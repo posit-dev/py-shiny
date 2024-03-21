@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import abc
 import json
-from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -24,7 +23,8 @@ from .._docstring import add_example, no_example
 from .._typing_extensions import Self
 from ..session._utils import get_current_session, require_active_session
 from ._dataframe_unsafe import serialize_numpy_dtypes
-from .renderer import Jsonifiable, Renderer, ValueFn, output_dispatch_handler
+from .renderer import Jsonifiable, Renderer, ValueFn, output_binding_request_handler
+from .renderer._utils import JsonifiableDict
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -35,33 +35,34 @@ if TYPE_CHECKING:
 DataFrameResult = Union[None, "pd.DataFrame", "DataGrid", "DataTable"]
 
 
-class CellUpdateFn(Protocol):
+CellValue = str
+
+
+class CellPatch(TypedDict):
+    row_index: int
+    column_index: int
+    value: CellValue
+    # prev_value: CellValue
+
+
+def cell_patch_to_jsonifiable(cell_patch: CellPatch) -> JsonifiableDict:
+    return cast(JsonifiableDict, dict(cell_patch))
+
+
+class PatchFn(Protocol):
     async def __call__(
         self,
         *,
-        info: CellUpdateInfo,
-    ) -> Any: ...
+        patch: CellPatch,
+    ) -> CellValue: ...
 
 
-class CellUpdateInfo(TypedDict):
-    row_index: int
-    column_index: int
-    value: str
-    prev: str
-
-
-class CellsUpdateFn(Protocol):
+class PatchesFn(Protocol):
     async def __call__(
         self,
         *,
-        infos: list[CellUpdateInfo],
-    ) -> list[Any]: ...
-@dataclass
-class CellPatch:
-    row_index: int
-    column_index: int
-    value: str
-    prev: str
+        patches: list[CellPatch],
+    ) -> list[CellPatch]: ...
 
 
 class AbstractTabularData(abc.ABC):
@@ -407,10 +408,18 @@ class data_frame(Renderer[DataFrameResult]):
     _value: reactive.Value[DataFrameResult | None]
     # _data: reactive.Value[pd.DataFrame | None]
 
-    _cell_update_fn: CellUpdateFn
-    _cells_update_fn: CellsUpdateFn
+    _patch_fn: PatchFn
+    _patches_fn: PatchesFn
 
-    cell_patches: reactive.Value[list[CellPatch]]
+    _cell_patch_map: reactive.Value[dict[tuple[int, int], CellPatch]]
+    """
+    Reactive map of patches to be applied to the data frame.
+
+    The key is defined as `(row_index, column_index)`, and the value is a `CellPatch`.
+
+    This map is used for faster deduplications of patches at each location.
+    """
+    cell_patches: reactive.Calc_[list[CellPatch]]
 
     data: reactive.Calc_[pd.DataFrame]
     """
@@ -459,6 +468,10 @@ class data_frame(Renderer[DataFrameResult]):
         * The edited data (`.data_patched()`) at the indices of the selected rows
     """
 
+    def _reset_reactives(self) -> None:
+        self._value.set(None)
+        self._cell_patch_map.set({})
+
     def _init_reactives(self) -> None:
 
         import pandas as pd
@@ -467,7 +480,13 @@ class data_frame(Renderer[DataFrameResult]):
 
         # Init
         self._value: reactive.Value[Union[DataFrameResult, None]] = reactive.Value(None)
-        self.cell_patches: reactive.Value[list[CellPatch]] = reactive.Value([])
+        self._cell_patch_map = reactive.Value({})
+
+        @reactive.calc
+        def self_cell_patches() -> list[CellPatch]:
+            return list(self._cell_patch_map().values())
+
+        self.cell_patches = self_cell_patches
 
         @reactive.calc
         def self_data() -> pd.DataFrame:
@@ -535,9 +554,9 @@ class data_frame(Renderer[DataFrameResult]):
                 data = self.data().copy(deep=False)
                 for cell_patch in self.cell_patches():
                     data.iat[  # pyright: ignore[reportUnknownMemberType]
-                        cell_patch.row_index,
-                        cell_patch.column_index,
-                    ] = cell_patch.value
+                        cell_patch["row_index"],
+                        cell_patch["column_index"],
+                    ] = cell_patch["value"]
 
                 return data
 
@@ -550,97 +569,89 @@ class data_frame(Renderer[DataFrameResult]):
             )
         return self._session
 
-    def set_cell_update_fn(self, fn: CellUpdateFn) -> Self:
-        self._cell_update_fn = fn
+    def set_patch_fn(self, fn: PatchFn) -> Self:
+        self._patch_fn = fn
         return self
 
-    def set_cells_update_fn(self, fn: CellsUpdateFn) -> Self:
-        self._cells_update_fn = fn
+    def set_patches_fn(self, fn: PatchesFn) -> Self:
+        self._patches_fn = fn
         return self
 
     def _init_handlers(self) -> None:
-        async def _set_cell_update_default(
+        async def patch_fn(
             *,
-            info: CellUpdateInfo,
-            # row_index: int,
-            # column_index: int,
-            # value: str,
-            # prev: str,
-            **kwargs: Any,
+            patch: CellPatch,
         ) -> str:
-            return info["value"]
+            return patch["value"]
 
-        async def _set_cells_update_default(
+        async def patches_fn(
             *,
-            infos: list[CellUpdateInfo],
-            **kwargs: Any,
+            patches: list[CellPatch],
         ):
-            with reactive.isolate():
-                formatted_values: list[Any] = []
-                for update_info in infos:
-                    # row_index = update_info["row_index"]
-                    # column_index = update_info["column_index"]
-                    # value = update_info["value"]
-                    # prev = update_info["prev"]
+            ret_patches: list[CellPatch] = []
+            for patch in patches:
 
-                    formatted_value = await self._cell_update_fn(info=update_info)
-                    #     row_index=row_index,
-                    #     column_index=column_index,
-                    #     value=value,
-                    #     prev=prev,
-                    # )
-                    # TODO-barret; check type here?
-                    # TODO-barret; The return value should be coerced by pandas to the correct type
-                    formatted_values.append(formatted_value)
+                new_patch = patch.copy()
+                new_patch["value"] = await self._patch_fn(patch=patch)
+                ret_patches.append(new_patch)
 
-                return formatted_values
+            return ret_patches
 
-        self.set_cell_update_fn(_set_cell_update_default)
-        self.set_cells_update_fn(_set_cells_update_default)
+        self.set_patch_fn(patch_fn)
+        self.set_patches_fn(patches_fn)
         # self._add_message_handlers()
 
-    # To be called by session's output_handler message handler on this data_frame instance
-    @output_dispatch_handler
-    # Do not change this method name unless you update corresponding code in `/js/dataframe/`!!
-    async def _handle_cells_update(self, update_infos: list[CellUpdateInfo]):
+        # TODO-barret; Use dynamic route instead of message handlers? Gut all of `output_binding_request_handler?`
+        # self._get_session().dynamic_route("data-frame-patches", self._handle_patches)
 
-        # Make new array to trigger reactive update
-        patches = self.cell_patches().copy()
+    # To be called by session's output_binding_request_handler message handler on this data_frame instance
+    @output_binding_request_handler
+    # Do not change this method name unless you update corresponding code in `/js/dataframe/`!!
+    async def _handle_patches(self, patches: list[CellPatch]) -> Jsonifiable:
+        # TODO-barret; verify that the patches are in the correct format
 
         # Call user's cell update method to retrieve formatted values
-        updated_raw_values = await self._cells_update_fn(infos=update_infos)
+        updated_patches = await self._patches_fn(patches=patches)
 
-        if (not isinstance(updated_raw_values, list)) or len(updated_raw_values) != len(
-            update_infos
-        ):
+        # Check to make sure `updated_infos` is a list of dicts with the correct keys
+        bad_patches_format = not isinstance(updated_patches, list)
+        if not bad_patches_format:
+            for updated_patch in updated_patches:
+                if not (
+                    # Verify structure
+                    isinstance(updated_patch, dict)
+                    # Verify types
+                    and isinstance(updated_patch["row_index"], int)
+                    and isinstance(updated_patch["column_index"], int)
+                    and isinstance(updated_patch["value"], CellValue)
+                ):
+                    bad_patches_format = True
+                    break
+                # TODO-barret; check type of `value` here?
+                # TODO-barret; The `value` should be coerced by pandas to the correct type
+
+        if bad_patches_format:
             raise ValueError(
-                f"The return value of {self.output_id}'s `handle_cells_update()` "
-                f"(typically set by `@{self.output_id}.set_cells_update_fn`) "
-                "must be a list of the same length as the input list of cell updates. "
-                f"Received {len(updated_raw_values)} items and expected {len(update_infos)}."
+                f"The return value of {self.output_id}'s `_patches_fn()` "
+                f"(typically set by `@{self.output_id}.set_patches_fn`) "
+                f"must be a list where each item has a row_index (`int`), column_index (`int`), and value (`{CellValue}`)."
             )
 
-        # Add new patches
-        for updated_raw_value, update_info in zip(updated_raw_values, update_infos):
-            patches.append(
-                CellPatch(
-                    row_index=update_info["row_index"],
-                    column_index=update_info["column_index"],
-                    value=updated_raw_value,
-                    prev=update_info["prev"],
-                )
-            )
+        # Copy to make sure reactive set works
+        cell_patch_map = self._cell_patch_map().copy()
+        # Add (or overwrite) new cell patches
+        for updated_patch in updated_patches:
+            cell_patch_map[
+                (updated_patch["row_index"], updated_patch["column_index"])
+            ] = updated_patch
 
-        # Remove duplicate patches
-        patch_map: dict[tuple[int, int], CellPatch] = {}
-        for patch in patches:
-            patch_map[(patch.row_index, patch.column_index)] = patch
-        patches = list(patch_map.values())
+        # (Reactively) Set new patch map
+        self._cell_patch_map.set(cell_patch_map)
 
-        # Set new patches
-        self.cell_patches.set(patches)
-
-        return updated_raw_values
+        return [
+            cell_patch_to_jsonifiable(updated_patch)
+            for updated_patch in updated_patches
+        ]
 
     def auto_output_ui(self) -> Tag:
         return ui.output_data_frame(id=self.output_id)
@@ -678,8 +689,7 @@ class data_frame(Renderer[DataFrameResult]):
 
     async def render(self) -> Jsonifiable:
         # Reset value
-        self._value.set(None)
-        self.cell_patches.set([])
+        self._reset_reactives()
 
         value = await self.fn()
         if value is None:
