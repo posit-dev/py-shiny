@@ -632,40 +632,22 @@ class ReloadArgs(TypedDict):
 
 
 # Check that the version of rsconnect supports Shiny Express; can be removed in the
-# future once this version of rsconnect is widely used. (Added 2024-03)
+# future once this version of rsconnect is widely used. The dependency on "packaging"
+# can also be removed then, because it is only used here. (Added 2024-03)
 def _verify_rsconnect_version() -> None:
     PACKAGE_NAME = "rsconnect-python"
     MIN_VERSION = "1.22.0"
 
     from importlib.metadata import PackageNotFoundError, version
 
-    def _safe_int(x: str) -> int:
-        try:
-            return int(x)
-        except ValueError:
-            return 0
-
-    def _compare_package_versions(version1: str, version2: str) -> Literal[-1, 0, 1]:
-        parts1 = [_safe_int(x) for x in version1.split(".")]
-        parts2 = [_safe_int(x) for x in version2.split(".")]
-
-        max_length = max(len(parts1), len(parts2))
-        parts1 += [0] * (max_length - len(parts1))
-        parts2 += [0] * (max_length - len(parts2))
-
-        for part1, part2 in zip(parts1, parts2):
-            if part1 > part2:
-                return 1
-            elif part1 < part2:
-                return -1
-
-        return 0
+    from packaging.version import parse
 
     try:
-        package_version = version(PACKAGE_NAME)
-        if _compare_package_versions(package_version, MIN_VERSION) < 0:
+        installed_version = parse(version(PACKAGE_NAME))
+        required_version = parse(MIN_VERSION)
+        if installed_version < required_version:
             print(
-                f"Warning: rsconnect-python {package_version} is installed, but it does not support deploying Shiny Express applications. "
+                f"Warning: rsconnect-python {installed_version} is installed, but it does not support deploying Shiny Express applications. "
                 f"Please upgrade to at least version {MIN_VERSION}. "
                 "If you are using pip, you can run `pip install --upgrade rsconnect-python`",
                 file=sys.stderr,
