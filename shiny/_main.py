@@ -663,7 +663,6 @@ def _verify_rsconnect_version() -> None:
 
     try:
         package_version = version(PACKAGE_NAME)
-        print(package_version)
         if _compare_package_versions(package_version, MIN_VERSION) < 0:
             print(
                 f"Warning: rsconnect-python {package_version} is installed, but it does not support deploying Shiny Express applications. "
