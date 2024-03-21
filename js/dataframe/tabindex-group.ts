@@ -10,7 +10,7 @@ export interface TabindexGroup<TElement extends HTMLElement> {
 }
 
 export function useTabindexGroup<TContainerElement extends HTMLElement>(
-  container: TContainerElement,
+  container: TContainerElement | null,
   focusableItems: () => NodeList,
   extraPadding?: {
     top?: number;
@@ -34,7 +34,8 @@ export function useTabindexGroup<TContainerElement extends HTMLElement>(
         // Not interested in capturing, only care about focus on the container itself
         return;
       }
-      findFirstItemInView(container, focusableItems(), extraPadding)?.focus();
+
+      findFirstItemInView(container!, focusableItems(), extraPadding)?.focus();
     },
     [container, focusableItems, extraPadding]
   );
