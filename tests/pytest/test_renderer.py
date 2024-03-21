@@ -7,8 +7,7 @@ import pytest
 from shiny import reactive, render
 from shiny._namespaces import ResolvedId, Root
 from shiny.render.renderer import Renderer, ValueFn, output_binding_request_handler
-from shiny.session import Outputs, Session
-from shiny.session._session import OutputInfo
+from shiny.session import Outputs, Session, get_current_session, session_context
 
 
 class _MockSession:
@@ -23,10 +22,18 @@ class _MockSession:
 test_session = cast(Session, _MockSession())
 
 
+class RendererWithSession(Renderer[str]):
+    _session: Session | None
+
+    def __init__(self, _fn: Optional[ValueFn[str]] = None):
+        super().__init__(_fn)
+        self._session = get_current_session()
+
+
 @pytest.mark.asyncio
 async def test_renderer_works():
     # No args works
-    class test_renderer(Renderer[str]):
+    class test_renderer(RendererWithSession):
         async def transform(self, value: str) -> str:
             return value + " " + value
 
@@ -48,7 +55,7 @@ async def test_renderer_works():
 @pytest.mark.asyncio
 async def test_renderer_works_with_args():
     # No args works
-    class test_renderer_with_args(Renderer[str]):
+    class test_renderer_with_args(RendererWithSession):
         def __init__(self, _fn: Optional[ValueFn[str]] = None, *, times: int = 2):
             super().__init__(_fn)
             self.times: int = times
@@ -82,7 +89,7 @@ def test_effect():
 
 @pytest.mark.asyncio
 async def test_output_handler():
-    class test_renderer(Renderer[str]):
+    class test_renderer(RendererWithSession):
         async def transform(self, value: str) -> str:
             return str(value)
 
@@ -95,41 +102,42 @@ async def test_output_handler():
         async def _handle_test_fn(self, msg: str) -> str:
             return f"handled {msg}"
 
-    @test_renderer
-    def app_fn() -> str:
-        return "ignored"
+    # Set the output to the test session
+    outputs = Outputs(test_session, Root, outputs={})
+    test_session.output = outputs
+    # Unrelated methods to make the test happy enough to pass
+    test_session.on_ended = lambda *args: None  # pyright: ignore
+    test_session._send_message_sync = lambda *args: None  # pyright: ignore
 
-    outputs = Outputs(
-        test_session,
-        Root,
-        outputs={
-            "app_fn": OutputInfo(
-                app_fn,
-                None,  # pyright: ignore[reportGeneralTypeIssues,reportArgumentType]
-                True,
+    with session_context(test_session):
+
+        @test_renderer
+        def app_fn() -> str:
+            return "ignored"
+
+        ex_val = "test value"
+        # Check for missing renderer
+        with pytest.raises(RuntimeError, match="unknown Output Renderer"):
+            await outputs._output_binding_request_handler("bad_id", "_", ex_val)
+
+        # Check for missing handler on the renderer
+        with pytest.raises(RuntimeError, match="does not have method"):
+            await outputs._output_binding_request_handler(
+                "app_fn", "does_not_exist", ex_val
             )
-        },
-    )
 
-    ex_val = "test value"
-    # Check for missing renderer
-    with pytest.raises(RuntimeError, match="unknown Output Renderer"):
-        await outputs._output_binding_request_handler("bad_id", "_", ex_val)
+        # Check handler is callable
+        with pytest.raises(RuntimeError, match="does not have callable method"):
+            await outputs._output_binding_request_handler(
+                "app_fn", "not_callable", ex_val
+            )
 
-    # Check for missing handler on the renderer
-    with pytest.raises(RuntimeError, match="does not have method"):
-        await outputs._output_binding_request_handler(
-            "app_fn", "does_not_exist", ex_val
-        )
+        # Check handler has been marked as an output handler
+        with pytest.raises(RuntimeError, match="did not mark method"):
+            await outputs._output_binding_request_handler(
+                "app_fn", "not_marked", ex_val
+            )
 
-    # Check handler is callable
-    with pytest.raises(RuntimeError, match="does not have callable method"):
-        await outputs._output_binding_request_handler("app_fn", "not_callable", ex_val)
-
-    # Check handler has been marked as an output handler
-    with pytest.raises(RuntimeError, match="did not mark method"):
-        await outputs._output_binding_request_handler("app_fn", "not_marked", ex_val)
-
-    # Check handler returns the correct value
-    val = await outputs._output_binding_request_handler("app_fn", "test_fn", ex_val)
-    assert val == f"handled {ex_val}"
+        # Check handler returns the correct value
+        val = await outputs._output_binding_request_handler("app_fn", "test_fn", ex_val)
+        assert val == f"handled {ex_val}"
