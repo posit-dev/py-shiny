@@ -90,7 +90,29 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
   useEffect(() => setValue(initialValue), [initialValue, setValue]);
 
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
-  const [cellState, setCellState] = useState<CellState>(CellStateEnum.Ready);
+  const [cellState, setCellState] = useState<CellState>(
+    getCellEditMapValue(cellEditMap, rowIndex, columnIndex)?.state ||
+      CellStateEnum.Ready
+  );
+
+  const [errorTitle, setErrorTitle] = useState<string | undefined>(undefined);
+
+  const setValueStateError = useCallback(
+    ({
+      newValue,
+      newCellState,
+      newErrorTitle,
+    }: {
+      newValue: typeof value;
+      newCellState: typeof cellState;
+      newErrorTitle: typeof errorTitle;
+    }) => {
+      setValue(newValue);
+      setCellState(newCellState);
+      setErrorTitle(newErrorTitle);
+    },
+    [setValue, setCellState, setErrorTitle]
+  );
 
   // Keyboard navigation:
   // * When editing a cell:
@@ -100,6 +122,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
   //   * On enter key:
   //     * √ Save value
   //     * √ Move to the cell below (or above w/ shift) and edit the new cell
+  //     * Should shift+enter add a newline in a cell?
   //   * On tab key:
   //     * √ Save value
   //     * √ Move to the cell to the right (or left w/ shift) and edit the new cell
@@ -113,16 +136,38 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
   //   * Have enter key enter edit mode for a cell
   //   * When a td is focused, Have esc key move focus to the table
   //   * When table is focused, Have esc key blur the focus
+  // TODO-barret-future; Combat edit mode being independent of selection mode
+  // * In row / column selection mode, allow for arrowoutput_binding_request_handler key navigation by focusing on a single cell, not a TR
+  // * If a cell is focused,
+  //   * `enter key` allows you to go into edit mode; If editing is turned off, the selection is toggled
+  //   * `space key` allows you toggle the selection of the cell
+  // * Arrow key navigation is required
 
   useEffect(() => {
     const cellIsEditable =
       editRowIndex === rowIndex && editColumnIndex === columnIndex;
+    // If the cell is editable, set the cell state to editing
     if (cellIsEditable) {
       setCellState(CellStateEnum.Editing);
+    } else {
+      // Update cell state when a cell edit has been created
+      const editInfo = getCellEditMapValue(cellEditMap, rowIndex, columnIndex);
+      if (editInfo) {
+        setValueStateError({
+          newValue: editInfo.value,
+          newCellState: editInfo.state,
+          newErrorTitle: editInfo.save_error,
+        });
+      }
     }
-  }, [editRowIndex, editColumnIndex, rowIndex, columnIndex]);
-
-  const [errorTitle, setErrorTitle] = useState<string | undefined>(undefined);
+  }, [
+    editRowIndex,
+    editColumnIndex,
+    rowIndex,
+    columnIndex,
+    cellEditMap,
+    setValueStateError,
+  ]);
 
   const resetEditInfo = useCallback(() => {
     setEditRowIndex(null);
@@ -137,14 +182,21 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     // Try to restore the previous value, state, and error
     // If there is no previous state info, reset the cell to the inital value
     const stateInfo = getCellEditMapValue(cellEditMap, rowIndex, columnIndex);
+
     if (stateInfo) {
-      setValue(initialValue);
-      setCellState(stateInfo.state);
-      setErrorTitle(stateInfo.save_error);
+      // Restore the previous value, state, and error
+      setValueStateError({
+        newValue: stateInfo.value,
+        newCellState: stateInfo.state,
+        newErrorTitle: stateInfo.save_error,
+      });
     } else {
-      setValue(initialValue);
-      setCellState(CellStateEnum.Ready);
-      setErrorTitle(undefined);
+      // Reset to the initial value
+      setValueStateError({
+        newValue: initialValue,
+        newCellState: CellStateEnum.Ready,
+        newErrorTitle: undefined,
+      });
     }
     // Remove editing info
     resetEditInfo();
@@ -188,6 +240,8 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
   };
 
   const attemptUpdate = useCallback(() => {
+    setErrorTitle(undefined);
+
     // Only update if the string form of the value has changed
     if (`${initialValue}` === `${value}`) {
       setCellState(CellStateEnum.Ready);
@@ -199,22 +253,19 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     // updateCellsData updates the underlying data via `setData` and `setCellEditMap`
     updateCellsData({
       id,
-      cellInfos: [
+      patches: [
         {
           rowIndex,
           columnIndex,
           value,
-          prev: initialValue,
+          // prev: initialValue,
         },
       ],
-      onSuccess: (_values) => {
-        // Update cell state
-        setCellState(CellStateEnum.EditSuccess);
+      onSuccess: (_patches) => {
+        // console.log("Success!!");
       },
       onError: (err) => {
-        // Update error info
-        setErrorTitle(String(err));
-        setCellState(CellStateEnum.EditFailure);
+        // console.log("Error!!", err);
       },
       columns,
       setData,
@@ -231,13 +282,6 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     setCellEditMap,
   ]);
 
-  // // When the input is blurred, we'll call our table meta's updateData function
-  // // console.log("rendering cell", rowIndex, id, initialValue, value);
-  // const onBlur = () => {
-  //   // console.log("on blur!", initialValue, value, e);
-  //   attemptUpdate();
-  // };
-
   // Select the input when it becomes editable
   useEffect(() => {
     if (cellState !== CellStateEnum.Editing) return;
@@ -247,13 +291,15 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     inputRef.current.select();
   }, [cellState]);
 
+  // When editing a cell, set up a global click listener to reset edit info when
+  // clicking outside of the cell
   useEffect(() => {
     if (cellState !== CellStateEnum.Editing) return;
     if (!inputRef.current) return;
 
     // TODO-barret; Restore cursor position and text selection here
 
-    // Setup global click listener to reset edit info
+    // Set up global click listener to reset edit info
     const onBodyClick = (e: MouseEvent) => {
       if (e.target === inputRef.current) return;
 
@@ -271,14 +317,13 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
   // Reselect the input when it comes into view!
   // (It could be scrolled out of view and then back into view)
   function onFocus(e: ReactFocusEvent<HTMLTextAreaElement>) {
-    console.log("focus cellState: ", cellState, rowIndex, columnIndex);
     if (cellState === CellStateEnum.Editing) {
       e.target.select();
     }
   }
 
   function onChange(e: ReactChangeEvent<HTMLTextAreaElement>) {
-    // console.log("on change!");
+    // Upddate value temporarily (do not save to cell edit map)
     setValue(e.target.value);
   }
 

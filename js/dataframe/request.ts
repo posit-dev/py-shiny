@@ -38,3 +38,27 @@ export function makeRequest(
 ) {
   window.Shiny.shinyapp!.makeRequest(method, args, onSuccess, onError, blobs);
 }
+
+export function makeRequestPromise({
+  method,
+  args,
+  blobs,
+}: {
+  method: string;
+  args: unknown[];
+  blobs?: Array<ArrayBuffer | Blob | string> | undefined;
+}) {
+  return new Promise((resolve, reject) => {
+    makeRequest(
+      method,
+      args,
+      (value: ResponseValue) => {
+        resolve(value);
+      },
+      (err: string) => {
+        reject(err);
+      },
+      blobs
+    );
+  });
+}

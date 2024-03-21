@@ -577,10 +577,10 @@ Shiny.outputBindings.register(
   "shinyDataFrame"
 );
 
-function getComputedBgColor(el: HTMLElement | null): string | null | undefined {
+function getComputedBgColor(el: HTMLElement | null): string | undefined {
   if (!el) {
     // Top of document, can't recurse further
-    return null;
+    return undefined;
   }
 
   const bgColor = getStyle(el, "background-color");
@@ -596,7 +596,7 @@ function getComputedBgColor(el: HTMLElement | null): string | null | undefined {
 
     if (bgImage && bgImage !== "none") {
       // Failed to detect background color, since it has a background image
-      return null;
+      return undefined;
     } else {
       // Recurse
       return getComputedBgColor(el.parentElement);
@@ -689,6 +689,6 @@ $(function () {
       detail: message.obj,
     });
     const el = document.getElementById(message.id);
-    el.dispatchEvent(evt);
+    el?.dispatchEvent(evt);
   });
 });

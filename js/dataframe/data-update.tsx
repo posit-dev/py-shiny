@@ -1,25 +1,25 @@
-import { ResponseValue, makeRequest } from "./request";
+import { ResponseValue, makeRequestPromise } from "./request";
 
 import type { CellState } from "./cell";
 import { CellStateEnum } from "./cell";
 import { CellEdit, SetCellEditMap, makeCellEditMapKey } from "./cell-edit-map";
 
-export type UpdateCellData = {
+export type CellPatch = {
   rowIndex: number;
   columnIndex: number;
-  value: unknown;
-  prev: unknown;
+  value: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  // prev: unknown;
 };
-export type UpdateCellDataRequest = {
+export type CellPatchPy = {
   row_index: number;
   column_index: number;
   value: unknown;
-  prev: unknown;
+  // prev: unknown;
 };
 
 export function updateCellsData({
   id,
-  cellInfos,
+  patches,
   onSuccess,
   onError,
   columns,
@@ -27,8 +27,8 @@ export function updateCellsData({
   setCellEditMap,
 }: {
   id: string | null;
-  cellInfos: UpdateCellData[];
-  onSuccess: (values: ResponseValue[]) => void;
+  patches: CellPatch[];
+  onSuccess: (values: CellPatch[]) => void;
   onError: (err: string) => void;
   columns: readonly string[];
   setData: (fn: (draft: unknown[][]) => void) => void;
@@ -37,36 +37,58 @@ export function updateCellsData({
   // // Skip page index reset until after next rerender
   // skipAutoResetPageIndex();
 
-  const updateInfos: UpdateCellDataRequest[] = cellInfos.map((cellInfo) => {
+  const patchesPy: CellPatchPy[] = patches.map((patch) => {
     return {
-      row_index: cellInfo.rowIndex,
-      column_index: cellInfo.columnIndex,
-      value: cellInfo.value,
-      prev: cellInfo.prev,
+      row_index: patch.rowIndex,
+      column_index: patch.columnIndex,
+      value: patch.value,
+      // prev: patch.prev,
     };
   });
 
-  makeRequest(
-    "output_handler",
-    [
+  makeRequestPromise({
+    method: "output_binding_request_handler",
+    args: [
       // id: string
       id,
       // handler: string
-      "cells_update",
-      // list[OnCellUpdateParams]
-      updateInfos,
+      "patches",
+      // list[CellPatch]
+      patchesPy,
     ],
-    (values: ResponseValue[]) => {
+  })
+    .then((newPatchesPy: ResponseValue) => {
+      // Assert type of values is list
+      if (!Array.isArray(newPatchesPy)) {
+        throw new Error("Expected a response of a list of patches");
+      }
+
+      for (const patch of newPatchesPy) {
+        if (
+          !("row_index" in patch && "column_index" in patch && "value" in patch)
+        ) {
+          throw new Error(
+            "Expected list of patches containing `row_index`, `column_index`, and `value`"
+          );
+        }
+      }
+      newPatchesPy = newPatchesPy as CellPatchPy[];
+
+      const newPatches = newPatchesPy.map((patch: CellPatchPy) => {
+        return {
+          rowIndex: patch.row_index,
+          columnIndex: patch.column_index,
+          value: patch.value,
+        };
+      });
+
       setData((draft) => {
-        values.forEach((value: string, i: number) => {
-          const { rowIndex, columnIndex } = cellInfos[i];
+        newPatches.forEach(({ rowIndex, columnIndex, value }) => {
           draft[rowIndex][columnIndex] = value;
         });
       });
       setCellEditMap((draft) => {
-        values.forEach((value: string, i: number) => {
-          const { rowIndex, columnIndex } = cellInfos[i];
-
+        newPatches.forEach(({ rowIndex, columnIndex, value }) => {
           const key = makeCellEditMapKey(rowIndex, columnIndex);
           const obj = draft.get(key) ?? ({} as CellEdit);
           obj.value = value;
@@ -77,11 +99,11 @@ export function updateCellsData({
           draft.set(key, obj);
         });
       });
-      onSuccess(values);
-    },
-    (err: string) => {
+      onSuccess(newPatches);
+    })
+    .catch((err: string) => {
       setCellEditMap((draft) => {
-        cellInfos.forEach(({ rowIndex, columnIndex, value }) => {
+        patches.forEach(({ rowIndex, columnIndex, value }) => {
           const key = makeCellEditMapKey(rowIndex, columnIndex);
           const obj = draft.get(key) ?? ({} as CellEdit);
 
@@ -95,7 +117,5 @@ export function updateCellsData({
         });
       });
       onError(err);
-    },
-    undefined
-  );
+    });
 }
