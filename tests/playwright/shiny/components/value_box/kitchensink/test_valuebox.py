@@ -33,6 +33,17 @@ def get_value_tag_name(value_box: ValueBox) -> str:
     return value_tag_name
 
 
+"""
+For each value box we want to test
+Layout and Positioning(e.g., showcase-top-right, showcase-left-center, showcase-bottom).
+Title and Value Elements: The tests assert the tag names used for the title and value elements within each ValueBox (e.g., <span>, <p>, <h1>, <h3>, <h5>).
+Fullscreen Availability and State: The tests check whether the fullscreen feature is available for a particular ValueBox and verify its initial state (fullscreen or not). For ValueBoxes with fullscreen support, the tests open and close the fullscreen mode and assert the expected behavior.
+Background and Foreground Colors: The tests assert the background and foreground (text) colors applied to the ValueBox components.
+Height: In some cases, the tests expect a specific height value for the ValueBox.
+Content: The tests verify the expected title and value text displayed within each ValueBox. Additionally, for ValueBoxes with fullscreen support, the tests check the content displayed in fullscreen mode.
+"""
+
+
 def test_valuebox(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 

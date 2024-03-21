@@ -2554,14 +2554,12 @@ class Sidebar(
 class _CardBodyP(_InputBaseP, Protocol):
     """
     Represents the body of a card control.
-
-    Parameters
-    ----------
-    loc_body
-        The locator for the body element of the card control.
     """
 
     loc_body: Locator
+    """
+    The locator for the body element of the card control.
+    """
 
 
 class _CardBodyM:
@@ -2591,14 +2589,12 @@ class _CardBodyM:
 class _CardFooterLayoutP(_InputBaseP, Protocol):
     """
     Represents the layout of the footer in a card.
-
-    Parameters
-    ----------
-    loc_footer
-        The locator for the footer element.
     """
 
     loc_footer: Locator
+    """
+    The locator for the footer element.
+    """
 
 
 class _CardFooterM:
@@ -2631,20 +2627,20 @@ class _CardFooterM:
 class _CardFullScreenLayoutP(_OutputBaseP, Protocol):
     """
     Represents a card full-screen layout for the Playwright controls.
-
-    Parameters
-    ----------
-    loc_title
-        The locator for the title element.
-    _loc_fullscreen
-        The locator for the full-screen element.
-    _loc_close_button
-        The locator for the close button element.
     """
 
     loc_title: Locator
+    """
+    The locator for the title element.
+    """
     _loc_fullscreen: Locator
+    """
+    The locator for the full-screen element.
+    """
     _loc_close_button: Locator
+    """
+    The locator for the close button element.
+    """
 
 
 class _CardFullScreenM:
