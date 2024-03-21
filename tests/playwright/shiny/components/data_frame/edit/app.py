@@ -1,8 +1,8 @@
 import pandas as pd
 from palmerpenguins import load_penguins_raw  # pyright: ignore[reportMissingTypeStubs]
 
-from shiny import App, Inputs, Outputs, Session, module, render, ui
-from shiny.render._dataframe import CellUpdateInfo
+from shiny import App, Inputs, Outputs, Session, module, reactive, render, ui
+from shiny.render._dataframe import CellPatch
 
 # TODO-barret; Make an example that uses a dataframe that then updates a higher level reactive, that causes the df to update... which causes the table to render completely
 # TODO-barret-future; When "updating" data, try to maintain the scroll, filter info when a new `df` is supplied;
@@ -53,12 +53,18 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
         return render.DataGrid(df, mode="edit")
         return render.DataTable(df, mode="edit")
 
-    @summary_data.set_cell_update_fn
-    async def handle_edit(
+    # @reactive.effect
+    # def _():
+    #     print(summary_data.data())
+    #     print(summary_data.data_patched())
+    #     print(summary_data.cell_patches())
+
+    @summary_data.set_patch_fn
+    async def upgrade_patch(
         *,
-        info: CellUpdateInfo,
+        patch: CellPatch,
     ):
-        if len(summary_data.cell_patches()) > 1:
+        if len(summary_data.cell_patches()) > 3:
             import random
 
             from shiny.types import SafeException
@@ -68,7 +74,7 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
             else:
                 raise RuntimeError("Barret testing!")
 
-        return "demo_" + info["value"]
+        return "demo_" + patch["value"]
 
     # @reactive.effect
     # def _():
@@ -76,80 +82,42 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
     #     print(summary_data.data_patched())
     #     print("patches: ", summary_data.cell_patches())
 
-    # summary_data.data_patched()  # ~ patched_df()
-
     if False:
         # Reactive value with current data
         # Make this a reactive calc
         # summary_data.data_selected_rows()
 
-        from typing import TypedDict
-
-        class CellUpdate(TypedDict):
-            row_index: int
-            column_id: str
-            value: str
-            prev: str
-
-        @summary_data.on_cells_update
-        async def handle_edit_full(
+        @summary_data.set_patches_fn
+        async def upgrade_patches(
             # data: pd.DataFrame,
             *,
-            cell_changes: list[CellUpdate],
+            patches: list[CellPatch],
             # row_index: int,
             # column_id: str,
             # value: str,
-            # prev: str,
         ):
-            data_local = summary_data.data_patched()
-            for change in cell_changes:  # typing: ignore
-                row_index = change["row_index"]
-                column_id = change["column_id"]
-                value = change["value"]
-                data_local.iat[row_index, column_id] = value
-            return data_local
 
-            # _df_patched.set(None)
-            # _df_patched.set(new_val)
+            new_patches: list[CellPatch] = []
+            for patch in patches:
+                # prev_value = summary_data.data()
+                new_patches.append(
+                    {
+                        "row_index": patch["row_index"],
+                        "column_index": patch["column_index"],
+                        "value": await summary_data._patch_fn(patch=patch),
+                    }
+                )
+                extra_patch = patch.copy()
+                extra_patch["column_index"] = abs(patch["column_index"] - 1)
+                new_patches.append(
+                    {
+                        "row_index": extra_patch["row_index"],
+                        "column_index": extra_patch["column_index"],
+                        "value": await summary_data._patch_fn(patch=extra_patch),
+                    }
+                )
 
-        # # Handle multiple cells changed at once (like a paste)
-        # @summary_data.on_cells_update
-        # async def handle_edit(
-        #     data: pd.DataFrame,
-        #     *,
-        #     cell_changes: list[dict],
-        # ):
-
-        #     ...
-
-        @summary_data.on_cell_update
-        async def handle_edit_simple(
-            data: pd.DataFrame,
-            *,
-            row_index: int,
-            column_id: str,
-            value: str,
-            prev: str,
-        ):
-            return "formatted_" + value
-
-            # pandas CoW (copy-on-write) an issue?
-            # https://pandas.pydata.org/docs/dev/user_guide/copy_on_write.html
-
-            print("edit!", row_index, column_id, value, prev)
-
-            df_local = df.get()
-            df_local.iat[row_index, column_id] = value
-            df.set(df_local)
-
-            # df.update(lambda x: x.iat[row_index, column_id] = value)
-            # df().iat[row_index, column_id] = value
-
-            return
-            # # df
-            # df_copy = df.copy()
-            # df_copy.iat[edit["row"], edit["col"]] = edit["new_value"]
-            # return df_copy
+            return new_patches
 
 
 def server(input: Inputs, output: Outputs, session: Session):
