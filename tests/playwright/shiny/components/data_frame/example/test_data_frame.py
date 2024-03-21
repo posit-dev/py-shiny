@@ -7,9 +7,8 @@ from typing import Any, Callable
 import pytest
 from conftest import ShinyAppProc, create_example_fixture, expect_to_change
 from controls import InputSelect, InputSwitch
-from playwright.sync_api import Locator, Page, expect
-
 from examples.example_apps import reruns, reruns_delay
+from playwright.sync_api import Locator, Page, expect
 
 data_frame_app = create_example_fixture("dataframe")
 
