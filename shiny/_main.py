@@ -10,7 +10,7 @@ import re
 import sys
 import types
 from pathlib import Path
-from typing import Any, Literal, Optional
+from typing import Any, Optional
 
 import click
 import uvicorn
