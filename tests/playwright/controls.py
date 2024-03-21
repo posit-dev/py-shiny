@@ -2699,7 +2699,9 @@ class ValueBox(
     _CardFullScreenM,
     _InputWithContainer,
 ):
-
+    """
+    ValueBox control for shiny.ui.value_box - https://shiny.posit.co/py/api/core/ui.value_box.html
+    """
     loc: Locator
     """
     Locator for the value box's value
@@ -2823,10 +2825,10 @@ class ValueBox(
         ----------
         text
             The expected text pattern or list of patterns/strings.
+            Note: If testing against multiple elements, text should be an array
         timeout
             The maximum time to wait for the expectation to pass. Defaults to None.
         """
-        """Note: If testing against multiple elements, text should be an array"""
         playwright_expect(self.loc_body).to_have_text(
             text,
             timeout=timeout,
