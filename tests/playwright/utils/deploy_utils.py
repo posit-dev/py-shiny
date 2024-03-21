@@ -159,14 +159,19 @@ def deploy_app(
         pytest.skip("Not on CI and within posit-dev/py-shiny repo")
 
     app_dir = os.path.dirname(app_file_path)
+    app_dir_name = os.path.basename(app_dir)
 
     # Use temporary directory to avoid modifying the original app directory
     # This allows us to run tests in parallel when deploying apps both modify the same rsconnect config file
     with tempfile.TemporaryDirectory("deploy_app") as tmpdir:
 
-        copy_tree(app_dir, tmpdir)
-
-        write_requirements_txt(tmpdir)
+        # Creating a dir with same name instead of tmp to avoid issues
+        # when deploying app to shinyapps.io using rsconnect package
+        # since the rsconnect/*.json file needs the app_dir name to be same
+        tmp_app_dir = os.path.join(tmpdir, app_dir_name)
+        os.mkdir(tmp_app_dir)
+        copy_tree(app_dir, tmp_app_dir)
+        write_requirements_txt(tmp_app_dir)
 
         deployment_function = {
             "connect": quiet_deploy_to_connect,
@@ -174,9 +179,9 @@ def deploy_app(
         }[location]
 
         pre_deployment_time = time.time()
-        url = deployment_function(app_name, tmpdir)
+        url = deployment_function(app_name, tmp_app_dir)
         tmp_rsconnect_dir = os.path.join(
-            tmpdir, "rsconnect-python", f"{os.path.basename(tmpdir)}.json"
+            tmp_app_dir, "rsconnect-python", f"{os.path.basename(tmp_app_dir)}.json"
         )
         assert_rsconnect_file_updated(tmp_rsconnect_dir, pre_deployment_time)
         local_rsconnect_dir = os.path.join(
