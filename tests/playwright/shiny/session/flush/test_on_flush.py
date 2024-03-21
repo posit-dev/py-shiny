@@ -21,13 +21,16 @@ def test_output_image_kitchen(page: Page, local_app: ShinyAppProc) -> None:
         "'bx-3-second-flushed', 'by-3-second-flushed', 'c-3-flushed')"
     )
 
+    print("closing app")
     # Verify `on_ended` callbacks are called in the correct order (and cancelled)
     local_app.close()
+    print("waiting for output")
 
     # Wait up to 3 seconds for the app to close and print the logs. (Should be ~ instant)
     local_app.stdout.wait_for(lambda x: "test4" in x, 10)
     stdout = str(local_app.stdout)
-    print(stdout)
+    print(f"stdout: `{stdout}`")
+    print(local_app.stdout)
     out_indexes = [
         stdout.index("session ended - sync - test1"),
         stdout.index("session ended - async - test2"),
