@@ -48,7 +48,11 @@ from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
 from ..reactive import Effect_, Value, effect, flush, isolate
 from ..reactive._core import lock, on_flushed
-from ..render.renderer import Renderer, RendererT, output_dispatch_handler
+from ..render.renderer import Renderer, RendererT
+from ..render.renderer._dispatch import (
+    OutputBindingRequestHandler,
+    RendererHasSession,
+)
 from ..types import (
     Jsonifiable,
     SafeException,
@@ -288,8 +292,7 @@ class Session(object, metaclass=SessionMeta):
                         return
 
                     if "method" not in message_obj:
-                        await self._send_error_response(
-                            message_obj,
+                        self._print_error_message(
                             "Message does not contain 'method'.",
                         )
                         return
@@ -340,7 +343,7 @@ class Session(object, metaclass=SessionMeta):
                 try:
                     # Starting in Python 3.10 this could be traceback.print_exception(e)
                     traceback.print_exception(*sys.exc_info())
-                    await self._send_error_response(None, str(e))
+                    self._print_error_message(e)
                 except Exception:
                     pass
                 finally:
@@ -390,12 +393,14 @@ class Session(object, metaclass=SessionMeta):
             func = self._message_handlers[message["method"]]
         except KeyError:
             await self._send_error_response(
-                message, "Unknown method: " + message["method"]
+                message,
+                "Unknown method: " + message["method"],
             )
             return
         except AttributeError:
             await self._send_error_response(
-                message, "Unknown method: " + message["method"]
+                message,
+                "Unknown method: " + message["method"],
             )
             return
 
@@ -688,16 +693,18 @@ class Session(object, metaclass=SessionMeta):
         """
         _utils.run_coro_hybrid(self._send_message(message))
 
+    def _print_error_message(self, message: str | Exception) -> None:
+        print(str(message), file=sys.stderr)
+
     async def _send_error_response(
         self,
-        message: ClientMessageOther | None,
+        message: ClientMessageOther,
         error: object,
     ) -> None:
         # { tag: number; value?: ResponseValue; error?: string }
-        tag = None
-        if message is not None:
-            if "tag" in message:
-                tag = message["tag"]
+        if "tag" not in message:
+            raise RuntimeError("No `tag` key in message")
+        tag = message["tag"]
         await self._send_message({"response": {"tag": tag, "error": error}})
 
     # ==========================================================================
@@ -1065,7 +1072,7 @@ class Outputs:
 
         self._init_message_handlers()
 
-    async def _output_message_handler(
+    async def _output_binding_request_handler(
         self,
         output_id: str,
         handler: str,
@@ -1080,6 +1087,10 @@ class Outputs:
 
         The value returned by the handler is sent back to the client with the original unique id (`tag`).
         """
+        # Verify that the output_id and handler are strings
+        assert isinstance(output_id, str)
+        assert isinstance(handler, str)
+
         if output_id not in self._outputs:
             raise RuntimeError(
                 f"Received request message for an unknown Output Renderer with id `{output_id}`"
@@ -1087,6 +1098,15 @@ class Outputs:
 
         output_info = self._outputs[output_id]
         renderer = output_info.renderer
+
+        # Using two `isinstance` checks works type checker to understand that `renderer` is a `Renderer` and has `_session`
+        if not (
+            isinstance(renderer, Renderer) and isinstance(renderer, RendererHasSession)
+        ):
+            raise RuntimeError(
+                f"Output Renderer with id `{output_id}` does not have a `_session` attribute. Please capture the Session during initialization of the Renderer and store it in a `_session` attribute."
+            )
+
         handler_fn_name = f"_handle_{handler}"
         if not hasattr(renderer, handler_fn_name):
             raise RuntimeError(
@@ -1097,28 +1117,19 @@ class Outputs:
             raise RuntimeError(
                 f"Output Renderer with id `{output_id}` does not have callable method `{handler_fn_name}` to handle request message"
             )
-        if not isinstance(handler_fn, output_dispatch_handler):
+
+        if not isinstance(handler_fn, OutputBindingRequestHandler):
             raise RuntimeError(
-                f"Output Renderer with id `{output_id}` did not mark method `{handler_fn_name}` as an output handler"
+                f"Output Renderer with id `{output_id}` did not mark method `{handler_fn_name}` as an output handler via `@output_binding_request_handler` from `shiny.render.renderer.output_binding_request_handler`"
             )
 
-        dispatch_handler_fn = cast(
-            output_dispatch_handler[Renderer[Any], object, Jsonifiable], handler_fn
-        )
-
-        # Make a new session proxy if the output is namespaced;
-        # No need to make recursive proxies as the important part is a prefix exists
-        sess_proxy = self._session
-        if "-" in output_id:
-            modPrefix, _ = output_id.rsplit("-", 1)
-            sess_proxy = self._session.make_scope(modPrefix)
-        with session_context(sess_proxy), isolate():
+        with session_context(renderer._session), isolate():
             try:
-                return await dispatch_handler_fn(renderer, msg)
+                return await handler_fn(msg)
             except Exception as e:
                 # Ex:
                 # ```
-                # Exception while handling `data_frame[id=testing-summary_data]._handle_cells_update()`: boom!
+                # Exception while handling `data_frame[id=testing-summary_data]._patch_fn()`: boom!
                 # ```
                 print(
                     "Exception while handling "
@@ -1126,6 +1137,7 @@ class Outputs:
                     e,
                     file=sys.stderr,
                 )
+                # TODO-barret-future; Should this logic be moved to the dispatch handler?
                 if self._session.app.sanitize_errors and not isinstance(
                     e, SafeException
                 ):
@@ -1136,8 +1148,8 @@ class Outputs:
     def _init_message_handlers(self) -> None:
         # Add the message handler
         if isinstance(self._session, Session):
-            self._session._message_handlers["output_handler"] = (
-                self._output_message_handler
+            self._session._message_handlers["output_binding_request_handler"] = (
+                self._output_binding_request_handler
             )
 
     @overload
