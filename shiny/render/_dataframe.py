@@ -131,7 +131,7 @@ def as_mode(
             )
         return mode
     warn_deprecated(
-        "`DataGraid(row_selection_mode=)` has been superseded by `DataGrid(mode=)`."
+        "`DataGrid(row_selection_mode=)` has been superseded by `DataGrid(mode=)`."
         ' Please use `DataGrid(mode="{row_selection_mode}_row")` instead.'
     )
     if row_selection_mode == "none":
@@ -205,6 +205,25 @@ class DataGrid(AbstractTabularData):
         filters: bool = False,
         mode: DataFrameMode = "none",
         row_selection_mode: RowSelectionModeDeprecated = "deprecated",
+        # TODO-barret; Rename to `selection_mode` and `editable`.
+        # Want to make room for the following orthogonal options in the future:
+        # - Row: none, single, multiple
+        # - Col: none, single, multiple
+        # - Region: none, single, multiple (?)
+        # Some possibilities for API:
+        # ```
+        # DataGrid(
+        #   row_selection = "single",
+        #   col_selection = "none",
+        #   region_selection = "single"
+        # )
+        # DataGrid(
+        #   selection = ("single", "none", "single")
+        # )
+        # DataGrid(
+        #   selection = {"row": "single", "col": "none", "region": "single"}
+        # )
+        # ```
     ):
         import pandas as pd
 
@@ -601,8 +620,12 @@ class data_frame(Renderer[DataFrameResult]):
         self.set_patches_fn(patches_fn)
         # self._add_message_handlers()
 
-        # TODO-barret; Use dynamic route instead of message handlers? Gut all of `output_binding_request_handler?`
-        # self._get_session().dynamic_route("data-frame-patches", self._handle_patches)
+        # # TODO-barret; Use dynamic route instead of message handlers? Gut all of `output_binding_request_handler?` TODO: Talk with Joe
+        # session = get_current_session()
+        # if session is not None:
+        #     session.dynamic_route("data-frame-patches-{id}", self._handle_patches)
+
+        # output_binding_request_handler(session, "name", self._handle_patches_1)
 
     # To be called by session's output_binding_request_handler message handler on this data_frame instance
     @output_binding_request_handler
