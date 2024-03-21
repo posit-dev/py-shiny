@@ -1,7 +1,7 @@
 import pandas as pd
 from palmerpenguins import load_penguins_raw  # pyright: ignore[reportMissingTypeStubs]
 
-from shiny import App, Inputs, Outputs, Session, module, reactive, render, ui
+from shiny import App, Inputs, Outputs, Session, module, render, ui
 from shiny.render._dataframe import CellPatch
 
 # TODO-barret; Make an example that uses a dataframe that then updates a higher level reactive, that causes the df to update... which causes the table to render completely
@@ -17,8 +17,6 @@ df1.insert(1, "a", [3, 4], True)  # pyright: ignore
 df = penguins
 # df = df1
 
-
-# df = reactive.value(df1)df = reactive.value(load_penguins_raw())
 
 MOD_ID = "testing"
 
@@ -53,6 +51,7 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
         return render.DataGrid(df, mode="edit")
         return render.DataTable(df, mode="edit")
 
+    # from shiny import reactive
     # @reactive.effect
     # def _():
     #     print(summary_data.data())

@@ -49,10 +49,7 @@ from ..input_handler import input_handlers
 from ..reactive import Effect_, Value, effect, flush, isolate
 from ..reactive._core import lock, on_flushed
 from ..render.renderer import Renderer, RendererT
-from ..render.renderer._dispatch import (
-    OutputBindingRequestHandler,
-    RendererHasSession,
-)
+from ..render.renderer._dispatch import OutputBindingRequestHandler, RendererHasSession
 from ..types import (
     Jsonifiable,
     SafeException,
