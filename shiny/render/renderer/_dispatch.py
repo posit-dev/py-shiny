@@ -7,11 +7,11 @@ from typing import (
     Callable,
     Literal,
     Protocol,
-    TypeGuard,
     TypeVar,
     runtime_checkable,
 )
 
+from ..._typing_extensions import TypeGuard
 from ...types import Jsonifiable
 
 if TYPE_CHECKING:
@@ -39,7 +39,12 @@ class OutputBindingRequestHandler(Protocol):
 
 
 def is_output_binding_request_handler(x: Any) -> TypeGuard[OutputBindingRequestHandler]:
-    return callable(x) and (getattr(x, "_outputBindingRequestHandler", False) == True)
+    if not callable(x):
+        return False
+    attr = getattr(x, "_outputBindingRequestHandler", False)
+    if not isinstance(attr, bool):
+        return False
+    return attr
 
 
 # Cast value for within `output_binding_request_handler` dispatching
