@@ -143,6 +143,7 @@ class ShinyAppProc:
 
     def _run(self) -> None:
         self.proc.wait()
+        sleep(0.5)
         if self.proc.stdout is not None:
             self.proc.stdout.close()
         if self.proc.stderr is not None:
