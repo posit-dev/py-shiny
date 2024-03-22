@@ -5,8 +5,7 @@ import os
 import subprocess
 import tempfile
 import time
-from distutils.dir_util import copy_tree
-from distutils.file_util import copy_file
+import shutil
 from typing import Any, Callable, TypeVar
 
 import pytest
@@ -170,7 +169,7 @@ def deploy_app(
         # since the rsconnect/*.json file needs the app_dir name to be same
         tmp_app_dir = os.path.join(tmpdir, app_dir_name)
         os.mkdir(tmp_app_dir)
-        copy_tree(app_dir, tmp_app_dir)
+        shutil.copytree(app_dir, tmp_app_dir)
         write_requirements_txt(tmp_app_dir)
 
         deployment_function = {
@@ -190,7 +189,7 @@ def deploy_app(
         # Copy file back if it doesn't exist locally (Helpful for local development and deployment)
         if not os.path.exists(local_rsconnect_dir):
 
-            copy_file(tmp_rsconnect_dir, local_rsconnect_dir)
+            shutil.copy(tmp_rsconnect_dir, local_rsconnect_dir)
 
         return url
 
