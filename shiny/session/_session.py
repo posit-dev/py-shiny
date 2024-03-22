@@ -242,9 +242,7 @@ class Session(object, metaclass=SessionMeta):
         self._has_run_session_end_tasks = True
 
         try:
-            print(f"Invoking {self._on_ended_callbacks.count()} on ended callbacks")
             await self._on_ended_callbacks.invoke()
-            print("After invoking on ended callbacks")
         finally:
             self.app._remove_session(self)
 
@@ -775,7 +773,6 @@ class Session(object, metaclass=SessionMeta):
         :
             A function that can be used to cancel the registration.
         """
-        print("adding on_ended callback")
         return self._on_ended_callbacks.register(wrap_async(fn))
 
     # ==========================================================================
