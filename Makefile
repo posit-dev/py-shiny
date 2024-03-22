@@ -51,6 +51,9 @@ clean-test: ## remove test and coverage artifacts
 typings/uvicorn:
 	pyright --createstub uvicorn
 
+typings/distutils:
+	pyright --createstub distutils
+
 typings/matplotlib/__init__.pyi: ## grab type stubs from GitHub
 	mkdir -p typings
 	git clone --depth 1 https://github.com/microsoft/python-type-stubs typings/python-type-stubs
@@ -72,7 +75,7 @@ check-black:
 check-isort:
 	@echo "-------- Sorting imports with isort --------"
 	isort --check-only --diff .
-check-types: typings/uvicorn typings/matplotlib/__init__.pyi typings/seaborn
+check-types: typings/uvicorn typings/matplotlib/__init__.pyi typings/seaborn typings/distutils
 	@echo "-------- Checking types with pyright --------"
 	pyright
 check-tests:
