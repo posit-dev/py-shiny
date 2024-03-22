@@ -136,7 +136,6 @@ class ShinyAppProc:
         self.proc = proc
         self.port = port
         self.url = f"http://127.0.0.1:{port}/"
-        print(f"App url is {self.url}")
         self.stdout = OutputStream(proc.stdout or dummyio())
         self.stderr = OutputStream(proc.stderr or dummyio())
         threading.Thread(group=None, target=self._run, daemon=True).start()
@@ -188,7 +187,6 @@ def run_shiny_app(
     timeout_secs: float = 10,
     bufsize: int = 64 * 1024,
 ) -> ShinyAppProc:
-
     if port == 0:
         port = shiny._utils.random_port()
 

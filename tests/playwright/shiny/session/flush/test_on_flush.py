@@ -29,7 +29,6 @@ def test_output_image_kitchen(page: Page, local_app: ShinyAppProc) -> None:
     # Wait up to 3 seconds for the app to close and print the logs. (Should be ~ instant)
     local_app.stdout.wait_for(lambda x: "test4" in x, 10)
     stdout = str(local_app.stdout)
-    print(local_app.stderr)
     print(f"stdout: `{stdout}`")
     print(local_app.stdout)
     out_indexes = [
