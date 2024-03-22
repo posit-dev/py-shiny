@@ -22,8 +22,9 @@ from typing import (
 from htmltools import Tag, TagAttrValue, TagChild
 
 if TYPE_CHECKING:
-    from ..session._utils import RenderedDeps
     import pandas as pd
+
+    from ..session._utils import RenderedDeps
 
 from .. import _utils
 from .. import ui as _ui
