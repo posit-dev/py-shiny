@@ -36,31 +36,34 @@ from starlette.requests import HTTPConnection, Request
 from starlette.responses import HTMLResponse, PlainTextResponse, StreamingResponse
 from starlette.types import ASGIApp
 
-from .._typing_extensions import NotRequired
-
-if TYPE_CHECKING:
-    from .._app import App
-
 from .. import _utils, reactive, render
 from .._connection import Connection, ConnectionClosed
 from .._deprecated import warn_deprecated
 from .._docstring import add_example
 from .._fileupload import FileInfo, FileUploadManager
 from .._namespaces import Id, ResolvedId, Root
-from .._typing_extensions import TypedDict
+from .._typing_extensions import NotRequired, TypedDict
 from .._utils import wrap_async
 from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
 from ..reactive import Effect_, Value, effect, flush, isolate
 from ..reactive._core import lock, on_flushed
 from ..render.renderer import Renderer, RendererT
+from ..render.renderer._dispatch import (
+    RendererHasSession,
+    is_output_binding_request_handler,
+)
 from ..types import (
+    Jsonifiable,
     SafeException,
     SilentCancelOutputException,
     SilentException,
     SilentOperationInProgressException,
 )
 from ._utils import RenderedDeps, read_thunk_opt, session_context
+
+if TYPE_CHECKING:
+    from .._app import App
 
 
 class ConnectionState(enum.Enum):
@@ -185,13 +188,17 @@ class Session(object, metaclass=SessionMeta):
         self.id: str = id
         self._conn: Connection = conn
         self._debug: bool = debug
+        self._message_handlers: dict[
+            str,
+            Callable[..., Awaitable[Jsonifiable]],
+        ] = self._create_message_handlers()
 
         # The HTTPConnection representing the WebSocket. This is used so that we can
         # query information about the request, like headers, cookies, etc.
         self.http_conn: HTTPConnection = conn.get_http_conn()
 
         self.input: Inputs = Inputs(dict())
-        self.output: Outputs = Outputs(self, self.ns, dict(), dict())
+        self.output: Outputs = Outputs(self, self.ns, outputs=dict())
 
         self.user: str | None = None
         self.groups: list[str] | None = None
@@ -210,14 +217,10 @@ class Session(object, metaclass=SessionMeta):
                 self.user = creds["user"]
                 self.groups = creds["groups"]
             except Exception as e:
-                print("Error parsing credentials header: " + str(e))
+                print("Error parsing credentials header: " + str(e), file=sys.stderr)
 
         self._outbound_message_queues = OutBoundMessageQueues()
 
-        self._message_handlers: dict[
-            str,
-            Callable[..., Awaitable[object]],
-        ] = self._create_message_handlers()
         self._file_upload_manager: FileUploadManager = FileUploadManager()
         self._on_ended_callbacks = _utils.AsyncCallbacks()
         self._has_run_session_end_tasks: bool = False
@@ -289,7 +292,9 @@ class Session(object, metaclass=SessionMeta):
                         return
 
                     if "method" not in message_obj:
-                        self._send_error_response("Message does not contain 'method'.")
+                        self._print_error_message(
+                            "Message does not contain 'method'.",
+                        )
                         return
 
                     async with lock():
@@ -338,7 +343,7 @@ class Session(object, metaclass=SessionMeta):
                 try:
                     # Starting in Python 3.10 this could be traceback.print_exception(e)
                     traceback.print_exception(*sys.exc_info())
-                    self._send_error_response(str(e))
+                    self._print_error_message(e)
                 except Exception:
                     pass
                 finally:
@@ -386,15 +391,24 @@ class Session(object, metaclass=SessionMeta):
     async def _dispatch(self, message: ClientMessageOther) -> None:
         try:
             func = self._message_handlers[message["method"]]
+        except KeyError:
+            await self._send_error_response(
+                message,
+                "Unknown method: " + message["method"],
+            )
+            return
         except AttributeError:
-            self._send_error_response("Unknown method: " + message["method"])
+            await self._send_error_response(
+                message,
+                "Unknown method: " + message["method"],
+            )
             return
 
         try:
             # TODO: handle `blobs`
-            value: object = await func(*message["args"])
+            value = await func(*message["args"])
         except Exception as e:
-            self._send_error_response("Error: " + str(e))
+            await self._send_error_response(message, str(e))
             return
 
         await self._send_response(message, value)
@@ -403,8 +417,12 @@ class Session(object, metaclass=SessionMeta):
         await self._send_message({"response": {"tag": message["tag"], "value": value}})
 
     # This is called during __init__.
-    def _create_message_handlers(self) -> dict[str, Callable[..., Awaitable[object]]]:
-        async def uploadInit(file_infos: list[FileInfo]) -> dict[str, object]:
+    def _create_message_handlers(
+        self,
+    ) -> dict[str, Callable[..., Awaitable[Jsonifiable]]]:
+        # TODO-future; Make sure these methods work within MockSession
+
+        async def uploadInit(file_infos: list[FileInfo]) -> dict[str, Jsonifiable]:
             with session_context(self):
                 if self._debug:
                     print("Upload init: " + str(file_infos), flush=True)
@@ -675,9 +693,19 @@ class Session(object, metaclass=SessionMeta):
         """
         _utils.run_coro_hybrid(self._send_message(message))
 
-    def _send_error_response(self, message_str: str) -> None:
-        print("_send_error_response: " + message_str)
-        pass
+    def _print_error_message(self, message: str | Exception) -> None:
+        print(str(message), file=sys.stderr)
+
+    async def _send_error_response(
+        self,
+        message: ClientMessageOther,
+        error: object,
+    ) -> None:
+        # { tag: number; value?: ResponseValue; error?: string }
+        if "tag" not in message:
+            raise RuntimeError("No `tag` key in message")
+        tag = message["tag"]
+        await self._send_message({"response": {"tag": tag, "error": error}})
 
     # ==========================================================================
     # Flush
@@ -779,7 +807,7 @@ class Session(object, metaclass=SessionMeta):
     # Misc
     # ==========================================================================
     async def _unhandled_error(self, e: Exception) -> None:
-        print("Unhandled error: " + str(e))
+        print("Unhandled error: " + str(e), file=sys.stderr)
         await self.close()
 
     @add_example()
@@ -913,10 +941,9 @@ class SessionProxy:
         self.ns = ns
         self.input = Inputs(values=parent.input._map, ns=ns)
         self.output = Outputs(
-            session=cast(Session, self),
-            effects=self.output._effects,
-            suspend_when_hidden=self.output._suspend_when_hidden,
+            cast(Session, self),
             ns=ns,
+            outputs=self.output._outputs,
         )
 
     def __getattr__(self, attr: str) -> Any:
@@ -1020,6 +1047,13 @@ class Inputs:
 # ======================================================================================
 
 
+@dataclasses.dataclass
+class OutputInfo:
+    renderer: Renderer[Any]
+    effect: Effect_
+    suspend_when_hidden: bool
+
+
 class Outputs:
     """
     A class representing Shiny output definitions.
@@ -1029,13 +1063,100 @@ class Outputs:
         self,
         session: Session,
         ns: Callable[[str], ResolvedId],
-        effects: dict[str, Effect_],
-        suspend_when_hidden: dict[str, bool],
+        *,
+        outputs: dict[str, OutputInfo],
     ) -> None:
         self._session = session
         self._ns = ns
-        self._effects = effects
-        self._suspend_when_hidden = suspend_when_hidden
+        self._outputs = outputs
+
+        self._init_message_handlers()
+
+    async def _output_binding_request_handler(
+        self,
+        output_id: str,
+        handler: str,
+        msg: object,
+    ) -> Jsonifiable:
+        """
+        Used to handle request messages from an Output Renderer.
+
+        Typically, this is used when an Output Renderer needs to set an input value.
+        E.g. a @render.data_frame result with a `mode="edit"` parameter will use
+        this to set the value of the data frame when a cell is edited.
+
+        The value returned by the handler is sent back to the client with the original unique id (`tag`).
+        """
+        # Verify that the output_id and handler are strings
+        assert isinstance(output_id, str)
+        assert isinstance(handler, str)
+
+        if output_id not in self._outputs:
+            raise RuntimeError(
+                f"Received request message for an unknown Output Renderer with id `{output_id}`"
+            )
+
+        output_info = self._outputs[output_id]
+        renderer = output_info.renderer
+
+        # Using two `isinstance` checks works type checker to understand that `renderer` is a `Renderer` and has `_session`
+        if not (
+            isinstance(renderer, Renderer) and isinstance(renderer, RendererHasSession)
+        ):
+            raise RuntimeError(
+                f"Output Renderer with id `{output_id}` does not have a `_session` attribute. Please capture the Session during initialization of the Renderer and store it in a `_session` attribute."
+            )
+
+        handler_fn_name = f"_handle_{handler}"
+        if not hasattr(renderer, handler_fn_name):
+            raise RuntimeError(
+                f"Output Renderer with id `{output_id}` does not have method `{handler_fn_name}` to handle request message"
+            )
+        handler_fn = getattr(renderer, handler_fn_name)
+        if not callable(handler_fn):
+            raise RuntimeError(
+                f"Output Renderer with id `{output_id}` does not have callable method `{handler_fn_name}` to handle request message"
+            )
+
+        if is_output_binding_request_handler(handler_fn):
+
+            with session_context(renderer._session), isolate():
+                try:
+                    return await handler_fn(msg)
+                except Exception as e:
+                    # Ex:
+                    # ```
+                    # Exception while handling `data_frame[id=testing-summary_data]._patch_fn()`: boom!
+                    # ```
+                    print(
+                        "Exception while handling "
+                        f"`{renderer.__class__.__name__}[id={output_id}].{handler_fn_name}()`:",
+                        e,
+                        file=sys.stderr,
+                    )
+                    # TODO-barret-future; Should this logic be moved to the dispatch handler?
+                    if self._session.app.sanitize_errors and not isinstance(
+                        e, SafeException
+                    ):
+                        raise RuntimeError(self._session.app.sanitize_error_msg)
+
+                    raise  # reraise the original exception
+
+        else:
+            # This if/else is poorly arranged as TypeGuards only work within the truthy
+            # section of the if statement. We could do a comparison of
+            # `isinstance(handler_fn, OutputBindingRequestHandler)` but it seems to not
+            # work on Python 3.12
+            raise RuntimeError(
+                f"Output Renderer with id `{output_id}` did not mark method `{handler_fn_name}` as an output handler via `@output_binding_request_handler` from `shiny.render.renderer.output_binding_request_handler`"
+            )
+
+    def _init_message_handlers(self) -> None:
+        # Add the message handler
+        if isinstance(self._session, Session):
+            self._session._message_handlers["output_binding_request_handler"] = (
+                self._output_binding_request_handler
+            )
 
     @overload
     def __call__(self, renderer: RendererT) -> RendererT:
@@ -1076,8 +1197,6 @@ class Outputs:
             renderer._on_register()
 
             self.remove(output_name)
-
-            self._suspend_when_hidden[output_name] = suspend_when_hidden
 
             @effect(
                 suspended=suspend_when_hidden and self._session._is_hidden(output_name),
@@ -1136,7 +1255,12 @@ class Outputs:
                 lambda: self._session._send_progress("binding", {"id": output_name})
             )
 
-            self._effects[output_name] = output_obs
+            # Store the renderer and effect info
+            self._outputs[output_name] = OutputInfo(
+                renderer=renderer,
+                effect=output_obs,
+                suspend_when_hidden=suspend_when_hidden,
+            )
 
             return renderer
 
@@ -1147,19 +1271,19 @@ class Outputs:
 
     def remove(self, id: Id) -> None:
         output_name = self._ns(id)
-        if output_name in self._effects:
-            self._effects[output_name].destroy()
-            del self._effects[output_name]
-            del self._suspend_when_hidden[output_name]
+        if output_name in self._outputs:
+            self._outputs[output_name].effect.destroy()
+            del self._outputs[output_name]
 
     def _manage_hidden(self) -> None:
         "Suspends execution of hidden outputs and resumes execution of visible outputs."
-        output_names = list(self._suspend_when_hidden.keys())
-        for name in output_names:
+        for name, output in self._outputs.items():
             if self._should_suspend(name):
-                self._effects[name].suspend()
+                output.effect.suspend()
             else:
-                self._effects[name].resume()
+                output.effect.resume()
 
     def _should_suspend(self, name: str) -> bool:
-        return self._suspend_when_hidden[name] and self._session._is_hidden(name)
+        return self._outputs[name].suspend_when_hidden and self._session._is_hidden(
+            name
+        )

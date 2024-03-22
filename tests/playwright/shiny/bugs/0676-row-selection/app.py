@@ -37,13 +37,13 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @render.table
     def detail():
-        selected_rows = cast("tuple[int]", input.grid_selected_rows() or ())
+        selected_rows = cast("tuple[int]", grid.input_selected_rows() or ())
         if len(selected_rows) > 0:
             return df.iloc[list(selected_rows)]
 
     @render.text
     def debug():
-        return input.grid_selected_rows()
+        return str(grid.input_selected_rows())
 
 
 app = App(app_ui, server, debug=True)

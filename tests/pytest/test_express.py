@@ -44,3 +44,10 @@ def test_is_express_app(tmp_path: Path):
 
     write_tmp_file("def f():\n  import shiny.express")
     assert not express.is_express_app(tmp_file, None)
+
+    # Look for magic comment - should override import detection
+    write_tmp_file("\n#shiny_mode: core\nfrom shiny.express import ui")
+    assert not express.is_express_app(tmp_file, None)
+
+    write_tmp_file("#shiny_mode: express\nfrom shiny import ui")
+    assert express.is_express_app(tmp_file, None)

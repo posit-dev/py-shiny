@@ -24,7 +24,7 @@ class ExpressMockSession:
     def __init__(self):
         self.ns = Root
         self.input = Inputs({})
-        self.output = Outputs(cast(Session, self), self.ns, {}, {})
+        self.output = Outputs(cast(Session, self), self.ns, outputs={})
 
         # Application-level (not session-level) options that may be set via app_opts().
         self.app_opts: AppOpts = {}
