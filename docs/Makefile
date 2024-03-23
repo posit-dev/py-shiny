@@ -1,5 +1,6 @@
 .PHONY: help Makefile
 .DEFAULT_GOAL := help
+FORCE:
 
 define BROWSER_PYSCRIPT
 import os, webbrowser, sys
@@ -21,43 +22,40 @@ for line in sys.stdin:
 endef
 export PRINT_HELP_PYSCRIPT
 
-BROWSER := python -c "$$BROWSER_PYSCRIPT"
+BROWSER := $(PYTHON) -c "$$BROWSER_PYSCRIPT"
 
 # Use venv from parent
-VENV = ../venv
+VENV = ../.venv
+PARENT_PYBIN_TARGET=.venv/bin
 PYBIN = $(VENV)/bin
+PIP = $(PYBIN)/pip
+PYTHON = $(PYBIN)/python
+
 
 # Any targets that depend on $(VENV) or $(PYBIN) will cause the venv to be
 # created. To use the venv, python scripts should run with the prefix $(PYBIN),
 # as in `$(PYBIN)/pip`.
 $(VENV):
-	python3 -m venv $(VENV)
+	cd .. && $(MAKE) $(PARENT_PYBIN_TARGET)
 
 $(PYBIN): $(VENV)
 
 
-help:
-	@python -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
+help: FORCE
+	@python3 -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
 
-dev-htmltools: $(PYBIN)  ## Install development version of htmltools
-	$(PYBIN)/pip install https://github.com/posit-dev/py-htmltools/tarball/main
-
-dev-shinylive: $(PYBIN)  ## Install development version of shinylive
-	$(PYBIN)/pip install https://github.com/posit-dev/py-shinylive/tarball/main
-
-deps: $(PYBIN) dev-htmltools dev-shinylive ## Install build dependencies
-	$(PYBIN)/pip install pip --upgrade
-	$(PYBIN)/pip install -e ..[doc]
+deps: $(PYBIN) FORCE ## Install build dependencies
+	cd .. && $(MAKE) install-docs
 
 quartodoc: quartodoc_build_core quartodoc_build_express quartodoc_post ## Build quartodocs for express and core
 
 ## Build interlinks for API docs
-quartodoc_interlinks: $(PYBIN)
+quartodoc_interlinks: $(PYBIN) FORCE
 	. $(PYBIN)/activate \
 	  && quartodoc interlinks
 
 ## Build core API docs
-quartodoc_build_core: $(PYBIN) quartodoc_interlinks
+quartodoc_build_core: $(PYBIN) quartodoc_interlinks FORCE
 	$(eval export SHINY_ADD_EXAMPLES=true)
 	$(eval export IN_QUARTODOC=true)
 	$(eval export SHINY_MODE=core)
@@ -68,7 +66,7 @@ quartodoc_build_core: $(PYBIN) quartodoc_interlinks
 	  && echo "::endgroup::"
 
 ## Build express API docs
-quartodoc_build_express: $(PYBIN) quartodoc_interlinks
+quartodoc_build_express: $(PYBIN) quartodoc_interlinks FORCE
 	$(eval export SHINY_ADD_EXAMPLES=true)
 	$(eval export IN_QUARTODOC=true)
 	$(eval export SHINY_MODE=express)
@@ -79,17 +77,17 @@ quartodoc_build_express: $(PYBIN) quartodoc_interlinks
 	  && echo "::endgroup::"
 
 ## Clean up after quartodoc build
-quartodoc_post: $(PYBIN)
+quartodoc_post: $(PYBIN) FORCE
 	. $(PYBIN)/activate \
 	  && python _combine_objects_json.py
 
-site:  ## Build website
+site: $(PYBIN) FORCE ## Build website
 	. $(PYBIN)/activate \
 	  && quarto render
 
-serve:  ## Build website and serve
+serve: $(PYBIN) FORCE ## Build website and serve
 	. $(PYBIN)/activate \
 	  && quarto preview --port 8080
 
-clean:  ## Clean build artifacts
+clean: FORCE ## Clean build artifacts
 	rm -rf _inv api _site .quarto
