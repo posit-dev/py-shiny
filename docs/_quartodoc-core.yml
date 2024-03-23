@@ -235,13 +235,13 @@ quartodoc:
             - session.get_current_session
             - session.require_active_session
             - session.session_context
-            - session.send_custom_message
-            - session.send_input_message
-            - session.on_flush
-            - session.on_flushed
-            - session.on_ended
-            - session.dynamic_route
             - reactive.get_current_context
+            - session.Session.send_custom_message
+            - session.Session.send_input_message
+            - session.Session.on_flush
+            - session.Session.on_flushed
+            - session.Session.on_ended
+            - session.Session.dynamic_route
             - name: input_handler.input_handlers
               dynamic: true
         - kind: page
