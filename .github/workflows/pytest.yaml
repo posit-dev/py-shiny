@@ -33,25 +33,20 @@ jobs:
         run: |
           make check-tests
 
-      - name: Type check with pyright
+      - name: Type check
         if: steps.install.outcome == 'success' && (success() || failure())
         run: |
           make check-types
 
-      - name: Lint with flake8
+      - name: Lint code
         if: steps.install.outcome == 'success' && (success() || failure())
         run: |
           make check-lint
 
-      - name: black
+      - name: Verify code formatting
         if: steps.install.outcome == 'success' && (success() || failure())
         run: |
-          make check-black
-
-      - name: isort
-        if: steps.install.outcome == 'success' && (success() || failure())
-        run: |
-          make check-isort
+          make check-format
 
   playwright-shiny:
     runs-on: ${{ matrix.os }}
@@ -142,6 +137,13 @@ jobs:
         run: |
           make playwright-deploys SUB_FILE=". -vv"
 
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: "playright-examples-${{ matrix.os }}-${{ matrix.python-version }}-results"
+          path: test-results/
+          retention-days: 5
+
   playwright-deploys:
     needs: [playwright-deploys-precheck]
     if: github.event_name != 'release' && (github.event_name == 'push' || (github.event_name == 'pull_request' && startsWith(github.head_ref, 'deploy')))
@@ -171,7 +173,6 @@ jobs:
           make playwright-deploys SUB_FILE=". -vv"
 
       - name: Deploy apps and run tests (on `push` or on `pull_request` w/ `deploy**` branch)
-        if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && startsWith(github.head_ref, 'deploy')) }}
         env:
           DEPLOY_APPS: "true"
           DEPLOY_CONNECT_SERVER_URL: "https://rsc.radixu.com/"

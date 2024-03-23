@@ -20,7 +20,8 @@ ignore <- capture.output({
   pak::pkg_install(c(
     "rstudio/bslib@main",
     "rstudio/shiny@main",
-    "cran::htmltools"
+    "rstudio/sass@main",
+    "rstudio/htmltools@main"
   ))
   #pak::pkg_install(c("rstudio/bslib@main", "rstudio/shiny@main", "rstudio/htmltools@main"))
 })

@@ -222,6 +222,8 @@ def layout_column_wrap(
     fill: bool = True,
     fillable: bool = True,
     height: Optional[CssUnit] = None,
+    min_height: Optional[CssUnit] = None,
+    max_height: Optional[CssUnit] = None,
     height_mobile: Optional[CssUnit] = None,
     gap: Optional[CssUnit] = None,
     class_: Optional[str] = None,
@@ -267,8 +269,10 @@ def layout_column_wrap(
         with an opinionated height (e.g., :func:`~shiny.ui.page_fillable`).
     fillable
         Whether or not each element is wrapped in a fillable container.
-    height
-        Any valid CSS unit to use for the height.
+    height,max_height,min_height
+        A valid CSS unit (e.g., `height="200px"`). Use `min_height` and `max_height` in
+        a filling layout to ensure that the layout container does not shrink below a
+        `min_height` or grow beyond a `max_height`.
     height_mobile
         Any valid CSS unit to use for the height when on mobile devices (or narrow
         windows).
@@ -288,6 +292,8 @@ def layout_column_wrap(
             fill=fill,
             fillable=fillable,
             height=height,
+            min_height=min_height,
+            max_height=max_height,
             height_mobile=height_mobile,
             gap=gap,
             class_=class_,
@@ -306,6 +312,8 @@ def layout_columns(
     gap: Optional[CssUnit] = None,
     class_: Optional[str] = None,
     height: Optional[CssUnit] = None,
+    min_height: Optional[CssUnit] = None,
+    max_height: Optional[CssUnit] = None,
     **kwargs: TagAttrValue,
 ) -> RecallContextManager[Tag]:
     """
@@ -368,8 +376,10 @@ def layout_columns(
     class_
         CSS class(es) to apply to the containing element.
 
-    height
-        Any valid CSS unit to use for the height.
+    height,max_height,min_height
+        A valid CSS unit (e.g., `height="200px"`). Use `min_height` and `max_height` in
+        a filling layout to ensure that the layout container does not shrink below a
+        `min_height` or grow beyond a `max_height`.
 
     **kwargs
         Additional attributes to apply to the containing element.
@@ -399,6 +409,8 @@ def layout_columns(
             gap=gap,
             class_=class_,
             height=height,
+            min_height=min_height,
+            max_height=max_height,
             **kwargs,
         ),
     )
@@ -1153,6 +1165,7 @@ def value_box(
     theme: Optional[str | ui.ValueBoxTheme] = None,
     height: Optional[CssUnit] = None,
     max_height: Optional[CssUnit] = None,
+    min_height: Optional[CssUnit] = None,
     fill: bool = True,
     class_: Optional[str] = None,
     **kwargs: TagAttrValue,
@@ -1195,9 +1208,9 @@ def value_box(
     full_screen
         If `True`, an icon will appear when hovering over the card body. Clicking the
         icon expands the card to fit viewport size.
-    height,max_height
-        Any valid CSS unit (e.g., `height="200px"`). Doesn't apply when a card is made
-        `full_screen`.
+    height,max_height,min_height
+        Any valid CSS unit (e.g., `height="200px"`). Doesn't apply when a value box is
+        made `full_screen`.
     fill
         Whether to allow the value box to grow/shrink to fit a fillable container with
         an opinionated height (e.g., :func:`~shiny.ui.page_fillable`).
@@ -1217,6 +1230,7 @@ def value_box(
             theme=theme,
             height=height,
             max_height=max_height,
+            min_height=min_height,
             fill=fill,
             class_=class_,
             **kwargs,

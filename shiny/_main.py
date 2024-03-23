@@ -288,6 +288,9 @@ def run_app(
             # is "shiny.express.app:_2f_path_2f_to_2f_app_2e_py".
             app = "shiny.express.app:" + escape_to_var_name(str(app_path))
             app_dir = str(app_path.parent)
+
+            # Express apps need min version of rsconnect-python to deploy correctly.
+            _verify_rsconnect_version()
         else:
             app, app_dir = resolve_app(app, app_dir)
 
@@ -626,3 +629,28 @@ class ReloadArgs(TypedDict):
     reload_includes: NotRequired[list[str]]
     reload_excludes: NotRequired[list[str]]
     reload_dirs: NotRequired[list[str]]
+
+
+# Check that the version of rsconnect supports Shiny Express; can be removed in the
+# future once this version of rsconnect is widely used. The dependency on "packaging"
+# can also be removed then, because it is only used here. (Added 2024-03)
+def _verify_rsconnect_version() -> None:
+    PACKAGE_NAME = "rsconnect-python"
+    MIN_VERSION = "1.22.0"
+
+    from importlib.metadata import PackageNotFoundError, version
+
+    from packaging.version import parse
+
+    try:
+        installed_version = parse(version(PACKAGE_NAME))
+        required_version = parse(MIN_VERSION)
+        if installed_version < required_version:
+            print(
+                f"Warning: rsconnect-python {installed_version} is installed, but it does not support deploying Shiny Express applications. "
+                f"Please upgrade to at least version {MIN_VERSION}. "
+                "If you are using pip, you can run `pip install --upgrade rsconnect-python`",
+                file=sys.stderr,
+            )
+    except PackageNotFoundError:
+        pass

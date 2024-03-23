@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import ast
-import os
 import sys
 from pathlib import Path
-from typing import cast
+from typing import Mapping, cast
 
 from htmltools import Tag, TagList
 
@@ -14,6 +13,7 @@ from .._typing_extensions import NotRequired, TypedDict
 from .._utils import import_module_from_path
 from ..session import Inputs, Outputs, Session, get_current_session, session_context
 from ..types import MISSING, MISSING_TYPE
+from ._is_express import find_magic_comment_mode
 from ._mock_session import ExpressMockSession
 from ._recall_context import RecallContextManager
 from .expressify_decorator._func_displayhook import _expressify_decorator_function_def
@@ -92,7 +92,7 @@ def wrap_express_app(file: Path) -> App:
 
 
 def run_express(file: Path) -> Tag | TagList:
-    with open(file) as f:
+    with open(file, encoding="utf-8") as f:
         content = f.read()
 
     tree = ast.parse(content, file)
@@ -145,8 +145,14 @@ def run_express(file: Path) -> Tag | TagList:
         get_top_level_recall_context_manager().__exit__(None, None, None)
 
         # If we're running as an Express app but there's also a top-level item named app
-        # which is a shiny.App object, the user probably made a mistake.
-        if "app" in var_context and isinstance(var_context["app"], App):
+        # which is a shiny.App object, the user probably made a mistake. (But if there's
+        # a magic comment to force it into Express mode, don't raise, because that means
+        # the user should know what they're doing.)
+        if (
+            "app" in var_context
+            and isinstance(var_context["app"], App)
+            and find_magic_comment_mode(content[:1000]) is None
+        ):
             raise RuntimeError(
                 "This looks like a Shiny Express app because it imports shiny.express, "
                 "but it also looks like a Shiny Core app because it has a variable named "
@@ -166,7 +172,7 @@ def run_express(file: Path) -> Tag | TagList:
         sys.displayhook = prev_displayhook
 
 
-_top_level_recall_context_manager: RecallContextManager[Tag]
+_top_level_recall_context_manager: RecallContextManager[Tag] | None = None
 
 
 def reset_top_level_recall_context_manager() -> None:
@@ -177,6 +183,9 @@ def reset_top_level_recall_context_manager() -> None:
 
 
 def get_top_level_recall_context_manager() -> RecallContextManager[Tag]:
+    if _top_level_recall_context_manager is None:
+        raise RuntimeError("No top-level recall context manager has been set.")
+
     return _top_level_recall_context_manager
 
 
@@ -200,9 +209,7 @@ class AppOpts(TypedDict):
 
 @no_example()
 def app_opts(
-    static_assets: (
-        str | os.PathLike[str] | dict[str, str | Path] | MISSING_TYPE
-    ) = MISSING,
+    static_assets: str | Path | Mapping[str, str | Path] | MISSING_TYPE = MISSING,
     debug: bool | MISSING_TYPE = MISSING,
 ):
     """
@@ -224,13 +231,21 @@ def app_opts(
         Whether to enable debug mode.
     """
 
-    # Store these options only if we're in the UI-rendering phase of Shiny Express.
     mock_session = get_current_session()
+
+    if mock_session is None:
+        # We can get here if a Shiny Core app, or if we're in the UI rendering phase of
+        # a Quarto-Shiny dashboard.
+        raise RuntimeError(
+            "express.app_opts() can only be used in a standalone Shiny Express app."
+        )
+
+    # Store these options only if we're in the UI-rendering phase of Shiny Express.
     if not isinstance(mock_session, ExpressMockSession):
         return
 
     if not isinstance(static_assets, MISSING_TYPE):
-        if isinstance(static_assets, (str, os.PathLike)):
+        if isinstance(static_assets, (str, Path)):
             static_assets = {"/": Path(static_assets)}
 
         # Convert string values to Paths. (Need new var name to help type checker.)
