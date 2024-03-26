@@ -20,21 +20,10 @@ def test_output_image_kitchen(page: Page, local_app: ShinyAppProc) -> None:
         "('a-3-flushed', 'bx-3-first-flushed', 'by-3-first-flushed', "
         "'bx-3-second-flushed', 'by-3-second-flushed', 'c-3-flushed')"
     )
-
-    # Verify `on_ended` callbacks are called in the correct order (and cancelled)
-    local_app.close()
-
-    stdout = str(local_app.stdout)
-    out_indexes = [
-        stdout.index("session ended - sync - test1"),
-        stdout.index("session ended - async - test2"),
-        stdout.index("session ended - async - test3"),
-        stdout.index("session ended - sync - test4"),
-    ]
-    for i in range(len(out_indexes)):
-        index = out_indexes[i]
-        assert index >= 0
-        # Make sure they are ordered correctly
-        if i > 0:
-            prev_index = out_indexes[i - 1]
-            assert index > prev_index
+    # Session end messages have not flushed yet
+    OutputTextVerbatim(page, "session_end_txt").expect_value("[]")
+    page.reload()
+    # Session end messages have flushed
+    OutputTextVerbatim(page, "session_end_txt").expect_value(
+        "['session ended - sync - test1', 'session ended - async - test2', 'session ended - async - test3', 'session ended - sync - test4']"
+    )
