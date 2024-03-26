@@ -18,9 +18,14 @@ def app_ui(req):
         ui.input_select(
             "selection_mode",
             "Selection mode",
-            {"none": "(None)", "single": "Single", "multiple": "Multiple"},
+            {
+                "none": "(None)",
+                "single_row": "Single",
+                "multiple_row": "Multiple",
+            },
             selected="multiple",
         ),
+        ui.input_switch("editable", "Edit", False),
         ui.input_switch("filters", "Filters", True),
         ui.input_switch("gridstyle", "Grid", True),
         ui.input_switch("fullwidth", "Take full width", True),
@@ -55,11 +60,17 @@ def light_dark_switcher(dark):
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    df: reactive.Value[pd.DataFrame] = reactive.Value()
+    df: reactive.value[pd.DataFrame] = reactive.value()
 
-    @reactive.Effect
+    @reactive.effect
     def update_df():
         return df.set(sns.load_dataset(req(input.dataset())))
+
+    @reactive.calc
+    def selection_mode():
+        if input.editable():
+            return "edit"
+        return input.selection_mode()
 
     @render.data_frame
     def grid():
@@ -71,7 +82,7 @@ def server(input: Inputs, output: Outputs, session: Session):
                 width=width,
                 height=height,
                 filters=input.filters(),
-                row_selection_mode=input.selection_mode(),
+                mode=selection_mode(),
             )
         else:
             return render.DataTable(
@@ -79,10 +90,10 @@ def server(input: Inputs, output: Outputs, session: Session):
                 width=width,
                 height=height,
                 filters=input.filters(),
-                row_selection_mode=input.selection_mode(),
+                mode=selection_mode(),
             )
 
-    @reactive.Effect
+    @reactive.effect
     @reactive.event(input.grid_cell_edit)
     def handle_edit():
         edit = input.grid_cell_edit()

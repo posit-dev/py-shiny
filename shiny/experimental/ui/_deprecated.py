@@ -1134,6 +1134,7 @@ def value_box(
         max_height=max_height,
         fill=fill,
         class_=class_,
+        id=None,
         **kwargs,
     )
 

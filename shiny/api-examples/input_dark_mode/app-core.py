@@ -35,13 +35,13 @@ app_ui = ui.page_navbar(
 def server(input: Inputs, output: Outputs, session: Session):
     @reactive.effect
     @reactive.event(input.make_light)
-    async def _():
-        await ui.update_dark_mode("light")
+    def _():
+        ui.update_dark_mode("light")
 
     @reactive.effect
     @reactive.event(input.make_dark)
-    async def _():
-        await ui.update_dark_mode("dark")
+    def _():
+        ui.update_dark_mode("dark")
 
     @render.plot(alt="A histogram")
     def plot() -> object:

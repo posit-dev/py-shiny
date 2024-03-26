@@ -55,17 +55,19 @@ def input_dark_mode(
 
     return web_component(
         "bslib-input-dark-mode",
+        {
+            "style": css(
+                **{
+                    "--text-1": "var(--bs-emphasis-color)",
+                    "--text-2": "var(--bs-tertiary-color)",
+                    # TODO: Fix the vertical correction to work better with Bootstrap
+                    "--vertical-correction": " ",
+                },
+            )
+        },
         id=id,
         attribute="data-bs-theme",
         mode=mode,
-        style=css(
-            **{
-                "--text-1": "var(--bs-emphasis-color)",
-                "--text-2": "var(--bs-tertiary-color)",
-                # TODO: Fix the vertical correction to work better with Bootstrap
-                "--vertical-correction": " ",
-            }
-        ),
         **kwargs,
     )
 
@@ -77,7 +79,7 @@ def validate_dark_mode_option(mode: BootstrapColorMode) -> BootstrapColorMode:
 
 
 @no_example()
-async def update_dark_mode(
+def update_dark_mode(
     mode: BootstrapColorMode, *, session: Optional[Session] = None
 ) -> None:
     session = require_active_session(session)
@@ -88,5 +90,4 @@ async def update_dark_mode(
         "method": "toggle",
         "value": mode,
     }
-
-    await session.send_custom_message("bslib.toggle-dark-mode", msg)
+    session._send_message_sync({"custom": {"bslib.toggle-dark-mode": msg}})

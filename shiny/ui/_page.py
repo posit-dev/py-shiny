@@ -33,7 +33,7 @@ from ..types import MISSING, MISSING_TYPE, NavSetArg
 from ._bootstrap import panel_title
 from ._html_deps_external import bootstrap_deps
 from ._html_deps_py_shiny import page_output_dependency
-from ._html_deps_shinyverse import components_dependency
+from ._html_deps_shinyverse import components_dependencies
 from ._navs import NavMenu, NavPanel, navset_bar
 from ._sidebar import Sidebar, SidebarOpen, layout_sidebar
 from ._tag import consolidate_attrs
@@ -88,7 +88,15 @@ def page_sidebar(
     """
 
     if isinstance(title, str):
-        title = tags.h1(title, class_="bslib-page-title")
+        title = tags.h1(title, class_="bslib-page-title navbar-brand")
+
+    if title is not None:
+        navbar_title = tags.div(
+            tags.div(title, class_="container-fluid"),
+            class_="navbar navbar-static-top",
+        )
+    else:
+        navbar_title = None
 
     if not isinstance(sidebar, Sidebar):
         raise TypeError(
@@ -103,12 +111,10 @@ def page_sidebar(
 
     return page_fillable(
         {"class": "bslib-page-sidebar"},
-        title,
+        navbar_title,
         layout_sidebar(
             sidebar,
             *children,
-            # Make the main area background white instead of the default gray.
-            {"style": "--bslib-shiny-preset-main-bg: white;"},
             attrs,
             fillable=fillable,
             border=False,
@@ -325,7 +331,7 @@ def page_fillable(
         {"class": "bslib-flow-mobile"} if not fillable_mobile else None,
         attrs,
         *children,
-        components_dependency(),
+        components_dependencies(),
         title=title,
         lang=lang,
     )

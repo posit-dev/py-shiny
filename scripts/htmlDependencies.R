@@ -1,5 +1,11 @@
 #!/usr/bin/env Rscript
 
+if (requireNamespace("cli", quietly = TRUE)) {
+  message <- function(..., .envir = parent.frame()) {
+    cli::cli_progress_step(paste0(...), .envir = .envir)
+  }
+}
+
 message("Checking for node / npm")
 if (Sys.which("npm")[["npm"]] == "") {
   stop("Please install node / npm before running script")
@@ -14,7 +20,8 @@ ignore <- capture.output({
   pak::pkg_install(c(
     "rstudio/bslib@main",
     "rstudio/shiny@main",
-    "cran::htmltools"
+    "rstudio/sass@main",
+    "rstudio/htmltools@main"
   ))
   #pak::pkg_install(c("rstudio/bslib@main", "rstudio/shiny@main", "rstudio/htmltools@main"))
 })
@@ -206,6 +213,62 @@ ignored <- lapply(woff_files, function(woff_file) {
   }
 })
 
+# ------------------------------------------------------------------------------
+message("Render shiny.min.css with bs_theme()")
+with_sass_options <- withr::with_(function(x) rlang::exec(sass::sass_options_set, !!!x))
+
+sass_opts_minify <- list(
+  output_style = "compressed",
+  source_comments = FALSE,
+  source_map_embed = FALSE
+)
+
+shiny_css_dep <- with_sass_options(
+  sass_opts_minify,
+  shiny:::shinyDependencyCSS(shiny_theme)
+)
+shiny_css_bslib <- fs::path(shiny_css_dep$src$file, shiny_css_dep$stylesheet)
+shiny_css_shared <- fs::path(www_shared, "shiny.min.css")
+writeLines(
+  c(
+    readLines(shiny_css_shared, n = 1), # keep header of original minified css
+    readLines(shiny_css_bslib)
+  ),
+  con = shiny_css_shared
+)
+
+message("Render selectize.min.js with bs_theme()")
+selectize_css_dep <- with_sass_options(
+  sass_opts_minify,
+  shiny:::selectizeDependencyFunc(shiny_theme)
+)
+selectize_css_bslib <- fs::path(
+  selectize_css_dep$src$file,
+  selectize_css_dep$stylesheet
+)
+selectize_shared <- fs::path(www_shared, "selectize", "css")
+fs::file_delete(fs::path(selectize_shared, "selectize.bootstrap3.css"))
+fs::file_copy(
+  selectize_css_bslib,
+  fs::path(selectize_shared, "selectize.min.css"),
+  overwrite = TRUE
+)
+
+message("Render datepicker.min.css with bs_theme()")
+datepicker_css_dep <- with_sass_options(
+  sass_opts_minify,
+  shiny:::datePickerCSS(shiny_theme)
+)
+datepicker_css_bslib <- fs::path(
+  datepicker_css_dep$src$file,
+  datepicker_css_dep$stylesheet
+)
+datepicker_shared <- fs::path(www_shared, "datepicker", "css")
+fs::file_copy(
+  datepicker_css_bslib,
+  fs::path(datepicker_shared, "bootstrap-datepicker3.min.css"),
+  overwrite = TRUE
+)
 
 # ------------------------------------------------------------------------------
 message("Cleanup bootstrap bundle")

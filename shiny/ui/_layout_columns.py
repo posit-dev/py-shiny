@@ -7,7 +7,7 @@ from warnings import warn
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css
 
 from .._docstring import add_example
-from ._html_deps_shinyverse import web_component_dependency
+from ._html_deps_shinyverse import components_dependencies
 from ._layout import wrap_all_in_gap_spaced_container
 from ._tag import consolidate_attrs
 from .css import CssUnit, as_css_unit
@@ -43,6 +43,8 @@ def layout_columns(
     gap: Optional[CssUnit] = None,
     class_: Optional[str] = None,
     height: Optional[CssUnit] = None,
+    min_height: Optional[CssUnit] = None,
+    max_height: Optional[CssUnit] = None,
     **kwargs: TagAttrValue,
 ) -> Tag:
     """
@@ -98,8 +100,10 @@ def layout_columns(
         Any valid CSS unit to use for the gap between columns.
     class_
         CSS class(es) to apply to the containing element.
-    height
-        Any valid CSS unit to use for the height.
+    height,max_height,min_height
+        A valid CSS unit (e.g., `height="200px"`). Use `min_height` and `max_height` in
+        a filling layout to ensure that the layout container does not shrink below a
+        `min_height` or grow beyond a `max_height`.
     **kwargs
         Additional attributes to apply to the containing element.
 
@@ -129,13 +133,15 @@ def layout_columns(
             "style": css(
                 gap=as_css_unit(gap),
                 height=as_css_unit(height),
+                min_height=as_css_unit(min_height),
+                max_height=as_css_unit(max_height),
             ),
         },
         col_widths_attrs(col_widths_spec),
         attrs,
         row_heights_attrs(row_heights),
         *wrap_all_in_gap_spaced_container(children, fillable, "bslib-grid-item"),
-        web_component_dependency(),
+        components_dependencies(),
     )
 
     # Apply fill to the outer layout (fillable is applied to the children)
@@ -153,7 +159,7 @@ def as_col_spec(
         return None
 
     if not isinstance(col_widths, Dict):
-        return {"md": validate_col_width(col_widths, n_kids, "md")}
+        return {"sm": validate_col_width(col_widths, n_kids, "sm")}
 
     ret: BreakpointsOptional[int] = {}
     col_widths_items = cast(BreakpointsSoft[int], col_widths).items()
@@ -259,12 +265,8 @@ def row_heights_attrs(
     # Remove any None values from x
     x_complete = {k: v for k, v in x.items() if v is not None}
 
-    # We use classes to activate CSS variables at the right breakpoints. Note: Mobile
-    # row height is derived from xs or defaults to auto in the CSS, so we don't need the
-    # class to activate it
-    classes = [
-        f"bslib-grid--row-heights--{brk}" for brk in x_complete.keys() if brk != "xs"
-    ]
+    # We use classes to activate CSS variables at the right breakpoints.
+    classes = [f"bslib-grid--row-heights--{brk}" for brk in x_complete.keys()]
 
     # Create CSS variables, treating numeric values as fractional units, passing strings
     css_vars: Dict[str, str] = {}

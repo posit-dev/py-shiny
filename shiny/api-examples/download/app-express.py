@@ -57,7 +57,7 @@ with ui.accordion(open=True):
 
         @render.download(
             label="Download filename",
-            filename=lambda: f"新型-{date.today().isoformat()}-{np.random.randint(100,999)}.csv",
+            filename=lambda: f"新型-{date.today().isoformat()}-{np.random.randint(100, 999)}.csv",
         )
         async def download3():
             await asyncio.sleep(0.25)

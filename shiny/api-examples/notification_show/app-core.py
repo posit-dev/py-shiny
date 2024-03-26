@@ -11,7 +11,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     ids: list[str] = []
     n: int = 0
 
-    @reactive.Effect
+    @reactive.effect
     @reactive.event(input.show)
     def _():
         nonlocal ids
@@ -21,7 +21,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         ids.append(id)
         n += 1
 
-    @reactive.Effect
+    @reactive.effect
     @reactive.event(input.remove)
     def _():
         nonlocal ids

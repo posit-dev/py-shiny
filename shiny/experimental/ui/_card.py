@@ -104,6 +104,7 @@ def card(
         fill=fill,
         class_=class_,
         wrapper=wrapper,
+        id=None,
         **kwargs,
     )
 

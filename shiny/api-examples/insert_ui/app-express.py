@@ -4,7 +4,7 @@ from shiny.express import input, ui
 ui.input_action_button("add", "Add UI")
 
 
-@reactive.Effect
+@reactive.effect
 @reactive.event(input.add)
 def _():
     ui.insert_ui(
