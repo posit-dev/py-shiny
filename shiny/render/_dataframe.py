@@ -1,86 +1,56 @@
 from __future__ import annotations
 
-import abc
-import json
+# TODO-barret; Docs
+# TODO-barret; Add examples!
 from typing import (
     TYPE_CHECKING,
     Any,
-    Literal,
-    Optional,
-    Protocol,
-    Sequence,
     TypedDict,
+    TypeVar,
     Union,
-    cast,
-    runtime_checkable,
 )
 
 from htmltools import Tag
 
 from .. import reactive, ui
-from .._deprecated import warn_deprecated
-from .._docstring import add_example, no_example
+from .._docstring import add_example
 from .._typing_extensions import Self
 from ..session._utils import get_current_session, require_active_session
-from ._dataframe_unsafe import serialize_numpy_dtypes
+from ._data_frame_utils._datagridtable import (
+    AbstractTabularData,
+    DataGrid,
+    DataTable,
+    cast_to_pandas,
+)
+from ._data_frame_utils._patch import (
+    CellPatch,
+    CellValue,
+    PatchesFn,
+    PatchFn,
+    cell_patch_to_jsonifiable,
+)
+from ._data_frame_utils._selection import (
+    # SelectionLocation,
+    # SelectionLocationJS,
+    BrowserCellSelection,
+    CellSelection,
+    SelectionMode,
+    as_browser_cell_selection,
+)
+
+# as_selection_location_js,
 from .renderer import Jsonifiable, Renderer, ValueFn, output_binding_request_handler
-from .renderer._utils import JsonifiableDict
 
 if TYPE_CHECKING:
     import pandas as pd
 
     from ..session._utils import Session
 
-# TODO-barret-future; make generic? By currently accepting `object`, it is difficult to capture the generic type of the data.
-DataFrameResult = Union[None, "pd.DataFrame", "DataGrid", "DataTable"]
+    DataFrameT = TypeVar("DataFrameT", bound=pd.DataFrame)
+    # TODO-future; Pandas, Polars, api compat, etc.; Today, we only support Pandas
 
 
-CellValue = str
-
-
-class CellPatch(TypedDict):
-    row_index: int
-    column_index: int
-    value: CellValue
-    # prev_value: CellValue
-
-
-def cell_patch_to_jsonifiable(cell_patch: CellPatch) -> JsonifiableDict:
-    return cast(JsonifiableDict, dict(cell_patch))
-
-
-class PatchFn(Protocol):
-    async def __call__(
-        self,
-        *,
-        patch: CellPatch,
-    ) -> CellValue: ...
-
-
-class PatchesFn(Protocol):
-    async def __call__(
-        self,
-        *,
-        patches: list[CellPatch],
-    ) -> list[CellPatch]: ...
-
-
-class AbstractTabularData(abc.ABC):
-    @abc.abstractmethod
-    def to_payload(self) -> Jsonifiable: ...
-
-
-EditMode = Literal["none", "edit"]
-RowSelectionMode = Literal["none", "single_row", "multiple_row"]
-# ColumnSelectionMode = Literal["single_col", "multiple_col"]
-DataFrameMode = Union[
-    EditMode,
-    RowSelectionMode,
-    # ColumnSelectionMode,
-    Literal["none"],
-]
-
-RowSelectionModeDeprecated = Literal["single", "multiple", "none", "deprecated"]
+from ._data_frame_utils._datagridtable import DataFrameResult
 
 
 class SelectedIndices(TypedDict):
@@ -116,264 +86,6 @@ class SelectedIndices(TypedDict):
 #             "Expected Standard-compliant DataFrame, or DataFrame with Standard-compliant implementation"
 #         )
 #     return df
-
-
-def as_mode(
-    mode: DataFrameMode,
-    *,
-    name: str,
-    row_selection_mode: RowSelectionModeDeprecated,
-) -> DataFrameMode:
-    if row_selection_mode == "deprecated":
-        if mode == "edit":
-            print(
-                f"`{name}(mode='edit')` is an expirmental feature. If you find any bugs or would like different behavior, please make an issue at https://github.com/posit-dev/py-shiny/issues/new"
-            )
-        return mode
-    warn_deprecated(
-        "`DataGrid(row_selection_mode=)` has been superseded by `DataGrid(mode=)`."
-        ' Please use `DataGrid(mode="{row_selection_mode}_row")` instead.'
-    )
-    if row_selection_mode == "none":
-        return "none"
-
-    mode = cast(RowSelectionMode, f"{row_selection_mode}_row")
-    return mode
-
-
-@add_example(ex_dir="../api-examples/data_frame")
-class DataGrid(AbstractTabularData):
-    """
-    Holds the data and options for a :class:`~shiny.render.data_frame` output, for a
-    spreadsheet-like view.
-
-    Parameters
-    ----------
-    data
-        A pandas `DataFrame` object, or any object that has a `.to_pandas()` method
-        (e.g., a Polars data frame or Arrow table).
-    width
-        A _maximum_ amount of horizontal space for the data grid to occupy, in CSS units
-        (e.g. `"400px"`) or as a number, which will be interpreted as pixels. The
-        default is `fit-content`, which sets the grid's width according to its contents.
-        Set this to `100%` to use the maximum available horizontal space.
-    height
-        A _maximum_ amount of vertical space for the data grid to occupy, in CSS units
-        (e.g. `"400px"`) or as a number, which will be interpreted as pixels. If there
-        are more rows than can fit in this space, the grid will scroll. Set the height
-        to `"auto"` to allow the grid to grow to fit all of the rows (this is not
-        recommended for large data sets, as it may crash the browser).
-    summary
-        If `True` (the default), shows a message like "Viewing rows 1 through 10 of 20"
-        below the grid when not all of the rows are being shown. If `False`, the message
-        is not displayed. You can also specify a string template to customize the
-        message, containing `{start}`, `{end}`, and `{total}` tokens. For example:
-        `"Viendo filas {start} a {end} de {total}"`.
-    filters
-        If `True`, shows a row of filter inputs below the headers, one for each column.
-    mode
-        Single string to set the mode of the table.
-
-        Supported values:
-        * Use `"none"` to disable any cell selections or editing.
-        * Use `"single_row"` to allow a single row to be selected at a time.
-        * Use `"multiple_row"` to allow multiple rows to be selected by clicking on them individually.
-        * Use `"edit"` to allow editing of the cells in the table.
-    row_selection_mode
-        Deprecated. Please use `mode={row_selection_mode}_row` instead.
-
-    Returns
-    -------
-    :
-        An object suitable for being returned from a `@render.data_frame`-decorated
-        output function.
-
-    See Also
-    --------
-    * :func:`~shiny.ui.output_data_frame`
-    * :class:`~shiny.render.data_frame`
-    * :class:`~shiny.render.DataTable`
-    """
-
-    def __init__(
-        self,
-        data: object,
-        *,
-        width: str | float | None = "fit-content",
-        height: Union[str, float, None] = None,
-        summary: Union[bool, str] = True,
-        filters: bool = False,
-        mode: DataFrameMode = "none",
-        row_selection_mode: RowSelectionModeDeprecated = "deprecated",
-        # TODO-barret; Rename to `selection_mode` and `editable`.
-        # Want to make room for the following orthogonal options in the future:
-        # - Row: none, single, multiple
-        # - Col: none, single, multiple
-        # - Region: none, single, multiple (?)
-        # Some possibilities for API:
-        # ```
-        # DataGrid(
-        #   row_selection = "single",
-        #   col_selection = "none",
-        #   region_selection = "single"
-        # )
-        # DataGrid(
-        #   selection = ("single", "none", "single")
-        # )
-        # DataGrid(
-        #   selection = {"row": "single", "col": "none", "region": "single"}
-        # )
-        # ```
-    ):
-        import pandas as pd
-
-        self.data: pd.DataFrame = cast(
-            pd.DataFrame,
-            cast_to_pandas(
-                data,
-                "The DataGrid() constructor didn't expect a 'data' argument of type",
-            ),
-        )
-
-        self.width = width
-        self.height = height
-        self.summary = summary
-        self.filters = filters
-        self.mode: DataFrameMode = as_mode(
-            mode, name="DataGrid", row_selection_mode=row_selection_mode
-        )
-
-    def to_payload(self) -> Jsonifiable:
-        res = serialize_pandas_df(self.data)
-        res["options"] = dict(
-            width=self.width,
-            height=self.height,
-            summary=self.summary,
-            filters=self.filters,
-            mode=self.mode,
-            style="grid",
-            fill=self.height is None,
-        )
-        return res
-
-
-@no_example()
-class DataTable(AbstractTabularData):
-    """
-    Holds the data and options for a :class:`~shiny.render.data_frame` output, for a
-    spreadsheet-like view.
-
-    Parameters
-    ----------
-    data
-        A pandas `DataFrame` object, or any object that has a `.to_pandas()` method
-        (e.g., a Polars data frame or Arrow table).
-    width
-        A _maximum_ amount of vertical space for the data table to occupy, in CSS units
-        (e.g. `"400px"`) or as a number, which will be interpreted as pixels. The
-        default is `fit-content`, which sets the table's width according to its
-        contents. Set this to `100%` to use the maximum available horizontal space.
-    height
-        A _maximum_ amount of vertical space for the data table to occupy, in CSS units
-        (e.g. `"400px"`) or as a number, which will be interpreted as pixels. If there
-        are more rows than can fit in this space, the table body will scroll. Set the
-        height to `None` to allow the table to grow to fit all of the rows (this is not
-        recommended for large data sets, as it may crash the browser).
-    summary
-        If `True` (the default), shows a message like "Viewing rows 1 through 10 of 20"
-        below the grid when not all of the rows are being shown. If `False`, the message
-        is not displayed. You can also specify a string template to customize the
-        message, containing `{start}`, `{end}`, and `{total}` tokens. For example:
-        `"Viendo filas {start} a {end} de {total}"`.
-    filters
-        If `True`, shows a row of filter inputs below the headers, one for each column.
-    mode
-        Single string to set the mode of the table.
-
-        Supported values:
-        * Use `"none"` to disable any cell selections or editing.
-        * Use `"single_row"` to allow a single row to be selected at a time.
-        * Use `"multiple_row"` to allow multiple rows to be selected by clicking on them individually.
-        * Use `"edit"` to allow editing of the cells in the table.
-    row_selection_mode
-        Deprecated. Please use `mode={row_selection_mode}_row` instead.
-
-    Returns
-    -------
-    :
-        An object suitable for being returned from a `@render.data_frame`-decorated
-        output function.
-
-    See Also
-    --------
-    * :func:`~shiny.ui.output_data_frame`
-    * :class:`~shiny.render.data_frame`
-    * :class:`~shiny.render.DataGrid`
-    """
-
-    def __init__(
-        self,
-        data: object,
-        *,
-        width: Union[str, float, None] = "fit-content",
-        height: Union[str, float, None] = "500px",
-        summary: Union[bool, str] = True,
-        filters: bool = False,
-        mode: DataFrameMode = "none",
-        row_selection_mode: Literal["deprecated"] = "deprecated",
-    ):
-        import pandas as pd
-
-        self.data: pd.DataFrame = cast(
-            pd.DataFrame,
-            cast_to_pandas(
-                data,
-                "The DataTable() constructor didn't expect a 'data' argument of type",
-            ),
-        )
-
-        self.width = width
-        self.height = height
-        self.summary = summary
-        self.filters = filters
-        self.mode: DataFrameMode = as_mode(
-            mode, name="DataTable", row_selection_mode=row_selection_mode
-        )
-
-    def to_payload(self) -> Jsonifiable:
-        res = serialize_pandas_df(self.data)
-        res["options"] = dict(
-            width=self.width,
-            height=self.height,
-            summary=self.summary,
-            filters=self.filters,
-            mode=self.mode,
-            style="table",
-        )
-        return res
-
-
-def serialize_pandas_df(df: "pd.DataFrame") -> dict[str, Any]:
-    columns = df.columns.tolist()
-    columns_set = set(columns)
-    if len(columns_set) != len(columns):
-        raise ValueError(
-            "The column names of the pandas DataFrame are not unique."
-            " This is not supported by the data_frame renderer."
-        )
-
-    # Currently, we don't make use of the index; drop it so we don't error trying to
-    # serialize it or something
-    df = df.reset_index(drop=True)
-
-    res = json.loads(
-        # {index: [index], columns: [columns], data: [values]}
-        df.to_json(None, orient="split")  # pyright: ignore[reportUnknownMemberType]
-    )
-
-    res["type_hints"] = serialize_numpy_dtypes(df)
-
-    return res
 
 
 @add_example()
@@ -444,46 +156,52 @@ class data_frame(Renderer[DataFrameResult]):
     """
     Reactive value of the data frame's output data.
 
-    This is a quick reference to the original data frame that was returned from the app's render function. If it is mutated in place, it **will** modify the original data.
+    This is a quick reference to the original data frame that was returned from the
+    app's render function. If it is mutated in place, it **will** modify the original
+    data.
     """
     data_patched: reactive.Calc_[pd.DataFrame]
     """
     Reactive value of the data frame's edited output data.
 
-    This is a shallow copy of the original data frame. It is possible that alterations to `data_patched` could alter the original `data` data frame. Please be cautious when using this value directly.
+    This is a shallow copy of the original data frame. It is possible that alterations
+    to `data_patched` could alter the original `data` data frame. Please be cautious
+    when using this value directly.
 
     See Also
     --------
     * [`pandas.DataFrame.copy` API documentation]h(ttps://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.copy.html)
     """
-    table_mode: reactive.Calc_[DataFrameMode]
+    selection_mode: reactive.Calc_[SelectionMode]
     """
-    Reactive value of the data frame's row selection mode.
+    Reactive value of the data frame's selection mode.
     """
 
-    input_selected: reactive.Calc_[SelectedIndices | None]
+    input_cell_selection: reactive.Calc_[BrowserCellSelection | None]
     """
-    Reactive value of selected rows indices.
+    Reactive value of selected information.
 
-    This method is a wrapper around `input.<id>_selected_rows()`, where `<id>` is
+    This method is a wrapper around `input.<id>_selected_cells()`, where `<id>` is
     the `id` of the data frame output. This method returns the selected rows and
     will cause reactive updates as the selected rows change.
 
     Returns
     -------
     :
-        * `None` if the row selection mode is None
-        * `tuple[int]` representing the indices of the selected rows. If no rowws are selected
+        * `None` if the selection mode is `None`
+        * :class:`~shiny.types.SelectionLocationJS` representing the indices of the
+          selected cells.
     """
 
-    data_selected: reactive.Calc_[pd.DataFrame]
+    data_selected: reactive.Calc_[pd.DataFrame | None]
     """
     Reactive value that returns the edited data frame subsetted to the selected area.
 
     Returns
     -------
     :
-        * If the row selection mode is `None`, the calculation will throw a silent error (`req(False)`)
+        * If the row selection mode is `None`, the calculation will throw a silent error
+          (`req(False)`)
         * The edited data (`.data_patched()`) at the indices of the selected rows
     """
 
@@ -498,7 +216,7 @@ class data_frame(Renderer[DataFrameResult]):
         from .. import req
 
         # Init
-        self._value: reactive.Value[Union[DataFrameResult, None]] = reactive.Value(None)
+        self._value: reactive.Value[DataFrameResult | None] = reactive.Value(None)
         self._cell_patch_map = reactive.Value({})
 
         @reactive.calc
@@ -525,7 +243,7 @@ class data_frame(Renderer[DataFrameResult]):
         self.data = self_data
 
         @reactive.calc
-        def self_table_mode() -> DataFrameMode:
+        def self_selection_mode() -> SelectionMode:
             value = self._value()
             req(value)
             if not isinstance(value, (DataGrid, DataTable)):
@@ -533,35 +251,50 @@ class data_frame(Renderer[DataFrameResult]):
                     f"Unsupported type returned from render function: {type(value)}. Expected `DataGrid` or `DataTable`"
                 )
 
-            return value.mode
+            return value.selection_mode
 
-        self.table_mode = self_table_mode
+        self.selection_mode = self_selection_mode
 
         @reactive.calc
-        def self_input_selected() -> SelectedIndices | None:
-            mode = self.table_mode()
-            if mode == "none":
+        def self_input_cell_selection() -> BrowserCellSelection | None:
+            selection_mode: SelectionMode = self.selection_mode()
+            if selection_mode == "none":
                 return None
-            return {
-                "rows": self._get_session().input[f"{self.output_id}_selected_rows"](),
-                "columns": None,
-            }
+            # TODO-barret; Set input_cell_selection
+            input_val = self._get_session().input[f"{self.output_id}_cell_selection"]()
 
-        self.input_selected = self_input_selected
+            browser_cell_selection = as_browser_cell_selection(input_val)
+
+            return browser_cell_selection
+
+        self.input_cell_selection = self_input_cell_selection
 
         @reactive.calc
-        def self_data_selected() -> pd.DataFrame:
-            indices = self.input_selected()
-            if indices is None:
+        def self_data_selected() -> pd.DataFrame | None:
+            # browser_cell_selection
+            bcs = self.input_cell_selection()
+            if bcs is None:
                 req(False)
                 raise RuntimeError("This should never be reached for typing purposes")
 
             data_selected = self.data_patched()
-            if indices["rows"] is not None:
-                data_selected = data_selected.iloc[list(indices["rows"])]
-            if indices["columns"] is not None:
-                data_selected = data_selected.iloc[:, list(indices["columns"])]
-            return data_selected
+            if bcs["type"] == "all":
+                return data_selected
+            elif bcs["type"] == "none":
+                return None
+            elif bcs["type"] == "row":
+                return data_selected.iloc[bcs["rows"] :]
+            elif bcs["type"] == "col":
+                # Seems to not  work with `tuple[int, ...]`,
+                # but converting to a list does!
+                cols = list(bcs["cols"])
+                return data_selected.iloc[:, cols]
+            elif bcs["type"] == "region":
+                return data_selected.iloc[
+                    bcs["rows"][0] : bcs["rows"][1],
+                    bcs["cols"][0] : bcs["cols"][1],
+                ]
+            raise RuntimeError(f"Unhandled selection type: {bcs['type']}")
 
         self.data_selected = self_data_selected
 
@@ -743,51 +476,77 @@ class data_frame(Renderer[DataFrameResult]):
             },
         )
 
-    async def update_row_selection(
-        self, idx: Optional[Sequence[int] | int] = None
+    async def update_cell_selection(
+        # self, selection: SelectionLocation | SelectionLocationJS
+        self,
+        selection: CellSelection | BrowserCellSelection,
     ) -> None:
-        if idx is None:
-            idx = ()
-        elif isinstance(idx, int):
-            idx = (idx,)
 
         with reactive.isolate():
-            mode = self.table_mode()
-        if mode == "none":
+            selection_mode = self.selection_mode()
+        if selection_mode == "none":
             raise ValueError(
-                "You can't update row selections when row_selection_mode is 'none'"
+                "You can't update cell selections when `.selection_mode()` is 'none'"
             )
 
-        if mode == "single_row" and len(idx) > 1:
+        browser_cell_selection = as_browser_cell_selection(selection)
+        if browser_cell_selection["type"] == "none":
+            pass
+        elif browser_cell_selection["type"] == "all":
+            pass
+        elif browser_cell_selection["type"] == "region":
+            raise RuntimeError("Region selection is not yet supported")
+        elif browser_cell_selection["type"] == "col":
+            raise RuntimeError("Column selection is not yet supported")
+        elif browser_cell_selection["type"] == "row":
+            row_value = browser_cell_selection["rows"]
+            # if len(row_value) == 0:
+            #     raise ValueError(
+            #         "Attempted to set row selection values to `None` when `.selection_mode()` is 'row'"
+            #     )
+            if selection_mode == "row" and len(row_value) > 1:
+                raise ValueError(
+                    "Attempted to set cell selection to more than 1 row when `.selection_mode()` is 'row'"
+                )
+
+            if selection_mode == "row" and len(selection) > 1:
+                raise ValueError(
+                    "Attempted to set multiple row selection values when `.selection_mode()` is 'row'"
+                )
+        else:
             raise ValueError(
-                "Attempted to set multiple row selection values when row_selection_mode is 'single'"
+                f"Unhandled selection type: {browser_cell_selection['type']}"
             )
-        await self._send_message_to_browser("updateRowSelection", {"keys": idx})
+        await self._send_message_to_browser(
+            # TODO-barret; upateRowSelection -> updateCellSelection
+            "updateCellSelection",
+            {"cell_selection": browser_cell_selection},
+        )
 
-    def input_selected_rows(self) -> Optional[tuple[int]]:
-        """
-        When `row_selection_mode` is set to "single" or "multiple" this will return
-        a tuple of integers representing the rows selected by a user.
-        """
+    # def update_selected_cells(
+    #     self,
+    #     x: (
+    #         SelectionLocation
+    #         | SelectionLocationJS
+    #         # | list[SelectionLocation | SelectionLocationJS]
+    #     ),
+    # ):
+    #     # Can't handle lists right now
+    #     assert not isinstance(x, list)
 
-        return self._get_session().input[self.output_id + "_selected_rows"]()
+    #     x = as_selection_location_js(x)
 
+    # def input_selected_rows(self) -> Optional[tuple[int]]:
+    #     """
+    #     When `row_selection_mode` is set to "single" or "multiple" this will return
+    #     a tuple of integers representing the rows selected by a user.
+    #     """
 
-@runtime_checkable
-class PandasCompatible(Protocol):
-    # Signature doesn't matter, runtime_checkable won't look at it anyway
-    def to_pandas(self) -> object: ...
+    #     return self._get_session().input[self.output_id + "_selected_rows"]()
+    # def input_selected_cells(self) -> Optional[tuple[int]]:
+    #     """
+    #     When `row_selection_mode` is set to "single" or "multiple" this will return
+    #     a tuple of integers representing the rows selected by a user.
+    #     """
 
-
-def cast_to_pandas(x: object, error_message_begin: str) -> object:
-    import pandas as pd
-
-    if not isinstance(x, pd.DataFrame):
-        if not isinstance(x, PandasCompatible):
-            raise TypeError(
-                error_message_begin
-                + f" '{str(type(x))}'. Use either a pandas.DataFrame, or an object"
-                " that has a .to_pandas() method."
-            )
-        return x.to_pandas()
-    return x
+    #     return self._get_session().input[self.output_id + "_selected_rows"]()
