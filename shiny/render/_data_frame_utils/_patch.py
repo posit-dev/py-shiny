@@ -2,8 +2,9 @@ from __future__ import annotations
 
 # TODO-barret; Docs
 # TODO-barret; Add examples!
-from typing import Protocol, TypedDict, cast
+from typing import Protocol, cast
 
+from ..._typing_extensions import TypedDict
 from ..renderer._utils import JsonifiableDict
 
 CellValue = str

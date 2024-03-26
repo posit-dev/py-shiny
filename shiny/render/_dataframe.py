@@ -4,13 +4,13 @@ import warnings
 
 # TODO-barret; Docs
 # TODO-barret; Add examples!
-from typing import TYPE_CHECKING, Any, TypedDict, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from htmltools import Tag
 
 from .. import reactive, ui
 from .._docstring import add_example
-from .._typing_extensions import Self
+from .._typing_extensions import Self, TypedDict
 from ..session._utils import get_current_session, require_active_session
 from ._data_frame_utils import (
     AbstractTabularData,

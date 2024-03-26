@@ -3,10 +3,10 @@ from __future__ import annotations
 # TODO-barret; Docs
 # TODO-barret; Add examples!
 import warnings
-from typing import Literal, Sequence, TypedDict, TypeGuard, Union
+from typing import Literal, Sequence, Union
 
 from ..._deprecated import warn_deprecated
-from ..._typing_extensions import NotRequired
+from ..._typing_extensions import NotRequired, TypedDict, TypeGuard
 
 # RowSelectionMode = Literal["none", "row", "rows"]
 RowSelectionMode = Literal["row", "rows"]
