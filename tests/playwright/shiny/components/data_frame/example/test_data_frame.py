@@ -175,6 +175,7 @@ def test_multi_selection(
     page: Page, data_frame_app: ShinyAppProc, grid_container: Locator, snapshot: Any
 ):
     page.goto(data_frame_app.url)
+    InputSelect(page, "selection_mode").set("multiple_row")
     first_cell = grid_container.locator("tbody tr:first-child td:first-child")
 
     def detail_text():
@@ -205,7 +206,7 @@ def test_single_selection(
     page: Page, data_frame_app: ShinyAppProc, grid_container: Locator, snapshot: Any
 ):
     page.goto(data_frame_app.url)
-    InputSelect(page, "selection_mode").set("single")
+    InputSelect(page, "selection_mode").set("single_row")
     first_cell = grid_container.locator("tbody tr:first-child td:first-child")
 
     def detail_text():

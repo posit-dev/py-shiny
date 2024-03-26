@@ -33,25 +33,20 @@ jobs:
         run: |
           make check-tests
 
-      - name: Type check with pyright
+      - name: Type check
         if: steps.install.outcome == 'success' && (success() || failure())
         run: |
           make check-types
 
-      - name: Lint with flake8
+      - name: Lint code
         if: steps.install.outcome == 'success' && (success() || failure())
         run: |
           make check-lint
 
-      - name: black
+      - name: Verify code formatting
         if: steps.install.outcome == 'success' && (success() || failure())
         run: |
-          make check-black
-
-      - name: isort
-        if: steps.install.outcome == 'success' && (success() || failure())
-        run: |
-          make check-isort
+          make check-format
 
   playwright-shiny:
     runs-on: ${{ matrix.os }}

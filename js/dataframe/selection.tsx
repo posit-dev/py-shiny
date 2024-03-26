@@ -2,9 +2,12 @@ import * as React from "react";
 import { useState } from "react";
 import { ImmutableSet } from "./immutable-set";
 
+import type { ValueOf } from "./types";
+
 export interface SelectionSet<TKey, TElement extends HTMLElement> {
   has(key: TKey): boolean;
   set(key: TKey, selected: boolean): void;
+  setMultiple(key_arr: TKey[]): void;
   clear(): void;
   keys(): ImmutableSet<TKey>;
   itemHandlers(): {
@@ -13,17 +16,33 @@ export interface SelectionSet<TKey, TElement extends HTMLElement> {
   };
 }
 
-export enum SelectionMode {
-  None = "none",
-  Single = "single",
-  Multiple = "multiple",
-  MultiNative = "multi-native",
+export const SelectionModeEnum = {
+  None: "none",
+  Single: "single_row",
+  Multiple: "multiple_row",
+  MultiNative: "multi-native_row",
+} as const;
+const selectionModes = Object.values(SelectionModeEnum);
+export type SelectionMode = ValueOf<typeof SelectionModeEnum>;
+
+export function initRowSelectionMode(
+  mode_option: string | undefined
+): SelectionMode {
+  // If no option was provided, default to multinative mode
+  const selectionMode = mode_option ?? SelectionModeEnum.MultiNative;
+
+  // If a row selection mode matches one of the enum values, use it. Otherwise, fall back to none (e.g. `dataFrameMode == "edit"`).
+  if (!selectionModes.includes(selectionMode as SelectionMode)) {
+    return SelectionModeEnum.None;
+  } else {
+    return selectionMode as SelectionMode;
+  }
 }
 
 export function useSelection<TKey, TElement extends HTMLElement>(
   mode: SelectionMode,
   keyAccessor: (el: TElement) => TKey,
-  focusOffset: (start: TKey, offset: number) => TKey,
+  focusOffset: (start: TKey, offset: number) => TKey | null,
   between?: (from: TKey, to: TKey) => ReadonlyArray<TKey>
 ): SelectionSet<TKey, TElement> {
   const [selectedKeys, setSelectedKeys] = useState<ImmutableSet<TKey>>(
@@ -35,7 +54,7 @@ export function useSelection<TKey, TElement extends HTMLElement>(
   const [anchor, setAnchor] = useState<TKey | null>(null);
 
   const onMouseDown = (event: React.MouseEvent<TElement, MouseEvent>): void => {
-    if (mode === SelectionMode.None) {
+    if (mode === SelectionModeEnum.None) {
       return;
     }
 
@@ -61,7 +80,7 @@ export function useSelection<TKey, TElement extends HTMLElement>(
   };
 
   const onKeyDown = (event: React.KeyboardEvent<TElement>): void => {
-    if (mode === SelectionMode.None) {
+    if (mode === SelectionModeEnum.None) {
       return;
     }
 
@@ -69,7 +88,7 @@ export function useSelection<TKey, TElement extends HTMLElement>(
     const key = keyAccessor(el);
     const selected = selectedKeys.has(key);
 
-    if (mode === SelectionMode.Single) {
+    if (mode === SelectionModeEnum.Single) {
       if (event.key === " " || event.key === "Enter") {
         if (selectedKeys.has(key)) {
           setSelectedKeys(ImmutableSet.empty());
@@ -86,7 +105,7 @@ export function useSelection<TKey, TElement extends HTMLElement>(
           }
         }
       }
-    } else if (mode === SelectionMode.Multiple) {
+    } else if (mode === SelectionModeEnum.Multiple) {
       if (event.key === " " || event.key === "Enter") {
         setSelectedKeys(selectedKeys.toggle(key));
         event.preventDefault();
@@ -109,6 +128,10 @@ export function useSelection<TKey, TElement extends HTMLElement>(
       } else {
         setSelectedKeys(selectedKeys.delete(key));
       }
+    },
+
+    setMultiple(key_arr: TKey[]) {
+      setSelectedKeys(ImmutableSet.just(...key_arr));
     },
 
     clear() {
@@ -142,12 +165,12 @@ const isMac = /^mac/i.test(
 
 function performMouseDownAction<TKey, TElement>(
   mode: SelectionMode,
-  between: (from: TKey, to: TKey) => readonly TKey[],
+  between: ((from: TKey, to: TKey) => readonly TKey[]) | undefined,
   selectedKeys: ImmutableSet<TKey>,
   event: React.MouseEvent<TElement, MouseEvent>,
   key: TKey,
   anchor: TKey | null
-): { selection: ImmutableSet<TKey>; anchor?: true } {
+): { selection: ImmutableSet<TKey>; anchor?: true } | null {
   const { shiftKey, altKey } = event;
   const ctrlKey = isMac ? event.metaKey : event.ctrlKey;
   const metaKey = isMac ? event.ctrlKey : event.metaKey;
@@ -156,9 +179,9 @@ function performMouseDownAction<TKey, TElement>(
     return null;
   }
 
-  if (mode === SelectionMode.Multiple) {
+  if (mode === SelectionModeEnum.Multiple) {
     return { selection: selectedKeys.toggle(key), anchor: true };
-  } else if (mode === SelectionMode.Single) {
+  } else if (mode === SelectionModeEnum.Single) {
     if (ctrlKey && !shiftKey) {
       // Ctrl-click is like simple click, except it removes selection if an item is
       // already selected
@@ -171,11 +194,13 @@ function performMouseDownAction<TKey, TElement>(
       // Simple click sets selection, always
       return { selection: ImmutableSet.just(key), anchor: true };
     }
-  } else if (mode === SelectionMode.MultiNative) {
+  } else if (mode === SelectionModeEnum.MultiNative) {
     if (shiftKey && ctrlKey) {
       // Ctrl-Shift-click: Add anchor row through current row to selection
-      const toSelect = between(anchor, key);
-      return { selection: selectedKeys.add(...toSelect) };
+      if (anchor !== null && between) {
+        const toSelect = between(anchor, key);
+        return { selection: selectedKeys.add(...toSelect) };
+      }
     } else if (ctrlKey) {
       // Ctrl-click: toggle the current row and make it anchor
       return { selection: selectedKeys.toggle(key), anchor: true };
@@ -190,4 +215,5 @@ function performMouseDownAction<TKey, TElement>(
       return { selection: ImmutableSet.just(key), anchor: true };
     }
   }
+  return null;
 }

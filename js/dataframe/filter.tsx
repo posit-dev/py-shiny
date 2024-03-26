@@ -17,7 +17,9 @@ import React, {
 } from "react";
 import { FilterNumeric } from "./filter-numeric";
 
-export function useFilter<TData>(enabled: boolean): FiltersOptions<TData> {
+export function useFilter<TData>(
+  enabled: boolean | undefined
+): FiltersOptions<TData> {
   if (enabled) {
     return {
       getFilteredRowModel: getFilteredRowModel(),

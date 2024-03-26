@@ -1,10 +1,10 @@
+from ._dispatch import output_binding_request_handler
 from ._renderer import (  # noqa: F401
-    Renderer,
-    ValueFn,
-    Jsonifiable,
-    RendererT,
     AsyncValueFn,
-    # IT,  # pyright: ignore[reportUnusedImport]
+    Jsonifiable,
+    Renderer,
+    RendererT,
+    ValueFn,
 )
 
 __all__ = (
@@ -13,4 +13,5 @@ __all__ = (
     "Jsonifiable",
     "AsyncValueFn",
     "RendererT",
+    "output_binding_request_handler",
 )

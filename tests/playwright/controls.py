@@ -2552,17 +2552,34 @@ class Sidebar(
 
 
 class _CardBodyP(_InputBaseP, Protocol):
+    """
+    Represents the body of a card control.
+    """
+
     loc_body: Locator
+    """
+    The locator for the body element of the card control.
+    """
 
 
 class _CardBodyM:
+    """Represents a card body element with additional methods for testing."""
+
     def expect_body(
         self: _CardBodyP,
         text: PatternOrStr | list[PatternOrStr],
         *,
         timeout: Timeout = None,
     ) -> None:
-        """Note: If testing against multiple elements, text should be an array"""
+        """Expect the card body element to have the specified text.
+
+        Parameters
+        ----------
+        text
+            The expected text or a list of expected texts.
+        timeout
+            The maximum time to wait for the text to appear. Defaults to None.
+        """
         playwright_expect(self.loc).to_have_text(
             text,
             timeout=timeout,
@@ -2570,16 +2587,37 @@ class _CardBodyM:
 
 
 class _CardFooterLayoutP(_InputBaseP, Protocol):
+    """
+    Represents the layout of the footer in a card.
+    """
+
     loc_footer: Locator
+    """
+    The locator for the footer element.
+    """
 
 
 class _CardFooterM:
+    """
+    Represents the footer section of a card.
+    """
+
     def expect_footer(
         self: _CardFooterLayoutP,
         text: PatternOrStr,
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Asserts that the footer section of the card has the expected text.
+
+        Parameters
+        ----------
+        text
+            The expected text in the footer section.
+        timeout
+            The maximum time to wait for the footer text to appear. Defaults to None.
+        """
         playwright_expect(self.loc_footer).to_have_text(
             text,
             timeout=timeout,
@@ -2587,15 +2625,40 @@ class _CardFooterM:
 
 
 class _CardFullScreenLayoutP(_OutputBaseP, Protocol):
+    """
+    Represents a card full-screen layout for the Playwright controls.
+    """
+
     loc_title: Locator
+    """
+    The locator for the title element.
+    """
     _loc_fullscreen: Locator
+    """
+    The locator for the full-screen element.
+    """
     _loc_close_button: Locator
+    """
+    The locator for the close button element.
+    """
 
 
 class _CardFullScreenM:
+    """
+    Represents a class for managing full screen functionality of a card.
+    """
+
     def open_full_screen(
         self: _CardFullScreenLayoutP, *, timeout: Timeout = None
     ) -> None:
+        """
+        Opens the card in full screen mode.
+
+        Parameters
+        ----------
+        timeout
+            The maximum time to wait for the card to open in full screen mode. Defaults to None.
+        """
         self.loc_title.hover(timeout=timeout)
         self._loc_fullscreen.wait_for(state="visible", timeout=timeout)
         self._loc_fullscreen.click(timeout=timeout)
@@ -2603,11 +2666,29 @@ class _CardFullScreenM:
     def close_full_screen(
         self: _CardFullScreenLayoutP, *, timeout: Timeout = None
     ) -> None:
+        """
+        Closes the card from full screen mode.
+
+        Parameters
+        ----------
+        timeout
+            The maximum time to wait for the card to close from full screen mode. Defaults to None.
+        """
         self._loc_close_button.click(timeout=timeout)
 
     def expect_full_screen(
         self: _CardFullScreenLayoutP, open: bool, *, timeout: Timeout = None
     ) -> None:
+        """
+        Verifies if the card is expected to be in full screen mode.
+
+        Parameters
+        ----------
+        open
+            True if the card is expected to be in full screen mode, False otherwise.
+        timeout
+            The maximum time to wait for the verification. Defaults to None.
+        """
         playwright_expect(self._loc_close_button).to_have_count(
             int(open), timeout=timeout
         )
@@ -2618,24 +2699,44 @@ class ValueBox(
     _CardFullScreenM,
     _InputWithContainer,
 ):
-    # title: TagChild,
-    # value: TagChild,
-    # *args: TagChild | TagAttrs,
-    # showcase: TagChild = None,
-    # showcase_layout: ((TagChild, Tag) -> CardItem) | None = None,
-    # full_screen: bool = False,
-    # theme_color: str | None = "primary",
-    # height: CssUnit | None = None,
-    # max_height: CssUnit | None = None,
-    # fill: bool = True,
-    # class_: str | None = None,
-    # **kwargs: TagAttrValue
+    """
+    ValueBox control for shiny.ui.value_box - https://shiny.posit.co/py/api/core/ui.value_box.html
+    """
+
+    loc: Locator
+    """
+    Locator for the value box's value
+    """
+    loc_showcase: Locator
+    """
+    Locator for the value box showcase
+    """
+    loc_title: Locator
+    """
+    Locator for the value box title
+    """
+    loc_body: Locator
+    """
+    Locator for the value box body
+    """
+
     def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes a new instance of the ValueBox class.
+
+        Parameters
+        ----------
+        page
+            The Playwright page object.
+        id
+            The ID of the value box.
+
+        """
         super().__init__(
             page,
             id=id,
             loc_container=f"div#{id}.bslib-value-box",
-            loc="> div > .value-box-grid",
+            loc="> div.card-body > .value-box-grid, > div.card-body",
         )
         value_box_grid = self.loc
         self.loc_showcase = value_box_grid.locator("> .value-box-showcase")
@@ -2657,7 +2758,17 @@ class ValueBox(
         )
 
     def expect_height(self, value: StyleValue, *, timeout: Timeout = None) -> None:
-        expect_to_have_style(self.loc_container, "height", value, timeout=timeout)
+        """
+        Expects the value box to have a specific height.
+
+        Parameters
+        ----------
+        value
+            The expected height value.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to None.
+        """
+        expect_to_have_style(self.loc_container, "max-height", value, timeout=timeout)
 
     def expect_title(
         self,
@@ -2665,6 +2776,17 @@ class ValueBox(
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Expects the value box title to have a specific text.
+
+        Parameters
+        ----------
+        text
+            The expected text pattern or string.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to None.
+
+        """
         playwright_expect(self.loc_title).to_have_text(
             text,
             timeout=timeout,
@@ -2676,6 +2798,16 @@ class ValueBox(
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Expects the value box value to have a specific text.
+
+        Parameters
+        ----------
+        text
+            The expected text pattern or string.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to None.
+        """
         playwright_expect(self.loc).to_have_text(
             text,
             timeout=timeout,
@@ -2687,15 +2819,38 @@ class ValueBox(
         *,
         timeout: Timeout = None,
     ) -> None:
-        """Note: If testing against multiple elements, text should be an array"""
+        """
+        Expects the value box body to have specific text.
+
+        Parameters
+        ----------
+        text
+            The expected text pattern or list of patterns/strings.
+            Note: If testing against multiple elements, text should be an array
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to None.
+        """
         playwright_expect(self.loc_body).to_have_text(
             text,
             timeout=timeout,
         )
 
-    # hard to test since it can be customized by user
-    # def expect_showcase_layout(self, layout, *, timeout: Timeout = None) -> None:
-    #     raise NotImplementedError()
+    def expect_full_screen_available(
+        self, available: bool, *, timeout: Timeout = None
+    ) -> None:
+        """
+        Expects the value box to be available for full screen mode.
+
+        Parameters
+        ----------
+        available
+            True if the value box is expected to be available for full screen mode, False otherwise.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to None.
+        """
+        playwright_expect(self._loc_fullscreen).to_have_count(
+            int(available), timeout=timeout
+        )
 
 
 class Card(_WidthLocM, _CardFooterM, _CardBodyM, _CardFullScreenM, _InputWithContainer):

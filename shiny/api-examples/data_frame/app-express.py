@@ -3,7 +3,7 @@ import plotly.express as px
 from shinywidgets import render_widget
 
 from shiny import reactive, req
-from shiny.express import input, render, ui
+from shiny.express import render, ui
 
 # Load the Gapminder dataset
 df = px.data.gapminder()
@@ -37,7 +37,7 @@ with ui.layout_columns(col_widths=[12, 6, 6]):
 
         @render.data_frame
         def summary_data():
-            return render.DataGrid(summary_df.round(2), row_selection_mode="multiple")
+            return render.DataGrid(summary_df.round(2), mode="multiple_rows")
 
     with ui.card(height="400px"):
 
@@ -66,12 +66,12 @@ with ui.layout_columns(col_widths=[12, 6, 6]):
 
 @reactive.calc
 def filtered_df():
-    req(input.summary_data_selected_rows())
+    req(summary_data.input_selected_rows())
 
-    # input.summary_data_selected_rows() is a tuple, so we must convert it to list,
+    # summary_data.input_selected_rows() is a tuple, so we must convert it to list,
     # as that's what Pandas requires for indexing.
 
-    selected_idx = list(input.summary_data_selected_rows())
+    selected_idx = list(summary_data.input_selected_rows())
     countries = summary_df.iloc[selected_idx]["country"]
     # Filter data for selected countries
     return df[df["country"].isin(countries)]

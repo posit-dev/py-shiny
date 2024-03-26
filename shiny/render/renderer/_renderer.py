@@ -1,24 +1,13 @@
 from __future__ import annotations
 
-from typing import (
-    Any,
-    Awaitable,
-    Callable,
-    Dict,
-    Generic,
-    List,
-    Optional,
-    Tuple,
-    TypeVar,
-    Union,
-    cast,
-)
+from typing import Any, Awaitable, Callable, Generic, Optional, TypeVar, Union, cast
 
 from htmltools import MetadataNode, Tag, TagList
 
 from ..._docstring import add_example
 from ..._typing_extensions import Self
 from ..._utils import is_async_callable, wrap_async
+from ...types import Jsonifiable
 
 # TODO-barret-future: Double check docs are rendererd
 # Missing first paragraph from some classes: Example: TransformerMetadata.
@@ -50,36 +39,6 @@ IT = TypeVar("IT")
 """
 Return type from the user-supplied value function passed into the renderer.
 """
-
-
-# https://github.com/python/cpython/blob/df1eec3dae3b1eddff819fd70f58b03b3fbd0eda/Lib/json/encoder.py#L77-L95
-# +-------------------+---------------+
-# | Python            | JSON          |
-# +===================+===============+
-# | dict              | object        |
-# +-------------------+---------------+
-# | list, tuple       | array         |
-# +-------------------+---------------+
-# | str               | string        |
-# +-------------------+---------------+
-# | int, float        | number        |
-# +-------------------+---------------+
-# | True              | true          |
-# +-------------------+---------------+
-# | False             | false         |
-# +-------------------+---------------+
-# | None              | null          |
-# +-------------------+---------------+
-Jsonifiable = Union[
-    str,
-    int,
-    float,
-    bool,
-    None,
-    List["Jsonifiable"],
-    Tuple["Jsonifiable"],
-    Dict[str, "Jsonifiable"],
-]
 
 
 DefaultUIFnResult = Union[TagList, Tag, MetadataNode, str]
