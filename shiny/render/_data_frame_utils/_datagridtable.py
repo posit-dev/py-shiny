@@ -134,25 +134,6 @@ class DataGrid(AbstractTabularData):
         editable: bool = False,
         selection_mode: SelectionMode = "none",
         row_selection_mode: RowSelectionModeDeprecated = "deprecated",
-        # TODO-barret; Rename to `selection_mode` and `editable`.
-        # Want to make room for the following orthogonal options in the future:
-        # - Row: none, single, multiple
-        # - Col: none, single, multiple
-        # - Region: none, single, multiple (?)
-        # Some possibilities for API:
-        # ```
-        # DataGrid(
-        #   row_selection = "single",
-        #   col_selection = "none",
-        #   region_selection = "single"
-        # )
-        # DataGrid(
-        #   selection = ("single", "none", "single")
-        # )
-        # DataGrid(
-        #   selection = {"row": "single", "col": "none", "region": "single"}
-        # )
-        # ```
     ):
 
         self.data = cast_to_pandas(

@@ -9,6 +9,7 @@ from ._patch import (
     CellValue,
     PatchesFn,
     PatchFn,
+    assert_patches_shape,
     cell_patch_to_jsonifiable,
 )
 from ._selection import (
@@ -27,6 +28,7 @@ __all__ = (
     "CellValue",
     "PatchesFn",
     "PatchFn",
+    "assert_patches_shape",
     "cell_patch_to_jsonifiable",
     "BrowserCellSelection",
     "CellSelection",

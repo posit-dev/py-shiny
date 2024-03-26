@@ -24,6 +24,7 @@ from ._data_frame_utils import (
     PatchFn,
     SelectionMode,
     as_browser_cell_selection,
+    assert_patches_shape,
     cast_to_pandas,
     cell_patch_to_jsonifiable,
 )
@@ -363,7 +364,7 @@ class data_frame(Renderer[DataFrameResult]):
     @output_binding_request_handler
     # Do not change this method name unless you update corresponding code in `/js/dataframe/`!!
     async def _handle_patches(self, patches: list[CellPatch]) -> Jsonifiable:
-        # TODO-barret; verify that the patches are in the correct format
+        assert_patches_shape(patches)
 
         # Call user's cell update method to retrieve formatted values
         updated_patches = await self._patches_fn(patches=patches)
@@ -519,7 +520,6 @@ class data_frame(Renderer[DataFrameResult]):
                 f"Unhandled selection type: {browser_cell_selection['type']}"
             )
         await self._send_message_to_browser(
-            # TODO-barret; upateRowSelection -> updateCellSelection
             "updateCellSelection",
             {"cellSelection": browser_cell_selection},
         )

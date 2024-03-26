@@ -35,3 +35,13 @@ class PatchesFn(Protocol):
         *,
         patches: list[CellPatch],
     ) -> list[CellPatch]: ...
+
+
+def assert_patches_shape(x: list[CellPatch]) -> None:
+    assert isinstance(x, list)
+
+    for patch in x:
+        assert isinstance(patch, dict)
+        assert "row_index" in patch
+        assert "column_index" in patch
+        assert "value" in patch
