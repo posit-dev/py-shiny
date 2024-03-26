@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import warnings
+
 # TODO-barret; Docs
 # TODO-barret; Add examples!
 from typing import (
@@ -111,14 +113,16 @@ class data_frame(Renderer[DataFrameResult]):
     Row selection
     -------------
     When using the row selection feature, you can access the selected rows by using the
-    `<data_frame_renderer>.input_selected_rows()` method, where `<data_frame_renderer>`
+    `<data_frame_renderer>.input_cell_selection()` method, where `<data_frame_renderer>`
     is the render function name that corresponds with the `id=` used in
     :func:`~shiny.ui.outout_data_frame`. Internally, this method retrieves the selected
-    row value from session's `input.<id>_selected_rows()` value. The value returned will
-    be `None` if the row selection mode is `"none"`, or a tuple of integers representing
-    the indices of the selected rows. If no rows have been selected (while in a non-`"none"`
-    row selection mode), an empty tuple will be returned. To filter a pandas data frame
-    down to the selected rows, use `df.iloc[list(input.<id>_selected_rows())]`.
+    cell information from session's `input.<id>_cell_selection()` value. The value
+    returned will be `None` if the row selection mode is `"none"`, or a tuple of
+    integers representing the indices of the selected rows. If no rows have been
+    selected (while in a non-`"none"` row selection mode), an empty tuple will be
+    returned. To filter a pandas data frame down to the selected rows, use
+    `<data_frame_renderer>.data_selected()` or
+    `df.iloc[list(input.<id>_cell_selection()["rows"])]`.
 
     Tip
     ----
@@ -193,7 +197,7 @@ class data_frame(Renderer[DataFrameResult]):
           selected cells.
     """
 
-    data_selected: reactive.Calc_[pd.DataFrame | None]
+    data_selected: reactive.Calc_[pd.DataFrame]
     """
     Reactive value that returns the edited data frame subsetted to the selected area.
 
@@ -260,8 +264,10 @@ class data_frame(Renderer[DataFrameResult]):
             selection_mode: SelectionMode = self.selection_mode()
             if selection_mode == "none":
                 return None
-            # TODO-barret; Set input_cell_selection
+
             input_val = self._get_session().input[f"{self.output_id}_cell_selection"]()
+            if input_val is None:
+                return None
 
             browser_cell_selection = as_browser_cell_selection(input_val)
 
@@ -270,7 +276,8 @@ class data_frame(Renderer[DataFrameResult]):
         self.input_cell_selection = self_input_cell_selection
 
         @reactive.calc
-        def self_data_selected() -> pd.DataFrame | None:
+        # TODO-barret; Subset data according to what is viewed in the browser; Apply filtering and sorting as well! https://github.com/posit-dev/py-shiny/issues/1240
+        def self_data_selected() -> pd.DataFrame:
             # browser_cell_selection
             bcs = self.input_cell_selection()
             if bcs is None:
@@ -281,11 +288,15 @@ class data_frame(Renderer[DataFrameResult]):
             if bcs["type"] == "all":
                 return data_selected
             elif bcs["type"] == "none":
-                return None
+                # Empty subset
+                return data_selected.iloc[[]]
             elif bcs["type"] == "row":
-                return data_selected.iloc[bcs["rows"] :]
+                # Seems to not work with `tuple[int, ...]`,
+                # but converting to a list does!
+                rows = list(bcs["rows"])
+                return data_selected.iloc[rows]
             elif bcs["type"] == "col":
-                # Seems to not  work with `tuple[int, ...]`,
+                # Seems to not work with `tuple[int, ...]`,
                 # but converting to a list does!
                 cols = list(bcs["cols"])
                 return data_selected.iloc[:, cols]
@@ -479,15 +490,20 @@ class data_frame(Renderer[DataFrameResult]):
     async def update_cell_selection(
         # self, selection: SelectionLocation | SelectionLocationJS
         self,
-        selection: CellSelection | BrowserCellSelection,
+        selection: CellSelection | BrowserCellSelection | None,
     ) -> None:
+        if selection is None:
+            selection = "none"
 
         with reactive.isolate():
             selection_mode = self.selection_mode()
         if selection_mode == "none":
-            raise ValueError(
-                "You can't update cell selections when `.selection_mode()` is 'none'"
+            warnings.warn(
+                "Cell selection can not be updated when `.selection_mode()` is 'none'. "
+                "Please set `selection_mode=` to 'single' or 'multiple' in the return "
+                "value of `@render.data_frame` to enable cell selection."
             )
+            selection = "none"
 
         browser_cell_selection = as_browser_cell_selection(selection)
         if browser_cell_selection["type"] == "none":
@@ -500,19 +516,12 @@ class data_frame(Renderer[DataFrameResult]):
             raise RuntimeError("Column selection is not yet supported")
         elif browser_cell_selection["type"] == "row":
             row_value = browser_cell_selection["rows"]
-            # if len(row_value) == 0:
-            #     raise ValueError(
-            #         "Attempted to set row selection values to `None` when `.selection_mode()` is 'row'"
-            #     )
             if selection_mode == "row" and len(row_value) > 1:
-                raise ValueError(
-                    "Attempted to set cell selection to more than 1 row when `.selection_mode()` is 'row'"
+                warnings.warn(
+                    "Attempted to set cell selection to more than 1 row when `.selection_mode()` is 'row'. "
+                    "Only the first row supplied will be selected."
                 )
-
-            if selection_mode == "row" and len(selection) > 1:
-                raise ValueError(
-                    "Attempted to set multiple row selection values when `.selection_mode()` is 'row'"
-                )
+                browser_cell_selection["rows"] = (row_value[0],)
         else:
             raise ValueError(
                 f"Unhandled selection type: {browser_cell_selection['type']}"
@@ -520,33 +529,5 @@ class data_frame(Renderer[DataFrameResult]):
         await self._send_message_to_browser(
             # TODO-barret; upateRowSelection -> updateCellSelection
             "updateCellSelection",
-            {"cell_selection": browser_cell_selection},
+            {"cellSelection": browser_cell_selection},
         )
-
-    # def update_selected_cells(
-    #     self,
-    #     x: (
-    #         SelectionLocation
-    #         | SelectionLocationJS
-    #         # | list[SelectionLocation | SelectionLocationJS]
-    #     ),
-    # ):
-    #     # Can't handle lists right now
-    #     assert not isinstance(x, list)
-
-    #     x = as_selection_location_js(x)
-
-    # def input_selected_rows(self) -> Optional[tuple[int]]:
-    #     """
-    #     When `row_selection_mode` is set to "single" or "multiple" this will return
-    #     a tuple of integers representing the rows selected by a user.
-    #     """
-
-    #     return self._get_session().input[self.output_id + "_selected_rows"]()
-    # def input_selected_cells(self) -> Optional[tuple[int]]:
-    #     """
-    #     When `row_selection_mode` is set to "single" or "multiple" this will return
-    #     a tuple of integers representing the rows selected by a user.
-    #     """
-
-    #     return self._get_session().input[self.output_id + "_selected_rows"]()

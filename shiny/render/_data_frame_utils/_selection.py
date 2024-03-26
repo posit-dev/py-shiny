@@ -391,12 +391,19 @@ def as_browser_cell_selection(
         else:
             # Col!
             assert isinstance(col_value, Sequence)
+            if len(col_value) == 0:
+                # Nothing selected
+                return {"type": "none"}
             return {"type": "col", "cols": tuple(col_value)}
     else:
         # row_value is not None
         if col_value is None:
             # Row!
             assert isinstance(row_value, Sequence)
+            if len(row_value) == 0:
+                # Nothing selected
+                return {"type": "none"}
+
             return {"type": "row", "rows": tuple(row_value)}
         else:
             # Region!
@@ -434,8 +441,8 @@ def as_selection_mode(
         return selection_mode
 
     warn_deprecated(
-        "`DataGrid(row_selection_mode=)` has been superseded by `DataGrid(selection_mode=)`."
-        ' Please use `DataGrid(mode="{row_selection_mode}_row")` instead.'
+        f"`{name}(row_selection_mode=)` has been superseded by `{name}(selection_mode=)`."
+        f' Please use `{name}(mode="{row_selection_mode}_row")` instead.'
     )
 
     if row_selection_mode == "none":

@@ -28,6 +28,7 @@ import { TableBodyCell } from "./cell";
 import { useCellEditMap } from "./cell-edit-map";
 import { findFirstItemInView, getStyle } from "./dom-utils";
 import { Filter, useFilter } from "./filter";
+import type { BrowserCellSelection } from "./selection";
 import {
   SelectionModeEnum,
   initRowSelectionMode,
@@ -38,6 +39,8 @@ import css from "./styles.scss";
 import { useTabindexGroup } from "./tabindex-group";
 import { useSummary } from "./table-summary";
 import { EditModeEnum, PandasData, TypeHint } from "./types";
+
+// TODO-barret set selected cell as input! (Might be a followup?)
 
 // TODO-barret; Type support
 // export interface PandasData<TIndex> {
@@ -109,7 +112,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
   //   // console.log("rowModel", rowModel);
   // }, [editColumnIndex, editRowIndex]);
 
-  const editCellsIsAllowed = data.options["mode"] === EditModeEnum.Edit;
+  const editCellsIsAllowed = data.options["editable"] === true;
 
   const [cellEditMap, setCellEditMap] = useCellEditMap();
 
@@ -220,9 +223,8 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
   const tableClass = tableStyle === "table" ? "table table-sm" : null;
 
   // ### Row selection ###############################################################
-  // rowSelectionMode
 
-  const rowSelectionMode = initRowSelectionMode(data.options["mode"]);
+  const rowSelectionMode = initRowSelectionMode(data.options["selection_mode"]);
 
   const canSelect = rowSelectionMode !== SelectionModeEnum.None;
   const canMultiSelect =
@@ -257,13 +259,25 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
   );
 
   useEffect(() => {
-    const handleMessage = (event: CustomEvent<{ keys: number[] }>) => {
+    const handleMessage = (
+      event: CustomEvent<{ cellSelection: BrowserCellSelection }>
+    ) => {
       // We convert "None" to an empty tuple on the python side
       // so an empty array indicates that selection should be cleared.
-      if (!event.detail.keys.length) {
+
+      const cellSelection = event.detail.cellSelection;
+
+      if (cellSelection.type === "none") {
         rowSelection.clear();
+        return;
+      } else if (cellSelection.type === "all") {
+        rowSelection.setMultiple(rowData.map((_, i) => String(i)));
+        return;
+      } else if (cellSelection.type === "row") {
+        rowSelection.setMultiple(cellSelection.rows.map(String));
+        return;
       } else {
-        rowSelection.setMultiple(event.detail.keys.map(String));
+        console.error("Unhandled cell selection update:", cellSelection);
       }
     };
 
@@ -273,32 +287,45 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
     if (!element) return;
 
     element.addEventListener(
-      "updateRowSelection",
+      "updateCellSelection",
       handleMessage as EventListener
     );
 
     return () => {
       element.removeEventListener(
-        "updateRowSelection",
+        "updateCellSelection",
         handleMessage as EventListener
       );
     };
-  }, [id, rowSelection]);
+  }, [id, rowSelection, rowData]);
 
   useEffect(() => {
     if (!id) return;
+    const shinyId = `${id}_cell_selection`;
+    let shinyValue: BrowserCellSelection | null = null;
     if (rowSelectionMode === SelectionModeEnum.None) {
-      Shiny.setInputValue!(`${id}_selected_rows`, null);
+      shinyValue = null;
+    } else if (
+      rowSelectionMode === SelectionModeEnum.Single ||
+      rowSelectionMode === SelectionModeEnum.Multiple ||
+      rowSelectionMode === SelectionModeEnum.MultiNative
+    ) {
+      const rowSelectionKeys = rowSelection.keys().toList();
+      // Currently do not sent `none` or `all` to the server as it is hard to utilize when we know the selection is row based
+      // if (rowSelectionKeys.length === 0) {
+      //   shinyValue = { type: "none" };
+      // } else if (rowSelectionKeys.length === rowData.length) {
+      //   shinyValue = { type: "all" };
+      // } else {
+      shinyValue = {
+        type: "row",
+        rows: rowSelectionKeys.map((key) => parseInt(key)).sort(),
+      };
+      // }
     } else {
-      Shiny.setInputValue!(
-        `${id}_selected_rows`,
-        rowSelection
-          .keys()
-          .toList()
-          .map((key) => parseInt(key))
-          .sort()
-      );
+      console.error("Unhandled row selection mode:", rowSelectionMode);
     }
+    Shiny.setInputValue!(shinyId, shinyValue);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, rowSelectionMode, [...rowSelection.keys()]]);
 
@@ -326,6 +353,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
   //
   const tbodyTabItems = React.useCallback(
     () => tbodyRef.current!.querySelectorAll("[tabindex='-1']"),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [tbodyRef.current]
   );
   const tbodyTabGroup = useTabindexGroup(containerRef.current, tbodyTabItems, {

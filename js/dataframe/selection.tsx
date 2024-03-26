@@ -4,6 +4,24 @@ import { ImmutableSet } from "./immutable-set";
 
 import type { ValueOf } from "./types";
 
+type BrowserCellSelectionAll = { type: "all" };
+type BrowserCellSelectionNone = { type: "none" };
+type BrowserCellSelectionRow = { type: "row"; rows: readonly number[] };
+type BrowserCellSelectionCol = { type: "col"; cols: readonly number[] };
+type BrowserCellSelectionRegion = {
+  type: "region";
+  rows: readonly [number, number];
+  cols: readonly [number, number];
+};
+
+// For sending and receiving selection info to python
+export type BrowserCellSelection =
+  | BrowserCellSelectionAll
+  | BrowserCellSelectionNone
+  | BrowserCellSelectionRow
+  | BrowserCellSelectionCol
+  | BrowserCellSelectionRegion;
+
 export interface SelectionSet<TKey, TElement extends HTMLElement> {
   has(key: TKey): boolean;
   set(key: TKey, selected: boolean): void;
@@ -18,8 +36,8 @@ export interface SelectionSet<TKey, TElement extends HTMLElement> {
 
 export const SelectionModeEnum = {
   None: "none",
-  Single: "single_row",
-  Multiple: "multiple_row",
+  Single: "row",
+  Multiple: "rows",
   MultiNative: "multi-native_row",
 } as const;
 const selectionModes = Object.values(SelectionModeEnum);
