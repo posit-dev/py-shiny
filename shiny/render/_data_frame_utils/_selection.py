@@ -158,6 +158,7 @@ CellSelection = Union[
 ]
 
 
+# Proposal, remove BrowserCellSelectionAll and BrowserCellSelectionNone as they can be represented by an empty Row/Col/Region
 class BrowserCellSelectionAll(TypedDict):
     type: Literal["all"]
 
