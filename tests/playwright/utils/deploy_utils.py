@@ -169,7 +169,7 @@ def deploy_app(
         # since the rsconnect/*.json file needs the app_dir name to be same
         tmp_app_dir = os.path.join(tmpdir, app_dir_name)
         os.mkdir(tmp_app_dir)
-        shutil.copytree(app_dir, tmp_app_dir)
+        shutil.copytree(app_dir, tmp_app_dir, dirs_exist_ok=True)
         write_requirements_txt(tmp_app_dir)
 
         deployment_function = {
