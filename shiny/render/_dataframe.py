@@ -4,13 +4,7 @@ import warnings
 
 # TODO-barret; Docs
 # TODO-barret; Add examples!
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    TypedDict,
-    TypeVar,
-    Union,
-)
+from typing import TYPE_CHECKING, Any, TypedDict, TypeVar
 
 from htmltools import Tag
 
@@ -32,8 +26,6 @@ from ._data_frame_utils._patch import (
     cell_patch_to_jsonifiable,
 )
 from ._data_frame_utils._selection import (
-    # SelectionLocation,
-    # SelectionLocationJS,
     BrowserCellSelection,
     CellSelection,
     SelectionMode,
@@ -501,8 +493,10 @@ class data_frame(Renderer[DataFrameResult]):
             warnings.warn(
                 "Cell selection can not be updated when `.selection_mode()` is 'none'. "
                 "Please set `selection_mode=` to 'single' or 'multiple' in the return "
-                "value of `@render.data_frame` to enable cell selection."
+                "value of `@render.data_frame` to enable cell selection.",
+                stacklevel=2,
             )
+
             selection = "none"
 
         browser_cell_selection = as_browser_cell_selection(selection)
@@ -519,8 +513,10 @@ class data_frame(Renderer[DataFrameResult]):
             if selection_mode == "row" and len(row_value) > 1:
                 warnings.warn(
                     "Attempted to set cell selection to more than 1 row when `.selection_mode()` is 'row'. "
-                    "Only the first row supplied will be selected."
+                    "Only the first row supplied will be selected.",
+                    stacklevel=2,
                 )
+
                 browser_cell_selection["rows"] = (row_value[0],)
         else:
             raise ValueError(
