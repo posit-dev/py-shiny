@@ -12,24 +12,20 @@ from .. import reactive, ui
 from .._docstring import add_example
 from .._typing_extensions import Self
 from ..session._utils import get_current_session, require_active_session
-from ._data_frame_utils._datagridtable import (
+from ._data_frame_utils import (
     AbstractTabularData,
+    BrowserCellSelection,
+    CellPatch,
+    CellSelection,
+    CellValue,
     DataGrid,
     DataTable,
-    cast_to_pandas,
-)
-from ._data_frame_utils._patch import (
-    CellPatch,
-    CellValue,
     PatchesFn,
     PatchFn,
-    cell_patch_to_jsonifiable,
-)
-from ._data_frame_utils._selection import (
-    BrowserCellSelection,
-    CellSelection,
     SelectionMode,
     as_browser_cell_selection,
+    cast_to_pandas,
+    cell_patch_to_jsonifiable,
 )
 
 # as_selection_location_js,

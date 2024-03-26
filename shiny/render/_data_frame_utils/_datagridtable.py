@@ -57,7 +57,7 @@ def as_editable(
     return editable
 
 
-@add_example(ex_dir="../api-examples/data_frame")
+@add_example(ex_dir="../../api-examples/data_frame")
 class DataGrid(AbstractTabularData):
     """
     Holds the data and options for a :class:`~shiny.render.data_frame` output, for a
