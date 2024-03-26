@@ -57,20 +57,19 @@ clean-test: FORCE
 	rm -rf typings/
 
 typings/appdirs:
-	echo "Creating appdirs stubs"
+	@echo "Creating appdirs stubs"
 	pyright --createstub appdirs
 typings/folium:
-	echo "Creating folium stubs"
+	@echo "Creating folium stubs"
 	pyright --createstub folium
 typings/uvicorn:
-	echo "Creating uvicorn stubs"
+	@echo "Creating uvicorn stubs"
 	pyright --createstub uvicorn
 typings/seaborn:
-	echo "Creating seaborn stubs"
+	@echo "Creating seaborn stubs"
 	pyright --createstub seaborn
-
 typings/matplotlib/__init__.pyi:
-	echo "Creating matplotlib stubs"
+	@echo "Creating matplotlib stubs"
 	mkdir -p typings
 	git clone --depth 1 https://github.com/microsoft/python-type-stubs typings/python-type-stubs
 	mv typings/python-type-stubs/stubs/matplotlib typings/
