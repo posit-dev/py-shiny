@@ -179,17 +179,10 @@ def deploy_app(
 
         pre_deployment_time = time.time()
         url = deployment_function(app_name, tmp_app_dir)
-        tmp_rsconnect_dir = os.path.join(
+        tmp_rsconnect_config = os.path.join(
             tmp_app_dir, "rsconnect-python", f"{os.path.basename(tmp_app_dir)}.json"
         )
-        assert_rsconnect_file_updated(tmp_rsconnect_dir, pre_deployment_time)
-        local_rsconnect_dir = os.path.join(
-            app_dir, "rsconnect-python", f"{os.path.basename(app_dir)}.json"
-        )
-        # Copy file back if it doesn't exist locally (Helpful for local development and deployment)
-        if not os.path.exists(local_rsconnect_dir):
-
-            shutil.copy(tmp_rsconnect_dir, local_rsconnect_dir)
+        assert_rsconnect_file_updated(tmp_rsconnect_config, pre_deployment_time)
 
         return url
 
