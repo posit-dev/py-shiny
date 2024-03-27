@@ -49,10 +49,6 @@ from ..input_handler import input_handlers
 from ..reactive import Effect_, Value, effect, flush, isolate
 from ..reactive._core import lock, on_flushed
 from ..render.renderer import Renderer, RendererT
-from ..render.renderer._dispatch import (
-    RendererHasSession,
-    is_output_binding_request_handler,
-)
 from ..types import (
     Jsonifiable,
     SafeException,
@@ -1144,94 +1140,6 @@ class Outputs:
         self._session = session
         self._ns = ns
         self._outputs = outputs
-
-        self._init_message_handlers()
-
-    async def _output_binding_request_handler(
-        self,
-        output_id: str,
-        handler: str,
-        msg: object,
-    ) -> Jsonifiable:
-        """
-        Used to handle request messages from an Output Renderer.
-
-        Typically, this is used when an Output Renderer needs to set an input value.
-        E.g. a @render.data_frame result with a `mode="edit"` parameter will use
-        this to set the value of the data frame when a cell is edited.
-
-        The value returned by the handler is sent back to the client with the original unique id (`tag`).
-        """
-        # Verify that the output_id and handler are strings
-        assert isinstance(output_id, str)
-        assert isinstance(handler, str)
-
-        if output_id not in self._outputs:
-            raise RuntimeError(
-                f"Received request message for an unknown Output Renderer with id `{output_id}`"
-            )
-
-        output_info = self._outputs[output_id]
-        renderer = output_info.renderer
-
-        # Using two `isinstance` checks works type checker to understand that `renderer` is a `Renderer` and has `_session`
-        if not (
-            isinstance(renderer, Renderer) and isinstance(renderer, RendererHasSession)
-        ):
-            raise RuntimeError(
-                f"Output Renderer with id `{output_id}` does not have a `_session` attribute. Please capture the Session during initialization of the Renderer and store it in a `_session` attribute."
-            )
-
-        handler_fn_name = f"_handle_{handler}"
-        if not hasattr(renderer, handler_fn_name):
-            raise RuntimeError(
-                f"Output Renderer with id `{output_id}` does not have method `{handler_fn_name}` to handle request message"
-            )
-        handler_fn = getattr(renderer, handler_fn_name)
-        if not callable(handler_fn):
-            raise RuntimeError(
-                f"Output Renderer with id `{output_id}` does not have callable method `{handler_fn_name}` to handle request message"
-            )
-
-        if is_output_binding_request_handler(handler_fn):
-
-            with session_context(renderer._session), isolate():
-                try:
-                    return await handler_fn(msg)
-                except Exception as e:
-                    # Ex:
-                    # ```
-                    # Exception while handling `data_frame[id=testing-summary_data]._patch_fn()`: boom!
-                    # ```
-                    print(
-                        "Exception while handling "
-                        f"`{renderer.__class__.__name__}[id={output_id}].{handler_fn_name}()`:",
-                        e,
-                        file=sys.stderr,
-                    )
-                    # TODO-barret-future; Should this logic be moved to the dispatch handler?
-                    if self._session.app.sanitize_errors and not isinstance(
-                        e, SafeException
-                    ):
-                        raise RuntimeError(self._session.app.sanitize_error_msg)
-
-                    raise  # reraise the original exception
-
-        else:
-            # This if/else is poorly arranged as TypeGuards only work within the truthy
-            # section of the if statement. We could do a comparison of
-            # `isinstance(handler_fn, OutputBindingRequestHandler)` but it seems to not
-            # work on Python 3.12
-            raise RuntimeError(
-                f"Output Renderer with id `{output_id}` did not mark method `{handler_fn_name}` as an output handler via `@output_binding_request_handler` from `shiny.render.renderer.output_binding_request_handler`"
-            )
-
-    def _init_message_handlers(self) -> None:
-        # Add the message handler
-        if isinstance(self._session, Session):
-            self._session._message_handlers["output_binding_request_handler"] = (
-                self._output_binding_request_handler
-            )
 
     @overload
     def __call__(self, renderer: RendererT) -> RendererT:

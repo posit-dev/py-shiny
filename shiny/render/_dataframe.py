@@ -25,7 +25,7 @@ from .._docstring import add_example, no_example
 from .._typing_extensions import Self
 from ..session._utils import get_current_session, require_active_session
 from ._dataframe_unsafe import serialize_numpy_dtypes
-from .renderer import Jsonifiable, Renderer, ValueFn, output_binding_request_handler
+from .renderer import Jsonifiable, Renderer, ValueFn
 from .renderer._utils import JsonifiableDict
 
 if TYPE_CHECKING:
