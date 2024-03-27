@@ -191,7 +191,16 @@ class Session(object, metaclass=SessionMeta):
         self._message_handlers: dict[
             str,
             Callable[..., Awaitable[Jsonifiable]],
-        ] = self._create_message_handlers()
+        ] = {}
+        """
+        Dictionary of message handlers for the session.
+
+        If a request is sent from the client to the server via
+        `window.Shiny.make_request()`, the server will look up the method in this
+        dictionary and call the corresponding function with the arguments provided in
+        the request.
+        """
+        self._init_message_handlers()
 
         # The HTTPConnection representing the WebSocket. This is used so that we can
         # query information about the request, like headers, cookies, etc.
@@ -417,9 +426,7 @@ class Session(object, metaclass=SessionMeta):
         await self._send_message({"response": {"tag": message["tag"], "value": value}})
 
     # This is called during __init__.
-    def _create_message_handlers(
-        self,
-    ) -> dict[str, Callable[..., Awaitable[Jsonifiable]]]:
+    def _init_message_handlers(self):
         # TODO-future; Make sure these methods work within MockSession
 
         async def uploadInit(file_infos: list[FileInfo]) -> dict[str, Jsonifiable]:
@@ -456,10 +463,8 @@ class Session(object, metaclass=SessionMeta):
             # Explicitly return None to signal that the message was handled.
             return None
 
-        return {
-            "uploadInit": uploadInit,
-            "uploadEnd": uploadEnd,
-        }
+        self.set_message_handler("uploadInit", uploadInit)
+        self.set_message_handler("uploadEnd", uploadEnd)
 
     # ==========================================================================
     # Handling /session/{session_id}/{action}/{subpath} requests
