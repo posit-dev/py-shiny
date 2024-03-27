@@ -3,7 +3,7 @@ from __future__ import annotations
 # TODO-barret; Docs
 # TODO-barret; Add examples!
 import warnings
-from typing import Literal, Sequence, Union
+from typing import Literal, Sequence, Tuple, Union
 
 from ..._deprecated import warn_deprecated
 from ..._typing_extensions import NotRequired, TypedDict
@@ -23,7 +23,7 @@ SelectionMode = Union[
 ]
 
 # Types
-SelectionModes = tuple[SelectionMode, ...]
+SelectionModes = Tuple[SelectionMode, ...]
 """
 Tuple of possible modes for selecting cells in a DataGrid or DataTable.
 
