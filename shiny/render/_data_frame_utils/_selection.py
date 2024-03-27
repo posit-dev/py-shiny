@@ -282,15 +282,16 @@ def is_sequence_2(r: Sequence[int]) -> TypeGuard[LocationRange]:
 #         )
 
 
-def to_list_or_none(x: int | Sequence[int] | None) -> Sequence[int] | None:
+def to_tuple_or_none(x: int | Sequence[int] | None) -> tuple[int, ...] | None:
     if x is None:
         return None
     if isinstance(x, int):
-        return [x]
+        return (x,)
 
     assert isinstance(x, Sequence)
-    if len(x) == 0:
-        return None
+    x = tuple(x)
+    # if len(x) == 0:
+    #     return None
     for i in x:
         assert isinstance(i, int)
     return x
@@ -376,8 +377,8 @@ def as_browser_cell_selection(
         raise ValueError(f"Unhandled BrowserCellSelection['type']: {x['type']}")
 
     # Not a BrowserCellSelection, convert as if a CellSelection!
-    row_value = to_list_or_none(x.get("rows", None))
-    col_value = to_list_or_none(x.get("cols", None))
+    row_value = to_tuple_or_none(x.get("rows", None))
+    col_value = to_tuple_or_none(x.get("cols", None))
 
     if row_value is None:
         if col_value is None:
@@ -386,20 +387,13 @@ def as_browser_cell_selection(
         else:
             # Col!
             assert isinstance(col_value, Sequence)
-            if len(col_value) == 0:
-                # Nothing selected
-                return {"type": "none"}
-            return {"type": "col", "cols": tuple(col_value)}
+            return {"type": "col", "cols": col_value}
     else:
         # row_value is not None
         if col_value is None:
             # Row!
             assert isinstance(row_value, Sequence)
-            if len(row_value) == 0:
-                # Nothing selected
-                return {"type": "none"}
-
-            return {"type": "row", "rows": tuple(row_value)}
+            return {"type": "row", "rows": row_value}
         else:
             # Region!
             assert isinstance(row_value, Sequence)
