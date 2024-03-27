@@ -186,7 +186,7 @@ class Session(object, metaclass=SessionMeta):
         self._debug: bool = debug
         self._message_handlers: dict[
             str,
-            Callable[..., Awaitable[Jsonifiable]],
+            tuple[Callable[..., Awaitable[Jsonifiable]], Session],
         ] = {}
         """
         Dictionary of message handlers for the session.
@@ -395,7 +395,7 @@ class Session(object, metaclass=SessionMeta):
 
     async def _dispatch(self, message: ClientMessageOther) -> None:
         try:
-            async_func = self._message_handlers[message["method"]]
+            async_func, handler_session = self._message_handlers[message["method"]]
         except KeyError:
             await self._send_error_response(
                 message,
@@ -412,12 +412,12 @@ class Session(object, metaclass=SessionMeta):
         try:
             # TODO: handle `blobs`
 
-            # Isolate so that the function can be run without an explicit session.
-            # Let the handler function manage its own session context. (due to modules)
-            with isolate():
+            # * Use the session context from when the message handler was set
+            # * Using `isolate()` allows the handler to read reactive values in a
+            #   non-reactive context
+            with session_context(handler_session), isolate():
                 value = await async_func(*message["args"])
         except Exception as e:
-            # raise  # TODO-barret; REmove!
             # Safe error handling!
             if self.app.sanitize_errors and not isinstance(e, SafeException):
                 await self._send_error_response(message, self.app.sanitize_error_msg)
@@ -923,6 +923,9 @@ class Session(object, metaclass=SessionMeta):
         for individual cell updates to be sent to the server, processed, and handled by
         the existing data frame output.
 
+        When the message handler is executed, it will be executed within an isolated reactive
+        context and the session context that set the message handler.
+
         Parameters
         ----------
         name
@@ -940,6 +943,24 @@ class Session(object, metaclass=SessionMeta):
             The key under which the handler is stored (or removed). This value will be
             namespaced when used with a session proxy.
         """
+        # Use `_impl` method to allow for SessionProxy to set the `handler_session`
+        return self._set_message_handler_impl(
+            name,
+            handler,
+            # The handler will be executed within the root session
+            handler_session=self,
+        )
+
+    def _set_message_handler_impl(
+        self,
+        name: str,
+        handler: (
+            Callable[..., Jsonifiable] | Callable[..., Awaitable[Jsonifiable]] | None
+        ),
+        *,
+        # Allow the handler to be executed within a Session or SessionProxy
+        handler_session: Session | SessionProxy,
+    ) -> str:
         # Verify that the name is a string
         assert isinstance(name, str)
         if handler is None:
@@ -947,7 +968,7 @@ class Session(object, metaclass=SessionMeta):
                 del self._message_handlers[name]
         else:
             assert callable(handler)
-            self._message_handlers[name] = wrap_async(handler)
+            self._message_handlers[name] = (wrap_async(handler), self)
         return name
 
     def _process_ui(self, ui: TagChild) -> RenderedDeps:
@@ -1033,7 +1054,12 @@ class SessionProxy:
     ) -> str:
         # Verify that the name is a string
         assert isinstance(name, str)
-        return self._parent.set_message_handler(self.ns(name), handler)
+        return self._parent._set_message_handler_impl(
+            self.ns(name),
+            handler,
+            # Allow the handler to be executed within this session proxy
+            handler_session=self,
+        )
 
     def download(
         self, id: Optional[str] = None, **kwargs: object
