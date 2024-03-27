@@ -5,6 +5,8 @@ import json
 from typing import (
     TYPE_CHECKING,
     Any,
+    Awaitable,
+    Callable,
     Literal,
     Optional,
     Protocol,
@@ -618,19 +620,31 @@ class data_frame(Renderer[DataFrameResult]):
 
         self.set_patch_fn(patch_fn)
         self.set_patches_fn(patches_fn)
-        # self._add_message_handlers()
 
-        # # TODO-barret; Use dynamic route instead of message handlers? Gut all of `output_binding_request_handler?` TODO: Talk with Joe
-        # session = get_current_session()
-        # if session is not None:
-        #     session.dynamic_route("data-frame-patches-{id}", self._handle_patches)
+    def _set_patches_handler_impl(
+        self,
+        handler: Callable[..., Awaitable[Jsonifiable]] | None,
+    ) -> str:
+        session = self._get_session()
+        key = session.set_message_handler(
+            f"data_frame_patches_{self.output_id}",
+            handler,
+        )
+        return key
 
-        # output_binding_request_handler(session, "name", self._handle_patches_1)
+    def _reset_patches_handler(self) -> str:
+        return self._set_patches_handler_impl(None)
 
-    # To be called by session's output_binding_request_handler message handler on this data_frame instance
-    @output_binding_request_handler
+    def _set_patches_handler(self) -> str:
+        """
+        Set the client patches handler for the data frame.
+
+        This method **must be** called as late as possible as it depends on the ID of the output.
+        """
+        return self._set_patches_handler_impl(self._patches_handler)
+
     # Do not change this method name unless you update corresponding code in `/js/dataframe/`!!
-    async def _handle_patches(self, patches: list[CellPatch]) -> Jsonifiable:
+    async def _patches_handler(self, patches: list[CellPatch]) -> Jsonifiable:
         # TODO-barret; verify that the patches are in the correct format
 
         # Call user's cell update method to retrieve formatted values
@@ -713,6 +727,7 @@ class data_frame(Renderer[DataFrameResult]):
     async def render(self) -> Jsonifiable:
         # Reset value
         self._reset_reactives()
+        self._reset_patches_handler()
 
         value = await self.fn()
         if value is None:
@@ -726,8 +741,15 @@ class data_frame(Renderer[DataFrameResult]):
                 )
             )
 
+        # Send info to client
+        patch_key = self._set_patches_handler()
         self._value.set(value)
-        return value.to_payload()
+        return {
+            "data": value.to_payload(),
+            "patchInfo": {
+                "key": patch_key,
+            },
+        }
 
     async def _send_message_to_browser(self, handler: str, obj: dict[str, Any]):
 

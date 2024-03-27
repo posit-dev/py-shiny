@@ -34,3 +34,7 @@ export interface PandasData<TIndex> {
   type_hints?: ReadonlyArray<TypeHint>;
   options: DataGridOptions;
 }
+
+export interface PatchInfo {
+  key: string;
+}
