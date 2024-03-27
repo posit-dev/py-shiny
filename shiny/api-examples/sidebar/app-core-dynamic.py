@@ -25,7 +25,8 @@ app_ui = ui.page_fluid(
     ui.layout_column_wrap(
         ui.card(
             ui._card.card_body(
-                ui.output_ui("sidebar_dynamic", fill=True, fillable=True), class_="p-0"
+                ui.output_ui("sidebar_dynamic_container", fill=True, fillable=True),
+                class_="p-0",
             ),
         ),
         ui.card(
@@ -39,7 +40,7 @@ app_ui = ui.page_fluid(
 
 def server(input: Inputs, output: Outputs, session: Session):
     @render.ui
-    def sidebar_dynamic():
+    def sidebar_dynamic_container():
         return ui.layout_sidebar(
             ui.sidebar(
                 ui.markdown(

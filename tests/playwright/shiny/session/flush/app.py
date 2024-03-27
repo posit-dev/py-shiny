@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from typing import List
 
 from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 
@@ -37,8 +38,10 @@ app_ui = ui.page_fluid(
     ui.output_text_verbatim("all_txt", placeholder=True),
     ui.tags.span("Flush events: "),
     ui.output_text_verbatim("flush_txt", placeholder=True),
-    ui.tags.span("Flushed: "),
+    ui.tags.span("Flushed events: "),
     ui.output_text_verbatim("flushed_txt", placeholder=True),
+    ui.tags.span("Session end events (refresh App to add events): "),
+    ui.output_text_verbatim("session_end_txt", placeholder=True),
     ui.tags.script(
         """
         $(document).on('shiny:connected', function(event) {
@@ -55,18 +58,20 @@ app_ui = ui.page_fluid(
     ),
 )
 
+session_ended_messages: List[str] = []
+
 
 def server(input: Inputs, output: Outputs, session: Session):
     def on_ended_sync(txt: str):
         def _():
-            print(txt)
+            session_ended_messages.append(txt)
 
         return _
 
     def on_ended_async(txt: str):
         async def _():
             await asyncio.sleep(0)
-            print(txt)
+            session_ended_messages.append(txt)
 
         return _
 
@@ -180,6 +185,10 @@ def server(input: Inputs, output: Outputs, session: Session):
     @render.text
     def flushed_txt():
         return str(flushed_vals.get())
+
+    @render.text
+    def session_end_txt():
+        return str(session_ended_messages)
 
 
 app = App(app_ui, server)

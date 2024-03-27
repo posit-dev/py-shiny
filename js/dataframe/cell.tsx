@@ -20,6 +20,7 @@ import {
   getCellEditMapValue,
 } from "./cell-edit-map";
 import { updateCellsData } from "./data-update";
+import type { PatchInfo } from "./types";
 
 // States
 // # √ Ready
@@ -50,6 +51,7 @@ export type CellState = keyof typeof CellStateEnum;
 interface TableBodyCellProps {
   id: string | null;
   cell: Cell<unknown[], unknown>;
+  patchInfo: PatchInfo;
   columns: readonly string[];
   editCellsIsAllowed: boolean;
   editRowIndex: number | null;
@@ -66,6 +68,7 @@ interface TableBodyCellProps {
 export const TableBodyCell: FC<TableBodyCellProps> = ({
   id,
   cell,
+  patchInfo,
   columns,
   editCellsIsAllowed,
   editRowIndex,
@@ -137,7 +140,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
   //   * When a td is focused, Have esc key move focus to the table
   //   * When table is focused, Have esc key blur the focus
   // TODO-barret-future; Combat edit mode being independent of selection mode
-  // * In row / column selection mode, allow for arrowoutput_binding_request_handler key navigation by focusing on a single cell, not a TR
+  // * In row / column selection mode, allow for arrow key navigation by focusing on a single cell, not a TR
   // * If a cell is focused,
   //   * `enter key` allows you to go into edit mode; If editing is turned off, the selection is toggled
   //   * `space key` allows you toggle the selection of the cell
@@ -253,6 +256,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     // updateCellsData updates the underlying data via `setData` and `setCellEditMap`
     updateCellsData({
       id,
+      patchInfo: patchInfo,
       patches: [
         {
           rowIndex,
@@ -273,6 +277,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     });
   }, [
     id,
+    patchInfo,
     rowIndex,
     columnIndex,
     value,

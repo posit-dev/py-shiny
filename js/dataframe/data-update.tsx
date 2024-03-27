@@ -3,6 +3,7 @@ import { ResponseValue, makeRequestPromise } from "./request";
 import type { CellState } from "./cell";
 import { CellStateEnum } from "./cell";
 import { CellEdit, SetCellEditMap, makeCellEditMapKey } from "./cell-edit-map";
+import type { PatchInfo } from "./types";
 
 export type CellPatch = {
   rowIndex: number;
@@ -19,6 +20,7 @@ export type CellPatchPy = {
 
 export function updateCellsData({
   id,
+  patchInfo,
   patches,
   onSuccess,
   onError,
@@ -27,6 +29,7 @@ export function updateCellsData({
   setCellEditMap,
 }: {
   id: string | null;
+  patchInfo: PatchInfo;
   patches: CellPatch[];
   onSuccess: (values: CellPatch[]) => void;
   onError: (err: string) => void;
@@ -47,12 +50,8 @@ export function updateCellsData({
   });
 
   makeRequestPromise({
-    method: "output_binding_request_handler",
+    method: patchInfo.key,
     args: [
-      // id: string
-      id,
-      // handler: string
-      "patches",
       // list[CellPatch]
       patchesPy,
     ],

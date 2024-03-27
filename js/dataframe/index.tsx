@@ -38,7 +38,7 @@ import { SortArrow } from "./sort-arrows";
 import css from "./styles.scss";
 import { useTabindexGroup } from "./tabindex-group";
 import { useSummary } from "./table-summary";
-import { EditModeEnum, PandasData, TypeHint } from "./types";
+import { EditModeEnum, PandasData, PatchInfo, TypeHint } from "./types";
 
 // TODO-barret set selected cell as input! (Might be a followup?)
 
@@ -90,11 +90,16 @@ declare module "@tanstack/table-core" {
 interface ShinyDataGridProps<TIndex> {
   id: string | null;
   data: PandasData<TIndex>;
+  patchInfo: PatchInfo;
   bgcolor?: string;
 }
 
-const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
-  const { id, data, bgcolor } = props;
+const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
+  id,
+  data,
+  patchInfo,
+  bgcolor,
+}) => {
   const { columns, type_hints: typeHints, data: rowData } = data;
   const { width, height, fill, filters: withFilters } = data.options;
 
@@ -486,6 +491,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
                           id={id}
                           key={cell.id}
                           cell={cell}
+                          patchInfo={patchInfo}
                           editCellsIsAllowed={editCellsIsAllowed}
                           columns={columns}
                           editRowIndex={editRowIndex}
@@ -673,10 +679,12 @@ export class ShinyDataFrameOutput extends HTMLElement {
     }
   }
 
-  renderValue(data: unknown) {
+  renderValue(
+    value: null | { patchInfo: PatchInfo; data: PandasData<unknown> }
+  ) {
     this.clearError();
 
-    if (!data) {
+    if (!value) {
       this.reactRoot!.render(null);
       return;
     }
@@ -685,7 +693,8 @@ export class ShinyDataFrameOutput extends HTMLElement {
       <StrictMode>
         <ShinyDataGrid
           id={this.id}
-          data={data as PandasData<unknown>}
+          data={value.data}
+          patchInfo={value.patchInfo}
           bgcolor={getComputedBgColor(this)}
         ></ShinyDataGrid>
       </StrictMode>

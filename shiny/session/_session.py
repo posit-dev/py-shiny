@@ -49,10 +49,6 @@ from ..input_handler import input_handlers
 from ..reactive import Effect_, Value, effect, flush, isolate
 from ..reactive._core import lock, on_flushed
 from ..render.renderer import Renderer, RendererT
-from ..render.renderer._dispatch import (
-    RendererHasSession,
-    is_output_binding_request_handler,
-)
 from ..types import (
     Jsonifiable,
     SafeException,
@@ -190,8 +186,17 @@ class Session(object, metaclass=SessionMeta):
         self._debug: bool = debug
         self._message_handlers: dict[
             str,
-            Callable[..., Awaitable[Jsonifiable]],
-        ] = self._create_message_handlers()
+            tuple[Callable[..., Awaitable[Jsonifiable]], Session],
+        ] = {}
+        """
+        Dictionary of message handlers for the session.
+
+        If a request is sent from the client to the server via
+        `window.Shiny.make_request()`, the server will look up the method in this
+        dictionary and call the corresponding function with the arguments provided in
+        the request.
+        """
+        self._init_message_handlers()
 
         # The HTTPConnection representing the WebSocket. This is used so that we can
         # query information about the request, like headers, cookies, etc.
@@ -390,7 +395,7 @@ class Session(object, metaclass=SessionMeta):
 
     async def _dispatch(self, message: ClientMessageOther) -> None:
         try:
-            func = self._message_handlers[message["method"]]
+            async_func, handler_session = self._message_handlers[message["method"]]
         except KeyError:
             await self._send_error_response(
                 message,
@@ -406,9 +411,18 @@ class Session(object, metaclass=SessionMeta):
 
         try:
             # TODO: handle `blobs`
-            value = await func(*message["args"])
+
+            # * Use the session context from when the message handler was set
+            # * Using `isolate()` allows the handler to read reactive values in a
+            #   non-reactive context
+            with session_context(handler_session), isolate():
+                value = await async_func(*message["args"])
         except Exception as e:
-            await self._send_error_response(message, str(e))
+            # Safe error handling!
+            if self.app.sanitize_errors and not isinstance(e, SafeException):
+                await self._send_error_response(message, self.app.sanitize_error_msg)
+            else:
+                await self._send_error_response(message, str(e))
             return
 
         await self._send_response(message, value)
@@ -417,9 +431,7 @@ class Session(object, metaclass=SessionMeta):
         await self._send_message({"response": {"tag": message["tag"], "value": value}})
 
     # This is called during __init__.
-    def _create_message_handlers(
-        self,
-    ) -> dict[str, Callable[..., Awaitable[Jsonifiable]]]:
+    def _init_message_handlers(self):
         # TODO-future; Make sure these methods work within MockSession
 
         async def uploadInit(file_infos: list[FileInfo]) -> dict[str, Jsonifiable]:
@@ -456,10 +468,8 @@ class Session(object, metaclass=SessionMeta):
             # Explicitly return None to signal that the message was handled.
             return None
 
-        return {
-            "uploadInit": uploadInit,
-            "uploadEnd": uploadEnd,
-        }
+        self.set_message_handler("uploadInit", uploadInit)
+        self.set_message_handler("uploadEnd", uploadEnd)
 
     # ==========================================================================
     # Handling /session/{session_id}/{action}/{subpath} requests
@@ -890,6 +900,77 @@ class Session(object, metaclass=SessionMeta):
         nonce = _utils.rand_hex(8)
         return f"session/{urllib.parse.quote(self.id)}/dynamic_route/{urllib.parse.quote(name)}?nonce={urllib.parse.quote(nonce)}"
 
+    def set_message_handler(
+        self,
+        name: str,
+        handler: (
+            Callable[..., Jsonifiable] | Callable[..., Awaitable[Jsonifiable]] | None
+        ),
+    ) -> str:
+        """
+        Set a client message handler.
+
+        Sets a method that can be called by the client via
+        `Shiny.shinyapp.makeRequest()`. `Shiny.shinyapp.makeRequest()` makes a request
+        to the server and waits for a response. By using `makeRequest()` (JS) and
+        `set_message_handler()` (python), you can have a much richer communication
+        interaction than just using Input values and re-rendering outputs.
+
+        For example, `@render.data_frame` can have many cells edited. While it is
+        possible to set many input values, if `makeRequest()` did not exist, the data
+        frame would be updated on the first cell update. This would cause the data frame
+        to be re-rendered, cancelling any pending cell updates. `makeRequest()` allows
+        for individual cell updates to be sent to the server, processed, and handled by
+        the existing data frame output.
+
+        When the message handler is executed, it will be executed within an isolated reactive
+        context and the session context that set the message handler.
+
+        Parameters
+        ----------
+        name
+            The name of the message handler.
+        handler
+            The handler function to be called when the client makes a message for the
+            given name.  The handler function should take any number of arguments that
+            are provided by the client and return a JSON-serializable object.
+
+            If the value is `None`, then the handler at `name` will be removed.
+
+        Returns
+        -------
+        :
+            The key under which the handler is stored (or removed). This value will be
+            namespaced when used with a session proxy.
+        """
+        # Use `_impl` method to allow for SessionProxy to set the `handler_session`
+        return self._set_message_handler_impl(
+            name,
+            handler,
+            # The handler will be executed within the root session
+            handler_session=self,
+        )
+
+    def _set_message_handler_impl(
+        self,
+        name: str,
+        handler: (
+            Callable[..., Jsonifiable] | Callable[..., Awaitable[Jsonifiable]] | None
+        ),
+        *,
+        # Allow the handler to be executed within a Session or SessionProxy
+        handler_session: Session | SessionProxy,
+    ) -> str:
+        # Verify that the name is a string
+        assert isinstance(name, str)
+        if handler is None:
+            if name in self._message_handlers:
+                del self._message_handlers[name]
+        else:
+            assert callable(handler)
+            self._message_handlers[name] = (wrap_async(handler), self)
+        return name
+
     def _process_ui(self, ui: TagChild) -> RenderedDeps:
         res = TagList(ui).render()
         deps: list[dict[str, Any]] = []
@@ -963,6 +1044,22 @@ class SessionProxy:
 
     def dynamic_route(self, name: str, handler: DynamicRouteHandler) -> str:
         return self._parent.dynamic_route(self.ns(name), handler)
+
+    def set_message_handler(
+        self,
+        name: str,
+        handler: (
+            Callable[..., Jsonifiable] | Callable[..., Awaitable[Jsonifiable]] | None
+        ),
+    ) -> str:
+        # Verify that the name is a string
+        assert isinstance(name, str)
+        return self._parent._set_message_handler_impl(
+            self.ns(name),
+            handler,
+            # Allow the handler to be executed within this session proxy
+            handler_session=self,
+        )
 
     def download(
         self, id: Optional[str] = None, **kwargs: object
@@ -1069,94 +1166,6 @@ class Outputs:
         self._session = session
         self._ns = ns
         self._outputs = outputs
-
-        self._init_message_handlers()
-
-    async def _output_binding_request_handler(
-        self,
-        output_id: str,
-        handler: str,
-        msg: object,
-    ) -> Jsonifiable:
-        """
-        Used to handle request messages from an Output Renderer.
-
-        Typically, this is used when an Output Renderer needs to set an input value.
-        E.g. a @render.data_frame result with a `mode="edit"` parameter will use
-        this to set the value of the data frame when a cell is edited.
-
-        The value returned by the handler is sent back to the client with the original unique id (`tag`).
-        """
-        # Verify that the output_id and handler are strings
-        assert isinstance(output_id, str)
-        assert isinstance(handler, str)
-
-        if output_id not in self._outputs:
-            raise RuntimeError(
-                f"Received request message for an unknown Output Renderer with id `{output_id}`"
-            )
-
-        output_info = self._outputs[output_id]
-        renderer = output_info.renderer
-
-        # Using two `isinstance` checks works type checker to understand that `renderer` is a `Renderer` and has `_session`
-        if not (
-            isinstance(renderer, Renderer) and isinstance(renderer, RendererHasSession)
-        ):
-            raise RuntimeError(
-                f"Output Renderer with id `{output_id}` does not have a `_session` attribute. Please capture the Session during initialization of the Renderer and store it in a `_session` attribute."
-            )
-
-        handler_fn_name = f"_handle_{handler}"
-        if not hasattr(renderer, handler_fn_name):
-            raise RuntimeError(
-                f"Output Renderer with id `{output_id}` does not have method `{handler_fn_name}` to handle request message"
-            )
-        handler_fn = getattr(renderer, handler_fn_name)
-        if not callable(handler_fn):
-            raise RuntimeError(
-                f"Output Renderer with id `{output_id}` does not have callable method `{handler_fn_name}` to handle request message"
-            )
-
-        if is_output_binding_request_handler(handler_fn):
-
-            with session_context(renderer._session), isolate():
-                try:
-                    return await handler_fn(msg)
-                except Exception as e:
-                    # Ex:
-                    # ```
-                    # Exception while handling `data_frame[id=testing-summary_data]._patch_fn()`: boom!
-                    # ```
-                    print(
-                        "Exception while handling "
-                        f"`{renderer.__class__.__name__}[id={output_id}].{handler_fn_name}()`:",
-                        e,
-                        file=sys.stderr,
-                    )
-                    # TODO-barret-future; Should this logic be moved to the dispatch handler?
-                    if self._session.app.sanitize_errors and not isinstance(
-                        e, SafeException
-                    ):
-                        raise RuntimeError(self._session.app.sanitize_error_msg)
-
-                    raise  # reraise the original exception
-
-        else:
-            # This if/else is poorly arranged as TypeGuards only work within the truthy
-            # section of the if statement. We could do a comparison of
-            # `isinstance(handler_fn, OutputBindingRequestHandler)` but it seems to not
-            # work on Python 3.12
-            raise RuntimeError(
-                f"Output Renderer with id `{output_id}` did not mark method `{handler_fn_name}` as an output handler via `@output_binding_request_handler` from `shiny.render.renderer.output_binding_request_handler`"
-            )
-
-    def _init_message_handlers(self) -> None:
-        # Add the message handler
-        if isinstance(self._session, Session):
-            self._session._message_handlers["output_binding_request_handler"] = (
-                self._output_binding_request_handler
-            )
 
     @overload
     def __call__(self, renderer: RendererT) -> RendererT:
