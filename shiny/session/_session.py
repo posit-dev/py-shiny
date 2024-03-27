@@ -890,6 +890,56 @@ class Session(object, metaclass=SessionMeta):
         nonce = _utils.rand_hex(8)
         return f"session/{urllib.parse.quote(self.id)}/dynamic_route/{urllib.parse.quote(name)}?nonce={urllib.parse.quote(nonce)}"
 
+    def set_message_handler(
+        self,
+        name: str,
+        handler: (
+            Callable[..., Jsonifiable] | Callable[..., Awaitable[Jsonifiable]] | None
+        ),
+    ) -> str:
+        """
+        Set a client message handler.
+
+        Sets a method that can be called by the client via
+        `Shiny.shinyapp.makeRequest()`. `Shiny.shinyapp.makeRequest()` makes a request
+        to the server and waits for a response. By using `makeRequest()` (JS) and
+        `set_message_handler()` (python), you can have a much richer communication
+        interaction than just using Input values and re-rendering outputs.
+
+        For example, `@render.data_frame` can have many cells edited. While it is
+        possible to set many input values, if `makeRequest()` did not exist, the data
+        frame would be updated on the first cell update. This would cause the data frame
+        to be re-rendered, cancelling any pending cell updates. `makeRequest()` allows
+        for individual cell updates to be sent to the server, processed, and handled by
+        the existing data frame output.
+
+        Parameters
+        ----------
+        name
+            The name of the message handler.
+        handler
+            The handler function to be called when the client makes a message for the
+            given name.  The handler function should take any number of arguments that
+            are provided by the client and return a JSON-serializable object.
+
+            If the value is `None`, then the handler at `name` will be removed.
+
+        Returns
+        -------
+        :
+            The key under which the handler is stored (or removed). This value will be
+            namespaced when used with a session proxy.
+        """
+        # Verify that the name is a string
+        assert isinstance(name, str)
+        if handler is None:
+            if name in self._message_handlers:
+                del self._message_handlers[name]
+        else:
+            assert callable(handler)
+            self._message_handlers[name] = wrap_async(handler)
+        return name
+
     def _process_ui(self, ui: TagChild) -> RenderedDeps:
         res = TagList(ui).render()
         deps: list[dict[str, Any]] = []
@@ -963,6 +1013,17 @@ class SessionProxy:
 
     def dynamic_route(self, name: str, handler: DynamicRouteHandler) -> str:
         return self._parent.dynamic_route(self.ns(name), handler)
+
+    def set_message_handler(
+        self,
+        name: str,
+        handler: (
+            Callable[..., Jsonifiable] | Callable[..., Awaitable[Jsonifiable]] | None
+        ),
+    ) -> str:
+        # Verify that the name is a string
+        assert isinstance(name, str)
+        return self._parent.set_message_handler(self.ns(name), handler)
 
     def download(
         self, id: Optional[str] = None, **kwargs: object
