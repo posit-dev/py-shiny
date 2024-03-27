@@ -508,7 +508,7 @@ class data_frame(Renderer[DataFrameResult]):
             selection_mode = self.selection_mode()
         if selection_mode == "none":
             warnings.warn(
-                "Cell selection can not be updated when `.selection_mode()` is 'none'. "
+                "Cell selection cannot be updated when `.selection_mode()` is 'none'. "
                 "Please set `selection_mode=` to 'single' or 'multiple' in the return "
                 "value of `@render.data_frame` to enable cell selection.",
                 stacklevel=2,

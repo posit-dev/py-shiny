@@ -50,7 +50,7 @@ def as_editable(
     editable = bool(editable)
     if editable:
         print(
-            f"`{name}(editable=true)` is an expirmental feature. "
+            f"`{name}(editable=true)` is an experimental feature. "
             "If you find any bugs or would like different behavior, "
             "please make an issue at https://github.com/posit-dev/py-shiny/issues/new"
         )

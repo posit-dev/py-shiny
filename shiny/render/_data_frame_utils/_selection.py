@@ -25,43 +25,38 @@ SelectionMode = Union[
 LocationRange = tuple[int, int]
 
 
-# class SelectionLocation_(TypedDict):
-#     rows: LocationRange | Literal["all"]
-#     cols: LocationRange | Literal["all"]
+# row_idx = 0
+# col_idx = 9
+# min_row = 0
+# max_row = 3
+# min_col = 0
+# max_col = 3
 
-row_idx = 0
-col_idx = 9
-min_row = 0
-max_row = 3
-min_col = 0
-max_col = 3
+# # Select single cell
+# x = {"rows": row_idx, "cols": col_idx}
+# x = {"rows": [row_idx], "cols": [col_idx]}
+# # select single region
+# x = {"rows": [min_row, max_row], "cols": [max_col, min_col]}
+# # No multi-region selection!
 
+# # select single row; all columns
+# x = {"rows": row_idx}
+# x = {"rows": row_idx, "cols": None}
+# x = {"rows": [row_idx]}
+# x = {"rows": [row_idx], "cols": None}
+# # select multiple rows; all columns
+# x = {"rows": [row_idx, row_idx + 3, row_idx + 5]}
+# x = {"rows": [row_idx, row_idx + 3, row_idx + 5], "cols": None}
 
-# Select single cell
-x = {"rows": row_idx, "cols": col_idx}
-x = {"rows": [row_idx], "cols": [col_idx]}
-# select single region
-x = {"rows": [min_row, max_row], "cols": [max_col, min_col]}
-# No multi-region selection!
-
-# select single row; all columns
-x = {"rows": row_idx}
-x = {"rows": row_idx, "cols": None}
-x = {"rows": [row_idx]}
-x = {"rows": [row_idx], "cols": None}
-# select multiple rows; all columns
-x = {"rows": [row_idx, row_idx + 3, row_idx + 5]}
-x = {"rows": [row_idx, row_idx + 3, row_idx + 5], "cols": None}
-
-# (same for cols)
-# select single col; all rows
-x = {"cols": col_idx}
-x = {"cols": col_idx, "rows": None}
-x = {"cols": [col_idx]}
-x = {"cols": [col_idx], "rows": None}
-# select multiple cols; all rows
-x = {"cols": [col_idx, col_idx + 3, col_idx + 5]}
-x = {"cols": [col_idx, col_idx + 3, col_idx + 5], "rows": None}
+# # (same for cols)
+# # select single col; all rows
+# x = {"cols": col_idx}
+# x = {"cols": col_idx, "rows": None}
+# x = {"cols": [col_idx]}
+# x = {"cols": [col_idx], "rows": None}
+# # select multiple cols; all rows
+# x = {"cols": [col_idx, col_idx + 3, col_idx + 5]}
+# x = {"cols": [col_idx, col_idx + 3, col_idx + 5], "rows": None}
 
 
 class CellSelectionCell(TypedDict):
@@ -89,16 +84,6 @@ class CellSelectionNone(TypedDict):
     cols: None
 
 
-# class CellSelectionCore(TypedDict):
-#     rows: Sequence[int] | None
-#     cols: Sequence[int] | None
-# CellSelectionBase = Union[
-#     # SelectionLocationDict,
-#     CellSelectionCore,
-#     Literal["all", "none"],
-# ]
-
-
 # class CellSelectionAll(TypedDict):
 #     rows: True
 #     cols: True
@@ -114,45 +99,15 @@ CellSelectionDict = Union[
     # CellSelectionAll,
 ]
 
-# @@@@@@@@@@@@@@
-
-
-# class SelectionLocationRegion(TypedDict):
-#     rows: LocationRange
-#     cols: LocationRange
-
-
-# class SelectionLocationRow(TypedDict):
-#     rows: tuple[int, ...]
-#     cols: Literal["all"]
-
-
-# class SelectionLocationCol(TypedDict):
-#     rows: Literal["all"]
-#     cols: LocationRange
-
-
-# class SelectionLocationAll(TypedDict):
-#     rows: Literal["all"]
-#     cols: Literal["all"]
-
-
-# SelectionLocationDict = Union[
-#     SelectionLocationRegion,
-#     SelectionLocationRow,
-#     SelectionLocationCol,
-#     SelectionLocationAll,
-# ]
-
 # More user friendly Selection type:
 CellSelection = Union[
-    # SelectionLocationDict,
     CellSelectionDict,
     Literal["all", "none"],
 ]
 
 
 # Proposal, remove BrowserCellSelectionAll and BrowserCellSelectionNone as they can be represented by an empty Row/Col/Region
+# Update: Maybe only remove `All` as `None` has a different meaning in that nothing should be selected. Whereas `All` means everything can could be represented as a row, column, or region with appropriate values.
 class BrowserCellSelectionAll(TypedDict):
     type: Literal["all"]
 
@@ -217,69 +172,6 @@ def is_sequence_2(r: Sequence[int]) -> TypeGuard[LocationRange]:
         and isinstance(r[0], int)
         and isinstance(r[1], int)
     )
-
-
-# def as_cell_selection(
-#     x: SelectionLocationJS | CellSelectionDict,
-# ) -> SelectionLocationJS:
-#     if x == "all":
-#         return "all"
-#     if x == "none":
-#         return "none"
-
-#     assert isinstance(x, dict)
-
-#     # Seems like a SelectionLocationJS, verify shape...
-#     if "type" in x:
-#         if x["type"] == "all":
-#             return x
-
-#         if x["type"] == "row":
-#             assert_rows(x)
-#             return x
-#         if x["type"] == "col":
-#             assert_cols(x)
-#             return x
-#         if x["type"] == "region":
-#             assert_rows(x)
-#             assert_cols(x)
-#             return x
-#         raise ValueError(f"Unknown SelectionLocationJS[\"type\"]: {x['type']}")
-
-#     # Seems like a SelectionLocation, verify and convert...
-#     if "rows" not in x:
-#         raise ValueError("SelectionLocation must have 'rows' key")
-#     if "cols" not in x:
-#         raise ValueError("SelectionLocation must have 'cols' key")
-
-#     # All
-#     if x["rows"] == "all" and x["cols"] == "all":
-#         return {"type": "all"}
-
-#     # Cols
-#     if x["rows"] == "all":
-#         assert x["cols"] != "all"
-#         if is_location_range(x["cols"]):
-#             return {"type": "col", "cols": x["cols"]}
-#         else:
-#             raise ValueError("SelectionLocation['cols'] must be a tuple[int, int]")
-
-#     # Rows
-#     if x["cols"] == "all":
-#         assert x["rows"] != "all"
-#         if is_location_range(x["rows"]):
-#             return {"type": "row", "rows": x["rows"]}
-#         else:
-#             raise ValueError("SelectionLocation['rows'] must be a tuple[int, int]")
-
-
-#     # Region
-#     if is_location_range(x["rows"]) and is_location_range(x["cols"]):
-#         return {"type": "region", "rows": x["rows"], "cols": x["cols"]}
-#     else:
-#         raise ValueError(
-#             "SelectionLocation['rows'] and ['cols'] must be a tuple[int, int]"
-#         )
 
 
 def to_tuple_or_none(x: int | Sequence[int] | None) -> tuple[int, ...] | None:
