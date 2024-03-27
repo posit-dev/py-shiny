@@ -399,7 +399,7 @@ class Session(object, metaclass=SessionMeta):
 
     async def _dispatch(self, message: ClientMessageOther) -> None:
         try:
-            func = self._message_handlers[message["method"]]
+            async_func = self._message_handlers[message["method"]]
         except KeyError:
             await self._send_error_response(
                 message,
@@ -415,9 +415,18 @@ class Session(object, metaclass=SessionMeta):
 
         try:
             # TODO: handle `blobs`
-            value = await func(*message["args"])
+
+            # Isolate so that the function can be run without an explicit session.
+            # Let the handler function manage its own session context. (due to modules)
+            with isolate():
+                value = await async_func(*message["args"])
         except Exception as e:
-            await self._send_error_response(message, str(e))
+            # raise  # TODO-barret; REmove!
+            # Safe error handling!
+            if self.app.sanitize_errors and not isinstance(e, SafeException):
+                await self._send_error_response(message, self.app.sanitize_error_msg)
+            else:
+                await self._send_error_response(message, str(e))
             return
 
         await self._send_response(message, value)
