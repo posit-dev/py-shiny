@@ -22,7 +22,7 @@ from ._data_frame_utils import (
     DataTable,
     PatchesFn,
     PatchFn,
-    SelectionMode,
+    SelectionModes,
     as_browser_cell_selection,
     assert_patches_shape,
     cast_to_pandas,
@@ -165,9 +165,9 @@ class data_frame(Renderer[DataFrameResult]):
     --------
     * [`pandas.DataFrame.copy` API documentation]h(ttps://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.copy.html)
     """
-    selection_mode: reactive.Calc_[SelectionMode]
+    selection_modes: reactive.Calc_[SelectionModes]
     """
-    Reactive value of the data frame's selection mode.
+    Reactive value of the data frame's possible selection modes.
     """
 
     input_cell_selection: reactive.Calc_[BrowserCellSelection | None]
@@ -196,6 +196,12 @@ class data_frame(Renderer[DataFrameResult]):
         * If the row selection mode is `None`, the calculation will throw a silent error
           (`req(False)`)
         * The edited data (`.data_patched()`) at the indices of the selected rows
+
+    See Also
+    --------
+    * :func:`~shiny.render.data_frame.input_cell_selection`
+    * :func:`~shiny.render.data_frame.data_patched`
+    * :func:`~shiny.req`
     """
 
     def _reset_reactives(self) -> None:
@@ -236,7 +242,7 @@ class data_frame(Renderer[DataFrameResult]):
         self.data = self_data
 
         @reactive.calc
-        def self_selection_mode() -> SelectionMode:
+        def self_selection_modes() -> SelectionModes:
             value = self._value()
             req(value)
             if not isinstance(value, (DataGrid, DataTable)):
@@ -244,21 +250,19 @@ class data_frame(Renderer[DataFrameResult]):
                     f"Unsupported type returned from render function: {type(value)}. Expected `DataGrid` or `DataTable`"
                 )
 
-            return value.selection_mode
+            return value.selection_modes
 
-        self.selection_mode = self_selection_mode
+        self.selection_modes = self_selection_modes
 
         @reactive.calc
         def self_input_cell_selection() -> BrowserCellSelection | None:
-            selection_mode: SelectionMode = self.selection_mode()
-            if selection_mode == "none":
-                return None
-
             input_val = self._get_session().input[f"{self.output_id}_cell_selection"]()
-            if input_val is None:
-                return None
 
-            browser_cell_selection = as_browser_cell_selection(input_val)
+            browser_cell_selection = as_browser_cell_selection(
+                input_val, self.selection_modes()
+            )
+            if browser_cell_selection["type"] == "none":
+                return None
 
             return browser_cell_selection
 
@@ -274,9 +278,9 @@ class data_frame(Renderer[DataFrameResult]):
                 raise RuntimeError("This should never be reached for typing purposes")
 
             data_selected = self.data_patched()
-            if bcs["type"] == "all":
-                return data_selected
-            elif bcs["type"] == "none":
+            # if bcs["type"] == "all":
+            #     return data_selected
+            if bcs["type"] == "none":
                 # Empty subset
                 return data_selected.iloc[[]]
             elif bcs["type"] == "row":
@@ -505,31 +509,32 @@ class data_frame(Renderer[DataFrameResult]):
             selection = "none"
 
         with reactive.isolate():
-            selection_mode = self.selection_mode()
-        if selection_mode == "none":
+            selection_modes = self.selection_modes()
+        if "none" in selection_modes:
             warnings.warn(
-                "Cell selection cannot be updated when `.selection_mode()` is 'none'. "
-                "Please set `selection_mode=` to 'single' or 'multiple' in the return "
-                "value of `@render.data_frame` to enable cell selection.",
+                "Cell selection cannot be updated when `.selection_modes()` contains 'none'. "
+                'Please set `selection_modes=` to contain a non-`"none"` value '
+                "(e.g. 'row' or 'rows') in the return value of "
+                "`@render.data_frame` to enable cell selection.",
                 stacklevel=2,
             )
 
             selection = "none"
 
-        browser_cell_selection = as_browser_cell_selection(selection)
+        browser_cell_selection = as_browser_cell_selection(selection, selection_modes)
         if browser_cell_selection["type"] == "none":
             pass
-        elif browser_cell_selection["type"] == "all":
-            pass
-        elif browser_cell_selection["type"] == "region":
-            raise RuntimeError("Region selection is not yet supported")
-        elif browser_cell_selection["type"] == "col":
-            raise RuntimeError("Column selection is not yet supported")
+        # elif browser_cell_selection["type"] == "region":
+        #     raise RuntimeError("Region selection is not yet supported")
+        # elif browser_cell_selection["type"] == "cell":
+        #     raise RuntimeError("Single cell selection is not yet supported")
+        # elif browser_cell_selection["type"] == "col":
+        #     raise RuntimeError("Column selection is not yet supported")
         elif browser_cell_selection["type"] == "row":
             row_value = browser_cell_selection["rows"]
-            if selection_mode == "row" and len(row_value) > 1:
+            if "row" in selection_modes and len(row_value) > 1:
                 warnings.warn(
-                    "Attempted to set cell selection to more than 1 row when `.selection_mode()` is 'row'. "
+                    "Attempted to set cell selection to more than 1 row when `.selection_modes()` contains 'row'. "
                     "Only the first row supplied will be selected.",
                     stacklevel=2,
                 )

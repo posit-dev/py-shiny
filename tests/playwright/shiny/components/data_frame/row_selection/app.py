@@ -36,7 +36,7 @@ def make_server(input: Inputs):
     def grid():
         return render.DataGrid(
             data=load_penguins_raw(),
-            selection_mode=input.selection_mode(),
+            selection_modes=input.selection_mode(),
             height="300px",
         )
 
@@ -44,7 +44,7 @@ def make_server(input: Inputs):
     def grid_selected():
         return render.DataGrid(
             data=grid.data_selected(),
-            selection_mode=input.selection_mode(),
+            selection_modes=input.selection_mode(),
         )
 
     @reactive.effect
@@ -62,8 +62,6 @@ def make_server(input: Inputs):
         cell_selection = grid.input_cell_selection()
         if cell_selection is None:
             return "None"
-        if cell_selection["type"] == "all":
-            return "(All rows selected)"
         return str(cell_selection.get("rows", ()))
 
     # Test for selected rows data

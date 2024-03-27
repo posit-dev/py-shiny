@@ -82,7 +82,7 @@ def server(input: Inputs, output: Outputs, session: Session):
                 width=width,
                 height=height,
                 filters=input.filters(),
-                selection_mode=selection_mode(),
+                selection_modes=selection_mode(),
             )
         else:
             return render.DataTable(
@@ -90,7 +90,7 @@ def server(input: Inputs, output: Outputs, session: Session):
                 width=width,
                 height=height,
                 filters=input.filters(),
-                selection_mode=selection_mode(),
+                selection_modes=selection_mode(),
             )
 
     @reactive.effect

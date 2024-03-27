@@ -40,25 +40,53 @@ export const SelectionModeEnum = {
   Multiple: "rows",
   MultiNative: "multi-native_row",
 } as const;
-const selectionModes = Object.values(SelectionModeEnum);
+const selectionModeValues = Object.values(SelectionModeEnum);
 export type SelectionMode = ValueOf<typeof SelectionModeEnum>;
+export type SelectionModes = SelectionMode[];
 
-export function initRowSelectionMode(
-  mode_option: string | undefined
-): SelectionMode {
+export function initRowSelectionModes(
+  mode_option: SelectionModes | undefined
+): SelectionModes {
   // If no option was provided, default to multinative mode
-  const selectionMode = mode_option ?? SelectionModeEnum.MultiNative;
+  const selectionModes = mode_option ?? [SelectionModeEnum.MultiNative];
 
-  // If a row selection mode matches one of the enum values, use it. Otherwise, fall back to none (e.g. `dataFrameMode == "edit"`).
-  if (!selectionModes.includes(selectionMode as SelectionMode)) {
-    return SelectionModeEnum.None;
-  } else {
-    return selectionMode as SelectionMode;
+  const subSelectionModes = selectionModes.filter((selectionMode) =>
+    selectionModeValues.includes(selectionMode)
+  );
+
+  // If no selection modes are found, default to none
+  if (subSelectionModes.length === 0) {
+    return [SelectionModeEnum.None];
   }
+
+  if (subSelectionModes.includes(SelectionModeEnum.None)) {
+    return [SelectionModeEnum.None];
+  }
+  // Remove multiple if multinative is present
+  if (
+    subSelectionModes.includes(SelectionModeEnum.Multiple) &&
+    subSelectionModes.includes(SelectionModeEnum.MultiNative)
+  ) {
+    selectionModes.splice(
+      selectionModes.indexOf(SelectionModeEnum.Multiple),
+      1
+    );
+  }
+  // Remove single if multiple or multinative is present
+  if (
+    subSelectionModes.includes(SelectionModeEnum.Single) &&
+    (subSelectionModes.includes(SelectionModeEnum.Multiple) ||
+      subSelectionModes.includes(SelectionModeEnum.MultiNative))
+  ) {
+    selectionModes.splice(selectionModes.indexOf(SelectionModeEnum.Single), 1);
+  }
+  // TODO: Handle cols/region/cells here!
+
+  return subSelectionModes;
 }
 
 export function useSelection<TKey, TElement extends HTMLElement>(
-  mode: SelectionMode,
+  selectionModes: SelectionModes,
   keyAccessor: (el: TElement) => TKey,
   focusOffset: (start: TKey, offset: number) => TKey | null,
   between?: (from: TKey, to: TKey) => ReadonlyArray<TKey>
@@ -72,7 +100,7 @@ export function useSelection<TKey, TElement extends HTMLElement>(
   const [anchor, setAnchor] = useState<TKey | null>(null);
 
   const onMouseDown = (event: React.MouseEvent<TElement, MouseEvent>): void => {
-    if (mode === SelectionModeEnum.None) {
+    if (selectionModes.includes(SelectionModeEnum.None)) {
       return;
     }
 
@@ -80,7 +108,7 @@ export function useSelection<TKey, TElement extends HTMLElement>(
     const key = keyAccessor(el);
 
     const result = performMouseDownAction<TKey, TElement>(
-      mode,
+      selectionModes,
       between,
       selectedKeys,
       event,
@@ -98,7 +126,7 @@ export function useSelection<TKey, TElement extends HTMLElement>(
   };
 
   const onKeyDown = (event: React.KeyboardEvent<TElement>): void => {
-    if (mode === SelectionModeEnum.None) {
+    if (selectionModes.includes(SelectionModeEnum.None)) {
       return;
     }
 
@@ -106,7 +134,7 @@ export function useSelection<TKey, TElement extends HTMLElement>(
     const key = keyAccessor(el);
     const selected = selectedKeys.has(key);
 
-    if (mode === SelectionModeEnum.Single) {
+    if (selectionModes.includes(SelectionModeEnum.Single)) {
       if (event.key === " " || event.key === "Enter") {
         if (selectedKeys.has(key)) {
           setSelectedKeys(ImmutableSet.empty());
@@ -123,7 +151,7 @@ export function useSelection<TKey, TElement extends HTMLElement>(
           }
         }
       }
-    } else if (mode === SelectionModeEnum.Multiple) {
+    } else if (selectionModes.includes(SelectionModeEnum.Multiple)) {
       if (event.key === " " || event.key === "Enter") {
         setSelectedKeys(selectedKeys.toggle(key));
         event.preventDefault();
@@ -182,7 +210,7 @@ const isMac = /^mac/i.test(
 );
 
 function performMouseDownAction<TKey, TElement>(
-  mode: SelectionMode,
+  selectionModes: SelectionModes,
   between: ((from: TKey, to: TKey) => readonly TKey[]) | undefined,
   selectedKeys: ImmutableSet<TKey>,
   event: React.MouseEvent<TElement, MouseEvent>,
@@ -197,9 +225,9 @@ function performMouseDownAction<TKey, TElement>(
     return null;
   }
 
-  if (mode === SelectionModeEnum.Multiple) {
+  if (selectionModes.includes(SelectionModeEnum.Multiple)) {
     return { selection: selectedKeys.toggle(key), anchor: true };
-  } else if (mode === SelectionModeEnum.Single) {
+  } else if (selectionModes.includes(SelectionModeEnum.Single)) {
     if (ctrlKey && !shiftKey) {
       // Ctrl-click is like simple click, except it removes selection if an item is
       // already selected
@@ -212,7 +240,7 @@ function performMouseDownAction<TKey, TElement>(
       // Simple click sets selection, always
       return { selection: ImmutableSet.just(key), anchor: true };
     }
-  } else if (mode === SelectionModeEnum.MultiNative) {
+  } else if (selectionModes.includes(SelectionModeEnum.MultiNative)) {
     if (shiftKey && ctrlKey) {
       // Ctrl-Shift-click: Add anchor row through current row to selection
       if (anchor !== null && between) {

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 # TODO-barret; Docs
 # TODO-barret; Add examples!
-from typing import Protocol, cast
+from typing import Protocol, Sequence, cast
 
 from ..._typing_extensions import TypedDict
 from ..renderer._utils import JsonifiableDict
@@ -37,8 +37,8 @@ class PatchesFn(Protocol):
     ) -> list[CellPatch]: ...
 
 
-def assert_patches_shape(x: list[CellPatch]) -> None:
-    assert isinstance(x, list)
+def assert_patches_shape(x: Sequence[CellPatch]) -> None:
+    assert isinstance(x, Sequence)
 
     for patch in x:
         assert isinstance(patch, dict)

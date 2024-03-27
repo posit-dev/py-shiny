@@ -8,6 +8,7 @@ from typing import (
     Any,
     Literal,
     Protocol,
+    Sequence,
     TypeVar,
     Union,
     overload,
@@ -16,7 +17,12 @@ from typing import (
 
 from ..._docstring import add_example, no_example
 from ...types import Jsonifiable
-from ._selection import RowSelectionModeDeprecated, SelectionMode, as_selection_mode
+from ._selection import (
+    RowSelectionModeDeprecated,
+    SelectionMode,
+    SelectionModes,
+    as_selection_modes,
+)
 from ._unsafe import serialize_numpy_dtypes
 
 if TYPE_CHECKING:
@@ -91,14 +97,19 @@ class DataGrid(AbstractTabularData):
         If `True`, allows the user to edit the cells in the grid. When a cell is edited,
         the new value is sent to the server for processing. The server can then return
         a new value for the cell, which will be displayed in the grid.
-    selection_mode
-        Single string to set the mode of the table.
+    selection_modes
+        Single string or a Sequence of string values to define possible ways to select
+        data within the data frame.
 
         Supported values:
         * Use `"none"` to disable any cell selections or editing.
         * Use `"row"` to allow a single row to be selected at a time.
         * Use `"rows"` to allow multiple rows to be selected by clicking on them
         individually.
+
+        Resolution rules:
+        * If `"none"` is supplied, all other values will be ignored.
+        * If both `"row"` and `"rows"` are supplied, `"row"` will be dropped (supporting `"rows"`).
     row_selection_mode
         Deprecated. Please use `mode={row_selection_mode}_row` instead.
 
@@ -121,7 +132,7 @@ class DataGrid(AbstractTabularData):
     summary: bool | str
     filters: bool
     editable: bool
-    selection_mode: SelectionMode
+    selection_modes: SelectionModes
 
     def __init__(
         self,
@@ -132,7 +143,7 @@ class DataGrid(AbstractTabularData):
         summary: bool | str = True,
         filters: bool = False,
         editable: bool = False,
-        selection_mode: SelectionMode = "none",
+        selection_modes: SelectionMode | Sequence[SelectionMode] = "none",
         row_selection_mode: RowSelectionModeDeprecated = "deprecated",
     ):
 
@@ -146,8 +157,8 @@ class DataGrid(AbstractTabularData):
         self.summary = summary
         self.filters = filters
         self.editable = as_editable(editable, name="DataGrid")
-        self.selection_mode: SelectionMode = as_selection_mode(
-            selection_mode,
+        self.selection_modes = as_selection_modes(
+            selection_modes,
             name="DataGrid",
             editable=self.editable,
             row_selection_mode=row_selection_mode,
@@ -161,7 +172,7 @@ class DataGrid(AbstractTabularData):
             summary=self.summary,
             filters=self.filters,
             editable=self.editable,
-            selection_mode=self.selection_mode,
+            selection_modes=self.selection_modes,
             style="grid",
             fill=self.height is None,
         )
@@ -202,14 +213,19 @@ class DataTable(AbstractTabularData):
         If `True`, allows the user to edit the cells in the grid. When a cell is edited,
         the new value is sent to the server for processing. The server can then return
         a new value for the cell, which will be displayed in the grid.
-    selection_mode
-        Single string to set the mode of the table.
+    selection_modes
+        Single string or a Sequence of string values to define possible ways to select
+        data within the data frame.
 
         Supported values:
         * Use `"none"` to disable any cell selections or editing.
         * Use `"row"` to allow a single row to be selected at a time.
         * Use `"rows"` to allow multiple rows to be selected by clicking on them
         individually.
+
+        Resolution rules:
+        * If `"none"` is supplied, all other values will be ignored.
+        * If both `"row"` and `"rows"` are supplied, `"row"` will be dropped (supporting `"rows"`).
     row_selection_mode
         Deprecated. Please use `mode={row_selection_mode}_row` instead.
 
@@ -231,6 +247,7 @@ class DataTable(AbstractTabularData):
     height: str | float | None
     summary: bool | str
     filters: bool
+    selection_modes: SelectionModes
 
     def __init__(
         self,
@@ -241,7 +258,7 @@ class DataTable(AbstractTabularData):
         summary: bool | str = True,
         filters: bool = False,
         editable: bool = False,
-        selection_mode: SelectionMode = "none",
+        selection_modes: SelectionMode | Sequence[SelectionMode] = "none",
         row_selection_mode: Literal["deprecated"] = "deprecated",
     ):
 
@@ -255,8 +272,8 @@ class DataTable(AbstractTabularData):
         self.summary = summary
         self.filters = filters
         self.editable = as_editable(editable, name="DataTable")
-        self.selection_mode: SelectionMode = as_selection_mode(
-            selection_mode,
+        self.selection_modes = as_selection_modes(
+            selection_modes,
             name="DataTable",
             editable=self.editable,
             row_selection_mode=row_selection_mode,
@@ -270,7 +287,7 @@ class DataTable(AbstractTabularData):
             summary=self.summary,
             filters=self.filters,
             editable=self.editable,
-            selection_mode=self.selection_mode,
+            selection_modes=self.selection_modes,
             style="table",
         )
         return res

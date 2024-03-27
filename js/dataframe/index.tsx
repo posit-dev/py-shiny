@@ -31,7 +31,7 @@ import { Filter, useFilter } from "./filter";
 import type { BrowserCellSelection } from "./selection";
 import {
   SelectionModeEnum,
-  initRowSelectionMode,
+  initRowSelectionModes,
   useSelection,
 } from "./selection";
 import { SortArrow } from "./sort-arrows";
@@ -229,15 +229,17 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
 
   // ### Row selection ###############################################################
 
-  const rowSelectionMode = initRowSelectionMode(data.options["selection_mode"]);
+  const rowSelectionModes = initRowSelectionModes(
+    data.options["selection_modes"]
+  );
 
-  const canSelect = rowSelectionMode !== SelectionModeEnum.None;
+  const canSelect = !rowSelectionModes.includes(SelectionModeEnum.None);
   const canMultiSelect =
-    rowSelectionMode === SelectionModeEnum.MultiNative ||
-    rowSelectionMode === SelectionModeEnum.Multiple;
+    rowSelectionModes.includes(SelectionModeEnum.MultiNative) ||
+    rowSelectionModes.includes(SelectionModeEnum.Multiple);
 
   const rowSelection = useSelection<string, HTMLTableRowElement>(
-    rowSelectionMode,
+    rowSelectionModes,
     (el) => el.dataset.key!,
     (key, offset) => {
       const rowModel = table.getSortedRowModel();
@@ -308,12 +310,12 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
     if (!id) return;
     const shinyId = `${id}_cell_selection`;
     let shinyValue: BrowserCellSelection | null = null;
-    if (rowSelectionMode === SelectionModeEnum.None) {
+    if (rowSelectionModes.includes(SelectionModeEnum.None)) {
       shinyValue = null;
     } else if (
-      rowSelectionMode === SelectionModeEnum.Single ||
-      rowSelectionMode === SelectionModeEnum.Multiple ||
-      rowSelectionMode === SelectionModeEnum.MultiNative
+      rowSelectionModes.includes(SelectionModeEnum.Single) ||
+      rowSelectionModes.includes(SelectionModeEnum.Multiple) ||
+      rowSelectionModes.includes(SelectionModeEnum.MultiNative)
     ) {
       const rowSelectionKeys = rowSelection.keys().toList();
       // Currently do not sent `none` or `all` to the server as it is hard to utilize when we know the selection is row based
@@ -328,11 +330,11 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
       };
       // }
     } else {
-      console.error("Unhandled row selection mode:", rowSelectionMode);
+      console.error("Unhandled row selection mode:", rowSelectionModes);
     }
     Shiny.setInputValue!(shinyId, shinyValue);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, rowSelectionMode, [...rowSelection.keys()]]);
+  }, [id, rowSelectionModes, [...rowSelection.keys()]]);
 
   // ### End row selection ############################################################
 

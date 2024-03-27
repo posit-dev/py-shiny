@@ -48,12 +48,12 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
     @render.data_frame
     def summary_data():
         # return df
-        return render.DataGrid(df, selection_mode="none", editable=True)
-        return render.DataTable(df, selection_mode="none", editable=True)
-        # return render.DataGrid(df, selection_mode="rows", editable=True)
-        # return render.DataTable(df, selection_mode="rows", editable=True)
-        # return render.DataGrid(df, selection_mode="rows", editable=False)
-        # return render.DataTable(df, selection_mode="rows", editable=False)
+        return render.DataGrid(df, selection_modes="none", editable=True)
+        return render.DataTable(df, selection_modes="none", editable=True)
+        # return render.DataGrid(df, selection_modes="rows", editable=True)
+        # return render.DataTable(df, selection_modes="rows", editable=True)
+        # return render.DataGrid(df, selection_modes="rows", editable=False)
+        # return render.DataTable(df, selection_modes="rows", editable=False)
 
     # from shiny import reactive
     # @reactive.effect
