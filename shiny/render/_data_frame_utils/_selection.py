@@ -423,28 +423,30 @@ def as_selection_mode(
     editable: bool,
     row_selection_mode: RowSelectionModeDeprecated = "deprecated",
 ) -> SelectionMode:
-    if row_selection_mode == "deprecated":
-        # Disable selection_mode if `editable=True``
-        if editable:
-            warnings.warn(
-                '`editable` can not be `True` while `selection_mode` != `"none"`. '
-                'Setting `selection_mode="none"`',
-                stacklevel=2,
-            )
-            return "none"
+    # If a user supplied `row_selection_mode`... use the value but warn against it
+    if row_selection_mode != "deprecated":
 
-        return selection_mode
+        warn_deprecated(
+            f"`{name}(row_selection_mode=)` has been superseded by `{name}(selection_mode=)`."
+            f' Please use `{name}(mode="{row_selection_mode}_row")` instead.'
+        )
 
-    warn_deprecated(
-        f"`{name}(row_selection_mode=)` has been superseded by `{name}(selection_mode=)`."
-        f' Please use `{name}(mode="{row_selection_mode}_row")` instead.'
-    )
+        if row_selection_mode == "none":
+            return as_selection_mode("none", name=name, editable=editable)
+        elif row_selection_mode == "single":
+            return as_selection_mode("row", name=name, editable=editable)
+        elif row_selection_mode == "multiple":
+            return as_selection_mode("rows", name=name, editable=editable)
+        else:
+            raise ValueError("Unknown row_selection_mode: {row_selection_mode}")
 
-    if row_selection_mode == "none":
-        return as_selection_mode("none", name=name, editable=editable)
-    elif row_selection_mode == "single":
-        return as_selection_mode("row", name=name, editable=editable)
-    elif row_selection_mode == "multiple":
-        return as_selection_mode("rows", name=name, editable=editable)
-    else:
-        raise ValueError("Unknown row_selection_mode: {row_selection_mode}")
+    # Disable selection_mode if `editable=True``
+    if editable:
+        warnings.warn(
+            '`editable` can not currently be `True` while `selection_mode` != `"none"`. '
+            'Setting `selection_mode="none"`',
+            stacklevel=2,
+        )
+        return "none"
+
+    return selection_mode
