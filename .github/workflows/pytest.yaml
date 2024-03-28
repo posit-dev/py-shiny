@@ -5,13 +5,14 @@ on:
   push:
     branches: ["main", "rc-*"]
   pull_request:
+  merge_group:
   release:
     types: [published]
   schedule:
     - cron: "0 8 * * *"
 
 jobs:
-  build:
+  check:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -21,7 +22,7 @@ jobs:
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup py-shiny
         id: install
         uses: ./.github/py-shiny/setup
@@ -58,16 +59,24 @@ jobs:
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup py-shiny
         uses: ./.github/py-shiny/setup
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Determine browsers for testing
+        uses: ./.github/py-shiny/pytest-browsers
+        id: browsers
+        with:
+          all-browsers: ${{ startsWith(github.head_ref, 'playwright') }}
+      - name: Display browser
+        shell: bash
+        run: echo '${{ steps.browsers.outputs.browsers }}'
       - name: Run End-to-End tests
         timeout-minutes: 20
         run: |
-          make playwright-shiny SUB_FILE=". -vv"
+          make playwright-shiny SUB_FILE=". -vv" ${{ steps.browsers.outputs.browsers }}
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -85,14 +94,14 @@ jobs:
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup py-shiny
         uses: ./.github/py-shiny/setup
         with:
           python-version: ${{ matrix.python-version }}
 
       - name: Install node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: "18"
           cache: npm
@@ -102,10 +111,15 @@ jobs:
         run: |
           npm ci
 
+      - name: Determine browsers for testing
+        uses: ./.github/py-shiny/pytest-browsers
+        id: browsers
+        with:
+          all-browsers: ${{ startsWith(github.head_ref, 'playwright') }}
       - name: Run example app tests
         timeout-minutes: 20
         run: |
-          make playwright-examples SUB_FILE=". -vv"
+          make playwright-examples SUB_FILE=". -vv" ${{ steps.browsers.outputs.browsers }}
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -124,7 +138,7 @@ jobs:
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup py-shiny
         uses: ./.github/py-shiny/setup
         with:
@@ -146,7 +160,7 @@ jobs:
 
   playwright-deploys:
     needs: [playwright-deploys-precheck]
-    if: github.event_name != 'release' && (github.event_name == 'push' || (github.event_name == 'pull_request' && startsWith(github.head_ref, 'deploy')))
+    if: github.event_name != 'release' && (github.event_name == 'push' || startsWith(github.head_ref, 'deploy'))
     # Only allow one `playwright-deploys` job to run at a time. (Independent of branch / PR)
     # Only one is allowed to run at a time because it is deploying to the same server location.
     concurrency: playwright-deploys
@@ -159,7 +173,7 @@ jobs:
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup py-shiny
         uses: ./.github/py-shiny/setup
         with:
@@ -172,7 +186,7 @@ jobs:
         run: |
           make playwright-deploys SUB_FILE=". -vv"
 
-      - name: Deploy apps and run tests (on `push` or on `pull_request` w/ `deploy**` branch)
+      - name: Deploy apps and run tests (on `push` or `deploy**` branches)
         env:
           DEPLOY_APPS: "true"
           DEPLOY_CONNECT_SERVER_URL: "https://rsc.radixu.com/"
@@ -197,9 +211,9 @@ jobs:
     name: "Deploy to PyPI"
     runs-on: ubuntu-latest
     if: github.event_name == 'release'
-    needs: [build]
+    needs: [check]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: "Set up Python 3.10"
         uses: actions/setup-python@v4
         with:
@@ -233,7 +247,7 @@ jobs:
 
   testrail-reporting-nightly:
     runs-on: ${{ matrix.os }}
-    if: ${{ github.event_name == 'schedule' || (github.event_name == 'pull_request' && startsWith(github.head_ref, 'testrail')) }}
+    if: ${{ github.event_name == 'schedule' || startsWith(github.head_ref, 'testrail') }}
     strategy:
       matrix:
         python-version:
@@ -246,14 +260,14 @@ jobs:
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup py-shiny
         uses: ./.github/py-shiny/setup
         with:
           python-version: ${{ matrix.python-version }}
 
       - name: Install node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: "18"
           cache: npm
