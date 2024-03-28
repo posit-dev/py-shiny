@@ -351,22 +351,53 @@ class _InputWithLabel(_InputWithContainer):
 
 
 class _WidthLocM:
+    """
+    A class representing the width location mixin.
+    This class provides methods to expect the width attribute of an element.
+    """
+
     def expect_width(
         self: _InputBaseP,
         value: AttrValue,
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Expect the width attribute of an element to have a specific value.
+
+        Parameters
+        ----------
+            value
+                The expected value of the width attribute.
+            timeout
+                The maximum time to wait for the expectation to be fulfilled.
+                Defaults to None.
+        """
         expect_attr(self.loc, "width", value=value, timeout=timeout)
 
 
 class _WidthContainerM:
+    """
+    A class representing the width container mixin.
+    This class provides methods to expect the width attribute of an element's container.
+    """
     def expect_width(
         self: _InputWithContainerP,
         value: AttrValue,
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Expect the width attribute of an element's container to have a specific value.
+
+        Parameters
+        ----------
+            value
+                The expected value of the width attribute.
+            timeout
+                The maximum time to wait for the expectation to be fulfilled.
+                Defaults to None.
+        """
         expect_attr(self.loc_container, "width", value=value, timeout=timeout)
 
 
@@ -2854,6 +2885,26 @@ class ValueBox(
 
 
 class Card(_WidthLocM, _CardFooterM, _CardBodyM, _CardFullScreenM, _InputWithContainer):
+    """
+    Card control for shiny.ui.card - https://shiny.posit.co/py/api/core/ui.card.html
+    """
+
+    loc: Locator
+    """
+    Locator for the card's value
+    """
+    loc_title: Locator
+    """
+    Locator for the card title
+    """
+    loc_footer: Locator
+    """
+    Locator for the card footer
+    """
+    loc_body: Locator
+    """
+    Locator for the card body
+    """
     # *args: TagChild | TagAttrs | CardItem,
     # full_screen: bool = False,
     # height: CssUnit | None = None,
@@ -2864,6 +2915,16 @@ class Card(_WidthLocM, _CardFooterM, _CardBodyM, _CardFullScreenM, _InputWithCon
     # wrapper: WrapperCallable | MISSING_TYPE | None = MISSING,
     # **kwargs: TagAttrValue
     def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes a new instance of the Card class.
+
+        Parameters
+        ----------
+        page
+            The Playwright page object.
+        id
+            The ID of the card.
+        """
         super().__init__(
             page,
             id=id,
@@ -2890,6 +2951,16 @@ class Card(_WidthLocM, _CardFooterM, _CardBodyM, _CardFullScreenM, _InputWithCon
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Expects the card header to have a specific text.
+
+        Parameters
+        ----------
+        text
+            The expected text pattern or string.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to None.
+        """
         playwright_expect(self.loc_title).to_have_text(
             text,
             timeout=timeout,
@@ -2909,14 +2980,86 @@ class Card(_WidthLocM, _CardFooterM, _CardBodyM, _CardFullScreenM, _InputWithCon
     #     )
 
     def expect_max_height(self, value: StyleValue, *, timeout: Timeout = None) -> None:
+        """
+        Expects the card to have a specific maximum height.
+
+        Parameters
+        ----------
+        value
+            The expected maximum height value.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to None.
+        """
         expect_to_have_style(self.loc_container, "max-height", value, timeout=timeout)
 
     def expect_min_height(self, value: StyleValue, *, timeout: Timeout = None) -> None:
+        """
+        Expects the card to have a specific minimum height.
+
+        Parameters
+        ----------
+        value
+            The expected minimum height value.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to None.
+        """
         expect_to_have_style(self.loc_container, "min-height", value, timeout=timeout)
 
     def expect_height(self, value: StyleValue, *, timeout: Timeout = None) -> None:
+        """
+        Expects the card to have a specific height.
+
+        Parameters
+        ----------
+        value
+            The expected height value.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to None.
+        """
         expect_to_have_style(self.loc_container, "height", value, timeout=timeout)
 
+    def expect_full_screen_available(
+        self, available: bool, *, timeout: Timeout = None
+    ) -> None:
+        """
+        Expects the card to be available for full screen mode.
+
+        Parameters
+        ----------
+        available
+            True if the value box is expected to be available for full screen mode, False otherwise.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to None.
+        """
+        playwright_expect(self._loc_fullscreen).to_have_count(
+            int(available), timeout=timeout
+        )
+
+    def expect_header_exists(self, exists: bool, *, timeout: Timeout = None) -> None:
+        """
+        Expects the card header to exist or not.
+
+        Parameters
+        ----------
+        exists
+            True if the card header is expected to exist, False otherwise.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to None.
+        """
+        playwright_expect(self.loc_title).to_have_count(int(exists), timeout=timeout)
+
+    def expect_footer_exists(self, exists: bool, *, timeout: Timeout = None) -> None:
+        """
+        Expects the card footer to exist or not.
+
+        Parameters
+        ----------
+        exists
+            True if the card footer is expected to exist, False otherwise.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to None.
+        """
+        playwright_expect(self.loc_footer).to_have_count(int(exists), timeout=timeout)
 
 # Experimental below
 
