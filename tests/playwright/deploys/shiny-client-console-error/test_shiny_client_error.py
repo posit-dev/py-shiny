@@ -1,18 +1,18 @@
 from playwright.sync_api import Page
 from utils.deploy_utils import create_deploys_app_url_fixture, skip_if_not_chrome
 
-app_url = create_deploys_app_url_fixture("shiny_client_error")
+app_url = create_deploys_app_url_fixture("shiny_client_console_error")
 
 
 @skip_if_not_chrome
-def test_shiny_client_error(page: Page, app_url: str) -> None:
+def test_shiny_client_console_error(page: Page, app_url: str) -> None:
     page.goto(app_url)
 
     assert page.locator("#same_id").count() == 2
     shiny_error_message = page.query_selector("shiny-error-message")
 
     # show the client error message only for local apps
-    if "127.0.0.1:" in app_url:
+    if "http" in app_url:
 
         assert shiny_error_message is not None
         assert (
