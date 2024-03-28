@@ -43,7 +43,7 @@ jobs:
           make quartodoc
 
       - name: Build site
-        if: github.event != 'merge_group'
+        if: ${{ github.event_name != 'pull_request' || startsWith(github.head_ref, 'docs')  }}
         run: |
           cd docs
           make site
