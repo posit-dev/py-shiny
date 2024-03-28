@@ -8,7 +8,7 @@ on:
   merge_group:
 
 jobs:
-  build:
+  build-docs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -56,7 +56,7 @@ jobs:
 
   deploy:
     if: github.ref == 'refs/heads/main'
-    needs: build
+    needs: build-docs
 
     # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
     permissions:

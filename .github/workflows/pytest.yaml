@@ -12,7 +12,7 @@ on:
     - cron: "0 8 * * *"
 
 jobs:
-  build:
+  check:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -211,7 +211,7 @@ jobs:
     name: "Deploy to PyPI"
     runs-on: ubuntu-latest
     if: github.event_name == 'release'
-    needs: [build]
+    needs: [check]
     steps:
       - uses: actions/checkout@v4
       - name: "Set up Python 3.10"

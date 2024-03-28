@@ -1,4 +1,4 @@
-name: Build
+name: Verify built assets
 
 on:
   push:
