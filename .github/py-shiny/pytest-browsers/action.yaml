@@ -1,0 +1,19 @@
+name: 'Custom merge queue browsers'
+description: 'Trim down pytest browsers to just chrome for merge_group events.'
+outputs:
+  browsers:
+    description: 'pytest browsers to use'
+    value: ${{ steps.browsers.outputs.browser }}
+runs:
+  using: "composite"
+  steps:
+      - name: Determine browsers to use
+        shell: bash
+        id: browsers
+        run: |
+          if [ "${{ github.event_name }}" == "merge_group" ]; then
+            echo "Using chrome browser only!"
+            echo 'browsers=PYTEST_BROWSER="--browser chromium"' >> "$GITHUB_OUTPUT"
+          else
+            echo "No custom pytest browsers"
+          fi

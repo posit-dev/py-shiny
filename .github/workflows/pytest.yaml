@@ -65,10 +65,12 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - uses: ./.github/py-shiny/pytest-browers
+        id: browsers
       - name: Run End-to-End tests
         timeout-minutes: 20
         run: |
-          make playwright-shiny SUB_FILE=". -vv"
+          make playwright-shiny SUB_FILE=". -vv" ${{ steps.browsers.outputs.browsers }}
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -103,10 +105,12 @@ jobs:
         run: |
           npm ci
 
+      - uses: ./.github/py-shiny/pytest-browers
+        id: browsers
       - name: Run example app tests
         timeout-minutes: 20
         run: |
-          make playwright-examples SUB_FILE=". -vv"
+          make playwright-examples SUB_FILE=". -vv" ${{ steps.browsers.outputs.browsers }}
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
