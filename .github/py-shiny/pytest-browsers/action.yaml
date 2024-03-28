@@ -21,7 +21,7 @@ runs:
             exit 0
           fi
 
-          if [ "${{ github.event_name }}" == "pull-request" ]; then
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
             echo "Using chrome browser only!"
             echo 'browsers=PYTEST_BROWSERS="--browser chromium"' >> "$GITHUB_OUTPUT"
           fi
