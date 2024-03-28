@@ -27,4 +27,4 @@ runs:
           fi
 
           echo "Using chrome browser only!"
-          echo 'browsers=PYTEST_BROWSER="--browser chromium"' >> "$GITHUB_OUTPUT"
+          echo 'browsers=PYTEST_BROWSERS="--browser chromium"' >> "$GITHUB_OUTPUT"
