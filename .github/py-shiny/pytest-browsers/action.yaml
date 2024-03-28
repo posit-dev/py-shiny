@@ -3,7 +3,7 @@ description: 'Trim down pytest browsers for any github event other than merge_gr
 outputs:
   browsers:
     description: 'pytest browsers to use'
-    value: ${{ steps.browsers.outputs.browser }}
+    value: ${{ steps.browsers.outputs.browsers }}
 runs:
   using: "composite"
   steps:
