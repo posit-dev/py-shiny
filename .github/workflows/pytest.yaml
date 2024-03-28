@@ -65,7 +65,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - uses: ./.github/py-shiny/pytest-browers
+      - uses: ./.github/py-shiny/pytest-browsers
         id: browsers
       - name: Run End-to-End tests
         timeout-minutes: 20
@@ -105,7 +105,7 @@ jobs:
         run: |
           npm ci
 
-      - uses: ./.github/py-shiny/pytest-browers
+      - uses: ./.github/py-shiny/pytest-browsers
         id: browsers
       - name: Run example app tests
         timeout-minutes: 20
