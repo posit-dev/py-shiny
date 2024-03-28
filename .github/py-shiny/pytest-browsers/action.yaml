@@ -10,7 +10,7 @@ outputs:
     description: 'pytest browsers to use'
     value: ${{ steps.browsers.outputs.browsers }}
 runs:
-  using: 'composite'
+  using: "composite"
   steps:
       - name: Determine browsers to use
         shell: bash
@@ -21,10 +21,10 @@ runs:
             exit 0
           fi
 
-          if [ "${{ github.event_name }}" == "merge_group" ]; then
-            echo "No custom pytest browsers for merge_group event!"
-            exit 0
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            echo "Using chrome browser only!"
+            echo 'browsers=PYTEST_BROWSERS="--browser chromium"' >> "$GITHUB_OUTPUT"
           fi
 
-          echo "Using chrome browser only!"
-          echo 'browsers=PYTEST_BROWSER="--browser chromium"' >> "$GITHUB_OUTPUT"
+          echo "No custom pytest browsers!"
+          exit 0

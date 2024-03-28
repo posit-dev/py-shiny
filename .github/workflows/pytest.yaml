@@ -12,7 +12,7 @@ on:
     - cron: "0 8 * * *"
 
 jobs:
-  build:
+  check:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -70,6 +70,9 @@ jobs:
         id: browsers
         with:
           all-browsers: ${{ startsWith(github.head_ref, 'playwright') }}
+      - name: Display browser
+        shell: bash
+        run: echo '${{ steps.browsers.outputs.browsers }}'
       - name: Run End-to-End tests
         timeout-minutes: 20
         run: |
@@ -98,7 +101,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: "18"
           cache: npm
@@ -208,7 +211,7 @@ jobs:
     name: "Deploy to PyPI"
     runs-on: ubuntu-latest
     if: github.event_name == 'release'
-    needs: [build]
+    needs: [check]
     steps:
       - uses: actions/checkout@v4
       - name: "Set up Python 3.10"
@@ -264,7 +267,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: "18"
           cache: npm
