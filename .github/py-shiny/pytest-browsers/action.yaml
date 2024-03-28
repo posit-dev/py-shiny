@@ -10,7 +10,7 @@ outputs:
     description: 'pytest browsers to use'
     value: ${{ steps.browsers.outputs.browsers }}
 runs:
-  using: 'composite'
+  using: "composite"
   steps:
       - name: Determine browsers to use
         shell: bash
