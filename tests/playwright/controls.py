@@ -381,6 +381,7 @@ class _WidthContainerM:
     A class representing the width container mixin.
     This class provides methods to expect the width attribute of an element's container.
     """
+
     def expect_width(
         self: _InputWithContainerP,
         value: AttrValue,
@@ -2905,6 +2906,7 @@ class Card(_WidthLocM, _CardFooterM, _CardBodyM, _CardFullScreenM, _InputWithCon
     """
     Locator for the card body
     """
+
     # *args: TagChild | TagAttrs | CardItem,
     # full_screen: bool = False,
     # height: CssUnit | None = None,
@@ -3060,6 +3062,7 @@ class Card(_WidthLocM, _CardFooterM, _CardBodyM, _CardFullScreenM, _InputWithCon
             The maximum time to wait for the expectation to pass. Defaults to None.
         """
         playwright_expect(self.loc_footer).to_have_count(int(exists), timeout=timeout)
+
 
 # Experimental below
 

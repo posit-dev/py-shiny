@@ -2,11 +2,10 @@ from conftest import ShinyAppProc
 from controls import Card
 from playwright.sync_api import Page
 
+
 def get_body_tag_name(card: Card) -> str:
     body_tag_name = (
-        card.loc_body.locator("*")
-        .nth(0)
-        .evaluate("el => el.tagName.toLowerCase()")
+        card.loc_body.locator("*").nth(0).evaluate("el => el.tagName.toLowerCase()")
     )
     return body_tag_name
 
@@ -18,6 +17,7 @@ Header and Footer: The tests verify the presence and content of the header and f
 Body Element: The tests assert the tag name used for the body element within each card (e.g., <span>, <p>, <h1>, <h3>, <h5>).
 Fullscreen Availability and State: The tests check whether the fullscreen feature is available for a particular card and verify its initial state (fullscreen or not). For cards with fullscreen support, the tests open and close the fullscreen mode and assert the expected behavior.
 """
+
 
 def test_card_kitchensink(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
