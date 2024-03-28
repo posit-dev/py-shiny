@@ -70,6 +70,9 @@ jobs:
         id: browsers
         with:
           all-browsers: ${{ startsWith(github.head_ref, 'playwright') }}
+      - name: Display browser
+        shell: bash
+        run: echo '${{ steps.browsers.outputs.browsers }}'
       - name: Run End-to-End tests
         timeout-minutes: 20
         run: |
