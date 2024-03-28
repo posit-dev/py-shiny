@@ -65,8 +65,11 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - uses: ./.github/py-shiny/pytest-browsers
+      - name: Determine browsers for testing
+        uses: ./.github/py-shiny/pytest-browsers
         id: browsers
+        with:
+          all-browsers: ${{ startsWith(github.head_ref, 'playwright') }}
       - name: Run End-to-End tests
         timeout-minutes: 20
         run: |
@@ -105,8 +108,11 @@ jobs:
         run: |
           npm ci
 
-      - uses: ./.github/py-shiny/pytest-browsers
+      - name: Determine browsers for testing
+        uses: ./.github/py-shiny/pytest-browsers
         id: browsers
+        with:
+          all-browsers: ${{ startsWith(github.head_ref, 'playwright') }}
       - name: Run example app tests
         timeout-minutes: 20
         run: |
