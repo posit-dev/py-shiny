@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
+* `Session` objects now have a `set_message_handler(name, fn)` method that allows you to register a message handler function that will be called when a request message with the given name is received from the client (via `Shiny.shinyapp.makeRequest()` (JS)). (#1253)
+
 * Experimental: `@render.data_frame` return values of `DataTable` and `DataGrid` support `mode="edit"` to enable editing of the data table cells. (#1198)
 
 * `ui.card()` and `ui.value_box()` now take an `id` argument that, when provided, is used to report the full screen state of the card or value box to the server. For example, when using `ui.card(id = "my_card", full_screen = TRUE)` you can determine if the card is currently in full screen mode by reading the boolean value of `input.my_card()["full_screen"]`. (#1215)
@@ -22,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Added support for using `shiny.express` in Quarto Dashboards. (#1217)
 
 * `ui.value_box()`, `ui.layout_columns()` and `ui.layout_column_wrap()` now all have `min_height` and `max_height` arguments. These are useful in filling layouts, like `ui.page_fillable()`, `ui.page_sidebar(fillable=True)` or `ui.page_navbar(fillable=True)`. For example, you can use `ui.layout_columns(min_height=300, max_height=500)` to ensure that a set of items (likely arranged in a row of columns) are always between 300 and 500 pixels tall. (#1223)
+
+* Added an error console which displays errors in the browser's UI. This is enabled by default when running applications locally, and can be disabled with `shiny run --no-dev-mode`. It is not enabled for applications that are deployed to a server. (#1060)
 
 ### Bug fixes
 
@@ -34,6 +38,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Fixed an issue that could happen with a `ui.card()` or `ui.value_box()` that is rendered dynamically via `@render.ui` when an updated card replaces a card that the user has expanded into full screen mode. Now the full screen state is reset for the new card or value box. If you want to update a card without potentially exiting the full-screen mode, update specific parts of the card using `ui.output_ui()` or `ui.output_text()`. (#1221)
 
 * `ui.layout_columns()` now correctly applies the `row_heights` at the `xs` breakpoint, if supplied. (#1222)
+
+* `ui.panel_conditional()` now adds the `.shiny-panel-conditional` class to the `<div>` element wrapping the conditional panel contents. (#1257)
 
 ### Other changes
 

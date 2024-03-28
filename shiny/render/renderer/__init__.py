@@ -1,5 +1,4 @@
-from ._dispatch import output_binding_request_handler
-from ._renderer import (  # noqa: F401
+from ._renderer import (
     AsyncValueFn,
     Jsonifiable,
     Renderer,
@@ -13,5 +12,4 @@ __all__ = (
     "Jsonifiable",
     "AsyncValueFn",
     "RendererT",
-    "output_binding_request_handler",
 )

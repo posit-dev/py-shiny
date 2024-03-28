@@ -197,7 +197,13 @@ def panel_conditional(
     if ns_prefix != "":
         ns_prefix += "-"
 
-    return div(*args, data_display_if=condition, data_ns_prefix=ns_prefix, **kwargs)
+    return div(
+        *args,
+        {"class": "shiny-panel-conditional"},
+        data_display_if=condition,
+        data_ns_prefix=ns_prefix,
+        **kwargs,
+    )
 
 
 @add_example()

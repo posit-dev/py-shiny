@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
+import tempfile
+import time
 from typing import Any, Callable, TypeVar
 
 import pytest
@@ -128,6 +131,16 @@ def write_requirements_txt(app_dir: str) -> None:
         f.write(f"git+https://github.com/posit-dev/py-shiny.git@{git_hash}\n")
 
 
+def assert_rsconnect_file_updated(file_path: str, min_mtime: float) -> None:
+    """
+    Asserts that the specified file has been updated since `min_mtime` (seconds since epoch).
+    """
+    mtime = os.path.getmtime(file_path)
+    assert (
+        mtime > min_mtime
+    ), f"File '{file_path}' was not updated during app deployment which means the deployment failed"
+
+
 def deploy_app(
     app_file_path: str,
     location: str,
@@ -140,26 +153,38 @@ def deploy_app(
 
     run_on_ci = os.environ.get("CI", "False") == "true"
     repo = os.environ.get("GITHUB_REPOSITORY", "unknown")
-    branch_name = os.environ.get("GITHUB_HEAD_REF", "unknown")
 
-    if (
-        not run_on_ci
-        or repo != "posit-dev/py-shiny"
-        or not (branch_name.startswith("deploy") or branch_name == "main")
-    ):
-        pytest.skip("Not on CI or posit-dev/py-shiny repo or deploy* or main branch")
-        raise RuntimeError()
+    if not (run_on_ci and repo == "posit-dev/py-shiny"):
+        pytest.skip("Not on CI and within posit-dev/py-shiny repo")
 
     app_dir = os.path.dirname(app_file_path)
-    write_requirements_txt(app_dir)
+    app_dir_name = os.path.basename(app_dir)
 
-    deployment_function = {
-        "connect": quiet_deploy_to_connect,
-        "shinyapps": quiet_deploy_to_shinyapps,
-    }[location]
+    # Use temporary directory to avoid modifying the original app directory
+    # This allows us to run tests in parallel when deploying apps both modify the same rsconnect config file
+    with tempfile.TemporaryDirectory("deploy_app") as tmpdir:
 
-    url = deployment_function(app_name, app_dir)
-    return url
+        # Creating a dir with same name instead of tmp to avoid issues
+        # when deploying app to shinyapps.io using rsconnect package
+        # since the rsconnect/*.json file needs the app_dir name to be same
+        tmp_app_dir = os.path.join(tmpdir, app_dir_name)
+        os.mkdir(tmp_app_dir)
+        shutil.copytree(app_dir, tmp_app_dir, dirs_exist_ok=True)
+        write_requirements_txt(tmp_app_dir)
+
+        deployment_function = {
+            "connect": quiet_deploy_to_connect,
+            "shinyapps": quiet_deploy_to_shinyapps,
+        }[location]
+
+        pre_deployment_time = time.time()
+        url = deployment_function(app_name, tmp_app_dir)
+        tmp_rsconnect_config = os.path.join(
+            tmp_app_dir, "rsconnect-python", f"{os.path.basename(tmp_app_dir)}.json"
+        )
+        assert_rsconnect_file_updated(tmp_rsconnect_config, pre_deployment_time)
+
+        return url
 
 
 def create_deploys_app_url_fixture(

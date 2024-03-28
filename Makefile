@@ -297,6 +297,7 @@ clean-js: FORCE
 
 # Default `SUB_FILE` to empty
 SUB_FILE:=
+PYTEST_BROWSERS:= --browser webkit --browser firefox --browser chromium
 
 install-playwright: $(PLAYWRIGHT) FORCE
 	@echo "-------- Installing playwright browsers --------"
@@ -305,15 +306,15 @@ install-playwright: $(PLAYWRIGHT) FORCE
 
 playwright-shiny: install-playwright $(PYTEST) FORCE ## end-to-end tests with playwright; (SUB_FILE="" within tests/playwright/shiny/)
 	. $(PYBIN)/activate && \
-	  pytest tests/playwright/shiny/$(SUB_FILE)
+	  pytest tests/playwright/shiny/$(SUB_FILE) $(PYTEST_BROWSERS)
 
 playwright-deploys: install-playwright $(RSCONNECT) $(PYTEST) FORCE ## end-to-end tests on deployed apps with playwright; (SUB_FILE="" within tests/playwright/deploys/)
 	. $(PYBIN)/activate && \
-	  pytest tests/playwright/deploys/$(SUB_FILE)
+	  pytest tests/playwright/deploys/$(SUB_FILE) $(PYTEST_BROWSERS)
 
 playwright-examples: install-playwright $(PYTEST) FORCE ## end-to-end tests on all py-shiny examples with playwright; (SUB_FILE="" within tests/playwright/examples/)
 	. $(PYBIN)/activate && \
-	  pytest tests/playwright/examples/$(SUB_FILE)
+	  pytest tests/playwright/examples/$(SUB_FILE) $(PYTEST_BROWSERS)
 
 playwright-debug: install-playwright $(PYTEST) FORCE ## All end-to-end tests, chrome only, headed; (SUB_FILE="" within tests/playwright/)
 	. $(PYBIN)/activate && \
@@ -325,11 +326,11 @@ playwright-show-trace: FORCE ## Show trace of failed tests
 # end-to-end tests with playwright and generate junit report
 testrail-junit: install-playwright $(TRCLI) $(PYTEST) FORCE
 	. $(PYBIN)/activate && \
-	  pytest tests/playwright/shiny/$(SUB_FILE) --junitxml=report.xml
+	  pytest tests/playwright/shiny/$(SUB_FILE) --junitxml=report.xml $(PYTEST_BROWSERS)
 
 coverage: $(PYTEST) $(COVERAGE) FORCE ## check combined code coverage (must run e2e last)
 	. $(PYBIN)/activate && \
-	  pytest --cov-report term-missing --cov=shiny tests/pytest/ tests/playwright/shiny/$(SUB_FILE) && \
+	  pytest --cov-report term-missing --cov=shiny tests/pytest/ tests/playwright/shiny/$(SUB_FILE) $(PYTEST_BROWSERS) && \
 	  coverage html && \
 	  $(BROWSER) htmlcov/index.html
 
