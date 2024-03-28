@@ -41,6 +41,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `ui.panel_conditional()` now adds the `.shiny-panel-conditional` class to the `<div>` element wrapping the conditional panel contents. (#1257)
 
+* Unwanted double padding is also removed for items in `ui.panel_conditional()` the parent container uses `gap` for spacing multiple elements (e.g., when used in `ui.layout_columns()`, `ui.page_fillable()`, etc). (#1266)
+
 ### Other changes
 
 * The fill CSS used by fillable containers (i.e. when `fillable=True`) now uses a [CSS cascade layer](https://developer.mozilla.org/en-US/docs/Learn/CSS/Building_blocks/Cascade_layers) named `htmltools` to reduce the precedence order of the fill CSS. (#1228)
