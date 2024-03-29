@@ -98,8 +98,8 @@ class DataGrid(AbstractTabularData):
         the new value is sent to the server for processing. The server can then return
         a new value for the cell, which will be displayed in the grid.
     selection_modes
-        Single string or a Sequence of string values to define possible ways to select
-        data within the data frame.
+        Single string or a `set`/`list`/`tuple` of string values to define possible ways
+        to select data within the data frame.
 
         Supported values:
         * Use `"none"` to disable any cell selections or editing.
@@ -214,8 +214,8 @@ class DataTable(AbstractTabularData):
         the new value is sent to the server for processing. The server can then return
         a new value for the cell, which will be displayed in the grid.
     selection_modes
-        Single string or a Sequence of string values to define possible ways to select
-        data within the data frame.
+        Single string or a `set`/`list`/`tuple` of string values to define possible ways
+        to select data within the data frame.
 
         Supported values:
         * Use `"none"` to disable any cell selections or editing.
