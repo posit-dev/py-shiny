@@ -4,7 +4,6 @@ import { ImmutableSet } from "./immutable-set";
 
 import type { ValueOf } from "./types";
 
-type BrowserCellSelectionAll = { type: "all" };
 type BrowserCellSelectionNone = { type: "none" };
 type BrowserCellSelectionRow = { type: "row"; rows: readonly number[] };
 type BrowserCellSelectionCol = { type: "col"; cols: readonly number[] };
@@ -16,7 +15,6 @@ type BrowserCellSelectionRegion = {
 
 // For sending and receiving selection info to python
 export type BrowserCellSelection =
-  | BrowserCellSelectionAll
   | BrowserCellSelectionNone
   | BrowserCellSelectionRow
   | BrowserCellSelectionCol
@@ -34,55 +32,88 @@ export interface SelectionSet<TKey, TElement extends HTMLElement> {
   };
 }
 
-export const SelectionModeEnum = {
-  None: "none",
-  Single: "row",
-  Multiple: "rows",
-  MultiNative: "multi-native_row",
-} as const;
-const selectionModeValues = Object.values(SelectionModeEnum);
-export type SelectionMode = ValueOf<typeof SelectionModeEnum>;
-export type SelectionModes = SelectionMode[];
+// Keep as strings (and not pointer types) as this is a shape defined by the python side
+export type SelectionModesProp = {
+  row: "none" | "single" | "multiple" | "multi-native";
+  col: "none" | "single" | "multiple";
+  rect: "none" | "region" | "cell";
+};
+export class SelectionModes {
+  static readonly _NONE = "none";
+  static readonly _ROW_SINGLE = "single";
+  static readonly _ROW_MULTIPLE = "multiple";
+  static readonly _ROW_MULTI_NATIVE = "multi-native";
+  static readonly _COL_SINGLE = "single";
+  static readonly _col_multiple = "multiple";
+  static readonly _RECT_REGION = "region";
+  static readonly _RECT_CELL = "cell";
 
-export function initRowSelectionModes(
-  mode_option: SelectionModes | undefined
-): SelectionModes {
-  // If no option was provided, default to multinative mode
-  const selectionModes = mode_option ?? [SelectionModeEnum.MultiNative];
+  static readonly _rowEnum = {
+    NONE: SelectionModes._NONE,
+    SINGLE: SelectionModes._ROW_SINGLE,
+    MULTIPLE: SelectionModes._ROW_MULTIPLE,
+    // TODO-barret; Make it the new definition of rows!
+    MULTI_NATIVE: SelectionModes._ROW_MULTI_NATIVE,
+  } as const;
+  static readonly _colEnum = {
+    NONE: SelectionModes._NONE,
+    SINGLE: SelectionModes._COL_SINGLE,
+    MULTIPLE: SelectionModes._col_multiple,
+  } as const;
+  static readonly _rectEnum = {
+    NONE: SelectionModes._NONE,
+    REGION: SelectionModes._RECT_REGION,
+    CELL: SelectionModes._RECT_CELL,
+  } as const;
 
-  const subSelectionModes = selectionModes.filter((selectionMode) =>
-    selectionModeValues.includes(selectionMode)
-  );
+  row: ValueOf<typeof SelectionModes._rowEnum>;
+  col: ValueOf<typeof SelectionModes._colEnum>;
+  rect: ValueOf<typeof SelectionModes._rectEnum>;
 
-  // If no selection modes are found, default to none
-  if (subSelectionModes.length === 0) {
-    return [SelectionModeEnum.None];
+  constructor({
+    row,
+    col,
+    rect,
+  }: {
+    row: SelectionModesProp["row"];
+    col: SelectionModesProp["col"];
+    rect: SelectionModesProp["rect"];
+  }) {
+    if (!Object.values(SelectionModes._rowEnum).includes(row)) {
+      throw new Error(`Invalid row selection mode: ${row}`);
+    }
+    if (!Object.values(SelectionModes._colEnum).includes(col)) {
+      throw new Error(`Invalid col selection mode: ${col}`);
+    }
+    if (!Object.values(SelectionModes._rectEnum).includes(rect)) {
+      throw new Error(`Invalid rect selection mode: ${rect}`);
+    }
+    this.row = row;
+    this.col = col;
+    this.rect = rect;
   }
 
-  if (subSelectionModes.includes(SelectionModeEnum.None)) {
-    return [SelectionModeEnum.None];
-  }
-  // Remove multiple if multinative is present
-  if (
-    subSelectionModes.includes(SelectionModeEnum.Multiple) &&
-    subSelectionModes.includes(SelectionModeEnum.MultiNative)
-  ) {
-    selectionModes.splice(
-      selectionModes.indexOf(SelectionModeEnum.Multiple),
-      1
+  is_none(): boolean {
+    return (
+      this.row === SelectionModes._rowEnum.NONE &&
+      this.col === SelectionModes._colEnum.NONE &&
+      this.rect === SelectionModes._rectEnum.NONE
     );
   }
-  // Remove single if multiple or multinative is present
-  if (
-    subSelectionModes.includes(SelectionModeEnum.Single) &&
-    (subSelectionModes.includes(SelectionModeEnum.Multiple) ||
-      subSelectionModes.includes(SelectionModeEnum.MultiNative))
-  ) {
-    selectionModes.splice(selectionModes.indexOf(SelectionModeEnum.Single), 1);
-  }
-  // TODO: Handle cols/region/cells here!
+}
 
-  return subSelectionModes;
+export function initRowSelectionModes(
+  selectionModesOption: SelectionModesProp | undefined
+): SelectionModes {
+  // If no option was provided, default to multinative mode
+  if (!selectionModesOption) {
+    selectionModesOption = { row: "multi-native", col: "none", rect: "none" };
+  }
+  return new SelectionModes({
+    row: selectionModesOption.row,
+    col: selectionModesOption.col,
+    rect: selectionModesOption.rect,
+  });
 }
 
 export function useSelection<TKey, TElement extends HTMLElement>(
@@ -100,7 +131,7 @@ export function useSelection<TKey, TElement extends HTMLElement>(
   const [anchor, setAnchor] = useState<TKey | null>(null);
 
   const onMouseDown = (event: React.MouseEvent<TElement, MouseEvent>): void => {
-    if (selectionModes.includes(SelectionModeEnum.None)) {
+    if (selectionModes.is_none()) {
       return;
     }
 
@@ -126,7 +157,7 @@ export function useSelection<TKey, TElement extends HTMLElement>(
   };
 
   const onKeyDown = (event: React.KeyboardEvent<TElement>): void => {
-    if (selectionModes.includes(SelectionModeEnum.None)) {
+    if (selectionModes.is_none()) {
       return;
     }
 
@@ -134,7 +165,7 @@ export function useSelection<TKey, TElement extends HTMLElement>(
     const key = keyAccessor(el);
     const selected = selectedKeys.has(key);
 
-    if (selectionModes.includes(SelectionModeEnum.Single)) {
+    if (selectionModes.row === SelectionModes._rowEnum.SINGLE) {
       if (event.key === " " || event.key === "Enter") {
         if (selectedKeys.has(key)) {
           setSelectedKeys(ImmutableSet.empty());
@@ -151,7 +182,7 @@ export function useSelection<TKey, TElement extends HTMLElement>(
           }
         }
       }
-    } else if (selectionModes.includes(SelectionModeEnum.Multiple)) {
+    } else if (selectionModes.row === SelectionModes._rowEnum.MULTIPLE) {
       if (event.key === " " || event.key === "Enter") {
         setSelectedKeys(selectedKeys.toggle(key));
         event.preventDefault();
@@ -225,9 +256,7 @@ function performMouseDownAction<TKey, TElement>(
     return null;
   }
 
-  if (selectionModes.includes(SelectionModeEnum.Multiple)) {
-    return { selection: selectedKeys.toggle(key), anchor: true };
-  } else if (selectionModes.includes(SelectionModeEnum.Single)) {
+  if (selectionModes.row === SelectionModes._rowEnum.SINGLE) {
     if (ctrlKey && !shiftKey) {
       // Ctrl-click is like simple click, except it removes selection if an item is
       // already selected
@@ -240,7 +269,10 @@ function performMouseDownAction<TKey, TElement>(
       // Simple click sets selection, always
       return { selection: ImmutableSet.just(key), anchor: true };
     }
-  } else if (selectionModes.includes(SelectionModeEnum.MultiNative)) {
+    // TODO-barret; multinative should be the new definition of `rows`!
+  } else if (selectionModes.row === SelectionModes._rowEnum.MULTIPLE) {
+    return { selection: selectedKeys.toggle(key), anchor: true };
+  } else if (selectionModes.row === SelectionModes._rowEnum.MULTI_NATIVE) {
     if (shiftKey && ctrlKey) {
       // Ctrl-Shift-click: Add anchor row through current row to selection
       if (anchor !== null && between) {

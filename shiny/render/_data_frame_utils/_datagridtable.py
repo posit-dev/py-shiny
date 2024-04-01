@@ -8,7 +8,6 @@ from typing import (
     Any,
     Literal,
     Protocol,
-    Sequence,
     TypeVar,
     Union,
     overload,
@@ -19,7 +18,7 @@ from ..._docstring import add_example, no_example
 from ...types import Jsonifiable
 from ._selection import (
     RowSelectionModeDeprecated,
-    SelectionMode,
+    SelectionModeInput,
     SelectionModes,
     as_selection_modes,
 )
@@ -45,7 +44,7 @@ else:
 
 class AbstractTabularData(abc.ABC):
     @abc.abstractmethod
-    def to_payload(self) -> Jsonifiable: ...
+    def to_payload(self) -> dict[str, Jsonifiable]: ...
 
 
 def as_editable(
@@ -97,7 +96,7 @@ class DataGrid(AbstractTabularData):
         If `True`, allows the user to edit the cells in the grid. When a cell is edited,
         the new value is sent to the server for processing. The server can then return
         a new value for the cell, which will be displayed in the grid.
-    selection_modes
+    selection_mode
         Single string or a `set`/`list`/`tuple` of string values to define possible ways
         to select data within the data frame.
 
@@ -143,7 +142,7 @@ class DataGrid(AbstractTabularData):
         summary: bool | str = True,
         filters: bool = False,
         editable: bool = False,
-        selection_modes: SelectionMode | Sequence[SelectionMode] = "none",
+        selection_mode: SelectionModeInput = "none",
         row_selection_mode: RowSelectionModeDeprecated = "deprecated",
     ):
 
@@ -158,13 +157,13 @@ class DataGrid(AbstractTabularData):
         self.filters = filters
         self.editable = as_editable(editable, name="DataGrid")
         self.selection_modes = as_selection_modes(
-            selection_modes,
+            selection_mode,
             name="DataGrid",
             editable=self.editable,
             row_selection_mode=row_selection_mode,
         )
 
-    def to_payload(self) -> Jsonifiable:
+    def to_payload(self) -> dict[str, Jsonifiable]:
         res = serialize_pandas_df(self.data)
         res["options"] = dict(
             width=self.width,
@@ -172,7 +171,6 @@ class DataGrid(AbstractTabularData):
             summary=self.summary,
             filters=self.filters,
             editable=self.editable,
-            selection_modes=self.selection_modes,
             style="grid",
             fill=self.height is None,
         )
@@ -213,7 +211,7 @@ class DataTable(AbstractTabularData):
         If `True`, allows the user to edit the cells in the grid. When a cell is edited,
         the new value is sent to the server for processing. The server can then return
         a new value for the cell, which will be displayed in the grid.
-    selection_modes
+    selection_mode
         Single string or a `set`/`list`/`tuple` of string values to define possible ways
         to select data within the data frame.
 
@@ -258,7 +256,7 @@ class DataTable(AbstractTabularData):
         summary: bool | str = True,
         filters: bool = False,
         editable: bool = False,
-        selection_modes: SelectionMode | Sequence[SelectionMode] = "none",
+        selection_mode: SelectionModeInput = "none",
         row_selection_mode: Literal["deprecated"] = "deprecated",
     ):
 
@@ -273,13 +271,13 @@ class DataTable(AbstractTabularData):
         self.filters = filters
         self.editable = as_editable(editable, name="DataTable")
         self.selection_modes = as_selection_modes(
-            selection_modes,
+            selection_mode,
             name="DataTable",
             editable=self.editable,
             row_selection_mode=row_selection_mode,
         )
 
-    def to_payload(self) -> Jsonifiable:
+    def to_payload(self) -> dict[str, Jsonifiable]:
         res = serialize_pandas_df(self.data)
         res["options"] = dict(
             width=self.width,
@@ -287,7 +285,6 @@ class DataTable(AbstractTabularData):
             summary=self.summary,
             filters=self.filters,
             editable=self.editable,
-            selection_modes=self.selection_modes,
             style="table",
         )
         return res
@@ -306,12 +303,24 @@ def serialize_pandas_df(df: "pd.DataFrame") -> dict[str, Any]:
     # serialize it or something
     df = df.reset_index(drop=True)
 
+    # # Can we keep the original column information?
+    # # Maybe we need to inspect the original columns for any "unknown" column type. See if it contains any HTML or Tag objects
+    # for col in columns:
+    #     if df[col].dtype.name == "unknown":
+    #         print(df[col].to_list())
+    #         raise ValueError(
+    #             "The pandas DataFrame contains columns of type 'object'."
+    #             " This is not supported by the data_frame renderer."
+    #         )
+
     res = json.loads(
         # {index: [index], columns: [columns], data: [values]}
         df.to_json(None, orient="split")  # pyright: ignore[reportUnknownMemberType]
     )
 
-    res["type_hints"] = serialize_numpy_dtypes(df)
+    res["typeHints"] = serialize_numpy_dtypes(df)
+
+    # print(json.dumps(res, indent=4))
 
     return res
 

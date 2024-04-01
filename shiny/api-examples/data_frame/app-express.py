@@ -37,7 +37,7 @@ with ui.layout_columns(col_widths=[12, 6, 6]):
 
         @render.data_frame
         def summary_data():
-            return render.DataGrid(summary_df.round(2), selection_modes="rows")
+            return render.DataGrid(summary_df.round(2), selection_mode="rows")
 
     with ui.card(height="400px"):
 

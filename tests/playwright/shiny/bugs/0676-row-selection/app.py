@@ -35,7 +35,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     def grid():
         return render.DataGrid(
             df,
-            selection_modes="rows",
+            selection_mode="rows",
             height=350,
         )
 

@@ -36,7 +36,7 @@ def make_server(input: Inputs):
     def grid():
         return render.DataGrid(
             data=load_penguins_raw(),
-            selection_modes=input.selection_mode(),
+            selection_mode=input.selection_mode(),
             height="300px",
         )
 
@@ -44,7 +44,7 @@ def make_server(input: Inputs):
     def grid_selected():
         return render.DataGrid(
             data=grid.data_selected(),
-            selection_modes=input.selection_mode(),
+            selection_mode=input.selection_mode(),
         )
 
     @reactive.effect
@@ -55,7 +55,7 @@ def make_server(input: Inputs):
     @reactive.effect
     @reactive.event(input.select)
     async def select_1_3_5():
-        await grid.update_cell_selection({"rows": [1, 3, 5]})
+        await grid.update_cell_selection({"rows": (1, 3, 5)})
 
     @render.code
     def selected_rows():

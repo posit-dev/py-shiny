@@ -165,6 +165,7 @@ class data_frame(Renderer[DataFrameResult]):
     --------
     * [`pandas.DataFrame.copy` API documentation]h(ttps://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.copy.html)
     """
+    # TODO-barret; Should this be the original? Or the updated version
     selection_modes: reactive.Calc_[SelectionModes]
     """
     Reactive value of the data frame's possible selection modes.
@@ -256,10 +257,13 @@ class data_frame(Renderer[DataFrameResult]):
 
         @reactive.calc
         def self_input_cell_selection() -> BrowserCellSelection | None:
-            input_val = self._get_session().input[f"{self.output_id}_cell_selection"]()
+            browser_cell_selection_input = self._get_session().input[
+                f"{self.output_id}_cell_selection"
+            ]()
 
             browser_cell_selection = as_browser_cell_selection(
-                input_val, self.selection_modes()
+                browser_cell_selection_input,
+                selection_modes=self.selection_modes(),
             )
             if browser_cell_selection["type"] == "none":
                 return None
@@ -480,17 +484,17 @@ class data_frame(Renderer[DataFrameResult]):
         patch_key = self._set_patches_handler()
         self._value.set(value)
         return {
-            "data": value.to_payload(),
+            "payload": value.to_payload(),
             "patchInfo": {
                 "key": patch_key,
             },
+            "selectionModes": self.selection_modes().as_dict(),
         }
 
     async def _send_message_to_browser(self, handler: str, obj: dict[str, Any]):
 
         session = self._get_session()
         id = session.ns(self.output_id)
-
         await session.send_custom_message(
             "shinyDataFrameMessage",
             {
@@ -510,10 +514,12 @@ class data_frame(Renderer[DataFrameResult]):
 
         with reactive.isolate():
             selection_modes = self.selection_modes()
-        if "none" in selection_modes:
+            data = self.data()
+
+        if selection_modes._is_none():
             warnings.warn(
-                "Cell selection cannot be updated when `.selection_modes()` contains 'none'. "
-                'Please set `selection_modes=` to contain a non-`"none"` value '
+                'Cell selection cannot be updated when `.selection_mode=` contains "none". '
+                'Please set `selection_mode=` to contain a non-`"none"` value '
                 "(e.g. 'row' or 'rows') in the return value of "
                 "`@render.data_frame` to enable cell selection.",
                 stacklevel=2,
@@ -521,18 +527,22 @@ class data_frame(Renderer[DataFrameResult]):
 
             selection = "none"
 
-        browser_cell_selection = as_browser_cell_selection(selection, selection_modes)
+        browser_cell_selection = as_browser_cell_selection(
+            selection,
+            selection_modes=selection_modes,
+            data=data,
+        )
         if browser_cell_selection["type"] == "none":
             pass
-        # elif browser_cell_selection["type"] == "region":
-        #     raise RuntimeError("Region selection is not yet supported")
+        elif browser_cell_selection["type"] == "region":
+            raise RuntimeError("Region selection is not yet supported")
         # elif browser_cell_selection["type"] == "cell":
         #     raise RuntimeError("Single cell selection is not yet supported")
-        # elif browser_cell_selection["type"] == "col":
-        #     raise RuntimeError("Column selection is not yet supported")
+        elif browser_cell_selection["type"] == "col":
+            raise RuntimeError("Column selection is not yet supported")
         elif browser_cell_selection["type"] == "row":
             row_value = browser_cell_selection["rows"]
-            if "row" in selection_modes and len(row_value) > 1:
+            if selection_modes.row == "single" and len(row_value) > 1:
                 warnings.warn(
                     "Attempted to set cell selection to more than 1 row when `.selection_modes()` contains 'row'. "
                     "Only the first row supplied will be selected.",

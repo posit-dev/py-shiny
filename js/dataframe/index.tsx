@@ -28,9 +28,9 @@ import { TableBodyCell } from "./cell";
 import { useCellEditMap } from "./cell-edit-map";
 import { findFirstItemInView, getStyle } from "./dom-utils";
 import { Filter, useFilter } from "./filter";
-import type { BrowserCellSelection } from "./selection";
+import type { BrowserCellSelection, SelectionModesProp } from "./selection";
 import {
-  SelectionModeEnum,
+  SelectionModes,
   initRowSelectionModes,
   useSelection,
 } from "./selection";
@@ -47,7 +47,7 @@ import { EditModeEnum, PandasData, PatchInfo, TypeHint } from "./types";
 //   columns: ReadonlyArray<string>;
 //   // index: ReadonlyArray<TIndex>;
 //   data: unknown[][];
-//   type_hints?: ReadonlyArray<TypeHint>;
+//   typeHints?: ReadonlyArray<TypeHint>;
 //   options: DataGridOptions;
 // }
 
@@ -87,21 +87,30 @@ declare module "@tanstack/table-core" {
 // TODO: Drag to resize table/grid
 // TODO: Row numbers
 
+type ShinyDataGridServerInfo<TIndex> = {
+  payload: PandasData<TIndex>;
+  patchInfo: PatchInfo;
+  selectionModes: SelectionModesProp;
+};
+
 interface ShinyDataGridProps<TIndex> {
   id: string | null;
-  data: PandasData<TIndex>;
-  patchInfo: PatchInfo;
+  gridInfo: ShinyDataGridServerInfo<TIndex>;
   bgcolor?: string;
 }
 
 const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
   id,
-  data,
-  patchInfo,
+  gridInfo: { payload, patchInfo, selectionModes: selectionModesProp },
   bgcolor,
 }) => {
-  const { columns, type_hints: typeHints, data: rowData } = data;
-  const { width, height, fill, filters: withFilters } = data.options;
+  const {
+    columns,
+    typeHints,
+    data: rowData,
+    options: payload_options,
+  } = payload;
+  const { width, height, fill, filters: withFilters } = payload_options;
 
   const containerRef = useRef<HTMLDivElement>(null);
   const theadRef = useRef<HTMLTableSectionElement>(null);
@@ -117,7 +126,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
   //   // console.log("rowModel", rowModel);
   // }, [editColumnIndex, editRowIndex]);
 
-  const editCellsIsAllowed = data.options["editable"] === true;
+  const editCellsIsAllowed = payload_options["editable"] === true;
 
   const [cellEditMap, setCellEditMap] = useCellEditMap();
 
@@ -197,7 +206,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
   // Reset scroll when dataset changes
   useLayoutEffect(() => {
     rowVirtualizer.scrollToOffset(0);
-  }, [data, rowVirtualizer]);
+  }, [payload, rowVirtualizer]);
 
   const totalSize = rowVirtualizer.getTotalSize();
   const virtualRows = rowVirtualizer.getVirtualItems();
@@ -215,28 +224,25 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
       : 0;
 
   const summary = useSummary(
-    data.options["summary"],
+    payload_options["summary"],
     containerRef?.current,
     virtualRows,
     theadRef.current,
     rowVirtualizer.options.count
   );
 
-  const tableStyle = data.options["style"] ?? "grid";
+  const tableStyle = payload_options["style"] ?? "grid";
   const containerClass =
     tableStyle === "grid" ? "shiny-data-grid-grid" : "shiny-data-grid-table";
   const tableClass = tableStyle === "table" ? "table table-sm" : null;
 
   // ### Row selection ###############################################################
 
-  const rowSelectionModes = initRowSelectionModes(
-    data.options["selection_modes"]
-  );
+  const rowSelectionModes = initRowSelectionModes(selectionModesProp);
 
-  const canSelect = !rowSelectionModes.includes(SelectionModeEnum.None);
-  const canMultiSelect =
-    rowSelectionModes.includes(SelectionModeEnum.MultiNative) ||
-    rowSelectionModes.includes(SelectionModeEnum.Multiple);
+  const canSelect = !rowSelectionModes.is_none();
+  const canMultiRowSelect =
+    rowSelectionModes.row !== SelectionModes._rowEnum.NONE;
 
   const rowSelection = useSelection<string, HTMLTableRowElement>(
     rowSelectionModes,
@@ -277,9 +283,9 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
       if (cellSelection.type === "none") {
         rowSelection.clear();
         return;
-      } else if (cellSelection.type === "all") {
-        rowSelection.setMultiple(rowData.map((_, i) => String(i)));
-        return;
+        // } else if (cellSelection.type === "all") {
+        //   rowSelection.setMultiple(rowData.map((_, i) => String(i)));
+        //   return;
       } else if (cellSelection.type === "row") {
         rowSelection.setMultiple(cellSelection.rows.map(String));
         return;
@@ -310,15 +316,11 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
     if (!id) return;
     const shinyId = `${id}_cell_selection`;
     let shinyValue: BrowserCellSelection | null = null;
-    if (rowSelectionModes.includes(SelectionModeEnum.None)) {
+    if (rowSelectionModes.is_none()) {
       shinyValue = null;
-    } else if (
-      rowSelectionModes.includes(SelectionModeEnum.Single) ||
-      rowSelectionModes.includes(SelectionModeEnum.Multiple) ||
-      rowSelectionModes.includes(SelectionModeEnum.MultiNative)
-    ) {
+    } else if (rowSelectionModes.row !== SelectionModes._rowEnum.NONE) {
       const rowSelectionKeys = rowSelection.keys().toList();
-      // Currently do not sent `none` or `all` to the server as it is hard to utilize when we know the selection is row based
+      // Do not sent `none` or `all` to the server as it is hard to utilize when we know the selection is row based
       // if (rowSelectionKeys.length === 0) {
       //   shinyValue = { type: "none" };
       // } else if (rowSelectionKeys.length === rowData.length) {
@@ -328,7 +330,6 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
         type: "row",
         rows: rowSelectionKeys.map((key) => parseInt(key)).sort(),
       };
-      // }
     } else {
       console.error("Unhandled row selection mode:", rowSelectionModes);
     }
@@ -375,7 +376,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
       rowSelection.clear();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data]);
+  }, [payload]);
 
   const headerRowCount = table.getHeaderGroups().length;
 
@@ -413,7 +414,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
         <table
           className={tableClass + (withFilters ? " filtering" : "")}
           aria-rowcount={dataState.length}
-          aria-multiselectable={canMultiSelect}
+          aria-multiselectable={canMultiRowSelect}
           style={{
             width: width === null || width === "auto" ? undefined : "100%",
           }}
@@ -488,6 +489,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
                     {...rowSelection.itemHandlers()}
                   >
                     {row.getVisibleCells().map((cell) => {
+                      // TODO-barret; Only send in the cell data that is needed;
                       return (
                         <TableBodyCell
                           id={id}
@@ -681,9 +683,7 @@ export class ShinyDataFrameOutput extends HTMLElement {
     }
   }
 
-  renderValue(
-    value: null | { patchInfo: PatchInfo; data: PandasData<unknown> }
-  ) {
+  renderValue(value: ShinyDataGridServerInfo<unknown> | null) {
     this.clearError();
 
     if (!value) {
@@ -695,8 +695,7 @@ export class ShinyDataFrameOutput extends HTMLElement {
       <StrictMode>
         <ShinyDataGrid
           id={this.id}
-          data={value.data}
-          patchInfo={value.patchInfo}
+          gridInfo={value}
           bgcolor={getComputedBgColor(this)}
         ></ShinyDataGrid>
       </StrictMode>

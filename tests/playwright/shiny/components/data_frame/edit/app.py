@@ -10,11 +10,17 @@ from shiny.render._dataframe import CellPatch
 
 # Load the dataset
 penguins = load_penguins_raw()
+df = penguins
 
+df = df.head(5)
+
+for i in range(1, 5):
+    df.iloc[i, 1] = ui.tags.strong(ui.tags.em(str(df.iloc[i, 1]))).get_html_string()
+
+
+# TODO-barret; Add automated tests for this
 df1 = pd.DataFrame(data={"a": [1, 2]})
 df1.insert(1, "a", [3, 4], True)  # pyright: ignore
-
-df = penguins
 # df = df1
 
 
@@ -48,12 +54,12 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
     @render.data_frame
     def summary_data():
         # return df
-        return render.DataGrid(df, selection_modes="none", editable=True)
-        return render.DataTable(df, selection_modes="none", editable=True)
-        # return render.DataGrid(df, selection_modes="rows", editable=True)
-        # return render.DataTable(df, selection_modes="rows", editable=True)
-        # return render.DataGrid(df, selection_modes="rows", editable=False)
-        # return render.DataTable(df, selection_modes="rows", editable=False)
+        return render.DataGrid(df, selection_mode="none", editable=True)
+        return render.DataTable(df, selection_mode="none", editable=True)
+        # return render.DataGrid(df, selection_mode="rows", editable=True)
+        # return render.DataTable(df, selection_mode="rows", editable=True)
+        # return render.DataGrid(df, selection_mode="rows", editable=False)
+        # return render.DataTable(df, selection_mode="rows", editable=False)
 
     # from shiny import reactive
     # @reactive.effect

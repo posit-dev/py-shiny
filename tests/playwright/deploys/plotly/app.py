@@ -54,7 +54,7 @@ def server(input, output, session):
     def summary_data():
         return render.DataGrid(
             summary_df.round(2),
-            # TODO-barret; Replace with selection_modes="rows" to the DataGrid
+            # TODO-barret; Replace with selection_mode="rows" to the DataGrid
             # TODO-barret; Test legacy `row_selection_mode="multiple"`
             row_selection_mode="multiple",
             width="100%",

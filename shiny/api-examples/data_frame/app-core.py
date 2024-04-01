@@ -40,7 +40,7 @@ app_ui = ui.page_fillable(
 def server(input, output, session):
     @render.data_frame
     def summary_data():
-        return render.DataGrid(summary_df.round(2), selection_modes="rows")
+        return render.DataGrid(summary_df.round(2), selection_mode="rows")
 
     @reactive.calc
     def filtered_df():
