@@ -18,12 +18,6 @@ for i in range(1, 5):
     df.iloc[i, 1] = ui.tags.strong(ui.tags.em(str(df.iloc[i, 1]))).get_html_string()
 
 
-# TODO-barret; Add automated tests for this
-df1 = pd.DataFrame(data={"a": [1, 2]})
-df1.insert(1, "a", [3, 4], True)  # pyright: ignore
-# df = df1
-
-
 MOD_ID = "testing"
 
 
