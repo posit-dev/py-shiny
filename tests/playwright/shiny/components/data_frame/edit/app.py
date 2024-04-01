@@ -1,4 +1,3 @@
-import pandas as pd
 from palmerpenguins import load_penguins_raw  # pyright: ignore[reportMissingTypeStubs]
 
 from shiny import App, Inputs, Outputs, Session, module, render, ui

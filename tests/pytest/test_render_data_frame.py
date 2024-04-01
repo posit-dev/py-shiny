@@ -46,14 +46,16 @@ def test_as_selection_modes_legacy():
     with pytest.raises(ValueError, match="Unknown row_selection_mode: foo"):
         render.DataGrid(
             df,
-            row_selection_mode="foo",  # pyright: ignore[reportGeneralTypeIssues]
+            row_selection_mode="foo",  # pyright: ignore[reportArgumentType,reportGeneralTypeIssues]
         )
 
 
 def test_as_selection_modes():
     with pytest.raises(ValueError) as e:
         SelectionModes(
-            selection_mode_set={"foo"}  # pyright: ignore[reportGeneralTypeIssues]
+            selection_mode_set={
+                "foo",  # pyright: ignore[reportArgumentType,reportGeneralTypeIssues]
+            }
         )
     assert "Unknown selection modes: foo" in str(e.value)
 
