@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Literal, Optional
+from warnings import warn
 
 from htmltools import HTMLDependency, Tag, Tagifiable, TagList
 from packaging.version import Version
 
+from .._versions import bootstrap as BOOTSTRAP_VERSION
 from ._include_helpers import include_css
 
 __all__ = ("theme",)
@@ -57,9 +59,42 @@ class Theme:
             + f"replace={self.replace!r})"
         )
 
+    def check_compatibility(
+        self,
+        base_version: str | Version = BOOTSTRAP_VERSION,
+    ) -> None:
+        if self.bs_version is None:
+            return
+
+        if not isinstance(base_version, Version):
+            base_version = Version(base_version)
+
+        if self.bs_version == base_version:
+            return
+
+        the_theme = f"'{self.name}'" if self.name else ""
+        the_theme += f" ({self.version})" if self.version else ""
+        the_theme = f"theme {the_theme}" if the_theme else "`theme`"
+
+        if self.bs_version.major != base_version.major:
+            raise RuntimeError(
+                "Bootstrap version mismatch:"
+                + f"\n  * {self.bs_version} from {the_theme}."
+                + f"\n  * {base_version} from Shiny."
+                + "\n  ! These versions of Bootstrap are incompatible."
+            )
+
+        warn(
+            "Bootstrap version mismatch:"
+            + f"\n  * {self.bs_version} from {the_theme}."
+            + f"\n  * {base_version} from Shiny."
+            + "\n  ! This version mismatch may cause unexpected issues.",
+            RuntimeWarning,
+        )
+
 
 def theme(
-    theme: str | Path | Tag | Tagifiable,
+    theme: str | Path | Tag | Tagifiable | HTMLDependency,
     *,
     name: Optional[str] = None,
     version: Optional[str] = None,
