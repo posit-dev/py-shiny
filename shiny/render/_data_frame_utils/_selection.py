@@ -513,7 +513,7 @@ def as_selection_modes(
     if not isinstance(selection_mode_val, tuple):
         selection_mode_val = (selection_mode_val,)
 
-    selection_mode_set = cast(set[SelectionMode], set(selection_mode_val))
+    selection_mode_set = cast(Set[SelectionMode], set(selection_mode_val))
 
     # TODO-barret-PR; Fix user cell edit/select interaction model to make this work!
     # Disable selection_mode if `editable=True``
