@@ -24,7 +24,7 @@ def ui_value_box():
 
 @module.server
 def card_server(input: Inputs, output: Outputs, session: Session):
-    return input.thing
+    return input.thing_full_screen
 
 
 app_ui = ui.page_fluid(
@@ -41,11 +41,11 @@ def server(input: Inputs):
 
     @render.code()
     def out_card():
-        return my_card()["full_screen"]
+        return my_card()
 
     @render.code()
     def out_value_box():
-        return my_value_box()["full_screen"]
+        return my_value_box()
 
 
 app = App(app_ui, server)

@@ -15,9 +15,9 @@ with ui.value_box(
 
 @render.code()
 def out_card():
-    return f'{input.my_card()["full_screen"]!r}'
+    return f"{input.my_card_full_screen()!r}"
 
 
 @render.code()
 def out_value_box():
-    return f'{input.my_value_box()["full_screen"]!r}'
+    return f"{input.my_value_box_full_screen()!r}"
