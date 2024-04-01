@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import warnings
 
-# TODO-barret; Docs
-# TODO-barret; Add examples!
+# TODO-barret-render.data_frame; Docs
+# TODO-barret-render.data_frame; Add examples!
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, TypeVar
 
 from htmltools import Tag
@@ -165,7 +165,7 @@ class data_frame(Renderer[DataFrameResult]):
     --------
     * [`pandas.DataFrame.copy` API documentation]h(ttps://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.copy.html)
     """
-    # TODO-barret; Should this be the original? Or the updated version
+    # TODO-barret-Q; Should this be the original? Or the updated version
     selection_modes: reactive.Calc_[SelectionModes]
     """
     Reactive value of the data frame's possible selection modes.
@@ -273,7 +273,7 @@ class data_frame(Renderer[DataFrameResult]):
         self.input_cell_selection = self_input_cell_selection
 
         @reactive.calc
-        # TODO-barret; Subset data according to what is viewed in the browser; Apply filtering and sorting as well! https://github.com/posit-dev/py-shiny/issues/1240
+        # TODO-barret-render.data_frame; Subset data according to what is viewed in the browser; Apply filtering and sorting as well! https://github.com/posit-dev/py-shiny/issues/1240
         def self_data_selected() -> pd.DataFrame:
             # browser_cell_selection
             bcs = self.input_cell_selection()
@@ -403,8 +403,8 @@ class data_frame(Renderer[DataFrameResult]):
                 ):
                     bad_patches_format = True
                     break
-                # TODO-barret; check type of `value` here?
-                # TODO-barret; The `value` should be coerced by pandas to the correct type
+                # TODO-barret-render.data_frame; check type of `value` here?
+                # TODO-barret-render.data_frame; The `value` should be coerced by pandas to the correct type
 
         if bad_patches_format:
             raise ValueError(

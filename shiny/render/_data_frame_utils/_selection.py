@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-# TODO-barret; Docs
-# TODO-barret; Add examples!
+# TODO-barret-render.data_frame; Docs
+# TODO-barret-render.data_frame; Add examples of selection!
 import warnings
 from typing import TYPE_CHECKING, List, Literal, Set, Tuple, Union, cast
 
@@ -55,7 +55,7 @@ class SelectionModes:
             bad_modes = selection_mode_set - complete_selection_mode_set
             # TODO-test; Test that this error is raised
             raise ValueError(
-                f"Unknown selection modes: {bad_modes}. "
+                f"Unknown selection modes: {', '.join(bad_modes)}. "
                 f"Valid selection modes: {', '.join(complete_selection_mode_set)}"
             )
 
@@ -84,21 +84,25 @@ class SelectionModes:
             self.row = "multiple"
 
         if "col" in selection_mode_set:
-            raise ValueError(
+            raise RuntimeError(
                 "Column based cell selections are not currently supported."
             )
             self.col = "single"
         elif "cols" in selection_mode_set:
-            raise ValueError(
+            raise RuntimeError(
                 "Column based cell selections are not currently supported."
             )
             self.col = "multiple"
 
         if "cell" in selection_mode_set:
-            raise ValueError("Cell based cell selections are not currently supported.")
+            raise RuntimeError(
+                "Region based cell selections are not currently supported."
+            )
             self.rect = "cell"
         elif "region" in selection_mode_set:
-            raise ValueError("Cell based cell selections are not currently supported.")
+            raise RuntimeError(
+                "Region based cell selections are not currently supported."
+            )
             self.rect = "region"
 
     def _is_none(self) -> bool:
@@ -504,7 +508,7 @@ def as_selection_modes(
         elif row_selection_mode == "multiple":
             selection_mode_val = "rows"
         else:
-            raise ValueError("Unknown row_selection_mode: {row_selection_mode}")
+            raise ValueError(f"Unknown row_selection_mode: {row_selection_mode}")
 
         warn_deprecated(
             f"`{name}(row_selection_mode=)` has been superseded by `{name}(selection_mode=)`."
@@ -515,7 +519,7 @@ def as_selection_modes(
 
     selection_mode_set = cast(Set[SelectionMode], set(selection_mode_val))
 
-    # TODO-barret-PR; Fix user cell edit/select interaction model to make this work!
+    # TODO-barret-render.data_frame; Fix user cell edit/select interaction model to make this work!
     # Disable selection_mode if `editable=True``
     if editable and not selection_mode_set.issubset(none_set):
         warnings.warn(

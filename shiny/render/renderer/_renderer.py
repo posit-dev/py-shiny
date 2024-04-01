@@ -9,7 +9,7 @@ from ..._typing_extensions import Self
 from ..._utils import is_async_callable, wrap_async
 from ...types import Jsonifiable
 
-# TODO-barret-future: Double check docs are rendererd
+# TODO-barret-docs: Double check docs are rendererd
 # Missing first paragraph from some classes: Example: TransformerMetadata.
 # No init method for TransformerParams. This is because the `DocClass` object does not
 # display methods that start with `_`. Therefore no `__init__` or `__call__` methods are

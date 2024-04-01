@@ -4,8 +4,8 @@ from palmerpenguins import load_penguins_raw  # pyright: ignore[reportMissingTyp
 from shiny import App, Inputs, Outputs, Session, module, render, ui
 from shiny.render._dataframe import CellPatch
 
-# TODO-barret; Make an example that uses a dataframe that then updates a higher level reactive, that causes the df to update... which causes the table to render completely
-# TODO-barret-future; When "updating" data, try to maintain the scroll, filter info when a new `df` is supplied;
+# TODO-barret-render.data_frame; Make an example that uses a dataframe that then updates a higher level reactive, that causes the df to update... which causes the table to render completely
+# TODO-barret-render.data_frame; When "updating" data, try to maintain the scroll, filter info when a new `df` is supplied;
 
 
 # Load the dataset
