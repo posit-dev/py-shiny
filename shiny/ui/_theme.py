@@ -8,7 +8,7 @@ from htmltools import HTMLDependency, Tag, Tagifiable, TagList
 from htmltools.tags import head
 from packaging.version import Version
 
-from .._docstring import no_example
+from .._docstring import add_example
 from .._versions import bootstrap as BOOTSTRAP_VERSION
 from ._include_helpers import include_css
 
@@ -17,7 +17,7 @@ __all__ = ("theme",)
 
 class Theme:
     """
-    A theme for styling Shiny via the `theme` argument of page functions.
+    Provide a theme for styling Shiny via the `theme` argument of page functions.
 
     Specify a theme that customizes the appearance of a Shiny application by replacing
     the default Bootstrap theme, by replacing Bootstrap altogether, or by layering on
@@ -192,7 +192,7 @@ class Theme:
         )
 
 
-@no_example()
+@add_example()
 def theme(
     theme: str | Path | Tag | Tagifiable | HTMLDependency,
     *,
@@ -202,7 +202,7 @@ def theme(
     replace: Literal["css", "all", "none"] = "css",
 ) -> Theme:
     """
-    A theme for styling Shiny.
+    Provide a theme for styling Shiny via the `theme` argument of page functions.
 
     Specify a theme that customizes the appearance of a Shiny application by replacing
     the default Bootstrap theme, by replacing Bootstrap altogether, or by layering on
