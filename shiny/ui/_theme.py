@@ -16,7 +16,75 @@ __all__ = ("theme",)
 
 class Theme:
     """
-    A theme object for Shiny UI page elements.
+    A theme for styling Shiny via the `theme` argument of page functions.
+
+    Specify a theme that customizes the appearance of a Shiny application by replacing
+    the default Bootstrap theme, by replacing Bootstrap altogether, or by layering on
+    top of the default Bootstrap theme.
+
+    Parameters
+    ----------
+    theme
+        The theme to apply. This can be a path to a CSS file, a :class:`~htmltools.Tag`
+        or :class:`~htmltools.Tagifiable` object, or an
+        :class:`~htmltools.HTMLDependency`. When `theme` is a string or
+        :class:`~pathlib.Path`, it is interpreted as a path to a CSS file that should
+        completely replace `bootstrap.min.css`. The CSS file is included using
+        :func:`~shiny.ui.include_css()`. For best results, the CSS file and its
+        supporting assets should be stored in a subdirectory containing only the
+        necessary files.
+    name
+        An optional name for the theme.
+    version
+        An optional version of the theme.
+    bs_version
+        The Bootstrap version with which the theme is compatible. When the theme is
+        used, an error will be raised if the major version of Shiny's built-in Bootstrap
+        version and does not match the theme's major Bootstrap version. Otherwise, a
+        warning is raised if the minor or patch versions do not match.
+    replace
+        Specifies how the theme should replace existing styles:
+
+        * `"css"` is the default: The theme replaces only the `bootstrap.min.css` file
+          of Shiny's built-in Bootstrap theme.
+        * `"none"`: The theme is added as additional CSS (and/or JavaScript) files in
+          addition to Shiny's built-in Bootstrap theme.
+        * `"all"`: Shiny's built-in Bootstrap theme is completely replaced by the theme.
+          This option is for expert usage and should be used with caution. Shiny is
+          designed to work with the currently bundled version of Bootstrap. Use the
+          `bs_version` parameter to check compatibility of the provided theme with the
+          bundled Bootstrap version at runtime.
+
+    Attributes
+    ----------
+    theme
+        The theme to apply as a tagified :class:`~htmltools.Tag`,
+        :class:`~htmltools.TagList`, or :class:`~htmltools.HTMLDependency`.
+    name
+        An optional name for the theme.
+    version
+        An optional version of the theme.
+    bs_version
+        The Bootstrap version with which the theme is compatible.
+    replace
+        Specifies how the theme should replace existing styles:
+
+        * `"css"` is the default: The theme replaces only the `bootstrap.min.css` file
+          of Shiny's built-in Bootstrap theme.
+        * `"none"`: The theme is added as additional CSS (and/or JavaScript) files in
+          addition to Shiny's built-in Bootstrap theme.
+        * `"all"`: Shiny's built-in Bootstrap theme is completely replaced by the theme.
+          This option is for expert usage and should be used with caution. Shiny is
+          designed to work with the currently bundled version of Bootstrap. Use the
+          `bs_version` parameter to check compatibility of the provided theme with the
+          bundled Bootstrap version at runtime.
+
+    Raises
+    ------
+    ValueError
+        If an invalid replacement strategy is specified for `replace`.
+    TypeError
+        If the theme, when tagified, does not return a `Tag` or `TagList`.
     """
 
     def __init__(
@@ -64,6 +132,35 @@ class Theme:
         self,
         base_version: str | Version = BOOTSTRAP_VERSION,
     ) -> None:
+        """
+        Checks the compatibility of the theme's Bootstrap version with the base version.
+
+        This method compares the major version of the theme's Bootstrap version
+        (`bs_version`) with the provided `base_version`. If the major versions are
+        different, it raises a `RuntimeError` indicating that the versions are
+        incompatible. If the major versions are the same but the versions are not
+        identical, it issues a warning about the potential for unexpected issues due to
+        the version mismatch.
+
+        Parameters
+        ----------
+        base_version
+            The base Bootstrap version to compare against. Defaults to the version of
+            Bootstrap bundled with Shiny.
+
+        Raises
+        ------
+        RuntimeError
+            When the major versions of `bs_version` and `base_version` are different,
+            indicating incompatibility between the theme's Bootstrap version and the
+            base version.
+
+        Warns
+        -----
+        RuntimeWarning
+            When the versions are not identical but the major versions match, indicating
+            a potential for unexpected issues.
+        """
         if self.bs_version is None:
             return
 
@@ -103,30 +200,49 @@ def theme(
     replace: Literal["css", "all", "none"] = "css",
 ) -> Theme:
     """
-    Create a theme object for Shiny UI page elements.
+    A theme for styling Shiny.
+
+    Specify a theme that customizes the appearance of a Shiny application by replacing
+    the default Bootstrap theme, by replacing Bootstrap altogether, or by layering on
+    top of the default Bootstrap theme.
 
     Parameters
     ----------
     theme
-        The theme to use. This can be a string or Path (interpreted as a path to a CSS
-        file), a :class:`~htmltools.Tag`, or a :class:`~htmltools.Tagifiable`.
+        The theme to apply. This can be a path to a CSS file, a :class:`~htmltools.Tag`
+        or :class:`~htmltools.Tagifiable` object, or an
+        :class:`~htmltools.HTMLDependency`. When `theme` is a string or
+        :class:`~pathlib.Path`, it is interpreted as a path to a CSS file that should
+        completely replace `bootstrap.min.css`. The CSS file is included using
+        :func:`~shiny.ui.include_css()`. For best results, the CSS file and its
+        supporting assets should be stored in a subdirectory containing only the
+        necessary files.
     name
-        The name of the theme.
+        An optional name for the theme.
     version
-        The version of the theme. (Not the version of Bootstrap used by the theme.)
+        An optional version of the theme.
     bs_version
-        The Bootstrap version that the theme is compatible with.
+        The Bootstrap version with which the theme is compatible. When the theme is
+        used, an error will be raised if the major version of Shiny's built-in Bootstrap
+        version and does not match the theme's major Bootstrap version. Otherwise, a
+        warning is raised if the minor or patch versions do not match.
     replace
-        How this theme replaces Shiny's built-in Bootstrap theme. If ``"css"``, the CSS
-        of this theme replaces the `bootstrap.min.css`. If ``"all"``, the entire
-        Bootstrap bundle, including both `bootstrap.min.css` and `bootstrap.min.js`,
-        is replaced. If ``"none"``, the Bootstrap bundle is not replaced and the theme
-        dependency is added as additional CSS (and/or JavaScript) files.
+        Specifies how the theme should replace existing styles:
+
+        * `"css"` is the default: The theme replaces only the `bootstrap.min.css` file
+          of Shiny's built-in Bootstrap theme.
+        * `"none"`: The theme is added as additional CSS (and/or JavaScript) files in
+          addition to Shiny's built-in Bootstrap theme.
+        * `"all"`: Shiny's built-in Bootstrap theme is completely replaced by the theme.
+          This option is for expert usage and should be used with caution. Shiny is
+          designed to work with the currently bundled version of Bootstrap. Use the
+          `bs_version` parameter to check compatibility of the provided theme with the
+          bundled Bootstrap version at runtime.
 
     Returns
     -------
     :
-        A theme object for Shiny UI page elements.
+        A theme object for use with the `theme` argument of Shiny UI page elements.
     """
     return Theme(
         theme,
