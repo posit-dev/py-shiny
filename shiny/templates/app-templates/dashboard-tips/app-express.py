@@ -3,9 +3,10 @@ import plotly.express as px
 
 # Load data and compute static values
 from shared import app_dir, tips
+from shinywidgets import render_plotly
+
 from shiny import reactive, render
 from shiny.express import input, ui
-from shinywidgets import render_plotly
 
 bill_rng = (min(tips.total_bill), max(tips.total_bill))
 

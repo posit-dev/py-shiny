@@ -2,6 +2,7 @@ import seaborn as sns
 
 # Import data from shared.py
 from shared import df
+
 from shiny import App, render, ui
 
 # The contents of the first 'page' is a navset with two 'panels'.

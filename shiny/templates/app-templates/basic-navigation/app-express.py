@@ -2,6 +2,7 @@ import seaborn as sns
 
 # Import data from shared.py
 from shared import df
+
 from shiny.express import input, render, ui
 
 ui.page_opts(title="Shiny navigation components")
