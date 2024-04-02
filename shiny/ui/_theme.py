@@ -5,6 +5,7 @@ from typing import Literal, Optional
 from warnings import warn
 
 from htmltools import HTMLDependency, Tag, Tagifiable, TagList
+from htmltools.tags import head
 from packaging.version import Version
 
 from .._versions import bootstrap as BOOTSTRAP_VERSION
@@ -34,7 +35,7 @@ class Theme:
             )
 
         if isinstance(theme, (str, Path)):
-            theme_tag = include_css(theme)
+            theme_tag = head(include_css(theme))
         elif isinstance(theme, HTMLDependency):
             theme_tag = theme
         else:
@@ -47,10 +48,10 @@ class Theme:
                 )
 
         self.theme: Tag | TagList | HTMLDependency = theme_tag
-        self.name = name
-        self.version = maybe_version(version, "version")
-        self.bs_version = maybe_version(bs_version, "bs_version")
-        self.replace = replace
+        self.name: Optional[str] = name
+        self.version: Optional[Version] = maybe_version(version, "version")
+        self.bs_version: Optional[Version] = maybe_version(bs_version, "bs_version")
+        self.replace: Literal["css", "all", "none"] = replace
 
     def __repr__(self) -> str:
         return (

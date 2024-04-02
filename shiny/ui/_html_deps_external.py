@@ -1,10 +1,14 @@
 from __future__ import annotations
 
-from htmltools import HTML, HTMLDependency
+from pathlib import Path
+
+from htmltools import HTML, HTMLDependency, Tag, TagList
 
 from .._versions import bootstrap as bootstrap_version
 from .._versions import shiny_html_deps
 from ..html_dependencies import jquery_deps
+from ..types import MISSING, MISSING_TYPE
+from ._theme import Theme
 
 """
 HTML dependencies for external dependencies Bootstrap, ionrangeslider, datepicker, selectize, and jQuery UI.
@@ -16,17 +20,33 @@ For...
 """
 
 
-def bootstrap_deps() -> list[HTMLDependency]:
+def bootstrap_deps(
+    theme: str | Path | Theme | MISSING_TYPE = MISSING,
+) -> list[HTMLDependency | Tag | TagList]:
+    if isinstance(theme, (str, Path)):
+        theme = Theme(theme)
+
+    if isinstance(theme, Theme):
+        theme.check_compatibility(bootstrap_version)
+
+        theme_deps = theme.theme
+        replace = theme.replace
+        if replace == "all":
+            return [jquery_deps(), theme_deps]
+    else:
+        theme_deps = None
+        replace = "none"
+
     dep = HTMLDependency(
         name="bootstrap",
         version=bootstrap_version,
         source={"package": "shiny", "subdir": "www/shared/bootstrap/"},
         script={"src": "bootstrap.bundle.min.js"},
-        stylesheet={"href": "bootstrap.min.css"},
+        stylesheet={"href": "bootstrap.min.css"} if replace != "css" else None,
         meta={"name": "viewport", "content": "width=device-width, initial-scale=1"},
     )
-    deps = [jquery_deps(), dep]
-    return deps
+    deps = [jquery_deps(), dep, theme_deps]
+    return [d for d in deps if d is not None]
 
 
 def ionrangeslider_deps() -> list[HTMLDependency]:
