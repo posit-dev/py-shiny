@@ -18,7 +18,7 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
         return render.DataGrid(
             data=load_penguins(),  # pyright: ignore[reportUnknownArgumentType]
             filters=True,
-            mode="edit",
+            editable=True,
         )
 
     @render.code
