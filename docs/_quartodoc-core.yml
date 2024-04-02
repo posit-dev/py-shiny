@@ -22,6 +22,7 @@ quartodoc:
         - ui.page_bootstrap
         - ui.page_auto
         - ui.page_output
+        - ui.theme
     - title: UI Layouts
       desc: Control the layout of multiple UI components.
       contents:

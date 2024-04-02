@@ -47,6 +47,7 @@ quartodoc:
       desc: Tools for creating, arranging, and styling UI components.
       contents:
         - express.ui.page_opts
+        - express.ui.theme
         - express.ui.sidebar
         - express.ui.layout_columns
         - express.ui.layout_column_wrap
