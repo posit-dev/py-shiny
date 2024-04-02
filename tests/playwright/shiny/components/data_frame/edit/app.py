@@ -1,21 +1,20 @@
-import pandas as pd
 from palmerpenguins import load_penguins_raw  # pyright: ignore[reportMissingTypeStubs]
 
 from shiny import App, Inputs, Outputs, Session, module, render, ui
 from shiny.render._dataframe import CellPatch
 
-# TODO-barret; Make an example that uses a dataframe that then updates a higher level reactive, that causes the df to update... which causes the table to render completely
-# TODO-barret-future; When "updating" data, try to maintain the scroll, filter info when a new `df` is supplied;
+# TODO-barret-render.data_frame; Make an example that uses a dataframe that then updates a higher level reactive, that causes the df to update... which causes the table to render completely
+# TODO-barret-render.data_frame; When "updating" data, try to maintain the scroll, filter info when a new `df` is supplied;
 
 
 # Load the dataset
 penguins = load_penguins_raw()
-
-df1 = pd.DataFrame(data={"a": [1, 2]})
-df1.insert(1, "a", [3, 4], True)  # pyright: ignore
-
 df = penguins
-# df = df1
+
+df = df.head(5)
+
+for i in range(1, 5):
+    df.iloc[i, 1] = ui.tags.strong(ui.tags.em(str(df.iloc[i, 1]))).get_html_string()
 
 
 MOD_ID = "testing"
@@ -48,8 +47,12 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
     @render.data_frame
     def summary_data():
         # return df
-        return render.DataGrid(df, mode="edit")
-        return render.DataTable(df, mode="edit")
+        return render.DataGrid(df, selection_mode="none", editable=True)
+        return render.DataTable(df, selection_mode="none", editable=True)
+        # return render.DataGrid(df, selection_mode="rows", editable=True)
+        # return render.DataTable(df, selection_mode="rows", editable=True)
+        # return render.DataGrid(df, selection_mode="rows", editable=False)
+        # return render.DataTable(df, selection_mode="rows", editable=False)
 
     # from shiny import reactive
     # @reactive.effect

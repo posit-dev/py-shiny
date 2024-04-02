@@ -133,9 +133,16 @@ shiny-data-frame .shiny-data-grid.shiny-data-grid-table {
 
     > tbody > tr {
       &[aria-selected="true"] {
+        // !!Duplicate any changes in the `td` below!!
         --shiny-datagrid-grid-gridlines-color: var(--shiny-datagrid-grid-body-selected-bgcolor);
         background-color: var(--shiny-datagrid-grid-body-selected-bgcolor);
         color: var(--shiny-datagrid-grid-body-selected-color);
+        // Needed to combat bootstrap's `.table>:not(caption)>*>*` selector
+        td {
+          --shiny-datagrid-grid-gridlines-color: var(--shiny-datagrid-grid-body-selected-bgcolor);
+          background-color: var(--shiny-datagrid-grid-body-selected-bgcolor);
+          color: var(--shiny-datagrid-grid-body-selected-color);
+        }
       }
     }
   }

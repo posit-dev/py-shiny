@@ -20,8 +20,8 @@ def app_ui(req):
             "Selection mode",
             {
                 "none": "(None)",
-                "single_row": "Single",
-                "multiple_row": "Multiple",
+                "row": "Single",
+                "rows": "Multiple",
             },
             selected="multiple",
         ),
@@ -82,7 +82,7 @@ def server(input: Inputs, output: Outputs, session: Session):
                 width=width,
                 height=height,
                 filters=input.filters(),
-                mode=selection_mode(),
+                selection_mode=selection_mode(),
             )
         else:
             return render.DataTable(
@@ -90,7 +90,7 @@ def server(input: Inputs, output: Outputs, session: Session):
                 width=width,
                 height=height,
                 filters=input.filters(),
-                mode=selection_mode(),
+                selection_mode=selection_mode(),
             )
 
     @reactive.effect
@@ -103,10 +103,10 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @render.text
     def detail():
-        selected_rows = grid.input_selected_rows() or ()
+        selected_rows = (grid.input_cell_selection() or {}).get("rows", ())
         if len(selected_rows) > 0:
             # "split", "records", "index", "columns", "values", "table"
-            return df().iloc[list(grid.input_selected_rows())]
+            return df().iloc[list(selected_rows)]
 
 
 app = App(app_ui, server)
