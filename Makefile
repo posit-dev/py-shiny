@@ -122,6 +122,9 @@ docs: FORCE ## docs: build docs with quartodoc
 docs-preview: FORCE ## docs: preview docs in browser
 	@echo "-------- Previewing docs in browser --------"
 	@cd docs && make serve
+docs-quartodoc: FORCE
+	@echo "-------- Making quartodoc docs --------"
+	@cd docs && make quartodoc
 
 
 install-npm: FORCE

@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import typing
 
+from shiny import ui
+from shiny.express import ui as xui
 
-def compare_annotations(
+
+def assert_annotations(
     core_fn: typing.Callable[..., typing.Any],
     express_fn: typing.Callable[..., typing.Any],
 ) -> None:
@@ -29,3 +32,7 @@ def compare_annotations(
             assert (
                 ui_a[key] == layout_a[key]
             ), f"Type annotations for {key} in {core_fn} (Core) don't match {express_fn} (Express)"
+
+
+def test_sidebar_annotations() -> None:
+    assert_annotations(ui.sidebar, xui.sidebar)
