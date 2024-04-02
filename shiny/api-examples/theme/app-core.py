@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from shiny import App, reactive, render, req, ui
+from shiny import App, render, ui
 
 app_ui = ui.page_sidebar(
     ui.sidebar(
