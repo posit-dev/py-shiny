@@ -73,9 +73,15 @@ def template_query(
     # Define the control flow for the top level menu
     if template is None or template == "cancel":
         sys.exit(1)
+    elif template == "external-gallery":
+        url = "https://shiny.posit.co/py/templates"
+        print(f"Opening <{url}> in your browser.")
+        print("Choose a template and copy the `shiny create` command to use it.")
+        import webbrowser
+
+        webbrowser.open(url)
     elif template == "js-component":
         js_component_questions(dest_dir=dest_dir, package_name=package_name)
-        return
     elif template in package_template_choices.values():
         js_component_questions(template, dest_dir=dest_dir, package_name=package_name)
     else:
