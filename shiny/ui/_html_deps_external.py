@@ -33,6 +33,11 @@ def bootstrap_deps(
         replace = theme.replace
         if replace == "all":
             return [jquery_deps(), theme_deps]
+    elif theme is not MISSING:
+        raise TypeError(
+            f"Invalid type for `theme`: {type(theme)}. "
+            + "Must be a string, Path, or Theme object created with `shiny.ui.theme()`."
+        )
     else:
         theme_deps = None
         replace = "none"

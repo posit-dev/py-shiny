@@ -12,6 +12,7 @@ __all__ = (
 )
 
 from copy import copy
+from pathlib import Path
 from typing import Any, Callable, Literal, Optional, Sequence, cast
 
 from htmltools import (
@@ -37,6 +38,7 @@ from ._html_deps_shinyverse import components_dependencies
 from ._navs import NavMenu, NavPanel, navset_bar
 from ._sidebar import Sidebar, SidebarOpen, layout_sidebar
 from ._tag import consolidate_attrs
+from ._theme import Theme
 from ._utils import get_window_title
 from .css import CssUnit, as_css_padding, as_css_unit
 from .fill._fill import as_fillable_container
@@ -53,6 +55,7 @@ def page_sidebar(
     fillable_mobile: bool = False,
     window_title: str | MISSING_TYPE = MISSING,
     lang: Optional[str] = None,
+    theme: str | Path | Theme | MISSING_TYPE = MISSING,
     **kwargs: TagAttrValue,
 ) -> Tag:
     """
@@ -123,6 +126,7 @@ def page_sidebar(
         get_window_title(title, window_title=window_title),
         padding=0,
         gap=0,
+        theme=theme,
         lang=lang,
         fillable_mobile=fillable_mobile,
     )
@@ -150,6 +154,7 @@ def page_navbar(
     collapsible: bool = True,
     fluid: bool = True,
     window_title: str | MISSING_TYPE = MISSING,
+    theme: str | Path | Theme | MISSING_TYPE = MISSING,
     lang: Optional[str] = None,
 ) -> Tag:
     """
@@ -264,6 +269,7 @@ def page_navbar(
     if fillable is False and sidebar is None:
         return page_bootstrap(
             *page_args,
+            theme=theme,
             **page_kwargs,
         )
 
@@ -273,6 +279,7 @@ def page_navbar(
             fillable_mobile=fillable_mobile,
             padding=0,
             gap=0,
+            theme=theme,
             **page_kwargs,
         )
 
@@ -284,6 +291,7 @@ def page_fillable(
     gap: Optional[CssUnit] = None,
     fillable_mobile: bool = False,
     title: Optional[str] = None,
+    theme: str | Path | Theme | MISSING_TYPE = MISSING,
     lang: Optional[str] = None,
     **kwargs: TagAttrValue,
 ) -> Tag:
@@ -333,6 +341,7 @@ def page_fillable(
         *children,
         components_dependencies(),
         title=title,
+        theme=theme,
         lang=lang,
     )
 
@@ -350,6 +359,7 @@ def page_fillable(
 def page_fluid(
     *args: TagChild | TagAttrs,
     title: Optional[str] = None,
+    theme: str | Path | Theme | MISSING_TYPE = MISSING,
     lang: Optional[str] = None,
     **kwargs: str,
 ) -> Tag:
@@ -383,7 +393,10 @@ def page_fluid(
     """
 
     return page_bootstrap(
-        div({"class": "container-fluid"}, *args, **kwargs), title=title, lang=lang
+        div({"class": "container-fluid"}, *args, **kwargs),
+        title=title,
+        theme=theme,
+        lang=lang,
     )
 
 
@@ -391,6 +404,7 @@ def page_fluid(
 def page_fixed(
     *args: TagChild | TagAttrs,
     title: Optional[str] = None,
+    theme: str | Path | Theme | MISSING_TYPE = MISSING,
     lang: Optional[str] = None,
     **kwargs: str,
 ) -> Tag:
@@ -424,7 +438,10 @@ def page_fixed(
     """
 
     return page_bootstrap(
-        div({"class": "container"}, *args, **kwargs), title=title, lang=lang
+        div({"class": "container"}, *args, **kwargs),
+        title=title,
+        theme=theme,
+        lang=lang,
     )
 
 
@@ -433,6 +450,7 @@ def page_fixed(
 def page_bootstrap(
     *args: TagChild | TagAttrs,
     title: Optional[str] = None,
+    theme: str | Path | Theme | MISSING_TYPE = MISSING,
     lang: Optional[str] = None,
     **kwargs: TagAttrValue,
 ) -> Tag:
@@ -466,7 +484,7 @@ def page_bootstrap(
     head = tags.title(title) if title else None
     return tags.html(
         tags.head(head),
-        tags.body(*bootstrap_deps(), *args, **kwargs),
+        tags.body(*bootstrap_deps(theme), *args, **kwargs),
         lang=lang,
     )
 
@@ -476,6 +494,7 @@ def page_auto(
     *args: TagChild | TagAttrs,
     title: str | MISSING_TYPE = MISSING,
     window_title: str | MISSING_TYPE = MISSING,
+    theme: str | Path | Theme | MISSING_TYPE = MISSING,
     lang: str | MISSING_TYPE = MISSING,
     fillable: bool | MISSING_TYPE = MISSING,
     full_width: bool = False,
@@ -533,6 +552,8 @@ def page_auto(
         kwargs["window_title"] = window_title
     if not isinstance(lang, MISSING_TYPE):
         kwargs["lang"] = lang
+    if not isinstance(theme, MISSING_TYPE):
+        kwargs["theme"] = theme
 
     # Presence of a top-level nav items and/or sidebar determines the page function
     navs = [x for x in args if isinstance(x, (NavPanel, NavMenu))]
