@@ -1,4 +1,4 @@
-from palmerpenguins import load_penguins  # pyright: ignore[reportMissingTypeStubs]
+from palmerpenguins import load_penguins_raw  # pyright: ignore[reportMissingTypeStubs]
 
 from shiny import App, Inputs, Outputs, Session, render, ui
 
@@ -13,7 +13,7 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
     @render.data_frame
     def penguins_df():
         return render.DataGrid(
-            data=load_penguins(),  # pyright: ignore[reportUnknownArgumentType]
+            data=load_penguins_raw(),  # pyright: ignore[reportUnknownArgumentType]
             filters=True,
             selection_mode="rows",
         )
