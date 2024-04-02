@@ -80,8 +80,10 @@ def template_query(
         import webbrowser
 
         webbrowser.open(url)
+        sys.exit(0)
     elif template == "js-component":
         js_component_questions(dest_dir=dest_dir, package_name=package_name)
+        return
     elif template in package_template_choices.values():
         js_component_questions(template, dest_dir=dest_dir, package_name=package_name)
     else:
