@@ -8,6 +8,7 @@ from htmltools import HTMLDependency, Tag, Tagifiable, TagList
 from htmltools.tags import head
 from packaging.version import Version
 
+from .._docstring import no_example
 from .._versions import bootstrap as BOOTSTRAP_VERSION
 from ._include_helpers import include_css
 
@@ -28,11 +29,8 @@ class Theme:
         The theme to apply. This can be a path to a CSS file, a :class:`~htmltools.Tag`
         or :class:`~htmltools.Tagifiable` object, or an
         :class:`~htmltools.HTMLDependency`. When `theme` is a string or
-        :class:`~pathlib.Path`, it is interpreted as a path to a CSS file that should
-        completely replace `bootstrap.min.css`. The CSS file is included using
-        :func:`~shiny.ui.include_css()`. For best results, the CSS file and its
-        supporting assets should be stored in a subdirectory containing only the
-        necessary files.
+        :class:`~pathlib.Path`, it is interpreted as a path to a CSS file that will be
+        added to the app using :func:`~shiny.ui.include_css()`.
     name
         An optional name for the theme.
     version
@@ -45,8 +43,9 @@ class Theme:
     replace
         Specifies how the theme should replace existing styles:
 
-        * `"css"` is the default: The theme replaces only the `bootstrap.min.css` file
-          of Shiny's built-in Bootstrap theme.
+        * `"css"` is the default: The theme completely replaces the Bootstrap
+          stylesheet, i.e. the `bootstrap.min.css` file, of Shiny's built-in Bootstrap
+          theme.
         * `"none"`: The theme is added as additional CSS (and/or JavaScript) files in
           addition to Shiny's built-in Bootstrap theme.
         * `"all"`: Shiny's built-in Bootstrap theme is completely replaced by the theme.
@@ -191,6 +190,7 @@ class Theme:
         )
 
 
+@no_example()
 def theme(
     theme: str | Path | Tag | Tagifiable | HTMLDependency,
     *,
@@ -212,11 +212,8 @@ def theme(
         The theme to apply. This can be a path to a CSS file, a :class:`~htmltools.Tag`
         or :class:`~htmltools.Tagifiable` object, or an
         :class:`~htmltools.HTMLDependency`. When `theme` is a string or
-        :class:`~pathlib.Path`, it is interpreted as a path to a CSS file that should
-        completely replace `bootstrap.min.css`. The CSS file is included using
-        :func:`~shiny.ui.include_css()`. For best results, the CSS file and its
-        supporting assets should be stored in a subdirectory containing only the
-        necessary files.
+        :class:`~pathlib.Path`, it is interpreted as a path to a CSS file that will be
+        added to the app using :func:`~shiny.ui.include_css()`.
     name
         An optional name for the theme.
     version
@@ -229,8 +226,9 @@ def theme(
     replace
         Specifies how the theme should replace existing styles:
 
-        * `"css"` is the default: The theme replaces only the `bootstrap.min.css` file
-          of Shiny's built-in Bootstrap theme.
+        * `"css"` is the default: The theme completely replaces the Bootstrap
+          stylesheet, i.e. the `bootstrap.min.css` file, of Shiny's built-in Bootstrap
+          theme.
         * `"none"`: The theme is added as additional CSS (and/or JavaScript) files in
           addition to Shiny's built-in Bootstrap theme.
         * `"all"`: Shiny's built-in Bootstrap theme is completely replaced by the theme.
@@ -238,6 +236,7 @@ def theme(
           designed to work with the currently bundled version of Bootstrap. Use the
           `bs_version` parameter to check compatibility of the provided theme with the
           bundled Bootstrap version at runtime.
+
 
     Returns
     -------

@@ -322,9 +322,7 @@ def page_fillable(
         CSS file: If a string or :class:`~pathlib.Path` is provided, it is
         interpreted as a path to a CSS file that should completely replace
         `bootstrap.min.css`. The CSS file is included using
-        :func:`~shiny.ui.include_css()`. For best results, the CSS file and its
-        supporting assets should be stored in a subdirectory containing only the
-        necessary files.
+        :func:`~shiny.ui.include_css()`.
 
         Theme object: For more control over the theme and how it is applied, use
         :func:`~shiny.ui.theme()`.
@@ -395,9 +393,7 @@ def page_fluid(
         CSS file: If a string or :class:`~pathlib.Path` is provided, it is
         interpreted as a path to a CSS file that should completely replace
         `bootstrap.min.css`. The CSS file is included using
-        :func:`~shiny.ui.include_css()`. For best results, the CSS file and its
-        supporting assets should be stored in a subdirectory containing only the
-        necessary files.
+        :func:`~shiny.ui.include_css()`.
 
         Theme object: For more control over the theme and how it is applied, use
         :func:`~shiny.ui.theme()`.
@@ -454,9 +450,7 @@ def page_fixed(
         CSS file: If a string or :class:`~pathlib.Path` is provided, it is
         interpreted as a path to a CSS file that should completely replace
         `bootstrap.min.css`. The CSS file is included using
-        :func:`~shiny.ui.include_css()`. For best results, the CSS file and its
-        supporting assets should be stored in a subdirectory containing only the
-        necessary files.
+        :func:`~shiny.ui.include_css()`.
 
         Theme object: For more control over the theme and how it is applied, use
         :func:`~shiny.ui.theme()`.
@@ -514,9 +508,7 @@ def page_bootstrap(
         CSS file: If a string or :class:`~pathlib.Path` is provided, it is
         interpreted as a path to a CSS file that should completely replace
         `bootstrap.min.css`. The CSS file is included using
-        :func:`~shiny.ui.include_css()`. For best results, the CSS file and its
-        supporting assets should be stored in a subdirectory containing only the
-        necessary files.
+        :func:`~shiny.ui.include_css()`.
 
         Theme object: For more control over the theme and how it is applied, use
         :func:`~shiny.ui.theme()`.
@@ -584,9 +576,7 @@ def page_auto(
         CSS file: If a string or :class:`~pathlib.Path` is provided, it is
         interpreted as a path to a CSS file that should completely replace
         `bootstrap.min.css`. The CSS file is included using
-        :func:`~shiny.ui.include_css()`. For best results, the CSS file and its
-        supporting assets should be stored in a subdirectory containing only the
-        necessary files.
+        :func:`~shiny.ui.include_css()`.
 
         Theme object: For more control over the theme and how it is applied, use
         :func:`~shiny.ui.theme()`.
