@@ -30,7 +30,7 @@ class Theme:
         or :class:`~htmltools.Tagifiable` object, or an
         :class:`~htmltools.HTMLDependency`. When `theme` is a string or
         :class:`~pathlib.Path`, it is interpreted as a path to a CSS file that will be
-        added to the app using :func:`~shiny.ui.include_css()`.
+        added to the app using :func:`~shiny.ui.include_css`.
     name
         An optional name for the theme.
     version
@@ -41,7 +41,8 @@ class Theme:
         version and does not match the theme's major Bootstrap version. Otherwise, a
         warning is raised if the minor or patch versions do not match.
     replace
-        Specifies how the theme should replace existing styles:
+        Specifies how the theme should replace or augment Shiny's bundled Bootstrap
+        theme:
 
         * `"css"` is the default: The theme completely replaces the Bootstrap
           stylesheet, i.e. the `bootstrap.min.css` file, of Shiny's built-in Bootstrap
@@ -66,7 +67,8 @@ class Theme:
     bs_version
         The Bootstrap version with which the theme is compatible.
     replace
-        Specifies how the theme should replace existing styles:
+        Specifies how the theme should replace or augment Shiny's bundled Bootstrap
+        theme:
 
         * `"css"` is the default: The theme replaces only the `bootstrap.min.css` file
           of Shiny's built-in Bootstrap theme.
@@ -213,7 +215,7 @@ def theme(
         or :class:`~htmltools.Tagifiable` object, or an
         :class:`~htmltools.HTMLDependency`. When `theme` is a string or
         :class:`~pathlib.Path`, it is interpreted as a path to a CSS file that will be
-        added to the app using :func:`~shiny.ui.include_css()`.
+        added to the app using :func:`~shiny.ui.include_css`.
     name
         An optional name for the theme.
     version
@@ -224,7 +226,8 @@ def theme(
         version and does not match the theme's major Bootstrap version. Otherwise, a
         warning is raised if the minor or patch versions do not match.
     replace
-        Specifies how the theme should replace existing styles:
+        Specifies how the theme should replace or augment Shiny's bundled Bootstrap
+        theme:
 
         * `"css"` is the default: The theme completely replaces the Bootstrap
           stylesheet, i.e. the `bootstrap.min.css` file, of Shiny's built-in Bootstrap

@@ -44,16 +44,16 @@ def page_opts(
         ``title``.
     theme
         A path to a CSS file that will replace the Bootstrap CSS bundled with a Shiny
-        app, or a theme create width :func:`~shiny.ui.theme()`. If no value is provided,
+        app, or a theme create width :func:`~shiny.ui.theme`. If no value is provided,
         the default Shiny Bootstrap theme is used.
 
         CSS file: If a string or :class:`~pathlib.Path` is provided, it is
         interpreted as a path to a CSS file that should completely replace
         `bootstrap.min.css`. The CSS file is included using
-        :func:`~shiny.ui.include_css()`.
+        :func:`~shiny.ui.include_css`.
 
         Theme object: For more control over the theme and how it is applied, use
-        :func:`~shiny.ui.theme()`.
+        :func:`~shiny.ui.theme`.
     lang
         ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
         will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
