@@ -122,6 +122,9 @@ docs: FORCE ## docs: build docs with quartodoc
 docs-preview: FORCE ## docs: preview docs in browser
 	@echo "-------- Previewing docs in browser --------"
 	@cd docs && make serve
+docs-quartodoc: FORCE
+	@echo "-------- Making quartodoc docs --------"
+	@cd docs && make quartodoc
 
 
 install-npm: FORCE
@@ -144,7 +147,7 @@ clean-js: FORCE
 
 # Default `SUB_FILE` to empty
 SUB_FILE:=
-
+PYTEST_BROWSERS:= --browser webkit --browser firefox --browser chromium
 install-playwright: FORCE
 	playwright install --with-deps
 
@@ -157,15 +160,15 @@ install-rsconnect: FORCE
 
 # end-to-end tests with playwright; (SUB_FILE="" within tests/playwright/shiny/)
 playwright-shiny: install-playwright
-	pytest tests/playwright/shiny/$(SUB_FILE)
+	pytest tests/playwright/shiny/$(SUB_FILE) $(PYTEST_BROWSERS)
 
 # end-to-end tests on deployed apps with playwright; (SUB_FILE="" within tests/playwright/deploys/)
 playwright-deploys: install-playwright install-rsconnect
-	pytest tests/playwright/deploys/$(SUB_FILE)
+	pytest tests/playwright/deploys/$(SUB_FILE) $(PYTEST_BROWSERS)
 
 # end-to-end tests on all py-shiny examples with playwright; (SUB_FILE="" within tests/playwright/examples/)
 playwright-examples: install-playwright
-	pytest tests/playwright/examples/$(SUB_FILE)
+	pytest tests/playwright/examples/$(SUB_FILE) $(PYTEST_BROWSERS)
 
 playwright-debug: install-playwright ## All end-to-end tests, chrome only, headed; (SUB_FILE="" within tests/playwright/)
 	pytest -c tests/playwright/playwright-pytest.ini tests/playwright/$(SUB_FILE)
@@ -175,10 +178,10 @@ playwright-show-trace: ## Show trace of failed tests
 
 # end-to-end tests with playwright and generate junit report
 testrail-junit: install-playwright install-trcli
-	pytest tests/playwright/shiny/$(SUB_FILE) --junitxml=report.xml
+	pytest tests/playwright/shiny/$(SUB_FILE) --junitxml=report.xml $(PYTEST_BROWSERS)
 
 coverage: FORCE ## check combined code coverage (must run e2e last)
-	pytest --cov-report term-missing --cov=shiny tests/pytest/ tests/playwright/shiny/$(SUB_FILE)
+	pytest --cov-report term-missing --cov=shiny tests/pytest/ tests/playwright/shiny/$(SUB_FILE) $(PYTEST_BROWSERS)
 	coverage html
 	$(BROWSER) htmlcov/index.html
 

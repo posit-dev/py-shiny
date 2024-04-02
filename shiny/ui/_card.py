@@ -25,7 +25,7 @@ from ._tooltip import tooltip
 from .css._css_unit import CssUnit, as_css_padding, as_css_unit
 from .fill import as_fill_item, as_fillable_container
 
-# TODO-barret-future; Update header to return CardHeader class. Same for footer. Then we
+# TODO-future; Update header to return CardHeader class. Same for footer. Then we
 # can check `*args` for a CardHeader class and move it to the top. And footer to the
 # bottom. Can throw error if multiple headers/footers are provided or could concatenate.
 
@@ -83,8 +83,8 @@ def card(
         Additional CSS classes for the returned Tag.
     id
         Provide a unique identifier for the :func:`~shiny.ui.card` or to report its
-        state to Shiny. For example, using `id="my_card"`, you can observe the card's
-        full screen state with `input.my_card()["full_screen"]`.
+        full screen state to Shiny. For example, using `id="my_card"`, you can observe
+        the card's full screen state with `input.my_card_full_screen()`.
     **kwargs
         HTML attributes on the returned Tag.
 
