@@ -5,8 +5,9 @@ from typing import Iterable, Literal, Optional, cast
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, div
 
 from .._deprecated import warn_deprecated
+from .._docstring import add_example
 from ..types import MISSING, MISSING_TYPE
-from ._html_deps_shinyverse import components_dependency
+from ._html_deps_shinyverse import components_dependencies
 from ._tag import consolidate_attrs
 from ._utils import is_01_scalar
 from .css import CssUnit, as_css_unit
@@ -14,6 +15,7 @@ from .css._css_unit import isinstance_cssunit
 from .fill import as_fill_item, as_fillable_container
 
 
+@add_example()
 def layout_column_wrap(
     *args: TagChild | TagAttrs,
     width: CssUnit | None | MISSING_TYPE = MISSING,
@@ -22,6 +24,8 @@ def layout_column_wrap(
     fill: bool = True,
     fillable: bool = True,
     height: Optional[CssUnit] = None,
+    min_height: Optional[CssUnit] = None,
+    max_height: Optional[CssUnit] = None,
     height_mobile: Optional[CssUnit] = None,
     gap: Optional[CssUnit] = None,
     class_: Optional[str] = None,
@@ -33,8 +37,8 @@ def layout_column_wrap(
     """
     A grid-like, column-first layout
 
-    Wraps a 1d sequence of UI elements into a 2d grid. The number of columns (and rows)
-    in the grid dependent on the column `width` as well as the size of the display.
+    Wraps a 1d sequence of UI elements into a 2d grid. The number of columns
+    (and rows) in the grid depends on the column width and the size of the display.
 
     Parameters
     ----------
@@ -43,21 +47,26 @@ def layout_column_wrap(
         :func:`~shiny.ui.card`). Named arguments become attributes on the
         containing :class:`~htmltools.Tag` element.
     width
-        The desired width of each card. It can be a (unit-less) number between 0 and 1
-        and should be specified as `1/num`, where `num` represents the number of desired
-        columns. It can be a CSS length unit representing either the minimum (when
-        `fixed_width=False`) or fixed width (`fixed_width=True`). It can also be `None`,
-        which allows power users to set the `grid-template-columns` CSS property
-        manually, either via a `style` attribute or a CSS stylesheet. If missing, a
-        value of `200px` will be used.
+        The desired width of each card. It can be one of the following:
+
+        * A (unit-less) number between 0 and 1, specified as `1/num`, where `num`
+          represents the number of desired columns.
+        * A CSS length unit representing either the minimum (when `fixed_width=False`)
+          or fixed width (`fixed_width=True`).
+        * `None`, which allows power users to set the `grid-template-columns` CSS
+          property manually, either via a `style` attribute or a CSS stylesheet.
+        * If missing, a value of `200px` will be used.
     fixed_width
-        When `width` is greater than 1 or is a CSS length unit, e.g. `"200px"`,
+        When `width` is greater than 1 or is a CSS length unit, e.g., `"200px"`,
         `fixed_width` indicates whether that `width` value represents the absolute size
         of each column (`fixed_width=TRUE`) or the minimum size of a column
-        (`fixed_width=FALSE`). When `fixed_width=FALSE`, new columns are added to a row
-        when `width` space is available and columns will never exceed the container or
-        viewport size. When `fixed_width=TRUE`, all columns will be exactly `width`
-        wide, which may result in columns overflowing the parent container.
+        (`fixed_width=FALSE`).
+
+        When `fixed_width=FALSE`, new columns are added to a row when `width` space is
+        available and columns will never exceed the container or viewport size.
+
+        When `fixed_width=TRUE`, all columns will be exactly `width` wide, which may
+        result in columns overflowing the parent container.
     heights_equal
         If `"all"` (the default), every card in every row of the grid will have the same
         height. If `"row"`, then every card in _each_ row of the grid will have the same
@@ -67,8 +76,10 @@ def layout_column_wrap(
         with an opinionated height (e.g., :func:`~shiny.ui.page_fillable`).
     fillable
         Whether or not each element is wrapped in a fillable container.
-    height
-        Any valid CSS unit to use for the height.
+    height,max_height,min_height
+        A valid CSS unit (e.g., `height="200px"`). Use `min_height` and `max_height` in
+        a filling layout to ensure that the layout container does not shrink below a
+        `min_height` or grow beyond a `max_height`.
     height_mobile
         Any valid CSS unit to use for the height when on mobile devices (or narrow
         windows).
@@ -139,6 +150,8 @@ def layout_column_wrap(
             "auto" if height_mobile is None else height_mobile
         ),
         "gap": as_css_unit(gap),
+        "min-height": as_css_unit(min_height),
+        "max-height": as_css_unit(max_height),
     }
 
     tag = div(
@@ -148,7 +161,7 @@ def layout_column_wrap(
         },
         attrs,
         *wrap_all_in_gap_spaced_container(children, fillable),
-        components_dependency(),
+        components_dependencies(),
     )
     if fill:
         tag = as_fill_item(tag)

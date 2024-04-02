@@ -11,7 +11,18 @@ from contextlib import contextmanager
 from pathlib import PurePath
 from time import sleep
 from types import TracebackType
-from typing import IO, Any, Callable, Generator, List, Optional, TextIO, Type, Union
+from typing import (
+    IO,
+    Any,
+    Callable,
+    Generator,
+    List,
+    Literal,
+    Optional,
+    TextIO,
+    Type,
+    Union,
+)
 
 import pytest
 
@@ -20,13 +31,34 @@ import shiny._utils
 __all__ = (
     "ShinyAppProc",
     "create_app_fixture",
-    "create_doc_example_fixture",
+    "create_doc_example_core_fixture",
     "create_example_fixture",
     "local_app",
     "run_shiny_app",
     "expect_to_change",
     "retry_with_timeout",
 )
+
+from playwright.sync_api import BrowserContext, Page
+
+
+# Make a single page fixture that can be used by all tests
+@pytest.fixture(scope="session")
+# By using a single page, the browser is only launched once and all tests run in the same tab / page.
+def session_page(browser: BrowserContext) -> Page:
+    return browser.new_page()
+
+
+@pytest.fixture(scope="function")
+# By going to `about:blank`, we _reset_ the page to a known state before each test.
+# It is not perfect, but it is faster than making a new page for each test.
+# This must be done before each test
+def page(session_page: Page) -> Page:
+    session_page.goto("about:blank")
+    # Reset screen size to 1080p
+    session_page.set_viewport_size({"width": 1920, "height": 1080})
+    return session_page
+
 
 here = PurePath(__file__).parent
 here_root = here.parent.parent
@@ -176,34 +208,72 @@ def run_shiny_app(
     return sa
 
 
-def create_app_fixture(app: Union[PurePath, str], scope: str = "module"):
+def local_app_fixture_gen(app: PurePath | str):
+    sa = run_shiny_app(app, wait_for_start=False)
+    try:
+        with sa:
+            sa.wait_until_ready(30)
+            yield sa
+    finally:
+        logging.warning("Application output:\n" + str(sa.stderr))
+
+
+ScopeName = Literal["session", "package", "module", "class", "function"]
+
+
+def create_app_fixture(
+    app: Union[PurePath, str],
+    scope: ScopeName = "module",
+):
+    @pytest.fixture(scope=scope)
     def fixture_func():
-        sa = run_shiny_app(app, wait_for_start=False)
-        try:
-            with sa:
-                sa.wait_until_ready(30)
-                yield sa
-        finally:
-            logging.warning("Application output:\n" + str(sa.stderr))
+        # Pass through `yield` via `next(...)` call
+        # (`yield` must be on same line as `next`!)
+        app_gen = local_app_fixture_gen(app)
+        yield next(app_gen)
 
-    return pytest.fixture(
-        scope=scope,  # type: ignore
-    )(fixture_func)
+    return fixture_func
 
 
-def create_example_fixture(example_name: str, scope: str = "module"):
+def create_example_fixture(
+    example_name: str,
+    example_file: str = "app.py",
+    scope: ScopeName = "module",
+):
     """Used to create app fixtures from apps in py-shiny/examples"""
-    return create_app_fixture(here_root / "examples" / example_name / "app.py", scope)
-
-
-def create_doc_example_fixture(example_name: str, scope: str = "module"):
-    """Used to create app fixtures from apps in py-shiny/shiny/api-examples"""
     return create_app_fixture(
-        here_root / "shiny/api-examples" / example_name / "app.py", scope
+        here_root / "examples" / example_name / example_file, scope
     )
 
 
-def x_create_doc_example_fixture(example_name: str, scope: str = "module"):
+def create_doc_example_fixture(
+    example_name: str,
+    example_file: str = "app.py",
+    scope: ScopeName = "module",
+):
+    """Used to create app fixtures from apps in py-shiny/shiny/api-examples"""
+    return create_app_fixture(
+        here_root / "shiny/api-examples" / example_name / example_file, scope
+    )
+
+
+def create_doc_example_core_fixture(
+    example_name: str,
+    scope: ScopeName = "module",
+):
+    """Used to create app fixtures from ``app-core.py`` example apps in py-shiny/shiny/api-examples"""
+    return create_doc_example_fixture(example_name, "app-core.py", scope)
+
+
+def create_doc_example_express_fixture(
+    example_name: str,
+    scope: ScopeName = "module",
+):
+    """Used to create app fixtures from ``app-express.py`` example apps in py-shiny/shiny/api-examples"""
+    return create_doc_example_fixture(example_name, "app-express.py", scope)
+
+
+def x_create_doc_example_fixture(example_name: str, scope: ScopeName = "module"):
     """Used to create app fixtures from apps in py-shiny/shiny/examples"""
     return create_app_fixture(
         here_root / "shiny/experimental/api-examples" / example_name / "app.py", scope
@@ -212,13 +282,8 @@ def x_create_doc_example_fixture(example_name: str, scope: str = "module"):
 
 @pytest.fixture(scope="module")
 def local_app(request: pytest.FixtureRequest) -> Generator[ShinyAppProc, None, None]:
-    sa = run_shiny_app(PurePath(request.path).parent / "app.py", wait_for_start=False)
-    try:
-        with sa:
-            sa.wait_until_ready(30)
-            yield sa
-    finally:
-        logging.warning("Application output:\n" + str(sa.stderr))
+    app_gen = local_app_fixture_gen(PurePath(request.path).parent / "app.py")
+    yield next(app_gen)
 
 
 @contextmanager

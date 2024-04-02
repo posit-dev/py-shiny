@@ -39,14 +39,14 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    annotated_data = reactive.Value(weather_df)
+    annotated_data = reactive.value(weather_df)
 
-    @reactive.Calc
+    @reactive.calc
     def selected_data():
         out = brushed_points(annotated_data(), input.time_series_brush(), xvar="date")
         return out
 
-    @reactive.Effect
+    @reactive.effect
     @reactive.event(input.annotate_button)
     def _():
         selected = selected_data()
@@ -62,7 +62,6 @@ def server(input: Inputs, output: Outputs, session: Session):
         df = df.loc[:, ["date", "temp_c", "annotation"]]
         annotated_data.set(df)
 
-    @output
     @render.plot
     def time_series():
         fig, ax = plt.subplots()
@@ -76,7 +75,6 @@ def server(input: Inputs, output: Outputs, session: Session):
         out.tick_params(axis="x", rotation=30)
         return out.get_figure()
 
-    @output
     @render.ui
     def annotator():
         if input.time_series_brush() is not None:
@@ -104,7 +102,6 @@ def server(input: Inputs, output: Outputs, session: Session):
             )
             return out
 
-    @output
     @render.data_frame
     def annotations():
         df = annotated_data().copy()
@@ -112,7 +109,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         df = df.loc[df["annotation"] != ""]
         return df
 
-    @session.download(filename="data.csv")
+    @render.download(filename="data.csv")
     def download():
         yield annotated_data().to_csv()
 

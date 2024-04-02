@@ -1,6 +1,5 @@
 """Tests for """
 
-
 import contextlib
 import random
 import textwrap
@@ -20,19 +19,20 @@ def private_seed_n(n: int = 0) -> Generator[None, None, None]:
         yield
 
 
-def test_nav_markup():
-    a = ui.nav_panel("a", "a")
-    b = ui.nav_panel("b", "b")
-    c = ui.nav_panel("c", "c")
-    menu = ui.nav_menu(
-        "Menu",
-        c,
-        "----",
-        "Plain text",
-        "----",
-        ui.nav_control("Other item"),
-    )
+a = ui.nav_panel("a", "a")
+b = ui.nav_panel("b", "b")
+c = ui.nav_panel("c", "c")
+menu = ui.nav_menu(
+    "Menu",
+    c,
+    "----",
+    "Plain text",
+    "----",
+    ui.nav_control("Other item"),
+)
 
+
+def test_navset_tab_markup():
     with private_seed_n():
         x = ui.navset_tab(a, b, ui.nav_control("Some item"), menu)
 
@@ -66,6 +66,8 @@ def test_nav_markup():
         </div>"""
     )
 
+
+def test_navset_pill_markup():
     with private_seed_n():
         x = ui.navset_pill(menu, a, id="navset_pill_id")
 
@@ -94,6 +96,8 @@ def test_nav_markup():
         </div>"""
     )
 
+
+def test_navset_card_pill_markup():
     with private_seed_n():
         x = ui.navset_card_pill(
             a,
@@ -125,15 +129,17 @@ def test_nav_markup():
           </div>
           <div class="card-body bslib-gap-spacing html-fill-item html-fill-container" style="margin-top:auto;margin-bottom:auto;flex:1 1 auto;">
             <div class="tab-content html-fill-item html-fill-container" data-tabsetid="7311">
-              <div class="tab-pane html-fill-item html-fill-container" role="tabpanel" data-value="a" id="tab-7311-0" style="gap:0;padding:0;">a</div>
-              <div class="tab-pane active html-fill-item html-fill-container" role="tabpanel" data-value="c" id="tab-7890-0" style="gap:0;padding:0;">c</div>
-              <div class="tab-pane html-fill-item html-fill-container" role="tabpanel" data-value="b" id="tab-7311-2" style="gap:0;padding:0;">b</div>
+              <div class="tab-pane html-fill-item html-fill-container bslib-gap-spacing" role="tabpanel" data-value="a" id="tab-7311-0" style="gap:0;padding:0;">a</div>
+              <div class="tab-pane active html-fill-item html-fill-container bslib-gap-spacing" role="tabpanel" data-value="c" id="tab-7890-0" style="gap:0;padding:0;">c</div>
+              <div class="tab-pane html-fill-item html-fill-container bslib-gap-spacing" role="tabpanel" data-value="b" id="tab-7311-2" style="gap:0;padding:0;">b</div>
             </div>
           </div>
           <script data-bslib-card-init="">window.bslib.Card.initializeAllCards();</script>
         </div>"""
     )
 
+
+def test_navset_bar_markup():
     with private_seed_n():
         x = ui.navset_bar(
             ui.nav_menu("Menu", "Plain text", c),
@@ -144,7 +150,7 @@ def test_nav_markup():
 
     assert TagList(x).render()["html"] == textwrap.dedent(
         """\
-        <nav class="navbar navbar-expand-md navbar-light bg-light">
+        <nav class="navbar navbar-expand-md navbar-default">
           <div class="container-fluid">
             <span class="navbar-brand">Page title</span><button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar-collapse-1663" aria-controls="navbar-collapse-1663" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
             <div id="navbar-collapse-1663" class="collapse navbar-collapse">
@@ -165,7 +171,7 @@ def test_nav_markup():
         <div class="container-fluid html-fill-item html-fill-container">
           Page header
           <div class="tab-content html-fill-item html-fill-container" data-tabsetid="7311">
-            <div class="tab-pane active html-fill-item html-fill-container" role="tabpanel" data-value="c" id="tab-7890-1" style="--bslib-navbar-margin:0;;">c</div>
+            <div class="tab-pane active html-fill-item html-fill-container bslib-gap-spacing" role="tabpanel" data-value="c" id="tab-7890-1" style="--bslib-navbar-margin:0;;">c</div>
           </div>
           Page footer
         </div>"""

@@ -1,10 +1,17 @@
 from __future__ import annotations
 
-__all__ = ("current_namespace", "resolve_id", "ui", "server")
+__all__ = ("current_namespace", "resolve_id", "ui", "server", "ResolvedId")
 
 from typing import TYPE_CHECKING, Callable, TypeVar
 
-from ._namespaces import Id, current_namespace, namespace_context, resolve_id
+from ._docstring import no_example
+from ._namespaces import (
+    Id,
+    ResolvedId,
+    current_namespace,
+    namespace_context,
+    resolve_id,
+)
 from ._typing_extensions import Concatenate, ParamSpec
 
 if TYPE_CHECKING:
@@ -14,6 +21,7 @@ P = ParamSpec("P")
 R = TypeVar("R")
 
 
+@no_example()
 def ui(fn: Callable[P, R]) -> Callable[Concatenate[str, P], R]:
     def wrapper(id: Id, *args: P.args, **kwargs: P.kwargs) -> R:
         with namespace_context(id):
@@ -22,6 +30,7 @@ def ui(fn: Callable[P, R]) -> Callable[Concatenate[str, P], R]:
     return wrapper
 
 
+@no_example()
 def server(
     fn: Callable[Concatenate[Inputs, Outputs, Session, P], R]
 ) -> Callable[Concatenate[str, P], R]:

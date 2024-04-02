@@ -5,6 +5,7 @@ from typing import List, Set
 import pytest
 
 from shiny._utils import AsyncCallbacks, Callbacks, private_seed, random_port
+from shiny.ui._utils import extract_js_keys, js_eval
 
 
 def test_randomness():
@@ -138,7 +139,7 @@ async def test_async_callbacks():
 
 # Timeout within 2 seconds
 @pytest.mark.timeout(2)
-@pytest.mark.flaky(reruns=3, reruns_delay=1)
+@pytest.mark.flaky(reruns=3)
 def test_random_port():
     assert random_port(9000, 9000) == 9000
 
@@ -165,7 +166,7 @@ def test_random_port():
             # Port `port + j` is busy,
             # Shift the test range and try again
             port += j + 1
-            print(port)
+            print("Trying port: ", port)
     # If no port is available, throw an error
     # `attempts` should be << n
     if attempts == n:
@@ -191,6 +192,41 @@ def test_random_port_unusable():
 
 
 def test_random_port_starvation():
-    with socketserver.TCPServer(("127.0.0.1", 9000), socketserver.BaseRequestHandler):
-        with pytest.raises(RuntimeError, match="Failed to find a usable random port"):
-            random_port(9000, 9000)
+    port = 9000
+    for _ in range(100):
+        try:
+            with socketserver.TCPServer(
+                ("127.0.0.1", port),
+                socketserver.BaseRequestHandler,
+            ):
+                with pytest.raises(
+                    RuntimeError, match="Failed to find a usable random port"
+                ):
+                    random_port(port, port)
+        except OSError as e:
+            print(e)
+            # Port is busy, bump the port number
+            port += 1
+            print("Trying port: ", port)
+
+
+def test_extract_js_keys():
+    options = {
+        "key1": "value1",
+        "key2": js_eval("<h1>Hello, world!</h1>"),
+        "key3": {
+            "subkey1": js_eval("console.log('Hello, world!');"),
+            "subkey2": "value2",
+            "subkey3": {
+                "subsubkey1": js_eval("<p>This is a paragraph.</p>"),
+                "subsubkey2": "value3",
+            },
+        },
+        "key4": "value4",
+    }
+
+    assert extract_js_keys(options) == [
+        "key2",
+        "key3.subkey1",
+        "key3.subkey3.subsubkey1",
+    ]

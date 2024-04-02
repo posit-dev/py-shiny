@@ -29,7 +29,6 @@ def server(input: Inputs, output: Outputs, session: Session):
             file[0]["datapath"]
         )
 
-    @output
     @render.table
     def summary():
         df = parsed_file()
@@ -40,9 +39,9 @@ def server(input: Inputs, output: Outputs, session: Session):
         # Get the row count, column count, and column names of the DataFrame
         row_count = df.shape[0]
         column_count = df.shape[1]
-        names: list[
-            str
-        ] = df.columns.tolist()  # pyright: ignore[reportUnknownMemberType]
+        names: list[str] = (
+            df.columns.tolist()
+        )  # pyright: ignore[reportUnknownMemberType]
         column_names = ", ".join(str(name) for name in names)
 
         # Create a new DataFrame to display the information
@@ -58,7 +57,6 @@ def server(input: Inputs, output: Outputs, session: Session):
         # checkboxes
         return info_df.loc[:, input.stats()]
 
-    @output
     @render.text
     def file2_info():
         file2: typing.Union[typing.List["FileInfo"], None] = input.file2()

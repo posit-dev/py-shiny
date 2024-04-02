@@ -47,7 +47,7 @@ class AnimationOptions(TypedDict):
 
     See Also
     --------
-    ~shiny.ui.input_slider
+    * :func:`~shiny.ui.input_slider`
     """
 
     interval: NotRequired[int]
@@ -98,7 +98,7 @@ def input_slider(
     animate
         ``True`` to show simple animation controls with default settings; ``False`` not
         to; or a custom settings list, such as those created using
-        :class:`AnimationOptions()`.
+        :class:`~AnimationOptions`.
     width
         The CSS width, e.g. '400px', or '100%'
     sep
@@ -132,12 +132,12 @@ def input_slider(
     ------
     ::: {.callout-note title="Server value"}
     A number, date, or date-time (depending on the class of value), or in the case of
-    slider range, a list of two numbers/dates/date-times.
+    slider range, a tuple of two numbers/dates/date-times.
     :::
 
     See Also
-    -------
-    ~shiny.ui.update_slider
+    --------
+    * :func:`~shiny.ui.update_slider`
     """
 
     # Thanks to generic typing, max, value, etc. should be of the same type

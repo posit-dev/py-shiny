@@ -1,10 +1,10 @@
 import re
 
-from conftest import ShinyAppProc, create_doc_example_fixture
+from conftest import ShinyAppProc, create_doc_example_core_fixture
 from controls import OutputImage
 from playwright.sync_api import Page
 
-app = create_doc_example_fixture("output_image")
+app = create_doc_example_core_fixture("output_image")
 
 
 def test_output_image_kitchen(page: Page, app: ShinyAppProc) -> None:

@@ -2,16 +2,24 @@ import { BuildOptions, build } from "esbuild";
 import { sassPlugin } from "esbuild-sass-plugin";
 import * as fs from "node:fs/promises";
 
+let minify = true;
+process.argv.forEach((val, index) => {
+  if (val === "--minify=false") {
+    console.log("Disabling minification");
+    minify = false;
+  }
+});
+
 const outDir = "../shiny/www/shared/py-shiny";
 
 async function bundle_helper(
   options: BuildOptions
-): Promise<ReturnType<typeof build>> {
+): Promise<ReturnType<typeof build> | undefined> {
   try {
     const result = await build({
       format: "esm",
       bundle: true,
-      minify: true,
+      minify: minify,
       sourcemap: true,
       metafile: false,
       outdir: outDir,
@@ -60,6 +68,11 @@ const opts: Array<BuildOptions> = [
     },
     minify: false,
     sourcemap: false,
+  },
+  {
+    entryPoints: { "spin/spin": "spin/spin.scss" },
+    plugins: [sassPlugin({ type: "css", sourceMap: false })],
+    metafile: true,
   },
 ];
 

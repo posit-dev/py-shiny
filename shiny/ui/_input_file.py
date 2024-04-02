@@ -65,18 +65,18 @@ def input_file(
     ::: {.callout-note title="Server value"}
     A list of dictionaries (one for each file upload) with the following keys:
 
-    * name: The filename provided by the web browser. This is *not* the path to read
+    * ``name``: The filename provided by the web browser. This is *not* the path to read
         to get at the actual data that was uploaded (see 'datapath').
-    * size: The size of the uploaded data, in bytes.
-    * type: The MIME type reported by the browser (for example, 'text/plain'), or
+    * ``size``: The size of the uploaded data, in bytes.
+    * ``type``: The MIME type reported by the browser (for example, 'text/plain'), or
         empty string if the browser didn't know.
-    * datapath: The path to a temp file that contains the data that was uploaded.
+    * ``datapath``: The path to a temp file that contains the data that was uploaded.
         This file may be deleted if the user performs another upload operation.
     :::
 
     See Also
     --------
-    ~shiny.ui.download_button
+    * :func:`~shiny.ui.download_button`
     """
 
     if isinstance(accept, str):

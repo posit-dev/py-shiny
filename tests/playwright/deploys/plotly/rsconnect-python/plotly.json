@@ -1,0 +1,11 @@
+{
+    "https://api.shinyapps.io": {
+        "server_url": "https://api.shinyapps.io",
+        "app_url": "https://testing-apps.shinyapps.io/example_deploy_app_a1/",
+        "app_id": 10800241,
+        "app_guid": null,
+        "title": "example_deploy_app_A",
+        "app_mode": "python-shiny",
+        "app_store_version": 1
+    }
+}

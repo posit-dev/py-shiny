@@ -4,6 +4,7 @@ __all__ = (
     "output_plot",
     "output_image",
     "output_text",
+    "output_code",
     "output_text_verbatim",
     "output_table",
     "output_ui",
@@ -13,7 +14,7 @@ from typing import Optional
 
 from htmltools import Tag, TagAttrValue, TagFunction, css, div, tags
 
-from .._docstring import add_example
+from .._docstring import add_example, no_example
 from .._namespaces import resolve_id
 from ..types import MISSING, MISSING_TYPE
 from ._plot_output_opts import (
@@ -46,8 +47,8 @@ def output_plot(
     """
     Create a output container for a static plot.
 
-    Place a :func:`~shiny.render.plot` result in the user interface. See
-    :func:`~shiny.render.plot` for more details on what types of plots are supported.
+    Place a :class:`~shiny.render.plot` result in the user interface. See
+    :class:`~shiny.render.plot` for more details on what types of plots are supported.
 
     Parameters
     ----------
@@ -100,7 +101,7 @@ def output_plot(
 
     See Also
     --------
-    * :func:`~shiny.render.plot`
+    * :class:`~shiny.render.plot`
     * :func:`~shiny.ui.output_image`
     """
     if isinstance(fill, MISSING_TYPE):
@@ -186,7 +187,7 @@ def output_image(
 
     See Also
     --------
-    * :func:`~shiny.render.image`
+    * :class:`~shiny.render.image`
     * :func:`~shiny.ui.output_plot`
     """
     func = tags.span if inline else div
@@ -246,7 +247,7 @@ def output_text(
     id
         An output id.
     inline
-        If ``True``, the result is displayed inline
+        If ``True``, the result is displayed inline.
     container
         A Callable that returns the output container.
 
@@ -261,7 +262,7 @@ def output_text(
 
     See Also
     --------
-    * :func:`~shiny.render.text`
+    * :class:`~shiny.render.text`
     * :func:`~shiny.ui.output_text_verbatim`
     """
 
@@ -270,11 +271,54 @@ def output_text(
     return container(id=resolve_id(id), class_="shiny-text-output")
 
 
+@no_example()
+def output_code(id: str, placeholder: bool = True) -> Tag:
+    """
+    Create a output container for code (monospaced text).
+
+    This is similar to :func:`~shiny.ui.output_text`, except that it displays the text
+    in a fixed-width container with a gray-ish background color and border.
+
+    Parameters
+    ----------
+    id
+        An output id.
+    placeholder
+        If the output is empty or ``None``, should an empty rectangle be displayed to
+        serve as a placeholder? (This does not affect behavior when the output is
+        nonempty.)
+
+    Returns
+    -------
+    :
+        A UI element
+
+    Note
+    ----
+    This function is currently the same as :func:`~shiny.ui.output_text_verbatim`, but
+    this may change in future versions of Shiny.
+
+    See Also
+    --------
+    * :class:`~shiny.render.text`
+    * :func:`~shiny.ui.output_text`
+    * :func:`~shiny.ui.output_text_verbatim`
+
+    Example
+    -------
+    See :func:`~shiny.ui.output_text`
+    """
+
+    cls = "shiny-text-output" + (" noplaceholder" if not placeholder else "")
+    return tags.pre(id=resolve_id(id), class_=cls)
+
+
+@add_example(ex_dir="../api-examples/input_text")
 def output_text_verbatim(id: str, placeholder: bool = False) -> Tag:
     """
     Create a output container for some text.
 
-    Place a :func:`~shiny.render.text` result in the user interface.
+    Place a :class:`~shiny.render.text` result in the user interface.
     Differs from :func:`~shiny.ui.output_text` in that it wraps the text in a
     fixed-width container with a gray-ish background color and border.
 
@@ -284,7 +328,8 @@ def output_text_verbatim(id: str, placeholder: bool = False) -> Tag:
         An output id.
     placeholder
         If the output is empty or ``None``, should an empty rectangle be displayed to
-        serve as a placeholder? (does not affect behavior when the output is nonempty)
+        serve as a placeholder? (This does not affect behavior when the output
+        is nonempty.)
 
     Returns
     -------
@@ -293,7 +338,7 @@ def output_text_verbatim(id: str, placeholder: bool = False) -> Tag:
 
     See Also
     --------
-    * :func:`~shiny.render.text`
+    * :class:`~shiny.render.text`
     * :func:`~shiny.ui.output_text`
 
     Example
@@ -323,7 +368,7 @@ def output_table(id: str, **kwargs: TagAttrValue) -> Tag:
 
     See Also
     --------
-    * :func:`~shiny.render.table`
+    * :class:`~shiny.render.table`
     """
     return tags.div({"class": "shiny-html-output"}, id=resolve_id(id), **kwargs)
 
@@ -345,7 +390,7 @@ def output_ui(
     id
         An output id.
     inline
-        If ``True``, the result is displayed inline
+        If ``True``, the result is displayed inline.
     container
         A Callable that returns the output container.
     fill
@@ -364,7 +409,7 @@ def output_ui(
 
     See Also
     --------
-    * :func:`~shiny.render.ui`
+    * :class:`~shiny.render.ui`
     * :func:`~shiny.ui.output_text`
     """
 

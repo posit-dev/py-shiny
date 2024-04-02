@@ -14,7 +14,7 @@ from htmltools import (
     tags,
 )
 
-from .._docstring import add_example
+from .._docstring import add_example, no_example
 from ._card import CardItem, card, card_body
 from ._tag import consolidate_attrs
 from ._utils import css_no_sub
@@ -91,6 +91,7 @@ class ShowcaseLayout:
         self.max_height_full_screen = as_css_unit(max_height_full_screen)
 
 
+@add_example()
 def showcase_left_center(
     *,
     width: CssUnit = "30%",
@@ -101,7 +102,7 @@ def showcase_left_center(
     """
     Showcase left center
 
-    A :func:`~shiny.ui.showcase_left_center` is a :class:`~shiny.ui.ShowcaseLayout` with
+    A :func:`~shiny.ui.showcase_left_center` is a `ShowcaseLayout` with
     the following default properties:
 
     * `width` is `"30%"`
@@ -124,6 +125,7 @@ def showcase_left_center(
     )
 
 
+@add_example()
 def showcase_top_right(
     *,
     width: CssUnit = "40%",
@@ -134,7 +136,7 @@ def showcase_top_right(
     """
     Showcase top right
 
-    A :func:`~shiny.ui.showcase_top_right` is a :class:`~shiny.ui.ShowcaseLayout` with
+    A :func:`~shiny.ui.showcase_top_right` is a `ShowcaseLayout` with
     the following default properties:
 
     * `width` is `"40%"`
@@ -158,6 +160,7 @@ def showcase_top_right(
     )
 
 
+@add_example()
 def showcase_bottom(
     *,
     width: CssUnit = "100%",
@@ -170,7 +173,7 @@ def showcase_bottom(
     """
     Showcase bottom
 
-    A :func:`~shiny.ui.showcase_bottom` is a :class:`~shiny.ui.ShowcaseLayout` with
+    A :func:`~shiny.ui.showcase_bottom` is a `ShowcaseLayout` with
     the following default properties:
 
     * `width` is `"100%"`
@@ -224,6 +227,7 @@ class ValueBoxTheme:
     bg: str | None
 
 
+@no_example()
 def value_box_theme(
     name: Optional[str] = None,
     *,
@@ -247,23 +251,22 @@ def value_box_theme(
     Parameters
     ---------
     name
-        The name of the theme, e.g. `"primary"`, `"danger"`, `"purple"`).  `name` can
-        also be a bootstrap supported color: `"blue"`, `"purple"`, `"pink"`, `"red"`,
+        The name of the theme, e.g. `"primary"`, `"danger"`, `"purple"`.  `name` can
+        also be a Bootstrap-supported color: `"blue"`, `"purple"`, `"pink"`, `"red"`,
         `"orange"`, `"yellow"`, `"green"`, `"teal"`, and `"cyan"`. These colors can be
         used with `bg-NAME`, `text-NAME`, and `bg-gradient-NAME1-NAME2`. If a `name`
-        does not start with `text-` or `bg-`, it will be auto prefixed with `bg-`.
+        does not start with `text-` or `bg-`, it will be auto-prefixed with `bg-`.
     fg,bg
         The background and foreground colors for the theme.
 
     Returns
     -------
     :
-        A :class:`~shiny.ui.ValueBoxTheme`
+        A `ValueBoxTheme`
 
     See Also
     --------
     * :func:`~shiny.ui.value_box`
-    * :class:`~shiny.ui.ValueBoxTheme`
     """
     # bg
     #     If only `bg` is provided,
@@ -304,15 +307,17 @@ def value_box(
     theme: Optional[str | ValueBoxTheme] = None,
     height: Optional[CssUnit] = None,
     max_height: Optional[CssUnit] = None,
+    min_height: Optional[CssUnit] = None,
     fill: bool = True,
     class_: Optional[str] = None,
+    id: Optional[str] = None,
     **kwargs: TagAttrValue,
 ) -> Tag:
     """
     Value box
 
     An opinionated (:func:`~shiny.ui.card`-powered) box, designed for
-    displaying a `value` and `title`. Optionally, a `showcase` can provide for context
+    displaying a `value` and `title`. Optionally, a `showcase` can provide context
     for what the `value` represents (for example, it could hold an icon, or even a
     :func:`~shiny.ui.output_plot`).
 
@@ -331,28 +336,32 @@ def value_box(
     showcase_layout
         One of `"left center"` (default), `"top right"` or `"bottom"`. Alternatively,
         you can customize the showcase layout options with the
-        :func:`~shiny.ui.showcase_left_center`, :func:`~shiny.ui.showcase_top_right()`,
-        or :func:`~shiny.ui.showcase_bottom()` functions. Use the options functions when
+        :func:`~shiny.ui.showcase_left_center`, :func:`~shiny.ui.showcase_top_right`,
+        or :func:`~shiny.ui.showcase_bottom` functions. Use the options functions when
         you want to control the height or width of the showcase area.
     theme
         The name of a theme (e.g. `"primary"`, `"danger"`, `"purple"`, `"bg-green"`,
         `"text-red"`) for the value box, or a theme constructed with
-        :func:`~shiny.ui.value_box_theme`. The theme names provide a convenient way to
-        use your app's Bootstrap theme colors as the foreground or background colors of
-        the value box. For more control, you can create your own theme with
-        :func:`~shiny.ui.value_box_theme` where you can pass foreground and background
-        colors directly. Bootstrap supported color themes: `"blue"`, `"purple"`,
-        `"pink"`, `"red"`, `"orange"`, `"yellow"`, `"green"`, `"teal"`, and `"cyan"`.
-        These colors can be used with `bg-NAME`, `text-NAME`, and
-        `bg-gradient-NAME1-NAME2` to change the background, foreground, or use a
-        background gradient respectively. If a `theme` string does not start with
-        `text-` or `bg-`, it will be auto prefixed with `bg-`.
+        :func:`~shiny.ui.value_box_theme`.
+
+        The theme names provide a convenient way to use your app's Bootstrap theme
+        colors as the foreground or background colors of the value box. For more
+        control, you can create your own theme with :func:`~shiny.ui.value_box_theme`
+        where you can pass foreground and background colors directly.
+
+        Bootstrap supported color themes: `"blue"`, `"purple"`, `"pink"`, `"red"`,
+        `"orange"`, `"yellow"`, `"green"`, `"teal"`, and `"cyan"`. These colors can be
+        used with `bg-NAME`, `text-NAME`, and `bg-gradient-NAME1-NAME2` to change the
+        background, foreground, or use a background gradient respectively.
+
+        If a `theme` string does not start with `text-` or `bg-`, it will be auto
+        prefixed with `bg-`.
     full_screen
         If `True`, an icon will appear when hovering over the card body. Clicking the
         icon expands the card to fit viewport size.
-    height,max_height
-        Any valid CSS unit (e.g., `height="200px"`). Doesn't apply when a card is made
-        `full_screen`.
+    height,max_height,min_height
+        Any valid CSS unit (e.g., `height="200px"`). Doesn't apply when a value box is
+        made `full_screen`.
     fill
         Whether to allow the value box to grow/shrink to fit a fillable container with
         an opinionated height (e.g., :func:`~shiny.ui.page_fillable`).
@@ -360,6 +369,10 @@ def value_box(
         Utility classes for customizing the appearance of the summary card. Use `bg-*`
         and `text-*` classes (e.g, `"bg-danger"` and `"text-light"`) to customize the
         background/foreground colors.
+    id
+        Provide a unique identifier for the :func:`~shiny.ui.value_box()` to report its
+        state to Shiny. For example, using `id="my_value_box"`, you can observe the
+        value box's full screen state with `input.my_value_box()["full_screen"]`.
     **kwargs
         Additional attributes to pass to :func:`~shiny.ui.card`.
 
@@ -374,8 +387,6 @@ def value_box(
     * :func:`~shiny.ui.showcase_bottom`
     * :func:`~shiny.ui.showcase_left_center`
     * :func:`~shiny.ui.showcase_top_right`
-    * :class:`~shiny.ui.ShowcaseLayout`
-    * :class:`~shiny.ui.ValueBoxTheme`
     * :func:`~shiny.ui.card`
     """
 
@@ -443,15 +454,19 @@ def value_box(
         },
         {"class": theme.class_} if theme.class_ else None,
         {"class": class_} if class_ else None,
-        {"class": showcase_layout.class_}
-        if showcase and isinstance(showcase_layout, ShowcaseLayout)
-        else None,
+        (
+            {"class": showcase_layout.class_}
+            if showcase and isinstance(showcase_layout, ShowcaseLayout)
+            else None
+        ),
         attrs,
         contents,
         full_screen=full_screen,
         height=height,
         max_height=max_height,
+        min_height=min_height,
         fill=fill,
+        id=id,
     )
 
 

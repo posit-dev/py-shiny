@@ -1,4 +1,5 @@
 """Facade classes for working with Shiny inputs/outputs in Playwright"""
+
 from __future__ import annotations
 
 import json
@@ -751,7 +752,7 @@ class InputSelectize(_InputSelectBase):
         super().__init__(
             page,
             id=id,
-            select_class="",
+            select_class=".selectized",
         )
 
 
@@ -767,9 +768,7 @@ class _InputActionBase(_InputBase):
         self.expect.to_have_text(value, timeout=timeout)
 
     def click(self, *, timeout: Timeout = None, **kwargs: object) -> None:
-        self.loc.click(
-            timeout=timeout, **kwargs  # pyright: ignore[reportGeneralTypeIssues]
-        )
+        self.loc.click(timeout=timeout, **kwargs)  # pyright: ignore[reportArgumentType]
 
 
 class InputActionButton(
@@ -789,6 +788,101 @@ class InputActionButton(
             page,
             id=id,
             loc=f"button#{id}.action-button.shiny-bound-input",
+        )
+
+
+class InputDarkMode(_InputBase):
+    def __init__(
+        self,
+        page: Page,
+        id: Optional[str] | None,
+    ) -> None:
+        id_selector = "" if id is None else f"#{id}"
+
+        super().__init__(
+            page,
+            id="" if id is None else id,
+            loc=f"bslib-input-dark-mode{id_selector}",
+        )
+
+    def click(self, *, timeout: Timeout = None):
+        self.loc.click(timeout=timeout)
+        return self
+
+    def expect_mode(self, value: str, *, timeout: Timeout = None):
+        expect_attr(self.loc, "mode", value=value, timeout=timeout)
+        self.expect_page_mode(value, timeout=timeout)
+        return self
+
+    def expect_page_mode(self, value: str, *, timeout: Timeout = None):
+        expect_attr(
+            self.page.locator("html"), "data-bs-theme", value=value, timeout=timeout
+        )
+        return self
+
+    def expect_wc_attribute(self, value: str, *, timeout: Timeout = None):
+        expect_attr(self.loc, "attribute", value=value, timeout=timeout)
+        return self
+
+
+class InputTaskButton(
+    _WidthLocM,
+    _InputActionBase,
+):
+    # TODO-Karan: Test auto_reset functionality
+    # id: str,
+    # label: TagChild,
+    # *args: TagChild,
+    # icon: TagChild = None,
+    # label_busy: TagChild = "Processing...",
+    # icon_busy: TagChild | MISSING_TYPE = MISSING,
+    # width: Optional[str] = None,
+    # type: Optional[str] = "primary",
+    # auto_reset: bool = True,
+    # **kwargs: TagAttrValue,
+    def __init__(
+        self,
+        page: Page,
+        id: str,
+    ) -> None:
+        super().__init__(
+            page,
+            id=id,
+            loc=f"button#{id}.bslib-task-button.shiny-bound-input",
+        )
+
+    def expect_state(
+        self, value: Literal["ready", "busy"] | str, *, timeout: Timeout = None
+    ):
+        expect_attr(
+            self.loc.locator("> bslib-switch-inline"),
+            name="case",
+            value=value,
+            timeout=timeout,
+        )
+
+    def expect_label(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+        self.expect_label_ready(value, timeout=timeout)
+
+    def expect_label_ready(self, value: PatternOrStr, *, timeout: Timeout = None):
+        self.expect_label_state("ready", value, timeout=timeout)
+
+    def expect_label_busy(self, value: PatternOrStr, *, timeout: Timeout = None):
+        self.expect_label_state("busy", value, timeout=timeout)
+
+    def expect_label_state(
+        self, state: str, value: PatternOrStr, *, timeout: Timeout = None
+    ):
+        playwright_expect(
+            self.loc.locator(f"> bslib-switch-inline > span[slot='{state}']")
+        ).to_have_text(value, timeout=timeout)
+
+    def expect_auto_reset(self, value: bool, timeout: Timeout = None):
+        expect_attr(
+            self.loc,
+            name="data-auto-reset",
+            value="" if value else None,
+            timeout=timeout,
         )
 
 
@@ -834,15 +928,13 @@ class _InputCheckboxBase(
         self.loc.wait_for(state="visible", timeout=timeout)
         self.loc.scroll_into_view_if_needed(timeout=timeout)
         self.loc.set_checked(
-            value, timeout=timeout, **kwargs  # pyright: ignore[reportGeneralTypeIssues]
+            value, timeout=timeout, **kwargs  # pyright: ignore[reportArgumentType]
         )
 
     def toggle(self, *, timeout: Timeout = None, **kwargs: object) -> None:
         self.loc.wait_for(state="visible", timeout=timeout)
         self.loc.scroll_into_view_if_needed(timeout=timeout)
-        self.loc.click(
-            timeout=timeout, **kwargs  # pyright: ignore[reportGeneralTypeIssues]
-        )
+        self.loc.click(timeout=timeout, **kwargs)  # pyright: ignore[reportArgumentType]
 
     def expect_checked(self, value: bool, *, timeout: Timeout = None) -> None:
         if value:
@@ -1151,7 +1243,7 @@ class InputCheckboxGroup(
             checkbox.set_checked(
                 is_selected,
                 timeout=timeout,
-                **kwargs,  # pyright: ignore[reportGeneralTypeIssues]
+                **kwargs,  # pyright: ignore[reportArgumentType]
             )
 
     def expect_choices(
@@ -1313,11 +1405,13 @@ class InputFile(
 
     def set(
         self,
-        file_path: str
-        | pathlib.Path
-        | FilePayload
-        | list[str | pathlib.Path]
-        | list[FilePayload],
+        file_path: (
+            str
+            | pathlib.Path
+            | FilePayload
+            | list[str | pathlib.Path]
+            | list[FilePayload]
+        ),
         *,
         timeout: Timeout = None,
         expect_complete_timeout: Timeout = 30 * 1000,
@@ -1672,9 +1766,11 @@ class InputSliderRange(_InputSliderBase):
 
     def expect_value(
         self,
-        value: typing.Tuple[PatternOrStr, PatternOrStr]
-        | typing.Tuple[PatternOrStr, MISSING_TYPE]
-        | typing.Tuple[MISSING_TYPE, PatternOrStr],
+        value: (
+            typing.Tuple[PatternOrStr, PatternOrStr]
+            | typing.Tuple[PatternOrStr, MISSING_TYPE]
+            | typing.Tuple[MISSING_TYPE, PatternOrStr]
+        ),
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -1717,9 +1813,11 @@ class InputSliderRange(_InputSliderBase):
 
     def set(
         self,
-        value: typing.Tuple[str, str]
-        | typing.Tuple[str, MISSING_TYPE]
-        | typing.Tuple[MISSING_TYPE, str],
+        value: (
+            typing.Tuple[str, str]
+            | typing.Tuple[str, MISSING_TYPE]
+            | typing.Tuple[MISSING_TYPE, str]
+        ),
         *,
         max_err_values: int = 15,
         timeout: Timeout = None,
@@ -1978,9 +2076,11 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
 
     def expect_value(
         self,
-        value: typing.Tuple[PatternOrStr, PatternOrStr]
-        | typing.Tuple[PatternOrStr, MISSING_TYPE]
-        | typing.Tuple[MISSING_TYPE, PatternOrStr],
+        value: (
+            typing.Tuple[PatternOrStr, PatternOrStr]
+            | typing.Tuple[PatternOrStr, MISSING_TYPE]
+            | typing.Tuple[MISSING_TYPE, PatternOrStr]
+        ),
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -2142,8 +2242,7 @@ class _OutputContainerP(_OutputBaseP, Protocol):
         tag_name: Literal["span", "div"] | str,
         *,
         timeout: Timeout = None,
-    ) -> None:
-        ...
+    ) -> None: ...
 
 
 class _OutputContainerM:
@@ -2172,6 +2271,24 @@ class OutputText(_OutputInlineContainerM, _OutputTextValue):
         id: str,
     ) -> None:
         super().__init__(page, id=id, loc=f"#{id}.shiny-text-output")
+
+    def get_value(self, *, timeout: Timeout = None) -> str:
+        return self.loc.inner_text(timeout=timeout)
+
+
+class OutputCode(_OutputTextValue):
+    def __init__(self, page: Page, id: str) -> None:
+        super().__init__(page, id=id, loc=f"pre#{id}.shiny-text-output")
+
+    def expect_has_placeholder(
+        self, placeholder: bool = False, *, timeout: Timeout = None
+    ) -> None:
+        _expect_class_value(
+            self.loc,
+            cls="noplaceholder",
+            has_class=not placeholder,
+            timeout=timeout,
+        )
 
 
 class OutputTextVerbatim(_OutputTextValue):
@@ -2435,17 +2552,34 @@ class Sidebar(
 
 
 class _CardBodyP(_InputBaseP, Protocol):
+    """
+    Represents the body of a card control.
+    """
+
     loc_body: Locator
+    """
+    The locator for the body element of the card control.
+    """
 
 
 class _CardBodyM:
+    """Represents a card body element with additional methods for testing."""
+
     def expect_body(
         self: _CardBodyP,
         text: PatternOrStr | list[PatternOrStr],
         *,
         timeout: Timeout = None,
     ) -> None:
-        """Note: If testing against multiple elements, text should be an array"""
+        """Expect the card body element to have the specified text.
+
+        Parameters
+        ----------
+        text
+            The expected text or a list of expected texts.
+        timeout
+            The maximum time to wait for the text to appear. Defaults to None.
+        """
         playwright_expect(self.loc).to_have_text(
             text,
             timeout=timeout,
@@ -2453,16 +2587,37 @@ class _CardBodyM:
 
 
 class _CardFooterLayoutP(_InputBaseP, Protocol):
+    """
+    Represents the layout of the footer in a card.
+    """
+
     loc_footer: Locator
+    """
+    The locator for the footer element.
+    """
 
 
 class _CardFooterM:
+    """
+    Represents the footer section of a card.
+    """
+
     def expect_footer(
         self: _CardFooterLayoutP,
         text: PatternOrStr,
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Asserts that the footer section of the card has the expected text.
+
+        Parameters
+        ----------
+        text
+            The expected text in the footer section.
+        timeout
+            The maximum time to wait for the footer text to appear. Defaults to None.
+        """
         playwright_expect(self.loc_footer).to_have_text(
             text,
             timeout=timeout,
@@ -2470,15 +2625,40 @@ class _CardFooterM:
 
 
 class _CardFullScreenLayoutP(_OutputBaseP, Protocol):
+    """
+    Represents a card full-screen layout for the Playwright controls.
+    """
+
     loc_title: Locator
+    """
+    The locator for the title element.
+    """
     _loc_fullscreen: Locator
+    """
+    The locator for the full-screen element.
+    """
     _loc_close_button: Locator
+    """
+    The locator for the close button element.
+    """
 
 
 class _CardFullScreenM:
+    """
+    Represents a class for managing full screen functionality of a card.
+    """
+
     def open_full_screen(
         self: _CardFullScreenLayoutP, *, timeout: Timeout = None
     ) -> None:
+        """
+        Opens the card in full screen mode.
+
+        Parameters
+        ----------
+        timeout
+            The maximum time to wait for the card to open in full screen mode. Defaults to None.
+        """
         self.loc_title.hover(timeout=timeout)
         self._loc_fullscreen.wait_for(state="visible", timeout=timeout)
         self._loc_fullscreen.click(timeout=timeout)
@@ -2486,11 +2666,29 @@ class _CardFullScreenM:
     def close_full_screen(
         self: _CardFullScreenLayoutP, *, timeout: Timeout = None
     ) -> None:
+        """
+        Closes the card from full screen mode.
+
+        Parameters
+        ----------
+        timeout
+            The maximum time to wait for the card to close from full screen mode. Defaults to None.
+        """
         self._loc_close_button.click(timeout=timeout)
 
     def expect_full_screen(
         self: _CardFullScreenLayoutP, open: bool, *, timeout: Timeout = None
     ) -> None:
+        """
+        Verifies if the card is expected to be in full screen mode.
+
+        Parameters
+        ----------
+        open
+            True if the card is expected to be in full screen mode, False otherwise.
+        timeout
+            The maximum time to wait for the verification. Defaults to None.
+        """
         playwright_expect(self._loc_close_button).to_have_count(
             int(open), timeout=timeout
         )
@@ -2501,24 +2699,44 @@ class ValueBox(
     _CardFullScreenM,
     _InputWithContainer,
 ):
-    # title: TagChild,
-    # value: TagChild,
-    # *args: TagChild | TagAttrs,
-    # showcase: TagChild = None,
-    # showcase_layout: ((TagChild, Tag) -> CardItem) | None = None,
-    # full_screen: bool = False,
-    # theme_color: str | None = "primary",
-    # height: CssUnit | None = None,
-    # max_height: CssUnit | None = None,
-    # fill: bool = True,
-    # class_: str | None = None,
-    # **kwargs: TagAttrValue
+    """
+    ValueBox control for shiny.ui.value_box - https://shiny.posit.co/py/api/core/ui.value_box.html
+    """
+
+    loc: Locator
+    """
+    Locator for the value box's value
+    """
+    loc_showcase: Locator
+    """
+    Locator for the value box showcase
+    """
+    loc_title: Locator
+    """
+    Locator for the value box title
+    """
+    loc_body: Locator
+    """
+    Locator for the value box body
+    """
+
     def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes a new instance of the ValueBox class.
+
+        Parameters
+        ----------
+        page
+            The Playwright page object.
+        id
+            The ID of the value box.
+
+        """
         super().__init__(
             page,
             id=id,
             loc_container=f"div#{id}.bslib-value-box",
-            loc="> div > .value-box-grid",
+            loc="> div.card-body > .value-box-grid, > div.card-body",
         )
         value_box_grid = self.loc
         self.loc_showcase = value_box_grid.locator("> .value-box-showcase")
@@ -2540,7 +2758,17 @@ class ValueBox(
         )
 
     def expect_height(self, value: StyleValue, *, timeout: Timeout = None) -> None:
-        expect_to_have_style(self.loc_container, "height", value, timeout=timeout)
+        """
+        Expects the value box to have a specific height.
+
+        Parameters
+        ----------
+        value
+            The expected height value.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to None.
+        """
+        expect_to_have_style(self.loc_container, "max-height", value, timeout=timeout)
 
     def expect_title(
         self,
@@ -2548,6 +2776,17 @@ class ValueBox(
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Expects the value box title to have a specific text.
+
+        Parameters
+        ----------
+        text
+            The expected text pattern or string.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to None.
+
+        """
         playwright_expect(self.loc_title).to_have_text(
             text,
             timeout=timeout,
@@ -2559,6 +2798,16 @@ class ValueBox(
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Expects the value box value to have a specific text.
+
+        Parameters
+        ----------
+        text
+            The expected text pattern or string.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to None.
+        """
         playwright_expect(self.loc).to_have_text(
             text,
             timeout=timeout,
@@ -2570,15 +2819,38 @@ class ValueBox(
         *,
         timeout: Timeout = None,
     ) -> None:
-        """Note: If testing against multiple elements, text should be an array"""
+        """
+        Expects the value box body to have specific text.
+
+        Parameters
+        ----------
+        text
+            The expected text pattern or list of patterns/strings.
+            Note: If testing against multiple elements, text should be an array
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to None.
+        """
         playwright_expect(self.loc_body).to_have_text(
             text,
             timeout=timeout,
         )
 
-    # hard to test since it can be customized by user
-    # def expect_showcase_layout(self, layout, *, timeout: Timeout = None) -> None:
-    #     raise NotImplementedError()
+    def expect_full_screen_available(
+        self, available: bool, *, timeout: Timeout = None
+    ) -> None:
+        """
+        Expects the value box to be available for full screen mode.
+
+        Parameters
+        ----------
+        available
+            True if the value box is expected to be available for full screen mode, False otherwise.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to None.
+        """
+        playwright_expect(self._loc_fullscreen).to_have_count(
+            int(available), timeout=timeout
+        )
 
 
 class Card(_WidthLocM, _CardFooterM, _CardBodyM, _CardFullScreenM, _InputWithContainer):
@@ -2829,18 +3101,30 @@ class _OverlayBase(_InputBase):
         loc_el.scroll_into_view_if_needed(timeout=timeout)
         return loc_el.get_attribute("aria-describedby")
 
-    @property
-    def loc_overlay_body(self) -> Locator:
+    # @property
+    # def loc_overlay_body(self) -> Locator:
+    #     # Can not leverage `self.loc_overlay_container` as `self._overlay_selector` must
+    #     # be concatenated directly to the result of `self._get_overlay_id()`
+    #     return self.page.locator(f"#{self._get_overlay_id()}{self._overlay_selector}")
+
+    # @property
+    # def loc_overlay_container(self) -> Locator:
+    #     return self.page.locator(f"#{self._get_overlay_id()}")
+
+    def get_loc_overlay_body(self, *, timeout: Timeout = None) -> Locator:
         # Can not leverage `self.loc_overlay_container` as `self._overlay_selector` must
         # be concatenated directly to the result of `self._get_overlay_id()`
-        return self.page.locator(f"#{self._get_overlay_id()}{self._overlay_selector}")
+        return self.page.locator(
+            f"#{self._get_overlay_id(timeout=timeout)}{self._overlay_selector}"
+        )
 
-    @property
-    def loc_overlay_container(self) -> Locator:
-        return self.page.locator(f"#{self._get_overlay_id()}")
+    def get_loc_overlay_container(self, *, timeout: Timeout = None) -> Locator:
+        return self.page.locator(f"#{self._get_overlay_id(timeout=timeout)}")
 
     def expect_body(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
-        playwright_expect(self.loc_overlay_body).to_have_text(value, timeout=timeout)
+        playwright_expect(self.get_loc_overlay_body(timeout=timeout)).to_have_text(
+            value, timeout=timeout
+        )
 
     def expect_active(self, active: bool, *, timeout: Timeout = None) -> None:
         value = re.compile(r".*") if active else None
@@ -2853,7 +3137,7 @@ class _OverlayBase(_InputBase):
 
     def expect_placement(self, value: str, *, timeout: Timeout = None) -> None:
         return expect_attr(
-            loc=self.loc_overlay_container,
+            loc=self.get_loc_overlay_container(timeout=timeout),
             timeout=timeout,
             name="data-popper-placement",
             value=value,
@@ -2878,7 +3162,7 @@ class Popover(_OverlayBase):
         )
 
     def set(self, open: bool, timeout: Timeout = None) -> None:
-        if open ^ self.loc_overlay_body.count() > 0:
+        if open ^ self.get_loc_overlay_body(timeout=timeout).count() > 0:
             self.toggle()
 
     def toggle(self, timeout: Timeout = None) -> None:
@@ -2904,10 +3188,10 @@ class Tooltip(_OverlayBase):
         )
 
     def set(self, open: bool, timeout: Timeout = None) -> None:
-        if open ^ self.loc_overlay_body.count() > 0:
+        if open ^ self.get_loc_overlay_body(timeout=timeout).count() > 0:
             self.toggle(timeout=timeout)
         if not open:
-            self.loc_overlay_body.click()
+            self.get_loc_overlay_body(timeout=timeout).click()
 
     def toggle(self, timeout: Timeout = None) -> None:
         self.loc_trigger.wait_for(state="visible", timeout=timeout)
@@ -2931,17 +3215,25 @@ class _LayoutNavItemBase(_InputWithContainer):
             self.loc_container.locator('a[role="tab"].active')
         ).to_have_attribute("data-value", value, timeout=timeout)
 
-    # TODO-future: Make it a single locator expectation
-    # get active content instead of assertion
-    @property
-    def loc_active_content(self) -> Locator:
-        datatab_id = self.loc_container.get_attribute("data-tabsetid")
+    # # TODO-future: Make it a single locator expectation
+    # # get active content instead of assertion
+    # @property
+    # def loc_active_content(self) -> Locator:
+    #     datatab_id = self.loc_container.get_attribute("data-tabsetid")
+    #     return self.page.locator(
+    #         f"div.tab-content[data-tabsetid='{datatab_id}'] > div.tab-pane.active"
+    #     )
+
+    def get_loc_active_content(self, *, timeout: Timeout = None) -> Locator:
+        datatab_id = self.loc_container.get_attribute("data-tabsetid", timeout=timeout)
         return self.page.locator(
             f"div.tab-content[data-tabsetid='{datatab_id}'] > div.tab-pane.active"
         )
 
     def expect_content(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
-        playwright_expect(self.loc_active_content).to_have_text(value, timeout=timeout)
+        playwright_expect(self.get_loc_active_content()).to_have_text(
+            value, timeout=timeout
+        )
 
     def expect_nav_values(
         self,

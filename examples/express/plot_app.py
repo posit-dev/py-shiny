@@ -1,8 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from shiny import render, ui
-from shiny.express import input
+from shiny import render
+from shiny.express import input, ui
 
 ui.input_slider("n", "N", 1, 100, 50)
 

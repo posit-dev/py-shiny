@@ -1,8 +1,8 @@
-from conftest import ShinyAppProc, create_doc_example_fixture
+from conftest import ShinyAppProc, create_doc_example_core_fixture
 from controls import InputActionButton, InputPassword, OutputTextVerbatim
 from playwright.sync_api import Page, expect
 
-app = create_doc_example_fixture("input_password")
+app = create_doc_example_core_fixture("input_password")
 
 
 def test_input_password_kitchen(page: Page, app: ShinyAppProc) -> None:

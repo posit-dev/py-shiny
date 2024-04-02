@@ -11,7 +11,7 @@ import pytest
 from htmltools import Tagifiable
 
 from shiny import render, ui
-from shiny.express import display_body
+from shiny.express import expressify
 
 
 @contextlib.contextmanager
@@ -25,7 +25,7 @@ def capture_display() -> Generator[list[object], None, None]:
         sys1.displayhook = old_displayhook
 
 
-@display_body()
+@expressify()
 def display_repeated(value: str, /, times: int, *, sep: str = " ") -> None:
     sep.join([value] * times)
 
@@ -47,7 +47,7 @@ def test_simple():
         display_repeated("hello")  # type: ignore
 
 
-@display_body()
+@expressify()
 def display_variadic(*args: object, **kwargs: object):
     "# args"
     for arg in args:
@@ -58,7 +58,7 @@ def display_variadic(*args: object, **kwargs: object):
 
 
 def test_null_filtered():
-    @display_body()
+    @expressify()
     def has_none():
         1
         None
@@ -78,7 +78,7 @@ def test_variadic():
 def nested(z: int = 1):
     x = 2
 
-    @display_body()
+    @expressify()
     def inner():
         x * 10 * z
 
@@ -88,12 +88,12 @@ def nested(z: int = 1):
 
 
 def test_caching():
-    import shiny.express.display_decorator._display_body as _display_body
+    import shiny.express.expressify_decorator._expressify as _expressify
 
     nested()
-    cache_len_before = len(_display_body.code_cache)
+    cache_len_before = len(_expressify.code_cache)
     nested(z=3)
-    cache_len_after = len(_display_body.code_cache)
+    cache_len_after = len(_expressify.code_cache)
     assert cache_len_before == cache_len_after
 
 
@@ -105,14 +105,14 @@ def test_duplicate_func_names_ok():
 
     x = "hello"
 
-    @display_body()
-    def inner():  # pyright: ignore[reportGeneralTypeIssues]
+    @expressify()
+    def inner():  # pyright: ignore[reportRedeclaration]
         x + " world"
 
     inner_old = inner
 
-    @display_body()
-    def inner():  # pyright: ignore[reportGeneralTypeIssues]
+    @expressify()
+    def inner():  # pyright: ignore[reportRedeclaration]
         x + " universe"
 
     with capture_display() as d:
@@ -124,7 +124,7 @@ def test_duplicate_func_names_ok():
         assert d == ["hello universe"]
 
     # Here's yet another one, just to be mean
-    @display_body()
+    @expressify()
     def inner():
         x + " nobody"
 
@@ -135,7 +135,7 @@ def test_not_decorated():
         2
         3
 
-    decorated = display_body()(not_decorated)
+    decorated = expressify()(not_decorated)
 
     with capture_display() as d:
         decorated()
@@ -149,7 +149,7 @@ def test_not_decorated():
 
 
 def test_annotations():
-    @display_body()
+    @expressify()
     def annotated(x: int, y: int) -> int:
         """Here's a docstring"""
         x + y
@@ -163,9 +163,9 @@ def test_annotations():
 
 
 def test_implicit_output():
-    @display_body()
+    @expressify()
     def has_implicit_outputs():
-        @render.text
+        @render.code
         def foo():
             return "hello"
 
@@ -173,11 +173,11 @@ def test_implicit_output():
         has_implicit_outputs()
         assert len(d) == 1
         d0 = cast(Tagifiable, d[0])
-        assert d0.tagify() == ui.output_text_verbatim("foo")
+        assert d0.tagify() == ui.output_code("foo")
 
 
 def test_no_nested_transform_unless_explicit():
-    @display_body()
+    @expressify()
     def inner1():
         1
         2
@@ -188,7 +188,7 @@ def test_no_nested_transform_unless_explicit():
             3
             4
 
-            @display_body()
+            @expressify()
             def inner3():
                 # Does transform, it has the decorator again
                 5

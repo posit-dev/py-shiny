@@ -134,7 +134,7 @@ def app_ui(req):
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @reactive.Calc
+    @reactive.calc
     def recent_df():
         """
         Returns the most recent rows from the database, at the refresh interval
@@ -152,7 +152,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             with reactive.isolate():
                 return df()
 
-    @reactive.Calc
+    @reactive.calc
     def timeframe_df():
         """
         Returns rows from the database within the specified time range. Notice that we
@@ -162,7 +162,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         start, end = input.timerange()
         return read_time_period(start, end)
 
-    @reactive.Calc
+    @reactive.calc
     def filtered_df():
         """
         Return the data frame that should be displayed in the app, based on the user's
@@ -174,11 +174,10 @@ def server(input: Inputs, output: Outputs, session: Session):
         # Filter the rows so we only include the desired models
         return data[data["model"].isin(input.models())]
 
-    @reactive.Calc
+    @reactive.calc
     def filtered_model_names():
         return filtered_df()["model"].unique()
 
-    @output
     @render.ui
     def value_boxes():
         data = filtered_df()
@@ -196,11 +195,11 @@ def server(input: Inputs, output: Outputs, session: Session):
                 ui.value_box(
                     model,
                     ui.h2(score),
-                    theme="text-success"
-                    if score > THRESHOLD_MID
-                    else "text-warning"
-                    if score > THRESHOLD_LOW
-                    else "bg-danger",
+                    theme=(
+                        "text-success"
+                        if score > THRESHOLD_MID
+                        else "text-warning" if score > THRESHOLD_LOW else "bg-danger"
+                    ),
                 )
                 for model, score in scores_by_model.items()
             ],
@@ -208,7 +207,6 @@ def server(input: Inputs, output: Outputs, session: Session):
             fixed_width=True,
         )
 
-    @output
     @render_plotly_streaming(recreate_key=filtered_model_names, update="data")
     def plot_timeseries():
         """
@@ -249,7 +247,6 @@ def server(input: Inputs, output: Outputs, session: Session):
 
         return fig
 
-    @output
     @render_plotly_streaming(recreate_key=filtered_model_names, update="data")
     def plot_dist():
         fig = px.histogram(
@@ -285,7 +282,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
         return fig
 
-    @reactive.Effect
+    @reactive.effect
     def update_time_range():
         """
         Every 5 seconds, update the custom time range slider's min and max values to

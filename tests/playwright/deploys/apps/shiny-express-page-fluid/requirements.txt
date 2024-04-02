@@ -1,2 +1,0 @@
-git+https://github.com/posit-dev/py-shiny.git#egg=shiny
-git+https://github.com/posit-dev/py-htmltools#egg=htmltools

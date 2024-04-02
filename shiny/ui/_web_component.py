@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild
 
-from ._html_deps_shinyverse import web_component_dependency
+from ._html_deps_shinyverse import components_dependencies
 
 
 def web_component(
@@ -12,7 +12,7 @@ def web_component(
 ) -> Tag:
     return Tag(
         tag_name,
-        web_component_dependency(),
+        components_dependencies(),
         *args,
         _add_ws=False,
         **kwargs,

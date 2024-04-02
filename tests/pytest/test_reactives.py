@@ -1095,66 +1095,52 @@ async def test_event_silent_exception_async():
 # ------------------------------------------------------------
 @pytest.mark.asyncio
 async def test_event_type_check():
-    conn = MockConnection()
-    session = App(ui.TagList(), None)._create_session(conn)
-    output = session.output
-
     with pytest.raises(TypeError):
         # Should complain about missing argument to @event().
         @event()
-        async def _():
-            ...
+        async def _(): ...
 
     with pytest.raises(TypeError):
         # Should complain that @event() can't take the result of @Effect (which returns
         # None).
-        @event(lambda: 1)  # type: ignore
+        @event(lambda: 1)  # pyright: ignore[reportArgumentType]
         @effect()
-        async def _():
-            ...
+        async def _(): ...
 
     with pytest.raises(TypeError):
         # Should complain that @event must be applied before @Calc.
         @event(lambda: 1)
         @calc()
-        async def _():
-            ...
+        async def _(): ...
 
     with pytest.raises(TypeError):
         # Should complain that @event must be applied before @render.text. At some point
         # in the future, this may be allowed.
-        @event(lambda: 1)  # No static type error, unfortunately.
+        @event(lambda: 1)  # pyright: ignore[reportArgumentType]
         @render.text
-        async def _():
-            ...
+        async def _(): ...
 
     with pytest.raises(TypeError):
         # Should complain that @event must be applied before @output.
-        @event(lambda: 1)  # type: ignore
-        @output
+        @event(lambda: 1)  # pyright: ignore[reportArgumentType]
         @render.text
-        async def _():
-            ...
+        async def _(): ...
 
     # These are OK
     @event(lambda: 1)
-    async def _():
-        ...
+    async def _(): ...
 
     @effect()
     @event(lambda: 1)
-    async def _():
-        ...
+    async def _(): ...
 
     @calc()
     @event(lambda: 1)
-    async def _():
-        ...
+    async def _(): ...
 
     @render.text
     @event(lambda: 1)
-    async def _():
-        ...
+    async def _(): ...
 
 
 # ------------------------------------------------------------
@@ -1168,50 +1154,41 @@ async def test_output_type_check():
 
     with pytest.raises(TypeError):
         # Should complain about bare function
-        @output  # type: ignore
-        def _():
-            ...
+        @output  # pyright: ignore[reportArgumentType,reportUntypedFunctionDecorator]
+        def _(): ...
 
     with pytest.raises(TypeError):
         # Should complain about @event
-        @output  # type: ignore
+        @output  # pyright: ignore[reportArgumentType,reportUntypedFunctionDecorator]
         @event(lambda: 1)
-        def _():
-            ...
+        def _(): ...
 
     with pytest.raises(TypeError):
         # Should complain about @event, even with render.text. Although maybe in the
         # future this will be allowed.
-        @output  # type: ignore
-        @event(lambda: 1)
+        @output  # pyright: ignore[reportArgumentType,reportUntypedFunctionDecorator]
+        @event(lambda: 1)  # pyright: ignore[reportArgumentType]
         @render.text
-        def _():
-            ...
+        def _(): ...
 
     with pytest.raises(TypeError):
         # Should complain about @Calc
-        @output  # type: ignore
+        @output  # pyright: ignore[reportArgumentType,reportUntypedFunctionDecorator]
         @calc
-        def _():
-            ...
+        def _(): ...
 
     with pytest.raises(TypeError):
         # Should complain about @Effet
-        @output  # type: ignore
+        @output  # pyright: ignore[reportArgumentType,reportUntypedFunctionDecorator]
         @effect
-        def _():
-            ...
+        def _(): ...
 
-    @output
     @render.text
-    def _():
-        ...
+    def _(): ...
 
-    @output
     @render.plot
     @event(lambda: 1)
-    def _():
-        ...
+    def _(): ...
 
 
 # ------------------------------------------------------------

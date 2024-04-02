@@ -53,7 +53,7 @@ app_ui = ui.page_sidebar(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @reactive.Calc
+    @reactive.calc
     def filtered_df() -> pd.DataFrame:
         """Returns a Pandas data frame that includes only the desired rows"""
 
@@ -63,7 +63,6 @@ def server(input: Inputs, output: Outputs, session: Session):
         # Filter the rows so we only include the desired species
         return df[df["Species"].isin(input.species())]
 
-    @output
     @render.plot
     def scatter():
         """Generates a plot for Shiny to display to the user"""
@@ -81,7 +80,6 @@ def server(input: Inputs, output: Outputs, session: Session):
             legend=False,
         )
 
-    @output
     @render.ui
     def value_boxes():
         df = filtered_df()
@@ -124,7 +122,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             if name in input.species()
         ]
 
-        return ui.layout_column_wrap(1 / len(value_boxes), *value_boxes)
+        return ui.layout_column_wrap(*value_boxes, width=1 / len(value_boxes))
 
 
 app = App(

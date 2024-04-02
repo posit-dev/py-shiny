@@ -1,18 +1,20 @@
 from __future__ import annotations
 
-import random
-from typing import Literal, Optional, TypeVar
+from typing import TYPE_CHECKING, Literal, Optional, TypeVar
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id_or_none
-from .._utils import drop_none
-from ..session import Session, require_active_session
+from .._utils import drop_none, private_random_id
+from ..session import require_active_session
 from ..types import MISSING, MISSING_TYPE
-from ._html_deps_shinyverse import components_dependency
+from ._html_deps_shinyverse import components_dependencies
 from ._tag import consolidate_attrs
 from .css._css_unit import CssUnit, as_css_unit
+
+if TYPE_CHECKING:
+    from .. import Session
 
 __all__ = (
     "accordion",
@@ -26,7 +28,7 @@ __all__ = (
 
 class AccordionPanel:
     """
-    Internal class used to represent an accordion panel.
+    The internal class used to represent an accordion panel.
 
     This class is used to represent an accordion panel. It is not intended to be
     instantiated directly. Instead, use :func:`~shiny.ui.accordion_panel`.
@@ -34,7 +36,7 @@ class AccordionPanel:
     Parameters
     ----------
     *args
-        Contents to the accordion panel body. Or tag attributes that are supplied to the
+        Contents to appear in the accordion panel body, or tag attributes that are supplied to the
         returned :class:`~htmltools.Tag` object.
     data_value
         A character string that uniquely identifies this panel.
@@ -143,9 +145,11 @@ class AccordionPanel:
                     "class": "accordion-collapse collapse",
                 },
                 {"class": "show"} if self._is_open else None,
-                {"data-bs-parent": f"#{self._accordion_id}"}
-                if not self._is_multiple
-                else None,
+                (
+                    {"data-bs-parent": f"#{self._accordion_id}"}
+                    if not self._is_multiple
+                    else None
+                ),
                 tags.div(
                     {"class": "accordion-body"},
                     attrs,
@@ -261,7 +265,7 @@ def accordion(
     # but only create a binding when it is provided
     binding_class_value: TagAttrs | None = None
     if id is None:
-        id = f"bslib_accordion_{random.randint(1000, 10000)}"
+        id = private_random_id("bslib_accordion")
         binding_class_value = None
     else:
         binding_class_value = {"class": "bslib-accordion-input"}
@@ -283,7 +287,7 @@ def accordion(
         # just for ease of identifying autoclosing client-side
         {"class": "autoclose"} if not multiple else None,
         binding_class_value,
-        components_dependency(),
+        components_dependencies(),
         attrs,
         *panel_tags,
     )
@@ -344,7 +348,7 @@ def accordion_panel(
     if not isinstance(value, str):
         raise TypeError("`value` must be a string")
 
-    id = f"bslib-accordion-panel-{random.randint(1000, 10000)}"
+    id = private_random_id("bslib_accordion_panel")
 
     return AccordionPanel(
         *args,
@@ -397,7 +401,7 @@ def update_accordion(
     session: Optional[Session] = None,
 ) -> None:
     """
-    Dynamically set accordions panel state
+    Dynamically set accordions' states.
 
     Dynamically (i.e., programmatically) update/modify :func:`~shiny.ui.accordion`s in a Shiny app.
     These functions require an `id` to be provided to the :func:`~shiny.ui.accordion` and must also be
@@ -408,11 +412,11 @@ def update_accordion(
     id
         A string that matches an existing :func:`~shiny.ui.accordion`'s `id`.
     show
-        either a string or list of strings (used to identify particular
+        Either a string or list of strings (used to identify particular
         :func:`~shiny.ui.accordion_panel`(s) by their `value`) or a `bool` to set the state of all
         panels.
     session
-        A shiny session object (the default should almost always be used).
+        A Shiny session object (the default should almost always be used).
 
     References
     ----------
@@ -442,7 +446,7 @@ def insert_accordion_panel(
     session: Optional[Session] = None,
 ) -> None:
     """
-    Insert an :func:`~shiny.ui.accordion_panel`
+    Insert an :func:`~shiny.ui.accordion_panel`.
 
     Parameters
     ----------
@@ -457,7 +461,7 @@ def insert_accordion_panel(
         `"after"` will append after the last panel and `"before"` will prepend before
         the first panel.
     session
-        A shiny session object (the default should almost always be used).
+        A Shiny session object (the default should almost always be used).
 
     References
     ----------
@@ -495,7 +499,7 @@ def remove_accordion_panel(
     session: Optional[Session] = None,
 ) -> None:
     """
-    Remove an :func:`~shiny.ui.accordion_panel`
+    Remove an :func:`~shiny.ui.accordion_panel`.
 
     Parameters
     ----------
@@ -504,7 +508,7 @@ def remove_accordion_panel(
     target
         The `value` of an existing panel to remove.
     session
-        A shiny session object (the default should almost always be used).
+        A Shiny session object (the default should almost always be used).
 
     References
     ----------
@@ -552,7 +556,7 @@ def update_accordion_panel(
     session: Optional[Session] = None,
 ) -> None:
     """
-    Dynamically update accordions panel contents
+    Dynamically update accordion panel contents.
 
     Dynamically (i.e., programmatically) update/modify :func:`~shiny.ui.accordion` panels in a Shiny app.
     These functions require an `id` to be provided to the :func:`~shiny.ui.accordion` and must also be
@@ -573,7 +577,7 @@ def update_accordion_panel(
     icon
         If not missing, the new icon of the panel.
     session
-        A shiny session object (the default should almost always be used).
+        A Shiny session object (the default should almost always be used).
 
     References
     ----------

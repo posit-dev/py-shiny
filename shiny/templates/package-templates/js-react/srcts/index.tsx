@@ -1,17 +1,21 @@
 import { SketchPicker } from "react-color";
 import React from "react";
 
-import { makeReactInput, makeReactOutput } from "@shiny-helpers/react";
+import {
+  makeReactInput,
+  makeReactOutput,
+} from "@posit-dev/shiny-bindings-react";
 
 // Generates a new input binding that renders the supplied react component
 // into the root of the webcomponent.
 makeReactInput({
-  tagName: "custom-component-input",
+  name: "custom-component-input",
+  selector: "custom-component-input",
   initialValue: "#fff",
-  renderComp: ({ initialValue, onNewValue }) => (
+  renderComp: ({ initialValue, updateValue }) => (
     <ColorPickerReact
       initialValue={initialValue}
-      onNewValue={(color) => onNewValue(color)}
+      updateValue={(color) => updateValue(color)}
     />
   ),
 });
@@ -19,10 +23,10 @@ makeReactInput({
 // Color Picker React component
 function ColorPickerReact({
   initialValue,
-  onNewValue,
+  updateValue,
 }: {
   initialValue: string;
-  onNewValue: (x: string) => void;
+  updateValue: (x: string) => void;
 }) {
   const [currentColor, setCurrentColor] = React.useState(initialValue);
 
@@ -31,14 +35,15 @@ function ColorPickerReact({
       color={currentColor}
       onChange={(color) => {
         setCurrentColor(color.hex);
-        onNewValue(color.hex);
+        updateValue(color.hex);
       }}
     />
   );
 }
 
 makeReactOutput<{ value: string }>({
-  tagName: "custom-component-output",
+  name: "custom-component-output",
+  selector: "custom-component-output",
   renderComp: ({ value }) => (
     <div
       style={{

@@ -27,7 +27,7 @@ from htmltools import (
     tags,
 )
 
-from .._docstring import add_example
+from .._docstring import add_example, no_example
 from ..module import current_namespace
 from ..types import MISSING, MISSING_TYPE
 from ._html_deps_external import jqui_deps
@@ -61,12 +61,13 @@ def row(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
         A UI element.
 
     See Also
-    -------
-    :func:`~shiny.ui.column`
+    --------
+    * :func:`~shiny.ui.column`
     """
     return div({"class": "row"}, *args, **kwargs)
 
 
+@add_example(ex_dir="../api-examples/row")
 def column(
     width: int, *args: TagChild | TagAttrs, offset: int = 0, **kwargs: TagAttrValue
 ) -> Tag:
@@ -92,8 +93,8 @@ def column(
         A UI element.
 
     See Also
-    -------
-    :func:`~shiny.ui.row`
+    --------
+    * :func:`~shiny.ui.row`
     """
 
     if width < 1 or width > 12:
@@ -108,11 +109,12 @@ def column(
     return div({"class": cls}, *args, **kwargs)
 
 
+@no_example()
 def panel_well(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
     """
-    Create a well panel
+    Create a well panel.
 
-    Creates a panel with a slightly inset border and grey background. Equivalent to
+    Creates a panel with a slightly inset border and gray background. Equivalent to
     Bootstrap's ``well`` CSS class.
 
     Parameters
@@ -128,9 +130,9 @@ def panel_well(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
         A UI element.
 
     See Also
-    -------
-    :func:`~shiny.ui.panel_sidebar`
-    :func:`~shiny.ui.panel_main`
+    --------
+    * :func:`~shiny.ui.panel_sidebar`
+    * :func:`~shiny.ui.panel_main`
     """
     return div({"class": "well"}, *args, **kwargs)
 
@@ -147,7 +149,7 @@ def panel_conditional(
     **kwargs: TagAttrValue,
 ) -> Tag:
     """
-    Create a conditional panel
+    Create a conditional panel.
 
     Show UI elements only if a ``JavaScript`` condition is ``true``.
 
@@ -170,23 +172,24 @@ def panel_conditional(
     ----
     In the JS expression, you can refer to input and output JavaScript objects that
     contain the current values of input and output. For example, if you have an input
-    with an id of foo, then you can use input.foo to read its value. (Be sure not to
-    modify the input/output objects, as this may cause unpredictable behavior.)
+    with an ``id`` of ``foo``, then you can use ``input.foo`` to read its value.
+    (Be sure not to modify the input/output objects, as this may cause unpredictable
+    behavior.)
 
     You are not recommended to use special JavaScript characters such as a period . in
-    the input id's, but if you do use them anyway, for example, ``id = "foo.bar"``, you
-    will have to use ``input["foo.bar"]`` instead of ``input.foo.bar`` to read the input
+    the input id's, but if you do use them anyway, for example, `id = "foo.bar"`, you
+    will have to use `input["foo.bar"]` instead of ``input.foo.bar`` to read the input
     value.
 
     Tip
     ---
     A more powerful (but slower) way to conditionally show UI content is to use
-    :func:`~shiny.render.ui`.
+    :class:`~shiny.render.ui`.
 
     See Also
-    -------
-    ~shiny.render.ui
-    ~shiny.ui.output_ui
+    --------
+    * :class:`~shiny.render.ui`
+    * :func:`~shiny.ui.output_ui`
     """
 
     ns_prefix = current_namespace()
@@ -194,7 +197,13 @@ def panel_conditional(
     if ns_prefix != "":
         ns_prefix += "-"
 
-    return div(*args, data_display_if=condition, data_ns_prefix=ns_prefix, **kwargs)
+    return div(
+        *args,
+        {"class": "shiny-panel-conditional"},
+        data_display_if=condition,
+        data_ns_prefix=ns_prefix,
+        **kwargs,
+    )
 
 
 @add_example()
@@ -230,6 +239,7 @@ def panel_title(
     return TagList(get_window_title(title, window_title), title)
 
 
+@no_example()
 def panel_fixed(
     *args: TagChild | TagAttrs,
     top: Optional[str] = None,
@@ -262,8 +272,8 @@ def panel_fixed(
         A UI element.
 
     See Also
-    -------
-    :func:`~shiny.ui.panel_absolute`
+    --------
+    * :func:`~shiny.ui.panel_absolute`
     """
     return panel_absolute(
         *args,
@@ -297,11 +307,11 @@ def panel_absolute(
     """
     Create a panel of absolutely positioned content.
 
-    Creates a ``<div>`` tag whose CSS position is set to absolute (or fixed if ``fixed =
-    True``). The way absolute positioning works in HTML is that absolute coordinates are
-    specified relative to its nearest parent element whose position is not set to static
-    (which is the default), and if no such parent is found, then relative to the page
-    borders. If you're not sure what that means, just keep in mind that you may get
+    Creates a `<div>` tag whose CSS position is set to absolute (or fixed if ``fixed =
+    True``). In HTML, absolute coordinates are specified relative to an element's
+    nearest parent element whose position is not set to static (the default).
+    If no such parent is found, the coordinates are relative to the page borders.
+    If you're not sure what that means, just keep in mind that you may get
     strange results if you use this function from inside of certain types of panels.
 
     Parameters
@@ -309,16 +319,16 @@ def panel_absolute(
     *args
         UI elements to include inside the panel.
     top
-        Distance between the top of the panel, and the top of the page or parent
+        Distance between the top of the panel and the top of the page or parent
         container.
     left
-        Distance between the left side of the panel, and the left of the page or parent
+        Distance between the left side of the panel and the left of the page or parent
         container.
     right
-        Distance between the right side of the panel, and the right of the page or
+        Distance between the right side of the panel and the right of the page or
         parent container.
     bottom
-        Distance between the bottom of the panel, and the bottom of the page or parent
+        Distance between the bottom of the panel and the bottom of the page or parent
         container.
     width
         Width of the panel.
@@ -351,12 +361,12 @@ def panel_absolute(
     results.
 
     Like most other distance parameters in Shiny, the position and size parameters take
-    a number (interpreted as pixels) or a valid CSS size string, such as ``"100px"``
-    (100 pixels) or ``"25%"``.
+    a number (interpreted as pixels) or a valid CSS size string, such as `"100px"`
+    (100 pixels) or `"25%"`.
 
-    For arcane HTML reasons, to have the panel fill the page or parent you should
+    For arcane HTML reasons, to have the panel fill the page or parent,
     specify 0 for ``top``, ``left``, ``right``, and ``bottom`` rather than the more
-    obvious ``width = "100%"`` and ``height = "100%"``.
+    obvious `width = "100%"` and `height = "100%"`.
     """
 
     style = css(
@@ -381,9 +391,13 @@ def panel_absolute(
     return TagList(deps, divTag, tags.script(f'$(".draggable").draggable({dragOpts});'))
 
 
+@no_example()
 def help_text(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
     """
     Create a help text element
+
+    Help text is stylized text which can be added to the user interface to provide additional explanation
+    or context. Text passed to :func:`~shiny.ui.help_text` receives the Bootstrap `help-block` class.
 
     Parameters
     ----------

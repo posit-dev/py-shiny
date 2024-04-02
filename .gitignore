@@ -1,5 +1,5 @@
 # Byte-compiled / optimized / DLL files
-__pycache__/
+**/__pycache__/
 *.py[cod]
 *$py.class
 
@@ -113,3 +113,5 @@ docs/source/reference/
 
 # Developer scratch area
 _dev/
+tests/playwright/deploys/**/requirements.txt
+test-results/

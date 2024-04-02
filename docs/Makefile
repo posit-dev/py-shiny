@@ -40,16 +40,48 @@ help:
 	@python -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
 
 dev-htmltools: $(PYBIN)  ## Install development version of htmltools
-	$(PYBIN)/pip install https://github.com/rstudio/py-htmltools/tarball/main
+	$(PYBIN)/pip install https://github.com/posit-dev/py-htmltools/tarball/main
 
-deps: $(PYBIN)  ## Install build dependencies
+dev-shinylive: $(PYBIN)  ## Install development version of shinylive
+	$(PYBIN)/pip install https://github.com/posit-dev/py-shinylive/tarball/main
+
+deps: $(PYBIN) dev-htmltools dev-shinylive ## Install build dependencies
 	$(PYBIN)/pip install pip --upgrade
 	$(PYBIN)/pip install -e ..[doc]
 
-quartodoc:  ## Build qmd files for API docs
+quartodoc: quartodoc_build_core quartodoc_build_express quartodoc_post ## Build quartodocs for express and core
+
+## Build interlinks for API docs
+quartodoc_interlinks: $(PYBIN)
 	. $(PYBIN)/activate \
-	  && quartodoc interlinks \
-	  && quartodoc build --config _quartodoc.yml --verbose
+	  && quartodoc interlinks
+
+## Build core API docs
+quartodoc_build_core: $(PYBIN) quartodoc_interlinks
+	$(eval export SHINY_ADD_EXAMPLES=true)
+	$(eval export IN_QUARTODOC=true)
+	$(eval export SHINY_MODE=core)
+	. $(PYBIN)/activate \
+	  && echo "::group::quartodoc build core docs" \
+	  && quartodoc build --config _quartodoc-core.yml --verbose \
+	  && mv objects.json _objects_core.json \
+	  && echo "::endgroup::"
+
+## Build express API docs
+quartodoc_build_express: $(PYBIN) quartodoc_interlinks
+	$(eval export SHINY_ADD_EXAMPLES=true)
+	$(eval export IN_QUARTODOC=true)
+	$(eval export SHINY_MODE=express)
+	. $(PYBIN)/activate \
+	  && echo "::group::quartodoc build express docs" \
+	  && quartodoc build --config _quartodoc-express.yml --verbose \
+	  && mv objects.json _objects_express.json \
+	  && echo "::endgroup::"
+
+## Clean up after quartodoc build
+quartodoc_post: $(PYBIN)
+	. $(PYBIN)/activate \
+	  && python _combine_objects_json.py
 
 site:  ## Build website
 	. $(PYBIN)/activate \

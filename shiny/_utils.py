@@ -10,12 +10,18 @@ import os
 import random
 import secrets
 import socketserver
+import sys
 import tempfile
-from typing import Any, Awaitable, Callable, Optional, TypeVar, cast
+import warnings
+from pathlib import Path
+from types import ModuleType
+from typing import Any, Awaitable, Callable, Generator, Optional, TypeVar, cast
 
 from ._typing_extensions import ParamSpec, TypeGuard
 
 CancelledError = asyncio.CancelledError
+
+T = TypeVar("T")
 
 
 # ==============================================================================
@@ -47,6 +53,12 @@ def lists_to_tuples(x: object) -> object:
     else:
         # TODO: are there other mutable iterators that we want to make read only?
         return x
+
+
+# Given a dictionary, return a new dictionary with the keys sorted by length.
+def sort_keys_length(x: dict[str, T], descending: bool = False) -> dict[str, T]:
+    sorted_keys = sorted(x.keys(), key=len, reverse=descending)
+    return {key: x[key] for key in sorted_keys}
 
 
 def guess_mime_type(
@@ -199,8 +211,16 @@ def private_random_int(min: int, max: int) -> str:
         return str(random.randint(min, max))
 
 
+def private_random_id(prefix: str = "", bytes: int = 3) -> str:
+    if prefix != "" and not prefix.endswith("_"):
+        prefix += "_"
+
+    with private_seed():
+        return prefix + rand_hex(bytes)
+
+
 @contextlib.contextmanager
-def private_seed():
+def private_seed() -> Generator[None, None, None]:
     state = random.getstate()
     global own_random_state
     try:
@@ -221,35 +241,89 @@ random.setstate(current_random_state)
 # Async-related functions
 # ==============================================================================
 
-T = TypeVar("T")
+R = TypeVar("R")  # Return type
 P = ParamSpec("P")
 
 
 def wrap_async(
-    fn: Callable[P, T] | Callable[P, Awaitable[T]]
-) -> Callable[P, Awaitable[T]]:
+    fn: Callable[P, R] | Callable[P, Awaitable[R]]
+) -> Callable[P, Awaitable[R]]:
     """
-    Given a synchronous function that returns T, return an async function that wraps the
+    Given a synchronous function that returns R, return an async function that wraps the
     original function. If the input function is already async, then return it unchanged.
     """
 
     if is_async_callable(fn):
         return fn
 
-    fn = cast(Callable[P, T], fn)
+    fn = cast(Callable[P, R], fn)
 
     @functools.wraps(fn)
-    async def fn_async(*args: P.args, **kwargs: P.kwargs) -> T:
+    async def fn_async(*args: P.args, **kwargs: P.kwargs) -> R:
         return fn(*args, **kwargs)
 
     return fn_async
 
 
+# # TODO-barret-future; Q: Keep code?
+# class WrapAsync(Generic[P, R]):
+#     """
+#     Make a function asynchronous.
+
+#     Parameters
+#     ----------
+#     fn
+#         Function to make asynchronous.
+
+#     Returns
+#     -------
+#     :
+#         Asynchronous function (within the `WrapAsync` instance)
+#     """
+
+#     def __init__(self, fn: Callable[P, R] | Callable[P, Awaitable[R]]):
+#         if isinstance(fn, WrapAsync):
+#             fn = cast(WrapAsync[P, R], fn)
+#             return fn
+#         self._is_async = is_async_callable(fn)
+#         self._fn = wrap_async(fn)
+
+#     async def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R:
+#         """
+#         Call the asynchronous function.
+#         """
+#         return await self._fn(*args, **kwargs)
+
+#     @property
+#     def is_async(self) -> bool:
+#         """
+#         Was the original function asynchronous?
+
+#         Returns
+#         -------
+#         :
+#             Whether the original function is asynchronous.
+#         """
+#         return self._is_async
+
+#     @property
+#     def fn(self) -> Callable[P, R] | Callable[P, Awaitable[R]]:
+#         """
+#         Retrieve the original function
+
+#         Returns
+#         -------
+#         :
+#             Original function supplied to the `WrapAsync` constructor.
+#         """
+#         return self._fn
+
+
 # This function should generally be used in this code base instead of
 # `iscoroutinefunction()`.
 def is_async_callable(
-    obj: Callable[P, T] | Callable[P, Awaitable[T]]
-) -> TypeGuard[Callable[P, Awaitable[T]]]:
+    obj: Callable[P, R] | Callable[P, Awaitable[R]]
+) -> TypeGuard[Callable[P, Awaitable[R]]]:
     """
     Determine if an object is an async function.
 
@@ -282,7 +356,7 @@ def is_async_callable(
 # of how this stuff works.
 # For a more in-depth explanation, see
 # https://snarky.ca/how-the-heck-does-async-await-work-in-python-3-5/.
-def run_coro_sync(coro: Awaitable[T]) -> T:
+def run_coro_sync(coro: Awaitable[R]) -> R:
     """
     Run a coroutine that is in fact synchronous. Given a coroutine (which is
     returned by calling an `async def` function), this function will run the
@@ -310,7 +384,7 @@ def run_coro_sync(coro: Awaitable[T]) -> T:
     )
 
 
-def run_coro_hybrid(coro: Awaitable[T]) -> "asyncio.Future[T]":
+def run_coro_hybrid(coro: Awaitable[R]) -> "asyncio.Future[R]":
     """
     Synchronously runs the given coro up to its first yield, then runs the rest of the
     coro by scheduling it on the current event loop, as per normal. You can think of
@@ -325,7 +399,7 @@ def run_coro_hybrid(coro: Awaitable[T]) -> "asyncio.Future[T]":
     asyncio Task implementation, this is a hastily assembled hack job; who knows what
     unknown unknowns lurk here.
     """
-    result_future: asyncio.Future[T] = asyncio.Future()
+    result_future: asyncio.Future[R] = asyncio.Future()
 
     if not inspect.iscoroutine(coro):
         raise TypeError("run_coro_hybrid requires a Coroutine object.")
@@ -339,7 +413,7 @@ def run_coro_hybrid(coro: Awaitable[T]) -> "asyncio.Future[T]":
             assert fut.done()
             try:
                 fut.result()
-            except BaseException as e:
+            except BaseException as e:  # noqa: B036
                 exc = e
 
         if result_future.cancelled():
@@ -365,7 +439,7 @@ def run_coro_hybrid(coro: Awaitable[T]) -> "asyncio.Future[T]":
         except (KeyboardInterrupt, SystemExit) as e:
             result_future.set_exception(e)
             raise
-        except BaseException as e:
+        except BaseException as e:  # noqa: B036
             result_future.set_exception(e)
         else:
             # If we get here, the coro didn't finish. Schedule it for completion.
@@ -467,3 +541,45 @@ def package_dir(package: str) -> str:
         if pkg_file is None:
             raise RuntimeError(f"Could not find package dir for '{package}'")
         return os.path.dirname(pkg_file)
+
+
+class ModuleImportWarning(ImportWarning):
+    pass
+
+
+warnings.simplefilter("always", ModuleImportWarning)
+
+
+def import_module_from_path(module_name: str, path: Path):
+    import importlib.util
+
+    if not path.is_absolute():
+        raise ValueError("Path must be absolute")
+
+    spec = importlib.util.spec_from_file_location(module_name, path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Could not import module {module_name} from path: {path}")
+
+    module = importlib.util.module_from_spec(spec)
+
+    prev_module: ModuleType | None = None
+
+    if module_name in sys.modules:
+        prev_module = sys.modules[module_name]
+        warnings.warn(
+            f"A module named {module_name} is already loaded, but is being loaded again.",
+            ModuleImportWarning,
+            stacklevel=1,
+        )
+
+    sys.modules[module_name] = module
+
+    try:
+        spec.loader.exec_module(module)
+    except Exception:
+        if prev_module is None:
+            del sys.modules[module_name]
+        else:
+            sys.modules[module_name] = prev_module
+        raise
+    return module

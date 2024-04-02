@@ -23,13 +23,11 @@ Possible python types that can be converted into a CSS unit. Numeric values will
 
 
 @overload
-def as_css_unit(value: None) -> None:
-    ...
+def as_css_unit(value: None) -> None: ...
 
 
 @overload
-def as_css_unit(value: CssUnit) -> str:
-    ...
+def as_css_unit(value: CssUnit) -> str: ...
 
 
 def as_css_unit(value: None | CssUnit) -> None | str:
@@ -45,6 +43,21 @@ def as_css_unit(value: None | CssUnit) -> None | str:
     -------
     :
         If the `value` is `None`, then `None`. If the value is `0`, then `"0"`. If the `value` is numeric, then a formatted pixel value. Otherwise, the `value` as-is.
+
+    Examples
+    --------
+
+    ```{python}
+    from shiny.ui.css import as_css_unit
+
+    as_css_unit(0)
+    ```
+    ```{python}
+    as_css_unit(300)
+    ```
+    ```{python}
+    as_css_unit("1em")
+    ```
     """
     # TODO-future: Actually validate. Or don't validate, but then change
     # the function name to to_css_unit() or something.
@@ -58,13 +71,11 @@ def as_css_unit(value: None | CssUnit) -> None | str:
 
 
 @overload
-def as_css_padding(padding: CssUnit | list[CssUnit]) -> str:
-    ...
+def as_css_padding(padding: CssUnit | list[CssUnit]) -> str: ...
 
 
 @overload
-def as_css_padding(padding: None) -> None:
-    ...
+def as_css_padding(padding: None) -> None: ...
 
 
 def as_css_padding(padding: CssUnit | list[CssUnit] | None) -> str | None:
@@ -80,6 +91,15 @@ def as_css_padding(padding: CssUnit | list[CssUnit] | None) -> str | None:
     -------
     :
         A CSS padding value.
+
+    Examples
+    --------
+
+    ```{python}
+    from shiny.ui.css import as_css_padding
+
+    as_css_padding([0, "1em"])
+    ```
     """
     if padding is None:
         return None
@@ -111,13 +131,11 @@ def isinstance_cssunit(x: object) -> bool:
 
 
 @overload
-def as_grid_unit(x: CssUnit) -> str:
-    ...
+def as_grid_unit(x: CssUnit) -> str: ...
 
 
 @overload
-def as_grid_unit(x: None) -> None:
-    ...
+def as_grid_unit(x: None) -> None: ...
 
 
 def as_grid_unit(x: CssUnit | None) -> str | None:

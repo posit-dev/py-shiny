@@ -5,17 +5,18 @@ on:
   push:
     branches: ["main"]
   pull_request:
+  merge_group:
 
 jobs:
-  build:
+  build-docs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.11"]
+        python-version: ["3.12"]
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
@@ -34,7 +35,6 @@ jobs:
         run: |
           cd docs
           make ../venv
-          . ../venv/bin/activate && pip install https://github.com/rstudio/py-htmltools/tarball/main
           make deps
 
       - name: Run quartodoc
@@ -43,6 +43,7 @@ jobs:
           make quartodoc
 
       - name: Build site
+        if: ${{ github.event_name != 'pull_request' || startsWith(github.head_ref, 'docs')  }}
         run: |
           cd docs
           make site
@@ -53,15 +54,14 @@ jobs:
         with:
           path: "docs/_site"
 
-
   deploy:
     if: github.ref == 'refs/heads/main'
-    needs: build
+    needs: build-docs
 
     # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
     permissions:
-      pages: write      # to deploy to Pages
-      id-token: write   # to verify the deployment originates from an appropriate source
+      pages: write # to deploy to Pages
+      id-token: write # to verify the deployment originates from an appropriate source
 
     # Deploy to the github-pages environment
     environment:

@@ -21,22 +21,28 @@ __all__ = (
 import json
 import re
 from datetime import date
-from typing import Literal, Mapping, Optional, overload
+from typing import TYPE_CHECKING, Literal, Mapping, Optional, cast, overload
 
-from htmltools import TagChild, TagList
+from htmltools import TagChild, TagList, tags
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
-from .._docstring import add_example, doc_format
-from .._namespaces import resolve_id
+from .._docstring import add_example, doc_format, no_example
+from .._namespaces import ResolvedId, resolve_id
 from .._typing_extensions import NotRequired, TypedDict
 from .._utils import drop_none
-from ..session import Session, require_active_session, session_context
+from ..input_handler import input_handlers
+from ..session import require_active_session, session_context
+from ..types import ActionButtonValue
 from ._input_check_radio import ChoicesArg, _generate_options
 from ._input_date import _as_date_attr
 from ._input_select import SelectChoicesArg, _normalize_choices, _render_choices
 from ._input_slider import SliderStepArg, SliderValueArg, _as_numeric, _slider_type
-from ._utils import _session_on_flush_send_msg
+from ._utils import JSEval, _session_on_flush_send_msg, extract_js_keys
+
+if TYPE_CHECKING:
+    from .. import Session
+
 
 _note = """
     The input updater functions send a message to the client, telling it to change the
@@ -45,13 +51,13 @@ _note = """
 
     The syntax of these functions is similar to the functions that created the inputs in
     the first place. For example, :func:`~shiny.ui.input_numeric` and
-    :func:`~update_numeric` take a similar set of arguments.
+    :func:`~shiny.ui.update_numeric` take a similar set of arguments.
 
     Any arguments with ``None`` values will be ignored; they will not result in any
     changes to the input object on the client.
 
-    For :func:`~update_radio_buttons`, :func:`~update_checkbox_group`, and
-    :func:`~update_select`, the set of choices can be cleared by using ``choices=[]``.
+    For :func:`~shiny.ui.update_radio_buttons`, :func:`~shiny.ui.update_checkbox_group`, and
+    :func:`~shiny.ui.update_select`, the set of choices can be cleared by using ``choices=[]``.
     Similarly, for these inputs, the selected item can be cleared by using
     `selected=[]`.
 """
@@ -89,8 +95,8 @@ def update_action_button(
     {note}
 
     See Also
-    -------
-    :func:`~shiny.input_action_button`
+    --------
+    * :func:`~shiny.input_action_button`
     """
 
     session = require_active_session(session)
@@ -102,6 +108,70 @@ def update_action_button(
 
 update_action_link = update_action_button
 update_action_link.__doc__ = update_action_button.__doc__
+
+
+# -----------------------------------------------------------------------------
+# input_task_button.py
+# -----------------------------------------------------------------------------
+@no_example()
+def update_task_button(
+    id: str,
+    *,
+    state: Optional[str] = None,
+    session: Optional[Session] = None,
+) -> None:
+    """
+    Change the state of a task button on the client.
+
+    When a task button is clicked, it automatically changes to the "busy" state. This
+    function can be used to change the state back to "ready" when the task is complete.
+
+    You can also use this function to change the state to "busy" manually, which will
+    prevent the button from automatically resetting to "ready" after a click.
+
+    Parameters
+    ----------
+    id
+        An input id.
+    state
+        The new state of the button. One of "ready", "busy", or a custom state name
+        added via :func:`~shiny.ui.input_task_button`.
+    session
+        A :class:`~shiny.Session` instance. If not provided, it is inferred via
+        :func:`~shiny.session.get_current_session`.
+    """
+
+    session = require_active_session(session)
+
+    if state is not None:
+        resolved_id = session.ns(id)
+        if state != "ready":
+            manual_task_reset_buttons.add(resolved_id)
+        else:
+            manual_task_reset_buttons.discard(resolved_id)
+
+    msg = {"state": state}
+    session.send_input_message(id, drop_none(msg))
+
+
+manual_task_reset_buttons: set[ResolvedId] = set()
+
+
+@input_handlers.add("bslib.taskbutton")
+def _(
+    value: dict[str, object], name: ResolvedId, session: Session
+) -> ActionButtonValue:
+    if value["autoReset"]:
+
+        @session.on_flush
+        def callback() -> None:
+            # This is input_task_button's auto-reset feature: unless the button has
+            # opted out using set_task_button_manual_reset(), we should reset after a
+            # flush cycle where a bslib.taskbutton value is seen.
+            if name not in manual_task_reset_buttons:
+                update_task_button(name, state="ready", session=session)
+
+    return ActionButtonValue(cast(int, value["value"]))
 
 
 # -----------------------------------------------------------------------------
@@ -136,8 +206,8 @@ def update_checkbox(
     {note}
 
     See Also
-    -------
-    ~shiny.ui.input_checkbox
+    --------
+    * :func:`~shiny.ui.input_checkbox`
     """
 
     session = require_active_session(session)
@@ -145,6 +215,7 @@ def update_checkbox(
     session.send_input_message(id, drop_none(msg))
 
 
+@no_example()
 @doc_format(note=_note)
 def update_switch(
     id: str,
@@ -173,8 +244,8 @@ def update_switch(
     {note}
 
     See Also
-    -------
-    ~shiny.ui.input_switch
+    --------
+    * :func:`~shiny.ui.input_switch`
     """
 
     session = require_active_session(session)
@@ -219,8 +290,8 @@ def update_checkbox_group(
     {note}
 
     See Also
-    -------
-    ~shiny.ui.input_checkbox_group
+    --------
+    * :func:`~shiny.ui.input_checkbox_group`
     """
 
     _update_choice_input(
@@ -271,8 +342,8 @@ def update_radio_buttons(
     {note}
 
     See Also
-    -------
-    ~shiny.ui.input_radio_buttons
+    --------
+    * :func:`~shiny.ui.input_radio_buttons`
     """
 
     _update_choice_input(
@@ -354,8 +425,8 @@ def update_date(
     {note}
 
     See Also
-    -------
-    ~shiny.ui.input_date
+    --------
+    * :func:`~shiny.ui.input_date`
     """
 
     session = require_active_session(session)
@@ -410,8 +481,8 @@ def update_date_range(
     {note}
 
     See Also
-    -------
-    ~shiny.ui.input_date_range
+    --------
+    * :func:`~shiny.ui.input_date_range`
     """
 
     session = require_active_session(session)
@@ -458,15 +529,15 @@ def update_numeric(
     step
         Interval to use when stepping between min and max.
     session
-        The :class:`~shiny.Session` object passed to the server function of a :func:`~shiny.App`.
+        The :class:`~shiny.Session` object passed to the server function of a :class:`~shiny.App`.
 
     Note
     ----
     {note}
 
     See Also
-    -------
-    ~shiny.ui.input_numeric
+    --------
+    * :func:`~shiny.ui.input_numeric`
     """
 
     session = require_active_session(session)
@@ -519,9 +590,9 @@ def update_select(
     {note}
 
     See Also
-    -------
-    ~shiny.ui.input_select
-    ~shiny.ui.update_selectize
+    --------
+    * :func:`~shiny.ui.input_select`
+    * :func:`~shiny.ui.update_selectize`
     """
 
     session = require_active_session(session)
@@ -560,8 +631,7 @@ def update_selectize(
     label: Optional[str] = None,
     choices: Optional[SelectChoicesArg] = None,
     selected: Optional[str | list[str]] = None,
-    # TODO: we need the equivalent of base::I()/htmlwidgets::JS() for marking strings as strings to be evaluated
-    # options: Optional[Dict[str, str]] = None,
+    options: Optional[dict[str, str | float | JSEval]] = None,
     server: bool = False,
     session: Optional[Session] = None,
 ) -> None:
@@ -582,6 +652,8 @@ def update_selectize(
         ``<optgroup>`` labels.
     selected
         The values that should be initially selected, if any.
+    options
+        Options to send to update, see `input_selectize` for details.
     server
         Whether to store choices on the server side, and load the select options
         dynamically on searching, instead of writing all choices into the page at once
@@ -595,8 +667,8 @@ def update_selectize(
     {note}
 
     See Also
-    -------
-    ~shiny.ui.input_selectize
+    --------
+    * :func:`~shiny.ui.input_selectize`
     """
 
     session = require_active_session(session)
@@ -605,6 +677,17 @@ def update_selectize(
         return update_select(
             id, label=label, choices=choices, selected=selected, session=session
         )
+
+    if options is not None:
+        cfg = TagList(
+            tags.script(
+                json.dumps(options),
+                type="application/json",
+                data_for=id,
+                data_eval=json.dumps(extract_js_keys(options)),
+            )
+        )
+        session.send_input_message(id, drop_none({"config": cfg.get_html_string()}))
 
     # Transform choices to a list of dicts (this is the form the client wants)
     # [{"label": "Foo", "value": "foo", "optgroup": "foo"}, ...]
@@ -773,8 +856,8 @@ def update_slider(
     {note}
 
     See Also
-    -------
-    ~shiny.ui.input_slider
+    --------
+    * :func:`~shiny.ui.input_slider`
     """
 
     session = require_active_session(session)
@@ -845,8 +928,8 @@ def update_text(
     {note}
 
     See Also
-    -------
-    ~shiny.ui.input_text
+    --------
+    * :func:`~shiny.ui.input_text`
     """
 
     session = require_active_session(session)
@@ -887,10 +970,10 @@ def update_navs(
     {note}
 
     See Also
-    -------
-    ~shiny.ui.navset_tab
-    ~shiny.ui.navset_pill
-    ~shiny.ui.page_navbar
+    --------
+    * :func:`~shiny.ui.navset_tab`
+    * :func:`~shiny.ui.navset_pill`
+    * :func:`~shiny.ui.page_navbar`
     """
 
     session = require_active_session(session)
@@ -909,7 +992,7 @@ def update_tooltip(
     session: Optional[Session] = None,
 ) -> None:
     """
-    Update tooltip contents
+    Update tooltip contents.
 
     Parameters
     ----------
@@ -929,9 +1012,11 @@ def update_tooltip(
         drop_none(
             {
                 "method": "update",
-                "title": require_active_session(session)._process_ui(TagList(*args))
-                if len(args) > 0
-                else None,
+                "title": (
+                    require_active_session(session)._process_ui(TagList(*args))
+                    if len(args) > 0
+                    else None
+                ),
             }
         ),
     )
@@ -951,7 +1036,7 @@ def update_tooltip(
 # -----------------------------------------------------------------------------
 
 
-# @add_example()
+@add_example()
 def update_popover(
     id: str,
     *args: TagChild,
@@ -971,7 +1056,7 @@ def update_popover(
     title
         The new title of the popover.
     show
-        Opens (`True`) or closes (`False) the popover.
+        Opens (`True`) or closes (`False`) the popover.
     session
         A Shiny session object (the default should almost always be used).
 
@@ -988,9 +1073,9 @@ def update_popover(
             drop_none(
                 {
                     "method": "update",
-                    "content": session._process_ui(TagList(*args))
-                    if len(args) > 0
-                    else None,
+                    "content": (
+                        session._process_ui(TagList(*args)) if len(args) > 0 else None
+                    ),
                     "header": session._process_ui(title) if title is not None else None,
                 },
             ),
@@ -1007,13 +1092,11 @@ def update_popover(
 
 
 @overload
-def _normalize_show_value(show: None) -> Literal["toggle"]:
-    ...
+def _normalize_show_value(show: None) -> Literal["toggle"]: ...
 
 
 @overload
-def _normalize_show_value(show: bool) -> Literal["show", "hide"]:
-    ...
+def _normalize_show_value(show: bool) -> Literal["show", "hide"]: ...
 
 
 def _normalize_show_value(show: bool | None) -> Literal["toggle", "show", "hide"]:

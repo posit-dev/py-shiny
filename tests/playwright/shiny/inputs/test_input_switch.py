@@ -1,15 +1,14 @@
-from conftest import ShinyAppProc, create_doc_example_fixture
+from conftest import ShinyAppProc, create_doc_example_core_fixture
 from controls import InputSwitch, OutputUi
 from playwright.sync_api import Page, expect
 
-app = create_doc_example_fixture("input_switch")
+app = create_doc_example_core_fixture("input_switch")
 
 
 def test_input_switch_kitchen(page: Page, app: ShinyAppProc) -> None:
     page.goto(app.url)
 
     somevalue = InputSwitch(page, "somevalue")
-    somevalue.expect_label
 
     expect(somevalue.loc_label).to_have_text("Some value")
     somevalue.expect_label("Some value")

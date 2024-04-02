@@ -30,7 +30,7 @@ def input_password(
     value
         Initial value.
     width
-        The CSS width, e.g. '400px', or '100%'
+        The CSS width, e.g., '400px', or '100%'.
     placeholder
         The placeholder of the input.
 
@@ -46,8 +46,8 @@ def input_password(
     :::
 
     See Also
-    -------
-    ~shiny.ui.update_text
+    --------
+    * :func:`~shiny.ui.update_text`
     """
     resolved_id = resolve_id(id)
     return div(

@@ -3,8 +3,10 @@ from __future__ import annotations
 import copy
 import os
 import secrets
+from contextlib import AsyncExitStack, asynccontextmanager
+from inspect import signature
 from pathlib import Path
-from typing import Any, Callable, Optional, cast
+from typing import Any, Callable, Mapping, Optional, TypeVar, cast
 
 import starlette.applications
 import starlette.exceptions
@@ -27,15 +29,19 @@ from ._autoreload import InjectAutoreloadMiddleware, autoreload_url
 from ._connection import Connection, StarletteConnection
 from ._error import ErrorMiddleware
 from ._shinyenv import is_pyodide
-from ._utils import guess_mime_type, is_async_callable
+from ._utils import guess_mime_type, is_async_callable, sort_keys_length
 from .html_dependencies import jquery_deps, require_deps, shiny_deps
 from .http_staticfiles import FileResponse, StaticFiles
-from .session import Inputs, Outputs, Session, session_context
+from .session._session import Inputs, Outputs, Session, session_context
+
+T = TypeVar("T")
 
 # Default values for App options.
 LIB_PREFIX: str = "lib/"
 SANITIZE_ERRORS: bool = False
-SANITIZE_ERROR_MSG: str = "An error has occurred. Check your logs or contact the app author for clarification."
+SANITIZE_ERROR_MSG: str = (
+    "An error has occurred. Check your logs or contact the app author for clarification."
+)
 
 
 class App:
@@ -46,12 +52,12 @@ class App:
     ----------
     ui
         The UI definition for the app (e.g., a call to :func:`~shiny.ui.page_fluid` or
-        :func:`~shiny.ui.page_fixed`, with layouts and controls nested inside). You can
+        similar, with layouts and controls nested inside). You can
         also pass a function that takes a :class:`~starlette.requests.Request` and
         returns a UI definition, if you need the UI definition to be created dynamically
         for each pageview.
     server
-        A function which is called once for each session, ensuring that each app is
+        A function which is called once for each session, ensuring that each session is
         independent.
     static_assets
         Static files to be served by the app. If this is a string or Path object, it
@@ -61,8 +67,8 @@ class App:
     debug
         Whether to enable debug mode.
 
-    Example
-    -------
+    Examples
+    --------
 
     ```{python}
     #| eval: false
@@ -90,7 +96,9 @@ class App:
     may default to ``True`` in some production environments (e.g., Posit Connect).
     """
 
-    sanitize_error_msg: str = "An error has occurred. Check your logs or contact the app author for clarification."
+    sanitize_error_msg: str = (
+        "An error has occurred. Check your logs or contact the app author for clarification."
+    )
     """
     The message to show when an error occurs and ``SANITIZE_ERRORS=True``.
     """
@@ -101,19 +109,29 @@ class App:
     def __init__(
         self,
         ui: Tag | TagList | Callable[[Request], Tag | TagList] | Path,
-        server: Optional[Callable[[Inputs, Outputs, Session], None]],
+        server: (
+            Callable[[Inputs], None] | Callable[[Inputs, Outputs, Session], None] | None
+        ),
         *,
-        static_assets: Optional["str" | "os.PathLike[str]" | dict[str, Path]] = None,
+        static_assets: Optional[str | Path | Mapping[str, str | Path]] = None,
         debug: bool = False,
     ) -> None:
+        # Used to store callbacks to be called when the app is shutting down (according
+        # to the ASGI lifespan protocol)
+        self._exit_stack = AsyncExitStack()
+
         if server is None:
-
-            def _server(inputs: Inputs, outputs: Outputs, session: Session):
-                pass
-
-            server = _server
-
-        self.server = server
+            self.server = noop_server_fn
+        elif len(signature(server).parameters) == 1:
+            self.server = wrap_server_fn_with_output_session(
+                cast(Callable[[Inputs], None], server)
+            )
+        elif len(signature(server).parameters) == 3:
+            self.server = cast(Callable[[Inputs, Outputs, Session], None], server)
+        else:
+            raise ValueError(
+                "`server` must have 1 (Inputs) or 3 parameters (Inputs, Outputs, Session)"
+            )
 
         self._debug: bool = debug
 
@@ -124,14 +142,28 @@ class App:
 
         if static_assets is None:
             static_assets = {}
-        if isinstance(static_assets, (str, os.PathLike)):
-            if not os.path.isabs(static_assets):
-                raise ValueError(
-                    f"static_assets must be an absolute path: {static_assets}"
-                )
-            static_assets = {"/": Path(static_assets)}
 
-        self._static_assets: dict[str, Path] = static_assets
+        if isinstance(static_assets, Mapping):
+            static_assets_map = {k: Path(v) for k, v in static_assets.items()}
+        else:
+            static_assets_map = {"/": Path(static_assets)}
+
+        for _, static_asset_path in static_assets_map.items():
+            if not static_asset_path.is_absolute():
+                raise ValueError(
+                    f'static_assets must be an absolute path: "{static_asset_path}".'
+                    " Consider using one of the following instead:\n"
+                    f'  os.path.join(os.path.dirname(__file__), "{static_asset_path}")  OR'
+                    f'  pathlib.Path(__file__).parent/"{static_asset_path}"'
+                )
+
+        # Sort the static assets keys by descending length, to ensure that the most
+        # specific paths are mounted first. Suppose there are mounts "/foo" and "/". If
+        # "/" is first in the dict, then requests to "/foo/file.html" will never reach
+        # the second mount. We need to put "/foo" first and "/" second so that it will
+        # actually look in the "/foo" mount.
+        static_assets_map = sort_keys_length(static_assets_map, descending=True)
+        self._static_assets: dict[str, Path] = static_assets_map
 
         self._sessions: dict[str, Session] = {}
 
@@ -166,7 +198,7 @@ class App:
                 cast("Tag | TagList", ui), lib_prefix=self.lib_prefix
             )
 
-    def init_starlette_app(self):
+    def init_starlette_app(self) -> starlette.applications.Starlette:
         routes: list[starlette.routing.BaseRoute] = [
             starlette.routing.WebSocketRoute("/websocket/", self._on_connect_cb),
             starlette.routing.Route("/", self._on_root_request_cb, methods=["GET"]),
@@ -201,9 +233,15 @@ class App:
         starlette_app = starlette.applications.Starlette(
             routes=routes,
             middleware=middleware,
+            lifespan=self._lifespan,
         )
 
         return starlette_app
+
+    @asynccontextmanager
+    async def _lifespan(self, app: starlette.applications.Starlette):
+        async with self._exit_stack:
+            yield
 
     def _create_session(self, conn: Connection) -> Session:
         id = secrets.token_hex(32)
@@ -230,11 +268,32 @@ class App:
         """
         from ._main import run_app
 
-        run_app(self, **kwargs)  # pyright: ignore[reportGeneralTypeIssues]
+        run_app(self, **kwargs)  # pyright: ignore[reportArgumentType]
 
     # ASGI entrypoint. Handles HTTP, WebSocket, and lifespan.
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         await self.starlette_app(scope, receive, send)
+
+    def on_shutdown(self, callback: Callable[[], None]) -> Callable[[], None]:
+        """
+        Register a callback to be called when the app is shutting down. This can be
+        useful for cleaning up app-wide resources, like connection pools, temporary
+        directories, worker threads/processes, etc.
+
+        Parameters
+        ----------
+        callback
+            The callback to call. It should take no arguments, and any return value will
+            be ignored. Try not to raise an exception in the callback, as exceptions
+            during cleanup can hide the original exception that caused the app to shut
+            down.
+
+        Returns
+        -------
+        :
+            The callback, to allow this method to be used as a decorator.
+        """
+        return self._exit_stack.callback(callback)
 
     async def call_pyodide(self, scope: Scope, receive: Receive, send: Send) -> None:
         """
@@ -278,7 +337,7 @@ class App:
 
         See Also
         --------
-        ~shiny.Session.close
+        * :func:`~shiny.Session.close`
         """
         # convert to list to avoid modifying the dict while iterating over it, which
         # throws an error
@@ -379,7 +438,7 @@ class App:
         ui_res = copy.copy(ui)
         # Make sure requirejs, jQuery, and Shiny come before any other dependencies.
         # (see require_deps() for a comment about why we even include it)
-        ui_res.insert(0, [require_deps(), jquery_deps(), shiny_deps()])
+        ui_res.insert(0, [require_deps(), jquery_deps(), *shiny_deps()])
         rendered = HTMLDocument(ui_res).render(lib_prefix=lib_prefix)
         self._ensure_web_dependencies(rendered["dependencies"])
         return rendered
@@ -390,7 +449,7 @@ class App:
 
         doc = HTMLTextDocument(
             page_html,
-            deps=[require_deps(), jquery_deps(), shiny_deps()],
+            deps=[require_deps(), jquery_deps(), *shiny_deps()],
             deps_replace_pattern='<meta name="shiny-dependency-placeholder" content="">',
         )
 
@@ -400,7 +459,7 @@ class App:
         return rendered
 
 
-def is_uifunc(x: Path | Tag | TagList | Callable[[Request], Tag | TagList]):
+def is_uifunc(x: Path | Tag | TagList | Callable[[Request], Tag | TagList]) -> bool:
     if (
         isinstance(x, Path)
         or isinstance(x, Tag)
@@ -446,3 +505,17 @@ def create_static_asset_route(
             file_response_handler,
             name="shiny-app-static-assets-" + mount_point,
         )
+
+
+def noop_server_fn(input: Inputs, output: Outputs, session: Session) -> None:
+    pass
+
+
+def wrap_server_fn_with_output_session(
+    server: Callable[[Inputs], None]
+) -> Callable[[Inputs, Outputs, Session], None]:
+    def _server(input: Inputs, output: Outputs, session: Session):
+        # Only has 1 parameter, ignore output, session
+        server(input)
+
+    return _server

@@ -13,7 +13,6 @@ def app_ui(request: Request):
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @output
     @render.text
     def now():
         reactive.invalidate_later(0.1)

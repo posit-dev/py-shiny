@@ -41,8 +41,8 @@ def download_button(
 
     See Also
     --------
-    ~shiny.Session.download
-    ~shiny.ui.download_link
+    * :class:`~shiny.render.download`
+    * :func:`~shiny.ui.download_link`
     """
 
     return tags.a(
@@ -74,7 +74,7 @@ def download_link(
     **kwargs: TagAttrValue,
 ) -> Tag:
     """
-    Create a download button
+    Create a download button.
 
     Parameters
     ----------
@@ -96,8 +96,8 @@ def download_link(
 
     See Also
     --------
-    ~shiny.Session.download
-    ~shiny.ui.download_link
+    * :class:`~shiny.render.download`
+    * :func:`~shiny.ui.download_button`
     """
 
     return tags.a(
