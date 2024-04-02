@@ -4,7 +4,6 @@ from shiny import App, Inputs, Outputs, Session, render, ui
 from shiny.render._dataframe import CellPatch
 from shiny.types import SafeException
 
-
 app_ui = ui.page_fluid(
     ui.h2("Palmer Penguins"),
     ui.output_data_frame("penguins_df"),
