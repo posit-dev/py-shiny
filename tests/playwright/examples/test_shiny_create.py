@@ -48,7 +48,10 @@ def test_template_examples(page: Page, ex_app_path: str) -> None:
 
 
 @pytest.mark.flaky(reruns=reruns, reruns_delay=reruns_delay)
-@pytest.mark.parametrize("app_template", ["basic-app", "dashboard", "multi-page"])
+@pytest.mark.parametrize(
+    "app_template",
+    ["basic-app", "basic-sidebar", "dashboard", "dashboard-tips", "basic-navigation"],
+)
 def test_create_core(app_template: str, page: Page):
     with tempfile.TemporaryDirectory("example_apps") as tmpdir:
         subprocess_create(app_template, dest_dir=tmpdir)
