@@ -484,7 +484,7 @@ app_template_choices = {
     "Basic dashboard": "dashboard",
     "Intermediate dashboard": "dashboard-tips",
     "Navigating multiple pages/panels": "basic-navigation",
-    "Custom JavaScript component": "js-component",
+    "Custom JavaScript component ...": "js-component",
     "Choose from the Shiny Templates website": "external-gallery",
 }
 
