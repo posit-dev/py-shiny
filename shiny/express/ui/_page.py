@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Callable
 
 from htmltools import Tag
@@ -7,6 +8,7 @@ from htmltools import Tag
 from ... import ui
 from ..._docstring import no_example
 from ...types import MISSING, MISSING_TYPE
+from ...ui._theme import Theme
 from .._recall_context import RecallContextManager
 from .._run import get_top_level_recall_context_manager
 
@@ -22,6 +24,7 @@ def page_opts(
     *,
     title: str | MISSING_TYPE = MISSING,
     window_title: str | MISSING_TYPE = MISSING,
+    theme: str | Path | Theme | MISSING_TYPE = MISSING,
     lang: str | MISSING_TYPE = MISSING,
     page_fn: Callable[..., Tag] | None | MISSING_TYPE = MISSING,
     fillable: bool | MISSING_TYPE = MISSING,
@@ -71,6 +74,8 @@ def page_opts(
         cm.kwargs["title"] = title
     if not isinstance(window_title, MISSING_TYPE):
         cm.kwargs["window_title"] = window_title
+    if not isinstance(theme, MISSING_TYPE):
+        cm.kwargs["theme"] = theme
     if not isinstance(lang, MISSING_TYPE):
         cm.kwargs["lang"] = lang
     if not isinstance(page_fn, MISSING_TYPE):
