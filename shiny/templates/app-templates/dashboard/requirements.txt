@@ -1,3 +1,4 @@
+faicons
 shiny
 seaborn
 pandas
