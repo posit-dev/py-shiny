@@ -43,21 +43,20 @@ def test_card_kitchensink(page: Page, local_app: ShinyAppProc) -> None:
     card.expect_max_height(None)
     card.expect_min_height(None)
     card.expect_height(None)
-    card.expect_header_exists(False)
-    card.expect_footer_exists(False)
+    card.expect_header(None)
+    card.expect_footer(None)
     card.expect_body(
         ["\nThis is the body without a header of a footer - No Fullscreen\n"]
     )
     assert get_body_tag_name(card) == "p"
     card.expect_full_screen(False)
-    card.expect_full_screen_available(False)
+    card.expect_full_screen_enabled(False)
 
     card = Card(page, "card3")
     card.expect_max_height("500px")
     card.expect_min_height("200px")
     card.expect_header("Fill is False. Fullscreen is False")
-    card.expect_header_exists(True)
-    card.expect_footer_exists(False)
+    card.expect_footer(None)
     card.expect_body(["Max height and min height are set."])
     assert get_body_tag_name(card) == "h3"
-    card.expect_full_screen_available(False)
+    card.expect_full_screen_enabled(False)
