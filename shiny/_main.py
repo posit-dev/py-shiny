@@ -485,6 +485,7 @@ app_template_choices = {
     "Intermediate dashboard": "dashboard-tips",
     "Navigating multiple pages/panels": "basic-navigation",
     "Custom JavaScript component": "js-component",
+    "Choose from the Shiny Templates website": "external-gallery",
 }
 
 # These are templates which produce a Python package and have content filled in at
