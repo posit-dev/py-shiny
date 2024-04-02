@@ -3,6 +3,7 @@ from faicons import icon_svg
 
 # Import data from shared.py
 from shared import app_dir, df
+
 from shiny import App, reactive, render, ui
 
 app_ui = ui.page_sidebar(
