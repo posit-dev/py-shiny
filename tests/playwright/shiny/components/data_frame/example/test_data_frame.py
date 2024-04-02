@@ -172,10 +172,13 @@ def test_sort(
 
 @pytest.mark.flaky(reruns=reruns, delay=reruns_delay)
 def test_multi_selection(
-    page: Page, data_frame_app: ShinyAppProc, grid_container: Locator, snapshot: Any
+    page: Page,
+    data_frame_app: ShinyAppProc,
+    grid_container: Locator,
+    snapshot: Any,
 ):
     page.goto(data_frame_app.url)
-    InputSelect(page, "selection_mode").set("multiple_row")
+    InputSelect(page, "selection_mode").set("rows")
     first_cell = grid_container.locator("tbody tr:first-child td:first-child")
 
     def detail_text():
@@ -203,10 +206,13 @@ def test_multi_selection(
 
 @pytest.mark.flaky(reruns=reruns, delay=reruns_delay)
 def test_single_selection(
-    page: Page, data_frame_app: ShinyAppProc, grid_container: Locator, snapshot: Any
+    page: Page,
+    data_frame_app: ShinyAppProc,
+    grid_container: Locator,
+    snapshot: Any,
 ):
     page.goto(data_frame_app.url)
-    InputSelect(page, "selection_mode").set("single_row")
+    InputSelect(page, "selection_mode").set("row")
     first_cell = grid_container.locator("tbody tr:first-child td:first-child")
 
     def detail_text():

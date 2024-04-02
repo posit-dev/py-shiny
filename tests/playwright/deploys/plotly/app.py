@@ -54,19 +54,15 @@ def server(input, output, session):
     def summary_data():
         return render.DataGrid(
             summary_df.round(2),
-            row_selection_mode="multiple",
+            selection_mode="rows",
             width="100%",
             height="100%",
         )
 
     @reactive.calc
     def filtered_df():
-        req(summary_data.input_selected_rows())
-
-        # summary_data.input_selected_rows() is a tuple, so we must convert it to list,
-        # as that's what Pandas requires for indexing.
-        selected_idx = list(summary_data.input_selected_rows())
-        countries = summary_df.iloc[selected_idx]["country"]
+        req(not summary_data.data_selected().empty)
+        countries = summary_data.data_selected()["country"]
         # Filter data for selected countries
         return df[df["country"].isin(countries)]
 
