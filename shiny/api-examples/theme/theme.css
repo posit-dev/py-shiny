@@ -1,0 +1,39 @@
+@font-face {
+  font-family: InterVariable;
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("https://rsms.me/inter/font-files/InterVariable.woff2?v=4.0")
+    format("woff2");
+}
+@font-face {
+  font-family: InterVariable;
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("https://rsms.me/inter/font-files/InterVariable-Italic.woff2?v=4.0")
+    format("woff2");
+}
+
+:root {
+  font-size: 20px;
+  --bs-body-font-family: "InterVariable";
+  --bs-heading-color: var(--bs-pink);
+
+  --pink-rgb: 191, 0, 127;
+
+  --bslib-sidebar-bg: rgba(var(--pink-rgb), 0.05);
+  --bslib-sidebar-fg: var(--bs-pink);
+  --bslib-sidebar-toggle-bg: rgba(var(--pink-rgb), 0.1);
+  --bs-border-color-translucent: rgba(var(--pink-rgb), 0.33);
+  --bs-border-color: var(--bs-border-color-translucent);
+}
+
+.bslib-page-sidebar {
+  --bslib-page-sidebar-title-bg: var(--bs-pink);
+  --bslib-page-sidebar-title-color: var(--bs-white);
+}
+
+pre {
+  background: rgba(var(--pink-rgb), 0.05);
+}
