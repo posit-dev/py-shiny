@@ -314,6 +314,20 @@ def page_fillable(
     title
         The browser window title (defaults to the host URL of the page). Can also be set
         as a side effect via :func:`~shiny.ui.panel_title`.
+    theme
+        A path to a CSS file that will replace the Bootstrap CSS bundled with a Shiny
+        app, or a theme create width :func:`~shiny.ui.theme()`. If no value is provided,
+        the default Shiny Bootstrap theme is used.
+
+        CSS file: If a string or :class:`~pathlib.Path` is provided, it is
+        interpreted as a path to a CSS file that should completely replace
+        `bootstrap.min.css`. The CSS file is included using
+        :func:`~shiny.ui.include_css()`. For best results, the CSS file and its
+        supporting assets should be stored in a subdirectory containing only the
+        necessary files.
+
+        Theme object: For more control over the theme and how it is applied, use
+        :func:`~shiny.ui.theme()`.
     lang
         ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
         will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
@@ -373,6 +387,20 @@ def page_fluid(
     title
         The browser window title (defaults to the host URL of the page). Can also be set
         as a side effect via :func:`~shiny.ui.panel_title`.
+    theme
+        A path to a CSS file that will replace the Bootstrap CSS bundled with a Shiny
+        app, or a theme create width :func:`~shiny.ui.theme()`. If no value is provided,
+        the default Shiny Bootstrap theme is used.
+
+        CSS file: If a string or :class:`~pathlib.Path` is provided, it is
+        interpreted as a path to a CSS file that should completely replace
+        `bootstrap.min.css`. The CSS file is included using
+        :func:`~shiny.ui.include_css()`. For best results, the CSS file and its
+        supporting assets should be stored in a subdirectory containing only the
+        necessary files.
+
+        Theme object: For more control over the theme and how it is applied, use
+        :func:`~shiny.ui.theme()`.
     lang
         ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
         will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
@@ -418,6 +446,20 @@ def page_fixed(
     title
         The browser window title (defaults to the host URL of the page). Can also be set
         as a side effect via :func:`~shiny.ui.panel_title`.
+    theme
+        A path to a CSS file that will replace the Bootstrap CSS bundled with a Shiny
+        app, or a theme create width :func:`~shiny.ui.theme()`. If no value is provided,
+        the default Shiny Bootstrap theme is used.
+
+        CSS file: If a string or :class:`~pathlib.Path` is provided, it is
+        interpreted as a path to a CSS file that should completely replace
+        `bootstrap.min.css`. The CSS file is included using
+        :func:`~shiny.ui.include_css()`. For best results, the CSS file and its
+        supporting assets should be stored in a subdirectory containing only the
+        necessary files.
+
+        Theme object: For more control over the theme and how it is applied, use
+        :func:`~shiny.ui.theme()`.
     lang
         ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
         will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
@@ -464,6 +506,20 @@ def page_bootstrap(
     title
         The browser window title (defaults to the host URL of the page). Can also be set
         as a side effect via :func:`~shiny.ui.panel_title`.
+    theme
+        A path to a CSS file that will replace the Bootstrap CSS bundled with a Shiny
+        app, or a theme create width :func:`~shiny.ui.theme()`. If no value is provided,
+        the default Shiny Bootstrap theme is used.
+
+        CSS file: If a string or :class:`~pathlib.Path` is provided, it is
+        interpreted as a path to a CSS file that should completely replace
+        `bootstrap.min.css`. The CSS file is included using
+        :func:`~shiny.ui.include_css()`. For best results, the CSS file and its
+        supporting assets should be stored in a subdirectory containing only the
+        necessary files.
+
+        Theme object: For more control over the theme and how it is applied, use
+        :func:`~shiny.ui.theme()`.
     lang
         ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
         will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
@@ -520,6 +576,20 @@ def page_auto(
     window_title
         The browser window title. If no value is provided, this will use the value of
         ``title``.
+    theme
+        A path to a CSS file that will replace the Bootstrap CSS bundled with a Shiny
+        app, or a theme create width :func:`~shiny.ui.theme()`. If no value is provided,
+        the default Shiny Bootstrap theme is used.
+
+        CSS file: If a string or :class:`~pathlib.Path` is provided, it is
+        interpreted as a path to a CSS file that should completely replace
+        `bootstrap.min.css`. The CSS file is included using
+        :func:`~shiny.ui.include_css()`. For best results, the CSS file and its
+        supporting assets should be stored in a subdirectory containing only the
+        necessary files.
+
+        Theme object: For more control over the theme and how it is applied, use
+        :func:`~shiny.ui.theme()`.
     lang
         ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
         will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
