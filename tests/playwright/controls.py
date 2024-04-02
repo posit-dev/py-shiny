@@ -352,7 +352,7 @@ class _InputWithLabel(_InputWithContainer):
 
 class _WidthLocM:
     """
-    A class representing the width location mixin.
+    A mixin class representing the `loc`'s width.
     This class provides methods to expect the width attribute of an element.
     """
 
@@ -367,18 +367,18 @@ class _WidthLocM:
 
         Parameters
         ----------
-            value
-                The expected value of the width attribute.
-            timeout
-                The maximum time to wait for the expectation to be fulfilled.
-                Defaults to None.
+        value
+            The expected value of the width attribute.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled.
+            Defaults to None.
         """
         expect_attr(self.loc, "width", value=value, timeout=timeout)
 
 
 class _WidthContainerM:
     """
-    A class representing the width container mixin.
+    A mixin class representing the container's width.
     This class provides methods to expect the width attribute of an element's container.
     """
 
@@ -2887,24 +2887,24 @@ class ValueBox(
 
 class Card(_WidthLocM, _CardFooterM, _CardBodyM, _CardFullScreenM, _InputWithContainer):
     """
-    Card control for shiny.ui.card - https://shiny.posit.co/py/api/core/ui.card.html
+    Card control for :func:`~shiny.ui.card`
     """
 
     loc: Locator
     """
-    Locator for the card's value
+    `Locator` for the card's value
     """
     loc_title: Locator
     """
-    Locator for the card title
+    `Locator` for the card title
     """
     loc_footer: Locator
     """
-    Locator for the card footer
+    `Locator` for the card footer
     """
     loc_body: Locator
     """
-    Locator for the card body
+    `Locator` for the card body
     """
 
     # *args: TagChild | TagAttrs | CardItem,
