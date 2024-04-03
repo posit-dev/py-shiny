@@ -2,9 +2,7 @@ from __future__ import annotations
 
 from typing import Literal, Optional
 
-from htmltools import HTML, HTMLDependency, Tag, head_content, tags
-
-from .. import __version__
+from htmltools import HTMLDependency, Tag, head_content, tags
 
 
 def use_loading_spinners(
@@ -91,22 +89,6 @@ def use_loading_spinners(
     )
 
     return head_content(tags.style(HTML("body{" + rule_contents + "}</style>")))
-
-
-page_level_spinners_deps = HTMLDependency(
-    "shiny-loading-spinners-css",
-    version=__version__,
-    source={
-        "package": "shiny",
-        "subdir": "www/shared/loading-spinners/",
-    },
-    stylesheet=[
-        {"href": "spinners-page-level.css"},
-        {"href": "spinners-common.css"},
-    ],
-    all_files=True,
-)
-
 
 def with_spinner(el: Tag) -> Tag:
     """
