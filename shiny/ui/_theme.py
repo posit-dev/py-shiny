@@ -4,8 +4,7 @@ from pathlib import Path
 from typing import Literal, Optional
 from warnings import warn
 
-from htmltools import HTMLDependency, Tag, Tagifiable, TagList
-from htmltools.tags import head
+from htmltools import HTMLDependency, Tag, Tagifiable, TagList, head_content
 from packaging.version import Version
 
 from .._docstring import add_example
@@ -104,7 +103,7 @@ class Theme:
             )
 
         if isinstance(theme, (str, Path)):
-            theme_tag = head(include_css(theme))
+            theme_tag = head_content(include_css(theme))
         elif isinstance(theme, HTMLDependency):
             theme_tag = theme
         else:
