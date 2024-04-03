@@ -4,15 +4,16 @@ from typing import Literal, Optional
 
 from htmltools import Tag, tags
 
-__all__ = ("loading_spinners",)
+__all__ = ("settings", "disable", "enable")
 
 
-def loading_spinners(
-    type: Literal["tadpole", "disc", "dots", "dot-track", "bounce"] = "tadpole",
+def settings(
+    type: Optional[Literal["tadpole", "disc", "dots", "dot-track", "bounce"]] = None,
     color: Optional[str] = None,
     size: Optional[str] = None,
     speed: Optional[str] = None,
     delay: Optional[str] = None,
+    css_selector: str = ":root",
 ) -> Tag:
     """
     Customize UI loading spinners.
@@ -40,24 +41,24 @@ def loading_spinners(
         The amount of time to wait before showing the spinner. This can be any valid CSS
         time. Defaults to "0.1s". This is useful for not showing the spinner if the
         computation finishes quickly.
+    css_selector
+        A CSS selector for scoping the spinner customization. Defaults to the root element.
 
     Returns
     -------
-    :
-        A <style> tag.
-
-    Notes
-    -----
-    This function is meant to be called a single time. If it is called multiple times
-    with different arguments then only the first call will be reflected.
+     A <style> tag.
     """
 
     animation = None
     easing = None
+    svg = None
 
     # Some of the spinners work better with linear easing and some with ease-in-out so
     # we modify them together.
-    if type == "disc":
+    if type == "tadpole":
+        svg = "tadpole-spinner.svg"
+        easing = "linear"
+    elif type == "disc":
         svg = "disc-spinner.svg"
         easing = "linear"
     elif type == "dots":
@@ -71,15 +72,14 @@ def loading_spinners(
         animation = "shiny-loading-spinner-bounce"
         # Set speed variable to 0.8s if it hasnt been set by the user
         speed = speed or "0.8s"
-    else:
-        svg = "tadpole-spinner.svg"
-        easing = "linear"
+    elif type is not None:
+        raise ValueError(f"Invalid spinner type: {type}")
 
-    # We set options using css variables. Here we create the rule that updates the
-    # appropriate variables before being included in the head of the document with our
-    # html dep.
-    rule_contents = (
-        f"--shiny-spinner-svg: url({svg});"
+    # Options are controlled via CSS variables. Note that the cascade allows this to be
+    # called multiple times. As long as the CSS selector is the same, the last call
+    # takes precedence. Also, css_selector allows for scoping of the spinner customization.
+    css_vars = (
+        (f"--shiny-spinner-svg: url({svg});" if svg else "")
         + (f"--shiny-spinner-easing: {easing};" if easing else "")
         + (f"--shiny-spinner-animation: {animation};" if animation else "")
         + (f"--shiny-spinner-color: {color};" if color else "")
@@ -88,4 +88,40 @@ def loading_spinners(
         + (f"--shiny-spinner-delay: {delay};" if delay else "")
     )
 
-    return tags.style("body{" + rule_contents + "}")
+    return tags.style(css_selector + " {" + css_vars + "}")
+
+
+def disable() -> Tag:
+    """
+    Disable loading spinners.
+
+    Include this in your app's UI to disable the loading spinners.
+
+    Returns
+    -------
+    A <script> tag.
+    """
+
+    return tags.script(
+        f"(function() {{ document.body.classList.add('{DISABLE_CSS_CLASS}') }} )()"
+    )
+
+
+def enable() -> Tag:
+    """
+    Enable loading spinners.
+
+    Include this in your app's UI to enable the loading spinners. Since spinners are
+    enabled by default, this is only necessary if you've previously disabled them.
+
+    Returns
+    -------
+    A <script> tag.
+    """
+
+    return tags.script(
+        f"(function() {{ document.body.classList.remove('{DISABLE_CSS_CLASS}') }} )()"
+    )
+
+
+DISABLE_CSS_CLASS = "disable-shiny-spinners"

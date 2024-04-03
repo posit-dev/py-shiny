@@ -25,10 +25,7 @@ def shiny_deps() -> list[HTMLDependency]:
                 "package": "shiny",
                 "subdir": "www/shared/loading-spinners/",
             },
-            stylesheet=[
-                {"href": "spinners-page-level.css"},
-                {"href": "spinners-common.css"},
-            ],
+            stylesheet={"href": "spinners.css"},
             all_files=True,
         ),
     ]

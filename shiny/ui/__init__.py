@@ -167,7 +167,7 @@ from ._valuebox import (
     value_box_theme,
 )
 
-from ._loading_spinners import loading_spinners
+from .loading_spinners import settings
 
 from .dataframe import output_data_frame
 
@@ -357,7 +357,7 @@ __all__ = (
     "strong",
     "em",
     "hr",
-    "loading_spinners",
+    "settings",
     # Submodules
     "fill",
     # utils
