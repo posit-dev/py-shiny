@@ -1,60 +1,61 @@
 # pyright:basic
-import asyncio
+import time
 
 import matplotlib.pyplot as plt
 import numpy as np
 
-from shiny import App, reactive, render, ui
+from shiny import App, module, render, ui
 
+
+# -- Reusable card module --
+@module.ui
+def card_ui():
+    return ui.card(
+        ui.card_header(
+            "A plot",
+            ui.input_action_button("update", "Update"),
+        ),
+        ui.output_plot("plot"),
+    )
+
+
+@module.server
+def card_server(input, output, session, length):
+
+    def draw_plot():
+        data = np.random.randn(100)
+        plt.plot(data)
+        plt.ylabel("some numbers")
+        return plt.gcf()
+
+    @render.plot
+    def plot():
+        if input.update() > 0:
+            time.sleep(length())
+        else:
+            time.sleep(4)
+        return draw_plot()
+
+
+# -- Main app --
 app_ui = ui.page_sidebar(
     ui.sidebar(
-        ui.input_slider("rows", "Rows", 0, 100, 20),
+        ui.input_slider("length", "Sleep length", 0, 1000, 40),
     ),
-    ui.use_loading_spinners(color="red"),
-    ui.layout_column_wrap(
-        ui.card(
-            # Add a spinner directly to an output.
-            ui.with_spinner(ui.output_plot("plot")),
-        ),
-        ui.card(
-            ui.output_plot("plot2"),
-        ),
-        height="1500px",
+    ui.loading_spinners(color="red"),
+    ui.layout_columns(
+        card_ui("a"), card_ui("b"), card_ui("c"), card_ui("d"), col_widths=[6, 6]
     ),
-    class_="dot-track-spinner",
+    fillable=True,
 )
 
 
 def server(input, output, session):
-    first_render = reactive.value(True)
 
-    @render.plot
-    async def plot():
-        # Generate input.rows() random numbers
-        data = np.random.randn(input.rows())
-        plt.plot(data)
-        plt.ylabel("some numbers")
-
-        # Only sleep on subsequent renders so we can quickly start looking at the
-        # spinner
-        with reactive.isolate():
-            if not first_render.get():
-                # Sleep for a second to simulate a long running process
-                await asyncio.sleep(3)
-            else:
-                first_render.set(False)
-
-        return plt.gcf()
-
-    @render.plot
-    async def plot2():
-        # Generate input.rows() random numbers
-        data = np.random.randn(input.rows())
-        plt.plot(data)
-        plt.ylabel("some numbers")
-        # Sleep for a second to simulate a long running process
-
-        return plt.gcf()
+    card_server("a", length=input.length)
+    card_server("b", length=input.length)
+    card_server("c", length=input.length)
+    card_server("d", length=input.length)
 
 
 app = App(app_ui, server)
