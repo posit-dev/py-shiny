@@ -9,7 +9,6 @@ import threading
 import time
 from contextlib import contextmanager
 from pathlib import PurePath
-from time import sleep
 from types import TracebackType
 from typing import (
     IO,
@@ -148,7 +147,8 @@ class ShinyAppProc:
             self.proc.stderr.close()
 
     def close(self) -> None:
-        sleep(0.5)
+        # from time import sleep
+        # sleep(0.5)
         self.proc.terminate()
 
     def __enter__(self) -> ShinyAppProc:
