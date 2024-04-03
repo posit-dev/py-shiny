@@ -28,23 +28,20 @@ def use_loading_spinners(
     ----------
 
     type
-        The type of spinner to use. Options include "disc", "tadpole", "dots",
+        The type of spinner to use. Options include "tadpole", "disc", "dots",
         "dot-track", and "bounce". Defaults to "tadpole".
     color
         The color of the spinner. This can be any valid CSS color. Defaults to the
         current app "primary" color (if using a theme) or light-blue if not.
     size
-        The size of the spinner. This can be any valid CSS size. Defaults to "80px".
+        The size of the spinner. This can be any valid CSS size. Defaults to "40px".
     speed
         The amount of time for the spinner to complete a single revolution. This can be
-        any valid CSS time. Defaults to "1s".
+        any valid CSS time. Defaults to "2s".
     delay
         The amount of time to wait before showing the spinner. This can be any valid CSS
-        time. Defaults to "0.5s". This is useful for not showing the spinner if the
+        time. Defaults to "0.1s". This is useful for not showing the spinner if the
         computation finishes quickly.
-    page_level
-        Should the spinner be shown at the page level (i.e. one spinner per app) or at
-        the level of each output (default).
 
     Returns
     -------
