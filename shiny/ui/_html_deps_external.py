@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Literal
+
 from htmltools import HTML, HTMLDependency
 
 from .._versions import bootstrap as bootstrap_version
@@ -43,6 +45,17 @@ def bootstrap_deps() -> list[HTMLDependency]:
         bootstrap_meta,
         bootstrap_js,
         bootstrap_css,
+    ]
+
+
+def bootstrap_deps_suppress(
+    parts: list[Literal["css", "js", "meta"]]
+) -> list[HTMLDependency]:
+    bs_v_suppressed = str(bootstrap_version) + ".9999"
+
+    return [
+        HTMLDependency(name=f"bootstrap-{part}", version=bs_v_suppressed)
+        for part in parts
     ]
 
 

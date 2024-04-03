@@ -63,7 +63,7 @@ from ._card import (
     card_header,
 )
 from ._download_button import download_button, download_link
-from ._include_helpers import include_css, include_js
+from ._include_helpers import include_css, include_js, include_bootstrap_css
 from ._input_action_button import input_action_button, input_action_link
 from ._input_check_radio import (
     input_checkbox,
@@ -212,6 +212,7 @@ __all__ = (
     # _include_helpers
     "include_css",
     "include_js",
+    "include_bootstrap_css",
     # _input_action_button
     "input_action_button",
     "input_action_link",
