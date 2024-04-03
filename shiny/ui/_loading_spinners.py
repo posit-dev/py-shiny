@@ -2,20 +2,20 @@ from __future__ import annotations
 
 from typing import Literal, Optional
 
-from htmltools import HTMLDependency, Tag, head_content, tags
+from htmltools import Tag, tags
+
+__all__ = ("loading_spinners",)
 
 
-def use_loading_spinners(
+def loading_spinners(
     type: Literal["tadpole", "disc", "dots", "dot-track", "bounce"] = "tadpole",
     color: Optional[str] = None,
     size: Optional[str] = None,
     speed: Optional[str] = None,
     delay: Optional[str] = None,
-) -> HTMLDependency:
+) -> Tag:
     """
-    Function to tweak loading spinner options for app.
-
-    This function allows you to tweak the style of the loading spinners used in your app.
+    Customize UI loading spinners.
 
     When supplied in your app's UI, elements that are loading (e.g. plots or tables)
     will have a spinner displayed over them. This is useful for when you have a
@@ -44,7 +44,7 @@ def use_loading_spinners(
     Returns
     -------
     :
-        An HTMLDependency
+        A <style> tag.
 
     Notes
     -----
@@ -88,32 +88,4 @@ def use_loading_spinners(
         + (f"--shiny-spinner-delay: {delay};" if delay else "")
     )
 
-    return head_content(tags.style(HTML("body{" + rule_contents + "}</style>")))
-
-def with_spinner(el: Tag) -> Tag:
-    """
-    Enable a loading spinner for a given output. These spinners will sit directly on the
-    output itself rather than in the upper corner.
-
-    Parameters
-    ----------
-
-    el
-        The element to add the spinner to. Typically an output element like a
-        plot or table.
-
-    Returns
-    -------
-    :
-        Element with the class "show-spinner" added to it.
-
-    Examples
-    --------
-
-    ```{python}
-    #|eval: false
-    ui.with_spinner(ui.output_plot("plot")),
-    ```
-    """
-    el.attrs["class"] = el.attrs.get("class", "") + " show-spinner"
-    return el
+    return tags.style("body{" + rule_contents + "}")
