@@ -37,6 +37,9 @@ from . import css  # noqa: F401  # pyright: ignore[reportUnusedImport]
 # Expose the fill module for extended usage: ex: ui.fill.as_fill_item(x).
 from . import fill
 
+# Expose the loading_spinners module for extended usage
+from . import loading_spinners
+
 from ._accordion import (
     AccordionPanel,
     accordion,
@@ -166,9 +169,6 @@ from ._valuebox import (
     value_box,
     value_box_theme,
 )
-
-from .loading_spinners import settings
-
 from .dataframe import output_data_frame
 
 __all__ = (
@@ -357,8 +357,8 @@ __all__ = (
     "strong",
     "em",
     "hr",
-    "settings",
     # Submodules
+    "loading_spinners",
     "fill",
     # utils
     "js_eval",

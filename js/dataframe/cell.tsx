@@ -332,25 +332,25 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     setValue(e.target.value);
   }
 
-  // https://medium.com/@oherterich/creating-a-textarea-with-dynamic-height-using-react-and-typescript-5ed2d78d9848
-  // Updates the height of a <textarea> when the value changes.
-  const useAutosizeTextArea = (
-    textAreaRef: HTMLTextAreaElement | null,
-    value: string
-  ) => {
-    useEffect(() => {
-      if (textAreaRef) {
-        // We need to reset the height momentarily to get the correct scrollHeight for the textarea
-        textAreaRef.style.height = "0px";
-        const scrollHeight = textAreaRef.scrollHeight;
+  // // https://medium.com/@oherterich/creating-a-textarea-with-dynamic-height-using-react-and-typescript-5ed2d78d9848
+  // // Updates the height of a <textarea> when the value changes.
+  // const useAutosizeTextArea = (
+  //   textAreaRef: HTMLTextAreaElement | null,
+  //   value: string
+  // ) => {
+  //   useEffect(() => {
+  //     if (textAreaRef) {
+  //       // We need to reset the height momentarily to get the correct scrollHeight for the textarea
+  //       textAreaRef.style.height = "0px";
+  //       const scrollHeight = textAreaRef.scrollHeight;
 
-        // We then set the height directly, outside of the render loop
-        // Trying to set this with state or a ref will product an incorrect value.
-        textAreaRef.style.height = scrollHeight + "px";
-      }
-    }, [textAreaRef, value]);
-  };
-  useAutosizeTextArea(inputRef.current, value as string);
+  //       // We then set the height directly, outside of the render loop
+  //       // Trying to set this with state or a ref will product an incorrect value.
+  //       textAreaRef.style.height = scrollHeight + "px";
+  //     }
+  //   }, [textAreaRef, value]);
+  // };
+  // useAutosizeTextArea(inputRef.current, value as string);
 
   let onClick:
     | ((e: ReactMouseEvent<HTMLTableCellElement>) => void)
@@ -361,21 +361,23 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
   const tableCellClass = CellStateClassEnum[cellState];
   // let cellContentEditable: boolean = false;
 
+  let editContent: ReactElement | null = null;
   if (cellState === CellStateEnum.EditSaving) {
     content = <em>{value as string}</em>;
-  } else if (cellState === CellStateEnum.Editing) {
-    content = (
-      <textarea
-        value={value as string}
-        onChange={onChange}
-        // onBlur={onBlur}
-        onFocus={onFocus}
-        onKeyDown={onInputKeyDown}
-        ref={inputRef}
-        style={{ width: "100%", height: "100%" }}
-      />
-    );
   } else {
+    if (cellState === CellStateEnum.Editing) {
+      editContent = (
+        <textarea
+          value={value as string}
+          onChange={onChange}
+          // onBlur={onBlur}
+          onFocus={onFocus}
+          onKeyDown={onInputKeyDown}
+          ref={inputRef}
+          // style={{ width: "100%", height: "100%" }}
+        />
+      );
+    }
     // Only allow transition to edit mode if the cell can be edited
     if (editCellsIsAllowed) {
       onClick = (e: ReactMouseEvent<HTMLTableCellElement>) => {
@@ -419,6 +421,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
       title={cellTitle}
       className={tableCellClass}
     >
+      {editContent}
       {content}
     </td>
   );

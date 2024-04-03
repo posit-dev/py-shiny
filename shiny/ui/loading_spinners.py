@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import Literal
 
 from htmltools import Tag, tags
 
@@ -8,11 +8,11 @@ __all__ = ("settings", "disable", "enable")
 
 
 def settings(
-    type: Optional[Literal["tadpole", "disc", "dots", "dot-track", "bounce"]] = None,
-    color: Optional[str] = None,
-    size: Optional[str] = None,
-    speed: Optional[str] = None,
-    delay: Optional[str] = None,
+    type: Literal["tadpole", "disc", "dots", "dot-track", "bounce"] | None = None,
+    color: str | None = None,
+    size: str | None = None,
+    speed: str | None = None,
+    delay: str | None = None,
     css_selector: str = ":root",
 ) -> Tag:
     """
