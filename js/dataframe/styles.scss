@@ -273,13 +273,27 @@ shiny-data-frame {
  * # CELL EDITING STYLES
  *
  */
-shiny-data-frame .shiny-data-grid > table > tbody > tr > td:has(> textarea.cell-edit-editing) {
-  padding: 0;
-  margin: 0;
+shiny-data-frame .shiny-data-grid > table > tbody > tr > td.cell-edit-editing {
+  // padding: 0;
+  // margin: 0;
 
+  :not(textarea) {
+    visibility: hidden;
+  }
+
+  color: transparent;
+
+  // Position the textarea over the existing cell via absolute positioning and inset
+  // Use absolute positioning to ensure the textarea is using the full available space!
+  position: relative;
   & > textarea {
-    width: 100%;
-    height: 100%;
+    position: absolute;
+    inset: var(--shiny-datagrid-padding-x) var(--shiny-datagrid-padding-y);
+
+    background-color: inherit;
+    padding: 0px;
+    // overflow: hidden;
+    resize: none;
   }
 }
 
