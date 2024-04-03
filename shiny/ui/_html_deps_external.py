@@ -17,16 +17,33 @@ For...
 
 
 def bootstrap_deps() -> list[HTMLDependency]:
-    dep = HTMLDependency(
-        name="bootstrap",
+    bootstrap_css = HTMLDependency(
+        name="bootstrap-css",
+        version=bootstrap_version,
+        source={"package": "shiny", "subdir": "www/shared/bootstrap/"},
+        stylesheet={"href": "bootstrap.min.css"},
+    )
+
+    bootstrap_js = HTMLDependency(
+        name="bootstrap-js",
         version=bootstrap_version,
         source={"package": "shiny", "subdir": "www/shared/bootstrap/"},
         script={"src": "bootstrap.bundle.min.js"},
-        stylesheet={"href": "bootstrap.min.css"},
+    )
+
+    bootstrap_meta = HTMLDependency(
+        name="bootstrap-meta",
+        version=bootstrap_version,
+        source={"package": "shiny", "subdir": "www/shared/bootstrap/"},
         meta={"name": "viewport", "content": "width=device-width, initial-scale=1"},
     )
-    deps = [jquery_deps(), dep]
-    return deps
+
+    return [
+        jquery_deps(),
+        bootstrap_meta,
+        bootstrap_js,
+        bootstrap_css,
+    ]
 
 
 def ionrangeslider_deps() -> list[HTMLDependency]:
