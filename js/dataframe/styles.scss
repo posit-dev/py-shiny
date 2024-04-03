@@ -288,8 +288,9 @@ shiny-data-frame .shiny-data-grid > table > tbody > tr > td.cell-edit-editing {
   position: relative;
   & > textarea {
     position: absolute;
-    padding: var(--shiny-datagrid-padding-x) var(--shiny-datagrid-padding-y);
+    padding: var(--shiny-datagrid-padding);
     inset: 0px;
+    border: none;
 
     background-color: inherit;
     // overflow: hidden;
