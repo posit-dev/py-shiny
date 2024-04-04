@@ -64,6 +64,7 @@ jobs:
       - name: Update shinylive's copy of shiny, htmltools, and other packages
         run: |
           cd shinylive-repo
+          make submodules
           make submodules-pull
 
       - name: Build shinylive
