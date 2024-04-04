@@ -93,7 +93,7 @@ jobs:
           path: "deploy"
 
   deploy:
-    # if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main'
     needs: build-docs
 
     # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
