@@ -9,7 +9,6 @@ import threading
 import time
 from contextlib import contextmanager
 from pathlib import PurePath
-from time import sleep
 from types import TracebackType
 from typing import (
     IO,
@@ -148,7 +147,8 @@ class ShinyAppProc:
             self.proc.stderr.close()
 
     def close(self) -> None:
-        sleep(0.5)
+        # from time import sleep
+        # sleep(0.5)
         self.proc.terminate()
 
     def __enter__(self) -> ShinyAppProc:
@@ -167,12 +167,14 @@ class ShinyAppProc:
 
         def stderr_uvicorn(line: str) -> bool:
             error_lines.append(line)
+            if "error while attempting to bind on address" in line:
+                raise ConnectionError(f"Error while staring shiny app: `{line}`")
             return "Uvicorn running on" in line
 
         if self.stderr.wait_for(stderr_uvicorn, timeoutSecs=timeoutSecs):
             return
         else:
-            raise RuntimeError(
+            raise TimeoutError(
                 "Shiny app exited without ever becoming ready. Waiting for 'Uvicorn running on' in stderr. Last 20 lines of stderr:\n"
                 + "\n".join(error_lines[-20:])
             )
@@ -187,11 +189,18 @@ def run_shiny_app(
     timeout_secs: float = 10,
     bufsize: int = 64 * 1024,
 ) -> ShinyAppProc:
-    if port == 0:
-        port = shiny._utils.random_port()
+    shiny_port = port if port != 0 else shiny._utils.random_port()
 
     child = subprocess.Popen(
-        [sys.executable, "-m", "shiny", "run", "--port", str(port), str(app_file)],
+        [
+            sys.executable,
+            "-m",
+            "shiny",
+            "run",
+            "--port",
+            str(shiny_port),
+            str(app_file),
+        ],
         bufsize=bufsize,
         executable=sys.executable,
         stdout=subprocess.PIPE,
@@ -202,20 +211,40 @@ def run_shiny_app(
 
     # TODO: Detect early exit
 
-    sa = ShinyAppProc(child, port)
+    sa = ShinyAppProc(child, shiny_port)
     if wait_for_start:
         sa.wait_until_ready(timeout_secs)
     return sa
 
 
+# Attempt up to 3 times to start the app, with a random port each time
 def local_app_fixture_gen(app: PurePath | str):
-    sa = run_shiny_app(app, wait_for_start=False)
-    try:
-        with sa:
-            sa.wait_until_ready(30)
-            yield sa
-    finally:
-        logging.warning("Application output:\n" + str(sa.stderr))
+
+    has_yielded_app = False
+    remaining_attempts = 3
+    while not has_yielded_app and remaining_attempts > 0:
+        remaining_attempts -= 1
+
+        # Make shiny process
+        sa = run_shiny_app(app, wait_for_start=False, port=0)
+        try:
+            # enter / exit shiny context manager; (closes streams on exit)
+            with sa:
+                # Wait for shiny app to start
+                # Could throw a `ConnectionError` if the port is already in use
+                sa.wait_until_ready(30)
+                # Run app!
+                has_yielded_app = True
+                yield sa
+        except ConnectionError as e:
+            if remaining_attempts == 0:
+                # Ran out of attempts!
+                raise e
+            print(f"Failed to bind to port: {e}", file=sys.stderr)
+            # Try again with a new port!
+        finally:
+            if has_yielded_app:
+                logging.warning("Application output:\n" + str(sa.stderr))
 
 
 ScopeName = Literal["session", "package", "module", "class", "function"]

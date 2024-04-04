@@ -483,6 +483,7 @@ app_template_choices = {
     "Dashboard": "dashboard",
     "Multi-page app with modules": "multi-page",
     "Custom JavaScript Component": "js-component",
+    "Choose from the Shiny Templates website": "external-gallery",
 }
 
 # These are templates which produce a Python package and have content filled in at
