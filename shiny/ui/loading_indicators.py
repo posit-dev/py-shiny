@@ -4,10 +4,19 @@ from typing import Literal
 
 from htmltools import Tag, tags
 
-__all__ = ("settings", "disable", "enable")
+__all__ = ("mode", "spinner_options")
 
 
-def settings(
+def mode(type: Literal["spinners", "cursor", "none"] = "spinners") -> Tag:
+    if type not in ("spinners", "cursor", "none"):
+        raise ValueError(f"Invalid loading indicator mode: {type}")
+
+    return tags.script(
+        f"$(function() {{ document.body.dataset.shinyLoadingIndicatorMode = '{type}'; }});"
+    )
+
+
+def spinner_options(
     type: Literal["tadpole", "disc", "dots", "dot-track", "bounce"] | None = None,
     color: str | None = None,
     size: str | None = None,
@@ -16,18 +25,13 @@ def settings(
     css_selector: str = ":root",
 ) -> Tag:
     """
-    Customize UI loading spinners.
-
-    When supplied in your app's UI, elements that are loading (e.g. plots or tables)
-    will have a spinner displayed over them. This is useful for when you have a
-    long-running computation and want to indicate to the user that something is
-    happening beyond the default grayed-out element.
+    Customize UI loading indicators applied to recalculating outputs.
 
     Parameters
     ----------
 
     type
-        The type of spinner to use. Options include "tadpole", "disc", "dots",
+        The type of  to use. Options include "tadpole", "disc", "dots",
         "dot-track", and "bounce". Defaults to "tadpole".
     color
         The color of the spinner. This can be any valid CSS color. Defaults to the
@@ -89,39 +93,3 @@ def settings(
     )
 
     return tags.style(css_selector + " {" + css_vars + "}")
-
-
-def disable() -> Tag:
-    """
-    Disable loading spinners.
-
-    Include this in your app's UI to disable the loading spinners.
-
-    Returns
-    -------
-    A <script> tag.
-    """
-
-    return tags.script(
-        f"(function() {{ document.body.classList.add('{DISABLE_CSS_CLASS}') }} )()"
-    )
-
-
-def enable() -> Tag:
-    """
-    Enable loading spinners.
-
-    Include this in your app's UI to enable the loading spinners. Since spinners are
-    enabled by default, this is only necessary if you've previously disabled them.
-
-    Returns
-    -------
-    A <script> tag.
-    """
-
-    return tags.script(
-        f"(function() {{ document.body.classList.remove('{DISABLE_CSS_CLASS}') }} )()"
-    )
-
-
-DISABLE_CSS_CLASS = "disable-shiny-spinners"

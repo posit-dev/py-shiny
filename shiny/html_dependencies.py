@@ -5,6 +5,7 @@ import os
 from htmltools import HTMLDependency
 
 from . import __version__
+from .ui._html_deps_py_shiny import loading_indicators_dependency
 
 
 def shiny_deps() -> list[HTMLDependency]:
@@ -16,18 +17,7 @@ def shiny_deps() -> list[HTMLDependency]:
             script={"src": "shiny.js"},
             stylesheet={"href": "shiny.min.css"},
         ),
-        # Place spinners css in as a dependency.
-        # Eventually this should be in the main shiny css?
-        HTMLDependency(
-            "shiny-loading-spinners",
-            version=__version__,
-            source={
-                "package": "shiny",
-                "subdir": "www/shared/loading-spinners/",
-            },
-            stylesheet={"href": "spinners.css"},
-            all_files=True,
-        ),
+        loading_indicators_dependency(),
     ]
     if os.getenv("SHINY_DEV_MODE") == "1":
         deps.append(

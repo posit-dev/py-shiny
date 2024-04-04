@@ -38,7 +38,7 @@ from . import css  # noqa: F401  # pyright: ignore[reportUnusedImport]
 from . import fill
 
 # Expose the loading_spinners module for extended usage
-from . import loading_spinners
+from . import loading_indicators
 
 from ._accordion import (
     AccordionPanel,
@@ -358,7 +358,7 @@ __all__ = (
     "em",
     "hr",
     # Submodules
-    "loading_spinners",
+    "loading_indicators",
     "fill",
     # utils
     "js_eval",

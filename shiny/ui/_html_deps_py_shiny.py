@@ -3,6 +3,7 @@ from __future__ import annotations
 from htmltools import HTMLDependency
 
 from .. import __version__
+from . import loading_indicators
 
 """
 HTML dependencies for internal dependencies such as dataframe or text area's autoresize.
@@ -51,4 +52,16 @@ def spin_dependency() -> HTMLDependency:
         __version__,
         source={"package": "shiny", "subdir": "www/shared/py-shiny/spin"},
         stylesheet={"href": "spin.css"},
+    )
+
+
+def loading_indicators_dependency() -> HTMLDependency:
+    return HTMLDependency(
+        "shiny-loading-indicators",
+        __version__,
+        source={"package": "shiny", "subdir": "www/shared/py-shiny/loading-indicators"},
+        stylesheet={"href": "loading-indicators.css"},
+        all_files=True,
+        # Default to spinners mode
+        head=loading_indicators.mode("spinners"),
     )
