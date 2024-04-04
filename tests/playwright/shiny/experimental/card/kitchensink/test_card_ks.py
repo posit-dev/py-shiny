@@ -50,7 +50,7 @@ def test_card_kitchensink(page: Page, local_app: ShinyAppProc) -> None:
     )
     assert get_body_tag_name(card) == "p"
     card.expect_full_screen_open(False)
-    card.expect_full_screen_enabled(False)
+    card.expect_full_screen_available(False)
 
     card = Card(page, "card3")
     card.expect_max_height("500px")
@@ -59,4 +59,4 @@ def test_card_kitchensink(page: Page, local_app: ShinyAppProc) -> None:
     card.expect_footer(None)
     card.expect_body(["Max height and min height are set."])
     assert get_body_tag_name(card) == "h3"
-    card.expect_full_screen_enabled(False)
+    card.expect_full_screen_available(False)

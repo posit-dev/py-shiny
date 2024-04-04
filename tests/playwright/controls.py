@@ -2725,7 +2725,7 @@ class _CardFullScreenM:
             int(open), timeout=timeout
         )
 
-    def expect_full_screen_enabled(
+    def expect_full_screen_available(
         self: _CardFullScreenLayoutP, available: bool, *, timeout: Timeout = None
     ) -> None:
         """
