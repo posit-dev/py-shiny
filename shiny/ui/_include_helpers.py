@@ -371,11 +371,13 @@ def check_bootstrap_compatibility_dep(
         )
 
     if hasattr(theme, "bs_version"):
-        check_bootstrap_compatibility_version(
-            bs_version=theme.__getattribute__("bs_version"),
-            name=theme.name,
-            version=theme.version,
-        )
+        bs_version = getattr(theme, "bs_version", None)
+        if bs_version is not None and isinstance(bs_version, (str, Version)):
+            check_bootstrap_compatibility_version(
+                bs_version=bs_version,
+                name=theme.name,
+                version=theme.version,
+            )
 
     source_dir = theme.source_path_map()["source"]
 
