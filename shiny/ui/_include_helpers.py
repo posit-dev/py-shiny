@@ -389,9 +389,6 @@ def check_bootstrap_compatibility_dep(
 
 def check_bootstrap_compatibility_file(theme: str | Path):
     theme = Path(theme)
-    # import pdb
-
-    # pdb.set_trace()
 
     if theme.suffix != ".css":
         warn(
