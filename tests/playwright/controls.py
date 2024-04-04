@@ -393,11 +393,11 @@ class _WidthContainerM:
 
         Parameters
         ----------
-            value
-                The expected value of the width attribute.
-            timeout
-                The maximum time to wait for the expectation to be fulfilled.
-                Defaults to None.
+        value
+            The expected value of the width attribute.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled.
+            Defaults to None.
         """
         expect_attr(self.loc_container, "width", value=value, timeout=timeout)
 
