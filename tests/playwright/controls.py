@@ -2708,7 +2708,7 @@ class _CardFullScreenM:
         """
         self._loc_close_button.click(timeout=timeout)
 
-    def expect_full_screen(
+    def expect_full_screen_open(
         self: _CardFullScreenLayoutP, open: bool, *, timeout: Timeout = None
     ) -> None:
         """
@@ -2723,6 +2723,23 @@ class _CardFullScreenM:
         """
         playwright_expect(self._loc_close_button).to_have_count(
             int(open), timeout=timeout
+        )
+
+    def expect_full_screen_enabled(
+        self: _CardFullScreenLayoutP, available: bool, *, timeout: Timeout = None
+    ) -> None:
+        """
+        Expects the card to be available for full screen mode.
+
+        Parameters
+        ----------
+        available
+            True if the value box is expected to be available for full screen mode, False otherwise.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to None.
+        """
+        playwright_expect(self._loc_fullscreen).to_have_count(
+            int(available), timeout=timeout
         )
 
 
@@ -2865,23 +2882,6 @@ class ValueBox(
         playwright_expect(self.loc_body).to_have_text(
             text,
             timeout=timeout,
-        )
-
-    def expect_full_screen_available(
-        self, available: bool, *, timeout: Timeout = None
-    ) -> None:
-        """
-        Expects the value box to be available for full screen mode.
-
-        Parameters
-        ----------
-        available
-            True if the value box is expected to be available for full screen mode, False otherwise.
-        timeout
-            The maximum time to wait for the expectation to pass. Defaults to None.
-        """
-        playwright_expect(self._loc_fullscreen).to_have_count(
-            int(available), timeout=timeout
         )
 
 
@@ -3033,23 +3033,6 @@ class Card(_WidthLocM, _CardFooterM, _CardBodyM, _CardFullScreenM, _InputWithCon
             The maximum time to wait for the expectation to pass. Defaults to None.
         """
         expect_to_have_style(self.loc_container, "height", value, timeout=timeout)
-
-    def expect_full_screen_enabled(
-        self, available: bool, *, timeout: Timeout = None
-    ) -> None:
-        """
-        Expects the card to be available for full screen mode.
-
-        Parameters
-        ----------
-        available
-            True if the value box is expected to be available for full screen mode, False otherwise.
-        timeout
-            The maximum time to wait for the expectation to pass. Defaults to None.
-        """
-        playwright_expect(self._loc_fullscreen).to_have_count(
-            int(available), timeout=timeout
-        )
 
 
 class Accordion(
