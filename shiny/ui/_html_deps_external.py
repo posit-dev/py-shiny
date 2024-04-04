@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Literal
 
 from htmltools import HTML, HTMLDependency
+from htmltools._core import HTMLDependencySource
 
 from .._versions import bootstrap as bootstrap_version
 from .._versions import shiny_html_deps
@@ -19,25 +20,30 @@ For...
 
 
 def bootstrap_deps() -> list[HTMLDependency]:
+    bootstrap_source: HTMLDependencySource = {
+        "package": "shiny",
+        "subdir": "www/shared/bootstrap/",
+    }
+
     bootstrap_css = HTMLDependency(
         name="bootstrap-css",
-        version=bootstrap_version,
-        source={"package": "shiny", "subdir": "www/shared/bootstrap/"},
         stylesheet={"href": "bootstrap.min.css"},
+        version=bootstrap_version,
+        source=bootstrap_source,
     )
 
     bootstrap_js = HTMLDependency(
         name="bootstrap-js",
-        version=bootstrap_version,
-        source={"package": "shiny", "subdir": "www/shared/bootstrap/"},
         script={"src": "bootstrap.bundle.min.js"},
+        version=bootstrap_version,
+        source=bootstrap_source,
     )
 
     bootstrap_meta = HTMLDependency(
         name="bootstrap-meta",
-        version=bootstrap_version,
-        source={"package": "shiny", "subdir": "www/shared/bootstrap/"},
         meta={"name": "viewport", "content": "width=device-width, initial-scale=1"},
+        version=bootstrap_version,
+        source=bootstrap_source,
     )
 
     return [
