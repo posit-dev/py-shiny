@@ -1,6 +1,7 @@
 # pyright:basic
 import time
 
+import matplotlib.pyplot as mpl
 import numpy as np
 import seaborn as sns
 
@@ -30,7 +31,11 @@ def card_server(input, output, session, length, update_all):
     async def plot_task(initial, length):
         time.sleep(0.5 if initial else length)
 
-        return sns.lineplot(x=np.arange(100), y=np.random.randn(100))
+        # Without ax, seaborn works through side effects, so supply the ax to avoid
+        # one figure from affecting another.
+        fig, ax = mpl.subplots(1, 1)
+        sns.lineplot(x=np.arange(100), y=np.random.randn(100), ax=ax)
+        return fig
 
     @reactive.effect
     @reactive.event(input.update, ignore_none=False)
