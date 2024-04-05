@@ -277,7 +277,13 @@ class _InputBase:
 
 
 class _InputWithContainer(_InputBase):
+    """
+    A mixin class representing inputs with a container.
+    """
     loc_container: Locator
+    """
+    `loc_container` is the locator of the container of the input.
+    """
 
     def __init__(
         self,
@@ -287,6 +293,20 @@ class _InputWithContainer(_InputBase):
         loc: InitLocator,
         loc_container: InitLocator = "div.shiny-input-container",
     ) -> None:
+        """
+        Initializes the input with a container.
+
+        Parameters
+        ----------
+        page
+            The page where the input is located.
+        id
+            The id of the input.
+        loc
+            The locator of the input.
+        loc_container
+            The locator of the container of the input.
+        """
         loc_is_str = isinstance(loc, str)
         loc_container_is_str = isinstance(loc_container, str)
 
@@ -2526,7 +2546,6 @@ class OutputTable(_OutputBase):
             timeout=timeout,
         )
 
-
 class Sidebar(
     _WidthLocM,
     _InputWithContainer,
@@ -3506,7 +3525,34 @@ class LayoutNavSetBar(_LayoutNavItemBase):
 
 
 class OutputDataFrame(_InputWithContainer):
+    """
+    OutputDataFrame control for :func:`~shiny.ui.output_data_frame`
+    """
+
+    loc: Locator
+    """
+    `Locator` for the data frame
+    """
+    loc_columns: Locator
+    """
+    `Locator` for the data frame columns
+    """
+    loc_rows: Locator
+    """
+    `Locator` for the data frame rows
+    """
+
     def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes a new instance of the OutputDataFrame class.
+
+        Parameters
+        ----------
+        page
+            The Playwright page object.
+        id
+            The ID of the data frame.
+        """
         super().__init__(
             page,
             id=id,
@@ -3517,6 +3563,16 @@ class OutputDataFrame(_InputWithContainer):
         self.loc_rows = self.loc.locator("> table > tbody")
 
     def expect_n_row(self, row_number: int, *, timeout: Timeout = None):
+        """
+        Expects the number of rows in the data frame.
+
+        Parameters
+        ----------
+        row_number
+            The expected number of rows.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to None.
+        """
         playwright_expect(self.loc_rows.locator("> tr")).to_have_count(
             row_number, timeout=timeout
         )
@@ -3529,43 +3585,89 @@ class OutputDataFrame(_InputWithContainer):
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Expects the cell in the data frame to have the specified text.
+
+        Parameters
+        ----------
+        text
+            The expected text in the cell.
+        row
+            The row number of the cell.
+        col
+            The column number of the cell.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to None.
+        """
         assert_type(row, int)
         assert_type(col, int)
         playwright_expect(
             self.loc.locator(
-                f"xpath=./table/tbody/tr[{row}]/td[{col}] | ./table/tbody/tr[{row}]/th[{col}]"
+                f"> table > tbody > tr:nth-child({row}) > td:nth-child({col}),> table > tbody > tr:nth-child({row}) > th:nth-child({col})"
             )
         ).to_have_text(text, timeout=timeout)
 
     def expect_column_labels(
         self,
         labels: ListPatternOrStr | None,
+        edit: bool = False,
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Expects the column labels in the data frame.
+
+        Parameters
+        ----------
+        labels
+            The expected column labels.
+            Note: None if the column labels are expected to not exist.
+        edit
+            True if the data frame is in edit mode, False otherwise.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to None.
+        """
         if isinstance(labels, list) and len(labels) == 0:
             labels = None
 
         if labels is None:
             playwright_expect(
-                self.loc.locator("xpath=./table/thead/tr/th")
+                self.loc_columns.locator(" th")
             ).to_have_count(0, timeout=timeout)
         else:
-            playwright_expect(
-                self.loc.locator("xpath=./table/thead/tr/th")
-            ).to_have_text(labels, timeout=timeout)
+            if edit:
+                # to accommodate the empty filter fields
+                labels = labels + ['' for _ in labels]
+                playwright_expect(
+                    self.loc_columns.locator(" th")
+                ).to_have_text(labels, timeout=timeout)
+            else:
+                playwright_expect(
+                    self.loc_columns.locator(" th")
+                ).to_have_text(labels, timeout=timeout)
 
     def expect_column_text(
         self,
         col: int,
-        # Can't use `None` as we don't know how many rows exist
         text: ListPatternOrStr,
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Expects the text in the specified column of the data frame.
+
+        Parameters
+        ----------
+        col
+            The column number.
+        text
+            The expected text in the column.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to None.
+        """
         assert_type(col, int)
         playwright_expect(
-            self.loc.locator(f"xpath=./table/tbody/tr/td[{col}]")
+            self.loc_columns.locator(f"> tr > th:nth-child({col}) > div")
         ).to_have_text(
             text,
             timeout=timeout,
@@ -3574,17 +3676,115 @@ class OutputDataFrame(_InputWithContainer):
     def expect_n_col(
         self,
         n: int,
+        edit: bool = False,
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Expects the number of columns in the data frame.
+
+        Parameters
+        ----------
+        n
+            The expected number of columns.
+        edit
+            True if the data frame is in edit mode, False otherwise.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to None.
+        """
+        if edit:
+            n = n * 2
         playwright_expect(
-            # self.loc.locator("xpath=./table/thead/tr[1]/(td|th)")
-            self.loc.locator("xpath=./table/thead/tr[1]/td | ./table/thead/tr[1]/th")
+            self.loc_columns.locator(" th")
         ).to_have_count(
             n,
             timeout=timeout,
         )
 
+    def expect_cell_class(
+        self,
+        row: int,
+        col: int,
+        class_: str,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expects the class of the cell
+
+        Parameters
+        ----------
+        row
+            The row number of the cell.
+        col
+            The column number of the cell.
+        class_
+            The expected class of the cell.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to None.
+        """
+        playwright_expect(
+            self.loc_rows.locator(
+                f"> tr:nth-child({row}) > td:nth-child({col})"
+            )
+        ).to_have_class(class_, timeout=timeout)
+
+    def set_cell_value(
+        self,
+        value: str,
+        row: int,
+        col: int,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Sets the value of the cell in the data frame.
+
+        Parameters
+        ----------
+        value
+            The value to set in the cell.
+        row
+            The row number of the cell.
+        col
+            The column number of the cell.
+        timeout
+            The maximum time to wait for the action to complete. Defaults to None.
+        """
+        cell = self.loc_rows.locator(
+            f"> tr:nth-child({row}) > td:nth-child({col})"
+        )
+        cell.scroll_into_view_if_needed(timeout=timeout)
+        cell.click()
+        cell.locator('> textarea').fill(value)
+
+    def expect_cell_validation_message(
+        self,
+        row: int,
+        col: int,
+        message: str,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expects the validation message of the cell in the data frame.
+
+        Parameters
+        ----------
+        row
+            The row number of the cell.
+        col
+            The column number of the cell.
+        message
+            The expected validation message of the cell.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to None.
+        """
+        playwright_expect(
+            self.loc_rows.locator(
+                f"> tr:nth-child({row}) > td:nth-child({col})"
+            )
+        ).to_have_attribute(name='title', value=message, timeout=timeout)
 
 # TODO: Use mixin for dowloadlink and download button
 class DownloadLink(_InputActionBase):

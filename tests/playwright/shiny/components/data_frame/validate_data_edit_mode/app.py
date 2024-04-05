@@ -32,17 +32,17 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
         *,
         patch: CellPatch,
     ):
-
-        if (patch["column_index"] == 0) and (
-            patch["value"] not in ["Adelie", "Chinstrap", "Gentoo"]
-        ):  # check species
+        print(patch)
+        if (patch["column_index"] == 4) and (
+            patch["value"] not in ["Torgersen", "Biscoe", "Dream"]
+        ):  # check island
             raise SafeException(
-                "Penguin species should be one of Adelie, Chinstrap, Gentoo"
+                "Penguin island should be one of 'Torgersen', 'Biscoe', 'Dream'"
             )
-        if (patch["column_index"] == 2) and int(
+        if (patch["column_index"] == 9) and int(
             patch["value"]
-        ) > 50:  # check bill_length_mm
-            raise SafeException("Penguin bill length cannot be greater than 50mm")
+        ) > 50:  # check culmen length
+            raise SafeException("Penguin culmen length cannot be greater than 50mm")
         return patch["value"]
 
 
