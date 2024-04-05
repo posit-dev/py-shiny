@@ -392,8 +392,6 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
     className += " html-fill-item";
   }
 
-  const maxRowSize = table.getSortedRowModel().rows.length;
-
   return (
     <>
       <div
@@ -490,28 +488,19 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
 
                       return (
                         <TableBodyCell
-                          id={id}
-                          containerRef={containerRef}
                           key={cell.id}
+                          rowId={cell.row.id}
+                          containerRef={containerRef}
                           cell={cell}
                           patchInfo={patchInfo}
                           editCellsIsAllowed={editCellsIsAllowed}
                           columns={columns}
                           rowIndex={rowIndex}
                           columnIndex={columnIndex}
-                          // isEditing={
-                          //   editRowIndex === rowIndex &&
-                          //   editColumnIndex === columnIndex
-                          // }
-                          // setEditRowIndex={setEditRowIndex}
-                          // setEditColumnIndex={setEditColumnIndex}
-                          virtualRows={virtualRows}
-                          // cellEditMap={cellEditMap}
+                          getSortedRowModel={table.getSortedRowModel}
                           cellEditInfo={cellEditInfo}
-                          maxRowSize={maxRowSize}
                           setData={setData}
                           setCellEditMapAtLoc={setCellEditMapAtLoc}
-                          // updateCellsData={updateCellsData}
                         ></TableBodyCell>
                       );
                     })}

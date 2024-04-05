@@ -34,7 +34,7 @@ export interface SelectionSet<TKey, TElement extends HTMLElement> {
 
 // Keep as strings (and not pointer types) as this is a shape defined by the python side
 export type SelectionModesProp = {
-  row: "none" | "single" | "multiple" | "multi-native";
+  row: "none" | "single" | "multiple";
   col: "none" | "single" | "multiple";
   rect: "none" | "region" | "cell";
 };
@@ -42,7 +42,6 @@ export class SelectionModes {
   static readonly _NONE = "none";
   static readonly _ROW_SINGLE = "single";
   static readonly _ROW_MULTIPLE = "multiple";
-  static readonly _ROW_MULTI_NATIVE = "multi-native";
   static readonly _COL_SINGLE = "single";
   static readonly _col_multiple = "multiple";
   static readonly _RECT_REGION = "region";
@@ -52,8 +51,6 @@ export class SelectionModes {
     NONE: SelectionModes._NONE,
     SINGLE: SelectionModes._ROW_SINGLE,
     MULTIPLE: SelectionModes._ROW_MULTIPLE,
-    // TODO-barret; Make it the new definition of rows!
-    MULTI_NATIVE: SelectionModes._ROW_MULTI_NATIVE,
   } as const;
   static readonly _colEnum = {
     NONE: SelectionModes._NONE,
@@ -256,7 +253,9 @@ function performMouseDownAction<TKey, TElement>(
     return null;
   }
 
-  if (selectionModes.row === SelectionModes._rowEnum.SINGLE) {
+  if (selectionModes.row === SelectionModes._rowEnum.NONE) {
+    return null;
+  } else if (selectionModes.row === SelectionModes._rowEnum.SINGLE) {
     if (ctrlKey && !shiftKey) {
       // Ctrl-click is like simple click, except it removes selection if an item is
       // already selected
@@ -271,8 +270,6 @@ function performMouseDownAction<TKey, TElement>(
     }
     // TODO-barret; multinative should be the new definition of `rows`!
   } else if (selectionModes.row === SelectionModes._rowEnum.MULTIPLE) {
-    return { selection: selectedKeys.toggle(key), anchor: true };
-  } else if (selectionModes.row === SelectionModes._rowEnum.MULTI_NATIVE) {
     if (shiftKey && ctrlKey) {
       // Ctrl-Shift-click: Add anchor row through current row to selection
       if (anchor !== null && between) {
@@ -292,6 +289,8 @@ function performMouseDownAction<TKey, TElement>(
       // Regular click: Select the current row and make it anchor
       return { selection: ImmutableSet.just(key), anchor: true };
     }
+  } else {
+    throw new Error(`Unsupported row selection mode: ${selectionModes.row}`);
   }
   return null;
 }
