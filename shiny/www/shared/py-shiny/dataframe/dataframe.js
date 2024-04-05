@@ -223,7 +223,10 @@ shiny-data-frame .shiny-data-grid > table > tbody > tr > td.cell-edit-editing :n
 shiny-data-frame .shiny-data-grid > table > tbody > tr > td.cell-edit-editing > textarea {
   position: absolute;
   padding: var(--shiny-datagrid-padding);
-  inset: 0px;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   border: none;
   background-color: inherit;
   resize: none;
