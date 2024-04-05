@@ -280,6 +280,7 @@ class _InputWithContainer(_InputBase):
     """
     A mixin class representing inputs with a container.
     """
+
     loc_container: Locator
     """
     `loc_container` is the locator of the container of the input.
@@ -2546,6 +2547,7 @@ class OutputTable(_OutputBase):
             timeout=timeout,
         )
 
+
 class Sidebar(
     _WidthLocM,
     _InputWithContainer,
@@ -3631,20 +3633,20 @@ class OutputDataFrame(_InputWithContainer):
             labels = None
 
         if labels is None:
-            playwright_expect(
-                self.loc_columns.locator(" th")
-            ).to_have_count(0, timeout=timeout)
+            playwright_expect(self.loc_columns.locator(" th")).to_have_count(
+                0, timeout=timeout
+            )
         else:
             if edit:
                 # to accommodate the empty filter fields
-                labels = labels + ['' for _ in labels]
-                playwright_expect(
-                    self.loc_columns.locator(" th")
-                ).to_have_text(labels, timeout=timeout)
+                labels = labels + ["" for _ in labels]
+                playwright_expect(self.loc_columns.locator(" th")).to_have_text(
+                    labels, timeout=timeout
+                )
             else:
-                playwright_expect(
-                    self.loc_columns.locator(" th")
-                ).to_have_text(labels, timeout=timeout)
+                playwright_expect(self.loc_columns.locator(" th")).to_have_text(
+                    labels, timeout=timeout
+                )
 
     def expect_column_text(
         self,
@@ -3694,9 +3696,7 @@ class OutputDataFrame(_InputWithContainer):
         """
         if edit:
             n = n * 2
-        playwright_expect(
-            self.loc_columns.locator(" th")
-        ).to_have_count(
+        playwright_expect(self.loc_columns.locator(" th")).to_have_count(
             n,
             timeout=timeout,
         )
@@ -3724,9 +3724,7 @@ class OutputDataFrame(_InputWithContainer):
             The maximum time to wait for the expectation to pass. Defaults to None.
         """
         playwright_expect(
-            self.loc_rows.locator(
-                f"> tr:nth-child({row}) > td:nth-child({col})"
-            )
+            self.loc_rows.locator(f"> tr:nth-child({row}) > td:nth-child({col})")
         ).to_have_class(class_, timeout=timeout)
 
     def set_cell_value(
@@ -3751,12 +3749,10 @@ class OutputDataFrame(_InputWithContainer):
         timeout
             The maximum time to wait for the action to complete. Defaults to None.
         """
-        cell = self.loc_rows.locator(
-            f"> tr:nth-child({row}) > td:nth-child({col})"
-        )
+        cell = self.loc_rows.locator(f"> tr:nth-child({row}) > td:nth-child({col})")
         cell.scroll_into_view_if_needed(timeout=timeout)
         cell.click()
-        cell.locator('> textarea').fill(value)
+        cell.locator("> textarea").fill(value)
 
     def expect_cell_validation_message(
         self,
@@ -3781,10 +3777,9 @@ class OutputDataFrame(_InputWithContainer):
             The maximum time to wait for the expectation to pass. Defaults to None.
         """
         playwright_expect(
-            self.loc_rows.locator(
-                f"> tr:nth-child({row}) > td:nth-child({col})"
-            )
-        ).to_have_attribute(name='title', value=message, timeout=timeout)
+            self.loc_rows.locator(f"> tr:nth-child({row}) > td:nth-child({col})")
+        ).to_have_attribute(name="title", value=message, timeout=timeout)
+
 
 # TODO: Use mixin for dowloadlink and download button
 class DownloadLink(_InputActionBase):
