@@ -5,8 +5,8 @@
   output when it's recalculating and add a spinner to the `::after` pseudo-element.
 */
 
-/* A reusable mixin for spinner styles */
-@mixin shiny-spinner-styles {
+/* A reusable mixin for "core" spinner styles */
+@mixin shiny-spinner-core {
   /* Customizable spinner properties */
   --_shiny-spinner-svg: var(--shiny-spinner-svg, url(tadpole-spinner.svg));
   --_shiny-spinner-color: var(--shiny-spinner-color, var(--bs-primary, #007bc2));
@@ -16,9 +16,7 @@
   --_shiny-spinner-delay: var(--shiny-spinner-delay, 0.25s);
   --_shiny-spinner-animation: var(--shiny-spinner-animation, shiny-loading-spinner-spin);
 
-  position: absolute;
-  inset: calc(50% - var(--_shiny-spinner-size) / 2);
-
+  position: absolute; /* Position relative to the parent */
   background: var(--_shiny-spinner-color);
   mask: var(--_shiny-spinner-svg) center/contain no-repeat;
   -webkit-mask: var(--_shiny-spinner-svg) center/contain no-repeat;
@@ -35,12 +33,22 @@
   opacity: 1;
 }
 
+@mixin shiny-output-spinner {
+  @include shiny-spinner-core;
+  inset: calc(50% - var(--_shiny-spinner-size) / 2);
+}
+
+@mixin shiny-page-spinner {
+  @include shiny-spinner-core;
+  inset: 1rem 1rem auto auto;
+}
+
 [data-shiny-loading-indicator-mode="spinners"] {
   .recalculating {
     position: relative;
     /* Overlay the spinner on recalculating outputs */
     &::after {
-      @include shiny-spinner-styles;
+      @include shiny-output-spinner;
     }
     /*
       shiny.css puts `opacity: 0.3` on .recalculating, which unfortunately applies to
@@ -52,16 +60,15 @@
     }
   }
 
-  /* If shiny is busy (say, due to a effect/observe), show a spinner in the top-right corner of the page */
+  /* If shiny is busy (say, due to a effect/observe), show page-level spinner... */
   &.shiny-busy {
     position: relative;
     &::after {
-      @include shiny-spinner-styles;
-      inset: 1rem 1rem auto auto;
+      @include shiny-page-spinner;
     }
   }
 
-  /* But if has spinners elsewhere, don't show the top-right spinner */
+  /* ... unless outputs are recalculating */
   &.shiny-busy:has(.recalculating)::after {
     display: none;
   }
@@ -90,10 +97,38 @@
 }
 
 /****************************************
+In spinner mode, if the page has anything recalculating, show progress cursor
+*****************************************/
+[data-shiny-loading-indicator-mode="spinner"] {
+  /* If shiny is busy (say, due to a effect/observe), show a spinner in the top-right corner of the page */
+  &.shiny-busy,
+  &:has(.recalculating) {
+    position: relative;
+    &::after {
+      @include shiny-page-spinner;
+    }
+  }
+}
+
+/****************************************
 In cursor mode, if the page has anything recalculating, show progress cursor
 *****************************************/
-[data-shiny-loading-indicator-mode="cursor"]:has(.recalculating) {
-  cursor: progress;
+[data-shiny-loading-indicator-mode="cursor"] {
+  &.shiny-busy,
+  &:has(.recalculating) {
+    cursor: progress;
+  }
+
+  /* Show a page-level spinner if on mobile */
+  @media (max-width: 767px) {
+    &.shiny-busy,
+    &:has(.recalculating) {
+      position: relative;
+      &::after {
+        @include shiny-page-spinner;
+      }
+    }
+  }
 }
 
 /****************************************

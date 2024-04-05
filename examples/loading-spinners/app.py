@@ -71,7 +71,9 @@ def card_server(input, output, session, length, simulate_all):
 app_ui = ui.page_sidebar(
     ui.sidebar(
         ui.input_task_button("simulate_all", "Simulate all", icon=icon_svg("shuffle")),
-        ui.input_select("loading_mode", "Loading mode", ["spinners", "cursor", "none"]),
+        ui.input_select(
+            "loading_mode", "Loading mode", ["spinners", "spinner", "cursor", "none"]
+        ),
         ui.input_slider("length", "Simulation length", 0, 500, 5),
     ),
     ui.layout_columns(

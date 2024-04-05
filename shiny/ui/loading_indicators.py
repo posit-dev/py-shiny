@@ -7,8 +7,8 @@ from htmltools import Tag, tags
 __all__ = ("mode", "spinner_options")
 
 
-def mode(type: Literal["spinners", "cursor", "none"] = "spinners") -> Tag:
-    if type not in ("spinners", "cursor", "none"):
+def mode(type: Literal["spinners", "spinner", "cursor", "none"] = "spinners") -> Tag:
+    if type not in ("spinners", "spinner", "cursor", "none"):
         raise ValueError(f"Invalid loading indicator mode: {type}")
 
     return tags.script(
