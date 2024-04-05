@@ -1,4 +1,5 @@
 import { BuildOptions, build } from "esbuild";
+import { copy } from "esbuild-plugin-copy";
 import { sassPlugin } from "esbuild-sass-plugin";
 import * as fs from "node:fs/promises";
 
@@ -80,7 +81,17 @@ const opts: Array<BuildOptions> = [
         "loading-indicators/loading-indicators.scss",
     },
     loader: { ".svg": "dataurl" },
-    plugins: [sassPlugin({ type: "css", sourceMap: false })],
+    plugins: [
+      sassPlugin({ type: "css", sourceMap: false }),
+      copy({
+        resolveFrom: "cwd",
+        assets: {
+          from: ["./loading-indicators/*.svg"],
+          to: ["../shiny/www/shared/py-shiny/loading-indicators/"],
+        },
+        watch: true,
+      }),
+    ],
     metafile: true,
   },
 ];

@@ -4,52 +4,66 @@
   The general idea is to leverage the `recalculating` class that shiny.js adds to each
   output when it's recalculating and add a spinner to the `::after` pseudo-element.
 */
-body[data-shiny-loading-indicator-mode="spinners"] {
+
+/* A reusable mixin for spinner styles */
+@mixin shiny-spinner-styles {
+  /* Customizable spinner properties */
+  --_shiny-spinner-svg: var(--shiny-spinner-svg, url(tadpole-spinner.svg));
+  --_shiny-spinner-color: var(--shiny-spinner-color, var(--bs-primary, #007bc2));
+  --_shiny-spinner-size: var(--shiny-spinner-size, 40px);
+  --_shiny-spinner-easing: var(--shiny-spinner-easing, ease-in-out);
+  --_shiny-spinner-speed: var(--shiny-spinner-speed, 2s);
+  --_shiny-spinner-delay: var(--shiny-spinner-delay, 0.25s);
+  --_shiny-spinner-animation: var(--shiny-spinner-animation, shiny-loading-spinner-spin);
+
+  position: absolute;
+  inset: calc(50% - var(--_shiny-spinner-size) / 2);
+
+  background: var(--_shiny-spinner-color);
+  mask: var(--_shiny-spinner-svg) center/contain no-repeat;
+  -webkit-mask: var(--_shiny-spinner-svg) center/contain no-repeat;
+  width: var(--_shiny-spinner-size);
+  height: var(--_shiny-spinner-size);
+  content: "";
+
+  scale: 0;
+  animation-name: var(--_shiny-spinner-animation);
+  animation-duration: var(--_shiny-spinner-speed);
+  animation-iteration-count: infinite;
+  animation-timing-function: var(--_shiny-spinner-easing);
+  animation-delay: var(--_shiny-spinner-delay);
+  opacity: 1;
+}
+
+[data-shiny-loading-indicator-mode="spinners"] {
   .recalculating {
     position: relative;
-
-    /* Customizable spinner properties */
-    --_shiny-spinner-svg: var(--shiny-spinner-svg, url(tadpole-spinner.svg));
-    --_shiny-spinner-color: var(--shiny-spinner-color, var(--bs-primary, #007bc2));
-    --_shiny-spinner-size: var(--shiny-spinner-size, 40px);
-    --_shiny-spinner-easing: var(--shiny-spinner-easing, ease-in-out);
-    --_shiny-spinner-speed: var(--shiny-spinner-speed, 2s);
-    --_shiny-spinner-delay: var(--shiny-spinner-delay, 0.1s);
-    --_shiny-spinner-animation: var(--shiny-spinner-animation, shiny-loading-spinner-spin);
-
-    /* Add the spinner/mask */
+    /* Overlay the spinner on recalculating outputs */
     &::after {
-      position: absolute;
-      inset: calc(50% - var(--_shiny-spinner-size) / 2);
-
-      background: var(--_shiny-spinner-color);
-      mask: var(--_shiny-spinner-svg) center/contain no-repeat;
-      -webkit-mask: var(--_shiny-spinner-svg) center/contain no-repeat;
-      width: var(--_shiny-spinner-size);
-      height: var(--_shiny-spinner-size);
-      content: "";
-
-      scale: 0;
-      animation-name: var(--_shiny-spinner-animation);
-      animation-duration: var(--_shiny-spinner-speed);
-      animation-iteration-count: infinite;
-      animation-timing-function: var(--_shiny-spinner-easing);
-      animation-delay: var(--_shiny-spinner-delay);
-
-      z-index: 1001; /* TODO: needed? */
+      @include shiny-spinner-styles;
     }
-
     /*
       shiny.css puts `opacity: 0.3` on .recalculating, which unfortunately applies to
-      the spinner. Undo that, but keep it on the children of .recalculating.
+      the spinner. Undo that, but still apply (smaller) opacity to the content.
     */
     opacity: 1;
     > * {
-      opacity: 0.3;
+      opacity: 0.2;
     }
+  }
+
+  /* If shiny is busy (say, due to a effect/observe), show a spinner in the top-right corner of the page */
+  &.shiny-busy {
+    position: relative;
     &::after {
-      opacity: 1;
+      @include shiny-spinner-styles;
+      inset: 1rem 1rem auto auto;
     }
+  }
+
+  /* But if has spinners elsewhere, don't show the top-right spinner */
+  &.shiny-busy:has(.recalculating)::after {
+    display: none;
   }
 
   /*
@@ -78,7 +92,7 @@ body[data-shiny-loading-indicator-mode="spinners"] {
 /****************************************
 In cursor mode, if the page has anything recalculating, show progress cursor
 *****************************************/
-body[data-shiny-loading-indicator-mode="cursor"]:has(.recalculating) {
+[data-shiny-loading-indicator-mode="cursor"]:has(.recalculating) {
   cursor: progress;
 }
 

@@ -12,7 +12,7 @@ def mode(type: Literal["spinners", "cursor", "none"] = "spinners") -> Tag:
         raise ValueError(f"Invalid loading indicator mode: {type}")
 
     return tags.script(
-        f"$(function() {{ document.body.dataset.shinyLoadingIndicatorMode = '{type}'; }});"
+        f"$(function() {{ document.documentElement.dataset.shinyLoadingIndicatorMode = '{type}'; }});"
     )
 
 
