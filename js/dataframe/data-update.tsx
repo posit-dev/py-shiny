@@ -1,8 +1,11 @@
 import { ResponseValue, makeRequestPromise } from "./request";
 
-import type { CellState } from "./cell";
 import { CellStateEnum } from "./cell";
-import { CellEdit, SetCellEditMap, makeCellEditMapKey } from "./cell-edit-map";
+import {
+  CellEdit,
+  SetCellEditMapAtLoc,
+  makeCellEditMapKey,
+} from "./cell-edit-map";
 import type { PatchInfo } from "./types";
 
 export type CellPatch = {
@@ -19,23 +22,21 @@ export type CellPatchPy = {
 };
 
 export function updateCellsData({
-  id,
   patchInfo,
   patches,
   onSuccess,
   onError,
   columns,
   setData,
-  setCellEditMap,
+  setCellEditMapAtLoc,
 }: {
-  id: string | null;
   patchInfo: PatchInfo;
   patches: CellPatch[];
   onSuccess: (values: CellPatch[]) => void;
   onError: (err: string) => void;
   columns: readonly string[];
   setData: (fn: (draft: unknown[][]) => void) => void;
-  setCellEditMap: SetCellEditMap;
+  setCellEditMapAtLoc: SetCellEditMapAtLoc;
 }) {
   // // Skip page index reset until after next rerender
   // skipAutoResetPageIndex();
@@ -86,33 +87,24 @@ export function updateCellsData({
           draft[rowIndex][columnIndex] = value;
         });
       });
-      setCellEditMap((draft) => {
-        newPatches.forEach(({ rowIndex, columnIndex, value }) => {
-          const key = makeCellEditMapKey(rowIndex, columnIndex);
-          const obj = draft.get(key) ?? ({} as CellEdit);
-          obj.value = value;
-          obj.state = CellStateEnum.EditSuccess;
+      newPatches.forEach(({ rowIndex, columnIndex, value }) => {
+        setCellEditMapAtLoc(rowIndex, columnIndex, (obj_draft) => {
+          obj_draft.value = value;
+          obj_draft.state = CellStateEnum.EditSuccess;
           // Remove save_error if it exists
-          delete obj.save_error;
-
-          draft.set(key, obj);
+          obj_draft.errorTitle = undefined;
         });
       });
       onSuccess(newPatches);
     })
     .catch((err: string) => {
-      setCellEditMap((draft) => {
-        patches.forEach(({ rowIndex, columnIndex, value }) => {
-          const key = makeCellEditMapKey(rowIndex, columnIndex);
-          const obj = draft.get(key) ?? ({} as CellEdit);
-
+      patches.forEach(({ rowIndex, columnIndex, value }) => {
+        setCellEditMapAtLoc(rowIndex, columnIndex, (obj_draft) => {
           // Do not overwrite value!
-          obj.value = String(value);
+          obj_draft.value = String(value);
 
-          obj.state = CellStateEnum.EditFailure;
-          obj.save_error = String(err);
-          // console.log("Setting cell edit map");
-          draft.set(key, obj);
+          obj_draft.state = CellStateEnum.EditFailure;
+          obj_draft.errorTitle = String(err);
         });
       });
       onError(err);

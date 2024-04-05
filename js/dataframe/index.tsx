@@ -25,7 +25,7 @@ import { Root, createRoot } from "react-dom/client";
 import { ErrorsMessageValue } from "rstudio-shiny/srcts/types/src/shiny/shinyapp";
 import { useImmer } from "use-immer";
 import { TableBodyCell } from "./cell";
-import { useCellEditMap } from "./cell-edit-map";
+import { getCellEditMapObj, useCellEditMap } from "./cell-edit-map";
 import { findFirstItemInView, getStyle } from "./dom-utils";
 import { Filter, useFilter } from "./filter";
 import type { BrowserCellSelection, SelectionModesProp } from "./selection";
@@ -116,19 +116,9 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
   const theadRef = useRef<HTMLTableSectionElement>(null);
   const tbodyRef = useRef<HTMLTableSectionElement>(null);
 
-  const [editRowIndex, setEditRowIndex] = useState<number | null>(null);
-  const [editColumnIndex, setEditColumnIndex] = useState<number | null>(null);
-
-  // // TODO-barret; Next row should use the sorted row order, not the current order
-  // useEffect(() => {
-  //   console.log("editing info!", editRowIndex, editColumnIndex);
-  //   // const rowModel = table.getSortedRowModel();
-  //   // console.log("rowModel", rowModel);
-  // }, [editColumnIndex, editRowIndex]);
+  const { cellEditMap, setCellEditMapAtLoc } = useCellEditMap();
 
   const editCellsIsAllowed = payload_options["editable"] === true;
-
-  const [cellEditMap, setCellEditMap] = useCellEditMap();
 
   const coldefs = useMemo<ColumnDef<unknown[], unknown>[]>(
     () =>
@@ -402,8 +392,6 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
     className += " html-fill-item";
   }
 
-  const maxRowSize = table.getSortedRowModel().rows.length;
-
   return (
     <>
       <div
@@ -490,24 +478,29 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
                   >
                     {row.getVisibleCells().map((cell) => {
                       // TODO-barret; Only send in the cell data that is needed;
+                      const rowIndex = cell.row.index;
+                      const columnIndex = cell.column.columnDef.meta!.colIndex;
+                      const [cellEditInfo, _key] = getCellEditMapObj(
+                        cellEditMap,
+                        rowIndex,
+                        columnIndex
+                      );
+
                       return (
                         <TableBodyCell
-                          id={id}
                           key={cell.id}
+                          rowId={cell.row.id}
+                          containerRef={containerRef}
                           cell={cell}
                           patchInfo={patchInfo}
                           editCellsIsAllowed={editCellsIsAllowed}
                           columns={columns}
-                          editRowIndex={editRowIndex}
-                          editColumnIndex={editColumnIndex}
-                          setEditRowIndex={setEditRowIndex}
-                          setEditColumnIndex={setEditColumnIndex}
-                          virtualRows={virtualRows}
-                          cellEditMap={cellEditMap}
-                          maxRowSize={maxRowSize}
+                          rowIndex={rowIndex}
+                          columnIndex={columnIndex}
+                          getSortedRowModel={table.getSortedRowModel}
+                          cellEditInfo={cellEditInfo}
                           setData={setData}
-                          setCellEditMap={setCellEditMap}
-                          // updateCellsData={updateCellsData}
+                          setCellEditMapAtLoc={setCellEditMapAtLoc}
                         ></TableBodyCell>
                       );
                     })}

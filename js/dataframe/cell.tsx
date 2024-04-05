@@ -1,4 +1,4 @@
-import { flexRender } from "@tanstack/react-table";
+import { RowModel, flexRender } from "@tanstack/react-table";
 import { VirtualItem } from "@tanstack/react-virtual";
 import { Cell } from "@tanstack/table-core";
 import React, {
@@ -11,14 +11,8 @@ import React, {
   useCallback,
   useEffect,
   useRef,
-  useState,
 } from "react";
-import { useImmer } from "use-immer";
-import {
-  CellEditMap,
-  SetCellEditMap,
-  getCellEditMapValue,
-} from "./cell-edit-map";
+import { CellEdit, SetCellEditMapAtLoc } from "./cell-edit-map";
 import { updateCellsData } from "./data-update";
 import type { PatchInfo } from "./types";
 
@@ -49,73 +43,45 @@ const CellStateClassEnum = {
 export type CellState = keyof typeof CellStateEnum;
 
 interface TableBodyCellProps {
-  id: string | null;
+  key: string;
+  rowId: string;
+  containerRef: React.RefObject<HTMLDivElement>;
   cell: Cell<unknown[], unknown>;
   patchInfo: PatchInfo;
   columns: readonly string[];
+  rowIndex: number;
+  columnIndex: number;
   editCellsIsAllowed: boolean;
-  editRowIndex: number | null;
-  editColumnIndex: number | null;
-  virtualRows: VirtualItem[];
-  setEditRowIndex: (index: number | null) => void;
-  setEditColumnIndex: (index: number | null) => void;
+  getSortedRowModel: () => RowModel<unknown[]>;
   setData: (fn: (draft: unknown[][]) => void) => void;
-  cellEditMap: CellEditMap;
-  setCellEditMap: SetCellEditMap;
-  maxRowSize: number;
+  cellEditInfo: CellEdit | undefined;
+  setCellEditMapAtLoc: SetCellEditMapAtLoc;
 }
 
 export const TableBodyCell: FC<TableBodyCellProps> = ({
-  id,
+  containerRef,
+  rowId,
   cell,
   patchInfo,
   columns,
+  rowIndex,
+  columnIndex,
   editCellsIsAllowed,
-  editRowIndex,
-  editColumnIndex,
-  virtualRows,
-  setEditRowIndex,
-  setEditColumnIndex,
-  cellEditMap,
+  getSortedRowModel,
+  cellEditInfo,
   setData,
-  setCellEditMap,
-  maxRowSize,
+  setCellEditMapAtLoc,
 }) => {
-  const rowIndex = cell.row.index;
-  const columnIndex = cell.column.columnDef.meta!.colIndex;
-
   const initialValue = cell.getValue();
-  // We need to keep and update the state of the cell normally
-  const [value, setValue] = useImmer(initialValue);
-  // If the initialValue (defined by `cell.getValue()`) is changed externally
-  // (e.g. copy/**paste**), sync it up with our state
-  // (This method only runs if `initialValue` has changed)
-  useEffect(() => setValue(initialValue), [initialValue, setValue]);
+
+  const cellValue = cellEditInfo?.value ?? initialValue;
+  const cellState = cellEditInfo?.state ?? CellStateEnum.Ready;
+  const errorTitle = cellEditInfo?.errorTitle;
+  // Listen to boolean value of cellEditInfo. This allows for the cell state to be restored if esc is hit
+  const isEditing = cellEditInfo?.isEditing ?? false;
+  const editValue = cellEditInfo?.editValue ?? initialValue;
 
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
-  const [cellState, setCellState] = useState<CellState>(
-    getCellEditMapValue(cellEditMap, rowIndex, columnIndex)?.state ||
-      CellStateEnum.Ready
-  );
-
-  const [errorTitle, setErrorTitle] = useState<string | undefined>(undefined);
-
-  const setValueStateError = useCallback(
-    ({
-      newValue,
-      newCellState,
-      newErrorTitle,
-    }: {
-      newValue: typeof value;
-      newCellState: typeof cellState;
-      newErrorTitle: typeof errorTitle;
-    }) => {
-      setValue(newValue);
-      setCellState(newCellState);
-      setErrorTitle(newErrorTitle);
-    },
-    [setValue, setCellState, setErrorTitle]
-  );
 
   // Keyboard navigation:
   // * When editing a cell:
@@ -146,63 +112,31 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
   //   * `space key` allows you toggle the selection of the cell
   // * Arrow key navigation is required
 
-  useEffect(() => {
-    const cellIsEditable =
-      editRowIndex === rowIndex && editColumnIndex === columnIndex;
-    // If the cell is editable, set the cell state to editing
-    if (cellIsEditable) {
-      setCellState(CellStateEnum.Editing);
-    } else {
-      // Update cell state when a cell edit has been created
-      const editInfo = getCellEditMapValue(cellEditMap, rowIndex, columnIndex);
-      if (editInfo) {
-        setValueStateError({
-          newValue: editInfo.value,
-          newCellState: editInfo.state,
-          newErrorTitle: editInfo.save_error,
-        });
+  const resetEditing = useCallback(
+    (
+      {
+        resetIsEditing = false,
+        resetEditValue = false,
+      }: { resetIsEditing?: boolean; resetEditValue?: boolean } = {
+        resetIsEditing: true,
+        resetEditValue: true,
       }
-    }
-  }, [
-    editRowIndex,
-    editColumnIndex,
-    rowIndex,
-    columnIndex,
-    cellEditMap,
-    setValueStateError,
-  ]);
-
-  const resetEditInfo = useCallback(() => {
-    setEditRowIndex(null);
-    setEditColumnIndex(null);
-  }, [setEditColumnIndex, setEditRowIndex]);
+    ) => {
+      setCellEditMapAtLoc(rowIndex, columnIndex, (obj_draft) => {
+        if (resetIsEditing) obj_draft.isEditing = false;
+        if (resetEditValue) obj_draft.editValue = undefined;
+      });
+    },
+    [rowIndex, columnIndex, setCellEditMapAtLoc]
+  );
 
   const handleEsc = (e: ReactKeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key !== "Escape") return;
     // Prevent default behavior
     e.preventDefault();
 
-    // Try to restore the previous value, state, and error
-    // If there is no previous state info, reset the cell to the inital value
-    const stateInfo = getCellEditMapValue(cellEditMap, rowIndex, columnIndex);
-
-    if (stateInfo) {
-      // Restore the previous value, state, and error
-      setValueStateError({
-        newValue: stateInfo.value,
-        newCellState: stateInfo.state,
-        newErrorTitle: stateInfo.save_error,
-      });
-    } else {
-      // Reset to the initial value
-      setValueStateError({
-        newValue: initialValue,
-        newCellState: CellStateEnum.Ready,
-        newErrorTitle: undefined,
-      });
-    }
-    // Remove editing info
-    resetEditInfo();
+    // Turn off editing and the _temp_ edit value
+    resetEditing();
   };
   const handleTab = (e: ReactKeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key !== "Tab") return;
@@ -211,14 +145,20 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
 
     const hasShift = e.shiftKey;
 
-    const newColumnIndex = editColumnIndex! + (hasShift ? -1 : 1);
+    const newColumnIndex = columnIndex! + (hasShift ? -1 : 1);
+
+    // Submit changes to the current cell
+    attemptUpdate();
+
     if (newColumnIndex < 0 || newColumnIndex >= columns.length) {
       // If the new column index is out of bounds, quit
       return;
     }
 
-    attemptUpdate();
-    setEditColumnIndex(newColumnIndex);
+    // Turn on editing in next cell!
+    setCellEditMapAtLoc(rowIndex, newColumnIndex, (obj_draft) => {
+      obj_draft.isEditing = true;
+    });
   };
   // TODO future: Make Cmd-Enter add a newline in a cell.
   const handleEnter = (e: ReactKeyboardEvent<HTMLTextAreaElement>) => {
@@ -228,14 +168,28 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
 
     const hasShift = e.shiftKey;
 
-    const newRowIndex = editRowIndex! + (hasShift ? -1 : 1);
-    if (newRowIndex < 0 || newRowIndex >= maxRowSize) {
+    const rowModel = getSortedRowModel();
+    const sortedRowIndex = rowModel.rows.findIndex((row) => row.id === rowId);
+    // Couldn't find row... silently quit
+    if (sortedRowIndex < 0) {
+      return;
+    }
+    const nextSortedRowIndex = sortedRowIndex! + (hasShift ? -1 : 1);
+
+    // Submit changes to the current cell
+    attemptUpdate();
+
+    if (nextSortedRowIndex < 0 || nextSortedRowIndex >= rowModel.rows.length) {
       // If the new row index is out of bounds, quit
       return;
     }
 
-    attemptUpdate();
-    setEditRowIndex(newRowIndex);
+    // Turn on editing in the next cell!
+    // Get the original row index
+    const targetRowIndex = rowModel.rows[nextSortedRowIndex].index;
+    setCellEditMapAtLoc(targetRowIndex, columnIndex, (obj_draft) => {
+      obj_draft.isEditing = true;
+    });
   };
 
   const onInputKeyDown = (e: ReactKeyboardEvent<HTMLTextAreaElement>) => {
@@ -243,63 +197,76 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
   };
 
   const attemptUpdate = useCallback(() => {
-    setErrorTitle(undefined);
+    // Reset error title
+    setCellEditMapAtLoc(rowIndex, columnIndex, (obj_draft) => {
+      obj_draft.errorTitle = undefined;
+    });
 
     // Only update if the string form of the value has changed
-    if (`${initialValue}` === `${value}`) {
-      setCellState(CellStateEnum.Ready);
+    if (`${initialValue}` === `${editValue}`) {
+      // Reset all edit info
+      resetEditing();
+      // Set state to prior cell state
+      setCellEditMapAtLoc(rowIndex, columnIndex, (obj_draft) => {
+        obj_draft.state = cellState;
+      });
       return;
     }
 
-    setCellState(CellStateEnum.EditSaving);
+    // Only turn off editing for cell; Maintain all other edit info
+    resetEditing({ resetIsEditing: true });
+
+    // Set state to saving
+    setCellEditMapAtLoc(rowIndex, columnIndex, (obj_draft) => {
+      obj_draft.state = CellStateEnum.EditSaving;
+    });
+
     // Update the data!
-    // updateCellsData updates the underlying data via `setData` and `setCellEditMap`
+    // updateCellsData updates the underlying data via `setData` and `setCellEditMapAtLoc`
     updateCellsData({
-      id,
       patchInfo: patchInfo,
-      patches: [
-        {
-          rowIndex,
-          columnIndex,
-          value,
-          // prev: initialValue,
-        },
-      ],
+      patches: [{ rowIndex, columnIndex, value: editValue }],
       onSuccess: (_patches) => {
+        // Reset `editValue`
+        resetEditing({ resetEditValue: true });
+
         // console.log("Success!!");
       },
-      onError: (err) => {
-        // console.log("Error!!", err);
+      onError: (_err) => {
+        // console.log("Error!!", _err);
+        // // Do not reset edit value here so that users can "restore" their prior edit value
+        // resetEditing({ resetEditValue: true });
       },
       columns,
       setData,
-      setCellEditMap,
+      setCellEditMapAtLoc,
     });
   }, [
-    id,
-    patchInfo,
+    setCellEditMapAtLoc,
     rowIndex,
     columnIndex,
-    value,
     initialValue,
+    editValue,
+    resetEditing,
+    patchInfo,
     columns,
     setData,
-    setCellEditMap,
+    cellState,
   ]);
 
   // Select the input when it becomes editable
   useEffect(() => {
-    if (cellState !== CellStateEnum.Editing) return;
+    if (!isEditing) return;
     if (!inputRef.current) return;
 
     inputRef.current.focus();
     inputRef.current.select();
-  }, [cellState]);
+  }, [isEditing]);
 
   // When editing a cell, set up a global click listener to reset edit info when
   // clicking outside of the cell
   useEffect(() => {
-    if (cellState !== CellStateEnum.Editing) return;
+    if (!isEditing) return;
     if (!inputRef.current) return;
 
     // TODO-barret; Restore cursor position and text selection here
@@ -309,7 +276,8 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
       if (e.target === inputRef.current) return;
 
       attemptUpdate();
-      resetEditInfo();
+      // Turn off editing for this cell
+      resetEditing();
     };
     document.body.addEventListener("click", onBodyClick);
 
@@ -317,19 +285,28 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     return () => {
       document.body.removeEventListener("click", onBodyClick);
     };
-  }, [cellState, attemptUpdate, resetEditInfo, value]);
+  }, [
+    cellState,
+    attemptUpdate,
+    rowIndex,
+    columnIndex,
+    isEditing,
+    resetEditing,
+  ]);
 
   // Reselect the input when it comes into view!
   // (It could be scrolled out of view and then back into view)
   function onFocus(e: ReactFocusEvent<HTMLTextAreaElement>) {
-    if (cellState === CellStateEnum.Editing) {
+    if (isEditing) {
       e.target.select();
     }
   }
 
   function onChange(e: ReactChangeEvent<HTMLTextAreaElement>) {
-    // Upddate value temporarily (do not save to cell edit map)
-    setValue(e.target.value);
+    // Update edit value to cell map
+    setCellEditMapAtLoc(rowIndex, columnIndex, (obj_draft) => {
+      obj_draft.editValue = e.target.value;
+    });
   }
 
   // // https://medium.com/@oherterich/creating-a-textarea-with-dynamic-height-using-react-and-typescript-5ed2d78d9848
@@ -357,18 +334,19 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     | undefined = undefined;
   let content: ReactElement | ReturnType<typeof flexRender> | undefined =
     undefined;
-  let cellTitle = errorTitle;
-  const tableCellClass = CellStateClassEnum[cellState];
-  // let cellContentEditable: boolean = false;
+  const cellTitle = errorTitle;
+  const tableCellClass =
+    CellStateClassEnum[isEditing ? CellStateEnum.Editing : cellState];
 
   let editContent: ReactElement | null = null;
   if (cellState === CellStateEnum.EditSaving) {
-    content = <em>{value as string}</em>;
+    // If saving, do not allow any clicks or edits
+    content = <em>{editValue as string}</em>;
   } else {
-    if (cellState === CellStateEnum.Editing) {
+    if (isEditing) {
       editContent = (
         <textarea
-          value={value as string}
+          value={editValue as string}
           onChange={onChange}
           // onBlur={onBlur}
           onFocus={onFocus}
@@ -377,46 +355,31 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
           // style={{ width: "100%", height: "100%" }}
         />
       );
-    }
-    // Only allow transition to edit mode if the cell can be edited
-    if (editCellsIsAllowed) {
-      onClick = (e: ReactMouseEvent<HTMLTableCellElement>) => {
-        setEditRowIndex(rowIndex);
-        setEditColumnIndex(columnIndex);
-        // Do not prevent default or stop propagation here!
-        // Other methods need to be able to handle the event as well. e.g. `onBodyClick` above.
-        // e.preventDefault();
-        // e.stopPropagation();
-      };
-    }
-    if (cellState === CellStateEnum.EditFailure) {
-      cellTitle = errorTitle;
+    } else {
+      // `isEditing` is `false`
+
+      // Only allow transition to edit mode if the cell can be edited
+      if (editCellsIsAllowed) {
+        onClick = (e: ReactMouseEvent<HTMLTableCellElement>) => {
+          // Do not prevent default or stop propagation here!
+          // Other methods need to be able to handle the event as well. e.g. `onBodyClick` above.
+          // e.preventDefault();
+          // e.stopPropagation();
+
+          // Set this cell to editing mode
+          setCellEditMapAtLoc(rowIndex, columnIndex, (obj_draft) => {
+            obj_draft.isEditing = true;
+            obj_draft.editValue = cellValue as string;
+          });
+        };
+      }
     }
     content = flexRender(cell.column.columnDef.cell, cell.getContext());
-    // // TODO-barret; Consider using https://www.npmjs.com/package/react-contenteditable !
-    // const cellValue = cell.getValue();
-    // const cellValueType = typeof cellValue;
-    // const cellContentIsEditable =
-    //   cellValueType === "string" ||
-    //   cellValueType === "number" ||
-    //   cellValueType === "boolean" ||
-    //   cellValueType === "undefined" ||
-    //   cellValue === null;
-    // if (cellContentIsEditable) {
-    //   // cellContentEditable = ""plaintext-only";
-    //   cellContentEditable = true;
-    // }
-    // const onInput = (e: ReactChangeEvent<HTMLTableCellElement>) => {
-    //   console.log("on input!", e, rowIndex, columnIndex, e.target.textContent);
-    // };
-    // td attrs for below
-    // contentEditable={cellContentEditable}
-    // onInput={onInput}
   }
 
   return (
     <td
-      key={cell.id}
+      id={cell.id}
       onClick={onClick}
       title={cellTitle}
       className={tableCellClass}
@@ -426,3 +389,23 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     </td>
   );
 };
+
+// // TODO-barret; Consider using https://www.npmjs.com/package/react-contenteditable !
+// const cellValue = cell.getValue();
+// const cellValueType = typeof cellValue;
+// const cellContentIsEditable =
+//   cellValueType === "string" ||
+//   cellValueType === "number" ||
+//   cellValueType === "boolean" ||
+//   cellValueType === "undefined" ||
+//   cellValue === null;
+// if (cellContentIsEditable) {
+//   // cellContentEditable = ""plaintext-only";
+//   cellContentEditable = true;
+// }
+// const onInput = (e: ReactChangeEvent<HTMLTableCellElement>) => {
+//   console.log("on input!", e, rowIndex, columnIndex, e.target.textContent);
+// };
+// td attrs for below
+// contentEditable={cellContentEditable}
+// onInput={onInput}
