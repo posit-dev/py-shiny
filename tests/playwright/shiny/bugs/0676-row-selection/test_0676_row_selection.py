@@ -25,5 +25,5 @@ def test_row_selection(page: Page, local_app: ShinyAppProc) -> None:
     expect(debug_loc).to_have_text("(2,)")
 
     # Ensure that keys are in sorted order, not the order in which they were selected
-    row1.click()
+    row1.click(modifiers=["Meta"])
     expect(debug_loc).to_have_text("(0, 2)")
