@@ -32,7 +32,6 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
         *,
         patch: CellPatch,
     ):
-        print(patch)
         if (patch["column_index"] == 4) and (
             patch["value"] not in ["Torgersen", "Biscoe", "Dream"]
         ):  # check island
