@@ -1,4 +1,4 @@
-import { flexRender } from "@tanstack/react-table";
+import { RowModel, flexRender } from "@tanstack/react-table";
 import { VirtualItem } from "@tanstack/react-virtual";
 import { Cell } from "@tanstack/table-core";
 import React, {
@@ -43,7 +43,8 @@ const CellStateClassEnum = {
 export type CellState = keyof typeof CellStateEnum;
 
 interface TableBodyCellProps {
-  id: string | null;
+  key: string;
+  rowId: string;
   containerRef: React.RefObject<HTMLDivElement>;
   cell: Cell<unknown[], unknown>;
   patchInfo: PatchInfo;
@@ -51,27 +52,25 @@ interface TableBodyCellProps {
   rowIndex: number;
   columnIndex: number;
   editCellsIsAllowed: boolean;
-  virtualRows: VirtualItem[];
+  getSortedRowModel: () => RowModel<unknown[]>;
   setData: (fn: (draft: unknown[][]) => void) => void;
   cellEditInfo: CellEdit | undefined;
   setCellEditMapAtLoc: SetCellEditMapAtLoc;
-  maxRowSize: number;
 }
 
 export const TableBodyCell: FC<TableBodyCellProps> = ({
-  id,
   containerRef,
+  rowId,
   cell,
   patchInfo,
   columns,
   rowIndex,
   columnIndex,
   editCellsIsAllowed,
-  virtualRows,
+  getSortedRowModel,
   cellEditInfo,
   setData,
   setCellEditMapAtLoc,
-  maxRowSize,
 }) => {
   const initialValue = cell.getValue();
 
@@ -147,12 +146,14 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     const hasShift = e.shiftKey;
 
     const newColumnIndex = columnIndex! + (hasShift ? -1 : 1);
+
+    // Submit changes to the current cell
+    attemptUpdate();
+
     if (newColumnIndex < 0 || newColumnIndex >= columns.length) {
       // If the new column index is out of bounds, quit
       return;
     }
-
-    attemptUpdate();
 
     // Turn on editing in next cell!
     setCellEditMapAtLoc(rowIndex, newColumnIndex, (obj_draft) => {
@@ -167,16 +168,26 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
 
     const hasShift = e.shiftKey;
 
-    const newRowIndex = rowIndex! + (hasShift ? -1 : 1);
-    if (newRowIndex < 0 || newRowIndex >= maxRowSize) {
+    const rowModel = getSortedRowModel();
+    const sortedRowIndex = rowModel.rows.findIndex((row) => row.id === rowId);
+    // Couldn't find row... silently quit
+    if (sortedRowIndex < 0) {
+      return;
+    }
+    const nextSortedRowIndex = sortedRowIndex! + (hasShift ? -1 : 1);
+
+    // Submit changes to the current cell
+    attemptUpdate();
+
+    if (nextSortedRowIndex < 0 || nextSortedRowIndex >= rowModel.rows.length) {
       // If the new row index is out of bounds, quit
       return;
     }
 
-    attemptUpdate();
-
     // Turn on editing in the next cell!
-    setCellEditMapAtLoc(newRowIndex, columnIndex, (obj_draft) => {
+    // Get the original row index
+    const targetRowIndex = rowModel.rows[nextSortedRowIndex].index;
+    setCellEditMapAtLoc(targetRowIndex, columnIndex, (obj_draft) => {
       obj_draft.isEditing = true;
     });
   };
@@ -213,7 +224,6 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     // Update the data!
     // updateCellsData updates the underlying data via `setData` and `setCellEditMapAtLoc`
     updateCellsData({
-      id,
       patchInfo: patchInfo,
       patches: [{ rowIndex, columnIndex, value: editValue }],
       onSuccess: (_patches) => {
@@ -238,7 +248,6 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     initialValue,
     editValue,
     resetEditing,
-    id,
     patchInfo,
     columns,
     setData,
@@ -370,7 +379,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
 
   return (
     <td
-      key={cell.id}
+      id={cell.id}
       onClick={onClick}
       title={cellTitle}
       className={tableCellClass}
