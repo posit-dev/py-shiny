@@ -9,9 +9,9 @@ def test_valuebox(page: Page, local_app: ShinyAppProc, value_box_id: str) -> Non
     page.goto(local_app.url)
 
     value_box = ValueBox(page, value_box_id)
-    value_box.expect_full_screen(False)
+    value_box.expect_full_screen_open(False)
     value_box.open_full_screen()
-    value_box.expect_full_screen(True)
+    value_box.expect_full_screen_open(True)
     if value_box_id == "valuebox1":
         value_box.expect_height(None)
         value_box.expect_title("KPI Title")
@@ -29,4 +29,4 @@ def test_valuebox(page: Page, local_app: ShinyAppProc, value_box_id: str) -> Non
         )
         assert title_tag_name == "p"
     value_box.close_full_screen()
-    value_box.expect_full_screen(False)
+    value_box.expect_full_screen_open(False)

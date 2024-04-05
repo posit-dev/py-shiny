@@ -42,7 +42,10 @@ You can create and run your first application with `shiny create`, the CLI will 
 
 ## Development
 
-API documentation for the `main` branch of Shiny: https://posit-dev.github.io/py-shiny/api/
+* Shinylive built from the `main` branch: https://posit-dev.github.io/py-shiny/shinylive/py/examples/
+* API documentation for the `main` branch:
+    * https://posit-dev.github.io/py-shiny/docs/api/express/
+    * https://posit-dev.github.io/py-shiny/docs/api/core/
 
 If you want to do development on Shiny for Python:
 
