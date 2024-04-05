@@ -291,7 +291,13 @@ shiny-data-frame .shiny-data-grid > table > tbody > tr > td.cell-edit-editing {
   & > textarea {
     position: absolute;
     padding: var(--shiny-datagrid-padding);
-    inset: 0px;
+    // We could use `inset: 0px`, but firefox doesn't render it properly.
+    // Instead, use top, left, width, height
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+
     border: none;
 
     background-color: inherit;
