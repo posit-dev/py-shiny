@@ -1,4 +1,6 @@
 # pyright:basic
+import asyncio
+import concurrent.futures
 import time
 
 import matplotlib.pyplot as mpl
@@ -7,6 +9,12 @@ import seaborn as sns
 from faicons import icon_svg
 
 from shiny import App, module, reactive, render, ui
+
+# Execute each extended task on a different thread.
+pool = concurrent.futures.ThreadPoolExecutor()
+
+# Use Agg backend for matplotlib so that it doesn't try to open a window.
+mpl.switch_backend("Agg")
 
 
 # -- Reusable card module --
@@ -29,10 +37,8 @@ def card_ui(title="Tadpole", spinner_type="tadpole"):
 @module.server
 def card_server(input, output, session, length, simulate_all):
 
-    @ui.bind_task_button(button_id="simulate")
-    @reactive.extended_task
-    async def plot_task(initial, length):
-        time.sleep(0.5 if initial else length)
+    def do_plot(wait_time=0.5):
+        time.sleep(wait_time)
 
         # Without ax, seaborn works through side effects, so supply the ax to avoid
         # one figure from affecting another.
@@ -40,16 +46,21 @@ def card_server(input, output, session, length, simulate_all):
         sns.lineplot(x=np.arange(100), y=np.random.randn(100), ax=ax)
         return fig
 
+    @ui.bind_task_button(button_id="simulate")
+    @reactive.extended_task
+    async def plot_task(wait_time=1):
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(pool, do_plot, wait_time)
+
     @reactive.effect
     @reactive.event(input.simulate, ignore_none=False)
     def _():
-        plot_task(initial=input.simulate() == 0, length=length())
+        plot_task(1 if input.simulate() == 0 else length())
 
     @reactive.effect
     @reactive.event(simulate_all)
     def _():
-        simulate_all()
-        plot_task(initial=False, length=length())
+        plot_task(length())
 
     @render.plot
     def plot():
@@ -61,7 +72,7 @@ app_ui = ui.page_sidebar(
     ui.sidebar(
         ui.input_task_button("simulate_all", "Simulate all", icon=icon_svg("shuffle")),
         ui.input_select("loading_mode", "Loading mode", ["spinners", "cursor", "none"]),
-        ui.input_slider("length", "Simulation length", 0, 1000, 3),
+        ui.input_slider("length", "Simulation length", 0, 500, 5),
     ),
     ui.layout_columns(
         card_ui("a", "Tadpole", "tadpole"),
@@ -74,6 +85,7 @@ app_ui = ui.page_sidebar(
     ui.output_ui("loading_mode_ui"),
     ui.output_ui("some_text"),
     fillable=True,
+    title="Loading indicators + extended tasks = ❤️",
 )
 
 
@@ -99,3 +111,4 @@ def server(input, output, session):
 
 
 app = App(app_ui, server)
+app.on_shutdown(pool.shutdown)
