@@ -22,7 +22,6 @@ export type CellPatchPy = {
 };
 
 export function updateCellsData({
-  id,
   patchInfo,
   patches,
   onSuccess,
@@ -31,7 +30,6 @@ export function updateCellsData({
   setData,
   setCellEditMapAtLoc,
 }: {
-  id: string | null;
   patchInfo: PatchInfo;
   patches: CellPatch[];
   onSuccess: (values: CellPatch[]) => void;
