@@ -3535,11 +3535,11 @@ class OutputDataFrame(_InputWithContainer):
     """
     `Locator` for the data frame
     """
-    loc_columns: Locator
+    loc_head: Locator
     """
     `Locator` for the data frame columns
     """
-    loc_rows: Locator
+    loc_body: Locator
     """
     `Locator` for the data frame rows
     """
@@ -3561,8 +3561,14 @@ class OutputDataFrame(_InputWithContainer):
             loc_container=f"#{id}.html-fill-item",
             loc="> div > div.shiny-data-grid-grid",
         )
-        self.loc_columns = self.loc.locator("> table > thead")
-        self.loc_rows = self.loc.locator("> table > tbody")
+        self.loc_head = self.loc.locator("> table > thead")
+        self.loc_body = self.loc.locator("> table > tbody")
+        self.loc_column_label = self.loc_head.locator("> tr > th:not(.filters th)")
+
+    def cell_locator(self, row: int, col: int) -> Locator:
+        return self.loc_body.locator(f"> tr:nth-child({row})").locator(
+            f"> td:nth-child({col}),  > th:nth-child({col})"
+        )
 
     def expect_n_row(self, row_number: int, *, timeout: Timeout = None):
         """
@@ -3575,16 +3581,16 @@ class OutputDataFrame(_InputWithContainer):
         timeout
             The maximum time to wait for the expectation to pass. Defaults to None.
         """
-        playwright_expect(self.loc_rows.locator("> tr")).to_have_count(
+        playwright_expect(self.loc_body.locator("> tr")).to_have_count(
             row_number, timeout=timeout
         )
 
     def expect_cell(
         self,
         text: PatternOrStr,
+        *,
         row: int,
         col: int,
-        *,
         timeout: Timeout = None,
     ) -> None:
         """
@@ -3603,16 +3609,13 @@ class OutputDataFrame(_InputWithContainer):
         """
         assert_type(row, int)
         assert_type(col, int)
-        playwright_expect(
-            self.loc.locator(
-                f"> table > tbody > tr:nth-child({row}) > td:nth-child({col}),> table > tbody > tr:nth-child({row}) > th:nth-child({col})"
-            )
-        ).to_have_text(text, timeout=timeout)
+        playwright_expect(self.cell_locator(row, col)).to_have_text(
+            text, timeout=timeout
+        )
 
     def expect_column_labels(
         self,
         labels: ListPatternOrStr | None,
-        edit: bool = False,
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -3633,26 +3636,17 @@ class OutputDataFrame(_InputWithContainer):
             labels = None
 
         if labels is None:
-            playwright_expect(self.loc_columns.locator(" th")).to_have_count(
-                0, timeout=timeout
-            )
+            playwright_expect(self.loc_column_label).to_have_count(0, timeout=timeout)
         else:
-            if edit:
-                # to accommodate the empty filter fields
-                labels = labels + ["" for _ in labels]
-                playwright_expect(self.loc_columns.locator(" th")).to_have_text(
-                    labels, timeout=timeout
-                )
-            else:
-                playwright_expect(self.loc_columns.locator(" th")).to_have_text(
-                    labels, timeout=timeout
-                )
+            playwright_expect(self.loc_column_label).to_have_text(
+                labels, timeout=timeout
+            )
 
-    def expect_column_text(
+    def expect_column_label(
         self,
-        col: int,
         text: ListPatternOrStr,
         *,
+        col: int,
         timeout: Timeout = None,
     ) -> None:
         """
@@ -3668,9 +3662,8 @@ class OutputDataFrame(_InputWithContainer):
             The maximum time to wait for the expectation to pass. Defaults to None.
         """
         assert_type(col, int)
-        playwright_expect(
-            self.loc_columns.locator(f"> tr > th:nth-child({col}) > div")
-        ).to_have_text(
+        # It's zero based, nth(0) selects the first element.
+        playwright_expect(self.loc_column_label.nth(col - 1)).to_have_text(
             text,
             timeout=timeout,
         )
@@ -3678,7 +3671,6 @@ class OutputDataFrame(_InputWithContainer):
     def expect_n_col(
         self,
         n: int,
-        edit: bool = False,
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -3689,24 +3681,20 @@ class OutputDataFrame(_InputWithContainer):
         ----------
         n
             The expected number of columns.
-        edit
-            True if the data frame is in edit mode, False otherwise.
         timeout
             The maximum time to wait for the expectation to pass. Defaults to None.
         """
-        if edit:
-            n = n * 2
-        playwright_expect(self.loc_columns.locator(" th")).to_have_count(
+        playwright_expect(self.loc_column_label).to_have_count(
             n,
             timeout=timeout,
         )
 
     def expect_cell_class(
         self,
-        row: int,
-        col: int,
         class_: str,
         *,
+        row: int,
+        col: int,
         timeout: Timeout = None,
     ) -> None:
         """
@@ -3723,25 +3711,52 @@ class OutputDataFrame(_InputWithContainer):
         timeout
             The maximum time to wait for the expectation to pass. Defaults to None.
         """
-        playwright_expect(
-            self.loc_rows.locator(f"> tr:nth-child({row}) > td:nth-child({col})")
-        ).to_have_class(class_, timeout=timeout)
+        expect_to_have_class(
+            self.cell_locator(row=row, col=col),
+            class_,
+        )
 
-    def set_cell_value(
+    def expect_class_state(
         self,
-        value: str,
+        state: str,
+        *,
         row: int,
         col: int,
+        timeout: Timeout = None,
+    ):
+        """
+        Expects the state of the class in the data frame.
+        """
+        # if state == "ready":
+        #     # what to assert here?
+        if state == "editing":
+            self.expect_cell_class("cell-edit-editing", row=row, col=col)
+        elif state == "saving":
+            self.expect_cell_class("cell-edit-saving", row=row, col=col)
+        elif state == "failure":
+            self.expect_cell_class("cell-edit-failure", row=row, col=col)
+        elif state == "success":
+            self.expect_cell_class("cell-edit-success", row=row, col=col)
+        else:
+            raise ValueError(
+                "Invalid state. Select one of 'success', 'failure', 'saving', 'editing', 'ready'"
+            )
+
+    def edit_cell(
+        self,
+        text: str,
         *,
+        row: int,
+        col: int,
         timeout: Timeout = None,
     ) -> None:
         """
-        Sets the value of the cell in the data frame.
+        Edits the cell in the data frame.
 
         Parameters
         ----------
         value
-            The value to set in the cell.
+            The value to edit in the cell.
         row
             The row number of the cell.
         col
@@ -3749,17 +3764,43 @@ class OutputDataFrame(_InputWithContainer):
         timeout
             The maximum time to wait for the action to complete. Defaults to None.
         """
-        cell = self.loc_rows.locator(f"> tr:nth-child({row}) > td:nth-child({col})")
+        cell = self.cell_locator(row=row, col=col)
         cell.scroll_into_view_if_needed(timeout=timeout)
         cell.click()
-        cell.locator("> textarea").fill(value)
+        cell.locator("> textarea").fill(text)
 
-    def expect_cell_validation_message(
+    def save_cell(
         self,
+        text: str,
+        *,
         row: int,
         col: int,
+        key: str,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Saves the value of the cell in the data frame.
+
+        Parameters
+        ----------
+        text
+            The key to save the value of the cell.
+        row
+            The row number of the cell.
+        col
+            The column number of the cell.
+        timeout
+            The maximum time to wait for the action to complete. Defaults to None.
+        """
+        self.edit_cell(text, row=row, col=col, timeout=timeout)
+        self.cell_locator(row=row, col=col).locator("> textarea").press(key)
+
+    def expect_cell_title(
+        self,
         message: str,
         *,
+        row: int,
+        col: int,
         timeout: Timeout = None,
     ) -> None:
         """
@@ -3777,7 +3818,7 @@ class OutputDataFrame(_InputWithContainer):
             The maximum time to wait for the expectation to pass. Defaults to None.
         """
         playwright_expect(
-            self.loc_rows.locator(f"> tr:nth-child({row}) > td:nth-child({col})")
+            self.cell_locator(row=row, col=col)
         ).to_have_attribute(name="title", value=message, timeout=timeout)
 
 
