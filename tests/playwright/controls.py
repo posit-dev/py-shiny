@@ -3727,9 +3727,11 @@ class OutputDataFrame(_InputWithContainer):
         """
         Expects the state of the class in the data frame.
         """
-        # if state == "ready":
-        #     # what to assert here?
-        if state == "editing":
+        if state == "ready":
+            playwright_expect(self.cell_locator(row=row, col=col)).not_to_have_class(
+                "cell-edit-editing", timeout=timeout
+            )
+        elif state == "editing":
             self.expect_cell_class("cell-edit-editing", row=row, col=col)
         elif state == "saving":
             self.expect_cell_class("cell-edit-saving", row=row, col=col)
@@ -3775,7 +3777,7 @@ class OutputDataFrame(_InputWithContainer):
         *,
         row: int,
         col: int,
-        key: str,
+        save_key: str,
         timeout: Timeout = None,
     ) -> None:
         """
@@ -3793,7 +3795,7 @@ class OutputDataFrame(_InputWithContainer):
             The maximum time to wait for the action to complete. Defaults to None.
         """
         self.edit_cell(text, row=row, col=col, timeout=timeout)
-        self.cell_locator(row=row, col=col).locator("> textarea").press(key)
+        self.cell_locator(row=row, col=col).locator("> textarea").press(save_key)
 
     def expect_cell_title(
         self,
@@ -3817,9 +3819,9 @@ class OutputDataFrame(_InputWithContainer):
         timeout
             The maximum time to wait for the expectation to pass. Defaults to None.
         """
-        playwright_expect(
-            self.cell_locator(row=row, col=col)
-        ).to_have_attribute(name="title", value=message, timeout=timeout)
+        playwright_expect(self.cell_locator(row=row, col=col)).to_have_attribute(
+            name="title", value=message, timeout=timeout
+        )
 
 
 # TODO: Use mixin for dowloadlink and download button
