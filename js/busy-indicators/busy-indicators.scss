@@ -61,7 +61,8 @@
   }
 
   /* If shiny is busy (say, due to a effect/observe), show page-level spinner... */
-  &.shiny-busy {
+  &.shiny-busy,
+  &.shiny-not-yet-idle {
     position: relative;
     &::after {
       @include shiny-page-spinner;
@@ -102,6 +103,7 @@ In spinner mode, if the page has anything recalculating, show progress cursor
 [data-shiny-busy-indicator-mode="spinner"] {
   /* If shiny is busy (say, due to a effect/observe), show a spinner in the top-right corner of the page */
   &.shiny-busy,
+  &.shiny-not-yet-idle,
   &:has(.recalculating) {
     position: relative;
     &::after {
@@ -115,6 +117,7 @@ In cursor mode, if the page has anything recalculating, show progress cursor
 *****************************************/
 [data-shiny-busy-indicator-mode="cursor"] {
   &.shiny-busy,
+  &.shiny-not-yet-idle,
   &:has(.recalculating) {
     cursor: progress;
   }
@@ -122,6 +125,7 @@ In cursor mode, if the page has anything recalculating, show progress cursor
   /* Show a page-level spinner if on mobile */
   @media (max-width: 767px) {
     &.shiny-busy,
+    &.shiny-not-yet-idle,
     &:has(.recalculating) {
       position: relative;
       &::after {

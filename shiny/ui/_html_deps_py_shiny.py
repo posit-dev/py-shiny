@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from htmltools import HTMLDependency
+from htmltools import HTMLDependency, TagList, tags
 
 from .. import __version__
 from . import busy_indicators
@@ -61,7 +61,18 @@ def busy_indicators_dependency() -> HTMLDependency:
         __version__,
         source={"package": "shiny", "subdir": "www/shared/py-shiny/busy-indicators"},
         stylesheet={"href": "busy-indicators.css"},
+        # Allow css to load svg spinners via url()
         all_files=True,
-        # Default to spinners mode
-        head=busy_indicators.mode("spinners"),
+        head=TagList(
+            # Default to spinners mode
+            busy_indicators.mode("spinners"),
+            # Show a page-level spinner up until the next idle.
+            # Note: this is only sensible when this dependency comes bundled with the
+            # main shiny dependency, which is currently the case (i.e., it should never
+            # come in through dynamic UI).
+            tags.script(
+                "document.documentElement.classList.add('shiny-not-yet-idle');"
+                + "$(document).on('shiny:idle', function() { document.documentElement.classList.remove('shiny-not-yet-idle'); });"
+            ),
+        ),
     )
