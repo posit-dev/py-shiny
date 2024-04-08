@@ -4,28 +4,38 @@ from typing import Literal
 
 from htmltools import Tag, tags
 
+from .._docstring import add_example, no_example
+
 __all__ = ("mode", "spinner_options")
 
 
+@no_example()
 def mode(type: Literal["spinners", "spinner", "cursor", "none"] = "spinners") -> Tag:
     """
-    Set the busy indicator mode for the Shiny app.
+    Set the busy indicator mode.
+
+    Include the result of this function in the app's UI to set the busy indicator mode.
 
     Parameters
     ----------
     type
         The busy indicator mode to use. Options include:
 
-        * "spinners": Show a spinner overlay on each output when they are recalculating,
+        * `spinners`: Show a spinner overlay on each output when they are recalculating,
            and a page-level spinner when the server is otherwise busy.
-        * "spinner": Show a page-level spinner whenever the server is busy.
-        * "cursor": Show a progress indicator on the mouse cursor whenever the server
+        * `spinner`: Show a page-level spinner whenever the server is busy.
+        * `cursor`: Show a progress indicator on the mouse cursor whenever the server
            is busy. On mobile, a page-level spinner is shown instead.
-        * "none": Do not show any busy indicators.
+        * `none`: Do not show any busy indicators.
 
     Returns
     -------
-    A <script> tag.
+    :
+        A `<style>` tag.
+
+    See Also
+    --------
+    * :func:`~shiny.ui.busy_indicators.spinner_options`: Customize spinning busy indicators.
     """
 
     if type not in ("spinners", "spinner", "cursor", "none"):
@@ -36,6 +46,7 @@ def mode(type: Literal["spinners", "spinner", "cursor", "none"] = "spinners") ->
     )
 
 
+@add_example(ex_dir="../api-examples/busy_indicators/spinner_options")
 def spinner_options(
     type: Literal["tadpole", "disc", "dots", "dot-track", "bounce"] | str | None = None,
     *,
@@ -49,14 +60,15 @@ def spinner_options(
     """
     Customize spinning busy indicators.
 
+    Include the result of this function in the app's UI to customize spinner appearance.
+
     Parameters
     ----------
-
     type
         The type of spinner to use. Builtin options include: tadpole, disc, dots,
         dot-track, and bounce. A custom type may also provided, which should be a valid
-        value for the [CSS
-        mask-image](https://developer.mozilla.org/en-US/docs/Web/CSS/mask-image)
+        value for the CSS
+        [mask-image](https://developer.mozilla.org/en-US/docs/Web/CSS/mask-image)
         property.
     color
         The color of the spinner. This can be any valid CSS color. Defaults to the
@@ -81,7 +93,8 @@ def spinner_options(
 
     Returns
     -------
-     A <style> tag.
+    :
+        A `<style>` tag.
     """
 
     # bounce requires a different animation than the others
@@ -97,7 +110,7 @@ def spinner_options(
 
     # Options are controlled via CSS variables.
     css_vars = (
-        (f"--shiny-spinner-svg: {type};" if type else "")
+        (f"--shiny-spinner-mask-img: {type};" if type else "")
         + (f"--shiny-spinner-easing: {easing};" if easing else "")
         + (f"--shiny-spinner-animation: {animation};" if animation else "")
         + (f"--shiny-spinner-color: {color};" if color else "")

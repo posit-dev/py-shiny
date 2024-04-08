@@ -16,7 +16,7 @@
 
 /* A reusable mixin for "core" spinner styles */
 @mixin shiny-spinner-core {
-  --_shiny-spinner-svg: var(--shiny-spinner-svg, var(--_shiny-spinner-type-tadpole));
+  --_shiny-spinner-mask-img: var(--shiny-spinner-mask-img, var(--_shiny-spinner-type-tadpole));
   --_shiny-spinner-color: var(--shiny-spinner-color, var(--bs-primary, #007bc2));
   --_shiny-spinner-size: var(--shiny-spinner-size, 40px);
   --_shiny-spinner-easing: var(--shiny-spinner-easing, linear);
@@ -25,11 +25,11 @@
   --_shiny-spinner-animation: var(--shiny-spinner-animation, shiny-busy-spinner-spin);
 
   /* Apply the spinner type as a mask */
-  mask-image: var(--_shiny-spinner-svg);
+  mask-image: var(--_shiny-spinner-mask-img);
   mask-position: center;
   mask-size: contain;
   mask-repeat: no-repeat;
-  -webkit-mask-image: var(--_shiny-spinner-svg);
+  -webkit-mask-image: var(--_shiny-spinner-mask-img);
   -webkit-mask-position: center;
   -webkit-mask-size: contain;
   -webkit-mask-repeat: no-repeat;
