@@ -1,5 +1,5 @@
 shiny_html_deps = "1.8.1.9000"
-bslib = "0.6.2.9000"
+bslib = "0.7.0.9000"
 htmltools = "0.5.8.9000"
 bootstrap = "5.3.1"
 requirejs = "2.3.6"
