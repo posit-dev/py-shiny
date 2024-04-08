@@ -26,7 +26,7 @@ def card_ui(title="Tadpole", spinner_type="tadpole"):
             ui.input_task_button("simulate", "Simulate", icon=icon_svg("shuffle")),
             class_="d-flex justify-content-between align-items-center",
         ),
-        ui.loading_indicators.spinner_options(
+        ui.busy_indicators.spinner_options(
             spinner_type, css_selector="." + spinner_type
         ),
         ui.output_plot("plot"),
@@ -72,7 +72,9 @@ app_ui = ui.page_sidebar(
     ui.sidebar(
         ui.input_task_button("simulate_all", "Simulate all", icon=icon_svg("shuffle")),
         ui.input_select(
-            "loading_mode", "Loading mode", ["spinners", "spinner", "cursor", "none"]
+            "busy_mode",
+            "Busy indicator mode",
+            ["spinners", "spinner", "cursor", "none"],
         ),
         ui.input_slider("length", "Simulation length", 0, 500, 5),
     ),
@@ -84,18 +86,18 @@ app_ui = ui.page_sidebar(
         col_widths=[6, 6],
     ),
     card_ui("e", "Ball", "bounce"),
-    ui.output_ui("loading_mode_ui"),
+    ui.output_ui("busy_mode_ui"),
     ui.output_ui("some_text"),
     fillable=True,
-    title="Loading indicators + extended tasks = ❤️",
+    title="Busy indicators + extended tasks = ❤️",
 )
 
 
 def server(input, output, session):
 
     @render.ui
-    def loading_mode_ui():
-        return ui.loading_indicators.mode(input.loading_mode())
+    def busy_mode_ui():
+        return ui.busy_indicators.mode(input.busy_mode())
 
     card_server("a", length=input.length, simulate_all=input.simulate_all)
     card_server("b", length=input.length, simulate_all=input.simulate_all)

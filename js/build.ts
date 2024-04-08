@@ -77,8 +77,7 @@ const opts: Array<BuildOptions> = [
   },
   {
     entryPoints: {
-      "loading-indicators/loading-indicators":
-        "loading-indicators/loading-indicators.scss",
+      "busy-indicators/busy-indicators": "busy-indicators/busy-indicators.scss",
     },
     loader: { ".svg": "dataurl" },
     plugins: [
@@ -86,8 +85,8 @@ const opts: Array<BuildOptions> = [
       copy({
         resolveFrom: "cwd",
         assets: {
-          from: ["./loading-indicators/*.svg"],
-          to: ["../shiny/www/shared/py-shiny/loading-indicators/"],
+          from: ["./busy-indicators/*.svg"],
+          to: ["../shiny/www/shared/py-shiny/busy-indicators/"],
         },
         watch: true,
       }),

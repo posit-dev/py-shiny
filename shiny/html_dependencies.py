@@ -5,7 +5,7 @@ import os
 from htmltools import HTMLDependency
 
 from . import __version__
-from .ui._html_deps_py_shiny import loading_indicators_dependency
+from .ui._html_deps_py_shiny import busy_indicators_dependency
 
 
 def shiny_deps() -> list[HTMLDependency]:
@@ -17,7 +17,7 @@ def shiny_deps() -> list[HTMLDependency]:
             script={"src": "shiny.js"},
             stylesheet={"href": "shiny.min.css"},
         ),
-        loading_indicators_dependency(),
+        busy_indicators_dependency(),
     ]
     if os.getenv("SHINY_DEV_MODE") == "1":
         deps.append(

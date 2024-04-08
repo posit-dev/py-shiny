@@ -1,5 +1,5 @@
 /*
-  CSS for shiny.ui.loading_spinners module.
+  CSS for shiny.ui.busy_indicators module.
 
   The general idea is to leverage the `recalculating` class that shiny.js adds to each
   output when it's recalculating and add a spinner to the `::after` pseudo-element.
@@ -14,7 +14,7 @@
   --_shiny-spinner-easing: var(--shiny-spinner-easing, ease-in-out);
   --_shiny-spinner-speed: var(--shiny-spinner-speed, 2s);
   --_shiny-spinner-delay: var(--shiny-spinner-delay, 0.25s);
-  --_shiny-spinner-animation: var(--shiny-spinner-animation, shiny-loading-spinner-spin);
+  --_shiny-spinner-animation: var(--shiny-spinner-animation, shiny-busy-spinner-spin);
 
   position: absolute; /* Position relative to the parent */
   background: var(--_shiny-spinner-color);
@@ -43,7 +43,7 @@
   inset: 1rem 1rem auto auto;
 }
 
-[data-shiny-loading-indicator-mode="spinners"] {
+[data-shiny-busy-indicator-mode="spinners"] {
   .recalculating {
     position: relative;
     /* Overlay the spinner on recalculating outputs */
@@ -99,7 +99,7 @@
 /****************************************
 In spinner mode, if the page has anything recalculating, show progress cursor
 *****************************************/
-[data-shiny-loading-indicator-mode="spinner"] {
+[data-shiny-busy-indicator-mode="spinner"] {
   /* If shiny is busy (say, due to a effect/observe), show a spinner in the top-right corner of the page */
   &.shiny-busy,
   &:has(.recalculating) {
@@ -113,7 +113,7 @@ In spinner mode, if the page has anything recalculating, show progress cursor
 /****************************************
 In cursor mode, if the page has anything recalculating, show progress cursor
 *****************************************/
-[data-shiny-loading-indicator-mode="cursor"] {
+[data-shiny-busy-indicator-mode="cursor"] {
   &.shiny-busy,
   &:has(.recalculating) {
     cursor: progress;
@@ -134,7 +134,7 @@ In cursor mode, if the page has anything recalculating, show progress cursor
 /****************************************
   Keyframe that powers most spinner types
 ****************************************/
-@keyframes shiny-loading-spinner-spin {
+@keyframes shiny-busy-spinner-spin {
   0% {
     scale: 1;
     rotate: 0deg;
@@ -145,8 +145,8 @@ In cursor mode, if the page has anything recalculating, show progress cursor
   }
 }
 
-/* For loading_spinners.settings(type="bounce") */
-@keyframes shiny-loading-spinner-bounce {
+/* For busy_indicators.spinner_options(type="bounce") */
+@keyframes shiny-busy-spinner-bounce {
   0% {
     animation-timing-function: cubic-bezier(0.33, 0, 0.66, 0.33);
     translate: 0 calc(var(--_shiny-spinner-size) * (5 / 24));

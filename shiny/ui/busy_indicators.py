@@ -8,11 +8,31 @@ __all__ = ("mode", "spinner_options")
 
 
 def mode(type: Literal["spinners", "spinner", "cursor", "none"] = "spinners") -> Tag:
+    """
+    Set the busy indicator mode for the Shiny app.
+
+    Parameters
+    ----------
+    type
+        The busy indicator mode to use. Options include:
+
+        * "spinners": Show a spinner overlay on each output when they are recalculating,
+           and a page-level spinner when the server is otherwise busy.
+        * "spinner": Show a page-level spinner whenever the server is busy.
+        * "cursor": Show a progress indicator on the mouse cursor whenever the server
+           is busy. On mobile, a page-level spinner is shown instead.
+        * "none": Do not show any busy indicators.
+
+    Returns
+    -------
+    A <script> tag.
+    """
+
     if type not in ("spinners", "spinner", "cursor", "none"):
-        raise ValueError(f"Invalid loading indicator mode: {type}")
+        raise ValueError(f"Invalid busy indicator mode: {type}")
 
     return tags.script(
-        f"$(function() {{ document.documentElement.dataset.shinyLoadingIndicatorMode = '{type}'; }});"
+        f"$(function() {{ document.documentElement.dataset.shinyBusyIndicatorMode = '{type}'; }});"
     )
 
 
@@ -25,13 +45,13 @@ def spinner_options(
     css_selector: str = ":root",
 ) -> Tag:
     """
-    Customize UI loading indicators applied to recalculating outputs.
+    Customize spinning busy indicators.
 
     Parameters
     ----------
 
     type
-        The type of  to use. Options include "tadpole", "disc", "dots",
+        The type of spinner to use. Options include "tadpole", "disc", "dots",
         "dot-track", and "bounce". Defaults to "tadpole".
     color
         The color of the spinner. This can be any valid CSS color. Defaults to the
@@ -73,7 +93,7 @@ def spinner_options(
         easing = "linear"
     elif type == "bounce":
         svg = "ball.svg"
-        animation = "shiny-loading-spinner-bounce"
+        animation = "shiny-busy-spinner-bounce"
         # Set speed variable to 0.8s if it hasnt been set by the user
         speed = speed or "0.8s"
     elif type is not None:

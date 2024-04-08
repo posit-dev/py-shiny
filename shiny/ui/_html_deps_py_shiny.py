@@ -3,7 +3,7 @@ from __future__ import annotations
 from htmltools import HTMLDependency
 
 from .. import __version__
-from . import loading_indicators
+from . import busy_indicators
 
 """
 HTML dependencies for internal dependencies such as dataframe or text area's autoresize.
@@ -55,13 +55,13 @@ def spin_dependency() -> HTMLDependency:
     )
 
 
-def loading_indicators_dependency() -> HTMLDependency:
+def busy_indicators_dependency() -> HTMLDependency:
     return HTMLDependency(
-        "shiny-loading-indicators",
+        "shiny-busy-indicators",
         __version__,
-        source={"package": "shiny", "subdir": "www/shared/py-shiny/loading-indicators"},
-        stylesheet={"href": "loading-indicators.css"},
+        source={"package": "shiny", "subdir": "www/shared/py-shiny/busy-indicators"},
+        stylesheet={"href": "busy-indicators.css"},
         all_files=True,
         # Default to spinners mode
-        head=loading_indicators.mode("spinners"),
+        head=busy_indicators.mode("spinners"),
     )
