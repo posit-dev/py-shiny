@@ -5,39 +5,60 @@
   output when it's recalculating and add a spinner to the `::after` pseudo-element.
 */
 
+/* "Built-in" spinner types */
+:root {
+  --_shiny-spinner-type-tadpole: url(tadpole-spinner.svg);
+  --_shiny-spinner-type-disc: url(disc-spinner.svg);
+  --_shiny-spinner-type-dots: url(dots-spinner.svg);
+  --_shiny-spinner-type-dot-track: url(dot-track-spinner.svg);
+  --_shiny-spinner-type-bounce: url(ball.svg);
+}
+
 /* A reusable mixin for "core" spinner styles */
 @mixin shiny-spinner-core {
-  /* Customizable spinner properties */
-  --_shiny-spinner-svg: var(--shiny-spinner-svg, url(tadpole-spinner.svg));
+  --_shiny-spinner-svg: var(--shiny-spinner-svg, var(--_shiny-spinner-type-tadpole));
   --_shiny-spinner-color: var(--shiny-spinner-color, var(--bs-primary, #007bc2));
   --_shiny-spinner-size: var(--shiny-spinner-size, 40px);
-  --_shiny-spinner-easing: var(--shiny-spinner-easing, ease-in-out);
+  --_shiny-spinner-easing: var(--shiny-spinner-easing, linear);
   --_shiny-spinner-speed: var(--shiny-spinner-speed, 2s);
-  --_shiny-spinner-delay: var(--shiny-spinner-delay, 0.25s);
+  --_shiny-spinner-delay: var(--shiny-spinner-delay, 0.3s);
   --_shiny-spinner-animation: var(--shiny-spinner-animation, shiny-busy-spinner-spin);
 
-  position: absolute; /* Position relative to the parent */
+  /* Apply the spinner type as a mask */
+  mask-image: var(--_shiny-spinner-svg);
+  mask-position: center;
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  -webkit-mask-image: var(--_shiny-spinner-svg);
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+
+  /* Color and sizing */
   background: var(--_shiny-spinner-color);
-  mask: var(--_shiny-spinner-svg) center/contain no-repeat;
-  -webkit-mask: var(--_shiny-spinner-svg) center/contain no-repeat;
+  position: absolute;
   width: var(--_shiny-spinner-size);
   height: var(--_shiny-spinner-size);
-  content: "";
 
-  scale: 0;
+  /* Animation */
   animation-name: var(--_shiny-spinner-animation);
   animation-duration: var(--_shiny-spinner-speed);
   animation-iteration-count: infinite;
   animation-timing-function: var(--_shiny-spinner-easing);
   animation-delay: var(--_shiny-spinner-delay);
+
+  content: "";
+  scale: 0;
   opacity: 1;
 }
 
+/* Output-level spinners */
 @mixin shiny-output-spinner {
   @include shiny-spinner-core;
   inset: calc(50% - var(--_shiny-spinner-size) / 2);
 }
 
+/* Page-level spinner */
 @mixin shiny-page-spinner {
   @include shiny-spinner-core;
   inset: 1rem 1rem auto auto;

@@ -87,7 +87,6 @@ app_ui = ui.page_sidebar(
     ),
     card_ui("e", "Ball", "bounce"),
     ui.output_ui("busy_mode_ui"),
-    ui.output_ui("some_text"),
     fillable=True,
     title="Busy indicators + extended tasks = ❤️",
 )
@@ -104,14 +103,6 @@ def server(input, output, session):
     card_server("c", length=input.length, simulate_all=input.simulate_all)
     card_server("d", length=input.length, simulate_all=input.simulate_all)
     card_server("e", length=input.length, simulate_all=input.simulate_all)
-
-    # @render.ui
-    # def some_text():
-    #    input.simulate_all()
-    #    time.sleep(input.length())
-    #    return ui.markdown(
-    #        "This app demonstrates the use of different loading spinners."
-    #    )
 
 
 app = App(app_ui, server)

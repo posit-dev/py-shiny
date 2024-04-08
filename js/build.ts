@@ -1,5 +1,4 @@
 import { BuildOptions, build } from "esbuild";
-import { copy } from "esbuild-plugin-copy";
 import { sassPlugin } from "esbuild-sass-plugin";
 import * as fs from "node:fs/promises";
 
@@ -80,17 +79,7 @@ const opts: Array<BuildOptions> = [
       "busy-indicators/busy-indicators": "busy-indicators/busy-indicators.scss",
     },
     loader: { ".svg": "dataurl" },
-    plugins: [
-      sassPlugin({ type: "css", sourceMap: false }),
-      copy({
-        resolveFrom: "cwd",
-        assets: {
-          from: ["./busy-indicators/*.svg"],
-          to: ["../shiny/www/shared/py-shiny/busy-indicators/"],
-        },
-        watch: true,
-      }),
-    ],
+    plugins: [sassPlugin({ type: "css", sourceMap: false })],
     metafile: true,
   },
 ];

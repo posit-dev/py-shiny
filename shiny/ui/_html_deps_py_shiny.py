@@ -61,8 +61,6 @@ def busy_indicators_dependency() -> HTMLDependency:
         __version__,
         source={"package": "shiny", "subdir": "www/shared/py-shiny/busy-indicators"},
         stylesheet={"href": "busy-indicators.css"},
-        # Allow css to load svg spinners via url()
-        all_files=True,
         head=TagList(
             # Default to spinners mode
             busy_indicators.mode("spinners"),
