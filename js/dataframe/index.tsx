@@ -31,8 +31,8 @@ import { Filter, useFilter } from "./filter";
 import type { BrowserCellSelection, SelectionModesProp } from "./selection";
 import {
   SelectionModes,
-  initRowSelectionModes,
-  useSelection,
+  initSelectionModes,
+  useRowSelection,
 } from "./selection";
 import { SortArrow } from "./sort-arrows";
 import css from "./styles.scss";
@@ -228,16 +228,52 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
 
   // ### Row selection ###############################################################
 
-  const rowSelectionModes = initRowSelectionModes(selectionModesProp);
+  const selectionModes = initSelectionModes(selectionModesProp);
 
-  const canSelect = !rowSelectionModes.is_none();
   const canMultiRowSelect =
-    rowSelectionModes.row !== SelectionModes._rowEnum.NONE;
+    selectionModes.row === SelectionModes._rowEnum.MULTIPLE;
 
-  const rowSelection = useSelection<string, HTMLTableRowElement>(
-    rowSelectionModes,
-    (el) => el.dataset.key!,
-    (key, offset) => {
+  // TODO barret implement cell selection and cell update!
+
+  const rectSelection = useRectSelection<
+    string,
+    [string, string],
+    HTMLTableCellElement
+  >({
+    selectionModes,
+    keysAccessor: (el) => {
+      const rowKey = el.parentElement?.dataset.key;
+      const colKey = el.dataset.key!;
+      return [rowKey!, colKey];
+    },
+    focusOffset: (keys, offset) => {
+      const rowModel = table.getSortedRowModel();
+      let index = rowModel.rows.findIndex((row) => row.id === keys[0]);
+      if (index < 0) {
+        return null;
+      }
+      index += offset;
+      if (index < 0 || index >= rowModel.rows.length) {
+        return null;
+      }
+      const targetKey = rowModel.rows[index].id;
+      rowVirtualizer.scrollToIndex(index);
+      setTimeout(() => {
+        const targetEl = containerRef.current?.querySelector(
+          `[data-key='${targetKey}']`
+        ) as HTMLElement | null;
+        targetEl?.focus();
+      }, 0);
+      return targetKey;
+    },
+  });
+
+  const rowSelection = useRowSelection<string, HTMLTableRowElement>({
+    selectionModes,
+    // TODO-barret; Use keyAccessor in Cell Traversal to get the cell key
+    keyAccessor: (el) => el.dataset.key!,
+    // TODO-barret; Use focusOffset in Cell Traversal to get the next cell key, not position!
+    focusOffset: (key, offset) => {
       const rowModel = table.getSortedRowModel();
       let index = rowModel.rows.findIndex((row) => row.id === key);
       if (index < 0) {
@@ -257,9 +293,9 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
       }, 0);
       return targetKey;
     },
-    (fromKey, toKey) =>
-      findKeysBetween(table.getSortedRowModel(), fromKey, toKey)
-  );
+    between: (fromKey, toKey) =>
+      findKeysBetween(table.getSortedRowModel(), fromKey, toKey),
+  });
 
   useEffect(() => {
     const handleMessage = (
@@ -273,9 +309,6 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
       if (cellSelection.type === "none") {
         rowSelection.clear();
         return;
-        // } else if (cellSelection.type === "all") {
-        //   rowSelection.setMultiple(rowData.map((_, i) => String(i)));
-        //   return;
       } else if (cellSelection.type === "row") {
         rowSelection.setMultiple(cellSelection.rows.map(String));
         return;
@@ -306,9 +339,9 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
     if (!id) return;
     const shinyId = `${id}_cell_selection`;
     let shinyValue: BrowserCellSelection | null = null;
-    if (rowSelectionModes.is_none()) {
+    if (selectionModes.isNone()) {
       shinyValue = null;
-    } else if (rowSelectionModes.row !== SelectionModes._rowEnum.NONE) {
+    } else if (selectionModes.row !== SelectionModes._rowEnum.NONE) {
       const rowSelectionKeys = rowSelection.keys().toList();
       // Do not sent `none` or `all` to the server as it is hard to utilize when we know the selection is row based
       // if (rowSelectionKeys.length === 0) {
@@ -320,12 +353,21 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
         type: "row",
         rows: rowSelectionKeys.map((key) => parseInt(key)).sort(),
       };
+    } else if (selectionModes.rect !== SelectionModes._rectEnum.NONE) {
+      if (selectionModes.rect === SelectionModes._rectEnum.REGION) {
+        throw new Error("Region selection not yet supported");
+      }
+      shinyValue = {
+        type: "rect",
+        rows: [],
+        cols: [],
+      };
     } else {
-      console.error("Unhandled row selection mode:", rowSelectionModes);
+      console.error("Unhandled row selection mode:", selectionModes);
     }
     Shiny.setInputValue!(shinyId, shinyValue);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, rowSelectionModes, [...rowSelection.keys()]]);
+  }, [id, selectionModes, [...rowSelection.keys()]]);
 
   // ### End row selection ############################################################
 
@@ -334,7 +376,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
   type TKey = typeof HTMLTableRowElement.prototype.dataset.key;
   type TElement = HTMLTableRowElement;
 
-  if (editCellsIsAllowed && canSelect) {
+  if (editCellsIsAllowed && selectionModes.canSelect()) {
     // TODO-barret; maybe listen for a double click?
     // Is is possible to rerender on double click independent of the row selection?
     console.error(

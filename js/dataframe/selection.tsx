@@ -7,8 +7,8 @@ import type { ValueOf } from "./types";
 type BrowserCellSelectionNone = { type: "none" };
 type BrowserCellSelectionRow = { type: "row"; rows: readonly number[] };
 type BrowserCellSelectionCol = { type: "col"; cols: readonly number[] };
-type BrowserCellSelectionRegion = {
-  type: "region";
+type BrowserCellSelectionRect = {
+  type: "rect";
   rows: readonly [number, number];
   cols: readonly [number, number];
 };
@@ -18,7 +18,7 @@ export type BrowserCellSelection =
   | BrowserCellSelectionNone
   | BrowserCellSelectionRow
   | BrowserCellSelectionCol
-  | BrowserCellSelectionRegion;
+  | BrowserCellSelectionRect;
 
 export interface SelectionSet<TKey, TElement extends HTMLElement> {
   has(key: TKey): boolean;
@@ -63,6 +63,8 @@ export class SelectionModes {
     CELL: SelectionModes._RECT_CELL,
   } as const;
 
+  static _types: "none" | "row" | "col" | "rect";
+
   row: ValueOf<typeof SelectionModes._rowEnum>;
   col: ValueOf<typeof SelectionModes._colEnum>;
   rect: ValueOf<typeof SelectionModes._rectEnum>;
@@ -90,7 +92,11 @@ export class SelectionModes {
     this.rect = rect;
   }
 
-  is_none(): boolean {
+  canSelect(): boolean {
+    return !this.isNone();
+  }
+
+  isNone(): boolean {
     return (
       this.row === SelectionModes._rowEnum.NONE &&
       this.col === SelectionModes._colEnum.NONE &&
@@ -99,7 +105,7 @@ export class SelectionModes {
   }
 }
 
-export function initRowSelectionModes(
+export function initSelectionModes(
   selectionModesOption: SelectionModesProp | undefined
 ): SelectionModes {
   // If no option was provided, default to multinative mode
@@ -113,12 +119,153 @@ export function initRowSelectionModes(
   });
 }
 
-export function useSelection<TKey, TElement extends HTMLElement>(
-  selectionModes: SelectionModes,
-  keyAccessor: (el: TElement) => TKey,
-  focusOffset: (start: TKey, offset: number) => TKey | null,
-  between?: (from: TKey, to: TKey) => ReadonlyArray<TKey>
-): SelectionSet<TKey, TElement> {
+export function useRectSelection<
+  TKey,
+  TKeys extends [TKey, TKey],
+  TElement extends HTMLElement
+>({
+  selectionModes,
+  keysAccessor,
+  focusOffset,
+  between,
+}: {
+  selectionModes: SelectionModes;
+  keysAccessor: (el: TElement) => TKeys;
+  focusOffset: (start: TKeys, offsets: [number, number]) => TKeys | null;
+  between?: (from: TKeys, to: TKeys) => ReadonlyArray<TKeys>;
+}): SelectionSet<TKeys, TElement> {
+  const [selectedKeys, setSelectedKeys] = useState<ImmutableSet<TKeys>>(
+    ImmutableSet.empty()
+  );
+
+  // The anchor is the item that was most recently selected with a click or ctrl-click,
+  // and is used to determine the "other end" of a shift-click selection operation.
+  const [anchor, setAnchor] = useState<TKeys | null>(null);
+
+  const onMouseDown = (event: React.MouseEvent<TElement, MouseEvent>): void => {
+    if (selectionModes.rect == SelectionModes._rectEnum.NONE) return;
+
+    const el = event.currentTarget as TElement;
+    const keys = keysAccessor(el);
+
+    const result = performRectMouseDownAction<TKey, TKeys, TElement>({
+      selectionModes,
+      between,
+      selectedKeys,
+      event,
+      keys,
+      anchor,
+    });
+    if (result) {
+      setSelectedKeys(result.selection);
+      if (result.anchor) {
+        setAnchor(keys);
+        el.focus();
+      }
+      event.preventDefault();
+    }
+  };
+
+  const onKeyDown = (event: React.KeyboardEvent<TElement>): void => {
+    if (selectionModes.rect == SelectionModes._rectEnum.NONE) return;
+
+    const el = event.currentTarget as TElement;
+    const keys = keysAccessor(el);
+    const selected = selectedKeys.has(keys);
+
+    if (selectionModes.rect === SelectionModes._rectEnum.CELL) {
+      switch (event.key) {
+        case " ":
+        case "Enter":
+          if (selectedKeys.has(keys)) {
+            setSelectedKeys(ImmutableSet.empty());
+          } else {
+            setSelectedKeys(ImmutableSet.just(keys));
+          }
+          event.preventDefault();
+          break;
+
+        case "ArrowUp":
+        case "ArrowDown":
+        case "ArrowLeft":
+        case "ArrowRight":
+          {
+            const offsetLR =
+              event.key === "ArrowLeft"
+                ? -1
+                : event.key === "ArrowRight"
+                ? 1
+                : 0;
+            const offsetUD =
+              event.key === "ArrowUp" ? -1 : event.key === "ArrowDown" ? 1 : 0;
+            const targetKeys = focusOffset(keys, [offsetLR, offsetUD]);
+            if (targetKeys) {
+              event.preventDefault();
+              if (selected) {
+                setSelectedKeys(ImmutableSet.just(targetKeys));
+              }
+            }
+          }
+          break;
+      }
+    } else if (selectionModes.rect === SelectionModes._rectEnum.REGION) {
+      if (event.key === " " || event.key === "Enter") {
+        setSelectedKeys(selectedKeys.toggle(keys));
+        event.preventDefault();
+      } else if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+        if (focusOffset(keys, [0, event.key === "ArrowUp" ? -1 : 1])) {
+          event.preventDefault();
+        }
+      }
+    } else {
+      throw new Error(
+        "Unimplemented rect selection key action: " + selectionModes.rect
+      );
+    }
+  };
+
+  return {
+    has(key: TKeys): boolean {
+      return selectedKeys.has(key);
+    },
+
+    set(key: TKeys, selected: boolean) {
+      if (selected) {
+        setSelectedKeys(selectedKeys.add(key));
+      } else {
+        setSelectedKeys(selectedKeys.delete(key));
+      }
+    },
+
+    setMultiple(key_arr: TKeys[]) {
+      setSelectedKeys(ImmutableSet.just(...key_arr));
+    },
+
+    clear() {
+      setSelectedKeys(selectedKeys.clear());
+    },
+
+    keys() {
+      return selectedKeys;
+    },
+
+    itemHandlers() {
+      return { onMouseDown, onKeyDown };
+    },
+  };
+}
+
+export function useRowSelection<TKey, TElement extends HTMLElement>({
+  selectionModes,
+  keyAccessor,
+  focusOffset,
+  between,
+}: {
+  selectionModes: SelectionModes;
+  keyAccessor: (el: TElement) => TKey;
+  focusOffset: (start: TKey, offset: number) => TKey | null;
+  between?: (from: TKey, to: TKey) => ReadonlyArray<TKey>;
+}): SelectionSet<TKey, TElement> {
   const [selectedKeys, setSelectedKeys] = useState<ImmutableSet<TKey>>(
     ImmutableSet.empty()
   );
@@ -128,21 +275,19 @@ export function useSelection<TKey, TElement extends HTMLElement>(
   const [anchor, setAnchor] = useState<TKey | null>(null);
 
   const onMouseDown = (event: React.MouseEvent<TElement, MouseEvent>): void => {
-    if (selectionModes.is_none()) {
-      return;
-    }
+    if (selectionModes.row === SelectionModes._rowEnum.NONE) return;
 
     const el = event.currentTarget as TElement;
     const key = keyAccessor(el);
 
-    const result = performMouseDownAction<TKey, TElement>(
+    const result = performRowMouseDownAction<TKey, TElement>({
       selectionModes,
       between,
       selectedKeys,
       event,
       key,
-      anchor
-    );
+      anchor,
+    });
     if (result) {
       setSelectedKeys(result.selection);
       if (result.anchor) {
@@ -154,9 +299,7 @@ export function useSelection<TKey, TElement extends HTMLElement>(
   };
 
   const onKeyDown = (event: React.KeyboardEvent<TElement>): void => {
-    if (selectionModes.is_none()) {
-      return;
-    }
+    if (selectionModes.row === SelectionModes._rowEnum.NONE) return;
 
     const el = event.currentTarget as TElement;
     const key = keyAccessor(el);
@@ -188,6 +331,10 @@ export function useSelection<TKey, TElement extends HTMLElement>(
           event.preventDefault();
         }
       }
+    } else {
+      throw new Error(
+        "Unimplemented row selection key action: " + selectionModes.row
+      );
     }
   };
 
@@ -237,14 +384,25 @@ const isMac = /^mac/i.test(
   window.navigator.userAgentData?.platform ?? window.navigator.platform
 );
 
-function performMouseDownAction<TKey, TElement>(
-  selectionModes: SelectionModes,
-  between: ((from: TKey, to: TKey) => readonly TKey[]) | undefined,
-  selectedKeys: ImmutableSet<TKey>,
-  event: React.MouseEvent<TElement, MouseEvent>,
-  key: TKey,
-  anchor: TKey | null
-): { selection: ImmutableSet<TKey>; anchor?: true } | null {
+function performRectMouseDownAction<
+  TKey,
+  TKeys extends [TKey, TKey],
+  TElement
+>({
+  selectionModes,
+  between,
+  selectedKeys,
+  event,
+  keys,
+  anchor,
+}: {
+  selectionModes: SelectionModes;
+  between: ((from: TKeys, to: TKeys) => readonly TKeys[]) | undefined;
+  selectedKeys: ImmutableSet<TKeys>;
+  event: React.MouseEvent<TElement, MouseEvent>;
+  keys: TKeys;
+  anchor: TKeys | null;
+}): { selection: ImmutableSet<TKeys>; anchor?: true } | null {
   const { shiftKey, altKey } = event;
   const ctrlKey = isMac ? event.metaKey : event.ctrlKey;
   const metaKey = isMac ? event.ctrlKey : event.metaKey;
@@ -253,9 +411,76 @@ function performMouseDownAction<TKey, TElement>(
     return null;
   }
 
-  if (selectionModes.row === SelectionModes._rowEnum.NONE) {
+  if (selectionModes.rect === SelectionModes._rectEnum.NONE) return null;
+
+  if (selectionModes.rect === SelectionModes._rectEnum.CELL) {
+    if (ctrlKey && !shiftKey) {
+      // Ctrl-click is like simple click, except it removes selection if an item is
+      // already selected
+      if (selectedKeys.has(keys)) {
+        return { selection: ImmutableSet.empty(), anchor: true };
+      } else {
+        return { selection: ImmutableSet.just(keys), anchor: true };
+      }
+    } else {
+      // Simple click sets selection, always
+      return { selection: ImmutableSet.just(keys), anchor: true };
+    }
+  } else if (selectionModes.rect === SelectionModes._rectEnum.REGION) {
+    // throw new Error("Region selection not implemented");
+    // if (shiftKey && ctrlKey) {
+    //   // Ctrl-Shift-click: Add anchor row through current row to selection
+    //   if (anchor !== null && between) {
+    //     const toSelect = between(anchor, keys);
+    //     return { selection: selectedKeys.add(...toSelect) };
+    //   }
+    // } else if (ctrlKey) {
+    //   // Ctrl-click: toggle the current row and make it anchor
+    //   return { selection: selectedKeys.toggle(keys), anchor: true };
+    // } else
+    if (shiftKey) {
+      // Shift-click: replace selection with anchor row through current row
+      if (anchor !== null && between) {
+        const toSelect = between(anchor, keys);
+        return { selection: ImmutableSet.just(...toSelect) };
+      } else {
+        return null;
+      }
+    } else {
+      // Regular click: Select the current row and make it anchor
+      return { selection: ImmutableSet.just(keys), anchor: true };
+    }
+  } else {
+    throw new Error("Invalid rect selection mode: " + selectionModes.rect);
+  }
+}
+
+function performRowMouseDownAction<TKey, TElement>({
+  selectionModes,
+  between,
+  selectedKeys,
+  event,
+  key,
+  anchor,
+}: {
+  selectionModes: SelectionModes;
+  between: ((from: TKey, to: TKey) => readonly TKey[]) | undefined;
+  selectedKeys: ImmutableSet<TKey>;
+  event: React.MouseEvent<TElement, MouseEvent>;
+  key: TKey;
+  anchor: TKey | null;
+}): { selection: ImmutableSet<TKey>; anchor?: true } | null {
+  const { shiftKey, altKey } = event;
+  const ctrlKey = isMac ? event.metaKey : event.ctrlKey;
+  const metaKey = isMac ? event.ctrlKey : event.metaKey;
+
+  if (metaKey || altKey) {
     return null;
-  } else if (selectionModes.row === SelectionModes._rowEnum.SINGLE) {
+  }
+
+  if (selectionModes.row === SelectionModes._rowEnum.NONE) return null;
+
+  if (selectionModes.row === SelectionModes._rowEnum.SINGLE) {
     if (ctrlKey && !shiftKey) {
       // Ctrl-click is like simple click, except it removes selection if an item is
       // already selected
@@ -290,7 +515,10 @@ function performMouseDownAction<TKey, TElement>(
       return { selection: ImmutableSet.just(key), anchor: true };
     }
   } else {
-    throw new Error(`Unsupported row selection mode: ${selectionModes.row}`);
+    throw new Error(
+      "Unimplemented row selection click action: " + selectionModes.row
+    );
   }
+
   return null;
 }

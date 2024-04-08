@@ -95,9 +95,9 @@ class SelectionModes:
             self.col = "multiple"
 
         if "cell" in selection_mode_set:
-            raise RuntimeError(
-                "Region based cell selections are not currently supported."
-            )
+            # raise RuntimeError(
+            #     "Region based cell selections are not currently supported."
+            # )
             self.rect = "cell"
         elif "region" in selection_mode_set:
             raise RuntimeError(
@@ -260,24 +260,17 @@ class BrowserCellSelectionCol(TypedDict):
     cols: tuple[int, ...]
 
 
-class BrowserCellSelectionRegion(TypedDict):
-    type: Literal["region"]
+class BrowserCellSelectionRect(TypedDict):
+    type: Literal["rect"]
     rows: tuple[int, int]
     cols: tuple[int, int]
-
-
-# class BrowserCellSelectionCell(TypedDict):
-#     type: Literal["cell"]
-#     rows: tuple[int]
-#     cols: tuple[int]
 
 
 # For receiving selection info from JS:
 BrowserCellSelection = Union[
     BrowserCellSelectionRow,
     BrowserCellSelectionCol,
-    # BrowserCellSelectionCell,
-    BrowserCellSelectionRegion,
+    BrowserCellSelectionRect,
     BrowserCellSelectionNone,
 ]
 """
@@ -286,8 +279,7 @@ A single selection set sent to/from the browser.
 - `"none"`: No cells are selected
 - `"row"`: A set of selected rows
 - `"col"`: A set of selected columns
-- `"region"`: A single rectangular region that is selected
-- `"cell"`: A single cell that is selected
+- `"rect"`: A single rectangular region that is selected
 """
 
 # ####################
@@ -377,7 +369,7 @@ def as_browser_cell_selection(
         if selection_modes._has_rect():
             if selection_modes.rect == "region":
                 return {
-                    "type": "region",
+                    "type": "rect",
                     "rows": (0, row_len - 1),
                     "cols": (0, col_len - 1),
                 }
@@ -417,7 +409,7 @@ def as_browser_cell_selection(
         if x["type"] == "col":
             assert col_value is not None
             return {"type": "col", "cols": col_value}
-        # if x["type"] == "cell":
+        # if x["type"] == "rec":
         #     if not selection_modes._has_rect():
         #         raise ValueError(
         #             "Current selection modes do not support cell based selection. "
@@ -428,7 +420,7 @@ def as_browser_cell_selection(
         #     assert len(row_value) == 1
         #     assert len(col_value) == 1
         #     return {"type": "cell", "rows": row_value, "cols": col_value}
-        if x["type"] == "region":
+        if x["type"] == "rect":
             if not selection_modes._has_rect():
                 raise ValueError(
                     "Current selection modes do not support cell based selection. "
@@ -440,7 +432,7 @@ def as_browser_cell_selection(
             assert len(col_value) == 2
             assert row_value[0] <= row_value[1]
             assert col_value[0] <= col_value[1]
-            return {"type": "region", "rows": row_value, "cols": col_value}
+            return {"type": "rect", "rows": row_value, "cols": col_value}
 
         raise ValueError(f"Unhandled BrowserCellSelection['type']: {x['type']}")
 
@@ -466,20 +458,24 @@ def as_browser_cell_selection(
             # row_value is not None
             # col_value is not None
 
-            # if len(row_value) == 1 and len(col_value) == 1:
-            #     # Cell!
-            #     return as_browser_cell_selection(
-            #         {"type": "cell", "rows": row_value, "cols": col_value},
-            #         selection_modes=selection_modes,
-            #     )
-            # else:
-            # Region!
-            assert len(row_value) == 2
-            assert len(col_value) == 2
-            return as_browser_cell_selection(
-                {"type": "region", "rows": row_value, "cols": col_value},
-                selection_modes=selection_modes,
-            )
+            if len(row_value) == 1 and len(col_value) == 1:
+                # Cell!
+                return as_browser_cell_selection(
+                    {
+                        "type": "rect",
+                        "rows": (row_value[0], row_value[0]),
+                        "cols": (col_value[0], col_value[0]),
+                    },
+                    selection_modes=selection_modes,
+                )
+            else:
+                # Region!
+                assert len(row_value) == 2
+                assert len(col_value) == 2
+                return as_browser_cell_selection(
+                    {"type": "rect", "rows": row_value, "cols": col_value},
+                    selection_modes=selection_modes,
+                )
 
 
 RowSelectionModeDeprecated = Literal["single", "multiple", "none", "deprecated"]
