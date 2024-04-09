@@ -14,7 +14,21 @@ df = penguins
 df = df.head(5)
 
 for i in range(1, 5):
-    df.iloc[i, 1] = ui.tags.strong(ui.tags.em(str(df.iloc[i, 1]))).get_html_string()
+    df.iloc[i, 1] = ui.HTML(
+        str(
+            ui.tags.strong(
+                ui.tags.em(
+                    str(
+                        df.iloc[i, 1],
+                    )
+                )
+            )
+        )
+    )
+
+# from shiny.render._data_frame_utils._datagridtable import serialize_numpy_dtypes
+
+# print(serialize_numpy_dtypes(df))
 
 
 MOD_ID = "testing"
@@ -47,11 +61,18 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
     @render.data_frame
     def summary_data():
         # return df
-        return render.DataGrid(df, selection_mode="none", editable=True)
-        return render.DataTable(df, selection_mode="none", editable=True)
+        return render.DataGrid(
+            df,
+            selection_mode="none",
+            editable=True,
+            html_columns=[1],
+        )
+        # return render.DataTable(df, selection_mode="none", editable=True)
         # return render.DataGrid(df, selection_mode="rows", editable=True)
         # return render.DataTable(df, selection_mode="rows", editable=True)
-        # return render.DataGrid(df, selection_mode="rows", editable=False)
+        return render.DataGrid(
+            df, selection_mode="rows", editable=False, html_columns=[1]
+        )
         # return render.DataTable(df, selection_mode="rows", editable=False)
 
     # from shiny import reactive
@@ -61,11 +82,44 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
     #     print(summary_data.data_patched())
     #     print(summary_data.cell_patches())
 
+    from shinywidgets import render_widget
+
+    @render_widget
+    def country_detail_pop():
+        import plotly.express as px
+
+        return px.line(
+            px.data.gapminder(),
+            x="year",
+            y="lifeExp",
+            color="country",
+            title="Population Over Time",
+        )
+
+    # x = "<em>Barret</em>"
+
+    # y = "<em>Barret</em>"
+    # html_columns = ["y"]
+
+    # z = ui.HTML("<em>Barret</em>")
+    # # z is HTML!
+
+    # TODO-barret; Maintain pre-processed value and use it within editing
+    # TODO-barret; Do not allow editing of the HTML cells
+
     @summary_data.set_patch_fn
-    async def upgrade_patch(
+    def upgrade_patch(
         *,
         patch: CellPatch,
     ):
+        from shinywidgets import output_widget
+
+        if len(summary_data.cell_patches()) == 0:
+            return ui.card(output_widget("country_detail_pop"), height="400px")
+
+        import time
+
+        time.sleep(2)
         if len(summary_data.cell_patches()) > 3:
             import random
 
@@ -76,7 +130,32 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
             else:
                 raise RuntimeError("Barret testing!")
 
-        return "demo_" + patch["value"]
+        val = ui.HTML(f"demo_{patch['value']}")
+        # return val
+
+        from htmltools import HTMLDependency, TagList
+
+        print(str(len(summary_data.cell_patches())))
+
+        import random
+
+        return TagList(
+            HTMLDependency(
+                "barret" + "".join(random.choices("0123456789", k=5)),
+                version="1",
+                head=f"""
+                <script>console.log("patching: {val}")</script>
+                """,
+            ),
+            val,
+        )
+
+        return ui.HTML(
+            f"""
+            <script>console.log("patching: {patch['value']}")</script>
+            demo_{patch["value"]}
+            """
+        )
 
     # @reactive.effect
     # def _():

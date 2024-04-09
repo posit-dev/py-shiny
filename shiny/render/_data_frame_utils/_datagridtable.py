@@ -2,6 +2,7 @@ from __future__ import annotations
 
 # TODO-barret-future; make DataTable and DataGrid generic? By currently accepting `object`, it is difficult to capture the generic type of the data.
 import abc
+import inspect
 import json
 from typing import (
     TYPE_CHECKING,
@@ -14,7 +15,12 @@ from typing import (
     runtime_checkable,
 )
 
+from htmltools import HTML, MetadataNode, Tag, Tagifiable, TagList, TagNode
+
 from ..._docstring import add_example, no_example
+from ..._typing_extensions import TypedDict
+from ...session import Session
+from ...session._utils import RenderedDeps, get_current_session
 from ...types import Jsonifiable
 from ._selection import (
     RowSelectionModeDeprecated,
@@ -96,6 +102,7 @@ class DataGrid(AbstractTabularData):
         If `True`, allows the user to edit the cells in the grid. When a cell is edited,
         the new value is sent to the server for processing. The server can then return
         a new value for the cell, which will be displayed in the grid.
+    html_columns
     selection_mode
         Single string or a `set`/`list`/`tuple` of string values to define possible ways
         to select data within the data frame.
@@ -132,6 +139,7 @@ class DataGrid(AbstractTabularData):
     filters: bool
     editable: bool
     selection_modes: SelectionModes
+    html_columns: tuple[int, ...] | Literal["auto"]
 
     def __init__(
         self,
@@ -143,6 +151,7 @@ class DataGrid(AbstractTabularData):
         filters: bool = False,
         editable: bool = False,
         selection_mode: SelectionModeInput = "none",
+        html_columns: bool | int | list[int] | tuple[int, ...] = False,
         row_selection_mode: RowSelectionModeDeprecated = "deprecated",
     ):
 
@@ -162,19 +171,50 @@ class DataGrid(AbstractTabularData):
             editable=self.editable,
             row_selection_mode=row_selection_mode,
         )
+        self.html_columns = as_html_columns(html_columns, self.data)
 
     def to_payload(self) -> dict[str, Jsonifiable]:
-        res = serialize_pandas_df(self.data)
+        res, html_columns = serialize_pandas_df(
+            self.data, html_columns=self.html_columns
+        )
         res["options"] = dict(
             width=self.width,
             height=self.height,
             summary=self.summary,
             filters=self.filters,
             editable=self.editable,
+            htmlColumns=html_columns,
             style="grid",
             fill=self.height is None,
         )
         return res
+
+
+def as_html_columns(
+    html_columns: Literal["auto"] | bool | int | list[int] | tuple[int, ...],
+    data: pd.DataFrame,
+) -> tuple[int, ...]:
+    if html_columns is False:
+        return tuple[int]([])
+
+    if html_columns is True:
+        return tuple(range(len(data.columns)))
+
+    if isinstance(html_columns, int):
+        return (html_columns,)
+
+    if isinstance(html_columns, (list, tuple)):
+
+        for col in html_columns:
+            if not isinstance(col, int):
+                raise TypeError(
+                    f"`html_columns=` expected an int or a list/tuple of ints, but found '{type(col)}'."
+                )
+        return tuple(html_columns)
+
+    raise TypeError(
+        f"The `html_columns=` expected a bool, int, or a list/tuple of ints, but found '{type(html_columns)}'."
+    )
 
 
 @no_example()
@@ -246,6 +286,7 @@ class DataTable(AbstractTabularData):
     summary: bool | str
     filters: bool
     selection_modes: SelectionModes
+    html_columns: tuple[int, ...] | Literal["auto"]
 
     def __init__(
         self,
@@ -257,6 +298,9 @@ class DataTable(AbstractTabularData):
         filters: bool = False,
         editable: bool = False,
         selection_mode: SelectionModeInput = "none",
+        html_columns: (
+            Literal["auto"] | bool | int | list[int] | tuple[int, ...]
+        ) = False,
         row_selection_mode: Literal["deprecated"] = "deprecated",
     ):
 
@@ -276,21 +320,30 @@ class DataTable(AbstractTabularData):
             editable=self.editable,
             row_selection_mode=row_selection_mode,
         )
+        self.html_columns = as_html_columns(html_columns, self.data)
 
     def to_payload(self) -> dict[str, Jsonifiable]:
-        res = serialize_pandas_df(self.data)
+        res, html_columns = serialize_pandas_df(
+            self.data, html_columns=self.html_columns
+        )
         res["options"] = dict(
             width=self.width,
             height=self.height,
             summary=self.summary,
             filters=self.filters,
             editable=self.editable,
+            htmlColumns=html_columns,
             style="table",
         )
         return res
 
 
-def serialize_pandas_df(df: "pd.DataFrame") -> dict[str, Any]:
+def serialize_pandas_df(
+    df: "pd.DataFrame",
+    *,
+    html_columns: tuple[int, ...] | Literal["auto"],
+) -> tuple[dict[str, Any], tuple[int, ...]]:
+
     columns = df.columns.tolist()
     columns_set = set(columns)
     if len(columns_set) != len(columns):
@@ -313,16 +366,59 @@ def serialize_pandas_df(df: "pd.DataFrame") -> dict[str, Any]:
     #             " This is not supported by the data_frame renderer."
     #         )
 
+    # TODO-barret; Don't drop HTMLDeps here!
+    # for each html column, process deps on each cell?
+    # __json__()
+
+    session = get_current_session()
+
+    if session is not None:
+        print("Session!")
+
+        def handle_html(x: Any) -> str | float | bool | list[Any] | dict[Any, Any]:
+            return wrap_shiny_html(x, session=session)
+
+    else:
+
+        def handle_html(x: Any) -> str | float | bool | list[Any] | dict[Any, Any]:
+            return x
+
     res = json.loads(
         # {index: [index], columns: [columns], data: [values]}
-        df.to_json(None, orient="split")  # pyright: ignore[reportUnknownMemberType]
+        # TODO-barret; Use a handler for html columns?
+        df.to_json(  # pyright: ignore[reportUnknownMemberType]
+            None, orient="split", default_handler=handle_html
+        )
     )
+
+    # TODO-barret; Actually use the html_columns value; If it is "auto", we need to check the columns for any html objects; If the column is flagged, upgrade all cells in that column to be html based
 
     res["typeHints"] = serialize_numpy_dtypes(df)
 
+    if False and html_columns == "auto":
+        html_columns_set = set[int]()
+        # ret_html_columns: list[int] = []
+        for i, typeHint in zip(range(len(columns)), res["typeHints"]):
+            if typeHint["type"] == "unknown":
+                # Go through column values and check if they contain py-htmltools objects
+                for val in df[
+                    columns[i]
+                ].to_list():  # pyright: ignore[reportUnknownVariableType]
+                    if isinstance(val, (Tag, TagList)):
+                        # If they do, mark the column and extra htmldeps
+                        html_columns_set.add(i)
+
+                        ret_html_columns.append(i)
+
+        ret_html_columns = tuple(
+            i for i, col in enumerate(columns) if df[col].dtype.name == "object"
+        )
+    else:
+        ret_html_columns = html_columns
+
     # print(json.dumps(res, indent=4))
 
-    return res
+    return (res, ret_html_columns)
 
 
 @runtime_checkable
@@ -355,3 +451,31 @@ def cast_to_pandas(
         + f" '{str(type(x))}'. Use either a pandas.DataFrame, or an object"
         " that has a .to_pandas() method."
     )
+
+
+class CellHtml(TypedDict):
+    isShinyHtml: bool
+    obj: RenderedDeps
+
+
+# T = TypeVar("T", bound=object)
+
+# TODO-barret; Only allowed to call `wrap_shiny_html` if the column has been marked as html OR the html_columns="auto"
+# TODO-barret; Hitting tab/shift-tab (enter/shift-enter) on a cell at a boundry should submit the value and refocus itself
+
+
+@overload
+def wrap_shiny_html(x: TagNode, *, session: Session) -> CellHtml: ...
+@overload
+def wrap_shiny_html(x: Jsonifiable, *, session: Session) -> Jsonifiable: ...
+def wrap_shiny_html(
+    x: Jsonifiable | TagNode, *, session: Session
+) -> Jsonifiable | CellHtml:
+    print("\n\n")
+    print("wrap_shiny_html", x)
+    if not isinstance(x, (HTML, Tagifiable)):
+        if isinstance(x, (str, int, float, bool, list, dict, tuple)):
+            return x
+    print("wrap_shiny_html2", x)
+    html_and_deps = session._process_ui(x)
+    return {"isShinyHtml": True, "obj": html_and_deps}

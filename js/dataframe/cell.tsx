@@ -1,6 +1,7 @@
 import { RowModel, flexRender } from "@tanstack/react-table";
 import { VirtualItem } from "@tanstack/react-virtual";
 import { Cell } from "@tanstack/table-core";
+import dompurify from "dompurify";
 import React, {
   FC,
   ChangeEvent as ReactChangeEvent,
@@ -15,6 +16,8 @@ import React, {
 import { CellEdit, SetCellEditMapAtLoc } from "./cell-edit-map";
 import { updateCellsData } from "./data-update";
 import type { PatchInfo } from "./types";
+
+type HtmlDep = any;
 
 // States
 // # √ Ready
@@ -41,6 +44,17 @@ const CellStateClassEnum = {
   Ready: undefined,
 } as const;
 export type CellState = keyof typeof CellStateEnum;
+
+const isShinyHtmlFn = (
+  x: any
+): x is { isShinyHtml: true; obj: { deps?: HtmlDep[]; html: string } } => {
+  return (
+    x !== null &&
+    typeof x !== "string" &&
+    Object.prototype.hasOwnProperty.call(x, "isShinyHtml") &&
+    x.isShinyHtml === true
+  );
+};
 
 interface TableBodyCellProps {
   key: string;
@@ -72,16 +86,42 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
   setData,
   setCellEditMapAtLoc,
 }) => {
-  const initialValue = cell.getValue();
+  const initialValue = cell.getValue() as
+    | string
+    | { isShinyHtml: true; obj: { deps?: HtmlDep[]; html: string } }
+    | null;
+
+  const isHtmlColumn = cell.column.columnDef.meta!.isHtmlColumn;
+
+  // const isShinyHtml: boolean =
+  //   initialValue !== null &&
+  //   typeof initialValue !== "string" &&
+  //   Object.prototype.hasOwnProperty.call(initialValue, "isShinyHtml") &&
+  //   initialValue.isShinyHtml === true;
+  // const valueHasHtmlKey =
+  //   isHtmlColumn &&
+  //   typeof initialValue !== "string" &&
+  //   Object.prototype.hasOwnProperty.call(initialValue, "html");
 
   const cellValue = cellEditInfo?.value ?? initialValue;
+  const getCellValueText = useCallback(() => {
+    if (isShinyHtmlFn(cellValue)) {
+      return cellValue.obj.html;
+    }
+    return cellValue as string;
+  }, [cellValue]);
+
   const cellState = cellEditInfo?.state ?? CellStateEnum.Ready;
   const errorTitle = cellEditInfo?.errorTitle;
   // Listen to boolean value of cellEditInfo. This allows for the cell state to be restored if esc is hit
   const isEditing = cellEditInfo?.isEditing ?? false;
-  const editValue = cellEditInfo?.editValue ?? initialValue;
+  const editValue = cellEditInfo?.editValue ?? getCellValueText();
 
+  // if (isEditing) console.log("editValue", editValue, rowIndex, columnIndex);
+
+  const tdRef = useRef<HTMLTableCellElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  // editCellsIsAllowed = editCellsIsAllowed && !isHtmlColumn;
 
   // Keyboard navigation:
   // * When editing a cell:
@@ -203,7 +243,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     });
 
     // Only update if the string form of the value has changed
-    if (`${initialValue}` === `${editValue}`) {
+    if (`${getCellValueText()}` === `${editValue}`) {
       // Reset all edit info
       resetEditing();
       // Set state to prior cell state
@@ -220,6 +260,11 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     setCellEditMapAtLoc(rowIndex, columnIndex, (obj_draft) => {
       obj_draft.state = CellStateEnum.EditSaving;
     });
+    // Replace cell content to remove any HTML based cell values
+    // Can not use window.Shiny.renderContentAsync(tdRef.current, null) as the method is async;
+    // tdRef.current?.replaceChildren("");
+    // // Reset any shiny bindings that have occurred in cell
+    // window.Shiny.bindAll();
 
     // Update the data!
     // updateCellsData updates the underlying data via `setData` and `setCellEditMapAtLoc`
@@ -245,7 +290,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     setCellEditMapAtLoc,
     rowIndex,
     columnIndex,
-    initialValue,
+    getCellValueText,
     editValue,
     resetEditing,
     patchInfo,
@@ -332,11 +377,13 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
   let onClick:
     | ((e: ReactMouseEvent<HTMLTableCellElement>) => void)
     | undefined = undefined;
+  // let dangerousContent: { __html: string } | undefined = undefined;
   let content: ReactElement | ReturnType<typeof flexRender> | undefined =
     undefined;
   const cellTitle = errorTitle;
   const tableCellClass =
     CellStateClassEnum[isEditing ? CellStateEnum.Editing : cellState];
+  let attemptRenderAsync = false;
 
   let editContent: ReactElement | null = null;
   if (cellState === CellStateEnum.EditSaving) {
@@ -346,7 +393,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     if (isEditing) {
       editContent = (
         <textarea
-          value={editValue as string}
+          value={String(editValue)}
           onChange={onChange}
           // onBlur={onBlur}
           onFocus={onFocus}
@@ -369,25 +416,73 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
           // Set this cell to editing mode
           setCellEditMapAtLoc(rowIndex, columnIndex, (obj_draft) => {
             obj_draft.isEditing = true;
-            obj_draft.editValue = cellValue as string;
+            obj_draft.editValue = getCellValueText() as string;
           });
         };
       }
+      if (isHtmlColumn) {
+        // // console.log(rowIndex, columnIndex, isEditing, editValue);
+        // // window.Shiny.renderContentAsync();
+        // const dangerousScript = `<script>console.log(1, this, this.parent)</script>`;
+        // // dangerousContent = { __html: dompurify.sanitize(cellValue as string) };
+        // dangerousContent = { __html: dangerousScript };
+        // attemptRenderAsync = true
+      }
     }
-    content = flexRender(cell.column.columnDef.cell, cell.getContext());
+    if (!isShinyHtmlFn(cellValue)) {
+      content = flexRender(cell.column.columnDef.cell, cell.getContext());
+    } else {
+      attemptRenderAsync = true;
+    }
   }
 
-  return (
+  // TODO-barret; when the tdRef is visible when we should display dangerous content, run html script to display the UI!
+  useEffect(() => {
+    // console.log("useEffect", rowIndex, columnIndex, isShinyHtml, content);
+    if (!tdRef.current) return;
+    if (!attemptRenderAsync) return;
+    if (!isShinyHtmlFn(cellValue)) return;
+    // if (isEditing) return;
+
+    // if (!isHtmlColumn) return;
+    // if (!isShinyHtmlFn(initialValue)) return;
+    // // Safety hatch; Do not render if content is already set
+    // if (content) return;
+
+    // console.log(initialValue, rowIndex, columnIndex);
+    // console.log("renderContentAsync", rowIndex, columnIndex, cellValue.obj);
+
+    const cellValueObjDeepCopy = JSON.parse(JSON.stringify(cellValue.obj));
+
+    window.Shiny.renderContentAsync(tdRef.current, cellValueObjDeepCopy);
+
+    const curTdRef = tdRef.current;
+
+    return () => {
+      // console.log("renderContentAsync removed!", rowIndex, columnIndex);
+      curTdRef.replaceChildren("");
+    };
+  }, [tdRef, cellValue, rowIndex, columnIndex, attemptRenderAsync]);
+
+  // if (rowIndex === 1 && columnIndex === 1) {
+  //   console.log("TableBodyCell", rowIndex, columnIndex, editContent, content);
+  // }
+
+  const ret = (
     <td
-      id={cell.id}
+      // key={cell.id}
+      ref={tdRef}
       onClick={onClick}
       title={cellTitle}
       className={tableCellClass}
+      // dangerouslySetInnerHTML={dangerousContent}
     >
       {editContent}
       {content}
     </td>
   );
+
+  return ret;
 };
 
 // // TODO-barret; Consider using https://www.npmjs.com/package/react-contenteditable !
@@ -409,3 +504,24 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
 // td attrs for below
 // contentEditable={cellContentEditable}
 // onInput={onInput}
+
+// const DangerouseContent: FC<{ fn: () => void }> = ({ fn }) => {
+//   const dangerousRef = useRef<HTMLDivElement | null>(null);
+
+//   useEffect(() => {
+//     if (!dangerousRef.current) return;
+//     fn(dangerousRef);
+
+//     return () => {
+//       console.log("Dangerous content removed!", dangerousRef.current);
+//     };
+//   }, [fn, dangerousRef]);
+
+//   const ret = (
+//     <div ref={dangerousRef}>
+//       <p>Dangerous content!</p>
+//     </div>
+//   );
+
+//   return ret;
+// };

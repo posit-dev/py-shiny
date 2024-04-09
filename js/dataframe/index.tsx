@@ -55,6 +55,7 @@ declare module "@tanstack/table-core" {
   interface ColumnMeta<TData extends RowData, TValue> {
     colIndex: number;
     typeHint: TypeHint | undefined;
+    isHtmlColumn: boolean;
   }
   // interface TableMeta<TData extends RowData> {
   //   updateCellsData: (cellInfos: UpdateCellData[]) => void;
@@ -108,9 +109,9 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
     columns,
     typeHints,
     data: rowData,
-    options: payload_options,
+    options: payloadOptions,
   } = payload;
-  const { width, height, fill, filters: withFilters } = payload_options;
+  const { width, height, fill, filters: withFilters } = payloadOptions;
 
   const containerRef = useRef<HTMLDivElement>(null);
   const theadRef = useRef<HTMLTableSectionElement>(null);
@@ -118,7 +119,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
 
   const { cellEditMap, setCellEditMapAtLoc } = useCellEditMap();
 
-  const editCellsIsAllowed = payload_options["editable"] === true;
+  const editCellsIsAllowed = payloadOptions["editable"] === true;
 
   const coldefs = useMemo<ColumnDef<unknown[], unknown>[]>(
     () =>
@@ -135,6 +136,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
           header: colname,
           meta: {
             colIndex: i,
+            isHtmlColumn: payloadOptions["htmlColumns"]?.includes(i) ?? false,
             typeHint: typeHint,
           },
           cell: ({ getValue }) => {
@@ -214,14 +216,14 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
       : 0;
 
   const summary = useSummary(
-    payload_options["summary"],
+    payloadOptions["summary"],
     containerRef?.current,
     virtualRows,
     theadRef.current,
     rowVirtualizer.options.count
   );
 
-  const tableStyle = payload_options["style"] ?? "grid";
+  const tableStyle = payloadOptions["style"] ?? "grid";
   const containerClass =
     tableStyle === "grid" ? "shiny-data-grid-grid" : "shiny-data-grid-table";
   const tableClass = tableStyle === "table" ? "table table-sm" : null;

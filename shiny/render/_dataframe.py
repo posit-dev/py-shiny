@@ -4,29 +4,38 @@ import warnings
 
 # TODO-barret-render.data_frame; Docs
 # TODO-barret-render.data_frame; Add examples!
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, TypeVar
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, TypeVar, cast
 
 from htmltools import Tag
 
 from .. import reactive, ui
 from .._docstring import add_example
 from .._typing_extensions import Self, TypedDict
-from ..session._utils import get_current_session, require_active_session
+from .._utils import is_async_callable, wrap_async
+from ..session._utils import (
+    get_current_session,
+    require_active_session,
+    session_context,
+)
 from ._data_frame_utils import (
     AbstractTabularData,
     BrowserCellSelection,
     CellPatch,
+    CellPatchProcessed,
     CellSelection,
     CellValue,
     DataGrid,
     DataTable,
     PatchesFn,
+    PatchesFnSync,
     PatchFn,
+    PatchFnSync,
     SelectionModes,
     as_browser_cell_selection,
     assert_patches_shape,
     cast_to_pandas,
-    cell_patch_to_jsonifiable,
+    cell_patch_processed_to_jsonifiable,
+    wrap_shiny_html,
 )
 
 # as_selection_location_js,
@@ -135,7 +144,7 @@ class data_frame(Renderer[DataFrameResult]):
     _patch_fn: PatchFn
     _patches_fn: PatchesFn
 
-    _cell_patch_map: reactive.Value[dict[tuple[int, int], CellPatch]]
+    _cell_patch_map: reactive.Value[dict[tuple[int, int], CellPatchProcessed]]
     """
     Reactive map of patches to be applied to the data frame.
 
@@ -143,7 +152,7 @@ class data_frame(Renderer[DataFrameResult]):
 
     This map is used for faster deduplications of patches at each location.
     """
-    cell_patches: reactive.Calc_[list[CellPatch]]
+    cell_patches: reactive.Calc_[list[CellPatchProcessed]]
 
     data: reactive.Calc_[pd.DataFrame]
     """
@@ -220,7 +229,7 @@ class data_frame(Renderer[DataFrameResult]):
         self._cell_patch_map = reactive.Value({})
 
         @reactive.calc
-        def self_cell_patches() -> list[CellPatch]:
+        def self_cell_patches() -> list[CellPatchProcessed]:
             return list(self._cell_patch_map().values())
 
         self.cell_patches = self_cell_patches
@@ -329,19 +338,19 @@ class data_frame(Renderer[DataFrameResult]):
             )
         return self._session
 
-    def set_patch_fn(self, fn: PatchFn) -> Self:
-        self._patch_fn = fn
+    def set_patch_fn(self, fn: PatchFn | PatchFnSync) -> Self:
+        self._patch_fn = wrap_async(fn)  # pyright: ignore[reportGeneralTypeIssues]
         return self
 
-    def set_patches_fn(self, fn: PatchesFn) -> Self:
-        self._patches_fn = fn
+    def set_patches_fn(self, fn: PatchesFn | PatchesFnSync) -> Self:
+        self._patches_fn = wrap_async(fn)  # pyright: ignore[reportGeneralTypeIssues]
         return self
 
     def _init_handlers(self) -> None:
         async def patch_fn(
             *,
             patch: CellPatch,
-        ) -> str:
+        ) -> CellValue:
             return patch["value"]
 
         async def patches_fn(
@@ -386,48 +395,104 @@ class data_frame(Renderer[DataFrameResult]):
     async def _patches_handler(self, patches: list[CellPatch]) -> Jsonifiable:
         assert_patches_shape(patches)
 
-        # Call user's cell update method to retrieve formatted values
-        updated_patches = await self._patches_fn(patches=patches)
+        with session_context(self._get_session()):
+            # Call user's cell update method to retrieve formatted values
+            patches = await self._patches_fn(patches=patches)
 
         # Check to make sure `updated_infos` is a list of dicts with the correct keys
-        bad_patches_format = not isinstance(updated_patches, list)
+        bad_patches_format = not isinstance(patches, list)
         if not bad_patches_format:
-            for updated_patch in updated_patches:
+            for patch in patches:
                 if not (
                     # Verify structure
-                    isinstance(updated_patch, dict)
+                    isinstance(patch, dict)
                     # Verify types
-                    and isinstance(updated_patch["row_index"], int)
-                    and isinstance(updated_patch["column_index"], int)
-                    and isinstance(updated_patch["value"], CellValue)
+                    and isinstance(patch["row_index"], int)
+                    and isinstance(patch["column_index"], int)
+                    # TODO-future; Check for cell type
+                    # and isinstance(updated_patch["value"], CellValue)
                 ):
-                    bad_patches_format = True
-                    break
-                # TODO-barret-render.data_frame; check type of `value` here?
-                # TODO-barret-render.data_frame; The `value` should be coerced by pandas to the correct type
+                    raise ValueError(
+                        f"The return value of {self.output_id}'s `_patches_fn()` "
+                        f"(typically set by `@{self.output_id}.set_patches_fn`) "
+                        f"must be a list where each item has a row_index (`int`), column_index (`int`), and value (`TagChild`)."
+                    )
 
-        if bad_patches_format:
-            raise ValueError(
-                f"The return value of {self.output_id}'s `_patches_fn()` "
-                f"(typically set by `@{self.output_id}.set_patches_fn`) "
-                f"must be a list where each item has a row_index (`int`), column_index (`int`), and value (`{CellValue}`)."
+        # Add (or overwrite) new cell patches
+        processed_patches: list[Jsonifiable] = []
+        for patch in patches:
+            processed_patch = self._set_cell_patch_map_value(
+                value=patch["value"],
+                row_index=patch["row_index"],
+                column_index=patch["column_index"],
+            )
+            processed_patches.append(
+                cell_patch_processed_to_jsonifiable(processed_patch)
             )
 
-        # Copy to make sure reactive set works
-        cell_patch_map = self._cell_patch_map().copy()
-        # Add (or overwrite) new cell patches
-        for updated_patch in updated_patches:
-            cell_patch_map[
-                (updated_patch["row_index"], updated_patch["column_index"])
-            ] = updated_patch
+        # Return the processed patches to the client
+        print("processed_patches", processed_patches)
+        return processed_patches
 
-        # (Reactively) Set new patch map
+    def _set_cell_patch_map_value(
+        self, value: CellValue, *, row_index: int, column_index: int
+    ) -> CellPatchProcessed:
+        """
+        Set the value within the cell patch map.
+
+        Parameters
+        ----------
+        value :
+            The new value to set the cell to.
+        row_index :
+            The row index of the cell to update.
+        column_index :
+            The column index of the cell to update.
+        """
+        assert isinstance(
+            row_index, int
+        ), f"Expected `row_index` to be an `int`, got {type(row_index)}"
+        assert isinstance(
+            column_index, int
+        ), f"Expected `column_index` to be an `int`, got {type(column_index)}"
+
+        # TODO-barret-render.data_frame; check type of `value` here?
+        # TODO-barret-render.data_frame; The `value` should be coerced by pandas to the correct type
+
+        cell_patch_processed: CellPatchProcessed = {
+            "row_index": row_index,
+            "column_index": column_index,
+            "value": wrap_shiny_html(value, session=self._get_session()),
+        }
+        # Use copy to set the new value
+        cell_patch_map = self._cell_patch_map().copy()
+        cell_patch_map[(row_index, column_index)] = cell_patch_processed
         self._cell_patch_map.set(cell_patch_map)
 
-        return [
-            cell_patch_to_jsonifiable(updated_patch)
-            for updated_patch in updated_patches
-        ]
+        return cell_patch_processed
+
+    def _update_cell_value(
+        self, value: CellValue, *, row_index: int, column_index: int
+    ) -> CellPatchProcessed:
+        """
+        Update the value of a cell in the data frame.
+
+        Parameters
+        ----------
+        value :
+            The new value to set the cell to.
+        row_index :
+            The row index of the cell to update.
+        column_index :
+            The column index of the cell to update.
+        """
+        cell_patch_processed = self._set_cell_patch_map_value(
+            value, row_index=row_index, column_index=column_index
+        )
+
+        # TODO-barret-render.data_frame; Send message to client to update cell value
+
+        return cell_patch_processed
 
     def auto_output_ui(self) -> Tag:
         return ui.output_data_frame(id=self.output_id)
@@ -480,16 +545,19 @@ class data_frame(Renderer[DataFrameResult]):
                 )
             )
 
-        # Send info to client
+        # Set patches url handler for client
         patch_key = self._set_patches_handler()
         self._value.set(value)
-        return {
-            "payload": value.to_payload(),
-            "patchInfo": {
-                "key": patch_key,
-            },
-            "selectionModes": self.selection_modes().as_dict(),
-        }
+
+        # Use session context so `to_payload()` gets the correct session
+        with session_context(self._get_session()):
+            return {
+                "payload": value.to_payload(),
+                "patchInfo": {
+                    "key": patch_key,
+                },
+                "selectionModes": self.selection_modes().as_dict(),
+            }
 
     async def _send_message_to_browser(self, handler: str, obj: dict[str, Any]):
 

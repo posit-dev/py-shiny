@@ -30,6 +30,8 @@ export interface PandasData<TIndex> {
   data: unknown[][];
   options: DataGridOptions;
   typeHints?: ReadonlyArray<TypeHint>;
+  editable?: boolean;
+  htmlColumns?: ReadonlyArray<number>;
 }
 
 export interface PatchInfo {
