@@ -2,7 +2,6 @@ from __future__ import annotations
 
 # TODO-barret-future; make DataTable and DataGrid generic? By currently accepting `object`, it is difficult to capture the generic type of the data.
 import abc
-import inspect
 import json
 from typing import (
     TYPE_CHECKING,
@@ -15,12 +14,12 @@ from typing import (
     runtime_checkable,
 )
 
-from htmltools import HTML, MetadataNode, Tag, Tagifiable, TagList, TagNode
+from htmltools import HTML, MetadataNode, Tagifiable, TagNode
 
 from ..._docstring import add_example, no_example
 from ..._typing_extensions import TypedDict
 from ...session import Session
-from ...session._utils import RenderedDeps, get_current_session
+from ...session._utils import RenderedDeps, require_active_session
 from ...types import Jsonifiable
 from ._selection import (
     RowSelectionModeDeprecated,
@@ -151,7 +150,9 @@ class DataGrid(AbstractTabularData):
         filters: bool = False,
         editable: bool = False,
         selection_mode: SelectionModeInput = "none",
-        html_columns: bool | int | list[int] | tuple[int, ...] = False,
+        html_columns: (
+            Literal["auto"] | bool | int | list[int] | tuple[int, ...]
+        ) = "auto",
         row_selection_mode: RowSelectionModeDeprecated = "deprecated",
     ):
 
@@ -193,7 +194,10 @@ class DataGrid(AbstractTabularData):
 def as_html_columns(
     html_columns: Literal["auto"] | bool | int | list[int] | tuple[int, ...],
     data: pd.DataFrame,
-) -> tuple[int, ...]:
+) -> tuple[int, ...] | Literal["auto"]:
+    if html_columns == "auto":
+        return "auto"
+
     if html_columns is False:
         return tuple[int]([])
 
@@ -300,7 +304,7 @@ class DataTable(AbstractTabularData):
         selection_mode: SelectionModeInput = "none",
         html_columns: (
             Literal["auto"] | bool | int | list[int] | tuple[int, ...]
-        ) = False,
+        ) = "auto",
         row_selection_mode: Literal["deprecated"] = "deprecated",
     ):
 
@@ -366,57 +370,64 @@ def serialize_pandas_df(
     #             " This is not supported by the data_frame renderer."
     #         )
 
-    # TODO-barret; Don't drop HTMLDeps here!
-    # for each html column, process deps on each cell?
-    # __json__()
+    type_hints = serialize_numpy_dtypes(df)
 
-    session = get_current_session()
+    if html_columns == "auto":
+        html_columns_set = set[int]()
+        for i, type_hint in zip(range(len(columns)), type_hints):
+            if type_hint["type"] == "unknown":
+                # Go through column values and check if they contain py-htmltools objects
+                for val in df[  # pyright: ignore[reportUnknownVariableType]
+                    columns[i]
+                ].to_list():
+                    if isinstance(val, (HTML, Tagifiable, MetadataNode)):
+                        # If they do, mark the column and extra htmldeps
+                        html_columns_set.add(i)
+                        break
 
-    if session is not None:
-        print("Session!")
-
-        def handle_html(x: Any) -> str | float | bool | list[Any] | dict[Any, Any]:
-            return wrap_shiny_html(x, session=session)
-
+        ret_html_columns = tuple(html_columns_set)
     else:
+        ret_html_columns = html_columns
+    # print(ret_html_columns)
 
-        def handle_html(x: Any) -> str | float | bool | list[Any] | dict[Any, Any]:
-            return x
+    if len(ret_html_columns) > 0:
+        # Enable copy-on-write mode for the data;
+        # Use `deep=False` to avoid copying the full data; CoW will copy the necessary data when modified
+        import pandas as pd
+
+        with pd.option_context("mode.copy_on_write", True):
+            df = df.copy(deep=False)
+            session = require_active_session(None)
+
+            def wrap_shiny_html_with_session(x: TagNode) -> CellHtml:
+                return wrap_shiny_html(x, session=session)
+
+            for html_column in ret_html_columns:
+                df[df.columns[html_column]] = df[
+                    df.columns[html_column]
+                ].apply(  # pyright: ignore[reportUnknownMemberType]
+                    wrap_shiny_html_with_session
+                )
+
+    def handle_html(x: Any) -> str | float | bool | list[Any] | dict[Any, Any]:
+        if isinstance(x, (HTML, Tagifiable, MetadataNode)):
+            raise ValueError(
+                "Please set `DataGrid(html_columns='auto')` or DataTable(html_columns='auto')` to enable HTML for all columns. Found a `TagNode` within a cell."
+            )
+        return x
 
     res = json.loads(
         # {index: [index], columns: [columns], data: [values]}
-        # TODO-barret; Use a handler for html columns?
         df.to_json(  # pyright: ignore[reportUnknownMemberType]
-            None, orient="split", default_handler=handle_html
+            None,
+            orient="split",
+            default_handler=handle_html,
         )
     )
 
-    # TODO-barret; Actually use the html_columns value; If it is "auto", we need to check the columns for any html objects; If the column is flagged, upgrade all cells in that column to be html based
+    res["typeHints"] = type_hints
 
-    res["typeHints"] = serialize_numpy_dtypes(df)
-
-    if False and html_columns == "auto":
-        html_columns_set = set[int]()
-        # ret_html_columns: list[int] = []
-        for i, typeHint in zip(range(len(columns)), res["typeHints"]):
-            if typeHint["type"] == "unknown":
-                # Go through column values and check if they contain py-htmltools objects
-                for val in df[
-                    columns[i]
-                ].to_list():  # pyright: ignore[reportUnknownVariableType]
-                    if isinstance(val, (Tag, TagList)):
-                        # If they do, mark the column and extra htmldeps
-                        html_columns_set.add(i)
-
-                        ret_html_columns.append(i)
-
-        ret_html_columns = tuple(
-            i for i, col in enumerate(columns) if df[col].dtype.name == "object"
-        )
-    else:
-        ret_html_columns = html_columns
-
-    # print(json.dumps(res, indent=4))
+    print(json.dumps(res, indent=4))
 
     return (res, ret_html_columns)
 
@@ -456,12 +467,6 @@ def cast_to_pandas(
 class CellHtml(TypedDict):
     isShinyHtml: bool
     obj: RenderedDeps
-
-
-# T = TypeVar("T", bound=object)
-
-# TODO-barret; Only allowed to call `wrap_shiny_html` if the column has been marked as html OR the html_columns="auto"
-# TODO-barret; Hitting tab/shift-tab (enter/shift-enter) on a cell at a boundry should submit the value and refocus itself
 
 
 @overload

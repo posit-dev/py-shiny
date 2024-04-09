@@ -42,8 +42,12 @@ def serialize_numpy_dtype(
     elif t == "categorical":
         res["categories"] = [str(x) for x in col.cat.categories.to_list()]
     else:
-        # TODO-barret; detect html here
         t = "unknown"
+        # for _, x in enumerate(col):
+        #     if isinstance(x, (str)):
+        #     if x is not None:
+        #         t = type(x).__name__
+        #         break
 
     res["type"] = t
 

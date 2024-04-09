@@ -1,4 +1,4 @@
-import { RowModel, flexRender } from "@tanstack/react-table";
+import { ColumnDef, RowModel, flexRender } from "@tanstack/react-table";
 import { VirtualItem } from "@tanstack/react-virtual";
 import { Cell } from "@tanstack/table-core";
 import dompurify from "dompurify";
@@ -45,15 +45,24 @@ const CellStateClassEnum = {
 } as const;
 export type CellState = keyof typeof CellStateEnum;
 
-const isShinyHtmlFn = (
-  x: any
-): x is { isShinyHtml: true; obj: { deps?: HtmlDep[]; html: string } } => {
+type CellHtmlValue = {
+  isShinyHtml: true;
+  obj: { deps?: HtmlDep[]; html: string };
+};
+const isShinyHtml = (x: any): x is CellHtmlValue => {
   return (
     x !== null &&
     typeof x !== "string" &&
     Object.prototype.hasOwnProperty.call(x, "isShinyHtml") &&
     x.isShinyHtml === true
   );
+};
+type CellValue = string | CellHtmlValue | null;
+const getCellValueText = (cellValue: CellValue) => {
+  if (isShinyHtml(cellValue)) {
+    return cellValue.obj.html;
+  }
+  return cellValue as string;
 };
 
 interface TableBodyCellProps {
@@ -63,6 +72,7 @@ interface TableBodyCellProps {
   cell: Cell<unknown[], unknown>;
   patchInfo: PatchInfo;
   columns: readonly string[];
+  coldefs: readonly ColumnDef<unknown[], unknown>[];
   rowIndex: number;
   columnIndex: number;
   editCellsIsAllowed: boolean;
@@ -78,6 +88,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
   cell,
   patchInfo,
   columns,
+  coldefs,
   rowIndex,
   columnIndex,
   editCellsIsAllowed,
@@ -104,24 +115,15 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
   //   Object.prototype.hasOwnProperty.call(initialValue, "html");
 
   const cellValue = cellEditInfo?.value ?? initialValue;
-  const getCellValueText = useCallback(() => {
-    if (isShinyHtmlFn(cellValue)) {
-      return cellValue.obj.html;
-    }
-    return cellValue as string;
-  }, [cellValue]);
 
   const cellState = cellEditInfo?.state ?? CellStateEnum.Ready;
   const errorTitle = cellEditInfo?.errorTitle;
   // Listen to boolean value of cellEditInfo. This allows for the cell state to be restored if esc is hit
   const isEditing = cellEditInfo?.isEditing ?? false;
-  const editValue = cellEditInfo?.editValue ?? getCellValueText();
-
-  // if (isEditing) console.log("editValue", editValue, rowIndex, columnIndex);
+  const editValue = cellEditInfo?.editValue ?? getCellValueText(cellValue);
 
   const tdRef = useRef<HTMLTableCellElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
-  // editCellsIsAllowed = editCellsIsAllowed && !isHtmlColumn;
 
   // Keyboard navigation:
   // * When editing a cell:
@@ -183,20 +185,34 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     // Prevent default behavior
     e.preventDefault();
 
-    const hasShift = e.shiftKey;
-
-    const newColumnIndex = columnIndex! + (hasShift ? -1 : 1);
-
     // Submit changes to the current cell
     attemptUpdate();
 
-    if (newColumnIndex < 0 || newColumnIndex >= columns.length) {
-      // If the new column index is out of bounds, quit
-      return;
+    const hasShift = e.shiftKey;
+
+    let nextColumnIndex = columnIndex;
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const newColumnIndex = nextColumnIndex + (hasShift ? -1 : 1);
+
+      if (newColumnIndex < 0 || newColumnIndex >= coldefs.length) {
+        // If the new column index is out of bounds, re-enable the current one
+        setCellEditMapAtLoc(rowIndex, columnIndex, (obj_draft) => {
+          obj_draft.isEditing = true;
+        });
+        return;
+      }
+
+      console.log("newColumnIndex", newColumnIndex);
+      nextColumnIndex = newColumnIndex;
+      // Repeat the loop if the next column is an HTML column
+      if (!coldefs[newColumnIndex].meta!.isHtmlColumn) {
+        break;
+      }
     }
 
     // Turn on editing in next cell!
-    setCellEditMapAtLoc(rowIndex, newColumnIndex, (obj_draft) => {
+    setCellEditMapAtLoc(rowIndex, nextColumnIndex, (obj_draft) => {
       obj_draft.isEditing = true;
     });
   };
@@ -208,6 +224,9 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
 
     const hasShift = e.shiftKey;
 
+    // Submit changes to the current cell
+    attemptUpdate();
+
     const rowModel = getSortedRowModel();
     const sortedRowIndex = rowModel.rows.findIndex((row) => row.id === rowId);
     // Couldn't find row... silently quit
@@ -216,11 +235,11 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     }
     const nextSortedRowIndex = sortedRowIndex! + (hasShift ? -1 : 1);
 
-    // Submit changes to the current cell
-    attemptUpdate();
-
     if (nextSortedRowIndex < 0 || nextSortedRowIndex >= rowModel.rows.length) {
-      // If the new row index is out of bounds, quit
+      // If the new row index is out of bounds, re-enable the current one
+      setCellEditMapAtLoc(rowIndex, columnIndex, (obj_draft) => {
+        obj_draft.isEditing = true;
+      });
       return;
     }
 
@@ -243,7 +262,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     });
 
     // Only update if the string form of the value has changed
-    if (`${getCellValueText()}` === `${editValue}`) {
+    if (`${getCellValueText(cellValue)}` === `${editValue}`) {
       // Reset all edit info
       resetEditing();
       // Set state to prior cell state
@@ -260,11 +279,6 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     setCellEditMapAtLoc(rowIndex, columnIndex, (obj_draft) => {
       obj_draft.state = CellStateEnum.EditSaving;
     });
-    // Replace cell content to remove any HTML based cell values
-    // Can not use window.Shiny.renderContentAsync(tdRef.current, null) as the method is async;
-    // tdRef.current?.replaceChildren("");
-    // // Reset any shiny bindings that have occurred in cell
-    // window.Shiny.bindAll();
 
     // Update the data!
     // updateCellsData updates the underlying data via `setData` and `setCellEditMapAtLoc`
@@ -290,7 +304,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     setCellEditMapAtLoc,
     rowIndex,
     columnIndex,
-    getCellValueText,
+    cellValue,
     editValue,
     resetEditing,
     patchInfo,
@@ -377,12 +391,22 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
   let onClick:
     | ((e: ReactMouseEvent<HTMLTableCellElement>) => void)
     | undefined = undefined;
-  // let dangerousContent: { __html: string } | undefined = undefined;
   let content: ReactElement | ReturnType<typeof flexRender> | undefined =
     undefined;
   const cellTitle = errorTitle;
-  const tableCellClass =
-    CellStateClassEnum[isEditing ? CellStateEnum.Editing : cellState];
+  let tableCellClass: string | undefined = undefined;
+  const addToTableCellClass = (x: string | undefined) => {
+    if (!x) return;
+    if (tableCellClass) {
+      tableCellClass += " ";
+      tableCellClass += x;
+    } else {
+      tableCellClass = x;
+    }
+  };
+  addToTableCellClass(
+    CellStateClassEnum[isEditing ? CellStateEnum.Editing : cellState]
+  );
   let attemptRenderAsync = false;
 
   let editContent: ReactElement | null = null;
@@ -406,7 +430,8 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
       // `isEditing` is `false`
 
       // Only allow transition to edit mode if the cell can be edited
-      if (editCellsIsAllowed) {
+      if (editCellsIsAllowed && !isHtmlColumn) {
+        addToTableCellClass("cell-editable");
         onClick = (e: ReactMouseEvent<HTMLTableCellElement>) => {
           // Do not prevent default or stop propagation here!
           // Other methods need to be able to handle the event as well. e.g. `onBodyClick` above.
@@ -416,73 +441,51 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
           // Set this cell to editing mode
           setCellEditMapAtLoc(rowIndex, columnIndex, (obj_draft) => {
             obj_draft.isEditing = true;
-            obj_draft.editValue = getCellValueText() as string;
+            obj_draft.editValue = getCellValueText(cellValue) as string;
           });
         };
-      }
-      if (isHtmlColumn) {
-        // // console.log(rowIndex, columnIndex, isEditing, editValue);
-        // // window.Shiny.renderContentAsync();
-        // const dangerousScript = `<script>console.log(1, this, this.parent)</script>`;
-        // // dangerousContent = { __html: dompurify.sanitize(cellValue as string) };
-        // dangerousContent = { __html: dangerousScript };
-        // attemptRenderAsync = true
+      } else {
+        addToTableCellClass("cell-html");
       }
     }
-    if (!isShinyHtmlFn(cellValue)) {
-      content = flexRender(cell.column.columnDef.cell, cell.getContext());
-    } else {
+    if (isShinyHtml(cellValue)) {
       attemptRenderAsync = true;
+    } else {
+      // Render cell contents like normal
+      content = flexRender(cell.column.columnDef.cell, cell.getContext());
     }
   }
 
-  // TODO-barret; when the tdRef is visible when we should display dangerous content, run html script to display the UI!
   useEffect(() => {
-    // console.log("useEffect", rowIndex, columnIndex, isShinyHtml, content);
     if (!tdRef.current) return;
     if (!attemptRenderAsync) return;
-    if (!isShinyHtmlFn(cellValue)) return;
-    // if (isEditing) return;
+    if (!isShinyHtml(cellValue)) return;
 
-    // if (!isHtmlColumn) return;
-    // if (!isShinyHtmlFn(initialValue)) return;
-    // // Safety hatch; Do not render if content is already set
-    // if (content) return;
-
-    // console.log(initialValue, rowIndex, columnIndex);
-    // console.log("renderContentAsync", rowIndex, columnIndex, cellValue.obj);
-
+    // TODO-future; Use faster way to make a deep copy
     const cellValueObjDeepCopy = JSON.parse(JSON.stringify(cellValue.obj));
-
     window.Shiny.renderContentAsync(tdRef.current, cellValueObjDeepCopy);
 
     const curTdRef = tdRef.current;
 
     return () => {
-      // console.log("renderContentAsync removed!", rowIndex, columnIndex);
+      // Unbind all Shiny inputs and outputs within the cell
+      window.Shiny.unbindAll(curTdRef);
+      // Remove DOM elements from cell inserted by `window.Shiny.renderContentAsync`
       curTdRef.replaceChildren("");
     };
   }, [tdRef, cellValue, rowIndex, columnIndex, attemptRenderAsync]);
 
-  // if (rowIndex === 1 && columnIndex === 1) {
-  //   console.log("TableBodyCell", rowIndex, columnIndex, editContent, content);
-  // }
-
-  const ret = (
+  return (
     <td
-      // key={cell.id}
       ref={tdRef}
       onClick={onClick}
       title={cellTitle}
       className={tableCellClass}
-      // dangerouslySetInnerHTML={dangerousContent}
     >
       {editContent}
       {content}
     </td>
   );
-
-  return ret;
 };
 
 // // TODO-barret; Consider using https://www.npmjs.com/package/react-contenteditable !
@@ -504,24 +507,3 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
 // td attrs for below
 // contentEditable={cellContentEditable}
 // onInput={onInput}
-
-// const DangerouseContent: FC<{ fn: () => void }> = ({ fn }) => {
-//   const dangerousRef = useRef<HTMLDivElement | null>(null);
-
-//   useEffect(() => {
-//     if (!dangerousRef.current) return;
-//     fn(dangerousRef);
-
-//     return () => {
-//       console.log("Dangerous content removed!", dangerousRef.current);
-//     };
-//   }, [fn, dangerousRef]);
-
-//   const ret = (
-//     <div ref={dangerousRef}>
-//       <p>Dangerous content!</p>
-//     </div>
-//   );
-
-//   return ret;
-// };

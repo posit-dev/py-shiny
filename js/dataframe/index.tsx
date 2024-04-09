@@ -497,6 +497,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
                           patchInfo={patchInfo}
                           editCellsIsAllowed={editCellsIsAllowed}
                           columns={columns}
+                          coldefs={coldefs}
                           rowIndex={rowIndex}
                           columnIndex={columnIndex}
                           getSortedRowModel={table.getSortedRowModel}

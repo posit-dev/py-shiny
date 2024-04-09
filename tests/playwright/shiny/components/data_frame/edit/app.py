@@ -6,6 +6,9 @@ from shiny.render._dataframe import CellPatch
 # TODO-barret-render.data_frame; Make an example that uses a dataframe that then updates a higher level reactive, that causes the df to update... which causes the table to render completely
 # TODO-barret-render.data_frame; When "updating" data, try to maintain the scroll, filter info when a new `df` is supplied;
 
+# TODO-future; Can we maintain pre-processed value and use it within editing?
+# A: Doesn't seem possible for now
+
 
 # Load the dataset
 penguins = load_penguins_raw()
@@ -13,9 +16,15 @@ df = penguins
 
 df = df.head(5)
 
+
+# print(ui.p)
+# print(ui.p.__json__)
+
+# raise ValueError("Barret testing!")
+
 for i in range(1, 5):
-    df.iloc[i, 1] = ui.HTML(
-        str(
+    df.iloc[i, 1] = ui.p(
+        ui.HTML(
             ui.tags.strong(
                 ui.tags.em(
                     str(
@@ -65,7 +74,9 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
             df,
             selection_mode="none",
             editable=True,
-            html_columns=[1],
+            # html_columns=(1,),
+            # html_columns=(2,),
+            html_columns="auto",
         )
         # return render.DataTable(df, selection_mode="none", editable=True)
         # return render.DataGrid(df, selection_mode="rows", editable=True)
@@ -103,9 +114,6 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
 
     # z = ui.HTML("<em>Barret</em>")
     # # z is HTML!
-
-    # TODO-barret; Maintain pre-processed value and use it within editing
-    # TODO-barret; Do not allow editing of the HTML cells
 
     @summary_data.set_patch_fn
     def upgrade_patch(
