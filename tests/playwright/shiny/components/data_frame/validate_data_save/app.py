@@ -32,6 +32,7 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
         *,
         patch: CellPatch,
     ):
+	# Slow down change so that we can test for "editing" state
         time.sleep(2)
         return patch["value"]
 
