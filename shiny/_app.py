@@ -52,10 +52,9 @@ class App:
     ----------
     ui
         The UI definition for the app (e.g., a call to :func:`~shiny.ui.page_fluid` or
-        similar, with layouts and controls nested inside). You can
-        also pass a function that takes a :class:`~starlette.requests.Request` and
-        returns a UI definition, if you need the UI definition to be created dynamically
-        for each pageview.
+        similar, with layouts and controls nested inside). You can also pass a function
+        that takes a :class:`~starlette.requests.Request` and returns a UI definition,
+        if you need the UI definition to be created dynamically for each pageview.
     server
         A function which is called once for each session, ensuring that each session is
         independent.
@@ -66,6 +65,12 @@ class App:
         that mount point.
     debug
         Whether to enable debug mode.
+    dev_mode
+        Whether to enable development mode. This enables an error console in the client
+        which displays JavaScript errors. If ``None`` (the default), then the default is
+        to check if the environment variable ``SHINY_DEV_MODE`` is set to `"1"` and if
+        so, enable dev mode. If ``True`` or ``False``, then that value will be used and
+        the environment variable will be ignored.
 
     Examples
     --------
@@ -115,6 +120,7 @@ class App:
         *,
         static_assets: Optional[str | Path | Mapping[str, str | Path]] = None,
         debug: bool = False,
+        dev_mode: bool | None = None,
     ) -> None:
         # Used to store callbacks to be called when the app is shutting down (according
         # to the ASGI lifespan protocol)
@@ -134,6 +140,9 @@ class App:
             )
 
         self._debug: bool = debug
+        if dev_mode is None:
+            dev_mode = os.getenv("SHINY_DEV_MODE") == "1"
+        self._dev_mode: bool = dev_mode
 
         # Settings that the user can change after creating the App object.
         self.lib_prefix: str = LIB_PREFIX
@@ -438,7 +447,9 @@ class App:
         ui_res = copy.copy(ui)
         # Make sure requirejs, jQuery, and Shiny come before any other dependencies.
         # (see require_deps() for a comment about why we even include it)
-        ui_res.insert(0, [require_deps(), jquery_deps(), *shiny_deps()])
+        ui_res.insert(
+            0, [require_deps(), jquery_deps(), *shiny_deps(dev_mode=self._dev_mode)]
+        )
         rendered = HTMLDocument(ui_res).render(lib_prefix=lib_prefix)
         self._ensure_web_dependencies(rendered["dependencies"])
         return rendered
@@ -449,7 +460,7 @@ class App:
 
         doc = HTMLTextDocument(
             page_html,
-            deps=[require_deps(), jquery_deps(), *shiny_deps()],
+            deps=[require_deps(), jquery_deps(), *shiny_deps(dev_mode=self._dev_mode)],
             deps_replace_pattern='<meta name="shiny-dependency-placeholder" content="">',
         )
 

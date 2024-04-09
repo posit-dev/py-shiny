@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-import os
-
 from htmltools import HTMLDependency
 
 
-def shiny_deps() -> list[HTMLDependency]:
+def shiny_deps(dev_mode: bool = False) -> list[HTMLDependency]:
     deps = [
         HTMLDependency(
             name="shiny",
@@ -15,7 +13,7 @@ def shiny_deps() -> list[HTMLDependency]:
             stylesheet={"href": "shiny.min.css"},
         )
     ]
-    if os.getenv("SHINY_DEV_MODE") == "1":
+    if dev_mode:
         deps.append(
             HTMLDependency(
                 "shiny-devmode",
