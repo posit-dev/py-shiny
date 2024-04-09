@@ -9,4 +9,4 @@ with ui.panel_conditional("input.show && input.radio === 'slider'"):
     ui.input_slider("slider", None, min=0, max=100, value=50)
 
 with ui.panel_conditional("input.show && input.radio === 'select'"):
-    ui.input_select("slider", None, ["A", "B", "C"])
+    ui.input_select("select", None, ["A", "B", "C"])
