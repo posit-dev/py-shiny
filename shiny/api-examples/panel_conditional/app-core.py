@@ -11,7 +11,7 @@ app_ui = ui.page_fluid(
     ),
     ui.panel_conditional(
         "input.show && input.radio === 'select'",
-        ui.input_select("slider", None, ["A", "B", "C"]),
+        ui.input_select("select", None, ["A", "B", "C"]),
     ),
 )
 
