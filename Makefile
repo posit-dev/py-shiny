@@ -148,6 +148,7 @@ clean-js: FORCE
 # Default `SUB_FILE` to empty
 SUB_FILE:=
 PYTEST_BROWSERS:= --browser webkit --browser firefox --browser chromium
+PYTEST_DEPLOYS_BROWSERS:= --browser chromium
 install-playwright: FORCE
 	playwright install --with-deps
 
@@ -164,7 +165,7 @@ playwright-shiny: install-playwright
 
 # end-to-end tests on deployed apps with playwright; (SUB_FILE="" within tests/playwright/deploys/)
 playwright-deploys: install-playwright install-rsconnect
-	pytest tests/playwright/deploys/$(SUB_FILE) $(PYTEST_BROWSERS)
+	pytest tests/playwright/deploys/$(SUB_FILE) $(PYTEST_DEPLOYS_BROWSERS)
 
 # end-to-end tests on all py-shiny examples with playwright; (SUB_FILE="" within tests/playwright/examples/)
 playwright-examples: install-playwright
