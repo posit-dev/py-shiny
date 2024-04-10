@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import copy
 from typing import Iterable, Literal
 
 from htmltools import Tag, tags
@@ -16,10 +15,10 @@ BusyTypes = Literal["spinners", "pulse", "cursor"]
 @add_example(ex_dir="../api-examples/busy_indicators")
 def use(types: Iterable[BusyTypes] = ("spinners", "pulse")) -> Tag:
     """
-    Use/customize busy indicators.
+    Use and customize busy indicator types.
 
-    Include the result of this function in the app's UI to use/customize busy indicators.
-    Provide an empty list/tuple to disable all busy indicators.
+    Include the result of this function in the app's UI to customize busy indicator types.
+    Provide an empty list/tuple for no busy indicators.
 
     Parameters
     ----------
@@ -101,6 +100,10 @@ def spinner_options(
     -------
     :
         A `<style>` tag.
+
+    Note
+    ----
+    To effectively disable spinners, set the `size` to "0px".
     """
 
     # bounce requires a different animation than the others

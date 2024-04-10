@@ -93,14 +93,6 @@
       display: none;
     }
   }
-
-  /* Opt-out class */
-  .shiny-spinner-disabled.recalculating::after {
-    display: none;
-  }
-  .shiny-spinner-disabled-children .recalculating::after {
-    display: none;
-  }
 }
 
 /* Pulsing page-level banner */
