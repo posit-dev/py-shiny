@@ -4,14 +4,14 @@ import warnings
 
 # TODO-barret-render.data_frame; Docs
 # TODO-barret-render.data_frame; Add examples!
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, TypeVar, cast
 
 from htmltools import Tag
 
 from .. import reactive, ui
 from .._docstring import add_example
 from .._typing_extensions import Self, TypedDict
-from .._utils import is_async_callable, wrap_async
+from .._utils import wrap_async
 from ..session._utils import (
     get_current_session,
     require_active_session,
@@ -139,6 +139,7 @@ class data_frame(Renderer[DataFrameResult]):
     _session: Session | None  # Do not use. Use `_get_session()` instead
 
     _value: reactive.Value[DataFrameResult | None]
+    _type_hints: reactive.Value[dict[str, str] | None]
     # _data: reactive.Value[pd.DataFrame | None]
 
     _patch_fn: PatchFn
@@ -217,6 +218,7 @@ class data_frame(Renderer[DataFrameResult]):
     def _reset_reactives(self) -> None:
         self._value.set(None)
         self._cell_patch_map.set({})
+        self._type_hints.set(None)
 
     def _init_reactives(self) -> None:
 
@@ -226,6 +228,7 @@ class data_frame(Renderer[DataFrameResult]):
 
         # Init
         self._value: reactive.Value[DataFrameResult | None] = reactive.Value(None)
+        self._type_hints: reactive.Value[dict[str, str] | None] = reactive.Value(None)
         self._cell_patch_map = reactive.Value({})
 
         @reactive.calc
@@ -409,7 +412,7 @@ class data_frame(Renderer[DataFrameResult]):
                     # Verify types
                     and isinstance(patch["row_index"], int)
                     and isinstance(patch["column_index"], int)
-                    # TODO-future; Check for cell type
+                    # TODO-barret-render.data_frame; Check for cell type and compare against self._type_hints
                     # and isinstance(updated_patch["value"], CellValue)
                 ):
                     raise ValueError(
@@ -551,8 +554,11 @@ class data_frame(Renderer[DataFrameResult]):
 
         # Use session context so `to_payload()` gets the correct session
         with session_context(self._get_session()):
+            payload = value.to_payload()
+            type_hints = payload.get("typeHints", None)
+            self._type_hints.set(cast(Dict[str, str] | None, type_hints))
             return {
-                "payload": value.to_payload(),
+                "payload": payload,
                 "patchInfo": {
                     "key": patch_key,
                 },

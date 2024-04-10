@@ -9,6 +9,20 @@ from shiny.render._dataframe import CellPatch
 # TODO-future; Can we maintain pre-processed value and use it within editing?
 # A: Doesn't seem possible for now
 
+# TODO-karan-test; Data frame with an `Tag` in column
+# TODO-karan-test; Data frame with an `TagList` in (another) column
+# TODO-karan-test; Data frame with an `MetadataNode` (`HTMLDependency`) in (another) column
+# TODO-karan-test; Data frame with an `HTML` in (another) column
+
+# TODO-karan-test; Data frame edit that returns shiny reactive output UI in cell; Add server hook to render something to that cell; Make sure it works when the data frame data is updated and when the data frame is removed.
+
+
+# TODO-karan-test; Edit a cell in the first row and hit `shift+enter`. It should not submit the change and stay editing the current cell
+# TODO-karan-test; Edit a cell in the last row and hit `enter`. It should not submit the change and stay editing the current cell
+
+# TODO-karan-test; Data frame with html content in the first two columns; Edit a cell in the third column and try to hit `shift + tab`. It should not submit the edit in the current cell and stay at the current cell (not moving to the second or first column)
+# TODO-karan-test; Data frame with html content in the last two columns; Edit a cell in the third from last column and try to hit `tab`. It should not submit the edit in the current cell and stay at the current cell (not moving to the last two columns)
+
 
 # Load the dataset
 penguins = load_penguins_raw()
@@ -92,6 +106,12 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
     #     print(summary_data.data())
     #     print(summary_data.data_patched())
     #     print(summary_data.cell_patches())
+
+    # from shiny import reactive
+
+    # @reactive.effect
+    # def _():
+    #     print(summary_data._type_hints())
 
     from shinywidgets import render_widget
 

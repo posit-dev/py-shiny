@@ -10,11 +10,12 @@ from typing import (
     Protocol,
     TypeVar,
     Union,
+    cast,
     overload,
     runtime_checkable,
 )
 
-from htmltools import HTML, MetadataNode, Tagifiable, TagNode
+from htmltools import TagNode
 
 from ..._docstring import add_example, no_example
 from ..._typing_extensions import TypedDict
@@ -27,7 +28,7 @@ from ._selection import (
     SelectionModes,
     as_selection_modes,
 )
-from ._unsafe import serialize_numpy_dtypes
+from ._unsafe import is_shiny_html, serialize_numpy_dtypes
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -101,7 +102,6 @@ class DataGrid(AbstractTabularData):
         If `True`, allows the user to edit the cells in the grid. When a cell is edited,
         the new value is sent to the server for processing. The server can then return
         a new value for the cell, which will be displayed in the grid.
-    html_columns
     selection_mode
         Single string or a `set`/`list`/`tuple` of string values to define possible ways
         to select data within the data frame.
@@ -175,16 +175,13 @@ class DataGrid(AbstractTabularData):
         self.html_columns = as_html_columns(html_columns, self.data)
 
     def to_payload(self) -> dict[str, Jsonifiable]:
-        res, html_columns = serialize_pandas_df(
-            self.data, html_columns=self.html_columns
-        )
+        res = serialize_pandas_df(self.data)
         res["options"] = dict(
             width=self.width,
             height=self.height,
             summary=self.summary,
             filters=self.filters,
             editable=self.editable,
-            htmlColumns=html_columns,
             style="grid",
             fill=self.height is None,
         )
@@ -327,26 +324,19 @@ class DataTable(AbstractTabularData):
         self.html_columns = as_html_columns(html_columns, self.data)
 
     def to_payload(self) -> dict[str, Jsonifiable]:
-        res, html_columns = serialize_pandas_df(
-            self.data, html_columns=self.html_columns
-        )
+        res = serialize_pandas_df(self.data)
         res["options"] = dict(
             width=self.width,
             height=self.height,
             summary=self.summary,
             filters=self.filters,
             editable=self.editable,
-            htmlColumns=html_columns,
             style="table",
         )
         return res
 
 
-def serialize_pandas_df(
-    df: "pd.DataFrame",
-    *,
-    html_columns: tuple[int, ...] | Literal["auto"],
-) -> tuple[dict[str, Any], tuple[int, ...]]:
+def serialize_pandas_df(df: "pd.DataFrame") -> dict[str, Any]:
 
     columns = df.columns.tolist()
     columns_set = set(columns)
@@ -372,25 +362,12 @@ def serialize_pandas_df(
 
     type_hints = serialize_numpy_dtypes(df)
 
-    if html_columns == "auto":
-        html_columns_set = set[int]()
-        for i, type_hint in zip(range(len(columns)), type_hints):
-            if type_hint["type"] == "unknown":
-                # Go through column values and check if they contain py-htmltools objects
-                for val in df[  # pyright: ignore[reportUnknownVariableType]
-                    columns[i]
-                ].to_list():
-                    if isinstance(val, (HTML, Tagifiable, MetadataNode)):
-                        # If they do, mark the column and extra htmldeps
-                        html_columns_set.add(i)
-                        break
+    # Auto opt-in for html columns
+    html_columns = [
+        i for i, type_hint in enumerate(type_hints) if type_hint["type"] == "html"
+    ]
 
-        ret_html_columns = tuple(html_columns_set)
-    else:
-        ret_html_columns = html_columns
-    # print(ret_html_columns)
-
-    if len(ret_html_columns) > 0:
+    if len(html_columns) > 0:
         # Enable copy-on-write mode for the data;
         # Use `deep=False` to avoid copying the full data; CoW will copy the necessary data when modified
         import pandas as pd
@@ -402,34 +379,23 @@ def serialize_pandas_df(
             def wrap_shiny_html_with_session(x: TagNode) -> CellHtml:
                 return wrap_shiny_html(x, session=session)
 
-            for html_column in ret_html_columns:
+            for html_column in html_columns:
+                # _upgrade_ all the HTML columns to `CellHtml` json objects
                 df[df.columns[html_column]] = df[
                     df.columns[html_column]
                 ].apply(  # pyright: ignore[reportUnknownMemberType]
                     wrap_shiny_html_with_session
                 )
 
-    def handle_html(x: Any) -> str | float | bool | list[Any] | dict[Any, Any]:
-        if isinstance(x, (HTML, Tagifiable, MetadataNode)):
-            raise ValueError(
-                "Please set `DataGrid(html_columns='auto')` or DataTable(html_columns='auto')` to enable HTML for all columns. Found a `TagNode` within a cell."
-            )
-        return x
-
     res = json.loads(
         # {index: [index], columns: [columns], data: [values]}
-        df.to_json(  # pyright: ignore[reportUnknownMemberType]
-            None,
-            orient="split",
-            default_handler=handle_html,
-        )
+        df.to_json(None, orient="split")  # pyright: ignore[reportUnknownMemberType]
     )
 
     res["typeHints"] = type_hints
 
-    print(json.dumps(res, indent=4))
-
-    return (res, ret_html_columns)
+    # print(json.dumps(res, indent=4))
+    return res
 
 
 @runtime_checkable
@@ -476,11 +442,6 @@ def wrap_shiny_html(x: Jsonifiable, *, session: Session) -> Jsonifiable: ...
 def wrap_shiny_html(
     x: Jsonifiable | TagNode, *, session: Session
 ) -> Jsonifiable | CellHtml:
-    print("\n\n")
-    print("wrap_shiny_html", x)
-    if not isinstance(x, (HTML, Tagifiable)):
-        if isinstance(x, (str, int, float, bool, list, dict, tuple)):
-            return x
-    print("wrap_shiny_html2", x)
-    html_and_deps = session._process_ui(x)
-    return {"isShinyHtml": True, "obj": html_and_deps}
+    if is_shiny_html(x):
+        return {"isShinyHtml": True, "obj": session._process_ui(x)}
+    return cast(Jsonifiable, x)
