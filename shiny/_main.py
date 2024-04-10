@@ -479,10 +479,12 @@ def try_import_module(module: str) -> Optional[types.ModuleType]:
 # directory. The process for adding new ones is to add your app folder to
 # that directory, and then add another entry to this dictionary.
 app_template_choices = {
-    "Basic App": "basic-app",
-    "Dashboard": "dashboard",
-    "Multi-page app with modules": "multi-page",
-    "Custom JavaScript Component": "js-component",
+    "Basic app": "basic-app",
+    "Sidebar layout": "basic-sidebar",
+    "Basic dashboard": "dashboard",
+    "Intermediate dashboard": "dashboard-tips",
+    "Navigating multiple pages/panels": "basic-navigation",
+    "Custom JavaScript component ...": "js-component",
     "Choose from the Shiny Templates website": "external-gallery",
 }
 

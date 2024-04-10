@@ -10,11 +10,17 @@ from typing import (
     Protocol,
     TypeVar,
     Union,
+    cast,
     overload,
     runtime_checkable,
 )
 
+from htmltools import TagNode
+
 from ..._docstring import add_example, no_example
+from ..._typing_extensions import TypedDict
+from ...session import Session
+from ...session._utils import RenderedDeps, require_active_session
 from ...types import Jsonifiable
 from ._selection import (
     RowSelectionModeDeprecated,
@@ -22,7 +28,7 @@ from ._selection import (
     SelectionModes,
     as_selection_modes,
 )
-from ._unsafe import serialize_numpy_dtypes
+from ._unsafe import is_shiny_html, serialize_numpy_dtypes
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -291,6 +297,7 @@ class DataTable(AbstractTabularData):
 
 
 def serialize_pandas_df(df: "pd.DataFrame") -> dict[str, Any]:
+
     columns = df.columns.tolist()
     columns_set = set(columns)
     if len(columns_set) != len(columns):
@@ -313,15 +320,41 @@ def serialize_pandas_df(df: "pd.DataFrame") -> dict[str, Any]:
     #             " This is not supported by the data_frame renderer."
     #         )
 
+    type_hints = serialize_numpy_dtypes(df)
+
+    # Auto opt-in for html columns
+    html_columns = [
+        i for i, type_hint in enumerate(type_hints) if type_hint["type"] == "html"
+    ]
+
+    if len(html_columns) > 0:
+        # Enable copy-on-write mode for the data;
+        # Use `deep=False` to avoid copying the full data; CoW will copy the necessary data when modified
+        import pandas as pd
+
+        with pd.option_context("mode.copy_on_write", True):
+            df = df.copy(deep=False)
+            session = require_active_session(None)
+
+            def wrap_shiny_html_with_session(x: TagNode):
+                return wrap_shiny_html(x, session=session)
+
+            for html_column in html_columns:
+                # _upgrade_ all the HTML columns to `CellHtml` json objects
+                df[df.columns[html_column]] = df[
+                    df.columns[html_column]
+                ].apply(  # pyright: ignore[reportUnknownMemberType]
+                    wrap_shiny_html_with_session
+                )
+
     res = json.loads(
         # {index: [index], columns: [columns], data: [values]}
         df.to_json(None, orient="split")  # pyright: ignore[reportUnknownMemberType]
     )
 
-    res["typeHints"] = serialize_numpy_dtypes(df)
+    res["typeHints"] = type_hints
 
     # print(json.dumps(res, indent=4))
-
     return res
 
 
@@ -355,3 +388,22 @@ def cast_to_pandas(
         + f" '{str(type(x))}'. Use either a pandas.DataFrame, or an object"
         " that has a .to_pandas() method."
     )
+
+
+class CellHtml(TypedDict):
+    isShinyHtml: bool
+    obj: RenderedDeps
+
+
+@overload
+def wrap_shiny_html(  # pyright: ignore[reportOverlappingOverload]
+    x: TagNode, *, session: Session
+) -> CellHtml: ...
+@overload
+def wrap_shiny_html(x: Jsonifiable, *, session: Session) -> Jsonifiable: ...
+def wrap_shiny_html(
+    x: Jsonifiable | TagNode, *, session: Session
+) -> Jsonifiable | CellHtml:
+    if is_shiny_html(x):
+        return {"isShinyHtml": True, "obj": session._process_ui(x)}
+    return cast(Jsonifiable, x)

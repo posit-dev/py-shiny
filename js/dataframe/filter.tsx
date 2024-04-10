@@ -45,6 +45,10 @@ export interface FilterProps
 export const Filter: FC<FilterProps> = ({ header, className, ...props }) => {
   const typeHint = header.column.columnDef.meta?.typeHint;
 
+  if (typeHint.type === "html") {
+    // Do not filter on html types
+    return null;
+  }
   if (typeHint.type === "numeric") {
     const [from, to] = (header.column.getFilterValue() as
       | [number | undefined, number | undefined]
