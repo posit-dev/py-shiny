@@ -4,7 +4,7 @@ import warnings
 
 # TODO-barret-render.data_frame; Docs
 # TODO-barret-render.data_frame; Add examples!
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, TypeVar, Union, cast
 
 from htmltools import Tag
 
@@ -559,8 +559,13 @@ class data_frame(Renderer[DataFrameResult]):
         # Use session context so `to_payload()` gets the correct session
         with session_context(self._get_session()):
             payload = value.to_payload()
-            type_hints = payload.get("typeHints", None)
-            self._type_hints.set(cast(Dict[str, str] | None, type_hints))
+
+            type_hints = cast(
+                Union[Dict[str, str], None],
+                payload.get("typeHints", None),
+            )
+            self._type_hints.set(type_hints)
+
             return {
                 "payload": payload,
                 "patchInfo": {
