@@ -13,7 +13,7 @@ __all__ = ("use", "spinner_options")
 BusyTypes = Literal["spinners", "pulse", "cursor"]
 
 
-@no_example()
+@add_example(ex_dir="../api-examples/busy_indicators")
 def use(types: Iterable[BusyTypes] = ("spinners", "pulse")) -> Tag:
     """
     Use/customize busy indicators.
@@ -52,7 +52,7 @@ def use(types: Iterable[BusyTypes] = ("spinners", "pulse")) -> Tag:
     )
 
 
-@add_example(ex_dir="../api-examples/busy_indicators/spinner_options")
+@no_example()
 def spinner_options(
     type: Literal["tadpole", "disc", "dots", "dot-track", "bounce"] | str | None = None,
     *,
