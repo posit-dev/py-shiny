@@ -185,9 +185,6 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     // Prevent default behavior
     e.preventDefault();
 
-    // Submit changes to the current cell
-    attemptUpdate();
-
     const hasShift = e.shiftKey;
 
     let nextColumnIndex = columnIndex;
@@ -196,20 +193,22 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
       const newColumnIndex = nextColumnIndex + (hasShift ? -1 : 1);
 
       if (newColumnIndex < 0 || newColumnIndex >= coldefs.length) {
-        // If the new column index is out of bounds, re-enable the current one
-        setCellEditMapAtLoc(rowIndex, columnIndex, (obj_draft) => {
-          obj_draft.isEditing = true;
-        });
+        // If the new column index is out of bounds, stay put
+        // setCellEditMapAtLoc(rowIndex, columnIndex, (obj_draft) => {
+        //   obj_draft.isEditing = true;
+        // });
         return;
       }
 
-      console.log("newColumnIndex", newColumnIndex);
       nextColumnIndex = newColumnIndex;
-      // Repeat the loop if the next column is an HTML column
-      if (!coldefs[newColumnIndex].meta!.isHtmlColumn) {
+      // Repeat until the loop if the next column is not an HTML column
+      if (coldefs[newColumnIndex].meta!.isHtmlColumn !== true) {
         break;
       }
     }
+
+    // Submit changes to the current cell
+    attemptUpdate();
 
     // Turn on editing in next cell!
     setCellEditMapAtLoc(rowIndex, nextColumnIndex, (obj_draft) => {
@@ -224,9 +223,6 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
 
     const hasShift = e.shiftKey;
 
-    // Submit changes to the current cell
-    attemptUpdate();
-
     const rowModel = getSortedRowModel();
     const sortedRowIndex = rowModel.rows.findIndex((row) => row.id === rowId);
     // Couldn't find row... silently quit
@@ -236,12 +232,15 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     const nextSortedRowIndex = sortedRowIndex! + (hasShift ? -1 : 1);
 
     if (nextSortedRowIndex < 0 || nextSortedRowIndex >= rowModel.rows.length) {
-      // If the new row index is out of bounds, re-enable the current one
-      setCellEditMapAtLoc(rowIndex, columnIndex, (obj_draft) => {
-        obj_draft.isEditing = true;
-      });
+      // If the new row index is out of bounds, stay put
+      // setCellEditMapAtLoc(rowIndex, columnIndex, (obj_draft) => {
+      //   obj_draft.isEditing = true;
+      // });
       return;
     }
+
+    // Submit changes to the current cell
+    attemptUpdate();
 
     // Turn on editing in the next cell!
     // Get the original row index
