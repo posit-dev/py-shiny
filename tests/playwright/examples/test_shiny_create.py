@@ -49,8 +49,12 @@ def test_template_examples(page: Page, ex_app_path: str) -> None:
     validate_example(page, ex_app_path)
 
 
+app_templates = list(app_template_choices.values())
+assert len(app_templates) > 0
+
+
 @pytest.mark.flaky(reruns=reruns, reruns_delay=reruns_delay)
-@pytest.mark.parametrize("app_template", list(app_template_choices.values()))
+@pytest.mark.parametrize("app_template", app_templates)
 def test_create_core(app_template: str, page: Page):
     with tempfile.TemporaryDirectory("example_apps") as tmpdir:
         subprocess_create(app_template, dest_dir=tmpdir)
