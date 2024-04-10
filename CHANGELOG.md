@@ -27,6 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added an error console which displays errors in the browser's UI. This is enabled by default when running applications locally, and can be disabled with `shiny run --no-dev-mode`. It is not enabled for applications that are deployed to a server. (#1060)
 
+* `shiny create` was updated to include some additional templates as well as an option to choose from the new [templates website](https://shiny.posit.co/py/templates/). (#1273, #1277, #1274)
+
 ### Bug fixes
 
 * On Windows, Shiny Express app files are now read in as UTF-8. (#1203)
