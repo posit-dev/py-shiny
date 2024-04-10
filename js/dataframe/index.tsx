@@ -136,7 +136,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
           header: colname,
           meta: {
             colIndex: i,
-            isHtmlColumn: payloadOptions["htmlColumns"]?.includes(i) ?? false,
+            isHtmlColumn: typeHint?.type === "html",
             typeHint: typeHint,
           },
           cell: ({ getValue }) => {

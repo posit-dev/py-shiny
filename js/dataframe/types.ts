@@ -7,7 +7,7 @@ export const EditModeEnum = {
 export type EditMode = ValueOf<typeof EditModeEnum>;
 
 export interface TypeHint {
-  type: "string" | "numeric" | "categorical" | "unknown";
+  type: "string" | "numeric" | "categorical" | "unknown" | "html";
 }
 
 export interface CategoricalTypeHint extends TypeHint {
@@ -31,7 +31,6 @@ export interface PandasData<TIndex> {
   options: DataGridOptions;
   typeHints?: ReadonlyArray<TypeHint>;
   editable?: boolean;
-  htmlColumns?: ReadonlyArray<number>;
 }
 
 export interface PatchInfo {
