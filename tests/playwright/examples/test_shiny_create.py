@@ -50,6 +50,8 @@ def test_template_examples(page: Page, ex_app_path: str) -> None:
 
 
 app_templates = list(app_template_choices.values())
+app_templates.remove("external-gallery")  # Not actually a template
+app_templates.remove("js-component")  # Several templates that can't be easily tested
 assert len(app_templates) > 0
 
 
