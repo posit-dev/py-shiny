@@ -1,7 +1,6 @@
 import { ColumnDef, RowModel, flexRender } from "@tanstack/react-table";
 import { VirtualItem } from "@tanstack/react-virtual";
 import { Cell } from "@tanstack/table-core";
-import dompurify from "dompurify";
 import React, {
   FC,
   ChangeEvent as ReactChangeEvent,
