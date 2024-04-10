@@ -31,7 +31,7 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
                 "Penguin island should be one of 'Torgersen', 'Biscoe', 'Dream'"
             )
         if (patch["column_index"] == 9) and int(
-            patch["value"]
+            patch["value"]  # pyright: ignore[reportArgumentType]
         ) > 50:  # check culmen length
             raise SafeException("Penguin culmen length cannot be greater than 50mm")
         return patch["value"]
