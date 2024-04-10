@@ -16,6 +16,7 @@ import { CellEdit, SetCellEditMapAtLoc } from "./cell-edit-map";
 import { updateCellsData } from "./data-update";
 import type { PatchInfo } from "./types";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type HtmlDep = any;
 
 // States
@@ -48,6 +49,8 @@ type CellHtmlValue = {
   isShinyHtml: true;
   obj: { deps?: HtmlDep[]; html: string };
 };
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const isShinyHtml = (x: any): x is CellHtmlValue => {
   return (
     x !== null &&
