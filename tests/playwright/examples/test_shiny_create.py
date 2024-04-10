@@ -6,6 +6,8 @@ import pytest
 from example_apps import get_apps, reruns, reruns_delay, validate_example
 from playwright.sync_api import Page
 
+from shiny._main import app_template_choices
+
 
 def subprocess_create(
     app_template: str,
@@ -48,10 +50,7 @@ def test_template_examples(page: Page, ex_app_path: str) -> None:
 
 
 @pytest.mark.flaky(reruns=reruns, reruns_delay=reruns_delay)
-@pytest.mark.parametrize(
-    "app_template",
-    ["basic-app", "basic-sidebar", "dashboard", "dashboard-tips", "basic-navigation"],
-)
+@pytest.mark.parametrize("app_template", list(app_template_choices.values()))
 def test_create_core(app_template: str, page: Page):
     with tempfile.TemporaryDirectory("example_apps") as tmpdir:
         subprocess_create(app_template, dest_dir=tmpdir)
