@@ -11,7 +11,7 @@ from shiny.render._dataframe import CellPatch
 
 # TODO-karan-test; Data frame with an `Tag` in column
 # TODO-karan-test; Data frame with an `TagList` in (another) column
-# TODO-karan-test; Data frame with an `MetadataNode` (`HTMLDependency`) in (another) column
+# TODO-karan-test; Data frame with an `MetadataNode` (`HTMLDependency`) in (another) column; Use the `head=` string field to add a script tag that runs some JS. Then expect the JS object to exist in the DOM
 # TODO-karan-test; Data frame with an `HTML` in (another) column
 
 # TODO-karan-test; Data frame edit that returns shiny reactive output UI in cell; Add server hook to render something to that cell; Make sure it works when the data frame data is updated and when the data frame is removed.
