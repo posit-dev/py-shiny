@@ -88,16 +88,11 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
             df,
             selection_mode="none",
             editable=True,
-            # html_columns=(1,),
-            # html_columns=(2,),
-            html_columns="auto",
         )
         # return render.DataTable(df, selection_mode="none", editable=True)
         # return render.DataGrid(df, selection_mode="rows", editable=True)
         # return render.DataTable(df, selection_mode="rows", editable=True)
-        return render.DataGrid(
-            df, selection_mode="rows", editable=False, html_columns=[1]
-        )
+        return render.DataGrid(df, selection_mode="rows", editable=False)
         # return render.DataTable(df, selection_mode="rows", editable=False)
 
     # from shiny import reactive
@@ -126,14 +121,6 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
             color="country",
             title="Population Over Time",
         )
-
-    # x = "<em>Barret</em>"
-
-    # y = "<em>Barret</em>"
-    # html_columns = ["y"]
-
-    # z = ui.HTML("<em>Barret</em>")
-    # # z is HTML!
 
     @summary_data.set_patch_fn
     def upgrade_patch(

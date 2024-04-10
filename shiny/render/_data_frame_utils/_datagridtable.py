@@ -138,7 +138,6 @@ class DataGrid(AbstractTabularData):
     filters: bool
     editable: bool
     selection_modes: SelectionModes
-    html_columns: tuple[int, ...] | Literal["auto"]
 
     def __init__(
         self,
@@ -150,9 +149,6 @@ class DataGrid(AbstractTabularData):
         filters: bool = False,
         editable: bool = False,
         selection_mode: SelectionModeInput = "none",
-        html_columns: (
-            Literal["auto"] | bool | int | list[int] | tuple[int, ...]
-        ) = "auto",
         row_selection_mode: RowSelectionModeDeprecated = "deprecated",
     ):
 
@@ -172,7 +168,6 @@ class DataGrid(AbstractTabularData):
             editable=self.editable,
             row_selection_mode=row_selection_mode,
         )
-        self.html_columns = as_html_columns(html_columns, self.data)
 
     def to_payload(self) -> dict[str, Jsonifiable]:
         res = serialize_pandas_df(self.data)
@@ -186,36 +181,6 @@ class DataGrid(AbstractTabularData):
             fill=self.height is None,
         )
         return res
-
-
-def as_html_columns(
-    html_columns: Literal["auto"] | bool | int | list[int] | tuple[int, ...],
-    data: pd.DataFrame,
-) -> tuple[int, ...] | Literal["auto"]:
-    if html_columns == "auto":
-        return "auto"
-
-    if html_columns is False:
-        return tuple[int]([])
-
-    if html_columns is True:
-        return tuple(range(len(data.columns)))
-
-    if isinstance(html_columns, int):
-        return (html_columns,)
-
-    if isinstance(html_columns, (list, tuple)):
-
-        for col in html_columns:
-            if not isinstance(col, int):
-                raise TypeError(
-                    f"`html_columns=` expected an int or a list/tuple of ints, but found '{type(col)}'."
-                )
-        return tuple(html_columns)
-
-    raise TypeError(
-        f"The `html_columns=` expected a bool, int, or a list/tuple of ints, but found '{type(html_columns)}'."
-    )
 
 
 @no_example()
@@ -287,7 +252,6 @@ class DataTable(AbstractTabularData):
     summary: bool | str
     filters: bool
     selection_modes: SelectionModes
-    html_columns: tuple[int, ...] | Literal["auto"]
 
     def __init__(
         self,
@@ -299,9 +263,6 @@ class DataTable(AbstractTabularData):
         filters: bool = False,
         editable: bool = False,
         selection_mode: SelectionModeInput = "none",
-        html_columns: (
-            Literal["auto"] | bool | int | list[int] | tuple[int, ...]
-        ) = "auto",
         row_selection_mode: Literal["deprecated"] = "deprecated",
     ):
 
@@ -321,7 +282,6 @@ class DataTable(AbstractTabularData):
             editable=self.editable,
             row_selection_mode=row_selection_mode,
         )
-        self.html_columns = as_html_columns(html_columns, self.data)
 
     def to_payload(self) -> dict[str, Jsonifiable]:
         res = serialize_pandas_df(self.data)

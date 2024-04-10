@@ -103,16 +103,6 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
 
   const isHtmlColumn = cell.column.columnDef.meta!.isHtmlColumn;
 
-  // const isShinyHtml: boolean =
-  //   initialValue !== null &&
-  //   typeof initialValue !== "string" &&
-  //   Object.prototype.hasOwnProperty.call(initialValue, "isShinyHtml") &&
-  //   initialValue.isShinyHtml === true;
-  // const valueHasHtmlKey =
-  //   isHtmlColumn &&
-  //   typeof initialValue !== "string" &&
-  //   Object.prototype.hasOwnProperty.call(initialValue, "html");
-
   const cellValue = cellEditInfo?.value ?? initialValue;
 
   const cellState = cellEditInfo?.state ?? CellStateEnum.Ready;
@@ -192,10 +182,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
       const newColumnIndex = nextColumnIndex + (hasShift ? -1 : 1);
 
       if (newColumnIndex < 0 || newColumnIndex >= coldefs.length) {
-        // If the new column index is out of bounds, stay put
-        // setCellEditMapAtLoc(rowIndex, columnIndex, (obj_draft) => {
-        //   obj_draft.isEditing = true;
-        // });
+        // If the new column index is out of bounds, quit
         return;
       }
 
@@ -231,10 +218,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     const nextSortedRowIndex = sortedRowIndex! + (hasShift ? -1 : 1);
 
     if (nextSortedRowIndex < 0 || nextSortedRowIndex >= rowModel.rows.length) {
-      // If the new row index is out of bounds, stay put
-      // setCellEditMapAtLoc(rowIndex, columnIndex, (obj_draft) => {
-      //   obj_draft.isEditing = true;
-      // });
+      // If the new row index is out of bounds, quit
       return;
     }
 
