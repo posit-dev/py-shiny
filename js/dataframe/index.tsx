@@ -13,6 +13,7 @@ import {
 import { Virtualizer, useVirtualizer } from "@tanstack/react-virtual";
 import React, {
   FC,
+  ReactElement,
   StrictMode,
   useCallback,
   useEffect,
@@ -123,25 +124,29 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
 
   const coldefs = useMemo<ColumnDef<unknown[], unknown>[]>(
     () =>
-      columns.map((colname, i) => {
-        const typeHint = typeHints?.[i];
+      columns.map((colname, colIndex) => {
+        const typeHint = typeHints?.[colIndex];
+
+        const isHtmlColumn = typeHint?.type === "html";
+        const enableSorting = isHtmlColumn ? false : undefined;
 
         return {
           accessorFn: (row, index) => {
-            return row[i];
+            return row[colIndex];
           },
           // TODO: delegate this decision to something in filter.tsx
           filterFn:
             typeHint?.type === "numeric" ? "inNumberRange" : "includesString",
           header: colname,
           meta: {
-            colIndex: i,
-            isHtmlColumn: typeHint?.type === "html",
-            typeHint: typeHint,
+            colIndex,
+            isHtmlColumn,
+            typeHint,
           },
           cell: ({ getValue }) => {
             return getValue() as string;
           },
+          enableSorting,
         };
       }),
     [columns, typeHints]
@@ -413,6 +418,25 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
             {table.getHeaderGroups().map((headerGroup, i) => (
               <tr key={headerGroup.id} aria-rowindex={i + 1}>
                 {headerGroup.headers.map((header) => {
+                  const headerContent = header.isPlaceholder ? undefined : (
+                    <div
+                      style={{
+                        cursor: header.column.getCanSort()
+                          ? "pointer"
+                          : undefined,
+                        userSelect: header.column.getCanSort()
+                          ? "none"
+                          : undefined,
+                      }}
+                    >
+                      {flexRender(
+                        header.column.columnDef.header,
+                        header.getContext()
+                      )}
+                      <SortArrow direction={header.column.getIsSorted()} />
+                    </div>
+                  );
+
                   return (
                     <th
                       key={header.id}
@@ -423,24 +447,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
                       onClick={header.column.getToggleSortingHandler()}
                       onKeyDown={makeHeaderKeyDown(header.column)}
                     >
-                      {header.isPlaceholder ? null : (
-                        <div
-                          style={{
-                            cursor: header.column.getCanSort()
-                              ? "pointer"
-                              : undefined,
-                            userSelect: header.column.getCanSort()
-                              ? "none"
-                              : undefined,
-                          }}
-                        >
-                          {flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                          <SortArrow direction={header.column.getIsSorted()} />
-                        </div>
-                      )}
+                      {headerContent}
                     </th>
                   );
                 })}

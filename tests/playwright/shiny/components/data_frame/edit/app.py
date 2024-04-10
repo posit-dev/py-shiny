@@ -14,6 +14,12 @@ from shiny.render._dataframe import CellPatch
 # TODO-future; Can we maintain pre-processed value and use it within editing?
 # A: Doesn't seem possible for now
 
+
+# TODO-karan-test; Data frame with filters enabled. Add an html column. Make sure the column can not be sorted or filtered. Make sure other columns can be sorted and filtered
+# TODO-karan-test; Sort on a column. Enter edit mode on a cell. Hit `enter` to go to next cell. Make sure the next cell is the next sorted row, even when in the original data that row is not the next row.
+# TODO-karan-test; Filter on a column. Enter edit mode on a cell. Hit `enter` to go to next cell. Make sure the next cell is the next filtered row, even when in the original data that row is not the next row.
+
+
 # TODO-karan-test; Data frame with an `Tag` in column
 # TODO-karan-test; Data frame with an `TagList` in (another) column
 # TODO-karan-test; Data frame with an `MetadataNode` (`HTMLDependency`) in (another) column; Use the `head=` string field to add a script tag that runs some JS. Then expect the JS object to exist in the DOM
@@ -91,8 +97,9 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
         # return df
         return render.DataGrid(
             df,
-            selection_mode="none",
-            editable=True,
+            selection_mode="rows",
+            editable=False,
+            filters=True,
         )
         # return render.DataTable(df, selection_mode="none", editable=True)
         # return render.DataGrid(df, selection_mode="rows", editable=True)
