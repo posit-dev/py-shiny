@@ -1,4 +1,4 @@
-import { RowModel, flexRender } from "@tanstack/react-table";
+import { ColumnDef, RowModel, flexRender } from "@tanstack/react-table";
 import { VirtualItem } from "@tanstack/react-virtual";
 import { Cell } from "@tanstack/table-core";
 import React, {
@@ -15,6 +15,9 @@ import React, {
 import { CellEdit, SetCellEditMapAtLoc } from "./cell-edit-map";
 import { updateCellsData } from "./data-update";
 import type { PatchInfo } from "./types";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type HtmlDep = any;
 
 // States
 // # √ Ready
@@ -42,6 +45,28 @@ const CellStateClassEnum = {
 } as const;
 export type CellState = keyof typeof CellStateEnum;
 
+type CellHtmlValue = {
+  isShinyHtml: true;
+  obj: { deps?: HtmlDep[]; html: string };
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const isShinyHtml = (x: any): x is CellHtmlValue => {
+  return (
+    x !== null &&
+    typeof x !== "string" &&
+    Object.prototype.hasOwnProperty.call(x, "isShinyHtml") &&
+    x.isShinyHtml === true
+  );
+};
+type CellValue = string | CellHtmlValue | null;
+const getCellValueText = (cellValue: CellValue) => {
+  if (isShinyHtml(cellValue)) {
+    return cellValue.obj.html;
+  }
+  return cellValue as string;
+};
+
 interface TableBodyCellProps {
   key: string;
   rowId: string;
@@ -49,6 +74,7 @@ interface TableBodyCellProps {
   cell: Cell<unknown[], unknown>;
   patchInfo: PatchInfo;
   columns: readonly string[];
+  coldefs: readonly ColumnDef<unknown[], unknown>[];
   rowIndex: number;
   columnIndex: number;
   editCellsIsAllowed: boolean;
@@ -64,6 +90,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
   cell,
   patchInfo,
   columns,
+  coldefs,
   rowIndex,
   columnIndex,
   editCellsIsAllowed,
@@ -72,15 +99,22 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
   setData,
   setCellEditMapAtLoc,
 }) => {
-  const initialValue = cell.getValue();
+  const initialValue = cell.getValue() as
+    | string
+    | { isShinyHtml: true; obj: { deps?: HtmlDep[]; html: string } }
+    | null;
+
+  const isHtmlColumn = cell.column.columnDef.meta!.isHtmlColumn;
 
   const cellValue = cellEditInfo?.value ?? initialValue;
+
   const cellState = cellEditInfo?.state ?? CellStateEnum.Ready;
   const errorTitle = cellEditInfo?.errorTitle;
   // Listen to boolean value of cellEditInfo. This allows for the cell state to be restored if esc is hit
   const isEditing = cellEditInfo?.isEditing ?? false;
-  const editValue = cellEditInfo?.editValue ?? initialValue;
+  const editValue = cellEditInfo?.editValue ?? getCellValueText(cellValue);
 
+  const tdRef = useRef<HTMLTableCellElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
   // Keyboard navigation:
@@ -145,18 +179,28 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
 
     const hasShift = e.shiftKey;
 
-    const newColumnIndex = columnIndex! + (hasShift ? -1 : 1);
+    let nextColumnIndex = columnIndex;
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const newColumnIndex = nextColumnIndex + (hasShift ? -1 : 1);
+
+      if (newColumnIndex < 0 || newColumnIndex >= coldefs.length) {
+        // If the new column index is out of bounds, quit
+        return;
+      }
+
+      nextColumnIndex = newColumnIndex;
+      // Repeat until the loop if the next column is not an HTML column
+      if (coldefs[newColumnIndex].meta!.isHtmlColumn !== true) {
+        break;
+      }
+    }
 
     // Submit changes to the current cell
     attemptUpdate();
 
-    if (newColumnIndex < 0 || newColumnIndex >= columns.length) {
-      // If the new column index is out of bounds, quit
-      return;
-    }
-
     // Turn on editing in next cell!
-    setCellEditMapAtLoc(rowIndex, newColumnIndex, (obj_draft) => {
+    setCellEditMapAtLoc(rowIndex, nextColumnIndex, (obj_draft) => {
       obj_draft.isEditing = true;
     });
   };
@@ -176,13 +220,13 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     }
     const nextSortedRowIndex = sortedRowIndex! + (hasShift ? -1 : 1);
 
-    // Submit changes to the current cell
-    attemptUpdate();
-
     if (nextSortedRowIndex < 0 || nextSortedRowIndex >= rowModel.rows.length) {
       // If the new row index is out of bounds, quit
       return;
     }
+
+    // Submit changes to the current cell
+    attemptUpdate();
 
     // Turn on editing in the next cell!
     // Get the original row index
@@ -203,7 +247,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     });
 
     // Only update if the string form of the value has changed
-    if (`${initialValue}` === `${editValue}`) {
+    if (`${getCellValueText(cellValue)}` === `${editValue}`) {
       // Reset all edit info
       resetEditing();
       // Set state to prior cell state
@@ -245,7 +289,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     setCellEditMapAtLoc,
     rowIndex,
     columnIndex,
-    initialValue,
+    cellValue,
     editValue,
     resetEditing,
     patchInfo,
@@ -335,8 +379,20 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
   let content: ReactElement | ReturnType<typeof flexRender> | undefined =
     undefined;
   const cellTitle = errorTitle;
-  const tableCellClass =
-    CellStateClassEnum[isEditing ? CellStateEnum.Editing : cellState];
+  let tableCellClass: string | undefined = undefined;
+  const addToTableCellClass = (x: string | undefined) => {
+    if (!x) return;
+    if (tableCellClass) {
+      tableCellClass += " ";
+      tableCellClass += x;
+    } else {
+      tableCellClass = x;
+    }
+  };
+  addToTableCellClass(
+    CellStateClassEnum[isEditing ? CellStateEnum.Editing : cellState]
+  );
+  let attemptRenderAsync = false;
 
   let editContent: ReactElement | null = null;
   if (cellState === CellStateEnum.EditSaving) {
@@ -346,7 +402,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     if (isEditing) {
       editContent = (
         <textarea
-          value={editValue as string}
+          value={String(editValue)}
           onChange={onChange}
           // onBlur={onBlur}
           onFocus={onFocus}
@@ -359,7 +415,8 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
       // `isEditing` is `false`
 
       // Only allow transition to edit mode if the cell can be edited
-      if (editCellsIsAllowed) {
+      if (editCellsIsAllowed && !isHtmlColumn) {
+        addToTableCellClass("cell-editable");
         onClick = (e: ReactMouseEvent<HTMLTableCellElement>) => {
           // Do not prevent default or stop propagation here!
           // Other methods need to be able to handle the event as well. e.g. `onBodyClick` above.
@@ -369,17 +426,43 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
           // Set this cell to editing mode
           setCellEditMapAtLoc(rowIndex, columnIndex, (obj_draft) => {
             obj_draft.isEditing = true;
-            obj_draft.editValue = cellValue as string;
+            obj_draft.editValue = getCellValueText(cellValue) as string;
           });
         };
+      } else {
+        addToTableCellClass("cell-html");
       }
     }
-    content = flexRender(cell.column.columnDef.cell, cell.getContext());
+    if (isShinyHtml(cellValue)) {
+      attemptRenderAsync = true;
+    } else {
+      // Render cell contents like normal
+      content = flexRender(cell.column.columnDef.cell, cell.getContext());
+    }
   }
+
+  useEffect(() => {
+    if (!tdRef.current) return;
+    if (!attemptRenderAsync) return;
+    if (!isShinyHtml(cellValue)) return;
+
+    // TODO-future; Use faster way to make a deep copy
+    const cellValueObjDeepCopy = JSON.parse(JSON.stringify(cellValue.obj));
+    window.Shiny.renderContentAsync(tdRef.current, cellValueObjDeepCopy);
+
+    const curTdRef = tdRef.current;
+
+    return () => {
+      // Unbind all Shiny inputs and outputs within the cell
+      window.Shiny.unbindAll(curTdRef);
+      // Remove DOM elements from cell inserted by `window.Shiny.renderContentAsync`
+      curTdRef.replaceChildren("");
+    };
+  }, [tdRef, cellValue, rowIndex, columnIndex, attemptRenderAsync]);
 
   return (
     <td
-      id={cell.id}
+      ref={tdRef}
       onClick={onClick}
       title={cellTitle}
       className={tableCellClass}
