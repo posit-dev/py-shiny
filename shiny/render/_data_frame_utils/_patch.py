@@ -2,7 +2,7 @@ from __future__ import annotations
 
 # TODO-barret-render.data_frame; Docs
 # TODO-barret-render.data_frame; Add examples of patch!
-from typing import Awaitable, Protocol, Sequence, cast
+from typing import Protocol, Sequence, cast
 
 from htmltools import TagNode
 

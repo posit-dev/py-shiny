@@ -40,7 +40,9 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
                 "Penguin species should be one of Adelie, Chinstrap, Gentoo"
             )
         if (patch["column_index"] == 2) and int(
-            patch["value"]
+            patch[
+                "value"
+            ]  # pyright: ignore[reportArgumentType,reportGeneralTypeIssues]
         ) > 50:  # check bill_length_mm
             raise SafeException("Penguin bill length cannot be greater than 50mm")
         return patch["value"]

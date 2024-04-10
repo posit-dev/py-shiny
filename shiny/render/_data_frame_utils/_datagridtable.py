@@ -336,7 +336,7 @@ def serialize_pandas_df(df: "pd.DataFrame") -> dict[str, Any]:
             df = df.copy(deep=False)
             session = require_active_session(None)
 
-            def wrap_shiny_html_with_session(x: TagNode) -> CellHtml:
+            def wrap_shiny_html_with_session(x: TagNode):
                 return wrap_shiny_html(x, session=session)
 
             for html_column in html_columns:
@@ -396,7 +396,9 @@ class CellHtml(TypedDict):
 
 
 @overload
-def wrap_shiny_html(x: TagNode, *, session: Session) -> CellHtml: ...
+def wrap_shiny_html(  # pyright: ignore[reportOverlappingOverload]
+    x: TagNode, *, session: Session
+) -> CellHtml: ...
 @overload
 def wrap_shiny_html(x: Jsonifiable, *, session: Session) -> Jsonifiable: ...
 def wrap_shiny_html(

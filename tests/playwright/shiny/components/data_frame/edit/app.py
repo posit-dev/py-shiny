@@ -1,4 +1,9 @@
-from palmerpenguins import load_penguins_raw  # pyright: ignore[reportMissingTypeStubs]
+# pyright: reportUnknownMemberType = false
+# pyright: reportMissingTypeStubs = false
+# pyright: reportArgumentType = false
+# pyright: reportUnknownMemberType = false
+
+from palmerpenguins import load_penguins_raw
 
 from shiny import App, Inputs, Outputs, Session, module, render, ui
 from shiny.render._dataframe import CellPatch

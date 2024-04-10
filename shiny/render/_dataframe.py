@@ -342,11 +342,15 @@ class data_frame(Renderer[DataFrameResult]):
         return self._session
 
     def set_patch_fn(self, fn: PatchFn | PatchFnSync) -> Self:
-        self._patch_fn = wrap_async(fn)  # pyright: ignore[reportGeneralTypeIssues]
+        self._patch_fn = wrap_async(  # pyright: ignore[reportGeneralTypeIssues,reportAttributeAccessIssue]
+            fn
+        )
         return self
 
     def set_patches_fn(self, fn: PatchesFn | PatchesFnSync) -> Self:
-        self._patches_fn = wrap_async(fn)  # pyright: ignore[reportGeneralTypeIssues]
+        self._patches_fn = wrap_async(  # pyright: ignore[reportGeneralTypeIssues,reportAttributeAccessIssue]
+            fn
+        )
         return self
 
     def _init_handlers(self) -> None:
