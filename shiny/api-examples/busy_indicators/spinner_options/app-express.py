@@ -23,13 +23,15 @@ with ui.card():
         sns.lineplot(x=np.arange(100), y=np.random.randn(100))
 
 
-ui.input_select(
-    "busy_mode",
-    "Busy indicator mode",
-    ["spinners", "spinner", "cursor", "none"],
+ui.input_selectize(
+    "indicator_types",
+    "Busy indicator types",
+    ["spinners", "pulse", "cursor"],
+    multiple=True,
+    selected=["spinners", "pulse"],
 )
 
 
 @render.express
-def busy_mode_ui():
-    ui.busy_indicators.mode(input.busy_mode())
+def indicator_types_ui():
+    ui.busy_indicators.use(input.indicator_types())

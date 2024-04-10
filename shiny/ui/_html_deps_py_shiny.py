@@ -62,8 +62,8 @@ def busy_indicators_dependency() -> HTMLDependency:
         source={"package": "shiny", "subdir": "www/shared/py-shiny/busy-indicators"},
         stylesheet={"href": "busy-indicators.css"},
         head=TagList(
-            # Default to spinners mode
-            busy_indicators.mode("spinners"),
+            # Enable busy indicators by default.
+            busy_indicators.use(),
             # Show a page-level spinner up until the next idle.
             # Note: this is only sensible when this dependency comes bundled with the
             # main shiny dependency, which is currently the case (i.e., it should never

@@ -1,32 +1,35 @@
 from __future__ import annotations
 
-from typing import Literal
+import copy
+from typing import Iterable, Literal
 
 from htmltools import Tag, tags
 
 from .._docstring import add_example, no_example
 
-__all__ = ("mode", "spinner_options")
+__all__ = ("use", "spinner_options")
+
+
+BusyTypes = Literal["spinners", "pulse", "cursor"]
 
 
 @no_example()
-def mode(type: Literal["spinners", "spinner", "cursor", "none"] = "spinners") -> Tag:
+def use(types: Iterable[BusyTypes] = ("spinners", "pulse")) -> Tag:
     """
-    Set the busy indicator mode.
+    Use/customize busy indicators.
 
-    Include the result of this function in the app's UI to set the busy indicator mode.
+    Include the result of this function in the app's UI to use/customize busy indicators.
+    Provide an empty list/tuple to disable all busy indicators.
 
     Parameters
     ----------
-    type
-        The busy indicator mode to use. Options include:
+    types
+        A list/tuple of busy indicator types, which can include:
 
-        * `spinners`: Show a spinner overlay on each output when they are recalculating,
-           and a page-level spinner when the server is otherwise busy.
-        * `spinner`: Show a page-level spinner whenever the server is busy.
+        * `spinners`: Overlay a spinner on each recalculating output.
+        * `pulse`: Show a pulsing banner at the top of the window when the server is busy.
         * `cursor`: Show a progress indicator on the mouse cursor whenever the server
-           is busy. On mobile, a page-level spinner is shown instead.
-        * `none`: Do not show any busy indicators.
+           is busy. On mobile, a pulsing banner is shown instead.
 
     Returns
     -------
@@ -38,11 +41,14 @@ def mode(type: Literal["spinners", "spinner", "cursor", "none"] = "spinners") ->
     * :func:`~shiny.ui.busy_indicators.spinner_options`: Customize spinning busy indicators.
     """
 
-    if type not in ("spinners", "spinner", "cursor", "none"):
-        raise ValueError(f"Invalid busy indicator mode: {type}")
+    for x in types:
+        if x not in ("spinners", "pulse", "cursor"):
+            raise ValueError(f"Invalid busy indicator type: {x}")
+
+    types_str = ",".join(types)
 
     return tags.script(
-        f"$(function() {{ document.documentElement.dataset.shinyBusyIndicatorMode = '{type}'; }});"
+        f"$(function() {{ document.documentElement.dataset.shinyBusyIndicatorTypes = '{types_str}'; }});"
     )
 
 

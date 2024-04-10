@@ -71,10 +71,12 @@ def card_server(input, output, session, length, simulate_all):
 app_ui = ui.page_sidebar(
     ui.sidebar(
         ui.input_task_button("simulate_all", "Simulate all", icon=icon_svg("shuffle")),
-        ui.input_select(
-            "busy_mode",
-            "Busy indicator mode",
-            ["spinners", "spinner", "cursor", "none"],
+        ui.input_selectize(
+            "indicator_types",
+            "Busy indicator types",
+            ["spinners", "pulse", "cursor"],
+            multiple=True,
+            selected=["spinners", "pulse"],
         ),
         ui.input_slider("length", "Simulation length", 0, 500, 5),
     ),
@@ -86,7 +88,7 @@ app_ui = ui.page_sidebar(
         col_widths=[6, 6],
     ),
     card_ui("e", "Ball", "bounce"),
-    ui.output_ui("busy_mode_ui"),
+    ui.output_ui("indicator_types_ui"),
     fillable=True,
     title="Busy indicators + extended tasks = ❤️",
 )
@@ -95,8 +97,8 @@ app_ui = ui.page_sidebar(
 def server(input, output, session):
 
     @render.ui
-    def busy_mode_ui():
-        return ui.busy_indicators.mode(input.busy_mode())
+    def indicator_types_ui():
+        return ui.busy_indicators.use(input.indicator_types())
 
     card_server("a", length=input.length, simulate_all=input.simulate_all)
     card_server("b", length=input.length, simulate_all=input.simulate_all)

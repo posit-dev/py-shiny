@@ -108,7 +108,7 @@ quartodoc:
         - ui.include_js
         - ui.insert_ui
         - ui.remove_ui
-        - ui.busy_indicators.mode
+        - ui.busy_indicators.use
         - ui.busy_indicators.spinner_options
         - ui.fill.as_fillable_container
         - ui.fill.as_fill_item

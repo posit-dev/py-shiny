@@ -11,17 +11,16 @@ from shiny import App, reactive, render, ui
 app_ui = ui.page_sidebar(
     ui.sidebar(
         ui.input_task_button("update", "Update"),
-        ui.input_slider("length", "Update length", 0, 1000, 3),
+        ui.input_slider("length", "Update length", 0, 1000, 1),
     ),
-    # ui.output_ui("foo"),
-    ui.output_plot("p"),
+    ui.output_ui("foo"),
     fillable=True,
 )
 
 
 def server(input, output, session):
 
-    time.sleep(5)
+    time.sleep(2)
 
     @reactive.calc
     def wait_time():
@@ -29,17 +28,26 @@ def server(input, output, session):
 
     @render.ui
     def foo():
-        return [
-            ui.output_ui("some_text"),
-            ui.output_plot("p"),
-        ]
+        time.sleep(wait_time())
+        return [ui.output_ui("short"), ui.output_ui("long"), ui.output_plot("p")]
 
     @render.ui
-    def some_text():
+    def short():
         time.sleep(wait_time())
 
         return ui.markdown(
             "This app demonstrates the use of different loading spinners."
+        )
+
+    @render.ui
+    def long():
+        time.sleep(wait_time())
+
+        return ui.markdown(
+            "Lorem ipsum dolor sit amet, consectetur adipiscing elit. "
+            "Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. "
+            "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. "
+            "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. "
         )
 
     @render.plot

@@ -16,12 +16,14 @@ app_ui = ui.page_fixed(
         ),
         ui.output_plot("plot"),
     ),
-    ui.input_select(
-        "busy_mode",
-        "Busy indicator mode",
-        ["spinners", "spinner", "cursor", "none"],
+    ui.input_selectize(
+        "indicator_types",
+        "Busy indicator types",
+        ["spinners", "pulse", "cursor"],
+        multiple=True,
+        selected=["spinners", "pulse"],
     ),
-    ui.output_ui("busy_mode_ui"),
+    ui.output_ui("indicator_types_ui"),
 )
 
 
@@ -34,8 +36,8 @@ def server(input):
         sns.lineplot(x=np.arange(100), y=np.random.randn(100))
 
     @render.ui
-    def busy_mode_ui():
-        ui.busy_indicators.mode(input.busy_mode())
+    def indicator_types_ui():
+        ui.busy_indicators.use(input.indicator_types())
 
 
 app = App(app_ui, server)

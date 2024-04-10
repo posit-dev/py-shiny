@@ -6,6 +6,7 @@
 */
 
 /* "Built-in" spinner types */
+/* Part of the reason why they're all here is so we can embed the SVGs in the CSS */
 :root {
   --_shiny-spinner-type-tadpole: url(tadpole-spinner.svg);
   --_shiny-spinner-type-disc: url(disc-spinner.svg);
@@ -14,121 +15,101 @@
   --_shiny-spinner-type-bounce: url(ball.svg);
 }
 
-/* A reusable mixin for "core" spinner styles */
-@mixin shiny-spinner-core {
-  --_shiny-spinner-mask-img: var(--shiny-spinner-mask-img, var(--_shiny-spinner-type-tadpole));
-  --_shiny-spinner-color: var(--shiny-spinner-color, var(--bs-primary, #007bc2));
-  --_shiny-spinner-size: var(--shiny-spinner-size, 40px);
-  --_shiny-spinner-easing: var(--shiny-spinner-easing, linear);
-  --_shiny-spinner-speed: var(--shiny-spinner-speed, 2s);
-  --_shiny-spinner-delay: var(--shiny-spinner-delay, 0.5s);
-  --_shiny-spinner-animation: var(--shiny-spinner-animation, shiny-busy-spinner-spin);
-
-  /* Apply the spinner type as a mask */
-  mask-image: var(--_shiny-spinner-mask-img);
-  mask-position: center;
-  mask-size: contain;
-  mask-repeat: no-repeat;
-  -webkit-mask-image: var(--_shiny-spinner-mask-img);
-  -webkit-mask-position: center;
-  -webkit-mask-size: contain;
-  -webkit-mask-repeat: no-repeat;
-
-  /* Color and sizing */
-  background: var(--_shiny-spinner-color);
-  position: absolute;
-  width: var(--_shiny-spinner-size);
-  height: var(--_shiny-spinner-size);
-
-  /* Animation */
-  animation-name: var(--_shiny-spinner-animation);
-  animation-duration: var(--_shiny-spinner-speed);
+/* Mixin for pulsing banner since we need to include in several different contexts */
+@mixin shiny-page-busy {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  content: ""; /* Used in a ::after context */
+  animation-name: busy-page-pulse;
+  animation-duration: 20s;
   animation-iteration-count: infinite;
-  animation-timing-function: var(--_shiny-spinner-easing);
-  animation-delay: var(--_shiny-spinner-delay);
-
-  content: "";
-  scale: 0;
-  opacity: 1;
+  background: linear-gradient(45deg, #fff, #505050, #007bc2, #74149c, #007bc2, #505050, #fff);
+  background-size: 800%;
 }
 
-/* Output-level spinners */
-@mixin shiny-output-spinner {
-  @include shiny-spinner-core;
-  inset: calc(50% - var(--_shiny-spinner-size) / 2);
-}
-
-/* Page-level spinner */
-@mixin shiny-page-spinner {
-  @include shiny-spinner-core;
-  inset: 1rem 1rem auto auto;
-}
-
-[data-shiny-busy-indicator-mode="spinners"] {
+[data-shiny-busy-indicator-types*="spinners"] {
   .recalculating {
     position: relative;
-    /* Overlay the spinner on recalculating outputs */
+
     &::after {
-      @include shiny-output-spinner;
+      position: absolute;
+
+      /* Spinner options */
+      --_shiny-spinner-mask-img: var(--shiny-spinner-mask-img, var(--_shiny-spinner-type-tadpole));
+      --_shiny-spinner-color: var(--shiny-spinner-color, var(--bs-primary, #007bc2));
+      --_shiny-spinner-size: var(--shiny-spinner-size, 40px);
+      --_shiny-spinner-easing: var(--shiny-spinner-easing, ease-in-out);
+      --_shiny-spinner-speed: var(--shiny-spinner-speed, 2s);
+      --_shiny-spinner-delay: var(--shiny-spinner-delay, 0.5s);
+      --_shiny-spinner-animation: var(--shiny-spinner-animation, shiny-busy-spinner-spin);
+
+      /* Apply the spinner type as a mask */
+      mask-image: var(--_shiny-spinner-mask-img);
+      mask-position: center;
+      mask-size: contain;
+      mask-repeat: no-repeat;
+      -webkit-mask-image: var(--_shiny-spinner-mask-img);
+      -webkit-mask-position: center;
+      -webkit-mask-size: contain;
+      -webkit-mask-repeat: no-repeat;
+
+      /* Color, sizing, & positioning */
+      background: var(--_shiny-spinner-color);
+      width: var(--_shiny-spinner-size);
+      height: var(--_shiny-spinner-size);
+      inset: calc(50% - var(--_shiny-spinner-size) / 2);
+
+      /* Animation */
+      animation-name: var(--_shiny-spinner-animation);
+      animation-duration: var(--_shiny-spinner-speed);
+      animation-iteration-count: infinite;
+      animation-timing-function: var(--_shiny-spinner-easing);
+      animation-delay: var(--_shiny-spinner-delay);
+
+      content: "";
+      scale: 0;
     }
+
     /*
       shiny.css puts `opacity: 0.3` on .recalculating, which unfortunately applies to
-      the spinner. Undo that, but still apply (smaller) opacity to the content.
+      the spinner. Undo that, but still apply (smaller) opacity to immediate children
+      that aren't recalculating.
     */
     opacity: 1;
-    > * {
+    > *:not(.recalculating) {
       opacity: 0.2;
     }
-  }
 
-  /* If shiny is busy (say, due to a effect/observe), show page-level spinner... */
-  &.shiny-busy,
-  &.shiny-not-yet-idle {
-    position: relative;
-    &::after {
-      @include shiny-page-spinner;
-    }
-  }
-
-  /* ... unless outputs are recalculating */
-  &.shiny-busy:has(.recalculating)::after {
-    display: none;
-  }
-
-  /*
-    Disable spinner on the renderUI() container for 2 reasons:
-      1. .shiny-html-output has on it `display: contents` (for other reasons), which breaks the positioning of the spinner.
-      2. A spinner on this container can be redundant when it contains outputs
-    As a compromise, we indicate progress on the container by changing the cursor.
-  */
-  .shiny-html-output.recalculating {
-    cursor: progress;
-    &::after {
+    /*
+      Disable spinner on uiOutput() mainly because (for other reasons) it has
+      `display:contents`, which breaks the ::after positioning.
+      Note that, even if we could position it, we'd probably want to disable it
+      if it has recalculating children.
+    */
+    &.shiny-html-output::after {
       display: none;
     }
   }
 
   /* Opt-out class */
-  .disable-shiny-spinners .recalculating::after {
+  .shiny-spinner-disabled.recalculating::after {
     display: none;
   }
-
-  .disable-shiny-spinners.recalculating::after {
+  .shiny-spinner-disabled-children .recalculating::after {
     display: none;
   }
 }
 
-/****************************************
-In spinner mode, if the page has anything recalculating, show progress cursor
-*****************************************/
-[data-shiny-busy-indicator-mode="spinner"] {
-  /* If shiny is busy (say, due to a effect/observe), show a spinner in the top-right corner of the page */
+/* Pulsing page-level banner */
+[data-shiny-busy-indicator-types*="pulse"] {
   &.shiny-busy,
   &.shiny-not-yet-idle,
   &:has(.recalculating) {
-    position: relative;
     &::after {
-      @include shiny-page-spinner;
+      @include shiny-page-busy;
     }
   }
 }
@@ -136,7 +117,7 @@ In spinner mode, if the page has anything recalculating, show progress cursor
 /****************************************
 In cursor mode, if the page has anything recalculating, show progress cursor
 *****************************************/
-[data-shiny-busy-indicator-mode="cursor"] {
+[data-shiny-busy-indicator-types*="cursor"] {
   &.shiny-busy,
   &.shiny-not-yet-idle,
   &:has(.recalculating) {
@@ -148,17 +129,14 @@ In cursor mode, if the page has anything recalculating, show progress cursor
     &.shiny-busy,
     &.shiny-not-yet-idle,
     &:has(.recalculating) {
-      position: relative;
       &::after {
-        @include shiny-page-spinner;
+        @include shiny-page-busy;
       }
     }
   }
 }
 
-/****************************************
-  Keyframe that powers most spinner types
-****************************************/
+/* Keyframes behind most spinner types */
 @keyframes shiny-busy-spinner-spin {
   0% {
     scale: 1;
@@ -192,5 +170,20 @@ In cursor mode, if the page has anything recalculating, show progress cursor
   100% {
     translate: 0 calc(var(--_shiny-spinner-size) * (5 / 24));
     scale: 1 1;
+  }
+}
+
+/* Keyframes for the pulsing banner */
+@keyframes busy-page-pulse {
+  0% {
+    background-position: 0px 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0px 50%;
   }
 }
