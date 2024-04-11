@@ -41,7 +41,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @render.data_frame
     def detail():
-        return grid.data_selected()
+        return grid.data_view(selected=True)
 
     @render.code
     def debug():
