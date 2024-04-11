@@ -4,6 +4,7 @@ import {
   ColumnDef,
   RowData,
   RowModel,
+  SortingState,
   TableOptions,
   flexRender,
   getCoreRowModel,
@@ -28,13 +29,14 @@ import { useImmer } from "use-immer";
 import { TableBodyCell } from "./cell";
 import { getCellEditMapObj, useCellEditMap } from "./cell-edit-map";
 import { findFirstItemInView, getStyle } from "./dom-utils";
-import { Filter, useFilter } from "./filter";
+import { Filter, useFilters } from "./filter";
 import type { BrowserCellSelection, SelectionModesProp } from "./selection";
 import {
   SelectionModes,
   initRowSelectionModes,
   useSelection,
 } from "./selection";
+import { useSort } from "./sort";
 import { SortArrow } from "./sort-arrows";
 import css from "./styles.scss";
 import { useTabindexGroup } from "./tabindex-group";
@@ -173,14 +175,21 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
   const dataOriginal = useMemo(() => rowData, [rowData]);
   const [dataState, setData] = useImmer(rowData);
 
-  const filterOpts = useFilter<unknown[]>(withFilters);
+  const { sorting, sortState, sortingTableOptions } = useSort();
+
+  const { columnFilters, columnFiltersState, filtersTableOptions } =
+    useFilters<unknown[]>(withFilters);
 
   const options: TableOptions<unknown[]> = {
     data: dataState,
     columns: coldefs,
+    state: {
+      ...sortState,
+      ...columnFiltersState,
+    },
     getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    ...filterOpts,
+    ...sortingTableOptions,
+    ...filtersTableOptions,
     // debugAll: true,
     // Provide our updateCellsData function to our table meta
     // autoResetPageIndex,
@@ -326,8 +335,35 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
       console.error("Unhandled row selection mode:", rowSelectionModes);
     }
     Shiny.setInputValue!(shinyId, shinyValue);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, rowSelectionModes, [...rowSelection.keys()]]);
+  }, [id, rowSelection, rowSelectionModes, table, table.getSortedRowModel]);
+
+  useEffect(() => {
+    if (!id) return;
+    const shinyId = `${id}_column_sort`;
+    Shiny.setInputValue!(shinyId, sorting);
+  }, [id, sorting]);
+  useEffect(() => {
+    if (!id) return;
+    const shinyId = `${id}_column_filter`;
+    Shiny.setInputValue!(shinyId, columnFilters);
+  }, [id, columnFilters]);
+  useEffect(() => {
+    if (!id) return;
+    const shinyId = `${id}_data_view_indicies`;
+
+    // Already prefiltered rows!
+    const shinyValue: RowModel<unknown[]> = table.getSortedRowModel();
+    console.log("sortedRowModel", shinyValue);
+
+    const rowIndices = table.getSortedRowModel().rows.map((row) => row.index);
+    Shiny.setInputValue!(shinyId, rowIndices);
+  }, [
+    id,
+    table,
+    // Update with either sorting or columnFilters update!
+    sorting,
+    columnFilters,
+  ]);
 
   // ### End row selection ############################################################
 
