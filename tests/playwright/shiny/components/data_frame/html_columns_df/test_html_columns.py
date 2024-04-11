@@ -48,7 +48,7 @@ def test_validate_html_columns(page: Page, local_app: ShinyAppProc) -> None:
 
     # assert that html columns are not editable
     data_frame.expect_cell_class("cell-html", row=2, col=1)
-    # Unskip line after the issue of ui.HTML unable to parse html tags is fixed
+    # Unskip test code after https://github.com/posit-dev/py-shiny/pull/1310 is merged
     # data_frame.expect_cell_class("cell-html", row=1, col=3)
     data_frame.expect_cell_class("cell-html", row=1, col=4)
     data_frame.expect_cell_class("cell-html", row=1, col=5)
