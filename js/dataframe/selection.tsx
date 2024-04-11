@@ -7,8 +7,8 @@ import type { ValueOf } from "./types";
 type BrowserCellSelectionNone = { type: "none" };
 type BrowserCellSelectionRow = { type: "row"; rows: readonly number[] };
 type BrowserCellSelectionCol = { type: "col"; cols: readonly number[] };
-type BrowserCellSelectionRegion = {
-  type: "region";
+type BrowserCellSelectionRect = {
+  type: "rect";
   rows: readonly [number, number];
   cols: readonly [number, number];
 };
@@ -18,7 +18,7 @@ export type BrowserCellSelection =
   | BrowserCellSelectionNone
   | BrowserCellSelectionRow
   | BrowserCellSelectionCol
-  | BrowserCellSelectionRegion;
+  | BrowserCellSelectionRect;
 
 export interface SelectionSet<TKey, TElement extends HTMLElement> {
   has(key: TKey): boolean;
