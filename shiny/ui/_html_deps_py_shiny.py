@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from htmltools import HTMLDependency, TagList, tags
+from htmltools import HTMLDependency, tags
 
 from .. import __version__
 from . import busy_indicators
@@ -55,22 +55,24 @@ def spin_dependency() -> HTMLDependency:
     )
 
 
-def busy_indicators_dependency() -> HTMLDependency:
-    return HTMLDependency(
+def busy_indicators_deps() -> list[HTMLDependency]:
+    dep = HTMLDependency(
         "shiny-busy-indicators",
         __version__,
         source={"package": "shiny", "subdir": "www/shared/py-shiny/busy-indicators"},
         stylesheet={"href": "busy-indicators.css"},
-        head=TagList(
-            # Enable busy indicators by default.
-            busy_indicators.use(),
-            # Show a page-level spinner up until the next idle.
-            # Note: this is only sensible when this dependency comes bundled with the
-            # main shiny dependency, which is currently the case (i.e., it should never
-            # come in through dynamic UI).
-            tags.script(
-                "document.documentElement.classList.add('shiny-not-yet-idle');"
-                + "$(document).on('shiny:idle', function() { document.documentElement.classList.remove('shiny-not-yet-idle'); });"
-            ),
+        # Add a CSS class to the root element up until the next idle. The
+        # busy-indicators.css above uses this class in order to indicate busy status
+        # when the app is loading.
+        # TODO: it'd be nice shiny.js did this
+        head=tags.script(
+            "document.documentElement.classList.add('shiny-not-yet-idle');"
+            + "$(document).one('shiny:idle', function() { document.documentElement.classList.remove('shiny-not-yet-idle'); });"
         ),
     )
+
+    return [
+        dep,
+        # Enable busy indicators by default.
+        busy_indicators.use(),
+    ]

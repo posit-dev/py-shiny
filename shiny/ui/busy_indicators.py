@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Iterable, Literal
 
-from htmltools import Tag, tags
+from htmltools import HTMLDependency, Tag, head_content, tags
 
 from .._docstring import add_example, no_example
 
@@ -13,7 +13,7 @@ BusyTypes = Literal["spinners", "pulse", "cursor"]
 
 
 @add_example(ex_dir="../api-examples/busy_indicators")
-def use(types: Iterable[BusyTypes] = ("spinners", "pulse")) -> Tag:
+def use(types: Iterable[BusyTypes] = ("spinners", "pulse")) -> HTMLDependency:
     """
     Use and customize busy indicator types.
 
@@ -33,7 +33,7 @@ def use(types: Iterable[BusyTypes] = ("spinners", "pulse")) -> Tag:
     Returns
     -------
     :
-        A `<style>` tag.
+        An HTML dependency.
 
     See Also
     --------
@@ -44,11 +44,12 @@ def use(types: Iterable[BusyTypes] = ("spinners", "pulse")) -> Tag:
         if x not in ("spinners", "pulse", "cursor"):
             raise ValueError(f"Invalid busy indicator type: {x}")
 
+    # TODO: it'd be nice if htmltools had something like a page_attrs() that allowed us
+    # to do this without needing to inject JS into the head.
     types_str = ",".join(types)
+    js = f"document.documentElement.dataset.shinyBusyIndicatorTypes = '{types_str}';"
 
-    return tags.script(
-        f"$(function() {{ document.documentElement.dataset.shinyBusyIndicatorTypes = '{types_str}'; }});"
-    )
+    return head_content(tags.script(js))
 
 
 @no_example()

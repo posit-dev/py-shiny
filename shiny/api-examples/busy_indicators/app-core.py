@@ -37,7 +37,7 @@ def server(input):
 
     @render.ui
     def indicator_types_ui():
-        ui.busy_indicators.use(input.indicator_types())
+        return ui.busy_indicators.use(input.indicator_types())
 
 
 app = App(app_ui, server)

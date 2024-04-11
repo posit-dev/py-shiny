@@ -3,10 +3,16 @@
 
   The general idea is to leverage the `recalculating` class that shiny.js adds to each
   output when it's recalculating and add a spinner to the `::after` pseudo-element.
+  Also, when shiny is otherwise busy, a page-level 'pulse' banner is added to the top
+  of the page.
 */
 
-/* "Built-in" spinner types */
-/* Part of the reason why they're all here is so we can embed the SVGs in the CSS */
+/*
+  "Built-in" spinner types
+
+  It's important to list out all the types/svgs here so that esbuild can bundle them
+  with the CSS (see js/build.ts).
+*/
 :root {
   --_shiny-spinner-type-tadpole: url(tadpole-spinner.svg);
   --_shiny-spinner-type-disc: url(disc-spinner.svg);
