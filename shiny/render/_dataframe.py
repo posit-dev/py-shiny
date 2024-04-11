@@ -83,10 +83,6 @@ class ColumnFilterNumber(TypedDict):
     value: tuple[float, float]
 
 
-class DataView(Protocol):
-    def __call__(self, *, selected: bool = False) -> pd.DataFrame: ...
-
-
 # # TODO-future; Use `dataframe-api-compat>=0.2.6` to injest dataframes and return standardized dataframe structures
 # # TODO-future: Find this type definition: https://github.com/data-apis/dataframe-api-compat/blob/273c0be45962573985b3a420869d0505a3f9f55d/dataframe_api_compat/polars_standard/dataframe_object.py#L22
 # # Related: https://data-apis.org/dataframe-api-compat/quick_start/
@@ -192,26 +188,34 @@ class data_frame(Renderer[DataFrameResult]):
     app's render function. If it is mutated in place, it **will** modify the original
     data.
     """
-    data_view: DataView
-    """
-    Function to retrieve the data how it is viewed within the browser.
+    _data_view: reactive.Calc_[pd.DataFrame]
+    _data_view_selected: reactive.Calc_[pd.DataFrame]
 
-    This function will sort, filter, and apply any patches to the data frame as viewed
-    by the user within the browser.
+    def data_view(self, *, selected: bool = False) -> pd.DataFrame:
+        """
+        Reactive function to retrieve the data how it is viewed within the browser.
 
-    This is a shallow copy of the original data frame. It is possible that alterations
-    to `data_view` could alter the original `data` data frame. Please be cautious
-    when using this value directly.
+        This function will sort, filter, and apply any patches to the data frame as viewed
+        by the user within the browser.
 
-    Parameters
-    ----------
-    selected
-        If `True`, subset the viewed data to the selected area. Defaults to `False`.
+        This is a shallow copy of the original data frame. It is possible that alterations
+        to `data_view` could alter the original `data` data frame. Please be cautious
+        when using this value directly.
 
-    See Also
-    --------
-    * [`pandas.DataFrame.copy` API documentation]h(ttps://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.copy.html)
-    """
+        Parameters
+        ----------
+        selected
+            If `True`, subset the viewed data to the selected area. Defaults to `False`.
+
+        See Also
+        --------
+        * [`pandas.DataFrame.copy` API documentation]h(ttps://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.copy.html)
+        """
+        # Return reactive calculations so that they can be cached for other calculations
+        if selected:
+            return self._data_view_selected()
+        else:
+            return self._data_view()
 
     # data_patched: reactive.Calc_[pd.DataFrame]
     # """
@@ -348,36 +352,34 @@ class data_frame(Renderer[DataFrameResult]):
 
         self._input_data_view_indicies = self__input_data_view_indicies
 
-        @reactive.calc
-        def self__data_selected() -> pd.DataFrame:
-            # browser_cell_selection
-            bcs = self.input_cell_selection()
-            if bcs is None:
-                req(False)
-                raise RuntimeError("This should never be reached for typing purposes")
-
-            data_selected = self.data_view(selected=False)
-            if bcs["type"] == "none":
-                # Empty subset
-                return data_selected.iloc[[]]
-            elif bcs["type"] == "row":
-                # Seems to not work with `tuple[int, ...]`,
-                # but converting to a list does!
-                rows = list(bcs["rows"])
-                return data_selected.iloc[rows]
-            elif bcs["type"] == "col":
-                # Seems to not work with `tuple[int, ...]`,
-                # but converting to a list does!
-                cols = list(bcs["cols"])
-                return data_selected.iloc[:, cols]
-            elif bcs["type"] == "region":
-                return data_selected.iloc[
-                    bcs["rows"][0] : bcs["rows"][1],
-                    bcs["cols"][0] : bcs["cols"][1],
-                ]
-            raise RuntimeError(f"Unhandled selection type: {bcs['type']}")
-
-        # self._data_selected = self__data_selected
+        # @reactive.calc
+        # def self__data_selected() -> pd.DataFrame:
+        #     # browser_cell_selection
+        #     bcs = self.input_cell_selection()
+        #     if bcs is None:
+        #         req(False)
+        #         raise RuntimeError("This should never be reached for typing purposes")
+        #     data_selected = self.data_view(selected=False)
+        #     if bcs["type"] == "none":
+        #         # Empty subset
+        #         return data_selected.iloc[[]]
+        #     elif bcs["type"] == "row":
+        #         # Seems to not work with `tuple[int, ...]`,
+        #         # but converting to a list does!
+        #         rows = list(bcs["rows"])
+        #         return data_selected.iloc[rows]
+        #     elif bcs["type"] == "col":
+        #         # Seems to not work with `tuple[int, ...]`,
+        #         # but converting to a list does!
+        #         cols = list(bcs["cols"])
+        #         return data_selected.iloc[:, cols]
+        #     elif bcs["type"] == "region":
+        #         return data_selected.iloc[
+        #             bcs["rows"][0] : bcs["rows"][1],
+        #             bcs["cols"][0] : bcs["cols"][1],
+        #         ]
+        #     raise RuntimeError(f"Unhandled selection type: {bcs['type']}")
+        # # self._data_selected = self__data_selected
 
         @reactive.calc
         def self__data_patched() -> pd.DataFrame:
@@ -436,15 +438,6 @@ class data_frame(Renderer[DataFrameResult]):
 
         self._data_view = self__data_view
         self._data_view_selected = self__data_view_selected
-
-        def self_data_view(*, selected: bool = False) -> pd.DataFrame:
-            # Return reactive calculations so that they can be cached for other calculations
-            if selected:
-                return self._data_view_selected()
-            else:
-                return self._data_view()
-
-        self.data_view = self_data_view
 
     def _get_session(self) -> Session:
         if self._session is None:
