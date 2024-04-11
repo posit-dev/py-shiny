@@ -55,7 +55,7 @@ def make_server(input: Inputs):
     @reactive.effect
     @reactive.event(input.select)
     async def select_1_3_5():
-        await grid.update_cell_selection({"rows": (1, 3, 5)})
+        await grid.update_cell_selection({"type": "row", "rows": (1, 3, 5)})
 
     @render.code
     def selected_rows():
