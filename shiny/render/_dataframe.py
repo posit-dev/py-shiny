@@ -4,7 +4,17 @@ import warnings
 
 # TODO-barret-render.data_frame; Docs
 # TODO-barret-render.data_frame; Add examples!
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, TypeVar, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Awaitable,
+    Callable,
+    Dict,
+    Protocol,
+    TypeVar,
+    Union,
+    cast,
+)
 
 from htmltools import Tag
 
@@ -56,6 +66,25 @@ from ._data_frame_utils._datagridtable import DataFrameResult
 class SelectedIndices(TypedDict):
     rows: tuple[int] | None
     columns: tuple[int] | None
+
+
+class ColumnSort(TypedDict):
+    id: str
+    desc: bool
+
+
+class ColumnFilterStr(TypedDict):
+    id: str
+    value: str
+
+
+class ColumnFilterNumber(TypedDict):
+    id: str
+    value: tuple[float, float]
+
+
+class DataView(Protocol):
+    def __call__(self, *, selected: bool = False) -> pd.DataFrame: ...
 
 
 # # TODO-future; Use `dataframe-api-compat>=0.2.6` to injest dataframes and return standardized dataframe structures
@@ -119,7 +148,7 @@ class data_frame(Renderer[DataFrameResult]):
     integers representing the indices of the selected rows. If no rows have been
     selected (while in a non-`"none"` row selection mode), an empty tuple will be
     returned. To filter a pandas data frame down to the selected rows, use
-    `<data_frame_renderer>.data_selected()` or
+    `<data_frame_renderer>.data_view()` or
     `df.iloc[list(input.<id>_cell_selection()["rows"])]`.
 
     Tip
@@ -163,18 +192,40 @@ class data_frame(Renderer[DataFrameResult]):
     app's render function. If it is mutated in place, it **will** modify the original
     data.
     """
-    data_patched: reactive.Calc_[pd.DataFrame]
+    data_view: DataView
     """
-    Reactive value of the data frame's edited output data.
+    Function to retrieve the data how it is viewed within the browser.
+
+    This function will sort, filter, and apply any patches to the data frame as viewed
+    by the user within the browser.
 
     This is a shallow copy of the original data frame. It is possible that alterations
-    to `data_patched` could alter the original `data` data frame. Please be cautious
+    to `data_view` could alter the original `data` data frame. Please be cautious
     when using this value directly.
+
+    Parameters
+    ----------
+    selected
+        If `True`, subset the viewed data to the selected area. Defaults to `False`.
 
     See Also
     --------
     * [`pandas.DataFrame.copy` API documentation]h(ttps://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.copy.html)
     """
+
+    # data_patched: reactive.Calc_[pd.DataFrame]
+    # """
+    # Reactive value of the data frame's edited output data.
+
+    # This is a shallow copy of the original data frame. It is possible that alterations
+    # to `data_patched` could alter the original `data` data frame. Please be cautious
+    # when using this value directly.
+
+    # See Also
+    # --------
+    # * [`pandas.DataFrame.copy` API documentation]h(ttps://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.copy.html)
+    # """
+
     # TODO-barret-Q; Should this be the original? Or the updated version
     selection_modes: reactive.Calc_[SelectionModes]
     """
@@ -192,27 +243,9 @@ class data_frame(Renderer[DataFrameResult]):
     Returns
     -------
     :
-        * `None` if the selection mode is `None`
-        * :class:`~shiny.types.SelectionLocationJS` representing the indices of the
+        * `None` if the selection mode is `"none"`
+        * :class:`~shiny.types.BrowserCellSelection` representing the indices of the
           selected cells.
-    """
-
-    data_selected: reactive.Calc_[pd.DataFrame]
-    """
-    Reactive value that returns the edited data frame subsetted to the selected area.
-
-    Returns
-    -------
-    :
-        * If the row selection mode is `None`, the calculation will throw a silent error
-          (`req(False)`)
-        * The edited data (`.data_patched()`) at the indices of the selected rows
-
-    See Also
-    --------
-    * :func:`~shiny.render.data_frame.input_cell_selection`
-    * :func:`~shiny.render.data_frame.data_patched`
-    * :func:`~shiny.req`
     """
 
     def _reset_reactives(self) -> None:
@@ -285,17 +318,14 @@ class data_frame(Renderer[DataFrameResult]):
         self.input_cell_selection = self_input_cell_selection
 
         @reactive.calc
-        # TODO-barret-render.data_frame; Subset data according to what is viewed in the browser; Apply filtering and sorting as well! https://github.com/posit-dev/py-shiny/issues/1240
-        def self_data_selected() -> pd.DataFrame:
+        def self__data_selected() -> pd.DataFrame:
             # browser_cell_selection
             bcs = self.input_cell_selection()
             if bcs is None:
                 req(False)
                 raise RuntimeError("This should never be reached for typing purposes")
 
-            data_selected = self.data_patched()
-            # if bcs["type"] == "all":
-            #     return data_selected
+            data_selected = self.data_view(selected=False)
             if bcs["type"] == "none":
                 # Empty subset
                 return data_selected.iloc[[]]
@@ -316,13 +346,14 @@ class data_frame(Renderer[DataFrameResult]):
                 ]
             raise RuntimeError(f"Unhandled selection type: {bcs['type']}")
 
-        self.data_selected = self_data_selected
+        # self._data_selected = self__data_selected
 
         @reactive.calc
-        def self_data_patched() -> pd.DataFrame:
+        def self__data_patched() -> pd.DataFrame:
             # Enable copy-on-write mode for the data;
             # Use `deep=False` to avoid copying the full data; CoW will copy the necessary data when modified
             with pd.option_context("mode.copy_on_write", True):
+                # Apply patches!
                 data = self.data().copy(deep=False)
                 for cell_patch in self.cell_patches():
                     data.iat[  # pyright: ignore[reportUnknownMemberType]
@@ -332,7 +363,57 @@ class data_frame(Renderer[DataFrameResult]):
 
                 return data
 
-        self.data_patched = self_data_patched
+        self._data_patched = self__data_patched
+
+        # Helper method to subset data according to what is viewed in the browser;
+        # Apply filtering and sorting
+        # https://github.com/posit-dev/py-shiny/issues/1240
+        def _subset_data_view(selected: bool) -> pd.DataFrame:
+            # Enable copy-on-write mode for the data;
+            # Use `deep=False` to avoid copying the full data; CoW will copy the necessary data when modified
+            with pd.option_context("mode.copy_on_write", True):
+                # Get patched data
+                data = self._data_patched().copy(deep=False)
+
+                # Turn into list for pandas compatibility
+                data_view_indicies = list(self._input_data_view_indicies())
+
+                # Possibly subset the indicies to selected rows
+                if selected:
+                    cell_selection = self.input_cell_selection()
+                    if cell_selection is not None and cell_selection["type"] == "row":
+                        # Use a `set` for faster lookups
+                        selected_row_indicies_set = set(cell_selection["rows"])
+
+                        # Subset the data view indicies to only include the selected rows
+                        data_view_indicies = [
+                            index
+                            for index in data_view_indicies
+                            if index in selected_row_indicies_set
+                        ]
+
+                return data.iloc[data_view_indicies]
+
+        # Helper reactives so that internal calculations can be cached for use in other calculations
+        @reactive.calc
+        def self__data_view() -> pd.DataFrame:
+            return _subset_data_view(selected=False)
+
+        @reactive.calc
+        def self__data_view_selected() -> pd.DataFrame:
+            return _subset_data_view(selected=True)
+
+        self._data_view = self__data_view
+        self._data_view_selected = self__data_view_selected
+
+        def self_data_view(*, selected: bool = False) -> pd.DataFrame:
+            # Return reactive calculations so that they can be cached for other calculations
+            if selected:
+                return self._data_view_selected()
+            else:
+                return self._data_view()
+
+        self.data_view = self_data_view
 
     def _get_session(self) -> Session:
         if self._session is None:
@@ -588,7 +669,7 @@ class data_frame(Renderer[DataFrameResult]):
         )
 
     async def update_cell_selection(
-        # self, selection: SelectionLocation | SelectionLocationJS
+        # self, selection: SelectionLocation | BrowserCellSelection
         self,
         selection: CellSelection | BrowserCellSelection | None,
     ) -> None:
