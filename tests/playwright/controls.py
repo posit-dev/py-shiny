@@ -3794,7 +3794,7 @@ class OutputDataFrame(_InputWithContainer):
         self,
         col: int,
         *,
-        text: str,
+        text: str | list[str] | tuple[str, str],
         timeout: Timeout = None,
     ) -> None:
         """
@@ -3809,8 +3809,16 @@ class OutputDataFrame(_InputWithContainer):
         timeout
             The maximum time to wait for the action to complete. Defaults to None.
         """
-
-        self.loc_column_filter.nth(col - 1).locator("> input").fill(text)
+        if isinstance(text, str):
+            self.loc_column_filter.nth(col - 1).locator("> input").fill(text)
+        else:
+            assert len(text) == 2
+            self.loc_column_filter.nth(col - 1).locator("> div > input").nth(0).fill(
+                text[0]
+            )
+            self.loc_column_filter.nth(col - 1).locator("> div > input").nth(1).fill(
+                text[1]
+            )
 
     def save_cell(
         self,

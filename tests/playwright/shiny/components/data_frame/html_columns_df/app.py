@@ -16,16 +16,16 @@ def random_generator():
     )
 
 
-df["studyName"] = df["studyName"].apply(  # pyright: ignore[reportUnknownMemberType]
-    lambda w: HTMLDependency(  # pyright: ignore[reportUnknownLambdaType, reportArgumentType]
+df.iloc[1, 0] = (  # pyright: ignore[reportArgumentType]
+    HTMLDependency(  # pyright: ignore[reportUnknownLambdaType, reportArgumentType]
         "studyname".join(random_generator()),
         version="1",
-        head=f"""
-                <script>console.log("studyName in view: {w}")</script>
+        head="""
+                <script>window.shinytestvalue = "testing"</script>
                 """,
     )
-)  # type: ignore
-df["Species"] = df["Species"].apply(lambda x: ui.p(ui.HTML(f"<u>{x}</u>")))  # type: ignore
+)
+df["Species"] = df["Species"].apply(lambda x: ui.HTML(f"<u>{x}</u>"))  # type: ignore
 df["Region"] = df["Region"].apply(  # type: ignore
     lambda y: ui.tags.h1(
         f"{y}"
@@ -41,6 +41,10 @@ df["Island"] = df["Island"].apply(  # pyright: ignore[reportUnknownMemberType]
         ),
     )
 )
+df.iloc[1, 5] = ui.p(  # pyright: ignore[reportArgumentType]
+    ui.input_action_button("test_cell_button", "Test button"),
+    ui.output_text_verbatim("test_cell_text", placeholder=True),
+)
 
 app_ui = ui.page_fluid(
     ui.h2("Palmer Penguins"),
@@ -49,6 +53,11 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session) -> None:
+
+    @render.text
+    def test_cell_text():
+        return f"test_cell_value {input.test_cell_button()}"
+
     @render.data_frame
     def penguins_df():
         return render.DataGrid(
