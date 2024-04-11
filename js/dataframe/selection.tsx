@@ -256,16 +256,11 @@ function performMouseDownAction<TKey, TElement>(
   if (selectionModes.row === SelectionModes._rowEnum.NONE) {
     return null;
   } else if (selectionModes.row === SelectionModes._rowEnum.SINGLE) {
-    if (ctrlKey && !shiftKey) {
-      // Ctrl-click is like simple click, except it removes selection if an item is
-      // already selected
-      if (selectedKeys.has(key)) {
-        return { selection: ImmutableSet.empty(), anchor: true };
-      } else {
-        return { selection: ImmutableSet.just(key), anchor: true };
-      }
+    if (selectedKeys.has(key)) {
+      // If the item is already selected, clicking on it again should clear the selection
+      return { selection: ImmutableSet.empty(), anchor: true };
     } else {
-      // Simple click sets selection, always
+      // Simple click sets selection
       return { selection: ImmutableSet.just(key), anchor: true };
     }
     // TODO-barret; multinative should be the new definition of `rows`!
