@@ -4,21 +4,21 @@ import { ImmutableSet } from "./immutable-set";
 
 import type { ValueOf } from "./types";
 
-type BrowserCellSelectionNone = { type: "none" };
-type BrowserCellSelectionRow = { type: "row"; rows: readonly number[] };
-type BrowserCellSelectionCol = { type: "col"; cols: readonly number[] };
-type BrowserCellSelectionRect = {
+type CellSelectionNone = { type: "none" };
+type CellSelectionRow = { type: "row"; rows: readonly number[] };
+type CellSelectionCol = { type: "col"; cols: readonly number[] };
+type CellSelectionRect = {
   type: "rect";
   rows: readonly [number, number];
   cols: readonly [number, number];
 };
 
 // For sending and receiving selection info to python
-export type BrowserCellSelection =
-  | BrowserCellSelectionNone
-  | BrowserCellSelectionRow
-  | BrowserCellSelectionCol
-  | BrowserCellSelectionRect;
+export type CellSelection =
+  | CellSelectionNone
+  | CellSelectionRow
+  | CellSelectionCol
+  | CellSelectionRect;
 
 export interface SelectionSet<TKey, TElement extends HTMLElement> {
   has(key: TKey): boolean;

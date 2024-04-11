@@ -146,49 +146,49 @@ Input types for selection modes in a DataGrid or DataTable.
 
 
 # ####################
-# # BrowserCellSelection: For receiving selection info from JS
+# # CellSelection: For receiving selection info from JS
 # ####################
 
 # Should only contain a single selection area
 
-# # Do not include `BrowserCellSelectionAll` as it should be represented by a row, column, or region with appropriate values.
-# class BrowserCellSelectionAll(TypedDict):
+# # Do not include `CellSelectionAll` as it should be represented by a row, column, or region with appropriate values.
+# class CellSelectionAll(TypedDict):
 #     type: Literal["all"]
 
 
-class BrowserCellSelectionNone(TypedDict):
+class CellSelectionNone(TypedDict):
     type: Literal["none"]
 
 
-class BrowserCellSelectionRow(TypedDict):
+class CellSelectionRow(TypedDict):
     type: Literal["row"]
     rows: tuple[int, ...]
 
 
-class BrowserCellSelectionCol(TypedDict):
+class CellSelectionCol(TypedDict):
     type: Literal["col"]
     cols: tuple[int, ...]
 
 
-class BrowserCellSelectionRect(TypedDict):
-    type: Literal["Rect"]
+class CellSelectionRect(TypedDict):
+    type: Literal["rect"]
     rows: tuple[int, int]
     cols: tuple[int, int]
 
 
-# class BrowserCellSelectionCell(TypedDict):
+# class CellSelectionCell(TypedDict):
 #     type: Literal["cell"]
 #     rows: tuple[int]
 #     cols: tuple[int]
 
 
 # For receiving selection info from JS:
-BrowserCellSelection = Union[
-    BrowserCellSelectionRow,
-    BrowserCellSelectionCol,
-    # BrowserCellSelectionCell,
-    BrowserCellSelectionRect,
-    BrowserCellSelectionNone,
+CellSelection = Union[
+    CellSelectionRow,
+    CellSelectionCol,
+    # CellSelectionCell,
+    CellSelectionRect,
+    CellSelectionNone,
 ]
 """
 A single selection set sent to/from the browser.
@@ -219,12 +219,12 @@ def to_tuple_or_none(
     return x
 
 
-def as_browser_cell_selection(
-    x: BrowserCellSelection | Literal["all"] | None,
+def as_cell_selection(
+    x: CellSelection | Literal["all"] | None,
     *,
     selection_modes: SelectionModes,
     data: pd.DataFrame | MISSING_TYPE = MISSING,
-) -> BrowserCellSelection:
+) -> CellSelection:
 
     if x is None or selection_modes._is_none():
         return {"type": "none"}
@@ -237,17 +237,31 @@ def as_browser_cell_selection(
         row_len, col_len = data.shape
         # Look at the selection modes to determine what to do
         if selection_modes._has_rect():
-            if selection_modes.rect == "rect":
+            if selection_modes.rect == "cell":
+                warnings.warn(
+                    "Cannot select all cells with `cell` selection mode. Selecting the first cell"
+                )
+                return {"type": "rect", "rows": (0, 0), "cols": (0, 0)}
+            if selection_modes.rect == "region":
                 return {
                     "type": "rect",
                     "rows": (0, row_len - 1),
                     "cols": (0, col_len - 1),
                 }
         if selection_modes._has_row():
-
+            if selection_modes.row == "single":
+                warnings.warn(
+                    "Cannot select all rows with `row` selection mode. Selecting the first row"
+                )
+                return {"type": "row", "rows": (0,)}
             if selection_modes.row == "multiple":
                 return {"type": "row", "rows": tuple(range(row_len))}
         if selection_modes._has_col():
+            if selection_modes.col == "single":
+                warnings.warn(
+                    "Cannot select all columns with `col` selection mode. Selecting the first column"
+                )
+                return {"type": "col", "cols": (0,)}
             if selection_modes.col == "multiple":
                 return {"type": "col", "cols": tuple(range(col_len))}
         raise ValueError(
@@ -261,7 +275,7 @@ def as_browser_cell_selection(
     row_value = to_tuple_or_none(x.get("rows", None))
     col_value = to_tuple_or_none(x.get("cols", None))
 
-    assert "type" in x, "`type` field is required in BrowserCellSelection"
+    assert "type" in x, "`type` field is required in CellSelection"
 
     if x["type"] == "none":
         return x
@@ -302,7 +316,7 @@ def as_browser_cell_selection(
         assert col_value[0] <= col_value[1]
         return {"type": "rect", "rows": row_value, "cols": col_value}
 
-    raise ValueError(f"Unhandled BrowserCellSelection['type']: {x['type']}")
+    raise ValueError(f"Unhandled CellSelection['type']: {x['type']}")
 
 
 RowSelectionModeDeprecated = Literal["single", "multiple", "none", "deprecated"]

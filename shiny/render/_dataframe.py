@@ -29,9 +29,9 @@ from ..session._utils import (
 )
 from ._data_frame_utils import (
     AbstractTabularData,
-    BrowserCellSelection,
     CellPatch,
     CellPatchProcessed,
+    CellSelection,
     CellValue,
     DataGrid,
     DataTable,
@@ -40,7 +40,7 @@ from ._data_frame_utils import (
     PatchFn,
     PatchFnSync,
     SelectionModes,
-    as_browser_cell_selection,
+    as_cell_selection,
     assert_patches_shape,
     cast_to_pandas,
     cell_patch_processed_to_jsonifiable,
@@ -190,7 +190,7 @@ class data_frame(Renderer[DataFrameResult]):
     Reactive value of the data frame's possible selection modes.
     """
 
-    input_cell_selection: reactive.Calc_[BrowserCellSelection | None]
+    input_cell_selection: reactive.Calc_[CellSelection | None]
     """
     Reactive value of selected information.
 
@@ -277,12 +277,12 @@ class data_frame(Renderer[DataFrameResult]):
         self.selection_modes = self_selection_modes
 
         @reactive.calc
-        def self_input_cell_selection() -> BrowserCellSelection | None:
+        def self_input_cell_selection() -> CellSelection | None:
             browser_cell_selection_input = self._get_session().input[
                 f"{self.output_id}_cell_selection"
             ]()
 
-            browser_cell_selection = as_browser_cell_selection(
+            browser_cell_selection = as_cell_selection(
                 browser_cell_selection_input,
                 selection_modes=self.selection_modes(),
             )
@@ -599,7 +599,7 @@ class data_frame(Renderer[DataFrameResult]):
     async def update_cell_selection(
         # self, selection: SelectionLocation | SelectionLocationJS
         self,
-        selection: BrowserCellSelection | Literal["all"] | None,
+        selection: CellSelection | Literal["all"] | None,
     ) -> None:
         with reactive.isolate():
             selection_modes = self.selection_modes()
@@ -616,20 +616,20 @@ class data_frame(Renderer[DataFrameResult]):
 
             selection = None
 
-        browser_cell_selection = as_browser_cell_selection(
+        cell_selection = as_cell_selection(
             selection,
             selection_modes=selection_modes,
             data=data,
         )
 
-        if browser_cell_selection["type"] == "none":
+        if cell_selection["type"] == "none":
             pass
-        elif browser_cell_selection["type"] == "region":
-            raise RuntimeError("Region selection is not yet supported")
-        elif browser_cell_selection["type"] == "col":
+        elif cell_selection["type"] == "rect":
+            raise RuntimeError("Rectangle region selection is not yet supported")
+        elif cell_selection["type"] == "col":
             raise RuntimeError("Column selection is not yet supported")
-        elif browser_cell_selection["type"] == "row":
-            row_value = browser_cell_selection["rows"]
+        elif cell_selection["type"] == "row":
+            row_value = cell_selection["rows"]
             if selection_modes.row == "single" and len(row_value) > 1:
                 warnings.warn(
                     "Attempted to set cell selection to more than 1 row when `.selection_modes()` contains 'row'. "
@@ -637,12 +637,10 @@ class data_frame(Renderer[DataFrameResult]):
                     stacklevel=2,
                 )
 
-                browser_cell_selection["rows"] = (row_value[0],)
+                cell_selection["rows"] = (row_value[0],)
         else:
-            raise ValueError(
-                f"Unhandled selection type: {browser_cell_selection['type']}"
-            )
+            raise ValueError(f"Unhandled selection type: {cell_selection['type']}")
         await self._send_message_to_browser(
             "updateCellSelection",
-            {"cellSelection": browser_cell_selection},
+            {"cellSelection": cell_selection},
         )

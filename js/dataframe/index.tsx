@@ -29,7 +29,7 @@ import { TableBodyCell } from "./cell";
 import { getCellEditMapObj, useCellEditMap } from "./cell-edit-map";
 import { findFirstItemInView, getStyle } from "./dom-utils";
 import { Filter, useFilter } from "./filter";
-import type { BrowserCellSelection, SelectionModesProp } from "./selection";
+import type { CellSelection, SelectionModesProp } from "./selection";
 import {
   SelectionModes,
   initRowSelectionModes,
@@ -270,7 +270,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
 
   useEffect(() => {
     const handleMessage = (
-      event: CustomEvent<{ cellSelection: BrowserCellSelection }>
+      event: CustomEvent<{ cellSelection: CellSelection }>
     ) => {
       // We convert "None" to an empty tuple on the python side
       // so an empty array indicates that selection should be cleared.
@@ -312,7 +312,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
   useEffect(() => {
     if (!id) return;
     const shinyId = `${id}_cell_selection`;
-    let shinyValue: BrowserCellSelection | null = null;
+    let shinyValue: CellSelection | null = null;
     if (rowSelectionModes.is_none()) {
       shinyValue = null;
     } else if (rowSelectionModes.row !== SelectionModes._rowEnum.NONE) {
