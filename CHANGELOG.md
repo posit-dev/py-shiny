@@ -47,6 +47,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Error messages now use `var(--bs-danger)` instead of `var(--bs-danger-text-emphasis)` for the text color. (#1266)
 
+* Clicking an already selected row (with `selection_mode="row"`) now unselects the row. (#1306)
+
 ### Other changes
 
 * The fill CSS used by fillable containers (i.e. when `fillable=True`) now uses a [CSS cascade layer](https://developer.mozilla.org/en-US/docs/Learn/CSS/Building_blocks/Cascade_layers) named `htmltools` to reduce the precedence order of the fill CSS. (#1228)
