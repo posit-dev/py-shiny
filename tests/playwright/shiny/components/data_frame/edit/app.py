@@ -14,6 +14,8 @@ from shiny.render._dataframe import CellPatch
 # TODO-future; Can we maintain pre-processed value and use it within editing?
 # A: Doesn't seem possible for now
 
+# TODO-karan-test; If a single row is selected, make sure the row is highlighted; If the single row is clicked again, make sure the row is unselected;
+# TODO-karan-test; If a single row is selected and another row is clicked, make sure the new row is selected and the old row is unselected
 
 # TODO-karan-test; Data frame with filters enabled. Add an html column. Make sure the column can not be sorted or filtered. Make sure other columns can be sorted and filtered
 # TODO-karan-test; Sort on a column. Enter edit mode on a cell. Hit `enter` to go to next cell. Make sure the next cell is the next sorted row, even when in the original data that row is not the next row.
