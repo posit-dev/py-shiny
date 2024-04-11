@@ -156,7 +156,7 @@ install-trcli: FORCE
 	$(if $(shell which trcli), @echo -n, $(shell pip install trcli))
 
 install-rsconnect: FORCE
-	pip install git+https://github.com/rstudio/rsconnect-python.git#egg=rsconnect-python
+	pip install rsconnect-python
 
 # end-to-end tests with playwright; (SUB_FILE="" within tests/playwright/shiny/)
 playwright-shiny: install-playwright
