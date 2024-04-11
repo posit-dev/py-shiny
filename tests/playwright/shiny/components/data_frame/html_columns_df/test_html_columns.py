@@ -9,9 +9,10 @@ def test_validate_html_columns(page: Page, local_app: ShinyAppProc) -> None:
     data_frame = OutputDataFrame(page, "penguins_df")
 
     # verify shiny reactive output UI in cell
+    output_txt = OutputTextVerbatim(page, "test_cell_text")
+    output_txt.expect_value("test_cell_value 0")
     test_button = InputActionButton(page, "test_cell_button")
     test_button.click()
-    output_txt = OutputTextVerbatim(page, "test_cell_text")
     output_txt.expect_value("test_cell_value 1")
 
     # assert patching works
