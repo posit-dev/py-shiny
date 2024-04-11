@@ -3563,6 +3563,7 @@ class OutputDataFrame(_InputWithContainer):
         )
         self.loc_head = self.loc.locator("> table > thead")
         self.loc_body = self.loc.locator("> table > tbody")
+        self.loc_column_filter = self.loc_head.locator("> tr.filters > th")
         self.loc_column_label = self.loc_head.locator("> tr > th:not(.filters th)")
 
     def cell_locator(self, row: int, col: int) -> Locator:
@@ -3770,6 +3771,46 @@ class OutputDataFrame(_InputWithContainer):
         cell.scroll_into_view_if_needed(timeout=timeout)
         cell.click()
         cell.locator("> textarea").fill(text)
+
+    def sort_column(
+        self,
+        col: int,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Sorts the column in the data frame.
+
+        Parameters
+        ----------
+        col
+            The column number to sort.
+        timeout
+            The maximum time to wait for the action to complete. Defaults to None.
+        """
+        self.loc_column_label.nth(col - 1).click(timeout=timeout)
+
+    def filter_column(
+        self,
+        col: int,
+        *,
+        text: str,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Filters the column in the data frame.
+
+        Parameters
+        ----------
+        col
+            The column number to filter.
+        text
+            The text to filter the column.
+        timeout
+            The maximum time to wait for the action to complete. Defaults to None.
+        """
+
+        self.loc_column_filter.nth(col - 1).locator("> input").fill(text)
 
     def save_cell(
         self,
