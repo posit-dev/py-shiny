@@ -26,6 +26,10 @@ def serialize_numpy_dtypes(df: "pd.DataFrame") -> list[dict[str, Any]]:
     return [serialize_numpy_dtype(col) for _, col in df.items()]
 
 
+def col_contains_shiny_html(col: "pd.Series") -> bool:
+    return any(is_shiny_html(val) for _, val in enumerate(col))
+
+
 def serialize_numpy_dtype(
     col: "pd.Series",
 ) -> dict[str, Any]:
@@ -39,20 +43,20 @@ def serialize_numpy_dtype(
     res: dict[str, Any] = {}
 
     if t == "string":
-        pass
+        if col_contains_shiny_html(col):
+            t = "html"
+        else:
+            pass
+        # If no HTML (which is a str) is found, then it is a string! (Keep t as `"string"`)
     elif t in ["bytes", "floating", "integer", "decimal", "mixed-integer-float"]:
         t = "numeric"
     elif t == "categorical":
         res["categories"] = [str(x) for x in col.cat.categories.to_list()]
     else:
-        t = "unknown"
-        for _, val in enumerate(col):
-            # if isinstance(val, TagNode):
-
-            if is_shiny_html(val):
-                # If they do, mark the column and extra htmldeps
-                t = "html"
-                break
+        if col_contains_shiny_html(col):
+            t = "html"
+        else:
+            t = "unknown"
 
     res["type"] = t
 
