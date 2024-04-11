@@ -43,7 +43,7 @@ def make_server(input: Inputs):
     @render.data_frame
     def grid_selected():
         return render.DataGrid(
-            data=grid.data_selected(),
+            data=grid.data_view(selected=True),
             selection_mode=input.selection_mode(),
         )
 
