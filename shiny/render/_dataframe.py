@@ -4,7 +4,17 @@ import warnings
 
 # TODO-barret-render.data_frame; Docs
 # TODO-barret-render.data_frame; Add examples!
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, TypeVar, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Awaitable,
+    Callable,
+    Dict,
+    Literal,
+    TypeVar,
+    Union,
+    cast,
+)
 
 from htmltools import Tag
 
@@ -22,7 +32,6 @@ from ._data_frame_utils import (
     BrowserCellSelection,
     CellPatch,
     CellPatchProcessed,
-    CellSelection,
     CellValue,
     DataGrid,
     DataTable,
@@ -590,11 +599,8 @@ class data_frame(Renderer[DataFrameResult]):
     async def update_cell_selection(
         # self, selection: SelectionLocation | SelectionLocationJS
         self,
-        selection: CellSelection | BrowserCellSelection | None,
+        selection: BrowserCellSelection | Literal["all"] | None,
     ) -> None:
-        if selection is None:
-            selection = "none"
-
         with reactive.isolate():
             selection_modes = self.selection_modes()
             data = self.data()
@@ -608,19 +614,18 @@ class data_frame(Renderer[DataFrameResult]):
                 stacklevel=2,
             )
 
-            selection = "none"
+            selection = None
 
         browser_cell_selection = as_browser_cell_selection(
             selection,
             selection_modes=selection_modes,
             data=data,
         )
+
         if browser_cell_selection["type"] == "none":
             pass
         elif browser_cell_selection["type"] == "region":
             raise RuntimeError("Region selection is not yet supported")
-        # elif browser_cell_selection["type"] == "cell":
-        #     raise RuntimeError("Single cell selection is not yet supported")
         elif browser_cell_selection["type"] == "col":
             raise RuntimeError("Column selection is not yet supported")
         elif browser_cell_selection["type"] == "row":

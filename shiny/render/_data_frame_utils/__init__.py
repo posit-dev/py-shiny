@@ -19,7 +19,6 @@ from ._patch import (
 )
 from ._selection import (
     BrowserCellSelection,
-    CellSelection,
     SelectionMode,
     SelectionModes,
     as_browser_cell_selection,
@@ -42,7 +41,6 @@ __all__ = (
     "assert_patches_shape",
     "cell_patch_processed_to_jsonifiable",
     "BrowserCellSelection",
-    "CellSelection",
     "SelectionMode",
     "SelectionModes",
     "as_browser_cell_selection",
