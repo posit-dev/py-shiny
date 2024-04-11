@@ -4,7 +4,17 @@ import warnings
 
 # TODO-barret-render.data_frame; Docs
 # TODO-barret-render.data_frame; Add examples!
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, TypeVar, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Awaitable,
+    Callable,
+    Dict,
+    Literal,
+    TypeVar,
+    Union,
+    cast,
+)
 
 from htmltools import Tag
 
@@ -19,7 +29,6 @@ from ..session._utils import (
 )
 from ._data_frame_utils import (
     AbstractTabularData,
-    BrowserCellSelection,
     CellPatch,
     CellPatchProcessed,
     CellSelection,
@@ -31,7 +40,7 @@ from ._data_frame_utils import (
     PatchFn,
     PatchFnSync,
     SelectionModes,
-    as_browser_cell_selection,
+    as_cell_selection,
     assert_patches_shape,
     cast_to_pandas,
     cell_patch_processed_to_jsonifiable,
@@ -56,6 +65,21 @@ from ._data_frame_utils._datagridtable import DataFrameResult
 class SelectedIndices(TypedDict):
     rows: tuple[int] | None
     columns: tuple[int] | None
+
+
+class ColumnSort(TypedDict):
+    id: str
+    desc: bool
+
+
+class ColumnFilterStr(TypedDict):
+    id: str
+    value: str
+
+
+class ColumnFilterNumber(TypedDict):
+    id: str
+    value: tuple[float, float]
 
 
 # # TODO-future; Use `dataframe-api-compat>=0.2.6` to injest dataframes and return standardized dataframe structures
@@ -119,7 +143,7 @@ class data_frame(Renderer[DataFrameResult]):
     integers representing the indices of the selected rows. If no rows have been
     selected (while in a non-`"none"` row selection mode), an empty tuple will be
     returned. To filter a pandas data frame down to the selected rows, use
-    `<data_frame_renderer>.data_selected()` or
+    `<data_frame_renderer>.data_view()` or
     `df.iloc[list(input.<id>_cell_selection()["rows"])]`.
 
     Tip
@@ -163,25 +187,55 @@ class data_frame(Renderer[DataFrameResult]):
     app's render function. If it is mutated in place, it **will** modify the original
     data.
     """
-    data_patched: reactive.Calc_[pd.DataFrame]
-    """
-    Reactive value of the data frame's edited output data.
+    _data_view: reactive.Calc_[pd.DataFrame]
+    _data_view_selected: reactive.Calc_[pd.DataFrame]
 
-    This is a shallow copy of the original data frame. It is possible that alterations
-    to `data_patched` could alter the original `data` data frame. Please be cautious
-    when using this value directly.
+    def data_view(self, *, selected: bool = False) -> pd.DataFrame:
+        """
+        Reactive function to retrieve the data how it is viewed within the browser.
 
-    See Also
-    --------
-    * [`pandas.DataFrame.copy` API documentation]h(ttps://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.copy.html)
-    """
+        This function will sort, filter, and apply any patches to the data frame as viewed
+        by the user within the browser.
+
+        This is a shallow copy of the original data frame. It is possible that alterations
+        to `data_view` could alter the original `data` data frame. Please be cautious
+        when using this value directly.
+
+        Parameters
+        ----------
+        selected
+            If `True`, subset the viewed data to the selected area. Defaults to `False`.
+
+        See Also
+        --------
+        * [`pandas.DataFrame.copy` API documentation]h(ttps://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.copy.html)
+        """
+        # Return reactive calculations so that they can be cached for other calculations
+        if selected:
+            return self._data_view_selected()
+        else:
+            return self._data_view()
+
+    # data_patched: reactive.Calc_[pd.DataFrame]
+    # """
+    # Reactive value of the data frame's edited output data.
+
+    # This is a shallow copy of the original data frame. It is possible that alterations
+    # to `data_patched` could alter the original `data` data frame. Please be cautious
+    # when using this value directly.
+
+    # See Also
+    # --------
+    # * [`pandas.DataFrame.copy` API documentation]h(ttps://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.copy.html)
+    # """
+
     # TODO-barret-Q; Should this be the original? Or the updated version
     selection_modes: reactive.Calc_[SelectionModes]
     """
     Reactive value of the data frame's possible selection modes.
     """
 
-    input_cell_selection: reactive.Calc_[BrowserCellSelection | None]
+    input_cell_selection: reactive.Calc_[CellSelection | None]
     """
     Reactive value of selected information.
 
@@ -192,27 +246,9 @@ class data_frame(Renderer[DataFrameResult]):
     Returns
     -------
     :
-        * `None` if the selection mode is `None`
-        * :class:`~shiny.types.SelectionLocationJS` representing the indices of the
+        * `None` if the selection mode is `"none"`
+        * :class:`~shiny.types.BrowserCellSelection` representing the indices of the
           selected cells.
-    """
-
-    data_selected: reactive.Calc_[pd.DataFrame]
-    """
-    Reactive value that returns the edited data frame subsetted to the selected area.
-
-    Returns
-    -------
-    :
-        * If the row selection mode is `None`, the calculation will throw a silent error
-          (`req(False)`)
-        * The edited data (`.data_patched()`) at the indices of the selected rows
-
-    See Also
-    --------
-    * :func:`~shiny.render.data_frame.input_cell_selection`
-    * :func:`~shiny.render.data_frame.data_patched`
-    * :func:`~shiny.req`
     """
 
     def _reset_reactives(self) -> None:
@@ -268,12 +304,12 @@ class data_frame(Renderer[DataFrameResult]):
         self.selection_modes = self_selection_modes
 
         @reactive.calc
-        def self_input_cell_selection() -> BrowserCellSelection | None:
+        def self_input_cell_selection() -> CellSelection | None:
             browser_cell_selection_input = self._get_session().input[
                 f"{self.output_id}_cell_selection"
             ]()
 
-            browser_cell_selection = as_browser_cell_selection(
+            browser_cell_selection = as_cell_selection(
                 browser_cell_selection_input,
                 selection_modes=self.selection_modes(),
             )
@@ -284,45 +320,72 @@ class data_frame(Renderer[DataFrameResult]):
 
         self.input_cell_selection = self_input_cell_selection
 
+        # Array of sorted column information
+        # TODO-barret-render.data_frame; Expose and update column sorting
+        # Do not expose until update methods are provided
         @reactive.calc
-        # TODO-barret-render.data_frame; Subset data according to what is viewed in the browser; Apply filtering and sorting as well! https://github.com/posit-dev/py-shiny/issues/1240
-        def self_data_selected() -> pd.DataFrame:
-            # browser_cell_selection
-            bcs = self.input_cell_selection()
-            if bcs is None:
-                req(False)
-                raise RuntimeError("This should never be reached for typing purposes")
+        def self__input_column_sort() -> list[ColumnSort]:
+            column_sort = self._get_session().input[f"{self.output_id}_column_sort"]()
+            return column_sort
 
-            data_selected = self.data_patched()
-            # if bcs["type"] == "all":
-            #     return data_selected
-            if bcs["type"] == "none":
-                # Empty subset
-                return data_selected.iloc[[]]
-            elif bcs["type"] == "row":
-                # Seems to not work with `tuple[int, ...]`,
-                # but converting to a list does!
-                rows = list(bcs["rows"])
-                return data_selected.iloc[rows]
-            elif bcs["type"] == "col":
-                # Seems to not work with `tuple[int, ...]`,
-                # but converting to a list does!
-                cols = list(bcs["cols"])
-                return data_selected.iloc[:, cols]
-            elif bcs["type"] == "region":
-                return data_selected.iloc[
-                    bcs["rows"][0] : bcs["rows"][1],
-                    bcs["cols"][0] : bcs["cols"][1],
-                ]
-            raise RuntimeError(f"Unhandled selection type: {bcs['type']}")
+        self._input_column_sort = self__input_column_sort
 
-        self.data_selected = self_data_selected
+        # Array of column filters applied by user
+        # TODO-barret-render.data_frame; Expose and update column filters
+        # Do not expose until update methods are provided
+        @reactive.calc
+        def self__input_column_filter() -> list[ColumnFilterStr | ColumnFilterNumber]:
+            column_filter = self._get_session().input[
+                f"{self.output_id}_column_filter"
+            ]()
+            return column_filter
+
+        self._input_column_filter = self__input_column_filter
 
         @reactive.calc
-        def self_data_patched() -> pd.DataFrame:
+        def self__input_data_view_indicies() -> list[int]:
+            data_view_indicies = self._get_session().input[
+                f"{self.output_id}_data_view_indicies"
+            ]()
+            return data_view_indicies
+
+        self._input_data_view_indicies = self__input_data_view_indicies
+
+        # @reactive.calc
+        # def self__data_selected() -> pd.DataFrame:
+        #     # browser_cell_selection
+        #     bcs = self.input_cell_selection()
+        #     if bcs is None:
+        #         req(False)
+        #         raise RuntimeError("This should never be reached for typing purposes")
+        #     data_selected = self.data_view(selected=False)
+        #     if bcs["type"] == "none":
+        #         # Empty subset
+        #         return data_selected.iloc[[]]
+        #     elif bcs["type"] == "row":
+        #         # Seems to not work with `tuple[int, ...]`,
+        #         # but converting to a list does!
+        #         rows = list(bcs["rows"])
+        #         return data_selected.iloc[rows]
+        #     elif bcs["type"] == "col":
+        #         # Seems to not work with `tuple[int, ...]`,
+        #         # but converting to a list does!
+        #         cols = list(bcs["cols"])
+        #         return data_selected.iloc[:, cols]
+        #     elif bcs["type"] == "rect":
+        #         return data_selected.iloc[
+        #             bcs["rows"][0] : bcs["rows"][1],
+        #             bcs["cols"][0] : bcs["cols"][1],
+        #         ]
+        #     raise RuntimeError(f"Unhandled selection type: {bcs['type']}")
+        # # self._data_selected = self__data_selected
+
+        @reactive.calc
+        def self__data_patched() -> pd.DataFrame:
             # Enable copy-on-write mode for the data;
             # Use `deep=False` to avoid copying the full data; CoW will copy the necessary data when modified
             with pd.option_context("mode.copy_on_write", True):
+                # Apply patches!
                 data = self.data().copy(deep=False)
                 for cell_patch in self.cell_patches():
                     data.iat[  # pyright: ignore[reportUnknownMemberType]
@@ -332,7 +395,48 @@ class data_frame(Renderer[DataFrameResult]):
 
                 return data
 
-        self.data_patched = self_data_patched
+        self._data_patched = self__data_patched
+
+        # Helper method to subset data according to what is viewed in the browser;
+        # Apply filtering and sorting
+        # https://github.com/posit-dev/py-shiny/issues/1240
+        def _subset_data_view(selected: bool) -> pd.DataFrame:
+            # Enable copy-on-write mode for the data;
+            # Use `deep=False` to avoid copying the full data; CoW will copy the necessary data when modified
+            with pd.option_context("mode.copy_on_write", True):
+                # Get patched data
+                data = self._data_patched().copy(deep=False)
+
+                # Turn into list for pandas compatibility
+                data_view_indicies = list(self._input_data_view_indicies())
+
+                # Possibly subset the indicies to selected rows
+                if selected:
+                    cell_selection = self.input_cell_selection()
+                    if cell_selection is not None and cell_selection["type"] == "row":
+                        # Use a `set` for faster lookups
+                        selected_row_indicies_set = set(cell_selection["rows"])
+
+                        # Subset the data view indicies to only include the selected rows
+                        data_view_indicies = [
+                            index
+                            for index in data_view_indicies
+                            if index in selected_row_indicies_set
+                        ]
+
+                return data.iloc[data_view_indicies]
+
+        # Helper reactives so that internal calculations can be cached for use in other calculations
+        @reactive.calc
+        def self__data_view() -> pd.DataFrame:
+            return _subset_data_view(selected=False)
+
+        @reactive.calc
+        def self__data_view_selected() -> pd.DataFrame:
+            return _subset_data_view(selected=True)
+
+        self._data_view = self__data_view
+        self._data_view_selected = self__data_view_selected
 
     def _get_session(self) -> Session:
         if self._session is None:
@@ -588,13 +692,10 @@ class data_frame(Renderer[DataFrameResult]):
         )
 
     async def update_cell_selection(
-        # self, selection: SelectionLocation | SelectionLocationJS
+        # self, selection: SelectionLocation | BrowserCellSelection
         self,
-        selection: CellSelection | BrowserCellSelection | None,
+        selection: CellSelection | Literal["all"] | None,
     ) -> None:
-        if selection is None:
-            selection = "none"
-
         with reactive.isolate():
             selection_modes = self.selection_modes()
             data = self.data()
@@ -608,23 +709,22 @@ class data_frame(Renderer[DataFrameResult]):
                 stacklevel=2,
             )
 
-            selection = "none"
+            selection = None
 
-        browser_cell_selection = as_browser_cell_selection(
+        cell_selection = as_cell_selection(
             selection,
             selection_modes=selection_modes,
             data=data,
         )
-        if browser_cell_selection["type"] == "none":
+
+        if cell_selection["type"] == "none":
             pass
-        elif browser_cell_selection["type"] == "region":
-            raise RuntimeError("Region selection is not yet supported")
-        # elif browser_cell_selection["type"] == "cell":
-        #     raise RuntimeError("Single cell selection is not yet supported")
-        elif browser_cell_selection["type"] == "col":
+        elif cell_selection["type"] == "rect":
+            raise RuntimeError("Rectangle region selection is not yet supported")
+        elif cell_selection["type"] == "col":
             raise RuntimeError("Column selection is not yet supported")
-        elif browser_cell_selection["type"] == "row":
-            row_value = browser_cell_selection["rows"]
+        elif cell_selection["type"] == "row":
+            row_value = cell_selection["rows"]
             if selection_modes.row == "single" and len(row_value) > 1:
                 warnings.warn(
                     "Attempted to set cell selection to more than 1 row when `.selection_modes()` contains 'row'. "
@@ -632,12 +732,10 @@ class data_frame(Renderer[DataFrameResult]):
                     stacklevel=2,
                 )
 
-                browser_cell_selection["rows"] = (row_value[0],)
+                cell_selection["rows"] = (row_value[0],)
         else:
-            raise ValueError(
-                f"Unhandled selection type: {browser_cell_selection['type']}"
-            )
+            raise ValueError(f"Unhandled selection type: {cell_selection['type']}")
         await self._send_message_to_browser(
             "updateCellSelection",
-            {"cellSelection": browser_cell_selection},
+            {"cellSelection": cell_selection},
         )

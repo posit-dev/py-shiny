@@ -1,4 +1,5 @@
 import {
+  ColumnFiltersState,
   FiltersOptions,
   Header,
   TableOptions,
@@ -17,24 +18,37 @@ import React, {
 } from "react";
 import { FilterNumeric } from "./filter-numeric";
 
-export function useFilter<TData>(
-  enabled: boolean | undefined
-): FiltersOptions<TData> {
-  if (enabled) {
-    return {
-      getFilteredRowModel: getFilteredRowModel(),
-      getFacetedRowModel: getFacetedRowModel(),
-      getFacetedUniqueValues: getFacetedUniqueValues(),
-      getFacetedMinMaxValues: getFacetedMinMaxValues(),
-      filterFns: {
-        substring: (row, columnId, value, addMeta) => {
-          return row.getValue(columnId).toString().includes(value);
+export function useFilters<TData>(enabled: boolean | undefined): {
+  columnFilters: ColumnFiltersState;
+  setColumnFilters: React.Dispatch<React.SetStateAction<ColumnFiltersState>>;
+  columnFiltersState: { columnFilters: ColumnFiltersState };
+  filtersTableOptions: FiltersOptions<TData>;
+} {
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]); // can set initial column filter state here
+
+  const filtersTableOptions = enabled
+    ? {
+        getFilteredRowModel: getFilteredRowModel<TData>(),
+        getFacetedRowModel: getFacetedRowModel<TData>(),
+        getFacetedUniqueValues: getFacetedUniqueValues<TData>(),
+        getFacetedMinMaxValues: getFacetedMinMaxValues<TData>(),
+        filterFns: {
+          substring: (row, columnId, value, addMeta) => {
+            return row.getValue(columnId).toString().includes(value);
+          },
         },
-      },
-    };
-  } else {
-    return {};
-  }
+        onColumnFiltersChange: setColumnFilters,
+      }
+    : {};
+
+  return {
+    columnFilters,
+    columnFiltersState: {
+      columnFilters,
+    },
+    filtersTableOptions,
+    setColumnFilters,
+  };
 }
 
 export interface FilterProps

@@ -3,16 +3,23 @@
 # pyright: reportUnusedImport=false
 
 __all__ = (
+    "Annotated",
     "Concatenate",
     "ParamSpec",
     "TypeGuard",
     "NotRequired",
+    "Self",
     "TypedDict",
     "assert_type",
 )
 
 
 import sys
+
+if sys.version_info >= (3, 9):
+    from typing import Annotated
+else:
+    from typing_extensions import Annotated
 
 if sys.version_info >= (3, 10):
     from typing import Concatenate, ParamSpec, TypeGuard
@@ -32,4 +39,4 @@ else:
 # conditional imports into the .pyi file when generating type stubs. Without this line,
 # pyright will not include the above imports in the generated .pyi file, and it will
 # result in a lot of red squiggles in user code.
-_: 'Concatenate[str, ParamSpec("P")] | ParamSpec | TypeGuard | NotRequired | TypedDict | assert_type | Self'  # type:ignore
+_: 'Annotated |Concatenate[str, ParamSpec("P")] | ParamSpec | TypeGuard | NotRequired | TypedDict | assert_type | Self'  # type:ignore

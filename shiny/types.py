@@ -24,6 +24,7 @@ from typing import (
     Optional,
     Protocol,
     Tuple,
+    TypeVar,
     Union,
 )
 
@@ -42,6 +43,10 @@ class MISSING_TYPE:
 
 
 MISSING: MISSING_TYPE = MISSING_TYPE()
+
+
+T = TypeVar("T")
+ListOrTuple = Union[List[T], Tuple[T, ...]]
 
 
 # Information about a single file, with a structure like:

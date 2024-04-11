@@ -34,19 +34,21 @@ from shiny.render._dataframe import CellPatch
 # TODO-karan-test; Data frame with html content in the first two columns; Edit a cell in the third column and try to hit `shift + tab`. It should not submit the edit in the current cell and stay at the current cell (not moving to the second or first column)
 # TODO-karan-test; Data frame with html content in the last two columns; Edit a cell in the third from last column and try to hit `tab`. It should not submit the edit in the current cell and stay at the current cell (not moving to the last two columns)
 
+# TODO-karan-test; The resulting data frame `._input_column_sort()` should return the columns that was sorted on and their direction. (Is multi sort allowed?)
+# TODO-karan-test; The resulting data frame `._input_column_filter()` should return the columns that was filtered on and their filter values. (Test both string and number columns)
+# TODO-karan-test; The resulting data frame `._input_data_view_indicies()` should return the start and end index of the data view. (Test with and without filters and sorting)
+# TODO-karan-test; The resulting data frame `data_view(selected=False)` should return the data view that is currently being displayed. (Test with and without filters and sorting)
+# TODO-karan-test; The resulting data frame `data_view(selected=True)` should return the data view that is currently being displayed, but only the selected rows. (Test with and without filters and sorting)
+# TODO-karan-test; The resulting data frame `input_cell_selection()` should return the currently selected cells.
 
 # Load the dataset
 penguins = load_penguins_raw()
 df = penguins
 
-df = df.head(5)
+df = df.head(15)
 
 
-# print(ui.p)
-# print(ui.p.__json__)
-
-# raise ValueError("Barret testing!")
-
+# Add some HTML content to the dataframe!
 for i in range(1, 5):
     df.iloc[i, 1] = ui.p(
         ui.HTML(
@@ -60,9 +62,12 @@ for i in range(1, 5):
         )
     )
 
-# from shiny.render._data_frame_utils._datagridtable import serialize_numpy_dtypes
 
-# print(serialize_numpy_dtypes(df))
+# Use a non-standard index, just in case
+df["test_index"] = [
+    f"Row {i}" for i in range(0, df.shape[0])
+]  # pyright: ignore[reportUnknownArgumentType]
+df.set_index("test_index", drop=True, inplace=True)
 
 
 MOD_ID = "testing"
@@ -107,7 +112,32 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
         return render.DataGrid(df, selection_mode="rows", editable=False)
         # return render.DataTable(df, selection_mode="rows", editable=False)
 
-    # from shiny import reactive
+    from shiny import reactive
+
+    @reactive.effect
+    def _():
+        print("Filters:", summary_data._input_column_filter())
+
+    @reactive.effect
+    def _():
+        print("Sorting:", summary_data._input_column_sort())
+
+    @reactive.effect
+    def _():
+        print("Indicies:", summary_data._input_data_view_indicies())
+
+    @reactive.effect
+    def _():
+        print("Data View:\n", summary_data.data_view(selected=False))
+
+    @reactive.effect
+    def _():
+        print("Data View (selected):\n", summary_data.data_view(selected=True))
+
+    @reactive.effect
+    def _():
+        print("Cell Selection:", summary_data.input_cell_selection())
+
     # @reactive.effect
     # def _():
     #     print(summary_data.data())
@@ -191,9 +221,6 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
     #     print("patches: ", summary_data.cell_patches())
 
     if False:
-        # Reactive value with current data
-        # Make this a reactive calc
-        # summary_data.data_selected_rows()
 
         @summary_data.set_patches_fn
         async def upgrade_patches(
