@@ -353,7 +353,6 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
 
     // Already prefiltered rows!
     const shinyValue: RowModel<unknown[]> = table.getSortedRowModel();
-    console.log("sortedRowModel", shinyValue);
 
     const rowIndices = table.getSortedRowModel().rows.map((row) => row.index);
     Shiny.setInputValue!(shinyId, rowIndices);
