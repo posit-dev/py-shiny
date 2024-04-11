@@ -317,15 +317,10 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
       shinyValue = null;
     } else if (rowSelectionModes.row !== SelectionModes._rowEnum.NONE) {
       const rowSelectionKeys = rowSelection.keys().toList();
-      // Do not sent `none` or `all` to the server as it is hard to utilize when we know the selection is row based
-      // if (rowSelectionKeys.length === 0) {
-      //   shinyValue = { type: "none" };
-      // } else if (rowSelectionKeys.length === rowData.length) {
-      //   shinyValue = { type: "all" };
-      // } else {
+      const rowsById = table.getSortedRowModel().rowsById;
       shinyValue = {
         type: "row",
-        rows: rowSelectionKeys.map((key) => parseInt(key)).sort(),
+        rows: rowSelectionKeys.map((key) => rowsById[key].index).sort(),
       };
     } else {
       console.error("Unhandled row selection mode:", rowSelectionModes);
