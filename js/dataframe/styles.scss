@@ -307,6 +307,12 @@ shiny-data-frame .shiny-data-grid > table > tbody > tr > td.cell-edit-editing {
 }
 
 shiny-data-frame .shiny-data-grid > table > tbody > tr > td {
+  &.cell-html {
+    cursor: default;
+  }
+  &.cell-editable {
+    cursor: text;
+  }
   &.cell-edit-saving {
     color: var(--shiny-datagrid-table-cell-edit-saving-color);
     font-style: var(--shiny-datagrid-table-cell-edit-saving-font-style);

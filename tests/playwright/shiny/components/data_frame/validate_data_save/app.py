@@ -1,8 +1,9 @@
+import time
+
 from palmerpenguins import load_penguins_raw  # pyright: ignore[reportMissingTypeStubs]
 
 from shiny import App, Inputs, Outputs, Session, render, ui
 from shiny.render._dataframe import CellPatch
-from shiny.types import SafeException
 
 app_ui = ui.page_fluid(
     ui.h2("Palmer Penguins"),
@@ -19,21 +20,20 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
             editable=True,
         )
 
+    @render.code
+    def selected_row_count():
+        # grid_selected_data = grid_selected.data()
+        return str(
+            penguins_df.data_selected()  # pyright: ignore[reportUnknownMemberType]
+        )
+
     @penguins_df.set_patch_fn
     async def upgrade_patch(
         *,
         patch: CellPatch,
     ):
-        if (patch["column_index"] == 4) and (
-            patch["value"] not in ["Torgersen", "Biscoe", "Dream"]
-        ):  # check island
-            raise SafeException(
-                "Penguin island should be one of 'Torgersen', 'Biscoe', 'Dream'"
-            )
-        if (patch["column_index"] == 9) and int(
-            patch["value"]  # pyright: ignore[reportArgumentType]
-        ) > 50:  # check culmen length
-            raise SafeException("Penguin culmen length cannot be greater than 50mm")
+        # Slow down change so that we can test for "editing" state
+        time.sleep(2)
         return patch["value"]
 
 
