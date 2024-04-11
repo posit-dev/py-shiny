@@ -3,11 +3,11 @@ from __future__ import annotations
 # TODO-barret-render.data_frame; Docs
 # TODO-barret-render.data_frame; Add examples of selection!
 import warnings
-from typing import TYPE_CHECKING, List, Literal, Set, Tuple, Union, cast
+from typing import TYPE_CHECKING, Literal, Set, Union, cast
 
 from ..._deprecated import warn_deprecated
-from ..._typing_extensions import TypedDict
-from ...types import MISSING, MISSING_TYPE, Jsonifiable
+from ..._typing_extensions import Annotated, TypedDict
+from ...types import MISSING, MISSING_TYPE, Jsonifiable, ListOrTuple
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -134,9 +134,8 @@ SelectionModeInput = Union[
     # String
     SelectionMode,
     # Sequence of strings
-    List[SelectionMode],
-    Tuple[SelectionMode, ...],
-    Set[SelectionMode],
+    ListOrTuple[SelectionMode],
+    # Set[SelectionMode],
     # Support the upgraded selection modes
     SelectionModes,
 ]
@@ -162,31 +161,25 @@ class CellSelectionNone(TypedDict):
 
 class CellSelectionRow(TypedDict):
     type: Literal["row"]
-    rows: tuple[int, ...]
+    rows: ListOrTuple[int]
 
 
 class CellSelectionCol(TypedDict):
     type: Literal["col"]
-    cols: tuple[int, ...]
+    cols: ListOrTuple[int]
 
 
 class CellSelectionRect(TypedDict):
     type: Literal["rect"]
-    rows: tuple[int, int]
-    cols: tuple[int, int]
-
-
-# class CellSelectionCell(TypedDict):
-#     type: Literal["cell"]
-#     rows: tuple[int]
-#     cols: tuple[int]
+    # Attempt to type the list of size 2, but it is not type enforced
+    rows: tuple[int, int] | Annotated[list[int], 2]
+    cols: tuple[int, int] | Annotated[list[int], 2]
 
 
 # For receiving selection info from JS:
 CellSelection = Union[
     CellSelectionRow,
     CellSelectionCol,
-    # CellSelectionCell,
     CellSelectionRect,
     CellSelectionNone,
 ]
@@ -202,9 +195,7 @@ A single selection set sent to/from the browser.
 # ####################
 
 
-def to_tuple_or_none(
-    x: int | list[int] | tuple[int, ...] | None
-) -> tuple[int, ...] | None:
+def to_tuple_or_none(x: int | ListOrTuple[int] | None) -> tuple[int, ...] | None:
     if x is None:
         return None
     if isinstance(x, int):
@@ -239,7 +230,8 @@ def as_cell_selection(
         if selection_modes._has_rect():
             if selection_modes.rect == "cell":
                 warnings.warn(
-                    "Cannot select all cells with `cell` selection mode. Selecting the first cell"
+                    "Cannot select all cells with `cell` selection mode. Selecting the first cell",
+                    stacklevel=3,
                 )
                 return {"type": "rect", "rows": (0, 0), "cols": (0, 0)}
             if selection_modes.rect == "region":
@@ -251,7 +243,8 @@ def as_cell_selection(
         if selection_modes._has_row():
             if selection_modes.row == "single":
                 warnings.warn(
-                    "Cannot select all rows with `row` selection mode. Selecting the first row"
+                    "Cannot select all rows with `row` selection mode. Selecting the first row",
+                    stacklevel=3,
                 )
                 return {"type": "row", "rows": (0,)}
             if selection_modes.row == "multiple":
@@ -259,7 +252,8 @@ def as_cell_selection(
         if selection_modes._has_col():
             if selection_modes.col == "single":
                 warnings.warn(
-                    "Cannot select all columns with `col` selection mode. Selecting the first column"
+                    "Cannot select all columns with `col` selection mode. Selecting the first column",
+                    stacklevel=3,
                 )
                 return {"type": "col", "cols": (0,)}
             if selection_modes.col == "multiple":

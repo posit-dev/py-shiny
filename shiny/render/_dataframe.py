@@ -318,7 +318,7 @@ class data_frame(Renderer[DataFrameResult]):
                 # but converting to a list does!
                 cols = list(bcs["cols"])
                 return data_selected.iloc[:, cols]
-            elif bcs["type"] == "region":
+            elif bcs["type"] == "rect":
                 return data_selected.iloc[
                     bcs["rows"][0] : bcs["rows"][1],
                     bcs["cols"][0] : bcs["cols"][1],
