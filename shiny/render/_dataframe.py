@@ -317,6 +317,37 @@ class data_frame(Renderer[DataFrameResult]):
 
         self.input_cell_selection = self_input_cell_selection
 
+        # Array of sorted column information
+        # TODO-barret-render.data_frame; Expose and update column sorting
+        # Do not expose until update methods are provided
+        @reactive.calc
+        def self__input_column_sort() -> list[ColumnSort]:
+            column_sort = self._get_session().input[f"{self.output_id}_column_sort"]()
+            return column_sort
+
+        self._input_column_sort = self__input_column_sort
+
+        # Array of column filters applied by user
+        # TODO-barret-render.data_frame; Expose and update column filters
+        # Do not expose until update methods are provided
+        @reactive.calc
+        def self__input_column_filter() -> list[ColumnFilterStr | ColumnFilterNumber]:
+            column_filter = self._get_session().input[
+                f"{self.output_id}_column_filter"
+            ]()
+            return column_filter
+
+        self._input_column_filter = self__input_column_filter
+
+        @reactive.calc
+        def self__input_data_view_indicies() -> list[int]:
+            data_view_indicies = self._get_session().input[
+                f"{self.output_id}_data_view_indicies"
+            ]()
+            return data_view_indicies
+
+        self._input_data_view_indicies = self__input_data_view_indicies
+
         @reactive.calc
         def self__data_selected() -> pd.DataFrame:
             # browser_cell_selection
