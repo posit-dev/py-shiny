@@ -104,7 +104,7 @@ export function initRowSelectionModes(
 ): SelectionModes {
   // If no option was provided, default to multinative mode
   if (!selectionModesOption) {
-    selectionModesOption = { row: "multi-native", col: "none", rect: "none" };
+    selectionModesOption = { row: "multiple", col: "none", rect: "none" };
   }
   return new SelectionModes({
     row: selectionModesOption.row,
