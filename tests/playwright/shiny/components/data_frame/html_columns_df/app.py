@@ -27,9 +27,9 @@ df.iloc[1, 0] = (  # pyright: ignore[reportArgumentType]
 )
 df["Species"] = df["Species"].apply(lambda x: ui.HTML(f"<u>{x}</u>"))  # type: ignore
 df["Region"] = df["Region"].apply(  # type: ignore
-    lambda y: ui.tags.h1(
+    lambda y: ui.tags.h1(  # pyright: ignore[reportUnknownLambdaType, reportArgumentType]
         f"{y}"
-    )  # pyright: ignore[reportUnknownLambdaType, reportArgumentType]
+    )
 )  # pyright: ignore[reportUnknownMemberType]
 df["Island"] = df["Island"].apply(  # pyright: ignore[reportUnknownMemberType]
     lambda z: ui.TagList(  # pyright: ignore[reportUnknownLambdaType]
