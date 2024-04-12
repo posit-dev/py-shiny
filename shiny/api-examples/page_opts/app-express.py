@@ -1,4 +1,4 @@
-from shiny.express import input, ui
+from shiny.express import ui
 
 ui.page_opts(title="App with Navbar", fillable=True, id="page")
 
