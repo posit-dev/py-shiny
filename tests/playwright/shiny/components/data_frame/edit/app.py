@@ -49,18 +49,15 @@ df = df.head(15)
 
 
 # Add some HTML content to the dataframe!
-for i in range(1, 5):
-    df.iloc[i, 1] = ui.p(
-        ui.HTML(
+df["Sample Number"] = df["Sample Number"].apply(
+    lambda x: ui.HTML(  # pyright: ignore[reportUnknownLambdaType]
+        str(
             ui.tags.strong(
-                ui.tags.em(
-                    str(
-                        df.iloc[i, 1],
-                    )
-                )
+                ui.tags.em(str(x))  # pyright: ignore[reportUnknownArgumentType]
             )
         )
     )
+)
 
 
 # Use a non-standard index, just in case
