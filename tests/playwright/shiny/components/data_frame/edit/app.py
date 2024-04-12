@@ -36,7 +36,7 @@ from shiny.render import CellPatch
 
 # TODO-karan-test; The resulting data frame `._input_column_sort()` should return the columns that was sorted on and their direction. (Is multi sort allowed?)
 # TODO-karan-test; The resulting data frame `._input_column_filter()` should return the columns that was filtered on and their filter values. (Test both string and number columns)
-# TODO-karan-test; The resulting data frame `._input_data_view_indicies()` should return the start and end index of the data view. (Test with and without filters and sorting)
+# TODO-karan-test; The resulting data frame `._input_data_view_indices()` should return the start and end index of the data view. (Test with and without filters and sorting)
 # TODO-karan-test; The resulting data frame `data_view(selected=False)` should return the data view that is currently being displayed. (Test with and without filters and sorting)
 # TODO-karan-test; The resulting data frame `data_view(selected=True)` should return the data view that is currently being displayed, but only the selected rows. (Test with and without filters and sorting)
 # TODO-karan-test; The resulting data frame `input_cell_selection()` should return the currently selected cells.
@@ -121,7 +121,7 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
 
     @reactive.effect
     def _():
-        print("Indicies:", summary_data._input_data_view_indicies())
+        print("indices:", summary_data._input_data_view_indices())
 
     @reactive.effect
     def _():
