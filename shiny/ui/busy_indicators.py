@@ -133,3 +133,36 @@ def spinner_options(
     # selector is the same, the last call takes precedence. Also, css_selector allows
     # for scoping of the spinner customization.
     return tags.style(css_selector + " {" + css_vars + "}")
+
+
+@no_example()
+def pulse_options(
+    *, color: str | None = None, height: str | None = None, speed: str | None = None
+) -> Tag:
+    """
+    Customize the pulsing busy indicator.
+
+    Include the result of this function in the app's UI to customize the pulsing banner
+
+    Parameters
+    ----------
+    color
+        The color of the pulsing banner. This can be any valid CSS color. Defaults to
+        the app's "primary" color (if Bootstrap is on the page) or light-blue if not.
+    height
+        The height of the pulsing banner. This can be any valid CSS size. Defaults to
+        "3.5px".
+
+    Returns
+    -------
+    :
+        A `<style>` tag.
+    """
+
+    css_vars = (
+        (f"--shiny-pulse-color: {color};" if color else "")
+        + (f"--shiny-pulse-height: {height};" if height else "")
+        + (f"--shiny-pulse-speed: {speed};" if speed else "")
+    )
+
+    return tags.style(":root {" + css_vars + "}")

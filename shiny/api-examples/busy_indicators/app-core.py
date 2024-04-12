@@ -6,7 +6,7 @@ import seaborn as sns
 from shiny import App, render, ui
 
 app_ui = ui.page_fixed(
-    ui.h4("Busy spinner demo"),
+    ui.h4("Busy spinner demo", class_="pt-3"),
     ui.busy_indicators.spinner_options(color="orange", size="80px"),
     ui.card(
         ui.card_header(

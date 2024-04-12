@@ -23,17 +23,26 @@
 
 /* Mixin for pulsing banner since we need to include in several different contexts */
 @mixin shiny-page-busy {
+  /* busy_indicators.pulse_options() */
+  --_shiny-pulse-color: var(--shiny-pulse-color, var(--bs-primary, #007bc2));
+  --_shiny-pulse-height: var(--shiny-pulse-height, 3.5px);
+  --_shiny-pulse-speed: var(--shiny-pulse-speed, 2s);
+
+  /* Color, sizing, & positioning */
   position: fixed;
   top: 0;
   left: 0;
-  right: 0;
-  height: 3px;
-  content: ""; /* Used in a ::after context */
+  height: var(--_shiny-pulse-height);
+  background: linear-gradient(120deg, var(--bs-body-bg, #fff), var(--_shiny-pulse-color), var(--bs-body-bg, #fff));
+  border-radius: 50%;
+
+  /* Animation */
   animation-name: busy-page-pulse;
-  animation-duration: 20s;
+  animation-duration: var(--_shiny-pulse-speed);
   animation-iteration-count: infinite;
-  background: linear-gradient(45deg, #fff, #505050, #007bc2, #74149c, #007bc2, #505050, #fff);
-  background-size: 800%;
+  animation-timing-function: linear;
+
+  content: ""; /* Used in a ::after context */
 }
 
 [data-shiny-busy-indicator-types*="spinners"] {
@@ -174,14 +183,40 @@ In cursor mode, if the page has anything recalculating, show progress cursor
 /* Keyframes for the pulsing banner */
 @keyframes busy-page-pulse {
   0% {
-    background-position: 0px 50%;
+    left: 0;
+    width: 0;
   }
-
+  12.5% {
+    left: 0;
+    width: 25%;
+  }
+  25% {
+    left: 25%;
+    width: 25%;
+  }
+  37.5% {
+    left: 75%;
+    width: 25%;
+  }
   50% {
-    background-position: 100% 50%;
+    left: 100%;
+    width: 0%;
   }
-
+  /* Go back */
+  62.5% {
+    left: 75%;
+    width: 25%;
+  }
+  75% {
+    left: 25%;
+    width: 25%;
+  }
+  87.5% {
+    left: 0;
+    width: 25%;
+  }
   100% {
-    background-position: 0px 50%;
+    left: 0;
+    width: 0;
   }
 }
