@@ -19,10 +19,12 @@ def test_validate_html_columns(page: Page, local_app: ShinyAppProc) -> None:
     data_frame.expect_cell("N1A1", row=1, col=7)
     data_frame.save_cell("N1A11", row=1, col=7, save_key="Enter")
     data_frame.expect_cell("ID: N1A11", row=1, col=7)
-    data_frame.expect_cell("1", row=1, col=2)
+
+    # assert sorting works
     data_frame.expect_cell("1", row=1, col=2)
     data_frame.sort_column(col=2)
     data_frame.expect_cell("152", row=1, col=2)
+
     # if a column is sorted, editing should not change the order
     data_frame.save_cell("152", row=1, col=2, save_key="Enter")
     data_frame.expect_cell("151", row=2, col=2)
