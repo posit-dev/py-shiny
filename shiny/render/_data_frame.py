@@ -56,7 +56,7 @@ if TYPE_CHECKING:
     from ..session._utils import Session
 
     DataFrameT = TypeVar("DataFrameT", bound=pd.DataFrame)
-    # TODO-future; Pandas, Polars, api compat, etc.; Today, we only support Pandas
+    # TODO-barret-render.data_frame; Pandas, Polars, api compat, etc.; Today, we only support Pandas
 
 
 from ._data_frame_utils._datagridtable import DataFrameResult

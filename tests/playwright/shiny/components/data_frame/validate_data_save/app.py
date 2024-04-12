@@ -3,7 +3,7 @@ import time
 from palmerpenguins import load_penguins_raw  # pyright: ignore[reportMissingTypeStubs]
 
 from shiny import App, Inputs, Outputs, Session, render, ui
-from shiny.render._dataframe import CellPatch
+from shiny.render._data_frame import CellPatch
 
 app_ui = ui.page_fluid(
     ui.h2("Palmer Penguins"),

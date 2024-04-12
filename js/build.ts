@@ -36,10 +36,10 @@ async function bundle_helper(
 
     if (options.metafile) {
       // Save metafile
-      const dataframe_results = result;
+      const data_frame_results = result;
       await fs.writeFile(
         "esbuild-metadata.json",
-        JSON.stringify(dataframe_results.metafile)
+        JSON.stringify(data_frame_results.metafile)
       );
       console.log("Metadata file written to esbuild-metadata.json");
     }
@@ -51,7 +51,7 @@ async function bundle_helper(
 
 const opts: Array<BuildOptions> = [
   {
-    entryPoints: { "dataframe/dataframe": "dataframe/index.tsx" },
+    entryPoints: { "data-frame/data-frame": "data-frame/index.tsx" },
     plugins: [sassPlugin({ type: "css-text", sourceMap: false })],
     metafile: true,
   },
