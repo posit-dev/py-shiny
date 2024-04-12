@@ -332,4 +332,4 @@ shiny-data-frame .shiny-data-grid > table > tbody > tr > td.cell-edit-failure {
    * @license MIT
    *)
 */
-//# sourceMappingURL=dataframe.js.map
+//# sourceMappingURL=data-frame.js.map
