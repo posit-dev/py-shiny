@@ -6,7 +6,7 @@ from . import (  # noqa: F401
     transformer,  # pyright: ignore[reportUnusedImport]
 )
 from ._data_frame import (  # noqa: F401
-    CellPatch,  # pyright: ignore[reportUnusedImport]
+    CellPatch,
     DataGrid,
     DataTable,
     data_frame,
@@ -41,4 +41,5 @@ __all__ = (
     "download",
     "DataGrid",
     "DataTable",
+    "CellPatch",
 )
