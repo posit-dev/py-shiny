@@ -57,7 +57,7 @@ def server(input, output, session):
     # Convert edited values to the correct data type
     @df_original.set_patch_fn
     def _(*, patch: render.CellPatch) -> render.CellValue:
-        if patch["column_index"] == 0:
+        if patch["column_index"] in [0, 2]:
             return float(patch["value"])
         return int(patch["value"])
 
