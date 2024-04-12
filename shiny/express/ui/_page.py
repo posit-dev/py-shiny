@@ -5,7 +5,7 @@ from typing import Callable
 from htmltools import Tag
 
 from ... import ui
-from ..._docstring import no_example
+from ..._docstring import add_example
 from ...types import MISSING, MISSING_TYPE
 from .._recall_context import RecallContextManager
 from .._run import get_top_level_recall_context_manager
@@ -17,7 +17,7 @@ def page_auto_cm() -> RecallContextManager[Tag]:
     return RecallContextManager(ui.page_auto)
 
 
-@no_example()
+@add_example()
 def page_opts(
     *,
     title: str | MISSING_TYPE = MISSING,
