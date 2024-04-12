@@ -485,11 +485,16 @@ def page_auto(
     """
     A page container which automatically decides which page function to use.
 
-    If there is a top-level nav, this will use :func:`~shiny.ui.page_navbar`. If not,
-    and there is a top-level sidebar, this will use :func:`~shiny.ui.page_sidebar`.
+    If there is a top-level :func:`~shiny.ui.nav_panel`, :func:`~shiny.ui.page_auto`
+    will use :func:`~shiny.ui.page_navbar`. Otherwise, if there is a top-level sidebar,
+    :func:`~shiny.ui.page_sidebar` is used.
 
-    If there are neither top-level navs nor sidebars, this will use the ``fillable`` and
-    ``full_width`` arguments to determine which page function to use.
+    If there are neither top-level nav panels nor sidebars, this will use the `fillable`
+    and `full_width` arguments to determine which page function to use:
+
+    1. If `fillable` is `True`, :func:`~shiny.ui.page_fillable` is used.
+    2. Otherwise, if `full_width` is `True`, :func:`~shiny.ui.page_fluid` is used.
+    3. If neither are `True`, :func:`~shiny.ui.page_fixed` is used.
 
     Parameters
     ----------
