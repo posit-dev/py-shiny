@@ -29,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `shiny create` was updated to include some additional templates as well as an option to choose from the new [templates website](https://shiny.posit.co/py/templates/). (#1273, #1277, #1274)
 
+* `shiny.express.ui.page_opts()` now accepts additional keyword arguments that are passed to the underlying page layout chosen by `shiny.ui.page_auto()`. (#1314)
+
 ### Bug fixes
 
 * On Windows, Shiny Express app files are now read in as UTF-8. (#1203)

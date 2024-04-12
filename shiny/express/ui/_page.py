@@ -5,7 +5,7 @@ from typing import Callable
 from htmltools import Tag
 
 from ... import ui
-from ..._docstring import no_example
+from ..._docstring import add_example
 from ...types import MISSING, MISSING_TYPE
 from .._recall_context import RecallContextManager
 from .._run import get_top_level_recall_context_manager
@@ -17,7 +17,7 @@ def page_auto_cm() -> RecallContextManager[Tag]:
     return RecallContextManager(ui.page_auto)
 
 
-@no_example()
+@add_example()
 def page_opts(
     *,
     title: str | MISSING_TYPE = MISSING,
@@ -26,11 +26,25 @@ def page_opts(
     page_fn: Callable[..., Tag] | None | MISSING_TYPE = MISSING,
     fillable: bool | MISSING_TYPE = MISSING,
     full_width: bool | MISSING_TYPE = MISSING,
+    **kwargs: object,
 ) -> None:
     """
     Set page-level options for the current app.
 
-    The arguments to this function get passed to :func:`~shiny.ui.page_auto`.
+    The arguments to this function get passed to :func:`~shiny.ui.page_auto`, which
+    determines which page function should be used based on the page options and the
+    top-level items in the app.
+
+    If there is a top-level :func:`~shiny.ui.nav_panel`, :func:`~shiny.ui.page_auto`
+    will use :func:`~shiny.ui.page_navbar`. Otherwise, if there is a top-level sidebar,
+    :func:`~shiny.ui.page_sidebar` is used.
+
+    If there are neither top-level nav panels nor sidebars, this will use the `fillable`
+    and `full_width` arguments to determine which page function to use:
+
+    1. If `fillable` is `True`, :func:`~shiny.ui.page_fillable` is used.
+    2. Otherwise, if `full_width` is `True`, :func:`~shiny.ui.page_fluid` is used.
+    3. If neither are `True`, :func:`~shiny.ui.page_fixed` is used.
 
     Parameters
     ----------
@@ -57,6 +71,9 @@ def page_opts(
         The page function to use. If ``None`` (the default), will automatically choose
         one based on the arguments provided. If not ``None``, this will override all
         heuristics for choosing page functions.
+    **kwargs
+        Additional arguments to pass to the page function. See the description above for
+        further details on how the page function is selected.
     """
     try:
         cm = get_top_level_recall_context_manager()
@@ -79,3 +96,5 @@ def page_opts(
         cm.kwargs["fillable"] = fillable
     if not isinstance(full_width, MISSING_TYPE):
         cm.kwargs["full_width"] = full_width
+    if len(kwargs) > 0:
+        cm.kwargs.update(kwargs)
