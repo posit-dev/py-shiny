@@ -14,5 +14,5 @@ with ui.nav_panel("Data"):
     "This page could be used to pick a dataset."
 
 with ui.nav_panel("View"):
-    "This page could be used to view the dataset. "
+    "This page could be used to view the dataset."
     "Notice the additional controls that appear when 'View' is selected."
