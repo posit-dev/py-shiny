@@ -15,9 +15,10 @@ from playwright.sync_api import expect as playwright_expect
 
 # Import `shiny`'s typing extentions.
 # Since this is a private file, tell pyright to ignore the import
-# (Imports split over many import statements due to auto formatting)
 from shiny._typing_extensions import (
     TypeGuard,  # pyright: ignore[reportPrivateImportUsage]
+)
+from shiny._typing_extensions import (
     assert_type,  # pyright: ignore[reportPrivateImportUsage]
 )
 from shiny.types import MISSING, MISSING_TYPE
