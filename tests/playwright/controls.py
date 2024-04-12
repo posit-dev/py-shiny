@@ -18,8 +18,6 @@ from playwright.sync_api import expect as playwright_expect
 # (Imports split over many import statements due to auto formatting)
 from shiny._typing_extensions import (
     TypeGuard,  # pyright: ignore[reportPrivateImportUsage]
-)
-from shiny._typing_extensions import (
     assert_type,  # pyright: ignore[reportPrivateImportUsage]
 )
 from shiny.types import MISSING, MISSING_TYPE
@@ -3567,8 +3565,8 @@ class OutputDataFrame(_InputWithContainer):
         self.loc_column_label = self.loc_head.locator("> tr > th:not(.filters th)")
 
     def cell_locator(self, row: int, col: int) -> Locator:
-        return self.loc_body.locator(f"> tr:nth-child({row})").locator(
-            f"> td:nth-child({col}),  > th:nth-child({col})"
+        return self.loc_body.locator(f"> tr:nth-child({row + 1})").locator(
+            f"> td:nth-child({col + 1}),  > th:nth-child({col + 1})"
         )
 
     def expect_n_row(self, row_number: int, *, timeout: Timeout = None):
@@ -3715,6 +3713,7 @@ class OutputDataFrame(_InputWithContainer):
         expect_to_have_class(
             self.cell_locator(row=row, col=col),
             class_,
+            timeout=timeout,
         )
 
     def expect_class_state(
@@ -3772,7 +3771,7 @@ class OutputDataFrame(_InputWithContainer):
         cell.click()
         cell.locator("> textarea").fill(text)
 
-    def sort_column(
+    def set_column_sort(
         self,
         col: int,
         *,
@@ -3788,9 +3787,9 @@ class OutputDataFrame(_InputWithContainer):
         timeout
             The maximum time to wait for the action to complete. Defaults to None.
         """
-        self.loc_column_label.nth(col - 1).click(timeout=timeout)
+        self.loc_column_label.nth(col).click(timeout=timeout)
 
-    def filter_column(
+    def set_column_filter(
         self,
         col: int,
         *,
@@ -3810,14 +3809,20 @@ class OutputDataFrame(_InputWithContainer):
             The maximum time to wait for the action to complete. Defaults to None.
         """
         if isinstance(text, str):
-            self.loc_column_filter.nth(col - 1).locator("> input").fill(text)
+            self.loc_column_filter.nth(col).locator("> input").fill(
+                text,
+                timeout=timeout,
+            )
         else:
             assert len(text) == 2
-            self.loc_column_filter.nth(col - 1).locator("> div > input").nth(0).fill(
-                text[0]
+            header_inputs = self.loc_column_filter.nth(col).locator("> div > input")
+            header_inputs.nth(0).fill(
+                text[0],
+                timeout=timeout,
             )
-            self.loc_column_filter.nth(col - 1).locator("> div > input").nth(1).fill(
-                text[1]
+            header_inputs.nth(1).fill(
+                text[1],
+                timeout=timeout,
             )
 
     def save_cell(
