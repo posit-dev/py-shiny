@@ -5,7 +5,7 @@ All notable changes to Shiny for Python will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [UNRELEASED] - YYYY-MM-DD
+## [0.9.0] - 2024-04-16
 
 ### Breaking Changes
 
@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `Session` objects now have a `set_message_handler(name, fn)` method that allows you to register a message handler function that will be called when a request message with the given name is received from the client (via `Shiny.shinyapp.makeRequest()` (JS)). (#1253)
 
-* Experimental: `@render.data_frame` return values of `DataTable` and `DataGrid` support `mode="edit"` to enable editing of the data table cells. (#1198)
+* Experimental: `@render.data_frame` return values of `DataTable` and `DataGrid` support `editable=True` to enable editing of the data table cells. (#1198)
 
 * `ui.card()` and `ui.value_box()` now take an `id` argument that, when provided, is used to report the full screen state of the card or value box to the server. For example, when using `ui.card(id = "my_card", full_screen = TRUE)` you can determine if the card is currently in full screen mode by reading the boolean value of `input.my_card_full_screen()`. (#1215, #1266)
 
