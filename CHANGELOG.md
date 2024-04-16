@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Breaking Changes
 
-* `@render.data_frame` return values of `DataTable` and `DataGrid` had their parameter of `row_selection: Literal["single", "multiple"]` become deprecated. Please use `mode="row_single"` or `mode="row_multiple"` instead. (#1198)
+* `@render.data_frame` return values of `DataTable` and `DataGrid` had their parameter of `row_selection: Literal["single", "multiple"]` become deprecated. Please use `selection_mode="row"` or `selection_mode="rows"` instead. (#1198)
 
 * The `col_widths` argument of `ui.layout_columns()` now sets the `sm` breakpoint by default, rather than the `md` breakpoint. For example, `col_widths=(12, 6, 6)` is now equivalent to `{"sm": (12, 6, 6)}` rather than `{"md": (12, 6, 6)}`. (#1222)
 
