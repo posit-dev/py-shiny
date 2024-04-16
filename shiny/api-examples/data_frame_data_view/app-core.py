@@ -10,7 +10,7 @@ app_ui = ui.page_fillable(
                     """
                     ##### Editable data frame
                     * Edit the cells!
-                    * Filter/sort the columns!
+                    * Sort the columns!
                     """
                 )
             ),
@@ -20,9 +20,9 @@ app_ui = ui.page_fillable(
             ui.card_header(
                 ui.markdown(
                     """
-                    ##### Edited data from the first data frame
+                    ##### Updated data from the first data frame
                     * Select the rows!
-                    * Filter/sort the columns!
+                    * Filter and sort the columns!
                     """
                 )
             ),
@@ -33,7 +33,7 @@ app_ui = ui.page_fillable(
                 ui.markdown(
                     """
                     ##### Selected data from the second data frame
-                    * Filter/sort the columns!
+                    * Sort the columns!
                     """
                 )
             ),
