@@ -20,7 +20,7 @@ from htmltools import Tag
 
 from .. import reactive, ui
 from .._docstring import add_example
-from .._typing_extensions import Self, TypedDict
+from .._typing_extensions import TypedDict
 from .._utils import wrap_async
 from ..session._utils import (
     get_current_session,
@@ -533,7 +533,7 @@ class data_frame(Renderer[DataFrameResult]):
             )
         return self._session
 
-    def set_patch_fn(self, fn: PatchFn | PatchFnSync) -> Self:
+    def set_patch_fn(self, fn: PatchFn | PatchFnSync) -> None:
         """
         Decorator to set the function that updates a single cell in the data frame.
 
@@ -548,9 +548,13 @@ class data_frame(Renderer[DataFrameResult]):
         self._patch_fn = wrap_async(  # pyright: ignore[reportGeneralTypeIssues,reportAttributeAccessIssue]
             fn
         )
-        return self
+        # Do not return self here as it is typically used as a decorator (which would return `self`)
+        # By returning `self` in express mode, it is attempted to be registered twice. That is bad.
+        # So for now, we will not return `self` here.
+        # from .._typing_extensions import Self
+        # return self
 
-    def set_patches_fn(self, fn: PatchesFn | PatchesFnSync) -> Self:
+    def set_patches_fn(self, fn: PatchesFn | PatchesFnSync) -> None:
         """
         Decorator to set the function that updates a batch of cells in the data frame.
 
@@ -565,7 +569,11 @@ class data_frame(Renderer[DataFrameResult]):
         self._patches_fn = wrap_async(  # pyright: ignore[reportGeneralTypeIssues,reportAttributeAccessIssue]
             fn
         )
-        return self
+        # Do not return self here as it is typically used as a decorator (which would return `self`)
+        # By returning `self` in express mode, it is attempted to be registered twice. That is bad.
+        # So for now, we will not return `self` here.
+        # from .._typing_extensions import Self
+        # return self
 
     def _init_patch_fns(self) -> None:
         """
