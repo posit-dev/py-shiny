@@ -148,12 +148,34 @@ class data_frame(Renderer[DataFrameResult]):
     to the selected rows, use `<data_frame_renderer>.data_view()` or
     `df.iloc[list(input.<id>_cell_selection()["rows"])]`.
 
+    Editing cells
+    -------------
+    When a returned `DataTable` or `DataGrid` object has `editable=True`, app users will
+    be able to edit the cells in the table. After a cell has been edited, the edited
+    value will be sent to the server for processing. The handling methods are set via
+    `@<data_frame_renderer>.set_patch_fn` or `@<data_frame_renderer>.set_patches_fn`
+    decorators. By default, both decorators will return a string value.
+
+    To access the data viewed by the user, use `<data_frame_renderer>.data_view()`. This
+    method will sort, filter, and apply any patches to the data frame as viewed by the
+    user within the browser. This is a shallow copy of the original data frame. It is
+    possible that alterations to `data_view` could alter the original `data` data frame.
+
+    To access the original data, use `<data_frame_renderer>.data()`. This is a quick
+    reference to the original data frame (converted to a `pandas.DataFrame`) that was
+    returned from the app's render function. If it is mutated in place, it **will**
+    modify the original data.
+
+    Note... if the data frame renderer is re-rendered due to reactivity, then (currently)
+    the user's edits, sorting, and filtering will be lost. We hope to improve upon this
+    in the future.
+
     Tip
-    ----
+    ---
     This decorator should be applied **before** the ``@output`` decorator (if that
     decorator is used). Also, the name of the decorated function (or
-    ``@output(id=...)``) should match the ``id`` of a :func:`~shiny.ui.output_table`
-    container (see :func:`~shiny.ui.output_table` for example usage).
+    ``@output(id=...)``) should match the ``id`` of a :func:`~shiny.ui.output_data_frame`
+    container (see :func:`~shiny.ui.output_data_frame` for example usage).
 
     See Also
     --------
