@@ -6,7 +6,7 @@
 from palmerpenguins import load_penguins_raw
 
 from shiny import App, Inputs, Outputs, Session, module, render, ui
-from shiny.render._data_frame import CellPatch
+from shiny.render import CellPatch
 
 # TODO-barret-render.data_frame; Make an example that uses a dataframe that then updates a higher level reactive, that causes the df to update... which causes the table to render completely
 # TODO-barret-render.data_frame; When "updating" data, try to maintain the scroll, filter info when a new `df` is supplied;
@@ -36,7 +36,7 @@ from shiny.render._data_frame import CellPatch
 
 # TODO-karan-test; The resulting data frame `._input_column_sort()` should return the columns that was sorted on and their direction. (Is multi sort allowed?)
 # TODO-karan-test; The resulting data frame `._input_column_filter()` should return the columns that was filtered on and their filter values. (Test both string and number columns)
-# TODO-karan-test; The resulting data frame `._input_data_view_indicies()` should return the start and end index of the data view. (Test with and without filters and sorting)
+# TODO-karan-test; The resulting data frame `._input_data_view_indices()` should return the start and end index of the data view. (Test with and without filters and sorting)
 # TODO-karan-test; The resulting data frame `data_view(selected=False)` should return the data view that is currently being displayed. (Test with and without filters and sorting)
 # TODO-karan-test; The resulting data frame `data_view(selected=True)` should return the data view that is currently being displayed, but only the selected rows. (Test with and without filters and sorting)
 # TODO-karan-test; The resulting data frame `input_cell_selection()` should return the currently selected cells.
@@ -113,15 +113,21 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
 
     @reactive.effect
     def _():
-        print("Filters:", summary_data._input_column_filter())
+        print(
+            "Filters:",
+            summary_data._input_column_filter(),  # pyright: ignore[reportUnknownArgumentType,reportAttributeAccessIssue]
+        )
 
     @reactive.effect
     def _():
-        print("Sorting:", summary_data._input_column_sort())
+        print(
+            "Sorting:",
+            summary_data._input_column_sort(),  # pyright: ignore[reportUnknownArgumentType,reportAttributeAccessIssue]
+        )
 
     @reactive.effect
     def _():
-        print("Indicies:", summary_data._input_data_view_indicies())
+        print("indices:", summary_data._input_data_view_indices())
 
     @reactive.effect
     def _():
