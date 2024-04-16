@@ -116,7 +116,7 @@ class DataGrid(AbstractTabularData):
         * If `"none"` is supplied, all other values will be ignored.
         * If both `"row"` and `"rows"` are supplied, `"row"` will be dropped (supporting `"rows"`).
     row_selection_mode
-        Deprecated. Please use `mode={row_selection_mode}_row` instead.
+        Deprecated. Please use `selection_mode=` instead.
 
     Returns
     -------
