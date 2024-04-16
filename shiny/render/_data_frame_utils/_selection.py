@@ -343,7 +343,7 @@ def as_selection_modes(
 
         warn_deprecated(
             f"`{name}(row_selection_mode=)` has been superseded by `{name}(selection_mode=)`."
-            f' Please use `{name}(mode="{selection_mode_val}")` instead.'
+            f' Please use `{name}(selection_mode="{selection_mode_val}")` instead.'
         )
     if not isinstance(selection_mode_val, tuple):
         selection_mode_val = (selection_mode_val,)
