@@ -2759,12 +2759,15 @@ var ShinyChatBoxInputBinding = class extends Shiny.InputBinding {
       this._insertMessage(el, message);
       return;
     }
-    if (lastMessage.getAttribute("role") === "assistant") {
-      const content = lastMessage.getAttribute("content");
-      lastMessage.setAttribute("content", content + message.content);
-    } else {
+    const content = lastMessage.getAttribute("content");
+    if (message.content === "") {
       this._insertMessage(el, message);
+      return;
     }
+    if (message.content === null) {
+      return;
+    }
+    lastMessage.setAttribute("content", content + message.content);
   }
   _submitInput(el) {
     const input = this.components.input;
@@ -2795,10 +2798,34 @@ var ShinyChatBoxInputBinding = class extends Shiny.InputBinding {
     }
   }
 };
+function insertStreamingMessage(data) {
+  const el = document.getElementById(data.id);
+  if (!el) {
+    console.error("Element not found:", data.id);
+    return;
+  }
+  const inputBinding = Shiny.inputBindings.bindingNames["shiny.chatBoxInput"];
+  if (!inputBinding) {
+    console.error("Binding not found:", "shiny.chatBoxInput");
+    return;
+  }
+  const msg = {
+    type: "insert_streaming_message",
+    message: {
+      content: data.content,
+      role: data.role
+    }
+  };
+  inputBinding.binding.receiveMessage(el, msg);
+}
 if (Shiny) {
   Shiny.inputBindings.register(
     new ShinyChatBoxInputBinding(),
     "shiny.chatBoxInput"
+  );
+  Shiny.addCustomMessageHandler(
+    "shiny.insertStreamingMessage",
+    insertStreamingMessage
   );
 }
 /*! Bundled license information:

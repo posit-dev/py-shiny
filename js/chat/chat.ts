@@ -133,20 +133,24 @@ class ShinyChatBoxInputBinding extends Shiny.InputBinding {
     const messageContainers =
       el.querySelectorAll<HTMLElement>(CHAT_MESSAGE_TAG);
 
-    // TODO: this is a quick and dirty POC that assumes we should always
-    // replace the last message if it's from the assistant. We should probably
-    // have more robust logic for this.
     const lastMessage = messageContainers[messageContainers.length - 1];
     if (!lastMessage) {
       this._insertMessage(el, message);
       return;
     }
-    if (lastMessage.getAttribute("role") === "assistant") {
-      const content = lastMessage.getAttribute("content");
-      lastMessage.setAttribute("content", content + message.content);
-    } else {
+
+    // TODO: this implementation at least works with OpenAI, where the
+    // first delta is '', and the last message is null. We should
+    // at least document this, and maybe make it more robust.
+    const content = lastMessage.getAttribute("content");
+    if (message.content === "") {
       this._insertMessage(el, message);
+      return;
     }
+    if (message.content === null) {
+      return;
+    }
+    lastMessage.setAttribute("content", content + message.content);
   }
 
   _submitInput(el: HTMLElement): void {
@@ -183,9 +187,46 @@ class ShinyChatBoxInputBinding extends Shiny.InputBinding {
   }
 }
 
+type InsertStreamingMessageData = {
+  id: string;
+  content: string;
+  role: string;
+};
+
+// Unfortunately shiny imposes a rate policy on input messages.
+// Use custom messages as a workaround.
+function insertStreamingMessage(data: InsertStreamingMessageData) {
+  const el = document.getElementById(data.id);
+  if (!el) {
+    console.error("Element not found:", data.id);
+    return;
+  }
+
+  const inputBinding = Shiny.inputBindings.bindingNames["shiny.chatBoxInput"];
+  if (!inputBinding) {
+    console.error("Binding not found:", "shiny.chatBoxInput");
+    return;
+  }
+
+  const msg = {
+    type: "insert_streaming_message",
+    message: {
+      content: data.content,
+      role: data.role,
+    },
+  };
+
+  inputBinding.binding.receiveMessage(el, msg);
+}
+
+// Register stuff with Shiny
 if (Shiny) {
   Shiny.inputBindings.register(
     new ShinyChatBoxInputBinding(),
     "shiny.chatBoxInput"
+  );
+  Shiny.addCustomMessageHandler(
+    "shiny.insertStreamingMessage",
+    insertStreamingMessage
   );
 }

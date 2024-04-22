@@ -14,10 +14,6 @@ app_ui = ui.page_fillable(
 
 
 def server(input):
-
-    # TODO: this doesn't actually lead to a streaming effect because
-    # Shiny still batches the messages together and sends them all at once
-    # for some reason. Maybe this needs to use send_custom_message instead of send_input_message?
     @reactive.effect
     @reactive.event(input.chat_box, ignore_init=True)
     async def _():
@@ -29,7 +25,9 @@ def server(input):
         )
         for chunk in response:
             content = chunk.choices[0].delta.content
-            chat.insert_streaming_message("chat_box", content=content, role="assistant")
+            await chat.insert_streaming_message(
+                "chat_box", content=content, role="assistant"
+            )
 
 
 app = App(app_ui, server)

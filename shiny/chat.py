@@ -4,6 +4,7 @@ from htmltools import HTMLDependency, Tag, TagAttrs, TagAttrValue, TagChild
 
 from . import ui
 from ._namespaces import resolve_id
+from .session import require_active_session
 from .ui._utils import _session_on_flush_send_msg
 
 if TYPE_CHECKING:
@@ -103,7 +104,7 @@ def insert_message(
     _session_on_flush_send_msg(id, session, msg)  # type: ignore
 
 
-def insert_streaming_message(
+async def insert_streaming_message(
     id: str,
     content: str,
     *,
@@ -115,11 +116,13 @@ def insert_streaming_message(
     """
 
     msg = {
-        "type": "insert_streaming_message",
-        "message": {"content": content, "role": role},
+        "id": resolve_id(id),
+        "content": content,
+        "role": role,
     }
 
-    _session_on_flush_send_msg(id, session, msg)  # type: ignore
+    session = require_active_session(session)
+    await session.send_custom_message("shiny.insertStreamingMessage", msg)  # type: ignore
 
 
 # ----------------------------------------------------------------------------------
