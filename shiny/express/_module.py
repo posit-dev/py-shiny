@@ -1,6 +1,7 @@
 import functools
-from typing import Callable, Concatenate, ParamSpec, TypeVar
+from typing import Callable, TypeVar
 
+from .._typing_extensions import Concatenate, ParamSpec
 from ..module import Id
 from ..session._session import Inputs, Outputs, Session
 from ..session._utils import require_active_session, session_context
