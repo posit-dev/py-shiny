@@ -74,6 +74,18 @@ const opts: Array<BuildOptions> = [
     plugins: [sassPlugin({ type: "css", sourceMap: false })],
     metafile: true,
   },
+  {
+    entryPoints: {
+      "chat/chat": "chat/chat.ts",
+    },
+    minify: false,
+    sourcemap: false,
+  },
+  {
+    entryPoints: { "chat/chat": "chat/chat.scss" },
+    plugins: [sassPlugin({ type: "css", sourceMap: false })],
+    metafile: true,
+  },
 ];
 
 // Run function to avoid top level await
