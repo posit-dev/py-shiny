@@ -11,6 +11,7 @@ from ..session import (
 from .. import render
 from . import ui
 from ._is_express import is_express_app
+from ._module import module
 from ._output import (  # noqa: F401
     output_args,  # pyright: ignore[reportUnusedImport]
     suspend_display,  # pyright: ignore[reportUnusedImport] - Deprecated
@@ -29,6 +30,7 @@ __all__ = (
     "wrap_express_app",
     "ui",
     "expressify",
+    "module",
 )
 
 # Add types to help type checkers
