@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### Breaking Changes
+
+### New features
+
+* Added support for creating modules using Shiny Express syntax, and using modules in Shiny Express apps. (#1220)
+
+### Bug fixes
+
+### Other changes
+
 
 ## [0.9.0] - 2024-04-16
 
