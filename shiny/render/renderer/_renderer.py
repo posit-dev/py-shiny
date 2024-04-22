@@ -1,6 +1,16 @@
 from __future__ import annotations
 
-from typing import Any, Awaitable, Callable, Generic, Optional, TypeVar, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Awaitable,
+    Callable,
+    Generic,
+    Optional,
+    TypeVar,
+    Union,
+    cast,
+)
 
 from htmltools import MetadataNode, Tag, TagList
 
@@ -8,6 +18,9 @@ from ..._docstring import add_example
 from ..._typing_extensions import Self
 from ..._utils import is_async_callable, wrap_async
 from ...types import Jsonifiable
+
+if TYPE_CHECKING:
+    from ...session import Session
 
 # TODO-barret-docs: Double check docs are rendererd
 # Missing first paragraph from some classes: Example: TransformerMetadata.
@@ -204,6 +217,7 @@ class Renderer(Generic[IT]):
         super().__init__()
 
         self._auto_registered: bool = False
+        self._session: Session | None = None
 
         # Must be done last
         if callable(_fn):
