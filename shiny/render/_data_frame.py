@@ -23,7 +23,6 @@ from .._docstring import add_example
 from .._typing_extensions import TypedDict
 from .._utils import wrap_async
 from ..session._utils import (
-    get_current_session,
     require_active_session,
     session_context,
 )
