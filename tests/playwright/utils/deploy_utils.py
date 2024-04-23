@@ -20,10 +20,10 @@ __all__ = (
 )
 
 # connect
-server_url = os.environ.get("DEPLOY_CONNECT_SERVER_URLE")
+server_url = os.environ.get("DEPLOY_CONNECT_SERVER_URL")
 api_key = os.environ.get("DEPLOY_CONNECT_SERVER_API_KEY")
 # shinyapps.io
-name = os.environ.get("DEPLOY_SHINYAPPS_NAMEE")
+name = os.environ.get("DEPLOY_SHINYAPPS_NAME")
 token = os.environ.get("DEPLOY_SHINYAPPS_TOKEN")
 secret = os.environ.get("DEPLOY_SHINYAPPS_SECRET")
 
