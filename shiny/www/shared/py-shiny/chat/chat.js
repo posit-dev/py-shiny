@@ -2707,10 +2707,10 @@ var ShinyChatBoxInputBinding = class extends Shiny.InputBinding {
     return $(scope).find(`.${BOX_CLASS}`);
   }
   initialize(el) {
-    const components = this._getComponents(el);
-    this.components = components;
-    components.input.addEventListener("keydown", this._clickButtonOnEnter);
-    components.button.addEventListener("click", (e7) => {
+    const inputs = this._getInputs(el);
+    this.inputs = inputs;
+    inputs.text.addEventListener("keydown", this._clickButtonOnEnter);
+    inputs.button.addEventListener("click", (e7) => {
       this._submitInput(el);
     });
   }
@@ -2736,21 +2736,17 @@ var ShinyChatBoxInputBinding = class extends Shiny.InputBinding {
     }
   }
   subscribe(el, callback) {
-    this.components.button.addEventListener("click", (e7) => {
+    this.inputs.button.addEventListener("click", (e7) => {
       callback(true);
     });
   }
-  _insertMessage(el, message) {
+  _insertMessage(el, message, enable = true) {
     const msg = document.createElement(CHAT_MESSAGE_TAG);
     msg.setAttribute("role", message.role);
     msg.setAttribute("content", message.content);
-    Shiny.renderContent(
-      this.components.inputContainer,
-      msg.outerHTML,
-      "beforeBegin"
-    );
-    this.components.input.disabled = false;
-    this.components.button.disabled = false;
+    Shiny.renderContent(this.inputs.container, msg.outerHTML, "beforeBegin");
+    if (enable)
+      this._enableInputs();
   }
   _insertStreamingMessage(el, message) {
     const messageContainers = el.querySelectorAll(CHAT_MESSAGE_TAG);
@@ -2761,40 +2757,45 @@ var ShinyChatBoxInputBinding = class extends Shiny.InputBinding {
     }
     const content = lastMessage.getAttribute("content");
     if (message.content === "") {
-      this._insertMessage(el, message);
+      this._insertMessage(el, message, false);
       return;
     }
     if (message.content === null) {
+      this._enableInputs();
       return;
     }
     lastMessage.setAttribute("content", content + message.content);
   }
   _submitInput(el) {
-    const input = this.components.input;
+    const input = this.inputs.text;
     this._insertMessage(el, { content: input?.value || "", role: "user" });
     input.value = "";
-    this.components.input.disabled = true;
-    this.components.button.disabled = true;
+    this._disableInputs();
   }
-  _getComponents(el) {
+  _getInputs(el) {
+    const inputs = el.querySelector(`:scope > .${INPUT_CLASS}`);
     return {
-      inputContainer: el.querySelector(
-        `:scope > .${INPUT_CLASS}`
-      ),
-      input: el.querySelector("textarea"),
-      button: el.querySelector("button")
+      container: inputs,
+      text: inputs.querySelector("textarea"),
+      button: inputs.querySelector("button")
     };
   }
-  // When the user presses Enter inside the query textarea, trigger a click on the "ask"
-  // button. We also have to trigger a "change" event on the textarea just before that,
-  // because otherwise Shiny will debounce changes to the value in the textarea, and the
-  // value may not be updated before the "ask" button click event happens.
+  _disableInputs() {
+    this.inputs.text.disabled = true;
+    this.inputs.button.disabled = true;
+  }
+  _enableInputs() {
+    this.inputs.text.disabled = false;
+    this.inputs.button.disabled = false;
+  }
+  // When the user presses Enter inside the query textarea, treat it as a
+  // click on the submit button.
   _clickButtonOnEnter(e7) {
     if (!(e7.target instanceof HTMLTextAreaElement))
       return;
     if (e7.code === "Enter" && !e7.shiftKey) {
       e7.preventDefault();
-      this.components.button.click();
+      this.inputs.button.click();
     }
   }
 };
