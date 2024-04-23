@@ -25,8 +25,8 @@
 @mixin shiny-page-busy {
   /* busy_indicators.pulse_options() */
   --_shiny-pulse-color: var(--shiny-pulse-color, var(--bs-primary, #007bc2));
-  --_shiny-pulse-height: var(--shiny-pulse-height, 3.5px);
-  --_shiny-pulse-speed: var(--shiny-pulse-speed, 2s);
+  --_shiny-pulse-height: var(--shiny-pulse-height, 5px);
+  --_shiny-pulse-speed: var(--shiny-pulse-speed, 1.85s);
 
   /* Color, sizing, & positioning */
   position: fixed;
@@ -35,12 +35,13 @@
   height: var(--_shiny-pulse-height);
   background: linear-gradient(120deg, var(--bs-body-bg, #fff), var(--_shiny-pulse-color), var(--bs-body-bg, #fff));
   border-radius: 50%;
+  z-index: 9999;
 
   /* Animation */
   animation-name: busy-page-pulse;
   animation-duration: var(--_shiny-pulse-speed);
   animation-iteration-count: infinite;
-  animation-timing-function: linear;
+  animation-timing-function: ease-in-out;
 
   content: ""; /* Used in a ::after context */
 }
@@ -183,40 +184,16 @@ In cursor mode, if the page has anything recalculating, show progress cursor
 /* Keyframes for the pulsing banner */
 @keyframes busy-page-pulse {
   0% {
-    left: 0;
-    width: 0;
-  }
-  12.5% {
-    left: 0;
-    width: 25%;
-  }
-  25% {
-    left: 25%;
-    width: 25%;
-  }
-  37.5% {
-    left: 75%;
-    width: 25%;
+    left: -75%;
+    width: 75%;
   }
   50% {
     left: 100%;
-    width: 0%;
+    width: 75%;
   }
   /* Go back */
-  62.5% {
-    left: 75%;
-    width: 25%;
-  }
-  75% {
-    left: 25%;
-    width: 25%;
-  }
-  87.5% {
-    left: 0;
-    width: 25%;
-  }
   100% {
-    left: 0;
-    width: 0;
+    left: -75%;
+    width: 75%;
   }
 }
