@@ -1,10 +1,14 @@
 from __future__ import annotations
 
-from htmltools import HTML, HTMLDependency
+from pathlib import Path
+
+from htmltools import HTML, HTMLDependency, Tagifiable, TagList, head_content
+from htmltools.tags import link
 
 from .._versions import bootstrap as bootstrap_version
 from .._versions import shiny_html_deps
 from ..html_dependencies import jquery_deps
+from ._include_helpers import check_path, include_css
 
 """
 HTML dependencies for external dependencies Bootstrap, ionrangeslider, datepicker, selectize, and jQuery UI.
@@ -16,13 +20,32 @@ For...
 """
 
 
-def bootstrap_deps() -> list[HTMLDependency]:
+def bootstrap_theme_deps(theme: str | Path | Tagifiable | None) -> TagList:
+    deps_bootstrap = bootstrap_deps(include_css=theme is None)
+
+    deps_theme = None
+    if isinstance(theme, str) and theme.startswith("http"):
+        deps_theme = head_content(link(rel="stylesheet", href=theme, type="text/css"))
+    elif isinstance(theme, (str, Path)):
+        check_path(theme)
+        deps_theme = head_content(include_css(theme))
+    elif isinstance(theme, Tagifiable):
+        deps_theme = theme
+    else:
+        raise ValueError(
+            "Invalid theme. Expected a URL or path to a full Bootstrap CSS file, or Tagifiable object."
+        )
+
+    return TagList(deps_bootstrap, deps_theme)
+
+
+def bootstrap_deps(include_css: bool = True) -> list[HTMLDependency]:
     dep = HTMLDependency(
         name="bootstrap",
         version=bootstrap_version,
         source={"package": "shiny", "subdir": "www/shared/bootstrap/"},
         script={"src": "bootstrap.bundle.min.js"},
-        stylesheet={"href": "bootstrap.min.css"},
+        stylesheet={"href": "bootstrap.min.css"} if include_css else None,
         meta={"name": "viewport", "content": "width=device-width, initial-scale=1"},
     )
     deps = [jquery_deps(), dep]

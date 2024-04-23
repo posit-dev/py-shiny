@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 __all__ = (
     "page_sidebar",
     "page_navbar",
@@ -20,6 +22,7 @@ from htmltools import (
     TagAttrs,
     TagAttrValue,
     TagChild,
+    Tagifiable,
     TagList,
     css,
     div,
@@ -31,7 +34,7 @@ from .._docstring import add_example, no_example
 from .._namespaces import resolve_id_or_none
 from ..types import MISSING, MISSING_TYPE, NavSetArg
 from ._bootstrap import panel_title
-from ._html_deps_external import bootstrap_deps
+from ._html_deps_external import bootstrap_theme_deps
 from ._html_deps_py_shiny import page_output_dependency
 from ._html_deps_shinyverse import components_dependencies
 from ._navs import NavMenu, NavPanel, navset_bar
@@ -53,6 +56,7 @@ def page_sidebar(
     fillable_mobile: bool = False,
     window_title: str | MISSING_TYPE = MISSING,
     lang: Optional[str] = None,
+    theme: Optional[str | Path | Tagifiable] = None,
     **kwargs: TagAttrValue,
 ) -> Tag:
     """
@@ -78,6 +82,16 @@ def page_sidebar(
         ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
         will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
         default, `None`, results in an empty string.
+    theme
+        A path to a local or online CSS file that will replace the Bootstrap CSS
+        bundled by default with a Shiny app. This file should be a complete
+        `bootstrap.css` or `bootstrap.min.css` file.
+
+        For advanced uses, you can also pass a :class:`~htmltools.Tagifiable` object.
+        In this case, Shiny will suppress the default Bootstrap CSS.
+
+        To modify the theme of an app without replacing the Bootstrap CSS entirely, use
+        :func:`~shiny.ui.include_css` to add custom CSS.
     **kwargs
         Additional attributes passed to :func:`~shiny.ui.layout_sidebar`.
 
@@ -124,6 +138,7 @@ def page_sidebar(
         padding=0,
         gap=0,
         lang=lang,
+        theme=theme,
         fillable_mobile=fillable_mobile,
     )
 
@@ -151,6 +166,7 @@ def page_navbar(
     fluid: bool = True,
     window_title: str | MISSING_TYPE = MISSING,
     lang: Optional[str] = None,
+    theme: Optional[str | Path | Tagifiable] = None,
 ) -> Tag:
     """
     Create a page with a navbar and a title.
@@ -200,6 +216,16 @@ def page_navbar(
         ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
         will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
         default, `None`, results in an empty string.
+    theme
+        A path to a local or online CSS file that will replace the Bootstrap CSS
+        bundled by default with a Shiny app. This file should be a complete
+        `bootstrap.css` or `bootstrap.min.css` file.
+
+        For advanced uses, you can also pass a :class:`~htmltools.Tagifiable` object.
+        In this case, Shiny will suppress the default Bootstrap CSS.
+
+        To modify the theme of an app without replacing the Bootstrap CSS entirely, use
+        :func:`~shiny.ui.include_css` to add custom CSS.
 
     Returns
     -------
@@ -264,6 +290,7 @@ def page_navbar(
     if fillable is False and sidebar is None:
         return page_bootstrap(
             *page_args,
+            theme=theme,
             **page_kwargs,
         )
 
@@ -273,6 +300,7 @@ def page_navbar(
             fillable_mobile=fillable_mobile,
             padding=0,
             gap=0,
+            theme=theme,
             **page_kwargs,
         )
 
@@ -285,6 +313,7 @@ def page_fillable(
     fillable_mobile: bool = False,
     title: Optional[str] = None,
     lang: Optional[str] = None,
+    theme: Optional[str | Path | Tagifiable] = None,
     **kwargs: TagAttrValue,
 ) -> Tag:
     """
@@ -310,6 +339,16 @@ def page_fillable(
         ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
         will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
         default, `None`, results in an empty string.
+    theme
+        A path to a local or online CSS file that will replace the Bootstrap CSS
+        bundled by default with a Shiny app. This file should be a complete
+        `bootstrap.css` or `bootstrap.min.css` file.
+
+        For advanced uses, you can also pass a :class:`~htmltools.Tagifiable` object.
+        In this case, Shiny will suppress the default Bootstrap CSS.
+
+        To modify the theme of an app without replacing the Bootstrap CSS entirely, use
+        :func:`~shiny.ui.include_css` to add custom CSS.
 
     Returns
     -------
@@ -334,6 +373,7 @@ def page_fillable(
         components_dependencies(),
         title=title,
         lang=lang,
+        theme=theme,
     )
 
     # page returns a <html> tag, but we need to make the <body> fillable
@@ -351,6 +391,7 @@ def page_fluid(
     *args: TagChild | TagAttrs,
     title: Optional[str] = None,
     lang: Optional[str] = None,
+    theme: Optional[str | Path | Tagifiable] = None,
     **kwargs: str,
 ) -> Tag:
     """
@@ -367,6 +408,16 @@ def page_fluid(
         ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
         will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
         default, `None`, results in an empty string.
+    theme
+        A path to a local or online CSS file that will replace the Bootstrap CSS
+        bundled by default with a Shiny app. This file should be a complete
+        `bootstrap.css` or `bootstrap.min.css` file.
+
+        For advanced uses, you can also pass a :class:`~htmltools.Tagifiable` object.
+        In this case, Shiny will suppress the default Bootstrap CSS.
+
+        To modify the theme of an app without replacing the Bootstrap CSS entirely, use
+        :func:`~shiny.ui.include_css` to add custom CSS.
     **kwargs
         Attributes on the page level container.
 
@@ -383,7 +434,10 @@ def page_fluid(
     """
 
     return page_bootstrap(
-        div({"class": "container-fluid"}, *args, **kwargs), title=title, lang=lang
+        div({"class": "container-fluid"}, *args, **kwargs),
+        title=title,
+        lang=lang,
+        theme=theme,
     )
 
 
@@ -392,6 +446,7 @@ def page_fixed(
     *args: TagChild | TagAttrs,
     title: Optional[str] = None,
     lang: Optional[str] = None,
+    theme: Optional[str | Path | Tagifiable] = None,
     **kwargs: str,
 ) -> Tag:
     """
@@ -408,6 +463,16 @@ def page_fixed(
         ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
         will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
         default, `None`, results in an empty string.
+    theme
+        A path to a local or online CSS file that will replace the Bootstrap CSS
+        bundled by default with a Shiny app. This file should be a complete
+        `bootstrap.css` or `bootstrap.min.css` file.
+
+        For advanced uses, you can also pass a :class:`~htmltools.Tagifiable` object.
+        In this case, Shiny will suppress the default Bootstrap CSS.
+
+        To modify the theme of an app without replacing the Bootstrap CSS entirely, use
+        :func:`~shiny.ui.include_css` to add custom CSS.
     **kwargs
         Attributes on the page level container.
 
@@ -424,7 +489,10 @@ def page_fixed(
     """
 
     return page_bootstrap(
-        div({"class": "container"}, *args, **kwargs), title=title, lang=lang
+        div({"class": "container"}, *args, **kwargs),
+        title=title,
+        lang=lang,
+        theme=theme,
     )
 
 
@@ -434,6 +502,7 @@ def page_bootstrap(
     *args: TagChild | TagAttrs,
     title: Optional[str] = None,
     lang: Optional[str] = None,
+    theme: Optional[str | Path | Tagifiable] = None,
     **kwargs: TagAttrValue,
 ) -> Tag:
     """
@@ -450,6 +519,16 @@ def page_bootstrap(
         ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
         will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
         default, `None`, results in an empty string.
+    theme
+        A path to a local or online CSS file that will replace the Bootstrap CSS
+        bundled by default with a Shiny app. This file should be a complete
+        `bootstrap.css` or `bootstrap.min.css` file.
+
+        For advanced uses, you can also pass a :class:`~htmltools.Tagifiable` object.
+        In this case, Shiny will suppress the default Bootstrap CSS.
+
+        To modify the theme of an app without replacing the Bootstrap CSS entirely, use
+        :func:`~shiny.ui.include_css` to add custom CSS.
     **kwargs
         Attributes on the the `<body>` tag.
 
@@ -466,7 +545,7 @@ def page_bootstrap(
     head = tags.title(title) if title else None
     return tags.html(
         tags.head(head),
-        tags.body(*bootstrap_deps(), *args, **kwargs),
+        tags.body(*bootstrap_theme_deps(theme), *args, **kwargs),
         lang=lang,
     )
 
@@ -477,6 +556,7 @@ def page_auto(
     title: str | MISSING_TYPE = MISSING,
     window_title: str | MISSING_TYPE = MISSING,
     lang: str | MISSING_TYPE = MISSING,
+    theme: str | Path | Tagifiable | MISSING_TYPE = MISSING,
     fillable: bool | MISSING_TYPE = MISSING,
     full_width: bool = False,
     page_fn: Callable[..., Tag] | None = None,
@@ -510,6 +590,16 @@ def page_auto(
         ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
         will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
         default, `None`, results in an empty string.
+    theme
+        A path to a local or online CSS file that will replace the Bootstrap CSS
+        bundled by default with a Shiny app. This file should be a complete
+        `bootstrap.css` or `bootstrap.min.css` file.
+
+        For advanced uses, you can also pass a :class:`~htmltools.Tagifiable` object.
+        In this case, Shiny will suppress the default Bootstrap CSS.
+
+        To modify the theme of an app without replacing the Bootstrap CSS entirely, use
+        :func:`~shiny.ui.include_css` to add custom CSS.
     fillable
         If there is a top-level sidebar or nav, then the value is passed through to the
         :func:`~shiny.ui.page_sidebar` or :func:`~shiny.ui.page_navbar` function.
@@ -538,6 +628,8 @@ def page_auto(
         kwargs["window_title"] = window_title
     if not isinstance(lang, MISSING_TYPE):
         kwargs["lang"] = lang
+    if not isinstance(theme, MISSING_TYPE):
+        kwargs["theme"] = theme
 
     # Presence of a top-level nav items and/or sidebar determines the page function
     navs = [x for x in args if isinstance(x, (NavPanel, NavMenu))]
