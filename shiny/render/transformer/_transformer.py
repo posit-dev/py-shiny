@@ -296,7 +296,7 @@ class OutputRenderer(
         `*args` is required to use with `**kwargs` when using
         `typing.ParamSpec`.
         """
-        ret = await self._transformer(
+        ret = await self._transformer(  # pyright: ignore
             # TransformerMetadata
             self._meta(),
             # Callable[[], IT] | Callable[[], Awaitable[IT]]
