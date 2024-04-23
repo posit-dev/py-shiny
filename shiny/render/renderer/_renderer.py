@@ -137,6 +137,12 @@ class Renderer(Generic[IT]):
     asynchonously.
     """
 
+    # Set _session here because some subclasses of Renderer (e.g. data_frame) set
+    # self._session before calling super().__init__(). If we were to set
+    # self._session=None in the __init__ method here, it would overwrite the value from
+    # the subclass. We avoid that by setting it here.
+    _session: Session | None = None
+
     def __call__(self, _fn: ValueFn[IT]) -> Self:
         """
         Add the value function to the renderer.
@@ -217,7 +223,6 @@ class Renderer(Generic[IT]):
         super().__init__()
 
         self._auto_registered: bool = False
-        self._session: Session | None = None
 
         # Must be done last
         if callable(_fn):
