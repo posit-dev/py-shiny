@@ -3,7 +3,7 @@ from __future__ import annotations
 import textwrap
 from typing import TYPE_CHECKING, Awaitable, Callable, cast
 
-from .._namespaces import Root
+from .._namespaces import Id, ResolvedId, Root
 from ..session import Inputs, Outputs, Session
 
 if TYPE_CHECKING:
@@ -21,8 +21,8 @@ class ExpressMockSession:
     the `app_opts()` function.
     """
 
-    def __init__(self):
-        self.ns = Root
+    def __init__(self, ns: ResolvedId = Root):
+        self.ns = ns
         self.input = Inputs({})
         self.output = Outputs(cast(Session, self), self.ns, outputs={})
 
@@ -38,6 +38,10 @@ class ExpressMockSession:
         fn: Callable[[], None] | Callable[[], Awaitable[None]],
     ) -> Callable[[], None]:
         return lambda: None
+
+    def make_scope(self, id: Id) -> Session:
+        ns = self.ns(id)
+        return cast(Session, ExpressMockSession(ns))
 
     def __getattr__(self, name: str):
         raise AttributeError(

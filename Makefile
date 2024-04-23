@@ -155,9 +155,8 @@ install-playwright: FORCE
 install-trcli: FORCE
 	$(if $(shell which trcli), @echo -n, $(shell pip install trcli))
 
-# Installs the main version of rsconnect till pypi version supports shiny express
 install-rsconnect: FORCE
-	pip install git+https://github.com/rstudio/rsconnect-python.git#egg=rsconnect-python
+	pip install rsconnect-python
 
 # end-to-end tests with playwright; (SUB_FILE="" within tests/playwright/shiny/)
 playwright-shiny: install-playwright

@@ -1,6 +1,16 @@
 from __future__ import annotations
 
-from typing import Any, Awaitable, Callable, Generic, Optional, TypeVar, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Awaitable,
+    Callable,
+    Generic,
+    Optional,
+    TypeVar,
+    Union,
+    cast,
+)
 
 from htmltools import MetadataNode, Tag, TagList
 
@@ -8,6 +18,9 @@ from ..._docstring import add_example
 from ..._typing_extensions import Self
 from ..._utils import is_async_callable, wrap_async
 from ...types import Jsonifiable
+
+if TYPE_CHECKING:
+    from ...session import Session
 
 # TODO-barret-docs: Double check docs are rendererd
 # Missing first paragraph from some classes: Example: TransformerMetadata.
@@ -123,6 +136,12 @@ class Renderer(Generic[IT]):
     asyncronous as the original app-supplied function possibly wrapped to execute
     asynchonously.
     """
+
+    # Set _session here because some subclasses of Renderer (e.g. data_frame) set
+    # self._session before calling super().__init__(). If we were to set
+    # self._session=None in the __init__ method here, it would overwrite the value from
+    # the subclass. We avoid that by setting it here.
+    _session: Session | None = None
 
     def __call__(self, _fn: ValueFn[IT]) -> Self:
         """
@@ -278,10 +297,13 @@ class Renderer(Generic[IT]):
         return rendered_ui
 
     def _render_auto_output_ui(self) -> DefaultUIFnResultOrNone:
-        return self.auto_output_ui(
-            # Pass the `@output_args(foo="bar")` kwargs through to the auto_output_ui function.
-            **self._auto_output_ui_kwargs,
-        )
+        from ...session import session_context
+
+        with session_context(self._session):
+            return self.auto_output_ui(
+                # Pass the `@output_args(foo="bar")` kwargs through to the auto_output_ui function.
+                **self._auto_output_ui_kwargs,
+            )
 
     # ######
     # Auto registering output
@@ -297,6 +319,7 @@ class Renderer(Generic[IT]):
             ns_name = session.output._ns(self.__name__)
             session.output.remove(ns_name)
             self._auto_registered = False
+            self._session = session
 
     def _auto_register(self) -> None:
         """
@@ -317,6 +340,7 @@ class Renderer(Generic[IT]):
                 # We mark the fact that we're auto-registered so that, if an explicit
                 # registration now occurs, we can undo this auto-registration.
                 self._auto_registered = True
+                self._session = s
 
 
 # Not inheriting from `WrapAsync[[], IT]` as python 3.8 needs typing extensions that

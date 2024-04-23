@@ -44,8 +44,9 @@ def server(input, output, session):
 
     @reactive.calc
     def filtered_df():
-        req(not summary_data.data_selected().empty)
-        countries = summary_data.data_selected()["country"]
+        data_selected = summary_data.data_view(selected=True)
+        req(not data_selected.empty)
+        countries = data_selected["country"]
         # Filter data for selected countries
         return df[df["country"].isin(countries)]
 

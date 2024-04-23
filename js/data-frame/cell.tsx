@@ -397,7 +397,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
   let editContent: ReactElement | null = null;
   if (cellState === CellStateEnum.EditSaving) {
     // If saving, do not allow any clicks or edits
-    content = <em>{editValue as string}</em>;
+    content = editValue as string;
   } else {
     if (isEditing) {
       editContent = (

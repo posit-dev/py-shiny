@@ -4,6 +4,7 @@ import {
   ColumnDef,
   RowData,
   RowModel,
+  SortingState,
   TableOptions,
   flexRender,
   getCoreRowModel,
@@ -28,13 +29,14 @@ import { useImmer } from "use-immer";
 import { TableBodyCell } from "./cell";
 import { getCellEditMapObj, useCellEditMap } from "./cell-edit-map";
 import { findFirstItemInView, getStyle } from "./dom-utils";
-import { Filter, useFilter } from "./filter";
-import type { BrowserCellSelection, SelectionModesProp } from "./selection";
+import { Filter, useFilters } from "./filter";
+import type { CellSelection, SelectionModesProp } from "./selection";
 import {
   SelectionModes,
   initRowSelectionModes,
   useSelection,
 } from "./selection";
+import { useSort } from "./sort";
 import { SortArrow } from "./sort-arrows";
 import css from "./styles.scss";
 import { useTabindexGroup } from "./tabindex-group";
@@ -173,14 +175,21 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
   const dataOriginal = useMemo(() => rowData, [rowData]);
   const [dataState, setData] = useImmer(rowData);
 
-  const filterOpts = useFilter<unknown[]>(withFilters);
+  const { sorting, sortState, sortingTableOptions } = useSort();
+
+  const { columnFilters, columnFiltersState, filtersTableOptions } =
+    useFilters<unknown[]>(withFilters);
 
   const options: TableOptions<unknown[]> = {
     data: dataState,
     columns: coldefs,
+    state: {
+      ...sortState,
+      ...columnFiltersState,
+    },
     getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    ...filterOpts,
+    ...sortingTableOptions,
+    ...filtersTableOptions,
     // debugAll: true,
     // Provide our updateCellsData function to our table meta
     // autoResetPageIndex,
@@ -270,7 +279,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
 
   useEffect(() => {
     const handleMessage = (
-      event: CustomEvent<{ cellSelection: BrowserCellSelection }>
+      event: CustomEvent<{ cellSelection: CellSelection }>
     ) => {
       // We convert "None" to an empty tuple on the python side
       // so an empty array indicates that selection should be cleared.
@@ -312,27 +321,48 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
   useEffect(() => {
     if (!id) return;
     const shinyId = `${id}_cell_selection`;
-    let shinyValue: BrowserCellSelection | null = null;
+    let shinyValue: CellSelection | null = null;
     if (rowSelectionModes.is_none()) {
       shinyValue = null;
     } else if (rowSelectionModes.row !== SelectionModes._rowEnum.NONE) {
       const rowSelectionKeys = rowSelection.keys().toList();
-      // Do not sent `none` or `all` to the server as it is hard to utilize when we know the selection is row based
-      // if (rowSelectionKeys.length === 0) {
-      //   shinyValue = { type: "none" };
-      // } else if (rowSelectionKeys.length === rowData.length) {
-      //   shinyValue = { type: "all" };
-      // } else {
+      const rowsById = table.getSortedRowModel().rowsById;
       shinyValue = {
         type: "row",
-        rows: rowSelectionKeys.map((key) => parseInt(key)).sort(),
+        rows: rowSelectionKeys.map((key) => rowsById[key].index).sort(),
       };
     } else {
       console.error("Unhandled row selection mode:", rowSelectionModes);
     }
     Shiny.setInputValue!(shinyId, shinyValue);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, rowSelectionModes, [...rowSelection.keys()]]);
+  }, [id, rowSelection, rowSelectionModes, table, table.getSortedRowModel]);
+
+  useEffect(() => {
+    if (!id) return;
+    const shinyId = `${id}_column_sort`;
+    Shiny.setInputValue!(shinyId, sorting);
+  }, [id, sorting]);
+  useEffect(() => {
+    if (!id) return;
+    const shinyId = `${id}_column_filter`;
+    Shiny.setInputValue!(shinyId, columnFilters);
+  }, [id, columnFilters]);
+  useEffect(() => {
+    if (!id) return;
+    const shinyId = `${id}_data_view_indices`;
+
+    // Already prefiltered rows!
+    const shinyValue: RowModel<unknown[]> = table.getSortedRowModel();
+
+    const rowIndices = table.getSortedRowModel().rows.map((row) => row.index);
+    Shiny.setInputValue!(shinyId, rowIndices);
+  }, [
+    id,
+    table,
+    // Update with either sorting or columnFilters update!
+    sorting,
+    columnFilters,
+  ]);
 
   // ### End row selection ############################################################
 

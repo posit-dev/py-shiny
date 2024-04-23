@@ -3,7 +3,7 @@ import time
 from palmerpenguins import load_penguins_raw  # pyright: ignore[reportMissingTypeStubs]
 
 from shiny import App, Inputs, Outputs, Session, render, ui
-from shiny.render._dataframe import CellPatch
+from shiny.render import CellPatch
 
 app_ui = ui.page_fluid(
     ui.h2("Palmer Penguins"),
@@ -24,8 +24,8 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
     def selected_row_count():
         # grid_selected_data = grid_selected.data()
         return str(
-            penguins_df.data_selected()  # pyright: ignore[reportUnknownMemberType]
-        )
+            penguins_df.data_view(selected=True)
+        )  # pyright: ignore[reportUnknownMemberType]
 
     @penguins_df.set_patch_fn
     async def upgrade_patch(
