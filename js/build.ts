@@ -82,6 +82,13 @@ const opts: Array<BuildOptions> = [
     plugins: [sassPlugin({ type: "css", sourceMap: false })],
     metafile: true,
   },
+  {
+    entryPoints: {
+      "busy-indicators/busy-indicators": "busy-indicators/busy-indicators.ts",
+    },
+    minify: false,
+    sourcemap: false,
+  },
 ];
 
 // Run function to avoid top level await

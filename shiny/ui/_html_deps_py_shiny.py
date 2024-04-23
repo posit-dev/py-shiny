@@ -61,14 +61,7 @@ def busy_indicators_deps() -> list[HTMLDependency]:
         __version__,
         source={"package": "shiny", "subdir": "www/shared/py-shiny/busy-indicators"},
         stylesheet={"href": "busy-indicators.css"},
-        # Add a CSS class to the root element up until the next idle. The
-        # busy-indicators.css above uses this class in order to indicate busy status
-        # when the app is loading.
-        # TODO: it'd be nice shiny.js did this
-        head=tags.script(
-            "document.documentElement.classList.add('shiny-not-yet-idle');"
-            + "$(document).one('shiny:idle', function() { document.documentElement.classList.remove('shiny-not-yet-idle'); });"
-        ),
+        script={"src": "busy-indicators.js"},
     )
 
     return [
