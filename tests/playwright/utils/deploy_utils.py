@@ -20,10 +20,10 @@ __all__ = (
 )
 
 # connect
-server_url = os.environ.get("DEPLOY_CONNECT_SERVER_URL")
+server_url = os.environ.get("DEPLOY_CONNECT_SERVER_URLE")
 api_key = os.environ.get("DEPLOY_CONNECT_SERVER_API_KEY")
 # shinyapps.io
-name = os.environ.get("DEPLOY_SHINYAPPS_NAME")
+name = os.environ.get("DEPLOY_SHINYAPPS_NAMEE")
 token = os.environ.get("DEPLOY_SHINYAPPS_TOKEN")
 secret = os.environ.get("DEPLOY_SHINYAPPS_SECRET")
 
@@ -94,7 +94,6 @@ def deploy_to_shinyapps(app_name: str, app_dir: str) -> str:
     # Deploy to shinyapps.io
     shinyapps_deploy = f"rsconnect deploy shiny {app_dir} --account {name} --token {token} --secret {secret} --title {app_name} --verbose"
     run_command(shinyapps_deploy)
-    run_command("exit 1")
 
     return f"https://{name}.shinyapps.io/{app_name}/"
 
