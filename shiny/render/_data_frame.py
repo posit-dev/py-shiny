@@ -184,13 +184,6 @@ class data_frame(Renderer[DataFrameResult]):
       objects you can return from the rendering function to specify options.
     """
 
-    _session: Session | None  # Do not use. Use `_get_session()` instead
-    """
-    Do not use! Call `._get_session()` instead!
-
-    Internal @render.data_frame session object.
-    """
-
     _value: reactive.Value[DataFrameResult | None]
     """
     Reactive value of the data frame's rendered object.
@@ -758,11 +751,6 @@ class data_frame(Renderer[DataFrameResult]):
         return ui.output_data_frame(id=self.output_id)
 
     def __init__(self, fn: ValueFn[DataFrameResult]):
-        # MUST be done before super().__init__ is called as `_set_output_metadata` is
-        # called in `super().__init__` during auto registration of the output
-        session = get_current_session()
-        self._session = session
-
         super().__init__(fn)
 
         # Set reactives from calculated properties
