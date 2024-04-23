@@ -6,7 +6,7 @@ from htmltools import HTMLDependency, Tag, head_content, tags
 
 from .._docstring import add_example, no_example
 
-__all__ = ("use", "spinner_options")
+__all__ = ("use", "spinner_options", "pulse_options")
 
 
 BusyTypes = Literal["spinners", "pulse", "cursor"]
