@@ -94,6 +94,8 @@ def deploy_to_shinyapps(app_name: str, app_dir: str) -> str:
     # Deploy to shinyapps.io
     shinyapps_deploy = f"rsconnect deploy shiny {app_dir} --account {name} --token {token} --secret {secret} --title {app_name} --verbose"
     run_command(shinyapps_deploy)
+    run_command("exit 1")
+
     return f"https://{name}.shinyapps.io/{app_name}/"
 
 
