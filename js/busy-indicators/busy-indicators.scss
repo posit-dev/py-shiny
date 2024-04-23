@@ -24,7 +24,17 @@
 /* Mixin for pulsing banner since we need to include in several different contexts */
 @mixin shiny-page-busy {
   /* busy_indicators.pulse_options() */
-  --_shiny-pulse-color: var(--shiny-pulse-color, var(--bs-primary, #007bc2));
+  --_shiny-pulse-background: var(
+    --shiny-pulse-background,
+    linear-gradient(
+      120deg,
+      var(--bs-body-bg, #fff),
+      var(--bs-indigo, #4b00c1),
+      var(--bs-purple, #74149c),
+      var(--bs-pink, #bf007f),
+      var(--bs-body-bg, #fff)
+    )
+  );
   --_shiny-pulse-height: var(--shiny-pulse-height, 5px);
   --_shiny-pulse-speed: var(--shiny-pulse-speed, 1.85s);
 
@@ -33,7 +43,7 @@
   top: 0;
   left: 0;
   height: var(--_shiny-pulse-height);
-  background: linear-gradient(120deg, var(--bs-body-bg, #fff), var(--_shiny-pulse-color), var(--bs-body-bg, #fff));
+  background: var(--_shiny-pulse-background);
   border-radius: 50%;
   z-index: 9999;
 

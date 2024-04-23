@@ -137,7 +137,10 @@ def spinner_options(
 
 @no_example()
 def pulse_options(
-    *, color: str | None = None, height: str | None = None, speed: str | None = None
+    *,
+    background: str | None = None,
+    height: str | None = None,
+    speed: str | None = None,
 ) -> Tag:
     """
     Customize the pulsing busy indicator.
@@ -146,12 +149,12 @@ def pulse_options(
 
     Parameters
     ----------
-    color
-        The color of the pulsing banner. This can be any valid CSS color. Defaults to
-        the app's "primary" color (if Bootstrap is on the page) or light-blue if not.
+    background
+        A CCS background definition for the pulse. The default uses a
+        [linear-gradient](https://developer.mozilla.org/en-US/docs/Web/CSS/gradient/linear-gradient)
+        of the theme's indigo, purple, and pink colors.
     height
-        The height of the pulsing banner. This can be any valid CSS size. Defaults to
-        "3.5px".
+        The height of the pulsing banner. This can be any valid CSS size.
 
     Returns
     -------
@@ -160,7 +163,7 @@ def pulse_options(
     """
 
     css_vars = (
-        (f"--shiny-pulse-color: {color};" if color else "")
+        (f"--shiny-pulse-background: {background};" if background else "")
         + (f"--shiny-pulse-height: {height};" if height else "")
         + (f"--shiny-pulse-speed: {speed};" if speed else "")
     )
