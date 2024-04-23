@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Awaitable, Callable, Literal, cast
 
 from .._namespaces import Id, ResolvedId, Root
 from ..session import Inputs, Outputs, SessionABC
+from ..session._session import SessionProxy
 
 if TYPE_CHECKING:
     from ._run import AppOpts
@@ -42,9 +43,9 @@ class ExpressMockSession(SessionABC):
     ) -> Callable[[], None]:
         return lambda: None
 
-    def make_scope(self, id: Id) -> SessionABC:
+    def make_scope(self, id: Id) -> SessionProxy:
         ns = self.ns(id)
-        return cast(SessionABC, ExpressMockSession(ns))
+        return SessionProxy(parent=self, ns=ns)
 
     def __getattr__(self, name: str):
         raise AttributeError(
