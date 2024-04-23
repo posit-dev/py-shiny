@@ -4,7 +4,7 @@ import textwrap
 from typing import TYPE_CHECKING, Awaitable, Callable, Literal, cast
 
 from .._namespaces import Id, ResolvedId, Root
-from ..session import Inputs, Outputs, Session, SessionBase
+from ..session import Inputs, Outputs, SessionABC
 
 if TYPE_CHECKING:
     from ._run import AppOpts
@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 all = ("ExpressMockSession",)
 
 
-class ExpressMockSession(SessionBase):
+class ExpressMockSession(SessionABC):
     """
     A very bare-bones mock session class that is used only in shiny.express's UI
     rendering phase.
@@ -24,7 +24,7 @@ class ExpressMockSession(SessionBase):
     def __init__(self, ns: ResolvedId = Root):
         self.ns = ns
         self.input = Inputs({})
-        self.output = Outputs(cast(Session, self), self.ns, outputs={})
+        self.output = Outputs(cast(SessionABC, self), self.ns, outputs={})
 
         # Application-level (not session-level) options that may be set via app_opts().
         self.app_opts: AppOpts = {}
@@ -42,9 +42,9 @@ class ExpressMockSession(SessionBase):
     ) -> Callable[[], None]:
         return lambda: None
 
-    def make_scope(self, id: Id) -> Session:
+    def make_scope(self, id: Id) -> SessionABC:
         ns = self.ns(id)
-        return cast(Session, ExpressMockSession(ns))
+        return cast(SessionABC, ExpressMockSession(ns))
 
     def __getattr__(self, name: str):
         raise AttributeError(

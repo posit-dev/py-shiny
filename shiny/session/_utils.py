@@ -13,7 +13,7 @@ from contextvars import ContextVar, Token
 from typing import TYPE_CHECKING, Any, Callable, Optional, TypeVar
 
 if TYPE_CHECKING:
-    from ._session import Session
+    from ._session import SessionABC
 
 from .._docstring import no_example
 from .._namespaces import namespace_context
@@ -28,14 +28,14 @@ class RenderedDeps(TypedDict):
 # ==============================================================================
 # Context manager for current session (AKA current reactive domain)
 # ==============================================================================
-_current_session: ContextVar[Optional[Session]] = ContextVar(
+_current_session: ContextVar[Optional[SessionABC]] = ContextVar(
     "current_session", default=None
 )
-_default_session: Optional[Session] = None
+_default_session: Optional[SessionABC] = None
 
 
 @no_example()
-def get_current_session() -> Optional[Session]:
+def get_current_session() -> Optional[SessionABC]:
     """
     Get the current user session.
 
@@ -59,7 +59,7 @@ def get_current_session() -> Optional[Session]:
 
 
 @contextmanager
-def session_context(session: Optional[Session]):
+def session_context(session: Optional[SessionABC]):
     """
     A context manager for current session.
 
@@ -69,7 +69,7 @@ def session_context(session: Optional[Session]):
         A :class:`~shiny.Session` instance. If not provided, the instance is inferred via
         :func:`~shiny.session.get_current_session`.
     """
-    token: Token[Session | None] = _current_session.set(session)
+    token: Token[SessionABC | None] = _current_session.set(session)
     try:
         with namespace_context(session.ns if session is not None else None):
             yield
@@ -78,7 +78,7 @@ def session_context(session: Optional[Session]):
 
 
 @no_example()
-def require_active_session(session: Optional[Session]) -> Session:
+def require_active_session(session: Optional[SessionABC]) -> SessionABC:
     """
     Raise an exception if no Shiny session is currently active.
 

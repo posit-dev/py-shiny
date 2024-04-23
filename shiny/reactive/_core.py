@@ -26,7 +26,7 @@ from .._docstring import add_example, no_example
 from ..types import MISSING, MISSING_TYPE
 
 if TYPE_CHECKING:
-    from ..session import Session
+    from ..session import SessionABC
 
 T = TypeVar("T")
 
@@ -303,7 +303,7 @@ def lock() -> asyncio.Lock:
 
 @add_example()
 def invalidate_later(
-    delay: float, *, session: "MISSING_TYPE | Session | None" = MISSING
+    delay: float, *, session: "MISSING_TYPE | SessionABC | None" = MISSING
 ) -> None:
     """
     Scheduled Invalidation

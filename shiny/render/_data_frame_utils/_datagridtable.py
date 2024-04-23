@@ -19,7 +19,6 @@ from htmltools import TagNode
 
 from ..._docstring import add_example, no_example
 from ..._typing_extensions import TypedDict
-from ...session import Session
 from ...session._utils import RenderedDeps, require_active_session
 from ...types import Jsonifiable
 from ._selection import (
@@ -32,6 +31,8 @@ from ._unsafe import is_shiny_html, serialize_numpy_dtypes
 
 if TYPE_CHECKING:
     import pandas as pd
+
+    from ...session import SessionABC
 
     DataFrameT = TypeVar("DataFrameT", bound=pd.DataFrame)
     # TODO-future; Pandas, Polars, api compat, etc.; Today, we only support Pandas
@@ -397,12 +398,12 @@ class CellHtml(TypedDict):
 
 @overload
 def wrap_shiny_html(  # pyright: ignore[reportOverlappingOverload]
-    x: TagNode, *, session: Session
+    x: TagNode, *, session: SessionABC
 ) -> CellHtml: ...
 @overload
-def wrap_shiny_html(x: Jsonifiable, *, session: Session) -> Jsonifiable: ...
+def wrap_shiny_html(x: Jsonifiable, *, session: SessionABC) -> Jsonifiable: ...
 def wrap_shiny_html(
-    x: Jsonifiable | TagNode, *, session: Session
+    x: Jsonifiable | TagNode, *, session: SessionABC
 ) -> Jsonifiable | CellHtml:
     if is_shiny_html(x):
         return {"isShinyHtml": True, "obj": session._process_ui(x)}

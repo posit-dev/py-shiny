@@ -152,9 +152,82 @@ class OutBoundMessageQueues:
         self.input_messages.append({"id": id, "message": message})
 
 
-class SessionBase(ABC):
+class SessionABC(ABC):
+    """
+    Interface definition for Session-like classes, like Session, SessionProxy, and
+    ExpressMockSession.
+    """
+
+    ns: ResolvedId
+    # id: str
+    input: Inputs
+    output: Outputs
+
     @abstractmethod
     def is_real_session(self) -> bool: ...
+
+    @abstractmethod
+    def _is_hidden(self, name: str) -> bool: ...
+
+    @abstractmethod
+    def on_ended(
+        self,
+        fn: Callable[[], None] | Callable[[], Awaitable[None]],
+    ) -> Callable[[], None]: ...
+
+    @abstractmethod
+    def make_scope(self, id: Id) -> SessionABC: ...
+
+    @abstractmethod
+    def root_scope(self) -> SessionABC: ...
+
+    @abstractmethod
+    def _process_ui(self, ui: TagChild) -> RenderedDeps: ...
+
+    @abstractmethod
+    def send_input_message(self, id: str, message: dict[str, object]) -> None: ...
+
+    @abstractmethod
+    async def send_custom_message(
+        self, type: str, message: dict[str, object]
+    ) -> None: ...
+
+    @abstractmethod
+    def set_message_handler(
+        self,
+        name: str,
+        handler: (
+            Callable[..., Jsonifiable] | Callable[..., Awaitable[Jsonifiable]] | None
+        ),
+        *,
+        _handler_session: Optional[SessionABC] = None,
+    ) -> str: ...
+
+    @abstractmethod
+    def on_flush(
+        self,
+        fn: Callable[[], None] | Callable[[], Awaitable[None]],
+        once: bool = True,
+    ) -> Callable[[], None]: ...
+
+    @abstractmethod
+    def on_flushed(
+        self,
+        fn: Callable[[], None] | Callable[[], Awaitable[None]],
+        once: bool = True,
+    ) -> Callable[[], None]: ...
+
+    @abstractmethod
+    def dynamic_route(self, name: str, handler: DynamicRouteHandler) -> str: ...
+
+    @abstractmethod
+    def download(
+        self,
+        id: Optional[str] = None,
+        filename: Optional[str | Callable[[], str]] = None,
+        media_type: None | str | Callable[[], str] = None,
+        encoding: str = "utf-8",
+    ) -> Callable[[DownloadHandler], None]: ...
 
     # Makes isinstance(x, Session) also return True when x is a SessionProxy (i.e., a
     # module session)
@@ -162,7 +235,7 @@ class SessionBase(ABC):
         return isinstance(__instance, SessionProxy)
 
 
-class Session(SessionBase):
+class Session(SessionABC):
     """
     A class representing a user session.
     """
@@ -190,7 +263,7 @@ class Session(SessionBase):
         self._debug: bool = debug
         self._message_handlers: dict[
             str,
-            tuple[Callable[..., Awaitable[Jsonifiable]], Session],
+            tuple[Callable[..., Awaitable[Jsonifiable]], SessionABC],
         ] = {}
         """
         Dictionary of message handlers for the session.
@@ -913,6 +986,8 @@ class Session(SessionBase):
         handler: (
             Callable[..., Jsonifiable] | Callable[..., Awaitable[Jsonifiable]] | None
         ),
+        *,
+        _handler_session: Optional[SessionABC] = None,
     ) -> str:
         """
         Set a client message handler.
@@ -950,32 +1025,18 @@ class Session(SessionBase):
             The key under which the handler is stored (or removed). This value will be
             namespaced when used with a session proxy.
         """
-        # Use `_impl` method to allow for SessionProxy to set the `handler_session`
-        return self._set_message_handler_impl(
-            name,
-            handler,
-            # The handler will be executed within the root session
-            handler_session=self,
-        )
-
-    def _set_message_handler_impl(
-        self,
-        name: str,
-        handler: (
-            Callable[..., Jsonifiable] | Callable[..., Awaitable[Jsonifiable]] | None
-        ),
-        *,
-        # Allow the handler to be executed within a Session or SessionProxy
-        handler_session: Session | SessionProxy,
-    ) -> str:
         # Verify that the name is a string
         assert isinstance(name, str)
+
+        if _handler_session is None:
+            _handler_session = self
+
         if handler is None:
             if name in self._message_handlers:
                 del self._message_handlers[name]
         else:
             assert callable(handler)
-            self._message_handlers[name] = (wrap_async(handler), self)
+            self._message_handlers[name] = (wrap_async(handler), _handler_session)
         return name
 
     def _process_ui(self, ui: TagChild) -> RenderedDeps:
@@ -1019,12 +1080,12 @@ class UpdateProgressMessage(TypedDict):
     style: str
 
 
-class SessionProxy(SessionBase):
+class SessionProxy(SessionABC):
     ns: ResolvedId
     input: Inputs
     output: Outputs
 
-    def __init__(self, parent: Session, ns: ResolvedId) -> None:
+    def __init__(self, parent: SessionABC, ns: ResolvedId) -> None:
         self._parent = parent
         self.ns = ns
         self.input = Inputs(values=parent.input._map, ns=ns)
@@ -1040,10 +1101,10 @@ class SessionProxy(SessionBase):
     def is_real_session(self) -> bool:
         return self._parent.is_real_session()
 
-    def make_scope(self, id: str) -> Session:
+    def make_scope(self, id: str) -> SessionABC:
         return self._parent.make_scope(self.ns(id))
 
-    def root_scope(self) -> Session:
+    def root_scope(self) -> SessionABC:
         res = self
         while isinstance(res, SessionProxy):
             res = res._parent
@@ -1061,23 +1122,35 @@ class SessionProxy(SessionBase):
         handler: (
             Callable[..., Jsonifiable] | Callable[..., Awaitable[Jsonifiable]] | None
         ),
+        *,
+        _handler_session: Optional[SessionABC] = None,
     ) -> str:
         # Verify that the name is a string
         assert isinstance(name, str)
-        return self._parent._set_message_handler_impl(
+
+        if _handler_session is None:
+            _handler_session = self
+
+        return self._parent.set_message_handler(
             self.ns(name),
             handler,
-            # Allow the handler to be executed within this session proxy
-            handler_session=self,
+            _handler_session=_handler_session,
         )
 
     def download(
-        self, id: Optional[str] = None, **kwargs: object
+        self,
+        id: Optional[str] = None,
+        filename: Optional[str | Callable[[], str]] = None,
+        media_type: None | str | Callable[[], str] = None,
+        encoding: str = "utf-8",
     ) -> Callable[[DownloadHandler], None]:
         def wrapper(fn: DownloadHandler):
             id_ = self.ns(id or fn.__name__)
             return self._parent.download(
-                id=id_, **kwargs  # pyright: ignore[reportArgumentType]
+                id=id_,
+                filename=filename,
+                media_type=media_type,
+                encoding=encoding,
             )(fn)
 
         return wrapper
@@ -1168,7 +1241,7 @@ class Outputs:
 
     def __init__(
         self,
-        session: Session,
+        session: SessionABC,
         ns: Callable[[str], ResolvedId],
         *,
         outputs: dict[str, OutputInfo],
@@ -1217,35 +1290,48 @@ class Outputs:
 
             self.remove(output_name)
 
+            def require_real_session() -> Session:
+                if not isinstance(self._session, Session):
+                    raise RuntimeError(
+                        "`output` must be used with a real session (as opposed to a mock session)."
+                    )
+
+                return self._session
+
             @effect(
                 suspended=suspend_when_hidden and self._session._is_hidden(output_name),
                 priority=priority,
             )
             async def output_obs():
-                await self._session._send_message(
+                if not self._session.is_real_session():
+                    raise RuntimeError(
+                        "`output` must be used with a real session (as opposed to a mock session)."
+                    )
+
+                session = require_real_session()
+
+                await session._send_message(
                     {"recalculating": {"name": output_name, "status": "recalculating"}}
                 )
 
                 try:
                     value = await renderer.render()
-                    self._session._outbound_message_queues.set_value(output_name, value)
+                    session._outbound_message_queues.set_value(output_name, value)
                 except SilentOperationInProgressException:
-                    self._session._send_progress(
+                    session._send_progress(
                         "binding", {"id": output_name, "persistent": True}
                     )
                     return
                 except SilentCancelOutputException:
                     return
                 except SilentException:
-                    self._session._outbound_message_queues.set_value(output_name, None)
+                    session._outbound_message_queues.set_value(output_name, None)
                 except Exception as e:
                     # Print traceback to the console
                     traceback.print_exc()
                     # Possibly sanitize error for the user
-                    if self._session.app.sanitize_errors and not isinstance(
-                        e, SafeException
-                    ):
-                        err_msg = self._session.app.sanitize_error_msg
+                    if session.app.sanitize_errors and not isinstance(e, SafeException):
+                        err_msg = session.app.sanitize_error_msg
                     else:
                         err_msg = str(e)
                     # Register the outbound error message
@@ -1256,12 +1342,10 @@ class Outputs:
                         # TODO: I don't think we actually use this for anything client-side
                         "type": None,
                     }
-                    self._session._outbound_message_queues.set_error(
-                        output_name, err_message
-                    )
+                    session._outbound_message_queues.set_error(output_name, err_message)
                     return
                 finally:
-                    await self._session._send_message(
+                    await session._send_message(
                         {
                             "recalculating": {
                                 "name": output_name,
@@ -1271,7 +1355,9 @@ class Outputs:
                     )
 
             output_obs.on_invalidate(
-                lambda: self._session._send_progress("binding", {"id": output_name})
+                lambda: require_real_session()._send_progress(
+                    "binding", {"id": output_name}
+                )
             )
 
             # Store the renderer and effect info

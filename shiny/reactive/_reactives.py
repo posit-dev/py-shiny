@@ -37,7 +37,7 @@ from ..types import MISSING, MISSING_TYPE, ActionButtonValue, SilentException
 from ._core import Context, Dependents, ReactiveWarning, isolate
 
 if TYPE_CHECKING:
-    from ..session import Session
+    from ..session import SessionABC
 
 T = TypeVar("T")
 
@@ -239,7 +239,7 @@ class Calc_(Generic[T]):
         self,
         fn: CalcFunction[T],
         *,
-        session: "MISSING_TYPE | Session | None" = MISSING,
+        session: "MISSING_TYPE | SessionABC | None" = MISSING,
     ) -> None:
         self.__name__ = fn.__name__
         self.__doc__ = fn.__doc__
@@ -257,7 +257,7 @@ class Calc_(Generic[T]):
         self._ctx: Optional[Context] = None
         self._exec_count: int = 0
 
-        self._session: Optional[Session]
+        self._session: Optional[SessionABC]
         # Use `isinstance(x, MISSING_TYPE)`` instead of `x is MISSING` because
         # the type checker doesn't know that MISSING is the only instance of
         # MISSING_TYPE; this saves us from casting later on.
@@ -344,7 +344,7 @@ class CalcAsync_(Calc_[T]):
         self,
         fn: CalcFunctionAsync[T],
         *,
-        session: "MISSING_TYPE | Session | None" = MISSING,
+        session: "MISSING_TYPE | SessionABC | None" = MISSING,
     ) -> None:
         if not _utils.is_async_callable(fn):
             raise TypeError(self.__class__.__name__ + " requires an async function")
@@ -385,7 +385,7 @@ def calc(fn: CalcFunction[T]) -> Calc_[T]: ...
 # works out.
 @overload
 def calc(
-    *, session: "MISSING_TYPE | Session | None" = MISSING
+    *, session: "MISSING_TYPE | SessionABC | None" = MISSING
 ) -> Callable[[CalcFunction[T]], Calc_[T]]: ...
 
 
@@ -393,7 +393,7 @@ def calc(
 def calc(
     fn: Optional[CalcFunction[T] | CalcFunctionAsync[T]] = None,
     *,
-    session: "MISSING_TYPE | Session | None" = MISSING,
+    session: "MISSING_TYPE | SessionABC | None" = MISSING,
 ) -> Calc_[T] | Callable[[CalcFunction[T]], Calc_[T]]:
     """
     Mark a function as a reactive calculation.
@@ -472,7 +472,7 @@ class Effect_:
         *,
         suspended: bool = False,
         priority: int = 0,
-        session: "MISSING_TYPE | Session | None" = MISSING,
+        session: "MISSING_TYPE | SessionABC | None" = MISSING,
     ) -> None:
         self.__name__ = fn.__name__
         self.__doc__ = fn.__doc__
@@ -502,7 +502,7 @@ class Effect_:
         self._ctx: Optional[Context] = None
         self._exec_count: int = 0
 
-        self._session: Optional[Session]
+        self._session: Optional[SessionABC]
         # Use `isinstance(x, MISSING_TYPE)`` instead of `x is MISSING` because
         # the type checker doesn't know that MISSING is the only instance of
         # MISSING_TYPE; this saves us from casting later on.
@@ -667,7 +667,7 @@ def effect(
     *,
     suspended: bool = False,
     priority: int = 0,
-    session: "MISSING_TYPE | Session | None" = MISSING,
+    session: "MISSING_TYPE | SessionABC | None" = MISSING,
 ) -> Callable[[EffectFunction | EffectFunctionAsync], Effect_]: ...
 
 
@@ -677,7 +677,7 @@ def effect(
     *,
     suspended: bool = False,
     priority: int = 0,
-    session: "MISSING_TYPE | Session | None" = MISSING,
+    session: "MISSING_TYPE | SessionABC | None" = MISSING,
 ) -> Effect_ | Callable[[EffectFunction | EffectFunctionAsync], Effect_]:
     """
     Mark a function as a reactive side effect.

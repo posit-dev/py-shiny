@@ -6,7 +6,7 @@ from htmltools import TagChild
 
 from .._docstring import add_example
 from ..session import require_active_session
-from ..session._session import Session
+from ..session._session import SessionABC
 
 
 @add_example()
@@ -16,7 +16,7 @@ def insert_ui(
     where: Literal["beforeBegin", "afterBegin", "beforeEnd", "afterEnd"] = "beforeEnd",
     multiple: bool = False,
     immediate: bool = False,
-    session: Optional[Session] = None,
+    session: Optional[SessionABC] = None,
 ) -> None:
     """
     Insert UI objects.
@@ -89,7 +89,7 @@ def remove_ui(
     selector: str,
     multiple: bool = False,
     immediate: bool = False,
-    session: Optional[Session] = None,
+    session: Optional[SessionABC] = None,
 ) -> None:
     """
     Remove UI objects.

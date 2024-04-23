@@ -12,7 +12,7 @@ from ..session import require_active_session
 from ..session._session import UpdateProgressMessage
 
 if TYPE_CHECKING:
-    from .. import Session
+    from ..session import SessionABC
 
 
 @add_example()
@@ -45,7 +45,7 @@ class Progress:
     value: float | None
 
     def __init__(
-        self, min: int = 0, max: int = 1, session: Optional[Session] = None
+        self, min: int = 0, max: int = 1, session: Optional[SessionABC] = None
     ) -> None:
         self.min = min
         self.max = max
