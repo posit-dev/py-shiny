@@ -22,10 +22,7 @@ from .. import reactive, ui
 from .._docstring import add_example
 from .._typing_extensions import TypedDict
 from .._utils import wrap_async
-from ..session._utils import (
-    require_active_session,
-    session_context,
-)
+from ..session._utils import require_active_session, session_context
 from ._data_frame_utils import (
     AbstractTabularData,
     CellPatch,
