@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import textwrap
-from typing import TYPE_CHECKING, Awaitable, Callable, cast
+from typing import TYPE_CHECKING, Awaitable, Callable, Literal, cast
 
 from .._namespaces import Id, ResolvedId, Root
-from ..session import Inputs, Outputs, Session
+from ..session import Inputs, Outputs, Session, SessionBase
 
 if TYPE_CHECKING:
     from ._run import AppOpts
@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 all = ("ExpressMockSession",)
 
 
-class ExpressMockSession:
+class ExpressMockSession(SessionBase):
     """
     A very bare-bones mock session class that is used only in shiny.express's UI
     rendering phase.
@@ -31,6 +31,9 @@ class ExpressMockSession:
 
     # This is needed so that Outputs don't throw an error.
     def _is_hidden(self, name: str) -> bool:
+        return False
+
+    def is_real_session(self) -> Literal[False]:
         return False
 
     def on_ended(

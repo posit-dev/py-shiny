@@ -16,6 +16,7 @@ import traceback
 import typing
 import urllib.parse
 import warnings
+from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import (
     TYPE_CHECKING,
@@ -151,14 +152,17 @@ class OutBoundMessageQueues:
         self.input_messages.append({"id": id, "message": message})
 
 
-# Makes isinstance(x, Session) also return True when x is a SessionProxy (i.e., a module
-# session)
-class SessionMeta(type):
+class SessionBase(ABC):
+    @abstractmethod
+    def is_real_session(self) -> bool: ...
+
+    # Makes isinstance(x, Session) also return True when x is a SessionProxy (i.e., a
+    # module session)
     def __instancecheck__(self, __instance: Any) -> bool:
         return isinstance(__instance, SessionProxy)
 
 
-class Session(object, metaclass=SessionMeta):
+class Session(SessionBase):
     """
     A class representing a user session.
     """
@@ -253,6 +257,9 @@ class Session(object, metaclass=SessionMeta):
             await self._on_ended_callbacks.invoke()
         finally:
             self.app._remove_session(self)
+
+    def is_real_session(self) -> Literal[True]:
+        return True
 
     @add_example()
     async def close(self, code: int = 1001) -> None:
@@ -1012,7 +1019,7 @@ class UpdateProgressMessage(TypedDict):
     style: str
 
 
-class SessionProxy:
+class SessionProxy(SessionBase):
     ns: ResolvedId
     input: Inputs
     output: Outputs
@@ -1029,6 +1036,9 @@ class SessionProxy:
 
     def __getattr__(self, attr: str) -> Any:
         return getattr(self._parent, attr)
+
+    def is_real_session(self) -> bool:
+        return self._parent.is_real_session()
 
     def make_scope(self, id: str) -> Session:
         return self._parent.make_scope(self.ns(id))
