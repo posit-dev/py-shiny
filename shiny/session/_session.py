@@ -154,15 +154,17 @@ class OutBoundMessageQueues:
 
 class Session(ABC):
     """
-    Interface definition for Session-like classes, like Session, SessionProxy, and
+    Interface definition for Session-like classes, like AppSession, SessionProxy, and
     ExpressMockSession.
     """
 
-    app: App
     ns: ResolvedId
+    app: App
     id: str
     input: Inputs
     output: Outputs
+    user: str | None
+    groups: list[str] | None
 
     # TODO: not sure these should be directly exposed
     _outbound_message_queues: OutBoundMessageQueues
@@ -298,23 +300,13 @@ class AppSession(Session):
     A class representing a user session.
     """
 
-    ns: ResolvedId = Root
-
-    # These declarations are here only for pyright and stubgen to generate stub files.
-    app: App
-    id: str
-    http_conn: HTTPConnection
-    input: Inputs
-    output: Outputs
-    user: str | None
-    groups: list[str] | None
-
     # ==========================================================================
     # Initialization
     # ==========================================================================
     def __init__(
         self, app: App, id: str, conn: Connection, debug: bool = False
     ) -> None:
+        self.ns: ResolvedId = Root
         self.app: App = app
         self.id: str = id
         self._conn: Connection = conn
@@ -1123,10 +1115,6 @@ class UpdateProgressMessage(TypedDict):
 
 
 class SessionProxy(Session):
-    ns: ResolvedId
-    input: Inputs
-    output: Outputs
-
     def __init__(self, parent: Session, ns: ResolvedId) -> None:
         self._parent = parent
         self.app = parent.app
