@@ -4,7 +4,7 @@ from shiny.express import input, render, ui
 
 ui.page_opts(
     title="Theme Example",
-    theme=Path(__file__).parent / "css" / "bootstrap.min.css",
+    theme=Path(__file__).parent / "css" / "bootswatch-minty.min.css",
 )
 
 with ui.sidebar(title="Parameters"):
