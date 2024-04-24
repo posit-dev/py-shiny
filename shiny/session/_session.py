@@ -152,10 +152,13 @@ class OutBoundMessageQueues:
         self.input_messages.append({"id": id, "message": message})
 
 
+# ======================================================================================
+# Session abstract base class
+# ======================================================================================
 class Session(ABC):
     """
-    Interface definition for Session-like classes, like AppSession, SessionProxy, and
-    ExpressMockSession.
+    Interface definition for Session-like classes, like :class:`AppSession`,
+    :class:`SessionProxy`, and :class:`~shiny.express.ExpressMockSession`.
     """
 
     ns: ResolvedId
@@ -173,14 +176,35 @@ class Session(ABC):
     @abstractmethod
     def is_real_session(self) -> bool: ...
 
+    @add_example()
+    @abstractmethod
+    async def close(self, code: int = 1001) -> None:
+        """
+        Close the session.
+        """
+
     @abstractmethod
     def _is_hidden(self, name: str) -> bool: ...
 
+    @add_example()
     @abstractmethod
     def on_ended(
         self,
         fn: Callable[[], None] | Callable[[], Awaitable[None]],
-    ) -> Callable[[], None]: ...
+    ) -> Callable[[], None]:
+        """
+        Registers a function to be called after the client has disconnected.
+
+        Parameters
+        ----------
+        fn
+            The function to call.
+
+        Returns
+        -------
+        :
+            A function that can be used to cancel the registration.
+        """
 
     @abstractmethod
     def make_scope(self, id: Id) -> Session: ...
@@ -192,7 +216,23 @@ class Session(ABC):
     def _process_ui(self, ui: TagChild) -> RenderedDeps: ...
 
     @abstractmethod
-    def send_input_message(self, id: str, message: dict[str, object]) -> None: ...
+    def send_input_message(self, id: str, message: dict[str, object]) -> None:
+        """
+        Send an input message to the session.
+
+        Sends a message to an input on the session's client web page; if the input is
+        present and bound on the page at the time the message is received, then the
+        input binding object's ``receiveMessage(el, message)`` method will be called.
+        This method should generally not be called directly from Shiny apps, but through
+        friendlier wrapper functions like ``ui.update_text()``.
+
+        Parameters
+        ----------
+        id
+            An id matching the id of an input to update.
+        message
+            The message to send.
+        """
 
     @abstractmethod
     def _send_insert_ui(
@@ -233,10 +273,142 @@ class Session(ABC):
     @abstractmethod
     def _send_progress(self, type: str, message: object) -> None: ...
 
+    @add_example()
     @abstractmethod
-    async def send_custom_message(
-        self, type: str, message: dict[str, object]
-    ) -> None: ...
+    async def send_custom_message(self, type: str, message: dict[str, object]) -> None:
+        """
+        Send a message to the client.
+
+        Parameters
+        ----------
+        type
+            The type of message to send.
+        message
+            The message to send.
+
+        Note
+        ----
+        Sends messages to the client which can be handled in JavaScript with
+        ``Shiny.addCustomMessageHandler(type, function(message){...})``. Once the
+        message handler is added, it will be invoked each time ``send_custom_message()``
+        is called on the server.
+        """
+
+    @abstractmethod
+    async def _send_message(self, message: dict[str, object]) -> None: ...
+
+    @abstractmethod
+    def _send_message_sync(self, message: dict[str, object]) -> None:
+        """
+        Same as _send_message, except that if the message isn't too large and the socket
+        isn't too backed up, then the message may be sent synchronously instead of
+        having to wait until the current task yields (and potentially much longer than
+        that, if there is a lot of contention for the main thread).
+        """
+
+    @add_example()
+    @abstractmethod
+    def on_flush(
+        self,
+        fn: Callable[[], None] | Callable[[], Awaitable[None]],
+        once: bool = True,
+    ) -> Callable[[], None]:
+        """
+        Register a function to call before the next reactive flush.
+
+        Parameters
+        ----------
+        fn
+            The function to call.
+        once
+            Whether to call the function only once or on every flush.
+
+        Returns
+        -------
+        :
+            A function that can be used to cancel the registration.
+        """
+
+    @add_example()
+    @abstractmethod
+    def on_flushed(
+        self,
+        fn: Callable[[], None] | Callable[[], Awaitable[None]],
+        once: bool = True,
+    ) -> Callable[[], None]:
+        """
+        Register a function to call after the next reactive flush.
+
+        Parameters
+        ----------
+        fn
+            The function to call.
+        once
+            Whether to call the function only once or on every flush.
+
+        Returns
+        -------
+        :
+            A function that can be used to cancel the registration.
+        """
+
+    @abstractmethod
+    async def _unhandled_error(self, e: Exception) -> None: ...
+
+    @add_example()
+    @abstractmethod
+    def download(
+        self,
+        id: Optional[str] = None,
+        filename: Optional[str | Callable[[], str]] = None,
+        media_type: None | str | Callable[[], str] = None,
+        encoding: str = "utf-8",
+    ) -> Callable[[DownloadHandler], None]:
+        """
+        Deprecated. Please use :class:`~shiny.render.download` instead.
+
+        Parameters
+        ----------
+        id
+            The name of the download.
+        filename
+            The filename of the download.
+        media_type
+            The media type of the download.
+        encoding
+            The encoding of the download.
+
+        Returns
+        -------
+        :
+            The decorated function.
+        """
+
+    @add_example()
+    @abstractmethod
+    def dynamic_route(self, name: str, handler: DynamicRouteHandler) -> str:
+        """
+        Register a function to call when a dynamically generated, session-specific,
+        route is requested.
+
+        Provides a convenient way to serve-up session-dependent values for other
+        clients/applications to consume.
+
+        Parameters
+        ----------
+        name
+            A name for the route (used to determine part of the URL path).
+        handler
+            The function to call when a request is made to the route. This function
+            should take a single argument (a :class:`starlette.requests.Request` object)
+            and return a :class:`starlette.types.ASGIApp` object.
+
+
+        Returns
+        -------
+        :
+            The URL path for the route.
+        """
 
     @abstractmethod
     def set_message_handler(
@@ -247,42 +419,46 @@ class Session(ABC):
         ),
         *,
         _handler_session: Optional[Session] = None,
-    ) -> str: ...
+    ) -> str:
+        """
+        Set a client message handler.
 
-    @abstractmethod
-    async def _send_message(self, message: dict[str, object]) -> None: ...
+        Sets a method that can be called by the client via
+        `Shiny.shinyapp.makeRequest()`. `Shiny.shinyapp.makeRequest()` makes a request
+        to the server and waits for a response. By using `makeRequest()` (JS) and
+        `set_message_handler()` (python), you can have a much richer communication
+        interaction than just using Input values and re-rendering outputs.
 
-    @abstractmethod
-    def _send_message_sync(self, message: dict[str, object]) -> None: ...
+        For example, `@render.data_frame` can have many cells edited. While it is
+        possible to set many input values, if `makeRequest()` did not exist, the data
+        frame would be updated on the first cell update. This would cause the data frame
+        to be re-rendered, cancelling any pending cell updates. `makeRequest()` allows
+        for individual cell updates to be sent to the server, processed, and handled by
+        the existing data frame output.
 
-    @abstractmethod
-    def on_flush(
-        self,
-        fn: Callable[[], None] | Callable[[], Awaitable[None]],
-        once: bool = True,
-    ) -> Callable[[], None]: ...
+        When the message handler is executed, it will be executed within an isolated
+        reactive context and the session context that set the message handler.
 
-    @abstractmethod
-    def on_flushed(
-        self,
-        fn: Callable[[], None] | Callable[[], Awaitable[None]],
-        once: bool = True,
-    ) -> Callable[[], None]: ...
+        Parameters
+        ----------
+        name
+            The name of the message handler.
+        handler
+            The handler function to be called when the client makes a message for the
+            given name.  The handler function should take any number of arguments that
+            are provided by the client and return a JSON-serializable object.
 
-    @abstractmethod
-    def dynamic_route(self, name: str, handler: DynamicRouteHandler) -> str: ...
+            If the value is `None`, then the handler at `name` will be removed.
+        _handler_session
+            For internal use. This is the session which will be used as the session
+            context when calling the handler.
 
-    @abstractmethod
-    async def _unhandled_error(self, e: Exception) -> None: ...
-
-    @abstractmethod
-    def download(
-        self,
-        id: Optional[str] = None,
-        filename: Optional[str | Callable[[], str]] = None,
-        media_type: None | str | Callable[[], str] = None,
-        encoding: str = "utf-8",
-    ) -> Callable[[DownloadHandler], None]: ...
+        Returns
+        -------
+        :
+            The key under which the handler is stored (or removed). This value will be
+            namespaced when used with a session proxy.
+        """
 
     # Makes isinstance(x, Session) also return True when x is a SessionProxy (i.e., a
     # module session)
@@ -384,11 +560,7 @@ class AppSession(Session):
     def is_real_session(self) -> Literal[True]:
         return True
 
-    @add_example()
     async def close(self, code: int = 1001) -> None:
-        """
-        Close the session.
-        """
         await self._conn.close(code, None)
         await self._run_session_end_tasks()
 
@@ -730,22 +902,6 @@ class AppSession(Session):
         return HTMLResponse("<h1>Not Found</h1>", 404)
 
     def send_input_message(self, id: str, message: dict[str, object]) -> None:
-        """
-        Send an input message to the session.
-
-        Sends a message to an input on the session's client web page; if the input is
-        present and bound on the page at the time the message is received, then the
-        input binding object's ``receiveMessage(el, message)`` method will be called.
-        This method should generally not be called directly from Shiny apps, but through
-        friendlier wrapper functions like ``ui.update_text()``.
-
-        Parameters
-        ----------
-        id
-            An id matching the id of an input to update.
-        message
-            The message to send.
-        """
         self._outbound_message_queues.add_input_message(id, message)
         self._request_flush()
 
@@ -768,25 +924,7 @@ class AppSession(Session):
         msg: dict[str, object] = {"progress": {"type": type, "message": message}}
         self._send_message_sync(msg)
 
-    @add_example()
     async def send_custom_message(self, type: str, message: dict[str, object]) -> None:
-        """
-        Send a message to the client.
-
-        Parameters
-        ----------
-        type
-            The type of message to send.
-        message
-            The message to send.
-
-        Note
-        ----
-        Sends messages to the client which can be handled in JavaScript with
-        ``Shiny.addCustomMessageHandler(type, function(message){...})``. Once the
-        message handler is added, it will be invoked each time ``send_custom_message()``
-        is called on the server.
-        """
         await self._send_message({"custom": {type: message}})
 
     async def _send_message(self, message: dict[str, object]) -> None:
@@ -801,12 +939,6 @@ class AppSession(Session):
         await self._conn.send(json.dumps(message))
 
     def _send_message_sync(self, message: dict[str, object]) -> None:
-        """
-        Same as _send_message, except that if the message isn't too large and the socket
-        isn't too backed up, then the message may be sent synchronously instead of
-        having to wait until the current task yields (and potentially much longer than
-        that, if there is a lot of contention for the main thread).
-        """
         _utils.run_coro_hybrid(self._send_message(message))
 
     def _print_error_message(self, message: str | Exception) -> None:
@@ -826,50 +958,18 @@ class AppSession(Session):
     # ==========================================================================
     # Flush
     # ==========================================================================
-    @add_example()
     def on_flush(
         self,
         fn: Callable[[], None] | Callable[[], Awaitable[None]],
         once: bool = True,
     ) -> Callable[[], None]:
-        """
-        Register a function to call before the next reactive flush.
-
-        Parameters
-        ----------
-        fn
-            The function to call.
-        once
-            Whether to call the function only once or on every flush.
-
-        Returns
-        -------
-        :
-            A function that can be used to cancel the registration.
-        """
         return self._flush_callbacks.register(wrap_async(fn), once)
 
-    @add_example()
     def on_flushed(
         self,
         fn: Callable[[], None] | Callable[[], Awaitable[None]],
         once: bool = True,
     ) -> Callable[[], None]:
-        """
-        Register a function to call after the next reactive flush.
-
-        Parameters
-        ----------
-        fn
-            The function to call.
-        once
-            Whether to call the function only once or on every flush.
-
-        Returns
-        -------
-        :
-            A function that can be used to cancel the registration.
-        """
         return self._flushed_callbacks.register(wrap_async(fn), once)
 
     def _request_flush(self) -> None:
@@ -899,24 +999,10 @@ class AppSession(Session):
     # ==========================================================================
     # On session ended
     # ==========================================================================
-    @add_example()
     def on_ended(
         self,
         fn: Callable[[], None] | Callable[[], Awaitable[None]],
     ) -> Callable[[], None]:
-        """
-        Registers a function to be called after the client has disconnected.
-
-        Parameters
-        ----------
-        fn
-            The function to call.
-
-        Returns
-        -------
-        :
-            A function that can be used to cancel the registration.
-        """
         return self._on_ended_callbacks.register(wrap_async(fn))
 
     # ==========================================================================
@@ -926,7 +1012,6 @@ class AppSession(Session):
         print("Unhandled error: " + str(e), file=sys.stderr)
         await self.close()
 
-    @add_example()
     def download(
         self,
         id: Optional[str] = None,
@@ -934,26 +1019,6 @@ class AppSession(Session):
         media_type: None | str | Callable[[], str] = None,
         encoding: str = "utf-8",
     ) -> Callable[[DownloadHandler], None]:
-        """
-        Deprecated. Please use :class:`~shiny.render.download` instead.
-
-        Parameters
-        ----------
-        id
-            The name of the download.
-        filename
-            The filename of the download.
-        media_type
-            The media type of the download.
-        encoding
-            The encoding of the download.
-
-        Returns
-        -------
-        :
-            The decorated function.
-        """
-
         warn_deprecated(
             "session.download() is deprecated. Please use render.download() instead."
         )
@@ -977,30 +1042,7 @@ class AppSession(Session):
 
         return wrapper
 
-    @add_example()
     def dynamic_route(self, name: str, handler: DynamicRouteHandler) -> str:
-        """
-        Register a function to call when a dynamically generated, session-specific,
-        route is requested.
-
-        Provides a convenient way to serve-up session-dependent values for other
-        clients/applications to consume.
-
-        Parameters
-        ----------
-        name
-            A name for the route (used to determine part of the URL path).
-        handler
-            The function to call when a request is made to the route. This function
-            should take a single argument (a :class:`starlette.requests.Request` object)
-            and return a :class:`starlette.types.ASGIApp` object.
-
-
-        Returns
-        -------
-        :
-            The URL path for the route.
-        """
 
         self._dynamic_routes.update({name: handler})
         nonce = _utils.rand_hex(8)
@@ -1015,45 +1057,6 @@ class AppSession(Session):
         *,
         _handler_session: Optional[Session] = None,
     ) -> str:
-        """
-        Set a client message handler.
-
-        Sets a method that can be called by the client via
-        `Shiny.shinyapp.makeRequest()`. `Shiny.shinyapp.makeRequest()` makes a request
-        to the server and waits for a response. By using `makeRequest()` (JS) and
-        `set_message_handler()` (python), you can have a much richer communication
-        interaction than just using Input values and re-rendering outputs.
-
-        For example, `@render.data_frame` can have many cells edited. While it is
-        possible to set many input values, if `makeRequest()` did not exist, the data
-        frame would be updated on the first cell update. This would cause the data frame
-        to be re-rendered, cancelling any pending cell updates. `makeRequest()` allows
-        for individual cell updates to be sent to the server, processed, and handled by
-        the existing data frame output.
-
-        When the message handler is executed, it will be executed within an isolated
-        reactive context and the session context that set the message handler.
-
-        Parameters
-        ----------
-        name
-            The name of the message handler.
-        handler
-            The handler function to be called when the client makes a message for the
-            given name.  The handler function should take any number of arguments that
-            are provided by the client and return a JSON-serializable object.
-
-            If the value is `None`, then the handler at `name` will be removed.
-        _handler_session
-            For internal use. This is the session which will be used as the session
-            context when calling the handler.
-
-        Returns
-        -------
-        :
-            The key under which the handler is stored (or removed). This value will be
-            namespaced when used with a session proxy.
-        """
         # Verify that the name is a string
         assert isinstance(name, str)
 
@@ -1140,6 +1143,9 @@ class SessionProxy(Session):
 
     def is_real_session(self) -> bool:
         return self._parent.is_real_session()
+
+    async def close(self, code: int = 1001) -> None:
+        await self._parent.close(code)
 
     def make_scope(self, id: str) -> Session:
         return self._parent.make_scope(self.ns(id))

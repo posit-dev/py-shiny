@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import textwrap
 from typing import TYPE_CHECKING, Awaitable, Callable, Literal, Optional
 
 from htmltools import TagChild
@@ -10,7 +9,6 @@ from ..session import Inputs, Outputs, Session
 from ..session._session import SessionProxy
 
 if TYPE_CHECKING:
-    from .._typing_extensions import Never
     from ..session._session import DownloadHandler, DynamicRouteHandler, RenderedDeps
     from ..types import Jsonifiable
     from ._run import AppOpts
@@ -47,6 +45,9 @@ class ExpressMockSession(Session):
 
     def is_real_session(self) -> Literal[False]:
         return False
+
+    async def close(self, code: int = 1001) -> None:
+        return
 
     # This is needed so that Outputs don't throw an error.
     def _is_hidden(self, name: str) -> bool:
