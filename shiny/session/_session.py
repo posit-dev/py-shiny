@@ -1039,8 +1039,8 @@ class AppSession(Session):
         for individual cell updates to be sent to the server, processed, and handled by
         the existing data frame output.
 
-        When the message handler is executed, it will be executed within an isolated reactive
-        context and the session context that set the message handler.
+        When the message handler is executed, it will be executed within an isolated
+        reactive context and the session context that set the message handler.
 
         Parameters
         ----------
@@ -1052,6 +1052,9 @@ class AppSession(Session):
             are provided by the client and return a JSON-serializable object.
 
             If the value is `None`, then the handler at `name` will be removed.
+        _handler_session
+            For internal use. This is the session which will be used as the session
+            context when calling the handler.
 
         Returns
         -------
