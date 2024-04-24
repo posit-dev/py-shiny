@@ -355,7 +355,6 @@ class Session(ABC):
     @abstractmethod
     async def _unhandled_error(self, e: Exception) -> None: ...
 
-    @add_example()
     @abstractmethod
     def download(
         self,
