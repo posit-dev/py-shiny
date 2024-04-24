@@ -544,7 +544,7 @@ def page_bootstrap(
     head = tags.title(title) if title else None
     return tags.html(
         tags.head(head),
-        tags.body(*bootstrap_theme_deps(theme), *args, **kwargs),
+        tags.body(bootstrap_theme_deps(theme), *args, **kwargs),
         lang=lang,
     )
 
