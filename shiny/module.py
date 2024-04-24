@@ -15,7 +15,7 @@ from ._namespaces import (
 from ._typing_extensions import Concatenate, ParamSpec
 
 if TYPE_CHECKING:
-    from .session import Inputs, Outputs, SessionABC
+    from .session import Inputs, Outputs, Session
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -32,7 +32,7 @@ def ui(fn: Callable[P, R]) -> Callable[Concatenate[str, P], R]:
 
 @no_example()
 def server(
-    fn: Callable[Concatenate[Inputs, Outputs, SessionABC, P], R]
+    fn: Callable[Concatenate[Inputs, Outputs, Session, P], R]
 ) -> Callable[Concatenate[str, P], R]:
     from .session import require_active_session, session_context
 

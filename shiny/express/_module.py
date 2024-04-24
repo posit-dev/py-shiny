@@ -3,7 +3,7 @@ from typing import Callable, TypeVar
 
 from .._typing_extensions import Concatenate, ParamSpec
 from ..module import Id
-from ..session._session import Inputs, Outputs, SessionABC
+from ..session._session import Inputs, Outputs, Session
 from ..session._utils import require_active_session, session_context
 from .expressify_decorator import expressify
 
@@ -15,7 +15,7 @@ __all__ = ("module",)
 
 
 def module(
-    fn: Callable[Concatenate[Inputs, Outputs, SessionABC, P], R]
+    fn: Callable[Concatenate[Inputs, Outputs, Session, P], R]
 ) -> Callable[Concatenate[Id, P], R]:
     fn = expressify(fn)
 

@@ -41,7 +41,7 @@ from ._input_slider import SliderStepArg, SliderValueArg, _as_numeric, _slider_t
 from ._utils import JSEval, _session_on_flush_send_msg, extract_js_keys
 
 if TYPE_CHECKING:
-    from ..session import SessionABC
+    from ..session import Session
 
 
 _note = """
@@ -73,7 +73,7 @@ def update_action_button(
     *,
     label: Optional[str] = None,
     icon: TagChild = None,
-    session: Optional[SessionABC] = None,
+    session: Optional[Session] = None,
 ) -> None:
     """
     Change the label and/or icon of an action button on the client.
@@ -118,7 +118,7 @@ def update_task_button(
     id: str,
     *,
     state: Optional[str] = None,
-    session: Optional[SessionABC] = None,
+    session: Optional[Session] = None,
 ) -> None:
     """
     Change the state of a task button on the client.
@@ -159,7 +159,7 @@ manual_task_reset_buttons: set[ResolvedId] = set()
 
 @input_handlers.add("bslib.taskbutton")
 def _(
-    value: dict[str, object], name: ResolvedId, session: SessionABC
+    value: dict[str, object], name: ResolvedId, session: Session
 ) -> ActionButtonValue:
     if value["autoReset"]:
 
@@ -184,7 +184,7 @@ def update_checkbox(
     *,
     label: Optional[str] = None,
     value: Optional[bool] = None,
-    session: Optional[SessionABC] = None,
+    session: Optional[Session] = None,
 ) -> None:
     """
     Change the value of a checkbox input on the client.
@@ -222,7 +222,7 @@ def update_switch(
     *,
     label: Optional[str] = None,
     value: Optional[bool] = None,
-    session: Optional[SessionABC] = None,
+    session: Optional[Session] = None,
 ) -> None:
     """
     Change the value of a switch input on the client.
@@ -262,7 +262,7 @@ def update_checkbox_group(
     choices: Optional[ChoicesArg] = None,
     selected: Optional[str | list[str] | tuple[str, ...]] = None,
     inline: bool = False,
-    session: Optional[SessionABC] = None,
+    session: Optional[Session] = None,
 ) -> None:
     """
     Change the value of a checkbox group input on the client.
@@ -314,7 +314,7 @@ def update_radio_buttons(
     choices: Optional[ChoicesArg] = None,
     selected: Optional[str] = None,
     inline: bool = False,
-    session: Optional[SessionABC] = None,
+    session: Optional[Session] = None,
 ) -> None:
     """
     Change the value of a radio input on the client.
@@ -365,7 +365,7 @@ def _update_choice_input(
     choices: Optional[ChoicesArg] = None,
     selected: Optional[str | list[str] | tuple[str, ...]] = None,
     inline: bool = False,
-    session: Optional[SessionABC] = None,
+    session: Optional[Session] = None,
 ) -> None:
     session = require_active_session(session)
     options = None
@@ -398,7 +398,7 @@ def update_date(
     value: Optional[date | str] = None,
     min: Optional[date | str] = None,
     max: Optional[date | str] = None,
-    session: Optional[SessionABC] = None,
+    session: Optional[Session] = None,
 ) -> None:
     """
     Change the value of a date input on the client.
@@ -449,7 +449,7 @@ def update_date_range(
     end: Optional[date | str] = None,
     min: Optional[date | str] = None,
     max: Optional[date | str] = None,
-    session: Optional[SessionABC] = None,
+    session: Optional[Session] = None,
 ) -> None:
     """
     Change the start and end values of a date range input on the client.
@@ -509,7 +509,7 @@ def update_numeric(
     min: Optional[float] = None,
     max: Optional[float] = None,
     step: Optional[float] = None,
-    session: Optional[SessionABC] = None,
+    session: Optional[Session] = None,
 ) -> None:
     """
     Change the value of a number input on the client.
@@ -562,7 +562,7 @@ def update_select(
     label: Optional[str] = None,
     choices: Optional[SelectChoicesArg] = None,
     selected: Optional[str | list[str]] = None,
-    session: Optional[SessionABC] = None,
+    session: Optional[Session] = None,
 ) -> None:
     """
     Change the value of a select input on the client.
@@ -633,7 +633,7 @@ def update_selectize(
     selected: Optional[str | list[str]] = None,
     options: Optional[dict[str, str | float | JSEval]] = None,
     server: bool = False,
-    session: Optional[SessionABC] = None,
+    session: Optional[Session] = None,
 ) -> None:
     """
     Change the value of a selectize.js powered input on the client.
@@ -814,7 +814,7 @@ def update_slider(
     step: Optional[SliderStepArg] = None,
     time_format: Optional[str] = None,
     timezone: Optional[str] = None,
-    session: Optional[SessionABC] = None,
+    session: Optional[Session] = None,
 ) -> None:
     """
     Change the value of a slider input on the client.
@@ -904,7 +904,7 @@ def update_text(
     label: Optional[str] = None,
     value: Optional[str] = None,
     placeholder: Optional[str] = None,
-    session: Optional[SessionABC] = None,
+    session: Optional[Session] = None,
 ) -> None:
     """
     Change the value of a text input on the client.
@@ -950,7 +950,7 @@ update_text_area.__doc__ = update_text.__doc__
 @add_example()
 @doc_format(note=_note)
 def update_navs(
-    id: str, selected: Optional[str] = None, session: Optional[SessionABC] = None
+    id: str, selected: Optional[str] = None, session: Optional[Session] = None
 ) -> None:
     """
     Change the value of a navs container on the client.
@@ -989,7 +989,7 @@ def update_tooltip(
     id: str,
     *args: TagChild,
     show: Optional[bool] = None,
-    session: Optional[SessionABC] = None,
+    session: Optional[Session] = None,
 ) -> None:
     """
     Update tooltip contents.
@@ -1042,7 +1042,7 @@ def update_popover(
     *args: TagChild,
     title: Optional[TagChild] = None,
     show: Optional[bool] = None,
-    session: Optional[SessionABC] = None,
+    session: Optional[Session] = None,
 ) -> None:
     """
     Update the contents or title of a popover.

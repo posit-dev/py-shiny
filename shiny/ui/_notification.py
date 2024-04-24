@@ -11,7 +11,7 @@ from .._utils import rand_hex
 from ..session import require_active_session
 
 if TYPE_CHECKING:
-    from ..session import SessionABC
+    from ..session import Session
 
 
 @add_example()
@@ -23,7 +23,7 @@ def notification_show(
     close_button: bool = True,
     id: Optional[str] = None,
     type: Literal["default", "message", "warning", "error"] = "default",
-    session: Optional[SessionABC] = None,
+    session: Optional[Session] = None,
 ) -> str:
     """
     Show a notification to the user.
@@ -94,7 +94,7 @@ def notification_show(
 
 
 @no_example()
-def notification_remove(id: str, *, session: Optional[SessionABC] = None) -> str:
+def notification_remove(id: str, *, session: Optional[Session] = None) -> str:
     """
     Remove a notification.
 

@@ -32,7 +32,7 @@ from ._unsafe import is_shiny_html, serialize_numpy_dtypes
 if TYPE_CHECKING:
     import pandas as pd
 
-    from ...session import SessionABC
+    from ...session import Session
 
     DataFrameT = TypeVar("DataFrameT", bound=pd.DataFrame)
     # TODO-future; Pandas, Polars, api compat, etc.; Today, we only support Pandas
@@ -398,12 +398,12 @@ class CellHtml(TypedDict):
 
 @overload
 def wrap_shiny_html(  # pyright: ignore[reportOverlappingOverload]
-    x: TagNode, *, session: SessionABC
+    x: TagNode, *, session: Session
 ) -> CellHtml: ...
 @overload
-def wrap_shiny_html(x: Jsonifiable, *, session: SessionABC) -> Jsonifiable: ...
+def wrap_shiny_html(x: Jsonifiable, *, session: Session) -> Jsonifiable: ...
 def wrap_shiny_html(
-    x: Jsonifiable | TagNode, *, session: SessionABC
+    x: Jsonifiable | TagNode, *, session: Session
 ) -> Jsonifiable | CellHtml:
     if is_shiny_html(x):
         return {"isShinyHtml": True, "obj": session._process_ui(x)}

@@ -11,7 +11,7 @@ from .._app import App
 from .._docstring import no_example
 from .._typing_extensions import NotRequired, TypedDict
 from .._utils import import_module_from_path
-from ..session import Inputs, Outputs, SessionABC, get_current_session, session_context
+from ..session import Inputs, Outputs, Session, get_current_session, session_context
 from ..types import MISSING, MISSING_TYPE
 from ._is_express import find_magic_comment_mode
 from ._mock_session import ExpressMockSession
@@ -50,7 +50,7 @@ def wrap_express_app(file: Path) -> App:
                 import_module_from_path("globals", globals_file)
 
         mock_session = ExpressMockSession()
-        with session_context(cast(SessionABC, mock_session)):
+        with session_context(cast(Session, mock_session)):
             # We tagify here, instead of waiting for the App object to do it when it wraps
             # the UI in a HTMLDocument and calls render() on it. This is because
             # AttributeErrors can be thrown during the tagification process, and we need to
@@ -62,7 +62,7 @@ def wrap_express_app(file: Path) -> App:
     except AttributeError as e:
         raise RuntimeError(e) from e
 
-    def express_server(input: Inputs, output: Outputs, session: SessionABC):
+    def express_server(input: Inputs, output: Outputs, session: Session):
         try:
             run_express(file)
 

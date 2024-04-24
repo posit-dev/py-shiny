@@ -8,12 +8,12 @@ from datetime import date, datetime, timezone
 from typing import TYPE_CHECKING, Any, Callable, Dict
 
 if TYPE_CHECKING:
-    from .session import SessionABC
+    from .session import Session
 
 from .module import ResolvedId
 from .types import ActionButtonValue
 
-InputHandlerType = Callable[[Any, ResolvedId, "SessionABC"], Any]
+InputHandlerType = Callable[[Any, ResolvedId, "Session"], Any]
 
 
 class _InputHandlers(Dict[str, InputHandlerType]):
@@ -33,7 +33,7 @@ class _InputHandlers(Dict[str, InputHandlerType]):
         del self[type]
 
     def _process_value(
-        self, type: str, value: Any, name: ResolvedId, session: SessionABC
+        self, type: str, value: Any, name: ResolvedId, session: Session
     ) -> Any:
         handler = self.get(type)
         if handler is None:
@@ -98,7 +98,7 @@ getType: function(el) {
 
 @input_handlers.add("shiny.date")
 def _(
-    value: str | list[str], name: ResolvedId, session: SessionABC
+    value: str | list[str], name: ResolvedId, session: Session
 ) -> date | None | tuple[date | None, date | None]:
 
     if isinstance(value, str):
@@ -123,7 +123,7 @@ def _safe_strptime_date(value: str | None) -> date | None:
 def _(
     value: int | float | list[int] | list[float],
     name: ResolvedId,
-    session: SessionABC,
+    session: Session,
 ) -> datetime | tuple[datetime, datetime]:
     def as_utc_date(x: int | float) -> datetime:
         dt = datetime.fromtimestamp(x, timezone.utc)
@@ -138,7 +138,7 @@ def _(
 
 
 @input_handlers.add("shiny.action")
-def _(value: int, name: ResolvedId, session: SessionABC) -> ActionButtonValue:
+def _(value: int, name: ResolvedId, session: Session) -> ActionButtonValue:
     # TODO: ActionButtonValue() class can probably be removed
     return ActionButtonValue(value)
 
@@ -148,17 +148,17 @@ def _(value: int, name: ResolvedId, session: SessionABC) -> ActionButtonValue:
 
 
 @input_handlers.add("shiny.number")
-def _(value: str, name: ResolvedId, session: SessionABC) -> str:
+def _(value: str, name: ResolvedId, session: Session) -> str:
     return value
 
 
 # TODO: implement when we have bookmarking
 @input_handlers.add("shiny.password")
-def _(value: str, name: ResolvedId, session: SessionABC) -> str:
+def _(value: str, name: ResolvedId, session: Session) -> str:
     return value
 
 
 # TODO: implement when we have bookmarking
 @input_handlers.add("shiny.file")
-def _(value: Any, name: ResolvedId, session: SessionABC) -> Any:
+def _(value: Any, name: ResolvedId, session: Session) -> Any:
     return value

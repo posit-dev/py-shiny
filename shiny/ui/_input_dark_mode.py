@@ -8,7 +8,7 @@ from htmltools import Tag, TagAttrValue, css
 
 from .._docstring import add_example, no_example
 from .._namespaces import resolve_id
-from ..session import SessionABC, require_active_session
+from ..session import Session, require_active_session
 from ._web_component import web_component
 
 BootstrapColorMode = Literal["light", "dark"]
@@ -80,7 +80,7 @@ def validate_dark_mode_option(mode: BootstrapColorMode) -> BootstrapColorMode:
 
 @no_example()
 def update_dark_mode(
-    mode: BootstrapColorMode, *, session: Optional[SessionABC] = None
+    mode: BootstrapColorMode, *, session: Optional[Session] = None
 ) -> None:
     session = require_active_session(session)
 

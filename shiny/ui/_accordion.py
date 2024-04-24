@@ -14,7 +14,7 @@ from ._tag import consolidate_attrs
 from .css._css_unit import CssUnit, as_css_unit
 
 if TYPE_CHECKING:
-    from ..session import SessionABC
+    from ..session import Session
 
 __all__ = (
     "accordion",
@@ -365,7 +365,7 @@ def accordion_panel(
 # you might want to open a panel after inserting it.
 def _send_panel_message(
     id: str,
-    session: SessionABC | None,
+    session: Session | None,
     **kwargs: object,
 ) -> None:
     message = drop_none(kwargs)
@@ -378,7 +378,7 @@ def _accordion_panel_action(
     id: str,
     method: str,
     values: bool | str | list[str],
-    session: SessionABC | None,
+    session: Session | None,
 ) -> None:
     if not isinstance(values, bool):
         if not isinstance(values, list):
@@ -398,7 +398,7 @@ def update_accordion(
     id: str,
     *,
     show: bool | str | list[str],
-    session: Optional[SessionABC] = None,
+    session: Optional[Session] = None,
 ) -> None:
     """
     Dynamically set accordions' states.
@@ -443,7 +443,7 @@ def insert_accordion_panel(
     panel: AccordionPanel,
     target: Optional[str] = None,
     position: Literal["after", "before"] = "after",
-    session: Optional[SessionABC] = None,
+    session: Optional[Session] = None,
 ) -> None:
     """
     Insert an :func:`~shiny.ui.accordion_panel`.
@@ -496,7 +496,7 @@ def insert_accordion_panel(
 def remove_accordion_panel(
     id: str,
     target: str | list[str],
-    session: Optional[SessionABC] = None,
+    session: Optional[Session] = None,
 ) -> None:
     """
     Remove an :func:`~shiny.ui.accordion_panel`.
@@ -553,7 +553,7 @@ def update_accordion_panel(
     value: str | None | MISSING_TYPE = MISSING,
     icon: TagChild | None | MISSING_TYPE = MISSING,
     show: Optional[bool] = None,
-    session: Optional[SessionABC] = None,
+    session: Optional[Session] = None,
 ) -> None:
     """
     Dynamically update accordion panel contents.

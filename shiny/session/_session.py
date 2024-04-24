@@ -152,7 +152,7 @@ class OutBoundMessageQueues:
         self.input_messages.append({"id": id, "message": message})
 
 
-class SessionABC(ABC):
+class Session(ABC):
     """
     Interface definition for Session-like classes, like Session, SessionProxy, and
     ExpressMockSession.
@@ -179,7 +179,7 @@ class SessionABC(ABC):
     def make_scope(self, id: Id) -> SessionProxy: ...
 
     @abstractmethod
-    def root_scope(self) -> SessionABC: ...
+    def root_scope(self) -> Session: ...
 
     @abstractmethod
     def _process_ui(self, ui: TagChild) -> RenderedDeps: ...
@@ -200,7 +200,7 @@ class SessionABC(ABC):
             Callable[..., Jsonifiable] | Callable[..., Awaitable[Jsonifiable]] | None
         ),
         *,
-        _handler_session: Optional[SessionABC] = None,
+        _handler_session: Optional[Session] = None,
     ) -> str: ...
 
     @abstractmethod
@@ -235,7 +235,7 @@ class SessionABC(ABC):
         return isinstance(__instance, SessionProxy)
 
 
-class Session(SessionABC):
+class AppSession(Session):
     """
     A class representing a user session.
     """
@@ -263,7 +263,7 @@ class Session(SessionABC):
         self._debug: bool = debug
         self._message_handlers: dict[
             str,
-            tuple[Callable[..., Awaitable[Jsonifiable]], SessionABC],
+            tuple[Callable[..., Awaitable[Jsonifiable]], Session],
         ] = {}
         """
         Dictionary of message handlers for the session.
@@ -987,7 +987,7 @@ class Session(SessionABC):
             Callable[..., Jsonifiable] | Callable[..., Awaitable[Jsonifiable]] | None
         ),
         *,
-        _handler_session: Optional[SessionABC] = None,
+        _handler_session: Optional[Session] = None,
     ) -> str:
         """
         Set a client message handler.
@@ -1053,7 +1053,7 @@ class Session(SessionABC):
         ns = self.ns(id)
         return SessionProxy(parent=self, ns=ns)
 
-    def root_scope(self) -> Session:
+    def root_scope(self) -> AppSession:
         return self
 
 
@@ -1080,17 +1080,17 @@ class UpdateProgressMessage(TypedDict):
     style: str
 
 
-class SessionProxy(SessionABC):
+class SessionProxy(Session):
     ns: ResolvedId
     input: Inputs
     output: Outputs
 
-    def __init__(self, parent: SessionABC, ns: ResolvedId) -> None:
+    def __init__(self, parent: Session, ns: ResolvedId) -> None:
         self._parent = parent
         self.ns = ns
         self.input = Inputs(values=parent.input._map, ns=ns)
         self.output = Outputs(
-            cast(Session, self),
+            self,
             ns=ns,
             outputs=self.output._outputs,
         )
@@ -1104,7 +1104,7 @@ class SessionProxy(SessionABC):
     def make_scope(self, id: str) -> SessionProxy:
         return self._parent.make_scope(self.ns(id))
 
-    def root_scope(self) -> SessionABC:
+    def root_scope(self) -> Session:
         res = self
         while isinstance(res, SessionProxy):
             res = res._parent
@@ -1123,7 +1123,7 @@ class SessionProxy(SessionABC):
             Callable[..., Jsonifiable] | Callable[..., Awaitable[Jsonifiable]] | None
         ),
         *,
-        _handler_session: Optional[SessionABC] = None,
+        _handler_session: Optional[Session] = None,
     ) -> str:
         # Verify that the name is a string
         assert isinstance(name, str)
@@ -1241,7 +1241,7 @@ class Outputs:
 
     def __init__(
         self,
-        session: SessionABC,
+        session: Session,
         ns: Callable[[str], ResolvedId],
         *,
         outputs: dict[str, OutputInfo],
@@ -1290,8 +1290,8 @@ class Outputs:
 
             self.remove(output_name)
 
-            def require_real_session() -> Session:
-                if not isinstance(self._session, Session):
+            def require_real_session() -> AppSession:
+                if not isinstance(self._session, AppSession):
                     raise RuntimeError(
                         "`output` must be used with a real session (as opposed to a mock session)."
                     )

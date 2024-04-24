@@ -53,7 +53,7 @@ from .renderer import Jsonifiable, Renderer, ValueFn
 if TYPE_CHECKING:
     import pandas as pd
 
-    from ..session import SessionABC
+    from ..session import Session
 
     DataFrameT = TypeVar("DataFrameT", bound=pd.DataFrame)
     # TODO-barret-render.data_frame; Pandas, Polars, api compat, etc.; Today, we only support Pandas
@@ -184,7 +184,7 @@ class data_frame(Renderer[DataFrameResult]):
       objects you can return from the rendering function to specify options.
     """
 
-    _session: SessionABC | None  # Do not use. Use `_get_session()` instead
+    _session: Session | None  # Do not use. Use `_get_session()` instead
     """
     Do not use! Call `._get_session()` instead!
 
@@ -526,7 +526,7 @@ class data_frame(Renderer[DataFrameResult]):
         self._data_view_all = self__data_view
         self._data_view_selected = self__data_view_selected
 
-    def _get_session(self) -> SessionABC:
+    def _get_session(self) -> Session:
         if self._session is None:
             raise RuntimeError(
                 "The data frame being used was not initialized within a reactive context / session. Please call `@render.data_frame` where `shiny.session.get_current_context()` returns a non-`None` value."

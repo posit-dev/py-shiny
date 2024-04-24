@@ -36,7 +36,7 @@ from ..renderer import Jsonifiable, Renderer
 from ..renderer._renderer import DefaultUIFn, DefaultUIFnResultOrNone
 
 if TYPE_CHECKING:
-    from ...session import SessionABC
+    from ...session import Session
 
 from ..._deprecated import warn_deprecated
 from ..._docstring import add_example
@@ -72,7 +72,7 @@ class TransformerMetadata(NamedTuple):
         The name of the output being rendered.
     """
 
-    session: SessionABC
+    session: Session
     name: str
 
 

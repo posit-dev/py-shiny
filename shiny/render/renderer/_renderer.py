@@ -20,7 +20,7 @@ from ..._utils import is_async_callable, wrap_async
 from ...types import Jsonifiable
 
 if TYPE_CHECKING:
-    from ...session import SessionABC
+    from ...session import Session
 
 # TODO-barret-docs: Double check docs are rendererd
 # Missing first paragraph from some classes: Example: TransformerMetadata.
@@ -141,7 +141,7 @@ class Renderer(Generic[IT]):
     # self._session before calling super().__init__(). If we were to set
     # self._session=None in the __init__ method here, it would overwrite the value from
     # the subclass. We avoid that by setting it here.
-    _session: SessionABC | None = None
+    _session: Session | None = None
 
     def __call__(self, _fn: ValueFn[IT]) -> Self:
         """

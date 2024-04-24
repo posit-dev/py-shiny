@@ -13,7 +13,7 @@ from htmltools import (
 )
 
 from .._typing_extensions import TypeGuard
-from ..session import SessionABC, require_active_session
+from ..session import Session, require_active_session
 from ..types import MISSING, MISSING_TYPE
 
 
@@ -68,7 +68,7 @@ def _find_child_strings(x: TagList | TagNode) -> str:
 
 
 def _session_on_flush_send_msg(
-    id: str, session: SessionABC | None, msg: dict[str, object]
+    id: str, session: Session | None, msg: dict[str, object]
 ) -> None:
     session = require_active_session(session)
     session.on_flush(lambda: session.send_input_message(id, msg), once=True)

@@ -16,7 +16,7 @@ from ..session import require_active_session
 from ..types import MISSING, MISSING_TYPE
 
 if TYPE_CHECKING:
-    from ..session import SessionABC
+    from ..session import Session
 
 
 @add_example(ex_dir="../api-examples/modal")
@@ -159,7 +159,7 @@ def modal(
 
 
 @add_example(ex_dir="../api-examples/modal")
-def modal_show(modal: Tag, session: Optional[SessionABC] = None) -> None:
+def modal_show(modal: Tag, session: Optional[Session] = None) -> None:
     """
     Show a modal dialog.
 
@@ -185,7 +185,7 @@ def modal_show(modal: Tag, session: Optional[SessionABC] = None) -> None:
 
 
 @add_example(ex_dir="../api-examples/modal")
-def modal_remove(session: Optional[SessionABC] = None) -> None:
+def modal_remove(session: Optional[Session] = None) -> None:
     """
     Remove a modal dialog box.
 
