@@ -151,8 +151,8 @@ Input types for selection modes in a DataGrid or DataTable.
 # Should only contain a single selection area
 
 # # Do not include `CellSelectionAll` as it should be represented by a row, column, or region with appropriate values.
-# class CellSelectionAll(TypedDict):
-#     type: Literal["all"]
+# # class CellSelectionAll(TypedDict):
+# #    type: Literal["all"]
 
 
 class CellSelectionNone(TypedDict):

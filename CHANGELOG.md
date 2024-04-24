@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added support for creating modules using Shiny Express syntax, and using modules in Shiny Express apps. (#1220)
 
+* `ui.page_*()` functions gain a `theme` argument that allows you to replace the Bootstrap CSS file with a new CSS file. `theme` can be a local CSS file, a URL, or a [shinyswatch](https://posit-dev.github.io/py-shinyswatch) theme. In Shiny Express apps, `theme` can be set via `express.ui.page_opts()`. (#1334)
+
 ### Bug fixes
 
 ### Other changes
