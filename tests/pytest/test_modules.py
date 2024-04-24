@@ -12,7 +12,7 @@ from shiny import App, Inputs, Outputs, Session, module, reactive, ui
 from shiny._connection import MockConnection
 from shiny._namespaces import resolve_id
 from shiny.session import get_current_session
-from shiny.session._session import AppSession
+from shiny.session._session import AppSession, SessionProxy
 
 
 @module.ui
@@ -101,13 +101,15 @@ async def test_session_scoping():
 
     assert sessions["inner"] is sessions["inner_current"]
     assert sessions["inner_current"] is sessions["inner_calc_current"]
-    assert isinstance(sessions["inner_current"], AppSession)
+    assert isinstance(sessions["inner_current"], SessionProxy)
+    assert sessions["inner_current"].root_scope() is sessions["top"]
     assert sessions["inner_id"] == "mod_outer-mod_inner-foo"
     assert sessions["inner_ui_id"] == "mod_outer-mod_inner-outer-inner-button"
 
     assert sessions["outer"] is sessions["outer_current"]
     assert sessions["outer_current"] is sessions["outer_calc_current"]
-    assert isinstance(sessions["outer_current"], AppSession)
+    assert isinstance(sessions["outer_current"], SessionProxy)
+    assert sessions["outer_current"].root_scope() is sessions["top"]
     assert sessions["outer_id"] == "mod_outer-foo"
     assert sessions["outer_ui_id"] == "mod_outer-outer-inner-button"
 
