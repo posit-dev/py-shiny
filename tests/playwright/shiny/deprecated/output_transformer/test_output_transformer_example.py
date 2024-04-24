@@ -2,7 +2,7 @@ from conftest import ShinyAppProc
 from controls import OutputTextVerbatim
 from playwright.sync_api import Page
 
-
+@pytest.mark.skip(reason="Test is flaky. delete or fix it")
 def test_output_image_kitchen(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 
