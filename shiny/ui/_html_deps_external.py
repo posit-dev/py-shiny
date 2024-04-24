@@ -25,8 +25,9 @@ ThemeProvider = Tagifiable | HTMLDependency | list[HTMLDependency]
 def bootstrap_theme_deps(theme: str | Path | ThemeProvider | None) -> TagList:
     deps_bootstrap = bootstrap_deps(include_css=theme is None)
 
-    deps_theme = None
-    if isinstance(theme, str) and theme.startswith("http"):
+    if theme is None:
+        deps_theme = None
+    elif isinstance(theme, str) and theme.startswith("http"):
         deps_theme = head_content(link(rel="stylesheet", href=theme, type="text/css"))
     elif isinstance(theme, (str, Path)):
         check_path(theme)
@@ -39,8 +40,10 @@ def bootstrap_theme_deps(theme: str | Path | ThemeProvider | None) -> TagList:
         deps_theme = theme
     else:
         raise ValueError(
-            "Invalid `theme`. Expected a URL or path to a full Bootstrap CSS file, "
-            + "or a Tagifiable object."
+            "Invalid `theme`. "
+            + "Expected a URL or path to a full Bootstrap CSS file, "
+            + "or a theme provider, "
+            + f"but received `theme` with type {type(theme)}."
         )
 
     return TagList(deps_bootstrap, deps_theme)
