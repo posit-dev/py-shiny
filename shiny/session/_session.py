@@ -158,10 +158,15 @@ class Session(ABC):
     ExpressMockSession.
     """
 
+    app: App
     ns: ResolvedId
-    # id: str
+    id: str
     input: Inputs
     output: Outputs
+
+    # TODO: not sure these should be directly exposed
+    _outbound_message_queues: OutBoundMessageQueues
+    _downloads: dict[str, DownloadInfo]
 
     @abstractmethod
     def is_real_session(self) -> bool: ...
@@ -188,6 +193,45 @@ class Session(ABC):
     def send_input_message(self, id: str, message: dict[str, object]) -> None: ...
 
     @abstractmethod
+    def _send_insert_ui(
+        self, selector: str, multiple: bool, where: str, content: RenderedDeps
+    ) -> None: ...
+
+    @abstractmethod
+    def _send_remove_ui(self, selector: str, multiple: bool) -> None: ...
+
+    @overload
+    @abstractmethod
+    def _send_progress(
+        self, type: Literal["binding"], message: BindingProgressMessage
+    ) -> None:
+        pass
+
+    @overload
+    @abstractmethod
+    def _send_progress(
+        self, type: Literal["open"], message: OpenProgressMessage
+    ) -> None:
+        pass
+
+    @overload
+    @abstractmethod
+    def _send_progress(
+        self, type: Literal["close"], message: CloseProgressMessage
+    ) -> None:
+        pass
+
+    @overload
+    @abstractmethod
+    def _send_progress(
+        self, type: Literal["update"], message: UpdateProgressMessage
+    ) -> None:
+        pass
+
+    @abstractmethod
+    def _send_progress(self, type: str, message: object) -> None: ...
+
+    @abstractmethod
     async def send_custom_message(
         self, type: str, message: dict[str, object]
     ) -> None: ...
@@ -202,6 +246,12 @@ class Session(ABC):
         *,
         _handler_session: Optional[Session] = None,
     ) -> str: ...
+
+    @abstractmethod
+    async def _send_message(self, message: dict[str, object]) -> None: ...
+
+    @abstractmethod
+    def _send_message_sync(self, message: dict[str, object]) -> None: ...
 
     @abstractmethod
     def on_flush(
@@ -221,6 +271,9 @@ class Session(ABC):
     def dynamic_route(self, name: str, handler: DynamicRouteHandler) -> str: ...
 
     @abstractmethod
+    async def _unhandled_error(self, e: Exception) -> None: ...
+
+    @abstractmethod
     def download(
         self,
         id: Optional[str] = None,
@@ -233,6 +286,11 @@ class Session(ABC):
     # module session)
     def __instancecheck__(self, __instance: Any) -> bool:
         return isinstance(__instance, SessionProxy)
+
+
+# ======================================================================================
+# AppSession
+# ======================================================================================
 
 
 class AppSession(Session):
@@ -714,30 +772,6 @@ class AppSession(Session):
         msg = {"selector": selector, "multiple": multiple}
         self._send_message_sync({"shiny-remove-ui": msg})
 
-    @overload
-    def _send_progress(
-        self, type: Literal["binding"], message: BindingProgressMessage
-    ) -> None:
-        pass
-
-    @overload
-    def _send_progress(
-        self, type: Literal["open"], message: OpenProgressMessage
-    ) -> None:
-        pass
-
-    @overload
-    def _send_progress(
-        self, type: Literal["close"], message: CloseProgressMessage
-    ) -> None:
-        pass
-
-    @overload
-    def _send_progress(
-        self, type: Literal["update"], message: UpdateProgressMessage
-    ) -> None:
-        pass
-
     def _send_progress(self, type: str, message: object) -> None:
         msg: dict[str, object] = {"progress": {"type": type, "message": message}}
         self._send_message_sync(msg)
@@ -1080,6 +1114,11 @@ class UpdateProgressMessage(TypedDict):
     style: str
 
 
+# ======================================================================================
+# SessionProxy
+# ======================================================================================
+
+
 class SessionProxy(Session):
     ns: ResolvedId
     input: Inputs
@@ -1087,16 +1126,26 @@ class SessionProxy(Session):
 
     def __init__(self, parent: Session, ns: ResolvedId) -> None:
         self._parent = parent
+        self.app = parent.app
+        self.id = parent.id
         self.ns = ns
         self.input = Inputs(values=parent.input._map, ns=ns)
         self.output = Outputs(
             self,
             ns=ns,
-            outputs=self.output._outputs,
+            outputs=parent.output._outputs,
         )
+        self._outbound_message_queues = parent._outbound_message_queues
+        self._downloads = parent._downloads
 
-    def __getattr__(self, attr: str) -> Any:
-        return getattr(self._parent, attr)
+    def _is_hidden(self, name: str) -> bool:
+        return self._parent._is_hidden(name)
+
+    def on_ended(
+        self,
+        fn: Callable[[], None] | Callable[[], Awaitable[None]],
+    ) -> Callable[[], None]:
+        return self._parent.on_ended(fn)
 
     def is_real_session(self) -> bool:
         return self._parent.is_real_session()
@@ -1110,11 +1159,25 @@ class SessionProxy(Session):
             res = res._parent
         return res
 
-    def send_input_message(self, id: str, message: dict[str, object]) -> None:
-        return self._parent.send_input_message(self.ns(id), message)
+    def _process_ui(self, ui: TagChild) -> RenderedDeps:
+        return self._parent._process_ui(ui)
 
-    def dynamic_route(self, name: str, handler: DynamicRouteHandler) -> str:
-        return self._parent.dynamic_route(self.ns(name), handler)
+    def send_input_message(self, id: str, message: dict[str, object]) -> None:
+        self._parent.send_input_message(self.ns(id), message)
+
+    def _send_insert_ui(
+        self, selector: str, multiple: bool, where: str, content: RenderedDeps
+    ) -> None:
+        self._parent._send_insert_ui(selector, multiple, where, content)
+
+    def _send_remove_ui(self, selector: str, multiple: bool) -> None:
+        self._parent._send_remove_ui(selector, multiple)
+
+    def _send_progress(self, type: str, message: object) -> None:
+        self._parent._send_progress(type, message)  # pyright: ignore
+
+    async def send_custom_message(self, type: str, message: dict[str, object]) -> None:
+        await self._parent.send_custom_message(type, message)
 
     def set_message_handler(
         self,
@@ -1136,6 +1199,32 @@ class SessionProxy(Session):
             handler,
             _handler_session=_handler_session,
         )
+
+    def on_flush(
+        self,
+        fn: Callable[[], None] | Callable[[], Awaitable[None]],
+        once: bool = True,
+    ) -> Callable[[], None]:
+        return self._parent.on_flush(fn, once)
+
+    async def _send_message(self, message: dict[str, object]) -> None:
+        await self._parent._send_message(message)
+
+    def _send_message_sync(self, message: dict[str, object]) -> None:
+        self._parent._send_message_sync(message)
+
+    def on_flushed(
+        self,
+        fn: Callable[[], None] | Callable[[], Awaitable[None]],
+        once: bool = True,
+    ) -> Callable[[], None]:
+        return self._parent.on_flushed(fn, once)
+
+    def dynamic_route(self, name: str, handler: DynamicRouteHandler) -> str:
+        return self._parent.dynamic_route(self.ns(name), handler)
+
+    async def _unhandled_error(self, e: Exception) -> None:
+        await self._parent._unhandled_error(e)
 
     def download(
         self,
@@ -1290,8 +1379,8 @@ class Outputs:
 
             self.remove(output_name)
 
-            def require_real_session() -> AppSession:
-                if not isinstance(self._session, AppSession):
+            def require_real_session() -> Session:
+                if not self._session.is_real_session():
                     raise RuntimeError(
                         "`output` must be used with a real session (as opposed to a mock session)."
                     )
