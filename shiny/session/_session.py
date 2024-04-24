@@ -183,7 +183,7 @@ class Session(ABC):
     ) -> Callable[[], None]: ...
 
     @abstractmethod
-    def make_scope(self, id: Id) -> SessionProxy: ...
+    def make_scope(self, id: Id) -> Session: ...
 
     @abstractmethod
     def root_scope(self) -> Session: ...
@@ -1078,7 +1078,7 @@ class AppSession(Session):
 
         return {"deps": deps, "html": res["html"]}
 
-    def make_scope(self, id: Id) -> SessionProxy:
+    def make_scope(self, id: Id) -> Session:
         ns = self.ns(id)
         return SessionProxy(parent=self, ns=ns)
 
@@ -1141,7 +1141,7 @@ class SessionProxy(Session):
     def is_real_session(self) -> bool:
         return self._parent.is_real_session()
 
-    def make_scope(self, id: str) -> SessionProxy:
+    def make_scope(self, id: str) -> Session:
         return self._parent.make_scope(self.ns(id))
 
     def root_scope(self) -> Session:
