@@ -1,6 +1,9 @@
 # This file is used to create a minimal Bootstrap CSS file based on the Minty
 # Bootstwatch theme for use in the example apps.
 
+# NOTE: This script requires the `purgecss` package to be installed.
+#       You can install it with `npm install -g purgecss`.
+
 import shutil
 import subprocess
 from pathlib import Path
