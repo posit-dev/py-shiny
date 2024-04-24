@@ -22,7 +22,6 @@ from htmltools import (
     TagAttrs,
     TagAttrValue,
     TagChild,
-    Tagifiable,
     TagList,
     css,
     div,
@@ -34,7 +33,7 @@ from .._docstring import add_example, no_example
 from .._namespaces import resolve_id_or_none
 from ..types import MISSING, MISSING_TYPE, NavSetArg
 from ._bootstrap import panel_title
-from ._html_deps_external import bootstrap_theme_deps
+from ._html_deps_external import ThemeProvider, bootstrap_theme_deps
 from ._html_deps_py_shiny import page_output_dependency
 from ._html_deps_shinyverse import components_dependencies
 from ._navs import NavMenu, NavPanel, navset_bar
@@ -56,7 +55,7 @@ def page_sidebar(
     fillable_mobile: bool = False,
     window_title: str | MISSING_TYPE = MISSING,
     lang: Optional[str] = None,
-    theme: Optional[str | Path | Tagifiable] = None,
+    theme: Optional[str | Path | ThemeProvider] = None,
     **kwargs: TagAttrValue,
 ) -> Tag:
     """
@@ -166,7 +165,7 @@ def page_navbar(
     fluid: bool = True,
     window_title: str | MISSING_TYPE = MISSING,
     lang: Optional[str] = None,
-    theme: Optional[str | Path | Tagifiable] = None,
+    theme: Optional[str | Path | ThemeProvider] = None,
 ) -> Tag:
     """
     Create a page with a navbar and a title.
@@ -313,7 +312,7 @@ def page_fillable(
     fillable_mobile: bool = False,
     title: Optional[str] = None,
     lang: Optional[str] = None,
-    theme: Optional[str | Path | Tagifiable] = None,
+    theme: Optional[str | Path | ThemeProvider] = None,
     **kwargs: TagAttrValue,
 ) -> Tag:
     """
@@ -391,7 +390,7 @@ def page_fluid(
     *args: TagChild | TagAttrs,
     title: Optional[str] = None,
     lang: Optional[str] = None,
-    theme: Optional[str | Path | Tagifiable] = None,
+    theme: Optional[str | Path | ThemeProvider] = None,
     **kwargs: str,
 ) -> Tag:
     """
@@ -446,7 +445,7 @@ def page_fixed(
     *args: TagChild | TagAttrs,
     title: Optional[str] = None,
     lang: Optional[str] = None,
-    theme: Optional[str | Path | Tagifiable] = None,
+    theme: Optional[str | Path | ThemeProvider] = None,
     **kwargs: str,
 ) -> Tag:
     """
@@ -502,7 +501,7 @@ def page_bootstrap(
     *args: TagChild | TagAttrs,
     title: Optional[str] = None,
     lang: Optional[str] = None,
-    theme: Optional[str | Path | Tagifiable] = None,
+    theme: Optional[str | Path | ThemeProvider] = None,
     **kwargs: TagAttrValue,
 ) -> Tag:
     """
@@ -556,7 +555,7 @@ def page_auto(
     title: str | MISSING_TYPE = MISSING,
     window_title: str | MISSING_TYPE = MISSING,
     lang: str | MISSING_TYPE = MISSING,
-    theme: str | Path | Tagifiable | MISSING_TYPE = MISSING,
+    theme: str | Path | ThemeProvider | MISSING_TYPE = MISSING,
     fillable: bool | MISSING_TYPE = MISSING,
     full_width: bool = False,
     page_fn: Callable[..., Tag] | None = None,

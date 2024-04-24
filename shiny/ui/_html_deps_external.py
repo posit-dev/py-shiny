@@ -19,8 +19,10 @@ For...
 * shinyverse dependencies (e.g. bslib, htmltools), see `shiny.ui._html_deps_shinyverse`
 """
 
+ThemeProvider = Tagifiable | HTMLDependency | list[HTMLDependency]
 
-def bootstrap_theme_deps(theme: str | Path | Tagifiable | None) -> TagList:
+
+def bootstrap_theme_deps(theme: str | Path | ThemeProvider | None) -> TagList:
     deps_bootstrap = bootstrap_deps(include_css=theme is None)
 
     deps_theme = None
@@ -29,11 +31,16 @@ def bootstrap_theme_deps(theme: str | Path | Tagifiable | None) -> TagList:
     elif isinstance(theme, (str, Path)):
         check_path(theme)
         deps_theme = head_content(include_css(theme))
-    elif isinstance(theme, Tagifiable):
+    elif isinstance(theme, Tagifiable) or isinstance(theme, HTMLDependency):
+        deps_theme = theme
+    elif isinstance(theme, list) and all(
+        [isinstance(dep, HTMLDependency) for dep in theme]
+    ):
         deps_theme = theme
     else:
         raise ValueError(
-            "Invalid theme. Expected a URL or path to a full Bootstrap CSS file, or Tagifiable object."
+            "Invalid `theme`. Expected a URL or path to a full Bootstrap CSS file, "
+            + "or a Tagifiable object."
         )
 
     return TagList(deps_bootstrap, deps_theme)
