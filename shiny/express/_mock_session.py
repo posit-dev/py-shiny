@@ -11,7 +11,7 @@ from ..session._session import SessionProxy
 
 if TYPE_CHECKING:
     from .._typing_extensions import Never
-    from ..session._session import DynamicRouteHandler, RenderedDeps
+    from ..session._session import DownloadHandler, DynamicRouteHandler, RenderedDeps
     from ..types import Jsonifiable
     from ._run import AppOpts
 
@@ -58,32 +58,32 @@ class ExpressMockSession(Session):
     ) -> Callable[[], None]:
         return lambda: None
 
-    def make_scope(self, id: Id) -> SessionProxy:
+    def make_scope(self, id: Id) -> Session:
         ns = self.ns(id)
         return SessionProxy(parent=self, ns=ns)
 
-    def root_scope(self):
-        self._not_implemented("root_scope")
+    def root_scope(self) -> ExpressMockSession:
+        return self
 
-    def _process_ui(self, ui: TagChild):
-        self._not_implemented("_process_ui")
+    def _process_ui(self, ui: TagChild) -> RenderedDeps:
+        return {"deps": [], "html": ""}
 
-    def send_input_message(self, id: str, message: dict[str, object]):
-        self._not_implemented("send_input_message")
+    def send_input_message(self, id: str, message: dict[str, object]) -> None:
+        return
 
     def _send_insert_ui(
         self, selector: str, multiple: bool, where: str, content: RenderedDeps
-    ):
-        self._not_implemented("_send_insert_ui")
+    ) -> None:
+        return
 
-    def _send_remove_ui(self, selector: str, multiple: bool):
-        self._not_implemented("_send_remove_ui")
+    def _send_remove_ui(self, selector: str, multiple: bool) -> None:
+        return
 
-    def _send_progress(self, type: str, message: object):
-        self._not_implemented("_send_progress")
+    def _send_progress(self, type: str, message: object) -> None:
+        return
 
-    async def send_custom_message(self, type: str, message: dict[str, object]):
-        self._not_implemented("send_custom_message")
+    async def send_custom_message(self, type: str, message: dict[str, object]) -> None:
+        return
 
     def set_message_handler(
         self,
@@ -93,34 +93,34 @@ class ExpressMockSession(Session):
         ),
         *,
         _handler_session: Optional[Session] = None,
-    ):
-        self._not_implemented("set_message_handler")
+    ) -> str:
+        return ""
 
-    async def _send_message(self, message: dict[str, object]):
-        self._not_implemented("_send_message")
+    async def _send_message(self, message: dict[str, object]) -> None:
+        return
 
-    def _send_message_sync(self, message: dict[str, object]):
-        self._not_implemented("_send_message_sync")
+    def _send_message_sync(self, message: dict[str, object]) -> None:
+        return
 
     def on_flush(
         self,
         fn: Callable[[], None] | Callable[[], Awaitable[None]],
         once: bool = True,
-    ):
-        self._not_implemented("on_flush")
+    ) -> Callable[[], None]:
+        return lambda: None
 
     def on_flushed(
         self,
         fn: Callable[[], None] | Callable[[], Awaitable[None]],
         once: bool = True,
-    ):
-        self._not_implemented("on_flushed")
+    ) -> Callable[[], None]:
+        return lambda: None
 
-    def dynamic_route(self, name: str, handler: DynamicRouteHandler):
-        self._not_implemented("dynamic_route")
+    def dynamic_route(self, name: str, handler: DynamicRouteHandler) -> str:
+        return ""
 
-    async def _unhandled_error(self, e: Exception):
-        self._not_implemented("_unhandled_error")
+    async def _unhandled_error(self, e: Exception) -> None:
+        return
 
     def download(
         self,
@@ -128,16 +128,5 @@ class ExpressMockSession(Session):
         filename: Optional[str | Callable[[], str]] = None,
         media_type: None | str | Callable[[], str] = None,
         encoding: str = "utf-8",
-    ):
-        self._not_implemented("download")
-
-    def _not_implemented(self, name: str) -> Never:
-        raise NotImplementedError(
-            textwrap.dedent(
-                f"""
-            The session attribute `{name}` is not yet available for use. Since this code
-            will run again when the session is initialized, you can use `if session:` to
-            only run this code when the session is established.
-        """
-            )
-        )
+    ) -> Callable[[DownloadHandler], None]:
+        return lambda x: None
