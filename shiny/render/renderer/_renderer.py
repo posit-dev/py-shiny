@@ -137,12 +137,6 @@ class Renderer(Generic[IT]):
     asynchonously.
     """
 
-    # Set _session here because some subclasses of Renderer (e.g. data_frame) set
-    # self._session before calling super().__init__(). If we were to set
-    # self._session=None in the __init__ method here, it would overwrite the value from
-    # the subclass. We avoid that by setting it here.
-    _session: Session | None = None
-
     def __call__(self, _fn: ValueFn[IT]) -> Self:
         """
         Add the value function to the renderer.
@@ -163,6 +157,7 @@ class Renderer(Generic[IT]):
         :
             Original renderer instance.
         """
+        from ...session import get_current_session
 
         if not callable(_fn):
             raise TypeError("Value function must be callable")
@@ -178,6 +173,8 @@ class Renderer(Generic[IT]):
         # This helps with testing and other situations where no session is present
         # for auto-registration to occur.
         self.output_id = self.__name__
+
+        self._session = get_current_session()
 
         # Allow for App authors to not require `@output`
         self._auto_register()
@@ -220,6 +217,7 @@ class Renderer(Generic[IT]):
         # """
         # Renderer - init docs here
         # """
+        self._session: Session | None = None
         super().__init__()
 
         self._auto_registered: bool = False
@@ -331,16 +329,12 @@ class Renderer(Generic[IT]):
         """
         # If in Express mode, register the output
         if not self._auto_registered:
-            from ...session import get_current_session
-
-            s = get_current_session()
-            if s is not None:
+            if self._session is not None:
                 # Register output on reactive graph
-                s.output(self)
+                self._session.output(self)
                 # We mark the fact that we're auto-registered so that, if an explicit
                 # registration now occurs, we can undo this auto-registration.
                 self._auto_registered = True
-                self._session = s
 
 
 # Not inheriting from `WrapAsync[[], IT]` as python 3.8 needs typing extensions that
