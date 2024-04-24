@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Union
+from typing import List, Union
 
 from htmltools import HTML, HTMLDependency, Tagifiable, TagList, head_content
 from htmltools.tags import link
@@ -20,7 +20,7 @@ For...
 * shinyverse dependencies (e.g. bslib, htmltools), see `shiny.ui._html_deps_shinyverse`
 """
 
-ThemeProvider = Union[Tagifiable, HTMLDependency, list["HTMLDependency"]]
+ThemeProvider = Union[Tagifiable, HTMLDependency, List[HTMLDependency]]
 
 
 def bootstrap_theme_deps(theme: str | Path | ThemeProvider | None) -> TagList:
