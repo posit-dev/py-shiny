@@ -28,7 +28,7 @@ def bootstrap_theme_deps(theme: str | Path | ThemeProvider | None) -> TagList:
 
     if theme is None:
         deps_theme = None
-    elif isinstance(theme, str) and theme.startswith("http"):
+    elif isinstance(theme, str) and theme.startswith(("http", "//")):
         deps_theme = head_content(link(rel="stylesheet", href=theme, type="text/css"))
     elif isinstance(theme, (str, Path)):
         check_path(theme)
