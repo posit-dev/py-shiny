@@ -20,7 +20,7 @@ For...
 * shinyverse dependencies (e.g. bslib, htmltools), see `shiny.ui._html_deps_shinyverse`
 """
 
-ThemeProvider = Union[Tagifiable, HTMLDependency, list[HTMLDependency]]
+ThemeProvider = Union[Tagifiable, HTMLDependency, list["HTMLDependency"]]
 
 
 def bootstrap_theme_deps(theme: str | Path | ThemeProvider | None) -> TagList:
