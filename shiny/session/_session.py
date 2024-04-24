@@ -1364,6 +1364,15 @@ class Outputs:
         suspend_when_hidden: bool = True,
         priority: int = 0,
     ) -> RendererT | Callable[[RendererT], RendererT]:
+
+        def require_real_session() -> Session:
+            if not self._session.is_real_session():
+                raise RuntimeError(
+                    "`output` must be used with a real session (as opposed to a mock session)."
+                )
+
+            return self._session
+
         def set_renderer(renderer: RendererT) -> RendererT:
             if not isinstance(renderer, Renderer):
                 raise TypeError(
@@ -1381,14 +1390,6 @@ class Outputs:
             renderer._on_register()
 
             self.remove(output_name)
-
-            def require_real_session() -> Session:
-                if not self._session.is_real_session():
-                    raise RuntimeError(
-                        "`output` must be used with a real session (as opposed to a mock session)."
-                    )
-
-                return self._session
 
             @effect(
                 suspended=suspend_when_hidden and self._session._is_hidden(output_name),
