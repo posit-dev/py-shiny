@@ -130,6 +130,7 @@ from ._navs import (
 from ._notification import notification_remove, notification_show
 from ._output import (
     output_code,
+    output_chat,
     output_image,
     output_plot,
     output_table,
@@ -307,6 +308,7 @@ __all__ = (
     "output_code",
     "output_text_verbatim",
     "output_table",
+    "output_chat",
     "output_ui",
     # _page
     "page_sidebar",

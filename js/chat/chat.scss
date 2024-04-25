@@ -1,5 +1,5 @@
 /* Prevent the prompt from going too wide */
-.shiny-chat-box {
+.shiny-chat-output {
   display: flex;
   flex-direction: column;
   margin: 0 auto;
@@ -30,10 +30,10 @@
     }
   }
 
-  .shiny-chat-input {
+  shiny-chat-input {
+    margin-top: auto;
     position: sticky;
     bottom: 0;
-    margin-top: auto;
     padding: 0.25rem;
     background-color: var(--bs-body-bg, white);
   }
