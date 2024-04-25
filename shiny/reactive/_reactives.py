@@ -514,7 +514,7 @@ class Effect_:
             session = get_current_session()
 
         if isinstance(session, Session) and session.is_stub_session():
-            # If we're in an ExpressMockSession or a SessionProxy of one, then don't
+            # If we're in an ExpressStubSession or a SessionProxy of one, then don't
             # actually set up this effect -- we don't want it to try to run later.
             return
 

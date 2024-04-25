@@ -163,7 +163,7 @@ class OutBoundMessageQueues:
 class Session(ABC):
     """
     Interface definition for Session-like classes, like :class:`AppSession`,
-    :class:`SessionProxy`, and :class:`~shiny.express.ExpressMockSession`.
+    :class:`SessionProxy`, and :class:`~shiny.express.ExpressStubSession`.
     """
 
     ns: ResolvedId

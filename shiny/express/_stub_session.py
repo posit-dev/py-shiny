@@ -13,12 +13,12 @@ if TYPE_CHECKING:
     from ..types import Jsonifiable
     from ._run import AppOpts
 
-all = ("ExpressMockSession",)
+all = ("ExpressStubbSession",)
 
 
-class ExpressMockSession(Session):
+class ExpressStubSession(Session):
     """
-    A very bare-bones mock session class that is used only in shiny.express's UI
+    A very bare-bones stub session class that is used only in shiny.express's UI
     rendering phase.
 
     Note that this class is also used to hold application-level options that are set via
@@ -63,7 +63,7 @@ class ExpressMockSession(Session):
         ns = self.ns(id)
         return SessionProxy(parent=self, ns=ns)
 
-    def root_scope(self) -> ExpressMockSession:
+    def root_scope(self) -> ExpressStubSession:
         return self
 
     def _process_ui(self, ui: TagChild) -> RenderedDeps:
