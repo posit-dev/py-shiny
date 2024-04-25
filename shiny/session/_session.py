@@ -459,11 +459,6 @@ class Session(ABC):
             namespaced when used with a session proxy.
         """
 
-    # Makes isinstance(x, Session) also return True when x is a SessionProxy (i.e., a
-    # module session)
-    def __instancecheck__(self, __instance: Any) -> bool:
-        return isinstance(__instance, SessionProxy)
-
 
 # ======================================================================================
 # AppSession
