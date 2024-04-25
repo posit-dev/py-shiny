@@ -179,7 +179,14 @@ class Session(ABC):
     _downloads: dict[str, DownloadInfo]
 
     @abstractmethod
-    def is_real_session(self) -> bool: ...
+    def is_stub_session(self) -> bool:
+        """
+        Returns whether this is a stub session.
+
+        In the UI-rendering phase of Shiny Express apps, the session context has a stub
+        session. This stub session is not a real session; it is there only so that code
+        which expects a session can run without raising errors.
+        """
 
     @add_example()
     @abstractmethod
@@ -556,8 +563,8 @@ class AppSession(Session):
         finally:
             self.app._remove_session(self)
 
-    def is_real_session(self) -> Literal[True]:
-        return True
+    def is_stub_session(self) -> Literal[False]:
+        return False
 
     async def close(self, code: int = 1001) -> None:
         await self._conn.close(code, None)
@@ -1140,8 +1147,8 @@ class SessionProxy(Session):
     ) -> Callable[[], None]:
         return self._parent.on_ended(fn)
 
-    def is_real_session(self) -> bool:
-        return self._parent.is_real_session()
+    def is_stub_session(self) -> bool:
+        return self._parent.is_stub_session()
 
     async def close(self, code: int = 1001) -> None:
         await self._parent.close(code)
@@ -1359,9 +1366,9 @@ class Outputs:
     ) -> RendererT | Callable[[RendererT], RendererT]:
 
         def require_real_session() -> Session:
-            if not self._session.is_real_session():
+            if self._session.is_stub_session():
                 raise RuntimeError(
-                    "`output` must be used with a real session (as opposed to a mock session)."
+                    "`output` must be used with a real session (as opposed to a stub session)."
                 )
 
             return self._session
@@ -1389,9 +1396,9 @@ class Outputs:
                 priority=priority,
             )
             async def output_obs():
-                if not self._session.is_real_session():
+                if self._session.is_stub_session():
                     raise RuntimeError(
-                        "`output` must be used with a real session (as opposed to a mock session)."
+                        "`output` must be used with a real session (as opposed to a stub session)."
                     )
 
                 session = require_real_session()

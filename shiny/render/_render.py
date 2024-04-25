@@ -706,10 +706,11 @@ class download(Renderer[str]):
         super().__call__(url)
 
         # Register the download handler for the session. The reason we check for session
-        # not being None is because in Express, when the UI is rendered, this function
-        # `render.download()()`  called once before any sessions have been started.
+        # not being None or a stub session is because in Express, when the UI is
+        # rendered, this function `render.download()()`  called once before any sessions
+        # have been started.
         session = get_current_session()
-        if session is not None and session.is_real_session():
+        if session is not None and not session.is_stub_session():
             session._downloads[self.output_id] = DownloadInfo(
                 filename=self.filename,
                 content_type=self.media_type,

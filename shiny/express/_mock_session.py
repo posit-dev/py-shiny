@@ -43,8 +43,8 @@ class ExpressMockSession(Session):
         # Application-level (not session-level) options that may be set via app_opts().
         self.app_opts: AppOpts = {}
 
-    def is_real_session(self) -> Literal[False]:
-        return False
+    def is_stub_session(self) -> Literal[True]:
+        return True
 
     async def close(self, code: int = 1001) -> None:
         return
