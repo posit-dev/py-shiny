@@ -136,6 +136,11 @@ class OutBoundMessageQueues:
         self.errors: dict[str, Any] = {}
         self.input_messages: list[dict[str, Any]] = []
 
+    def reset(self) -> None:
+        self.values.clear()
+        self.errors.clear()
+        self.input_messages.clear()
+
     def set_value(self, id: str, value: Any) -> None:
         self.values[id] = value
         # remove from self.errors
@@ -985,7 +990,7 @@ class AppSession(Session):
             try:
                 await self._send_message(message)
             finally:
-                self._outbound_message_queues = OutBoundMessageQueues()
+                self._outbound_message_queues.reset()
         finally:
             with session_context(self):
                 await self._flushed_callbacks.invoke()
