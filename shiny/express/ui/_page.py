@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Callable
 
 from htmltools import Tag
@@ -7,6 +8,7 @@ from htmltools import Tag
 from ... import ui
 from ..._docstring import add_example
 from ...types import MISSING, MISSING_TYPE
+from ...ui._html_deps_external import ThemeProvider
 from .._recall_context import RecallContextManager
 from .._run import get_top_level_recall_context_manager
 
@@ -23,6 +25,7 @@ def page_opts(
     title: str | MISSING_TYPE = MISSING,
     window_title: str | MISSING_TYPE = MISSING,
     lang: str | MISSING_TYPE = MISSING,
+    theme: str | Path | ThemeProvider | MISSING_TYPE = MISSING,
     page_fn: Callable[..., Tag] | None | MISSING_TYPE = MISSING,
     fillable: bool | MISSING_TYPE = MISSING,
     full_width: bool | MISSING_TYPE = MISSING,
@@ -57,6 +60,16 @@ def page_opts(
         ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
         will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
         default, `None`, results in an empty string.
+    theme
+        A path to a local or online CSS file that will replace the Bootstrap CSS
+        bundled by default with a Shiny app. This file should be a complete
+        `bootstrap.css` or `bootstrap.min.css` file.
+
+        For advanced uses, you can also pass a :class:`~htmltools.Tagifiable` object.
+        In this case, Shiny will suppress the default Bootstrap CSS.
+
+        To modify the theme of an app without replacing the Bootstrap CSS entirely, use
+        :func:`~shiny.ui.include_css` to add custom CSS.
     fillable
         If there is a top-level sidebar or nav, then the value is passed through to the
         :func:`~shiny.ui.page_sidebar` or :func:`~shiny.ui.page_navbar` function.
@@ -90,6 +103,8 @@ def page_opts(
         cm.kwargs["window_title"] = window_title
     if not isinstance(lang, MISSING_TYPE):
         cm.kwargs["lang"] = lang
+    if not isinstance(theme, MISSING_TYPE):
+        cm.kwargs["theme"] = theme
     if not isinstance(page_fn, MISSING_TYPE):
         cm.kwargs["page_fn"] = page_fn
     if not isinstance(fillable, MISSING_TYPE):

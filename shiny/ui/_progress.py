@@ -12,7 +12,7 @@ from ..session import require_active_session
 from ..session._session import UpdateProgressMessage
 
 if TYPE_CHECKING:
-    from .. import Session
+    from ..session import Session
 
 
 @add_example()

@@ -13,10 +13,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added support for creating modules using Shiny Express syntax, and using modules in Shiny Express apps. (#1220)
 
+* `ui.page_*()` functions gain a `theme` argument that allows you to replace the Bootstrap CSS file with a new CSS file. `theme` can be a local CSS file, a URL, or a [shinyswatch](https://posit-dev.github.io/py-shinyswatch) theme. In Shiny Express apps, `theme` can be set via `express.ui.page_opts()`. (#1334)
+
 ### Bug fixes
 
 ### Other changes
 
+* `Session` is now an abstract base class, and `AppSession` is a concrete subclass of it. Also, `ExpressMockSession` has been renamed `ExpressStubSession` and is a concrete subclass of `Session`. (#1331)
+
+* The `Session` class now has a method `is_stub_session()`. For `ExpressStubSession`, this method returns `True` for , and `AppSession` objects it returns `False`. (#1331)
+
+* Closed #1293: The error console would display error messages if an app was disconnected and the user changed an input. (#1339)
+
+* Fixed an issue where some CSS files were larger than necessary because they had source maps embedded in them. (#1339)
 
 ## [0.9.0] - 2024-04-16
 
