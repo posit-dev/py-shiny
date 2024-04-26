@@ -1,3 +1,4 @@
+import os
 import time
 
 import numpy as np
@@ -7,7 +8,22 @@ from shiny.express import input, render, ui
 
 ui.page_opts(title="Busy spinner demo")
 
-ui.busy_indicators.spinner_options(color="orange", size="80px")
+with ui.sidebar():
+    ui.input_selectize(
+        "indicator_types",
+        "Busy indicator types",
+        ["spinners", "pulse"],
+        multiple=True,
+        selected=["spinners", "pulse"],
+    )
+    ui.busy_indicators.spinner_options(color="orange")
+
+    @render.download
+    def download():
+        time.sleep(3)
+        path = os.path.join(os.path.dirname(__file__), "app-express.py")
+        return path
+
 
 with ui.card():
     ui.card_header(
@@ -17,21 +33,15 @@ with ui.card():
     )
 
     @render.plot
-    def x():
+    def plot():
         input.simulate()
         time.sleep(3)
         sns.lineplot(x=np.arange(100), y=np.random.randn(100))
 
 
-ui.input_selectize(
-    "indicator_types",
-    "Busy indicator types",
-    ["spinners", "pulse", "cursor"],
-    multiple=True,
-    selected=["spinners", "pulse"],
-)
-
-
-@render.express
+@render.ui
 def indicator_types_ui():
-    ui.busy_indicators.use(input.indicator_types())
+    return ui.busy_indicators.use(
+        spinners="spinners" in input.indicator_types(),
+        pulse="pulse" in input.indicator_types(),
+    )

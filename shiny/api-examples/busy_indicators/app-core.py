@@ -26,7 +26,7 @@ app_ui = ui.page_sidebar(
         ),
         ui.output_plot("plot"),
     ),
-    ui.output_ui("indicator_types_ui", inline=True),
+    ui.output_ui("indicator_types_ui"),
     title="Busy indicators demo",
 )
 
@@ -49,7 +49,7 @@ def server(input):
     @render.download
     def download():
         time.sleep(3)
-        path = os.path.join(os.path.dirname(__file__), "app-express.py")
+        path = os.path.join(os.path.dirname(__file__), "app-core.py")
         return path
 
 
