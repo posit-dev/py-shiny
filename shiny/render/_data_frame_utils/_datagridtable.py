@@ -59,12 +59,12 @@ def as_editable(
     name: str,
 ) -> bool:
     editable = bool(editable)
-    if editable:
-        print(
-            f"`{name}(editable=true)` is an experimental feature. "
-            "If you find any bugs or would like different behavior, "
-            "please make an issue at https://github.com/posit-dev/py-shiny/issues/new"
-        )
+    # if editable:
+    #     print(
+    #         f"`{name}(editable=true)` is an experimental feature. "
+    #         "If you find any bugs or would like different behavior, "
+    #         "please make an issue at https://github.com/posit-dev/py-shiny/issues/new"
+    #     )
     return editable
 
 
@@ -116,7 +116,7 @@ class DataGrid(AbstractTabularData):
         * If `"none"` is supplied, all other values will be ignored.
         * If both `"row"` and `"rows"` are supplied, `"row"` will be dropped (supporting `"rows"`).
     row_selection_mode
-        Deprecated. Please use `mode={row_selection_mode}_row` instead.
+        Deprecated. Please use `selection_mode=` instead.
 
     Returns
     -------

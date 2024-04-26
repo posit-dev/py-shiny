@@ -45,21 +45,6 @@ def skip_if_not_chrome(fn: CallableT) -> CallableT:
     return fn
 
 
-def exception_swallower(
-    function: Callable[[str, str], str]
-) -> Callable[[str, str], str]:
-    def wrapper(app_name: str, app_dir: str) -> str:
-        runtime_e: Exception | None = None
-        try:
-            return function(app_name, app_dir)
-        except Exception as e:
-            runtime_e = e
-        if isinstance(runtime_e, Exception):
-            raise RuntimeError("Failed to deploy to server.")
-
-    return wrapper
-
-
 def run_command(cmd: str) -> str:
     output = subprocess.run(
         cmd,
@@ -104,18 +89,12 @@ def deploy_to_connect(app_name: str, app_dir: str) -> str:
     return url
 
 
-quiet_deploy_to_connect = exception_swallower(deploy_to_connect)
-
-
 # TODO-future: Supress web browser from opening after deploying - https://github.com/rstudio/rsconnect-python/issues/462
 def deploy_to_shinyapps(app_name: str, app_dir: str) -> str:
     # Deploy to shinyapps.io
     shinyapps_deploy = f"rsconnect deploy shiny {app_dir} --account {name} --token {token} --secret {secret} --title {app_name} --verbose"
     run_command(shinyapps_deploy)
     return f"https://{name}.shinyapps.io/{app_name}/"
-
-
-quiet_deploy_to_shinyapps = exception_swallower(deploy_to_shinyapps)
 
 
 # Since connect parses python packages, we need to get latest version of shiny on HEAD
@@ -173,8 +152,8 @@ def deploy_app(
         write_requirements_txt(tmp_app_dir)
 
         deployment_function = {
-            "connect": quiet_deploy_to_connect,
-            "shinyapps": quiet_deploy_to_shinyapps,
+            "connect": deploy_to_connect,
+            "shinyapps": deploy_to_shinyapps,
         }[location]
 
         pre_deployment_time = time.time()

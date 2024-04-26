@@ -20,9 +20,9 @@ def data_frame_deps() -> HTMLDependency:
         version=__version__,
         source={
             "package": "shiny",
-            "subdir": "www/shared/py-shiny/dataframe",
+            "subdir": "www/shared/py-shiny/data-frame",
         },
-        script={"src": "dataframe.js", "type": "module"},
+        script={"src": "data-frame.js", "type": "module"},
     )
 
 

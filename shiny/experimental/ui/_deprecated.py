@@ -1434,6 +1434,7 @@ def page_sidebar(
         fillable_mobile=fillable_mobile,
         window_title=window_title,
         lang=lang,
+        theme=None,
         **kwargs,
     )
 
@@ -1510,5 +1511,6 @@ def page_fillable(
         fillable_mobile=fillable_mobile,
         title=title,
         lang=lang,
+        theme=None,
         **kwargs,
     )

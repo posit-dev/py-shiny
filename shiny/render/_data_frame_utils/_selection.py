@@ -151,8 +151,8 @@ Input types for selection modes in a DataGrid or DataTable.
 # Should only contain a single selection area
 
 # # Do not include `CellSelectionAll` as it should be represented by a row, column, or region with appropriate values.
-# class CellSelectionAll(TypedDict):
-#     type: Literal["all"]
+# # class CellSelectionAll(TypedDict):
+# #    type: Literal["all"]
 
 
 class CellSelectionNone(TypedDict):
@@ -343,7 +343,7 @@ def as_selection_modes(
 
         warn_deprecated(
             f"`{name}(row_selection_mode=)` has been superseded by `{name}(selection_mode=)`."
-            f' Please use `{name}(mode="{selection_mode_val}")` instead.'
+            f' Please use `{name}(selection_mode="{selection_mode_val}")` instead.'
         )
     if not isinstance(selection_mode_val, tuple):
         selection_mode_val = (selection_mode_val,)
