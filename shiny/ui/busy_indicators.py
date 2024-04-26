@@ -1,55 +1,59 @@
 from __future__ import annotations
 
-from typing import Iterable, Literal
+from typing import Literal
 
-from htmltools import HTMLDependency, Tag, head_content, tags
+from htmltools import Tag, tags
 
 from .._docstring import add_example, no_example
 
-__all__ = ("use", "spinner_options", "pulse_options")
+__all__ = (
+    "spinner_options",
+    "pulse_options",
+    "use",
+)
 
 
-BusyTypes = Literal["spinners", "pulse", "cursor"]
+BusyType = Literal["spinners", "pulse"]
 
 
 @add_example(ex_dir="../api-examples/busy_indicators")
-def use(types: Iterable[BusyTypes] = ("spinners", "pulse")) -> HTMLDependency:
+def use(*, spinners: bool = True, pulse: bool = True) -> Tag:
     """
     Use and customize busy indicator types.
 
     Include the result of this function in the app's UI to customize busy indicator types.
-    Provide an empty list/tuple for no busy indicators.
 
     Parameters
     ----------
-    types
-        A list/tuple of busy indicator types, which can include:
+    spinners
+        Overlay a spinner on each calculating/recalculating output.
+    pulse
+        Show a pulsing banner at the top of the window when the server is busy.
 
-        * `spinners`: Overlay a spinner on each recalculating output.
-        * `pulse`: Show a pulsing banner at the top of the window when the server is busy.
-        * `cursor`: Show a progress indicator on the mouse cursor whenever the server
-           is busy. On mobile, a pulsing banner is shown instead.
+    Note
+    ----
+    When both `spinners` and `pulse` are set to `True`, the pulse is disabled when
+    spinner(s) are active.
+    When both `spinners` and `pulse` are set to `False`, no busy indication is shown
+    (other than the gray-ing out of recalculating outputs).
 
     Returns
     -------
     :
         An HTML dependency.
-
-    See Also
-    --------
-    * :func:`~shiny.ui.busy_indicators.spinner_options`: Customize spinning busy indicators.
     """
-
-    for x in types:
-        if x not in ("spinners", "pulse", "cursor"):
-            raise ValueError(f"Invalid busy indicator type: {x}")
 
     # TODO: it'd be nice if htmltools had something like a page_attrs() that allowed us
     # to do this without needing to inject JS into the head.
-    types_str = ",".join(types)
-    js = f"document.documentElement.dataset.shinyBusyIndicatorTypes = '{types_str}';"
+    attrs = {"shinyBusySpinners": spinners, "shinyBusyPulse": pulse}
+    js = ""
+    for key, value in attrs.items():
+        if value:
+            js += f"document.documentElement.dataset.{key} = true;"
+        else:
+            js += f"delete document.documentElement.dataset.{key};"
 
-    return head_content(tags.script(js))
+    return tags.script(js)
 
 
 @no_example()

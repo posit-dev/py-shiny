@@ -55,17 +55,12 @@ def spin_dependency() -> HTMLDependency:
     )
 
 
-def busy_indicators_deps() -> list[HTMLDependency]:
-    dep = HTMLDependency(
+def busy_indicators_dep() -> HTMLDependency:
+    return HTMLDependency(
         "shiny-busy-indicators",
         __version__,
         source={"package": "shiny", "subdir": "www/shared/py-shiny/busy-indicators"},
         stylesheet={"href": "busy-indicators.css"},
         script={"src": "busy-indicators.js"},
+        head=busy_indicators.use(),  # Enable busy indicators by default.
     )
-
-    return [
-        dep,
-        # Enable busy indicators by default.
-        busy_indicators.use(),
-    ]

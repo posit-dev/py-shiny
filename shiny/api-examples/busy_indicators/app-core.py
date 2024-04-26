@@ -1,3 +1,4 @@
+import os
 import time
 
 import numpy as np
@@ -5,9 +6,18 @@ import seaborn as sns
 
 from shiny import App, render, ui
 
-app_ui = ui.page_fixed(
-    ui.h4("Busy spinner demo", class_="pt-3"),
-    ui.busy_indicators.spinner_options(color="orange", size="80px"),
+app_ui = ui.page_sidebar(
+    ui.sidebar(
+        ui.input_selectize(
+            "indicator_types",
+            "Busy indicator types",
+            ["spinners", "pulse"],
+            multiple=True,
+            selected=["spinners", "pulse"],
+        ),
+        ui.busy_indicators.spinner_options(color="orange"),
+        ui.download_button("download", "Download source"),
+    ),
     ui.card(
         ui.card_header(
             "Plot that takes a few seconds to render",
@@ -16,14 +26,8 @@ app_ui = ui.page_fixed(
         ),
         ui.output_plot("plot"),
     ),
-    ui.input_selectize(
-        "indicator_types",
-        "Busy indicator types",
-        ["spinners", "pulse", "cursor"],
-        multiple=True,
-        selected=["spinners", "pulse"],
-    ),
-    ui.output_ui("indicator_types_ui"),
+    ui.output_ui("indicator_types_ui", inline=True),
+    title="Busy indicators demo",
 )
 
 
@@ -37,7 +41,16 @@ def server(input):
 
     @render.ui
     def indicator_types_ui():
-        return ui.busy_indicators.use(input.indicator_types())
+        return ui.busy_indicators.use(
+            spinners="spinners" in input.indicator_types(),
+            pulse="pulse" in input.indicator_types(),
+        )
+
+    @render.download
+    def download():
+        time.sleep(5)
+        path = os.path.join(os.path.dirname(__file__), "app-express.py")
+        return path
 
 
 app = App(app_ui, server)

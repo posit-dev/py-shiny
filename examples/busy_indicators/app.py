@@ -74,7 +74,7 @@ app_ui = ui.page_sidebar(
         ui.input_selectize(
             "indicator_types",
             "Busy indicator types",
-            ["spinners", "pulse", "cursor"],
+            ["spinners", "pulse"],
             multiple=True,
             selected=["spinners", "pulse"],
         ),
