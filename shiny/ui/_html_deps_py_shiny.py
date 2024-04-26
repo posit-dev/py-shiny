@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from htmltools import HTMLDependency, tags
+from htmltools import HTMLDependency
 
 from .. import __version__
 from . import busy_indicators

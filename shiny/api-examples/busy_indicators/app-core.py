@@ -48,7 +48,7 @@ def server(input):
 
     @render.download
     def download():
-        time.sleep(5)
+        time.sleep(3)
         path = os.path.join(os.path.dirname(__file__), "app-express.py")
         return path
 
