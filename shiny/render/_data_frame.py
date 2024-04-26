@@ -49,7 +49,7 @@ from .renderer import Jsonifiable, Renderer, ValueFn
 if TYPE_CHECKING:
     import pandas as pd
 
-    from ..session._utils import Session
+    from ..session import Session
 
     DataFrameT = TypeVar("DataFrameT", bound=pd.DataFrame)
     # TODO-barret-render.data_frame; Pandas, Polars, api compat, etc.; Today, we only support Pandas

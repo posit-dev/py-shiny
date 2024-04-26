@@ -31,7 +31,6 @@ from .. import ui as _ui
 from .._docstring import add_example, no_example
 from .._namespaces import ResolvedId
 from .._typing_extensions import Self
-from ..express._mock_session import ExpressMockSession
 from ..session import get_current_session, require_active_session
 from ..session._session import DownloadHandler, DownloadInfo
 from ..types import MISSING, MISSING_TYPE, ImgData
@@ -707,10 +706,11 @@ class download(Renderer[str]):
         super().__call__(url)
 
         # Register the download handler for the session. The reason we check for session
-        # not being None is because in Express, when the UI is rendered, this function
-        # `render.download()()`  called once before any sessions have been started.
+        # not being None or a stub session is because in Express, when the UI is
+        # rendered, this function `render.download()()`  called once before any sessions
+        # have been started.
         session = get_current_session()
-        if session is not None and not isinstance(session, ExpressMockSession):
+        if session is not None and not session.is_stub_session():
             session._downloads[self.output_id] = DownloadInfo(
                 filename=self.filename,
                 content_type=self.media_type,

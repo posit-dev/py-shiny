@@ -11,7 +11,7 @@ from .._utils import rand_hex
 from ..session import require_active_session
 
 if TYPE_CHECKING:
-    from .. import Session
+    from ..session import Session
 
 
 @add_example()

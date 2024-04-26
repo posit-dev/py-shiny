@@ -14,8 +14,8 @@ from .._utils import import_module_from_path
 from ..session import Inputs, Outputs, Session, get_current_session, session_context
 from ..types import MISSING, MISSING_TYPE
 from ._is_express import find_magic_comment_mode
-from ._mock_session import ExpressMockSession
 from ._recall_context import RecallContextManager
+from ._stub_session import ExpressStubSession
 from .expressify_decorator._func_displayhook import _expressify_decorator_function_def
 from .expressify_decorator._node_transformers import (
     DisplayFuncsTransformer,
@@ -49,8 +49,8 @@ def wrap_express_app(file: Path) -> App:
             with session_context(None):
                 import_module_from_path("globals", globals_file)
 
-        mock_session = ExpressMockSession()
-        with session_context(cast(Session, mock_session)):
+        stub_session = ExpressStubSession()
+        with session_context(stub_session):
             # We tagify here, instead of waiting for the App object to do it when it wraps
             # the UI in a HTMLDocument and calls render() on it. This is because
             # AttributeErrors can be thrown during the tagification process, and we need to
@@ -79,7 +79,7 @@ def wrap_express_app(file: Path) -> App:
     if www_dir.is_dir():
         app_opts["static_assets"] = {"/": www_dir}
 
-    app_opts = _merge_app_opts(app_opts, mock_session.app_opts)
+    app_opts = _merge_app_opts(app_opts, stub_session.app_opts)
     app_opts = _normalize_app_opts(app_opts, file.parent)
 
     app = App(
@@ -231,9 +231,9 @@ def app_opts(
         Whether to enable debug mode.
     """
 
-    mock_session = get_current_session()
+    stub_session = get_current_session()
 
-    if mock_session is None:
+    if stub_session is None:
         # We can get here if a Shiny Core app, or if we're in the UI rendering phase of
         # a Quarto-Shiny dashboard.
         raise RuntimeError(
@@ -241,7 +241,7 @@ def app_opts(
         )
 
     # Store these options only if we're in the UI-rendering phase of Shiny Express.
-    if not isinstance(mock_session, ExpressMockSession):
+    if not isinstance(stub_session, ExpressStubSession):
         return
 
     if not isinstance(static_assets, MISSING_TYPE):
@@ -251,10 +251,10 @@ def app_opts(
         # Convert string values to Paths. (Need new var name to help type checker.)
         static_assets_paths = {k: Path(v) for k, v in static_assets.items()}
 
-        mock_session.app_opts["static_assets"] = static_assets_paths
+        stub_session.app_opts["static_assets"] = static_assets_paths
 
     if not isinstance(debug, MISSING_TYPE):
-        mock_session.app_opts["debug"] = debug
+        stub_session.app_opts["debug"] = debug
 
 
 def _merge_app_opts(app_opts: AppOpts, app_opts_new: AppOpts) -> AppOpts:
