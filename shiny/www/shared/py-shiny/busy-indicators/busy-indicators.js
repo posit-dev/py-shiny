@@ -4,29 +4,26 @@ $(document).one("shiny:idle", function() {
   document.documentElement.classList.remove("shiny-not-yet-idle");
 });
 var BUSY_CLASS = "shiny-output-busy";
-$(document).on("shiny:bound", function(e) {
-  if (e.bindingType !== "output") {
+function isDownloadBinding(binding) {
+  return binding.name === "shiny.downloadLink";
+}
+$(document).on("shiny:bound", function(x) {
+  const e = x;
+  if (e.bindingType !== "output")
     return;
-  }
-  const target = e.target;
-  if (!(target instanceof HTMLElement)) {
+  if (isDownloadBinding(e.binding))
     return;
-  }
-  if (e.binding.name === "shiny.downloadLink") {
-    return;
-  }
-  target.classList.add(BUSY_CLASS);
-  $(target).on("shiny:value shiny:error", function() {
-    target.classList.remove(BUSY_CLASS);
-  });
+  e.target.classList.add(BUSY_CLASS);
 });
-$(document).on("shiny:recalculating", function(e) {
-  const target = e.target;
-  if (!(target instanceof HTMLElement)) {
+$(document).on("shiny:outputinvalidated", function(x) {
+  const e = x;
+  if (isDownloadBinding(e.binding))
     return;
-  }
-  target.classList.add(BUSY_CLASS);
-  $(target).on("shiny:recalculated", function() {
-    target.classList.remove(BUSY_CLASS);
-  });
+  e.target.classList.add(BUSY_CLASS);
+});
+$(document).on("shiny:value", function(e) {
+  e.target.classList.remove(BUSY_CLASS);
+});
+$(document).on("shiny:error", function(e) {
+  e.target.classList.remove(BUSY_CLASS);
 });

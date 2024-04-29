@@ -1,61 +1,58 @@
 import { OutputBinding } from "rstudio-shiny/srcts/types/src/bindings";
 
-interface BoundEvent extends JQuery.Event {
+interface BoundEvent extends JQuery.TriggeredEvent {
   binding: OutputBinding;
   bindingType: string;
-  target: HTMLElement;
 }
 
-// Put a class on the root element up until the "1st" idle.
-// busy-indicators.scss uses this class for showing busy status
-// when the app is first loading.
+interface InvalidatedEvent extends JQuery.TriggeredEvent {
+  name: string;
+  binding: OutputBinding;
+}
+
+// This of this like the .shiny-busy class that shiny.js puts on the root element,
+// except it's added before shiny.js is initialized, connected, etc.
 // TODO: maybe shiny.js should be doing something like this?
 document.documentElement.classList.add("shiny-not-yet-idle");
 $(document).one("shiny:idle", function () {
   document.documentElement.classList.remove("shiny-not-yet-idle");
 });
 
-// Think of this like the recalculating class that shiny.js when recalculating,
+// Think of this like the .recalculating class that shiny.js when recalculating,
 // except it also gets added to output bindings that haven't yet received their
 // 1st value.
 const BUSY_CLASS = "shiny-output-busy";
 
+// Downloads are implemented via an output binding, but we don't want to
+// show a busy indicator on the trigger.
+function isDownloadBinding(binding: OutputBinding): boolean {
+  return binding.name === "shiny.downloadLink";
+}
+
 // Add BUSY_CLASS to output bindings that haven't yet received their value
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
-$(document).on("shiny:bound", function (e: BoundEvent) {
-  if (e.bindingType !== "output") {
-    return;
-  }
+$(document).on("shiny:bound", function (x) {
+  const e = x as BoundEvent;
 
-  const target = e.target;
-  if (!(target instanceof HTMLElement)) {
-    return;
-  }
+  if (e.bindingType !== "output") return;
+  if (isDownloadBinding(e.binding)) return;
 
-  // Downloads are implemented via an output binding...
-  // Instead of showing a spinner on the button/link itself, we'll add a busy status
-  // to the page.
-  if (e.binding.name === "shiny.downloadLink") {
-    return;
-  }
-
-  target.classList.add(BUSY_CLASS);
-  // TODO: do this on shiny:disconnected too?
-  $(target).on("shiny:value shiny:error", function () {
-    target.classList.remove(BUSY_CLASS);
-  });
+  e.target.classList.add(BUSY_CLASS);
 });
 
-// Add BUSY_CLASS to recalculating outputs
-$(document).on("shiny:recalculating", function (e: Event) {
-  const target = e.target;
-  if (!(target instanceof HTMLElement)) {
-    return;
-  }
+$(document).on("shiny:outputinvalidated", function (x) {
+  const e = x as InvalidatedEvent;
 
-  target.classList.add(BUSY_CLASS);
-  $(target).on("shiny:recalculated", function () {
-    target.classList.remove(BUSY_CLASS);
-  });
+  if (isDownloadBinding(e.binding)) return;
+
+  e.target.classList.add(BUSY_CLASS);
 });
+
+$(document).on("shiny:value", function (e: JQuery.TriggeredEvent) {
+  e.target.classList.remove(BUSY_CLASS);
+});
+
+$(document).on("shiny:error", function (e: JQuery.TriggeredEvent) {
+  e.target.classList.remove(BUSY_CLASS);
+});
+
+// TODO: remove all on shiny:disconnected?
