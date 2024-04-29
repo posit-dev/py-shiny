@@ -98,7 +98,10 @@ def server(input, output, session):
 
     @render.ui
     def indicator_types_ui():
-        return ui.busy_indicators.use(input.indicator_types())
+        return ui.busy_indicators.use(
+            spinners="spinners" in input.indicator_types(),
+            pulse="pulse" in input.indicator_types(),
+        )
 
     card_server("a", length=input.length, simulate_all=input.simulate_all)
     card_server("b", length=input.length, simulate_all=input.simulate_all)

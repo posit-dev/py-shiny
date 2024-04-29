@@ -17,6 +17,7 @@
   /* This class gets set by busy_indicators.ts */
   .shiny-output-busy {
     position: relative;
+    overflow: visible; /* overflow:hidden can, in some cases, clip the spinner */
 
     &::after {
       position: absolute;
@@ -24,7 +25,7 @@
       /* ui.busy_indicators.spinner_options() */
       --_shiny-spinner-mask-img: var(--shiny-spinner-mask-img, var(--_shiny-spinner-type-tadpole));
       --_shiny-spinner-color: var(--shiny-spinner-color, var(--bs-primary, #007bc2));
-      --_shiny-spinner-size: var(--shiny-spinner-size, 40px);
+      --_shiny-spinner-size: var(--shiny-spinner-size, 32px);
       --_shiny-spinner-easing: var(--shiny-spinner-easing, ease-in-out);
       --_shiny-spinner-speed: var(--shiny-spinner-speed, 2s);
       --_shiny-spinner-delay: var(--shiny-spinner-delay, 0.5s);
