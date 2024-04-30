@@ -58,6 +58,7 @@ def bootstrap_deps(include_css: bool = True) -> list[HTMLDependency]:
         script={"src": "bootstrap.bundle.min.js"},
         stylesheet={"href": "bootstrap.min.css"} if include_css else None,
         meta={"name": "viewport", "content": "width=device-width, initial-scale=1"},
+        all_files=True,
     )
     deps = [jquery_deps(), dep]
     return deps
