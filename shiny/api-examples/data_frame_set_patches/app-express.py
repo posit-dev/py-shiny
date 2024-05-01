@@ -10,6 +10,15 @@ from shiny.express import render, ui
 here = Path(__file__).parent
 mtcars_df = reactive.value(pd.read_csv(here / "mtcars.csv").iloc[:, range(4)])
 
+# A copy of the data frame that will store all the edits
+edited_df = reactive.value(None)
+
+
+# Copy mtcars_df to edited_df when mtcars_df changes and on initial load
+@reactive.effect
+def _sync_mtcars_to_edited_df():
+    edited_df.set(mtcars_df())
+
 
 ui.markdown(
     """
@@ -43,9 +52,10 @@ with ui.card():
                 patch["value"] = int(patch["value"])
 
         # "Save to the database" by writing the edited data to a CSV file
+        df = edited_df().copy()
         for patch in patches:
-            df = mtcars_df().copy()
             df.iloc[patch["row_index"], patch["column_index"]] = patch["value"]
+        edited_df.set(df)
         df.to_csv(here / "mtcars.csv", index=False)
         print("Saved the edited data to './mtcars.csv'")
 
