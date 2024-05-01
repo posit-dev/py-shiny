@@ -61,6 +61,18 @@ www_shared <- fs::path(www, "shared")
 www_bslib_components <- fs::path(www_shared, "bslib", "components")
 www_htmltools_fill <- fs::path(www_shared, "htmltools", "fill")
 
+css_file_was_compiled <- local({
+  files <- c()
+  function(file = NULL) {
+    if (!is.null(file)) {
+      files <<- c(files, file)
+      invisible(files)
+    } else {
+      unique(files)
+    }
+  }
+})
+
 # Copy over shiny's www/shared directory
 copy_from_pkg <- function(pkg_name, pkg_dir, local_dir, version_dir = fs::path_dir(local_dir)) {
   # `version_dir` is "equal to" or "contains" `local_dir`
@@ -177,10 +189,13 @@ withr::with_options(
 )
 # Overwrite css file
 ion_dep_dir <- fs::path(www_shared, "ionrangeslider")
+ion_dep_css <- fs::path(ion_dep_dir, "css", "ion.rangeSlider.css")
 fs::file_move(
   fs::path(temp_ion_dep_dir, "ionRangeSlider", "ionRangeSlider.min.css"),
-  fs::path(ion_dep_dir, "css", "ion.rangeSlider.css")
+  ion_dep_css
 )
+css_file_was_compiled(ion_dep_css)
+
 # Cleanup
 fs::dir_delete(temp_ion_dep_dir)
 
@@ -190,11 +205,16 @@ fs::dir_delete(temp_ion_dep_dir)
 message("Save bootstrap bundle")
 # Save htmldeps
 deps <- bslib::bs_theme_dependencies(shiny_theme)
+BOOTSTRAP_CSS_PATH <- NULL
+
 withr::with_options(
   list(htmltools.dir.version = FALSE),
   ignore <- lapply(deps, function(dep) {
     if (dep$name %in% c("bslib-component-css", "bslib-component-js")) {
       return()
+    }
+    if (dep$name == "bootstrap") {
+      BOOTSTRAP_CSS_PATH <<- fs::path(www_shared, "bootstrap", dep$stylesheet)
     }
     copyDependencyToDir(dep, www_shared)
   })
@@ -236,6 +256,7 @@ writeLines(
   ),
   con = shiny_css_shared
 )
+css_file_was_compiled(shiny_css_shared)
 
 message("Render selectize.min.js with bs_theme()")
 selectize_css_dep <- shiny:::selectizeDependencyFunc(shiny_theme)
@@ -250,6 +271,7 @@ fs::file_copy(
   fs::path(selectize_shared, "selectize.min.css"),
   overwrite = TRUE
 )
+css_file_was_compiled(fs::path(selectize_shared, "selectize.min.css"))
 
 message("Render datepicker.min.css with bs_theme()")
 datepicker_css_dep <- shiny:::datePickerCSS(shiny_theme)
@@ -263,6 +285,7 @@ fs::file_copy(
   fs::path(datepicker_shared, "bootstrap-datepicker3.min.css"),
   overwrite = TRUE
 )
+css_file_was_compiled(fs::path(datepicker_shared, "bootstrap-datepicker3.min.css"))
 
 # ------------------------------------------------------------------------------
 message("Cleanup bootstrap bundle")
@@ -292,6 +315,24 @@ fs::file_delete(
     "selectize/js/selectize.js"
   ))
 )
+
+# ------------------------------------------------------------------------------
+message("Merge compiled CSS into ", fs::path_rel(BOOTSTRAP_CSS_PATH, fs::path_wd()))
+for (file in css_file_was_compiled()) {
+  if (requireNamespace("cli", quietly = TRUE)) {
+    cli::cli_alert(fs::path_file(file))
+  } else {
+    message("-> ", fs::path_file(file))
+  }
+
+  cat(
+    "\n\n",
+    sprintf("/* ---- %s ---- */\n", fs::path_file(file)),
+    paste(readLines(file, warn = FALSE), collapse = "\n"),
+    file = BOOTSTRAP_CSS_PATH,
+    append = TRUE
+  )
+}
 
 
 # ------------------------------------------------------------------------------
