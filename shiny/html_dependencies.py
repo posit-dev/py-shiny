@@ -12,7 +12,9 @@ def shiny_deps() -> list[HTMLDependency]:
             version="0.0.1",
             source={"package": "shiny", "subdir": "www/shared/"},
             script={"src": "shiny.js"},
-            stylesheet={"href": "shiny.min.css"},
+            # CSS is now provided in bootstrap.min.css
+            # stylesheet={"href": "shiny.min.css"},
+            all_files=True,
         )
     ]
     if os.getenv("SHINY_DEV_MODE") == "1":

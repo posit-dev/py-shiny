@@ -71,12 +71,7 @@ def ionrangeslider_deps() -> list[HTMLDependency]:
             version="2.3.1",
             source={"package": "shiny", "subdir": "www/shared/ionrangeslider/"},
             script={"src": "js/ion.rangeSlider.min.js"},
-        ),
-        HTMLDependency(
-            name="preset-shiny-ionrangeslider",
-            version=shiny_html_deps,
-            source={"package": "shiny", "subdir": "www/shared/ionrangeslider/"},
-            stylesheet={"href": "css/ion.rangeSlider.css"},
+            all_files=True,
         ),
         HTMLDependency(
             name="strftime",
@@ -92,7 +87,9 @@ def datepicker_deps() -> HTMLDependency:
         name="bootstrap-datepicker",
         version="1.9.0",
         source={"package": "shiny", "subdir": "www/shared/datepicker/"},
-        stylesheet={"href": "css/bootstrap-datepicker3.min.css"},
+        # CSS is now provided in bootstrap.min.css
+        # stylesheet={"href": "css/bootstrap-datepicker3.min.css"},
+        all_files=True,
         script={"src": "js/bootstrap-datepicker.min.js"},
         # Need to enable noConflict mode. See #1346.
         head=HTML(
@@ -110,7 +107,9 @@ def selectize_deps() -> HTMLDependency:
             {"src": "js/selectize.min.js"},
             {"src": "accessibility/js/selectize-plugin-a11y.min.js"},
         ],
-        stylesheet={"href": "css/selectize.min.css"},
+        all_files=True,
+        # CSS is now provided in bootstrap.min.css
+        # stylesheet={"href": "css/selectize.min.css"},
     )
 
 
