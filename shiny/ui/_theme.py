@@ -38,7 +38,7 @@ class Theme:
         # 1. "precompiled" indicating it's okay to use precompiled preset.min.css
         # 2. "" indicating that the CSS has not been compiled yet
         # 3. A string containing the compiled CSS for the current theme
-        self._css: str = "precompiled"
+        self._css: str = "precompiled" if preset in ["bootstrap", "shiny"] else ""
 
         # If the theme has been customized and rendered once, we store the tempdir
         # so that we can re-use the already compiled CSS file.

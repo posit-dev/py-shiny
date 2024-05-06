@@ -375,12 +375,13 @@ for (preset in bundled_presets) {
     "Failed to precompile {.strong {preset}} theme CSS."
   )
 
+  path_preset_compiled <- path(path_dir(path_preset_scss), "preset.min.css")
 
   # Pre-render the Sass files into compiled CSS
   tryCatch({
     sass(
       sass_file(path_preset_scss),
-      output = path(path_dir(path_preset_scss), "preset.min.css"),
+      output = path_preset_compiled,
       options = sass_options(
         output_style = "compressed",
         source_comments = FALSE,
@@ -392,6 +393,14 @@ for (preset in bundled_presets) {
     cli::cli_progress_done(result = "error")
     cli::cli_inform("Failed to compile Sass file {.path {path_preset_scss}}.", parent = cnd)
   })
+
+  # Remove intermediate entry-point Sass file
+  file_delete(path_preset_scss)
+
+  # Don't bundle precompiled Bootswatch files
+  if (!preset %in% c("shiny", "bootstrap")) {
+    file_delete(path_preset_compiled)
+  }
 }
 
 # Generate Python Files -------------------------------------------------------------
