@@ -113,19 +113,19 @@ bslib_component_sass <- function() {
 }
 
 shiny_sass <- function(bs_version) {
-  shiny:::shinyDependencySassLayer(bs_version)
+  shiny:::shinyDependencySass(bs_version)
 }
 
 shiny_sass_selectize <- function(bs_version) {
-  sass_layer(rules = shiny:::selectizeSassLayer(bs_version))
+  sass_layer(rules = shiny:::selectizeSass(bs_version))
 }
 
 shiny_sass_ionrangeslider <- function() {
-  sass_layer(rules = shiny:::ionRangeSliderDependencySassLayer())
+  sass_layer(rules = shiny:::ionRangeSliderDependencySass())
 }
 
 shiny_sass_daterange_picker <- function() {
-  sass_layer(rules = shiny:::datePickerSassLayer())
+  sass_layer(rules = shiny:::datePickerSass())
 }
 
 theme_as_sass_lines <- function(full_theme) {
