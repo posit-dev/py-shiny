@@ -375,17 +375,22 @@ from typing import Literal
 
 ShinyThemePreset = Literal[
 %s
-])"
+]
+
+ShinyThemePresets: tuple[ShinyThemePreset, ...] = (
+%s
+))"
 
 presets <- paste0(
   '"', bundled_presets, '"',
   collapse = ",\n\t"
 )
+presets <- paste0("\t", presets, ",")
 
 path_presets_py <- path(here::here("shiny", "ui"), "_theme_presets.py")
 
 writeLines(
-  sprintf(template, paste0("\t", presets, ",")),
+  sprintf(template, presets, presets),
   path_presets_py
 )
 
