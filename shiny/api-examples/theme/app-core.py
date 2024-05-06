@@ -19,19 +19,20 @@ Durians are known for their large size and thorn-covered husk, which requires ca
 """
     ),
     title="Theme Example",
-    theme=ui.Theme("shiny")
-    .add_defaults(
-        headings_color="red",
-        bar_color="purple",
-        select_color_text="green",
-        bslib_dashboard_design=True,
-    )
-    .add_mixins("$bslib-sidebar-bg: $gray-200;")
-    .add_rules(
-        """
-        strong { color: $primary; }
-        .sidebar-title { color: $danger; }
-        """
+    theme=(
+        ui.Theme("shiny")
+        .add_defaults(
+            headings_color="red",
+            bar_color="purple",
+            select_color_text="green",
+            bslib_dashboard_design=True,
+        ).
+        .add_rules(
+            """
+            strong { color: $primary; }
+            .sidebar-title { color: $danger; }
+            """
+        )
     ),
     # theme="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css",
     # theme=Path(__file__).parent / "css" / "bootswatch-minty.min.css",

@@ -350,8 +350,8 @@ for (preset in bundled_presets) {
   ))
 
   preset_sass_entry_files[preset] <- write_theme_sass_files(preset, theme_sass_lines)
+  cli::cli_progress_done()
 }
-cli::cli_progress_done()
 
 # Fixup Sass Files -------------------------------------------------------------------
 cli::cli_h2("Fixing up intermediate Sass Files")

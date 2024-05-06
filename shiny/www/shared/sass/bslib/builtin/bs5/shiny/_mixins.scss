@@ -4,9 +4,5 @@ $accordion-button-active-bg: null;
 $accordion-button-active-color: null;
 $accordion-icon-active-color: null;
 
-// Shiny: selectInput() and selectizeInput()
-$selectize-color-dropdown-item-active: $component-active-bg !default;
-$selectize-color-dropdown-item-active-text: $component-active-color !default;
-
 // Component Variables
 @import "ionrangeslider/_variables.scss";
