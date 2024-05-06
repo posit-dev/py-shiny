@@ -50,5 +50,7 @@ def components_dependencies() -> HTMLDependency:
             {"src": "components.min.js"},
             {"src": "web-components.min.js", "type": "module"},
         ],
-        stylesheet={"href": "components.css"},
+        # CSS is now provided by bootstrap.min.css
+        # stylesheet={"href": "components.css"},
+        all_files=True,
     )
