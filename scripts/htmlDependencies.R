@@ -1,4 +1,12 @@
-#!/usr/bin/env Rscript
+#!/usr/bin/env -S Rscript --vanilla
+
+package_ref <- if (file.exists("scripts/_pkg-sources.R")) {
+  source("scripts/_pkg-sources.R")$value
+} else if (file.exists("_pkg-sources.R")) {
+  source("_pkg-sources.R")$value
+} else {
+  stop("Could not find _pkg-sources.R")
+}
 
 if (requireNamespace("cli", quietly = TRUE)) {
   message <- function(..., .envir = parent.frame()) {
@@ -18,10 +26,10 @@ message("Installing GitHub packages: bslib, shiny, htmltools")
 withr::local_temp_libpaths()
 ignore <- capture.output({
   pak::pkg_install(c(
-    "rstudio/bslib@main",
-    "rstudio/shiny@main",
-    "rstudio/sass@main",
-    "rstudio/htmltools@main"
+    package_ref$shiny,
+    package_ref$bslib,
+    package_ref$sass,
+    package_ref$htmltools
   ))
   #pak::pkg_install(c("rstudio/bslib@main", "rstudio/shiny@main", "rstudio/htmltools@main"))
 })
