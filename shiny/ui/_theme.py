@@ -7,7 +7,6 @@ from typing import Optional, TypeVar
 
 from htmltools import HTMLDependency
 from packaging.version import Version
-from sass import compile as sass_compile
 
 from .._docstring import no_example
 from .._versions import bootstrap
@@ -101,6 +100,9 @@ class Theme:
                 return self._read_precompiled_css()
             return self._css
 
+        check_libsass_installed()
+        import sass
+
         sass_lines = [
             '@import "_01_functions";',
             *self._functions,
@@ -114,7 +116,7 @@ class Theme:
 
         sass_string = "\n".join(sass_lines)
 
-        self._css = sass_compile(
+        self._css = sass.compile(
             string=sass_string,
             include_paths=[path_pkg_preset(self._preset)],
         )
@@ -190,4 +192,13 @@ def check_is_valid_preset(preset: ShinyThemePreset) -> None:
         raise ValueError(
             f"Invalid preset '{preset}'.\n"
             + f"Expected one of: '{'\', \''.join(ShinyThemePresets)}'.",
+        )
+
+def check_libsass_installed() -> None:
+    import importlib.util
+
+    if importlib.util.find_spec("sass") is None:
+        raise ImportError(
+            "The 'libsass' package is required to compile custom themes. "
+            "Please install it with `pip install libsass` or `pip install shiny[theme]`.",
         )
