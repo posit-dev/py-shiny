@@ -14,10 +14,10 @@ from .._versions import bootstrap
 from ._theme_presets import ShinyThemePreset, ShinyThemePresets
 from ._utils import path_pkg_www
 
-T = TypeVar("T", bound="ShinyTheme")
+T = TypeVar("T", bound="Theme")
 
 @no_example()
-class ShinyTheme:
+class Theme:
     def __init__(
         self,
         preset: ShinyThemePreset = "shiny",
@@ -25,7 +25,7 @@ class ShinyTheme:
     ):
         check_is_valid_preset(preset)
         self._preset: ShinyThemePreset = preset
-        self.name = name if name is not None else preset
+        self.name = name
         self._version = bootstrap
 
         # User-provided Sass code
@@ -71,6 +71,8 @@ class ShinyTheme:
         if len(kwargs) > 0:
             for key, value in kwargs.items():
                 key.replace("_", "-")
+                if isinstance(value, bool):
+                    value = "true" if value else "false"
                 defaults.append(f"${key}: {value};")
 
         # Add args to the front of _defaults
@@ -136,7 +138,7 @@ class ShinyTheme:
         if self._css == "precompiled":
             return self._html_dependency_precompiled()
 
-        dep_name = f"shinytheme-{self.name}"
+        dep_name = f"shiny-theme-{self.name or self._preset}"
         css_name = f"{dep_name}.min.css"
 
         # Re-use already compiled CSS file if possible
