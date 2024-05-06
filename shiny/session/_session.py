@@ -1414,6 +1414,7 @@ class Outputs:
                     session._send_progress(
                         "binding", {"id": output_name, "persistent": True}
                     )
+                    # It's important to exit early here _without_ a recalculated message
                     return
                 except SilentCancelOutputException:
                     pass
