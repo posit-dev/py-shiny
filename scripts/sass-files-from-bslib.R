@@ -324,13 +324,16 @@ bundled_presets <- c(
   bootswatch_themes(version)
 )
 
+dep_files <- c()
+preset_sass_entry_files <- list()
+
 cli::cli_h2("Preparing {length(bundled_presets)} Bootstrap theme preset{?s}")
 
 for (preset in bundled_presets) {
 
   cli::cli_progress_step(
     "Preparing {.strong {preset}} theme Sass files...",
-    "Prepared {.strong {preset}} theme {.path {path_rel(path(DIR_RESOURCES, 'preset', preset))}}",
+    "Prepared {.strong {preset}} theme in {.path {path_rel(path(DIR_RESOURCES, 'preset', preset))}}",
     "Failed to prepare {.strong {preset}} theme Sass files."
   )
 
@@ -338,14 +341,35 @@ for (preset in bundled_presets) {
   theme_full <- bs_full_theme(theme)
   theme_sass_lines <- theme_as_sass_lines(theme_full)
 
-  dep_files <- copy_theme_dependency_files(theme_sass_lines, to = DIR_RESOURCES)
+  dep_files <<- unique(c(
+    dep_files,
+    copy_theme_dependency_files(theme_sass_lines, to = DIR_RESOURCES)
+  ))
 
-  bsw_file <- dep_files[path_file(dep_files) == "_bootswatch.scss"]
-  if (length(bsw_file)) {
-    fixup_bootswatch_mixins(bsw_file)
-  }
+  preset_sass_entry_files[preset] <- write_theme_sass_files(preset, theme_sass_lines)
+}
+cli::cli_progress_done()
 
-  path_preset_scss <- write_theme_sass_files(preset, theme_sass_lines)
+cli::cli_h2("Fixing up intermediate Sass Files")
+
+cli::cli_progress_step("Fixing up Bootswatch mixin names")
+bsw_files <- dep_files[path_file(dep_files) == "_bootswatch.scss"]
+for (bsw_file in bsw_files) {
+  fixup_bootswatch_mixins(bsw_file)
+}
+
+cli::cli_progress_done()
+
+cli::cli_h2("Precompiling CSS files")
+for (preset in bundled_presets) {
+  path_preset_scss <- preset_sass_entry_files[[preset]]
+
+  cli::cli_progress_step(
+    "Precompiling {.strong {preset}} theme CSS...",
+    "Precompiled {.strong {preset}} theme CSS {.path {path_rel(path_preset_scss)}}",
+    "Failed to precompile {.strong {preset}} theme CSS."
+  )
+
 
   # Pre-render the Sass files into compiled CSS
   tryCatch({
