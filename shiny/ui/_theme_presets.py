@@ -63,3 +63,8 @@ ShinyThemePresets: tuple[ShinyThemePreset, ...] = (
 	"yeti",
 	"zephyr",
 )
+
+ShinyThemePresetsBundled: tuple[ShinyThemePreset, ...] = (
+	"bootstrap",
+	"shiny",
+)

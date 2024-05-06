@@ -321,18 +321,19 @@ write_theme_sass_files <- function(preset, theme_sass_lines) {
 }
 
 # Prepare Preset Sass Files ----------------------------------------------------------
-bundled_presets <- c(
+presets <- c(
   "bootstrap",
   "shiny",
   bootswatch_themes(version)
 )
+bundled_presets <- c("bootstrap", "shiny")
 
 dep_files <- c()
 preset_sass_entry_files <- list()
 
-cli::cli_h2("Preparing {length(bundled_presets)} Bootstrap theme preset{?s}")
+cli::cli_h2("Preparing {length(presets)} Bootstrap theme preset{?s}")
 
-for (preset in bundled_presets) {
+for (preset in presets) {
 
   cli::cli_progress_step(
     "Preparing {.strong {preset}} theme Sass files...",
@@ -366,12 +367,13 @@ cli::cli_progress_done()
 
 # Precompile CSS Files ---------------------------------------------------------------
 cli::cli_h2("Precompiling CSS files")
-for (preset in bundled_presets) {
+for (preset in presets) {
   path_preset_scss <- preset_sass_entry_files[[preset]]
+  verb <- if (preset %in% bundled_presets) "Pre-compil" else "Test"
 
   cli::cli_progress_step(
-    "Precompiling {.strong {preset}} theme CSS...",
-    "Precompiled {.strong {preset}} theme CSS {.path {path_rel(path_preset_scss)}}",
+    "{verb}ing {.strong {preset}} theme CSS...",
+    "{verb}ed {.strong {preset}} theme CSS {.path {path_rel(path_dir(path_preset_scss))}}",
     "Failed to precompile {.strong {preset}} theme CSS."
   )
 
@@ -398,7 +400,7 @@ for (preset in bundled_presets) {
   file_delete(path_preset_scss)
 
   # Don't bundle precompiled Bootswatch files
-  if (!preset %in% c("shiny", "bootstrap")) {
+  if (!preset %in% bundled_presets) {
     file_delete(path_preset_compiled)
   }
 }
@@ -421,16 +423,19 @@ ShinyThemePreset = Literal[
 
 ShinyThemePresets: tuple[ShinyThemePreset, ...] = (
 %s
+)
+
+ShinyThemePresetsBundled: tuple[ShinyThemePreset, ...] = (
+%s
 ))"
 
-presets <- paste0(
-  '"', bundled_presets, '"',
-  collapse = ",\n\t"
-)
-presets <- paste0("\t", presets, ",")
+py_list <- function(x) {
+  x <- paste(sprintf('"%s"', x), collapse = ",\n\t")
+  paste0("\t", x, ",")
+}
 
 writeLines(
-  sprintf(template, presets, presets),
+  sprintf(template, py_list(presets), py_list(presets), py_list(bundled_presets)),
   path_presets_py
 )
 

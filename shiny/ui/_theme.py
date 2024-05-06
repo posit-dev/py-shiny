@@ -11,7 +11,11 @@ from sass import compile as sass_compile
 
 from .._docstring import no_example
 from .._versions import bootstrap
-from ._theme_presets import ShinyThemePreset, ShinyThemePresets
+from ._theme_presets import (
+    ShinyThemePreset,
+    ShinyThemePresets,
+    ShinyThemePresetsBundled,
+)
 from ._utils import path_pkg_www
 
 T = TypeVar("T", bound="Theme")
@@ -38,7 +42,7 @@ class Theme:
         # 1. "precompiled" indicating it's okay to use precompiled preset.min.css
         # 2. "" indicating that the CSS has not been compiled yet
         # 3. A string containing the compiled CSS for the current theme
-        self._css: str = "precompiled" if preset in ["bootstrap", "shiny"] else ""
+        self._css: str = "precompiled" if preset in ShinyThemePresetsBundled else ""
 
         # If the theme has been customized and rendered once, we store the tempdir
         # so that we can re-use the already compiled CSS file.
