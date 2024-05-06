@@ -1,5 +1,6 @@
 #!/usr/bin/env -S Rscript --vanilla
 
+# Setup clean package environment -----------------------------------------------------
 package_ref <- if (file.exists("scripts/_pkg-sources.R")) {
   source("scripts/_pkg-sources.R")$value
 } else if (file.exists("_pkg-sources.R")) {
@@ -57,6 +58,7 @@ pak_install(
 
 withr::local_options(bslib.precompiled = FALSE, sass.cache = FALSE)
 
+# Setting up ---------------------------------------------------------------------
 cli::cli_h2("Setting up")
 
 library(bslib, warn.conflicts = FALSE)
@@ -88,6 +90,7 @@ sass_markers <- "/*-- scss:functions --*/
 path_sass_markers <- path(DIR_RESOURCES, "_sass_layer_markers.scss")
 writeLines(sass_markers, path_sass_markers)
 
+# Functions ---------------------------------------------------------------------
 
 bslib_bs_theme <- function(version, preset = "shiny") {
   theme <- bs_theme(version, preset = preset)
@@ -317,7 +320,7 @@ write_theme_sass_files <- function(preset, theme_sass_lines) {
   path(pkg_dir_preset, "preset.scss")
 }
 
-# Main ----------------------------------------------------------------
+# Prepare Preset Sass Files ----------------------------------------------------------
 bundled_presets <- c(
   "bootstrap",
   "shiny",
@@ -350,6 +353,7 @@ for (preset in bundled_presets) {
 }
 cli::cli_progress_done()
 
+# Fixup Sass Files -------------------------------------------------------------------
 cli::cli_h2("Fixing up intermediate Sass Files")
 
 cli::cli_progress_step("Fixing up Bootswatch mixin names")
@@ -360,6 +364,7 @@ for (bsw_file in bsw_files) {
 
 cli::cli_progress_done()
 
+# Precompile CSS Files ---------------------------------------------------------------
 cli::cli_h2("Precompiling CSS files")
 for (preset in bundled_presets) {
   path_preset_scss <- preset_sass_entry_files[[preset]]
@@ -389,7 +394,8 @@ for (preset in bundled_presets) {
   })
 }
 
-cli::cli_h2("Finishing up")
+# Generate Python Files -------------------------------------------------------------
+cli::cli_h2("Generate Python files")
 
 path_presets_py <- path(here::here("shiny", "ui"), "_theme_presets.py")
 cli::cli_progress_step("Generating {.path {path_rel(path_presets_py)}}")
