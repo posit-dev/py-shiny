@@ -5,7 +5,7 @@ from htmltools import HTMLDependency
 from palmerpenguins import load_penguins_raw  # pyright: ignore[reportMissingTypeStubs]
 
 from shiny import App, Inputs, Outputs, Session, render, ui
-from shiny.render._dataframe import CellPatch
+from shiny.render import CellPatch
 
 df = load_penguins_raw()
 
