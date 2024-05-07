@@ -1447,6 +1447,11 @@ class Outputs:
                     }
                 )
 
+                # Needed so that Shiny knows to flush the outputs. Even if no
+                # outputs/errors are queued, it's necessary to flush so that the
+                # client knows that progress is over.
+                await cast(AppSession, session)._flush()
+
             output_obs.on_invalidate(
                 lambda: require_real_session()._send_progress(
                     "binding", {"id": output_name}
