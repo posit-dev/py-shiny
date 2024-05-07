@@ -104,6 +104,7 @@ from ...ui import (
     notification_remove,
     nav_spacer,
     Progress,
+    Theme,
     value_box_theme,
     js_eval,
 )
@@ -248,6 +249,7 @@ __all__ = (
     "notification_remove",
     "nav_spacer",
     "Progress",
+    "Theme",
     "value_box_theme",
     # Imports from ._cm_components
     "sidebar",
