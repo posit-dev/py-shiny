@@ -1039,7 +1039,7 @@ class NavSetBar(NavSet):
             tags.span({"class": "navbar-brand"}, self.title),
         )
         if self.collapsible:
-            collapse_id = "navbar-collapse-" + private_random_int(1000, 10000)
+            collapse_id = "navbar-collapse-" + nav_random_int()
             nav_container.append(
                 tags.button(
                     tags.span(class_="navbar-toggler-icon"),
@@ -1289,7 +1289,7 @@ def render_navset(
     selected: Optional[str],
     context: dict[str, Any],
 ) -> tuple[Tag, Tag]:
-    tabsetid = private_random_int(1000, 10000)
+    tabsetid = nav_random_int()
 
     # Separate MetadataNodes from NavSetArgs.
     metadata_args: list[MetadataNode] = []
@@ -1354,6 +1354,10 @@ def navset_title(
 
     title_attrs: TagAttrs = {"class": "bslib-navs-card-title"}
     return [title_attrs, tags.span(title)]
+
+
+def nav_random_int() -> str:
+    return private_random_int(1000, 1000000)
 
 
 ##############################################
