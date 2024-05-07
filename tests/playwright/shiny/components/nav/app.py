@@ -110,9 +110,6 @@ app_ui = ui.page_navbar(
         make_navset(
             "navset_bar", ui.navset_bar, title=True, sidebar=True, headerfooter=True
         ),
-        make_navset(
-            "navset_bar", ui.navset_bar, title=True, sidebar=True, headerfooter=True
-        ),
         make_navset("navset_tab", ui.navset_tab, headerfooter=True),
         make_navset("navset_pill", ui.navset_pill, headerfooter=True),
         make_navset("navset_underline", ui.navset_underline, headerfooter=True),
