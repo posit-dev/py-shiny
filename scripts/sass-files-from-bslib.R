@@ -16,7 +16,7 @@ withr::local_temp_libpaths("replace")
 ensure_base_packages <- function() {
   for (pkg in c("cli", "pak")) {
     if (!requireNamespace(pkg, quietly = TRUE)) {
-      message("Installing base packge: ", pkg)
+      message("Installing base package: ", pkg)
       install.packages(pkg, quiet = TRUE)
     }
   }
@@ -74,6 +74,8 @@ cli::cli_alert_warning("Reset {.path {path_rel(DIR_RESOURCES)}}")
 if (dir_exists(DIR_RESOURCES)) dir_delete(DIR_RESOURCES)
 dir_create(DIR_RESOURCES)
 
+# We'll use these markers to split the final, full Sass file into four layers
+# using the same logic as `sass::sass_layer_file()` and Quarto.
 sass_markers <- "/*-- scss:functions --*/
 // SPLIT: functions
 
@@ -92,11 +94,18 @@ writeLines(sass_markers, path_sass_markers)
 
 # Functions ---------------------------------------------------------------------
 
+#' Create a base Bootstrap theme via {bslib}.
 bslib_bs_theme <- function(version, preset = "shiny") {
   theme <- bs_theme(version, preset = preset)
+  # The bs3compat layer is for legacy markup only and isn't needed in py-shiny
   bs_remove(theme, "bs3compat")
 }
 
+#' Create a full Shiny theme bundle with all dependencies.
+#'
+#' Adds styles for bslib components, shiny styles, `input_selectize()`, `input_slider()`
+#' and `input_date_range()`.
+#' @return A `bslib::bs_bundle()` object.
 bs_full_theme <- function(theme) {
   bs_version <- bslib::theme_version(theme)
 
@@ -112,7 +121,7 @@ bs_full_theme <- function(theme) {
 }
 
 bslib_component_sass <- function() {
-  sass_layer(rules = bslib:::component_dependency_sass_layer())
+  bslib:::component_dependency_sass_layer()
 }
 
 shiny_sass <- function(bs_version) {
@@ -120,22 +129,27 @@ shiny_sass <- function(bs_version) {
 }
 
 shiny_sass_selectize <- function(bs_version) {
-  sass_layer(rules = shiny:::selectizeSass(bs_version))
+  shiny:::selectizeSass(bs_version)
 }
 
 shiny_sass_ionrangeslider <- function() {
-  sass_layer(rules = shiny:::ionRangeSliderDependencySass())
+  sass::sass_layer(rules = shiny:::ionRangeSliderDependencySass())
 }
 
 shiny_sass_daterange_picker <- function() {
-  sass_layer(rules = shiny:::datePickerSass())
+  shiny:::datePickerSass()
 }
 
+#' Flattens the Sass bundle into a single Sass file, ignoring file attachments
+#' @return A character vector of lines of flattened Sass code
 theme_as_sass_lines <- function(full_theme) {
   bs_sass <- as_sass(full_theme)
   strsplit(as.character(bs_sass), "\n")[[1]]
 }
 
+#' Replaces package-relative paths in the theme Sass with paths relative to the
+#' `shiny/www/shared/sass/preset/{preset_name}` directory, where the preset Sass will
+#' be stored.
 theme_relative_paths <- function(theme_sass_lines) {
   replace_package_path <- function(pkg) {
     replacement <- "@import \"../../"
@@ -164,6 +178,9 @@ theme_relative_paths <- function(theme_sass_lines) {
   theme_sass_lines
 }
 
+#' Finds the Sass file for a given import statement, which may exclude a leading
+#' underscore and/or the file extension.
+#' @return The path to the Sass file, or `NULL` if the file could not be found.
 find_sass_file <- function(file) {
   if (file_exists(file)) return(file)
 
@@ -182,6 +199,9 @@ find_sass_file <- function(file) {
   NULL
 }
 
+#' Searches the Sass lines recursively for `@import` statements and returns the paths to
+#' all imported files, including `@import` statements in imported files.
+#' @return A character vector of absolute paths to all imported Sass files.
 theme_files_used <- function(theme_sass_lines) {
   imports <- grep("^\\s*@import \"", theme_sass_lines, value = TRUE)
   if (!length(imports)) return()
@@ -215,6 +235,9 @@ theme_files_used <- function(theme_sass_lines) {
   files_ret
 }
 
+#' Splits the theme Sass into four layers: functions, defaults, rules, and mixins. Uses
+#' the same logic as `sass::sass_layer_file()` and Quarto.
+#' @return A named list of character vectors, each containing the lines of a Sass layer.
 theme_sass_split <- function(theme_sass_lines) {
   # Splits the sass files into four layers:
   # 1. functions
@@ -237,6 +260,7 @@ theme_sass_split <- function(theme_sass_lines) {
   theme_split
 }
 
+#' Fixes up Bootswatch mixin names to avoid conflicts with Bootstrap's own mixins.
 fixup_bootswatch_mixins <- function(file) {
   # Some Bootswatch files include mixins that conflict with Bootstrap's own
   # mixins. We need to rename these mixins to avoid the conflict. This does't
@@ -271,7 +295,11 @@ fixup_bootswatch_mixins <- function(file) {
   writeLines(lines, file)
 }
 
-copy_theme_dependency_files <- function(theme_sass_lines, to = DIR_RESOURCES) {
+#' Copies the theme Sass files to the `shiny/www/shared/sass` directory.
+#' @param theme_sass_lines The lines of the theme Sass file.
+#' @param to The directory to copy the files to.
+#' @return A character vector of paths to the copied files.
+copy_theme_sass_files <- function(theme_sass_lines, to = DIR_RESOURCES) {
   theme_files <- theme_files_used(theme_sass_lines)
 
   path_lib <- path_package("bslib")
@@ -289,6 +317,10 @@ copy_theme_dependency_files <- function(theme_sass_lines, to = DIR_RESOURCES) {
   file_copy(theme_files, theme_files_new, overwrite = TRUE)
 }
 
+#' Writes the theme Sass files to the `shiny/www/shared/sass/preset/{preset}` directory.
+#' @param preset The name of the preset.
+#' @param theme_sass_lines The lines of the theme's flattened Sass.
+#' @return The path to the entry-point Sass file for the preset.
 write_theme_sass_files <- function(preset, theme_sass_lines) {
   # Take out bslib's web-font-path override
   theme_sass_lines <- setdiff(theme_sass_lines, '$web-font-path: "font.css" !default;')
@@ -300,16 +332,13 @@ write_theme_sass_files <- function(preset, theme_sass_lines) {
   if (dir_exists(pkg_dir_preset)) dir_delete(pkg_dir_preset)
   dir_create(pkg_dir_preset)
 
-  file_names <- c()
+  # _01_functions.scss, _02_defaults.scss, etc.
+  file_names <- sprintf("_%02d_%s.scss", seq_along(theme_split), names(theme_split))
 
   for (i in seq_along(theme_split)) {
-    theme_name <- names(theme_split)[i]
-    file_name <- sprintf("_%02d_%s.scss", i, theme_name)
-    file_names <- c(file_names, file_name)
-
     writeLines(
-      theme_split[[theme_name]],
-      path(pkg_dir_preset, file_name)
+      theme_split[[i]],
+      path(pkg_dir_preset, file_names[i])
     )
   }
 
@@ -347,7 +376,7 @@ for (preset in presets) {
 
   dep_files <<- unique(c(
     dep_files,
-    copy_theme_dependency_files(theme_sass_lines, to = DIR_RESOURCES)
+    copy_theme_sass_files(theme_sass_lines, to = DIR_RESOURCES)
   ))
 
   preset_sass_entry_files[preset] <- write_theme_sass_files(preset, theme_sass_lines)
@@ -429,13 +458,13 @@ ShinyThemePresetsBundled: tuple[ShinyThemePreset, ...] = (
 %s
 ))"
 
-py_list <- function(x) {
-  x <- paste(sprintf('"%s"', x), collapse = ",\n\t")
-  paste0("\t", x, ",")
+py_lines <- function(x) {
+  x <- paste(sprintf('"%s"', x), collapse = ",\n    ")
+  paste0("    ", x, ",")
 }
 
 writeLines(
-  sprintf(template, py_list(presets), py_list(presets), py_list(bundled_presets)),
+  sprintf(template, py_lines(presets), py_lines(presets), py_lines(bundled_presets)),
   path_presets_py
 )
 
