@@ -1414,9 +1414,10 @@ class Outputs:
                     session._send_progress(
                         "binding", {"id": output_name, "persistent": True}
                     )
+                    # It's important to exit early here _without_ a recalculated message
                     return
                 except SilentCancelOutputException:
-                    return
+                    pass
                 except SilentException:
                     session._outbound_message_queues.set_value(output_name, None)
                 except Exception as e:
@@ -1436,16 +1437,15 @@ class Outputs:
                         "type": None,
                     }
                     session._outbound_message_queues.set_error(output_name, err_message)
-                    return
-                finally:
-                    await session._send_message(
-                        {
-                            "recalculating": {
-                                "name": output_name,
-                                "status": "recalculated",
-                            }
+
+                await session._send_message(
+                    {
+                        "recalculating": {
+                            "name": output_name,
+                            "status": "recalculated",
                         }
-                    )
+                    }
+                )
 
             output_obs.on_invalidate(
                 lambda: require_real_session()._send_progress(
