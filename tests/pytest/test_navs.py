@@ -60,9 +60,9 @@ def test_navset_tab_markup():
           </li>
         </ul>
         <div class="tab-content" data-tabsetid="886440">
-          <div class="tab-pane active" role="tabpanel" data-value="a" id="tab-7311-0">a</div>
-          <div class="tab-pane" role="tabpanel" data-value="b" id="tab-7311-1">b</div>
-          <div class="tab-pane" role="tabpanel" data-value="c" id="tab-7890-0">c</div>
+          <div class="tab-pane active" role="tabpanel" data-value="a" id="tab-886440-0">a</div>
+          <div class="tab-pane" role="tabpanel" data-value="b" id="tab-886440-1">b</div>
+          <div class="tab-pane" role="tabpanel" data-value="c" id="tab-404958-0">c</div>
         </div>"""
     )
 
@@ -91,8 +91,8 @@ def test_navset_pill_markup():
           </li>
         </ul>
         <div class="tab-content" data-tabsetid="886440">
-          <div class="tab-pane active" role="tabpanel" data-value="c" id="tab-7890-0">c</div>
-          <div class="tab-pane" role="tabpanel" data-value="a" id="tab-7311-1">a</div>
+          <div class="tab-pane active" role="tabpanel" data-value="c" id="tab-404958-0">c</div>
+          <div class="tab-pane" role="tabpanel" data-value="a" id="tab-886440-1">a</div>
         </div>"""
     )
 
@@ -129,9 +129,9 @@ def test_navset_card_pill_markup():
           </div>
           <div class="card-body bslib-gap-spacing html-fill-item html-fill-container" style="margin-top:auto;margin-bottom:auto;flex:1 1 auto;">
             <div class="tab-content html-fill-item html-fill-container" data-tabsetid="886440">
-              <div class="tab-pane html-fill-item html-fill-container bslib-gap-spacing" role="tabpanel" data-value="a" id="tab-7311-0" style="gap:0;padding:0;">a</div>
-              <div class="tab-pane active html-fill-item html-fill-container bslib-gap-spacing" role="tabpanel" data-value="c" id="tab-7890-0" style="gap:0;padding:0;">c</div>
-              <div class="tab-pane html-fill-item html-fill-container bslib-gap-spacing" role="tabpanel" data-value="b" id="tab-7311-2" style="gap:0;padding:0;">b</div>
+              <div class="tab-pane html-fill-item html-fill-container bslib-gap-spacing" role="tabpanel" data-value="a" id="tab-886440-0" style="gap:0;padding:0;">a</div>
+              <div class="tab-pane active html-fill-item html-fill-container bslib-gap-spacing" role="tabpanel" data-value="c" id="tab-404958-0" style="gap:0;padding:0;">c</div>
+              <div class="tab-pane html-fill-item html-fill-container bslib-gap-spacing" role="tabpanel" data-value="b" id="tab-886440-2" style="gap:0;padding:0;">b</div>
             </div>
           </div>
           <script data-bslib-card-init="">window.bslib.Card.initializeAllCards();</script>
@@ -152,8 +152,8 @@ def test_navset_bar_markup():
         """\
         <nav class="navbar navbar-expand-md navbar-default">
           <div class="container-fluid">
-            <span class="navbar-brand">Page title</span><button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar-collapse-1663" aria-controls="navbar-collapse-1663" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
-            <div id="navbar-collapse-1663" class="collapse navbar-collapse">
+            <span class="navbar-brand">Page title</span><button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar-collapse-795772" aria-controls="navbar-collapse-795772" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
+            <div id="navbar-collapse-795772" class="collapse navbar-collapse">
               <ul class="nav navbar-nav nav-underline" data-tabsetid="886440">
                 <li class="nav-item dropdown">
                   <a class="nav-link dropdown-toggle active" data-bs-toggle="dropdown" data-value="Menu" href="#" role="button">Menu</a>
@@ -171,7 +171,7 @@ def test_navset_bar_markup():
         <div class="container-fluid html-fill-item html-fill-container">
           Page header
           <div class="tab-content html-fill-item html-fill-container" data-tabsetid="886440">
-            <div class="tab-pane active html-fill-item html-fill-container bslib-gap-spacing" role="tabpanel" data-value="c" id="tab-7890-1" style="--bslib-navbar-margin:0;;">c</div>
+            <div class="tab-pane active html-fill-item html-fill-container bslib-gap-spacing" role="tabpanel" data-value="c" id="tab-404958-1" style="--bslib-navbar-margin:0;;">c</div>
           </div>
           Page footer
         </div>"""
