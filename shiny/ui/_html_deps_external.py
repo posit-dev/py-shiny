@@ -7,7 +7,6 @@ from htmltools import HTML, HTMLDependency, Tagifiable, TagList, head_content
 from htmltools.tags import link
 
 from .._versions import bootstrap as bootstrap_version
-from .._versions import shiny_html_deps
 from ..html_dependencies import jquery_deps
 from ._include_helpers import check_path, include_css
 

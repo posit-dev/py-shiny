@@ -19,6 +19,7 @@ from ._utils import path_pkg_www
 
 T = TypeVar("T", bound="Theme")
 
+
 @no_example()
 class Theme:
     def __init__(
@@ -191,8 +192,9 @@ def check_is_valid_preset(preset: ShinyThemePreset) -> None:
     if preset not in ShinyThemePresets:
         raise ValueError(
             f"Invalid preset '{preset}'.\n"
-            + f"Expected one of: '{'\', \''.join(ShinyThemePresets)}'.",
+            + f"""Expected one of: "{'", "'.join(ShinyThemePresets)}".""",
         )
+
 
 def check_libsass_installed() -> None:
     import importlib.util

@@ -1,4 +1,4 @@
-from pathlib import Path
+# from pathlib import Path
 
 from shiny import App, render, ui
 
@@ -26,7 +26,7 @@ Durians are known for their large size and thorn-covered husk, which requires ca
             bar_color="purple",
             select_color_text="green",
             bslib_dashboard_design=True,
-        ).
+        )
         .add_rules(
             """
             strong { color: $primary; }
