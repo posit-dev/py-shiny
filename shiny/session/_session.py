@@ -1450,8 +1450,8 @@ class Outputs:
                 # Needed so that Shiny knows to flush the outputs. Even if no
                 # outputs/errors are queued, it's necessary to flush so that the
                 # client knows that progress is over.
-                if getattr(session, "_flush", None):
-                    await session._flush()  # pyright: ignore
+                if isinstance(session, AppSession):
+                    await session._flush()
 
             output_obs.on_invalidate(
                 lambda: require_real_session()._send_progress(
