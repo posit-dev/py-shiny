@@ -109,8 +109,7 @@ quartodoc:
         - ui.insert_ui
         - ui.remove_ui
         - ui.busy_indicators.use
-        - ui.busy_indicators.spinner_options
-        - ui.busy_indicators.pulse_options
+        - ui.busy_indicators.options
         - ui.fill.as_fillable_container
         - ui.fill.as_fill_item
         - ui.fill.remove_all_fill

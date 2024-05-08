@@ -19,7 +19,7 @@ withr::local_temp_libpaths()
 ignore <- capture.output({
   pak::pkg_install(c(
     "rstudio/bslib@main",
-    "rstudio/shiny@main",
+    "rstudio/shiny@busy-indicators",
     "rstudio/sass@main",
     "rstudio/htmltools@main"
   ))

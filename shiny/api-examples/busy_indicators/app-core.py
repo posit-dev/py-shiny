@@ -15,7 +15,7 @@ app_ui = ui.page_sidebar(
             multiple=True,
             selected=["spinners", "pulse"],
         ),
-        ui.busy_indicators.spinner_options(color="orange"),
+        ui.busy_indicators.options(spinner_color="orange"),
         ui.download_button("download", "Download source"),
     ),
     ui.card(

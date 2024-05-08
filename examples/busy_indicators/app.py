@@ -19,18 +19,14 @@ mpl.switch_backend("Agg")
 
 # -- Reusable card module --
 @module.ui
-def card_ui(title="Tadpole", spinner_type="tadpole"):
+def card_ui():
     return ui.card(
         ui.card_header(
-            title,
+            "A plot",
             ui.input_task_button("simulate", "Simulate", icon=icon_svg("shuffle")),
             class_="d-flex justify-content-between align-items-center",
         ),
-        ui.busy_indicators.spinner_options(
-            spinner_type, css_selector="." + spinner_type
-        ),
         ui.output_plot("plot"),
-        class_=spinner_type,
     )
 
 
@@ -81,13 +77,13 @@ app_ui = ui.page_sidebar(
         ui.input_slider("length", "Simulation length", 0, 500, 5),
     ),
     ui.layout_columns(
-        card_ui("a", "Tadpole", "tadpole"),
-        card_ui("b", "Disc", "disc"),
-        card_ui("c", "Dots", "dots"),
-        card_ui("d", "Dot track", "dot-track"),
+        card_ui("a"),
+        card_ui("b"),
+        card_ui("c"),
+        card_ui("d"),
         col_widths=[6, 6],
     ),
-    card_ui("e", "Ball", "bounce"),
+    card_ui("e"),
     ui.output_ui("indicator_types_ui"),
     fillable=True,
     title="Busy indicators + extended tasks = ❤️",
