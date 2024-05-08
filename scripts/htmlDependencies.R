@@ -2,6 +2,7 @@
 
 VERSION <- 5
 VERSION_REQUIREJS <- "2.3.6"
+BUNDLED_PRESETS <- c("bootstrap", "shiny")
 
 # Load supporting files ------------------------------------------------------------
 find_root <- function(dir = getwd()) {
@@ -19,107 +20,98 @@ find_root <- function(dir = getwd()) {
 }
 
 .root <- find_root()
-path_root <- function(...) path(.root, ...)
 
 source(file.path(.root, "scripts", "_functions_setup.R"))
 source(file.path(.root, "scripts", "_functions_deps.R"))
+source(file.path(.root, "scripts", "_functions_sass.R"))
 package_ref <- source(file.path(.root, "scripts", "_pkg-sources.R"))$value
-
-if (requireNamespace("cli", quietly = TRUE)) {
-  message <- function(..., .envir = parent.frame()) {
-    cli::cli_progress_step(paste0(...), .envir = .envir)
-  }
-}
 
 assert_npm_is_installed()
 
-# Use local lib path for installing packages so we don't pollute the user's library
-message("Installing GitHub packages: bslib, shiny, htmltools")
-withr::local_temp_libpaths()
-ignore <- capture.output({
-  pak::pkg_install(c(
-    package_ref$shiny,
-    package_ref$bslib,
-    package_ref$sass,
-    package_ref$htmltools
-  ))
-  #pak::pkg_install(c("rstudio/bslib@main", "rstudio/shiny@main", "rstudio/htmltools@main"))
-})
+# Setup clean package environment ---------------------------------------------------
+if (!requireNamespace("withr", quietly = TRUE)) {
+  message("Installing `withr`` package")
+  install.packages("withr", quiet = TRUE)
+}
+library(withr)
 
-library(htmltools, quietly = TRUE, warn.conflicts = FALSE)
-library(bslib, quietly = TRUE, warn.conflicts = FALSE)
-library(fs, quietly = TRUE, warn.conflicts = FALSE)
+local_temp_libpaths("replace")
 
-WWW_SHARED <- path(.root, "shiny", "www", "shared")
-
-
-theme <- bs_theme(version = VERSION, preset = "shiny")
-
-# ------------------------------------------------------------------------------
-# Must come first!
-message("Copy shiny www/shared")
-# Copy over shiny's www/shared directory
-copy_from_pkg("shiny", "www/shared", WWW_SHARED, WWW_SHARED)
-
-# ------------------------------------------------------------------------------
-message("Cleanup shiny www/shared")
-# Don't need legacy (hopefully)
-dir_delete(path(WWW_SHARED, "legacy"))
-# Don't need dataTables (hopefully)
-dir_delete(path(WWW_SHARED, "datatables"))
-# Don't need sass files (hopefully)
-dir_delete(path(WWW_SHARED, "shiny_scss"))
-
-# jQuery will come in via bslib (below)
-file_delete(
-  dir_ls(WWW_SHARED, type = "file", regexp = "jquery")
+message("Installing required packages...")
+pak_install(
+  "fs",
+  package_ref$shiny,
+  package_ref$bslib,
+  package_ref$sass,
+  package_ref$htmltools
 )
 
-# ------------------------------------------------------------------------------
-message("Copy bslib components")
-# Copy over bslib's components directory
+local_options(bslib.precompiled = FALSE, sass.cache = FALSE)
+
+# Setting up ---------------------------------------------------------------------
+cli::cli_h2("Setting up")
+
+library(bslib, warn.conflicts = FALSE)
+library(htmltools)
+library(sass)
+library(fs)
+
+PRESETS <- c(
+  "bootstrap",
+  "shiny",
+  bootswatch_themes(VERSION)
+)
+
+path_root <- function(...) {
+  path(.root, ...)
+}
+
+WWW_SHARED <- path(.root, "shiny", "www", "shared")
+DIR_SASS <- path_root("shiny", "www", "shared", "sass")
+
+if (dir_exists(WWW_SHARED)) {
+  cli::cli_alert_warning("Reset {.path {path_rel(WWW_SHARED)}}")
+  dir_delete(WWW_SHARED)
+}
+
+dir_create(WWW_SHARED)
+
+# Copy dependencies from {shiny} and {bslib} -----------------------------------------
+cli::cli_h2("Copying HTML deps from {.pkg shiny} and {.pkg bslib}")
+
+copy_from_pkg("shiny", "www/shared", WWW_SHARED, WWW_SHARED)
 www_bslib_components <- path(WWW_SHARED, "bslib", "components")
 copy_from_pkg("bslib", "components/dist", www_bslib_components)
-delete_non_minified(www_bslib_components)
-
-
-# ------------------------------------------------------------------------------
-message("Copy htmltools - fill")
-# Copy over htmltools's fill directory
 copy_from_pkg("htmltools", "fill", path(WWW_SHARED, "htmltools", "fill"))
 
 
-# ------------------------------------------------------------------------------
-message("Save ionRangeSlider dep")
+# Pre-rendering Component CSS --------------------------------------------------------
+cli::cli_h2("Pre-rendering Component CSS")
 
-# Upgrade to Bootstrap 5 by default
+theme <- bs_theme(version = VERSION, preset = "shiny")
+
 write_deps_ionrangeslider(theme, WWW_SHARED)
-
-
-message("Save bootstrap bundle")
 write_bootstrap_bslib_deps(theme, WWW_SHARED)
-
-
-# ------------------------------------------------------------------------------
-message("Render shiny.min.css with bs_theme()")
 write_shiny_css(theme, WWW_SHARED)
-
-message("Render selectize.min.js with bs_theme()")
 write_selectize_css(theme, WWW_SHARED)
-
-message("Render datepicker.min.css with bs_theme()")
 write_datepicker_css(theme, WWW_SHARED)
 
-# ------------------------------------------------------------------------------
-message("Cleanup bootstrap bundle")
-# This additional bs3compat HTMLDependency() only holds
-# the JS shim for tab panel logic, which we don't need
-# since we're generating BS5+ tab markup. Note, however,
-# we still do have bs3compat's bundled CSS on the page, which
-# comes in naturally via the bootstrap HTMLDependency()
+# Finishing installing Dependencies ---------------------------------------------------
+cli::cli_h2("Finishing installing dependencies")
+
+write_require_js(VERSION_REQUIREJS, WWW_SHARED)
+npm_install_dependencies()
+
+cli::cli_progress_step("Removing unused files from copied dependencies")
+delete_non_minified(www_bslib_components)
 delete_from_www_shared(
   WWW_SHARED,
   "bs3compat",
+  "legacy",
+  "datatables",
+  "shiny_scss",
+  # jQuery comes from bslib
+  path_rel(dir_ls(WWW_SHARED, type = "file", regexp = "jquery"), WWW_SHARED),
   # Remove non-minified or unused files
   "datepicker/css/bootstrap-datepicker3.css",
   "datepicker/js/bootstrap-datepicker.js",
@@ -136,16 +128,42 @@ delete_from_www_shared(
   "selectize/accessibility/js/selectize-plugin-a11y.js", # TODO: keep this one?
   "selectize/js/selectize.js"
 )
+cli::cli_progress_done()
 
-# ------------------------------------------------------------------------------
-message("Save requirejs")
-write_require_js(VERSION_REQUIREJS, WWW_SHARED)
 
-# ------------------------------------------------------------------------------
-message("Save _versions.py")
+# Prepare Preset Sass Files ----------------------------------------------------------
+cli::cli_h2("Preparing {length(PRESETS)} Bootstrap theme preset{?s}")
+
+dir_create(DIR_SASS)
+path_sass_markers <- write_sass_layer_markers(DIR_SASS)
+
+dep_files <- c()
+for (preset in PRESETS) {
+  preset_files <-
+    prepare_and_write_theme_sass_files(
+      VERSION,
+      preset,
+      path_sass_markers,
+      output_dir = DIR_SASS
+    )
+
+  dep_files <- unique(c(dep_files, preset_files$deps))
+}
+
+# Fixup Sass Files -------------------------------------------------------------------
+cli::cli_h2("Fixing up intermediate Sass Files")
+fixup_bootswatch_mixins(dep_files)
+
+
+# Precompile CSS Files ---------------------------------------------------------------
+cli::cli_h2("Precompiling CSS files")
+for (preset in PRESETS) {
+  compile_theme_sass(preset, BUNDLED_PRESETS, DIR_SASS)
+}
+
+# Generate Python Files -------------------------------------------------------------
+cli::cli_h2("Generate Python files")
+
+write_python_preset_choices(PRESETS, BUNDLED_PRESETS)
 write_versions_py(bootstrap = VERSION, requirejs = VERSION_REQUIREJS)
-
-
-# ------------------------------------------------------------------------------
-message("Copy ./js deps via npm")
-npm_install_dependencies()
+copy_shiny_preset_to_base_bootstrap()

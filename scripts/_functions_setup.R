@@ -14,7 +14,9 @@ pak_install <- function(...) {
 
   cli::cli_progress_step("Installing {length(pkgs)} package{?s}")
 
-  pak::pak(pkgs, upgrade = TRUE, ask = FALSE, lib = .libPaths()[1])
+  capture.output(
+    pak::pak(pkgs, upgrade = TRUE, ask = FALSE, lib = .libPaths()[1])
+  )
 
   cli::cli_progress_done()
 
