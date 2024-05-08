@@ -33,3 +33,8 @@ pak_install <- function(...) {
 
   invisible(pkgs)
 }
+
+bs_version_full <- function(version) {
+  bs_v <- bslib::versions()
+  names(bs_v)[bs_v == version]
+}
