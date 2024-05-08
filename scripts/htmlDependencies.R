@@ -26,11 +26,10 @@ source(file.path(.root, "scripts", "_functions_deps.R"))
 source(file.path(.root, "scripts", "_functions_sass.R"))
 package_ref <- source(file.path(.root, "scripts", "_pkg-sources.R"))$value
 
-assert_npm_is_installed()
 
 # Setup clean package environment ---------------------------------------------------
 if (!requireNamespace("withr", quietly = TRUE)) {
-  message("Installing `withr`` package")
+  message("Installing withr")
   install.packages("withr", quiet = TRUE)
 }
 library(withr)
@@ -50,6 +49,8 @@ local_options(bslib.precompiled = FALSE, sass.cache = FALSE)
 
 # Setting up ---------------------------------------------------------------------
 cli::cli_h2("Setting up")
+
+assert_npm_is_installed()
 
 library(bslib, warn.conflicts = FALSE)
 library(htmltools)
@@ -77,7 +78,7 @@ if (dir_exists(WWW_SHARED)) {
 dir_create(WWW_SHARED)
 
 # Copy dependencies from {shiny} and {bslib} -----------------------------------------
-cli::cli_h2("Copying HTML deps from {.pkg shiny} and {.pkg bslib}")
+cli::cli_h2("Copy web dependencies from {.pkg shiny} and {.pkg bslib}")
 
 copy_from_pkg("shiny", "www/shared", WWW_SHARED, WWW_SHARED)
 www_bslib_components <- path(WWW_SHARED, "bslib", "components")
@@ -86,7 +87,7 @@ copy_from_pkg("htmltools", "fill", path(WWW_SHARED, "htmltools", "fill"))
 
 
 # Pre-rendering Component CSS --------------------------------------------------------
-cli::cli_h2("Pre-rendering Component CSS")
+cli::cli_h2("Pre-render Component CSS")
 
 theme <- bs_theme(version = VERSION, preset = "shiny")
 
@@ -97,12 +98,12 @@ write_selectize_css(theme, WWW_SHARED)
 write_datepicker_css(theme, WWW_SHARED)
 
 # Finishing installing Dependencies ---------------------------------------------------
-cli::cli_h2("Finishing installing dependencies")
+cli::cli_h2("Finish installing web dependencies")
 
 write_require_js(VERSION_REQUIREJS, WWW_SHARED)
 npm_install_dependencies()
 
-cli::cli_progress_step("Removing unused files from copied dependencies")
+cli::cli_progress_step("Remove unused files from copied dependencies")
 delete_non_minified(www_bslib_components)
 delete_from_www_shared(
   WWW_SHARED,
@@ -132,7 +133,7 @@ cli::cli_progress_done()
 
 
 # Prepare Preset Sass Files ----------------------------------------------------------
-cli::cli_h2("Preparing {length(PRESETS)} Bootstrap theme preset{?s}")
+cli::cli_h2("Prepare {length(PRESETS)} Bootstrap theme preset{?s}")
 
 dir_create(DIR_SASS)
 path_sass_markers <- write_sass_layer_markers(DIR_SASS)
@@ -151,19 +152,20 @@ for (preset in PRESETS) {
 }
 
 # Fixup Sass Files -------------------------------------------------------------------
-cli::cli_h2("Fixing up intermediate Sass Files")
+cli::cli_h2("Fix up intermediate Sass Files")
 fixup_bootswatch_mixins(dep_files)
 
 
 # Precompile CSS Files ---------------------------------------------------------------
-cli::cli_h2("Precompiling CSS files")
+cli::cli_h2("Precompile CSS files")
 for (preset in PRESETS) {
   compile_theme_sass(preset, BUNDLED_PRESETS, DIR_SASS)
 }
+
+copy_shiny_preset_to_base_bootstrap()
 
 # Generate Python Files -------------------------------------------------------------
 cli::cli_h2("Generate Python files")
 
 write_python_preset_choices(PRESETS, BUNDLED_PRESETS)
 write_versions_py(bootstrap = VERSION, requirejs = VERSION_REQUIREJS)
-copy_shiny_preset_to_base_bootstrap()

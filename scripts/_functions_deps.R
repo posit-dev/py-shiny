@@ -59,7 +59,7 @@ copy_from_pkg <- function(pkg_name, pkg_dir, local_dir, version_dir = path_dir(l
 
   stopifnot(local_dir != ".")
 
-  cli::cli_progress_step("Copying {.strong {pkg_dir}} from {.pkg {pkg_name}} to {.path {path_rel(local_dir)}}")
+  cli::cli_progress_step("Copy {.strong {pkg_dir}} from {.pkg {pkg_name}} to {.path {path_rel(local_dir)}}")
 
   # Copy other folder into local parent folder
   dir_copy(
@@ -125,7 +125,7 @@ cli_progress_with_bs_theme <- function(message, theme, .envir = parent.frame()) 
 }
 
 write_deps_ionrangeslider <- function(theme, www_shared) {
-  cli_progress_with_bs_theme("Rendering {.field ionRangeSlider} CSS", theme)
+  cli_progress_with_bs_theme("Render {.field ionRangeSlider} CSS", theme)
   local_sass_compressed()
 
 	ion_dep <- shiny:::ionRangeSliderDependencyCSS(theme)
@@ -175,7 +175,7 @@ write_deps_ionrangeslider <- function(theme, www_shared) {
 }
 
 write_bootstrap_bslib_deps <- function(theme, www_shared) {
-  cli_progress_with_bs_theme("Rendering {.field bslib} component CSS", theme)
+  cli_progress_with_bs_theme("Render {.field bslib} component CSS", theme)
   local_sass_compressed()
 
 	deps <- bslib::bs_theme_dependencies(theme)
@@ -223,7 +223,7 @@ extract_css_path <- function(dep) {
 }
 
 write_shiny_css <- function(theme, www_shared) {
-  cli_progress_with_bs_theme("Rendering {.field shiny} CSS", theme)
+  cli_progress_with_bs_theme("Render {.field shiny} CSS", theme)
   local_sass_compressed()
 
   shiny_css_dep <- shiny:::shinyDependencyCSS(theme)
@@ -241,7 +241,7 @@ write_shiny_css <- function(theme, www_shared) {
 }
 
 write_selectize_css <- function(theme, www_shared) {
-  cli_progress_with_bs_theme("Rendering {.field selectize} CSS", theme)
+  cli_progress_with_bs_theme("Render {.field selectize} CSS", theme)
   local_sass_compressed()
 
 	selectize_css_dep <- shiny:::selectizeDependencyFunc(theme)
@@ -260,7 +260,7 @@ write_selectize_css <- function(theme, www_shared) {
 }
 
 write_datepicker_css <- function(theme, www_shared) {
-  cli_progress_with_bs_theme("Rendering {.field datepicker} CSS", theme)
+  cli_progress_with_bs_theme("Render {.field datepicker} CSS", theme)
   local_sass_compressed()
 
 	datepicker_css_dep <- shiny:::datePickerCSS(theme)
@@ -288,7 +288,7 @@ delete_from_www_shared <- function(www_shared, ...) {
 
 write_require_js <- function(requirejs_version, www_shared) {
 	requirejs <- path(www_shared, "requirejs")
-  cli::cli_progress_step("Downloading {.field require.js} to {.path path_rel(requirejs)}")
+  cli::cli_progress_step("Download {.field require.js} to {.path {path_rel(requirejs)}}")
 
 	dir_create(requirejs)
 
@@ -312,7 +312,7 @@ write_require_js <- function(requirejs_version, www_shared) {
 
 write_versions_py <- function(bootstrap, requirejs) {
   path_versions_py <- path_root("shiny", "_versions.py")
-  cli::cli_progress_step("Writing versions to {.path {path_rel(path_versions_py)}}")
+  cli::cli_progress_step("Write versions to {.path {path_rel(path_versions_py)}}")
 
   versions <- list(
     shiny_html_deps = as.character(packageVersion("shiny")),
@@ -343,7 +343,7 @@ write_versions_py <- function(bootstrap, requirejs) {
 }
 
 npm_install_dependencies <- function() {
-  cli::cli_progress_step("Installing npm dependencies")
+  cli::cli_progress_step("Install npm dependencies")
   withr::local_dir(path_root("js"))
   invisible(system("npm install && npm run build", intern = TRUE, ignore.stderr = TRUE))
 }
