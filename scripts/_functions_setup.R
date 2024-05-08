@@ -7,6 +7,18 @@ ensure_base_packages <- function() {
   }
 }
 
+assert_npm_is_installed <- function() {
+  if (Sys.which("npm")[["npm"]] == "") {
+    cli::cli_abort(c(
+      "{.strong {npm}} is required to install JavaScript dependenceis.",
+      i = "Please install {.url https://nodejs.org}."
+    ))
+  }
+
+  cli::cli_alert_success("{.strong npm} is installed")
+  invisible(TRUE)
+}
+
 pak_install <- function(...) {
   ensure_base_packages()
   pkgs <- c(...)
@@ -38,4 +50,23 @@ pak_install <- function(...) {
 bs_version_full <- function(version) {
   bs_v <- bslib::versions()
   names(bs_v)[bs_v == version]
+}
+
+pkg_source_version <- function(pkg) {
+  desc <- suppressWarnings(utils::packageDescription(pkg))
+  if (!inherits(desc, "packageDescription")) {
+    return("[not installed]")
+  }
+  version <- desc[["Version"]]
+  if (is.null(desc[["GithubRepo"]])) {
+    return(version)
+  }
+
+  sprintf(
+    "%s (%s/%s@%s)",
+    version,
+    desc[["GithubUsername"]],
+    desc[["GithubRepo"]],
+    desc[["GithubSHA1"]]
+  )
 }
