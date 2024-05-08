@@ -83,6 +83,19 @@ copy_from_pkg <- function(pkg_name, pkg_dir, local_dir, version_dir = path_dir(l
   invisible(local_dir)
 }
 
+local_sass_options <- withr::local_(function(x) rlang::exec(sass::sass_options_set, !!!x))
+
+local_sass_compressed <- function(.envir = parent.frame()) {
+  local_sass_options(
+    list(
+    output_style = "compressed",
+    source_comments = FALSE,
+    source_map_embed = FALSE
+    ),
+    .local_envir = .envir
+  )
+}
+
 delete_non_minified <- function(dir) {
   file_delete(
     dir_ls(
@@ -96,6 +109,8 @@ delete_non_minified <- function(dir) {
 }
 
 write_deps_ionrangeslider <- function(theme, www_shared) {
+  local_sass_compressed()
+
 	ion_dep <- shiny:::ionRangeSliderDependencyCSS(theme)
 	ion_dep_css <- path(ion_dep$src$file, ion_dep$stylesheet)
 
@@ -143,6 +158,8 @@ write_deps_ionrangeslider <- function(theme, www_shared) {
 }
 
 write_bootstrap_bslib_deps <- function(theme, www_shared) {
+  local_sass_compressed()
+
 	deps <- bslib::bs_theme_dependencies(theme)
 
 	withr::with_options(
@@ -188,6 +205,8 @@ extract_css_path <- function(dep) {
 }
 
 write_shiny_css <- function(theme, www_shared) {
+  local_sass_compressed()
+
   shiny_css_dep <- shiny:::shinyDependencyCSS(theme)
   shiny_css_bslib <- extract_css_path(shiny_css_dep)
   shiny_css_shared <- path(www_shared, "shiny.min.css")
@@ -203,6 +222,8 @@ write_shiny_css <- function(theme, www_shared) {
 }
 
 write_selectize_css <- function(theme, www_shared) {
+  local_sass_compressed()
+
 	selectize_css_dep <- shiny:::selectizeDependencyFunc(theme)
 	selectize_css_bslib <- extract_css_path(selectize_css_dep)
 	selectize_shared <- path(www_shared, "selectize", "css")
@@ -219,6 +240,8 @@ write_selectize_css <- function(theme, www_shared) {
 }
 
 write_datepicker_css <- function(theme, www_shared) {
+  local_sass_compressed()
+
 	datepicker_css_dep <- shiny:::datePickerCSS(theme)
 	datepicker_css_bslib <- extract_css_path(datepicker_css_dep)
 	datepicker_shared <- path(www_shared, "datepicker", "css")
@@ -265,11 +288,13 @@ write_require_js <- function(requirejs_version, www_shared) {
 }
 
 write_versions_py <- function(bootstrap, requirejs) {
-  versions["shiny_html_deps"] <- as.character(packageVersion("shiny"))
-  versions["bslib"] <- as.character(packageVersion("bslib"))
-  versions["htmltools"] <- as.character(packageVersion("htmltools"))
-  versions["bootstrap"] <- bs_version_full(bootstrap)
-  versions["requirejs"] <- requirejs
+  versions <- list(
+    shiny_html_deps = as.character(packageVersion("shiny")),
+    bslib = as.character(packageVersion("bslib")),
+    htmltools = as.character(packageVersion("htmltools")),
+    bootstrap = bs_version_full(bootstrap),
+    requirejs = requirejs
+  )
 
   path_versions_py <- path_root("shiny", "_versions.py")
 

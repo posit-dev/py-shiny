@@ -33,8 +33,6 @@ if (requireNamespace("cli", quietly = TRUE)) {
 
 assert_npm_is_installed()
 
-versions <- list()
-
 # Use local lib path for installing packages so we don't pollute the user's library
 message("Installing GitHub packages: bslib, shiny, htmltools")
 withr::local_temp_libpaths()
@@ -54,13 +52,6 @@ library(fs, quietly = TRUE, warn.conflicts = FALSE)
 
 WWW_SHARED <- path(.root, "shiny", "www", "shared")
 
-# Set sass compilation options
-local_sass_options <- withr::local_(function(x) rlang::exec(sass::sass_options_set, !!!x))
-local_sass_options(list(
-  output_style = "compressed",
-  source_comments = FALSE,
-  source_map_embed = FALSE
-))
 
 theme <- bs_theme(version = VERSION, preset = "shiny")
 
