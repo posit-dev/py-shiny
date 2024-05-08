@@ -1,4 +1,3 @@
-
 ensure_base_packages <- function() {
   for (pkg in c("cli", "pak")) {
     if (!requireNamespace(pkg, quietly = TRUE)) {

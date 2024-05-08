@@ -1,4 +1,3 @@
-
 # We'll use these markers to split the final, full Sass file into four layers
 # using the same logic as `sass::sass_layer_file()` and Quarto.
 write_sass_layer_markers <- function(dir) {
@@ -109,7 +108,9 @@ theme_relative_paths <- function(theme_sass_lines) {
 #' underscore and/or the file extension.
 #' @return The path to the Sass file, or `NULL` if the file could not be found.
 find_sass_file <- function(file) {
-  if (file_exists(file)) return(file)
+  if (file_exists(file)) {
+    return(file)
+  }
 
   file_scss <- path(file, ext = "scss")
   file_sass <- path(file, ext = "sass")
@@ -131,7 +132,9 @@ find_sass_file <- function(file) {
 #' @return A character vector of absolute paths to all imported Sass files.
 theme_files_used <- function(theme_sass_lines) {
   imports <- grep("^\\s*@import \"", theme_sass_lines, value = TRUE)
-  if (!length(imports)) return()
+  if (!length(imports)) {
+    return()
+  }
 
   imports <- trimws(imports)
   imports <- gsub("^@import \"([^\"]+?)\";", 'identity("\\1")', imports)
@@ -198,7 +201,9 @@ fixup_bootswatch_mixins_file <- function(file) {
 
   lines <- readLines(file)
   mixins <- grep("^@mixin", lines, value = TRUE)
-  if (!length(mixins)) return()
+  if (!length(mixins)) {
+    return()
+  }
 
   mixins <- gsub("^@mixin ([^\\(]+)\\(.+", "\\1", mixins)
 
@@ -328,24 +333,27 @@ compile_theme_sass <- function(preset, bundled_presets, output_dir) {
   )
 
   # Pre-render the Sass files into compiled CSS
-  tryCatch({
-    sass(
-      sass_file(path_preset_scss),
-      output = path_preset_compiled,
-      options = sass_options(
-        output_style = "compressed",
-        source_comments = FALSE,
-        source_map_embed = FALSE
+  tryCatch(
+    {
+      sass(
+        sass_file(path_preset_scss),
+        output = path_preset_compiled,
+        options = sass_options(
+          output_style = "compressed",
+          source_comments = FALSE,
+          source_map_embed = FALSE
+        )
       )
-    )
-    if (preset %in% bundled_presets) {
-      path_out <- path_rel(path_preset_compiled)
+      if (preset %in% bundled_presets) {
+        path_out <- path_rel(path_preset_compiled)
+      }
+      cli::cli_progress_done()
+    },
+    error = function(cnd) {
+      cli::cli_progress_done(result = "error")
+      cli::cli_inform("Failed to compile Sass file {.path {path_preset_scss}}.", parent = cnd)
     }
-    cli::cli_progress_done()
-  }, error = function(cnd) {
-    cli::cli_progress_done(result = "error")
-    cli::cli_inform("Failed to compile Sass file {.path {path_preset_scss}}.", parent = cnd)
-  })
+  )
 
   # Remove intermediate entry-point Sass file
   file_delete(path_preset_scss)
