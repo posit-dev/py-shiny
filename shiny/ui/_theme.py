@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import os
 import tempfile
 from textwrap import dedent
@@ -101,11 +102,21 @@ class Theme:
         check_is_valid_preset(value)
         self._preset = value
 
-        if self._css != "precompiled":
+        has_customizations = (
+            len(self._functions) > 0
+            or len(self._defaults) > 0
+            or len(self._mixins) > 0
+            or len(self._rules) > 0
+        )
+
+        if has_customizations:
             self._css = ""
+        else:
+            self._css = "precompiled" if value in ShinyThemePresetsBundled else ""
+
         self._css_temp_srcdir = None
 
-    def add_functions(self: T, *args: list[str]) -> T:
+    def add_functions(self: T, *args: str) -> T:
         """
         Add custom Sass functions to the theme.
 
@@ -119,10 +130,12 @@ class Theme:
             The Sass functions to add as a single or multiple strings.
         """
         self._css = ""
-        self._functions.extend(dedent_array(*args))
+        self._functions.extend(dedent_array(args))
         return self
 
-    def add_defaults(self: T, *args: str, **kwargs: dict[str, str]) -> T:
+    def add_defaults(
+        self: T, *args: str, **kwargs: str | float | int | bool | None
+    ) -> T:
         """
         Add custom default values to the theme.
 
@@ -142,7 +155,11 @@ class Theme:
             `.add_defaults("$primary-color: #ff0000;")`.
         """
         if len(args) > 0 and len(kwargs) > 0:
+            # Python forces positional arguments to come _before_ kwargs, but default
+            # argument order might matter. To be safe, we force users to pick one order.
             raise ValueError("Cannot provide both positional and keyword arguments")
+        elif len(args) == 0 and len(kwargs) == 0:
+            return self
 
         defaults: list[str] = list(args)
 
@@ -151,6 +168,8 @@ class Theme:
                 key.replace("_", "-")
                 if isinstance(value, bool):
                     value = "true" if value else "false"
+                elif value is None:
+                    value = "null"
                 defaults.append(f"${key}: {value};")
 
         # Add args to the front of _defaults
@@ -232,14 +251,14 @@ class Theme:
         if self._css:
             if self._css == "precompiled":
                 return self._read_precompiled_css()
-            return self._css
+            return copy.copy(self._css)
 
         check_libsass_installed()
         import sass
 
         self._css = sass.compile(string=self.to_sass())
 
-        return self._css
+        return copy.copy(self._css)
 
     def _read_precompiled_css(self) -> str:
         path = path_pkg_preset(self._preset, "preset.min.css")
