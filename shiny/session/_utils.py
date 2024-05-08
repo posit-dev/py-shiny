@@ -71,7 +71,7 @@ def session_context(session: Optional[Session]):
     """
     token: Token[Session | None] = _current_session.set(session)
     try:
-        with namespace_context(session.ns if session else None):
+        with namespace_context(session.ns if session is not None else None):
             yield
     finally:
         _current_session.reset(token)

@@ -31,7 +31,7 @@ from .css import CssUnit, as_css_padding, as_css_unit
 from .fill import as_fill_item, as_fillable_container
 
 if TYPE_CHECKING:
-    from .. import Session
+    from ..session import Session
 
 __all__ = (
     "Sidebar",

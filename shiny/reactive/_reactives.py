@@ -37,7 +37,7 @@ from ..types import MISSING, MISSING_TYPE, ActionButtonValue, SilentException
 from ._core import Context, Dependents, ReactiveWarning, isolate
 
 if TYPE_CHECKING:
-    from ..session import Session
+    from .. import Session
 
 T = TypeVar("T")
 
@@ -477,8 +477,8 @@ class Effect_:
         self.__name__ = fn.__name__
         self.__doc__ = fn.__doc__
 
-        from ..express._mock_session import ExpressMockSession
         from ..render.renderer import Renderer
+        from ..session import Session
 
         if isinstance(fn, Renderer):
             raise TypeError(
@@ -513,9 +513,9 @@ class Effect_:
             # could be None if outside of a session).
             session = get_current_session()
 
-        if isinstance(session, ExpressMockSession):
-            # If we're in an ExpressMockSession, then don't actually set up this effect
-            # -- we don't want it to try to run later.
+        if isinstance(session, Session) and session.is_stub_session():
+            # If we're in an ExpressStubSession or a SessionProxy of one, then don't
+            # actually set up this effect -- we don't want it to try to run later.
             return
 
         self._session = session

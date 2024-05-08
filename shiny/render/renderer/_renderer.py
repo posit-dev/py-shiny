@@ -1,6 +1,16 @@
 from __future__ import annotations
 
-from typing import Any, Awaitable, Callable, Generic, Optional, TypeVar, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Awaitable,
+    Callable,
+    Generic,
+    Optional,
+    TypeVar,
+    Union,
+    cast,
+)
 
 from htmltools import MetadataNode, Tag, TagList
 
@@ -8,6 +18,9 @@ from ..._docstring import add_example
 from ..._typing_extensions import Self
 from ..._utils import is_async_callable, wrap_async
 from ...types import Jsonifiable
+
+if TYPE_CHECKING:
+    from ...session import Session
 
 # TODO-barret-docs: Double check docs are rendererd
 # Missing first paragraph from some classes: Example: TransformerMetadata.
@@ -144,6 +157,7 @@ class Renderer(Generic[IT]):
         :
             Original renderer instance.
         """
+        from ...session import get_current_session
 
         if not callable(_fn):
             raise TypeError("Value function must be callable")
@@ -159,6 +173,8 @@ class Renderer(Generic[IT]):
         # This helps with testing and other situations where no session is present
         # for auto-registration to occur.
         self.output_id = self.__name__
+
+        self._session = get_current_session()
 
         # Allow for App authors to not require `@output`
         self._auto_register()
@@ -201,6 +217,7 @@ class Renderer(Generic[IT]):
         # """
         # Renderer - init docs here
         # """
+        self._session: Session | None = None
         super().__init__()
 
         self._auto_registered: bool = False
@@ -278,10 +295,13 @@ class Renderer(Generic[IT]):
         return rendered_ui
 
     def _render_auto_output_ui(self) -> DefaultUIFnResultOrNone:
-        return self.auto_output_ui(
-            # Pass the `@output_args(foo="bar")` kwargs through to the auto_output_ui function.
-            **self._auto_output_ui_kwargs,
-        )
+        from ...session import session_context
+
+        with session_context(self._session):
+            return self.auto_output_ui(
+                # Pass the `@output_args(foo="bar")` kwargs through to the auto_output_ui function.
+                **self._auto_output_ui_kwargs,
+            )
 
     # ######
     # Auto registering output
@@ -297,6 +317,7 @@ class Renderer(Generic[IT]):
             ns_name = session.output._ns(self.__name__)
             session.output.remove(ns_name)
             self._auto_registered = False
+            self._session = session
 
     def _auto_register(self) -> None:
         """
@@ -308,12 +329,9 @@ class Renderer(Generic[IT]):
         """
         # If in Express mode, register the output
         if not self._auto_registered:
-            from ...session import get_current_session
-
-            s = get_current_session()
-            if s is not None:
+            if self._session is not None:
                 # Register output on reactive graph
-                s.output(self)
+                self._session.output(self)
                 # We mark the fact that we're auto-registered so that, if an explicit
                 # registration now occurs, we can undo this auto-registration.
                 self._auto_registered = True

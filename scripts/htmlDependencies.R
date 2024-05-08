@@ -92,6 +92,14 @@ copy_from_pkg <- function(pkg_name, pkg_dir, local_dir, version_dir = fs::path_d
   )
 }
 
+# Set sass compilation options
+local_sass_options <- withr::local_(function(x) rlang::exec(sass::sass_options_set, !!!x))
+local_sass_options(list(
+  output_style = "compressed",
+  source_comments = FALSE,
+  source_map_embed = FALSE
+))
+
 
 # ------------------------------------------------------------------------------
 # Must come first!
@@ -170,7 +178,7 @@ withr::with_options(
 # Overwrite css file
 ion_dep_dir <- fs::path(www_shared, "ionrangeslider")
 fs::file_move(
-  fs::path(temp_ion_dep_dir, "ionRangeSlider", "ionRangeSlider.css"),
+  fs::path(temp_ion_dep_dir, "ionRangeSlider", "ionRangeSlider.min.css"),
   fs::path(ion_dep_dir, "css", "ion.rangeSlider.css")
 )
 # Cleanup
@@ -215,18 +223,10 @@ ignored <- lapply(woff_files, function(woff_file) {
 
 # ------------------------------------------------------------------------------
 message("Render shiny.min.css with bs_theme()")
-with_sass_options <- withr::with_(function(x) rlang::exec(sass::sass_options_set, !!!x))
 
-sass_opts_minify <- list(
-  output_style = "compressed",
-  source_comments = FALSE,
-  source_map_embed = FALSE
-)
 
-shiny_css_dep <- with_sass_options(
-  sass_opts_minify,
-  shiny:::shinyDependencyCSS(shiny_theme)
-)
+
+shiny_css_dep <- shiny:::shinyDependencyCSS(shiny_theme)
 shiny_css_bslib <- fs::path(shiny_css_dep$src$file, shiny_css_dep$stylesheet)
 shiny_css_shared <- fs::path(www_shared, "shiny.min.css")
 writeLines(
@@ -238,10 +238,7 @@ writeLines(
 )
 
 message("Render selectize.min.js with bs_theme()")
-selectize_css_dep <- with_sass_options(
-  sass_opts_minify,
-  shiny:::selectizeDependencyFunc(shiny_theme)
-)
+selectize_css_dep <- shiny:::selectizeDependencyFunc(shiny_theme)
 selectize_css_bslib <- fs::path(
   selectize_css_dep$src$file,
   selectize_css_dep$stylesheet
@@ -255,10 +252,7 @@ fs::file_copy(
 )
 
 message("Render datepicker.min.css with bs_theme()")
-datepicker_css_dep <- with_sass_options(
-  sass_opts_minify,
-  shiny:::datePickerCSS(shiny_theme)
-)
+datepicker_css_dep <- shiny:::datePickerCSS(shiny_theme)
 datepicker_css_bslib <- fs::path(
   datepicker_css_dep$src$file,
   datepicker_css_dep$stylesheet

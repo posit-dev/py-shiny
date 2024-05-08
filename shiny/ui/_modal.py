@@ -7,14 +7,16 @@ __all__ = (
     "modal_remove",
 )
 
-from typing import Literal, Optional
+from typing import TYPE_CHECKING, Literal, Optional
 
 from htmltools import HTML, Tag, TagAttrs, TagAttrValue, TagChild, div, tags
 
 from .._docstring import add_example
 from ..session import require_active_session
-from ..session._session import Session
 from ..types import MISSING, MISSING_TYPE
+
+if TYPE_CHECKING:
+    from ..session import Session
 
 
 @add_example(ex_dir="../api-examples/modal")

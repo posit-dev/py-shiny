@@ -22,8 +22,8 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
     def selected_row_count():
         # grid_selected_data = grid_selected.data()
         return str(
-            penguins_df.data_selected()  # pyright: ignore[reportUnknownMemberType]
-        )
+            penguins_df.data_view(selected=True)
+        )  # pyright: ignore[reportUnknownMemberType]
 
 
 app = App(app_ui, server)

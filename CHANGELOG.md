@@ -5,11 +5,35 @@ All notable changes to Shiny for Python will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [UNRELEASED] - YYYY-MM-DD
+## [UNRELEASED]
 
 ### Breaking Changes
 
-* `@render.data_frame` return values of `DataTable` and `DataGrid` had their parameter of `row_selection: Literal["single", "multiple"]` become deprecated. Please use `mode="row_single"` or `mode="row_multiple"` instead. (#1198)
+### New features
+
+* Added support for creating modules using Shiny Express syntax, and using modules in Shiny Express apps. (#1220)
+
+* `ui.page_*()` functions gain a `theme` argument that allows you to replace the Bootstrap CSS file with a new CSS file. `theme` can be a local CSS file, a URL, or a [shinyswatch](https://posit-dev.github.io/py-shinyswatch) theme. In Shiny Express apps, `theme` can be set via `express.ui.page_opts()`. (#1334)
+
+### Bug fixes
+
+* Fixed an issue that prevented Shiny from serving the `font.css` file referenced in Shiny's Bootstrap CSS file. (#1342)
+
+### Other changes
+
+* `Session` is now an abstract base class, and `AppSession` is a concrete subclass of it. Also, `ExpressMockSession` has been renamed `ExpressStubSession` and is a concrete subclass of `Session`. (#1331)
+
+* The `Session` class now has a method `is_stub_session()`. For `ExpressStubSession`, this method returns `True` for , and `AppSession` objects it returns `False`. (#1331)
+
+* Closed #1293: The error console would display error messages if an app was disconnected and the user changed an input. (#1339)
+
+* Fixed an issue where some CSS files were larger than necessary because they had source maps embedded in them. (#1339)
+
+## [0.9.0] - 2024-04-16
+
+### Breaking Changes
+
+* `@render.data_frame` return values of `DataTable` and `DataGrid` had their parameter of `row_selection: Literal["single", "multiple"]` become deprecated. Please use `selection_mode="row"` or `selection_mode="rows"` instead. (#1198)
 
 * The `col_widths` argument of `ui.layout_columns()` now sets the `sm` breakpoint by default, rather than the `md` breakpoint. For example, `col_widths=(12, 6, 6)` is now equivalent to `{"sm": (12, 6, 6)}` rather than `{"md": (12, 6, 6)}`. (#1222)
 
@@ -17,7 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `Session` objects now have a `set_message_handler(name, fn)` method that allows you to register a message handler function that will be called when a request message with the given name is received from the client (via `Shiny.shinyapp.makeRequest()` (JS)). (#1253)
 
-* Experimental: `@render.data_frame` return values of `DataTable` and `DataGrid` support `mode="edit"` to enable editing of the data table cells. (#1198)
+* Experimental: `@render.data_frame` return values of `DataTable` and `DataGrid` support `editable=True` to enable editing of the data table cells. (#1198)
 
 * `ui.card()` and `ui.value_box()` now take an `id` argument that, when provided, is used to report the full screen state of the card or value box to the server. For example, when using `ui.card(id = "my_card", full_screen = TRUE)` you can determine if the card is currently in full screen mode by reading the boolean value of `input.my_card_full_screen()`. (#1215, #1266)
 
@@ -26,6 +50,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * `ui.value_box()`, `ui.layout_columns()` and `ui.layout_column_wrap()` now all have `min_height` and `max_height` arguments. These are useful in filling layouts, like `ui.page_fillable()`, `ui.page_sidebar(fillable=True)` or `ui.page_navbar(fillable=True)`. For example, you can use `ui.layout_columns(min_height=300, max_height=500)` to ensure that a set of items (likely arranged in a row of columns) are always between 300 and 500 pixels tall. (#1223)
 
 * Added an error console which displays errors in the browser's UI. This is enabled by default when running applications locally, and can be disabled with `shiny run --no-dev-mode`. It is not enabled for applications that are deployed to a server. (#1060)
+
+* `shiny create` was updated to include some additional templates as well as an option to choose from the new [templates website](https://shiny.posit.co/py/templates/). (#1273, #1277, #1274)
+
+* `shiny.express.ui.page_opts()` now accepts additional keyword arguments that are passed to the underlying page layout chosen by `shiny.ui.page_auto()`. (#1314)
 
 ### Bug fixes
 

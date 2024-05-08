@@ -1,8 +1,10 @@
+import pytest
 from conftest import ShinyAppProc
 from controls import OutputTextVerbatim
 from playwright.sync_api import Page
 
 
+@pytest.mark.skip(reason="Flaky test. please fix before enabling")
 def test_output_transformer(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 

@@ -32,7 +32,7 @@ from ._shinyenv import is_pyodide
 from ._utils import guess_mime_type, is_async_callable, sort_keys_length
 from .html_dependencies import jquery_deps, require_deps, shiny_deps
 from .http_staticfiles import FileResponse, StaticFiles
-from .session._session import Inputs, Outputs, Session, session_context
+from .session._session import AppSession, Inputs, Outputs, Session, session_context
 
 T = TypeVar("T")
 
@@ -174,9 +174,9 @@ class App:
         static_assets_map = sort_keys_length(static_assets_map, descending=True)
         self._static_assets: dict[str, Path] = static_assets_map
 
-        self._sessions: dict[str, Session] = {}
+        self._sessions: dict[str, AppSession] = {}
 
-        self._sessions_needing_flush: dict[int, Session] = {}
+        self._sessions_needing_flush: dict[int, AppSession] = {}
 
         self._registered_dependencies: dict[str, HTMLDependency] = {}
         self._dependency_handler = starlette.routing.Router()
@@ -252,14 +252,14 @@ class App:
         async with self._exit_stack:
             yield
 
-    def _create_session(self, conn: Connection) -> Session:
+    def _create_session(self, conn: Connection) -> AppSession:
         id = secrets.token_hex(32)
-        session = Session(self, id, conn, debug=self._debug)
+        session = AppSession(self, id, conn, debug=self._debug)
         self._sessions[id] = session
         return session
 
-    def _remove_session(self, session: Session | str) -> None:
-        if isinstance(session, Session):
+    def _remove_session(self, session: AppSession | str) -> None:
+        if isinstance(session, AppSession):
             session = session.id
 
         if self._debug:
@@ -388,7 +388,7 @@ class App:
         subpath: str = request.path_params["subpath"]  # type: ignore
 
         if session_id in self._sessions:
-            session: Session = self._sessions[session_id]
+            session: AppSession = self._sessions[session_id]
             with session_context(session):
                 return await session._handle_request(request, action, subpath)
 
@@ -397,7 +397,7 @@ class App:
     # ==========================================================================
     # Flush
     # ==========================================================================
-    def _request_flush(self, session: Session) -> None:
+    def _request_flush(self, session: AppSession) -> None:
         # TODO: Until we have reactive domains, because we can't yet keep track
         # of which sessions need a flush.
         pass

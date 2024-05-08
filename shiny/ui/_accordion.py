@@ -14,7 +14,7 @@ from ._tag import consolidate_attrs
 from .css._css_unit import CssUnit, as_css_unit
 
 if TYPE_CHECKING:
-    from .. import Session
+    from ..session import Session
 
 __all__ = (
     "accordion",
