@@ -1,5 +1,7 @@
-# We'll use these markers to split the final, full Sass file into four layers
-# using the same logic as `sass::sass_layer_file()` and Quarto.
+#' Write a Sass layer file used to split the final theme into four layers
+#' using the same logic as `sass::sass_layer_file()` and Quarto.
+#' @param dir The directory where the `_sass_layer_markers.css` file will be written.
+#' @return The path to the newly created Sass layer file.
 write_sass_layer_markers <- function(dir) {
   sass_markers <- "/*-- scss:functions --*/
 // SPLIT: functions
@@ -190,7 +192,6 @@ theme_sass_split <- function(theme_sass_lines) {
   theme_split
 }
 
-#' Fixes up Bootswatch mixin names to avoid conflicts with Bootstrap's own mixins.
 fixup_bootswatch_mixins_file <- function(file) {
   # Some Bootswatch files include mixins that conflict with Bootstrap's own
   # mixins. We need to rename these mixins to avoid the conflict. This does't
@@ -227,6 +228,10 @@ fixup_bootswatch_mixins_file <- function(file) {
   writeLines(lines, file)
 }
 
+#' Fixes up Bootswatch mixin names to avoid conflicts with Bootstrap's own mixins.
+#' @param dep_files A character vector of paths to all Sass files to scan (looking for
+#'   `_bootswatch.scss` files).
+#' @return A character vector of paths to all `_bootswatch.scss` files.
 fixup_bootswatch_mixins <- function(dep_files) {
   cli::cli_progress_step("Fix up Bootswatch mixin names")
 
@@ -235,6 +240,8 @@ fixup_bootswatch_mixins <- function(dep_files) {
   for (bsw_file in bsw_files) {
     fixup_bootswatch_mixins_file(bsw_file)
   }
+
+  invisible(bsw_files)
 }
 
 #' Copies the theme Sass files to the `shiny/www/shared/sass` directory.
@@ -319,11 +326,18 @@ prepare_and_write_theme_sass_files <- function(version, presets, path_sass_marke
   )
 }
 
-compile_theme_sass <- function(preset, bundled_presets, output_dir) {
+#' Compiles the on-disk theme preset Sass files into CSS.
+#' @param preset The name of the preset.
+#' @param presets_precompiled A character vector of preset names that py-shiny will
+#'   precompile and include in the package.
+#' @param output_dir The directory where the compiled CSS will be written.
+#' @return The path to the compiled CSS file if the preset is precompiled, otherwise
+#'   `NULL`.
+compile_theme_sass <- function(preset, presets_precompiled, output_dir) {
   path_preset_scss <- path(output_dir, "preset", preset, "preset.scss")
   path_preset_compiled <- path(path_dir(path_preset_scss), "preset.min.css")
 
-  verb <- if (preset %in% bundled_presets) "Pre-compil" else "Test"
+  verb <- if (preset %in% presets_precompiled) "Pre-compil" else "Test"
   path_out <- ""
 
   cli::cli_progress_step(
@@ -344,7 +358,7 @@ compile_theme_sass <- function(preset, bundled_presets, output_dir) {
           source_map_embed = FALSE
         )
       )
-      if (preset %in% bundled_presets) {
+      if (preset %in% presets_precompiled) {
         path_out <- path_rel(path_preset_compiled)
       }
       cli::cli_progress_done()
@@ -359,14 +373,18 @@ compile_theme_sass <- function(preset, bundled_presets, output_dir) {
   file_delete(path_preset_scss)
 
   # Don't bundle precompiled Bootswatch files
-  if (!preset %in% bundled_presets) {
+  if (!preset %in% presets_precompiled) {
     file_delete(path_preset_compiled)
+    return(invisible())
   }
 
   invisible(path_preset_compiled)
 }
 
-write_python_preset_choices <- function(presets, bundled_presets) {
+#' Write the Python preset choices to `_theme_presets.py`.
+#' @param presets A character vector of preset names.
+#' @param presets_precompiled A character vector of preset names that were precompiled.
+write_python_preset_choices <- function(presets, presets_precompiled) {
   path_presets_py <- path_root("shiny", "ui", "_theme_presets.py")
   cli::cli_progress_step("Generate {.path {path_rel(path_presets_py)}}")
 
@@ -394,13 +412,16 @@ ShinyThemePresetsBundled: tuple[ShinyThemePreset, ...] = (
   }
 
   writeLines(
-    sprintf(template, py_lines(presets), py_lines(presets), py_lines(bundled_presets)),
+    sprintf(template, py_lines(presets), py_lines(presets), py_lines(presets_precompiled)),
     path_presets_py
   )
 
   invisible(path_presets_py)
 }
 
+#' Copy the compiled CSS from the Shiny preset to the base Bootstrap CSS file. It also
+#' replaces the `@import` statement in the Bootstrap CSS file with the correct path to
+#' the font CSS file to re-enable pre-downloaded fonts.
 copy_shiny_preset_to_base_bootstrap <- function() {
   path_preset_shiny <- path_root("shiny", "www", "shared", "sass", "preset", "shiny", "preset.min.css")
   path_bootstrap <- path_root("shiny", "www", "shared", "bootstrap", "bootstrap.min.css")
