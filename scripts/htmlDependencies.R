@@ -1,6 +1,6 @@
 #!/usr/bin/env -S Rscript --vanilla
 
-VERSION <- 5
+VERSION_BOOTSTRAP <- 5
 VERSION_REQUIREJS <- "2.3.6"
 BUNDLED_PRESETS <- c("bootstrap", "shiny")
 
@@ -60,7 +60,7 @@ library(fs)
 PRESETS <- c(
   "bootstrap",
   "shiny",
-  bootswatch_themes(VERSION)
+  bootswatch_themes(VERSION_BOOTSTRAP)
 )
 
 path_root <- function(...) {
@@ -89,8 +89,8 @@ copy_from_pkg("htmltools", "fill", path(WWW_SHARED, "htmltools", "fill"))
 # Pre-rendering Component CSS --------------------------------------------------------
 cli::cli_h2("Pre-render Component CSS")
 
-theme_bs <- bs_theme(version = VERSION, preset = "bootstrap")
-theme_shiny <- bs_theme(version = VERSION, preset = "shiny")
+theme_bs <- bs_theme(version = VERSION_BOOTSTRAP, preset = "bootstrap")
+theme_shiny <- bs_theme(version = VERSION_BOOTSTRAP, preset = "shiny")
 
 write_bootstrap_bslib_deps(theme_shiny, WWW_SHARED)
 write_deps_ionrangeslider(theme_bs, WWW_SHARED)
@@ -143,7 +143,7 @@ dep_files <- c()
 for (preset in PRESETS) {
   preset_files <-
     prepare_and_write_theme_sass_files(
-      VERSION,
+      VERSION_BOOTSTRAP,
       preset,
       path_sass_markers,
       output_dir = DIR_SASS
@@ -169,4 +169,4 @@ copy_shiny_preset_to_base_bootstrap()
 cli::cli_h2("Generate Python files")
 
 write_python_preset_choices(PRESETS, BUNDLED_PRESETS)
-write_versions_py(bootstrap = VERSION, requirejs = VERSION_REQUIREJS)
+write_versions_py(bootstrap = VERSION_BOOTSTRAP, requirejs = VERSION_REQUIREJS)
