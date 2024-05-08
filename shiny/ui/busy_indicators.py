@@ -16,6 +16,7 @@ def options(
     spinner_color: str | None = None,
     spinner_size: str | None = None,
     spinner_delay: str | None = None,
+    spinner_selector: str | None = None,
     pulse_background: str | None = None,
     pulse_height: str | None = None,
     pulse_speed: str | None = None,
@@ -36,6 +37,10 @@ def options(
         The amount of time to wait before showing the spinner. This can be any valid
         CSS time and can useful for not showing the spinner if the computation
         finishes quickly.
+    spinner_selector
+        A CSS selector for scoping the spinner customization.
+        This can be useful if you want to have different spinners for different
+        parts of the app. Defaults to the root document element.
     pulse_background
         A CCS background definition for the pulse. The default uses a
         [linear-gradient](https://developer.mozilla.org/en-US/docs/Web/CSS/gradient/linear-gradient)
@@ -55,6 +60,7 @@ def options(
             color=spinner_color,
             size=spinner_size,
             delay=spinner_delay,
+            selector=spinner_selector,
         ),
         pulse_options(
             background=pulse_background,
@@ -69,8 +75,9 @@ def spinner_options(
     color: str | None = None,
     size: str | None = None,
     delay: str | None = None,
+    selector: str | None = None,
 ) -> TagChild:
-    if color is None and size is None and delay is None:
+    if color is None and size is None and delay is None and selector is None:
         return None
 
     css_vars = (
@@ -79,7 +86,10 @@ def spinner_options(
         + (f"--shiny-spinner-delay: {delay};" if delay else "")
     )
 
-    return tags.style(":root {" + css_vars + "}")
+    if selector is None:
+        selector = ":root"
+
+    return tags.style(f"{selector} {{ {css_vars} }}")
 
 
 def pulse_options(
