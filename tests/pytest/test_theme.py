@@ -3,8 +3,8 @@ import pytest
 from shiny.ui import Theme
 from shiny.ui._theme import (
     ShinyThemePreset,
-    ShinyThemePresets,
-    ShinyThemePresetsBundled,
+    shiny_theme_presets,
+    shiny_theme_presets_bundled,
 )
 
 
@@ -64,10 +64,10 @@ def test_theme_preset_must_be_valid():
         Theme("not_a_valid_preset")  # type: ignore
 
 
-@pytest.mark.parametrize("preset", ShinyThemePresets)
+@pytest.mark.parametrize("preset", shiny_theme_presets)
 def test_theme_css_compiles_and_is_cached(preset: ShinyThemePreset):
     theme = Theme(preset)
-    if preset in ShinyThemePresetsBundled:
+    if preset in shiny_theme_presets_bundled:
         assert theme._css == "precompiled"
     else:
         assert theme._css == ""
@@ -92,18 +92,18 @@ def test_theme_css_compiles_and_is_cached(preset: ShinyThemePreset):
 def test_theme_update_preset():
     theme = Theme("shiny")
     assert theme._preset == "shiny"
-    assert theme._css == "precompiled" if "shiny" in ShinyThemePresetsBundled else ""
+    assert theme._css == "precompiled" if "shiny" in shiny_theme_presets_bundled else ""
 
     theme.preset = "bootstrap"
     assert theme._preset == "bootstrap"
     assert theme._css == (
-        "precompiled" if "bootstrap" in ShinyThemePresetsBundled else ""
+        "precompiled" if "bootstrap" in shiny_theme_presets_bundled else ""
     )
 
     theme.preset = "sketchy"
     assert theme._preset == "sketchy"
     assert theme._css == (
-        "precompiled" if "sketchy" in ShinyThemePresetsBundled else ""
+        "precompiled" if "sketchy" in shiny_theme_presets_bundled else ""
     )
 
     with pytest.raises(ValueError, match="Invalid preset"):

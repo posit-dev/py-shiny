@@ -398,11 +398,11 @@ ShinyThemePreset = Literal[
 %s
 ]
 
-ShinyThemePresets: tuple[ShinyThemePreset, ...] = (
+shiny_theme_presets: tuple[ShinyThemePreset, ...] = (
 %s
 )
 
-ShinyThemePresetsBundled: tuple[ShinyThemePreset, ...] = (
+shiny_theme_presets_bundled: tuple[ShinyThemePreset, ...] = (
 %s
 ))"
 

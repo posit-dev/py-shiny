@@ -13,8 +13,8 @@ from .._docstring import no_example
 from .._versions import bootstrap
 from ._theme_presets import (
     ShinyThemePreset,
-    ShinyThemePresets,
-    ShinyThemePresetsBundled,
+    shiny_theme_presets,
+    shiny_theme_presets_bundled,
 )
 from ._utils import path_pkg_www
 
@@ -80,7 +80,7 @@ class Theme:
         # 1. "precompiled" indicating it's okay to use precompiled preset.min.css
         # 2. "" indicating that the CSS has not been compiled yet
         # 3. A string containing the compiled CSS for the current theme
-        self._css: str = "precompiled" if preset in ShinyThemePresetsBundled else ""
+        self._css: str = "precompiled" if preset in shiny_theme_presets_bundled else ""
 
         # If the theme has been customized and rendered once, we store the tempdir
         # so that we can re-use the already compiled CSS file.
@@ -91,7 +91,7 @@ class Theme:
         """
         Get a list of available theme presets.
         """
-        return ShinyThemePresets
+        return shiny_theme_presets
 
     @property
     def preset(self) -> ShinyThemePreset:
@@ -112,7 +112,7 @@ class Theme:
         if has_customizations:
             self._css = ""
         else:
-            self._css = "precompiled" if value in ShinyThemePresetsBundled else ""
+            self._css = "precompiled" if value in shiny_theme_presets_bundled else ""
 
         self._css_temp_srcdir = None
 
@@ -347,10 +347,10 @@ def path_pkg_preset(preset: ShinyThemePreset, *args: str) -> str:
 
 
 def check_is_valid_preset(preset: ShinyThemePreset) -> None:
-    if preset not in ShinyThemePresets:
+    if preset not in shiny_theme_presets:
         raise ValueError(
             f"Invalid preset '{preset}'.\n"
-            + f"""Expected one of: "{'", "'.join(ShinyThemePresets)}".""",
+            + f"""Expected one of: "{'", "'.join(shiny_theme_presets)}".""",
         )
 
 

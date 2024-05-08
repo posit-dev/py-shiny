@@ -34,7 +34,7 @@ ShinyThemePreset = Literal[
     "zephyr",
 ]
 
-ShinyThemePresets: tuple[ShinyThemePreset, ...] = (
+shiny_theme_presets: tuple[ShinyThemePreset, ...] = (
     "bootstrap",
     "shiny",
     "cerulean",
@@ -64,7 +64,7 @@ ShinyThemePresets: tuple[ShinyThemePreset, ...] = (
     "zephyr",
 )
 
-ShinyThemePresetsBundled: tuple[ShinyThemePreset, ...] = (
+shiny_theme_presets_bundled: tuple[ShinyThemePreset, ...] = (
     "bootstrap",
     "shiny",
 )
