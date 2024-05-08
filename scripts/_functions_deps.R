@@ -126,29 +126,33 @@ cli_progress_with_bs_theme <- function(message, theme, .envir = parent.frame()) 
 
 write_deps_ionrangeslider <- function(theme, www_shared) {
   cli_progress_with_bs_theme("Render {.field ionRangeSlider} CSS", theme)
+  preset <- bslib:::theme_preset_info(theme)$name
   local_sass_compressed()
 
 	ion_dep <- shiny:::ionRangeSliderDependencyCSS(theme)
 	ion_dep_css <- path(ion_dep$src$file, ion_dep$stylesheet)
 
 	# Preset="shiny" additional ionRangeSlider rules
-	ion_preset_rules <- system.file("builtin", "bs5", "shiny", "ionrangeslider", "_rules.scss", package = "bslib")
+  if (identical(preset, "shiny")) {
+    ion_preset_rules <- system.file("builtin", "bs5", "shiny", "ionrangeslider", "_rules.scss", package = "bslib")
 
-  ion_preset_compiled <-
-		sass::sass_partial(
-			readLines(ion_preset_rules),
-			theme,
-			write_attachments = FALSE,
-			cache = FALSE
-		)
 
-  # Append preset styles to the base ionRangeSlider CSS
-	cat(
-		c("\n\n/* shiny preset styles */\n\n", ion_preset_compiled),
-		file = ion_dep_css,
-		sep = "\n",
-		append = TRUE
-	)
+    ion_preset_compiled <-
+      sass::sass_partial(
+        readLines(ion_preset_rules),
+        theme,
+        write_attachments = FALSE,
+        cache = FALSE
+      )
+
+    # Append preset styles to the base ionRangeSlider CSS
+    cat(
+      c("\n\n/* shiny preset styles */\n\n", ion_preset_compiled),
+      file = ion_dep_css,
+      sep = "\n",
+      append = TRUE
+    )
+  }
 
   if (inherits(ion_dep, "html_dependency")) {
 		ion_dep <- list(ion_dep)
@@ -200,10 +204,16 @@ write_bootstrap_bslib_deps <- function(theme, www_shared) {
 		)
 	)
 
-	cli::cli_progress_step("Remove unused font files")
   path_bootstrap <- path(www_shared, "bootstrap")
+  path_bs_fonts <- path(path_bootstrap, "font.css")
 
-  font_css_text <- paste(readLines(path(path_bootstrap, "font.css")), collapse = "\n")
+  if (!file_exists(path_bs_fonts)) {
+    return(invisible())
+  }
+
+	cli::cli_progress_step("Remove unused font files")
+
+  font_css_text <- paste(readLines(path_bs_fonts), collapse = "\n")
 
   woff_files <- dir_ls(path(path_bootstrap, "fonts"), regexp = "[.]woff")
 

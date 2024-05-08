@@ -89,13 +89,14 @@ copy_from_pkg("htmltools", "fill", path(WWW_SHARED, "htmltools", "fill"))
 # Pre-rendering Component CSS --------------------------------------------------------
 cli::cli_h2("Pre-render Component CSS")
 
-theme <- bs_theme(version = VERSION, preset = "shiny")
+theme_bs <- bs_theme(version = VERSION, preset = "bootstrap")
+theme_shiny <- bs_theme(version = VERSION, preset = "shiny")
 
-write_deps_ionrangeslider(theme, WWW_SHARED)
-write_bootstrap_bslib_deps(theme, WWW_SHARED)
-write_shiny_css(theme, WWW_SHARED)
-write_selectize_css(theme, WWW_SHARED)
-write_datepicker_css(theme, WWW_SHARED)
+write_bootstrap_bslib_deps(theme_shiny, WWW_SHARED)
+write_deps_ionrangeslider(theme_bs, WWW_SHARED)
+write_shiny_css(theme_bs, WWW_SHARED)
+write_selectize_css(theme_bs, WWW_SHARED)
+write_datepicker_css(theme_bs, WWW_SHARED)
 
 # Finishing installing Dependencies ---------------------------------------------------
 cli::cli_h2("Finish installing web dependencies")

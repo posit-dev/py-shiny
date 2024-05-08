@@ -396,7 +396,7 @@ ShinyThemePresetsBundled: tuple[ShinyThemePreset, ...] = (
 copy_shiny_preset_to_base_bootstrap <- function() {
   path_preset_shiny <- path_root("shiny", "www", "shared", "sass", "preset", "shiny", "preset.min.css")
   path_bootstrap <- path_root("shiny", "www", "shared", "bootstrap", "bootstrap.min.css")
-  cli::cli_progress_step("Copy shiny preset {.path {path_rel(path_bootstrap)}}")
+  cli::cli_progress_step("Copy shiny preset to {.path {path_rel(path_bootstrap)}}")
 
   preset_shiny_lines <- readLines(path_preset_shiny)
   preset_shiny_lines[1] <- sub(
