@@ -5,26 +5,24 @@ import os
 from htmltools import HTMLDependency
 
 
-def shiny_deps() -> list[HTMLDependency]:
+def shiny_deps(include_css: bool = True) -> list[HTMLDependency]:
+    in_dev_mode = os.getenv("SHINY_DEV_MODE") == "1"
+
     deps = [
         HTMLDependency(
             name="shiny",
             version="0.0.1",
             source={"package": "shiny", "subdir": "www/shared/"},
             script={"src": "shiny.js"},
-            # CSS is now provided in bootstrap.min.css
-            # stylesheet={"href": "shiny.min.css"},
-            all_files=True,
+            # This CSS is now rendered against default Bootstrap
+            stylesheet={"href": "shiny.min.css"} if include_css else None,
+            head=(
+                "<script>window.__SHINY_DEV_MODE__ = true;</script>"
+                if in_dev_mode
+                else None
+            ),
         )
     ]
-    if os.getenv("SHINY_DEV_MODE") == "1":
-        deps.append(
-            HTMLDependency(
-                "shiny-devmode",
-                version="0.0.1",
-                head="<script>window.__SHINY_DEV_MODE__ = true;</script>",
-            )
-        )
 
     return deps
 

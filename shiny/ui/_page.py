@@ -33,7 +33,7 @@ from .._docstring import add_example, no_example
 from .._namespaces import resolve_id_or_none
 from ..types import MISSING, MISSING_TYPE, NavSetArg
 from ._bootstrap import panel_title
-from ._html_deps_external import ThemeProvider, bootstrap_theme_deps
+from ._html_deps_external import ThemeProvider, shiny_page_theme_deps
 from ._html_deps_py_shiny import page_output_dependency
 from ._html_deps_shinyverse import components_dependencies
 from ._navs import NavMenu, NavPanel, navset_bar
@@ -544,7 +544,7 @@ def page_bootstrap(
     head = tags.title(title) if title else None
     return tags.html(
         tags.head(head),
-        tags.body(bootstrap_theme_deps(theme), *args, **kwargs),
+        tags.body(shiny_page_theme_deps(theme), *args, **kwargs),
         lang=lang,
     )
 

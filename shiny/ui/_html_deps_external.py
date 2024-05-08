@@ -7,7 +7,10 @@ from htmltools import HTML, HTMLDependency, Tagifiable, TagList, head_content
 from htmltools.tags import link
 
 from .._versions import bootstrap as bootstrap_version
-from ..html_dependencies import jquery_deps
+from ..html_dependencies import jquery_deps, shiny_deps
+from ._html_deps_shinyverse import (
+    components_dependencies as bslib_component_dependencies,
+)
 from ._include_helpers import check_path, include_css
 
 """
@@ -22,7 +25,7 @@ For...
 ThemeProvider = Union[Tagifiable, HTMLDependency, List[HTMLDependency]]
 
 
-def bootstrap_theme_deps(theme: str | Path | ThemeProvider | None) -> TagList:
+def shiny_page_theme_deps(theme: str | Path | ThemeProvider | None) -> TagList:
     deps_bootstrap = bootstrap_deps(include_css=theme is None)
 
     if theme is None:
@@ -46,7 +49,19 @@ def bootstrap_theme_deps(theme: str | Path | ThemeProvider | None) -> TagList:
             + f"but received `theme` with type {type(theme)}."
         )
 
-    return TagList(deps_bootstrap, deps_theme)
+    return TagList(
+        deps_bootstrap,
+        deps_theme,
+        # These next dependencies have their CSS bundled in the main Bootstrap CSS
+        # but are also included at the component level. This page-level dependency will
+        # win in Shiny apps, but the component-level dependencies will win in other
+        # contexts where we don't have a page function.
+        shiny_deps(include_css=False),
+        bslib_component_dependencies(include_css=False),
+        ionrangeslider_deps(include_css=False),
+        datepicker_deps(include_css=False),
+        selectize_deps(include_css=False),
+    )
 
 
 def bootstrap_deps(include_css: bool = True) -> list[HTMLDependency]:
@@ -63,14 +78,15 @@ def bootstrap_deps(include_css: bool = True) -> list[HTMLDependency]:
     return deps
 
 
-def ionrangeslider_deps() -> list[HTMLDependency]:
+def ionrangeslider_deps(include_css: bool = True) -> list[HTMLDependency]:
     return [
         HTMLDependency(
             name="ionrangeslider",
             version="2.3.1",
             source={"package": "shiny", "subdir": "www/shared/ionrangeslider/"},
             script={"src": "js/ion.rangeSlider.min.js"},
-            all_files=True,
+            # This CSS is rendered against default Bootstrap
+            stylesheet={"href": "css/ion.rangeSlider.css"} if include_css else None,
         ),
         HTMLDependency(
             name="strftime",
@@ -81,14 +97,15 @@ def ionrangeslider_deps() -> list[HTMLDependency]:
     ]
 
 
-def datepicker_deps() -> HTMLDependency:
+def datepicker_deps(include_css: bool = True) -> HTMLDependency:
     return HTMLDependency(
         name="bootstrap-datepicker",
         version="1.9.0",
         source={"package": "shiny", "subdir": "www/shared/datepicker/"},
-        # CSS is now provided in bootstrap.min.css
-        # stylesheet={"href": "css/bootstrap-datepicker3.min.css"},
-        all_files=True,
+        # This CSS is rendered against default Bootstrap
+        stylesheet=(
+            {"href": "css/bootstrap-datepicker3.min.css"} if include_css else None
+        ),
         script={"src": "js/bootstrap-datepicker.min.js"},
         # Need to enable noConflict mode. See #1346.
         head=HTML(
@@ -97,7 +114,7 @@ def datepicker_deps() -> HTMLDependency:
     )
 
 
-def selectize_deps() -> HTMLDependency:
+def selectize_deps(include_css: bool = True) -> HTMLDependency:
     return HTMLDependency(
         name="selectize",
         version="0.12.6",
@@ -106,9 +123,8 @@ def selectize_deps() -> HTMLDependency:
             {"src": "js/selectize.min.js"},
             {"src": "accessibility/js/selectize-plugin-a11y.min.js"},
         ],
-        all_files=True,
-        # CSS is now provided in bootstrap.min.css
-        # stylesheet={"href": "css/selectize.min.css"},
+        # This CSS is rendered against default Bootstrap
+        stylesheet={"href": "css/selectize.min.css"} if include_css else None,
     )
 
 

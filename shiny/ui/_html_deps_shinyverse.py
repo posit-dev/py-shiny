@@ -38,7 +38,7 @@ def fill_dependency() -> HTMLDependency:
 # -- bslib -------------------------
 
 
-def components_dependencies() -> HTMLDependency:
+def components_dependencies(include_css: bool = True) -> HTMLDependency:
     return HTMLDependency(
         name="bslib-components",
         version=bslib_version,
@@ -50,7 +50,7 @@ def components_dependencies() -> HTMLDependency:
             {"src": "components.min.js"},
             {"src": "web-components.min.js", "type": "module"},
         ],
-        # CSS is now provided by bootstrap.min.css
-        # stylesheet={"href": "components.css"},
-        all_files=True,
+        # This CSS is rendered against default Bootstrap and is only used in a
+        # context where Shiny's Bootstrap is not used.
+        stylesheet={"href": "components.css"} if include_css else None,
     )
