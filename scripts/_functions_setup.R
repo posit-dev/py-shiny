@@ -39,7 +39,7 @@ pak_install <- function(...) {
     } else if (grepl("/", pkg)) {
       pkg_name <- basename(pkg)
     }
-    v_pkg <- tryCatch(packageVersion(pkg_name), error = function(e) "???")
+    v_pkg <- pkg_source_version(pkg_name)
 
     cli::cli_inform("Installed {.strong {pkg_name}} v{v_pkg}")
   }
