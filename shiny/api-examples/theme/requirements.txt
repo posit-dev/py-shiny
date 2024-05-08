@@ -1,0 +1,2 @@
+shiny @ git+https://github.com/posit-dev/py-shiny.git@feat/dynamic-theming
+libsass
