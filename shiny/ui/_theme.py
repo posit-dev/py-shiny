@@ -91,10 +91,9 @@ class Theme:
         self._rules: list[str] = []
 
         # _css is either:
-        # 1. "precompiled" indicating it's okay to use precompiled preset.min.css
-        # 2. "" indicating that the CSS has not been compiled yet
-        # 3. A string containing the compiled CSS for the current theme
-        self._css: str = "precompiled" if preset in shiny_theme_presets_bundled else ""
+        # 1. "" indicating that the CSS has not been compiled yet
+        # 2. A string containing the compiled CSS for the current theme
+        self._css: str = ""
 
         # If the theme has been customized and rendered once, we store the tempdir
         # so that we can re-use the already compiled CSS file.
@@ -115,20 +114,22 @@ class Theme:
     def preset(self, value: ShinyThemePreset) -> None:
         check_is_valid_preset(value)
         self._preset = value
+        self._css = ""
+        self._css_temp_srcdir = None
 
-        has_customizations = (
+    def _has_customizations(self) -> bool:
+        return (
             len(self._functions) > 0
             or len(self._defaults) > 0
             or len(self._mixins) > 0
             or len(self._rules) > 0
         )
 
-        if has_customizations:
-            self._css = ""
-        else:
-            self._css = "precompiled" if value in shiny_theme_presets_bundled else ""
-
-        self._css_temp_srcdir = None
+    def _can_use_precompiled(self) -> bool:
+        return (
+            self._preset in shiny_theme_presets_bundled
+            and not self._has_customizations()
+        )
 
     def add_functions(self: T, *args: str) -> T:
         """
@@ -263,8 +264,10 @@ class Theme:
             or changing the preset will invalidate the cache.
         """
         if self._css:
-            if self._css == "precompiled":
-                return self._read_precompiled_css()
+            return copy.copy(self._css)
+
+        if self._can_use_precompiled():
+            self._css = self._read_precompiled_css()
             return copy.copy(self._css)
 
         check_libsass_installed()
@@ -306,7 +309,7 @@ class Theme:
             the `Theme` object directly to the `theme` argument of any Shiny page
             function.
         """
-        if self._css == "precompiled":
+        if self._can_use_precompiled():
             return self._html_dependency_precompiled()
 
         dep_name = f"shiny-theme-{self.name or self._preset}"
