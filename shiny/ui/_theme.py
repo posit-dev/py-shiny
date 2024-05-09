@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import copy
 import os
+import pathlib
 import tempfile
 from textwrap import dedent
-from typing import Optional, TypeVar
+from typing import Optional, Sequence, TypeVar
 
 from htmltools import HTMLDependency
 from packaging.version import Version
@@ -53,6 +54,11 @@ class Theme:
         list.
     name
         A custom name for the theme. If not provided, the preset name will be used.
+    include_paths
+        Additional paths to include when looking for Sass files used in `@import`
+        statements the theme. This can be a single path as a string or
+        :class:`pathlib.Path`, or a list of paths. The paths should point to directories
+        containing additional Sass files that the theme depends on.
 
     Raises
     ------
@@ -64,11 +70,19 @@ class Theme:
         self,
         preset: ShinyThemePreset = "shiny",
         name: Optional[str] = None,
+        include_paths: Optional[str | pathlib.Path | list[str | pathlib.Path]] = None,
     ):
         check_is_valid_preset(preset)
         self._preset: ShinyThemePreset = preset
         self.name = name
         self._version = bootstrap
+        self._include_paths: list[str] = []
+
+        if isinstance(include_paths, (str, pathlib.Path)):
+            self._include_paths.append(str(include_paths))
+        elif isinstance(include_paths, Sequence):
+            for path in include_paths:
+                self._include_paths.append(str(path))
 
         # User-provided Sass code
         self._functions: list[str] = []
@@ -256,7 +270,10 @@ class Theme:
         check_libsass_installed()
         import sass
 
-        self._css = sass.compile(string=self.to_sass())
+        self._css = sass.compile(
+            string=self.to_sass(),
+            include_paths=self._include_paths,
+        )
 
         return copy.copy(self._css)
 

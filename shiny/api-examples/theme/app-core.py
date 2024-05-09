@@ -1,4 +1,4 @@
-# from pathlib import Path
+from pathlib import Path
 
 from shiny import App, render, ui
 
@@ -20,7 +20,7 @@ Durians are known for their large size and thorn-covered husk, which requires ca
     ),
     title="Theme Example",
     theme=(
-        ui.Theme("shiny")
+        ui.Theme("shiny", include_paths=Path(__file__).parent)
         .add_defaults(
             headings_color="red",
             bar_color="purple",
@@ -29,10 +29,11 @@ Durians are known for their large size and thorn-covered husk, which requires ca
         )
         .add_rules(
             """
-            strong { color: $primary; }
-            .sidebar-title { color: $danger; }
-            """
+        strong { color: $primary; }
+        .sidebar-title { color: $danger; }
+        """
         )
+        .add_rules('@import "css/rules.scss";')
     ),
     # theme="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css",
     # theme=Path(__file__).parent / "css" / "bootswatch-minty.min.css",
