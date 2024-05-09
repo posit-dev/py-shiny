@@ -313,7 +313,7 @@ class Theme:
         css_name = f"{dep_name}.min.css"
 
         # Re-use already compiled CSS file if possible
-        if self._css_temp_srcdir is not None:
+        if self._css and self._css_temp_srcdir is not None:
             return HTMLDependency(
                 name=dep_name,
                 version=Version(self._version),
@@ -326,7 +326,7 @@ class Theme:
         os.mkdir(srcdir)
         css_path = os.path.join(srcdir, css_name)
 
-        with open(os.path.join(srcdir, css_path), "w") as css_file:
+        with open(css_path, "w") as css_file:
             css_file.write(self.to_css())
 
         self._css_temp_srcdir = srcdir
