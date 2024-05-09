@@ -56,7 +56,7 @@ class Theme(Tagifiable):
         A custom name for the theme. If not provided, the preset name will be used.
     include_paths
         Additional paths to include when looking for Sass files used in `@import`
-        statements the theme. This can be a single path as a string or
+        statements in the theme. This can be a single path as a string or
         :class:`pathlib.Path`, or a list of paths. The paths should point to directories
         containing additional Sass files that the theme depends on.
 
