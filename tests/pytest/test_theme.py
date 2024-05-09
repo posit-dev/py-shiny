@@ -45,10 +45,10 @@ def test_theme_stores_values_correctly():
         "name": None,
         "_functions": ["@function get-color($color) { @return $color; }"],
         "_defaults": [
-            "$headings_color: red;",
-            "$bar_color: purple;",
-            "$select_color_text: green;",
-            "$bslib_dashboard_design: true;",
+            "$headings-color: red;",
+            "$bar-color: purple;",
+            "$select-color-text: green;",
+            "$bslib-dashboard-design: true;",
         ],
         "_mixins": ["@mixin alert { color: $alert; }"],
         "_rules": [
@@ -67,10 +67,9 @@ def test_theme_preset_must_be_valid():
 @pytest.mark.parametrize("preset", shiny_theme_presets)
 def test_theme_css_compiles_and_is_cached(preset: ShinyThemePreset):
     theme = Theme(preset)
-    if preset in shiny_theme_presets_bundled:
-        assert theme._css == "precompiled"
-    else:
-        assert theme._css == ""
+
+    assert theme._css == ""
+    assert theme._can_use_precompiled() == (preset in shiny_theme_presets_bundled)
 
     # Adding rules resets the theme's cached CSS
     theme.add_rules(".MY_RULE { color: red; }")
@@ -92,19 +91,15 @@ def test_theme_css_compiles_and_is_cached(preset: ShinyThemePreset):
 def test_theme_update_preset():
     theme = Theme("shiny")
     assert theme._preset == "shiny"
-    assert theme._css == "precompiled" if "shiny" in shiny_theme_presets_bundled else ""
+    assert theme._can_use_precompiled() == ("shiny" in shiny_theme_presets_bundled)
 
     theme.preset = "bootstrap"
     assert theme._preset == "bootstrap"
-    assert theme._css == (
-        "precompiled" if "bootstrap" in shiny_theme_presets_bundled else ""
-    )
+    assert theme._can_use_precompiled() == ("bootstrap" in shiny_theme_presets_bundled)
 
     theme.preset = "sketchy"
     assert theme._preset == "sketchy"
-    assert theme._css == (
-        "precompiled" if "sketchy" in shiny_theme_presets_bundled else ""
-    )
+    assert theme._can_use_precompiled() == ("sketchy" in shiny_theme_presets_bundled)
 
     with pytest.raises(ValueError, match="Invalid preset"):
         theme.preset = "not_a_valid_preset"  # type: ignore
@@ -113,3 +108,20 @@ def test_theme_update_preset():
 def test_theme_defaults_positional_or_keyword():
     with pytest.raises(ValueError, match="Cannot provide both"):
         Theme("shiny").add_defaults("$color: red;", other_color="green")
+
+
+def test_theme_keywords():
+    theme = Theme("shiny")
+    theme.add_functions(my_function="function")
+    theme.add_defaults(my_default1="default-one")
+    theme.add_defaults(my_default2="default-two")
+    theme.add_mixins(my_mixin="mixin")
+    theme.add_rules(my_rule="rule")
+
+    assert theme._functions == ["$my-function: function;"]
+    assert theme._defaults == [
+        "$my-default2: default-two;",
+        "$my-default1: default-one;",
+    ]
+    assert theme._mixins == ["$my-mixin: mixin;"]
+    assert theme._rules == ["$my-rule: rule;"]

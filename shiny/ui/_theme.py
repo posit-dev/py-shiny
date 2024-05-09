@@ -131,7 +131,37 @@ class Theme(Tagifiable):
             and not self._has_customizations()
         )
 
-    def add_functions(self: T, *args: str) -> T:
+    def _combine_args_kwargs(
+        self,
+        *args: str,
+        allow_both: bool = True,
+        kwargs: dict[str, str | float | int | bool | None],
+    ) -> list[str]:
+        if not allow_both and len(args) > 0 and len(kwargs) > 0:
+            # Python forces positional arguments to come _before_ kwargs, but default
+            # argument order might matter. To be safe, we force users to pick one order.
+            raise ValueError("Cannot provide both positional and keyword arguments.")
+        if len(args) == 0 and len(kwargs) == 0:
+            return []
+
+        values: list[str] = list(args)
+
+        if len(kwargs) > 0:
+            for key, value in kwargs.items():
+                key = key.replace("_", "-")
+                if isinstance(value, bool):
+                    value = "true" if value else "false"
+                elif value is None:
+                    value = "null"
+                values.append(f"${key}: {value};")
+
+        return dedent_array(values)
+
+    def add_functions(
+        self: T,
+        *args: str,
+        **kwargs: str | float | int | bool | None,
+    ) -> T:
         """
         Add custom Sass functions to the theme.
 
@@ -143,13 +173,22 @@ class Theme(Tagifiable):
         ----------
         *args
             The Sass functions to add as a single or multiple strings.
+        **kwargs
+            Keyword arguments containing function declarations to add. The keys
+            should be Sass variable names using underscore casing that will be
+            transformed automatically to kebab-case. For example,
+            `.add_functions(primary_color="#ff0000")` is equivalent to
+            `.add_functions("$primary-color: #ff0000;")`.
         """
+        functions = self._combine_args_kwargs(*args, kwargs=kwargs)
+        self._functions.extend(functions)
         self._css = ""
-        self._functions.extend(dedent_array(args))
         return self
 
     def add_defaults(
-        self: T, *args: str, **kwargs: str | float | int | bool | None
+        self: T,
+        *args: str,
+        **kwargs: str | float | int | bool | None,
     ) -> T:
         """
         Add custom default values to the theme.
@@ -169,23 +208,7 @@ class Theme(Tagifiable):
             `.add_defaults(primary_color="#ff0000")` is equivalent to
             `.add_defaults("$primary-color: #ff0000;")`.
         """
-        if len(args) > 0 and len(kwargs) > 0:
-            # Python forces positional arguments to come _before_ kwargs, but default
-            # argument order might matter. To be safe, we force users to pick one order.
-            raise ValueError("Cannot provide both positional and keyword arguments")
-        elif len(args) == 0 and len(kwargs) == 0:
-            return self
-
-        defaults: list[str] = list(args)
-
-        if len(kwargs) > 0:
-            for key, value in kwargs.items():
-                key.replace("_", "-")
-                if isinstance(value, bool):
-                    value = "true" if value else "false"
-                elif value is None:
-                    value = "null"
-                defaults.append(f"${key}: {value};")
+        defaults = self._combine_args_kwargs(*args, kwargs=kwargs, allow_both=False)
 
         # Add args to the front of _defaults
         self._defaults = dedent_array(defaults) + self._defaults
@@ -193,7 +216,11 @@ class Theme(Tagifiable):
 
         return self
 
-    def add_mixins(self: T, *args: str) -> T:
+    def add_mixins(
+        self: T,
+        *args: str,
+        **kwargs: str | float | int | bool | None,
+    ) -> T:
         """
         Add custom Sass mixins to the theme.
 
@@ -204,12 +231,23 @@ class Theme(Tagifiable):
         ----------
         *args
             Sass code, as a single or multiple strings, containing mixins to add.
+        **kwargs
+            Keyword arguments containing Sass value declarations to add. The keys
+            should be Sass variable names using underscore casing that will be
+            transformed automatically to kebab-case. For example,
+            `.add_mixins(primary_color="#ff0000")` is equivalent to
+            `.add_mixins("$primary-color: #ff0000;")`.
         """
-        self._mixins.extend(dedent_array(args))
+        mixins = self._combine_args_kwargs(*args, kwargs=kwargs)
+        self._mixins.extend(mixins)
         self._css = ""
         return self
 
-    def add_rules(self: T, *args: str) -> T:
+    def add_rules(
+        self: T,
+        *args: str,
+        **kwargs: str | float | int | bool | None,
+    ) -> T:
         """
         Add custom Sass rules to the theme.
 
@@ -220,8 +258,15 @@ class Theme(Tagifiable):
         ----------
         *args
             Sass code, as a single or multiple strings, containing rules to add.
+        **kwargs
+            Keyword arguments containing Sass value declarations to add. The keys
+            should be Sass variable names using underscore casing that will be
+            transformed automatically to kebab-case. For example,
+            `.add_rules(primary_color="#ff0000")` is equivalent to
+            `.add_rules("$primary-color: #ff0000;")`.
         """
-        self._rules.extend(dedent_array(args))
+        rules = self._combine_args_kwargs(*args, kwargs=kwargs)
+        self._rules.extend(rules)
         self._css = ""
         return self
 
