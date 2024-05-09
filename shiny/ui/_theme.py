@@ -7,7 +7,7 @@ import tempfile
 from textwrap import dedent
 from typing import Optional, Sequence, TypeVar
 
-from htmltools import HTMLDependency
+from htmltools import HTMLDependency, Tagifiable
 from packaging.version import Version
 
 from .._docstring import no_example
@@ -23,7 +23,7 @@ T = TypeVar("T", bound="Theme")
 
 
 @no_example()
-class Theme:
+class Theme(Tagifiable):
     """
     Create a custom Shiny theme.
 
