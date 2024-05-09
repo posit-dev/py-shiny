@@ -148,8 +148,7 @@ quartodoc:
       desc: Allow users to upload and download files.
       contents:
         - express.ui.input_file
-        - express.ui.download_button
-        - express.ui.download_link
+        - express.render.download
     - title: Dynamic UI
       desc: Dynamically show/hide UI elements.
       contents:
