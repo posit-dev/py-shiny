@@ -16,7 +16,6 @@ with ui.sidebar():
         multiple=True,
         selected=["spinners", "pulse"],
     )
-    ui.busy_indicators.spinner_options(color="orange")
 
     @render.download
     def download():
@@ -37,6 +36,9 @@ with ui.card():
         input.simulate()
         time.sleep(3)
         sns.lineplot(x=np.arange(100), y=np.random.randn(100))
+
+
+ui.busy_indicators.options(spinner_type="bars3")
 
 
 @render.ui
