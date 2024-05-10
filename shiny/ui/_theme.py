@@ -331,7 +331,7 @@ class Theme(Tagifiable):
 
     def to_css(
         self,
-        compile_args: Optional[SassCompileArgs] = {"output_style": "compressed"},
+        compile_args: Optional[SassCompileArgs] = None,
     ) -> str:
         """
         Compile the theme to CSS and return the result as a string.
@@ -354,7 +354,7 @@ class Theme(Tagifiable):
         import sass
 
         if compile_args is None:
-            compile_args = cast(SassCompileArgs, {})
+            compile_args = {"output_style": "compressed"}
 
         self._css = sass.compile(
             string=self.to_sass(),
