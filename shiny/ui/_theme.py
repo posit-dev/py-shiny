@@ -5,23 +5,13 @@ import os
 import pathlib
 import tempfile
 from textwrap import dedent
-from typing import (
-    Any,
-    Callable,
-    Iterable,
-    Literal,
-    NotRequired,
-    Optional,
-    Sequence,
-    TypedDict,
-    TypeVar,
-    cast,
-)
+from typing import Any, Callable, Iterable, Literal, Optional, Sequence, TypeVar, cast
 
 from htmltools import HTMLDependency, Tagifiable
 from packaging.version import Version
 
 from .._docstring import no_example
+from .._typing_extensions import NotRequired, TypedDict
 from .._versions import bootstrap
 from ._theme_presets import (
     ShinyThemePreset,
