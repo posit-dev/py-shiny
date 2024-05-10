@@ -14,19 +14,6 @@ from shiny.render import CellPatch
 # TODO-future; Can we maintain pre-processed value and use it within editing?
 # A: Doesn't seem possible for now
 
-# TODO-karan-test; Edit a cell in the first row and hit `shift+enter`. It should not submit the change and stay editing the current cell
-# TODO-karan-test; Edit a cell in the last row and hit `enter`. It should not submit the change and stay editing the current cell
-
-# TODO-karan-test; Data frame with html content in the first two columns; Edit a cell in the third column and try to hit `shift + tab`. It should not submit the edit in the current cell and stay at the current cell (not moving to the second or first column)
-# TODO-karan-test; Data frame with html content in the last two columns; Edit a cell in the third from last column and try to hit `tab`. It should not submit the edit in the current cell and stay at the current cell (not moving to the last two columns)
-
-# TODO-karan-test; The resulting data frame `._input_column_sort()` should return the columns that was sorted on and their direction. (Is multi sort allowed?)
-# TODO-karan-test; The resulting data frame `._input_column_filter()` should return the columns that was filtered on and their filter values. (Test both string and number columns)
-# TODO-karan-test; The resulting data frame `._input_data_view_indices()` should return the start and end index of the data view. (Test with and without filters and sorting)
-# TODO-karan-test; The resulting data frame `data_view(selected=False)` should return the data view that is currently being displayed. (Test with and without filters and sorting)
-# TODO-karan-test; The resulting data frame `data_view(selected=True)` should return the data view that is currently being displayed, but only the selected rows. (Test with and without filters and sorting)
-# TODO-karan-test; The resulting data frame `input_cell_selection()` should return the currently selected cells.
-
 # Load the dataset
 penguins = load_penguins_raw()
 df = penguins

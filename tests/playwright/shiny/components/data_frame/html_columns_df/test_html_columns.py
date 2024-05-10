@@ -63,3 +63,21 @@ def test_validate_html_columns(page: Page, local_app: ShinyAppProc) -> None:
     # Filter using a range for a column that contains numbers
     data_frame.set_column_filter(1, text=["40", "50"])
     data_frame.expect_cell("40", row=0, col=1)
+
+    # Editing a cell in the first row and hitting `shift+enter` should not submit the change and stay editing the current cell
+    data_frame.expect_cell("N25A2", row=0, col=6)
+    data_frame.save_cell("NAAAAA", row=0, col=6, save_key="Shift+Enter")
+    data_frame.expect_cell("N25A2", row=0, col=6)
+    data_frame.save_cell("NAAAAA", row=0, col=6, save_key="Escape")
+    data_frame.expect_cell("N25A2", row=0, col=6)
+
+    # Editing a cell in the last row and hitting `enter` should not submit the change and stay editing the current cell
+    # data_frame.set_column_filter(7, text="No")
+    # Test scrolling to last row
+    data_frame.save_cell("NAAAAA", row=7, col=6, save_key="Enter")
+    data_frame.expect_cell("N29A2", row=7, col=6)
+    data_frame.save_cell("NAAAAA", row=7, col=6, save_key="Escape")
+    data_frame.expect_cell("N29A2", row=7, col=6)
+
+    # Test scrolling up to top
+    data_frame.expect_cell("N25A2", row=0, col=6)

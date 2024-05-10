@@ -144,6 +144,11 @@ quartodoc:
         - express.ui.panel_fixed
         - express.ui.panel_title
         - express.ui.panel_well
+    - title: Uploads & downloads
+      desc: Allow users to upload and download files.
+      contents:
+        - express.ui.input_file
+        - express.render.download
     - title: Dynamic UI
       desc: Dynamically show/hide UI elements.
       contents:
