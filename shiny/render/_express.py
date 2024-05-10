@@ -24,7 +24,7 @@ class express(Renderer[None]):
     This is similar to :class:`~shiny.render.ui`, except that :class:`~shiny.render.ui`
     uses the return value from the the decorated function, whereas this function works
     like Shiny Express: as it executes each line of the decorated function, it calls
-    :func:`~sys.displayhook()` on the result. This has the effet of "capturing" the
+    :func:`~sys.displayhook()` on the result. This has the effect of "capturing" the
     output of each line.
 
     Returns

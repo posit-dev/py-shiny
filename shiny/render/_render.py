@@ -575,6 +575,13 @@ class ui(Renderer[TagChild]):
     """
     Reactively render HTML content.
 
+    Note: If you want to write your function with Shiny Express syntax, where the UI
+    components are automatically captured as the code is evaluated, use
+    :func:`~shiny.express.render.express` instead of this function.
+
+    This function is used to render HTML content, but it requires that the funciton
+    returns the content, using Shiny Core syntax.
+
     Returns
     -------
     :
@@ -589,6 +596,8 @@ class ui(Renderer[TagChild]):
 
     See Also
     --------
+    * :func:`~shiny.express.render.express`
+    * :func:`~shiny.express.expressify`
     * :func:`~shiny.ui.output_ui`
     """
 
