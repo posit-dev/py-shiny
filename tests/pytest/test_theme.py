@@ -113,15 +113,18 @@ def test_theme_defaults_positional_or_keyword():
 def test_theme_keywords():
     theme = Theme("shiny")
     theme.add_functions(my_function="function")
-    theme.add_defaults(my_default1="default-one")
-    theme.add_defaults(my_default2="default-two")
-    theme.add_mixins(my_mixin="mixin")
-    theme.add_rules(my_rule="rule")
+    theme.add_defaults(my_default1=True)
+    theme.add_defaults(my_default2=False)
+    theme.add_mixins(my_mixin=1)
+    theme.add_rules(my_rule=3.141596, my_other_rule=None)
 
     assert theme._functions == ["$my-function: function;"]
     assert theme._defaults == [
-        "$my-default2: default-two;",
-        "$my-default1: default-one;",
+        "$my-default2: false;",
+        "$my-default1: true;",
     ]
-    assert theme._mixins == ["$my-mixin: mixin;"]
-    assert theme._rules == ["$my-rule: rule;"]
+    assert theme._mixins == ["$my-mixin: 1;"]
+    assert theme._rules == [
+        "$my-rule: 3.141596;",
+        "$my-other-rule: null;",
+    ]
