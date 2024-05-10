@@ -63,4 +63,5 @@ def busy_indicators_dep() -> HTMLDependency:
         stylesheet={"href": "busy-indicators.css"},
         script={"src": "busy-indicators.js"},
         head=busy_indicators.use(),  # Enable busy indicators by default.
+        all_files=True,
     )

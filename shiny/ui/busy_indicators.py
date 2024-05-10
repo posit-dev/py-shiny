@@ -1,8 +1,15 @@
 from __future__ import annotations
 
+from base64 import b64encode
+from pathlib import Path
+from typing import get_args
+
 from htmltools import Tag, TagChild, TagList, tags
 
 from .._docstring import add_example, no_example
+from .._utils import private_random_int
+from ._busy_spinner_types import BusySpinnerType
+from ._card import CardItem
 
 __all__ = (
     "options",
@@ -13,6 +20,7 @@ __all__ = (
 @add_example(ex_dir="../api-examples/busy_indicators")
 def options(
     *,
+    spinner_type: BusySpinnerType | Path | None = None,
     spinner_color: str | None = None,
     spinner_size: str | None = None,
     spinner_delay: str | None = None,
@@ -20,14 +28,29 @@ def options(
     pulse_background: str | None = None,
     pulse_height: str | None = None,
     pulse_speed: str | None = None,
-) -> TagList:
+) -> CardItem:
     """
     Customize spinning busy indicators.
 
-    Include the result of this function in the app's UI to customize spinner appearance.
+    Busy indicators provide a visual cue to users when the server is busy calculating
+    outputs or otherwise performing tasks (e.g., producing downloads). This function
+    allows you to customize the appearance of those busy indicators. To apply the
+    customization, include the result of this function inside the app's UI.
 
     Parameters
     ----------
+    spinner_type
+        The type of spinner. Pre-bundled types are listed in the `BusySpinnerType`
+        type.
+
+        A path to a local SVG file can also be provided. The SVG should adhere
+        to the following rules:
+        * The SVG itself should contain the animation.
+        * It should avoid absolute sizes (the spinner's containing DOM element size is
+            set in CSS by `spinner_size`, so it should fill that container).
+        * It should avoid setting absolute colors (the spinner's containing DOM
+            element color is set in CSS by `spinner_color`, so it should inherit that
+            color).
     spinner_color
         The color of the spinner. This can be any valid CSS color. Defaults to the
         app's "primary" color (if Bootstrap is on the page).
@@ -38,9 +61,9 @@ def options(
         CSS time and can useful for not showing the spinner if the computation
         finishes quickly.
     spinner_selector
-        A CSS selector for scoping the spinner customization.
-        This can be useful if you want to have different spinners for different
-        parts of the app. Defaults to the root document element.
+        A character string containing a CSS selector for scoping the spinner
+        customization. The default (`None`) will apply the spinner customization to the
+        parent element of the spinner.
     pulse_background
         A CCS background definition for the pulse. The default uses a
         [linear-gradient](https://developer.mozilla.org/en-US/docs/Web/CSS/gradient/linear-gradient)
@@ -55,8 +78,9 @@ def options(
     * :func:`~shiny.ui.busy_indicators.use` for enabling/disabling busy indicators.
     """
 
-    return TagList(
+    res = TagList(
         spinner_options(
+            type=spinner_type,
             color=spinner_color,
             size=spinner_size,
             delay=spinner_delay,
@@ -69,27 +93,49 @@ def options(
         ),
     )
 
+    return CardItem(res)
+
 
 def spinner_options(
     *,
+    type: BusySpinnerType | Path | None = None,
     color: str | None = None,
     size: str | None = None,
     delay: str | None = None,
     selector: str | None = None,
 ) -> TagChild:
-    if color is None and size is None and delay is None and selector is None:
+    if (
+        type is None
+        and color is None
+        and size is None
+        and delay is None
+        and selector is None
+    ):
         return None
 
+    url = None
+    if type is not None:
+        if isinstance(type, Path):
+            with open(type, "rb") as f:
+                url = f"data:image/svg+xml;base64,{b64encode(f.read())}"
+        else:
+            if type not in get_args(BusySpinnerType):
+                raise ValueError(f"Invalid spinner type: {type}")
+            url = f"url('spinners/{type}.svg')"
+
     css_vars = (
-        (f"--shiny-spinner-color: {color};" if color else "")
+        (f"--shiny-spinner-url: {url};" if url else "")
+        + (f"--shiny-spinner-color: {color};" if color else "")
         + (f"--shiny-spinner-size: {size};" if size else "")
         + (f"--shiny-spinner-delay: {delay};" if delay else "")
     )
 
+    id = None
     if selector is None:
-        selector = ":root"
+        id = f"spinner-options-{private_random_int(1000, 1000000)}"
+        selector = f":has(> #{id})"
 
-    return tags.style(f"{selector} {{ {css_vars} }}")
+    return tags.style(f"{selector} {{ {css_vars} }}", id=id)
 
 
 def pulse_options(
@@ -115,8 +161,11 @@ def use(*, spinners: bool = True, pulse: bool = True) -> Tag:
     """
     Enable/disable busy indication
 
-    To enable/disable busy indicators, include the result of this function in the
-    app's UI.
+    Busy indicators provide a visual cue to users when the server is busy calculating
+    outputs or otherwise performing tasks (e.g., producing downloads). When enabled
+    (they are by default), a spinner is shown on each calculating/recalculating output,
+    and a pulsing banner is shown at the top of the page when the app is otherwise busy.
+    To disable, include the result of this function in anywhere in the app's UI.
 
     Parameters
     ----------
