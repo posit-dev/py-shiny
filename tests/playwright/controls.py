@@ -3680,7 +3680,6 @@ class OutputDataFrame(_InputWithContainer):
                 break
             if int(first_row_index) >= row:
                 first_row.scroll_into_view_if_needed(timeout=timeout)
-                self.page.wait_for_timeout(1000)
             else:
                 # First row index is lower than `row`
                 break
@@ -3691,9 +3690,7 @@ class OutputDataFrame(_InputWithContainer):
             if last_row_index is None:
                 break
             if int(last_row_index) <= row:
-                print("scroll up!")
                 last_row.scroll_into_view_if_needed(timeout=timeout)
-                self.page.wait_for_timeout(1000)
             else:
                 # Last row index is higher than `row`
                 break
@@ -3868,7 +3865,6 @@ class OutputDataFrame(_InputWithContainer):
 
         self._cell_scroll_if_needed(row=row, col=col, timeout=timeout)
         cell.click(timeout=timeout)
-        self.page.wait_for_timeout(1000)
         cell.locator("> textarea").fill(text)
 
     def set_column_sort(
