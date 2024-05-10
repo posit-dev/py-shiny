@@ -33,7 +33,7 @@ from ._utils import path_pkg_www
 T = TypeVar("T", bound="Theme")
 
 
-SassImporterReturnValue = Union[tuple[str], tuple[str, str], tuple[str, str, str]]
+SassImporterReturnValue = Union["tuple[str]", "tuple[str, str]", "tuple[str, str, str]"]
 SassImporterFunction = Union[
     Callable[[str], SassImporterReturnValue],
     Callable[[str, str], SassImporterReturnValue],
