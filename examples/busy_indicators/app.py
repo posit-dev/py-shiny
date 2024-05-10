@@ -3,7 +3,6 @@ import time
 
 import numpy as np
 import seaborn as sns
-from faicons import icon_svg
 
 from shiny import App, module, reactive, render, ui
 
@@ -13,25 +12,23 @@ from shiny import App, module, reactive, render, ui
 def card_ui(spinner_type):
     return ui.card(
         ui.busy_indicators.options(spinner_type=spinner_type),
-        ui.card_header("Spinner:" + spinner_type),
+        ui.card_header("Spinner: " + spinner_type),
         ui.output_plot("plot"),
     )
 
 
 @module.server
-def card_server(input, output, session, simulate):
-
+def card_server(input, output, session, rerender):
     @render.plot
     def plot():
+        rerender()
         time.sleep(1)
-        if simulate() > 0:
-            time.sleep(100)
         sns.lineplot(x=np.arange(100), y=np.random.randn(100))
 
 
 # -- Main app --
 app_ui = ui.page_fillable(
-    ui.input_task_button("simulate", "Simulate"),
+    ui.input_task_button("rerender", "Re-render"),
     ui.layout_columns(
         card_ui("ring", "ring"),
         card_ui("bars", "bars"),
@@ -45,13 +42,13 @@ app_ui = ui.page_fillable(
 def server(input, output, session):
 
     @reactive.calc
-    def simulate():
-        return input.simulate()
+    def rerender():
+        return input.rerender()
 
-    card_server("ring", simulate=simulate)
-    card_server("bars", simulate=simulate)
-    card_server("dots", simulate=simulate)
-    card_server("pulse", simulate=simulate)
+    card_server("ring", rerender=rerender)
+    card_server("bars", rerender=rerender)
+    card_server("dots", rerender=rerender)
+    card_server("pulse", rerender=rerender)
 
 
 app = App(app_ui, server)
