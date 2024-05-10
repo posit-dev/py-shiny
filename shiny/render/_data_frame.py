@@ -494,11 +494,13 @@ class data_frame(Renderer[DataFrameResult]):
                         # Use a `set` for faster lookups
                         selected_row_indices_set = set(cell_selection["rows"])
 
-                        # Subset the data view indices to only include the selected rows
+                        # Subset the data view indices to only include the selected rows that are in the data
                         data_view_indices = [
                             index
                             for index in data_view_indices
                             if index in selected_row_indices_set
+                            and index
+                            in data.index  # pyright: ignore[reportUnknownMemberType]
                         ]
 
                 return data.iloc[data_view_indices]
