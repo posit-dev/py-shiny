@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import pathlib
+import platform
 import re
 import sys
 import time
@@ -3566,7 +3567,18 @@ class OutputDataFrame(_InputWithContainer):
         self.loc_column_label = self.loc_head.locator("> tr > th:not(.filters th)")
 
     def cell_locator(self, row: int, col: int) -> Locator:
-        return self.loc_body.locator(f"> tr:nth-child({row + 1})").locator(
+        """
+        Returns the locator for a specific cell in the data frame.
+
+        Parameters
+        ----------
+        row
+            The row number of the cell.
+        col
+            The column number of the cell.
+        """
+        return self.loc_body.locator(f"> tr[data-index='{row}']").locator(
+            # nth-child starts from index = 1
             f"> td:nth-child({col + 1}),  > th:nth-child({col + 1})"
         )
 
@@ -3609,6 +3621,7 @@ class OutputDataFrame(_InputWithContainer):
         """
         assert_type(row, int)
         assert_type(col, int)
+        self._cell_scroll_if_needed(row=row, col=col, timeout=timeout)
         playwright_expect(self.cell_locator(row, col)).to_have_text(
             text, timeout=timeout
         )
@@ -3641,6 +3654,47 @@ class OutputDataFrame(_InputWithContainer):
             playwright_expect(self.loc_column_label).to_have_text(
                 labels, timeout=timeout
             )
+
+    def _cell_scroll_if_needed(self, *, row: int, col: int, timeout: Timeout):
+        """
+        Scrolls the cell into view if needed.
+
+        Parameters
+        ----------
+        row
+            The row number of the cell.
+        col
+            The column number of the cell.
+        timeout
+            The maximum time to wait for the action to complete.
+        """
+        # Check first and last row data-index and make sure `row` is included
+
+        cell = self.cell_locator(row=row, col=col)
+
+        # Scroll down if top number is larger
+        while not cell.is_visible(timeout=timeout):
+            first_row = self.loc_body.locator("> tr[data-index]").first
+            first_row_index = first_row.get_attribute("data-index")
+            if first_row_index is None:
+                break
+            if int(first_row_index) >= row:
+                first_row.scroll_into_view_if_needed(timeout=timeout)
+            else:
+                # First row index is lower than `row`
+                break
+        # Scroll up if bottom number is smaller
+        while not cell.is_visible(timeout=timeout):
+            last_row = self.loc_body.locator("> tr[data-index]").last
+            last_row_index = last_row.get_attribute("data-index")
+            if last_row_index is None:
+                break
+            if int(last_row_index) <= row:
+                last_row.scroll_into_view_if_needed(timeout=timeout)
+            else:
+                # Last row index is higher than `row`
+                break
+        cell.scroll_into_view_if_needed(timeout=timeout)
 
     def expect_column_label(
         self,
@@ -3717,6 +3771,46 @@ class OutputDataFrame(_InputWithContainer):
             timeout=timeout,
         )
 
+    def select_rows(
+        self,
+        rows: list[int],
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Selects the rows in the data frame.
+
+        Parameters
+        ----------
+        rows
+            The list of row numbers to select.
+        timeout
+            The maximum time to wait for the action to complete. Defaults to None.
+        """
+        if len(rows) > 1:
+            rows = sorted(rows)
+            # check if the items in the row contain all numbers from index 0 to index -1
+            if rows == list(range(rows[0], rows[-1] + 1)):
+                self.page.keyboard.down("Shift")
+                self.cell_locator(row=rows[0], col=0).click(timeout=timeout)
+                self.cell_locator(row=rows[-1], col=0).click(timeout=timeout)
+                self.page.keyboard.up("Shift")
+            else:
+                # if operating system is MacOs use Meta (Cmd) else use Ctrl key
+                if platform.system() == "Darwin":
+                    self.page.keyboard.down("Meta")
+                else:
+                    self.page.keyboard.down("Control")
+                for row in rows:
+                    self._cell_scroll_if_needed(row=row, col=0, timeout=timeout)
+                    self.cell_locator(row=row, col=0).click(timeout=timeout)
+                if platform.system() == "Darwin":
+                    self.page.keyboard.up("Meta")
+                else:
+                    self.page.keyboard.up("Control")
+        else:
+            self.cell_locator(row=rows[0], col=0).click(timeout=timeout)
+
     def expect_class_state(
         self,
         state: str,
@@ -3768,8 +3862,9 @@ class OutputDataFrame(_InputWithContainer):
             The maximum time to wait for the action to complete. Defaults to None.
         """
         cell = self.cell_locator(row=row, col=col)
-        cell.scroll_into_view_if_needed(timeout=timeout)
-        cell.click()
+
+        self._cell_scroll_if_needed(row=row, col=col, timeout=timeout)
+        cell.click(timeout=timeout)
         cell.locator("> textarea").fill(text)
 
     def set_column_sort(
@@ -3874,6 +3969,7 @@ class OutputDataFrame(_InputWithContainer):
         timeout
             The maximum time to wait for the expectation to pass. Defaults to None.
         """
+
         playwright_expect(self.cell_locator(row=row, col=col)).to_have_attribute(
             name="title", value=message, timeout=timeout
         )
