@@ -14,7 +14,7 @@ import sys
 import tempfile
 import warnings
 from pathlib import Path
-from types import ModuleType
+from types import CoroutineType, ModuleType
 from typing import Any, Awaitable, Callable, Generator, Optional, TypeVar, cast
 
 from ._typing_extensions import ParamSpec, TypeGuard
@@ -374,6 +374,9 @@ def run_coro_sync(coro: Awaitable[R]) -> R:
     if not inspect.iscoroutine(coro):
         raise TypeError("run_coro_sync requires a Coroutine object.")
 
+    # Pyright needs a little help here
+    coro = cast("CoroutineType[Any, Any, R]", coro)
+
     try:
         coro.send(None)
     except StopIteration as e:
@@ -403,6 +406,9 @@ def run_coro_hybrid(coro: Awaitable[R]) -> "asyncio.Future[R]":
 
     if not inspect.iscoroutine(coro):
         raise TypeError("run_coro_hybrid requires a Coroutine object.")
+
+    # Pyright needs a little help here
+    coro = cast("CoroutineType[Any, Any, R]", coro)
 
     # Inspired by Task.__step method in cpython/Lib/asyncio/tasks.py
     def _step(fut: Optional["asyncio.Future[None]"] = None):
