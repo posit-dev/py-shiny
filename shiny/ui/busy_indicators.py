@@ -43,7 +43,7 @@ def options(
         The type of spinner. Pre-bundled types are listed in the `BusySpinnerType`
         type.
 
-        A path to a local SVG file can also be provided. The SVG should adhere
+        A `Path` to a local SVG file can also be provided. The SVG should adhere
         to the following rules:
         * The SVG itself should contain the animation.
         * It should avoid absolute sizes (the spinner's containing DOM element size is
@@ -117,7 +117,8 @@ def spinner_options(
     if type is not None:
         if isinstance(type, Path):
             with open(type, "rb") as f:
-                url = f"data:image/svg+xml;base64,{b64encode(f.read())}"
+                dat = b64encode(f.read()).decode()
+                url = f"url('data:image/svg+xml;base64,{dat}')"
         else:
             if type not in get_args(BusySpinnerType):
                 raise ValueError(f"Invalid spinner type: {type}")
