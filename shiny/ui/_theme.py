@@ -1,11 +1,23 @@
 from __future__ import annotations
 
+import collections.abc
 import copy
 import os
 import pathlib
 import tempfile
 from textwrap import dedent
-from typing import Optional, Sequence, TypeVar
+from typing import (
+    Any,
+    Callable,
+    Iterable,
+    Literal,
+    NotRequired,
+    Optional,
+    Sequence,
+    TypedDict,
+    TypeVar,
+    cast,
+)
 
 from htmltools import HTMLDependency, Tagifiable
 from packaging.version import Version
@@ -20,6 +32,27 @@ from ._theme_presets import (
 from ._utils import path_pkg_www
 
 T = TypeVar("T", bound="Theme")
+
+
+SassImporterReturnValue = tuple[str] | tuple[str, str] | tuple[str, str, str]
+SassImporterFunction = (
+    Callable[[str], SassImporterReturnValue]
+    | Callable[[str, str], SassImporterReturnValue]
+)
+
+
+class SassCompileArgs(TypedDict):
+    output_style: NotRequired[Literal["nested", "expanded", "compact", "compressed"]]
+    source_comments: NotRequired[bool]
+    source_map_contents: NotRequired[bool]
+    source_map_embed: NotRequired[bool]
+    omit_source_map_url: NotRequired[bool]
+    source_map_root: NotRequired[str | None]
+    include_paths: NotRequired[Sequence[str]]
+    precision: NotRequired[int]
+    custom_functions: NotRequired[Any]  # not worth the effort, it's a complicated type
+    indented: NotRequired[bool]
+    importers: NotRequired[Iterable[tuple[int, SassImporterFunction]] | None]
 
 
 @no_example()
@@ -297,7 +330,10 @@ class Theme(Tagifiable):
 
         return "\n".join(sass_lines)
 
-    def to_css(self) -> str:
+    def to_css(
+        self,
+        compile_args: Optional[SassCompileArgs] = {"output_style": "compressed"},
+    ) -> str:
         """
         Compile the theme to CSS and return the result as a string.
 
@@ -318,10 +354,15 @@ class Theme(Tagifiable):
         check_libsass_installed()
         import sass
 
+        if compile_args is None:
+            compile_args = cast(SassCompileArgs, {})
+
         self._css = sass.compile(
             string=self.to_sass(),
             include_paths=self._include_paths,
+            **compile_args,  # type: ignore
         )
+        self._css = cast(str, self._css)
 
         return copy.copy(self._css)
 
