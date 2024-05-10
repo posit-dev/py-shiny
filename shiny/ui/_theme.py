@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import collections.abc
 import copy
 import os
 import pathlib
