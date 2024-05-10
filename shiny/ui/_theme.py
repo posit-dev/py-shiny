@@ -356,12 +356,14 @@ class Theme(Tagifiable):
         if compile_args is None:
             compile_args = {"output_style": "compressed"}
 
-        self._css = sass.compile(
-            string=self.to_sass(),
-            include_paths=self._include_paths,
-            **compile_args,  # type: ignore
+        self._css = cast(
+            str,
+            sass.compile(
+                string=self.to_sass(),
+                include_paths=self._include_paths,
+                **compile_args,  # type: ignore
+            ),
         )
-        self._css = cast(str, self._css)
 
         return copy.copy(self._css)
 
