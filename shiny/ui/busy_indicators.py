@@ -117,8 +117,8 @@ def spinner_options(
     if type is not None:
         if isinstance(type, Path):
             with open(type, "rb") as f:
-                dat = b64encode(f.read()).decode()
-                url = f"url('data:image/svg+xml;base64,{dat}')"
+                type64 = b64encode(f.read()).decode()
+                url = f"url('data:image/svg+xml;base64,{type64}')"
         else:
             if type not in get_args(BusySpinnerType):
                 raise ValueError(f"Invalid spinner type: {type}")
