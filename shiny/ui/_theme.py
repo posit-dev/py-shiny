@@ -69,13 +69,44 @@ class Theme(Tagifiable):
     Express apps, use the `theme` argument of :func:`~shiny.express.ui.page_opts` to set
     the app theme.
 
-    Customized themes require the [libsass package](https://pypi.org/project/libsass/),
-    and are compiled to CSS when the theme is used. The `Theme` class caches the
-    compiled CSS, but you can speed up app loading (and avoid the runtime `libsass`
-    dependency) by pre-compiling the theme CSS and saving it to a file. To do this, use
-    the `.to_css()` method to render the theme to a single minified CSS string. Once
-    saved to a file, the CSS can be used in any Shiny app by passing the file path to
-    the `theme` argument described above.
+    **Note: Compiling custom themes requires the
+    [libsass](https://pypi.org/project/libsass/) package**, which is not installed by
+    default with Shiny. Use `pip install libsass` or `pip install shiny[theme]` to
+    install it.
+
+    Customized themes rare compiled to CSS when the theme is used. The `Theme` class
+    caches the compiled CSS so that it's only compiled for the first user to load your
+    app, but you can speed up app loading (and avoid the runtime `libsass` dependency)
+    by pre-compiling the theme CSS and saving it to a file. To do this, use the
+    `.to_css()` method to render the theme to a single minified CSS string. Once saved
+    to a file, the CSS can be used in any Shiny app by passing the file path to the
+    `theme` argument instead of the `Theme` object.
+
+    ```{.python filename="my_theme.py"}
+    from shiny import ui
+
+    my_theme = (
+        ui.Theme("shiny")
+        .add_mixins(
+            headings_color="$success",
+            bar_color="$purple",
+            select_color_text="$orange",
+        )
+    )
+
+    with open("my_theme.css", "w") as f:
+        f.write(my_theme.to_css())
+    ```
+
+    ```{.python filename="app.py"}
+    from shiny import ui
+
+    ui = ui.page_fluid(
+        # App content...
+        title="My App",
+        theme="my_theme.css",
+    )
+    ```
 
     Parameters
     ----------

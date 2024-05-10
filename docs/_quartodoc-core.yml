@@ -99,6 +99,7 @@ quartodoc:
     - title: Custom UI
       desc: Lower-level UI functions for creating custom HTML/CSS/JS
       contents:
+        - ui.Theme
         - ui.HTML       # uses justattributes.rst template
         - ui.TagList    # uses class.rst template
         - name: ui.tags       # uses tags.rst template
