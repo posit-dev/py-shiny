@@ -37,6 +37,9 @@ from . import css  # noqa: F401  # pyright: ignore[reportUnusedImport]
 # Expose the fill module for extended usage: ex: ui.fill.as_fill_item(x).
 from . import fill
 
+# Export busy_indicators module
+from . import busy_indicators
+
 from ._accordion import (
     AccordionPanel,
     accordion,
@@ -355,6 +358,7 @@ __all__ = (
     "em",
     "hr",
     # Submodules
+    "busy_indicators",
     "fill",
     # utils
     "js_eval",
