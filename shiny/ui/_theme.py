@@ -5,7 +5,17 @@ import os
 import pathlib
 import tempfile
 from textwrap import dedent
-from typing import Any, Callable, Iterable, Literal, Optional, Sequence, TypeVar, cast
+from typing import (
+    Any,
+    Callable,
+    Iterable,
+    Literal,
+    Optional,
+    Sequence,
+    TypeVar,
+    Union,
+    cast,
+)
 
 from htmltools import HTMLDependency, Tagifiable
 from packaging.version import Version
@@ -23,11 +33,11 @@ from ._utils import path_pkg_www
 T = TypeVar("T", bound="Theme")
 
 
-SassImporterReturnValue = tuple[str] | tuple[str, str] | tuple[str, str, str]
-SassImporterFunction = (
-    Callable[[str], SassImporterReturnValue]
-    | Callable[[str, str], SassImporterReturnValue]
-)
+SassImporterReturnValue = Union[tuple[str], tuple[str, str], tuple[str, str, str]]
+SassImporterFunction = Union[
+    Callable[[str], SassImporterReturnValue],
+    Callable[[str, str], SassImporterReturnValue],
+]
 
 
 class SassCompileArgs(TypedDict):
