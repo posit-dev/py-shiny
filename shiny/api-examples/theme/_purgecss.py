@@ -8,9 +8,16 @@ import shutil
 import subprocess
 from pathlib import Path
 
-import shinyswatch
+from shared import filler_text, my_theme
+
+my_theme.name = "demo"
 
 from shiny import ui
+
+# If __file__ is not defined, use the current working directory
+if not globals().get("__file__"):
+    __file__ = Path.cwd() / "_purgecss.py"
+
 
 app_ui = ui.page_sidebar(
     ui.sidebar(
@@ -19,20 +26,11 @@ app_ui = ui.page_sidebar(
     ),
     ui.h2("Output"),
     ui.output_text_verbatim("txt"),
-    ui.markdown(
-        """
-**AI-generated filler text.** In the world of exotic fruits, the durian stands out with its spiky exterior and strong odor. Despite its divisive smell, many people are drawn to its rich, creamy texture and unique flavor profile. This tropical fruit is often referred to as the "king of fruits" in various Southeast Asian countries.
-
-Durians are known for their large size and thorn-covered husk, which requires careful handling. The flesh inside can vary in color from pale yellow to deep orange, with a custard-like consistency that melts in your mouth. Some describe its taste as a mix of sweet, savory, and creamy, while others find it overpowering and pungent.
-"""
-    ),
-    shinyswatch.theme.minty,
+    ui.markdown(filler_text),
     title="Theme Example",
+    theme=my_theme,
 )
 
-# If __file__ is not defined, use the current working directory
-if not globals().get("__file__"):
-    __file__ = Path.cwd() / "_purgecss.py"
 
 save_dir = Path(__file__).parent / "output"
 if save_dir.exists():
@@ -41,14 +39,13 @@ save_dir.mkdir()
 app_ui.save_html(save_dir / "index.html", include_version=False)
 
 purged_dir = Path(__file__).parent / "css"
-if purged_dir.exists():
-    shutil.rmtree(purged_dir)
 purged_dir.mkdir(exist_ok=True)
 
 args = [
     "purgecss",
+    "--variables",
     "--css",
-    "output/lib/shinyswatch-css/bootswatch.min.css",
+    "output/lib/shiny-theme-demo/shiny-theme-demo.min.css",
     "--content",
     "output/index.html",
     "--output",
@@ -57,7 +54,7 @@ args = [
 
 subprocess.run(args)
 
-(purged_dir / "bootswatch.min.css").rename(purged_dir / "bootswatch-minty.min.css")
+(purged_dir / "shiny-theme-demo.min.css").rename(purged_dir / "shiny-theme-demo.css")
 
 if True:
     shutil.rmtree(save_dir)
