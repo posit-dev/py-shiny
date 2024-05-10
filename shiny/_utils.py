@@ -375,7 +375,7 @@ def run_coro_sync(coro: Awaitable[R]) -> R:
         raise TypeError("run_coro_sync requires a Coroutine object.")
 
     # Pyright needs a little help here
-    coro = cast(CoroutineType[Any, Any, R], coro)
+    coro = cast("CoroutineType[Any, Any, R]", coro)
 
     try:
         coro.send(None)
@@ -408,7 +408,7 @@ def run_coro_hybrid(coro: Awaitable[R]) -> "asyncio.Future[R]":
         raise TypeError("run_coro_hybrid requires a Coroutine object.")
 
     # Pyright needs a little help here
-    coro = cast(CoroutineType[Any, Any, R], coro)
+    coro = cast("CoroutineType[Any, Any, R]", coro)
 
     # Inspired by Task.__step method in cpython/Lib/asyncio/tasks.py
     def _step(fut: Optional["asyncio.Future[None]"] = None):
