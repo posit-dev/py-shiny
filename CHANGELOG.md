@@ -25,6 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Fixed an issue that prevented Shiny from serving the `font.css` file referenced in Shiny's Bootstrap CSS file. (#1342)
 
+* Removed temporary state where a data frame renderer would try to subset to selected rows that did not exist. (#1351)
+
+* Restored `@render.data_frame`'s (prematurely removed) input value `input.<ID>_selected_rows()`. This value is to be considered deprecated. Please use `<ID>.input_cell_selection()["rows"]` moving forward. (#1345)
+
 ### Other changes
 
 * `Session` is now an abstract base class, and `AppSession` is a concrete subclass of it. Also, `ExpressMockSession` has been renamed `ExpressStubSession` and is a concrete subclass of `Session`. (#1331)

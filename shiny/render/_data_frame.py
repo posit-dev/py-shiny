@@ -542,10 +542,14 @@ class data_frame(Renderer[DataFrameResult]):
                     if cell_selection is not None and cell_selection["type"] == "row":
                         # Use a `set` for faster lookups
                         selected_row_set = set(cell_selection["rows"])
+                        nrow = data.shape[0]
 
-                        # Subset the data view indices to only include the selected rows
+                        # Subset the data view indices to only include the selected rows that are in the data
                         data_view_rows = [
-                            row for row in data_view_rows if row in selected_row_set
+                            row
+                            for row in data_view_rows
+                            # Make sure the row is not larger than the number of rows
+                            if row in selected_row_set and row < nrow
                         ]
 
                 return data.iloc[data_view_rows]
