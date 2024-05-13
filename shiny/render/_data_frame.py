@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import warnings
 
+# TODO-barret; Should `.input_cell_selection()` ever return None? Is that value even helpful? Empty lists would be much more user friendly.
+# TODO-barret-render.data_frame; Add method `update_sort()`
+# TODO-barret-render.data_frame; Add method `update_filter()`
 # TODO-barret-render.data_frame; Docs
 # TODO-barret-render.data_frame; Add examples!
 from typing import (
@@ -58,11 +61,6 @@ if TYPE_CHECKING:
 from ._data_frame_utils._datagridtable import DataFrameResult
 
 
-class SelectedIndices(TypedDict):
-    rows: tuple[int] | None
-    columns: tuple[int] | None
-
-
 class ColumnSort(TypedDict):
     id: str
     desc: bool
@@ -76,6 +74,18 @@ class ColumnFilterStr(TypedDict):
 class ColumnFilterNumber(TypedDict):
     id: str
     value: tuple[float, float]
+
+
+ColumnFilter = Union[ColumnFilterStr, ColumnFilterNumber]
+
+
+class DataViewInfo(TypedDict):
+    sort: tuple[ColumnSort, ...]
+    filter: tuple[ColumnFilter, ...]
+
+    rows: tuple[int, ...]  # sorted and filtered row number
+    selected_rows: tuple[int, ...]  # selected and sorted and filtered row number
+    # selected_columns: tuple[int, ...]  # selected and sorted and filtered row number
 
 
 # # TODO-future; Use `dataframe-api-compat>=0.2.6` to injest dataframes and return standardized dataframe structures
@@ -275,6 +285,18 @@ class data_frame(Renderer[DataFrameResult]):
         else:
             return self._data_view_all()
 
+    data_view_info: reactive.Calc_[DataViewInfo]
+    """
+    Reactive value of the data frame's view information.
+
+    This includes:
+    * `sort`: An array of `{"id": str, "desc": bool }` information. This is the output of `.input_column_sort()`.
+    * `filter`: An array of `{"id": str, "value": str | tuple[float, float]}` information. This is the output of `.input_column_filter()`.
+    * `rows`: The row numbers of the data frame that are currently being viewed in the browser after sorting and filtering has been applied.
+    * `selected_rows`: `rows` values that have been selected by the user. This value created from the `rows` key in `.input_cell_selection()`.
+
+    """
+
     # TODO-barret-render.data_frame; Allow for DataTable and DataGrid to accept SelectionModes
     selection_modes: reactive.Calc_[SelectionModes]
     """
@@ -285,7 +307,7 @@ class data_frame(Renderer[DataFrameResult]):
     """
     Reactive value of selected cell information.
 
-    This method is a wrapper around `input.<id>_selected_cells()`, where `<id>` is
+    This method is a wrapper around `input.<id>_cell_selection()`, where `<id>` is
     the `id` of the data frame output. This method returns the selected rows and
     will cause reactive updates as the selected rows change.
 
@@ -297,7 +319,7 @@ class data_frame(Renderer[DataFrameResult]):
           selected cells.
     """
 
-    _input_data_view_indices: reactive.Calc_[list[int]]
+    _input_data_view_rows: reactive.Calc_[tuple[int, ...]]
     """
     Reactive value of the data frame's view indices.
 
@@ -309,6 +331,16 @@ class data_frame(Renderer[DataFrameResult]):
     Reactive value of the data frame's patched data.
 
     This is the data frame with all the user's edit patches applied to it.
+    """
+
+    input_column_sort: reactive.Calc_[tuple[ColumnSort, ...]]
+    """
+    Reactive value of the data frame's column sorting information.
+    """
+
+    input_column_filter: reactive.Calc_[tuple[ColumnFilter, ...]]
+    """
+    Reactive value of the data frame's column filters.
     """
 
     def _reset_reactives(self) -> None:
@@ -380,36 +412,53 @@ class data_frame(Renderer[DataFrameResult]):
 
         self.input_cell_selection = self_input_cell_selection
 
-        # # Array of sorted column information
-        # # TODO-barret-render.data_frame; Expose and update column sorting
-        # # Do not expose until update methods are provided
-        # @reactive.calc
-        # def self__input_column_sort() -> list[ColumnSort]:
-        #     column_sort = self._get_session().input[f"{self.output_id}_column_sort"]()
-        #     return column_sort
+        @reactive.calc
+        def self_input_column_sort() -> tuple[ColumnSort, ...]:
+            column_sort = self._get_session().input[f"{self.output_id}_column_sort"]()
+            return tuple(column_sort)
 
-        # self._input_column_sort = self__input_column_sort
-
-        # # Array of column filters applied by user
-        # # TODO-barret-render.data_frame; Expose and update column filters
-        # # Do not expose until update methods are provided
-        # @reactive.calc
-        # def self__input_column_filter() -> list[ColumnFilterStr | ColumnFilterNumber]:
-        #     column_filter = self._get_session().input[
-        #         f"{self.output_id}_column_filter"
-        #     ]()
-        #     return column_filter
-
-        # self._input_column_filter = self__input_column_filter
+        self.input_column_sort = self_input_column_sort
 
         @reactive.calc
-        def self__input_data_view_indices() -> list[int]:
-            data_view_indices = self._get_session().input[
-                f"{self.output_id}_data_view_indices"
+        def self_input_column_filter() -> tuple[ColumnFilter, ...]:
+            column_filter = self._get_session().input[
+                f"{self.output_id}_column_filter"
             ]()
-            return data_view_indices
+            return tuple(column_filter)
 
-        self._input_data_view_indices = self__input_data_view_indices
+        self.input_column_filter = self_input_column_filter
+
+        @reactive.calc
+        def self_data_view_info() -> DataViewInfo:
+
+            cell_selection = self.input_cell_selection()
+            selected_rows = tuple(
+                cell_selection["rows"]
+                if cell_selection is not None and "rows" in cell_selection
+                else tuple[int]()
+            )
+
+            sort = self.input_column_sort()
+            filter = self.input_column_filter()
+            rows = self._input_data_view_rows()
+
+            return {
+                "sort": sort,
+                "filter": filter,
+                "rows": rows,
+                "selected_rows": selected_rows,
+            }
+
+        self.data_view_info = self_data_view_info
+
+        @reactive.calc
+        def self__input_data_view_rows() -> tuple[int, ...]:
+            data_view_rows = self._get_session().input[
+                f"{self.output_id}_data_view_rows"
+            ]()
+            return tuple(data_view_rows)
+
+        self._input_data_view_rows = self__input_data_view_rows
 
         # @reactive.calc
         # def self__data_selected() -> pd.DataFrame:
@@ -485,23 +534,21 @@ class data_frame(Renderer[DataFrameResult]):
                 data = self._data_patched().copy(deep=False)
 
                 # Turn into list for pandas compatibility
-                data_view_indices = list(self._input_data_view_indices())
+                data_view_rows = list(self._input_data_view_rows())
 
                 # Possibly subset the indices to selected rows
                 if selected:
                     cell_selection = self.input_cell_selection()
                     if cell_selection is not None and cell_selection["type"] == "row":
                         # Use a `set` for faster lookups
-                        selected_row_indices_set = set(cell_selection["rows"])
+                        selected_row_set = set(cell_selection["rows"])
 
                         # Subset the data view indices to only include the selected rows
-                        data_view_indices = [
-                            index
-                            for index in data_view_indices
-                            if index in selected_row_indices_set
+                        data_view_rows = [
+                            row for row in data_view_rows if row in selected_row_set
                         ]
 
-                return data.iloc[data_view_indices]
+                return data.iloc[data_view_rows]
 
         # Helper reactives so that internal calculations can be cached for use in other calculations
         @reactive.calc

@@ -1,0 +1,42 @@
+from conftest import ShinyAppProc
+from controls import OutputDataFrame, OutputTextVerbatim
+from playwright.sync_api import Page
+
+
+def test_validate_html_columns(page: Page, local_app: ShinyAppProc) -> None:
+    page.goto(local_app.url)
+
+    data_frame = OutputDataFrame(page, "testing-penguins_df")
+
+    OutputTextVerbatim(page, "testing-info_size").expect_value("4")
+
+    sort = OutputTextVerbatim(page, "testing-sort")
+    filter = OutputTextVerbatim(page, "testing-filter")
+    rows = OutputTextVerbatim(page, "testing-rows")
+    selected_rows = OutputTextVerbatim(page, "testing-selected_rows")
+
+    sort.expect_value("()")
+    filter.expect_value("()")
+    rows.expect_value("(0, 1, 2, 3, 4)")
+    selected_rows.expect_value("()")
+
+    data_frame.set_column_sort(col=2)
+    data_frame.set_column_sort(col=2)
+    sort.expect_value("({'id': 'Date Egg', 'desc': True},)")
+    filter.expect_value("()")
+    rows.expect_value("(2, 3, 4, 0, 1)")
+    selected_rows.expect_value("()")
+
+    data_frame.set_column_filter(1, text="A2")
+    sort.expect_value("({'id': 'Date Egg', 'desc': True},)")
+
+    data_frame.set_column_filter(0, text=["2", ""])
+    filter.expect_value(
+        "({'id': 'Individual ID', 'value': 'A2'}, {'id': 'Sample Number', 'value': (2, None)})"
+    )
+
+    rows.expect_value("(3, 1)")
+    selected_rows.expect_value("()")
+    data_frame.select_rows([0])
+    rows.expect_value("(3, 1)")
+    selected_rows.expect_value("(3,)")
