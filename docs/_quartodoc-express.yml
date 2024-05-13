@@ -165,6 +165,8 @@ quartodoc:
         - name: express.ui.tags       # uses tags.rst template
           children: embedded
         - express.ui.TagList    # uses class.rst template
+        - express.ui.busy_indicators.use
+        - express.ui.busy_indicators.options
         # TODO: should these be included?
         # - express.ui.fill.as_fillable_container
         # - express.ui.fill.as_fill_item

@@ -785,6 +785,15 @@ class AppSession(Session):
     async def _handle_request(
         self, request: Request, action: str, subpath: Optional[str]
     ) -> ASGIApp:
+        self._send_message_sync({"busy": "busy"})
+        try:
+            return await self._handle_request_impl(request, action, subpath)
+        finally:
+            self._send_message_sync({"busy": "idle"})
+
+    async def _handle_request_impl(
+        self, request: Request, action: str, subpath: Optional[str]
+    ) -> ASGIApp:
         if action == "upload" and request.method == "POST":
             if subpath is None or subpath == "":
                 return HTMLResponse("<h1>Bad Request</h1>", 400)

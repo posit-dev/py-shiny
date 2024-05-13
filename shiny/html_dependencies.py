@@ -4,22 +4,26 @@ import os
 
 from htmltools import HTMLDependency
 
+from . import __version__
+from .ui._html_deps_py_shiny import busy_indicators_dep
+
 
 def shiny_deps() -> list[HTMLDependency]:
     deps = [
         HTMLDependency(
             name="shiny",
-            version="0.0.1",
+            version=__version__,
             source={"package": "shiny", "subdir": "www/shared/"},
             script={"src": "shiny.js"},
             stylesheet={"href": "shiny.min.css"},
-        )
+        ),
+        busy_indicators_dep(),
     ]
     if os.getenv("SHINY_DEV_MODE") == "1":
         deps.append(
             HTMLDependency(
                 "shiny-devmode",
-                version="0.0.1",
+                version=__version__,
                 head="<script>window.__SHINY_DEV_MODE__ = true;</script>",
             )
         )
