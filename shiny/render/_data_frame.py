@@ -493,14 +493,14 @@ class data_frame(Renderer[DataFrameResult]):
                     if cell_selection is not None and cell_selection["type"] == "row":
                         # Use a `set` for faster lookups
                         selected_row_indices_set = set(cell_selection["rows"])
+                        nrow = data.shape[0]
 
                         # Subset the data view indices to only include the selected rows that are in the data
                         data_view_indices = [
                             index
                             for index in data_view_indices
-                            if index in selected_row_indices_set
-                            and index
-                            in data.index  # pyright: ignore[reportUnknownMemberType]
+                            # Make sure the index is not larger than the number of rows
+                            if index in selected_row_indices_set and index < nrow
                         ]
 
                 return data.iloc[data_view_indices]
