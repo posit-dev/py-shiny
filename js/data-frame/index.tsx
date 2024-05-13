@@ -364,6 +364,18 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
     columnFilters,
   ]);
 
+  // Restored for legacy purposes. Only send selected rows to Shiny when row selection is performed.
+  useEffect(() => {
+    if (!id) return;
+    let shinyValue: number[] | null = null;
+    if (rowSelectionModes.row !== SelectionModes._rowEnum.NONE) {
+      const rowSelectionKeys = rowSelection.keys().toList();
+      const rowsById = table.getSortedRowModel().rowsById;
+      shinyValue = rowSelectionKeys.map((key) => rowsById[key].index).sort();
+    }
+    Shiny.setInputValue!(`${id}_selected_rows`, shinyValue);
+  }, [id, rowSelection, rowSelectionModes, table]);
+
   // ### End row selection ############################################################
 
   // ### Editable cells ###############################################################
