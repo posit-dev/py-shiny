@@ -320,7 +320,6 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
 
   useEffect(() => {
     if (!id) return;
-    const shinyId = `${id}_cell_selection`;
     let shinyValue: CellSelection | null = null;
     if (rowSelectionModes.is_none()) {
       shinyValue = null;
@@ -334,28 +333,28 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
     } else {
       console.error("Unhandled row selection mode:", rowSelectionModes);
     }
-    Shiny.setInputValue!(shinyId, shinyValue);
+    Shiny.setInputValue!(`${id}_cell_selection`, shinyValue);
   }, [id, rowSelection, rowSelectionModes, table, table.getSortedRowModel]);
 
   useEffect(() => {
     if (!id) return;
-    const shinyId = `${id}_column_sort`;
-    Shiny.setInputValue!(shinyId, sorting);
+    Shiny.setInputValue!(`${id}_column_sort`, sorting);
   }, [id, sorting]);
   useEffect(() => {
     if (!id) return;
-    const shinyId = `${id}_column_filter`;
-    Shiny.setInputValue!(shinyId, columnFilters);
+    Shiny.setInputValue!(`${id}_column_filter`, columnFilters);
   }, [id, columnFilters]);
   useEffect(() => {
     if (!id) return;
-    const shinyId = `${id}_data_view_indices`;
 
     // Already prefiltered rows!
     const shinyValue: RowModel<unknown[]> = table.getSortedRowModel();
 
     const rowIndices = table.getSortedRowModel().rows.map((row) => row.index);
-    Shiny.setInputValue!(shinyId, rowIndices);
+    Shiny.setInputValue!(`${id}_data_view_rows`, rowIndices);
+
+    // Legacy value as of 2024-05-13
+    Shiny.setInputValue!(`${id}_data_view_indices`, rowIndices);
   }, [
     id,
     table,

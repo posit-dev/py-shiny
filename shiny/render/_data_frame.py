@@ -297,7 +297,7 @@ class data_frame(Renderer[DataFrameResult]):
           selected cells.
     """
 
-    _input_data_view_indices: reactive.Calc_[list[int]]
+    _input_data_view_rows: reactive.Calc_[list[int]]
     """
     Reactive value of the data frame's view indices.
 
@@ -403,13 +403,13 @@ class data_frame(Renderer[DataFrameResult]):
         # self._input_column_filter = self__input_column_filter
 
         @reactive.calc
-        def self__input_data_view_indices() -> list[int]:
-            data_view_indices = self._get_session().input[
+        def self__input_data_view_rows() -> list[int]:
+            data_view_rows = self._get_session().input[
                 f"{self.output_id}_data_view_indices"
             ]()
-            return data_view_indices
+            return data_view_rows
 
-        self._input_data_view_indices = self__input_data_view_indices
+        self._input_data_view_rows = self__input_data_view_rows
 
         # @reactive.calc
         # def self__data_selected() -> pd.DataFrame:
@@ -485,25 +485,25 @@ class data_frame(Renderer[DataFrameResult]):
                 data = self._data_patched().copy(deep=False)
 
                 # Turn into list for pandas compatibility
-                data_view_indices = list(self._input_data_view_indices())
+                data_view_rows = list(self._input_data_view_rows())
 
                 # Possibly subset the indices to selected rows
                 if selected:
                     cell_selection = self.input_cell_selection()
                     if cell_selection is not None and cell_selection["type"] == "row":
                         # Use a `set` for faster lookups
-                        selected_row_indices_set = set(cell_selection["rows"])
+                        selected_row_set = set(cell_selection["rows"])
                         nrow = data.shape[0]
 
                         # Subset the data view indices to only include the selected rows that are in the data
-                        data_view_indices = [
-                            index
-                            for index in data_view_indices
-                            # Make sure the index is not larger than the number of rows
-                            if index in selected_row_indices_set and index < nrow
+                        data_view_rows = [
+                            row
+                            for row in data_view_rows
+                            # Make sure the row is not larger than the number of rows
+                            if row in selected_row_set and row < nrow
                         ]
 
-                return data.iloc[data_view_indices]
+                return data.iloc[data_view_rows]
 
         # Helper reactives so that internal calculations can be cached for use in other calculations
         @reactive.calc

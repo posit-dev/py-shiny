@@ -84,23 +84,22 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
 
     from shiny import reactive
 
-    @reactive.effect
-    def _():
-        print(
-            "Filters:",
-            summary_data._input_column_filter(),  # pyright: ignore[reportUnknownArgumentType,reportAttributeAccessIssue]
-        )
+    # @reactive.effect
+    # def _():
+    #     print(
+    #         "Filters:",
+    #         summary_data._input_column_filter(),  # pyright: ignore[reportUnknownArgumentType,reportAttributeAccessIssue]
+    #     )
+    # @reactive.effect
+    # def _():
+    #     print(
+    #         "Sorting:",
+    #         summary_data._input_column_sort(),  # pyright: ignore[reportUnknownArgumentType,reportAttributeAccessIssue]
+    #     )
 
     @reactive.effect
     def _():
-        print(
-            "Sorting:",
-            summary_data._input_column_sort(),  # pyright: ignore[reportUnknownArgumentType,reportAttributeAccessIssue]
-        )
-
-    @reactive.effect
-    def _():
-        print("indices:", summary_data._input_data_view_indices())
+        print("indices:", summary_data._input_data_view_rows())
 
     @reactive.effect
     def _():
