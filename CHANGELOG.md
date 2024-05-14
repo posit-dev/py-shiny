@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `@render.data_frame`'s input value `input.<ID>_data_view_indices` has been renamed to `input.<ID>_data_view_rows` for consistent naming. Please use `input.<ID>_data_view_rows` and consider `input.<ID>_data_view_indices` deprecated. (#1374)
 
-* Restored `@render.data_frame`'s (prematurely removed) input value `input.<ID>_selected_rows()`. This value is to be considered deprecated. Please use `<ID>.input_cell_selection()["rows"]` moving forward. (#1345)
+* Restored `@render.data_frame`'s (prematurely removed in v0.9.0) input value `input.<ID>_selected_rows()`. Please use `<ID>.input_cell_selection()["rows"]` and consider `input.<ID>_selected_rows()` deprecated. (#1345)
 
 ### New features
 
