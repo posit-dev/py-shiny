@@ -73,7 +73,7 @@ class ColumnFilterStr(TypedDict):
 
 class ColumnFilterNumber(TypedDict):
     id: str
-    value: tuple[float, float]
+    value: tuple[float, float] | tuple[float, None] | tuple[None, float]
 
 
 ColumnFilter = Union[ColumnFilterStr, ColumnFilterNumber]
