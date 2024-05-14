@@ -28,6 +28,7 @@ from .._utils import wrap_async
 from ..session._utils import require_active_session, session_context
 from ._data_frame_utils import (
     AbstractTabularData,
+    BrowserCellSelection,
     CellPatch,
     CellPatchProcessed,
     CellSelection,
@@ -144,15 +145,18 @@ class data_frame(Renderer[DataFrameResult]):
     -------------
     When using the row selection feature, you can access the selected rows by using the
     `<data_frame_renderer>.input_cell_selection()` method, where `<data_frame_renderer>`
-    is the render function name that corresponds with the `id=` used in
-    :func:`~shiny.ui.outout_data_frame`. Internally, this method retrieves the selected
-    cell information from session's `input.<id>_cell_selection()` value. The value
-    returned will be `None` if the selection mode is `"none"`, or a tuple of
-    integers representing the indices of the selected rows if the selection mode is
-    `"row"` or `"rows"`. If no rows have been selected (while in a non-`"none"` row
-    selection mode), an empty tuple will be returned. To filter a pandas data frame down
-    to the selected rows, use `<data_frame_renderer>.data_view()` or
-    `df.iloc[list(input.<id>_cell_selection()["rows"])]`.
+    is the `@render.data_frame` function name that corresponds with the `id=` used in
+    :func:`~shiny.ui.outout_data_frame`. Internally,
+    `<data_frame_renderer>.input_cell_selection()` retrieves the selected cell
+    information from session's `input.<data_frame_renderer>_cell_selection()` value and
+    upgrades it for consistent subsetting.
+
+    To filter your pandas data frame (`df`) down to the selected rows, you can use:
+
+    * `df.iloc[list(input.<data_frame_renderer>_cell_selection()["rows"])]`
+    * `df.iloc[list(<data_frame_renderer>.input_cell_selection()["rows"])]`
+    * `df.iloc[list(<data_frame_renderer>.data_view_info()["selected_rows"])]`
+    * `<data_frame_renderer>.data_view(selected=True)`
 
     Editing cells
     -------------
@@ -303,7 +307,7 @@ class data_frame(Renderer[DataFrameResult]):
     Reactive value of the data frame's possible selection modes.
     """
 
-    input_cell_selection: reactive.Calc_[CellSelection | None]
+    input_cell_selection: reactive.Calc_[CellSelection]
     """
     Reactive value of selected cell information.
 
@@ -311,12 +315,16 @@ class data_frame(Renderer[DataFrameResult]):
     the `id` of the data frame output. This method returns the selected rows and
     will cause reactive updates as the selected rows change.
 
+    The value has been enhanced from it's vanilla form to include the missing `cols` key
+    (or `rows` key) as a tuple of integers representing all column (or row) numbers.
+    This allows for consistent usage within code when subsetting your data. These
+    missing keys are not sent over the wire as they are independent of the selection.
+
     Returns
     -------
     :
-        * `None` if the selection mode is `"none"`
-        * :class:`~shiny.render.CellSelection` representing the indices of the
-          selected cells.
+        :class:`~shiny.render.CellSelection` representing the indices of the selected
+        cells.
     """
 
     _input_data_view_rows: reactive.Calc_[tuple[int, ...]]
@@ -396,18 +404,18 @@ class data_frame(Renderer[DataFrameResult]):
         self.selection_modes = self_selection_modes
 
         @reactive.calc
-        def self_input_cell_selection() -> CellSelection | None:
-            browser_cell_selection_input = self._get_session().input[
-                f"{self.output_id}_cell_selection"
-            ]()
+        def self_input_cell_selection() -> CellSelection:
+            browser_cell_selection_input = cast(
+                BrowserCellSelection,
+                self._get_session().input[f"{self.output_id}_cell_selection"](),
+            )
+            data = self.data()
 
             browser_cell_selection = as_cell_selection(
                 browser_cell_selection_input,
                 selection_modes=self.selection_modes(),
+                data=data,
             )
-            if browser_cell_selection["type"] == "none":
-                return None
-
             return browser_cell_selection
 
         self.input_cell_selection = self_input_cell_selection
@@ -431,12 +439,8 @@ class data_frame(Renderer[DataFrameResult]):
         @reactive.calc
         def self_data_view_info() -> DataViewInfo:
 
-            cell_selection = self.input_cell_selection()
-            selected_rows = tuple(
-                cell_selection["rows"]
-                if cell_selection is not None and "rows" in cell_selection
-                else ()
-            )
+            selected_rows = tuple(self.input_cell_selection()["rows"])
+            # selected_cols = tuple(self.input_cell_selection()["cols"])
 
             sort = self.input_column_sort()
             filter = self.input_column_filter()
@@ -447,6 +451,7 @@ class data_frame(Renderer[DataFrameResult]):
                 "filter": filter,
                 "rows": rows,
                 "selected_rows": selected_rows,
+                # "selected_cols": selected_cols,
             }
 
         self.data_view_info = self_data_view_info
@@ -539,7 +544,7 @@ class data_frame(Renderer[DataFrameResult]):
                 # Possibly subset the indices to selected rows
                 if selected:
                     cell_selection = self.input_cell_selection()
-                    if cell_selection is not None and cell_selection["type"] == "row":
+                    if cell_selection["type"] == "row":
                         # Use a `set` for faster lookups
                         selected_row_set = set(cell_selection["rows"])
                         nrow = data.shape[0]
@@ -879,7 +884,7 @@ class data_frame(Renderer[DataFrameResult]):
     async def update_cell_selection(
         # self, selection: SelectionLocation | CellSelection
         self,
-        selection: CellSelection | Literal["all"] | None,
+        selection: CellSelection | Literal["all"] | None | BrowserCellSelection,
     ) -> None:
         """
         Update the cell selection in the data frame.
