@@ -363,6 +363,7 @@ def run_app(
         app_dir=app_dir,
         factory=factory,
         lifespan="on",
+        ws_per_message_deflate=False,
         **reload_args,  # pyright: ignore[reportArgumentType]
         **kwargs,
     )
