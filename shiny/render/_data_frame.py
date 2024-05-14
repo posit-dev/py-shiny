@@ -435,7 +435,7 @@ class data_frame(Renderer[DataFrameResult]):
             selected_rows = tuple(
                 cell_selection["rows"]
                 if cell_selection is not None and "rows" in cell_selection
-                else tuple[int]()
+                else ()
             )
 
             sort = self.input_column_sort()
