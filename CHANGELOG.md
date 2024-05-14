@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Breaking Changes
 
+* Restored `@render.data_frame`'s (prematurely removed in v0.9.0) input value `input.<ID>_selected_rows()`. Please use `<ID>.input_cell_selection()["rows"]` and consider `input.<ID>_selected_rows()` deprecated. (#1345)
+
 ### New features
 
 * Added busy indicators to provide users with a visual cue when the server is busy calculating outputs or otherwise serving requests to the client. More specifically, a spinner is shown on each calculating/recalculating output, and a pulsing banner is shown at the top of the page when the app is otherwise busy. Use the new `ui.busy_indicator.options()` function to customize the appearance of the busy indicators and `ui.busy_indicator.use()` to disable/enable them. (#918)
@@ -22,8 +24,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Fixed an issue that prevented Shiny from serving the `font.css` file referenced in Shiny's Bootstrap CSS file. (#1342)
 
 * Removed temporary state where a data frame renderer would try to subset to selected rows that did not exist. (#1351)
-
-* Restored `@render.data_frame`'s (prematurely removed) input value `input.<ID>_selected_rows()`. This value is to be considered deprecated. Please use `<ID>.input_cell_selection()["rows"]` moving forward. (#1345)
 
 ### Other changes
 
