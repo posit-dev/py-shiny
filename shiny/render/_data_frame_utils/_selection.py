@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Literal, Set, Union, cast
 
 from ..._deprecated import warn_deprecated
 from ..._typing_extensions import TypedDict
-from ...types import MISSING, MISSING_TYPE, Jsonifiable, ListOrTuple
+from ...types import Jsonifiable, ListOrTuple
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -256,10 +256,6 @@ def as_browser_cell_selection(
         return {"type": "none"}
 
     if x == "all":
-        if isinstance(data, MISSING_TYPE):
-            raise ValueError(
-                "Cannot use `all` selection mode without providing `data`."
-            )
         row_len, col_len = data.shape
         # Look at the selection modes to determine what to do
         if selection_modes._has_rect():
@@ -365,7 +361,11 @@ def as_cell_selection(
             "cols": browser_cell_selection["cols"],
         }
     if browser_cell_selection["type"] == "rect":
-        return browser_cell_selection
+        return {
+            "type": "rect",
+            "rows": browser_cell_selection["rows"],
+            "cols": browser_cell_selection["cols"],
+        }
 
     raise ValueError(
         f"Unhandled BrowserCellSelection['type']: {browser_cell_selection['type']}"

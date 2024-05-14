@@ -1,6 +1,6 @@
 import pandas as pd
 
-from shiny import App, Inputs, reactive, render, req, ui
+from shiny import App, Inputs, reactive, render, ui
 
 app_ui = ui.page_fluid(
     ui.output_data_frame("df1"),
@@ -23,9 +23,6 @@ def server(input: Inputs):
     @render.text
     def cell_selection():
         cell_selection = df1.input_cell_selection()
-        if cell_selection is None:
-            req(cell_selection)
-            raise ValueError("Cell selection is None")
         if cell_selection["type"] != "row":
             raise ValueError(
                 f"Cell selection type is not 'row': {cell_selection['type']}"
