@@ -119,6 +119,12 @@ class ExpressStubSession(Session):
     def _send_message_sync(self, message: dict[str, object]) -> None:
         return
 
+    def _increment_busy_count(self) -> None:
+        return
+
+    def _decrement_busy_count(self) -> None:
+        return
+
     def on_flush(
         self,
         fn: Callable[[], None] | Callable[[], Awaitable[None]],
