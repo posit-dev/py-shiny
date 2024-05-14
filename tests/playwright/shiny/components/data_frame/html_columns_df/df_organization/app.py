@@ -20,7 +20,7 @@ app_ui = ui.page_fluid(
     ),
     ui.output_data_frame("iris_df"),
     ui.h2("Data view indices"),
-    ui.output_text_verbatim("data_view_indices"),
+    ui.output_text_verbatim("data_view_rows"),
     ui.h2("Indices when view_selected=True"),
     ui.output_text_verbatim("data_view_selected_true"),
     ui.h2("Indices when view_selected=False"),
@@ -41,8 +41,8 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
         )
 
     @render.code  # pyright: ignore[reportArgumentType]
-    def data_view_indices():
-        return iris_df._input_data_view_indices()
+    def data_view_rows():
+        return iris_df._input_data_view_rows()
 
     @render.code  # pyright: ignore[reportArgumentType]
     def data_view_selected_false():  # pyright: ignore[reportUnknownParameterType]
