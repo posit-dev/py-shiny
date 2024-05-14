@@ -145,13 +145,13 @@ Input types for selection modes in a DataGrid or DataTable.
 
 
 # ####################
-# # CellSelection: For receiving selection info from JS
+# # BrowserCellSelection: For receiving selection info from JS
 # ####################
 
 # Should only contain a single selection area
 
-# Do not include `CellSelectionAll` as it should be represented by a row, column, or region with appropriate values.
-# class CellSelectionAll(TypedDict):
+# Do not include `BrowserCellSelectionAll` as it should be represented by a row, column, or region with appropriate values.
+# class BrowserCellSelectionAll(TypedDict):
 #    type: Literal["all"]
 
 
