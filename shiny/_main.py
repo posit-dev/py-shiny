@@ -10,7 +10,7 @@ import re
 import sys
 import types
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, NoReturn, Optional
 
 import click
 import uvicorn
@@ -150,6 +150,15 @@ any of the following will work:
     help="Dev mode",
     show_default=True,
 )
+@click.option(
+    "--profile",
+    is_flag=True,
+    default=False,
+    help="Run the app in profiling mode. This will launch the app under the py-spy "
+    "sampling profiler, and after Shiny is stopped, open a Speedscope.app flamegraph "
+    "in a web browser.",
+    show_default=True,
+)
 @no_example()
 def run(
     app: str | shiny.App,
@@ -167,8 +176,18 @@ def run(
     factory: bool,
     launch_browser: bool,
     dev_mode: bool,
+    profile: bool,
     **kwargs: object,
 ) -> None:
+    if profile:
+        if reload:
+            print(
+                "Error: --profile and --reload cannot be used together", file=sys.stderr
+            )
+            sys.exit(1)
+
+        run_under_pyspy()
+
     reload_includes_list = reload_includes.split(",")
     reload_excludes_list = reload_excludes.split(",")
     return run_app(
@@ -669,3 +688,83 @@ def _verify_rsconnect_version() -> None:
             )
     except PackageNotFoundError:
         pass
+
+
+def find_pyspy_path() -> str | None:
+    import sysconfig
+
+    schemes = [
+        sysconfig.get_default_scheme(),
+        sysconfig.get_preferred_scheme("prefix"),
+        sysconfig.get_preferred_scheme("home"),
+        sysconfig.get_preferred_scheme("user"),
+    ]
+
+    for scheme in schemes:
+        path = sysconfig.get_path("scripts", scheme=scheme)
+        pyspy_path = os.path.join(path, "py-spy" + (".exe" if os.name == "nt" else ""))
+        if os.path.exists(pyspy_path):
+            return pyspy_path
+
+    return None
+
+
+def run_under_pyspy() -> NoReturn:
+    import base64
+    import subprocess
+    import time
+    import webbrowser
+    from urllib.parse import quote_plus
+
+    pyspy_path = find_pyspy_path()
+    if pyspy_path is None:
+        print(
+            "Error: Profiler is not installed. You can install it with "
+            "'pip install shiny[profile]'.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    # Strip out the --profile argument and launch again under py-spy
+    new_argv = [x for x in sys.orig_argv if x != "--profile"]
+
+    # Create a filename based on "profile.json" but with a unique name based on the
+    # current date/time
+    epoch_time = int(time.time())
+    output_filename = f"profile-{epoch_time}.json"
+    output_filename_abs = os.path.join(os.getcwd(), output_filename)
+
+    try:
+        # TODO: Print out command line that will be run, in case user wants to change it
+
+        # Run a new process under py-spy
+        proc = subprocess.run(
+            [
+                pyspy_path,
+                "record",
+                "--format=speedscope",
+                f"--output={output_filename}",
+                "--idle",
+                "--subprocesses",
+                "--",
+                *new_argv,
+            ],
+            check=False,
+            stdin=sys.stdin,
+            stdout=sys.stdout,
+            stderr=sys.stderr,
+        )
+        sys.exit(proc.returncode)
+    finally:
+        if os.path.exists(output_filename_abs):
+            with open(output_filename_abs, "rb") as profile_file:
+                b64_str = base64.b64encode(profile_file.read()).decode("utf-8")
+                data_uri = f"data:application/json;base64,{b64_str}"
+            full_url = (
+                "https://speedscope.app/#profileURL="
+                + quote_plus(data_uri)
+                # + "&title="
+                # + quote_plus(output_filename)
+            )
+            # print(full_url)
+            webbrowser.open(full_url)
