@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from shiny.types import Jsonifiable
+from ..types import Jsonifiable
 
 __all__ = (
     "input_select",
