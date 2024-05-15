@@ -62,17 +62,17 @@ from ._data_frame_utils._datagridtable import DataFrameResult
 
 
 class ColumnSort(TypedDict):
-    id: str
+    col: int
     desc: bool
 
 
 class ColumnFilterStr(TypedDict):
-    id: str
+    col: int
     value: str
 
 
 class ColumnFilterNumber(TypedDict):
-    id: str
+    col: int
     value: tuple[float, float] | tuple[float, None] | tuple[None, float]
 
 
@@ -290,8 +290,8 @@ class data_frame(Renderer[DataFrameResult]):
     Reactive value of the data frame's view information.
 
     This includes:
-    * `sort`: An array of `{"id": str, "desc": bool }` information. This is the output of `.input_column_sort()`.
-    * `filter`: An array of `{"id": str, "value": str | tuple[float, float]}` information. This is the output of `.input_column_filter()`.
+    * `sort`: An array of `col`umn number and _is `desc`ending_ information. This is the output of `.input_column_sort()`.
+    * `filter`: An array of `col`umn number and `value` information. This is the output of `.input_column_filter()`.
     * `rows`: The row numbers of the data frame that are currently being viewed in the browser after sorting and filtering has been applied.
     * `selected_rows`: `rows` values that have been selected by the user. This value created from subsetting `rows` by only including values from `.input_cell_selection()["rows"]`.
     """

@@ -29,7 +29,7 @@ import { useImmer } from "use-immer";
 import { TableBodyCell } from "./cell";
 import { getCellEditMapObj, useCellEditMap } from "./cell-edit-map";
 import { findFirstItemInView, getStyle } from "./dom-utils";
-import { Filter, useFilters } from "./filter";
+import { Filter, FilterValue, useFilters } from "./filter";
 import type { CellSelection, SelectionModesProp } from "./selection";
 import {
   SelectionModes,
@@ -338,23 +338,42 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
 
   useEffect(() => {
     if (!id) return;
-    Shiny.setInputValue!(`${id}_column_sort`, sorting);
-  }, [id, sorting]);
+    const shinySort: { col: number; desc: boolean }[] = [];
+    sorting.map((sortObj) => {
+      const columnNum = columns.indexOf(sortObj.id);
+      shinySort.push({
+        col: columnNum,
+        desc: sortObj.desc,
+      });
+    });
+    Shiny.setInputValue!(`${id}_column_sort`, shinySort);
+  }, [columns, id, sorting]);
   useEffect(() => {
     if (!id) return;
-    Shiny.setInputValue!(`${id}_column_filter`, columnFilters);
-  }, [id, columnFilters]);
+    const shinyFilter: {
+      col: number;
+      value: FilterValue;
+    }[] = [];
+    columnFilters.map((filterObj) => {
+      const columnNum = columns.indexOf(filterObj.id);
+      shinyFilter.push({
+        col: columnNum,
+        value: filterObj.value as FilterValue,
+      });
+    });
+    Shiny.setInputValue!(`${id}_column_filter`, shinyFilter);
+  }, [id, columnFilters, columns]);
   useEffect(() => {
     if (!id) return;
 
-    // Already prefiltered rows!
-    const shinyValue: RowModel<unknown[]> = table.getSortedRowModel();
-
-    const rowIndices = table.getSortedRowModel().rows.map((row) => row.index);
-    Shiny.setInputValue!(`${id}_data_view_rows`, rowIndices);
+    const shinyRows: number[] = table
+      // Already prefiltered rows!
+      .getSortedRowModel()
+      .rows.map((row) => row.index);
+    Shiny.setInputValue!(`${id}_data_view_rows`, shinyRows);
 
     // Legacy value as of 2024-05-13
-    Shiny.setInputValue!(`${id}_data_view_indices`, rowIndices);
+    Shiny.setInputValue!(`${id}_data_view_indices`, shinyRows);
   }, [
     id,
     table,
