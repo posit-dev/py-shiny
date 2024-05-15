@@ -11,7 +11,7 @@ import re
 import sys
 import types
 from pathlib import Path
-from typing import Any, Iterable, NoReturn, Optional
+from typing import Any, Optional
 
 import click
 import uvicorn
@@ -21,8 +21,7 @@ import shiny
 
 from . import _autoreload, _hostenv, _static, _utils
 from ._docstring import no_example
-from ._profiler import check_dependencies as check_profiler_dependencies
-from ._profiler import profiler
+from ._profiler import check_profiler_dependencies, profiler
 from ._typing_extensions import NotRequired, TypedDict
 from .express import is_express_app
 from .express._utils import escape_to_var_name
@@ -697,144 +696,3 @@ def _verify_rsconnect_version() -> None:
             )
     except PackageNotFoundError:
         pass
-
-
-def find_pyspy_path() -> str | None:
-    import sysconfig
-
-    schemes = [
-        sysconfig.get_default_scheme(),
-        sysconfig.get_preferred_scheme("prefix"),
-        sysconfig.get_preferred_scheme("home"),
-        sysconfig.get_preferred_scheme("user"),
-    ]
-
-    for scheme in schemes:
-        path = sysconfig.get_path("scripts", scheme=scheme)
-        pyspy_path = os.path.join(path, "py-spy" + (".exe" if os.name == "nt" else ""))
-        if os.path.exists(pyspy_path):
-            return pyspy_path
-
-    return None
-
-
-def get_current_argv() -> Iterable[str]:
-    r"""
-    ## Windows, `shiny run`
-
-    argv: C:\Users\jcheng\Development\posit-dev\py-shiny\.venv311\Scripts\shiny run app.py
-    orig_argv: C:\Users\jcheng\AppData\Local\Programs\Python\Python311\python.exe C:\Users\jcheng\Development\posit-dev\py-shiny\.venv311\Scripts\shiny.exe run app.py
-
-        The argv is usable, the orig_argv is not because the Python path points to the
-        physical python.exe instead of the python.exe inside of the venv.
-
-    ## Windows, `python -m shiny run`
-
-    argv: C:\Users\jcheng\Development\posit-dev\py-shiny\.venv311\Lib\site-packages\shiny\__main__.py run app.py
-    orig_argv: C:\Users\jcheng\AppData\Local\Programs\Python\Python311\python.exe -m shiny run app.py
-
-        The argv is not usable because argv[0] is not executable. The orig_argv is not
-        usable because it's the physical python.exe instead of the python.exe inside
-        of the venv.
-
-    ## Mac, `shiny run`
-
-    argv: /Users/jcheng/Development/posit-dev/py-shiny/.venv/bin/shiny run app.py
-    orig_argv: /Users/jcheng/Development/posit-dev/py-shiny/.venv/bin/python /Users/jcheng/Development/posit-dev/py-shiny/.venv/bin/shiny run app.py
-
-        Both are usable, nice.
-
-    ## Mac, `python -m shiny run`
-
-    argv: /Users/jcheng/Development/posit-dev/py-shiny/.venv/lib/python3.10/site-packages/shiny/__main__.py run app.py
-    orig_argv: python -m shiny run app.py
-
-        The argv is not usable because argv[0] is not executable. The orig_argv is
-        usable.
-    """
-
-    # print("argv: " + " ".join(sys.argv))
-    # print("orig_argv: " + " ".join(sys.orig_argv))
-
-    args = sys.argv.copy()
-
-    if Path(args[0]).suffix == ".py":
-        args = [*sys.orig_argv]
-
-        if os.name == "nt" and sys.prefix != sys.base_prefix:
-            # In a virtualenv. Make sure we use the correct Python, the one from inside
-            # the venv.
-            args[0] = sys.executable
-
-    return args
-
-
-def run_under_pyspy() -> NoReturn:
-    import base64
-    import subprocess
-    import time
-    import webbrowser
-    from urllib.parse import quote_plus
-
-    pyspy_path = find_pyspy_path()
-    if pyspy_path is None:
-        print(
-            "Error: Profiler is not installed. You can install it with "
-            "'pip install shiny[profile]'.",
-            file=sys.stderr,
-        )
-        sys.exit(1)
-
-    print(" ".join(get_current_argv()))
-    # Strip out the --profile argument and launch again under py-spy
-    new_argv = [x for x in get_current_argv() if x != "--profile"]
-
-    # For some reason, on Windows, I see python.exe and shiny.exe as the first two
-    # arguments
-    # if os.name == "nt" and Path(new_argv[1]).suffix == ".exe":
-    #     new_argv.pop(0)
-
-    # Create a filename based on "profile.json" but with a unique name based on the
-    # current date/time
-    epoch_time = int(time.time())
-    output_filename = f"profile-{epoch_time}.json"
-    output_filename_abs = os.path.join(os.getcwd(), output_filename)
-
-    try:
-        # TODO: Print out command line that will be run, in case user wants to change it
-        subprocess_args = [
-            pyspy_path,
-            "record",
-            "--format=speedscope",
-            f"--output={output_filename}",
-            "--idle",
-            "--subprocesses",
-            "--",
-            *new_argv,
-        ]
-
-        print(" ".join(subprocess_args))
-
-        # Run a new process under py-spy
-        proc = subprocess.run(
-            subprocess_args,
-            check=False,
-            shell=False,
-            stdin=sys.stdin,
-            stdout=sys.stdout,
-            stderr=sys.stderr,
-        )
-        sys.exit(proc.returncode)
-    finally:
-        if os.path.exists(output_filename_abs):
-            with open(output_filename_abs, "rb") as profile_file:
-                b64_str = base64.b64encode(profile_file.read()).decode("utf-8")
-                data_uri = f"data:application/json;base64,{b64_str}"
-            full_url = (
-                "https://speedscope.app/#profileURL="
-                + quote_plus(data_uri)
-                # + "&title="
-                # + quote_plus(output_filename)
-            )
-            print(full_url)
-            webbrowser.open(full_url)

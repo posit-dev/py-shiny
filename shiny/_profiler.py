@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import contextlib
+import sys
 from typing import Any, Generator
 
 
-def check_dependencies() -> None:
+def check_profiler_dependencies() -> None:
     try:
-        import pyinstrument
+        import pyinstrument  # pyright: ignore[reportUnusedImport]
     except ImportError:
         print(
             "Error: Profiler is not installed. You can install it with "
@@ -20,7 +21,6 @@ def check_dependencies() -> None:
 def profiler() -> Generator[None, Any, None]:
     import base64
     import os
-    import sys
     import time
     import webbrowser
     from urllib.parse import quote_plus
