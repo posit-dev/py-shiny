@@ -88,14 +88,14 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
     def _():
         print(
             "Filters:",
-            summary_data.input_column_filter(),  # pyright: ignore[reportUnknownArgumentType,reportAttributeAccessIssue]
+            summary_data.input_column_filter(),
         )
 
     @reactive.effect
     def _():
         print(
             "Sorting:",
-            summary_data.input_column_sort(),  # pyright: ignore[reportUnknownArgumentType,reportAttributeAccessIssue]
+            summary_data.input_column_sort(),
         )
 
     @reactive.effect

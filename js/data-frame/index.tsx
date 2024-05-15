@@ -346,6 +346,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
   }, [id, columnFilters]);
   useEffect(() => {
     if (!id) return;
+
     // Already prefiltered rows!
     const shinyValue: RowModel<unknown[]> = table.getSortedRowModel();
 
