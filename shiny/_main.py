@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import copy
 import importlib
 import importlib.util
@@ -10,7 +11,7 @@ import re
 import sys
 import types
 from pathlib import Path
-from typing import Any, NoReturn, Optional
+from typing import Any, Iterable, NoReturn, Optional
 
 import click
 import uvicorn
@@ -20,6 +21,8 @@ import shiny
 
 from . import _autoreload, _hostenv, _static, _utils
 from ._docstring import no_example
+from ._profiler import check_dependencies as check_profiler_dependencies
+from ._profiler import profiler
 from ._typing_extensions import NotRequired, TypedDict
 from .express import is_express_app
 from .express._utils import escape_to_var_name
@@ -154,7 +157,7 @@ any of the following will work:
     "--profile",
     is_flag=True,
     default=False,
-    help="Run the app in profiling mode. This will launch the app under the py-spy "
+    help="Run the app in profiling mode. This will launch the app under a "
     "sampling profiler, and after Shiny is stopped, open a Speedscope.app flamegraph "
     "in a web browser.",
     show_default=True,
@@ -185,8 +188,7 @@ def run(
                 "Error: --profile and --reload cannot be used together", file=sys.stderr
             )
             sys.exit(1)
-
-        run_under_pyspy()
+        check_profiler_dependencies()
 
     reload_includes_list = reload_includes.split(",")
     reload_excludes_list = reload_excludes.split(",")
@@ -205,6 +207,7 @@ def run(
         factory=factory,
         launch_browser=launch_browser,
         dev_mode=dev_mode,
+        profile=profile,
         **kwargs,
     )
 
@@ -225,6 +228,7 @@ def run_app(
     factory: bool = False,
     launch_browser: bool = False,
     dev_mode: bool = True,
+    profile: bool = False,
     **kwargs: object,
 ) -> None:
     """
@@ -269,6 +273,10 @@ def run_app(
         Treat ``app`` as an application factory, i.e. a () -> <ASGI app> callable.
     launch_browser
         Launch app browser after app starts, using the Python webbrowser module.
+    profile
+        Run the app in profiling mode. This will launch the app under a sampling
+        profiler, and after Shiny is stopped, open a Speedscope.app flamegraph in a web
+        browser.
     **kwargs
         Additional keyword arguments which are passed to ``uvicorn.run``. For more
         information see [Uvicorn documentation](https://www.uvicorn.org/).
@@ -372,19 +380,20 @@ def run_app(
 
     maybe_setup_rsw_proxying(log_config)
 
-    uvicorn.run(  # pyright: ignore[reportUnknownMemberType]
-        app,
-        host=host,
-        port=port,
-        ws_max_size=ws_max_size,
-        log_level=log_level,
-        log_config=log_config,
-        app_dir=app_dir,
-        factory=factory,
-        lifespan="on",
-        **reload_args,  # pyright: ignore[reportArgumentType]
-        **kwargs,
-    )
+    with profiler() if profile else contextlib.nullcontext():
+        uvicorn.run(  # pyright: ignore[reportUnknownMemberType]
+            app,
+            host=host,
+            port=port,
+            ws_max_size=ws_max_size,
+            log_level=log_level,
+            log_config=log_config,
+            app_dir=app_dir,
+            factory=factory,
+            lifespan="on",
+            **reload_args,  # pyright: ignore[reportArgumentType]
+            **kwargs,
+        )
 
 
 def setup_hot_reload(
@@ -709,6 +718,57 @@ def find_pyspy_path() -> str | None:
     return None
 
 
+def get_current_argv() -> Iterable[str]:
+    r"""
+    ## Windows, `shiny run`
+
+    argv: C:\Users\jcheng\Development\posit-dev\py-shiny\.venv311\Scripts\shiny run app.py
+    orig_argv: C:\Users\jcheng\AppData\Local\Programs\Python\Python311\python.exe C:\Users\jcheng\Development\posit-dev\py-shiny\.venv311\Scripts\shiny.exe run app.py
+
+        The argv is usable, the orig_argv is not because the Python path points to the
+        physical python.exe instead of the python.exe inside of the venv.
+
+    ## Windows, `python -m shiny run`
+
+    argv: C:\Users\jcheng\Development\posit-dev\py-shiny\.venv311\Lib\site-packages\shiny\__main__.py run app.py
+    orig_argv: C:\Users\jcheng\AppData\Local\Programs\Python\Python311\python.exe -m shiny run app.py
+
+        The argv is not usable because argv[0] is not executable. The orig_argv is not
+        usable because it's the physical python.exe instead of the python.exe inside
+        of the venv.
+
+    ## Mac, `shiny run`
+
+    argv: /Users/jcheng/Development/posit-dev/py-shiny/.venv/bin/shiny run app.py
+    orig_argv: /Users/jcheng/Development/posit-dev/py-shiny/.venv/bin/python /Users/jcheng/Development/posit-dev/py-shiny/.venv/bin/shiny run app.py
+
+        Both are usable, nice.
+
+    ## Mac, `python -m shiny run`
+
+    argv: /Users/jcheng/Development/posit-dev/py-shiny/.venv/lib/python3.10/site-packages/shiny/__main__.py run app.py
+    orig_argv: python -m shiny run app.py
+
+        The argv is not usable because argv[0] is not executable. The orig_argv is
+        usable.
+    """
+
+    # print("argv: " + " ".join(sys.argv))
+    # print("orig_argv: " + " ".join(sys.orig_argv))
+
+    args = sys.argv.copy()
+
+    if Path(args[0]).suffix == ".py":
+        args = [*sys.orig_argv]
+
+        if os.name == "nt" and sys.prefix != sys.base_prefix:
+            # In a virtualenv. Make sure we use the correct Python, the one from inside
+            # the venv.
+            args[0] = sys.executable
+
+    return args
+
+
 def run_under_pyspy() -> NoReturn:
     import base64
     import subprocess
@@ -725,8 +785,14 @@ def run_under_pyspy() -> NoReturn:
         )
         sys.exit(1)
 
+    print(" ".join(get_current_argv()))
     # Strip out the --profile argument and launch again under py-spy
-    new_argv = [x for x in sys.orig_argv if x != "--profile"]
+    new_argv = [x for x in get_current_argv() if x != "--profile"]
+
+    # For some reason, on Windows, I see python.exe and shiny.exe as the first two
+    # arguments
+    # if os.name == "nt" and Path(new_argv[1]).suffix == ".exe":
+    #     new_argv.pop(0)
 
     # Create a filename based on "profile.json" but with a unique name based on the
     # current date/time
@@ -736,20 +802,24 @@ def run_under_pyspy() -> NoReturn:
 
     try:
         # TODO: Print out command line that will be run, in case user wants to change it
+        subprocess_args = [
+            pyspy_path,
+            "record",
+            "--format=speedscope",
+            f"--output={output_filename}",
+            "--idle",
+            "--subprocesses",
+            "--",
+            *new_argv,
+        ]
+
+        print(" ".join(subprocess_args))
 
         # Run a new process under py-spy
         proc = subprocess.run(
-            [
-                pyspy_path,
-                "record",
-                "--format=speedscope",
-                f"--output={output_filename}",
-                "--idle",
-                "--subprocesses",
-                "--",
-                *new_argv,
-            ],
+            subprocess_args,
             check=False,
+            shell=False,
             stdin=sys.stdin,
             stdout=sys.stdout,
             stderr=sys.stderr,
@@ -766,5 +836,5 @@ def run_under_pyspy() -> NoReturn:
                 # + "&title="
                 # + quote_plus(output_filename)
             )
-            # print(full_url)
+            print(full_url)
             webbrowser.open(full_url)
