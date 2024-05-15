@@ -293,8 +293,7 @@ class data_frame(Renderer[DataFrameResult]):
     * `sort`: An array of `{"id": str, "desc": bool }` information. This is the output of `.input_column_sort()`.
     * `filter`: An array of `{"id": str, "value": str | tuple[float, float]}` information. This is the output of `.input_column_filter()`.
     * `rows`: The row numbers of the data frame that are currently being viewed in the browser after sorting and filtering has been applied.
-    * `selected_rows`: `rows` values that have been selected by the user. This value created from the `rows` key in `.input_cell_selection()`.
-
+    * `selected_rows`: `rows` values that have been selected by the user. This value created from subsetting `rows` by only including values from `.input_cell_selection()["rows"]`.
     """
 
     # TODO-barret-render.data_frame; Allow for DataTable and DataGrid to accept SelectionModes
@@ -430,17 +429,19 @@ class data_frame(Renderer[DataFrameResult]):
 
         @reactive.calc
         def self_data_view_info() -> DataViewInfo:
+            sort = self.input_column_sort()
+            filter = self.input_column_filter()
+            rows = self._input_data_view_rows()
 
             cell_selection = self.input_cell_selection()
-            selected_rows = tuple(
+            # Use a `set` for faster lookups
+            selected_rows_values = set(
                 cell_selection["rows"]
                 if cell_selection is not None and "rows" in cell_selection
                 else ()
             )
-
-            sort = self.input_column_sort()
-            filter = self.input_column_filter()
-            rows = self._input_data_view_rows()
+            # Maintain order of rows for selected rows
+            selected_rows = tuple(row for row in rows if row in selected_rows_values)
 
             return {
                 "sort": sort,
@@ -533,24 +534,15 @@ class data_frame(Renderer[DataFrameResult]):
                 # Get patched data
                 data = self._data_patched().copy(deep=False)
 
+                data_view_info = self.data_view_info()
+
+                data_view_rows = (
+                    data_view_info["selected_rows"]
+                    if selected
+                    else data_view_info["rows"]
+                )
                 # Turn into list for pandas compatibility
-                data_view_rows = list(self._input_data_view_rows())
-
-                # Possibly subset the indices to selected rows
-                if selected:
-                    cell_selection = self.input_cell_selection()
-                    if cell_selection is not None and cell_selection["type"] == "row":
-                        # Use a `set` for faster lookups
-                        selected_row_set = set(cell_selection["rows"])
-                        nrow = data.shape[0]
-
-                        # Subset the data view indices to only include the selected rows that are in the data
-                        data_view_rows = [
-                            row
-                            for row in data_view_rows
-                            # Make sure the row is not larger than the number of rows
-                            if row in selected_row_set and row < nrow
-                        ]
+                data_view_rows = list(data_view_rows)
 
                 return data.iloc[data_view_rows]
 
