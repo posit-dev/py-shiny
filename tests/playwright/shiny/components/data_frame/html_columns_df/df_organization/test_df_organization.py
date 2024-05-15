@@ -12,11 +12,15 @@ def test_dataframe_organization_methods(page: Page, local_app: ShinyAppProc) -> 
     input_cell_selection = OutputCode(page, "cell_selection")
     reset_df = InputActionButton(page, "reset_df")
 
+    def reset_data_frame():
+        reset_df.click()
+        input_view_rows.expect_value("(0, 1, 2)")
+        input_view_selected_true.expect_value("[]")
+        input_view_selected_false.expect_value("[ 0 50 100]")
+        input_cell_selection.expect_value("()")
+
     # assert value of unsorted table
-    input_view_rows.expect_value("(0, 1, 2)")
-    input_view_selected_true.expect_value("[]")
-    input_view_selected_false.expect_value("[ 0 50 100]")
-    input_cell_selection.expect_value("()")
+    reset_data_frame()
 
     # sort column by number descending
     data_frame.set_column_sort(col=0)
@@ -46,8 +50,7 @@ def test_dataframe_organization_methods(page: Page, local_app: ShinyAppProc) -> 
     input_view_selected_false.expect_value("[100 50  0]")
     input_cell_selection.expect_value("()")
 
-    # reset dataframe
-    reset_df.click()
+    reset_data_frame()
 
     # filter using numbers
     data_frame.set_column_filter(col=0, text=["6", "7"])
@@ -56,8 +59,7 @@ def test_dataframe_organization_methods(page: Page, local_app: ShinyAppProc) -> 
     input_view_selected_false.expect_value("[ 50 100]")
     input_cell_selection.expect_value("()")
 
-    # reset dataframe
-    reset_df.click()
+    reset_data_frame()
 
     # select multiple rows
     data_frame.select_rows([0, 2])
@@ -66,8 +68,7 @@ def test_dataframe_organization_methods(page: Page, local_app: ShinyAppProc) -> 
     input_view_selected_false.expect_value("[  0  50 100]")
     input_cell_selection.expect_value("(0, 2)")
 
-    # reset dataframe
-    reset_df.click()
+    reset_data_frame()
 
     # select single row
     data_frame.select_rows([0])
