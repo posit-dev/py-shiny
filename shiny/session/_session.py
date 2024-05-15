@@ -4,6 +4,7 @@ from __future__ import annotations
 
 __all__ = ("Session", "Inputs", "Outputs")
 
+import asyncio
 import contextlib
 import dataclasses
 import enum
@@ -652,6 +653,12 @@ class AppSession(Session):
                             raise ProtocolError(
                                 f"Unrecognized method {message_obj['method']}"
                             )
+
+                        # Progress messages (of the "{binding: {id: xxx}}"" variety) may
+                        # have queued up at this point; let them drain before we send
+                        # the next message.
+                        # https://github.com/posit-dev/py-shiny/issues/1381
+                        await asyncio.sleep(0)
 
                         self._request_flush()
 
