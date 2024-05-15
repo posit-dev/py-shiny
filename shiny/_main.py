@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import copy
 import importlib
 import importlib.util
@@ -20,6 +21,7 @@ import shiny
 
 from . import _autoreload, _hostenv, _static, _utils
 from ._docstring import no_example
+from ._profiler import check_profiler_dependencies, profiler
 from ._typing_extensions import NotRequired, TypedDict
 from .express import is_express_app
 from .express._utils import escape_to_var_name
@@ -150,6 +152,15 @@ any of the following will work:
     help="Dev mode",
     show_default=True,
 )
+@click.option(
+    "--profile",
+    is_flag=True,
+    default=False,
+    help="Run the app in profiling mode. This will launch the app under a "
+    "sampling profiler, and after Shiny is stopped, open a Speedscope.app flamegraph "
+    "in a web browser.",
+    show_default=True,
+)
 @no_example()
 def run(
     app: str | shiny.App,
@@ -167,8 +178,17 @@ def run(
     factory: bool,
     launch_browser: bool,
     dev_mode: bool,
+    profile: bool,
     **kwargs: object,
 ) -> None:
+    if profile:
+        if reload:
+            print(
+                "Error: --profile and --reload cannot be used together", file=sys.stderr
+            )
+            sys.exit(1)
+        check_profiler_dependencies()
+
     reload_includes_list = reload_includes.split(",")
     reload_excludes_list = reload_excludes.split(",")
     return run_app(
@@ -186,6 +206,7 @@ def run(
         factory=factory,
         launch_browser=launch_browser,
         dev_mode=dev_mode,
+        profile=profile,
         **kwargs,
     )
 
@@ -206,6 +227,7 @@ def run_app(
     factory: bool = False,
     launch_browser: bool = False,
     dev_mode: bool = True,
+    profile: bool = False,
     **kwargs: object,
 ) -> None:
     """
@@ -250,6 +272,10 @@ def run_app(
         Treat ``app`` as an application factory, i.e. a () -> <ASGI app> callable.
     launch_browser
         Launch app browser after app starts, using the Python webbrowser module.
+    profile
+        Run the app in profiling mode. This will launch the app under a sampling
+        profiler, and after Shiny is stopped, open a Speedscope.app flamegraph in a web
+        browser.
     **kwargs
         Additional keyword arguments which are passed to ``uvicorn.run``. For more
         information see [Uvicorn documentation](https://www.uvicorn.org/).
@@ -353,19 +379,20 @@ def run_app(
 
     maybe_setup_rsw_proxying(log_config)
 
-    uvicorn.run(  # pyright: ignore[reportUnknownMemberType]
-        app,
-        host=host,
-        port=port,
-        ws_max_size=ws_max_size,
-        log_level=log_level,
-        log_config=log_config,
-        app_dir=app_dir,
-        factory=factory,
-        lifespan="on",
-        **reload_args,  # pyright: ignore[reportArgumentType]
-        **kwargs,
-    )
+    with profiler() if profile else contextlib.nullcontext():
+        uvicorn.run(  # pyright: ignore[reportUnknownMemberType]
+            app,
+            host=host,
+            port=port,
+            ws_max_size=ws_max_size,
+            log_level=log_level,
+            log_config=log_config,
+            app_dir=app_dir,
+            factory=factory,
+            lifespan="on",
+            **reload_args,  # pyright: ignore[reportArgumentType]
+            **kwargs,
+        )
 
 
 def setup_hot_reload(
