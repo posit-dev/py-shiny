@@ -405,7 +405,7 @@ class data_frame(Renderer[DataFrameResult]):
         @reactive.calc
         def self__input_data_view_rows() -> list[int]:
             data_view_rows = self._get_session().input[
-                f"{self.output_id}_data_view_indices"
+                f"{self.output_id}_data_view_rows"
             ]()
             return data_view_rows
 
