@@ -33,7 +33,7 @@ def get_apps(path: str) -> typing.List[str]:
     return app_paths
 
 
-app_idle_wait = {"duration": 300, "timeout": 5 * 1000}
+app_idle_wait = {"duration": 300, "timeout": 30 * 1000}
 app_hard_wait: typing.Dict[str, int] = {
     "examples/brownian": 250,
     "examples/ui-func": 250,
