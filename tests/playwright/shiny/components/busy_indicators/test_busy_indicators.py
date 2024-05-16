@@ -27,35 +27,23 @@ def test_busy_indicators(page: Page, local_app: ShinyAppProc) -> None:
     spinner_type = InputRadioButtons(page, "busy_indicator_type")
     render_button = InputTaskButton(page, "rerender")
 
-    # verify spinner indicator behavior
-    # plot spinner
-    height = get_spinner_computed_property(page, "#pulse-plot", "height")
-    assert height == "50px"
-    background_color = get_spinner_computed_property(
-        page, "#pulse-plot", "background-color"
-    )
-    assert background_color == "rgb(128, 128, 0)"
-    mask_image_url = get_spinner_computed_property(page, "#pulse-plot", "mask-image")
-    svg_name = os.path.basename(urlparse(mask_image_url).path).rstrip('")')
-    assert svg_name == "pulse.svg"
-    width = get_spinner_computed_property(page, "#pulse-plot", "width")
-    assert width == "50px"
+    # Verify spinner indicator behavior
+    spinner_properties = [
+        ("#pulse-plot", "50px", "rgb(128, 128, 0)", "pulse.svg"),
+        ("#ring-plot", "10px", "rgb(255, 0, 0)", "ring.svg"),
+    ]
 
-    # ring spinner
-    height = get_spinner_computed_property(page, "#ring-plot", "height")
-    assert height == "10px"
-    background_color = get_spinner_computed_property(
-        page, "#ring-plot", "background-color"
-    )
-    assert background_color == "rgb(255, 0, 0)"
-    mask_image_url = get_spinner_computed_property(page, "#ring-plot", "mask-image")
-    svg_name = os.path.basename(urlparse(mask_image_url).path).rstrip('")')
-    assert svg_name == "ring.svg"
-    width = get_spinner_computed_property(page, "#ring-plot", "width")
-    assert width == "10px"
+    for element_id, height, background_color, svg_name in spinner_properties:
+        assert get_spinner_computed_property(page, element_id, "height") == height
+        assert (
+            get_spinner_computed_property(page, element_id, "background-color")
+            == background_color
+        )
+        mask_image_url = get_spinner_computed_property(page, element_id, "mask-image")
+        assert os.path.basename(urlparse(mask_image_url).path).rstrip('")') == svg_name
+        assert get_spinner_computed_property(page, element_id, "width") == height
 
-    # verify pulse indicator behavior
-    # timeout is set to 8000ms to avoid the 5000ms default timeout
+    # Verify pulse indicator behavior
     expect_not_to_have_class(page.locator("html"), "shiny-busy", timeout=8000)
     spinner_type.set("pulse")
     render_button.click()
