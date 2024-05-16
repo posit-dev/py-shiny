@@ -67,6 +67,16 @@ class MockTime:
         self._i += 1
         # Oldest first
         self._sleepers.sort()
+
+        # This is necessary for some tests that call logic that internally awaits on
+        # asyncio.sleep(0). Without this, they hang.
+        #
+        # Another potential workaround would've been to check if delay <= 0 and just
+        # return. But this solution has the nice property of actually yielding control
+        # (I think...!), which is the whole point of asyncio.sleep(0).
+        if not self._is_advancing:
+            await self.advance_time(0)
+
         await wake.wait()
 
 
