@@ -50,4 +50,7 @@ def test_busy_indicators(page: Page, local_app: ShinyAppProc) -> None:
     spinner_type.set("pulse")
     render_button.click()
     assert get_pulse_computed_property(page, "height") == "100px"
-    assert get_pulse_computed_property(page, "background-image") == "linear-gradient(45deg, rgb(0, 0, 255), rgb(255, 0, 0))"
+    assert (
+        get_pulse_computed_property(page, "background-image")
+        == "linear-gradient(45deg, rgb(0, 0, 255), rgb(255, 0, 0))"
+    )
