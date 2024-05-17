@@ -1,8 +1,10 @@
-import json
-from typing import Any, Literal, Sequence, cast
+from typing import Any, Literal, Optional, Sequence, TypedDict, Union, cast
 
 from htmltools import Tag
-from openai.types.chat import ChatCompletionMessageParam
+
+# TODO: make openai a optional dependency?
+from openai import Stream
+from openai.types.chat import ChatCompletionChunk
 
 from .. import reactive
 from ..session import Session, get_current_session, require_active_session
@@ -11,21 +13,35 @@ from .renderer import Jsonifiable, Renderer, ValueFn
 
 __all__ = ("Chat", "ChatMessage", "chat")
 
-Roles = Literal["assistant", "user", "system"]
+Role = Literal["assistant", "user", "system"]
 
-# TODO: for some reason this isn't compatible with openai's type?
-# class ChatMessage(TypedDict):
-#     content: str
-#     role: Roles
 
-ChatMessage = ChatCompletionMessageParam
+# ChatMessage = ChatCompletionMessageParam
+
+
+class UserMessage(TypedDict):
+    content: str
+    role: Literal["user"]
+
+
+class AssistantMessage(TypedDict):
+    content: Optional[str]  # delta can be None (to end the message)
+    role: Literal["assistant"]
+
+
+class SystemMessage(TypedDict):
+    content: Optional[str]
+    role: Literal["system"]
+
+
+ChatMessage = AssistantMessage | SystemMessage | UserMessage
 
 
 class Chat:
     def __init__(
         self,
         *,
-        messages: Sequence[ChatMessage],
+        messages: Sequence[AssistantMessage | SystemMessage],
         # style: Literal["default", "messager"] = "default",
         # icons: Sequence[Literal["copy", "refresh"]] = ("copy", ),
         placeholder: str = "Enter a message...",
@@ -41,6 +57,7 @@ class Chat:
 class chat(Renderer[Chat]):
     _session: Session | None  # Do not use. Use `_get_session()` instead
     _messages: reactive.Value[Sequence[ChatMessage]]
+    _current_message_content: str = ""
 
     def __init__(self, fn: ValueFn[Chat]):
         # MUST be done before super().__init__ is called as `_set_output_metadata` is
@@ -51,6 +68,7 @@ class chat(Renderer[Chat]):
 
         # Initialize server-side reactives
         self._messages = reactive.Value(())
+        self._current_message_content = ""
 
     async def render(self) -> Jsonifiable:
         # Reset server-side reactives
@@ -82,33 +100,51 @@ class chat(Renderer[Chat]):
 
         # User input causes invalidation of the messages reactive
         user = req(self.user_input())
-        user_msg: ChatMessage = {"content": user, "role": "user"}
+        user_msg: UserMessage = {"content": user, "role": "user"}
 
-        # Append the user message to the messages reactive
-        with reactive.isolate():
-            msgs = tuple(self._messages()) + (user_msg,)
-            self._messages.set(msgs)
+        # Add the user message to the messages
+        self._update_messages(user_msg)
 
         return self._messages()
 
     # Append a message to the chat box
     async def append_message(
-        self, content: str, *, role: Roles = "assistant", stream: bool = False
+        self, message: ChatMessage | str | None, *, delta: bool = False
     ):
 
-        msg = cast(ChatMessage, {"content": content, "role": role})
+        # TODO: also handle ChatCompletionMessageParam?
+        if isinstance(message, str) or message is None:
+            msg: ChatMessage = {"content": message, "role": "assistant"}
+        else:
+            msg = message
 
-        with reactive.isolate():
-            msgs = tuple(self._messages()) + (msg,)
-            self._messages.set(msgs)
+        if delta:
+            self._current_message_content += msg["content"] or ""
+            if msg["content"] is None:  # end of message
+                msgFinal: AssistantMessage = {
+                    "content": self._current_message_content,
+                    "role": msg["role"],  # type: ignore
+                }
+                self._update_messages(msgFinal)
+        else:
+            self._current_message_content = msg["content"] or ""
+            self._update_messages(msg)
 
         type = "shiny-chat-append-message"
-        if stream:
-            type += "-stream"
-        await self._send_custom_message(
-            type,
-            {**msg, "stream": stream},
-        )
+        if delta:
+            type += "-delta"
+        await self._send_custom_message(type, {**msg})
+
+    # TODO: can we do this in a truly non-blocking way? Maybe via a ExtendedTask running in a separate thread?
+    async def append_message_stream(self, response: Stream[ChatCompletionChunk]):
+        for chunk in response:
+            content = chunk.choices[0].delta.content
+            await self.append_message(content, delta=True)
+
+    def _update_messages(self, message: ChatMessage):
+        with reactive.isolate():
+            msgs = tuple(self._messages()) + (message,)
+            self._messages.set(msgs)
 
     # Replace a message in the chat box
     # async def replace_message(

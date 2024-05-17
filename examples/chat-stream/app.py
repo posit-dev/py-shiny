@@ -1,33 +1,38 @@
 from openai import OpenAI
 
-from shiny import App, chat, reactive, ui
+from shiny import App, reactive, render, ui
 
 client = OpenAI()
 
 app_ui = ui.page_fillable(
-    chat.box(
-        id="chat_box",
-        messages=chat.message("Hello! How can I help you?", role="assistant"),
-    ),
+    ui.download_button("download", "Download"),
+    ui.output_chat("chat"),
     fillable_mobile=True,
 )
 
 
 def server(input):
-    @reactive.effect
-    @reactive.event(input.chat_box, ignore_init=True)
-    async def _():
-        messages = input.chat_box()
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=messages,
-            stream=True,
+
+    @render.download(filename="chat.csv")
+    async def download():
+        yield "one,two,three\n"
+        yield "新,1,2\n"
+        yield "型,4,5\n"
+
+    @render.chat
+    def chat():
+        return render.Chat(
+            messages=[{"content": "Hello! How can I help you?", "role": "assistant"}]
         )
-        for chunk in response:
-            content = chunk.choices[0].delta.content
-            await chat.insert_streaming_message(
-                "chat_box", content=content, role="assistant"
-            )
+
+    @reactive.effect
+    @reactive.event(chat.user_input)
+    async def _():
+        messages = chat.messages()
+        response = client.chat.completions.create(
+            model="gpt-4o", messages=messages, stream=True
+        )
+        await chat.append_message_stream(response)
 
 
 app = App(app_ui, server)

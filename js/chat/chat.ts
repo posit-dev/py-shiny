@@ -149,9 +149,9 @@ class ShinyChatOutputBinding extends Shiny.OutputBinding {
       this.#appendMessage(el, message);
     };
 
-    const handleAppendStreamEvent = (e: Event) => {
+    const handleAppendDeltaEvent = (e: Event) => {
       const message = (e as CustomEvent).detail;
-      this.#appendMessageStream(el, message);
+      this.#appendMessageDelta(el, message);
     };
 
     const handleReplaceEvent = (e: Event) => {
@@ -163,8 +163,8 @@ class ShinyChatOutputBinding extends Shiny.OutputBinding {
     el.addEventListener("shiny-chat-input-sent", handleAppendEvent);
     el.addEventListener("shiny-chat-append-message", handleAppendEvent);
     el.addEventListener(
-      "shiny-chat-append-message-stream",
-      handleAppendStreamEvent
+      "shiny-chat-append-message-delta",
+      handleAppendDeltaEvent
     );
     el.addEventListener("shiny-chat-replace-message", handleReplaceEvent);
   }
@@ -175,13 +175,16 @@ class ShinyChatOutputBinding extends Shiny.OutputBinding {
     const input = el.querySelector(CHAT_INPUT_TAG) as HTMLElement;
     input.insertAdjacentElement("beforebegin", msg);
 
+    // Scroll to the bottom to show the new message
+    this.#scrollToBottom(el);
+
     // Re-enable inputs after the message has been inserted
     if (enable) {
       this.#enableInput(el);
     }
   }
 
-  #appendMessageStream(el: HTMLElement, message: Message): void {
+  #appendMessageDelta(el: HTMLElement, message: Message): void {
     const messageContainers =
       el.querySelectorAll<HTMLElement>(CHAT_MESSAGE_TAG);
 
@@ -205,9 +208,16 @@ class ShinyChatOutputBinding extends Shiny.OutputBinding {
       return;
     }
     lastMessage.setAttribute("content", content + message.content);
+
+    // Don't scroll to bottom if the user has scrolled up a bit
+    if (el.scrollTop + el.clientHeight < el.scrollHeight - 30) {
+      return;
+    }
+
+    this.#scrollToBottom(el);
   }
 
-  // TODO: implement replaceMessageStream()
+  // TODO: implement replaceMessageDelta()
   #replaceMessage(el: HTMLElement, index: number, message: Message): void {
     const msg = createElement(CHAT_MESSAGE_TAG, message);
     const msgs = el.querySelectorAll(CHAT_MESSAGE_TAG);
@@ -221,6 +231,10 @@ class ShinyChatOutputBinding extends Shiny.OutputBinding {
   #enableInput(el: HTMLElement): void {
     const input = el.querySelector(CHAT_INPUT_TAG) as HTMLInputElement;
     input.disabled = false;
+  }
+
+  #scrollToBottom(el: HTMLElement): void {
+    el.scrollTop = el.scrollHeight;
   }
 }
 

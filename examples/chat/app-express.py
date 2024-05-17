@@ -28,5 +28,5 @@ async def _():
     for chunk in response:
         content = chunk.choices[0].delta.content
         await chat.append_message(
-            content, stream=True
+            content, delta=True
         )  # defaults to role is "assistant"
