@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-import pytest
 from conftest import ShinyAppProc
 from controls import (
     LayoutNavSetBar,
