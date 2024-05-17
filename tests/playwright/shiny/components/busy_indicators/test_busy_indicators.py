@@ -31,6 +31,8 @@ def test_busy_indicators(page: Page, local_app: ShinyAppProc) -> None:
     spinner_properties = [
         ("#pulse-plot", "50px", "rgb(128, 128, 0)", "pulse.svg"),
         ("#ring-plot", "10px", "rgb(255, 0, 0)", "ring.svg"),
+        ("#bars-plot", "20px", "rgb(0, 128, 0)", "bars.svg"),
+        ("#dots-plot", "30px", "rgb(0, 0, 255)", "dots.svg"),
     ]
 
     for element_id, height, background_color, svg_name in spinner_properties:
@@ -47,7 +49,5 @@ def test_busy_indicators(page: Page, local_app: ShinyAppProc) -> None:
     expect_not_to_have_class(page.locator("html"), "shiny-busy", timeout=8000)
     spinner_type.set("pulse")
     render_button.click()
-    height = get_pulse_computed_property(page, "height")
-    assert height == "100px"
-    background_image = get_pulse_computed_property(page, "background-image")
-    assert background_image == "linear-gradient(45deg, rgb(0, 0, 255), rgb(255, 0, 0))"
+    assert get_pulse_computed_property(page, "height") == "100px"
+    assert get_pulse_computed_property(page, "background-image") == "linear-gradient(45deg, rgb(0, 0, 255), rgb(255, 0, 0))"
