@@ -17,7 +17,6 @@ from controls import (
 from playwright.sync_api import Page
 
 
-@pytest.mark.skip_browser("webkit")
 def test_nav(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 
