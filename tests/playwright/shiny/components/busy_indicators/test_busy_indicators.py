@@ -2,7 +2,7 @@ import os
 from urllib.parse import urlparse
 
 from conftest import ShinyAppProc
-from controls import InputRadioButtons, InputTaskButton, expect_not_to_have_class
+from controls import InputRadioButtons, InputTaskButton, OutputTextVerbatim
 from playwright.sync_api import Page, expect
 
 
@@ -46,11 +46,22 @@ def test_busy_indicators(page: Page, local_app: ShinyAppProc) -> None:
         assert get_spinner_computed_property(page, element_id, "width") == height
 
     # Verify pulse indicator behavior
-    expect_not_to_have_class(page.locator("html"), "shiny-busy", timeout=8000)
+    output_txt = OutputTextVerbatim(page, "counter")
+    output_txt.expect_value("0")
     spinner_type.set("pulse")
     render_button.click()
+    # `::after` is not an implemented selector in playwright
+    # Since we are not using locators wait for up to 2 secs
+    for _ in range(200):
+        if get_pulse_computed_property(page, "height") != "auto":
+            break
+        page.wait_for_timeout(10)
     assert get_pulse_computed_property(page, "height") == "100px"
     assert (
         get_pulse_computed_property(page, "background-image")
         == "linear-gradient(45deg, rgb(0, 0, 255), rgb(255, 0, 0))"
     )
+    output_txt.expect_value("1")
+    # since output value is 1, nothing is computing
+    # verify the pulse indicator is removed
+    assert get_pulse_computed_property(page, "height") == "auto"
