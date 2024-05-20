@@ -4,6 +4,7 @@ from __future__ import annotations
 
 __all__ = ("Session", "Inputs", "Outputs")
 
+import asyncio
 import contextlib
 import dataclasses
 import enum
@@ -471,6 +472,12 @@ class Session(ABC):
             namespaced when used with a session proxy.
         """
 
+    @abstractmethod
+    def _increment_busy_count(self) -> None: ...
+
+    @abstractmethod
+    def _decrement_busy_count(self) -> None: ...
+
 
 # ======================================================================================
 # AppSession
@@ -493,6 +500,7 @@ class AppSession(Session):
         self.id: str = id
         self._conn: Connection = conn
         self._debug: bool = debug
+        self._busy_count: int = 0
         self._message_handlers: dict[
             str,
             tuple[Callable[..., Awaitable[Jsonifiable]], Session],
@@ -646,6 +654,12 @@ class AppSession(Session):
                                 f"Unrecognized method {message_obj['method']}"
                             )
 
+                        # Progress messages (of the "{binding: {id: xxx}}"" variety) may
+                        # have queued up at this point; let them drain before we send
+                        # the next message.
+                        # https://github.com/posit-dev/py-shiny/issues/1381
+                        await asyncio.sleep(0)
+
                         self._request_flush()
 
                         await flush()
@@ -785,11 +799,11 @@ class AppSession(Session):
     async def _handle_request(
         self, request: Request, action: str, subpath: Optional[str]
     ) -> ASGIApp:
-        self._send_message_sync({"busy": "busy"})
+        self._increment_busy_count()
         try:
             return await self._handle_request_impl(request, action, subpath)
         finally:
-            self._send_message_sync({"busy": "idle"})
+            self._decrement_busy_count()
 
     async def _handle_request_impl(
         self, request: Request, action: str, subpath: Optional[str]
@@ -1011,6 +1025,16 @@ class AppSession(Session):
             with session_context(self):
                 await self._flushed_callbacks.invoke()
 
+    def _increment_busy_count(self) -> None:
+        self._busy_count += 1
+        if self._busy_count == 1:
+            self._send_message_sync({"busy": "busy"})
+
+    def _decrement_busy_count(self) -> None:
+        self._busy_count -= 1
+        if self._busy_count == 0:
+            self._send_message_sync({"busy": "idle"})
+
     # ==========================================================================
     # On session ended
     # ==========================================================================
@@ -1190,6 +1214,12 @@ class SessionProxy(Session):
 
     async def send_custom_message(self, type: str, message: dict[str, object]) -> None:
         await self._parent.send_custom_message(type, message)
+
+    def _increment_busy_count(self) -> None:
+        self._parent._increment_busy_count()
+
+    def _decrement_busy_count(self) -> None:
+        self._parent._decrement_busy_count()
 
     def set_message_handler(
         self,

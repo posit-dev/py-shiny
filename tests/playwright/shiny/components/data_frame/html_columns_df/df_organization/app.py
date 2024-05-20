@@ -10,13 +10,14 @@ df = pd.DataFrame(
 )
 
 distinct_df = df.drop_duplicates(subset=["species"])
+distinct_df = df.iloc[[0, 1, 50, 51, 100, 101]]
+
 app_ui = ui.page_fluid(
-    ui.row(
-        ui.column(
-            6,
-            ui.h2("Iris Dataset"),
-        ),
-        ui.column(2, ui.input_action_button("reset_df", "Reset Dataframe")),
+    ui.h2("Iris Dataset"),
+    ui.layout_column_wrap(
+        ui.input_action_button("reset_df", "Reset Dataframe"),
+        ui.input_action_button("update_sort", "Update sort"),
+        ui.input_action_button("update_filter", "Update filter"),
     ),
     ui.output_data_frame("iris_df"),
     ui.h2("Data view indices"),
@@ -68,6 +69,18 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
     @reactive.event(input.reset_df)
     def reset_df():
         iris_df._reset_reactives()
+
+    @reactive.effect
+    @reactive.event(input.update_sort)
+    async def update_sort():
+        await iris_df.update_sort([1, {"col": 2, "desc": False}])
+
+    @reactive.effect
+    @reactive.event(input.update_filter)
+    async def update_filter():
+        await iris_df.update_filter(
+            [{"col": 0, "value": [5, 6.9]}, {"col": 4, "value": "v"}]
+        )
 
 
 app = App(app_ui, server)

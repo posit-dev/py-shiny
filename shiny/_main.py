@@ -18,7 +18,7 @@ import uvicorn.config
 
 import shiny
 
-from . import _autoreload, _hostenv, _static, _utils
+from . import __version__, _autoreload, _hostenv, _static, _utils
 from ._docstring import no_example
 from ._typing_extensions import NotRequired, TypedDict
 from .express import is_express_app
@@ -26,6 +26,7 @@ from .express._utils import escape_to_var_name
 
 
 @click.group("main")
+@click.version_option(__version__)
 def main() -> None:
     pass
 

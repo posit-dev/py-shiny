@@ -4,7 +4,6 @@ import {
   ColumnDef,
   RowData,
   RowModel,
-  SortingState,
   TableOptions,
   flexRender,
   getCoreRowModel,
@@ -29,14 +28,14 @@ import { useImmer } from "use-immer";
 import { TableBodyCell } from "./cell";
 import { getCellEditMapObj, useCellEditMap } from "./cell-edit-map";
 import { findFirstItemInView, getStyle } from "./dom-utils";
-import { Filter, useFilters } from "./filter";
+import { ColumnFiltersState, Filter, FilterValue, useFilters } from "./filter";
 import type { CellSelection, SelectionModesProp } from "./selection";
 import {
   SelectionModes,
   initRowSelectionModes,
   useSelection,
 } from "./selection";
-import { useSort } from "./sort";
+import { SortingState, useSort } from "./sort";
 import { SortArrow } from "./sort-arrows";
 import css from "./styles.scss";
 import { useTabindexGroup } from "./tabindex-group";
@@ -175,10 +174,14 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
   const dataOriginal = useMemo(() => rowData, [rowData]);
   const [dataState, setData] = useImmer(rowData);
 
-  const { sorting, sortState, sortingTableOptions } = useSort();
+  const { sorting, sortState, sortingTableOptions, setSorting } = useSort();
 
-  const { columnFilters, columnFiltersState, filtersTableOptions } =
-    useFilters<unknown[]>(withFilters);
+  const {
+    columnFilters,
+    columnFiltersState,
+    filtersTableOptions,
+    setColumnFilters,
+  } = useFilters<unknown[]>(withFilters);
 
   const options: TableOptions<unknown[]> = {
     data: dataState,
@@ -278,7 +281,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
   );
 
   useEffect(() => {
-    const handleMessage = (
+    const handleCellSelection = (
       event: CustomEvent<{ cellSelection: CellSelection }>
     ) => {
       // We convert "None" to an empty tuple on the python side
@@ -307,16 +310,84 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
 
     element.addEventListener(
       "updateCellSelection",
-      handleMessage as EventListener
+      handleCellSelection as EventListener
     );
 
     return () => {
       element.removeEventListener(
         "updateCellSelection",
-        handleMessage as EventListener
+        handleCellSelection as EventListener
       );
     };
   }, [id, rowSelection, rowData]);
+
+  useEffect(() => {
+    const handleColumnSort = (
+      event: CustomEvent<{ sort: { col: number; desc: boolean }[] }>
+    ) => {
+      const shinySorting = event.detail.sort;
+      const columnSorting: SortingState = [];
+
+      shinySorting.map((sort) => {
+        columnSorting.push({
+          id: columns[sort.col],
+          desc: sort.desc,
+        });
+      });
+      setSorting(columnSorting);
+    };
+
+    if (!id) return;
+
+    const element = document.getElementById(id);
+    if (!element) return;
+
+    element.addEventListener(
+      "updateColumnSort",
+      handleColumnSort as EventListener
+    );
+
+    return () => {
+      element.removeEventListener(
+        "updateColumnSort",
+        handleColumnSort as EventListener
+      );
+    };
+  }, [columns, id, setSorting]);
+
+  useEffect(() => {
+    const handleColumnFilter = (
+      event: CustomEvent<{ filter: { col: number; value: FilterValue }[] }>
+    ) => {
+      const shinyFilters = event.detail.filter;
+
+      const columnFilters: ColumnFiltersState = [];
+      shinyFilters.map((filter) => {
+        columnFilters.push({
+          id: columns[filter.col],
+          value: filter.value,
+        });
+      });
+      setColumnFilters(columnFilters);
+    };
+
+    if (!id) return;
+
+    const element = document.getElementById(id);
+    if (!element) return;
+
+    element.addEventListener(
+      "updateColumnFilter",
+      handleColumnFilter as EventListener
+    );
+
+    return () => {
+      element.removeEventListener(
+        "updateColumnFilter",
+        handleColumnFilter as EventListener
+      );
+    };
+  }, [columns, id, setColumnFilters]);
 
   useEffect(() => {
     if (!id) return;
@@ -338,22 +409,42 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
 
   useEffect(() => {
     if (!id) return;
-    Shiny.setInputValue!(`${id}_column_sort`, sorting);
-  }, [id, sorting]);
+    const shinySort: { col: number; desc: boolean }[] = [];
+    sorting.map((sortObj) => {
+      const columnNum = columns.indexOf(sortObj.id);
+      shinySort.push({
+        col: columnNum,
+        desc: sortObj.desc,
+      });
+    });
+    Shiny.setInputValue!(`${id}_column_sort`, shinySort);
+  }, [columns, id, sorting]);
   useEffect(() => {
     if (!id) return;
-    Shiny.setInputValue!(`${id}_column_filter`, columnFilters);
-  }, [id, columnFilters]);
+    const shinyFilter: {
+      col: number;
+      value: FilterValue;
+    }[] = [];
+    columnFilters.map((filterObj) => {
+      const columnNum = columns.indexOf(filterObj.id);
+      shinyFilter.push({
+        col: columnNum,
+        value: filterObj.value as FilterValue,
+      });
+    });
+    Shiny.setInputValue!(`${id}_column_filter`, shinyFilter);
+  }, [id, columnFilters, columns]);
   useEffect(() => {
     if (!id) return;
-    // Already prefiltered rows!
-    const shinyValue: RowModel<unknown[]> = table.getSortedRowModel();
 
-    const rowIndices = table.getSortedRowModel().rows.map((row) => row.index);
-    Shiny.setInputValue!(`${id}_data_view_rows`, rowIndices);
+    const shinyRows: number[] = table
+      // Already prefiltered rows!
+      .getSortedRowModel()
+      .rows.map((row) => row.index);
+    Shiny.setInputValue!(`${id}_data_view_rows`, shinyRows);
 
     // Legacy value as of 2024-05-13
-    Shiny.setInputValue!(`${id}_data_view_indices`, rowIndices);
+    Shiny.setInputValue!(`${id}_data_view_indices`, shinyRows);
   }, [
     id,
     table,
