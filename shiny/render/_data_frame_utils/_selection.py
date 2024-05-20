@@ -336,6 +336,8 @@ def as_cell_selection(
     *,
     selection_modes: SelectionModes,
     data: pd.DataFrame,
+    data_view_rows: ListOrTuple[int],
+    data_view_cols: ListOrTuple[int],
 ) -> CellSelection:
     """
     Converts the selection to `BrowserCellSelection` type and then adds missing
@@ -346,30 +348,39 @@ def as_cell_selection(
         selection_modes=selection_modes,
         data=data,
     )
+    ret: CellSelection | None = None
     if browser_cell_selection["type"] == "none":
-        return {"type": "none", "rows": (), "cols": ()}
-    if browser_cell_selection["type"] == "row":
-        return {
+        ret = {"type": "none", "rows": (), "cols": ()}
+    elif browser_cell_selection["type"] == "row":
+
+        ret = {
             "type": "row",
             "rows": browser_cell_selection["rows"],
-            "cols": tuple(range(data.shape[1])),
+            "cols": tuple(data_view_cols),
         }
-    if browser_cell_selection["type"] == "col":
-        return {
+    elif browser_cell_selection["type"] == "col":
+        ret = {
             "type": "col",
-            "rows": tuple(range(data.shape[0])),
+            "rows": tuple(data_view_rows),
             "cols": browser_cell_selection["cols"],
         }
-    if browser_cell_selection["type"] == "rect":
-        return {
+    elif browser_cell_selection["type"] == "rect":
+        ret = {
             "type": "rect",
             "rows": browser_cell_selection["rows"],
             "cols": browser_cell_selection["cols"],
         }
+    else:
+        raise ValueError(
+            f"Unhandled BrowserCellSelection['type']: {browser_cell_selection['type']}"
+        )
 
-    raise ValueError(
-        f"Unhandled BrowserCellSelection['type']: {browser_cell_selection['type']}"
-    )
+    # Make sure the rows are within the data
+    nrow, ncol = data.shape
+    ret["rows"] = tuple(row for row in ret["rows"] if row < nrow)
+    ret["cols"] = tuple(col for col in ret["cols"] if col < ncol)
+
+    return ret
 
 
 RowSelectionModeDeprecated = Literal["single", "multiple", "none", "deprecated"]

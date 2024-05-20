@@ -411,12 +411,12 @@ class data_frame(Renderer[DataFrameResult]):
                 BrowserCellSelection,
                 self._get_session().input[f"{self.output_id}_cell_selection"](),
             )
-            data = self.data()
-
             browser_cell_selection = as_cell_selection(
                 browser_cell_selection_input,
                 selection_modes=self.selection_modes(),
-                data=data,
+                data=self.data(),
+                data_view_rows=self._input_data_view_rows(),
+                data_view_cols=tuple(range(self.data().shape[1])),
             )
             return browser_cell_selection
 
@@ -446,10 +446,6 @@ class data_frame(Renderer[DataFrameResult]):
 
             selected_rows = tuple(self.input_cell_selection()["rows"])
             # selected_cols = tuple(self.input_cell_selection()["cols"])
-
-            sort = self.input_column_sort()
-            filter = self.input_column_filter()
-            rows = self._input_data_view_rows()
 
             return {
                 "sort": sort,
@@ -905,6 +901,8 @@ class data_frame(Renderer[DataFrameResult]):
         with reactive.isolate():
             selection_modes = self.selection_modes()
             data = self.data()
+            data_view_rows = self._input_data_view_rows()
+            data_view_cols = tuple(range(data.shape[1]))
 
         if selection_modes._is_none():
             warnings.warn(
@@ -921,6 +919,8 @@ class data_frame(Renderer[DataFrameResult]):
             selection,
             selection_modes=selection_modes,
             data=data,
+            data_view_rows=data_view_rows,
+            data_view_cols=data_view_cols,
         )
 
         if cell_selection["type"] == "none":
