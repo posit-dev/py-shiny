@@ -364,6 +364,9 @@ def run_app(
         app_dir=app_dir,
         factory=factory,
         lifespan="on",
+        # Don't allow shiny to use uvloop!
+        # https://github.com/posit-dev/py-shiny/issues/1373
+        loop="asyncio",
         **reload_args,  # pyright: ignore[reportArgumentType]
         **kwargs,
     )
