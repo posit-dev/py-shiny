@@ -4,6 +4,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import time
 from typing import Any, Callable, TypeVar
@@ -11,6 +12,10 @@ from typing import Any, Callable, TypeVar
 import pytest
 import requests
 from conftest import ScopeName, local_app_fixture_gen
+
+is_interactive = hasattr(sys, "ps1")
+reruns = 1 if is_interactive else 3
+reruns_delay = 1
 
 LOCAL_LOCATION = "local"
 

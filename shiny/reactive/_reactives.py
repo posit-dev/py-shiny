@@ -15,6 +15,7 @@ __all__ = (
     "event",
 )
 
+import asyncio
 import functools
 import traceback
 import warnings
@@ -575,6 +576,10 @@ class Effect_:
             try:
                 with ctx():
                     await self._fn()
+
+                    # Yield so that messages can be sent to the client if necessary.
+                    # https://github.com/posit-dev/py-shiny/issues/1381
+                    await asyncio.sleep(0)
             except SilentException:
                 # It's OK for SilentException to cause an Effect to stop running
                 pass
