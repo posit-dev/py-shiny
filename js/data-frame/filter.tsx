@@ -23,7 +23,9 @@ type FilterValueNumeric =
   | [number, number]
   | [number | undefined, number]
   | [number, number | undefined];
-export type FilterValue = FilterValueString | FilterValueNumeric;
+type FilterValue = FilterValueString | FilterValueNumeric;
+
+export type { ColumnFiltersState, FilterValue };
 
 export function useFilters<TData>(enabled: boolean | undefined): {
   columnFilters: ColumnFiltersState;
@@ -93,6 +95,7 @@ export const Filter: FC<FilterProps> = ({ header, className, ...props }) => {
   return (
     <input
       {...props}
+      value={header.column.getFilterValue() as string}
       className={`form-control form-control-sm ${className}`}
       type="text"
       onChange={(e) => header.column.setFilterValue(e.target.value)}

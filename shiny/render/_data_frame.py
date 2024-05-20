@@ -3,8 +3,6 @@ from __future__ import annotations
 import warnings
 
 # TODO-barret; Should `.input_cell_selection()` ever return None? Is that value even helpful? Empty lists would be much more user friendly.
-# TODO-barret-render.data_frame; Add method `update_sort()`
-# TODO-barret-render.data_frame; Add method `update_filter()`
 # TODO-barret-render.data_frame; Docs
 # TODO-barret-render.data_frame; Add examples!
 from typing import (
@@ -23,9 +21,10 @@ from htmltools import Tag
 
 from .. import reactive, ui
 from .._docstring import add_example
-from .._typing_extensions import TypedDict
+from .._typing_extensions import Annotated, TypedDict
 from .._utils import wrap_async
 from ..session._utils import require_active_session, session_context
+from ..types import ListOrTuple
 from ._data_frame_utils import (
     AbstractTabularData,
     CellPatch,
@@ -73,7 +72,12 @@ class ColumnFilterStr(TypedDict):
 
 class ColumnFilterNumber(TypedDict):
     col: int
-    value: tuple[float, float] | tuple[float, None] | tuple[None, float]
+    value: (
+        tuple[int | float, int | float]
+        | tuple[int | float, None]
+        | tuple[None, int | float]
+        | Annotated[list[int | float | None], 2]
+    )
 
 
 ColumnFilter = Union[ColumnFilterStr, ColumnFilterNumber]
@@ -119,8 +123,6 @@ class DataViewInfo(TypedDict):
 
 
 @add_example()
-@add_example(ex_dir="../api-examples/data_frame_data_view")
-@add_example(ex_dir="../api-examples/data_frame_set_patches")
 class data_frame(Renderer[DataFrameResult]):
     """
     Decorator for a function that returns a pandas `DataFrame` object (or similar) to
@@ -252,6 +254,7 @@ class data_frame(Renderer[DataFrameResult]):
     Reactive value of the selected rows of the (sorted and filtered) data.
     """
 
+    @add_example(ex_dir="../api-examples/data_frame_data_view")
     def data_view(self, *, selected: bool = False) -> pd.DataFrame:
         """
         Reactive function that retrieves the data how it is viewed within the browser.
@@ -565,6 +568,7 @@ class data_frame(Renderer[DataFrameResult]):
             )
         return self._session
 
+    @add_example(ex_dir="../api-examples/data_frame_data_view")
     def set_patch_fn(self, fn: PatchFn | PatchFnSync) -> None:
         """
         Decorator to set the function that updates a single cell in the data frame.
@@ -586,6 +590,7 @@ class data_frame(Renderer[DataFrameResult]):
         # from .._typing_extensions import Self
         # return self
 
+    @add_example(ex_dir="../api-examples/data_frame_set_patches")
     def set_patches_fn(self, fn: PatchesFn | PatchesFnSync) -> None:
         """
         Decorator to set the function that updates a batch of cells in the data frame.
@@ -933,4 +938,107 @@ class data_frame(Renderer[DataFrameResult]):
         await self._send_message_to_browser(
             "updateCellSelection",
             {"cellSelection": cell_selection},
+        )
+
+    @add_example(ex_dir="../api-examples/data_frame_update_sort")
+    async def update_sort(
+        self,
+        sort: ListOrTuple[ColumnSort | int] | int | ColumnSort | None,
+    ) -> None:
+        """
+        Update the column sorting in the data frame.
+
+        The sort will be applied in reverse order so that the first value has the highest
+        precedence. This mean _ties_ will go to the second sort column (and so on).
+
+        Parameters
+        ----------
+        sort
+            A list of column sorting information. If `None`, sorting will be removed.
+        """
+        print("update_sort", sort)
+        if sort is None:
+            sort = ()
+        elif isinstance(sort, int):
+            sort = (sort,)
+        elif isinstance(sort, (list, tuple)):
+            ...
+        else:
+            raise TypeError(
+                f"Expected `sort` to be a `list`, `tuple`, `int`, or `None`. Received `{type(sort)}`"
+            )
+
+        vals: list[ColumnSort] = []
+        if len(sort) > 0:
+            with reactive.isolate():
+                data = self.data()
+            ncol = len(data.columns)
+
+            for val in sort:
+                val_dict: ColumnSort = (
+                    val if isinstance(val, dict) else {"col": val, "desc": True}
+                )
+                assert isinstance(val_dict, dict)
+                assert isinstance(val_dict["col"], int)
+                assert 0 <= val_dict["col"] < ncol
+                assert isinstance(val_dict["desc"], bool)
+                vals.append(val_dict)
+
+        await self._send_message_to_browser(
+            "updateColumnSort",
+            {"sort": vals},
+        )
+
+    @add_example(ex_dir="../api-examples/data_frame_update_filter")
+    async def update_filter(
+        self,
+        filter: ListOrTuple[ColumnFilter] | None,
+    ) -> None:
+        """
+        Update the column filtering in the data frame.
+
+        Parameters
+        ----------
+        filter
+            A list of column filtering information. If `None`, filtering will be removed.
+        """
+
+        assert filter is None or isinstance(filter, (list, tuple))
+
+        if filter is None:
+            filter = []
+        else:
+            with reactive.isolate():
+                data = self.data()
+            ncol = len(data.columns)
+
+            for column_filter, i in zip(filter, range(len(filter))):
+                assert isinstance(column_filter, dict)
+                assert isinstance(column_filter["col"], int)
+                assert 0 <= column_filter["col"] < ncol
+                if isinstance(column_filter["value"], str):
+                    ...
+                elif isinstance(column_filter["value"], (list, tuple)):
+                    assert len(column_filter["value"]) == 2
+                    if (
+                        column_filter["value"][0] is None
+                        and column_filter["value"][1] is None
+                    ):
+                        raise TypeError(
+                            "Expected `filter[{i}]['value']` to be a `str` or a `list`/`tuple` of type `int` or `None`. Received `None` for both values."
+                        )
+                    assert isinstance(
+                        column_filter["value"][0], (int, float, type(None))
+                    )
+                    assert isinstance(
+                        column_filter["value"][1], (int, float, type(None))
+                    )
+                else:
+                    raise TypeError(
+                        f"Expected `filter[{i}]['value']` to be a `str` or a `list`/`tuple` of type `int` or `None`. Received `{type(column_filter['value'])}`"
+                    )
+
+        await self._send_message_to_browser(
+            "updateColumnFilter",
+            {"filter": filter},
         )
