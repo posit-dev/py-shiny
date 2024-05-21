@@ -309,7 +309,7 @@ class data_frame(Renderer[DataFrameResult]):
     Reactive value of the data frame's possible selection modes.
     """
 
-    input_cell_selection: reactive.Calc_[CellSelection]
+    input_cell_selection: reactive.Calc_[CellSelection | None]
     """
     Reactive value of selected cell information.
 
@@ -326,7 +326,7 @@ class data_frame(Renderer[DataFrameResult]):
     -------
     :
         :class:`~shiny.render.CellSelection` representing the indices of the selected
-        cells.
+        cells. If no cells are currently selected, `None` is returned.
     """
 
     _input_data_view_rows: reactive.Calc_[tuple[int, ...]]
@@ -406,19 +406,39 @@ class data_frame(Renderer[DataFrameResult]):
         self.selection_modes = self_selection_modes
 
         @reactive.calc
-        def self_input_cell_selection() -> CellSelection:
+        def self_input_cell_selection() -> CellSelection | None:
             browser_cell_selection_input = cast(
                 BrowserCellSelection,
                 self._get_session().input[f"{self.output_id}_cell_selection"](),
             )
-            browser_cell_selection = as_cell_selection(
+            cell_selection = as_cell_selection(
                 browser_cell_selection_input,
                 selection_modes=self.selection_modes(),
                 data=self.data(),
                 data_view_rows=self._input_data_view_rows(),
                 data_view_cols=tuple(range(self.data().shape[1])),
             )
-            return browser_cell_selection
+            # If it is an empty selection, return `None`
+            if cell_selection["type"] == "none":
+                return None
+            elif cell_selection["type"] == "row":
+                if len(cell_selection["rows"]) == 0:
+                    return None
+            if cell_selection["type"] == "col":
+                if len(cell_selection["cols"]) == 0:
+                    return None
+            elif cell_selection["type"] == "rect":
+                if (
+                    len(cell_selection["rows"]) == 0
+                    and len(cell_selection["cols"]) == 0
+                ):
+                    return None
+            else:
+                raise ValueError(
+                    f"Unexpected cell selection type: {cell_selection['type']}"
+                )
+
+            return cell_selection
 
         self.input_cell_selection = self_input_cell_selection
 
@@ -444,8 +464,10 @@ class data_frame(Renderer[DataFrameResult]):
             filter = self.input_column_filter()
             rows = self._input_data_view_rows()
 
-            selected_rows = tuple(self.input_cell_selection()["rows"])
-            # selected_cols = tuple(self.input_cell_selection()["cols"])
+            cell_selection = self.input_cell_selection()
+            selected_rows = (
+                tuple(cell_selection["rows"]) if cell_selection is not None else ()
+            )
 
             return {
                 "sort": sort,

@@ -23,6 +23,8 @@ def server(input: Inputs):
     @render.text
     def cell_selection():
         cell_selection = df1.input_cell_selection()
+        if cell_selection is None:
+            return "No cells selected"
         if cell_selection["type"] != "row":
             raise ValueError(
                 f"Cell selection type is not 'row': {cell_selection['type']}"
