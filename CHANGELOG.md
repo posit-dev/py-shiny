@@ -11,15 +11,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Restored `@render.data_frame`'s (prematurely removed in v0.9.0) input value `input.<ID>_selected_rows()`. Please use `<ID>.input_cell_selection()["rows"]` and consider `input.<ID>_selected_rows()` deprecated. (#1345, #1377)
 
-* `@render.data_frame`'s input value `input.<ID>_data_view_indices` has been renamed to `input.<ID>_data_view_rows` for consistent naming. Please use `input.<ID>_data_view_rows` and consider `input.<ID>_data_view_indices` deprecated. (#1377)
-
-* `@render.data_frame`'s input value `input.<ID>_data_view_indices` has been renamed to `input.<ID>_data_view_rows` for consistent naming. Please use `input.<ID>_data_view_rows` and consider `input.<ID>_data_view_indices` deprecated. (#1374)
-
-* Restored `@render.data_frame`'s (prematurely removed in v0.9.0) input value `input.<ID>_selected_rows()`. Please use `<ID>.input_cell_selection()["rows"]` and consider `input.<ID>_selected_rows()` deprecated. (#1345)
+* Some of `@render.data_frame`'s input values have been renamed for consistent naming. Please consider any old value deprecated. (#1374)
+  * `input.<ID>_data_view_indices` has been renamed to `input.<ID>_data_view_rows` (#1377)
+  * `input.<ID>_column_sort()` has been renamed to `input.<ID>_sort()` (#1374)
+  * `input.<ID>_column_filter()` has been renamed to `input.<ID>_filter()` (#1374)
 
 ### New features
 
-* Added `@render.data_frame`'s `.data_view_info()` which is a reactive value that contains `sort` (a list of sorted column information), `filter` (a list of filtered column information), `rows` (a list of row numbers for the sorted and filtered data frame), and `selected_rows` (`rows` that have been selected by the user). (#1374)
+* `@render.data_frame` has added a few new methods:
+  * `.data_view_rows()` which is a reactive value representing the sorted and filtered row numbers. This value wraps `input.<ID>_data_view_rows()`(#1374)
+  * `.input_sort()` which is a reactive value representing the sorted column information (dictionaries containing `col: int` and `desc: bool`). This value wraps `input.<ID>_sort()`. (#1374)
+  * `.input_filter()` which is a reactive value representing the filtered column information (dictionaries containing `col: int` and `value` which is either a string or a length 2 array of at least one non-`None` number). This value wraps `input.<ID>_filter()`. (#1374)
+  * `.update_sort(sort=)` to update the sorting of the data frame. (#1374)
+  * `.update_filter(filter=)` to update the filtering of the data frame. (#1374)
 
 * Added busy indicators to provide users with a visual cue when the server is busy calculating outputs or otherwise serving requests to the client. More specifically, a spinner is shown on each calculating/recalculating output, and a pulsing banner is shown at the top of the page when the app is otherwise busy. Use the new `ui.busy_indicator.options()` function to customize the appearance of the busy indicators and `ui.busy_indicator.use()` to disable/enable them. (#918)
 

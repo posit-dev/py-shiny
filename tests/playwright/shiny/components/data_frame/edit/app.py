@@ -95,7 +95,7 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
     def _():
         print(
             "Sorting:",
-            summary_data.input_column_sort(),
+            summary_data.input_sort(),
         )
 
     @reactive.effect

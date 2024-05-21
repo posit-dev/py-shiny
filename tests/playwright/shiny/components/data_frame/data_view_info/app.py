@@ -56,7 +56,7 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
 
     @render.code
     def sort():
-        return str(penguins_df.input_column_sort())
+        return str(penguins_df.input_sort())
 
     @render.code
     def filter():

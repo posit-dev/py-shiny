@@ -334,7 +334,7 @@ class data_frame(Renderer[DataFrameResult]):
         The data frame with all the user's edit patches applied to it.
     """
 
-    input_column_sort: reactive.Calc_[tuple[ColumnSort, ...]]
+    input_sort: reactive.Calc_[tuple[ColumnSort, ...]]
     """
     Reactive value of the data frame's column sorting information.
 
@@ -424,11 +424,11 @@ class data_frame(Renderer[DataFrameResult]):
         self.input_cell_selection = self_input_cell_selection
 
         @reactive.calc
-        def self_input_column_sort() -> tuple[ColumnSort, ...]:
+        def self_input_sort() -> tuple[ColumnSort, ...]:
             column_sort = self._get_session().input[f"{self.output_id}_column_sort"]()
             return tuple(column_sort)
 
-        self.input_column_sort = self_input_column_sort
+        self.input_sort = self_input_sort
 
         @reactive.calc
         def self_input_column_filter() -> tuple[ColumnFilter, ...]:
