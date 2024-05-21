@@ -47,7 +47,7 @@ dev-shinylive: $(PYBIN)  ## Install development version of shinylive
 
 deps: $(PYBIN) dev-htmltools dev-shinylive ## Install build dependencies
 	$(PYBIN)/pip install --force-reinstall -v "pip<24.0"
-	$(PYBIN)/pip install -e ..[doc]
+	$(PYBIN)/pip install ..[doc]
 
 quartodoc: quartodoc_build_core quartodoc_build_express quartodoc_post ## Build quartodocs for express and core
 
