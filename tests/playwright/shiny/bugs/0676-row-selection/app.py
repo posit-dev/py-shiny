@@ -45,7 +45,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @render.code
     def debug():
-        return str((grid.input_cell_selection() or {}).get("rows", ()))
+        return str((grid.cell_selection() or {}).get("rows", ()))
 
 
 app = App(app_ui, server, debug=True)
