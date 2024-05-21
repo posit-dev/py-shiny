@@ -133,7 +133,7 @@ class data_frame(Renderer[DataFrameResult]):
     Row selection
     -------------
     When using the row selection feature, you can access the selected rows by using the
-    `<data_frame_renderer>.input_cell_selection()` method, where `<data_frame_renderer>`
+    `<data_frame_renderer>.cell_selection()` method, where `<data_frame_renderer>`
     is the render function name that corresponds with the `id=` used in
     :func:`~shiny.ui.outout_data_frame`. Internally, this method retrieves the selected
     cell information from session's `input.<id>_cell_selection()` value. The value
@@ -281,11 +281,11 @@ class data_frame(Renderer[DataFrameResult]):
     Reactive value of the data frame's possible selection modes.
     """
 
-    input_cell_selection: reactive.Calc_[CellSelection | None]
+    cell_selection: reactive.Calc_[CellSelection | None]
     """
     Reactive value of selected cell information.
 
-    This method is a wrapper around `input.<id>_selected_cells()`, where `<id>` is
+    This method is a wrapper around `input.<id>_cell_selection()`, where `<id>` is
     the `id` of the data frame output. This method returns the selected rows and
     will cause reactive updates as the selected rows change.
 
@@ -364,21 +364,21 @@ class data_frame(Renderer[DataFrameResult]):
         self.selection_modes = self_selection_modes
 
         @reactive.calc
-        def self_input_cell_selection() -> CellSelection | None:
-            browser_cell_selection_input = self._get_session().input[
+        def self_cell_selection() -> CellSelection | None:
+            browser_cell_selection = self._get_session().input[
                 f"{self.output_id}_cell_selection"
             ]()
 
-            browser_cell_selection = as_cell_selection(
-                browser_cell_selection_input,
+            cell_selection = as_cell_selection(
+                browser_cell_selection,
                 selection_modes=self.selection_modes(),
             )
-            if browser_cell_selection["type"] == "none":
+            if cell_selection["type"] == "none":
                 return None
 
-            return browser_cell_selection
+            return cell_selection
 
-        self.input_cell_selection = self_input_cell_selection
+        self.cell_selection = self_cell_selection
 
         # # Array of sorted column information
         # # TODO-barret-render.data_frame; Expose and update column sorting
@@ -414,7 +414,7 @@ class data_frame(Renderer[DataFrameResult]):
         # @reactive.calc
         # def self__data_selected() -> pd.DataFrame:
         #     # browser_cell_selection
-        #     bcs = self.input_cell_selection()
+        #     bcs = self.cell_selection()
         #     if bcs is None:
         #         req(False)
         #         raise RuntimeError("This should never be reached for typing purposes")
@@ -489,7 +489,7 @@ class data_frame(Renderer[DataFrameResult]):
 
                 # Possibly subset the indices to selected rows
                 if selected:
-                    cell_selection = self.input_cell_selection()
+                    cell_selection = self.cell_selection()
                     if cell_selection is not None and cell_selection["type"] == "row":
                         # Use a `set` for faster lookups
                         selected_row_set = set(cell_selection["rows"])
@@ -893,3 +893,18 @@ class data_frame(Renderer[DataFrameResult]):
             "updateCellSelection",
             {"cellSelection": cell_selection},
         )
+
+    def input_cell_selection(self) -> CellSelection | None:
+        """
+        [Deprecated] Reactive value of selected cell information.
+
+        Please use `~shiny.render.data_frame.cell_selection` instead.
+        """
+
+        from .._deprecated import warn_deprecated
+
+        warn_deprecated(
+            "`@render.data_frame`'s `.input_cell_selection()` method is deprecated. Please use `.cell_selection()` instead."
+        )
+
+        return self.cell_selection()
