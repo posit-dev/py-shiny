@@ -417,6 +417,9 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
         desc: sortObj.desc,
       });
     });
+    Shiny.setInputValue!(`${id}_sort`, shinySort);
+
+    // Deprecated as of 2024-05-21
     Shiny.setInputValue!(`${id}_column_sort`, shinySort);
   }, [columns, id, sorting]);
   useEffect(() => {
@@ -432,6 +435,9 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
         value: filterObj.value as FilterValue,
       });
     });
+    Shiny.setInputValue!(`${id}_filter`, shinyFilter);
+
+    // Deprecated as of 2024-05-21
     Shiny.setInputValue!(`${id}_column_filter`, shinyFilter);
   }, [id, columnFilters, columns]);
   useEffect(() => {

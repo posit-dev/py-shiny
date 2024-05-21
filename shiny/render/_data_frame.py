@@ -45,6 +45,7 @@ from ._data_frame_utils import (
     cell_patch_processed_to_jsonifiable,
     wrap_shiny_html,
 )
+from ._data_frame_utils._unsafe import serialize_numpy_dtype
 
 # as_selection_location_js,
 from .renderer import Jsonifiable, Renderer, ValueFn
@@ -292,17 +293,6 @@ class data_frame(Renderer[DataFrameResult]):
         else:
             return self._data_view_all()
 
-    data_view_info: reactive.Calc_[DataViewInfo]
-    """
-    Reactive value of the data frame's view information.
-
-    This includes:
-    * `sort`: An array of `col`umn number and _is `desc`ending_ information. This is the output of `.input_column_sort()`.
-    * `filter`: An array of `col`umn number and `value` information. This is the output of `.input_column_filter()`.
-    * `rows`: The row numbers of the data frame that are currently being viewed in the browser after sorting and filtering has been applied.
-    * `selected_rows`: `rows` values that have been selected by the user. This value created from subsetting `rows` by only including values from `.input_cell_selection()["rows"]`.
-    """
-
     # TODO-barret-render.data_frame; Allow for DataTable and DataGrid to accept SelectionModes
     selection_modes: reactive.Calc_[SelectionModes]
     """
@@ -329,28 +319,47 @@ class data_frame(Renderer[DataFrameResult]):
         cells. If no cells are currently selected, `None` is returned.
     """
 
-    _input_data_view_rows: reactive.Calc_[tuple[int, ...]]
+    data_view_rows: reactive.Calc_[tuple[int, ...]]
     """
     Reactive value of the data frame's view indices.
 
-    These are the indices of the data frame that are currently being viewed in the
-    browser after sorting and filtering has been applied
+    This value is a wrapper around `input.<id>_data_view_rows()`, where `<id>` is the
+    `id` of the data frame output.
+
+    Returns
+    -------
+    :
+        The row numbers of the data frame that are currently being viewed in the browser
+        after sorting and filtering has been applied.
     """
     _data_patched: reactive.Calc_[pd.DataFrame]
     """
     Reactive value of the data frame's patched data.
 
-    This is the data frame with all the user's edit patches applied to it.
+    Returns
+    -------
+    :
+        The data frame with all the user's edit patches applied to it.
     """
 
-    input_column_sort: reactive.Calc_[tuple[ColumnSort, ...]]
+    input_sort: reactive.Calc_[tuple[ColumnSort, ...]]
     """
     Reactive value of the data frame's column sorting information.
+
+    Returns
+    -------
+    :
+        An array of `col`umn number and _is `desc`ending_ information.
     """
 
     input_column_filter: reactive.Calc_[tuple[ColumnFilter, ...]]
     """
     Reactive value of the data frame's column filters.
+
+    Returns
+    -------
+    :
+        An array of `col`umn number and `value` information.
     """
 
     def _reset_reactives(self) -> None:
@@ -443,11 +452,11 @@ class data_frame(Renderer[DataFrameResult]):
         self.input_cell_selection = self_input_cell_selection
 
         @reactive.calc
-        def self_input_column_sort() -> tuple[ColumnSort, ...]:
+        def self_input_sort() -> tuple[ColumnSort, ...]:
             column_sort = self._get_session().input[f"{self.output_id}_column_sort"]()
             return tuple(column_sort)
 
-        self.input_column_sort = self_input_column_sort
+        self.input_sort = self_input_sort
 
         @reactive.calc
         def self_input_column_filter() -> tuple[ColumnFilter, ...]:
@@ -459,34 +468,13 @@ class data_frame(Renderer[DataFrameResult]):
         self.input_column_filter = self_input_column_filter
 
         @reactive.calc
-        def self_data_view_info() -> DataViewInfo:
-            sort = self.input_column_sort()
-            filter = self.input_column_filter()
-            rows = self._input_data_view_rows()
-
-            cell_selection = self.input_cell_selection()
-            selected_rows = (
-                tuple(cell_selection["rows"]) if cell_selection is not None else ()
-            )
-
-            return {
-                "sort": sort,
-                "filter": filter,
-                "rows": rows,
-                "selected_rows": selected_rows,
-                # "selected_cols": selected_cols,
-            }
-
-        self.data_view_info = self_data_view_info
-
-        @reactive.calc
-        def self__input_data_view_rows() -> tuple[int, ...]:
+        def self_input_data_view_rows() -> tuple[int, ...]:
             data_view_rows = self._get_session().input[
                 f"{self.output_id}_data_view_rows"
             ]()
             return tuple(data_view_rows)
 
-        self._input_data_view_rows = self__input_data_view_rows
+        self.data_view_rows = self_input_data_view_rows
 
         # @reactive.calc
         # def self__data_selected() -> pd.DataFrame:
@@ -561,17 +549,18 @@ class data_frame(Renderer[DataFrameResult]):
                 # Get patched data
                 data = self._data_patched().copy(deep=False)
 
-                data_view_info = self.data_view_info()
+                if selected:
+                    cell_selection = self.input_cell_selection()
+                    if cell_selection is None:
+                        rows = ()
+                    else:
+                        rows = cell_selection.get("rows", ())
+                else:
+                    rows = self.data_view_rows()
 
-                data_view_rows = (
-                    data_view_info["selected_rows"]
-                    if selected
-                    else data_view_info["rows"]
-                )
                 # Turn into list for pandas compatibility
-                data_view_rows = list(data_view_rows)
-
-                return data.iloc[data_view_rows]
+                rows = list(rows)
+                return data.iloc[rows]
 
         # Helper reactives so that internal calculations can be cached for use in other calculations
         @reactive.calc
@@ -982,9 +971,8 @@ class data_frame(Renderer[DataFrameResult]):
         Parameters
         ----------
         sort
-            A list of column sorting information. If `None`, sorting will be removed.
+            A list of column sorting information. If `None`, sorting will be removed. `int` values will be upgraded to `{"col": int, "desc": <DESC>}` where `<DESC>` is `True` if the column is number like and `False` otherwise.
         """
-        print("update_sort", sort)
         if sort is None:
             sort = ()
         elif isinstance(sort, int):
@@ -1003,6 +991,12 @@ class data_frame(Renderer[DataFrameResult]):
             ncol = len(data.columns)
 
             for val in sort:
+                val_dict: ColumnSort
+                if isinstance(val, int):
+
+                    col: pd.Series[Any] = data[val]
+                    desc = serialize_numpy_dtype(col)["type"] == "numeric"
+                    val_dict = {"col": val, "desc": desc}
                 val_dict: ColumnSort = (
                     val if isinstance(val, dict) else {"col": val, "desc": True}
                 )

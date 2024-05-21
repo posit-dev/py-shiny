@@ -95,12 +95,12 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
     def _():
         print(
             "Sorting:",
-            summary_data.input_column_sort(),
+            summary_data.input_sort(),
         )
 
     @reactive.effect
     def _():
-        print("indices:", summary_data._input_data_view_rows())
+        print("indices:", summary_data.data_view_rows())
 
     @reactive.effect
     def _():

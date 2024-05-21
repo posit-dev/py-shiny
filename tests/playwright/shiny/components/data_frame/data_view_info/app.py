@@ -19,7 +19,6 @@ def mod_ui():
         ui.card(
             ui.layout_column_wrap(
                 ui.TagList(
-                    ui.div("Size: ", ui.output_text_verbatim("info_size")),
                     ui.div("Sort: ", ui.output_text_verbatim("sort")),
                     ui.div("Filter: ", ui.output_text_verbatim("filter")),
                     ui.div("Rows: ", ui.output_text_verbatim("rows")),
@@ -56,24 +55,23 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
         # return render.DataTable(df, selection_mode="rows", editable=False)
 
     @render.code
-    def info_size():
-        return str(len(penguins_df.data_view_info()))
-
-    @render.code
     def sort():
-        return str(penguins_df.data_view_info()["sort"])
+        return str(penguins_df.input_sort())
 
     @render.code
     def filter():
-        return str(penguins_df.data_view_info()["filter"])
+        return str(penguins_df.input_column_filter())
 
     @render.code
     def rows():
-        return str(penguins_df.data_view_info()["rows"])
+        return str(penguins_df.data_view_rows())
 
     @render.code
     def selected_rows():
-        return str(penguins_df.data_view_info()["selected_rows"])
+        cell_selection = penguins_df.input_cell_selection()
+        if cell_selection is None:
+            return ""
+        return str(cell_selection.get("rows", ()))
 
 
 def server(input: Inputs, output: Outputs, session: Session):
