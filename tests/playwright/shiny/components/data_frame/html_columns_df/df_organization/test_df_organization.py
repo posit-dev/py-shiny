@@ -17,7 +17,7 @@ def test_dataframe_organization_methods(page: Page, local_app: ShinyAppProc) -> 
         input_view_rows.expect_value("(0, 1, 2, 3, 4, 5)")
         input_view_selected_true.expect_value("[]")
         input_view_selected_false.expect_value("[  0   1  50  51 100 101]")
-        input_cell_selection.expect_value("()")
+        input_cell_selection.expect_value("")
 
     # assert value of unsorted table
     reset_data_frame()
@@ -27,28 +27,28 @@ def test_dataframe_organization_methods(page: Page, local_app: ShinyAppProc) -> 
     input_view_rows.expect_value("(2, 3, 4, 5, 0, 1)")
     input_view_selected_true.expect_value("[]")
     input_view_selected_false.expect_value("[ 50  51 100 101   0   1]")
-    input_cell_selection.expect_value("()")
+    input_cell_selection.expect_value("")
 
     # sort column by number ascending
     data_frame.set_column_sort(col=0)
     input_view_rows.expect_value("(1, 0, 5, 4, 3, 2)")
     input_view_selected_true.expect_value("[]")
     input_view_selected_false.expect_value("[  1   0 101 100  51  50]")
-    input_cell_selection.expect_value("()")
+    input_cell_selection.expect_value("")
 
     # sort column by text ascending
     data_frame.set_column_sort(col=4)
     input_view_rows.expect_value("(0, 1, 2, 3, 4, 5)")
     input_view_selected_true.expect_value("[]")
     input_view_selected_false.expect_value("[  0   1  50  51 100 101]")
-    input_cell_selection.expect_value("()")
+    input_cell_selection.expect_value("")
 
     # sort column by text descending
     data_frame.set_column_sort(col=4)
     input_view_rows.expect_value("(4, 5, 2, 3, 0, 1) ")
     input_view_selected_true.expect_value("[]")
     input_view_selected_false.expect_value("[100 101  50  51   0   1]")
-    input_cell_selection.expect_value("()")
+    input_cell_selection.expect_value("")
 
     # filter using numbers
     reset_data_frame()
@@ -56,20 +56,20 @@ def test_dataframe_organization_methods(page: Page, local_app: ShinyAppProc) -> 
     input_view_rows.expect_value("(3, 4)")
     input_view_selected_true.expect_value("[]")
     input_view_selected_false.expect_value("[ 51 100]")
-    input_cell_selection.expect_value("()")
+    input_cell_selection.expect_value("")
     # filter programatically
     reset_data_frame()
     InputActionButton(page, "update_filter").click()
     input_view_rows.expect_value("(3, 4, 5)")
     input_view_selected_true.expect_value("[]")
     input_view_selected_false.expect_value("[  51 100 101]")
-    input_cell_selection.expect_value("()")
+    input_cell_selection.expect_value("")
 
     data_frame.set_column_sort(3)
     input_view_rows.expect_value("(4, 5, 3)")
     input_view_selected_true.expect_value("[]")
     input_view_selected_false.expect_value("[100 101  51]")
-    input_cell_selection.expect_value("()")
+    input_cell_selection.expect_value("")
 
     # select single row
     reset_data_frame()
@@ -85,7 +85,7 @@ def test_dataframe_organization_methods(page: Page, local_app: ShinyAppProc) -> 
     input_view_rows.expect_value("(0, 4, 3, 2, 1, 5)")
     input_view_selected_true.expect_value("[]")
     input_view_selected_false.expect_value("[  0 100  51  50   1 101]")
-    input_cell_selection.expect_value("()")
+    input_cell_selection.expect_value("")
 
     # select multiple rows
     data_frame.select_rows([3, 1])  # select rows 3 and 1 of (0, 4, 3, 2, 1, 5)

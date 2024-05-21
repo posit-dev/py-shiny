@@ -22,8 +22,8 @@ def expect_row_selection(page: Page, prefix_main: str, prefix_secondary: str):
     main_select_btn = InputActionButton(page, f"{prefix_main}select")
     main_clear_btn = InputActionButton(page, f"{prefix_main}clear")
 
-    main_txt_rows.expect_value("()")
-    other_txt_rows.expect_value("()")
+    main_txt_rows.expect_value("")
+    other_txt_rows.expect_value("")
     main_selected_row_count.expect_value("0")
     other_selected_row_count.expect_value("0")
     main_grid_row_count.expect_value("344")
@@ -31,7 +31,7 @@ def expect_row_selection(page: Page, prefix_main: str, prefix_secondary: str):
 
     main_select_btn.click()
     main_txt_rows.expect_value("(1, 3, 5)")
-    other_txt_rows.expect_value("()")
+    other_txt_rows.expect_value("")
     main_selected_row_count.expect_value("3")
     other_selected_row_count.expect_value("0")
     main_grid_row_count.expect_value("344")
@@ -39,8 +39,8 @@ def expect_row_selection(page: Page, prefix_main: str, prefix_secondary: str):
 
     main_clear_btn.click()
 
-    main_txt_rows.expect_value("()")
-    other_txt_rows.expect_value("()")
+    main_txt_rows.expect_value("")
+    other_txt_rows.expect_value("")
     main_selected_row_count.expect_value("0")
     other_selected_row_count.expect_value("0")
     main_grid_row_count.expect_value("344")

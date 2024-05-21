@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Restored `@render.data_frame`'s (prematurely removed in v0.9.0) input value `input.<ID>_selected_rows()`. Please use `<ID>.input_cell_selection()["rows"]` and consider `input.<ID>_selected_rows()` deprecated. (#1345, #1377)
 
+# TODO-barret: Change phrasing to be `OLD INPUT VALUE` has been deprecated. Please use `DF.NEW_METHOD()` to retrieve the same information.
 * Some of `@render.data_frame`'s input values have been renamed for consistent naming. Please consider any old value deprecated. (#1374)
   * `input.<ID>_data_view_indices` has been renamed to `input.<ID>_data_view_rows` (#1377)
   * `input.<ID>_column_sort()` has been renamed to `input.<ID>_sort()` (#1374)

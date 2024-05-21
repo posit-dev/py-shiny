@@ -3,6 +3,8 @@ from __future__ import annotations
 import warnings
 
 # TODO-barret; Should `.input_cell_selection()` ever return None? Is that value even helpful? Empty lists would be much more user friendly.
+# For next release: Agreed to remove `None` type.
+# For this release: Immediately make PR to remove `.input_` from `.input_cell_selection()`
 # TODO-barret-render.data_frame; Docs
 # TODO-barret-render.data_frame; Add examples!
 from typing import (
@@ -299,6 +301,9 @@ class data_frame(Renderer[DataFrameResult]):
     Reactive value of the data frame's possible selection modes.
     """
 
+    # def input_cell_selection() : reactive.Calc_[CellSelection | None]:
+    #     print(cell_selection)
+
     input_cell_selection: reactive.Calc_[CellSelection | None]
     """
     Reactive value of selected cell information.
@@ -352,7 +357,7 @@ class data_frame(Renderer[DataFrameResult]):
         An array of `col`umn number and _is `desc`ending_ information.
     """
 
-    input_column_filter: reactive.Calc_[tuple[ColumnFilter, ...]]
+    input_filter: reactive.Calc_[tuple[ColumnFilter, ...]]
     """
     Reactive value of the data frame's column filters.
 
@@ -424,28 +429,28 @@ class data_frame(Renderer[DataFrameResult]):
                 browser_cell_selection_input,
                 selection_modes=self.selection_modes(),
                 data=self.data(),
-                data_view_rows=self._input_data_view_rows(),
+                data_view_rows=self.data_view_rows(),
                 data_view_cols=tuple(range(self.data().shape[1])),
             )
             # If it is an empty selection, return `None`
-            if cell_selection["type"] == "none":
-                return None
-            elif cell_selection["type"] == "row":
-                if len(cell_selection["rows"]) == 0:
-                    return None
-            if cell_selection["type"] == "col":
-                if len(cell_selection["cols"]) == 0:
-                    return None
-            elif cell_selection["type"] == "rect":
-                if (
-                    len(cell_selection["rows"]) == 0
-                    and len(cell_selection["cols"]) == 0
-                ):
-                    return None
-            else:
-                raise ValueError(
-                    f"Unexpected cell selection type: {cell_selection['type']}"
-                )
+            # if cell_selection["type"] == "none":
+            #     return None
+            # elif cell_selection["type"] == "row":
+            #     if len(cell_selection["rows"]) == 0:
+            #         return None
+            # elif cell_selection["type"] == "col":
+            #     if len(cell_selection["cols"]) == 0:
+            #         return None
+            # elif cell_selection["type"] == "rect":
+            #     if (
+            #         len(cell_selection["rows"]) == 0
+            #         and len(cell_selection["cols"]) == 0
+            #     ):
+            #         return None
+            # else:
+            #     raise ValueError(
+            #         f"Unexpected cell selection type: {cell_selection['type']}"
+            #     )
 
             return cell_selection
 
@@ -465,7 +470,7 @@ class data_frame(Renderer[DataFrameResult]):
             ]()
             return tuple(column_filter)
 
-        self.input_column_filter = self_input_column_filter
+        self.input_filter = self_input_column_filter
 
         @reactive.calc
         def self_input_data_view_rows() -> tuple[int, ...]:
@@ -912,7 +917,7 @@ class data_frame(Renderer[DataFrameResult]):
         with reactive.isolate():
             selection_modes = self.selection_modes()
             data = self.data()
-            data_view_rows = self._input_data_view_rows()
+            data_view_rows = self.data_view_rows()
             data_view_cols = tuple(range(data.shape[1]))
 
         if selection_modes._is_none():

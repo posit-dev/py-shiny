@@ -88,7 +88,7 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
     def _():
         print(
             "Filters:",
-            summary_data.input_column_filter(),
+            summary_data.input_filter(),
         )
 
     @reactive.effect

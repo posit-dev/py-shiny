@@ -14,7 +14,7 @@ def test_row_selection(page: Page, local_app: ShinyAppProc) -> None:
 
     df.expect_n_row(3)
     selected_rows.expect_value("Input selected rows: ()")
-    cell_selection.expect_value("Cell selection rows: ()")
+    cell_selection.expect_value("No cells selected")
 
     df.select_rows([0, 2])
 

@@ -24,7 +24,7 @@ app_ui = ui.page_fluid(
     ),
     ui.p(
         "Selected rows: ",
-        ui.output_code("debug"),
+        ui.output_code("selected_rows"),
     ),
     class_="p-3",
 )
@@ -44,9 +44,19 @@ def server(input: Inputs, output: Outputs, session: Session):
         return grid.data_view(selected=True)
 
     @render.code
-    def debug():
+    def selected_rows():
+        from shiny import req
+
         cell_selection = grid.input_cell_selection()
-        return str(cell_selection["rows"]) if cell_selection is not None else ""
+        str(cell_selection["rows"])
+
+        cell_selection = req(grid.input_cell_selection())
+        str(cell_selection["rows"])
+
+        str(req(grid.input_cell_selection())["rows"])
+        # mydata.iloc[grid.input_cell_selection()["rows"]]
+
+        return "foo"
 
 
-app = App(app_ui, server, debug=True)
+app = App(app_ui, server, debug=False)

@@ -350,7 +350,11 @@ def as_cell_selection(
     )
     ret: CellSelection | None = None
     if browser_cell_selection["type"] == "none":
-        ret = {"type": "none", "rows": (), "cols": ()}
+        ret = {
+            "type": "none",
+            "rows": (),
+            "cols": (),
+        }
     elif browser_cell_selection["type"] == "row":
 
         ret = {

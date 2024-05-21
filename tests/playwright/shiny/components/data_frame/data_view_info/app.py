@@ -60,7 +60,7 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
 
     @render.code
     def filter():
-        return str(penguins_df.input_column_filter())
+        return str(penguins_df.input_filter())
 
     @render.code
     def rows():
