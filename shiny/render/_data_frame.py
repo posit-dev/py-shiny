@@ -939,9 +939,8 @@ class data_frame(Renderer[DataFrameResult]):
         Parameters
         ----------
         sort
-            A list of column sorting information. If `None`, sorting will be removed.
+            A list of column sorting information. If `None`, sorting will be removed. `int` values will be upgraded to `{"col": int, "desc": <DESC>}` where `<DESC>` is `True` if the column is number like and `False` otherwise.
         """
-        print("update_sort", sort)
         if sort is None:
             sort = ()
         elif isinstance(sort, int):
@@ -960,6 +959,12 @@ class data_frame(Renderer[DataFrameResult]):
             ncol = len(data.columns)
 
             for val in sort:
+                val_dict: ColumnSort
+                if isinstance(val, int):
+
+                    col: pd.Series[Any] = data[val]
+                    desc = serialize_numpy_dtype(col)["type"] == "numeric"
+                    val_dict = {"col": val, "desc": desc}
                 val_dict: ColumnSort = (
                     val if isinstance(val, dict) else {"col": val, "desc": True}
                 )
