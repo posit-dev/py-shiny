@@ -45,7 +45,8 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @render.code
     def debug():
-        return str((grid.input_cell_selection() or {}).get("rows", ()))
+        cell_selection = grid.input_cell_selection()
+        return str(cell_selection["rows"]) if cell_selection is not None else ""
 
 
 app = App(app_ui, server, debug=True)

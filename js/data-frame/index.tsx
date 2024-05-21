@@ -399,7 +399,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
       const rowsById = table.getSortedRowModel().rowsById;
       shinyValue = {
         type: "row",
-        rows: rowSelectionKeys.map((key) => rowsById[key].index).sort(),
+        rows: rowSelectionKeys.map((key) => rowsById[key].index),
       };
     } else {
       console.error("Unhandled row selection mode:", rowSelectionModes);

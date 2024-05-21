@@ -31,6 +31,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `ui.page_*()` functions gain a `theme` argument that allows you to replace the Bootstrap CSS file with a new CSS file. `theme` can be a local CSS file, a URL, or a [shinyswatch](https://posit-dev.github.io/py-shinyswatch) theme. In Shiny Express apps, `theme` can be set via `express.ui.page_opts()`. (#1334)
 
+* `@render.data_frame`'s `<ID>.input_cell_selection()` no longer returns a `None` value and now always returns a dictionary containing both the `rows` and `cols` keys. This is done to achieve more consistent author code when working with cell selection. When the value's `type="none"`, both `rows` and `cols` are empty tuples. When `type="row"`, `cols` represents all column numbers of the data. In the future, when `type="col"`, `rows` will represent all row numbers of the data. These extra values are not available in `input.<ID>_cell_selection()` as they are independent of cells being selected and are removed to reduce information being sent to and from the browser. (#1376)
+
+* Added `@render.data_frame`'s `.data_view_info()` which is a reactive value that contains `sort` (a list of sorted column information), `filter` (a list of filtered column information), `rows` (a list of row numbers for the sorted and filtered data frame), and `selected_rows` (`rows` that have been selected by the user). (#1374)
+
 ### Bug fixes
 
 * Fixed an issue that prevented Shiny from serving the `font.css` file referenced in Shiny's Bootstrap CSS file. (#1342)

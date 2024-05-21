@@ -61,8 +61,8 @@ def make_server(input: Inputs):
     def selected_rows():
         cell_selection = grid.input_cell_selection()
         if cell_selection is None:
-            return "None"
-        return str(cell_selection.get("rows", ()))
+            return ""
+        return str(cell_selection["rows"])
 
     # Test for selected rows data
     @render.code

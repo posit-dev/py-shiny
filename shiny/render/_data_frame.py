@@ -27,6 +27,7 @@ from ..session._utils import require_active_session, session_context
 from ..types import ListOrTuple
 from ._data_frame_utils import (
     AbstractTabularData,
+    BrowserCellSelection,
     CellPatch,
     CellPatchProcessed,
     CellSelection,
@@ -147,15 +148,18 @@ class data_frame(Renderer[DataFrameResult]):
     -------------
     When using the row selection feature, you can access the selected rows by using the
     `<data_frame_renderer>.input_cell_selection()` method, where `<data_frame_renderer>`
-    is the render function name that corresponds with the `id=` used in
-    :func:`~shiny.ui.outout_data_frame`. Internally, this method retrieves the selected
-    cell information from session's `input.<id>_cell_selection()` value. The value
-    returned will be `None` if the selection mode is `"none"`, or a tuple of
-    integers representing the indices of the selected rows if the selection mode is
-    `"row"` or `"rows"`. If no rows have been selected (while in a non-`"none"` row
-    selection mode), an empty tuple will be returned. To filter a pandas data frame down
-    to the selected rows, use `<data_frame_renderer>.data_view()` or
-    `df.iloc[list(input.<id>_cell_selection()["rows"])]`.
+    is the `@render.data_frame` function name that corresponds with the `id=` used in
+    :func:`~shiny.ui.outout_data_frame`. Internally,
+    `<data_frame_renderer>.input_cell_selection()` retrieves the selected cell
+    information from session's `input.<data_frame_renderer>_cell_selection()` value and
+    upgrades it for consistent subsetting.
+
+    To filter your pandas data frame (`df`) down to the selected rows, you can use:
+
+    * `df.iloc[list(input.<data_frame_renderer>_cell_selection()["rows"])]`
+    * `df.iloc[list(<data_frame_renderer>.input_cell_selection()["rows"])]`
+    * `df.iloc[list(<data_frame_renderer>.data_view_info()["selected_rows"])]`
+    * `<data_frame_renderer>.data_view(selected=True)`
 
     Editing cells
     -------------
@@ -303,12 +307,16 @@ class data_frame(Renderer[DataFrameResult]):
     the `id` of the data frame output. This method returns the selected rows and
     will cause reactive updates as the selected rows change.
 
+    The value has been enhanced from it's vanilla form to include the missing `cols` key
+    (or `rows` key) as a tuple of integers representing all column (or row) numbers.
+    This allows for consistent usage within code when subsetting your data. These
+    missing keys are not sent over the wire as they are independent of the selection.
+
     Returns
     -------
     :
-        * `None` if the selection mode is `"none"`
-        * :class:`~shiny.render.CellSelection` representing the indices of the
-          selected cells.
+        :class:`~shiny.render.CellSelection` representing the indices of the selected
+        cells. If no cells are currently selected, `None` is returned.
     """
 
     data_view_rows: reactive.Calc_[tuple[int, ...]]
@@ -408,18 +416,38 @@ class data_frame(Renderer[DataFrameResult]):
 
         @reactive.calc
         def self_input_cell_selection() -> CellSelection | None:
-            browser_cell_selection_input = self._get_session().input[
-                f"{self.output_id}_cell_selection"
-            ]()
-
-            browser_cell_selection = as_cell_selection(
+            browser_cell_selection_input = cast(
+                BrowserCellSelection,
+                self._get_session().input[f"{self.output_id}_cell_selection"](),
+            )
+            cell_selection = as_cell_selection(
                 browser_cell_selection_input,
                 selection_modes=self.selection_modes(),
+                data=self.data(),
+                data_view_rows=self._input_data_view_rows(),
+                data_view_cols=tuple(range(self.data().shape[1])),
             )
-            if browser_cell_selection["type"] == "none":
+            # If it is an empty selection, return `None`
+            if cell_selection["type"] == "none":
                 return None
+            elif cell_selection["type"] == "row":
+                if len(cell_selection["rows"]) == 0:
+                    return None
+            if cell_selection["type"] == "col":
+                if len(cell_selection["cols"]) == 0:
+                    return None
+            elif cell_selection["type"] == "rect":
+                if (
+                    len(cell_selection["rows"]) == 0
+                    and len(cell_selection["cols"]) == 0
+                ):
+                    return None
+            else:
+                raise ValueError(
+                    f"Unexpected cell selection type: {cell_selection['type']}"
+                )
 
-            return browser_cell_selection
+            return cell_selection
 
         self.input_cell_selection = self_input_cell_selection
 
@@ -861,7 +889,7 @@ class data_frame(Renderer[DataFrameResult]):
     async def update_cell_selection(
         # self, selection: SelectionLocation | CellSelection
         self,
-        selection: CellSelection | Literal["all"] | None,
+        selection: CellSelection | Literal["all"] | None | BrowserCellSelection,
     ) -> None:
         """
         Update the cell selection in the data frame.
@@ -884,6 +912,8 @@ class data_frame(Renderer[DataFrameResult]):
         with reactive.isolate():
             selection_modes = self.selection_modes()
             data = self.data()
+            data_view_rows = self._input_data_view_rows()
+            data_view_cols = tuple(range(data.shape[1]))
 
         if selection_modes._is_none():
             warnings.warn(
@@ -900,6 +930,8 @@ class data_frame(Renderer[DataFrameResult]):
             selection,
             selection_modes=selection_modes,
             data=data,
+            data_view_rows=data_view_rows,
+            data_view_cols=data_view_cols,
         )
 
         if cell_selection["type"] == "none":

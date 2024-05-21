@@ -92,6 +92,4 @@ def test_dataframe_organization_methods(page: Page, local_app: ShinyAppProc) -> 
     input_view_rows.expect_value("(0, 4, 3, 2, 1, 5) ")
     input_view_selected_true.expect_value("[100  50]")
     input_view_selected_false.expect_value("[  0 100  51  50   1 101]")
-    input_cell_selection.expect_value("(2, 4)")
-    # TODO-barret: input cell selection should be ordered by user view
-    # input_cell_selection.expect_value("(4, 2)")
+    input_cell_selection.expect_value("(4, 2)")

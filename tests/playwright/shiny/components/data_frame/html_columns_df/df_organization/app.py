@@ -36,32 +36,39 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
     @render.data_frame
     def iris_df():
         return render.DataGrid(
-            data=distinct_df,  # pyright: ignore[reportUnknownArgumentType]
+            data=distinct_df,
             filters=True,
             selection_mode="rows",
         )
 
-    @render.code  # pyright: ignore[reportArgumentType]
+    @render.code
     def data_view_rows():
         return iris_df.data_view_rows()
 
-    @render.code  # pyright: ignore[reportArgumentType]
+    @render.code
     def data_view_selected_false():  # pyright: ignore[reportUnknownParameterType]
-        return iris_df.data_view(
-            selected=False
-        ).index.values  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+        return str(
+            iris_df.data_view(
+                selected=False
+            ).index.values  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType, reportUnknownArgumentType]
+        )
 
-    @render.code  # pyright: ignore[reportArgumentType]
+    @render.code
     def data_view_selected_true():  # pyright: ignore[reportUnknownParameterType]
-        return iris_df.data_view(
-            selected=True
-        ).index.values  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+        return str(
+            iris_df.data_view(
+                selected=True
+            ).index.values  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType, reportUnknownArgumentType]
+        )
 
-    @render.code  # pyright: ignore[reportArgumentType]
+    @render.code
     def cell_selection():  # pyright: ignore[reportUnknownParameterType]
-        return iris_df.input_cell_selection()["rows"]  # pyright: ignore
+        cell_selection = iris_df.input_cell_selection()
+        if cell_selection is None:
+            return ""
+        return str(cell_selection["rows"])
 
-    @reactive.Effect
+    @reactive.effect
     @reactive.event(input.reset_df)
     def reset_df():
         iris_df._reset_reactives()
