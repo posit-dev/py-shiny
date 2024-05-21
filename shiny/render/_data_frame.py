@@ -321,28 +321,47 @@ class data_frame(Renderer[DataFrameResult]):
           selected cells.
     """
 
-    _input_data_view_rows: reactive.Calc_[tuple[int, ...]]
+    data_view_rows: reactive.Calc_[tuple[int, ...]]
     """
     Reactive value of the data frame's view indices.
 
-    These are the indices of the data frame that are currently being viewed in the
-    browser after sorting and filtering has been applied
+    This value is a wrapper around `input.<id>_data_view_rows()`, where `<id>` is the
+    `id` of the data frame output.
+
+    Returns
+    -------
+    :
+        The row numbers of the data frame that are currently being viewed in the browser
+        after sorting and filtering has been applied.
     """
     _data_patched: reactive.Calc_[pd.DataFrame]
     """
     Reactive value of the data frame's patched data.
 
-    This is the data frame with all the user's edit patches applied to it.
+    Returns
+    -------
+    :
+        The data frame with all the user's edit patches applied to it.
     """
 
     input_column_sort: reactive.Calc_[tuple[ColumnSort, ...]]
     """
     Reactive value of the data frame's column sorting information.
+
+    Returns
+    -------
+    :
+        An array of `col`umn number and _is `desc`ending_ information.
     """
 
     input_column_filter: reactive.Calc_[tuple[ColumnFilter, ...]]
     """
     Reactive value of the data frame's column filters.
+
+    Returns
+    -------
+    :
+        An array of `col`umn number and `value` information.
     """
 
     def _reset_reactives(self) -> None:
@@ -434,7 +453,7 @@ class data_frame(Renderer[DataFrameResult]):
         def self_data_view_info() -> DataViewInfo:
             sort = self.input_column_sort()
             filter = self.input_column_filter()
-            rows = self._input_data_view_rows()
+            rows = self.data_view_rows()
 
             cell_selection = self.input_cell_selection()
             # Use a `set` for faster lookups
@@ -456,13 +475,13 @@ class data_frame(Renderer[DataFrameResult]):
         self.data_view_info = self_data_view_info
 
         @reactive.calc
-        def self__input_data_view_rows() -> tuple[int, ...]:
+        def self_input_data_view_rows() -> tuple[int, ...]:
             data_view_rows = self._get_session().input[
                 f"{self.output_id}_data_view_rows"
             ]()
             return tuple(data_view_rows)
 
-        self._input_data_view_rows = self__input_data_view_rows
+        self.data_view_rows = self_input_data_view_rows
 
         # @reactive.calc
         # def self__data_selected() -> pd.DataFrame:

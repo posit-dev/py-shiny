@@ -43,7 +43,7 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
 
     @render.code  # pyright: ignore[reportArgumentType]
     def data_view_rows():
-        return iris_df._input_data_view_rows()
+        return iris_df.data_view_rows()
 
     @render.code  # pyright: ignore[reportArgumentType]
     def data_view_selected_false():  # pyright: ignore[reportUnknownParameterType]

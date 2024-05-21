@@ -100,7 +100,7 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
 
     @reactive.effect
     def _():
-        print("indices:", summary_data._input_data_view_rows())
+        print("indices:", summary_data.data_view_rows())
 
     @reactive.effect
     def _():
