@@ -1,27 +1,13 @@
 from __future__ import annotations
 
 import datetime
-import functools
 import logging
 import subprocess
 import sys
 import threading
-import time
-from contextlib import contextmanager
 from pathlib import PurePath
 from types import TracebackType
-from typing import (
-    IO,
-    Any,
-    Callable,
-    Generator,
-    List,
-    Literal,
-    Optional,
-    TextIO,
-    Type,
-    Union,
-)
+from typing import IO, Callable, Generator, List, Literal, Optional, TextIO, Type, Union
 
 import pytest
 
@@ -30,12 +16,8 @@ import shiny._utils
 __all__ = (
     "ShinyAppProc",
     "create_app_fixture",
-    "create_doc_example_core_fixture",
-    "create_example_fixture",
     "local_app",
     "run_shiny_app",
-    "expect_to_change",
-    "retry_with_timeout",
 )
 
 from playwright.sync_api import BrowserContext, Page
@@ -57,10 +39,6 @@ def page(session_page: Page) -> Page:
     # Reset screen size to 1080p
     session_page.set_viewport_size({"width": 1920, "height": 1080})
     return session_page
-
-
-here = PurePath(__file__).parent
-here_root = here.parent.parent
 
 
 class OutputStream:
@@ -264,135 +242,7 @@ def create_app_fixture(
     return fixture_func
 
 
-def create_example_fixture(
-    example_name: str,
-    example_file: str = "app.py",
-    scope: ScopeName = "module",
-):
-    """Used to create app fixtures from apps in py-shiny/examples"""
-    return create_app_fixture(
-        here_root / "examples" / example_name / example_file, scope
-    )
-
-
-def create_doc_example_fixture(
-    example_name: str,
-    example_file: str = "app.py",
-    scope: ScopeName = "module",
-):
-    """Used to create app fixtures from apps in py-shiny/shiny/api-examples"""
-    return create_app_fixture(
-        here_root / "shiny/api-examples" / example_name / example_file, scope
-    )
-
-
-def create_doc_example_core_fixture(
-    example_name: str,
-    scope: ScopeName = "module",
-):
-    """Used to create app fixtures from ``app-core.py`` example apps in py-shiny/shiny/api-examples"""
-    return create_doc_example_fixture(example_name, "app-core.py", scope)
-
-
-def create_doc_example_express_fixture(
-    example_name: str,
-    scope: ScopeName = "module",
-):
-    """Used to create app fixtures from ``app-express.py`` example apps in py-shiny/shiny/api-examples"""
-    return create_doc_example_fixture(example_name, "app-express.py", scope)
-
-
-def x_create_doc_example_fixture(example_name: str, scope: ScopeName = "module"):
-    """Used to create app fixtures from apps in py-shiny/shiny/examples"""
-    return create_app_fixture(
-        here_root / "shiny/experimental/api-examples" / example_name / "app.py", scope
-    )
-
-
 @pytest.fixture(scope="module")
 def local_app(request: pytest.FixtureRequest) -> Generator[ShinyAppProc, None, None]:
     app_gen = local_app_fixture_gen(PurePath(request.path).parent / "app.py")
     yield next(app_gen)
-
-
-@contextmanager
-def expect_to_change(
-    func: Callable[[], Any], timeoutSecs: float = 10
-) -> Generator[None, None, None]:
-    """
-    Context manager that yields when the value returned by func() changes. Use this
-    around code that has a side-effect of changing some state asynchronously (such as
-    all browser actions), to prevent moving onto the next step of the test until this
-    one has actually taken effect.
-
-    Raises TimeoutError if the value does not change within timeoutSecs.
-
-    Parameters
-    ----------
-    func
-        A function that returns a value. The value returned by this function is
-        compared to the value returned by subsequent calls to this function.
-    timeoutSecs
-        How long to wait for the value to change before raising TimeoutError.
-
-    Example
-    -------
-
-        with expect_to_change(lambda: page.locator("#name").value()):
-            page.keyboard.send_keys("hello")
-
-    """
-
-    original_value = func()
-    yield
-
-    @retry_with_timeout(timeoutSecs)
-    def wait_for_change():
-        if func() == original_value:
-            raise AssertionError("Value did not change")
-
-    wait_for_change()
-
-
-def retry_with_timeout(timeout: float = 30):
-    """
-    Decorator that retries a function until 1) it succeeds, 2) fails with a
-    non-assertion error, or 3) repeatedly fails with an AssertionError for longer than
-    the timeout. If the timeout elapses, the last AssertionError is raised.
-
-    Parameters
-    ----------
-    timeout
-        How long to wait for the function to succeed before raising the last
-        AssertionError.
-
-    Returns
-    -------
-    A decorator that can be applied to a function.
-
-    Example
-    -------
-
-        @retry_with_timeout(30)
-        def try_to_find_element():
-            if not page.locator("#name").exists():
-                raise AssertionError("Element not found")
-
-        try_to_find_element()
-    """
-
-    def decorator(func: Callable[[], None]) -> Callable[[], None]:
-        @functools.wraps(func)
-        def wrapper() -> None:
-            start = time.time()
-            while True:
-                try:
-                    return func()
-                except AssertionError as e:
-                    if time.time() - start > timeout:
-                        raise e
-                    time.sleep(0.1)
-
-        return wrapper
-
-    return decorator
