@@ -29,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Removed temporary state where a data frame renderer would try to subset to selected rows that did not exist. (#1351, #1377)
 
+* Fix an issue in the data frame output which caused the table to freeze when filters removed previously selected cells. (#1412)
+
 ### Other changes
 
 * `Session` is now an abstract base class, and `AppSession` is a concrete subclass of it. Also, `ExpressMockSession` has been renamed `ExpressStubSession` and is a concrete subclass of `Session`. (#1331)
