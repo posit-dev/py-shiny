@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import textwrap
 from typing import TYPE_CHECKING, Awaitable, Callable, Literal, Optional
 
 from htmltools import TagChild
@@ -10,8 +9,6 @@ from ..session import Inputs, Outputs, Session
 from ..session._session import SessionProxy
 
 if TYPE_CHECKING:
-    from .._app import App
-    from .._typing_extensions import Never
     from ..session._session import DownloadHandler, DynamicRouteHandler, RenderedDeps
     from ..types import Jsonifiable
     from ._run import AppOpts
@@ -30,6 +27,10 @@ class ExpressStubSession(Session):
 
     def __init__(self, ns: ResolvedId = Root):
         self.ns = ns
+        # Setting self.app to None works for our uses, though in the future it may be
+        # necessary to also create a ExpressStubApp class to be a placeholder.
+        self.app = None  # pyright: ignore
+        self.id = "express_stub_session"
         self.input = Inputs({})
         self.output = Outputs(self, self.ns, outputs={})
 
@@ -45,22 +46,6 @@ class ExpressStubSession(Session):
 
     def is_stub_session(self) -> Literal[True]:
         return True
-
-    @property
-    def id(self) -> str:
-        self._not_implemented("id")
-
-    @id.setter
-    def id(self, value: str) -> None:  # pyright: ignore
-        self._not_implemented("id")
-
-    @property
-    def app(self) -> App:
-        self._not_implemented("app")
-
-    @app.setter
-    def app(self, value: App) -> None:  # pyright: ignore
-        self._not_implemented("app")
 
     async def close(self, code: int = 1001) -> None:
         return
@@ -153,14 +138,3 @@ class ExpressStubSession(Session):
         encoding: str = "utf-8",
     ) -> Callable[[DownloadHandler], None]:
         return lambda x: None
-
-    def _not_implemented(self, name: str) -> Never:
-        raise NotImplementedError(
-            textwrap.dedent(
-                f"""
-            The session attribute `{name}` is not yet available for use. Since this code
-            will run again when the session is initialized, you can use `if not session.is_stub_session():`
-            to only run this code when the session is established.
-        """
-            )
-        )
