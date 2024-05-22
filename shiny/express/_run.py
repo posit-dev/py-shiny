@@ -130,9 +130,7 @@ def run_express(file: Path) -> Tag | TagList:
                 )
             else:
                 exec(
-                    compile(
-                        ast.Interactive([node], type_ignores=[]), file_path, "single"
-                    ),
+                    compile(ast.Interactive([node]), file_path, "single"),
                     var_context,
                     var_context,
                 )
