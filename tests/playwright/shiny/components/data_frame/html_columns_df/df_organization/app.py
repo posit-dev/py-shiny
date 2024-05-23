@@ -58,7 +58,7 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
 
     @render.code  # pyright: ignore[reportArgumentType]
     def cell_selection():  # pyright: ignore[reportUnknownParameterType]
-        return iris_df.input_cell_selection()["rows"]  # pyright: ignore
+        return iris_df.cell_selection()["rows"]  # pyright: ignore
 
     @reactive.Effect
     @reactive.event(input.reset_df)

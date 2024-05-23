@@ -7,9 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
-### `input` key changes
+### Deprecations
 
-* Restored `@render.data_frame`'s (prematurely removed in v0.9.0) input value `input.<ID>_selected_rows()`. Please use `<ID>.input_cell_selection()["rows"]` and consider `input.<ID>_selected_rows()` deprecated. (#1345, #1377)
+* Restored `@render.data_frame`'s (prematurely removed in v0.9.0) input value `input.<ID>_selected_rows()`. Please use `<ID>.cell_selection()["rows"]` and consider `input.<ID>_selected_rows()` deprecated. (#1345, #1377)
+
+* `@render.data_frame`'s method `.input_cell_selection()` has been renamed to `.cell_selection()`. Please use `.cell_selection()` and consider `.input_cell_selection()` deprecated. (#1407)
 
 * `@render.data_frame`'s input value `input.<ID>_data_view_indices` has been renamed to `input.<ID>_data_view_rows` for consistent naming. Please use `input.<ID>_data_view_rows` and consider `input.<ID>_data_view_indices` deprecated. (#1377)
 
@@ -26,6 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Fixed an issue that prevented Shiny from serving the `font.css` file referenced in Shiny's Bootstrap CSS file. (#1342)
 
 * Removed temporary state where a data frame renderer would try to subset to selected rows that did not exist. (#1351, #1377)
+
+* Fix an issue in the data frame output which caused the table to freeze when filters removed previously selected cells. (#1412)
 
 ### Other changes
 

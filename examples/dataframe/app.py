@@ -99,7 +99,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @render.text
     def detail():
-        selected_rows = (grid.input_cell_selection() or {}).get("rows", ())
+        selected_rows = (grid.cell_selection() or {}).get("rows", ())
         if len(selected_rows) > 0:
             # "split", "records", "index", "columns", "values", "table"
             return df().iloc[list(selected_rows)]
