@@ -10,6 +10,11 @@ type Message = {
   role: string;
 };
 type Messages = Array<Message>;
+type MessageChunk = {
+  content: string;
+  role: string;
+  type: "message_start" | "message_chunk" | "message_end";
+};
 
 type ChatRenderData = {
   messages: Messages;
@@ -149,9 +154,9 @@ class ShinyChatOutputBinding extends Shiny.OutputBinding {
       this.#appendMessage(el, message);
     };
 
-    const handleAppendDeltaEvent = (e: Event) => {
+    const handleAppendChunkEvent = (e: Event) => {
       const message = (e as CustomEvent).detail;
-      this.#appendMessageDelta(el, message);
+      this.#appendMessageChunk(el, message);
     };
 
     const handleReplaceEvent = (e: Event) => {
@@ -163,8 +168,8 @@ class ShinyChatOutputBinding extends Shiny.OutputBinding {
     el.addEventListener("shiny-chat-input-sent", handleAppendEvent);
     el.addEventListener("shiny-chat-append-message", handleAppendEvent);
     el.addEventListener(
-      "shiny-chat-append-message-delta",
-      handleAppendDeltaEvent
+      "shiny-chat-append-message-chunk",
+      handleAppendChunkEvent
     );
     el.addEventListener("shiny-chat-replace-message", handleReplaceEvent);
   }
@@ -184,29 +189,22 @@ class ShinyChatOutputBinding extends Shiny.OutputBinding {
     }
   }
 
-  #appendMessageDelta(el: HTMLElement, message: Message): void {
-    const messageContainers =
-      el.querySelectorAll<HTMLElement>(CHAT_MESSAGE_TAG);
-
-    const lastMessage = messageContainers[messageContainers.length - 1];
-    if (!lastMessage) {
-      this.#appendMessage(el, message);
-      return;
-    }
-
-    // TODO: this implementation at least works with OpenAI, where the
-    // first delta is '', and the last message is null. We should
-    // at least document this, and see if it works for other streaming APIs.
-    const content = lastMessage.getAttribute("content");
-    if (message.content === "") {
+  #appendMessageChunk(el: HTMLElement, message: MessageChunk): void {
+    if (message.type === "message_start") {
       this.#appendMessage(el, message, false);
       return;
     }
-    if (message.content === null) {
+    if (message.type === "message_end") {
       // end of stream; enable the input
       this.#enableInput(el);
       return;
     }
+
+    const messageContainers =
+      el.querySelectorAll<HTMLElement>(CHAT_MESSAGE_TAG);
+    const lastMessage = messageContainers[messageContainers.length - 1];
+    if (!lastMessage) throw new Error("No messages found in the chat output");
+    const content = lastMessage.getAttribute("content");
     lastMessage.setAttribute("content", content + message.content);
 
     // Don't scroll to bottom if the user has scrolled up a bit
@@ -217,7 +215,7 @@ class ShinyChatOutputBinding extends Shiny.OutputBinding {
     this.#scrollToBottom(el);
   }
 
-  // TODO: implement replaceMessageDelta()
+  // TODO: implement replaceMessageChunk()
   #replaceMessage(el: HTMLElement, index: number, message: Message): void {
     const msg = createElement(CHAT_MESSAGE_TAG, message);
     const msgs = el.querySelectorAll(CHAT_MESSAGE_TAG);

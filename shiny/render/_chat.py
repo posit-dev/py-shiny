@@ -1,49 +1,34 @@
-from typing import Any, Literal, Optional, Sequence, TypedDict, Union, cast
+from typing import TYPE_CHECKING, Any, Sequence, cast, overload
 
 from htmltools import Tag
-
-# TODO: make openai a optional dependency?
-from openai import Stream
-from openai.types.chat import ChatCompletionChunk
 
 from .. import reactive
 from ..session import Session, get_current_session, require_active_session
 from ..ui import output_chat
+from ._chat_types import (
+    ChatMessage,
+    ChatMessageChunk,
+    normalize_message,
+    normalize_message_chunk,
+)
 from .renderer import Jsonifiable, Renderer, ValueFn
 
 __all__ = ("Chat", "ChatMessage", "chat")
 
-Role = Literal["assistant", "user", "system"]
-
-
-# ChatMessage = ChatCompletionMessageParam
-
-
-class UserMessage(TypedDict):
-    content: str
-    role: Literal["user"]
-
-
-class AssistantMessage(TypedDict):
-    content: Optional[str]  # delta can be None (to end the message)
-    role: Literal["assistant"]
-
-
-class SystemMessage(TypedDict):
-    content: Optional[str]
-    role: Literal["system"]
-
-
-ChatMessage = AssistantMessage | SystemMessage | UserMessage
+if TYPE_CHECKING:
+    from ._chat_types import AppendMessage, AppendMessageChunk, AppendMessageStream
 
 
 class Chat:
     def __init__(
         self,
         *,
-        messages: Sequence[AssistantMessage | SystemMessage],
-        # style: Literal["default", "messager"] = "default",
-        # icons: Sequence[Literal["copy", "refresh"]] = ("copy", ),
+        # TODO: maybe we can provide a richer experience if we know the client?
+        # client: "Client",
+        messages: Sequence[ChatMessage] = (),
+        # Unfortunately, anthropic wants prompt in the .create() method, which we don't
+        # currently support wrap
+        # system_prompt: Optional[str] = None,
         placeholder: str = "Enter a message...",
         width: str = "min(680px, 100%)",
         fill: bool = True,
@@ -57,7 +42,7 @@ class Chat:
 class chat(Renderer[Chat]):
     _session: Session | None  # Do not use. Use `_get_session()` instead
     _messages: reactive.Value[Sequence[ChatMessage]]
-    _current_message_content: str = ""
+    _final_message: str = ""
 
     def __init__(self, fn: ValueFn[Chat]):
         # MUST be done before super().__init__ is called as `_set_output_metadata` is
@@ -68,17 +53,18 @@ class chat(Renderer[Chat]):
 
         # Initialize server-side reactives
         self._messages = reactive.Value(())
-        self._current_message_content = ""
+        self._final_message = ""
 
     async def render(self) -> Jsonifiable:
         # Reset server-side reactives
         self._messages.set(())
+        self._final_message = ""
 
         value = await self.fn()
         if value is None:
             return None
 
-        self._messages.set(value.messages)
+        self._append_messages(value.messages)
 
         return {
             "messages": cast(Jsonifiable, value.messages),
@@ -100,78 +86,86 @@ class chat(Renderer[Chat]):
 
         # User input causes invalidation of the messages reactive
         user = req(self.user_input())
-        user_msg: UserMessage = {"content": user, "role": "user"}
+        user_msg: ChatMessage = {"content": user, "role": "user"}
 
         # Add the user message to the messages
-        self._update_messages(user_msg)
+        self._append_message(user_msg)
 
         return self._messages()
 
     # Append a message to the chat box
+    @overload
     async def append_message(
-        self, message: ChatMessage | str | None, *, delta: bool = False
-    ):
+        self, message: "AppendMessage", *, chunk: bool = False
+    ) -> None: ...
 
-        # TODO: also handle ChatCompletionMessageParam?
-        if isinstance(message, str) or message is None:
-            msg: ChatMessage = {"content": message, "role": "assistant"}
+    @overload
+    async def append_message(
+        self, message: "AppendMessageChunk", *, chunk: bool = True
+    ) -> None: ...
+
+    async def append_message(
+        self, message: "AppendMessage | AppendMessageChunk", *, chunk: bool = False
+    ) -> None:
+
+        if chunk:
+            # TODO: check if typing will actually yell this is something else than a message chunk
+            message = cast("AppendMessageChunk", message)
+            msg = normalize_message_chunk(message)
+            self._append_message_chunk(msg)
         else:
-            msg = message
+            message = cast("AppendMessage", message)
+            msg = normalize_message(message)
+            self._append_message(msg)
 
-        if delta:
-            self._current_message_content += msg["content"] or ""
-            if msg["content"] is None:  # end of message
-                msgFinal: AssistantMessage = {
-                    "content": self._current_message_content,
-                    "role": msg["role"],  # type: ignore
+        msg_type = "shiny-chat-append-message"
+        if chunk:
+            msg_type += "-chunk"
+        await self._send_custom_message(msg_type, {**msg})
+
+    async def append_message_stream(self, message: "AppendMessageStream"):
+        msg_iter = iter(message)
+
+        # Start the message
+        msg_start = next(msg_iter)
+        msg_start = normalize_message_chunk(msg_start)
+        if msg_start.get("type", None) is None:
+            msg_start["type"] = "message_start"
+        await self.append_message(msg_start, chunk=True)
+
+        # Append all the chunks (and end the message when we reach the end)
+        while True:
+            try:
+                msg = next(msg_iter)  # type: ignore
+                await self.append_message(msg, chunk=True)
+            except StopIteration:
+                msg: ChatMessageChunk = {
+                    "content": "",
+                    "role": "assistant",
+                    "type": "message_end",
                 }
-                self._update_messages(msgFinal)
-        else:
-            self._current_message_content = msg["content"] or ""
-            self._update_messages(msg)
+                await self.append_message(msg, chunk=True)
+                break
 
-        type = "shiny-chat-append-message"
-        if delta:
-            type += "-delta"
-        await self._send_custom_message(type, {**msg})
+    # For chunk messages, accumulate the chunks until we have a signal that the message
+    # has ended
+    def _append_message_chunk(self, msg: ChatMessageChunk):
+        self._final_message += msg["content"] or ""
+        if "type" in msg and msg["type"] == "message_end":
+            final: ChatMessage = {
+                "content": self._final_message,
+                "role": msg["role"],
+            }
+            self._append_message(final)
+            self._final_message = ""
 
-    # TODO: can we do this in a truly non-blocking way? Maybe via a ExtendedTask running in a separate thread?
-    async def append_message_stream(self, response: Stream[ChatCompletionChunk]):
-        for chunk in response:
-            content = chunk.choices[0].delta.content
-            await self.append_message(content, delta=True)
+    def _append_message(self, message: ChatMessage):
+        self._append_messages((message,))
 
-    def _update_messages(self, message: ChatMessage):
+    def _append_messages(self, messages: Sequence[ChatMessage]):
         with reactive.isolate():
-            msgs = tuple(self._messages()) + (message,)
+            msgs = tuple(self._messages()) + tuple(messages)
             self._messages.set(msgs)
-
-    # Replace a message in the chat box
-    # async def replace_message(
-    #    self,
-    #    *,
-    #    index: int,
-    #    content: str,
-    #    role: Roles = "assistant",
-    #    stream: bool = False,
-    # ):
-    #
-    #    type = "shiny-chat-replace-message"
-    #    if stream:
-    #        type += "-stream"
-    #    await self._send_custom_message(
-    #        type,
-    #        {
-    #            "index": index,
-    #            "content": content,
-    #            "role": role,
-    #            "stream": stream,
-    #        },
-    #    )
-
-    # TODO: if refresh icon is clicked, report the message index that needs to be replaced
-    # def message_invalidated():
-    #     pass
 
     async def _send_custom_message(self, handler: str, obj: dict[str, Any]):
         session = self._get_session()

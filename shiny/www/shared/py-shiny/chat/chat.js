@@ -2789,9 +2789,9 @@ var ShinyChatOutputBinding = class extends Shiny.OutputBinding {
       const message = e7.detail;
       this.#appendMessage(el, message);
     };
-    const handleAppendDeltaEvent = (e7) => {
+    const handleAppendChunkEvent = (e7) => {
       const message = e7.detail;
-      this.#appendMessageDelta(el, message);
+      this.#appendMessageChunk(el, message);
     };
     const handleReplaceEvent = (e7) => {
       const { index, message } = e7.detail;
@@ -2801,8 +2801,8 @@ var ShinyChatOutputBinding = class extends Shiny.OutputBinding {
     el.addEventListener("shiny-chat-input-sent", handleAppendEvent);
     el.addEventListener("shiny-chat-append-message", handleAppendEvent);
     el.addEventListener(
-      "shiny-chat-append-message-delta",
-      handleAppendDeltaEvent
+      "shiny-chat-append-message-chunk",
+      handleAppendChunkEvent
     );
     el.addEventListener("shiny-chat-replace-message", handleReplaceEvent);
   }
@@ -2816,29 +2816,27 @@ var ShinyChatOutputBinding = class extends Shiny.OutputBinding {
       this.#enableInput(el);
     }
   }
-  #appendMessageDelta(el, message) {
-    const messageContainers = el.querySelectorAll(CHAT_MESSAGE_TAG);
-    const lastMessage = messageContainers[messageContainers.length - 1];
-    if (!lastMessage) {
-      this.#appendMessage(el, message);
-      return;
-    }
-    const content = lastMessage.getAttribute("content");
-    if (message.content === "") {
+  #appendMessageChunk(el, message) {
+    if (message.type === "message_start") {
       this.#appendMessage(el, message, false);
       return;
     }
-    if (message.content === null) {
+    if (message.type === "message_end") {
       this.#enableInput(el);
       return;
     }
+    const messageContainers = el.querySelectorAll(CHAT_MESSAGE_TAG);
+    const lastMessage = messageContainers[messageContainers.length - 1];
+    if (!lastMessage)
+      throw new Error("No messages found in the chat output");
+    const content = lastMessage.getAttribute("content");
     lastMessage.setAttribute("content", content + message.content);
     if (el.scrollTop + el.clientHeight < el.scrollHeight - 30) {
       return;
     }
     this.#scrollToBottom(el);
   }
-  // TODO: implement replaceMessageDelta()
+  // TODO: implement replaceMessageChunk()
   #replaceMessage(el, index, message) {
     const msg = createElement(CHAT_MESSAGE_TAG, message);
     const msgs = el.querySelectorAll(CHAT_MESSAGE_TAG);
