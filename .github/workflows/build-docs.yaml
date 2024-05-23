@@ -45,17 +45,11 @@ jobs:
           cd docs
           make quartodoc
 
-      - name: Build site
-        if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'merge_group' || startsWith(github.head_ref, 'docs')  }}
-        run: |
-          cd docs
-          make site
-
       # =====================================================
       # Shinylive
       # =====================================================
       - name: Check out shinylive
-        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.head_ref, 'docs')  }}
+        if: github.ref == 'refs/heads/main'
         uses: actions/checkout@v4
         with:
           repository: rstudio/shinylive
@@ -63,7 +57,7 @@ jobs:
           path: shinylive-repo
 
       - name: Update shinylive's copy of shiny and htmltools
-        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.head_ref, 'docs')  }}
+        if: github.ref == 'refs/heads/main'
         run: |
           cd shinylive-repo
           make submodules
@@ -71,17 +65,29 @@ jobs:
           make submodules-pull-htmltools
 
       - name: Build shinylive
-        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.head_ref, 'docs')  }}
+        if: github.ref == 'refs/heads/main'
         run: |
           cd shinylive-repo
           make all
+
+      # TODO-future; Install updated shinylive assets via updated py-shinylive pkg
+
+      # =====================================================
+      # Build site
+      # =====================================================
+
+      - name: Build site
+        if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'merge_group' || startsWith(github.head_ref, 'docs')  }}
+        run: |
+          cd docs
+          make site
 
       # =====================================================
       # Deploy
       # =====================================================
 
       - name: Move built API docs and shinylive to single directory
-        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.head_ref, 'docs')  }}
+        if: github.ref == 'refs/heads/main'
         run: |
           mkdir deploy
           mv docs/_site deploy/docs
