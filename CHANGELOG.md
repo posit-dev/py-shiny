@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
-* Fixed an issue with opacity dimming occurring too often/quickly. (#1415)
+* Fixed an issue with opacity dimming occurring too often/quickly when outputs are recalculating. (#1415)
 
 ## [0.10.0] - 2024-05-23
 
