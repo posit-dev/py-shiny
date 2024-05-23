@@ -55,7 +55,7 @@ jobs:
       # Shinylive
       # =====================================================
       - name: Check out shinylive
-        if: github.ref == 'refs/heads/main'
+        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.head_ref, 'docs')  }}
         uses: actions/checkout@v4
         with:
           repository: rstudio/shinylive
@@ -63,7 +63,7 @@ jobs:
           path: shinylive-repo
 
       - name: Update shinylive's copy of shiny and htmltools
-        if: github.ref == 'refs/heads/main'
+        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.head_ref, 'docs')  }}
         run: |
           cd shinylive-repo
           make submodules
@@ -71,7 +71,7 @@ jobs:
           make submodules-pull-htmltools
 
       - name: Build shinylive
-        if: github.ref == 'refs/heads/main'
+        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.head_ref, 'docs')  }}
         run: |
           cd shinylive-repo
           make all
@@ -81,7 +81,7 @@ jobs:
       # =====================================================
 
       - name: Move built API docs and shinylive to single directory
-        if: github.ref == 'refs/heads/main'
+        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.head_ref, 'docs')  }}
         run: |
           mkdir deploy
           mv docs/_site deploy/docs
