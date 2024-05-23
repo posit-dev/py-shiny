@@ -25,12 +25,12 @@ def _():
     shared.rv.set(input.n())
 
 
-@render.text
+@render.code
 def rv_value():
     return f"shared.rv() = {shared.rv()}"
 
 
-@render.text
+@render.code
 def text_data():
     return "shared.data = " + str(shared.data)
 
