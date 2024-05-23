@@ -62,12 +62,13 @@ jobs:
           ref: main
           path: shinylive-repo
 
-      - name: Update shinylive's copy of shiny, htmltools, and other packages
+      - name: Update shinylive's copy of shiny and htmltools
         if: github.ref == 'refs/heads/main'
         run: |
           cd shinylive-repo
           make submodules
           make submodules-pull-shiny
+          make submodules-pull-htmltools
 
       - name: Build shinylive
         if: github.ref == 'refs/heads/main'
