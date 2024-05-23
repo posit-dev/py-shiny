@@ -33,7 +33,7 @@ app_ui = ui.page_sidebar(
         ui.input_slider("max_tokens", "Max Tokens", min=1, max=4096, step=1, value=100),
         position="right",
     ),
-    ui.output_chat("chat"),
+    ui.output_ui("chat_ui"),
     title="Shiny Chat Playground",
     fillable=True,
     fillable_mobile=True,
@@ -42,91 +42,84 @@ app_ui = ui.page_sidebar(
 
 def server(input):
 
-    @render.chat
-    def chat():
-        return render.Chat()
+    @render.ui
+    def chat_ui():
+        input.model()
+        chat = ui.Chat(id="chat")
 
-    @reactive.calc
-    def client():
-        if input.model() in models["openai"]:
-            return OpenAI()
-        elif input.model() in models["claude"]:
-            return Anthropic()
-        elif input.model() in models["google"]:
-            return GenerativeModel(
-                input.model(),
-                system_instruction=input.system_prompt(),
-            )
-        else:
-            raise ValueError(f"Invalid model: {input.model()}")
+        # TODO: remove the last callback when this gets re-rendered?
+        @chat.on_user_submit
+        async def _():
+            try:
+                if input.model() in models["openai"]:
+                    response = OpenAI().chat.completions.create(
+                        model=input.model(),
+                        messages=(
+                            {"content": input.system_prompt(), "role": "system"},
+                            *chat.messages(),
+                        ),
+                        stream=input.stream(),
+                        temperature=input.temperature(),
+                        max_tokens=input.max_tokens(),
+                    )
+                elif input.model() in models["claude"]:
+                    response = Anthropic().messages.create(
+                        model=input.model(),
+                        messages=chat.messages(),
+                        stream=input.stream(),
+                        temperature=input.temperature(),
+                        max_tokens=input.max_tokens(),
+                        system=input.system_prompt(),
+                    )
+                elif input.model() in models["google"]:
+                    m = GenerativeModel(
+                        input.model(),
+                        system_instruction=input.system_prompt(),
+                    )
+                    # Change content key to parts
+                    messages = chat.messages()
 
-    @reactive.calc
-    def create_response():
-        c = client()
-        if isinstance(c, OpenAI):
-            return c.chat.completions.create(
-                model=input.model(),
-                messages=(
-                    {"content": input.system_prompt(), "role": "system"},
-                    *chat.messages(),
-                ),
-                stream=input.stream(),
-                temperature=input.temperature(),
-                max_tokens=input.max_tokens(),
-            )
-        elif isinstance(c, Anthropic):
-            return c.messages.create(
-                model=input.model(),
-                messages=chat.messages(),
-                stream=input.stream(),
-                temperature=input.temperature(),
-                max_tokens=input.max_tokens(),
-                system=input.system_prompt(),
-            )
-        elif isinstance(c, GenerativeModel):
-            # Change content key to parts
-            messages = chat.messages()
+                    # Convert messages to the format expected by Google's API
+                    # TODO: we could automatically do this if client is provided?
+                    contents = [
+                        {
+                            "role": "model" if x["role"] == "assistant" else x["role"],
+                            "parts": x["content"],
+                        }
+                        for x in messages
+                    ]
 
-            # Convert messages to the format expected by Google's API
-            # TODO: we could automatically do this if client is provided?
-            contents = [
-                {
-                    "role": "model" if x["role"] == "assistant" else x["role"],
-                    "parts": x["content"],
-                }
-                for x in messages
-            ]
+                    response = m.generate_content(
+                        contents=contents,
+                        stream=input.stream(),
+                        generation_config=GenerationConfig(
+                            temperature=input.temperature(),
+                            max_output_tokens=input.max_tokens(),
+                        ),
+                    )
 
-            return c.generate_content(
-                contents=contents,
-                stream=input.stream(),
-                generation_config=GenerationConfig(
-                    temperature=input.temperature(),
-                    max_output_tokens=input.max_tokens(),
-                ),
-            )
+                else:
+                    raise ValueError(f"Invalid model: {input.model()}")
 
-    @reactive.effect
-    @reactive.event(chat.user_input)
-    async def _():
-        try:
-            response = create_response()
+                if input.stream():
+                    await chat.append_message_stream(response)
+                else:
+                    await chat.append_message(
+                        response
+                    )  # defaults to role is "assistant"
 
-            if input.stream():
-                await chat.append_message_stream(response)
-            else:
-                await chat.append_message(response)  # defaults to role is "assistant"
+            except Exception as e:
+                ui.notification_show(
+                    [
+                        ui.h4("Error generating response"),
+                        ui.p(str(e)),
+                    ],
+                    type="danger",
+                    duration=999999,
+                )
+                raise e
 
-        except Exception as e:
-            ui.notification_show(
-                [
-                    ui.h4("Error generating response"),
-                    ui.p(str(e)),
-                ],
-                type="danger",
-                duration=999999,
-            )
-            raise e
+        return chat
 
 
 app = App(app_ui, server)

@@ -9,21 +9,26 @@ type Message = {
   content: string;
   role: string;
 };
-type Messages = Array<Message>;
 type MessageChunk = {
   content: string;
   role: string;
   type: "message_start" | "message_chunk" | "message_end";
 };
-
-type ChatRenderData = {
-  messages: Messages;
-  //style: "default" | "messager";
-  //icons: { [key: string]: string };
-  placeholder: string;
-  width: string;
-  fill: boolean;
+type ShinyChatMessage = {
+  id: string;
+  handler: string;
+  obj: Message | MessageChunk;
 };
+
+// https://github.com/microsoft/TypeScript/issues/28357#issuecomment-748550734
+declare global {
+  interface GlobalEventHandlersEventMap {
+    "shiny-chat-input-sent": CustomEvent<Message>;
+    "shiny-chat-append-message": CustomEvent<Message>;
+    "shiny-chat-append-message-chunk": CustomEvent<MessageChunk>;
+    "shiny-chat-clear-messages": CustomEvent;
+  }
+}
 
 const ICONS: { [key: string]: string } = {
   user: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person" viewBox="0 0 16 16"><path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6m2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0m4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4m-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10s-3.516.68-4.168 1.332c-.678.678-.83 1.418-.832 1.664z"/></svg>',
@@ -34,9 +39,10 @@ const ICONS: { [key: string]: string } = {
   send: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-send" viewBox="0 0 16 16"><path d="M15.854.146a.5.5 0 0 1 .11.54l-5.819 14.547a.75.75 0 0 1-1.329.124l-3.178-4.995L.643 7.184a.75.75 0 0 1 .124-1.33L15.314.037a.5.5 0 0 1 .54.11ZM6.636 10.07l2.761 4.338L14.13 2.576zm6.787-8.201L1.591 6.602l4.339 2.76z"/></svg>',
 };
 
-const CHAT_OUTPUT_CLASS = "shiny-chat-output";
 const CHAT_MESSAGE_TAG = "shiny-chat-message";
+const CHAT_MESSAGES_TAG = "shiny-chat-messages";
 const CHAT_INPUT_TAG = "shiny-chat-input";
+const CHAT_CONTAINER_TAG = "shiny-chat-container";
 
 class LightElement extends LitElement {
   createRenderRoot() {
@@ -63,6 +69,12 @@ class ChatMessage extends LightElement {
   }
 }
 
+class ChatMessages extends LightElement {
+  render(): ReturnType<LitElement["render"]> {
+    return html``;
+  }
+}
+
 class ChatInput extends LightElement {
   @property() placeholder = "...";
   @property() disabled = false;
@@ -78,6 +90,7 @@ class ChatInput extends LightElement {
           placeholder="${this.placeholder}"
           @keydown=${this.#sendOnEnter}
           ?disabled=${this.disabled}
+          data-shiny-no-bind-input
         ></textarea>
         <button
           class="btn btn-primary"
@@ -117,138 +130,108 @@ class ChatInput extends LightElement {
   }
 }
 
-class ShinyChatOutputBinding extends Shiny.OutputBinding {
-  find(scope: HTMLElement): JQuery<HTMLElement> {
-    return $(scope).find(`.${CHAT_OUTPUT_CLASS}`);
+class ChatContainer extends LightElement {
+  private get input(): ChatInput {
+    return this.querySelector(CHAT_INPUT_TAG) as ChatInput;
   }
 
-  renderValue(el: HTMLElement, data: ChatRenderData | null): void {
-    if (!data) {
-      el.style.visibility = "hidden";
-      return;
-    } else {
-      el.style.visibility = "inherit";
-    }
+  private get messages(): ChatMessages {
+    return this.querySelector(CHAT_MESSAGES_TAG) as ChatMessages;
+  }
 
-    // TODO: implement style, fill, etc
-    const { messages, placeholder, width } = data;
+  render(): ReturnType<LitElement["render"]> {
+    return html``;
+  }
 
-    el.style.width = width;
+  connectedCallback(): void {
+    super.connectedCallback();
 
-    // Create the message elements and input element
-    const elements: HTMLElement[] = [];
-    messages.forEach((msg) => {
-      const msgEl = createElement(CHAT_MESSAGE_TAG, msg);
-      elements.push(msgEl);
-    });
-    const inputId = el.id + "_user_input";
-    const inputEl = createElement(CHAT_INPUT_TAG, { id: inputId, placeholder });
-    elements.push(inputEl);
-
-    // Insert the elements
-    el.append(...elements);
-
-    // Attach event listeners
-    const handleAppendEvent = (e: Event) => {
-      const message = (e as CustomEvent).detail;
-      this.#appendMessage(el, message);
-    };
-
-    const handleAppendChunkEvent = (e: Event) => {
-      const message = (e as CustomEvent).detail;
-      this.#appendMessageChunk(el, message);
-    };
-
-    const handleReplaceEvent = (e: Event) => {
-      const { index, message } = (e as CustomEvent).detail;
-      const el = e.target as HTMLElement;
-      this.#replaceMessage(el, index, message);
-    };
-
-    el.addEventListener("shiny-chat-input-sent", handleAppendEvent);
-    el.addEventListener("shiny-chat-append-message", handleAppendEvent);
-    el.addEventListener(
+    // TODO: remove event listeners on disconnect
+    this.addEventListener("shiny-chat-input-sent", this.#onAppend);
+    this.addEventListener("shiny-chat-append-message", this.#onAppend);
+    this.addEventListener(
       "shiny-chat-append-message-chunk",
-      handleAppendChunkEvent
+      this.#onAppendChunk
     );
-    el.addEventListener("shiny-chat-replace-message", handleReplaceEvent);
+    this.addEventListener("shiny-chat-clear-messages", () => {
+      this.messages.innerHTML = "";
+    });
   }
 
-  // Insert the message before the input (which is always the last element)
-  #appendMessage(el: HTMLElement, message: Message, enable = true): void {
+  #onAppend(event: CustomEvent<Message>): void {
+    this.#appendMessage(event.detail);
+  }
+
+  #appendMessage(message: Message, enable = true): void {
     const msg = createElement(CHAT_MESSAGE_TAG, message);
-    const input = el.querySelector(CHAT_INPUT_TAG) as HTMLElement;
-    input.insertAdjacentElement("beforebegin", msg);
+    this.messages.appendChild(msg);
 
     // Scroll to the bottom to show the new message
-    this.#scrollToBottom(el);
+    this.#scrollToBottom();
 
     // Re-enable inputs after the message has been inserted
     if (enable) {
-      this.#enableInput(el);
+      this.#enableInput();
     }
   }
 
-  #appendMessageChunk(el: HTMLElement, message: MessageChunk): void {
+  #onAppendChunk(event: CustomEvent<MessageChunk>): void {
+    this.#appendMessageChunk(event.detail);
+  }
+
+  #appendMessageChunk(message: MessageChunk): void {
     if (message.type === "message_start") {
-      this.#appendMessage(el, message, false);
+      this.#appendMessage(message, false);
       return;
     }
     if (message.type === "message_end") {
       // end of stream; enable the input
-      this.#enableInput(el);
+      this.#enableInput();
       return;
     }
 
-    const messageContainers =
-      el.querySelectorAll<HTMLElement>(CHAT_MESSAGE_TAG);
-    const lastMessage = messageContainers[messageContainers.length - 1];
+    const messages = this.messages;
+    const lastMessage = messages.lastElementChild as HTMLElement;
     if (!lastMessage) throw new Error("No messages found in the chat output");
     const content = lastMessage.getAttribute("content");
     lastMessage.setAttribute("content", content + message.content);
 
     // Don't scroll to bottom if the user has scrolled up a bit
-    if (el.scrollTop + el.clientHeight < el.scrollHeight - 30) {
+    if (
+      messages.scrollTop + messages.clientHeight <
+      messages.scrollHeight - 50
+    ) {
       return;
     }
 
-    this.#scrollToBottom(el);
+    this.#scrollToBottom();
   }
 
-  // TODO: implement replaceMessageChunk()
-  #replaceMessage(el: HTMLElement, index: number, message: Message): void {
-    const msg = createElement(CHAT_MESSAGE_TAG, message);
-    const msgs = el.querySelectorAll(CHAT_MESSAGE_TAG);
-    if (msgs.length === 0 || msgs.length - 1 <= index) {
-      this.#appendMessage(el, message);
-      return;
-    }
-    msgs[index]?.replaceWith(msg);
+  #enableInput(): void {
+    this.input.disabled = false;
   }
 
-  #enableInput(el: HTMLElement): void {
-    const input = el.querySelector(CHAT_INPUT_TAG) as HTMLInputElement;
-    input.disabled = false;
-  }
-
-  #scrollToBottom(el: HTMLElement): void {
-    el.scrollTop = el.scrollHeight;
+  #scrollToBottom(): void {
+    this.messages.scrollTop = this.messages.scrollHeight;
   }
 }
 
 // ------- Register custom elements and shiny bindings ---------
 
 customElements.define(CHAT_MESSAGE_TAG, ChatMessage);
+customElements.define(CHAT_MESSAGES_TAG, ChatMessages);
 customElements.define(CHAT_INPUT_TAG, ChatInput);
-
-Shiny.outputBindings.register(new ShinyChatOutputBinding(), "shiny.chatOutput");
+customElements.define(CHAT_CONTAINER_TAG, ChatContainer);
 
 $(function () {
-  Shiny.addCustomMessageHandler("shinyChatMessage", function (message) {
-    const evt = new CustomEvent(message.handler, {
-      detail: message.obj,
-    });
-    const el = document.getElementById(message.id);
-    el?.dispatchEvent(evt);
-  });
+  Shiny.addCustomMessageHandler(
+    "shinyChatMessage",
+    function (message: ShinyChatMessage) {
+      const evt = new CustomEvent(message.handler, {
+        detail: message.obj,
+      });
+      const el = document.getElementById(message.id);
+      el?.dispatchEvent(evt);
+    }
+  );
 });

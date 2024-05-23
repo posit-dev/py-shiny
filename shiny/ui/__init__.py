@@ -65,6 +65,7 @@ from ._card import (
     card_footer,
     card_header,
 )
+from ._chat import Chat
 from ._download_button import download_button, download_link
 from ._include_helpers import include_css, include_js
 from ._input_action_button import input_action_button, input_action_link
@@ -130,7 +131,6 @@ from ._navs import (
 from ._notification import notification_remove, notification_show
 from ._output import (
     output_code,
-    output_chat,
     output_image,
     output_plot,
     output_table,
@@ -197,6 +197,8 @@ __all__ = (
     "card",
     "card_header",
     "card_footer",
+    # _chat
+    "Chat",
     # _accordion
     "AccordionPanel",
     "accordion",
@@ -308,7 +310,6 @@ __all__ = (
     "output_code",
     "output_text_verbatim",
     "output_table",
-    "output_chat",
     "output_ui",
     # _page
     "page_sidebar",

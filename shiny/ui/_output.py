@@ -7,7 +7,6 @@ __all__ = (
     "output_code",
     "output_text_verbatim",
     "output_table",
-    "output_chat",
     "output_ui",
 )
 
@@ -18,7 +17,6 @@ from htmltools import Tag, TagAttrValue, TagFunction, css, div, tags
 from .._docstring import add_example, no_example
 from .._namespaces import resolve_id
 from ..types import MISSING, MISSING_TYPE
-from ._html_deps_py_shiny import chat_deps
 from ._plot_output_opts import (
     BrushOpts,
     ClickOpts,
@@ -373,34 +371,6 @@ def output_table(id: str, **kwargs: TagAttrValue) -> Tag:
     * :class:`~shiny.render.table`
     """
     return tags.div({"class": "shiny-html-output"}, id=resolve_id(id), **kwargs)
-
-
-@no_example()
-def output_chat(id: str, **kwargs: TagAttrValue) -> Tag:
-    """
-    Create a output container for a chat box.
-
-    Parameters
-    ----------
-    id
-        An output id.
-    **kwargs
-        Additional attributes to add to the container.
-
-    Returns
-    -------
-    :
-
-    See Also
-    --------
-    * :class:`~shiny.render.chat`
-    """
-
-    res = tags.div(
-        {"class": "shiny-chat-output"}, chat_deps(), id=resolve_id(id), **kwargs
-    )
-
-    return as_fillable_container(as_fill_item(res))
 
 
 @add_example()

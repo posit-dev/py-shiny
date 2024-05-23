@@ -1,9 +1,12 @@
 /* Prevent the prompt from going too wide */
-.shiny-chat-output {
+shiny-chat-container {
   display: flex;
   flex-direction: column;
   margin: 0 auto;
-  overflow: auto;
+
+  shiny-chat-messages {
+    overflow: auto;
+  }
 
   .message-container {
     display: flex;

@@ -5,7 +5,6 @@ Tools for reactively rendering output for the user interface.
 from . import (  # noqa: F401
     transformer,  # pyright: ignore[reportUnusedImport]
 )
-from ._chat import chat, Chat
 from ._data_frame import (
     CellPatch,
     CellValue,
@@ -33,7 +32,6 @@ from ._render import (
 
 __all__ = (
     # TODO-future: Document which variables are exposed via different import approaches
-    "chat",
     "data_frame",
     "express",
     "text",
@@ -43,7 +41,6 @@ __all__ = (
     "table",
     "ui",
     "download",
-    "Chat",
     "DataGrid",
     "DataTable",
     "CellPatch",

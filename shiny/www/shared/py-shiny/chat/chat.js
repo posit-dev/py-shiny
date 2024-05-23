@@ -2677,9 +2677,10 @@ var ICONS = {
   system: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-gear" viewBox="0 0 16 16"><path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492M5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0"/><path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115z"/></svg>',
   send: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-send" viewBox="0 0 16 16"><path d="M15.854.146a.5.5 0 0 1 .11.54l-5.819 14.547a.75.75 0 0 1-1.329.124l-3.178-4.995L.643 7.184a.75.75 0 0 1 .124-1.33L15.314.037a.5.5 0 0 1 .54.11ZM6.636 10.07l2.761 4.338L14.13 2.576zm6.787-8.201L1.591 6.602l4.339 2.76z"/></svg>'
 };
-var CHAT_OUTPUT_CLASS = "shiny-chat-output";
 var CHAT_MESSAGE_TAG = "shiny-chat-message";
+var CHAT_MESSAGES_TAG = "shiny-chat-messages";
 var CHAT_INPUT_TAG = "shiny-chat-input";
+var CHAT_CONTAINER_TAG = "shiny-chat-container";
 var LightElement = class extends s3 {
   createRenderRoot() {
     return this;
@@ -2709,6 +2710,11 @@ __decorateClass([
 __decorateClass([
   n4()
 ], ChatMessage.prototype, "content", 2);
+var ChatMessages = class extends LightElement {
+  render() {
+    return x``;
+  }
+};
 var ChatInput = class extends LightElement {
   constructor() {
     super(...arguments);
@@ -2726,6 +2732,7 @@ var ChatInput = class extends LightElement {
           placeholder="${this.placeholder}"
           @keydown=${this.#sendOnEnter}
           ?disabled=${this.disabled}
+          data-shiny-no-bind-input
         ></textarea>
         <button
           class="btn btn-primary"
@@ -2763,108 +2770,84 @@ __decorateClass([
 __decorateClass([
   n4()
 ], ChatInput.prototype, "disabled", 2);
-var ShinyChatOutputBinding = class extends Shiny.OutputBinding {
-  find(scope) {
-    return $(scope).find(`.${CHAT_OUTPUT_CLASS}`);
+var ChatContainer = class extends LightElement {
+  get input() {
+    return this.querySelector(CHAT_INPUT_TAG);
   }
-  renderValue(el, data) {
-    if (!data) {
-      el.style.visibility = "hidden";
-      return;
-    } else {
-      el.style.visibility = "inherit";
-    }
-    const { messages, placeholder, width } = data;
-    el.style.width = width;
-    const elements = [];
-    messages.forEach((msg) => {
-      const msgEl = createElement(CHAT_MESSAGE_TAG, msg);
-      elements.push(msgEl);
-    });
-    const inputId = el.id + "_user_input";
-    const inputEl = createElement(CHAT_INPUT_TAG, { id: inputId, placeholder });
-    elements.push(inputEl);
-    el.append(...elements);
-    const handleAppendEvent = (e7) => {
-      const message = e7.detail;
-      this.#appendMessage(el, message);
-    };
-    const handleAppendChunkEvent = (e7) => {
-      const message = e7.detail;
-      this.#appendMessageChunk(el, message);
-    };
-    const handleReplaceEvent = (e7) => {
-      const { index, message } = e7.detail;
-      const el2 = e7.target;
-      this.#replaceMessage(el2, index, message);
-    };
-    el.addEventListener("shiny-chat-input-sent", handleAppendEvent);
-    el.addEventListener("shiny-chat-append-message", handleAppendEvent);
-    el.addEventListener(
+  get messages() {
+    return this.querySelector(CHAT_MESSAGES_TAG);
+  }
+  render() {
+    return x``;
+  }
+  connectedCallback() {
+    super.connectedCallback();
+    this.addEventListener("shiny-chat-input-sent", this.#onAppend);
+    this.addEventListener("shiny-chat-append-message", this.#onAppend);
+    this.addEventListener(
       "shiny-chat-append-message-chunk",
-      handleAppendChunkEvent
+      this.#onAppendChunk
     );
-    el.addEventListener("shiny-chat-replace-message", handleReplaceEvent);
+    this.addEventListener("shiny-chat-clear-messages", () => {
+      this.messages.innerHTML = "";
+    });
   }
-  // Insert the message before the input (which is always the last element)
-  #appendMessage(el, message, enable = true) {
+  #onAppend(event) {
+    this.#appendMessage(event.detail);
+  }
+  #appendMessage(message, enable = true) {
     const msg = createElement(CHAT_MESSAGE_TAG, message);
-    const input = el.querySelector(CHAT_INPUT_TAG);
-    input.insertAdjacentElement("beforebegin", msg);
-    this.#scrollToBottom(el);
+    this.messages.appendChild(msg);
+    this.#scrollToBottom();
     if (enable) {
-      this.#enableInput(el);
+      this.#enableInput();
     }
   }
-  #appendMessageChunk(el, message) {
+  #onAppendChunk(event) {
+    this.#appendMessageChunk(event.detail);
+  }
+  #appendMessageChunk(message) {
     if (message.type === "message_start") {
-      this.#appendMessage(el, message, false);
+      this.#appendMessage(message, false);
       return;
     }
     if (message.type === "message_end") {
-      this.#enableInput(el);
+      this.#enableInput();
       return;
     }
-    const messageContainers = el.querySelectorAll(CHAT_MESSAGE_TAG);
-    const lastMessage = messageContainers[messageContainers.length - 1];
+    const messages = this.messages;
+    const lastMessage = messages.lastElementChild;
     if (!lastMessage)
       throw new Error("No messages found in the chat output");
     const content = lastMessage.getAttribute("content");
     lastMessage.setAttribute("content", content + message.content);
-    if (el.scrollTop + el.clientHeight < el.scrollHeight - 30) {
+    if (messages.scrollTop + messages.clientHeight < messages.scrollHeight - 50) {
       return;
     }
-    this.#scrollToBottom(el);
+    this.#scrollToBottom();
   }
-  // TODO: implement replaceMessageChunk()
-  #replaceMessage(el, index, message) {
-    const msg = createElement(CHAT_MESSAGE_TAG, message);
-    const msgs = el.querySelectorAll(CHAT_MESSAGE_TAG);
-    if (msgs.length === 0 || msgs.length - 1 <= index) {
-      this.#appendMessage(el, message);
-      return;
-    }
-    msgs[index]?.replaceWith(msg);
+  #enableInput() {
+    this.input.disabled = false;
   }
-  #enableInput(el) {
-    const input = el.querySelector(CHAT_INPUT_TAG);
-    input.disabled = false;
-  }
-  #scrollToBottom(el) {
-    el.scrollTop = el.scrollHeight;
+  #scrollToBottom() {
+    this.messages.scrollTop = this.messages.scrollHeight;
   }
 };
 customElements.define(CHAT_MESSAGE_TAG, ChatMessage);
+customElements.define(CHAT_MESSAGES_TAG, ChatMessages);
 customElements.define(CHAT_INPUT_TAG, ChatInput);
-Shiny.outputBindings.register(new ShinyChatOutputBinding(), "shiny.chatOutput");
+customElements.define(CHAT_CONTAINER_TAG, ChatContainer);
 $(function() {
-  Shiny.addCustomMessageHandler("shinyChatMessage", function(message) {
-    const evt = new CustomEvent(message.handler, {
-      detail: message.obj
-    });
-    const el = document.getElementById(message.id);
-    el?.dispatchEvent(evt);
-  });
+  Shiny.addCustomMessageHandler(
+    "shinyChatMessage",
+    function(message) {
+      const evt = new CustomEvent(message.handler, {
+        detail: message.obj
+      });
+      const el = document.getElementById(message.id);
+      el?.dispatchEvent(evt);
+    }
+  );
 });
 /*! Bundled license information:
 
