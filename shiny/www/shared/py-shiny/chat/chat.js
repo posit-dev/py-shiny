@@ -2721,7 +2721,6 @@ var ChatInput = class extends LightElement {
     this.placeholder = "...";
     this.disabled = false;
   }
-  // TODO: prevent Shiny from binding to inputs?
   render() {
     return x`
       <div class="input-group">
@@ -2788,9 +2787,7 @@ var ChatContainer = class extends LightElement {
       "shiny-chat-append-message-chunk",
       this.#onAppendChunk
     );
-    this.addEventListener("shiny-chat-clear-messages", () => {
-      this.messages.innerHTML = "";
-    });
+    this.addEventListener("shiny-chat-clear-messages", this.#onClear);
   }
   #onAppend(event) {
     this.#appendMessage(event.detail);
@@ -2825,6 +2822,9 @@ var ChatContainer = class extends LightElement {
       return;
     }
     this.#scrollToBottom();
+  }
+  #onClear() {
+    this.messages.innerHTML = "";
   }
   #enableInput() {
     this.input.disabled = false;

@@ -1,8 +1,9 @@
 from typing import (
-    TYPE_CHECKING,
+    Any,
     Awaitable,
     Callable,
     Generic,
+    Iterable,
     Literal,
     Optional,
     Sequence,
@@ -13,7 +14,8 @@ from typing import (
 
 from htmltools import Tag
 
-from .. import _utils, reactive
+from .. import _utils, reactive, ui
+from .._app import SANITIZE_ERROR_MSG
 from .._namespaces import resolve_id
 from ..session import Session, get_current_session
 from ._chat_types import (
@@ -26,9 +28,6 @@ from ._html_deps_py_shiny import chat_deps
 from .fill import as_fill_item, as_fillable_container
 
 __all__ = ("Chat", "ChatMessage", "ChatMessageChunk")
-
-if TYPE_CHECKING:
-    from ._chat_types import AppendMessage, AppendMessageChunk, AppendMessageStream
 
 T = TypeVar("T")
 
@@ -137,7 +136,9 @@ class Chat(Generic[T]):
         return res
 
     def on_user_submit(
-        self, func: SubmitFunction | SubmitFunctionAsync
+        self,
+        func: SubmitFunction | SubmitFunctionAsync,
+        errors: Literal["sanitize", "show", "none"] = "sanitize",
     ) -> reactive.Effect_:
         """
         Register a callback to run when the user submits a message.
@@ -150,7 +151,19 @@ class Chat(Generic[T]):
         @reactive.effect
         @reactive.event(self.user_input)
         async def wrapper():
-            await afunc()
+            try:
+                await afunc()
+            except Exception as e:
+                if errors == "sanitize":
+                    ui.notification_show(
+                        SANITIZE_ERROR_MSG, type="error", duration=5000
+                    )
+                elif errors == "show":
+                    ui.notification_show(
+                        ui.markdown(str(e)), type="error", duration=5000
+                    )
+
+                raise e
 
         return wrapper
 
@@ -176,38 +189,23 @@ class Chat(Generic[T]):
         from .. import req
 
         # User input causes invalidation of the messages reactive
-        user = req(self.user_input())
-        user_msg: ChatMessage = {"content": user, "role": "user"}
+        input = req(self.user_input())
+        user_msg = ChatMessage(content=input, role="user")
 
         # Add the user message to the messages
         self._append_message(user_msg)
 
         return state.messages()
 
-    @overload
-    async def append_message(
-        self, message: "AppendMessage", *, chunk: bool = False
-    ) -> None: ...
-
-    @overload
-    async def append_message(
-        self, message: "AppendMessageChunk", *, chunk: bool = True
-    ) -> None: ...
-
-    async def append_message(
-        self, message: "AppendMessage | AppendMessageChunk", *, chunk: bool = False
-    ) -> None:
+    async def append_message(self, message: Any, *, chunk: bool = False) -> None:
         """
         Append a message to the chat.
         """
 
         if chunk:
-            # TODO: check if typing will actually yell this is something else than a message chunk
-            message = cast("AppendMessageChunk", message)
             msg = normalize_message_chunk(message)
             self._append_message_chunk(msg)
         else:
-            message = cast("AppendMessage", message)
             msg = normalize_message(message)
             self._append_message(msg)
 
@@ -218,7 +216,7 @@ class Chat(Generic[T]):
             msg_type += "-chunk"
         await self._send_custom_message(msg_type, msg)
 
-    async def append_message_stream(self, message: "AppendMessageStream"):
+    async def append_message_stream(self, message: Iterable[Any]):
         msg_iter = iter(message)
 
         # Start the message
@@ -231,26 +229,23 @@ class Chat(Generic[T]):
         # Append all the chunks (and end the message when we reach the end)
         while True:
             try:
-                msg = next(msg_iter)  # type: ignore
+                msg = next(msg_iter)
                 await self.append_message(msg, chunk=True)
             except StopIteration:
-                msg: ChatMessageChunk = {
-                    "content": "",
-                    "role": "assistant",
-                    "type": "message_end",
-                }
+                msg = ChatMessageChunk(
+                    content="",
+                    role="assistant",
+                    type="message_end",
+                )
                 await self.append_message(msg, chunk=True)
                 break
 
     # For chunk messages, accumulate the chunks until we have a signal that the message
     # has ended
     def _append_message_chunk(self, msg: ChatMessageChunk):
-        self._final_message += msg["content"] or ""
+        self._final_message += msg["content"]
         if "type" in msg and msg["type"] == "message_end":
-            final: ChatMessage = {
-                "content": self._final_message,
-                "role": msg["role"],
-            }
+            final = ChatMessage(content=self._final_message, role="assistant")
             self._append_message(final)
             self._final_message = ""
 
