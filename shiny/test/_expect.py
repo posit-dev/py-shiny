@@ -3,10 +3,7 @@ import time
 from contextlib import contextmanager
 from typing import Any, Callable, Generator
 
-__all__ = (
-    "expect_to_change",
-    "retry_with_timeout",
-)
+__all__ = ("expect_to_change",)
 
 
 @contextmanager

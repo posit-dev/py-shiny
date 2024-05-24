@@ -1,9 +1,8 @@
 import os
 from urllib.parse import urlparse
 
-from conftest import ShinyAppProc
-from controls import InputRadioButtons, InputTaskButton, OutputTextVerbatim
-from playwright.sync_api import Page, expect
+from shiny.test import Page, ShinyAppProc, expect
+from shiny.test._controls import InputRadioButtons, InputTaskButton, OutputTextVerbatim
 
 
 def get_spinner_computed_property(

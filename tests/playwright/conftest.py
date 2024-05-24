@@ -1,8 +1,11 @@
+# This file is necessary for pytest to find relative module files
+# such as examples/example_apps.py
+
 from __future__ import annotations
 
 from pathlib import PurePath
 
-from ._conftest import ScopeName, create_app_fixture
+from shiny.test.fixture import ScopeName, create_app_fixture
 
 __all__ = (
     "create_doc_example_fixture",
@@ -52,10 +55,3 @@ def create_doc_example_express_fixture(
 ):
     """Used to create app fixtures from ``app-express.py`` example apps in py-shiny/shiny/api-examples"""
     return create_doc_example_fixture(example_name, "app-express.py", scope)
-
-
-# def x_create_doc_example_fixture(example_name: str, scope: ScopeName = "module"):
-#     """Used to create app fixtures from apps in py-shiny/shiny/examples"""
-#     return create_app_fixture(
-#         here_root / "shiny/experimental/api-examples" / example_name / "app.py", scope
-#     )

@@ -6,19 +6,21 @@ except ImportError:
         " Please install it with this command:"
         "\n\n    pip install pytest-playwright"
     )
-from playwright.sync_api import Page, expect
 
 
-from ._conftest import ShinyAppProc, create_app_fixture, local_app, run_shiny_app
-from ._expect import expect_to_change, retry_with_timeout
+from ._conftest import (
+    ShinyAppProc,
+    # run_shiny_app,
+)
+
+# from ._expect import expect_to_change
+from .playwright import Page, expect, Locator
 
 __all__ = (
-    "Page",
     "expect",
+    # "run_shiny_app",
+    # "expect_to_change",
     "ShinyAppProc",
-    "create_app_fixture",
-    "local_app",
-    "run_shiny_app",
-    "expect_to_change",
-    "retry_with_timeout",
+    "Page",
+    "Locator",
 )

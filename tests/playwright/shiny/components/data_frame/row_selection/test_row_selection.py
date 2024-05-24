@@ -1,6 +1,5 @@
-from conftest import ShinyAppProc
-from controls import InputActionButton, OutputTextVerbatim
-from playwright.sync_api import Page
+from shiny.test import Page, ShinyAppProc
+from shiny.test._controls import InputActionButton, OutputTextVerbatim
 
 
 def expect_row_selection(page: Page, prefix_main: str, prefix_secondary: str):

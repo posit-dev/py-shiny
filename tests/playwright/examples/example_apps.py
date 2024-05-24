@@ -4,8 +4,9 @@ import typing
 from pathlib import PurePath
 from typing import Literal
 
-from conftest import run_shiny_app
 from playwright.sync_api import ConsoleMessage, Page
+
+from shiny.test._conftest import run_shiny_app
 
 here_tests_e2e_examples = PurePath(__file__).parent
 pyshiny_root = here_tests_e2e_examples.parent.parent.parent

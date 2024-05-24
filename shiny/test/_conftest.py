@@ -1,44 +1,19 @@
 from __future__ import annotations
 
 import datetime
-import logging
 import subprocess
 import sys
 import threading
 from pathlib import PurePath
 from types import TracebackType
-from typing import IO, Callable, Generator, List, Literal, Optional, TextIO, Type, Union
-
-import pytest
+from typing import IO, Callable, List, Optional, TextIO, Type, Union
 
 import shiny._utils
 
 __all__ = (
     "ShinyAppProc",
-    "create_app_fixture",
-    "local_app",
     "run_shiny_app",
 )
-
-from playwright.sync_api import BrowserContext, Page
-
-
-# Make a single page fixture that can be used by all tests
-@pytest.fixture(scope="session")
-# By using a single page, the browser is only launched once and all tests run in the same tab / page.
-def session_page(browser: BrowserContext) -> Page:
-    return browser.new_page()
-
-
-@pytest.fixture(scope="function")
-# By going to `about:blank`, we _reset_ the page to a known state before each test.
-# It is not perfect, but it is faster than making a new page for each test.
-# This must be done before each test
-def page(session_page: Page) -> Page:
-    session_page.goto("about:blank")
-    # Reset screen size to 1080p
-    session_page.set_viewport_size({"width": 1920, "height": 1080})
-    return session_page
 
 
 class OutputStream:
@@ -193,56 +168,3 @@ def run_shiny_app(
     if wait_for_start:
         sa.wait_until_ready(timeout_secs)
     return sa
-
-
-# Attempt up to 3 times to start the app, with a random port each time
-def local_app_fixture_gen(app: PurePath | str):
-
-    has_yielded_app = False
-    remaining_attempts = 3
-    while not has_yielded_app and remaining_attempts > 0:
-        remaining_attempts -= 1
-
-        # Make shiny process
-        sa = run_shiny_app(app, wait_for_start=False, port=0)
-        try:
-            # enter / exit shiny context manager; (closes streams on exit)
-            with sa:
-                # Wait for shiny app to start
-                # Could throw a `ConnectionError` if the port is already in use
-                sa.wait_until_ready(30)
-                # Run app!
-                has_yielded_app = True
-                yield sa
-        except ConnectionError as e:
-            if remaining_attempts == 0:
-                # Ran out of attempts!
-                raise e
-            print(f"Failed to bind to port: {e}", file=sys.stderr)
-            # Try again with a new port!
-        finally:
-            if has_yielded_app:
-                logging.warning("Application output:\n" + str(sa.stderr))
-
-
-ScopeName = Literal["session", "package", "module", "class", "function"]
-
-
-def create_app_fixture(
-    app: Union[PurePath, str],
-    scope: ScopeName = "module",
-):
-    @pytest.fixture(scope=scope)
-    def fixture_func():
-        # Pass through `yield` via `next(...)` call
-        # (`yield` must be on same line as `next`!)
-        app_gen = local_app_fixture_gen(app)
-        yield next(app_gen)
-
-    return fixture_func
-
-
-@pytest.fixture(scope="module")
-def local_app(request: pytest.FixtureRequest) -> Generator[ShinyAppProc, None, None]:
-    app_gen = local_app_fixture_gen(PurePath(request.path).parent / "app.py")
-    yield next(app_gen)

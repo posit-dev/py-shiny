@@ -49,8 +49,7 @@ as the calling `test_*.py` file.
 ```python
 
 import re
-from playwright.sync_api import Page, expect
-from conftest import ShinyAppProc
+from shiny.test import Page, ShinyAppProc, expect
 
 
 def test_airmass(page: Page, local_app: ShinyAppProc):
@@ -68,9 +67,8 @@ use it from test funcs.
 ```python
 import re
 
-from playwright.sync_api import Page, expect
-
-from conftest import ShinyAppProc, create_example_fixture
+from shiny.test import Page, ShinyAppProc
+from shiny.test._internal import create_example_fixture
 
 airmass_app = create_example_fixture("airmass")
 

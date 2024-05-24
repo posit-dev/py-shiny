@@ -1,6 +1,5 @@
-from conftest import ShinyAppProc
-from controls import InputActionButton, OutputDataFrame, OutputTextVerbatim
-from playwright.sync_api import Page
+from shiny.test import Page, ShinyAppProc
+from shiny.test._controls import InputActionButton, OutputDataFrame, OutputTextVerbatim
 
 
 def test_validate_html_columns(page: Page, local_app: ShinyAppProc) -> None:

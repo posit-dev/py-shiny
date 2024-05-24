@@ -1,6 +1,5 @@
-from conftest import ShinyAppProc
-from controls import OutputDataFrame
-from playwright.sync_api import Page
+from shiny.test import Page, ShinyAppProc
+from shiny.test._controls import OutputDataFrame
 
 
 def test_validate_data_edit_mode(page: Page, local_app: ShinyAppProc) -> None:

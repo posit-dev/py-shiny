@@ -5,10 +5,12 @@ import time
 from typing import Any, Callable
 
 import pytest
-from conftest import ShinyAppProc, create_example_fixture, expect_to_change
-from controls import InputSelect, InputSwitch
+from conftest import create_example_fixture
 from examples.example_apps import reruns, reruns_delay
-from playwright.sync_api import Locator, Page, expect
+
+from shiny.test import Locator, Page, ShinyAppProc, expect
+from shiny.test._controls import InputSelect, InputSwitch
+from shiny.test._expect import expect_to_change
 
 data_frame_app = create_example_fixture("dataframe")
 

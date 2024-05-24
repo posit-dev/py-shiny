@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from conftest import ShinyAppProc
-from controls import InputCheckboxGroup, InputRadioButtons, PatternOrStr
-from playwright.sync_api import Page, expect
+from shiny.test import Page, ShinyAppProc, expect
+from shiny.test._controls import InputCheckboxGroup, InputRadioButtons, PatternOrStr
 
 
 def test_input_checkbox_group_kitchen(page: Page, local_app: ShinyAppProc) -> None:

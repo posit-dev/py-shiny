@@ -1,6 +1,7 @@
-from conftest import ShinyAppProc, create_doc_example_core_fixture
-from controls import OutputTable
-from playwright.sync_api import Page
+from conftest import create_doc_example_core_fixture
+
+from shiny.test import Page, ShinyAppProc
+from shiny.test._controls import OutputTable
 
 app = create_doc_example_core_fixture("output_table")
 

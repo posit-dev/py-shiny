@@ -3,8 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import pytest
-from conftest import ShinyAppProc
-from controls import (
+
+from shiny.test import Page, ShinyAppProc
+from shiny.test._controls import (
     LayoutNavSetBar,
     LayoutNavSetCardPill,
     LayoutNavSetCardTab,
@@ -14,7 +15,6 @@ from controls import (
     LayoutNavsetTab,
     LayoutNavSetUnderline,
 )
-from playwright.sync_api import Page
 
 
 @pytest.mark.skip_browser("webkit")
