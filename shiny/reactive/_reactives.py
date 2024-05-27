@@ -127,7 +127,9 @@ class Value(Generic[T]):
         self._read_only: bool = read_only
         self._value_dependents: Dependents = Dependents()
         self._is_set_dependents: Dependents = Dependents()
-        self._hash: str | None = hash_digest(value) if not is_immutable(value) else None
+        self._hash: str | None = None
+        if not (is_immutable(value) or isinstance(value, MISSING_TYPE)):
+            self._hash = hash_digest(value)
 
     def __call__(self) -> T:
         return self.get()
