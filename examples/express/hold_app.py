@@ -18,11 +18,11 @@ ui.hr()
 # `ui.hold()` can be used to just suppress output
 with ui.hold():
 
-    @render.text()
+    @render.code()
     def txt():
         return f"Slider value: {input.n()}"
 
 
 ui.input_slider("n", "N", 1, 100, 50)
 
-shiny.ui.output_text("txt", inline=True)
+shiny.ui.output_code("txt", inline=True)
