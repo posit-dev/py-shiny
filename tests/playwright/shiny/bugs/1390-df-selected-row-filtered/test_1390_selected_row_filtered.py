@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import platform
 
-from conftest import ShinyAppProc
-from controls import OutputCode, OutputDataFrame
 from playwright.sync_api import Page, expect
+
+from shiny.test import ShinyAppProc
+from shiny.test._controls import OutputCode, OutputDataFrame
 
 
 def test_row_selection(page: Page, local_app: ShinyAppProc) -> None:
