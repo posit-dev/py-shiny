@@ -52,6 +52,8 @@ app_ui = ui.page_fluid(
         """
         % f"{ncpu * 4}em"
     ),
+    # Disable busy indicators
+    ui.busy_indicators.use(spinners=False, pulse=False),
     ui.h3("CPU Usage %", class_="mt-2"),
     ui.layout_sidebar(
         ui.panel_sidebar(
