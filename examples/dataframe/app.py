@@ -31,7 +31,7 @@ def app_ui(req):
         ui.input_switch("fullwidth", "Take full width", True),
         ui.output_data_frame("grid"),
         ui.panel_fixed(
-            ui.output_text_verbatim("detail"),
+            ui.output_code("detail"),
             right="10px",
             bottom="10px",
         ),
@@ -97,7 +97,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         df_copy.iat[edit["row"], edit["col"]] = edit["new_value"]
         df.set(df_copy)
 
-    @render.text
+    @render.code
     def detail():
         selected_rows = (grid.cell_selection() or {}).get("rows", ())
         if len(selected_rows) > 0:
