@@ -189,12 +189,37 @@ class GoogleNormalizer(BaseMessageNormalizer):
         return GoogleNormalizer.can_normalize(chunk)
 
 
+class OllamaNormalizer(BaseMessageNormalizer):
+    @staticmethod
+    def normalize(message: dict[str, Any]) -> ChatMessage:
+        msg = message["message"]
+        return ChatMessage(content=msg["content"], role=msg["role"])
+
+    @staticmethod
+    def normalize_chunk(chunk: dict[str, Any]) -> ChatMessageChunk:
+        msg = chunk["message"]
+        return ChatMessageChunk(content=msg["content"], role=msg["role"])
+
+    @staticmethod
+    def can_normalize(message: Any) -> bool:
+        if not isinstance(message, dict):
+            return False
+        if "message" not in message:
+            return False
+        return DictNormalizer.can_normalize(message["message"])
+
+    @staticmethod
+    def can_normalize_chunk(chunk: Any) -> bool:
+        return OllamaNormalizer.can_normalize(chunk)
+
+
 class NormalizerRegistry:
     def __init__(self) -> None:
         self._strategies: dict[str, type[BaseMessageNormalizer]] = {
             "google": GoogleNormalizer,
             "anthropic": AnthropicNormalizer,
             "openai": OpenAINormalizer,
+            "ollama": OllamaNormalizer,
             "dict": DictNormalizer,
             "string": StringNormalizer,
         }
