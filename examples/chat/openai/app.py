@@ -9,15 +9,10 @@ ui.page_opts(
 )
 
 # Create a chat instance
-chat = ui.Chat(
-    id="chat",
-    messages=[
-        {"content": "Hi! How can I help you today?", "role": "assistant"},
-    ],
-)
+chat = ui.Chat(id="chat")
 
-# Display the chat
-chat
+# Display the chat with an initial message
+chat(messages=[{"content": "Hello! How can I help you today?", "role": "assistant"}])
 
 # Create the LLM client (assumes OPENAI_API_KEY is set in the environment)
 client = OpenAI()

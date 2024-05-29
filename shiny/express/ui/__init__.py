@@ -326,6 +326,8 @@ _known_missing = {
         "output_table",
         "output_ui",
         "output_data_frame",
+        # Chat knows how to render itself in express
+        "chat_ui",
     ),
     # Items from shiny.express.ui that don't have a counterpart in shiny.ui
     "shiny.express.ui": (

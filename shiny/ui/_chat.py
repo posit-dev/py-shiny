@@ -9,7 +9,6 @@ from typing import (
     Sequence,
     TypeVar,
     cast,
-    overload,
 )
 
 from htmltools import Tag
@@ -17,7 +16,7 @@ from htmltools import Tag
 from .. import _utils, reactive, ui
 from .._app import SANITIZE_ERROR_MSG
 from .._namespaces import resolve_id
-from ..session import Session, get_current_session
+from ..session import Session, require_active_session, session_context
 from ._chat_types import (
     ChatMessage,
     ChatMessageChunk,
@@ -27,33 +26,12 @@ from ._chat_types import (
 from ._html_deps_py_shiny import chat_deps
 from .fill import as_fill_item, as_fillable_container
 
-__all__ = ("Chat", "ChatMessage", "ChatMessageChunk")
+__all__ = ("Chat", "chat_ui", "ChatMessage", "ChatMessageChunk")
 
 T = TypeVar("T")
 
 SubmitFunction = Callable[[], None]
 SubmitFunctionAsync = Callable[[], Awaitable[None]]
-
-
-class NoSessionState:
-    session: None
-    messages: Sequence[ChatMessage]
-
-    def __init__(self, messages: Sequence[ChatMessage]):
-        self.session = None
-        self.messages = messages
-
-
-# When there's a session, messages get upgraded to a reactive value
-class SessionState:
-    session: Session
-    messages: reactive.Value[Sequence[ChatMessage]]
-
-    def __init__(
-        self, session: Session, messages: reactive.Value[Sequence[ChatMessage]]
-    ):
-        self.session = session
-        self.messages = messages
 
 
 class Chat(Generic[T]):
@@ -64,76 +42,64 @@ class Chat(Generic[T]):
     def __init__(
         self,
         id: str,
-        client: Optional[T] = None,
         *,
+        client: Optional[T] = None,
+        session: Optional[Session] = None,
+    ):
+        self.id = id
+        self.client = client
+        self._session = require_active_session(session)
+
+        # Chunked messages get accumulated (using this property) before changing state
+        self._final_message = ""
+
+        with session_context(self._session):
+            # Initialize message state
+            self._messages: reactive.Value[Sequence[ChatMessage]] = reactive.Value(())
+
+            # When user input is submitted, append it to message state
+            @reactive.effect
+            @reactive.event(self.user_input)
+            def _():
+                from .. import req
+
+                input = req(self.user_input())
+                user_msg = ChatMessage(content=input, role="user")
+                self._append_message(user_msg)
+
+    def tagify(self) -> Tag:
+        return self.__call__()
+
+    def __call__(
+        self,
         messages: Sequence[ChatMessage] = (),
-        # Unfortunately, anthropic wants prompt in the .create() method, so I don't think
-        # we can guarantee this'll work as intended (for all models)
-        # system_prompt: Optional[str] = None,
         placeholder: str = "Enter a message...",
         width: str = "min(680px, 100%)",
         fill: bool = True,
-    ):
-
-        self.id = id
-        self.client = client
-        self._placeholder = placeholder
-        self._width = width
-        self._fill = fill
-
-        # Initial message state
-        self._messages_init = messages
-
-        # Reactive message state
-        # NOTE: don't read this directly, use self._get_session_state() instead
-        self._messages: reactive.Value[Sequence[ChatMessage]] | None = None
-
-        # For chunked messages
-        self._final_message = ""
-
-    def tagify(self) -> Tag:
-
-        # Can be called with or without an active session
-        state = self._get_session_state(require_session=False)
-        if isinstance(state, NoSessionState):
-            messages = state.messages
-        else:
-            messages = state.messages()
-
-        messages_tag = Tag(
-            "shiny-chat-messages",
-            *[
-                Tag(
-                    "shiny-chat-message",
-                    content=x["content"],
-                    role=x["role"],
-                )
-                for x in messages
-            ],
+    ) -> Tag:
+        if not self._is_express():
+            raise RuntimeError(
+                "The `__call__()` method of the `ui.Chat` class only works in a Shiny Express context."
+                " Use `ui.chat_ui()` instead in Shiny Core to locate the chat UI."
+            )
+        return chat_ui(
+            id=self.id,
+            messages=messages,
+            placeholder=placeholder,
+            width=width,
+            fill=fill,
         )
 
-        if self._fill:
-            messages_tag = as_fill_item(messages_tag)
+    # TODO: maybe this should be a utility function in express?
+    @staticmethod
+    def _is_express() -> bool:
+        from ..express._run import get_top_level_recall_context_manager
 
-        id = resolve_id(self.id)
-
-        res = Tag(
-            "shiny-chat-container",
-            chat_deps(),
-            messages_tag,
-            Tag(
-                "shiny-chat-input",
-                placeholder=self._placeholder,
-                id=f"{id}_user_input",
-            ),
-            {"style": f"width: {self._width}"},
-            id=id,
-        )
-
-        if self._fill:
-            res = as_fillable_container(as_fill_item(res))
-
-        return res
+        try:
+            get_top_level_recall_context_manager()
+            return True
+        except RuntimeError:
+            return False
 
     def on_user_submit(
         self,
@@ -143,8 +109,6 @@ class Chat(Generic[T]):
         """
         Register a callback to run when the user submits a message.
         """
-
-        self._get_session_state(require_session=True)
 
         afunc = _utils.wrap_async(func)
 
@@ -170,32 +134,21 @@ class Chat(Generic[T]):
     def user_input(self) -> str:
         """
         Reactively read user input
+
+        Most users will want to use `on_user_submit` instead of reading this directly.
         """
 
-        state = self._get_session_state(require_session=True)
-        session = state.session
-
         id = f"{self.id}_user_input"
-        val = session.input[id]()
+        val = self._session.input[id]()
         return cast(str, val)
 
     def messages(self) -> Sequence[ChatMessage]:
         """
         Reactively read chat messages
+
+
         """
-
-        state = self._get_session_state(require_session=True)
-
-        from .. import req
-
-        # User input causes invalidation of the messages reactive
-        input = req(self.user_input())
-        user_msg = ChatMessage(content=input, role="user")
-
-        # Add the user message to the messages
-        self._append_message(user_msg)
-
-        return state.messages()
+        return self._messages()
 
     async def append_message(self, message: Any, *, chunk: bool = False) -> None:
         """
@@ -253,53 +206,20 @@ class Chat(Generic[T]):
         self._append_messages((message,))
 
     def _append_messages(self, messages: Sequence[ChatMessage]):
-        state = self._get_session_state(require_session=True)
         with reactive.isolate():
-            msgs = tuple(state.messages()) + tuple(messages)
-            state.messages.set(msgs)
-
-    # TODO: implement replace_message
+            msgs = tuple(self._messages()) + tuple(messages)
+            self._messages.set(msgs)
 
     async def clear_messages(self):
-        state = self._get_session_state(require_session=True)
         with reactive.isolate():
-            state.messages.set(())
+            self._messages.set(())
 
         await self._send_custom_message("shiny-chat-clear-messages", None)
-
-    @overload
-    def _get_session_state(self, require_session: Literal[True]) -> SessionState: ...
-
-    @overload
-    def _get_session_state(
-        self, require_session: Literal[False]
-    ) -> SessionState | NoSessionState: ...
-
-    def _get_session_state(
-        self, require_session: bool = True
-    ) -> SessionState | NoSessionState:
-        session = get_current_session()
-
-        if session is not None:
-            if session.is_stub_session():
-                return NoSessionState(messages=self._messages_init)
-            if self._messages is None:
-                self._messages = reactive.Value(self._messages_init)
-            return SessionState(session, self._messages)
-
-        if not require_session:
-            return NoSessionState(messages=self._messages_init)
-
-        # TODO: better error message
-        raise ValueError(
-            "This function must be called from within an active Shiny session"
-        )
 
     async def _send_custom_message(
         self, handler: str, obj: ChatMessage | ChatMessageChunk | None
     ):
-        state = self._get_session_state(require_session=True)
-        await state.session.send_custom_message(
+        await self._session.send_custom_message(
             "shinyChatMessage",
             {
                 "id": self.id,
@@ -307,3 +227,50 @@ class Chat(Generic[T]):
                 "obj": obj,
             },
         )
+
+
+def chat_ui(
+    id: str,
+    messages: Sequence[ChatMessage] = (),
+    placeholder: str = "Enter a message...",
+    width: str = "min(680px, 100%)",
+    fill: bool = True,
+) -> Tag:
+    """
+    Create a chat UI component.
+    """
+
+    messages_tag = Tag(
+        "shiny-chat-messages",
+        *[
+            Tag(
+                "shiny-chat-message",
+                content=x["content"],
+                role=x["role"],
+            )
+            for x in messages
+        ],
+    )
+
+    if fill:
+        messages_tag = as_fill_item(messages_tag)
+
+    id = resolve_id(id)
+
+    res = Tag(
+        "shiny-chat-container",
+        chat_deps(),
+        messages_tag,
+        Tag(
+            "shiny-chat-input",
+            placeholder=placeholder,
+            id=f"{id}_user_input",
+        ),
+        {"style": f"width: {width}"},
+        id=id,
+    )
+
+    if fill:
+        res = as_fillable_container(as_fill_item(res))
+
+    return res
