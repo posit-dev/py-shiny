@@ -17,6 +17,7 @@ __all__ = (
 
 import asyncio
 import functools
+import pickle
 import traceback
 import warnings
 from typing import (
@@ -30,17 +31,27 @@ from typing import (
     overload,
 )
 
+from xxhash import xxh32_hexdigest
+
 from .. import _utils
 from .._docstring import add_example
 from .._utils import is_async_callable, run_coro_sync
 from .._validation import req
-from ..types import MISSING, MISSING_TYPE, ActionButtonValue, SilentException
+from ..types import MISSING, MISSING_TYPE, ActionButtonValue, Any, SilentException
 from ._core import Context, Dependents, ReactiveWarning, isolate
 
 if TYPE_CHECKING:
     from .. import Session
 
 T = TypeVar("T")
+
+
+def is_immutable(x: Any) -> bool:
+    return isinstance(x, (int, float, str, tuple, frozenset, bool))
+
+
+def hash_digest(x: Any) -> str:
+    return xxh32_hexdigest(pickle.dumps(x, protocol=pickle.HIGHEST_PROTOCOL))
 
 
 # ==============================================================================
@@ -116,6 +127,9 @@ class Value(Generic[T]):
         self._read_only: bool = read_only
         self._value_dependents: Dependents = Dependents()
         self._is_set_dependents: Dependents = Dependents()
+        self._hash: str | None = None
+        if not (is_immutable(value) or isinstance(value, MISSING_TYPE)):
+            self._hash = hash_digest(value)
 
     def __call__(self) -> T:
         return self.get()
@@ -172,14 +186,22 @@ class Value(Generic[T]):
     # The ._set() method allows setting read-only Value objects. This is used when the
     # Value is part of a session.Inputs object, and the session wants to set it.
     def _set(self, value: T) -> bool:
-        if self._value is value:
+        value_hash = None
+        if is_immutable(value) and value == self._value:
             return False
+        elif isinstance(self._value, MISSING_TYPE) and isinstance(value, MISSING_TYPE):
+            return False
+        else:
+            value_hash = hash_digest(value)
+            if value_hash == self._hash:
+                return False
 
         if isinstance(self._value, MISSING_TYPE) != isinstance(value, MISSING_TYPE):
             self._is_set_dependents.invalidate()
 
         self._value = value
         self._value_dependents.invalidate()
+        self._hash = value_hash
         return True
 
     def unset(self) -> None:
