@@ -3,6 +3,7 @@ import { unsafeHTML } from "lit-html/directives/unsafe-html.js";
 import { property } from "lit/decorators.js";
 import { createElement } from "./_utils";
 
+import { sanitize } from "dompurify";
 import { parse } from "marked";
 
 type Message = {
@@ -56,14 +57,14 @@ class ChatMessage extends LightElement {
 
   render(): ReturnType<LitElement["render"]> {
     const content_html = parse(this.content) as string;
+    const safe_html = sanitize(content_html);
 
-    // TODO: sanitize `role: user` messages?
     return html`
       <div class="message-container message-${this.role}">
         <span class="badge rounded-pill text-bg-secondary">
           ${unsafeHTML(ICONS[this.role])}
         </span>
-        <div class="message-content">${unsafeHTML(content_html)}</div>
+        <div class="message-content">${unsafeHTML(safe_html)}</div>
       </div>
     `;
   }
