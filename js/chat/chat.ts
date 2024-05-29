@@ -32,7 +32,7 @@ declare global {
 }
 
 const ICONS: { [key: string]: string } = {
-  user: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person" viewBox="0 0 16 16"><path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6m2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0m4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4m-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10s-3.516.68-4.168 1.332c-.678.678-.83 1.418-.832 1.664z"/></svg>',
+  user: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person-fill" viewBox="0 0 16 16"><path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/></svg>',
   assistant:
     '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-robot" viewBox="0 0 16 16"><path d="M6 12.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5M3 8.062C3 6.76 4.235 5.765 5.53 5.886a26.6 26.6 0 0 0 4.94 0C11.765 5.765 13 6.76 13 8.062v1.157a.93.93 0 0 1-.765.935c-.845.147-2.34.346-4.235.346s-3.39-.2-4.235-.346A.93.93 0 0 1 3 9.219zm4.542-.827a.25.25 0 0 0-.217.068l-.92.9a25 25 0 0 1-1.871-.183.25.25 0 0 0-.068.495c.55.076 1.232.149 2.02.193a.25.25 0 0 0 .189-.071l.754-.736.847 1.71a.25.25 0 0 0 .404.062l.932-.97a25 25 0 0 0 1.922-.188.25.25 0 0 0-.068-.495c-.538.074-1.207.145-1.98.189a.25.25 0 0 0-.166.076l-.754.785-.842-1.7a.25.25 0 0 0-.182-.135"/><path d="M8.5 1.866a1 1 0 1 0-1 0V3h-2A4.5 4.5 0 0 0 1 7.5V8a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1v1a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1v-.5A4.5 4.5 0 0 0 10.5 3h-2zM14 7.5V13a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7.5A3.5 3.5 0 0 1 5.5 4h5A3.5 3.5 0 0 1 14 7.5"/></svg>',
   system:
@@ -41,6 +41,7 @@ const ICONS: { [key: string]: string } = {
 };
 
 const CHAT_MESSAGE_TAG = "shiny-chat-message";
+const CHAT_PLACEHOLDER_TAG = "shiny-chat-placeholder";
 const CHAT_MESSAGES_TAG = "shiny-chat-messages";
 const CHAT_INPUT_TAG = "shiny-chat-input";
 const CHAT_CONTAINER_TAG = "shiny-chat-container";
@@ -70,6 +71,13 @@ class ChatMessage extends LightElement {
   }
 }
 
+class ChatPlaceholder extends ChatMessage {
+  @property() role = "assistant";
+  // https://github.com/n3r4zzurr0/svg-spinners/blob/main/svg-css/3-dots-fade.svg
+  @property() content =
+    '<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><style>.spinner_S1WN{animation:spinner_MGfb .8s linear infinite;animation-delay:-.8s}.spinner_Km9P{animation-delay:-.65s}.spinner_JApP{animation-delay:-.5s}@keyframes spinner_MGfb{93.75%,100%{opacity:.2}}</style><circle class="spinner_S1WN" cx="4" cy="12" r="3"/><circle class="spinner_S1WN spinner_Km9P" cx="12" cy="12" r="3"/><circle class="spinner_S1WN spinner_JApP" cx="20" cy="12" r="3"/></svg>';
+}
+
 class ChatMessages extends LightElement {
   render(): ReturnType<LitElement["render"]> {
     return html``;
@@ -78,7 +86,7 @@ class ChatMessages extends LightElement {
 
 class ChatInput extends LightElement {
   @property() placeholder = "...";
-  @property() disabled = false;
+  @property({ type: Boolean, reflect: true }) disabled = false;
 
   render(): ReturnType<LitElement["render"]> {
     return html`
@@ -147,7 +155,7 @@ class ChatContainer extends LightElement {
     super.connectedCallback();
 
     // TODO: remove event listeners on disconnect
-    this.addEventListener("shiny-chat-input-sent", this.#onAppend);
+    this.addEventListener("shiny-chat-input-sent", this.#onInputSent);
     this.addEventListener("shiny-chat-append-message", this.#onAppend);
     this.addEventListener(
       "shiny-chat-append-message-chunk",
@@ -156,11 +164,18 @@ class ChatContainer extends LightElement {
     this.addEventListener("shiny-chat-clear-messages", this.#onClear);
   }
 
+  #onInputSent(event: CustomEvent<Message>): void {
+    this.#appendMessage(event.detail);
+    this.#addPlaceholder();
+  }
+
   #onAppend(event: CustomEvent<Message>): void {
     this.#appendMessage(event.detail);
   }
 
   #appendMessage(message: Message, enable = true): void {
+    this.#removePlaceholder();
+
     const msg = createElement(CHAT_MESSAGE_TAG, message);
     this.messages.appendChild(msg);
 
@@ -171,6 +186,16 @@ class ChatContainer extends LightElement {
     if (enable) {
       this.#enableInput();
     }
+  }
+
+  #addPlaceholder(): void {
+    const placeholder = createElement(CHAT_PLACEHOLDER_TAG, {});
+    this.messages.appendChild(placeholder);
+  }
+
+  #removePlaceholder(): void {
+    const placeholder = this.messages.querySelector(CHAT_PLACEHOLDER_TAG);
+    if (placeholder) placeholder.remove();
   }
 
   #onAppendChunk(event: CustomEvent<MessageChunk>): void {
@@ -221,6 +246,7 @@ class ChatContainer extends LightElement {
 // ------- Register custom elements and shiny bindings ---------
 
 customElements.define(CHAT_MESSAGE_TAG, ChatMessage);
+customElements.define(CHAT_PLACEHOLDER_TAG, ChatPlaceholder);
 customElements.define(CHAT_MESSAGES_TAG, ChatMessages);
 customElements.define(CHAT_INPUT_TAG, ChatInput);
 customElements.define(CHAT_CONTAINER_TAG, ChatContainer);
