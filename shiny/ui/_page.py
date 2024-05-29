@@ -267,26 +267,31 @@ def page_navbar(
 
     tagAttrs: TagAttrs = {"class": pageClass}
 
+    navbar = navset_bar(
+        *args,
+        title=title,
+        id=resolve_id_or_none(id),
+        selected=selected,
+        sidebar=sidebar,
+        fillable=fillable,
+        gap=gap,
+        padding=padding,
+        position=position,
+        header=header,
+        footer=footer,
+        bg=bg,
+        inverse=inverse,
+        underline=underline,
+        collapsible=collapsible,
+        fluid=fluid,
+    )
+    # This is a page-level navbar, so opt into page-level layouts (in particular for
+    # navbar with a global sidebar)
+    navbar._is_page_level = True
+
     page_args = (
         tagAttrs,
-        navset_bar(
-            *args,
-            title=title,
-            id=resolve_id_or_none(id),
-            selected=selected,
-            sidebar=sidebar,
-            fillable=fillable,
-            gap=gap,
-            padding=padding,
-            position=position,
-            header=header,
-            footer=footer,
-            bg=bg,
-            inverse=inverse,
-            underline=underline,
-            collapsible=collapsible,
-            fluid=fluid,
-        ),
+        navbar,
         get_window_title(title, window_title=window_title),
     )
     page_kwargs = {

@@ -989,6 +989,7 @@ class NavSetBar(NavSet):
     underline: bool
     collapsible: bool
     fluid: bool
+    _is_page_level: bool
 
     def __init__(
         self,
@@ -1032,6 +1033,7 @@ class NavSetBar(NavSet):
         self.underline = underline
         self.collapsible = collapsible
         self.fluid = fluid
+        self._is_page_level = False
 
     def layout(self, nav: Tag, content: Tag) -> TagList:
         nav_container = div(
@@ -1089,13 +1091,20 @@ class NavSetBar(NavSet):
             if self.fillable:
                 content_div = as_fillable_container(as_fill_item(content_div))
         else:
+            tab_content = contents
+            if self._is_page_level:
+                # TODO: This could also be applied to the non-sidebar page layout above
+                from ._page import page_main_container
+
+                tab_content = page_main_container(*contents)
+
             content_div = div(
                 # In the fluid case, the sidebar layout should be flush (i.e.,
                 # the .container-fluid class adds padding that we don't want)
                 {"class": "container"} if not self.fluid else None,
                 layout_sidebar(
                     self.sidebar,
-                    contents,
+                    tab_content,
                     fillable=self.fillable is not False,
                     border_radius=False,
                     border=not self.fluid,
