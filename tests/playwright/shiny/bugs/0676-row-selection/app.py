@@ -45,18 +45,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @render.code
     def selected_rows():
-        from shiny import req
-
-        cell_selection = grid.input_cell_selection()
-        str(cell_selection["rows"])
-
-        cell_selection = req(grid.input_cell_selection())
-        str(cell_selection["rows"])
-
-        str(req(grid.input_cell_selection())["rows"])
-        # mydata.iloc[grid.input_cell_selection()["rows"]]
-
-        return "foo"
+        return str(grid.input_cell_selection()["rows"])
 
 
 app = App(app_ui, server, debug=False)

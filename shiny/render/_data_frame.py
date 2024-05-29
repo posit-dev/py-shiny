@@ -149,17 +149,17 @@ class data_frame(Renderer[DataFrameResult]):
     Row selection
     -------------
     When using the row selection feature, you can access the selected rows by using the
-    `<data_frame_renderer>.input_cell_selection()` method, where `<data_frame_renderer>`
+    `<data_frame_renderer>.cell_selection()` method, where `<data_frame_renderer>`
     is the `@render.data_frame` function name that corresponds with the `id=` used in
     :func:`~shiny.ui.outout_data_frame`. Internally,
-    `<data_frame_renderer>.input_cell_selection()` retrieves the selected cell
+    `<data_frame_renderer>.cell_selection()` retrieves the selected cell
     information from session's `input.<data_frame_renderer>_cell_selection()` value and
     upgrades it for consistent subsetting.
 
     To filter your pandas data frame (`df`) down to the selected rows, you can use:
 
     * `df.iloc[list(input.<data_frame_renderer>_cell_selection()["rows"])]`
-    * `df.iloc[list(<data_frame_renderer>.input_cell_selection()["rows"])]`
+    * `df.iloc[list(<data_frame_renderer>.cell_selection()["rows"])]`
     * `df.iloc[list(<data_frame_renderer>.data_view_info()["selected_rows"])]`
     * `<data_frame_renderer>.data_view(selected=True)`
 
@@ -301,10 +301,7 @@ class data_frame(Renderer[DataFrameResult]):
     Reactive value of the data frame's possible selection modes.
     """
 
-    # def input_cell_selection() : reactive.Calc_[CellSelection | None]:
-    #     print(cell_selection)
-
-    input_cell_selection: reactive.Calc_[CellSelection | None]
+    cell_selection: reactive.Calc_[CellSelection | None]
     """
     Reactive value of selected cell information.
 
@@ -420,13 +417,14 @@ class data_frame(Renderer[DataFrameResult]):
         self.selection_modes = self_selection_modes
 
         @reactive.calc
-        def self_input_cell_selection() -> CellSelection | None:
-            browser_cell_selection_input = cast(
+        def self_cell_selection() -> CellSelection | None:
+            browser_cell_selection = cast(
                 BrowserCellSelection,
                 self._get_session().input[f"{self.output_id}_cell_selection"](),
             )
+
             cell_selection = as_cell_selection(
-                browser_cell_selection_input,
+                browser_cell_selection,
                 selection_modes=self.selection_modes(),
                 data=self.data(),
                 data_view_rows=self.data_view_rows(),
@@ -454,7 +452,7 @@ class data_frame(Renderer[DataFrameResult]):
 
             return cell_selection
 
-        self.input_cell_selection = self_input_cell_selection
+        self.cell_selection = self_cell_selection
 
         @reactive.calc
         def self_input_sort() -> tuple[ColumnSort, ...]:
@@ -484,7 +482,7 @@ class data_frame(Renderer[DataFrameResult]):
         # @reactive.calc
         # def self__data_selected() -> pd.DataFrame:
         #     # browser_cell_selection
-        #     bcs = self.input_cell_selection()
+        #     bcs = self.cell_selection()
         #     if bcs is None:
         #         req(False)
         #         raise RuntimeError("This should never be reached for typing purposes")
@@ -555,7 +553,7 @@ class data_frame(Renderer[DataFrameResult]):
                 data = self._data_patched().copy(deep=False)
 
                 if selected:
-                    cell_selection = self.input_cell_selection()
+                    cell_selection = self.cell_selection()
                     if cell_selection is None:
                         rows = ()
                     else:
@@ -1069,3 +1067,18 @@ class data_frame(Renderer[DataFrameResult]):
             "updateColumnFilter",
             {"filter": filter},
         )
+
+    def input_cell_selection(self) -> CellSelection | None:
+        """
+        [Deprecated] Reactive value of selected cell information.
+
+        Please use `~shiny.render.data_frame.cell_selection` instead.
+        """
+
+        from .._deprecated import warn_deprecated
+
+        warn_deprecated(
+            "`@render.data_frame`'s `.input_cell_selection()` method is deprecated. Please use `.cell_selection()` instead."
+        )
+
+        return self.cell_selection()

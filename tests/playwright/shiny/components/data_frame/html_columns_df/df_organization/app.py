@@ -63,10 +63,7 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
 
     @render.code
     def cell_selection():  # pyright: ignore[reportUnknownParameterType]
-        cell_selection = iris_df.input_cell_selection()
-        if cell_selection is None:
-            return ""
-        return str(cell_selection["rows"])
+        return str(iris_df.cell_selection()["rows"])
 
     @reactive.effect
     @reactive.event(input.reset_df)

@@ -112,7 +112,7 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
 
     @reactive.effect
     def _():
-        print("Cell Selection:", summary_data.input_cell_selection())
+        print("Cell Selection:", summary_data.cell_selection())
 
     # @reactive.effect
     # def _():

@@ -137,6 +137,10 @@ quartodoc:
         - express.ui.modal_remove
         - express.ui.modal_button
         - express.ui.Progress          # uses class.rst
+    - title: Modules
+      desc: ""
+      contents:
+        - express.module
     - title: UI panels
       desc: Visually group together a section of UI components.
       contents:

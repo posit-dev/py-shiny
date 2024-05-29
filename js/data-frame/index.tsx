@@ -399,7 +399,14 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
       const rowsById = table.getSortedRowModel().rowsById;
       shinyValue = {
         type: "row",
-        rows: rowSelectionKeys.map((key) => rowsById[key].index),
+        rows: rowSelectionKeys
+          .map((key) => {
+            if (!(key in rowsById)) {
+              return null;
+            }
+            return rowsById[key].index;
+          })
+          .filter((x): x is number => x !== null),
       };
     } else {
       console.error("Unhandled row selection mode:", rowSelectionModes);
@@ -466,7 +473,15 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
     if (rowSelectionModes.row !== SelectionModes._rowEnum.NONE) {
       const rowSelectionKeys = rowSelection.keys().toList();
       const rowsById = table.getSortedRowModel().rowsById;
-      shinyValue = rowSelectionKeys.map((key) => rowsById[key].index).sort();
+      shinyValue = rowSelectionKeys
+        .map((key) => {
+          if (!(key in rowsById)) {
+            return null;
+          }
+          return rowsById[key].index;
+        })
+        .filter((x): x is number => x !== null)
+        .sort();
     }
     Shiny.setInputValue!(`${id}_selected_rows`, shinyValue);
   }, [id, rowSelection, rowSelectionModes, table]);
