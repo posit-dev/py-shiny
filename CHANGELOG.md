@@ -5,19 +5,9 @@ All notable changes to Shiny for Python will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [UNRELEASED]
-
-### Deprecations
-
-* Restored `@render.data_frame`'s (prematurely removed in v0.9.0) input value `input.<ID>_selected_rows()`. Please use `<ID>.cell_selection()["rows"]` and consider `input.<ID>_selected_rows()` deprecated. (#1345, #1377)
-
-* `@render.data_frame`'s method `.input_cell_selection()` has been renamed to `.cell_selection()`. Please use `.cell_selection()` and consider `.input_cell_selection()` deprecated. (#1407)
-
-# TODO-barret: Change phrasing to be `OLD INPUT VALUE` has been deprecated. Please use `DF.NEW_METHOD()` to retrieve the same information.
-* Some of `@render.data_frame`'s input values have been renamed for consistent naming. Please consider any old value deprecated. (#1374)
-  * `input.<ID>_data_view_indices` has been renamed to `input.<ID>_data_view_rows` (#1377)
-  * `input.<ID>_column_sort()` has been renamed to `input.<ID>_sort()` (#1374)
-  * `input.<ID>_column_filter()` has been renamed to `input.<ID>_filter()` (#1374)
+* `@render.data_frame`'s input value `input.<ID>_data_view_indices()` has been deprecated. Please use `<ID>.data_view_rows()` to retrieve the same information. (#1377)
+* `@render.data_frame`'s input value `input.<ID>_column_sort()` has been deprecated. Please use `<ID>.sort()` to retrieve the same information. (#1374)
+* `@render.data_frame`'s input value `input.<ID>_column_filter()` has been deprecated. Please use `<ID>.filter()` to retrieve the same information. (#1374)
 
 ### New features
 
@@ -28,6 +18,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   * `.update_sort(sort=)` to update the sorting of the data frame. (#1374)
   * `.update_filter(filter=)` to update the filtering of the data frame. (#1374)
 
+* Added `@render.data_frame`'s `.data_view_info()` which is a reactive value that contains `sort` (a list of sorted column information), `filter` (a list of filtered column information), `rows` (a list of row numbers for the sorted and filtered data frame), and `selected_rows` (`rows` that have been selected by the user). (#1374)
+
+## [UNRELEASED]
+
+### Deprecations
+
+* Restored `@render.data_frame`'s (prematurely removed in v0.9.0) input value `input.<ID>_selected_rows()`. Please use `<ID>.cell_selection()["rows"]` and consider `input.<ID>_selected_rows()` deprecated. (#1345, #1377)
+
+* `@render.data_frame`'s method `.input_cell_selection()` has been renamed to `.cell_selection()`. Please use `.cell_selection()` and consider `.input_cell_selection()` deprecated. (#1407)
+
+### New features
+
 * Added busy indicators to provide users with a visual cue when the server is busy calculating outputs or otherwise serving requests to the client. More specifically, a spinner is shown on each calculating/recalculating output, and a pulsing banner is shown at the top of the page when the app is otherwise busy. Use the new `ui.busy_indicator.options()` function to customize the appearance of the busy indicators and `ui.busy_indicator.use()` to disable/enable them. (#918)
 
 * Added support for creating modules using Shiny Express syntax, and using modules in Shiny Express apps. (#1220)
@@ -35,8 +37,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * `ui.page_*()` functions gain a `theme` argument that allows you to replace the Bootstrap CSS file with a new CSS file. `theme` can be a local CSS file, a URL, or a [shinyswatch](https://posit-dev.github.io/py-shinyswatch) theme. In Shiny Express apps, `theme` can be set via `express.ui.page_opts()`. (#1334)
 
 * `@render.data_frame`'s `<ID>.input_cell_selection()` no longer returns a `None` value and now always returns a dictionary containing both the `rows` and `cols` keys. This is done to achieve more consistent author code when working with cell selection. When the value's `type="none"`, both `rows` and `cols` are empty tuples. When `type="row"`, `cols` represents all column numbers of the data. In the future, when `type="col"`, `rows` will represent all row numbers of the data. These extra values are not available in `input.<ID>_cell_selection()` as they are independent of cells being selected and are removed to reduce information being sent to and from the browser. (#1376)
-
-* Added `@render.data_frame`'s `.data_view_info()` which is a reactive value that contains `sort` (a list of sorted column information), `filter` (a list of filtered column information), `rows` (a list of row numbers for the sorted and filtered data frame), and `selected_rows` (`rows` that have been selected by the user). (#1374)
 
 ### Bug fixes
 
