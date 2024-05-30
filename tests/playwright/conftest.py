@@ -47,6 +47,7 @@ def session_page(browser: BrowserContext) -> Page:
 def page(session_page: Page) -> Page:
     """
     Reset the given page to a known state before each test.
+
     The page is built on the session_page, which is maintained over the full session.
     The page will visit "about:blank" to reset between apps.
     The default viewport size is set to 1920 x 1080 (1080p) for each test function.
