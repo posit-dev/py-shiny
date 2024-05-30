@@ -62,7 +62,7 @@ def create_app_fixture(
     scope: ScopeName = "module",
 ):
     """
-    Create a fixture for a local Shiny app.
+    Create a fixture for a local Shiny app directory.
 
     Parameters
     ----------
