@@ -14,7 +14,8 @@ import shiny._utils
 __all__ = (
     "ShinyAppProc",
     "run_shiny_app",
-    "shiny_app_gen",
+    # For internal use only
+    # "shiny_app_gen",
 )
 
 
@@ -202,10 +203,11 @@ class ShinyAppProc:
 def run_shiny_app(
     app_file: Union[str, PurePath],
     *,
+    start_attempts: int = 3,
     port: int = 0,
     cwd: Optional[str] = None,
     wait_for_start: bool = True,
-    timeout_secs: float = 10,
+    timeout_secs: float = 30,
     bufsize: int = 64 * 1024,
 ) -> ShinyAppProc:
     """
@@ -251,10 +253,34 @@ def run_shiny_app(
     sa = ShinyAppProc(child, shiny_port, app_file=app_file)
 
     if wait_for_start:
-        sa.wait_until_ready(timeout_secs)
+        try:
+            sa.wait_until_ready(timeout_secs)
+        except ConnectionError as e:
+            logging.error(f"Failed to bind to port: {e}")
+
+            # Make sure the current process is closed
+            sa.close()
+
+            start_attempts -= 1
+            if start_attempts < 1:
+                # Ran out of attempts!
+                raise e
+
+            # Try again with a new port!
+            return run_shiny_app(
+                app_file,
+                start_attempts=start_attempts,
+                port=port,
+                cwd=cwd,
+                wait_for_start=wait_for_start,
+                timeout_secs=timeout_secs,
+                bufsize=bufsize,
+            )
+
     return sa
 
 
+# Internal method to help make fixtures a little easier to write
 # Attempt up to 3 times to start the app, with a random port each time
 def shiny_app_gen(
     app_file: PurePath | str,
@@ -263,7 +289,7 @@ def shiny_app_gen(
     port: int = 0,
     cwd: Optional[str] = None,
     # wait_for_start: bool = False,
-    timeout_secs: float = 10,
+    timeout_secs: float = 30,
     bufsize: int = 64 * 1024,
 ) -> Generator[ShinyAppProc, Any, None]:
     """
@@ -300,34 +326,22 @@ def shiny_app_gen(
     # wait_for_start
     #     If True, wait for the app to become ready before returning.
 
-    has_yielded_app = False
-    while not has_yielded_app and start_attempts > 0:
-        start_attempts -= 1
-
-        # Make shiny process
-        sa = run_shiny_app(
-            app_file,
-            wait_for_start=False,
-            port=port,
-            cwd=cwd,
-            bufsize=bufsize,
-            timeout_secs=timeout_secs,
-        )
-        try:
-            # enter / exit shiny context manager; (closes streams on exit)
-            with sa:
-                # Wait for shiny app to start
-                # Could throw a `ConnectionError` if the port is already in use
-                sa.wait_until_ready(30)
-                # Run app!
-                has_yielded_app = True
-                yield sa
-        except ConnectionError as e:
-            if start_attempts == 0:
-                # Ran out of attempts!
-                raise e
-            logging.error(f"Failed to bind to port: {e}")
-            # Try again with a new port!
-        finally:
-            if has_yielded_app:
-                logging.warning("Application output:\n" + str(sa.stderr))
+    sa = run_shiny_app(
+        app_file,
+        wait_for_start=True,
+        start_attempts=start_attempts,
+        port=port,
+        cwd=cwd,
+        bufsize=bufsize,
+        timeout_secs=timeout_secs,
+    )
+    had_connection_error: bool = False
+    try:
+        with sa:
+            yield sa
+    except ConnectionError as e:
+        had_connection_error = True
+        raise e
+    finally:
+        if not had_connection_error:
+            logging.warning("Application output:\n" + str(sa.stderr))
