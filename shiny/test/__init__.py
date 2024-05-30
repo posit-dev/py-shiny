@@ -8,20 +8,17 @@ except ImportError:
     )
 
 
-from ._conftest import (
-    ShinyAppProc,
-    # run_shiny_app,
-)
+from ._conftest import ShinyAppProc
 
 # from ._expect import expect_to_change
-from ._playwright import Page, expect, Locator
+from ._playwright import Locator, Page, expect
 
 __all__ = (
-    "expect",
     # TODO-future: Find the proper location for these methods to be returned
     # "run_shiny_app",
     # "expect_to_change",
     "ShinyAppProc",
     "Page",
     "Locator",
+    "expect",
 )

@@ -17,9 +17,11 @@ __all__ = (
 
 
 class OutputStream:
-    """Designed to wrap an IO[str] and accumulate the output using a bg thread
+    """
+    Designed to wrap an IO[str] and accumulate the output using a bg thread
 
-    Also allows for blocking waits for particular lines."""
+    Also allows for blocking waits for particular lines.
+    """
 
     def __init__(self, io: IO[str], desc: Optional[str] = None):
         self._io = io
@@ -33,7 +35,9 @@ class OutputStream:
         self._thread.start()
 
     def _run(self):
-        """Pump lines into self._lines in a tight loop."""
+        """
+        Add lines into self._lines in a tight loop.
+        """
 
         try:
             while not self._io.closed:
@@ -53,7 +57,7 @@ class OutputStream:
                 self._closed = True
                 self._cond.notify_all()
 
-    def wait_for(self, predicate: Callable[[str], bool], timeoutSecs: float) -> bool:
+    def wait_for(self, predicate: Callable[[str], bool], timeout_secs: float) -> bool:
         """
         Wait until the predicate returns True for a line in the output.
 
@@ -96,6 +100,24 @@ def dummyio() -> TextIO:
 
 
 class ShinyAppProc:
+    """
+    Class that represents a running Shiny app process.
+
+    This class is a context manager that can be used to run a Shiny app in a subprocess. It provides a way to interact
+    with the app and terminate it when it is no longer needed.
+    """
+
+    proc: subprocess.Popen[str]
+    """The subprocess object that represents the running Shiny app."""
+    port: int
+    """The port that the Shiny app is running on."""
+    url: str
+    """The URL that the Shiny app is running on."""
+    stdout: OutputStream
+    """The standard output stream of the Shiny app subprocess."""
+    stderr: OutputStream
+    """The standard error stream of the Shiny app subprocess."""
+
     def __init__(self, proc: subprocess.Popen[str], port: int):
         self.proc = proc
         self.port = port
@@ -132,17 +154,21 @@ class ShinyAppProc:
     ):
         self.close()
 
-    def wait_until_ready(self, timeoutSecs: float) -> None:
+    def wait_until_ready(self, timeout_secs: float) -> None:
         """
         Waits until the shiny app is ready to serve requests.
 
-        Parameters:
-            timeoutSecs (float): The maximum number of seconds to wait for the app to become ready.
+        Parameters
+        ----------
+        timeout_secs
+            The maximum number of seconds to wait for the app to become ready.
 
-        Raises:
-            ConnectionError: If there is an error while starting the shiny app.
-            TimeoutError: If the shiny app does not become ready within the specified timeout.
-
+        Raises
+        ------
+        ConnectionError
+            If there is an error while starting the shiny app.
+        TimeoutError
+            If the shiny app does not become ready within the specified timeout.
         """
         error_lines: List[str] = []
 
@@ -152,7 +178,7 @@ class ShinyAppProc:
                 raise ConnectionError(f"Error while starting shiny app: `{line}`")
             return "Uvicorn running on" in line
 
-        if self.stderr.wait_for(stderr_uvicorn, timeoutSecs=timeoutSecs):
+        if self.stderr.wait_for(stderr_uvicorn, timeout_secs=timeout_secs):
             return
         else:
             raise TimeoutError(

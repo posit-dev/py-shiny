@@ -8,7 +8,7 @@ __all__ = ("expect_to_change",)
 
 @contextmanager
 def expect_to_change(
-    func: Callable[[], Any], timeoutSecs: float = 10
+    func: Callable[[], Any], timeout_secs: float = 10
 ) -> Generator[None, None, None]:
     """
     Context manager that yields when the value returned by func() changes. Use this
@@ -16,15 +16,18 @@ def expect_to_change(
     all browser actions), to prevent moving onto the next step of the test until this
     one has actually taken effect.
 
-    Raises TimeoutError if the value does not change within timeoutSecs.
-
     Parameters
     ----------
     func
         A function that returns a value. The value returned by this function is
         compared to the value returned by subsequent calls to this function.
-    timeoutSecs
+    timeout_secs
         How long to wait for the value to change before raising TimeoutError.
+
+    Raises
+    ------
+    TimeoutError
+        If the value does not change within timeout_secs.
 
     Example
     -------
@@ -37,7 +40,7 @@ def expect_to_change(
     original_value = func()
     yield
 
-    @retry_with_timeout(timeoutSecs)
+    @retry_with_timeout(timeout_secs)
     def wait_for_change():
         if func() == original_value:
             raise AssertionError("Value did not change")
