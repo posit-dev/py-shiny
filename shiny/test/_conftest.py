@@ -1,18 +1,20 @@
 from __future__ import annotations
 
 import datetime
+import logging
 import subprocess
 import sys
 import threading
 from pathlib import PurePath
 from types import TracebackType
-from typing import IO, Callable, List, Optional, TextIO, Type, Union
+from typing import IO, Any, Callable, Generator, List, Optional, TextIO, Type, Union
 
 import shiny._utils
 
 __all__ = (
     "ShinyAppProc",
     "run_shiny_app",
+    "shiny_app_gen",
 )
 
 
@@ -70,7 +72,7 @@ class OutputStream:
             How long to wait for the predicate to return True before raising a
             TimeoutError.
         """
-        timeoutAt = datetime.datetime.now() + datetime.timedelta(seconds=timeoutSecs)
+        timeout_at = datetime.datetime.now() + datetime.timedelta(seconds=timeout_secs)
         pos = 0
         with self._cond:
             while True:
@@ -81,7 +83,7 @@ class OutputStream:
                 if self._closed:
                     return False
                 else:
-                    remaining = (timeoutAt - datetime.datetime.now()).total_seconds()
+                    remaining = (timeout_at - datetime.datetime.now()).total_seconds()
                     if remaining < 0 or not self._cond.wait(timeout=remaining):
                         # Timed out
                         raise TimeoutError(
@@ -240,3 +242,81 @@ def run_shiny_app(
     if wait_for_start:
         sa.wait_until_ready(timeout_secs)
     return sa
+
+
+# Attempt up to 3 times to start the app, with a random port each time
+def shiny_app_gen(
+    app_file: PurePath | str,
+    *,
+    start_attempts: int = 3,
+    port: int = 0,
+    cwd: Optional[str] = None,
+    # wait_for_start: bool = False,
+    timeout_secs: float = 10,
+    bufsize: int = 64 * 1024,
+) -> Generator[ShinyAppProc, Any, None]:
+    """
+    Run a Shiny app in a subprocess.
+
+    This app will be automatically shut down when the Generator is exhausted. A
+    generator is returned so we can utilize the context manager methods of the
+    `ShinyAppProc` class (`__enter__` and `__exit__`). This allows for the app to be
+    automatically shut down when the context manager exists. (This exit method is not
+    possible when returning a ShinyAppProc directly.)
+
+    Parameters
+    ----------
+    app
+        The path to the Shiny app file.
+    start_attempts
+        Number of attempts to try and start the Shiny app. If the random port is already
+        in use, a new random port will be chosen and another attempt will be made. If
+        all attempts have been made, an error will be raised.
+    port
+        The port to run the app on. If 0, a random port will be chosen.
+    cwd
+        The working directory to run the app in.
+    timeout_secs
+        The maximum number of seconds to wait for the app to become ready.
+    bufsize
+        The buffer size to use for stdout and stderr.
+
+    Yields
+    ------
+    :
+        A single Shiny app process
+    """
+    # wait_for_start
+    #     If True, wait for the app to become ready before returning.
+
+    has_yielded_app = False
+    while not has_yielded_app and start_attempts > 0:
+        start_attempts -= 1
+
+        # Make shiny process
+        sa = run_shiny_app(
+            app_file,
+            wait_for_start=False,
+            port=port,
+            cwd=cwd,
+            bufsize=bufsize,
+            timeout_secs=timeout_secs,
+        )
+        try:
+            # enter / exit shiny context manager; (closes streams on exit)
+            with sa:
+                # Wait for shiny app to start
+                # Could throw a `ConnectionError` if the port is already in use
+                sa.wait_until_ready(30)
+                # Run app!
+                has_yielded_app = True
+                yield sa
+        except ConnectionError as e:
+            if start_attempts == 0:
+                # Ran out of attempts!
+                raise e
+            logging.error(f"Failed to bind to port: {e}")
+            # Try again with a new port!
+        finally:
+            if has_yielded_app:
+                logging.warning("Application output:\n" + str(sa.stderr))
