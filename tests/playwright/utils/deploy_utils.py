@@ -11,9 +11,9 @@ from typing import Any, Callable, TypeVar
 
 import pytest
 import requests
-
-from shiny.test.fixture import local_app_fixture_gen
 from conftest import ScopeName
+
+from shiny.test._conftest import shiny_app_gen
 
 is_interactive = hasattr(sys, "ps1")
 reruns = 1 if is_interactive else 3
@@ -183,7 +183,7 @@ def create_deploys_app_url_fixture(
         deploy_location = request.param
 
         if deploy_location == LOCAL_LOCATION:
-            shinyapp_proc_gen = local_app_fixture_gen(app_file)
+            shinyapp_proc_gen = shiny_app_gen(app_file)
             # Return the `url`
             yield next(shinyapp_proc_gen).url
         elif deploy_location in deploy_locations:
