@@ -17,7 +17,7 @@ def test_row_selection(page: Page, local_app: ShinyAppProc) -> None:
 
     expect(row3).to_be_visible()
     expect(row3.locator("td:nth-child(1)")).to_have_text("three")
-    expect(selected_rows_loc).to_have_text("--")
+    expect(selected_rows_loc).to_have_text("()")
 
     expect(result_loc).not_to_be_attached()
     row3.click()

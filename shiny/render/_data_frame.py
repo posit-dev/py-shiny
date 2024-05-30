@@ -3,8 +3,8 @@ from __future__ import annotations
 import warnings
 
 # TODO-barret; Should `.input_cell_selection()` ever return None? Is that value even helpful? Empty lists would be much more user friendly.
-# For next release: Agreed to remove `None` type.
-# For this release: Immediately make PR to remove `.input_` from `.input_cell_selection()`
+# * For next release: Agreed to remove `None` type.
+# * For this release: Immediately make PR to remove `.input_` from `.input_cell_selection()`
 # TODO-barret-render.data_frame; Docs
 # TODO-barret-render.data_frame; Add examples!
 from typing import (
@@ -301,7 +301,7 @@ class data_frame(Renderer[DataFrameResult]):
     Reactive value of the data frame's possible selection modes.
     """
 
-    cell_selection: reactive.Calc_[CellSelection | None]
+    cell_selection: reactive.Calc_[CellSelection]
     """
     Reactive value of selected cell information.
 
@@ -323,7 +323,7 @@ class data_frame(Renderer[DataFrameResult]):
 
     data_view_rows: reactive.Calc_[tuple[int, ...]]
     """
-    Reactive value of the data frame's view indices.
+    Reactive value of the data frame's user view row numbers.
 
     This value is a wrapper around `input.<id>_data_view_rows()`, where `<id>` is the
     `id` of the data frame output.
@@ -417,7 +417,7 @@ class data_frame(Renderer[DataFrameResult]):
         self.selection_modes = self_selection_modes
 
         @reactive.calc
-        def self_cell_selection() -> CellSelection | None:
+        def self_cell_selection() -> CellSelection:
             browser_cell_selection = cast(
                 BrowserCellSelection,
                 self._get_session().input[f"{self.output_id}_cell_selection"](),
@@ -430,25 +430,6 @@ class data_frame(Renderer[DataFrameResult]):
                 data_view_rows=self.data_view_rows(),
                 data_view_cols=tuple(range(self.data().shape[1])),
             )
-            # If it is an empty selection, return `None`
-            # if cell_selection["type"] == "none":
-            #     return None
-            # elif cell_selection["type"] == "row":
-            #     if len(cell_selection["rows"]) == 0:
-            #         return None
-            # elif cell_selection["type"] == "col":
-            #     if len(cell_selection["cols"]) == 0:
-            #         return None
-            # elif cell_selection["type"] == "rect":
-            #     if (
-            #         len(cell_selection["rows"]) == 0
-            #         and len(cell_selection["cols"]) == 0
-            #     ):
-            #         return None
-            # else:
-            #     raise ValueError(
-            #         f"Unexpected cell selection type: {cell_selection['type']}"
-            #     )
 
             return cell_selection
 
@@ -553,11 +534,7 @@ class data_frame(Renderer[DataFrameResult]):
                 data = self._data_patched().copy(deep=False)
 
                 if selected:
-                    cell_selection = self.cell_selection()
-                    if cell_selection is None:
-                        rows = ()
-                    else:
-                        rows = cell_selection.get("rows", ())
+                    rows = self.cell_selection()["rows"]
                 else:
                     rows = self.data_view_rows()
 
@@ -996,8 +973,7 @@ class data_frame(Renderer[DataFrameResult]):
             for val in sort:
                 val_dict: ColumnSort
                 if isinstance(val, int):
-
-                    col: pd.Series[Any] = data[val]
+                    col: pd.Series[Any] = data.iloc[:, val]
                     desc = serialize_numpy_dtype(col)["type"] == "numeric"
                     val_dict = {"col": val, "desc": desc}
                 val_dict: ColumnSort = (
@@ -1072,7 +1048,7 @@ class data_frame(Renderer[DataFrameResult]):
         """
         [Deprecated] Reactive value of selected cell information.
 
-        Please use `~shiny.render.data_frame.cell_selection` instead.
+        Please use `~shiny.render.data_frame`'s `.cell_selection()` method instead.
         """
 
         from .._deprecated import warn_deprecated

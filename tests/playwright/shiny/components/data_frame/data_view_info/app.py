@@ -68,10 +68,7 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
 
     @render.code
     def selected_rows():
-        cell_selection = penguins_df.input_cell_selection()
-        if cell_selection is None:
-            return ""
-        return str(cell_selection.get("rows", ()))
+        return str(penguins_df.cell_selection()["rows"])
 
 
 def server(input: Inputs, output: Outputs, session: Session):

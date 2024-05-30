@@ -22,15 +22,7 @@ def server(input: Inputs):
 
     @render.text
     def cell_selection():
-        cell_selection = df1.cell_selection()
-        if cell_selection is None:
-            return "No cells selected"
-        if cell_selection["type"] != "row":
-            raise ValueError(
-                f"Cell selection type is not 'row': {cell_selection['type']}"
-            )
-        rows = cell_selection["rows"]
-        return f"Cell selection rows: {rows}"
+        return f"Cell selection rows: {df1.cell_selection()['rows']}"
 
 
 app = App(app_ui, server)

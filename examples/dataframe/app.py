@@ -99,11 +99,9 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @render.text
     def detail():
-        return grid.data_view(selected=True)
-        # selected_rows = grid.cell_selection()["rows"]
-        # if len(selected_rows) > 0:
-        #     # "split", "records", "index", "columns", "values", "table"
-        #     return df().iloc[list(selected_rows)]
+        selected_rows = grid.cell_selection()["rows"]
+        if len(selected_rows) > 0:
+            return df().iloc[list(selected_rows)]
 
 
 app = App(app_ui, server)
