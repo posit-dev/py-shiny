@@ -4,31 +4,41 @@ shiny-chat-container {
   margin: 0 auto;
 
   shiny-chat-messages {
-    overflow: auto;
-  }
-
-  .message-container {
-    display: flex;
-    margin-bottom: 1rem;
-    gap: 1rem;
-
-    /* Make badges more circular */
-    .badge {
-      --bs-badge-padding-y: 0.65em;
-      height: fit-content;
-    }
-  }
-
-  .message-content {
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    p:last-child {
-      margin-bottom: 0;
+    gap: 1rem;
+    overflow: auto;
+
+    > * {
+      display: flex;
+      gap: 1rem;
+
+      /* Make badges more circular */
+      .badge {
+        --bs-badge-padding-y: 0.65em;
+        height: fit-content;
+      }
     }
-    pre code {
-      /* Fix alignment of first line in a code block */
-      padding: 0;
+
+    .message-content {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      p:last-child {
+        margin-bottom: 0;
+      }
+      pre code {
+        /* Fix alignment of first line in a code block */
+        padding: 0;
+      }
+      &.message-user {
+        margin-left: auto;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.9em;
+        border-radius: var(--bs-border-radius-pill, 50em);
+        background-color: var(--bs-primary-bg-subtle, #cce5f3);
+        color: var(--bs-primary-text-emphasis, #0d6efd);
+      }
     }
   }
 
