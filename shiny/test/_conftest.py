@@ -109,6 +109,8 @@ class ShinyAppProc:
     with the app and terminate it when it is no longer needed.
     """
 
+    file: PurePath
+    """The path to the Shiny app file."""
     proc: subprocess.Popen[str]
     """The subprocess object that represents the running Shiny app."""
     port: int
@@ -120,13 +122,21 @@ class ShinyAppProc:
     stderr: OutputStream
     """The standard error stream of the Shiny app subprocess."""
 
-    def __init__(self, proc: subprocess.Popen[str], port: int):
+    def __init__(
+        self,
+        proc: subprocess.Popen[str],
+        port: int,
+        *,
+        app_file: PurePath | str,
+    ):
         self.proc = proc
         self.port = port
         self.url = f"http://127.0.0.1:{port}/"
         self.stdout = OutputStream(proc.stdout or dummyio())
         self.stderr = OutputStream(proc.stderr or dummyio())
         threading.Thread(group=None, target=self._run, daemon=True).start()
+
+        self.file = PurePath(app_file)
 
     def _run(self) -> None:
         self.proc.wait()
@@ -238,7 +248,8 @@ def run_shiny_app(
 
     # TODO: Detect early exit
 
-    sa = ShinyAppProc(child, shiny_port)
+    sa = ShinyAppProc(child, shiny_port, app_file=app_file)
+
     if wait_for_start:
         sa.wait_until_ready(timeout_secs)
     return sa
