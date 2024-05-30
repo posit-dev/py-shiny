@@ -1,10 +1,12 @@
 import { LitElement, html } from "lit";
 import { unsafeHTML } from "lit-html/directives/unsafe-html.js";
 import { property } from "lit/decorators.js";
-import { createElement } from "./_utils";
 
+import ClipboardJS from "clipboard";
 import { sanitize } from "dompurify";
-import { parse } from "marked";
+
+import { marked } from "./_highlight";
+import { createElement } from "./_utils";
 
 type Message = {
   content: string;
@@ -57,7 +59,7 @@ class ChatMessage extends LightElement {
   @property() content = "...";
 
   render(): ReturnType<LitElement["render"]> {
-    const content_html = parse(this.content) as string;
+    const content_html = marked.parse(this.content) as string;
     const safe_html = sanitize(content_html);
 
     return html`
@@ -68,6 +70,32 @@ class ChatMessage extends LightElement {
         <div class="message-content">${unsafeHTML(safe_html)}</div>
       </div>
     `;
+  }
+
+  updated(changedProperties: Map<string | number | symbol, unknown>): void {
+    if (changedProperties.has("content")) {
+      this.#enableCodeCopy();
+    }
+  }
+
+  // When content is parsed in the render() method(), and code is detected/added, a copy
+  // button is added to the code block. This method enables the copy-to-clipboard
+  // functionality.
+  #enableCodeCopy(): void {
+    const btn = this.querySelector(".code-copy-button");
+    if (!btn) return;
+    this.querySelectorAll(".code-copy-button").forEach((btn) => {
+      const code = btn.parentElement as HTMLElement;
+      const clipboard = new ClipboardJS(btn, { target: () => code });
+      clipboard.on("success", function (e: ClipboardJS.Event) {
+        btn.classList.add("code-copy-button-checked");
+        setTimeout(
+          () => btn.classList.remove("code-copy-button-checked"),
+          2000
+        );
+        e.clearSelection();
+      });
+    });
   }
 }
 
@@ -173,7 +201,7 @@ class ChatContainer extends LightElement {
     this.#appendMessage(event.detail);
   }
 
-  #appendMessage(message: Message, enable = true): void {
+  #appendMessage(message: Message, finalize = true): void {
     this.#removePlaceholder();
 
     const msg = createElement(CHAT_MESSAGE_TAG, message);
@@ -182,8 +210,7 @@ class ChatContainer extends LightElement {
     // Scroll to the bottom to show the new message
     this.#scrollToBottom();
 
-    // Re-enable inputs after the message has been inserted
-    if (enable) {
+    if (finalize) {
       this.#enableInput();
     }
   }
