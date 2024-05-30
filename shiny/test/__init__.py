@@ -14,10 +14,11 @@ from ._conftest import (
 )
 
 # from ._expect import expect_to_change
-from .playwright import Page, expect, Locator
+from ._playwright import Page, expect, Locator
 
 __all__ = (
     "expect",
+    # TODO-future: Find the proper location for these methods to be returned
     # "run_shiny_app",
     # "expect_to_change",
     "ShinyAppProc",

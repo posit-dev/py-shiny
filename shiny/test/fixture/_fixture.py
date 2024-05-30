@@ -18,6 +18,14 @@ __all__ = (
 
 # Attempt up to 3 times to start the app, with a random port each time
 def local_app_fixture_gen(app: PurePath | str):
+    """
+    Generate a local Shiny app fixture.
+
+    Parameters
+    ----------
+    app
+        The path to the Shiny app file.
+    """
 
     has_yielded_app = False
     remaining_attempts = 3
@@ -53,10 +61,19 @@ def create_app_fixture(
     app: Union[PurePath, str],
     scope: ScopeName = "module",
 ):
+    """
+    Create a fixture for a local Shiny app.
+
+    Parameters
+    ----------
+    app
+        The path to the Shiny app file.
+    scope
+        The scope of the fixture.
+    """
+
     @pytest.fixture(scope=scope)
     def fixture_func():
-        # Pass through `yield` via `next(...)` call
-        # (`yield` must be on same line as `next`!)
         app_gen = local_app_fixture_gen(app)
         yield next(app_gen)
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from shiny.test import Page, ShinyAppProc, expect
 from shiny.test._controls import InputFile, OutputTable, OutputTextVerbatim
-from shiny.test.playwright import FilePayload
+from shiny.test._playwright import FilePayload
 
 
 def test_input_file_kitchen(page: Page, local_app: ShinyAppProc) -> None:

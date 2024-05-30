@@ -68,7 +68,7 @@ use it from test funcs.
 import re
 
 from shiny.test import Page, ShinyAppProc
-from shiny.test._internal import create_example_fixture
+from conftest import create_example_fixture
 
 airmass_app = create_example_fixture("airmass")
 

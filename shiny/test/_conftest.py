@@ -54,6 +54,18 @@ class OutputStream:
                 self._cond.notify_all()
 
     def wait_for(self, predicate: Callable[[str], bool], timeoutSecs: float) -> bool:
+        """
+        Wait until the predicate returns True for a line in the output.
+
+        Parameters
+        ----------
+        predicate
+            A function that takes a line of output and returns True if the line
+            satisfies the condition.
+        timeoutSecs
+            How long to wait for the predicate to return True before raising a
+            TimeoutError.
+        """
         timeoutAt = datetime.datetime.now() + datetime.timedelta(seconds=timeoutSecs)
         pos = 0
         with self._cond:
@@ -100,6 +112,11 @@ class ShinyAppProc:
             self.proc.stderr.close()
 
     def close(self) -> None:
+        """
+        Closes the connection and terminates the process.
+
+        This method is responsible for closing the connection and terminating the process associated with it.
+        """
         # from time import sleep
         # sleep(0.5)
         self.proc.terminate()
@@ -116,12 +133,23 @@ class ShinyAppProc:
         self.close()
 
     def wait_until_ready(self, timeoutSecs: float) -> None:
+        """
+        Waits until the shiny app is ready to serve requests.
+
+        Parameters:
+            timeoutSecs (float): The maximum number of seconds to wait for the app to become ready.
+
+        Raises:
+            ConnectionError: If there is an error while starting the shiny app.
+            TimeoutError: If the shiny app does not become ready within the specified timeout.
+
+        """
         error_lines: List[str] = []
 
         def stderr_uvicorn(line: str) -> bool:
             error_lines.append(line)
             if "error while attempting to bind on address" in line:
-                raise ConnectionError(f"Error while staring shiny app: `{line}`")
+                raise ConnectionError(f"Error while starting shiny app: `{line}`")
             return "Uvicorn running on" in line
 
         if self.stderr.wait_for(stderr_uvicorn, timeoutSecs=timeoutSecs):
@@ -142,6 +170,24 @@ def run_shiny_app(
     timeout_secs: float = 10,
     bufsize: int = 64 * 1024,
 ) -> ShinyAppProc:
+    """
+    Run a Shiny app in a subprocess.
+
+    Parameters
+    ----------
+    app_file
+        The path to the Shiny app file.
+    port
+        The port to run the app on. If 0, a random port will be chosen.
+    cwd
+        The working directory to run the app in.
+    wait_for_start
+        If True, wait for the app to become ready before returning.
+    timeout_secs
+        The maximum number of seconds to wait for the app to become ready.
+    bufsize
+        The buffer size to use for stdout and stderr.
+    """
     shiny_port = port if port != 0 else shiny._utils.random_port()
 
     child = subprocess.Popen(

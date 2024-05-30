@@ -18,8 +18,8 @@ from .._typing_extensions import (
     assert_type,  # pyright: ignore[reportPrivateImportUsage]
 )
 from ..types import MISSING, MISSING_TYPE
-from .playwright import FilePayload, FloatRect, Locator, Page, Position
-from .playwright import expect as playwright_expect
+from ._playwright import FilePayload, FloatRect, Locator, Page, Position
+from ._playwright import expect as playwright_expect
 
 """
 Questions:
