@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-import pytest
-
 from shiny.test import Page, ShinyAppProc
 from shiny.test._controls import (
     LayoutNavSetBar,
@@ -17,7 +15,6 @@ from shiny.test._controls import (
 )
 
 
-@pytest.mark.skip_browser("webkit")
 def test_nav(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 
