@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### [UNRELEASED]
 
+### Breaking Changes
+
+### New features
+
+### Bug fixes
+
+### Other changes
+
+### [0.10.2]
+
 ### Bug fixes
 
 * Fixed an issue with output spinners only showing for a split second. (#1429)
