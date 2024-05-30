@@ -5,22 +5,44 @@ All notable changes to Shiny for Python will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [UNRELEASED]
+
+### Breaking Changes
+
+* `@render.data_frame`'s `.cell_selection()` will no longer return `None` when the selection mode is `"none"`. In addition, missing `rows` or `cols` information will be populated with appropiate values. This allows for consistent handling of the cell selection object. (#1374)
+
 * `@render.data_frame`'s input value `input.<ID>_data_view_indices()` has been deprecated. Please use `<ID>.data_view_rows()` to retrieve the same information. (#1377)
+
 * `@render.data_frame`'s input value `input.<ID>_column_sort()` has been deprecated. Please use `<ID>.sort()` to retrieve the same information. (#1374)
+
 * `@render.data_frame`'s input value `input.<ID>_column_filter()` has been deprecated. Please use `<ID>.filter()` to retrieve the same information. (#1374)
 
 ### New features
 
 * `@render.data_frame` has added a few new methods:
-  * `.data_view_rows()` which is a reactive value representing the sorted and filtered row numbers. This value wraps `input.<ID>_data_view_rows()`(#1374)
-  * `.input_sort()` which is a reactive value representing the sorted column information (dictionaries containing `col: int` and `desc: bool`). This value wraps `input.<ID>_sort()`. (#1374)
-  * `.input_filter()` which is a reactive value representing the filtered column information (dictionaries containing `col: int` and `value` which is either a string or a length 2 array of at least one non-`None` number). This value wraps `input.<ID>_filter()`. (#1374)
-  * `.update_sort(sort=)` to update the sorting of the data frame. (#1374)
-  * `.update_filter(filter=)` to update the filtering of the data frame. (#1374)
+  * `.data_view_rows()` is a reactive value representing the sorted and filtered row numbers. This value wraps `input.<ID>_data_view_rows()`(#1374)
+  * `.sort()` is a reactive value representing the sorted column information (dictionaries containing `col: int` and `desc: bool`). This value wraps `input.<ID>_sort()`. (#1374)
+  * `.filter()` is a reactive value representing the filtered column information (dictionaries containing `col: int` and `value` which is either a string or a length 2 array of at least one non-`None` number). This value wraps `input.<ID>_filter()`. (#1374)
+  * `.update_sort(sort=)` allows app authors to programmatically update the sorting of the data frame. (#1374)
+  * `.update_filter(filter=)` allows app authors to programmatically update the filtering of the data frame. (#1374)
 
-* Added `@render.data_frame`'s `.data_view_info()` which is a reactive value that contains `sort` (a list of sorted column information), `filter` (a list of filtered column information), `rows` (a list of row numbers for the sorted and filtered data frame), and `selected_rows` (`rows` that have been selected by the user). (#1374)
+### Bug fixes
 
-## [UNRELEASED]
+### Other changes
+
+## [0.10.2]
+
+### Bug fixes
+
+* Fixed an issue with output spinners only showing for a split second. (#1429)
+
+## [0.10.1] - 2024-05-23
+
+### Bug fixes
+
+* Fixed an issue with opacity dimming occurring too often/quickly when outputs are recalculating. (#1415)
+
+## [0.10.0] - 2024-05-23
 
 ### Deprecations
 

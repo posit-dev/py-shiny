@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-import pytest
 from conftest import ShinyAppProc
 from controls import (
     LayoutNavSetBar,
@@ -17,7 +16,6 @@ from controls import (
 from playwright.sync_api import Page
 
 
-@pytest.mark.skip_browser("webkit")
 def test_nav(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 
