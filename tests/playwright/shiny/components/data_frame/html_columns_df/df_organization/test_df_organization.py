@@ -58,7 +58,7 @@ def test_dataframe_organization_methods(page: Page, local_app: ShinyAppProc) -> 
     data_view_selected_true.expect_value("[]")
     data_view_selected_false.expect_value("[ 51 100]")
     cell_selection.expect_value("()")
-    # filter programatically
+    # filter programmatically
     reset_data_frame()
     InputActionButton(page, "update_filter").click()
     data_view_rows.expect_value("(3, 4, 5)")
