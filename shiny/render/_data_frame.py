@@ -1057,4 +1057,8 @@ class data_frame(Renderer[DataFrameResult]):
             "`@render.data_frame`'s `.input_cell_selection()` method is deprecated. Please use `.cell_selection()` instead."
         )
 
+        cell_selection = self.cell_selection()
+        if cell_selection["type"] == "none":
+            return None
+
         return self.cell_selection()
