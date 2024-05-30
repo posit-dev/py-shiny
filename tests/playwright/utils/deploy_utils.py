@@ -12,7 +12,8 @@ from typing import Any, Callable, TypeVar
 import pytest
 import requests
 
-from shiny.test.fixture import ScopeName, local_app_fixture_gen
+from shiny.test.fixture import local_app_fixture_gen
+from conftest import ScopeName
 
 is_interactive = hasattr(sys, "ps1")
 reruns = 1 if is_interactive else 3

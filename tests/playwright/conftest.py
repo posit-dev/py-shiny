@@ -5,7 +5,8 @@ from __future__ import annotations
 
 from pathlib import PurePath
 
-from shiny.test.fixture import ScopeName, create_app_fixture
+from shiny.test.fixture import create_app_fixture
+from shiny.test.fixture._fixture import ScopeName as ScopeName
 
 __all__ = (
     "create_doc_example_fixture",
