@@ -1,9 +1,10 @@
 from pathlib import Path
 
 import pytest
-from conftest import run_shiny_app
-from controls import Card, OutputCode, ValueBox
-from playwright.sync_api import Page
+
+from shiny.test import Page, ShinyAppProc
+from shiny.test._conftest import run_shiny_app
+from shiny.test._controls import Card, OutputCode, ValueBox
 
 
 @pytest.mark.parametrize(
@@ -14,9 +15,11 @@ from playwright.sync_api import Page
     ],
 )
 def test_card_input(page: Page, app_path: str, sel_card: str, sel_vb: str) -> None:
-    app = run_shiny_app(Path(__file__).parent / app_path)
+    sa: ShinyAppProc = run_shiny_app(
+        Path(__file__).parent / app_path, wait_for_start=True
+    )
 
-    page.goto(app.url)
+    page.goto(sa.url)
 
     card = Card(page, sel_card)
     vb = ValueBox(page, sel_vb)

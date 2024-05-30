@@ -1,12 +1,13 @@
 import pytest
-from controls import OutputDataFrame
-from playwright.sync_api import Page
 from utils.deploy_utils import (
     create_deploys_app_url_fixture,
     reruns,
     reruns_delay,
     skip_if_not_chrome,
 )
+
+from shiny.test import Page
+from shiny.test._controls import OutputDataFrame
 
 app_url = create_deploys_app_url_fixture("shiny-express-dataframe")
 

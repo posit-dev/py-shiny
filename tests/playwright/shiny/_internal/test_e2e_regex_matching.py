@@ -1,6 +1,6 @@
 import re
 
-from controls import _attr_match_str, _style_match_str, _xpath_match_str
+from shiny.test._controls import _attr_match_str, _style_match_str, _xpath_match_str
 
 
 def test_style_match_str() -> None:

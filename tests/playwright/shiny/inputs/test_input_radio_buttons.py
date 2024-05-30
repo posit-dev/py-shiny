@@ -1,6 +1,7 @@
-from conftest import ShinyAppProc, create_doc_example_core_fixture
-from controls import InputRadioButtons
-from playwright.sync_api import Page, expect
+from conftest import create_doc_example_core_fixture
+
+from shiny.test import Page, ShinyAppProc, expect
+from shiny.test._controls import InputRadioButtons
 
 app = create_doc_example_core_fixture("input_radio_buttons")
 

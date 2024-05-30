@@ -1,11 +1,12 @@
 import pytest
-from playwright.sync_api import Page, expect
 from utils.deploy_utils import (
     create_deploys_app_url_fixture,
     reruns,
     reruns_delay,
     skip_if_not_chrome,
 )
+
+from shiny.test import Page, expect
 
 app_url = create_deploys_app_url_fixture("shiny_client_console_error")
 

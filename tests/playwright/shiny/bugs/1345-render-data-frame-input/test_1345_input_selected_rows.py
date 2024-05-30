@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from conftest import ShinyAppProc
-from controls import OutputDataFrame, OutputTextVerbatim
-from playwright.sync_api import Page
+from shiny.test import Page, ShinyAppProc
+from shiny.test._controls import OutputDataFrame, OutputTextVerbatim
 
 
 def test_row_selection(page: Page, local_app: ShinyAppProc) -> None:

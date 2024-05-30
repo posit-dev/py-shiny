@@ -1,5 +1,4 @@
-from conftest import ShinyAppProc
-from playwright.sync_api import Page, expect
+from shiny.test import Page, ShinyAppProc, expect
 
 
 def test_implicit_register(page: Page, local_app: ShinyAppProc) -> None:
