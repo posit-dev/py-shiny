@@ -41,7 +41,7 @@ from ._sidebar import Sidebar, SidebarOpen, layout_sidebar
 from ._tag import consolidate_attrs
 from ._utils import get_window_title
 from .css import CssUnit, as_css_padding, as_css_unit
-from .fill._fill import as_fillable_container
+from .fill._fill import add_fill_classes, as_fillable_container
 
 page_sidebar_default: SidebarOpen = SidebarOpen(desktop="open", mobile="always")
 
@@ -127,7 +127,7 @@ def page_sidebar(
         navbar_title,
         layout_sidebar(
             sidebar,
-            *children,
+            page_main_container(*children),
             attrs,
             fillable=fillable,
             border=False,
@@ -139,6 +139,14 @@ def page_sidebar(
         lang=lang,
         theme=theme,
         fillable_mobile=fillable_mobile,
+    )
+
+
+def page_main_container(*args: TagChild) -> Tag:
+    return add_fill_classes(
+        tags.main({"class": "bslib-page-main bslib-gap-spacing"}, *args),
+        fill_item=True,
+        fillable_container=True,
     )
 
 
@@ -257,26 +265,31 @@ def page_navbar(
 
     tagAttrs: TagAttrs = {"class": pageClass}
 
+    navbar = navset_bar(
+        *args,
+        title=title,
+        id=resolve_id_or_none(id),
+        selected=selected,
+        sidebar=sidebar,
+        fillable=fillable,
+        gap=gap,
+        padding=padding,
+        position=position,
+        header=header,
+        footer=footer,
+        bg=bg,
+        inverse=inverse,
+        underline=underline,
+        collapsible=collapsible,
+        fluid=fluid,
+    )
+    # This is a page-level navbar, so opt into page-level layouts (in particular for
+    # navbar with a global sidebar)
+    navbar._is_page_level = True
+
     page_args = (
         tagAttrs,
-        navset_bar(
-            *args,
-            title=title,
-            id=resolve_id_or_none(id),
-            selected=selected,
-            sidebar=sidebar,
-            fillable=fillable,
-            gap=gap,
-            padding=padding,
-            position=position,
-            header=header,
-            footer=footer,
-            bg=bg,
-            inverse=inverse,
-            underline=underline,
-            collapsible=collapsible,
-            fluid=fluid,
-        ),
+        navbar,
         get_window_title(title, window_title=window_title),
     )
     page_kwargs = {
