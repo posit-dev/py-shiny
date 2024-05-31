@@ -1,8 +1,9 @@
 import re
 
-from conftest import ShinyAppProc, create_doc_example_core_fixture
-from controls import InputTextArea, OutputTextVerbatim
-from playwright.sync_api import Locator, Page, expect
+from conftest import create_doc_example_core_fixture
+
+from shiny.test import Locator, Page, ShinyAppProc, expect
+from shiny.test._controls import InputTextArea, OutputTextVerbatim
 
 app = create_doc_example_core_fixture("input_text_area")
 

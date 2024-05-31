@@ -1,6 +1,7 @@
-from conftest import ShinyAppProc, create_doc_example_core_fixture
-from controls import InputActionButton, InputSlider, InputText, OutputUi
-from playwright.sync_api import Page, expect
+from conftest import create_doc_example_core_fixture
+
+from shiny.test import Page, ShinyAppProc, expect
+from shiny.test._controls import InputActionButton, InputSlider, InputText, OutputUi
 
 app = create_doc_example_core_fixture("output_ui")
 

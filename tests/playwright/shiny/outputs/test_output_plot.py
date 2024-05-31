@@ -1,8 +1,9 @@
 import re
 
-from conftest import ShinyAppProc, create_doc_example_core_fixture
-from controls import OutputPlot
-from playwright.sync_api import Page
+from conftest import create_doc_example_core_fixture
+
+from shiny.test import Page, ShinyAppProc
+from shiny.test._controls import OutputPlot
 
 app = create_doc_example_core_fixture("output_plot")
 

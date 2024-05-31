@@ -1,7 +1,6 @@
 # import pytest
-from conftest import ShinyAppProc
-from controls import InputRadioButtons, LayoutNavSetHidden
-from playwright.sync_api import Page
+from shiny.test import Page, ShinyAppProc
+from shiny.test._controls import InputRadioButtons, LayoutNavSetHidden
 
 
 def test_navset_hidden(page: Page, local_app: ShinyAppProc) -> None:

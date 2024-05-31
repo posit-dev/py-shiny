@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from conftest import ShinyAppProc, create_doc_example_core_fixture
-from controls import InputActionButton, InputDarkMode, LayoutNavSetBar
-from playwright.sync_api import Page
+from conftest import create_doc_example_core_fixture
+
+from shiny.test import Page, ShinyAppProc
+from shiny.test._controls import InputActionButton, InputDarkMode, LayoutNavSetBar
 
 app = create_doc_example_core_fixture("input_dark_mode")
 
