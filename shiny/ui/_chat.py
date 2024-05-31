@@ -176,11 +176,18 @@ class Chat(Generic[T]):
 
     async def append_message_stream(self, message: Iterable[Any] | AsyncIterable[Any]):
 
+        message = _utils.wrap_async_iterable(message)
+
+        @reactive.extended_task
+        async def _do_stream():
+            await self._append_message_stream(message)
+
+        _do_stream()
+
+    async def _append_message_stream(self, message: AsyncIterable[Any]):
         if sys.version_info < (3, 10):
             # ater/anext were new in 3.10
             raise RuntimeError("append_message_stream() requires Python 3.10 or later")
-
-        message = _utils.wrap_async_iterable(message)
 
         msg_iter = aiter(message)
 
