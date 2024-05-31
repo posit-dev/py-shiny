@@ -1,4 +1,4 @@
-from openai import OpenAI
+from openai import AsyncOpenAI
 
 from shiny import App, ui
 
@@ -9,11 +9,11 @@ app_ui = ui.page_fillable(
 
 def server(input, output, session):
     chat = ui.Chat("chat")
-    client = OpenAI()
+    client = AsyncOpenAI()
 
     @chat.on_user_submit
     async def _():
-        response = client.chat.completions.create(
+        response = await client.chat.completions.create(
             model="gpt-4o",
             messages=chat.messages(),
             stream=True,

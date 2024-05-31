@@ -1,5 +1,7 @@
+import sys
 from typing import (
     Any,
+    AsyncIterable,
     Awaitable,
     Callable,
     Generic,
@@ -117,6 +119,7 @@ class Chat(Generic[T]):
         async def wrapper():
             try:
                 await afunc()
+            # TODO: does this handle req() correctly?
             except Exception as e:
                 if errors == "sanitize":
                     ui.notification_show(
@@ -168,12 +171,21 @@ class Chat(Generic[T]):
         if chunk:
             msg_type += "-chunk"
         await self._send_custom_message(msg_type, msg)
+        # TODO: Joe said it's a good idea to yield here, but I'm not sure why?
+        # await asyncio.sleep(0)
 
-    async def append_message_stream(self, message: Iterable[Any]):
-        msg_iter = iter(message)
+    async def append_message_stream(self, message: Iterable[Any] | AsyncIterable[Any]):
+
+        if sys.version_info < (3, 10):
+            # ater/anext were new in 3.10
+            raise RuntimeError("append_message_stream() requires Python 3.10 or later")
+
+        message = _utils.wrap_async_iterable(message)
+
+        msg_iter = aiter(message)
 
         # Start the message
-        msg_start = next(msg_iter)
+        msg_start = await anext(msg_iter)
         msg_start = normalize_message_chunk(msg_start)
         if msg_start.get("type", None) is None:
             msg_start["type"] = "message_start"
@@ -182,9 +194,9 @@ class Chat(Generic[T]):
         # Append all the chunks (and end the message when we reach the end)
         while True:
             try:
-                msg = next(msg_iter)
+                msg = await anext(msg_iter)
                 await self.append_message(msg, chunk=True)
-            except StopIteration:
+            except StopAsyncIteration:
                 msg = ChatMessageChunk(
                     content="",
                     role="assistant",

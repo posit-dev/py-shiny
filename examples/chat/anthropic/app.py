@@ -1,4 +1,4 @@
-from anthropic import Anthropic
+from anthropic import AsyncAnthropic
 
 from shiny.express import ui
 
@@ -12,19 +12,19 @@ ui.page_opts(
 chat = ui.Chat(id="chat")
 
 # Display the chat
-chat
+chat()
 
 # Create the LLM client (assumes ANTHROPIC_API_KEY is set in the environment)
-client = Anthropic()
+client = AsyncAnthropic()
 
 
 # on user submit, generate and append a response
 @chat.on_user_submit
 async def _():
-    response = client.messages.create(
+    response = await client.messages.create(
         model="claude-3-opus-20240229",
         messages=chat.messages(),
         stream=True,
-        max_tokens=100,
+        max_tokens=1000,
     )
     await chat.append_message_stream(response)
