@@ -33,6 +33,14 @@ onDelegatedEvent(
   }
 );
 
+onDelegatedEvent(
+  "change",
+  "textarea.textarea-autoresize",
+  (target: HTMLTextAreaElement) => {
+    update_height(target);
+  }
+);
+
 // Update on load
 function update_on_load() {
   if (document.readyState === "loading") {

@@ -25,7 +25,7 @@ from ._chat_types import (
     normalize_message,
     normalize_message_chunk,
 )
-from ._html_deps_py_shiny import chat_deps
+from ._html_deps_py_shiny import autoresize_dependency, chat_deps
 from .fill import as_fill_item, as_fillable_container
 
 __all__ = ("Chat", "chat_ui", "ChatMessage", "ChatMessageChunk")
@@ -275,6 +275,7 @@ def chat_ui(
         messages_tag,
         Tag(
             "shiny-chat-input",
+            autoresize_dependency(),
             placeholder=placeholder,
             id=f"{id}_user_input",
         ),

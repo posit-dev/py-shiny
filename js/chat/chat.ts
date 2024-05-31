@@ -121,8 +121,8 @@ class ChatInput extends LightElement {
       <div class="input-group">
         <textarea
           id="${this.id}"
-          class="form-control"
-          style="resize:none;"
+          class="form-control textarea-autoresize"
+          rows="1"
           placeholder="${this.placeholder}"
           @keydown=${this.#sendOnEnter}
           ?disabled=${this.disabled}

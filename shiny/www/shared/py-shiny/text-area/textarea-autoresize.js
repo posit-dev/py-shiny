@@ -18,6 +18,13 @@ onDelegatedEvent(
     update_height(target);
   }
 );
+onDelegatedEvent(
+  "change",
+  "textarea.textarea-autoresize",
+  (target) => {
+    update_height(target);
+  }
+);
 function update_on_load() {
   if (document.readyState === "loading") {
     setTimeout(update_on_load, 10);
