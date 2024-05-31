@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Other changes
 
-### [0.10.2]
+## [0.10.2] - 2024-05-28
 
 ### Bug fixes
 
