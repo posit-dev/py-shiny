@@ -43,6 +43,8 @@ def wrap_express_app(file: Path) -> App:
         A :class:`shiny.App` object.
     """
 
+    file = file.resolve()
+
     try:
         globals_file = file.parent / "globals.py"
         if globals_file.is_file():
