@@ -56,11 +56,11 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
 
     @render.code
     def sort():
-        return str(penguins_df.input_sort())
+        return str(penguins_df.sort())
 
     @render.code
     def filter():
-        return str(penguins_df.input_filter())
+        return str(penguins_df.filter())
 
     @render.code
     def rows():

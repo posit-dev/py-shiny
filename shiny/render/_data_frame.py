@@ -344,7 +344,7 @@ class data_frame(Renderer[DataFrameResult]):
         The data frame with all the user's edit patches applied to it.
     """
 
-    input_sort: reactive.Calc_[tuple[ColumnSort, ...]]
+    sort: reactive.Calc_[tuple[ColumnSort, ...]]
     """
     Reactive value of the data frame's column sorting information.
 
@@ -354,7 +354,7 @@ class data_frame(Renderer[DataFrameResult]):
         An array of `col`umn number and _is `desc`ending_ information.
     """
 
-    input_filter: reactive.Calc_[tuple[ColumnFilter, ...]]
+    filter: reactive.Calc_[tuple[ColumnFilter, ...]]
     """
     Reactive value of the data frame's column filters.
 
@@ -436,29 +436,29 @@ class data_frame(Renderer[DataFrameResult]):
         self.cell_selection = self_cell_selection
 
         @reactive.calc
-        def self_input_sort() -> tuple[ColumnSort, ...]:
+        def self_sort() -> tuple[ColumnSort, ...]:
             column_sort = self._get_session().input[f"{self.output_id}_column_sort"]()
             return tuple(column_sort)
 
-        self.input_sort = self_input_sort
+        self.sort = self_sort
 
         @reactive.calc
-        def self_input_column_filter() -> tuple[ColumnFilter, ...]:
+        def self_filter() -> tuple[ColumnFilter, ...]:
             column_filter = self._get_session().input[
                 f"{self.output_id}_column_filter"
             ]()
             return tuple(column_filter)
 
-        self.input_filter = self_input_column_filter
+        self.filter = self_filter
 
         @reactive.calc
-        def self_input_data_view_rows() -> tuple[int, ...]:
+        def self_data_view_rows() -> tuple[int, ...]:
             data_view_rows = self._get_session().input[
                 f"{self.output_id}_data_view_rows"
             ]()
             return tuple(data_view_rows)
 
-        self.data_view_rows = self_input_data_view_rows
+        self.data_view_rows = self_data_view_rows
 
         # @reactive.calc
         # def self__data_selected() -> pd.DataFrame:

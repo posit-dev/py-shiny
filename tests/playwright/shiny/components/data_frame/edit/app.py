@@ -88,14 +88,14 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
     def _():
         print(
             "Filters:",
-            summary_data.input_filter(),
+            summary_data.filter(),
         )
 
     @reactive.effect
     def _():
         print(
             "Sorting:",
-            summary_data.input_sort(),
+            summary_data.sort(),
         )
 
     @reactive.effect
