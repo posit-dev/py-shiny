@@ -3864,6 +3864,9 @@ class OutputDataFrame(_InputWithContainer):
         cell.click(timeout=timeout)
         cell.locator("> textarea").fill(text)
 
+    # TODO-karan-test: Rename to `set_column_sorting?`
+    # TODO-karan-test: Add support for a list of columns
+    # TODO-karan-test: Add support for direction
     def set_column_sort(
         self,
         col: int,
@@ -3882,6 +3885,9 @@ class OutputDataFrame(_InputWithContainer):
         """
         self.loc_column_label.nth(col).click(timeout=timeout)
 
+    # TODO-karan-test: Rename to `set_column_filters?`
+    # TODO-karan-test: Add support for a list of columns ? If so, all other columns should be reset
+    # TODO-karan-test: Add support for a None value reset all filters
     def set_column_filter(
         self,
         col: int,

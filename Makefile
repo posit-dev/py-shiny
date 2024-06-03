@@ -158,23 +158,29 @@ install-trcli: FORCE
 install-rsconnect: FORCE
 	pip install git+https://github.com/rstudio/rsconnect-python.git#egg=rsconnect-python
 
-# end-to-end tests with playwright; (SUB_FILE="" within tests/playwright/shiny/)
-playwright-shiny: install-playwright
-	pytest tests/playwright/shiny/$(SUB_FILE) $(PYTEST_BROWSERS)
+# Full test path to playwright tests
+TEST_FILE:=tests/playwright/$(SUB_FILE)
+# All end-to-end tests with playwright
+playwright: install-playwright ## All end-to-end tests with playwright; (TEST_FILE="" from root of repo)
+	pytest $(TEST_FILE) $(PYTEST_BROWSERS)
 
-# end-to-end tests on deployed apps with playwright; (SUB_FILE="" within tests/playwright/deploys/)
-playwright-deploys: install-playwright install-rsconnect
-	pytest tests/playwright/deploys/$(SUB_FILE) $(PYTEST_DEPLOYS_BROWSERS)
-
-# end-to-end tests on all py-shiny examples with playwright; (SUB_FILE="" within tests/playwright/examples/)
-playwright-examples: install-playwright
-	pytest tests/playwright/examples/$(SUB_FILE) $(PYTEST_BROWSERS)
-
-playwright-debug: install-playwright ## All end-to-end tests, chrome only, headed; (SUB_FILE="" within tests/playwright/)
-	pytest -c tests/playwright/playwright-pytest.ini tests/playwright/$(SUB_FILE)
+playwright-debug: install-playwright ## All end-to-end tests, chrome only, headed; (TEST_FILE="" from root of repo)
+	pytest -c tests/playwright/playwright-pytest.ini $(TEST_FILE)
 
 playwright-show-trace: ## Show trace of failed tests
 	npx playwright show-trace test-results/*/trace.zip
+
+# end-to-end tests with playwright; (SUB_FILE="" within tests/playwright/shiny/)
+playwright-shiny: FORCE
+	$(MAKE) playwright TEST_FILE=tests/playwright/shiny/$(SUB_FILE)
+
+# end-to-end tests on deployed apps with playwright; (SUB_FILE="" within tests/playwright/deploys/)
+playwright-deploys: install-rsconnect
+	$(MAKE) playwright TEST_FILE=tests/playwright/deploys/$(SUB_FILE) PYTEST_BROWSERS="$(PYTEST_DEPLOYS_BROWSERS)"
+
+# end-to-end tests on all py-shiny examples with playwright; (SUB_FILE="" within tests/playwright/examples/)
+playwright-examples: FORCE
+	$(MAKE) playwright TEST_FILE=tests/playwright/examples/$(SUB_FILE)
 
 # end-to-end tests with playwright and generate junit report
 testrail-junit: install-playwright install-trcli

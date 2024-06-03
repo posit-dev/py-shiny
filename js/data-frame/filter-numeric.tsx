@@ -52,6 +52,7 @@ interface FilterNumericImplProps {
 const FilterNumericImpl: React.FC<FilterNumericImplProps> = (props) => {
   const [min, max] = props.value;
   const { editing, onFocus } = props;
+  const [rangeMin, rangeMax] = props.range();
 
   const minInputRef = useRef<HTMLInputElement>(null);
   const maxInputRef = useRef<HTMLInputElement>(null);
@@ -77,11 +78,14 @@ const FilterNumericImpl: React.FC<FilterNumericImplProps> = (props) => {
         }`}
         style={{ flex: "1 1 0", width: "0" }}
         type="number"
-        placeholder={createPlaceholder(editing, "Min", props.range()[0])}
+        placeholder={createPlaceholder(editing, "Min", rangeMin)}
         defaultValue={min}
+        // min={rangeMin}
+        // max={rangeMax}
         step="any"
         onChange={(e) => {
           const value = coerceToNum(e.target.value);
+          if (!minInputRef.current) return;
           minInputRef.current.classList.toggle(
             "is-invalid",
             !e.target.checkValidity()
@@ -96,11 +100,14 @@ const FilterNumericImpl: React.FC<FilterNumericImplProps> = (props) => {
         }`}
         style={{ flex: "1 1 0", width: "0" }}
         type="number"
-        placeholder={createPlaceholder(editing, "Max", props.range()[1])}
+        placeholder={createPlaceholder(editing, "Max", rangeMax)}
         defaultValue={max}
+        // min={rangeMin}
+        // max={rangeMax}
         step="any"
         onChange={(e) => {
           const value = coerceToNum(e.target.value);
+          if (!maxInputRef.current) return;
           maxInputRef.current.classList.toggle(
             "is-invalid",
             !e.target.checkValidity()
@@ -118,7 +125,7 @@ function createPlaceholder(
   value: number | undefined
 ) {
   if (!editing) {
-    return null;
+    return undefined;
   } else if (typeof value === "undefined") {
     return label;
   } else {
