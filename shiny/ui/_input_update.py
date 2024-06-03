@@ -170,7 +170,7 @@ def _(
             # This is input_task_button's auto-reset feature: unless the button has
             # opted out using set_task_button_manual_reset(), we should reset after a
             # flush cycle where a bslib.taskbutton value is seen.
-            if ResolvedId(name) not in manual_task_reset_buttons:
+            if name not in manual_task_reset_buttons:
                 with session_context(session):
                     update_task_button(name, state="ready")
 
