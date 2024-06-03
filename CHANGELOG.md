@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
-### Breaking Changes
+### Deprecations
 
 * `@render.data_frame`'s `.cell_selection()` will no longer return `None` when the selection mode is `"none"`. In addition, missing `rows` or `cols` information will be populated with appropiate values. This allows for consistent handling of the cell selection object. (#1374)
 
@@ -25,6 +25,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   * `.filter()` is a reactive value representing the filtered column information (dictionaries containing `col: int` and `value` which is either a string or a length 2 array of at least one non-`None` number). This value wraps `input.<ID>_filter()`. (#1374)
   * `.update_sort(sort=)` allows app authors to programmatically update the sorting of the data frame. (#1374)
   * `.update_filter(filter=)` allows app authors to programmatically update the filtering of the data frame. (#1374)
+
+* `@render.data_frame`'s `<ID>.cell_selection()` no longer returns a `None` value and now always returns a dictionary containing both the `rows` and `cols` keys. This is done to achieve more consistent author code when working with cell selection. When the value's `type="none"`, both `rows` and `cols` are empty tuples. When `type="row"`, `cols` represents all column numbers of the data. In the future, when `type="col"`, `rows` will represent all row numbers of the data. These extra values are not available in `input.<ID>_cell_selection()` as they are independent of cells being selected and are removed to reduce information being sent to and from the browser. (#1376)
+
 
 ### Bug fixes
 
@@ -59,8 +62,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Added support for creating modules using Shiny Express syntax, and using modules in Shiny Express apps. (#1220)
 
 * `ui.page_*()` functions gain a `theme` argument that allows you to replace the Bootstrap CSS file with a new CSS file. `theme` can be a local CSS file, a URL, or a [shinyswatch](https://posit-dev.github.io/py-shinyswatch) theme. In Shiny Express apps, `theme` can be set via `express.ui.page_opts()`. (#1334)
-
-* `@render.data_frame`'s `<ID>.input_cell_selection()` no longer returns a `None` value and now always returns a dictionary containing both the `rows` and `cols` keys. This is done to achieve more consistent author code when working with cell selection. When the value's `type="none"`, both `rows` and `cols` are empty tuples. When `type="row"`, `cols` represents all column numbers of the data. In the future, when `type="col"`, `rows` will represent all row numbers of the data. These extra values are not available in `input.<ID>_cell_selection()` as they are independent of cells being selected and are removed to reduce information being sent to and from the browser. (#1376)
 
 ### Bug fixes
 

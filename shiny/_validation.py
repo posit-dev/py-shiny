@@ -12,23 +12,6 @@ from .types import (
 T = TypeVar("T")
 
 
-# # @overload
-# # def req(*, cancel_output: bool | Literal["progress"] = False) -> None: ...
-
-
-# @overload
-# def req(*args: None, cancel_output: bool | Literal["progress"] = False) -> Never: ...
-
-
-# @overload
-# def req(*args: T, cancel_output: bool | Literal["progress"] = False) -> T: ...
-
-# @add_example()
-# def req(
-#     *args: T | None, cancel_output: bool | Literal["progress"] = False
-# ) -> T | Never:
-
-
 @overload
 def req(*, cancel_output: bool | Literal["progress"] = False) -> None: ...
 
