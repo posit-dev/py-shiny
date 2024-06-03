@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Literal, Never, TypeVar, overload
+from typing import Literal, TypeVar, overload
 
 from ._docstring import add_example
 from .types import (
@@ -23,11 +23,22 @@ T = TypeVar("T")
 # @overload
 # def req(*args: T, cancel_output: bool | Literal["progress"] = False) -> T: ...
 
+# @add_example()
+# def req(
+#     *args: T | None, cancel_output: bool | Literal["progress"] = False
+# ) -> T | Never:
+
+
+@overload
+def req(*, cancel_output: bool | Literal["progress"] = False) -> None: ...
+
+
+@overload
+def req(*args: T, cancel_output: bool | Literal["progress"] = False) -> T: ...
+
 
 @add_example()
-def req(
-    *args: T | None, cancel_output: bool | Literal["progress"] = False
-) -> T | Never:
+def req(*args: T, cancel_output: bool | Literal["progress"] = False) -> T | None:
     """
     Throw a silent exception for falsy values.
 
