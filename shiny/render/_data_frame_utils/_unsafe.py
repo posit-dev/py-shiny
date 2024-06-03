@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Literal, Protocol, Union, runtime_checkable
 
 from htmltools import HTML, MetadataNode, Tagifiable
 
@@ -35,9 +35,11 @@ class DataFrameDtypeCategories(TypedDict):
     categories: list[str]
 
 
-DataFrameDtype = (
-    DataFrameDtypeOriginal | DataFrameDtypeSubset | DataFrameDtypeCategories
-)
+DataFrameDtype = Union[
+    DataFrameDtypeOriginal,
+    DataFrameDtypeSubset,
+    DataFrameDtypeCategories,
+]
 
 
 def serialize_numpy_dtypes(df: "pd.DataFrame") -> list[DataFrameDtype]:
