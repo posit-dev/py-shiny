@@ -5,6 +5,10 @@ import {
 } from "@tanstack/react-table";
 import React, { useState } from "react";
 
+import type { ColumnSort } from "@tanstack/react-table";
+
+export type { ColumnSort, SortingState };
+
 export function useSort<TData>(): {
   sorting: SortingState;
   setSorting: React.Dispatch<React.SetStateAction<SortingState>>;

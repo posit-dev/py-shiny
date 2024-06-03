@@ -88,16 +88,15 @@ class Renderer(Generic[IT]):
     used!)
 
     There are two methods that must be implemented by the subclasses:
-    `.auto_output_ui(self, id: str)` and either `.transform(self, value: IT)` or
-    `.render(self)`.
+    `.auto_output_ui(self)` and either `.transform(self, value: IT)` or `.render(self)`.
 
     * In Express mode, the output renderer will automatically render its UI via
-      `.auto_output_ui(self, id: str)`. This helper method allows App authors to skip
-      adding a `ui.output_*` function to their UI, making Express mode even more
-      concise. If more control is needed over the UI, `@ui.hold` can be used to suppress
-      the auto rendering of the UI. When using `@ui.hold` on a renderer, the renderer's
-      UI will need to be added to the app to connect the rendered output to Shiny's
-      reactive graph.
+      `.auto_output_ui(self)`. This helper method allows App authors to skip adding a
+      `ui.output_*` function to their UI, making Express mode even more concise. If more
+      control is needed over the UI, `@ui.hold` can be used to suppress the auto
+      rendering of the UI. When using `@ui.hold` on a renderer, the renderer's UI will
+      need to be added to the app to connect the rendered output to Shiny's reactive
+      graph.
     * The `render` method is responsible for executing the value function and performing
       any transformations for the output value to be JSON-serializable (`None` is a
       valid value!). To avoid the boilerplate of resolving the value function and

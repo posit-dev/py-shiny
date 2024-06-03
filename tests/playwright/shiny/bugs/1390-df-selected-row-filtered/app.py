@@ -1,6 +1,5 @@
 import pandas as pd
 
-from shiny import req
 from shiny.express import render, ui
 
 df = pd.DataFrame(data={"a": [str(i) for i in range(10)]})
@@ -26,4 +25,4 @@ with ui.layout_column_wrap(width=1 / 2):
 
         @render.code
         def selected_rows():
-            return str(req(my_df.cell_selection() or {}).get("rows", ()))
+            return str(my_df.cell_selection()["rows"])

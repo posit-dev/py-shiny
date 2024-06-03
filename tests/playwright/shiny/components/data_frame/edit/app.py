@@ -22,7 +22,7 @@ df = df.head(15)
 
 
 # Add some HTML content to the dataframe!
-df["Sample Number"] = df["Sample Number"].apply(
+df["Sample Number"] = df["Sample Number"].apply(  # pyright: ignore[reportCallIssue]
     lambda x: ui.HTML(  # pyright: ignore[reportUnknownLambdaType]
         str(
             ui.tags.strong(
@@ -84,22 +84,23 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
 
     from shiny import reactive
 
-    # @reactive.effect
-    # def _():
-    #     print(
-    #         "Filters:",
-    #         summary_data._input_column_filter(),  # pyright: ignore[reportUnknownArgumentType,reportAttributeAccessIssue]
-    #     )
-    # @reactive.effect
-    # def _():
-    #     print(
-    #         "Sorting:",
-    #         summary_data._input_column_sort(),  # pyright: ignore[reportUnknownArgumentType,reportAttributeAccessIssue]
-    #     )
+    @reactive.effect
+    def _():
+        print(
+            "Filters:",
+            summary_data.filter(),
+        )
 
     @reactive.effect
     def _():
-        print("indices:", summary_data._input_data_view_rows())
+        print(
+            "Sorting:",
+            summary_data.sort(),
+        )
+
+    @reactive.effect
+    def _():
+        print("indices:", summary_data.data_view_rows())
 
     @reactive.effect
     def _():
