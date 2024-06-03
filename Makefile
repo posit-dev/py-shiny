@@ -159,7 +159,7 @@ install-rsconnect: FORCE
 	pip install git+https://github.com/rstudio/rsconnect-python.git#egg=rsconnect-python
 
 # Full test path to playwright tests
-TEST_FILE:=tests/playwright/$(SUB_FILE)
+TEST_FILE:="tests/playwright/$(SUB_FILE)"
 # All end-to-end tests with playwright
 playwright: install-playwright ## All end-to-end tests with playwright; (TEST_FILE="" from root of repo)
 	pytest $(TEST_FILE) $(PYTEST_BROWSERS)
@@ -172,15 +172,15 @@ playwright-show-trace: ## Show trace of failed tests
 
 # end-to-end tests with playwright; (SUB_FILE="" within tests/playwright/shiny/)
 playwright-shiny: FORCE
-	$(MAKE) playwright TEST_FILE=tests/playwright/shiny/$(SUB_FILE)
+	$(MAKE) playwright TEST_FILE="tests/playwright/shiny/$(SUB_FILE)"
 
 # end-to-end tests on deployed apps with playwright; (SUB_FILE="" within tests/playwright/deploys/)
 playwright-deploys: install-rsconnect
-	$(MAKE) playwright TEST_FILE=tests/playwright/deploys/$(SUB_FILE) PYTEST_BROWSERS="$(PYTEST_DEPLOYS_BROWSERS)"
+	$(MAKE) playwright TEST_FILE="tests/playwright/deploys/$(SUB_FILE)" PYTEST_BROWSERS="$(PYTEST_DEPLOYS_BROWSERS)"
 
 # end-to-end tests on all py-shiny examples with playwright; (SUB_FILE="" within tests/playwright/examples/)
 playwright-examples: FORCE
-	$(MAKE) playwright TEST_FILE=tests/playwright/examples/$(SUB_FILE)
+	$(MAKE) playwright TEST_FILE="tests/playwright/examples/$(SUB_FILE)"
 
 # end-to-end tests with playwright and generate junit report
 testrail-junit: install-playwright install-trcli
