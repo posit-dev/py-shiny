@@ -4,10 +4,11 @@ from typing import Literal, Optional, TypeVar
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, tags
 
-from .._docstring import add_example
+from .._deprecated import _session_param_docs as _session_param
+from .._docstring import add_example, doc_format
 from .._namespaces import resolve_id_or_none
 from .._utils import drop_none, private_random_id
-from ..session import require_active_session
+from ..session import require_active_session, session_context
 from ..types import MISSING, MISSING_TYPE
 from ._html_deps_shinyverse import components_dependencies
 from ._tag import consolidate_attrs
@@ -388,10 +389,12 @@ def _accordion_panel_action(
 
 
 @add_example()
+@doc_format(session_param=_session_param)
 def update_accordion(
     id: str,
     *,
     show: bool | str | list[str],
+    session: MISSING_TYPE = MISSING,
 ) -> None:
     """
     Dynamically set accordions' states.
@@ -408,6 +411,7 @@ def update_accordion(
         Either a string or list of strings (used to identify particular
         :func:`~shiny.ui.accordion_panel`(s) by their `value`) or a `bool` to set the state of all
         panels.
+    {session_param}
 
     References
     ----------
@@ -425,15 +429,19 @@ def update_accordion(
         show_val = []
     else:
         show_val = show
-    _accordion_panel_action(id=id, method="set", values=show_val)
+    active_session = require_active_session(session)
+    with session_context(active_session):
+        _accordion_panel_action(id=id, method="set", values=show_val)
 
 
 @add_example()
+@doc_format(session_param=_session_param)
 def insert_accordion_panel(
     id: str,
     panel: AccordionPanel,
     target: Optional[str] = None,
     position: Literal["after", "before"] = "after",
+    session: MISSING_TYPE = MISSING,
 ) -> None:
     """
     Insert an :func:`~shiny.ui.accordion_panel`.
@@ -450,6 +458,7 @@ def insert_accordion_panel(
         Should `panel` be added before or after the target? When `target=None`,
         `"after"` will append after the last panel and `"before"` will prepend before
         the first panel.
+    {session_param}
 
     References
     ----------
@@ -466,22 +475,25 @@ def insert_accordion_panel(
 
     if position not in ("after", "before"):
         raise ValueError("`position` must be either 'after' or 'before'")
-    session = require_active_session()
+    active_session = require_active_session(session)
     # Add accordion ID to panel; Used when `accordion(multiple=False)`
     panel._accordion_id = id
-    _send_panel_message(
-        id,
-        method="insert",
-        panel=session._process_ui(panel.resolve()),
-        target=None if target is None else _assert_str(target),
-        position=position,
-    )
+    with session_context(active_session):
+        _send_panel_message(
+            id,
+            method="insert",
+            panel=active_session._process_ui(panel.resolve()),
+            target=None if target is None else _assert_str(target),
+            position=position,
+        )
 
 
 @add_example()
+@doc_format(session_param=_session_param)
 def remove_accordion_panel(
     id: str,
     target: str | list[str],
+    session: MISSING_TYPE = MISSING,
 ) -> None:
     """
     Remove an :func:`~shiny.ui.accordion_panel`.
@@ -492,6 +504,7 @@ def remove_accordion_panel(
         A string that matches an existing :func:`~shiny.ui.accordion`'s `id`.
     target
         The `value` of an existing panel to remove.
+    {session_param}
 
     References
     ----------
@@ -508,11 +521,13 @@ def remove_accordion_panel(
     if not isinstance(target, list):
         target = [target]
 
-    _send_panel_message(
-        id,
-        method="remove",
-        target=_assert_list_str(target),
-    )
+    active_session = require_active_session(session)
+    with session_context(active_session):
+        _send_panel_message(
+            id,
+            method="remove",
+            target=_assert_list_str(target),
+        )
 
 
 T = TypeVar("T")
@@ -527,6 +542,7 @@ def _missing_none_x(x: T | None | MISSING_TYPE) -> T | Literal[""] | None:
 
 
 @add_example()
+@doc_format(session_param=_session_param)
 def update_accordion_panel(
     id: str,
     target: str,
@@ -535,6 +551,7 @@ def update_accordion_panel(
     value: str | None | MISSING_TYPE = MISSING,
     icon: TagChild | None | MISSING_TYPE = MISSING,
     show: Optional[bool] = None,
+    session: MISSING_TYPE = MISSING,
 ) -> None:
     """
     Dynamically update accordion panel contents.
@@ -557,6 +574,9 @@ def update_accordion_panel(
         If not missing, the new value of the panel.
     icon
         If not missing, the new icon of the panel.
+    show
+        If provided, open/close the targeted panel.
+    {session_param}
 
     References
     ----------
@@ -571,29 +591,30 @@ def update_accordion_panel(
     * :func:`~shiny.ui.remove_accordion_panel`
     """
 
-    session = require_active_session()
+    active_session = require_active_session(session)
+    with session_context(active_session):
 
-    # If `show` is given, then we need to open/close the targeted panel
-    # Perform before changing `value` at the same time.
-    if show is not None:
-        _accordion_panel_action(
-            id=id,
-            method="open" if bool(show) else "close",
-            values=[target],
+        # If `show` is given, then we need to open/close the targeted panel
+        # Perform before changing `value` at the same time.
+        if show is not None:
+            _accordion_panel_action(
+                id=id,
+                method="open" if bool(show) else "close",
+                values=[target],
+            )
+
+        title = _missing_none_x(title)
+        value = _missing_none_x(value)
+        icon = _missing_none_x(icon)
+        _send_panel_message(
+            id,
+            method="update",
+            target=_assert_str(target),
+            value=None if value is None else _assert_str(value),
+            body=None if len(body) == 0 else active_session._process_ui(body),
+            title=None if title is None else active_session._process_ui(title),
+            icon=None if icon is None else active_session._process_ui(icon),
         )
-
-    title = _missing_none_x(title)
-    value = _missing_none_x(value)
-    icon = _missing_none_x(icon)
-    _send_panel_message(
-        id,
-        method="update",
-        target=_assert_str(target),
-        value=None if value is None else _assert_str(value),
-        body=None if len(body) == 0 else session._process_ui(body),
-        title=None if title is None else session._process_ui(title),
-        icon=None if icon is None else session._process_ui(icon),
-    )
 
 
 def _assert_str(x: str) -> str:

@@ -688,7 +688,8 @@ def update_selectize(
             if not isinstance(v, Mapping):
                 flat_choices.append(
                     FlatSelectChoice(
-                        value=k, label=active_session._process_ui(v)["html"]
+                        value=k,
+                        label=active_session._process_ui(v)["html"],
                     )
                 )
             else:  # The optgroup case
@@ -978,10 +979,12 @@ def update_navs(
 # tooltips.py
 # -----------------------------------------------------------------------------
 @add_example()
+@doc_format(session_param=_session_param)
 def update_tooltip(
     id: str,
     *args: TagChild,
     show: Optional[bool] = None,
+    session: MISSING_TYPE = MISSING,
 ) -> None:
     """
     Update tooltip contents.
@@ -994,29 +997,32 @@ def update_tooltip(
         Contents to the tooltip's body.
     show
         Opens (`True`) or closes (`False`) the tooltip.
+    {session_param}
     """
 
-    session_on_flush_send_msg(
-        id,
-        drop_none(
-            {
-                "method": "update",
-                "title": (
-                    require_active_session()._process_ui(TagList(*args))
-                    if len(args) > 0
-                    else None
-                ),
-            }
-        ),
-    )
-    if show is not None:
+    active_session = require_active_session(session)
+    with session_context(active_session):
         session_on_flush_send_msg(
             id,
-            {
-                "method": "toggle",
-                "value": _normalize_show_value(show),
-            },
+            drop_none(
+                {
+                    "method": "update",
+                    "title": (
+                        active_session._process_ui(TagList(*args))
+                        if len(args) > 0
+                        else None
+                    ),
+                }
+            ),
         )
+        if show is not None:
+            session_on_flush_send_msg(
+                id,
+                {
+                    "method": "toggle",
+                    "value": _normalize_show_value(show),
+                },
+            )
 
 
 # -----------------------------------------------------------------------------
@@ -1031,6 +1037,7 @@ def update_popover(
     *args: TagChild,
     title: Optional[TagChild] = None,
     show: Optional[bool] = None,
+    session: MISSING_TYPE = MISSING,
 ) -> None:
     """
     Update the contents or title of a popover.
@@ -1045,34 +1052,44 @@ def update_popover(
         The new title of the popover.
     show
         Opens (`True`) or closes (`False`) the popover.
+    {session_param}
 
     See Also
     --------
     * :func:`~shiny.ui.popover`
     """
 
-    if title is not None or len(args) > 0:
-        session = require_active_session()
-        session_on_flush_send_msg(
-            id,
-            drop_none(
+    active_session = require_active_session(session)
+
+    with session_context(active_session):
+
+        if title is not None or len(args) > 0:
+            session_on_flush_send_msg(
+                id,
+                drop_none(
+                    {
+                        "method": "update",
+                        "content": (
+                            active_session._process_ui(TagList(*args))
+                            if len(args) > 0
+                            else None
+                        ),
+                        "header": (
+                            active_session._process_ui(title)
+                            if title is not None
+                            else None
+                        ),
+                    },
+                ),
+            )
+        if show is not None:
+            session_on_flush_send_msg(
+                id,
                 {
-                    "method": "update",
-                    "content": (
-                        session._process_ui(TagList(*args)) if len(args) > 0 else None
-                    ),
-                    "header": session._process_ui(title) if title is not None else None,
+                    "method": "toggle",
+                    "value": _normalize_show_value(show),
                 },
-            ),
-        )
-    if show is not None:
-        session_on_flush_send_msg(
-            id,
-            {
-                "method": "toggle",
-                "value": _normalize_show_value(show),
-            },
-        )
+            )
 
 
 @overload
