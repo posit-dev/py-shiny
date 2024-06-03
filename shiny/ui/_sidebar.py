@@ -16,8 +16,9 @@ from htmltools import (
     tags,
 )
 
+from .._deprecated import _session_param_docs as _session_param
 from .._deprecated import warn_deprecated
-from .._docstring import add_example, no_example
+from .._docstring import add_example, doc_format, no_example
 from .._namespaces import ResolvedId, resolve_id_or_none
 from .._typing_extensions import TypedDict
 from .._utils import private_random_id
@@ -757,10 +758,12 @@ def _get_layout_sidebar_sidebar(
 
 
 @add_example()
+@doc_format(session_param=_session_param)
 def update_sidebar(
     id: str,
     *,
     show: Optional[bool] = None,
+    session: MISSING_TYPE = MISSING,
 ) -> None:
     """
     Update a sidebar's visibility.
@@ -773,13 +776,14 @@ def update_sidebar(
         The `id` of the :func:`~shiny.ui.sidebar` to toggle.
     show
         The desired visible state of the sidebar, where `True` opens the sidebar and `False` closes the sidebar (if not already in that state).
+    {session_param}
 
     See Also
     --------
     * :func:`~shiny.ui.sidebar`
     * :func:`~shiny.ui.layout_sidebar`
     """
-    session = require_active_session()
+    active_session = require_active_session(session)
 
     # method: Literal["toggle", "open", "close"]
     # if open is None or open == "toggle":
@@ -800,9 +804,9 @@ def update_sidebar(
         method = "open" if bool(show) else "close"
 
         def callback() -> None:
-            session.send_input_message(id, {"method": method})
+            active_session.send_input_message(id, {"method": method})
 
-        session.on_flush(callback, once=True)
+        active_session.on_flush(callback, once=True)
 
 
 def _collapse_icon() -> TagChild:
