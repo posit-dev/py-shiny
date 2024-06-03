@@ -8,7 +8,8 @@ from htmltools import Tag, TagAttrValue, css
 
 from .._docstring import add_example, no_example
 from .._namespaces import resolve_id
-from ..session import Session, require_active_session
+from ..session import require_active_session
+from ..types import MISSING, MISSING_TYPE
 from ._web_component import web_component
 
 BootstrapColorMode = Literal["light", "dark"]
@@ -80,9 +81,11 @@ def validate_dark_mode_option(mode: BootstrapColorMode) -> BootstrapColorMode:
 
 @no_example()
 def update_dark_mode(
-    mode: BootstrapColorMode, *, session: Optional[Session] = None
+    mode: BootstrapColorMode,
+    *,
+    session: MISSING_TYPE = MISSING,
 ) -> None:
-    session = require_active_session(session)
+    active_session = require_active_session(session)
 
     mode = validate_dark_mode_option(mode)
 
@@ -90,4 +93,4 @@ def update_dark_mode(
         "method": "toggle",
         "value": mode,
     }
-    session._send_message_sync({"custom": {"bslib.toggle-dark-mode": msg}})
+    active_session._send_message_sync({"custom": {"bslib.toggle-dark-mode": msg}})
