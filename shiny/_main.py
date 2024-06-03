@@ -18,7 +18,7 @@ import uvicorn.config
 
 import shiny
 
-from . import _autoreload, _hostenv, _static, _utils
+from . import __version__, _autoreload, _hostenv, _static, _utils
 from ._docstring import no_example
 from ._typing_extensions import NotRequired, TypedDict
 from .express import is_express_app
@@ -26,6 +26,7 @@ from .express._utils import escape_to_var_name
 
 
 @click.group("main")
+@click.version_option(__version__)
 def main() -> None:
     pass
 
@@ -143,6 +144,13 @@ any of the following will work:
     help="Launch app browser after app starts, using the Python webbrowser module.",
     show_default=True,
 )
+@click.option(
+    "--dev-mode/--no-dev-mode",
+    is_flag=True,
+    default=True,
+    help="Dev mode",
+    show_default=True,
+)
 @no_example()
 def run(
     app: str | shiny.App,
@@ -159,6 +167,7 @@ def run(
     app_dir: str,
     factory: bool,
     launch_browser: bool,
+    dev_mode: bool,
     **kwargs: object,
 ) -> None:
     reload_includes_list = reload_includes.split(",")
@@ -177,6 +186,7 @@ def run(
         app_dir=app_dir,
         factory=factory,
         launch_browser=launch_browser,
+        dev_mode=dev_mode,
         **kwargs,
     )
 
@@ -196,6 +206,7 @@ def run_app(
     app_dir: Optional[str] = ".",
     factory: bool = False,
     launch_browser: bool = False,
+    dev_mode: bool = True,
     **kwargs: object,
 ) -> None:
     """
@@ -276,6 +287,8 @@ def run_app(
 
     os.environ["SHINY_HOST"] = host
     os.environ["SHINY_PORT"] = str(port)
+    if dev_mode:
+        os.environ["SHINY_DEV_MODE"] = "1"
 
     if isinstance(app, str):
         # Remove ":app" suffix if present. Normally users would just pass in the
@@ -288,6 +301,9 @@ def run_app(
             # is "shiny.express.app:_2f_path_2f_to_2f_app_2e_py".
             app = "shiny.express.app:" + escape_to_var_name(str(app_path))
             app_dir = str(app_path.parent)
+
+            # Express apps need min version of rsconnect-python to deploy correctly.
+            _verify_rsconnect_version()
         else:
             app, app_dir = resolve_app(app, app_dir)
 
@@ -314,8 +330,9 @@ def run_app(
             autoreload_port = _utils.random_port(host=host)
 
         if autoreload_port == port:
-            sys.stderr.write(
-                "Autoreload port is already being used by the app; disabling autoreload\n"
+            print(
+                "Autoreload port is already being used by the app; disabling autoreload\n",
+                file=sys.stderr,
             )
             reload = False
         else:
@@ -347,6 +364,9 @@ def run_app(
         app_dir=app_dir,
         factory=factory,
         lifespan="on",
+        # Don't allow shiny to use uvloop!
+        # https://github.com/posit-dev/py-shiny/issues/1373
+        loop="asyncio",
         **reload_args,  # pyright: ignore[reportArgumentType]
         **kwargs,
     )
@@ -426,10 +446,10 @@ def resolve_app(app: str, app_dir: str | None) -> tuple[str, str | None]:
         #       unfriendly. We should probably throw a custom error that the shiny run
         #       entrypoint knows not to print the stack trace for.
         if not os.path.exists(module_path):
-            sys.stderr.write(f"Error: {module_path} not found\n")
+            print(f"Error: {module_path} not found\n", file=sys.stderr)
             sys.exit(1)
         if not os.path.isfile(module_path):
-            sys.stderr.write(f"Error: {module_path} is not a file\n")
+            print(f"Error: {module_path} is not a file\n", file=sys.stderr)
             sys.exit(1)
         dirname, filename = os.path.split(module_path)
         module = filename[:-3] if filename.endswith(".py") else filename
@@ -463,10 +483,13 @@ def try_import_module(module: str) -> Optional[types.ModuleType]:
 # directory. The process for adding new ones is to add your app folder to
 # that directory, and then add another entry to this dictionary.
 app_template_choices = {
-    "Basic App": "basic-app",
-    "Dashboard": "dashboard",
-    "Multi-page app with modules": "multi-page",
-    "Custom JavaScript Component": "js-component",
+    "Basic app": "basic-app",
+    "Sidebar layout": "basic-sidebar",
+    "Basic dashboard": "dashboard",
+    "Intermediate dashboard": "dashboard-tips",
+    "Navigating multiple pages/panels": "basic-navigation",
+    "Custom JavaScript component ...": "js-component",
+    "Choose from the Shiny Templates website": "external-gallery",
 }
 
 # These are templates which produce a Python package and have content filled in at
@@ -625,3 +648,28 @@ class ReloadArgs(TypedDict):
     reload_includes: NotRequired[list[str]]
     reload_excludes: NotRequired[list[str]]
     reload_dirs: NotRequired[list[str]]
+
+
+# Check that the version of rsconnect supports Shiny Express; can be removed in the
+# future once this version of rsconnect is widely used. The dependency on "packaging"
+# can also be removed then, because it is only used here. (Added 2024-03)
+def _verify_rsconnect_version() -> None:
+    PACKAGE_NAME = "rsconnect-python"
+    MIN_VERSION = "1.22.0"
+
+    from importlib.metadata import PackageNotFoundError, version
+
+    from packaging.version import parse
+
+    try:
+        installed_version = parse(version(PACKAGE_NAME))
+        required_version = parse(MIN_VERSION)
+        if installed_version < required_version:
+            print(
+                f"Warning: rsconnect-python {installed_version} is installed, but it does not support deploying Shiny Express applications. "
+                f"Please upgrade to at least version {MIN_VERSION}. "
+                "If you are using pip, you can run `pip install --upgrade rsconnect-python`",
+                file=sys.stderr,
+            )
+    except PackageNotFoundError:
+        pass

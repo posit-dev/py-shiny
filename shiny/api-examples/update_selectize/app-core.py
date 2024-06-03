@@ -6,7 +6,7 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs):
-    @reactive.Effect
+    @reactive.effect
     def _():
         ui.update_selectize(
             "x",

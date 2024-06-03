@@ -42,7 +42,7 @@ from ._input_slider import SliderStepArg, SliderValueArg, _as_numeric, _slider_t
 from ._utils import JSEval, extract_js_keys, session_on_flush_send_msg
 
 if TYPE_CHECKING:
-    from .. import Session
+    from ..session import Session
 
 
 _note = """

@@ -21,14 +21,14 @@ app_ui = ui.page_fixed(
 
 
 def server(input):
-    finished_tasks = reactive.Value(0)
-    task_counter = reactive.Value(0)
+    finished_tasks = reactive.value(0)
+    task_counter = reactive.value(0)
 
     @render.text
     def cleared_tasks():
         return f"Finished tasks: {finished_tasks()}"
 
-    @reactive.Effect
+    @reactive.effect
     @reactive.event(input.add)
     def add():
         counter = task_counter.get() + 1
@@ -47,7 +47,7 @@ def server(input):
         # event within the `add` closure, so nesting the reactive effects
         # means that we don't have to worry about conflicting with
         # finish events from other task elements.
-        @reactive.Effect
+        @reactive.effect
         @reactive.event(finish)
         def iterate_counter():
             finished_tasks.set(finished_tasks.get() + 1)
@@ -65,7 +65,7 @@ def task_ui():
 
 @module.server
 def task_server(input, output, session, text):
-    finished = reactive.Value(False)
+    finished = reactive.value(False)
 
     @render.ui
     def button_row():
@@ -82,12 +82,12 @@ def task_server(input, output, session, text):
             style=css(text_decoration="line-through" if finished() else None),
         )
 
-    @reactive.Effect
+    @reactive.effect
     @reactive.event(input.finish)
     def finish_task():
         finished.set(True)
 
-    @reactive.Effect
+    @reactive.effect
     @reactive.event(input.clear)
     def clear_task():
         ui.remove_ui(selector=f"div#{session.ns('button_row')}")

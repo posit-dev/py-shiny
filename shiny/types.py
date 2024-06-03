@@ -5,6 +5,7 @@ from __future__ import annotations
 __all__ = (
     "MISSING",
     "MISSING_TYPE",
+    "Jsonifiable",
     "FileInfo",
     "ImgData",
     "SafeException",
@@ -12,7 +13,20 @@ __all__ = (
     "SilentCancelOutputException",
 )
 
-from typing import TYPE_CHECKING, Any, BinaryIO, Literal, NamedTuple, Optional, Protocol
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    BinaryIO,
+    Dict,
+    List,
+    Literal,
+    NamedTuple,
+    Optional,
+    Protocol,
+    Tuple,
+    TypeVar,
+    Union,
+)
 
 from htmltools import TagChild
 
@@ -29,6 +43,10 @@ class MISSING_TYPE:
 
 
 MISSING: MISSING_TYPE = MISSING_TYPE()
+
+
+T = TypeVar("T")
+ListOrTuple = Union[List[T], Tuple[T, ...]]
 
 
 # Information about a single file, with a structure like:
@@ -103,7 +121,7 @@ class SilentException(Exception):
     - Displayed to the user (as a big red error message)
         - This happens when the exception is raised from an output context (e.g., :class:`shiny.render.ui`)
     - Crashes the application
-        - This happens when the exception is raised from an :func:`shiny.reactive.Effect`
+        - This happens when the exception is raised from an :func:`shiny.reactive.effect`
 
     This exception is used to silently throw inside a reactive context, meaning that
     execution is paused, and no output is shown to users (or the python console).
@@ -310,3 +328,33 @@ class BrushInfo(TypedDict):
     log: CoordmapPanelLog
     direction: Literal["x", "y", "xy"]
     # .nonce: float
+
+
+# https://github.com/python/cpython/blob/df1eec3dae3b1eddff819fd70f58b03b3fbd0eda/Lib/json/encoder.py#L77-L95
+# +-------------------+---------------+
+# | Python            | JSON          |
+# +===================+===============+
+# | dict              | object        |
+# +-------------------+---------------+
+# | list, tuple       | array         |
+# +-------------------+---------------+
+# | str               | string        |
+# +-------------------+---------------+
+# | int, float        | number        |
+# +-------------------+---------------+
+# | True              | true          |
+# +-------------------+---------------+
+# | False             | false         |
+# +-------------------+---------------+
+# | None              | null          |
+# +-------------------+---------------+
+Jsonifiable = Union[
+    str,
+    int,
+    float,
+    bool,
+    None,
+    List["Jsonifiable"],
+    Tuple["Jsonifiable"],
+    Dict[str, "Jsonifiable"],
+]

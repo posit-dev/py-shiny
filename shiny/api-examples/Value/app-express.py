@@ -1,7 +1,7 @@
 from shiny import reactive
 from shiny.express import input, render, ui
 
-val = reactive.Value(0)
+val = reactive.value(0)
 
 
 @reactive.effect

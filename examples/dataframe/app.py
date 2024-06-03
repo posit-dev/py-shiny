@@ -18,15 +18,20 @@ def app_ui(req):
         ui.input_select(
             "selection_mode",
             "Selection mode",
-            {"none": "(None)", "single": "Single", "multiple": "Multiple"},
+            {
+                "none": "(None)",
+                "row": "Single row",
+                "rows": "Multiple rows",
+            },
             selected="multiple",
         ),
+        ui.input_switch("editable", "Edit", False),
         ui.input_switch("filters", "Filters", True),
         ui.input_switch("gridstyle", "Grid", True),
         ui.input_switch("fullwidth", "Take full width", True),
         ui.output_data_frame("grid"),
         ui.panel_fixed(
-            ui.output_text_verbatim("detail"),
+            ui.output_code("detail"),
             right="10px",
             bottom="10px",
         ),
@@ -55,9 +60,9 @@ def light_dark_switcher(dark):
 
 
 def server(input: Inputs):
-    df: reactive.Value[pd.DataFrame] = reactive.Value()
+    df: reactive.value[pd.DataFrame] = reactive.value()
 
-    @reactive.Effect
+    @reactive.effect
     def update_df():
         return df.set(sns.load_dataset(req(input.dataset())))
 
@@ -71,7 +76,8 @@ def server(input: Inputs):
                 width=width,
                 height=height,
                 filters=input.filters(),
-                row_selection_mode=input.selection_mode(),
+                editable=input.editable(),
+                selection_mode=input.selection_mode(),
             )
         else:
             return render.DataTable(
@@ -79,10 +85,11 @@ def server(input: Inputs):
                 width=width,
                 height=height,
                 filters=input.filters(),
-                row_selection_mode=input.selection_mode(),
+                editable=input.editable(),
+                selection_mode=input.selection_mode(),
             )
 
-    @reactive.Effect
+    @reactive.effect
     @reactive.event(input.grid_cell_edit)
     def handle_edit():
         edit = input.grid_cell_edit()
@@ -90,15 +97,12 @@ def server(input: Inputs):
         df_copy.iat[edit["row"], edit["col"]] = edit["new_value"]
         df.set(df_copy)
 
-    @render.text
+    @render.code
     def detail():
-        if (
-            input.grid_selected_rows() is not None
-            and len(input.grid_selected_rows()) > 0
-        ):
+        selected_rows = (grid.cell_selection() or {}).get("rows", ())
+        if len(selected_rows) > 0:
             # "split", "records", "index", "columns", "values", "table"
-
-            return df().iloc[list(input.grid_selected_rows())]
+            return df().iloc[list(selected_rows)]
 
 
 app = App(app_ui, server)

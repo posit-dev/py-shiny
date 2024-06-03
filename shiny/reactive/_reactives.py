@@ -15,6 +15,7 @@ __all__ = (
     "event",
 )
 
+import asyncio
 import functools
 import traceback
 import warnings
@@ -37,7 +38,7 @@ from ..types import MISSING, MISSING_TYPE, ActionButtonValue, SilentException
 from ._core import Context, Dependents, ReactiveWarning, isolate
 
 if TYPE_CHECKING:
-    from ..session import Session
+    from .. import Session
 
 T = TypeVar("T")
 
@@ -477,8 +478,8 @@ class Effect_:
         self.__name__ = fn.__name__
         self.__doc__ = fn.__doc__
 
-        from ..express._mock_session import MockSession
         from ..render.renderer import Renderer
+        from ..session import Session
 
         if isinstance(fn, Renderer):
             raise TypeError(
@@ -513,9 +514,9 @@ class Effect_:
             # could be None if outside of a session).
             session = get_current_session()
 
-        if isinstance(session, MockSession):
-            # If we're in a MockSession, then don't actually set up this Effect -- we
-            # don't want it to try to run later.
+        if isinstance(session, Session) and session.is_stub_session():
+            # If we're in an ExpressStubSession or a SessionProxy of one, then don't
+            # actually set up this effect -- we don't want it to try to run later.
             return
 
         self._session = session
@@ -547,7 +548,7 @@ class Effect_:
             def _continue() -> None:
                 ctx.add_pending_flush(self._priority)
                 if self._session:
-                    self._session._send_message_sync({"busy": "busy"})
+                    self._session._increment_busy_count()
 
             if self._suspended:
                 self._on_resume = _continue
@@ -558,7 +559,7 @@ class Effect_:
             if not self._destroyed:
                 await self._run()
             if self._session:
-                self._session._send_message_sync({"busy": "idle"})
+                self._session._decrement_busy_count()
 
         ctx.on_invalidate(on_invalidate_cb)
         ctx.on_flush(on_flush_cb)
@@ -575,6 +576,10 @@ class Effect_:
             try:
                 with ctx():
                     await self._fn()
+
+                    # Yield so that messages can be sent to the client if necessary.
+                    # https://github.com/posit-dev/py-shiny/issues/1381
+                    await asyncio.sleep(0)
             except SilentException:
                 # It's OK for SilentException to cause an Effect to stop running
                 pass

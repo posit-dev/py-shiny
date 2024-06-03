@@ -81,6 +81,10 @@ re_valid_id: Pattern[str] = re.compile("^\\.?\\w+$")
 
 
 def validate_id(id: str) -> None:
+    if not isinstance(id, str):
+        raise ValueError("`id` must be a single string")
+    if id == "":
+        raise ValueError("`id` must be a non-empty string")
     if not re_valid_id.match(id):
         raise ValueError(
             f"The string '{id}' is not a valid id; only letters, numbers, and "

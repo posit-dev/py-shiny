@@ -29,7 +29,7 @@ def server(input: Inputs):
     # Copy the list for user
     user_choices = [choice for choice in choices]
 
-    @reactive.Effect
+    @reactive.effect
     @reactive.event(input.remove_panel)
     def _():
         if len(user_choices) == 0:
@@ -37,7 +37,7 @@ def server(input: Inputs):
             return
 
         # Remove panel
-        ui.remove_accordion_panel("acc", f"Section { user_choices.pop() }")
+        ui.remove_accordion_panel("acc", f"Section {user_choices.pop()}")
 
         label = "No more panels to remove!"
         if len(user_choices) > 0:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import sys
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Literal, Optional, TypeVar
 
 
@@ -60,7 +61,7 @@ class DocStringWithExample(str): ...
 class ExampleWriter:
     def write_example(self, app_files: list[str]) -> str:
         app_file = app_files[0]
-        with open(app_file) as f:
+        with open(app_file, encoding="utf-8") as f:
             code = f.read()
 
         return f"```.python\n{code.strip()}\n```\n"
@@ -152,17 +153,19 @@ def add_example(
             return func
 
         other_files: list[str] = []
-        for f in os.listdir(example_dir):
-            abs_f = os.path.join(example_dir, f)
+        for abs_f in Path(example_dir).glob("**/*"):
+            rel_f = abs_f.relative_to(example_dir)
+            f = os.path.basename(abs_f)
             is_support_file = (
                 os.path.isfile(abs_f)
                 and f != app_file_name
                 and f != "app.py"
+                and f != ".DS_Store"
                 and not f.startswith("app-")
-                and not f.startswith("__")
+                and not str(rel_f).startswith("__")
             )
             if is_support_file:
-                other_files.append(abs_f)
+                other_files.append(str(abs_f))
 
         if func.__doc__ is None:
             func.__doc__ = ""
@@ -206,7 +209,7 @@ def is_express_app(app_path: str) -> bool:
     if not os.path.exists(app_path):
         return False
 
-    with open(app_path) as f:
+    with open(app_path, encoding="utf-8") as f:
         for line in f:
             if "from shiny.express" in line:
                 return True

@@ -1,0 +1,7 @@
+{
+	"recommendations": [
+    "posit.shiny",
+		"esbenp.prettier-vscode",
+    "ms-python.black-formatter",
+	]
+}

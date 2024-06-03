@@ -13,7 +13,7 @@ ui.input_checkbox_group(
 )
 
 
-@reactive.Calc
+@reactive.calc
 def parsed_file():
     file: list[FileInfo] | None = input.file1()
     if file is None:

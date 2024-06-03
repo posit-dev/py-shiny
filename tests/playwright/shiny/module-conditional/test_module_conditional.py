@@ -1,6 +1,5 @@
-from conftest import ShinyAppProc
-from controls import InputCheckbox
-from playwright.sync_api import Page, expect
+from shiny.test import Page, ShinyAppProc, expect
+from shiny.test._controls import InputCheckbox
 
 
 def test_async_app(page: Page, local_app: ShinyAppProc) -> None:

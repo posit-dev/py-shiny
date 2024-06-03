@@ -100,24 +100,24 @@ def location_server(
 
     register_widget("map", map)
 
-    @reactive.Effect
+    @reactive.effect
     def _():
         coords = reactive_read(marker, "location")
         if coords:
             update_text_inputs(coords[0], coords[1])
 
-    @reactive.Effect
+    @reactive.effect
     def sync_autolocate():
         coords = input.here()
         ui.notification_remove("searching")
         if coords and not input.lat() and not input.long():
             update_text_inputs(coords["latitude"], coords["longitude"])
 
-    @reactive.Effect
+    @reactive.effect
     def sync_inputs_to_marker():
         update_marker(input.lat(), input.long())
 
-    @reactive.Calc
+    @reactive.calc
     def location():
         """Returns tuple of (lat,long) floats--or throws silent error if no lat/long is
         selected"""

@@ -1,9 +1,10 @@
 # Shiny for Python
 
-[![Release](https://img.shields.io/github/v/release/rstudio/py-shiny)](https://img.shields.io/github/v/release/rstudio/py-shiny)
-[![Build status](https://img.shields.io/github/actions/workflow/status/rstudio/py-shiny/pytest.yaml?branch=main)](https://img.shields.io/github/actions/workflow/status/rstudio/py-shiny/pytest.yaml?branch=main)
-[![Supported Python versions](https://img.shields.io/pypi/pyversions/deptry)](https://pypi.org/project/deptry/)
-[![License](https://img.shields.io/github/license/rstudio/py-shiny)](https://img.shields.io/github/license/rstudio/py-shiny)
+[![PyPI Latest Release](https://img.shields.io/pypi/v/shiny.svg)](https://pypi.org/project/shiny/)
+[![Build status](https://img.shields.io/github/actions/workflow/status/posit-dev/py-shiny/pytest.yaml?branch=main)](https://img.shields.io/github/actions/workflow/status/posit-dev/py-shiny/pytest.yaml?branch=main)
+[![Conda Latest Release](https://anaconda.org/conda-forge/shiny/badges/version.svg)](https://anaconda.org/conda-forge/shiny)
+[![Supported Python versions](https://img.shields.io/pypi/pyversions/shiny)](https://pypi.org/project/shiny/)
+[![License](https://img.shields.io/github/license/posit-dev/py-shiny)](https://github.com/posit-dev/py-shiny/blob/main/LICENSE)
 
 Shiny for Python is the best way to build fast, beautiful web applications in Python. You can build quickly with Shiny and create simple interactive visualizations and prototype applications in an afternoon. But unlike other frameworks targeted at data scientists, Shiny does not limit your app's growth. Shiny remains extensible enough to power large, mission-critical applications.
 
@@ -41,7 +42,10 @@ You can create and run your first application with `shiny create`, the CLI will 
 
 ## Development
 
-API documentation for the `main` branch of Shiny: https://posit-dev.github.io/py-shiny/api/
+* Shinylive built from the `main` branch: https://posit-dev.github.io/py-shiny/shinylive/py/examples/
+* API documentation for the `main` branch:
+    * https://posit-dev.github.io/py-shiny/docs/api/express/
+    * https://posit-dev.github.io/py-shiny/docs/api/core/
 
 If you want to do development on Shiny for Python:
 

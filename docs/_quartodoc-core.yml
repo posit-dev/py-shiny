@@ -44,6 +44,7 @@ quartodoc:
         - ui.input_select
         - ui.input_selectize
         - ui.input_slider
+        - ui.input_dark_mode
         - ui.input_date
         - ui.input_date_range
         - ui.input_checkbox
@@ -56,6 +57,7 @@ quartodoc:
         - ui.input_password
         - ui.input_action_button
         - ui.input_action_link
+        - ui.input_task_button
     - title: Value boxes
       desc: Prominently display a value and label in a box that can be expanded to show more information.
       contents:
@@ -106,6 +108,8 @@ quartodoc:
         - ui.include_js
         - ui.insert_ui
         - ui.remove_ui
+        - ui.busy_indicators.use
+        - ui.busy_indicators.options
         - ui.fill.as_fillable_container
         - ui.fill.as_fill_item
         - ui.fill.remove_all_fill
@@ -116,30 +120,24 @@ quartodoc:
     - title: Update inputs
       desc: Programmatically update input values.
       contents:
-        - name: ui.update_select
-          dynamic: true
-        - name: ui.update_selectize
-          dynamic: true
-        - name: ui.update_slider
-          dynamic: true
+        - ui.update_select
+        - ui.update_selectize
+        - ui.update_slider
+        - ui.update_dark_mode
         - ui.update_date
-        - name: ui.update_date_range
-          dynamic: true
-        - name: ui.update_checkbox
-          dynamic: true
-        - name: ui.update_checkbox_group
-          dynamic: true
-        - name: ui.update_switch
-          dynamic: true
-        - name: ui.update_radio_buttons
-          dynamic: true
-        - name: ui.update_numeric
-          dynamic: true
+        - ui.update_date_range
+        - ui.update_checkbox
+        - ui.update_checkbox_group
+        - ui.update_switch
+        - ui.update_radio_buttons
+        - ui.update_numeric
         - ui.update_text
         - name: ui.update_text_area
           dynamic: "shiny.ui.update_text"
-        - name: ui.update_navs
-          dynamic: true
+        - ui.update_navs
+        - ui.update_action_button
+        - ui.update_action_link
+        - ui.update_task_button
     - title: Update UI Layouts
       desc: ""
       contents:
@@ -230,8 +228,13 @@ quartodoc:
             - session.require_active_session
             - session.session_context
             - reactive.get_current_context
-            - name: input_handler.input_handlers
-              dynamic: true
+            - session.Session.send_custom_message
+            - session.Session.send_input_message
+            - session.Session.on_flush
+            - session.Session.on_flushed
+            - session.Session.on_ended
+            - session.Session.dynamic_route
+            - input_handler.input_handlers
         - kind: page
           path: Renderer
           flatten: true

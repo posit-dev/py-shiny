@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from conftest import ShinyAppProc
-from playwright.sync_api import Page, expect
+from shiny.test import Page, ShinyAppProc, expect
 
 
 def test_row_selection(page: Page, local_app: ShinyAppProc) -> None:
@@ -25,5 +24,5 @@ def test_row_selection(page: Page, local_app: ShinyAppProc) -> None:
     expect(debug_loc).to_have_text("(2,)")
 
     # Ensure that keys are in sorted order, not the order in which they were selected
-    row1.click()
-    expect(debug_loc).to_have_text("(0, 2)")
+    row1.click(modifiers=["Shift"])
+    expect(debug_loc).to_have_text("(0, 1, 2)")

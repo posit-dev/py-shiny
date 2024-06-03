@@ -52,6 +52,8 @@ from ...ui._plot_output_opts import DblClickOpts as MainDblClickOpts
 from ...ui._plot_output_opts import HoverOpts as MainHoverOpts
 from ...ui._sidebar import DeprecatedPanelMain, DeprecatedPanelSidebar
 from ...ui._sidebar import Sidebar as MainSidebar
+from ...ui._sidebar import SidebarOpenSpec as MainSidebarOpenSpec
+from ...ui._sidebar import SidebarOpenValue as MainSidebarOpenValue
 from ...ui._sidebar import layout_sidebar as main_layout_sidebar
 from ...ui._sidebar import panel_main as main_panel_main
 from ...ui._sidebar import panel_sidebar as main_panel_sidebar
@@ -387,14 +389,19 @@ class Sidebar(MainSidebar):
 
     def __init__(
         self,
-        tag: Tag,
-        collapse_tag: Optional[Tag],
-        position: Literal["left", "right"],
-        open: Literal["desktop", "open", "closed", "always"],
-        width: CssUnit,
-        max_height_mobile: Optional[str | float],
-        color_fg: Optional[str],
-        color_bg: Optional[str],
+        children: list[TagChild],
+        attrs: TagAttrs,
+        position: Literal["left", "right"] = "left",
+        open: Optional[MainSidebarOpenValue | MainSidebarOpenSpec] = None,
+        width: CssUnit = 250,
+        id: Optional[str] = None,
+        title: TagChild | str = None,
+        fg: Optional[str] = None,
+        bg: Optional[str] = None,
+        class_: Optional[str] = None,
+        max_height_mobile: Optional[str | float] = None,
+        gap: Optional[CssUnit] = None,
+        padding: Optional[CssUnit | list[CssUnit]] = None,
     ):
         warn_deprecated(
             "`shiny.experimental.ui.Sidebar` is deprecated. "
@@ -402,14 +409,19 @@ class Sidebar(MainSidebar):
             "please use :class:`shiny.ui.Sidebar` instead."
         )
         super().__init__(
-            tag,
-            collapse_tag,
-            position,
-            open,
-            width,
-            max_height_mobile,
-            color_fg,
-            color_bg,
+            children=children,
+            attrs=attrs,
+            position=position,
+            open=open,
+            width=width,
+            id=id,
+            title=title,
+            fg=fg,
+            bg=bg,
+            class_=class_,
+            max_height_mobile=max_height_mobile,
+            gap=gap,
+            padding=padding,
         )
 
 
@@ -1110,6 +1122,7 @@ def value_box(
         max_height=max_height,
         fill=fill,
         class_=class_,
+        id=None,
         **kwargs,
     )
 
@@ -1409,6 +1422,7 @@ def page_sidebar(
         fillable_mobile=fillable_mobile,
         window_title=window_title,
         lang=lang,
+        theme=None,
         **kwargs,
     )
 
@@ -1485,5 +1499,6 @@ def page_fillable(
         fillable_mobile=fillable_mobile,
         title=title,
         lang=lang,
+        theme=None,
         **kwargs,
     )

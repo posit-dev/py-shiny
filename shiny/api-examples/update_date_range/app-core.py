@@ -9,7 +9,7 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs):
-    @reactive.Effect
+    @reactive.effect
     def _():
         d = date(2013, 4, input.n())
         ui.update_date_range(

@@ -13,6 +13,7 @@ from ...ui._accordion import AccordionPanel
 from ...ui._card import CardItem
 from ...ui._layout_columns import BreakpointsUser
 from ...ui._navs import NavMenu, NavPanel, NavSet, NavSetBar, NavSetCard
+from ...ui._sidebar import SidebarOpenSpec, SidebarOpenValue
 from ...ui.css import CssUnit
 from .._recall_context import RecallContextManager
 
@@ -42,17 +43,18 @@ __all__ = (
 @add_example()
 def sidebar(
     *,
-    width: CssUnit = 250,
     position: Literal["left", "right"] = "left",
-    open: Literal["desktop", "open", "closed", "always"] = "always",
+    open: Optional[SidebarOpenSpec | SidebarOpenValue | Literal["desktop"]] = None,
+    width: CssUnit = 250,
     id: Optional[str] = None,
     title: TagChild | str = None,
     bg: Optional[str] = None,
     fg: Optional[str] = None,
-    class_: Optional[str] = None,  # TODO-future; Consider using `**kwargs` instead
-    max_height_mobile: Optional[str | float] = "auto",
+    class_: Optional[str] = None,
+    max_height_mobile: Optional[str | float] = None,
     gap: Optional[CssUnit] = None,
     padding: Optional[CssUnit | list[CssUnit]] = None,
+    **kwargs: TagAttrValue,
 ) -> RecallContextManager[ui.Sidebar]:
     """
     Context manager for sidebar element
@@ -64,20 +66,21 @@ def sidebar(
     width
         A valid CSS unit used for the width of the sidebar.
     position
-        Where the sidebar should appear relative to the main content.
+        Where the sidebar should appear relative to the main content, one of `"left"` or
+        `"right"`.
     open
-        The initial state of the sidebar.
+        The initial state of the sidebar. If a string, the possible values are:
 
-        * `"desktop"`: the sidebar starts open on desktop screen, closed on mobile
-        * `"open"` or `True`: the sidebar starts open
-        * `"closed"` or `False`: the sidebar starts closed
-        * `"always"` or `None`: the sidebar is always open and cannot be closed
+        * `"open"`: the sidebar starts open
+        * `"closed"`: the sidebar starts closed
+        * `"always"`: the sidebar is always open and cannot be closed
 
-        In :func:`~shiny.ui.update_sidebar`, `open` indicates the desired state of the
-        sidebar. Note that :func:`~shiny.ui.update_sidebar` can only open or close the
-        sidebar, so it does not support the `"desktop"` and `"always"` options.
+        Alternatively, you can provide a dictionary with keys `"desktop"` and `"mobile"`
+        to set different initial states for desktop and mobile. For example, when
+        `{"desktop": "open", "mobile": "closed"}` the sidebar is initialized in the
+        open state on desktop screens or in the closed state on mobile screens.
     id
-        A character string. Required if wanting to re-actively read (or update) the
+        A character string. Required if wanting to reactively read (or update) the
         `collapsible` state in a Shiny app.
     title
         A character title to be used as the sidebar title, which will be wrapped in a
@@ -92,8 +95,8 @@ def sidebar(
     max_height_mobile
         A CSS length unit (passed through :func:`~shiny.ui.css.as_css_unit`) defining
         the maximum height of the horizontal sidebar when viewed on mobile devices. Only
-        applies to always-open sidebars that use `open = "always"`, where by default the
-        sidebar container is placed below the main content container on mobile devices.
+        applies to always-open sidebars on mobile, where by default the sidebar
+        container is placed below the main content container on mobile devices.
     gap
         A CSS length unit defining the vertical `gap` (i.e., spacing) between elements
         provided to `*args`.
@@ -109,6 +112,8 @@ def sidebar(
           and right, and the third will be bottom.
         * If four, then the values will be interpreted as top, right, bottom, and left
           respectively.
+    **kwargs
+        Named attributes are supplied to the sidebar content container.
     """
     return RecallContextManager(
         ui.sidebar,
@@ -124,6 +129,7 @@ def sidebar(
             max_height_mobile=max_height_mobile,
             gap=gap,
             padding=padding,
+            **kwargs,
         ),
     )
 
@@ -216,6 +222,8 @@ def layout_column_wrap(
     fill: bool = True,
     fillable: bool = True,
     height: Optional[CssUnit] = None,
+    min_height: Optional[CssUnit] = None,
+    max_height: Optional[CssUnit] = None,
     height_mobile: Optional[CssUnit] = None,
     gap: Optional[CssUnit] = None,
     class_: Optional[str] = None,
@@ -261,8 +269,10 @@ def layout_column_wrap(
         with an opinionated height (e.g., :func:`~shiny.ui.page_fillable`).
     fillable
         Whether or not each element is wrapped in a fillable container.
-    height
-        Any valid CSS unit to use for the height.
+    height,max_height,min_height
+        A valid CSS unit (e.g., `height="200px"`). Use `min_height` and `max_height` in
+        a filling layout to ensure that the layout container does not shrink below a
+        `min_height` or grow beyond a `max_height`.
     height_mobile
         Any valid CSS unit to use for the height when on mobile devices (or narrow
         windows).
@@ -282,6 +292,8 @@ def layout_column_wrap(
             fill=fill,
             fillable=fillable,
             height=height,
+            min_height=min_height,
+            max_height=max_height,
             height_mobile=height_mobile,
             gap=gap,
             class_=class_,
@@ -300,6 +312,8 @@ def layout_columns(
     gap: Optional[CssUnit] = None,
     class_: Optional[str] = None,
     height: Optional[CssUnit] = None,
+    min_height: Optional[CssUnit] = None,
+    max_height: Optional[CssUnit] = None,
     **kwargs: TagAttrValue,
 ) -> RecallContextManager[Tag]:
     """
@@ -362,8 +376,10 @@ def layout_columns(
     class_
         CSS class(es) to apply to the containing element.
 
-    height
-        Any valid CSS unit to use for the height.
+    height,max_height,min_height
+        A valid CSS unit (e.g., `height="200px"`). Use `min_height` and `max_height` in
+        a filling layout to ensure that the layout container does not shrink below a
+        `min_height` or grow beyond a `max_height`.
 
     **kwargs
         Additional attributes to apply to the containing element.
@@ -393,6 +409,8 @@ def layout_columns(
             gap=gap,
             class_=class_,
             height=height,
+            min_height=min_height,
+            max_height=max_height,
             **kwargs,
         ),
     )
@@ -1147,6 +1165,7 @@ def value_box(
     theme: Optional[str | ui.ValueBoxTheme] = None,
     height: Optional[CssUnit] = None,
     max_height: Optional[CssUnit] = None,
+    min_height: Optional[CssUnit] = None,
     fill: bool = True,
     class_: Optional[str] = None,
     **kwargs: TagAttrValue,
@@ -1189,9 +1208,9 @@ def value_box(
     full_screen
         If `True`, an icon will appear when hovering over the card body. Clicking the
         icon expands the card to fit viewport size.
-    height,max_height
-        Any valid CSS unit (e.g., `height="200px"`). Doesn't apply when a card is made
-        `full_screen`.
+    height,max_height,min_height
+        Any valid CSS unit (e.g., `height="200px"`). Doesn't apply when a value box is
+        made `full_screen`.
     fill
         Whether to allow the value box to grow/shrink to fit a fillable container with
         an opinionated height (e.g., :func:`~shiny.ui.page_fillable`).
@@ -1211,6 +1230,7 @@ def value_box(
             theme=theme,
             height=height,
             max_height=max_height,
+            min_height=min_height,
             fill=fill,
             class_=class_,
             **kwargs,

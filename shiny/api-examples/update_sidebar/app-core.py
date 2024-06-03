@@ -12,12 +12,12 @@ app_ui = ui.page_sidebar(
 
 
 def server(input: Inputs):
-    @reactive.Effect
+    @reactive.effect
     @reactive.event(input.open_sidebar)
     def _():
         ui.update_sidebar("sidebar", show=True)
 
-    @reactive.Effect
+    @reactive.effect
     @reactive.event(input.close_sidebar)
     def _():
         ui.update_sidebar("sidebar", show=False)

@@ -1,94 +1,96 @@
-from pathlib import Path
-
-import pandas as pd
 import seaborn as sns
+from faicons import icon_svg
 
-from shiny import App, Inputs, reactive, render, ui
+# Import data from shared.py
+from shared import app_dir, df
 
-sns.set_theme(style="white")
-df = pd.read_csv(Path(__file__).parent / "penguins.csv", na_values="NA")
-species = ["Adelie", "Gentoo", "Chinstrap"]
-
-
-def make_value_box(penguin):
-    return ui.value_box(
-        title=penguin, value=ui.output_text(f"{penguin}_count".lower()), theme="primary"
-    )
-
+from shiny import App, reactive, render, ui
 
 app_ui = ui.page_sidebar(
     ui.sidebar(
-        ui.input_slider(
-            "mass",
-            "Mass",
-            2000,
-            6000,
-            3400,
-        ),
+        ui.input_slider("mass", "Mass", 2000, 6000, 6000),
         ui.input_checkbox_group(
-            "species", "Filter by species", species, selected=species
+            "species",
+            "Species",
+            ["Adelie", "Gentoo", "Chinstrap"],
+            selected=["Adelie", "Gentoo", "Chinstrap"],
         ),
+        title="Filter controls",
     ),
-    ui.layout_columns(
-        *[make_value_box(penguin) for penguin in species],
+    ui.layout_column_wrap(
+        ui.value_box(
+            "Number of penguins",
+            ui.output_text("count"),
+            showcase=icon_svg("earlybirds"),
+        ),
+        ui.value_box(
+            "Average bill length",
+            ui.output_text("bill_length"),
+            showcase=icon_svg("ruler-horizontal"),
+        ),
+        ui.value_box(
+            "Average bill depth",
+            ui.output_text("bill_depth"),
+            showcase=icon_svg("ruler-vertical"),
+        ),
+        fill=False,
     ),
     ui.layout_columns(
         ui.card(
-            ui.card_header("Summary statistics"),
-            ui.output_data_frame("summary_statistics"),
-        ),
-        ui.card(
-            ui.card_header("Penguin bills"),
+            ui.card_header("Bill length and depth"),
             ui.output_plot("length_depth"),
+            full_screen=True,
+        ),
+        ui.card(
+            ui.card_header("Penguin data"),
+            ui.output_data_frame("summary_statistics"),
+            full_screen=True,
         ),
     ),
+    ui.include_css(app_dir / "styles.css"),
+    title="Penguins dashboard",
+    fillable=True,
 )
 
 
-def server(input: Inputs):
-    @reactive.Calc
-    def filtered_df() -> pd.DataFrame:
-        filt_df = df[df["Species"].isin(input.species())]
-        filt_df = filt_df.loc[filt_df["Body Mass (g)"] > input.mass()]
+def server(input):
+    @reactive.calc
+    def filtered_df():
+        filt_df = df[df["species"].isin(input.species())]
+        filt_df = filt_df.loc[filt_df["body_mass_g"] < input.mass()]
         return filt_df
 
     @render.text
-    def adelie_count():
-        return count_species(filtered_df(), "Adelie")
+    def count():
+        return filtered_df().shape[0]
 
     @render.text
-    def chinstrap_count():
-        return count_species(filtered_df(), "Chinstrap")
+    def bill_length():
+        return f"{filtered_df()['bill_length_mm'].mean():.1f} mm"
 
     @render.text
-    def gentoo_count():
-        return count_species(filtered_df(), "Gentoo")
+    def bill_depth():
+        return f"{filtered_df()['bill_depth_mm'].mean():.1f} mm"
 
     @render.plot
     def length_depth():
         return sns.scatterplot(
             data=filtered_df(),
-            x="Bill Length (mm)",
-            y="Bill Depth (mm)",
-            hue="Species",
+            x="bill_length_mm",
+            y="bill_depth_mm",
+            hue="species",
         )
 
     @render.data_frame
     def summary_statistics():
-        display_df = filtered_df()[
-            [
-                "Species",
-                "Island",
-                "Bill Length (mm)",
-                "Bill Depth (mm)",
-                "Body Mass (g)",
-            ]
+        cols = [
+            "species",
+            "island",
+            "bill_length_mm",
+            "bill_depth_mm",
+            "body_mass_g",
         ]
-        return render.DataGrid(display_df, filters=True)
-
-
-def count_species(df, species):
-    return df[df["Species"] == species].shape[0]
+        return render.DataGrid(filtered_df()[cols], filters=True)
 
 
 app = App(app_ui, server)

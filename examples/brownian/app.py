@@ -44,7 +44,7 @@ app_ui = ui.page_fluid(
 def server(input):
     # BROWNIAN MOTION ====
 
-    @reactive.Calc
+    @reactive.calc
     def random_walk():
         """Generates brownian data whenever 'New Data' is clicked"""
         input.data_btn()
@@ -54,7 +54,7 @@ def server(input):
     widget = brownian_widget(600, 600)
     register_widget("plot", widget)
 
-    @reactive.Effect
+    @reactive.effect
     def update_plotly_data():
         walk = random_walk()
         layer = widget.data[0]
@@ -65,7 +65,7 @@ def server(input):
 
     # HAND TRACKING ====
 
-    @reactive.Calc
+    @reactive.calc
     def camera_eye():
         """The eye position, as reflected by the hand input"""
         hand_val = input.hand()
@@ -78,7 +78,7 @@ def server(input):
     # The raw data is a little jittery. Smooth it out by averaging a few samples
     smooth_camera_eye = reactive_smooth(n_samples=5, smoother=xyz_mean)(camera_eye)
 
-    @reactive.Effect
+    @reactive.effect
     def update_plotly_camera():
         """Update Plotly camera using the hand tracking"""
         widget.layout.scene.camera.eye = smooth_camera_eye()
@@ -112,9 +112,9 @@ def reactive_smooth(n_samples, smoother, *, filter_none=True):
 
     def wrapper(calc):
         buffer = []  # Ring buffer of capacity `n_samples`
-        result = reactive.Value(None)  # Holds the most recent smoothed result
+        result = reactive.value(None)  # Holds the most recent smoothed result
 
-        @reactive.Effect
+        @reactive.effect
         def _():
             # Get latest value. Because this is happening in a reactive Effect, we'll
             # automatically take a reactive dependency on whatever is happening in the

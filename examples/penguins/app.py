@@ -53,7 +53,7 @@ app_ui = ui.page_sidebar(
 
 
 def server(input: Inputs):
-    @reactive.Calc
+    @reactive.calc
     def filtered_df() -> pd.DataFrame:
         """Returns a Pandas data frame that includes only the desired rows"""
 

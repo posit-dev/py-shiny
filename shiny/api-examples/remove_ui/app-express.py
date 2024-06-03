@@ -5,7 +5,7 @@ ui.input_action_button("rmv", "Remove UI")
 ui.input_text("txt", "Click button above to remove me")
 
 
-@reactive.Effect
+@reactive.effect
 @reactive.event(input.rmv)
 def _():
     ui.remove_ui(selector="div:has(> #txt)")

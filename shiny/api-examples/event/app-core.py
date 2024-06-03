@@ -6,8 +6,8 @@ app_ui = ui.page_fluid(
     ui.markdown(
         f"""
         This example demonstrates how `@reactive.event()` can be used to restrict
-        execution of: (1) a `@render` function, (2) `@reactive.Calc`, or (3)
-        `@reactive.Effect`.
+        execution of: (1) a `@render` function, (2) `@reactive.calc`, or (3)
+        `@reactive.effect`.
 
         In all three cases, the output is dependent on a random value that gets updated
         every 0.5 seconds (currently, it is {ui.output_ui("number", inline=True)}), but
@@ -36,9 +36,9 @@ app_ui = ui.page_fluid(
 
 def server(input: Inputs):
     # Update a random number every second
-    val = reactive.Value(random.randint(0, 1000))
+    val = reactive.value(random.randint(0, 1000))
 
-    @reactive.Effect
+    @reactive.effect
     def _():
         reactive.invalidate_later(0.5)
         val.set(random.randint(0, 1000))
@@ -56,7 +56,7 @@ def server(input: Inputs):
     def out_out():
         return str(val.get())
 
-    @reactive.Calc
+    @reactive.calc
     @reactive.event(input.btn_calc)
     def calc():
         return 1 / val.get()
@@ -65,7 +65,7 @@ def server(input: Inputs):
     def out_calc():
         return str(calc())
 
-    @reactive.Effect
+    @reactive.effect
     @reactive.event(input.btn_effect)
     def _():
         ui.insert_ui(

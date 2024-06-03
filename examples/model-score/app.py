@@ -48,7 +48,9 @@ def df():
         params=[150],
     )
     # Convert timestamp to datetime object, which SQLite doesn't support natively
-    tbl["timestamp"] = pd.to_datetime(tbl["timestamp"], utc=True)
+    tbl["timestamp"] = pd.to_datetime(
+        tbl["timestamp"], utc=True, format="%Y-%m-%d %H:%M:%S.%f"
+    )
     # Create a short label for readability
     tbl["time"] = tbl["timestamp"].dt.strftime("%H:%M:%S")
     # Reverse order of rows
@@ -64,7 +66,9 @@ def read_time_period(from_time, to_time):
         params=[from_time, to_time],
     )
     # Treat timestamp as a continuous variable
-    tbl["timestamp"] = pd.to_datetime(tbl["timestamp"], utc=True)
+    tbl["timestamp"] = pd.to_datetime(
+        tbl["timestamp"], utc=True, format="%Y-%m-%d %H:%M:%S.%f"
+    )
     tbl["time"] = tbl["timestamp"].dt.strftime("%H:%M:%S")
 
     return tbl
@@ -134,7 +138,7 @@ def app_ui(req):
 
 
 def server(input: Inputs):
-    @reactive.Calc
+    @reactive.calc
     def recent_df():
         """
         Returns the most recent rows from the database, at the refresh interval
@@ -152,7 +156,7 @@ def server(input: Inputs):
             with reactive.isolate():
                 return df()
 
-    @reactive.Calc
+    @reactive.calc
     def timeframe_df():
         """
         Returns rows from the database within the specified time range. Notice that we
@@ -162,7 +166,7 @@ def server(input: Inputs):
         start, end = input.timerange()
         return read_time_period(start, end)
 
-    @reactive.Calc
+    @reactive.calc
     def filtered_df():
         """
         Return the data frame that should be displayed in the app, based on the user's
@@ -174,7 +178,7 @@ def server(input: Inputs):
         # Filter the rows so we only include the desired models
         return data[data["model"].isin(input.models())]
 
-    @reactive.Calc
+    @reactive.calc
     def filtered_model_names():
         return filtered_df()["model"].unique()
 
@@ -282,7 +286,7 @@ def server(input: Inputs):
 
         return fig
 
-    @reactive.Effect
+    @reactive.effect
     def update_time_range():
         """
         Every 5 seconds, update the custom time range slider's min and max values to

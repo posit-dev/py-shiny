@@ -498,7 +498,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     # # ## Debug
 
-    # @reactive.Effect
+    # @reactive.effect
     # def _():
     #     print("here")
     #     reactive.invalidate_later(1)

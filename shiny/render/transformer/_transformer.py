@@ -266,8 +266,8 @@ class OutputRenderer(
         self._default_ui_args: tuple[object, ...] = tuple()
         self._default_ui_kwargs: dict[str, object] = dict()
 
-        # Allow for App authors to not require `@output`
-        self._auto_register()
+        # Register the value function with the parent Renderer class
+        self(value_fn)
 
     def _meta(self) -> TransformerMetadata:
         """
@@ -296,7 +296,7 @@ class OutputRenderer(
         `*args` is required to use with `**kwargs` when using
         `typing.ParamSpec`.
         """
-        ret = await self._transformer(
+        ret = await self._transformer(  # pyright: ignore
             # TransformerMetadata
             self._meta(),
             # Callable[[], IT] | Callable[[], Awaitable[IT]]

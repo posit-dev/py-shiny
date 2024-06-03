@@ -5,26 +5,29 @@ Tools for reactively rendering output for the user interface.
 from . import (  # noqa: F401
     transformer,  # pyright: ignore[reportUnusedImport]
 )
-from ._dataframe import (
+from ._data_frame import (
+    CellPatch,
+    CellValue,
     DataGrid,
     DataTable,
     data_frame,
+)
+from ._data_frame_utils import CellSelection
+from ._deprecated import (  # noqa: F401
+    RenderFunction,  # pyright: ignore[reportUnusedImport]
+    RenderFunctionAsync,  # pyright: ignore[reportUnusedImport]
 )
 from ._express import (
     express,
 )
 from ._render import (
     code,
+    download,
     image,
     plot,
     table,
     text,
     ui,
-    download,
-)
-from ._deprecated import (  # noqa: F401
-    RenderFunction,  # pyright: ignore[reportUnusedImport]
-    RenderFunctionAsync,  # pyright: ignore[reportUnusedImport]
 )
 
 __all__ = (
@@ -40,4 +43,7 @@ __all__ = (
     "download",
     "DataGrid",
     "DataTable",
+    "CellPatch",
+    "CellValue",
+    "CellSelection",
 )

@@ -1,9 +1,10 @@
-name: Build
+name: Verify built assets
 
 on:
   push:
     branches: ["main", "rc-*"]
   pull_request:
+  merge_group:
 
 jobs:
   verify_js_built:

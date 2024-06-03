@@ -4,7 +4,7 @@ from __future__ import annotations
 
 __all__ = ("input_handlers",)
 
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import TYPE_CHECKING, Any, Callable, Dict
 
 if TYPE_CHECKING:
@@ -99,25 +99,42 @@ getType: function(el) {
 @input_handlers.add("shiny.date")
 def _(
     value: str | list[str], name: ResolvedId, session: Session
-) -> date | tuple[date, date]:
+) -> date | None | tuple[date | None, date | None]:
+
     if isinstance(value, str):
+        return _safe_strptime_date(value)
+    else:
+        return (
+            _safe_strptime_date(value[0]),
+            _safe_strptime_date(value[1]),
+        )
+
+
+def _safe_strptime_date(value: str | None) -> date | None:
+    if value is None:
+        return None
+    try:
         return datetime.strptime(value, "%Y-%m-%d").date()
-    return (
-        datetime.strptime(value[0], "%Y-%m-%d").date(),
-        datetime.strptime(value[1], "%Y-%m-%d").date(),
-    )
+    except ValueError:
+        return None
 
 
 @input_handlers.add("shiny.datetime")
 def _(
-    value: int | float | list[int] | list[float], name: ResolvedId, session: Session
+    value: int | float | list[int] | list[float],
+    name: ResolvedId,
+    session: Session,
 ) -> datetime | tuple[datetime, datetime]:
+    def as_utc_date(x: int | float) -> datetime:
+        dt = datetime.fromtimestamp(x, timezone.utc)
+        # Remove hour offset from print method by removing the timezone
+        # Ex: 2021-08-01T00:00:00+00:00 -> 2021-08-01T00:00:00
+        # This is done as all dates are in UTC
+        return dt.replace(tzinfo=None)
+
     if isinstance(value, (int, float)):
-        return datetime.utcfromtimestamp(value)
-    return (
-        datetime.utcfromtimestamp(value[0]),
-        datetime.utcfromtimestamp(value[1]),
-    )
+        return as_utc_date(value)
+    return (as_utc_date(value[0]), as_utc_date(value[1]))
 
 
 @input_handlers.add("shiny.action")

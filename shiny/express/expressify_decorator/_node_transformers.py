@@ -59,8 +59,10 @@ class FuncBodyDisplayHookTransformer(TopLevelTransformer):
     FunctionDef it finds will be transformed.
     """
 
-    def __init__(self):
+    def __init__(self, has_docstring: bool = False):
         self.saw_func = False
+        self.has_docstring = has_docstring
+        self.has_visited_first_node = False
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> object:
         """
@@ -78,6 +80,19 @@ class FuncBodyDisplayHookTransformer(TopLevelTransformer):
         Note that we don't descend into the node, so child expressions will not
         be affected.
         """
+        if not self.has_visited_first_node:
+            self.has_visited_first_node = True
+
+            # If the first node is meant to be treated as a docstring, first make sure
+            # it actually is a static string, and return it without wrapping it with the
+            # displayhook.
+            if (
+                self.has_docstring
+                and isinstance(node.value, ast.Constant)
+                and isinstance(node.value.value, str)
+            ):
+                return node
+
         return ast.Expr(
             value=ast.Call(
                 func=ast.Name(id=sys_alias, ctx=ast.Load()),

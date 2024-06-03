@@ -10,7 +10,7 @@ app_ui = ui.page_sidebar(
 
 
 def server(input: Inputs):
-    val = reactive.Value(0)
+    val = reactive.value(0)
 
     @reactive.effect
     @reactive.event(input.minus)

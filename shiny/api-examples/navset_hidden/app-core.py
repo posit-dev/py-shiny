@@ -16,7 +16,7 @@ app_ui = ui.page_sidebar(
 
 
 def server(input: Inputs):
-    @reactive.Effect
+    @reactive.effect
     @reactive.event(input.controller)
     def _():
         ui.update_navs("hidden_tabs", selected="panel" + str(input.controller()))

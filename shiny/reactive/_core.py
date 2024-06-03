@@ -295,9 +295,10 @@ def lock() -> asyncio.Lock:
     """
     A lock that should be held whenever manipulating the reactive graph.
 
-    For example, :func:`~shiny.reactive.lock` makes it safe to set a :class:`~reactive.Value` and call
-    :func:`~shiny.reactive.flush` from a different :class:`~asyncio.Task` than the one that
-    is running the Shiny :class:`~shiny.Session`.
+    For example, :func:`~shiny.reactive.lock` makes it safe to set a
+    :class:`~reactive.value` and call :func:`~shiny.reactive.flush` from a different
+    :class:`~asyncio.Task` than the one that is running the Shiny
+    :class:`~shiny.Session`.
     """
     return _reactive_environment.lock
 

@@ -12,7 +12,7 @@ from htmltools import Tag, TagChild, css, div, span, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
-from ._html_deps_shinyverse import components_dependency
+from ._html_deps_shinyverse import components_dependencies
 from ._utils import shiny_input_label
 
 # Canonical format for representing select options.
@@ -160,7 +160,7 @@ def _bslib_input_checkbox(
             ),
             class_=class_,
         ),
-        components_dependency(),
+        components_dependencies(),
         class_="form-group shiny-input-container",
         style=css(width=width),
     )

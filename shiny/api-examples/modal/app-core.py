@@ -6,7 +6,7 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs):
-    @reactive.Effect
+    @reactive.effect
     @reactive.event(input.show)
     def _():
         m = ui.modal(

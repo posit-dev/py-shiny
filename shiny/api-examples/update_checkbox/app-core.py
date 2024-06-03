@@ -7,7 +7,7 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs):
-    @reactive.Effect
+    @reactive.effect
     def _():
         # True if controller is odd, False if even.
         x_even = input.controller() % 2 == 1

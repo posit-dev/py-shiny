@@ -31,13 +31,13 @@ with ui.layout_sidebar():
         ui.input_task_button("btn", "Compute, slowly")
         ui.input_action_button("btn_cancel", "Cancel")
 
-    @reactive.Effect
+    @reactive.effect
     @reactive.event(input.btn, ignore_none=False)
     def handle_click():
         # slow_compute.cancel()
         slow_compute(input.x(), input.y())
 
-    @reactive.Effect
+    @reactive.effect
     @reactive.event(input.btn_cancel)
     def handle_cancel():
         slow_compute.cancel()

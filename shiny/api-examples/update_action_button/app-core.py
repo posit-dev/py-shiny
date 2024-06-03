@@ -14,7 +14,7 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs):
-    @reactive.Effect
+    @reactive.effect
     def _():
         req(input.update())
         # Updates goButton's label and icon

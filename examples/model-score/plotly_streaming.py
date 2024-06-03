@@ -62,7 +62,7 @@ def render_plotly_streaming(
                 fig = func()
                 widget = go.FigureWidget(fig)
 
-            @reactive.Effect
+            @reactive.effect
             def update_plotly_data():
                 f_new = func()
                 with widget.batch_update():
@@ -83,16 +83,16 @@ def render_plotly_streaming(
 
 def deduplicate(func):
     with reactive.isolate():
-        rv = reactive.Value(func())
+        rv = reactive.value(func())
 
-    @reactive.Effect
+    @reactive.effect
     def update():
         x = func()
         with reactive.isolate():
             if x != rv():
                 rv.set(x)
 
-    @reactive.Calc
+    @reactive.calc
     @functools.wraps(func)
     def wrapper():
         return rv()

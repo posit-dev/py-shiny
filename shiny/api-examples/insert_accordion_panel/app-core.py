@@ -18,7 +18,7 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs):
-    @reactive.Effect
+    @reactive.effect
     @reactive.event(input.add_panel)
     def _():
         ui.insert_accordion_panel("acc", make_panel(str(random.randint(0, 10000))))

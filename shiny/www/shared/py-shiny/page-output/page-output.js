@@ -1,17 +1,17 @@
 // page-output/page-output.ts
 var PageOutputBinding = class extends Shiny.OutputBinding {
-  constructor() {
-    super(...arguments);
-    this.originalBodyTagAttrs = null;
-  }
+  originalBodyTagAttrs = null;
   find(scope) {
     return $(scope).find(".shiny-page-output");
   }
   onValueError(el, err) {
-    Shiny.unbindAll(el);
+    if (Shiny.unbindAll)
+      Shiny.unbindAll(el);
     this.renderError(el, err);
   }
   async renderValue(el, data) {
+    if (data === null)
+      return;
     if (el !== document.body) {
       throw new Error(
         'Output with class "shiny-page-output" must be a <body> tag.'
@@ -45,7 +45,7 @@ var PageOutputBinding = class extends Shiny.OutputBinding {
     } else {
       data.html = content;
     }
-    await Shiny.renderContent(el, data);
+    await Shiny.renderContentAsync(el, data);
   }
 };
 Shiny.outputBindings.register(

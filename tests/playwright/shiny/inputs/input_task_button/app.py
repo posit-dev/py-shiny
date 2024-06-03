@@ -1,5 +1,5 @@
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
 
 from shiny import reactive, render
 from shiny.express import input, ui
@@ -10,7 +10,7 @@ ui.h5("Current time")
 @render.text()
 def current_time() -> str:
     reactive.invalidate_later(0.1)
-    return str(datetime.now().utcnow())
+    return str(datetime.now(timezone.utc).isoformat())
 
 
 with ui.p():
@@ -37,19 +37,19 @@ with ui.layout_sidebar():
         ui.input_task_button("btn_block", "Block compute", label_busy="Blocking...")
         ui.input_action_button("btn_cancel", "Cancel")
 
-    @reactive.Effect
+    @reactive.effect
     @reactive.event(input.btn_task, ignore_none=False)
     def handle_click():
         # slow_compute.cancel()
         slow_compute(input.x(), input.y())
 
-    @reactive.Effect
+    @reactive.effect
     @reactive.event(input.btn_block, ignore_none=False)
     async def handle_click2():
         # slow_compute.cancel()
         await slow_input_compute(input.x(), input.y())
 
-    @reactive.Effect
+    @reactive.effect
     @reactive.event(input.btn_cancel)
     def handle_cancel():
         slow_compute.cancel()

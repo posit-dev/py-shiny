@@ -16,7 +16,7 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs):
-    @reactive.Calc
+    @reactive.calc
     def parsed_file():
         file: list[FileInfo] | None = input.file1()
         if file is None:

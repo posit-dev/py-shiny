@@ -16,4 +16,4 @@ with session.session_context(None):
     # This reactive value can be used by multiple sessions; if it is invalidated (in
     # other words, if the value is changed), it will trigger invalidations in all of
     # those sessions.
-    rv = reactive.Value(50)
+    rv = reactive.value(50)

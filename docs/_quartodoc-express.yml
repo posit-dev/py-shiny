@@ -16,6 +16,7 @@ quartodoc:
         - express.ui.input_select
         - express.ui.input_selectize
         - express.ui.input_slider
+        - express.ui.input_dark_mode
         - express.ui.input_date
         - express.ui.input_date_range
         - express.ui.input_checkbox
@@ -28,6 +29,7 @@ quartodoc:
         - express.ui.input_password
         - express.ui.input_action_button
         - express.ui.input_action_link
+        - express.ui.input_task_button
     - title: Output components
       desc: Reactively render output.
       contents:
@@ -97,30 +99,23 @@ quartodoc:
     - title: Update inputs
       desc: Programmatically update input values.
       contents:
-        - name: express.ui.update_select
-          dynamic: true
-        - name: express.ui.update_selectize
-          dynamic: true
-        - name: express.ui.update_slider
-          dynamic: true
-        - ui.update_date
-        - name: express.ui.update_date_range
-          dynamic: true
-        - name: express.ui.update_checkbox
-          dynamic: true
-        - name: express.ui.update_checkbox_group
-          dynamic: true
-        - name: express.ui.update_switch
-          dynamic: true
-        - name: express.ui.update_radio_buttons
-          dynamic: true
-        - name: express.ui.update_numeric
-          dynamic: true
-        - ui.update_text
-        - name: express.ui.update_text_area
-          dynamic: "shiny.ui.update_text"
-        - name: express.ui.update_navs
-          dynamic: true
+        - express.ui.update_select
+        - express.ui.update_selectize
+        - express.ui.update_slider
+        - express.ui.update_dark_mode
+        - express.ui.update_date
+        - express.ui.update_date_range
+        - express.ui.update_checkbox
+        - express.ui.update_checkbox_group
+        - express.ui.update_switch
+        - express.ui.update_radio_buttons
+        - express.ui.update_numeric
+        - express.ui.update_text
+        - express.ui.update_text_area
+        - express.ui.update_navs
+        - express.ui.update_action_button
+        - express.ui.update_action_link
+        - express.ui.update_task_button
     - title: Update UI Layouts
       desc: ""
       contents:
@@ -142,6 +137,10 @@ quartodoc:
         - express.ui.modal_remove
         - express.ui.modal_button
         - express.ui.Progress          # uses class.rst
+    - title: Modules
+      desc: ""
+      contents:
+        - express.module
     - title: UI panels
       desc: Visually group together a section of UI components.
       contents:
@@ -149,6 +148,11 @@ quartodoc:
         - express.ui.panel_fixed
         - express.ui.panel_title
         - express.ui.panel_well
+    - title: Uploads & downloads
+      desc: Allow users to upload and download files.
+      contents:
+        - express.ui.input_file
+        - express.render.download
     - title: Dynamic UI
       desc: Dynamically show/hide UI elements.
       contents:
@@ -165,12 +169,18 @@ quartodoc:
         - name: express.ui.tags       # uses tags.rst template
           children: embedded
         - express.ui.TagList    # uses class.rst template
+        - express.ui.busy_indicators.use
+        - express.ui.busy_indicators.options
         # TODO: should these be included?
         # - express.ui.fill.as_fillable_container
         # - express.ui.fill.as_fill_item
         # - express.ui.fill.remove_all_fill
         # - express.ui.css.as_css_unit
         # - express.ui.css.as_css_padding
+    - title: Application-level settings
+      desc:
+      contents:
+        - express.app_opts
     - title: Express developer tooling
       desc:
       contents:

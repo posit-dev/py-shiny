@@ -40,8 +40,8 @@ def server(input: Inputs):
         row_count = df.shape[0]
         column_count = df.shape[1]
         names: list[str] = (
-            df.columns.tolist()
-        )  # pyright: ignore[reportUnknownMemberType]
+            df.columns.tolist()  # pyright: ignore[reportUnknownMemberType]
+        )
         column_names = ", ".join(str(name) for name in names)
 
         # Create a new DataFrame to display the information

@@ -1,8 +1,9 @@
 // text-area/textarea-autoresize.ts
 function onDelegatedEvent(eventName, selector, callback) {
   document.addEventListener(eventName, (e) => {
-    if (e.target.matches(selector)) {
-      callback(e.target);
+    const e2 = e;
+    if (e2.target.matches(selector)) {
+      callback(e2.target);
     }
   });
 }
@@ -22,6 +23,9 @@ function update_on_load() {
     setTimeout(update_on_load, 10);
     return;
   }
-  document.querySelectorAll("textarea.textarea-autoresize").forEach(update_height);
+  const textAreas = document.querySelectorAll(
+    "textarea.textarea-autoresize"
+  );
+  textAreas.forEach(update_height);
 }
 update_on_load();

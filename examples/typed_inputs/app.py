@@ -8,9 +8,9 @@ app_ui = ui.page_fluid(
     ui.input_numeric("n", "N", 20),
     ui.input_numeric("n2", "N2", 50),
     ui.input_checkbox("checkbox", "Checkbox", True),
-    ui.output_text_verbatim("txt", placeholder=True),
-    ui.output_text_verbatim("txt2", placeholder=True),
-    ui.output_text_verbatim("txt3", placeholder=True),
+    ui.output_code("txt", placeholder=True),
+    ui.output_code("txt2", placeholder=True),
+    ui.output_code("txt3", placeholder=True),
 )
 
 
@@ -20,8 +20,8 @@ app_ui = ui.page_fluid(
 # But it is possible to specify the type of the input value, by creating a subclass of
 # Inputs. We'll do that for input.n2() and input.checkbox():
 class ShinyInputs(Inputs):
-    n2: reactive.Value[int]
-    check: reactive.Value[bool]
+    n2: reactive.value[int]
+    check: reactive.value[bool]
 
 
 def server(input: Inputs):
@@ -32,7 +32,7 @@ def server(input: Inputs):
 
     # The type checker knows that r() returns an int, which you can see if you hover
     # over it.
-    @reactive.Calc
+    @reactive.calc
     def r():
         if input.n() is None:
             return 0
@@ -42,19 +42,19 @@ def server(input: Inputs):
     # thinks the return type of input.n() is Any, so we don't get type checking here.
     # The function is returning the wrong value here: it returns an int instead of a
     # string, but this error is not flagged.
-    @render.text
+    @render.code
     async def txt():
         return input.n() * 2
 
     # In contrast, input.n2() is declared to return an int, so the type check does flag
-    # this error -- the `render.text()` is underlined in red.
-    @render.text
+    # this error -- the `render.code()` is underlined in red.
+    @render.code
     async def txt2():
         return input.n2() * 2
 
     # This is a corrected version of the function above. It returns a string, and is not
     # marked in red.
-    @render.text
+    @render.code
     async def txt3():
         return str(input.n2() * 2)
 

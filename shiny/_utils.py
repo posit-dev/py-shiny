@@ -10,12 +10,18 @@ import os
 import random
 import secrets
 import socketserver
+import sys
 import tempfile
+import warnings
+from pathlib import Path
+from types import CoroutineType, ModuleType
 from typing import Any, Awaitable, Callable, Generator, Optional, TypeVar, cast
 
 from ._typing_extensions import ParamSpec, TypeGuard
 
 CancelledError = asyncio.CancelledError
+
+T = TypeVar("T")
 
 
 # ==============================================================================
@@ -47,6 +53,12 @@ def lists_to_tuples(x: object) -> object:
     else:
         # TODO: are there other mutable iterators that we want to make read only?
         return x
+
+
+# Given a dictionary, return a new dictionary with the keys sorted by length.
+def sort_keys_length(x: dict[str, T], descending: bool = False) -> dict[str, T]:
+    sorted_keys = sorted(x.keys(), key=len, reverse=descending)
+    return {key: x[key] for key in sorted_keys}
 
 
 def guess_mime_type(
@@ -197,6 +209,14 @@ def random_port(
 def private_random_int(min: int, max: int) -> str:
     with private_seed():
         return str(random.randint(min, max))
+
+
+def private_random_id(prefix: str = "", bytes: int = 3) -> str:
+    if prefix != "" and not prefix.endswith("_"):
+        prefix += "_"
+
+    with private_seed():
+        return prefix + rand_hex(bytes)
 
 
 @contextlib.contextmanager
@@ -354,6 +374,9 @@ def run_coro_sync(coro: Awaitable[R]) -> R:
     if not inspect.iscoroutine(coro):
         raise TypeError("run_coro_sync requires a Coroutine object.")
 
+    # Pyright needs a little help here
+    coro = cast("CoroutineType[Any, Any, R]", coro)
+
     try:
         coro.send(None)
     except StopIteration as e:
@@ -383,6 +406,9 @@ def run_coro_hybrid(coro: Awaitable[R]) -> "asyncio.Future[R]":
 
     if not inspect.iscoroutine(coro):
         raise TypeError("run_coro_hybrid requires a Coroutine object.")
+
+    # Pyright needs a little help here
+    coro = cast("CoroutineType[Any, Any, R]", coro)
 
     # Inspired by Task.__step method in cpython/Lib/asyncio/tasks.py
     def _step(fut: Optional["asyncio.Future[None]"] = None):
@@ -521,3 +547,45 @@ def package_dir(package: str) -> str:
         if pkg_file is None:
             raise RuntimeError(f"Could not find package dir for '{package}'")
         return os.path.dirname(pkg_file)
+
+
+class ModuleImportWarning(ImportWarning):
+    pass
+
+
+warnings.simplefilter("always", ModuleImportWarning)
+
+
+def import_module_from_path(module_name: str, path: Path):
+    import importlib.util
+
+    if not path.is_absolute():
+        raise ValueError("Path must be absolute")
+
+    spec = importlib.util.spec_from_file_location(module_name, path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Could not import module {module_name} from path: {path}")
+
+    module = importlib.util.module_from_spec(spec)
+
+    prev_module: ModuleType | None = None
+
+    if module_name in sys.modules:
+        prev_module = sys.modules[module_name]
+        warnings.warn(
+            f"A module named {module_name} is already loaded, but is being loaded again.",
+            ModuleImportWarning,
+            stacklevel=1,
+        )
+
+    sys.modules[module_name] = module
+
+    try:
+        spec.loader.exec_module(module)
+    except Exception:
+        if prev_module is None:
+            del sys.modules[module_name]
+        else:
+            sys.modules[module_name] = prev_module
+        raise
+    return module

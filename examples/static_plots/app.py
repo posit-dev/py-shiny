@@ -54,7 +54,7 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs):
-    @reactive.Calc
+    @reactive.calc
     def fake_data():
         n = 5000
         mean = [0, 0]

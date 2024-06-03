@@ -312,7 +312,7 @@ def near_points(
     if all_rows:
         # Add selected_ column if needed
         new_df["selected_"] = False
-        new_df.iloc[
+        new_df.iloc[  # pyright: ignore[reportArgumentType]
             keep_idx,
             new_df.columns.get_loc(  # pyright: ignore[reportUnknownMemberType]
                 "selected_"

@@ -4,7 +4,9 @@ import tempfile
 
 import pytest
 from example_apps import get_apps, reruns, reruns_delay, validate_example
-from playwright.sync_api import Page
+
+from shiny._main import app_template_choices
+from shiny.test import Page
 
 
 def subprocess_create(
@@ -47,8 +49,14 @@ def test_template_examples(page: Page, ex_app_path: str) -> None:
     validate_example(page, ex_app_path)
 
 
+app_templates = list(app_template_choices.values())
+app_templates.remove("external-gallery")  # Not actually a template
+app_templates.remove("js-component")  # Several templates that can't be easily tested
+assert len(app_templates) > 0
+
+
 @pytest.mark.flaky(reruns=reruns, reruns_delay=reruns_delay)
-@pytest.mark.parametrize("app_template", ["basic-app", "dashboard", "multi-page"])
+@pytest.mark.parametrize("app_template", app_templates)
 def test_create_core(app_template: str, page: Page):
     with tempfile.TemporaryDirectory("example_apps") as tmpdir:
         subprocess_create(app_template, dest_dir=tmpdir)

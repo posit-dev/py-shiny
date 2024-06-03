@@ -91,7 +91,7 @@ def make_navset(
 
 
 app_ui = ui.page_navbar(
-    *nav_controls("page_navbar"),
+    *nav_controls("page_navbar()"),
     # bg="#0062cc",
     # inverse=True,
     id="page_navbar",
@@ -107,9 +107,6 @@ app_ui = ui.page_navbar(
             """
         ),
         "page_navbar(): Footer (w/ custom styling)",
-        make_navset(
-            "navset_bar", ui.navset_bar, title=True, sidebar=True, headerfooter=True
-        ),
         make_navset(
             "navset_bar", ui.navset_bar, title=True, sidebar=True, headerfooter=True
         ),

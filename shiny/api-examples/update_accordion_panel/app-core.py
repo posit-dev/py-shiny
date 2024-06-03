@@ -18,7 +18,7 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs):
-    @reactive.Effect
+    @reactive.effect
     @reactive.event(input.update_panel)
     def _():
         txt = " (updated)" if input.update_panel() else ""

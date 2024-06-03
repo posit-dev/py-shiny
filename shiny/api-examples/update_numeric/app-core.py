@@ -8,7 +8,7 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs):
-    @reactive.Effect
+    @reactive.effect
     def _():
         x = input.controller()
         ui.update_numeric("inNumber", value=x)

@@ -4,7 +4,7 @@ inputs:
   python-version:
     description: 'Python version to use'
     required: false
-    default: "3.11"
+    default: "3.12"
 runs:
   using: "composite"
   steps:
@@ -25,7 +25,6 @@ runs:
         shell: bash
         run: |
           pip install https://github.com/rstudio/py-htmltools/tarball/main
-          pip install https://github.com/posit-dev/py-shinylive/tarball/main
           make install-deps
 
       - name: Install

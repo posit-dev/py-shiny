@@ -1,3 +1,11 @@
 {
-  "organizeImportsSkipDestructiveCodeActions": true
+  "organizeImportsSkipDestructiveCodeActions": true,
+  "overrides": [
+    {
+      "files": "**/*.scss",
+      "options": {
+        "printWidth": 150
+      }
+    }
+  ]
 }

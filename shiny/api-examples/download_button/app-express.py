@@ -6,7 +6,7 @@ from shiny.express import render
 
 
 @render.download(
-    filename=lambda: f"新型-{date.today().isoformat()}-{random.randint(100,999)}.csv"
+    filename=lambda: f"新型-{date.today().isoformat()}-{random.randint(100, 999)}.csv"
 )
 async def downloadData():
     await asyncio.sleep(0.25)

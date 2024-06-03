@@ -40,11 +40,14 @@ help:
 	@python -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
 
 dev-htmltools: $(PYBIN)  ## Install development version of htmltools
-	$(PYBIN)/pip install https://github.com/rstudio/py-htmltools/tarball/main
+	$(PYBIN)/pip install https://github.com/posit-dev/py-htmltools/tarball/main
 
-deps: $(PYBIN)  ## Install build dependencies
+dev-shinylive: $(PYBIN)  ## Install development version of shinylive
+	$(PYBIN)/pip install https://github.com/posit-dev/py-shinylive/tarball/main
+
+deps: $(PYBIN) dev-htmltools dev-shinylive ## Install build dependencies
 	$(PYBIN)/pip install pip --upgrade
-	$(PYBIN)/pip install -e ..[doc]
+	$(PYBIN)/pip install ..[doc]
 
 quartodoc: quartodoc_build_core quartodoc_build_express quartodoc_post ## Build quartodocs for express and core
 

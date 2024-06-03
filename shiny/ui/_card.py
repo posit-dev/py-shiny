@@ -16,14 +16,16 @@ from htmltools import (
 )
 
 from .._docstring import add_example
+from .._namespaces import resolve_id_or_none
+from .._utils import private_random_id
 from ..types import MISSING, MISSING_TYPE
-from ._html_deps_shinyverse import components_dependency
+from ._html_deps_shinyverse import components_dependencies
 from ._tag import consolidate_attrs
 from ._tooltip import tooltip
 from .css._css_unit import CssUnit, as_css_padding, as_css_unit
 from .fill import as_fill_item, as_fillable_container
 
-# TODO-barret-future; Update header to return CardHeader class. Same for footer. Then we
+# TODO-future; Update header to return CardHeader class. Same for footer. Then we
 # can check `*args` for a CardHeader class and move it to the top. And footer to the
 # bottom. Can throw error if multiple headers/footers are provided or could concatenate.
 
@@ -53,6 +55,7 @@ def card(
     min_height: Optional[CssUnit] = None,
     fill: bool = True,
     class_: Optional[str] = None,
+    id: Optional[str] = None,
     # wrapper: WrapperCallable | None | MISSING_TYPE = MISSING,
     **kwargs: TagAttrValue,
 ) -> Tag:
@@ -78,6 +81,10 @@ def card(
         an opinionated height (e.g., :func:`~shiny.ui.page_fillable`).
     class_
         Additional CSS classes for the returned Tag.
+    id
+        Provide a unique identifier for the :func:`~shiny.ui.card` or to report its
+        full screen state to Shiny. For example, using `id="my_card"`, you can observe
+        the card's full screen state with `input.my_card_full_screen()`.
     **kwargs
         HTML attributes on the returned Tag.
 
@@ -101,6 +108,7 @@ def card(
         min_height=min_height,
         fill=fill,
         class_=class_,
+        id=id,
         wrapper=MISSING,
         **kwargs,
     )
@@ -114,6 +122,7 @@ def _card_impl(
     min_height: Optional[CssUnit] = None,
     fill: bool = True,
     class_: Optional[str] = None,
+    id: Optional[str] = None,
     wrapper: WrapperCallable | None | MISSING_TYPE = MISSING,
     **kwargs: TagAttrValue,
 ) -> Tag:
@@ -130,8 +139,15 @@ def _card_impl(
     attrs, children = consolidate_attrs(*args, class_=class_, **kwargs)
     children = _wrap_children_in_card(*children, wrapper=wrapper)
 
+    id = resolve_id_or_none(id)
+    is_shiny_input = id is not None
+
+    if full_screen and id is None:
+        id = private_random_id("bslib_card")
+
     tag = div(
         {
+            "id": id,
             "class": "card bslib-card bslib-mb-spacing",
             "style": css(
                 height=as_css_unit(height),
@@ -141,10 +157,11 @@ def _card_impl(
             "data-bslib-card-init": True,
             "data-full-screen": "false" if full_screen else None,
         },
+        {"class": "bslib-card-input"} if is_shiny_input else None,
         *children,
         attrs,
-        _full_screen_toggle() if full_screen else None,
-        components_dependency(),
+        _full_screen_toggle(id) if full_screen else None,
+        components_dependencies(),
         _card_js_init(),
     )
     if fill:
@@ -161,10 +178,15 @@ def _card_js_init() -> Tag:
     )
 
 
-def _full_screen_toggle() -> Tag:
+def _full_screen_toggle(id_controls: TagAttrValue) -> Tag:
     return tooltip(
-        tags.span(
-            {"class": "bslib-full-screen-enter badge rounded-pill"},
+        tags.button(
+            {
+                "class": "bslib-full-screen-enter badge rounded-pill",
+                "aria-expanded": "false",
+                "aria-controls": id_controls,
+                "aria-label": "Expand card",
+            },
             _full_screen_toggle_icon(),
         ),
         "Expand",

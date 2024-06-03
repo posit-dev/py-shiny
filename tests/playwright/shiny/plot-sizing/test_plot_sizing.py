@@ -1,8 +1,7 @@
 import re
 
-from conftest import ShinyAppProc
-from controls import OutputPlot
-from playwright.sync_api import Page
+from shiny.test import Page, ShinyAppProc
+from shiny.test._controls import OutputPlot
 
 
 def test_output_image_kitchen(page: Page, local_app: ShinyAppProc) -> None:

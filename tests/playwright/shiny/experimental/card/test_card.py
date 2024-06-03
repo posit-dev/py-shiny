@@ -1,6 +1,5 @@
-from conftest import ShinyAppProc
-from controls import Card
-from playwright.sync_api import Page
+from shiny.test import Page, ShinyAppProc
+from shiny.test._controls import Card
 
 
 def test_card(page: Page, local_app: ShinyAppProc) -> None:
@@ -19,8 +18,8 @@ def test_card(page: Page, local_app: ShinyAppProc) -> None:
             "\nThis is still the body.\n",
         ]
     )
-    card.expect_full_screen(False)
+    card.expect_full_screen_open(False)
     card.open_full_screen()
-    card.expect_full_screen(True)
+    card.expect_full_screen_open(True)
     card.close_full_screen()
-    card.expect_full_screen(False)
+    card.expect_full_screen_open(False)
