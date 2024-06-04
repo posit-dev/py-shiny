@@ -5,7 +5,7 @@ from typing import Literal, Union
 
 import pytest
 
-from ..run._conftest import shiny_app_gen
+from ..run._run import shiny_app_gen
 
 __all__ = (
     "create_app_fixture",

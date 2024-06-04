@@ -4,8 +4,7 @@ import pytest
 from playwright.sync_api import Page
 
 from shiny.playwright.controls import Card, OutputCode, ValueBox
-from shiny.run import ShinyAppProc
-from shiny.run._conftest import run_shiny_app
+from shiny.run import ShinyAppProc, run_shiny_app
 
 
 @pytest.mark.parametrize(

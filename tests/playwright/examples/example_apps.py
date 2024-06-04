@@ -6,8 +6,7 @@ from typing import Literal
 
 from playwright.sync_api import ConsoleMessage, Page
 
-from shiny.run import ShinyAppProc
-from shiny.run._conftest import run_shiny_app
+from shiny.run import ShinyAppProc, run_shiny_app
 
 here_tests_e2e_examples = PurePath(__file__).parent
 pyshiny_root = here_tests_e2e_examples.parent.parent.parent
