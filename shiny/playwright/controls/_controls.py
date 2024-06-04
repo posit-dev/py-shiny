@@ -3429,7 +3429,7 @@ class LayoutNavItem(_InputWithContainer):
         playwright_expect(self.loc_content).to_have_text(value, timeout=timeout)
 
 
-class LayoutNavsetTab(_LayoutNavItemBase):
+class LayoutNavSetTab(_LayoutNavItemBase):
     # *args: NavSetArg,
     # id: Optional[str] = None,
     # selected: Optional[str] = None,

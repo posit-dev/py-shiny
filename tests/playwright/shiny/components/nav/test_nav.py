@@ -11,7 +11,7 @@ from shiny.playwright.controls import (
     LayoutNavSetCardUnderline,
     LayoutNavSetPill,
     LayoutNavSetPillList,
-    LayoutNavsetTab,
+    LayoutNavSetTab,
     LayoutNavSetUnderline,
 )
 from shiny.run import ShinyAppProc
@@ -32,13 +32,13 @@ def test_nav(page: Page, local_app: ShinyAppProc) -> None:
             | LayoutNavSetCardUnderline
             | LayoutNavSetPill
             | LayoutNavSetPillList
-            | LayoutNavsetTab
+            | LayoutNavSetTab
             | LayoutNavSetUnderline
         ]
         verify: str
 
     nav_data: list[LayoutInfo] = [
-        LayoutInfo(LayoutNavsetTab, "navset_tab()"),
+        LayoutInfo(LayoutNavSetTab, "navset_tab()"),
         LayoutInfo(LayoutNavSetPill, "navset_pill()"),
         LayoutInfo(LayoutNavSetUnderline, "navset_underline()"),
         LayoutInfo(LayoutNavSetCardTab, "navset_card_tab()"),
