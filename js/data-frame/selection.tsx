@@ -36,7 +36,7 @@ export interface SelectionSet<TKey, TElement extends HTMLElement> {
 export type SelectionModesProp = {
   row: "none" | "single" | "multiple";
   col: "none" | "single" | "multiple";
-  rect: "none" | "region" | "cell";
+  rect: "none" | "cell" | "region";
 };
 export class SelectionModes {
   static readonly _NONE = "none";
@@ -44,8 +44,8 @@ export class SelectionModes {
   static readonly _ROW_MULTIPLE = "multiple";
   static readonly _COL_SINGLE = "single";
   static readonly _col_multiple = "multiple";
-  static readonly _RECT_REGION = "region";
   static readonly _RECT_CELL = "cell";
+  static readonly _RECT_REGION = "region";
 
   static readonly _rowEnum = {
     NONE: SelectionModes._NONE,
@@ -90,7 +90,7 @@ export class SelectionModes {
     this.rect = rect;
   }
 
-  is_none(): boolean {
+  isNone(): boolean {
     return (
       this.row === SelectionModes._rowEnum.NONE &&
       this.col === SelectionModes._colEnum.NONE &&
@@ -99,7 +99,7 @@ export class SelectionModes {
   }
 }
 
-export function initRowSelectionModes(
+export function initSelectionModes(
   selectionModesOption: SelectionModesProp | undefined
 ): SelectionModes {
   // If no option was provided, default to multinative mode
@@ -128,7 +128,7 @@ export function useSelection<TKey, TElement extends HTMLElement>(
   const [anchor, setAnchor] = useState<TKey | null>(null);
 
   const onMouseDown = (event: React.MouseEvent<TElement, MouseEvent>): void => {
-    if (selectionModes.is_none()) {
+    if (selectionModes.isNone()) {
       return;
     }
 
@@ -154,7 +154,7 @@ export function useSelection<TKey, TElement extends HTMLElement>(
   };
 
   const onKeyDown = (event: React.KeyboardEvent<TElement>): void => {
-    if (selectionModes.is_none()) {
+    if (selectionModes.isNone()) {
       return;
     }
 
@@ -204,8 +204,8 @@ export function useSelection<TKey, TElement extends HTMLElement>(
       }
     },
 
-    setMultiple(key_arr: TKey[]) {
-      setSelectedKeys(ImmutableSet.just(...key_arr));
+    setMultiple(keyArr: TKey[]) {
+      setSelectedKeys(ImmutableSet.just(...keyArr));
     },
 
     clear() {

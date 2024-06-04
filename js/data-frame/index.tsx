@@ -30,11 +30,7 @@ import { getCellEditMapObj, useCellEditMap } from "./cell-edit-map";
 import { findFirstItemInView, getStyle } from "./dom-utils";
 import { ColumnFiltersState, Filter, FilterValue, useFilters } from "./filter";
 import type { CellSelection, SelectionModesProp } from "./selection";
-import {
-  SelectionModes,
-  initRowSelectionModes,
-  useSelection,
-} from "./selection";
+import { SelectionModes, initSelectionModes, useSelection } from "./selection";
 import { SortingState, useSort } from "./sort";
 import { SortArrow } from "./sort-arrows";
 import css from "./styles.scss";
@@ -247,15 +243,17 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
 
   // ### Row selection ###############################################################
 
-  const rowSelectionModes = initRowSelectionModes(selectionModesProp);
+  const rowSelectionModes = initSelectionModes(selectionModesProp);
 
-  const canSelect = !rowSelectionModes.is_none();
+  const canSelect = !rowSelectionModes.isNone();
   const canMultiRowSelect =
     rowSelectionModes.row !== SelectionModes._rowEnum.NONE;
 
   const rowSelection = useSelection<string, HTMLTableRowElement>(
     rowSelectionModes,
-    (el) => el.dataset.key!,
+    (el) => {
+      return el.dataset.key!;
+    },
     (key, offset) => {
       const rowModel = table.getSortedRowModel();
       let index = rowModel.rows.findIndex((row) => row.id === key);
@@ -392,7 +390,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
   useEffect(() => {
     if (!id) return;
     let shinyValue: CellSelection | null = null;
-    if (rowSelectionModes.is_none()) {
+    if (rowSelectionModes.isNone()) {
       shinyValue = null;
     } else if (rowSelectionModes.row !== SelectionModes._rowEnum.NONE) {
       const rowSelectionKeys = rowSelection.keys().toList();
