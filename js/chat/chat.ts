@@ -131,13 +131,15 @@ class ChatInput extends LightElement {
         <button
           class="btn btn-primary"
           type="button"
+          title="Send message"
+          aria-label="Send message"
           @click=${this.#sendInput}
           ?disabled=${this.disabled}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
+            width="18"
+            height="18"
             fill="currentColor"
             class="bi bi-send"
             viewBox="0 0 16 16"
@@ -174,6 +176,10 @@ class ChatInput extends LightElement {
     // Clear and disable the inputs after sending (parent will re-enable it)
     textarea.value = "";
     this.disabled = true;
+
+    // Simulate an input event to trigger the textarea autoresize
+    const inputEvent = new Event("input", { bubbles: true, cancelable: true });
+    textarea.dispatchEvent(inputEvent);
   }
 }
 

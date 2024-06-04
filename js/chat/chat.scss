@@ -2,6 +2,7 @@ shiny-chat-container {
   display: flex;
   flex-direction: column;
   margin: 0 auto;
+  gap: 1rem;
 
   shiny-chat-messages {
     display: flex;
@@ -34,7 +35,7 @@ shiny-chat-container {
         grid-column: 2;
         justify-self: end;
         padding: 0.5rem 0.75rem;
-        border-radius: var(--bs-border-radius-pill, 50em);
+        border-radius: 26px;
         background-color: var(--bs-primary-bg-subtle, #cce5f3);
         color: var(--bs-primary-text-emphasis, #0d6efd);
       }
@@ -47,6 +48,14 @@ shiny-chat-container {
     bottom: 0;
     padding: 0.25rem;
     background-color: var(--bs-body-bg, white);
+
+    .btn {
+      --bs-btn-padding-x: 0.75em;
+      --bs-btn-padding-y: 0.25em;
+    }
+    textarea {
+      resize: none;
+    }
   }
 }
 
