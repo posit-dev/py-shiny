@@ -1,5 +1,7 @@
-from shiny.test import Page, ShinyAppProc, expect
-from shiny.test._controls import OutputTextVerbatim
+from playwright.sync_api import Page, expect
+
+from shiny.playwright.controls import OutputTextVerbatim
+from shiny.run import ShinyAppProc
 
 
 def test_express_page_fluid(page: Page, local_app: ShinyAppProc) -> None:

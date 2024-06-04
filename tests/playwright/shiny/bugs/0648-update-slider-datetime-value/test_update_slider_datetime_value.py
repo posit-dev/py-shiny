@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from typing import Optional
 
-from shiny.test import Page, ShinyAppProc, expect
-from shiny.test._controls import InputActionButton, InputSlider, OutputTextVerbatim
+from playwright.sync_api import Page, expect
+
+from shiny.playwright.controls import InputActionButton, InputSlider, OutputTextVerbatim
+from shiny.run import ShinyAppProc
 
 
 def test_slider_app(page: Page, local_app: ShinyAppProc) -> None:

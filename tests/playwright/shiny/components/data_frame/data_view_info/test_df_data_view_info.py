@@ -1,7 +1,7 @@
 from playwright.sync_api import Page
 
-from shiny.test import ShinyAppProc
-from shiny.test._controls import OutputDataFrame, OutputTextVerbatim
+from shiny.playwright.controls import OutputDataFrame, OutputTextVerbatim
+from shiny.run import ShinyAppProc
 
 
 def test_validate_html_columns(page: Page, local_app: ShinyAppProc) -> None:

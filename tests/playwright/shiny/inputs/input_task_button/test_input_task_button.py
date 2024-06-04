@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import time
 
-from shiny.test import Page, ShinyAppProc
-from shiny.test._controls import InputNumeric, InputTaskButton, OutputText
+from playwright.sync_api import Page
+
+from shiny.playwright.controls import InputNumeric, InputTaskButton, OutputText
+from shiny.run import ShinyAppProc
 
 
 def click_extended_task_button(

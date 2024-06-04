@@ -13,7 +13,7 @@ import pytest
 import requests
 from conftest import ScopeName
 
-from shiny.test._conftest import shiny_app_gen
+from shiny.run._conftest import shiny_app_gen
 
 is_interactive = hasattr(sys, "ps1")
 reruns = 1 if is_interactive else 3

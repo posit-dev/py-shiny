@@ -1,4 +1,5 @@
 import pytest
+from playwright.sync_api import Page, expect
 from utils.deploy_utils import (
     create_deploys_app_url_fixture,
     reruns,
@@ -6,8 +7,7 @@ from utils.deploy_utils import (
     skip_if_not_chrome,
 )
 
-from shiny.test import Page, expect
-from shiny.test._controls import LayoutNavsetTab
+from shiny.playwright.controls import LayoutNavsetTab
 
 TIMEOUT = 2 * 60 * 1000
 

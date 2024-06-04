@@ -6,10 +6,10 @@ from __future__ import annotations
 from pathlib import PurePath
 
 import pytest
+from playwright.sync_api import BrowserContext, Page
 
-from shiny.test._playwright import BrowserContext, Page
-from shiny.test.fixture import create_app_fixture
-from shiny.test.fixture._fixture import ScopeName as ScopeName
+from shiny.pytest import ScopeName as ScopeName
+from shiny.pytest import create_app_fixture
 
 __all__ = (
     "create_doc_example_fixture",

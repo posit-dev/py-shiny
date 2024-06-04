@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from shiny.test import Page, ShinyAppProc
-from shiny.test._controls import (
+from playwright.sync_api import Page
+
+from shiny.playwright.controls import (
     LayoutNavSetBar,
     LayoutNavSetCardPill,
     LayoutNavSetCardTab,
@@ -13,6 +14,7 @@ from shiny.test._controls import (
     LayoutNavsetTab,
     LayoutNavSetUnderline,
 )
+from shiny.run import ShinyAppProc
 
 
 def test_nav(page: Page, local_app: ShinyAppProc) -> None:

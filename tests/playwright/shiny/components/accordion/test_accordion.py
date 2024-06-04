@@ -1,8 +1,9 @@
 import pytest
 from examples.example_apps import reruns, reruns_delay
+from playwright.sync_api import Page
 
-from shiny.test import Page, ShinyAppProc
-from shiny.test._controls import Accordion, InputActionButton, OutputTextVerbatim
+from shiny.playwright.controls import Accordion, InputActionButton, OutputTextVerbatim
+from shiny.run import ShinyAppProc
 
 
 @pytest.mark.flaky(reruns=reruns, reruns_delay=reruns_delay)
