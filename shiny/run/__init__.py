@@ -15,7 +15,7 @@ from ._conftest import ShinyAppProc
 
 __all__ = (
     # TODO-future: Find the proper location for these methods to be returned
-    # "run_shiny_app",
+    "run_shiny_app",
     # "expect_to_change",
     "ShinyAppProc",
 )
