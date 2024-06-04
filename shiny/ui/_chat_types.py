@@ -224,29 +224,34 @@ class NormalizerRegistry:
             "string": StringNormalizer,
         }
 
-    # TODO: throw error if provider already exists and a way to force overwrite
-    def register(self, provider: str, strategy: type[BaseMessageNormalizer]) -> None:
+    def register(
+        self, provider: str, strategy: type[BaseMessageNormalizer], force: bool = False
+    ) -> None:
+        if provider in self._strategies and not force:
+            raise ValueError(f"Provider {provider} already exists in registry")
         self._strategies[provider] = strategy
 
 
-registry = NormalizerRegistry()
+message_normalizer_registry = NormalizerRegistry()
 
 
 def normalize_message(message: Any) -> ChatMessage:
-    for strategy in registry._strategies.values():
+    strategies = message_normalizer_registry._strategies
+    for strategy in strategies.values():
         if strategy.can_normalize(message):
             return strategy.normalize(message)
     raise ValueError(
         f"Could not find a normalizer for message of type {type(message)}: {message}"
-        "Consider registering a custom normalizer"
+        "Consider registering a custom normalizer via shiny.ui._chat_types.registry.register()"
     )
 
 
 def normalize_message_chunk(chunk: Any) -> ChatMessageChunk:
-    for strategy in registry._strategies.values():
+    strategies = message_normalizer_registry._strategies
+    for strategy in strategies.values():
         if strategy.can_normalize_chunk(chunk):
             return strategy.normalize_chunk(chunk)
     raise ValueError(
         f"Could not find a normalizer for message chunk of type {type(chunk)}: {chunk}"
-        "Consider registering a custom normalizer"
+        "Consider registering a custom normalizer via shiny.ui._chat_types.registry.register()"
     )

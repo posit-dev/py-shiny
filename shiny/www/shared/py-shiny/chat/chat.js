@@ -12532,7 +12532,6 @@ function createElement(tag_name, attrs) {
 
 // chat/chat.ts
 var CHAT_MESSAGE_TAG = "shiny-chat-message";
-var CHAT_PLACEHOLDER_TAG = "shiny-chat-placeholder";
 var CHAT_MESSAGES_TAG = "shiny-chat-messages";
 var CHAT_INPUT_TAG = "shiny-chat-input";
 var CHAT_CONTAINER_TAG = "shiny-chat-container";
@@ -12591,19 +12590,6 @@ __decorateClass([
 __decorateClass([
   n4()
 ], ChatMessage.prototype, "content", 2);
-var ChatPlaceholder = class extends ChatMessage {
-  constructor() {
-    super(...arguments);
-    this.role = "assistant";
-    this.content = '<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><style>.spinner_S1WN{animation:spinner_MGfb .8s linear infinite;animation-delay:-.8s}.spinner_Km9P{animation-delay:-.65s}.spinner_JApP{animation-delay:-.5s}@keyframes spinner_MGfb{93.75%,100%{opacity:.2}}</style><circle class="spinner_S1WN" cx="4" cy="12" r="3"/><circle class="spinner_S1WN spinner_Km9P" cx="12" cy="12" r="3"/><circle class="spinner_S1WN spinner_JApP" cx="20" cy="12" r="3"/></svg>';
-  }
-};
-__decorateClass([
-  n4()
-], ChatPlaceholder.prototype, "role", 2);
-__decorateClass([
-  n4()
-], ChatPlaceholder.prototype, "content", 2);
 var ChatMessages = class extends LightElement {
   render() {
     return x``;
@@ -12612,7 +12598,7 @@ var ChatMessages = class extends LightElement {
 var ChatInput = class extends LightElement {
   constructor() {
     super(...arguments);
-    this.placeholder = "...";
+    this.placeholder = "Enter a message...";
     this.disabled = false;
   }
   render() {
@@ -12698,6 +12684,16 @@ var ChatContainer = class extends LightElement {
     );
     this.addEventListener("shiny-chat-clear-messages", this.#onClear);
   }
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    this.removeEventListener("shiny-chat-input-sent", this.#onInputSent);
+    this.removeEventListener("shiny-chat-append-message", this.#onAppend);
+    this.removeEventListener(
+      "shiny-chat-append-message-chunk",
+      this.#onAppendChunk
+    );
+    this.removeEventListener("shiny-chat-clear-messages", this.#onClear);
+  }
   #onInputSent(event) {
     this.#appendMessage(event.detail);
     this.#addPlaceholder();
@@ -12715,11 +12711,17 @@ var ChatContainer = class extends LightElement {
     }
   }
   #addPlaceholder() {
-    const placeholder = createElement(CHAT_PLACEHOLDER_TAG, {});
+    const placeholder_message = {
+      // https://github.com/n3r4zzurr0/svg-spinners/blob/main/svg-css/3-dots-fade.svg
+      content: '<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><style>.spinner_S1WN{animation:spinner_MGfb .8s linear infinite;animation-delay:-.8s}.spinner_Km9P{animation-delay:-.65s}.spinner_JApP{animation-delay:-.5s}@keyframes spinner_MGfb{93.75%,100%{opacity:.2}}</style><circle class="spinner_S1WN" cx="4" cy="12" r="3"/><circle class="spinner_S1WN spinner_Km9P" cx="12" cy="12" r="3"/><circle class="spinner_S1WN spinner_JApP" cx="20" cy="12" r="3"/></svg>',
+      role: "assistant",
+      id: "placeholder-message"
+    };
+    const placeholder = createElement(CHAT_MESSAGE_TAG, placeholder_message);
     this.messages.appendChild(placeholder);
   }
   #removePlaceholder() {
-    const placeholder = this.messages.querySelector(CHAT_PLACEHOLDER_TAG);
+    const placeholder = this.messages.querySelector("#placeholder-message");
     if (placeholder)
       placeholder.remove();
   }
@@ -12757,7 +12759,6 @@ var ChatContainer = class extends LightElement {
   }
 };
 customElements.define(CHAT_MESSAGE_TAG, ChatMessage);
-customElements.define(CHAT_PLACEHOLDER_TAG, ChatPlaceholder);
 customElements.define(CHAT_MESSAGES_TAG, ChatMessages);
 customElements.define(CHAT_INPUT_TAG, ChatInput);
 customElements.define(CHAT_CONTAINER_TAG, ChatContainer);

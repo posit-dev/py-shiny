@@ -1,8 +1,14 @@
+@use "highlight_styles" as highlight_styles;
+
 shiny-chat-container {
   display: flex;
   flex-direction: column;
   margin: 0 auto;
   gap: 1rem;
+
+  p:last-child {
+    margin-bottom: 0;
+  }
 
   shiny-chat-messages {
     display: flex;
@@ -10,34 +16,32 @@ shiny-chat-container {
     overflow: auto;
     gap: 1rem;
 
-    > * {
+    shiny-chat-message {
       display: grid;
       grid-template-columns: auto minmax(0, 1fr);
       gap: 1rem;
+
+      /* Vertically center the message content */
+      .message-content {
+        height: fit-content;
+        align-self: center;
+      }
+
+      /* Align the user message to the right */
+      .message-user {
+        grid-column: 2;
+        justify-self: end;
+        padding: 0.5rem 0.75rem;
+        border-radius: 26px;
+        background-color: var(--bs-light-bg-subtle, #fcfcfc);
+        color: var(--bs-light-text-emphasis, #48505f);
+        border: var(--bs-border-width, 1px) solid var(--bs-border-color, #e9ecef);
+      }
 
       /* Make badges more circular */
       .badge {
         --bs-badge-padding-y: 0.65em;
         height: fit-content;
-      }
-    }
-
-    .message-content {
-      p:last-child {
-        margin-bottom: 0;
-      }
-      pre code {
-        /* Fix alignment of first line in a code block */
-        padding: 0;
-      }
-      &.message-user {
-        /* Put message in the 2nd column  and align to the right */
-        grid-column: 2;
-        justify-self: end;
-        padding: 0.5rem 0.75rem;
-        border-radius: 26px;
-        background-color: var(--bs-primary-bg-subtle, #cce5f3);
-        color: var(--bs-primary-text-emphasis, #0d6efd);
       }
     }
   }
@@ -67,9 +71,11 @@ shiny-chat-container {
   display: none;
 }
 
-/* Code highlighting */
-/* TODO: we should have this read Bootstrap CSS variables */
-@import "highlight.scss";
+/* Code highlighting (for both light and dark mode) */
+@include highlight_styles.atom_one_light;
+[data-bs-theme="dark"] {
+  @include highlight_styles.atom_one_dark;
+}
 
 /*
   Styling for the code-copy button (inspired by Quarto's code-copy feature)
