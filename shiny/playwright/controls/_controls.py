@@ -3332,12 +3332,12 @@ class Tooltip(_OverlayBase):
         self.loc_trigger.hover(timeout=timeout)
 
 
-class _LayoutNavItemBase(_InputWithContainer):
+class _NavItemBase(_InputWithContainer):
     def nav_item(
         self,
         value: str,
-    ) -> LayoutNavItem:
-        return LayoutNavItem(self.page, self.id, value)
+    ) -> NavItem:
+        return NavItem(self.page, self.id, value)
 
     def set(self, value: str, *, timeout: Timeout = None) -> None:
         self.nav_item(value).click(timeout=timeout)
@@ -3393,8 +3393,8 @@ class _LayoutNavItemBase(_InputWithContainer):
         self.expect.to_have_text(value, timeout=timeout)
 
 
-class LayoutNavItem(_InputWithContainer):
-    # *args: NavSetArg,
+class NavItem(_InputWithContainer):
+    # *args: NavsetArg,
     # id: Optional[str] = None,
     # selected: Optional[str] = None,
     # header: TagChild = None,
@@ -3429,8 +3429,8 @@ class LayoutNavItem(_InputWithContainer):
         playwright_expect(self.loc_content).to_have_text(value, timeout=timeout)
 
 
-class LayoutNavSetTab(_LayoutNavItemBase):
-    # *args: NavSetArg,
+class NavsetTab(_NavItemBase):
+    # *args: NavsetArg,
     # id: Optional[str] = None,
     # selected: Optional[str] = None,
     # header: TagChild = None,
@@ -3444,7 +3444,7 @@ class LayoutNavSetTab(_LayoutNavItemBase):
         )
 
 
-class LayoutNavSetPill(_LayoutNavItemBase):
+class NavsetPill(_NavItemBase):
     def __init__(self, page: Page, id: str) -> None:
         super().__init__(
             page,
@@ -3454,7 +3454,7 @@ class LayoutNavSetPill(_LayoutNavItemBase):
         )
 
 
-class LayoutNavSetUnderline(_LayoutNavItemBase):
+class NavsetUnderline(_NavItemBase):
     def __init__(self, page: Page, id: str) -> None:
         super().__init__(
             page,
@@ -3464,7 +3464,7 @@ class LayoutNavSetUnderline(_LayoutNavItemBase):
         )
 
 
-class LayoutNavSetPillList(_LayoutNavItemBase):
+class NavsetPillList(_NavItemBase):
     def __init__(self, page: Page, id: str) -> None:
         super().__init__(
             page,
@@ -3474,7 +3474,7 @@ class LayoutNavSetPillList(_LayoutNavItemBase):
         )
 
 
-class LayoutNavSetCardTab(_LayoutNavItemBase):
+class NavsetCardTab(_NavItemBase):
     def __init__(self, page: Page, id: str) -> None:
         super().__init__(
             page,
@@ -3484,7 +3484,7 @@ class LayoutNavSetCardTab(_LayoutNavItemBase):
         )
 
 
-class LayoutNavSetCardPill(_LayoutNavItemBase):
+class NavsetCardPill(_NavItemBase):
     def __init__(self, page: Page, id: str) -> None:
         super().__init__(
             page,
@@ -3494,7 +3494,7 @@ class LayoutNavSetCardPill(_LayoutNavItemBase):
         )
 
 
-class LayoutNavSetCardUnderline(_LayoutNavItemBase):
+class NavsetCardUnderline(_NavItemBase):
     def __init__(self, page: Page, id: str) -> None:
         super().__init__(
             page,
@@ -3504,7 +3504,7 @@ class LayoutNavSetCardUnderline(_LayoutNavItemBase):
         )
 
 
-class LayoutNavSetHidden(_LayoutNavItemBase):
+class NavsetHidden(_NavItemBase):
     def __init__(self, page: Page, id: str) -> None:
         super().__init__(
             page,
@@ -3514,7 +3514,7 @@ class LayoutNavSetHidden(_LayoutNavItemBase):
         )
 
 
-class LayoutNavSetBar(_LayoutNavItemBase):
+class NavsetBar(_NavItemBase):
     def __init__(self, page: Page, id: str) -> None:
         super().__init__(
             page,

@@ -3,7 +3,7 @@ from __future__ import annotations
 from conftest import create_doc_example_core_fixture
 from playwright.sync_api import Page
 
-from shiny.playwright.controls import InputActionButton, InputDarkMode, LayoutNavSetBar
+from shiny.playwright.controls import InputActionButton, InputDarkMode, NavsetBar
 from shiny.run import ShinyAppProc
 
 app = create_doc_example_core_fixture("input_dark_mode")
@@ -28,7 +28,7 @@ def test_input_dark_mode_switch(page: Page, app: ShinyAppProc) -> None:
     page.goto(app.url)
 
     mode_switch = InputDarkMode(page, "mode")
-    navbar = LayoutNavSetBar(page, "page")
+    navbar = NavsetBar(page, "page")
     make_light = InputActionButton(page, "make_light")
     make_dark = InputActionButton(page, "make_dark")
 
