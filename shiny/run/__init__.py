@@ -8,7 +8,7 @@ except ImportError:
     )
 
 
-from ._conftest import ShinyAppProc
+from ._conftest import ShinyAppProc, run_shiny_app
 
 # from ._expect import expect_to_change
 
