@@ -1,5 +1,7 @@
-from shiny.test import Page, ShinyAppProc
-from shiny.test._controls import Card
+from playwright.sync_api import Page
+
+from shiny.playwright.controls import Card
+from shiny.run import ShinyAppProc
 
 
 def test_card(page: Page, local_app: ShinyAppProc) -> None:

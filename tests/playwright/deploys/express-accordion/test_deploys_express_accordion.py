@@ -1,4 +1,5 @@
 import pytest
+from playwright.sync_api import Page
 from utils.deploy_utils import (
     create_deploys_app_url_fixture,
     reruns,
@@ -6,8 +7,7 @@ from utils.deploy_utils import (
     skip_if_not_chrome,
 )
 
-from shiny.test import Page
-from shiny.test._controls import Accordion
+from shiny.playwright.controls import Accordion
 
 app_url = create_deploys_app_url_fixture("shiny_express_accordion")
 

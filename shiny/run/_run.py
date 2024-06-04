@@ -9,7 +9,7 @@ from pathlib import PurePath
 from types import TracebackType
 from typing import IO, Any, Callable, Generator, List, Optional, TextIO, Type, Union
 
-import shiny._utils
+from .._utils import random_port
 
 __all__ = (
     "ShinyAppProc",
@@ -228,7 +228,7 @@ def run_shiny_app(
     bufsize
         The buffer size to use for stdout and stderr.
     """
-    shiny_port = port if port != 0 else shiny._utils.random_port()
+    shiny_port = port if port != 0 else random_port()
 
     child = subprocess.Popen(
         [

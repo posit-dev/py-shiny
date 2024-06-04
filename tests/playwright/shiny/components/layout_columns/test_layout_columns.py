@@ -3,8 +3,9 @@ from __future__ import annotations
 from typing import TypeVar
 
 from conftest import create_doc_example_core_fixture
+from playwright.sync_api import Page
 
-from shiny.test import Page, ShinyAppProc
+from shiny.run import ShinyAppProc
 
 T = TypeVar("T")
 

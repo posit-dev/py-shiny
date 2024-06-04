@@ -5,7 +5,8 @@ from typing import Generator
 
 import pytest
 
-from ._conftest import ShinyAppProc, shiny_app_gen
+from ..run import ShinyAppProc
+from ..run._run import shiny_app_gen
 
 
 @pytest.fixture(scope="module")

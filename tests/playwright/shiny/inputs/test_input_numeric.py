@@ -1,7 +1,8 @@
 from conftest import create_doc_example_core_fixture
+from playwright.sync_api import Page, expect
 
-from shiny.test import Page, ShinyAppProc, expect
-from shiny.test._controls import InputNumeric, OutputTextVerbatim
+from shiny.playwright.controls import InputNumeric, OutputTextVerbatim
+from shiny.run import ShinyAppProc
 
 app = create_doc_example_core_fixture("input_numeric")
 

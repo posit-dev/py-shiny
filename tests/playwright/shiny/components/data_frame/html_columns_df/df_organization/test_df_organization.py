@@ -1,5 +1,7 @@
-from shiny.test import Page, ShinyAppProc
-from shiny.test._controls import InputActionButton, OutputCode, OutputDataFrame
+from playwright.sync_api import Page
+
+from shiny.playwright.controls import InputActionButton, OutputCode, OutputDataFrame
+from shiny.run import ShinyAppProc
 
 
 def test_dataframe_organization_methods(page: Page, local_app: ShinyAppProc) -> None:

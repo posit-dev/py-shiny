@@ -8,10 +8,10 @@ from pathlib import Path
 import pytest
 from examples.example_apps import reruns, reruns_delay
 from mod_state import expect_default_mod_state, expect_mod_state
+from playwright.sync_api import Page
 
 from shiny._utils import guess_mime_type
-from shiny.test import Page, ShinyAppProc
-from shiny.test._controls import (
+from shiny.playwright.controls import (
     DownloadButton,
     DownloadLink,
     InputActionButton,
@@ -36,6 +36,7 @@ from shiny.test._controls import (
     OutputTextVerbatim,
     OutputUi,
 )
+from shiny.run import ShinyAppProc
 
 img_path = Path(__file__).parent / "imgs"
 penguin_imgs = [str(img_path / img) for img in os.listdir(img_path)]

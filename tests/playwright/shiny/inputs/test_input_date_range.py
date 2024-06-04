@@ -5,9 +5,10 @@ import typing
 from typing import Literal
 
 from conftest import create_doc_example_core_fixture
+from playwright.sync_api import Page, expect
 
-from shiny.test import Page, ShinyAppProc, expect
-from shiny.test._controls import InputDateRange
+from shiny.playwright.controls import InputDateRange
+from shiny.run import ShinyAppProc
 
 app = create_doc_example_core_fixture("input_date_range")
 

@@ -1,7 +1,8 @@
 import pytest
+from playwright.sync_api import Page
 
-from shiny.test import Page, ShinyAppProc
-from shiny.test._controls import ValueBox
+from shiny.playwright.controls import ValueBox
+from shiny.run import ShinyAppProc
 
 
 @pytest.mark.parametrize("value_box_id", ["valuebox1", "valuebox2"])

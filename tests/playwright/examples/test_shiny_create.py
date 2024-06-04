@@ -4,9 +4,9 @@ import tempfile
 
 import pytest
 from example_apps import get_apps, reruns, reruns_delay, validate_example
+from playwright.sync_api import Page
 
 from shiny._main import app_template_choices
-from shiny.test import Page
 
 
 def subprocess_create(
