@@ -1,6 +1,6 @@
 import re
 
-from shiny.playwright.controls._controls import (
+from shiny.playwright.expect._expect import (
     _attr_match_str,
     _style_match_str,
     _xpath_match_str,

@@ -6,7 +6,6 @@ import json
 import pathlib
 import platform
 import re
-import sys
 import time
 import typing
 from typing import Literal, Optional, Protocol
@@ -16,11 +15,23 @@ from playwright.sync_api import expect as playwright_expect
 
 # Import `shiny`'s typing extentions.
 # Since this is a private file, tell pyright to ignore the import
-from ..._typing_extensions import TypeGuard  # pyright: ignore[reportPrivateImportUsage]
-from ..._typing_extensions import (
-    assert_type,  # pyright: ignore[reportPrivateImportUsage]
-)
+from ..._typing_extensions import TypeGuard, assert_type
 from ...types import MISSING, MISSING_TYPE
+from .._types import (
+    AttrValue,
+    ListPatternOrStr,
+    OptionalFloat,
+    PatternOrStr,
+    StyleValue,
+    Timeout,
+)
+from ..expect import (
+    expect_attr,
+    expect_not_to_have_class,
+    expect_to_have_class,
+    expect_to_have_style,
+)
+from ..expect._expect import _attr_match_str, _expect_class_value, _xpath_match_str
 
 """
 Questions:
@@ -62,21 +73,6 @@ Questions:
   * If a method is used inconsistently, make/use a helper method
 """
 
-
-OptionalStr = Optional[str]
-OptionalInt = Optional[int]
-OptionalFloat = Optional[float]
-OptionalBool = Optional[bool]
-
-PatternStr = typing.Pattern[str]
-PatternOrStr = typing.Union[str, PatternStr]
-ListPatternOrStr = typing.Union[
-    typing.List[PatternOrStr], typing.List[str], typing.List[PatternStr]
-]
-AttrValue = typing.Union[PatternOrStr, None]
-StyleValue = typing.Union[PatternOrStr, None]
-
-Timeout = typing.Union[float, None]
 InitLocator = typing.Union[Locator, str]
 
 R = typing.TypeVar("R")
@@ -118,114 +114,6 @@ def set_text(
     # TODO-future; Composable set() method
     loc.fill("", timeout=timeout)  # Reset the value
     loc.type(text, delay=delay, timeout=timeout)  # Type the value
-
-
-def expect_attr(
-    loc: Locator,
-    name: str,
-    value: AttrValue,
-    timeout: Timeout = None,
-) -> None:
-    """Expect an attribute to have a value. If `value` is `None`, then the attribute should not exist."""
-    if value is None:
-        # if isinstance(value, type(None)):
-        # Not allowed to have any value for the attribute
-        playwright_expect(loc).not_to_have_attribute(
-            name, re.compile(r".*"), timeout=timeout
-        )
-        return
-
-    playwright_expect(loc).to_have_attribute(name=name, value=value, timeout=timeout)
-
-
-def _expect_class_value(
-    loc: Locator,
-    cls: str,
-    has_class: bool,
-    timeout: Timeout = None,
-) -> None:
-    """Expect a locator to have (or not to have) a class value"""
-    if has_class:
-        expect_to_have_class(loc, cls, timeout=timeout)
-    else:
-        expect_not_to_have_class(loc, cls, timeout=timeout)
-
-
-def expect_to_have_class(
-    loc: Locator,
-    cls: str,
-    timeout: Timeout = None,
-) -> None:
-    """Expect a locator to contain a class value"""
-    cls_regex = re.compile(rf"(^|\s+){re.escape(cls)}(\s+|$)")
-    playwright_expect(loc).to_have_class(cls_regex, timeout=timeout)
-
-
-def expect_not_to_have_class(
-    loc: Locator,
-    cls: str,
-    timeout: Timeout = None,
-) -> None:
-    """Expect a locator not to contain a class value"""
-    cls_regex = re.compile(rf"(^|\s+){re.escape(cls)}(\s+|$)")
-    playwright_expect(loc).not_to_have_class(cls_regex, timeout=timeout)
-
-
-def _style_match_str(key: str, value: PatternOrStr) -> PatternStr:
-    if isinstance(value, str):
-        value_str = re.escape(value)
-    else:
-        value_str = value.pattern
-    return re.compile(rf"(^|;)\s*{re.escape(key)}\s*:\s*{value_str}\s*(;|$)")
-
-
-def _attr_match_str(key: str, value: str) -> str:
-    # Escape double quotes
-    value_str = value.replace('"', '\\"')
-    # `key` is `value`
-    return f'{key}="{value_str}"'
-    # assert_type(value, re.Pattern[str])
-    # # `key` contains `value`
-    # return f'{key}*="{value.pattern}"'
-
-
-def _xpath_match_str(key: str, value: PatternOrStr) -> str:
-    if isinstance(value, str):
-        # Escape double quotes
-        value_str = value.replace('"', '\\"')
-        # `key` is `value`
-        return f'@{key}="{value_str}"'
-    else:
-        # Disabling type assertion for earlier versions of Python
-        if sys.version_info >= (3, 10):
-            assert_type(value, re.Pattern[str])
-
-        # `key` contains `value`
-        return f'matches(@{key}, "{value.pattern}")'
-
-
-def expect_to_have_style(
-    loc: Locator,
-    css_key: str,
-    # Str representation for value. Will be put in a regex with `css_key`
-    css_value: StyleValue,
-    timeout: Timeout = None,
-) -> None:
-    """Expect the `style` attribute to have a value. If `value` is `None`, then the style attribute should not exist."""
-    if css_value is None:
-        # Not allowed to have any value for the style
-        playwright_expect(loc).not_to_have_attribute(
-            "style",
-            re.compile(rf"\b{re.escape(css_key)}\s*:"),
-            timeout=timeout,
-        )
-        return
-
-    playwright_expect(loc).to_have_attribute(
-        "style",
-        _style_match_str(css_key, css_value),
-        timeout=timeout,
-    )
 
 
 def _expect_multiple(loc: Locator, multiple: bool, timeout: Timeout = None) -> None:
