@@ -14,14 +14,14 @@ from .._types import AttrValue, PatternOrStr, PatternStr, StyleValue, Timeout
 # Internal method only!
 # "_expect_class_value",
 __all__ = (
-    "expect_attr",
+    "expect_attribute_to_have_value",
     "expect_to_have_class",
     "expect_not_to_have_class",
     "expect_to_have_style",
 )
 
 
-def expect_attr(
+def expect_attribute_to_have_value(
     loc: Locator,
     name: str,
     value: AttrValue,

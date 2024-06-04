@@ -26,7 +26,7 @@ from .._types import (
     Timeout,
 )
 from ..expect import (
-    expect_attr,
+    expect_attribute_to_have_value,
     expect_not_to_have_class,
     expect_to_have_class,
     expect_to_have_style,
@@ -280,7 +280,7 @@ class _WidthLocM:
             The maximum time to wait for the expectation to be fulfilled.
             Defaults to None.
         """
-        expect_attr(self.loc, "width", value=value, timeout=timeout)
+        expect_attribute_to_have_value(self.loc, "width", value=value, timeout=timeout)
 
 
 class _WidthContainerM:
@@ -306,7 +306,9 @@ class _WidthContainerM:
             The maximum time to wait for the expectation to be fulfilled.
             Defaults to None.
         """
-        expect_attr(self.loc_container, "width", value=value, timeout=timeout)
+        expect_attribute_to_have_value(
+            self.loc_container, "width", value=value, timeout=timeout
+        )
 
 
 class _SetTextM:
@@ -351,7 +353,7 @@ class InputNumeric(
         *,
         timeout: Timeout = None,
     ) -> None:
-        expect_attr(self.loc, "min", value=value, timeout=timeout)
+        expect_attribute_to_have_value(self.loc, "min", value=value, timeout=timeout)
 
     def expect_max(
         self,
@@ -359,7 +361,7 @@ class InputNumeric(
         *,
         timeout: Timeout = None,
     ) -> None:
-        expect_attr(self.loc, "max", value=value, timeout=timeout)
+        expect_attribute_to_have_value(self.loc, "max", value=value, timeout=timeout)
 
     def expect_step(
         self,
@@ -367,7 +369,7 @@ class InputNumeric(
         *,
         timeout: Timeout = None,
     ) -> None:
-        expect_attr(self.loc, "step", value=value, timeout=timeout)
+        expect_attribute_to_have_value(self.loc, "step", value=value, timeout=timeout)
 
 
 class _ExpectSpellcheckAttrM:
@@ -378,7 +380,9 @@ class _ExpectSpellcheckAttrM:
         timeout: Timeout = None,
     ) -> None:
         # self.spellcheck.expect_to_have_value(value, timeout=timeout)
-        expect_attr(self.loc, "spellcheck", value=value, timeout=timeout)
+        expect_attribute_to_have_value(
+            self.loc, "spellcheck", value=value, timeout=timeout
+        )
 
 
 class _ExpectPlaceholderAttrM:
@@ -388,7 +392,9 @@ class _ExpectPlaceholderAttrM:
         *,
         timeout: Timeout = None,
     ) -> None:
-        expect_attr(self.loc, "placeholder", value=value, timeout=timeout)
+        expect_attribute_to_have_value(
+            self.loc, "placeholder", value=value, timeout=timeout
+        )
 
 
 class _ExpectAutocompleteAttrM:
@@ -398,7 +404,9 @@ class _ExpectAutocompleteAttrM:
         *,
         timeout: Timeout = None,
     ) -> None:
-        expect_attr(self.loc, "autocomplete", value=value, timeout=timeout)
+        expect_attribute_to_have_value(
+            self.loc, "autocomplete", value=value, timeout=timeout
+        )
 
 
 class InputText(
@@ -501,10 +509,10 @@ class InputTextArea(
         expect_to_have_style(self.loc, "height", value, timeout=timeout)
 
     def expect_cols(self, value: AttrValue, *, timeout: Timeout = None) -> None:
-        expect_attr(self.loc, "cols", value=value, timeout=timeout)
+        expect_attribute_to_have_value(self.loc, "cols", value=value, timeout=timeout)
 
     def expect_rows(self, value: AttrValue, *, timeout: Timeout = None) -> None:
-        expect_attr(self.loc, "rows", value=value, timeout=timeout)
+        expect_attribute_to_have_value(self.loc, "rows", value=value, timeout=timeout)
 
     def expect_resize(
         self,
@@ -512,7 +520,7 @@ class InputTextArea(
         *,
         timeout: Timeout = None,
     ) -> None:
-        expect_attr(self.loc, "resize", value=value, timeout=timeout)
+        expect_attribute_to_have_value(self.loc, "resize", value=value, timeout=timeout)
 
     def expect_autoresize(
         self,
@@ -651,7 +659,7 @@ class _InputSelectBase(
         _expect_multiple(self.loc, multiple, timeout=timeout)
 
     def expect_size(self, value: AttrValue, *, timeout: Timeout = None) -> None:
-        expect_attr(
+        expect_attribute_to_have_value(
             self.loc,
             "size",
             value=value,
@@ -749,18 +757,20 @@ class InputDarkMode(_InputBase):
         return self
 
     def expect_mode(self, value: str, *, timeout: Timeout = None):
-        expect_attr(self.loc, "mode", value=value, timeout=timeout)
+        expect_attribute_to_have_value(self.loc, "mode", value=value, timeout=timeout)
         self.expect_page_mode(value, timeout=timeout)
         return self
 
     def expect_page_mode(self, value: str, *, timeout: Timeout = None):
-        expect_attr(
+        expect_attribute_to_have_value(
             self.page.locator("html"), "data-bs-theme", value=value, timeout=timeout
         )
         return self
 
     def expect_wc_attribute(self, value: str, *, timeout: Timeout = None):
-        expect_attr(self.loc, "attribute", value=value, timeout=timeout)
+        expect_attribute_to_have_value(
+            self.loc, "attribute", value=value, timeout=timeout
+        )
         return self
 
 
@@ -793,7 +803,7 @@ class InputTaskButton(
     def expect_state(
         self, value: Literal["ready", "busy"] | str, *, timeout: Timeout = None
     ):
-        expect_attr(
+        expect_attribute_to_have_value(
             self.loc.locator("> bslib-switch-inline"),
             name="case",
             value=value,
@@ -817,7 +827,7 @@ class InputTaskButton(
         ).to_have_text(value, timeout=timeout)
 
     def expect_auto_reset(self, value: bool, timeout: Timeout = None):
-        expect_attr(
+        expect_attribute_to_have_value(
             self.loc,
             name="data-auto-reset",
             value="" if value else None,
@@ -1381,7 +1391,7 @@ class InputFile(
     ) -> None:
         if isinstance(accept, list):
             accept = ",".join(accept)
-        expect_attr(self.loc, "accept", accept, timeout=timeout)
+        expect_attribute_to_have_value(self.loc, "accept", accept, timeout=timeout)
 
     def expect_width(self, width: StyleValue, *, timeout: Timeout = None) -> None:
         expect_to_have_style(self.loc_container, "width", width, timeout=timeout)
@@ -1400,10 +1410,12 @@ class InputFile(
         *,
         timeout: Timeout = None,
     ) -> None:
-        expect_attr(self.loc, "capture", capture, timeout=timeout)
+        expect_attribute_to_have_value(self.loc, "capture", capture, timeout=timeout)
 
     def expect_placeholder(self, value: AttrValue, *, timeout: Timeout = None) -> None:
-        expect_attr(self.loc_file_display, "placeholder", value=value, timeout=timeout)
+        expect_attribute_to_have_value(
+            self.loc_file_display, "placeholder", value=value, timeout=timeout
+        )
 
 
 class _InputSliderBase(_WidthLocM, _InputWithLabel):
@@ -1473,14 +1485,14 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
         # TODO-future; Composable expectations
         self.expect_animate(exists=True, timeout=timeout)
         if not_is_missing(loop):
-            expect_attr(
+            expect_attribute_to_have_value(
                 self.loc_play_pause,
                 "data-loop",
                 "" if loop else None,
                 timeout=timeout,
             )
         if not_is_missing(interval):
-            expect_attr(
+            expect_attribute_to_have_value(
                 self.loc_play_pause,
                 "data-interval",
                 str(interval),
@@ -1507,25 +1519,39 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
         self.loc_play_pause.click()
 
     def expect_min(self, value: AttrValue, *, timeout: Timeout = None) -> None:
-        expect_attr(self.loc, "data-min", value=value, timeout=timeout)
+        expect_attribute_to_have_value(
+            self.loc, "data-min", value=value, timeout=timeout
+        )
 
     def expect_max(self, value: AttrValue, *, timeout: Timeout = None) -> None:
-        expect_attr(self.loc, "data-max", value=value, timeout=timeout)
+        expect_attribute_to_have_value(
+            self.loc, "data-max", value=value, timeout=timeout
+        )
 
     def expect_step(self, value: AttrValue, *, timeout: Timeout = None) -> None:
-        expect_attr(self.loc, "data-step", value=value, timeout=timeout)
+        expect_attribute_to_have_value(
+            self.loc, "data-step", value=value, timeout=timeout
+        )
 
     def expect_ticks(self, value: AttrValue, *, timeout: Timeout = None) -> None:
-        expect_attr(self.loc, "data-grid", value=value, timeout=timeout)
+        expect_attribute_to_have_value(
+            self.loc, "data-grid", value=value, timeout=timeout
+        )
 
     def expect_sep(self, value: AttrValue, *, timeout: Timeout = None) -> None:
-        expect_attr(self.loc, "data-prettify-separator", value=value, timeout=timeout)
+        expect_attribute_to_have_value(
+            self.loc, "data-prettify-separator", value=value, timeout=timeout
+        )
 
     def expect_pre(self, value: AttrValue, *, timeout: Timeout = None) -> None:
-        expect_attr(self.loc, "data-prefix", value=value, timeout=timeout)
+        expect_attribute_to_have_value(
+            self.loc, "data-prefix", value=value, timeout=timeout
+        )
 
     def expect_post(self, value: AttrValue, *, timeout: Timeout = None) -> None:
-        expect_attr(self.loc, "data-postfix", value=value, timeout=timeout)
+        expect_attribute_to_have_value(
+            self.loc, "data-postfix", value=value, timeout=timeout
+        )
 
     # def expect_data_type(
     #     self, value: AttrValue, *, timeout: Timeout = None
@@ -1533,13 +1559,19 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
     #     expect_attr(self.loc, "data-data-type", value=value, timeout=timeout)
 
     def expect_time_format(self, value: AttrValue, *, timeout: Timeout = None) -> None:
-        expect_attr(self.loc, "data-time-format", value=value, timeout=timeout)
+        expect_attribute_to_have_value(
+            self.loc, "data-time-format", value=value, timeout=timeout
+        )
 
     def expect_timezone(self, value: AttrValue, *, timeout: Timeout = None) -> None:
-        expect_attr(self.loc, "data-timezone", value=value, timeout=timeout)
+        expect_attribute_to_have_value(
+            self.loc, "data-timezone", value=value, timeout=timeout
+        )
 
     def expect_drag_range(self, value: AttrValue, *, timeout: Timeout = None) -> None:
-        expect_attr(self.loc, "data-drag-interval", value=value, timeout=timeout)
+        expect_attribute_to_have_value(
+            self.loc, "data-drag-interval", value=value, timeout=timeout
+        )
 
     def _wait_for_container(self, *, timeout: Timeout = None) -> None:
         self.loc_container.wait_for(state="visible", timeout=timeout)
@@ -1853,7 +1885,9 @@ class _DateBase(
         *,
         timeout: Timeout = None,
     ) -> None:
-        expect_attr(self.loc, "data-min-date", value=value, timeout=timeout)
+        expect_attribute_to_have_value(
+            self.loc, "data-min-date", value=value, timeout=timeout
+        )
 
     def expect_max_date(
         self,
@@ -1861,7 +1895,9 @@ class _DateBase(
         *,
         timeout: Timeout = None,
     ) -> None:
-        expect_attr(self.loc, "data-max-date", value=value, timeout=timeout)
+        expect_attribute_to_have_value(
+            self.loc, "data-max-date", value=value, timeout=timeout
+        )
 
     def expect_format(
         self,
@@ -1869,7 +1905,9 @@ class _DateBase(
         *,
         timeout: Timeout = None,
     ) -> None:
-        expect_attr(self.loc, "data-date-format", value=value, timeout=timeout)
+        expect_attribute_to_have_value(
+            self.loc, "data-date-format", value=value, timeout=timeout
+        )
 
     def expect_startview(
         self,
@@ -1877,7 +1915,9 @@ class _DateBase(
         *,
         timeout: Timeout = None,
     ) -> None:
-        expect_attr(self.loc, "data-date-start-view", value=value, timeout=timeout)
+        expect_attribute_to_have_value(
+            self.loc, "data-date-start-view", value=value, timeout=timeout
+        )
 
     def expect_weekstart(
         self,
@@ -1887,7 +1927,9 @@ class _DateBase(
     ) -> None:
         if isinstance(value, int):
             value = str(value)
-        expect_attr(self.loc, "data-date-week-start", value=value, timeout=timeout)
+        expect_attribute_to_have_value(
+            self.loc, "data-date-week-start", value=value, timeout=timeout
+        )
 
     def expect_language(
         self,
@@ -1895,7 +1937,9 @@ class _DateBase(
         *,
         timeout: Timeout = None,
     ) -> None:
-        expect_attr(self.loc, "data-date-language", value=value, timeout=timeout)
+        expect_attribute_to_have_value(
+            self.loc, "data-date-language", value=value, timeout=timeout
+        )
 
     # autoclose: bool = True,
     def expect_autoclose(
@@ -1904,7 +1948,9 @@ class _DateBase(
         *,
         timeout: Timeout = None,
     ) -> None:
-        expect_attr(self.loc, "data-date-autoclose", value=value, timeout=timeout)
+        expect_attribute_to_have_value(
+            self.loc, "data-date-autoclose", value=value, timeout=timeout
+        )
 
     def expect_datesdisabled(
         self,
@@ -1915,7 +1961,7 @@ class _DateBase(
         if isinstance(value, list):
             assert len(value) > 0, "`value` must be `None` or a non-empty list"
         value_str = "null" if value is None else json.dumps(value)
-        expect_attr(
+        expect_attribute_to_have_value(
             self.loc,
             "data-date-dates-disabled",
             value=value_str,
@@ -1931,7 +1977,7 @@ class _DateBase(
         if isinstance(value, list):
             assert len(value) > 0, "`value` must be `None` or a non-empty list"
         value_str = "null" if value is None else json.dumps(value)
-        expect_attr(
+        expect_attribute_to_have_value(
             self.loc,
             "data-date-days-of-week-disabled",
             value=value_str,
@@ -2283,7 +2329,7 @@ class _OutputImageBase(_OutputInlineContainerM, _OutputBase):
         *,
         timeout: Timeout = None,
     ) -> None:
-        expect_attr(self.loc_img, "src", value, timeout=timeout)
+        expect_attribute_to_have_value(self.loc_img, "src", value, timeout=timeout)
 
     def expect_img_width(
         self,
@@ -2291,7 +2337,7 @@ class _OutputImageBase(_OutputInlineContainerM, _OutputBase):
         *,
         timeout: Timeout = None,
     ) -> None:
-        expect_attr(self.loc_img, "width", value, timeout=timeout)
+        expect_attribute_to_have_value(self.loc_img, "width", value, timeout=timeout)
 
     def expect_img_height(
         self,
@@ -2299,7 +2345,7 @@ class _OutputImageBase(_OutputInlineContainerM, _OutputBase):
         *,
         timeout: Timeout = None,
     ) -> None:
-        expect_attr(self.loc_img, "height", value, timeout=timeout)
+        expect_attribute_to_have_value(self.loc_img, "height", value, timeout=timeout)
 
     def expect_img_alt(
         self,
@@ -2307,7 +2353,7 @@ class _OutputImageBase(_OutputInlineContainerM, _OutputBase):
         *,
         timeout: Timeout = None,
     ) -> None:
-        expect_attr(self.loc_img, "alt", value, timeout=timeout)
+        expect_attribute_to_have_value(self.loc_img, "alt", value, timeout=timeout)
 
     # def expect_img_style(
     #     self,
@@ -3149,7 +3195,7 @@ class _OverlayBase(_InputBase):
 
     def expect_active(self, active: bool, *, timeout: Timeout = None) -> None:
         value = re.compile(r".*") if active else None
-        return expect_attr(
+        return expect_attribute_to_have_value(
             loc=self.loc_trigger,
             timeout=timeout,
             name="aria-describedby",
@@ -3157,7 +3203,7 @@ class _OverlayBase(_InputBase):
         )
 
     def expect_placement(self, value: str, *, timeout: Timeout = None) -> None:
-        return expect_attr(
+        return expect_attribute_to_have_value(
             loc=self.get_loc_overlay_container(timeout=timeout),
             timeout=timeout,
             name="data-popper-placement",
