@@ -1,5 +1,7 @@
-from shiny.test import Page, ShinyAppProc
-from shiny.test._controls import InputActionButton, OutputTextVerbatim
+from playwright.sync_api import Page
+
+from shiny.playwright.controls import InputActionButton, OutputTextVerbatim
+from shiny.run import ShinyAppProc
 
 
 def test_output_image_kitchen(page: Page, local_app: ShinyAppProc) -> None:

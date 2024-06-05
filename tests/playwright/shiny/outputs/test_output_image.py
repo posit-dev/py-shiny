@@ -1,9 +1,10 @@
 import re
 
 from conftest import create_doc_example_core_fixture
+from playwright.sync_api import Page
 
-from shiny.test import Page, ShinyAppProc
-from shiny.test._controls import OutputImage
+from shiny.playwright.controls import OutputImage
+from shiny.run import ShinyAppProc
 
 app = create_doc_example_core_fixture("output_image")
 

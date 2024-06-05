@@ -1,10 +1,10 @@
 from pathlib import Path
 
 import pytest
+from playwright.sync_api import Page
 
-from shiny.test import Page, ShinyAppProc
-from shiny.test._conftest import run_shiny_app
-from shiny.test._controls import Card, OutputCode, ValueBox
+from shiny.playwright.controls import Card, OutputCode, ValueBox
+from shiny.run import ShinyAppProc, run_shiny_app
 
 
 @pytest.mark.parametrize(

@@ -1,7 +1,6 @@
 import pytest
 from example_apps import get_apps, reruns, reruns_delay, validate_example
-
-from shiny.test import Page
+from playwright.sync_api import Page
 
 
 @pytest.mark.flaky(reruns=reruns, reruns_delay=reruns_delay)

@@ -1,8 +1,14 @@
 # See https://github.com/microsoft/playwright-python/issues/1532
 # pyright: reportUnknownMemberType=false
 
-from shiny.test import Page, ShinyAppProc, expect
-from shiny.test._controls import InputActionButton, InputTextArea, OutputTextVerbatim
+from playwright.sync_api import Page, expect
+
+from shiny.playwright.controls import (
+    InputActionButton,
+    InputTextArea,
+    OutputTextVerbatim,
+)
+from shiny.run import ShinyAppProc
 
 
 def test_async_app(page: Page, local_app: ShinyAppProc) -> None:

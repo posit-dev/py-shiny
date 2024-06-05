@@ -1,8 +1,10 @@
 import re
 import time
 
-from shiny.test import Page, ShinyAppProc
-from shiny.test._controls import InputSlider, InputSliderRange, OutputTextVerbatim
+from playwright.sync_api import Page
+
+from shiny.playwright.controls import InputSlider, InputSliderRange, OutputTextVerbatim
+from shiny.run import ShinyAppProc
 from shiny.types import MISSING
 
 

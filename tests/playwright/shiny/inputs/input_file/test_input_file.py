@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from shiny.test import Page, ShinyAppProc, expect
-from shiny.test._controls import InputFile, OutputTable, OutputTextVerbatim
-from shiny.test._playwright import FilePayload
+from playwright.sync_api import FilePayload, Page, expect
+
+from shiny.playwright.controls import InputFile, OutputTable, OutputTextVerbatim
+from shiny.run import ShinyAppProc
 
 
 def test_input_file_kitchen(page: Page, local_app: ShinyAppProc) -> None:
