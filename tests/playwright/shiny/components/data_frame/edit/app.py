@@ -72,43 +72,37 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
         # return df
         return render.DataGrid(
             df,
-            selection_mode="rows",
-            editable=False,
+            selection_mode=("rows"),
+            editable=True,
             filters=True,
         )
         # return render.DataTable(df, selection_mode="none", editable=True)
-        # return render.DataGrid(df, selection_mode="rows", editable=True)
+        return render.DataGrid(df, selection_mode="rows", editable=True)
         # return render.DataTable(df, selection_mode="rows", editable=True)
-        return render.DataGrid(df, selection_mode="rows", editable=False)
+        # return render.DataGrid(df, selection_mode="rows", editable=False)
         # return render.DataTable(df, selection_mode="rows", editable=False)
 
     from shiny import reactive
 
-    @reactive.effect
-    def _():
-        print(
-            "Filters:",
-            summary_data.filter(),
-        )
+    # @reactive.effect
+    # def _():
+    #     print("Filters:", summary_data.filter())
 
-    @reactive.effect
-    def _():
-        print(
-            "Sorting:",
-            summary_data.sort(),
-        )
+    # @reactive.effect
+    # def _():
+    #     print("Sorting:", summary_data.sort())
 
-    @reactive.effect
-    def _():
-        print("indices:", summary_data.data_view_rows())
+    # @reactive.effect
+    # def _():
+    #     print("indices:", summary_data.data_view_rows())
 
-    @reactive.effect
-    def _():
-        print("Data View:\n", summary_data.data_view(selected=False))
+    # @reactive.effect
+    # def _():
+    #     print("Data View:\n", summary_data.data_view(selected=False))
 
-    @reactive.effect
-    def _():
-        print("Data View (selected):\n", summary_data.data_view(selected=True))
+    # @reactive.effect
+    # def _():
+    #     print("Data View (selected):\n", summary_data.data_view(selected=True))
 
     @reactive.effect
     def _():

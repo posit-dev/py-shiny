@@ -113,12 +113,17 @@ export function initSelectionModes(
   });
 }
 
-export function useSelection<TKey, TElement extends HTMLElement>(
-  selectionModes: SelectionModes,
-  keyAccessor: (el: TElement) => TKey,
-  focusOffset: (start: TKey, offset: number) => TKey | null,
-  between?: (from: TKey, to: TKey) => ReadonlyArray<TKey>
-): SelectionSet<TKey, TElement> {
+export function useSelection<TKey, TElement extends HTMLElement>({
+  selectionModes: selectionModes,
+  keyAccessor,
+  focusOffset,
+  between,
+}: {
+  selectionModes: SelectionModes;
+  keyAccessor: (el: TElement) => TKey;
+  focusOffset: (start: TKey, offset: number) => TKey | null;
+  between?: (from: TKey, to: TKey) => ReadonlyArray<TKey>;
+}): SelectionSet<TKey, TElement> {
   const [selectedKeys, setSelectedKeys] = useState<ImmutableSet<TKey>>(
     ImmutableSet.empty()
   );
