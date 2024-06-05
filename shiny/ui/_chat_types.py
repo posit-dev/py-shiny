@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Literal, TypedDict
+from typing import TYPE_CHECKING, Any, Literal, Optional, TypedDict, cast
 
 from typing_extensions import NotRequired
 
@@ -27,93 +27,80 @@ if TYPE_CHECKING:
 
 
 class BaseMessageNormalizer(ABC):
-    @staticmethod
     @abstractmethod
-    def normalize(message: Any) -> ChatMessage:
+    def normalize(self, message: Any) -> ChatMessage:
         pass
 
-    @staticmethod
     @abstractmethod
-    def normalize_chunk(chunk: Any) -> ChatMessageChunk:
+    def normalize_chunk(self, chunk: Any) -> ChatMessageChunk:
         pass
 
-    @staticmethod
     @abstractmethod
-    def can_normalize(message: Any) -> bool:
+    def can_normalize(self, message: Any) -> bool:
         pass
 
-    @staticmethod
     @abstractmethod
-    def can_normalize_chunk(chunk: Any) -> bool:
+    def can_normalize_chunk(self, chunk: Any) -> bool:
         pass
 
 
 class StringNormalizer(BaseMessageNormalizer):
-    @staticmethod
-    def normalize(message: str | None) -> ChatMessage:
-        return ChatMessage(content=message or "", role="assistant")
+    def normalize(self, message: Any) -> ChatMessage:
+        x = cast(Optional[str], message)
+        return ChatMessage(content=x or "", role="assistant")
 
     # Follow openai's convention of "" for message_start and None for message_end
-    @staticmethod
-    def normalize_chunk(chunk: str | None) -> ChatMessageChunk:
+    def normalize_chunk(self, chunk: Any) -> ChatMessageChunk:
+        x = cast(Optional[str], chunk)
         type = "message_chunk"
-        if chunk == "":
+        if x == "":
             type = "message_start"
-        if chunk is None:
+        if x is None:
             type = "message_end"
-            chunk = ""
-        return ChatMessageChunk(content=chunk, type=type, role="assistant")
+            x = ""
+        return ChatMessageChunk(content=x, type=type, role="assistant")
 
-    @staticmethod
-    def can_normalize(message: Any) -> bool:
+    def can_normalize(self, message: Any) -> bool:
         return isinstance(message, str) or message is None
 
-    @staticmethod
-    def can_normalize_chunk(chunk: Any) -> bool:
+    def can_normalize_chunk(self, chunk: Any) -> bool:
         return isinstance(chunk, str) or chunk is None
 
 
 class DictNormalizer(BaseMessageNormalizer):
-    @staticmethod
-    def normalize(message: dict[str, Any]) -> ChatMessage:
-        if "content" in message and "role" in message:
-            return ChatMessage(content=message["content"], role=message["role"])
-        else:
-            raise ValueError("Message must have 'content' and 'role' keys")
+    def normalize(self, message: Any) -> ChatMessage:
+        x = cast(dict[str, Any], message)
+        if "content" not in x:
+            raise ValueError("Message must have 'content' key")
+        return ChatMessage(content=x["content"], role=x.get("role", "assistant"))
 
-    @staticmethod
-    def normalize_chunk(chunk: dict[str, Any]) -> ChatMessageChunk:
-        if "content" in chunk and "role" in chunk and "type" in chunk:
-            return ChatMessageChunk(
-                content=chunk["content"],
-                role=chunk["role"],
-                type=chunk["type"],
-            )
-        else:
-            raise ValueError("Chunk must have 'content', 'role', and 'type' keys")
+    def normalize_chunk(self, chunk: Any) -> ChatMessageChunk:
+        x = cast(dict[str, Any], chunk)
+        if "content" not in x:
+            raise ValueError("Chunk must have a 'content' key")
+        return ChatMessageChunk(
+            content=x["content"],
+            role=x.get("role", "assistant"),
+            type=x.get("type", None),
+        )
 
-    @staticmethod
-    def can_normalize(message: Any) -> bool:
+    def can_normalize(self, message: Any) -> bool:
         return isinstance(message, dict)
 
-    @staticmethod
-    def can_normalize_chunk(chunk: Any) -> bool:
+    def can_normalize_chunk(self, chunk: Any) -> bool:
         return isinstance(chunk, dict)
 
 
-class OpenAINormalizer(BaseMessageNormalizer):
-    @staticmethod
-    def normalize(message: "ChatCompletion") -> ChatMessage:
-        content = message.choices[0].message.content
-        return ChatMessage(content=content or "", role="assistant")
+class OpenAINormalizer(StringNormalizer):
+    def normalize(self, message: Any) -> ChatMessage:
+        x = cast("ChatCompletion", message)
+        return super().normalize(x.choices[0].message.content)
 
-    @staticmethod
-    def normalize_chunk(chunk: "ChatCompletionChunk") -> ChatMessageChunk:
-        content = chunk.choices[0].delta.content
-        return StringNormalizer.normalize_chunk(content)
+    def normalize_chunk(self, chunk: Any) -> ChatMessageChunk:
+        x = cast("ChatCompletionChunk", chunk)
+        return super().normalize_chunk(x.choices[0].delta.content)
 
-    @staticmethod
-    def can_normalize(message: Any) -> bool:
+    def can_normalize(self, message: Any) -> bool:
         try:
             from openai.types.chat import ChatCompletion
 
@@ -121,8 +108,7 @@ class OpenAINormalizer(BaseMessageNormalizer):
         except ImportError:
             return False
 
-    @staticmethod
-    def can_normalize_chunk(chunk: Any) -> bool:
+    def can_normalize_chunk(self, chunk: Any) -> bool:
         try:
             from openai.types.chat import ChatCompletionChunk
 
@@ -132,21 +118,18 @@ class OpenAINormalizer(BaseMessageNormalizer):
 
 
 class AnthropicNormalizer(BaseMessageNormalizer):
-    @staticmethod
-    def normalize(message: "AnthropicMessage") -> ChatMessage:
-        content = message.content[0].text
-        return {"content": content, "role": "assistant"}
+    def normalize(self, message: Any) -> ChatMessage:
+        x = cast("AnthropicMessage", message)
+        content = x.content[0].text
+        return ChatMessage(content=content, role="assistant")
 
-    @staticmethod
-    def normalize_chunk(chunk: "MessageStreamEvent") -> ChatMessageChunk:
-        content = chunk.delta.text if chunk.type == "content_block_delta" else ""
-        type = (
-            "message_start" if chunk.type == "content_block_start" else "message_chunk"
-        )
+    def normalize_chunk(self, chunk: Any) -> ChatMessageChunk:
+        cnk = cast("MessageStreamEvent", chunk)
+        content = cnk.delta.text if cnk.type == "content_block_delta" else ""
+        type = "message_start" if cnk.type == "content_block_start" else "message_chunk"
         return ChatMessageChunk(content=content, type=type, role="assistant")
 
-    @staticmethod
-    def can_normalize(message: Any) -> bool:
+    def can_normalize(self, message: Any) -> bool:
         try:
             from anthropic.types import Message as AnthropicMessage
 
@@ -154,8 +137,7 @@ class AnthropicNormalizer(BaseMessageNormalizer):
         except ImportError:
             return False
 
-    @staticmethod
-    def can_normalize_chunk(chunk: Any) -> bool:
+    def can_normalize_chunk(self, chunk: Any) -> bool:
         try:
             from anthropic.types import MessageStreamEvent
 
@@ -165,16 +147,15 @@ class AnthropicNormalizer(BaseMessageNormalizer):
 
 
 class GoogleNormalizer(BaseMessageNormalizer):
-    @staticmethod
-    def normalize(message: "GenerateContentResponse") -> ChatMessage:
-        return ChatMessage(content=message.text, role="assistant")
+    def normalize(self, message: Any) -> ChatMessage:
+        msg = cast("GenerateContentResponse", message)
+        return ChatMessage(content=msg.text, role="assistant")
 
-    @staticmethod
-    def normalize_chunk(chunk: "GenerateContentResponse") -> ChatMessageChunk:
-        return ChatMessageChunk(content=chunk.text, role="assistant")
+    def normalize_chunk(self, chunk: Any) -> ChatMessageChunk:
+        cnk = cast("GenerateContentResponse", chunk)
+        return ChatMessageChunk(content=cnk.text, role="assistant")
 
-    @staticmethod
-    def can_normalize(message: Any) -> bool:
+    def can_normalize(self, message: Any) -> bool:
         try:
             from google.generativeai.types.generation_types import (  # pyright: ignore[reportMissingTypeStubs]
                 GenerateContentResponse,
@@ -184,52 +165,51 @@ class GoogleNormalizer(BaseMessageNormalizer):
         except ImportError:
             return False
 
-    @staticmethod
-    def can_normalize_chunk(chunk: Any) -> bool:
-        return GoogleNormalizer.can_normalize(chunk)
+    def can_normalize_chunk(self, chunk: Any) -> bool:
+        return self.can_normalize(chunk)
 
 
-class OllamaNormalizer(BaseMessageNormalizer):
-    @staticmethod
-    def normalize(message: dict[str, Any]) -> ChatMessage:
-        msg = message["message"]
-        return ChatMessage(content=msg["content"], role=msg["role"])
+class OllamaNormalizer(DictNormalizer):
+    def normalize(self, message: Any) -> ChatMessage:
+        x = cast(dict[str, Any], message["message"])
+        return super().normalize(x)
 
-    @staticmethod
-    def normalize_chunk(chunk: dict[str, Any]) -> ChatMessageChunk:
-        msg = chunk["message"]
-        return ChatMessageChunk(content=msg["content"], role=msg["role"])
+    def normalize_chunk(self, chunk: dict[str, Any]) -> ChatMessageChunk:
+        msg = cast(dict[str, Any], chunk["message"])
+        return super().normalize_chunk(msg)
 
-    @staticmethod
-    def can_normalize(message: Any) -> bool:
+    def can_normalize(self, message: Any) -> bool:
         if not isinstance(message, dict):
             return False
         if "message" not in message:
             return False
-        return DictNormalizer.can_normalize(message["message"])
+        return super().can_normalize(message["message"])
 
-    @staticmethod
-    def can_normalize_chunk(chunk: Any) -> bool:
-        return OllamaNormalizer.can_normalize(chunk)
+    def can_normalize_chunk(self, chunk: Any) -> bool:
+        return self.can_normalize(chunk)
 
 
 class NormalizerRegistry:
     def __init__(self) -> None:
-        self._strategies: dict[str, type[BaseMessageNormalizer]] = {
-            "google": GoogleNormalizer,
-            "anthropic": AnthropicNormalizer,
-            "openai": OpenAINormalizer,
-            "ollama": OllamaNormalizer,
-            "dict": DictNormalizer,
-            "string": StringNormalizer,
+        # Order of strategies matters (the 1st one that can normalize the message is used)
+        # So make sure to put the most specific strategies first
+        self._strategies: dict[str, BaseMessageNormalizer] = {
+            "openai": OpenAINormalizer(),
+            "anthropic": AnthropicNormalizer(),
+            "google": GoogleNormalizer(),
+            "ollama": OllamaNormalizer(),
+            "dict": DictNormalizer(),
+            "string": StringNormalizer(),
         }
 
     def register(
-        self, provider: str, strategy: type[BaseMessageNormalizer], force: bool = False
+        self, provider: str, strategy: BaseMessageNormalizer, force: bool = False
     ) -> None:
         if provider in self._strategies and not force:
             raise ValueError(f"Provider {provider} already exists in registry")
-        self._strategies[provider] = strategy
+        # Update the strategies dict such that the new strategy is the first to be considered
+        strategies = {provider: strategy}
+        strategies.update(self._strategies)
 
 
 message_normalizer_registry = NormalizerRegistry()
