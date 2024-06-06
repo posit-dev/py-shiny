@@ -12683,6 +12683,10 @@ var ChatContainer = class extends LightElement {
       this.#onAppendChunk
     );
     this.addEventListener("shiny-chat-clear-messages", this.#onClear);
+    this.addEventListener(
+      "shiny-chat-remove-placeholder",
+      this.#onRemovePlaceholder
+    );
   }
   disconnectedCallback() {
     super.disconnectedCallback();
@@ -12693,6 +12697,10 @@ var ChatContainer = class extends LightElement {
       this.#onAppendChunk
     );
     this.removeEventListener("shiny-chat-clear-messages", this.#onClear);
+    this.removeEventListener(
+      "shiny-chat-remove-placeholder",
+      this.#onRemovePlaceholder
+    );
   }
   #onInputSent(event) {
     this.#appendMessage(event.detail);
@@ -12750,6 +12758,10 @@ var ChatContainer = class extends LightElement {
   }
   #onClear() {
     this.messages.innerHTML = "";
+  }
+  #onRemovePlaceholder() {
+    this.#removePlaceholder();
+    this.#enableInput();
   }
   #enableInput() {
     this.input.disabled = false;

@@ -198,6 +198,10 @@ class ChatContainer extends LightElement {
       this.#onAppendChunk
     );
     this.addEventListener("shiny-chat-clear-messages", this.#onClear);
+    this.addEventListener(
+      "shiny-chat-remove-placeholder",
+      this.#onRemovePlaceholder
+    );
   }
 
   disconnectedCallback(): void {
@@ -209,6 +213,10 @@ class ChatContainer extends LightElement {
       this.#onAppendChunk
     );
     this.removeEventListener("shiny-chat-clear-messages", this.#onClear);
+    this.removeEventListener(
+      "shiny-chat-remove-placeholder",
+      this.#onRemovePlaceholder
+    );
   }
 
   #onInputSent(event: CustomEvent<Message>): void {
@@ -285,6 +293,11 @@ class ChatContainer extends LightElement {
 
   #onClear(): void {
     this.messages.innerHTML = "";
+  }
+
+  #onRemovePlaceholder(): void {
+    this.#removePlaceholder();
+    this.#enableInput();
   }
 
   #enableInput(): void {

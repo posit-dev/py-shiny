@@ -15,10 +15,10 @@ from typing import (
 
 from htmltools import Tag
 
-from .. import _utils, reactive, ui
-from .._app import SANITIZE_ERROR_MSG
+from .. import _utils, reactive
 from .._namespaces import resolve_id
 from ..session import Session, require_active_session, session_context
+from ..types import NotifyException
 from ._chat_types import (
     ChatMessage,
     ChatMessageChunk,
@@ -79,7 +79,7 @@ class Chat(Generic[T]):
         width: str = "min(680px, 100%)",
         fill: bool = True,
     ) -> Tag:
-        if not self._is_express():
+        if not _express_is_active():
             raise RuntimeError(
                 "The `__call__()` method of the `ui.Chat` class only works in a Shiny Express context."
                 " Use `ui.chat_ui()` instead in Shiny Core to locate the chat UI."
@@ -92,47 +92,40 @@ class Chat(Generic[T]):
             fill=fill,
         )
 
-    # TODO: maybe this should be a utility function in express?
-    @staticmethod
-    def _is_express() -> bool:
-        from ..express._run import get_top_level_recall_context_manager
-
-        try:
-            get_top_level_recall_context_manager()
-            return True
-        except RuntimeError:
-            return False
-
     def on_user_submit(
         self,
-        func: SubmitFunction | SubmitFunctionAsync,
-        errors: Literal["sanitize", "show", "none"] = "sanitize",
-    ) -> reactive.Effect_:
+        fn: SubmitFunction | SubmitFunctionAsync | None = None,
+        *,
+        error: Literal["sanitize", "actual", "unhandled"] = "sanitize",
+    ) -> (
+        reactive.Effect_
+        | Callable[[SubmitFunction | SubmitFunctionAsync], reactive.Effect_]
+    ):
         """
         Register a callback to run when the user submits a message.
         """
 
-        afunc = _utils.wrap_async(func)
+        def create_effect(fn: SubmitFunction | SubmitFunctionAsync):
+            afunc = _utils.wrap_async(fn)
 
-        @reactive.effect
-        @reactive.event(self.user_input)
-        async def wrapper():
-            try:
-                await afunc()
-            # TODO: does this handle req() correctly?
-            except Exception as e:
-                if errors == "sanitize":
-                    ui.notification_show(
-                        SANITIZE_ERROR_MSG, type="error", duration=5000
-                    )
-                elif errors == "show":
-                    ui.notification_show(
-                        ui.markdown(str(e)), type="error", duration=5000
-                    )
+            @reactive.effect
+            @reactive.event(self.user_input)
+            async def _():
+                if error == "unhandled":
+                    await afunc()
+                else:
+                    try:
+                        await afunc()
+                    except Exception as e:
+                        await self._remove_placeholder()
+                        raise NotifyException(str(e), sanitize=error == "sanitize")
 
-                raise e
+            return _
 
-        return wrapper
+        if fn is None:
+            return create_effect
+        else:
+            return create_effect(fn)
 
     def user_input(self) -> str:
         """
@@ -235,6 +228,9 @@ class Chat(Generic[T]):
 
         await self._send_custom_message("shiny-chat-clear-messages", None)
 
+    async def _remove_placeholder(self):
+        await self._send_custom_message("shiny-chat-remove-placeholder", None)
+
     async def _send_custom_message(
         self, handler: str, obj: ChatMessage | ChatMessageChunk | None
     ):
@@ -294,3 +290,13 @@ def chat_ui(
         res = as_fillable_container(as_fill_item(res))
 
     return res
+
+
+def _express_is_active() -> bool:
+    from ..express._run import get_top_level_recall_context_manager
+
+    try:
+        get_top_level_recall_context_manager()
+        return True
+    except RuntimeError:
+        return False
