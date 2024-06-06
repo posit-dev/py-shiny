@@ -20,6 +20,9 @@ if TYPE_CHECKING:
 P = ParamSpec("P")
 R = TypeVar("R")
 
+# Ensure that Id type is not stripped out from .pyi file when generating type stubs
+_: Id  # type: ignore
+
 
 @no_example()
 def ui(fn: Callable[P, R]) -> Callable[Concatenate[str, P], R]:
