@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Literal, Optional, TypedDict, cast
+from typing import TYPE_CHECKING, Any, Literal, Optional, TypedDict, Union, cast
 
 from typing_extensions import NotRequired
 
@@ -142,7 +142,7 @@ class OpenAINormalizer(StringNormalizer):
             from openai.types.chat import ChatCompletion
 
             return isinstance(message, ChatCompletion)
-        except ImportError:
+        except Exception:
             return False
 
     def can_normalize_chunk(self, chunk: Any) -> bool:
@@ -150,20 +150,33 @@ class OpenAINormalizer(StringNormalizer):
             from openai.types.chat import ChatCompletionChunk
 
             return isinstance(chunk, ChatCompletionChunk)
-        except ImportError:
+        except Exception:
             return False
 
 
 class AnthropicNormalizer(BaseMessageNormalizer):
     def normalize(self, message: Any) -> ChatMessage:
         x = cast("AnthropicMessage", message)
-        content = x.content[0].text
-        return ChatMessage(content=content, role="assistant")
+        content = x.content[0]
+        if content.type != "text":
+            raise ValueError(
+                f"Anthropic message type {content.type} not supported. "
+                "Only 'text' type is supported"
+            )
+        return ChatMessage(content=content.text, role="assistant")
 
     def normalize_chunk(self, chunk: Any) -> ChatMessageChunk:
-        cnk = cast("MessageStreamEvent", chunk)
-        content = cnk.delta.text if cnk.type == "content_block_delta" else ""
-        type = "message_start" if cnk.type == "content_block_start" else "message_chunk"
+        x = cast("MessageStreamEvent", chunk)
+        content = ""
+        if x.type == "content_block_delta":
+            if x.delta.type != "text_delta":
+                raise ValueError(
+                    f"Anthropic message delta type {x.delta.type} not supported. "
+                    "Only 'text_delta' type is supported"
+                )
+            content = x.delta.text
+
+        type = "message_start" if x.type == "content_block_start" else "message_chunk"
         return ChatMessageChunk(content=content, type=type, role="assistant")
 
     def can_normalize(self, message: Any) -> bool:
@@ -171,15 +184,34 @@ class AnthropicNormalizer(BaseMessageNormalizer):
             from anthropic.types import Message as AnthropicMessage
 
             return isinstance(message, AnthropicMessage)
-        except ImportError:
+        except Exception:
             return False
 
     def can_normalize_chunk(self, chunk: Any) -> bool:
         try:
-            from anthropic.types import MessageStreamEvent
+            from anthropic.types import (
+                RawContentBlockDeltaEvent,
+                RawContentBlockStartEvent,
+                RawContentBlockStopEvent,
+                RawMessageDeltaEvent,
+                RawMessageStartEvent,
+                RawMessageStopEvent,
+            )
+
+            # The actual MessageStreamEvent is a generic, so isinstance() can't
+            # be used to check the type. Instead, we manually construct the relevant
+            # union of relevant classes...
+            MessageStreamEvent = Union[
+                RawMessageStartEvent,
+                RawMessageDeltaEvent,
+                RawMessageStopEvent,
+                RawContentBlockStartEvent,
+                RawContentBlockDeltaEvent,
+                RawContentBlockStopEvent,
+            ]
 
             return isinstance(chunk, MessageStreamEvent)
-        except ImportError:
+        except Exception:
             return False
 
 
@@ -199,7 +231,7 @@ class GoogleNormalizer(BaseMessageNormalizer):
             )
 
             return isinstance(message, GenerateContentResponse)
-        except ImportError:
+        except Exception:
             return False
 
     def can_normalize_chunk(self, chunk: Any) -> bool:
