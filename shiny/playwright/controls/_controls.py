@@ -149,7 +149,7 @@ class _InputBaseP(Protocol):
 
 
 class _InputWithContainerP(_InputBaseP, Protocol):
-    """ A mixin class representing inputs with a container. """
+    """A mixin class representing inputs with a container."""
 
     loc_container: Locator
     """
@@ -158,7 +158,8 @@ class _InputWithContainerP(_InputBaseP, Protocol):
 
 
 class _InputBase:
-    """ A base class representing inputs. """
+    """A base class representing inputs."""
+
     # timeout: Timeout
     id: str
     loc: Locator
@@ -248,7 +249,7 @@ class _InputWithContainer(_InputBase):
 
 
 class _InputWithLabel(_InputWithContainer):
-    """ A mixin class representing inputs with a label. """
+    """A mixin class representing inputs with a label."""
 
     loc: Locator
     """
@@ -393,7 +394,8 @@ class _SetTextM:
 
 
 class _ExpectTextInputValueM:
-    """ A mixin class representing text input values. """
+    """A mixin class representing text input values."""
+
     def expect_value(
         self: _InputBaseP,
         value: PatternOrStr,
@@ -420,7 +422,8 @@ class InputNumeric(
     _WidthLocM,
     _InputWithLabel,
 ):
-    """ Input numeric control for :func: `~shiny.ui.input_numeric` """
+    """Input numeric control for :func: `~shiny.ui.input_numeric`"""
+
     def __init__(self, page: Page, id: str) -> None:
         """
         Initializes the input numeric.
@@ -575,7 +578,7 @@ class InputText(
     _ExpectSpellcheckAttrM,
     _InputWithLabel,
 ):
-    """ Input text control for :func: `~shiny.ui.input_text` """
+    """Input text control for :func: `~shiny.ui.input_text`"""
 
     loc: Locator
     """
@@ -589,6 +592,7 @@ class InputText(
     """
     The locator of the label of the input.
     """
+
     def __init__(self, page: Page, id: str) -> None:
         """
         Initializes the input text.
@@ -613,7 +617,7 @@ class InputPassword(
     _ExpectPlaceholderAttrM,
     _InputWithLabel,
 ):
-    """ Input password control for :func: `~shiny.ui.input_password` """
+    """Input password control for :func: `~shiny.ui.input_password`"""
 
     loc: Locator
     """
@@ -671,12 +675,13 @@ class InputTextArea(
     _ExpectSpellcheckAttrM,
     _InputWithLabel,
 ):
-    """ Input text area control for :func: `~shiny.ui.input_text_area` """
+    """Input text area control for :func: `~shiny.ui.input_text_area`"""
 
     loc: Locator
     """
     The locator of the input.
     """
+
     def __init__(self, page: Page, id: str) -> None:
         """
         Initializes the input text area.
@@ -1030,7 +1035,8 @@ class _InputSelectBase(
 
 
 class InputSelect(_InputSelectBase):
-    """ Input select control for :func: `~shiny.ui.input_select` """
+    """Input select control for :func: `~shiny.ui.input_select`"""
+
     def __init__(self, page: Page, id: str) -> None:
         """
         Initializes the input select.
@@ -1071,7 +1077,8 @@ class InputSelect(_InputSelectBase):
 
 
 class InputSelectize(_InputSelectBase):
-    """ Input selectize control for :func: `~shiny.ui.input_selectize` """
+    """Input selectize control for :func: `~shiny.ui.input_selectize`"""
+
     def __init__(self, page: Page, id: str) -> None:
         super().__init__(
             page,
@@ -1108,7 +1115,8 @@ class InputActionButton(
     _WidthLocM,
     _InputActionBase,
 ):
-    """ Input action button control for :func: `~shiny.ui.input_action_button` """
+    """Input action button control for :func: `~shiny.ui.input_action_button`"""
+
     def __init__(
         self,
         page: Page,
@@ -1132,7 +1140,8 @@ class InputActionButton(
 
 
 class InputDarkMode(_InputBase):
-    """ Input dark mode control for :func: `~shiny.ui.input_dark_mode` """
+    """Input dark mode control for :func: `~shiny.ui.input_dark_mode`"""
+
     def __init__(
         self,
         page: Page,
@@ -1224,12 +1233,13 @@ class InputTaskButton(
     _WidthLocM,
     _InputActionBase,
 ):
-    """ Input task button control for :func: `~shiny.ui.input_task_button` """
+    """Input task button control for :func: `~shiny.ui.input_task_button`"""
 
     loc: Locator
     """
     The locator of the input task button.
     """
+
     # TODO-Karan: Test auto_reset functionality
     def __init__(
         self,
@@ -1356,12 +1366,13 @@ class InputTaskButton(
 
 
 class InputActionLink(_InputActionBase):
-    """ Input action link control for :func: `~shiny.ui.input_action_link` """
+    """Input action link control for :func: `~shiny.ui.input_action_link`"""
 
     loc: Locator
     """
     The locator of the input action link.
     """
+
     def __init__(
         self,
         page: Page,
@@ -1468,7 +1479,7 @@ class _InputCheckboxBase(
 
 
 class InputCheckbox(_InputCheckboxBase):
-    """ Input checkbox control for :func: `~shiny.ui.input_checkbox` """
+    """Input checkbox control for :func: `~shiny.ui.input_checkbox`"""
 
     loc: Locator
     """
@@ -1482,6 +1493,7 @@ class InputCheckbox(_InputCheckboxBase):
     """
     The locator of the label of the input checkbox.
     """
+
     def __init__(
         self,
         page: Page,
@@ -1506,7 +1518,7 @@ class InputCheckbox(_InputCheckboxBase):
 
 
 class InputSwitch(_InputCheckboxBase):
-    """ Input switch control for :func: `~shiny.ui.input_switch` """
+    """Input switch control for :func: `~shiny.ui.input_switch`"""
 
     loc: Locator
     """
@@ -1520,6 +1532,7 @@ class InputSwitch(_InputCheckboxBase):
     """
     The locator of the label of the input switch.
     """
+
     def __init__(
         self,
         page: Page,
@@ -1981,7 +1994,7 @@ class InputRadioButtons(
     _WidthContainerM,
     _RadioButtonCheckboxGroupBase,
 ):
-    """ Input radio buttons control for :func: `~shiny.ui.input_radio_buttons` """
+    """Input radio buttons control for :func: `~shiny.ui.input_radio_buttons`"""
 
     loc_selected: Locator
     """
@@ -1995,6 +2008,7 @@ class InputRadioButtons(
     """
     The locator of the labels of the radio button choices.
     """
+
     def __init__(
         self,
         page: Page,
@@ -2113,7 +2127,7 @@ class InputFile(
     # _ExpectPlaceholderAttrM,
     _InputWithLabel,
 ):
-    """ Input file control for :func: `~shiny.ui.input_file` """
+    """Input file control for :func: `~shiny.ui.input_file`"""
 
     loc_button: Locator
     """
@@ -2700,7 +2714,7 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
 
 
 class InputSlider(_InputSliderBase):
-    """ Input slider control for :func: `~shiny.ui.input_slider` """
+    """Input slider control for :func: `~shiny.ui.input_slider`"""
 
     loc_irs_label: Locator
     """
@@ -2776,7 +2790,8 @@ class InputSlider(_InputSliderBase):
 
 
 class InputSliderRange(_InputSliderBase):
-    """ Input slider range control for :func: `~shiny.ui.input_slider_range` """
+    """Input slider range control for :func: `~shiny.ui.input_slider_range`"""
+
     loc_irs_label_from: Locator
     """
     The locator of the input slider label for the `from` handle.
@@ -3186,7 +3201,7 @@ class InputDate(_DateBase):
 
 
 class InputDateRange(_WidthContainerM, _InputWithLabel):
-    """ Input date range control for :func: `~shiny.ui.input_date_range` """
+    """Input date range control for :func: `~shiny.ui.input_date_range`"""
 
     loc_separator: Locator
     """
@@ -3582,12 +3597,13 @@ class _OutputInlineContainerM(_OutputContainerM):
 
 
 class OutputText(_OutputInlineContainerM, _OutputTextValue):
-    """ Text output control for :func: `~shiny.ui.text_output` """
+    """Text output control for :func: `~shiny.ui.text_output`"""
 
     loc: Locator
     """
     The locator of the text output.
     """
+
     def __init__(
         self,
         page: Page,
@@ -3618,7 +3634,7 @@ class OutputText(_OutputInlineContainerM, _OutputTextValue):
 
 
 class OutputCode(_OutputTextValue):
-    """ Code output control for :func: `~shiny.ui.code_output` """
+    """Code output control for :func: `~shiny.ui.code_output`"""
 
     loc: Locator
     """
@@ -3660,12 +3676,13 @@ class OutputCode(_OutputTextValue):
 
 
 class OutputTextVerbatim(_OutputTextValue):
-    """ Verbatim text output control for :func: `~shiny.ui.text_output_verbatim` """
+    """Verbatim text output control for :func: `~shiny.ui.text_output_verbatim`"""
 
     loc: Locator
     """
     The locator of the verbatim text output.
     """
+
     def __init__(self, page: Page, id: str) -> None:
         """
         Initializes a verbatim text output.
@@ -3850,12 +3867,13 @@ class OutputImage(_OutputImageBase):
 
 
 class OutputPlot(_OutputImageBase):
-    """ Plot output control for :func: `~shiny.ui.plot_output` """
+    """Plot output control for :func: `~shiny.ui.plot_output`"""
 
     loc: Locator
     """
     The locator of the plot output.
     """
+
     def __init__(self, page: Page, id: str) -> None:
         """
         Initializes a plot output.
@@ -3871,12 +3889,13 @@ class OutputPlot(_OutputImageBase):
 
 
 class OutputUi(_OutputInlineContainerM, _OutputBase):
-    """ UI output control for :func: `~shiny.ui.ui_output` """
+    """UI output control for :func: `~shiny.ui.ui_output`"""
 
     loc: Locator
     """
     The locator of the UI output.
     """
+
     def __init__(self, page: Page, id: str) -> None:
         """
         Initializes a UI output.
@@ -3903,13 +3922,13 @@ class OutputUi(_OutputInlineContainerM, _OutputBase):
 
 # When making selectors, use `xpath` so that direct decendents can be checked
 class OutputTable(_OutputBase):
-
-    """ Table output control for :func: `~shiny.ui.table_output` """
+    """Table output control for :func: `~shiny.ui.table_output`"""
 
     loc: Locator
     """
     The locator of the table output.
     """
+
     def __init__(self, page: Page, id: str) -> None:
         """
         Initializes a table output.
@@ -4059,7 +4078,8 @@ class Sidebar(
     _WidthLocM,
     _InputWithContainer,
 ):
-    """ Sidebar control for func: `~shiny.ui.sidebar` """
+    """Sidebar control for func: `~shiny.ui.sidebar`"""
+
     loc_container: Locator
     """
     `loc_container` is the locator of the container of the input.
@@ -4643,7 +4663,7 @@ class Accordion(
     _WidthLocM,
     _InputWithContainer,
 ):
-    """ Accordion control for :func:`~shiny.ui.accordion` """
+    """Accordion control for :func:`~shiny.ui.accordion`"""
 
     loc: Locator
     """
@@ -4829,6 +4849,7 @@ class AccordionPanel(
     """
     `Locator` for the visible accordion panel body
     """
+
     def __init__(self, page: Page, id: str, data_value: str) -> None:
         """
         Initializes a new instance of the AccordionPanel class.
@@ -4946,7 +4967,8 @@ class AccordionPanel(
 
 
 class _OverlayBase(_InputBase):
-    """ Base class for overlay controls """
+    """Base class for overlay controls"""
+
     loc_trigger: Locator
     """
     `loc_trigger` is the locator of the trigger element.
@@ -4959,6 +4981,7 @@ class _OverlayBase(_InputBase):
     """
     `loc_overlay_container` is the locator of the overlay container.
     """
+
     def __init__(
         self,
         page: Page,
@@ -5082,7 +5105,8 @@ class _OverlayBase(_InputBase):
 
 
 class Popover(_OverlayBase):
-    """ Popover control for :func:`~shiny.ui.popover` """
+    """Popover control for :func:`~shiny.ui.popover`"""
+
     loc_trigger: Locator
     """
     `loc_trigger` is the locator of the trigger element.
@@ -5095,6 +5119,7 @@ class Popover(_OverlayBase):
     """
     `loc_overlay_container` is the locator of the overlay container.
     """
+
     def __init__(self, page: Page, id: str) -> None:
         """
         Initializes a new instance of the Popover class.
@@ -5143,7 +5168,8 @@ class Popover(_OverlayBase):
 
 
 class Tooltip(_OverlayBase):
-    """ Tooltip control for :func:`~shiny.ui.tooltip` """
+    """Tooltip control for :func:`~shiny.ui.tooltip`"""
+
     loc_container: Locator
     """
     `loc_container` is the locator of the container of the input.
@@ -5164,6 +5190,7 @@ class Tooltip(_OverlayBase):
     """
     `loc_overlay_container` is the locator of the overlay container.
     """
+
     def __init__(self, page: Page, id: str) -> None:
         """
         Initializes a new instance of the Tooltip class.
@@ -5214,7 +5241,8 @@ class Tooltip(_OverlayBase):
 
 
 class _NavItemBase(_InputWithContainer):
-    """ A Base mixin class for Nav and NavItem controls """
+    """A Base mixin class for Nav and NavItem controls"""
+
     def nav_item(
         self,
         value: str,
@@ -5332,7 +5360,7 @@ class _NavItemBase(_InputWithContainer):
 
 
 class NavItem(_InputWithContainer):
-    """ NavItem control for :func:`~shiny.ui.nav_item` """
+    """NavItem control for :func:`~shiny.ui.nav_item`"""
 
     """
     `Locator` for the content of the nav item.
@@ -5345,6 +5373,7 @@ class NavItem(_InputWithContainer):
     """
     `Locator` for the nav item container.
     """
+
     def __init__(self, page: Page, id: str, data_value: str) -> None:
         """
         Initializes a new instance of the NavItem class.
@@ -5417,7 +5446,7 @@ class NavItem(_InputWithContainer):
 
 
 class NavsetTab(_NavItemBase):
-    """ NavsetTab control for :func:`~shiny.ui.navset_tab` """
+    """NavsetTab control for :func:`~shiny.ui.navset_tab`"""
 
     loc: Locator
     """
@@ -5427,6 +5456,7 @@ class NavsetTab(_NavItemBase):
     """
     `Locator` for the nav set tab container.
     """
+
     def __init__(self, page: Page, id: str) -> None:
         """
         Initializes a new instance of the NavsetTab class.
@@ -5447,7 +5477,8 @@ class NavsetTab(_NavItemBase):
 
 
 class NavsetPill(_NavItemBase):
-    """ NavsetPill control for :func:`~shiny.ui.navset_pill` """
+    """NavsetPill control for :func:`~shiny.ui.navset_pill`"""
+
     def __init__(self, page: Page, id: str) -> None:
         """
         Initializes a new instance of the NavsetPill class.
@@ -5468,7 +5499,8 @@ class NavsetPill(_NavItemBase):
 
 
 class NavsetUnderline(_NavItemBase):
-    """ NavsetUnderline control for :func:`~shiny.ui.navset_underline` """
+    """NavsetUnderline control for :func:`~shiny.ui.navset_underline`"""
+
     def __init__(self, page: Page, id: str) -> None:
         """
         Initializes a new instance of the NavsetUnderline class.
@@ -5489,7 +5521,8 @@ class NavsetUnderline(_NavItemBase):
 
 
 class NavsetPillList(_NavItemBase):
-    """ NavsetPillList control for :func:`~shiny.ui.navset_pill_list` """
+    """NavsetPillList control for :func:`~shiny.ui.navset_pill_list`"""
+
     def __init__(self, page: Page, id: str) -> None:
         """
         Initializes a new instance of the NavsetPillList class.
@@ -5510,7 +5543,8 @@ class NavsetPillList(_NavItemBase):
 
 
 class NavsetCardTab(_NavItemBase):
-    """ NavsetCardTab control for :func:`~shiny.ui.navset_card_tab` """
+    """NavsetCardTab control for :func:`~shiny.ui.navset_card_tab`"""
+
     def __init__(self, page: Page, id: str) -> None:
         """
         Initializes a new instance of the NavsetCardTab class.
@@ -5531,7 +5565,8 @@ class NavsetCardTab(_NavItemBase):
 
 
 class NavsetCardPill(_NavItemBase):
-    """ NavsetCardPill control for :func:`~shiny.ui.navset_card_pill` """
+    """NavsetCardPill control for :func:`~shiny.ui.navset_card_pill`"""
+
     def __init__(self, page: Page, id: str) -> None:
         """
         Initializes a new instance of the NavsetCardPill class.
@@ -5552,7 +5587,8 @@ class NavsetCardPill(_NavItemBase):
 
 
 class NavsetCardUnderline(_NavItemBase):
-    """ NavsetCardUnderline control for :func:`~shiny.ui.navset_card_underline` """
+    """NavsetCardUnderline control for :func:`~shiny.ui.navset_card_underline`"""
+
     def __init__(self, page: Page, id: str) -> None:
         """
         Initializes a new instance of the NavsetCardUnderline class.
@@ -5573,7 +5609,8 @@ class NavsetCardUnderline(_NavItemBase):
 
 
 class NavsetHidden(_NavItemBase):
-    """ NavsetHidden control for :func:`~shiny.ui.navset_hidden` """
+    """NavsetHidden control for :func:`~shiny.ui.navset_hidden`"""
+
     def __init__(self, page: Page, id: str) -> None:
         """
         Initializes a new instance of the NavsetHidden class.
@@ -5594,7 +5631,8 @@ class NavsetHidden(_NavItemBase):
 
 
 class NavsetBar(_NavItemBase):
-    """ NavsetBar control for :func:`~shiny.ui.navset_bar` """
+    """NavsetBar control for :func:`~shiny.ui.navset_bar`"""
+
     def __init__(self, page: Page, id: str) -> None:
         """
         Initializes a new instance of the NavsetBar class.
@@ -6073,6 +6111,7 @@ class DownloadLink(_InputActionBase):
     """
     DownloadLink control for :func:`~shiny.ui.download_link`
     """
+
     def __init__(self, page: Page, id: str) -> None:
         """
         Initializes a new instance of the DownloadLink class.
@@ -6098,6 +6137,7 @@ class DownloadButton(
     """
     DownloadButton control for :func:`~shiny.ui.download_button`
     """
+
     def __init__(self, page: Page, id: str) -> None:
         """
         Initializes a new instance of the DownloadButton class.
