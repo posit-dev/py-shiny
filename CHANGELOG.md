@@ -57,6 +57,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
+* Expose shiny.pytest, shiny.run and shiny.playwright modules that allow users to testing their Shiny apps. (#1448)
+
 * Added busy indicators to provide users with a visual cue when the server is busy calculating outputs or otherwise serving requests to the client. More specifically, a spinner is shown on each calculating/recalculating output, and a pulsing banner is shown at the top of the page when the app is otherwise busy. Use the new `ui.busy_indicator.options()` function to customize the appearance of the busy indicators and `ui.busy_indicator.use()` to disable/enable them. (#918)
 
 * Added support for creating modules using Shiny Express syntax, and using modules in Shiny Express apps. (#1220)
