@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from google.generativeai.types.generation_types import (  # pyright: ignore[reportMissingTypeStubs]
         GenerateContentResponse,
     )
+    from langchain_core.messages import BaseMessage, BaseMessageChunk
     from openai.types.chat import ChatCompletion, ChatCompletionChunk
 
 
@@ -89,6 +90,42 @@ class DictNormalizer(BaseMessageNormalizer):
 
     def can_normalize_chunk(self, chunk: Any) -> bool:
         return isinstance(chunk, dict)
+
+
+class LangChainNormalizer(BaseMessageNormalizer):
+    def normalize(self, message: Any) -> ChatMessage:
+        x = cast("BaseMessage", message)
+        if isinstance(x.content, list):  # type: ignore
+            raise ValueError(
+                "The `message.content` provided seems to represent numerous messages. "
+                "Consider iterating over `message.content` and calling .append_message() on each iteration."
+            )
+        return ChatMessage(content=x.content, role="assistant")
+
+    def normalize_chunk(self, chunk: Any) -> ChatMessageChunk:
+        x = cast("BaseMessageChunk", chunk)
+        if isinstance(x.content, list):  # type: ignore
+            raise ValueError(
+                "The `message.content` provided seems to represent numerous messages. "
+                "Consider iterating over `message.content` and calling .append_message() on each iteration."
+            )
+        return ChatMessageChunk(content=x.content, role="assistant")
+
+    def can_normalize(self, message: Any) -> bool:
+        try:
+            from langchain_core.messages import BaseMessage
+
+            return isinstance(message, BaseMessage)
+        except Exception:
+            return False
+
+    def can_normalize_chunk(self, chunk: Any) -> bool:
+        try:
+            from langchain_core.messages import BaseMessageChunk
+
+            return isinstance(chunk, BaseMessageChunk)
+        except Exception:
+            return False
 
 
 class OpenAINormalizer(StringNormalizer):
@@ -197,6 +234,7 @@ class NormalizerRegistry:
             "openai": OpenAINormalizer(),
             "anthropic": AnthropicNormalizer(),
             "google": GoogleNormalizer(),
+            "langchain": LangChainNormalizer(),
             "ollama": OllamaNormalizer(),
             "dict": DictNormalizer(),
             "string": StringNormalizer(),
