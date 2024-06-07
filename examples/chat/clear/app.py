@@ -14,8 +14,7 @@ with ui.sidebar():
 
 # Create and display the chat
 chat = ui.Chat(id="chat")
-
-chat
+chat()
 
 # Create the LLM client (assumes OPENAI_API_KEY is set in the environment)
 client = OpenAI()

@@ -1,4 +1,3 @@
-import sys
 from typing import (
     Any,
     AsyncIterable,
@@ -55,6 +54,9 @@ class Chat(Generic[T]):
         # Chunked messages get accumulated (using this property) before changing state
         self._final_message = ""
 
+        # Keep track of effects so we can destroy them when the chat is destroyed
+        self._effects: list[reactive.Effect_] = []
+
         with session_context(self._session):
             # Initialize message state
             self._messages: reactive.Value[Sequence[ChatMessage]] = reactive.Value(())
@@ -62,15 +64,14 @@ class Chat(Generic[T]):
             # When user input is submitted, append it to message state
             @reactive.effect
             @reactive.event(self.user_input)
-            def _():
+            def append_user_input():
                 from .. import req
 
                 input = req(self.user_input())
                 user_msg = ChatMessage(content=input, role="user")
                 self._append_message(user_msg)
 
-    def tagify(self) -> Tag:
-        return self.__call__()
+            self._effects.append(append_user_input)
 
     def __call__(
         self,
@@ -110,17 +111,19 @@ class Chat(Generic[T]):
 
             @reactive.effect
             @reactive.event(self.user_input)
-            async def _():
+            async def handle_user_input():
                 if error == "unhandled":
                     await afunc()
                 else:
                     try:
                         await afunc()
                     except Exception as e:
-                        await self._remove_placeholder()
+                        await self._remove_loading_message()
                         raise NotifyException(str(e), sanitize=error == "sanitize")
 
-            return _
+            self._effects.append(handle_user_input)
+
+            return handle_user_input
 
         if fn is None:
             return create_effect
@@ -141,8 +144,6 @@ class Chat(Generic[T]):
     def messages(self) -> Sequence[ChatMessage]:
         """
         Reactively read chat messages
-
-
         """
         return self._messages()
 
@@ -168,7 +169,6 @@ class Chat(Generic[T]):
         # await asyncio.sleep(0)
 
     async def append_message_stream(self, message: Iterable[Any] | AsyncIterable[Any]):
-
         message = _utils.wrap_async_iterable(message)
 
         @reactive.extended_task
@@ -178,39 +178,29 @@ class Chat(Generic[T]):
         _do_stream()
 
     async def _append_message_stream(self, message: AsyncIterable[Any]):
-        if sys.version_info < (3, 10):
-            # ater/anext were new in 3.10
-            raise RuntimeError("append_message_stream() requires Python 3.10 or later")
-
-        msg_iter = aiter(message)
+        # Get the first message just to determine the role
+        miter = message.__aiter__()
+        msg_first = await miter.__anext__()
+        role = normalize_message_chunk(msg_first)["role"]
 
         # Start the message
-        msg_start = await anext(msg_iter)
-        msg_start = normalize_message_chunk(msg_start)
-        if msg_start.get("type", None) is None:
-            msg_start["type"] = "message_start"
+        msg_start = ChatMessageChunk(content="", type="message_start", role=role)
         await self.append_message(msg_start, chunk=True)
 
-        # Append all the chunks (and end the message when we reach the end)
-        while True:
-            try:
-                msg = await anext(msg_iter)
+        try:
+            async for msg in message:
+                msg = normalize_message_chunk(msg)
                 await self.append_message(msg, chunk=True)
-            except StopAsyncIteration:
-                msg = ChatMessageChunk(
-                    content="",
-                    role="assistant",
-                    type="message_end",
-                )
-                await self.append_message(msg, chunk=True)
-                break
+        finally:
+            msg_end = ChatMessageChunk(content="", type="message_end", role=role)
+            await self.append_message(msg_end, chunk=True)
 
     # For chunk messages, accumulate the chunks until we have a signal that the message
     # has ended
     def _append_message_chunk(self, msg: ChatMessageChunk):
         self._final_message += msg["content"]
         if "type" in msg and msg["type"] == "message_end":
-            final = ChatMessage(content=self._final_message, role="assistant")
+            final = ChatMessage(content=self._final_message, role=msg["role"])
             self._append_message(final)
             self._final_message = ""
 
@@ -220,16 +210,25 @@ class Chat(Generic[T]):
     def _append_messages(self, messages: Sequence[ChatMessage]):
         with reactive.isolate():
             msgs = tuple(self._messages()) + tuple(messages)
-            self._messages.set(msgs)
+
+        self._messages.set(msgs)
 
     async def clear_messages(self):
-        with reactive.isolate():
-            self._messages.set(())
-
+        """
+        Clear all messages in the chat.
+        """
+        self._messages.set(())
         await self._send_custom_message("shiny-chat-clear-messages", None)
 
-    async def _remove_placeholder(self):
-        await self._send_custom_message("shiny-chat-remove-placeholder", None)
+    def destroy(self):
+        """
+        Destroy the chat instance.
+        """
+        for x in self._effects:
+            x.destroy()
+
+    async def _remove_loading_message(self):
+        await self._send_custom_message("shiny-chat-remove-loading-message", None)
 
     async def _send_custom_message(
         self, handler: str, obj: ChatMessage | ChatMessageChunk | None

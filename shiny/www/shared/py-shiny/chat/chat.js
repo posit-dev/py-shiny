@@ -12601,6 +12601,18 @@ var ChatInput = class extends LightElement {
     this.placeholder = "Enter a message...";
     this.disabled = false;
   }
+  get textarea() {
+    return this.querySelector("textarea");
+  }
+  get value() {
+    return this.textarea.value;
+  }
+  get valueIsEmpty() {
+    return this.value.trim().length === 0;
+  }
+  get button() {
+    return this.querySelector("button");
+  }
   render() {
     return x`
       <div class="input-group">
@@ -12609,7 +12621,8 @@ var ChatInput = class extends LightElement {
           class="form-control textarea-autoresize"
           rows="1"
           placeholder="${this.placeholder}"
-          @keydown=${this.#sendOnEnter}
+          @keydown=${this.#onKeyDown}
+          @input=${this.#onInput}
           ?disabled=${this.disabled}
           data-shiny-no-bind-input
         ></textarea>
@@ -12619,7 +12632,7 @@ var ChatInput = class extends LightElement {
           title="Send message"
           aria-label="Send message"
           @click=${this.#sendInput}
-          ?disabled=${this.disabled}
+          disabled
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -12637,25 +12650,29 @@ var ChatInput = class extends LightElement {
       </div>
     `;
   }
-  #sendOnEnter(e7) {
-    if (e7.code === "Enter" && !e7.shiftKey) {
+  // Pressing enter sends the message (if not empty)
+  #onKeyDown(e7) {
+    const isEnter = e7.code === "Enter" && !e7.shiftKey;
+    if (isEnter && !this.valueIsEmpty) {
       e7.preventDefault();
       this.#sendInput();
     }
   }
+  #onInput() {
+    this.button.disabled = this.value.trim().length === 0;
+  }
   #sendInput() {
-    const textarea = this.querySelector("textarea");
-    Shiny.setInputValue(this.id, textarea.value, { priority: "event" });
+    Shiny.setInputValue(this.id, this.value, { priority: "event" });
     const sentEvent = new CustomEvent("shiny-chat-input-sent", {
-      detail: { content: textarea.value, role: "user" },
+      detail: { content: this.value, role: "user" },
       bubbles: true,
       composed: true
     });
     this.dispatchEvent(sentEvent);
-    textarea.value = "";
+    this.textarea.value = "";
     this.disabled = true;
     const inputEvent = new Event("input", { bubbles: true, cancelable: true });
-    textarea.dispatchEvent(inputEvent);
+    this.textarea.dispatchEvent(inputEvent);
   }
 };
 __decorateClass([
@@ -12684,8 +12701,8 @@ var ChatContainer = class extends LightElement {
     );
     this.addEventListener("shiny-chat-clear-messages", this.#onClear);
     this.addEventListener(
-      "shiny-chat-remove-placeholder",
-      this.#onRemovePlaceholder
+      "shiny-chat-remove-loading-message",
+      this.#onRemoveLoadingMessage
     );
   }
   disconnectedCallback() {
@@ -12698,19 +12715,21 @@ var ChatContainer = class extends LightElement {
     );
     this.removeEventListener("shiny-chat-clear-messages", this.#onClear);
     this.removeEventListener(
-      "shiny-chat-remove-placeholder",
-      this.#onRemovePlaceholder
+      "shiny-chat-remove-loading-message",
+      this.#onRemoveLoadingMessage
     );
   }
+  // When user submits input, append it to the chat, and add a loading message
   #onInputSent(event) {
     this.#appendMessage(event.detail);
-    this.#addPlaceholder();
+    this.#addLoadingMessage();
   }
+  // Handle an append message event from server
   #onAppend(event) {
     this.#appendMessage(event.detail);
   }
   #appendMessage(message, finalize = true) {
-    this.#removePlaceholder();
+    this.#removeLoadingMessage();
     const msg = createElement(CHAT_MESSAGE_TAG, message);
     this.messages.appendChild(msg);
     this.#scrollToBottom();
@@ -12718,20 +12737,21 @@ var ChatContainer = class extends LightElement {
       this.#enableInput();
     }
   }
-  #addPlaceholder() {
-    const placeholder_message = {
+  #addLoadingMessage() {
+    const loading_message = {
       // https://github.com/n3r4zzurr0/svg-spinners/blob/main/svg-css/3-dots-fade.svg
       content: '<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><style>.spinner_S1WN{animation:spinner_MGfb .8s linear infinite;animation-delay:-.8s}.spinner_Km9P{animation-delay:-.65s}.spinner_JApP{animation-delay:-.5s}@keyframes spinner_MGfb{93.75%,100%{opacity:.2}}</style><circle class="spinner_S1WN" cx="4" cy="12" r="3"/><circle class="spinner_S1WN spinner_Km9P" cx="12" cy="12" r="3"/><circle class="spinner_S1WN spinner_JApP" cx="20" cy="12" r="3"/></svg>',
       role: "assistant",
-      id: "placeholder-message"
+      id: `${this.id}-loading-message`
     };
-    const placeholder = createElement(CHAT_MESSAGE_TAG, placeholder_message);
-    this.messages.appendChild(placeholder);
+    const message = createElement(CHAT_MESSAGE_TAG, loading_message);
+    this.messages.appendChild(message);
   }
-  #removePlaceholder() {
-    const placeholder = this.messages.querySelector("#placeholder-message");
-    if (placeholder)
-      placeholder.remove();
+  #removeLoadingMessage() {
+    const id = `${this.id}-loading-message`;
+    const message = this.messages.querySelector(`#${id}`);
+    if (message)
+      message.remove();
   }
   #onAppendChunk(event) {
     this.#appendMessageChunk(event.detail);
@@ -12759,8 +12779,8 @@ var ChatContainer = class extends LightElement {
   #onClear() {
     this.messages.innerHTML = "";
   }
-  #onRemovePlaceholder() {
-    this.#removePlaceholder();
+  #onRemoveLoadingMessage() {
+    this.#removeLoadingMessage();
     this.#enableInput();
   }
   #enableInput() {

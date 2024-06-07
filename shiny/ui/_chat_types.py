@@ -13,8 +13,8 @@ class ChatMessage(TypedDict):
 
 class ChatMessageChunk(TypedDict):
     content: str
-    role: Literal["assistant"]
-    type: NotRequired[Literal["message_start", "message_chunk", "message_end"]]
+    role: Role
+    type: NotRequired[Literal["message_start", "message_end"]]
 
 
 if TYPE_CHECKING:
@@ -50,16 +50,9 @@ class StringNormalizer(BaseMessageNormalizer):
         x = cast(Optional[str], message)
         return ChatMessage(content=x or "", role="assistant")
 
-    # Follow openai's convention of "" for message_start and None for message_end
     def normalize_chunk(self, chunk: Any) -> ChatMessageChunk:
         x = cast(Optional[str], chunk)
-        type = "message_chunk"
-        if x == "":
-            type = "message_start"
-        if x is None:
-            type = "message_end"
-            x = ""
-        return ChatMessageChunk(content=x, type=type, role="assistant")
+        return ChatMessageChunk(content=x or "", role="assistant")
 
     def can_normalize(self, message: Any) -> bool:
         return isinstance(message, str) or message is None
@@ -73,7 +66,10 @@ class DictNormalizer(BaseMessageNormalizer):
         x = cast(dict[str, Any], message)
         if "content" not in x:
             raise ValueError("Message must have 'content' key")
-        return ChatMessage(content=x["content"], role=x.get("role", "assistant"))
+        return ChatMessage(
+            content=x["content"],
+            role=x.get("role", "assistant"),
+        )
 
     def normalize_chunk(self, chunk: Any) -> ChatMessageChunk:
         x = cast(dict[str, Any], chunk)
@@ -176,8 +172,7 @@ class AnthropicNormalizer(BaseMessageNormalizer):
                 )
             content = x.delta.text
 
-        type = "message_start" if x.type == "content_block_start" else "message_chunk"
-        return ChatMessageChunk(content=content, type=type, role="assistant")
+        return ChatMessageChunk(content=content, role="assistant")
 
     def can_normalize(self, message: Any) -> bool:
         try:
