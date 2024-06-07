@@ -122,10 +122,10 @@ def set_text(
         The text to set.
     delay
         The delay between key presses in milliseconds.
-        Defaults to None.
+        Defaults to `None`.
     timeout
         The maximum time to wait for the text to be set.
-        Defaults to None.
+        Defaults to `None`.
     """
     # TODO-future; Composable set() method
     loc.fill("", timeout=timeout)  # Reset the value
@@ -287,8 +287,7 @@ class _InputWithLabel(_InputWithContainer):
         loc_container
             The locator of the container of the input.
         loc_label
-            The locator of the label of the input.
-            Defaults to None.
+            The locator of the label of the input. Defaults to `None`.
         """
         super().__init__(
             page,
@@ -317,8 +316,7 @@ class _InputWithLabel(_InputWithContainer):
         value
             The expected value of the label.
         timeout
-            The maximum time to wait for the expectation to be fulfilled.
-            Defaults to None.
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
         playwright_expect(self.loc_label).to_have_text(value, timeout=timeout)
 
@@ -343,8 +341,7 @@ class _WidthLocM:
         value
             The expected value of the width attribute.
         timeout
-            The maximum time to wait for the expectation to be fulfilled.
-            Defaults to None.
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
         expect_attribute_to_have_value(self.loc, "width", value=value, timeout=timeout)
 
@@ -369,8 +366,7 @@ class _WidthContainerM:
         value
             The expected value of the width attribute.
         timeout
-            The maximum time to wait for the expectation to be fulfilled.
-            Defaults to None.
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
         expect_attribute_to_have_value(
             self.loc_container, "width", value=value, timeout=timeout
@@ -387,8 +383,7 @@ class _SetTextM:
         value
             The text to set.
         timeout
-            The maximum time to wait for the text to be set.
-            Defaults to None.
+            The maximum time to wait for the text to be set. Defaults to `None`.
         """
         set_text(self.loc, value, timeout=timeout)
 
@@ -410,8 +405,7 @@ class _ExpectTextInputValueM:
         value
             The expected value of the input.
         timeout
-            The maximum time to wait for the expectation to be fulfilled.
-            Defaults to None.
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
         playwright_expect(self.loc).to_have_value(value, timeout=timeout)
 
@@ -455,8 +449,7 @@ class InputNumeric(
         value
             The expected value of the min attribute.
         timeout
-            The maximum time to wait for the expectation to be fulfilled.
-            Defaults to None.
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
         expect_attribute_to_have_value(self.loc, "min", value=value, timeout=timeout)
 
@@ -474,8 +467,7 @@ class InputNumeric(
         value
             The expected value of the max attribute.
         timeout
-            The maximum time to wait for the expectation to be fulfilled.
-            Defaults to None.
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
         expect_attribute_to_have_value(self.loc, "max", value=value, timeout=timeout)
 
@@ -493,8 +485,7 @@ class InputNumeric(
         value
             The expected value of the step attribute.
         timeout
-            The maximum time to wait for the expectation to be fulfilled.
-            Defaults to None.
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
         expect_attribute_to_have_value(self.loc, "step", value=value, timeout=timeout)
 
@@ -514,8 +505,7 @@ class _ExpectSpellcheckAttrM:
         value
             The expected value of the spellcheck attribute.
         timeout
-            The maximum time to wait for the expectation to be fulfilled.
-            Defaults to None.
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
         # self.spellcheck.expect_to_have_value(value, timeout=timeout)
         expect_attribute_to_have_value(
@@ -538,8 +528,7 @@ class _ExpectPlaceholderAttrM:
         value
             The expected value of the placeholder attribute.
         timeout
-            The maximum time to wait for the expectation to be fulfilled.
-            Defaults to None.
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
         expect_attribute_to_have_value(
             self.loc, "placeholder", value=value, timeout=timeout
@@ -561,8 +550,7 @@ class _ExpectAutocompleteAttrM:
         value
             The expected value of the autocomplete attribute.
         timeout
-            The maximum time to wait for the expectation to be fulfilled.
-            Defaults to None.
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
         expect_attribute_to_have_value(
             self.loc, "autocomplete", value=value, timeout=timeout
@@ -658,8 +646,7 @@ class InputPassword(
         value
             The expected value of the width attribute.
         timeout
-            The maximum time to wait for the expectation to be fulfilled.
-            Defaults to None.
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
         expect_to_have_style(self.loc_container, "width", value, timeout=timeout)
 
@@ -708,8 +695,7 @@ class InputTextArea(
         value
             The expected value of the width attribute.
         timeout
-            The maximum time to wait for the expectation to be fulfilled.
-            Defaults to None.
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
         if value is None:
             expect_to_have_style(self.loc_container, "width", None, timeout=timeout)
@@ -727,8 +713,7 @@ class InputTextArea(
         value
             The expected value of the height attribute.
         timeout
-            The maximum time to wait for the expectation to be fulfilled.
-            Defaults to None.
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
         expect_to_have_style(self.loc, "height", value, timeout=timeout)
 
@@ -741,8 +726,7 @@ class InputTextArea(
         value
             The expected value of the cols attribute.
         timeout
-            The maximum time to wait for the expectation to be fulfilled.
-            Defaults to None.
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
         expect_attribute_to_have_value(self.loc, "cols", value=value, timeout=timeout)
 
@@ -755,8 +739,7 @@ class InputTextArea(
         value
             The expected value of the rows attribute.
         timeout
-            The maximum time to wait for the expectation to be fulfilled.
-            Defaults to None.
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
         expect_attribute_to_have_value(self.loc, "rows", value=value, timeout=timeout)
 
@@ -774,8 +757,7 @@ class InputTextArea(
         value
             The expected value of the resize attribute.
         timeout
-            The maximum time to wait for the expectation to be fulfilled.
-            Defaults to None.
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
         expect_attribute_to_have_value(self.loc, "resize", value=value, timeout=timeout)
 
@@ -793,8 +775,7 @@ class InputTextArea(
         value
             The expected value of the autoresize attribute.
         timeout
-            The maximum time to wait for the expectation to be fulfilled.
-            Defaults to None.
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
         _expect_class_value(
             self.loc,
@@ -838,8 +819,7 @@ class _InputSelectBase(
         id
             The id of the input select.
         select_class
-            The class of the select element.
-            Defaults to "".
+            The class of the select element. Defaults to "".
         """
         super().__init__(
             page,
@@ -864,8 +844,7 @@ class _InputSelectBase(
         selected
             The value(s) of the selected option(s).
         timeout
-            The maximum time to wait for the selection to be set.
-            Defaults to None.
+            The maximum time to wait for the selection to be set. Defaults to `None`.
         """
         if isinstance(selected, str):
             selected = [selected]
@@ -886,8 +865,7 @@ class _InputSelectBase(
         choices
             The expected choices of the input select.
         timeout
-            The maximum time to wait for the expectation to be fulfilled.
-            Defaults to None.
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
         """Expect choices to be in order"""
         # Playwright doesn't like lists of size 0. Instead, check for empty locator
@@ -918,8 +896,7 @@ class _InputSelectBase(
         selected
             The expected value(s) of the selected option(s).
         timeout
-            The maximum time to wait for the expectation to be fulfilled.
-            Defaults to None.
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
         """Expect choices to be in order"""
         # Playwright doesn't like lists of size 0
@@ -957,8 +934,7 @@ class _InputSelectBase(
         choice_groups
             The expected choice groups of the input select.
         timeout
-            The maximum time to wait for the expectation to be fulfilled.
-            Defaults to None.
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
         """Expect choices to be in order"""
         # Playwright doesn't like lists of size 0. Instead, use `None`
@@ -990,8 +966,7 @@ class _InputSelectBase(
         choice_labels
             The expected choice labels of the input select.
         timeout
-            The maximum time to wait for the expectation to be fulfilled.
-            Defaults to None.
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
         # Playwright doesn't like lists of size 0. Instead, use `None`
         if len(choice_labels) == 0:
@@ -1009,8 +984,7 @@ class _InputSelectBase(
         multiple
             Whether the input select allows multiple selections.
         timeout
-            The maximum time to wait for the expectation to be fulfilled.
-            Defaults to None.
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
         _expect_multiple(self.loc, multiple, timeout=timeout)
 
@@ -1023,8 +997,7 @@ class _InputSelectBase(
         value
             The expected value of the size attribute.
         timeout
-            The maximum time to wait for the expectation to be fulfilled.
-            Defaults to None.
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
         expect_attribute_to_have_value(
             self.loc,
@@ -1064,8 +1037,7 @@ class InputSelect(_InputSelectBase):
         selectize
             Whether the input select is selectize.
         timeout
-            The maximum time to wait for the expectation to be fulfilled.
-            Defaults to None.
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
         # class_=None if selectize else "form-select",
         _expect_class_value(
@@ -1105,8 +1077,7 @@ class _InputActionBase(_InputBase):
         Parameters
         ----------
         timeout
-            The maximum time to wait for the input action to be clicked.
-            Defaults to None.
+            The maximum time to wait for the input action to be clicked. Defaults to `None`.
         """
         self.loc.click(timeout=timeout, **kwargs)  # pyright: ignore[reportArgumentType]
 
@@ -1172,8 +1143,7 @@ class InputDarkMode(_InputBase):
         Parameters
         ----------
         timeout
-            The maximum time to wait for the input dark mode to be clicked.
-            Defaults to None.
+            The maximum time to wait for the input dark mode to be clicked. Defaults to `None`.
         """
         self.loc.click(timeout=timeout)
         return self
@@ -1187,8 +1157,7 @@ class InputDarkMode(_InputBase):
         value
             The expected value of the mode attribute.
         timeout
-            The maximum time to wait for the expectation to be fulfilled.
-            Defaults to None.
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
         expect_attribute_to_have_value(self.loc, "mode", value=value, timeout=timeout)
         self.expect_page_mode(value, timeout=timeout)
@@ -1203,8 +1172,7 @@ class InputDarkMode(_InputBase):
         value
             The expected value of the page mode.
         timeout
-            The maximum time to wait for the expectation to be fulfilled.
-            Defaults to None.
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
         expect_attribute_to_have_value(
             self.page.locator("html"), "data-bs-theme", value=value, timeout=timeout
@@ -1220,8 +1188,7 @@ class InputDarkMode(_InputBase):
         value
             The expected value of the wc attribute.
         timeout
-            The maximum time to wait for the expectation to be fulfilled.
-            Defaults to None.
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
         expect_attribute_to_have_value(
             self.loc, "attribute", value=value, timeout=timeout
@@ -1273,8 +1240,7 @@ class InputTaskButton(
         value
             The expected value of the state.
         timeout
-            The maximum time to wait for the expectation to be fulfilled.
-            Defaults to None.
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
         expect_attribute_to_have_value(
             self.loc.locator("> bslib-switch-inline"),
@@ -1292,8 +1258,7 @@ class InputTaskButton(
         value
             The expected value of the label.
         timeout
-            The maximum time to wait for the expectation to be fulfilled.
-            Defaults to None.
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
         self.expect_label_ready(value, timeout=timeout)
 
@@ -1306,8 +1271,7 @@ class InputTaskButton(
         value
             The expected value of the label.
         timeout
-            The maximum time to wait for the expectation to be fulfilled.
-            Defaults to None.
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
         self.expect_label_state("ready", value, timeout=timeout)
 
@@ -1320,8 +1284,7 @@ class InputTaskButton(
         value
             The expected value of the label.
         timeout
-            The maximum time to wait for the expectation to be fulfilled.
-            Defaults to None.
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
         self.expect_label_state("busy", value, timeout=timeout)
 
@@ -1338,8 +1301,7 @@ class InputTaskButton(
         value
             The expected value of the label.
         timeout
-            The maximum time to wait for the expectation to be fulfilled.
-            Defaults to None.
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
         playwright_expect(
             self.loc.locator(f"> bslib-switch-inline > span[slot='{state}']")
@@ -1354,8 +1316,7 @@ class InputTaskButton(
         value
             The expected value of the auto-reset attribute.
         timeout
-            The maximum time to wait for the expectation to be fulfilled.
-            Defaults to None.
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
         expect_attribute_to_have_value(
             self.loc,
@@ -1437,8 +1398,7 @@ class _InputCheckboxBase(
         value
             The value of the input checkbox.
         timeout
-            The maximum time to wait for the input checkbox to be set.
-            Defaults to None.
+            The maximum time to wait for the input checkbox to be set. Defaults to `None`.
         """
         self.loc.wait_for(state="visible", timeout=timeout)
         self.loc.scroll_into_view_if_needed(timeout=timeout)
@@ -1453,8 +1413,7 @@ class _InputCheckboxBase(
         Parameters
         ----------
         timeout
-            The maximum time to wait for the input checkbox to be toggled.
-            Defaults to None.
+            The maximum time to wait for the input checkbox to be toggled. Defaults to `None`.
         """
         self.loc.wait_for(state="visible", timeout=timeout)
         self.loc.scroll_into_view_if_needed(timeout=timeout)
@@ -1469,8 +1428,7 @@ class _InputCheckboxBase(
         value
             Whether the input checkbox is checked.
         timeout
-            The maximum time to wait for the expectation to be fulfilled.
-            Defaults to None.
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
         if value:
             self.expect.to_be_checked(timeout=timeout)
@@ -2554,7 +2512,7 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
         value : AttrValue
             The expected value.
         timeout : Optional[Union[int, float]]
-            The maximum time to wait for the value to appear. Defaults to None.
+            The maximum time to wait for the value to appear. Defaults to `None`.
         """
         expect_attribute_to_have_value(
             self.loc, "data-time-format", value=value, timeout=timeout
@@ -2569,7 +2527,7 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
         value : AttrValue
             The expected value.
         timeout : Optional[Union[int, float]]
-            The maximum time to wait for the value to appear. Defaults to None.
+            The maximum time to wait for the value to appear. Defaults to `None`.
         """
         expect_attribute_to_have_value(
             self.loc, "data-timezone", value=value, timeout=timeout
@@ -2584,7 +2542,7 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
         value : AttrValue
             The expected value.
         timeout : Optional[Union[int, float]]
-            The maximum time to wait for the value to appear. Defaults to None.
+            The maximum time to wait for the value to appear. Defaults to `None`.
         """
         expect_attribute_to_have_value(
             self.loc, "data-drag-interval", value=value, timeout=timeout
@@ -2748,7 +2706,7 @@ class InputSlider(_InputSliderBase):
         value : PatternOrStr
             The expected value.
         timeout : Optional[Union[int, float]]
-            The maximum time to wait for the value to appear. Defaults to None.
+            The maximum time to wait for the value to appear. Defaults to `None`.
         """
         playwright_expect(self.loc_irs_label).to_have_text(value, timeout=timeout)
 
@@ -2767,10 +2725,9 @@ class InputSlider(_InputSliderBase):
         value : str
             The value to set the slider to.
         max_err_values : int, optional
-            The maximum number of error values to display if the value is not found.
-            Defaults to 15.
+            The maximum number of error values to display if the value is not found. Defaults to 15.
         timeout : Optional[Union[int, float]]
-            The maximum time to wait for the value to appear. Defaults to None.
+            The maximum time to wait for the value to appear. Defaults to `None`.
         """
         self._wait_for_container(timeout=timeout)
 
@@ -2838,7 +2795,7 @@ class InputSliderRange(_InputSliderBase):
         value : Tuple[PatternOrStr, PatternOrStr]
             The expected value.
         timeout : Optional[Union[int, float]]
-            The maximum time to wait for the value to appear. Defaults to None.
+            The maximum time to wait for the value to appear. Defaults to `None`.
         """
         if all_missing(*value):
             raise ValueError("Both `value` tuple entries cannot be `MISSING_TYPE`")
@@ -2896,10 +2853,9 @@ class InputSliderRange(_InputSliderBase):
         value : Tuple[str, str] | Tuple[str, MISSING_TYPE] | Tuple[MISSING_TYPE, str]
             The value to set the slider to.
         max_err_values : int, optional
-            The maximum number of error values to display if the value is not found.
-            Defaults to 15.
+            The maximum number of error values to display if the value is not found. Defaults to 15.
         timeout : Optional[Union[int, float]]
-            The maximum time to wait for the value to appear. Defaults to None.
+            The maximum time to wait for the value to appear. Defaults to `None`.
         """
         if all_missing(*value):
             raise ValueError("Both `value` tuple entries cannot be `MISSING_TYPE`")
@@ -2977,7 +2933,7 @@ class _DateBase(
         value : PatternOrStr
             The expected value.
         timeout : Optional[Union[int, float]]
-            The maximum time to wait for the value to appear. Defaults to None.
+            The maximum time to wait for the value to appear. Defaults to `None`.
         """
         # if value is None:
         #     self.expect.to_be_empty(timeout=timeout)
@@ -2998,7 +2954,7 @@ class _DateBase(
         value : str
             The expected `data-min-date` attribute value.
         timeout : Optional[Union[int, float]]
-            The maximum time to wait for the value to appear. Defaults to None.
+            The maximum time to wait for the value to appear. Defaults to `None`.
         """
         expect_attribute_to_have_value(
             self.loc, "data-min-date", value=value, timeout=timeout
@@ -3018,7 +2974,7 @@ class _DateBase(
         value : str
             The expected `data-max-date` attribute value.
         timeout : Optional[Union[int, float]]
-            The maximum time to wait for the value to appear. Defaults to None.
+            The maximum time to wait for the value to appear. Defaults to `None`.
         """
         expect_attribute_to_have_value(
             self.loc, "data-max-date", value=value, timeout=timeout
@@ -3038,7 +2994,7 @@ class _DateBase(
         value : str
             The expected `data-date-format` attribute value.
         timeout : Optional[Union[int, float]]
-            The maximum time to wait for the value to appear. Defaults to None.
+            The maximum time to wait for the value to appear. Defaults to `None`.
         """
         expect_attribute_to_have_value(
             self.loc, "data-date-format", value=value, timeout=timeout
@@ -3058,7 +3014,7 @@ class _DateBase(
         value : str
             The expected `data-date-start-view` attribute value.
         timeout : Optional[Union[int, float]]
-            The maximum time to wait for the value to appear. Defaults to None.
+            The maximum time to wait for the value to appear. Defaults to `None`.
         """
         expect_attribute_to_have_value(
             self.loc, "data-date-start-view", value=value, timeout=timeout
@@ -3078,7 +3034,7 @@ class _DateBase(
         value : int
             The expected `data-date-week-start` attribute value.
         timeout : Optional[Union[int, float]]
-            The maximum time to wait for the value to appear. Defaults to None.
+            The maximum time to wait for the value to appear. Defaults to `None`.
         """
         if isinstance(value, int):
             value = str(value)
@@ -3100,7 +3056,7 @@ class _DateBase(
         value : str
             The expected `data-date-language` attribute value.
         timeout : Optional[Union[int, float]]
-            The maximum time to wait for the value to appear. Defaults to None.
+            The maximum time to wait for the value to appear. Defaults to `None`.
         """
         expect_attribute_to_have_value(
             self.loc, "data-date-language", value=value, timeout=timeout
@@ -3121,7 +3077,7 @@ class _DateBase(
         value : Literal["true", "false"]
             The expected `data-date-autoclose` attribute value.
         timeout : Optional[Union[int, float]]
-            The maximum time to wait for the value to appear. Defaults to None.
+            The maximum time to wait for the value to appear. Defaults to `None`.
         """
         expect_attribute_to_have_value(
             self.loc, "data-date-autoclose", value=value, timeout=timeout
@@ -3141,7 +3097,7 @@ class _DateBase(
         value : Optional[list[str]]
             The expected `data-date-dates-disabled` attribute value.
         timeout : Optional[Union[int, float]]
-            The maximum time to wait for the value to appear. Defaults to None.
+            The maximum time to wait for the value to appear. Defaults to `None`.
         """
         if isinstance(value, list):
             assert len(value) > 0, "`value` must be `None` or a non-empty list"
@@ -3167,7 +3123,7 @@ class _DateBase(
         value : Optional[list[int]]
             The expected `data-date-days-of-week-disabled` attribute value.
         timeout : Optional[Union[int, float]]
-            The maximum time to wait for the value to appear. Defaults to None.
+            The maximum time to wait for the value to appear. Defaults to `None`.
         """
         if isinstance(value, list):
             assert len(value) > 0, "`value` must be `None` or a non-empty list"
@@ -3276,7 +3232,7 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
         value : Tuple[str, str]
             The value to set. The first element is the start date and the second element is the end date.
         timeout : Optional[Union[int, float]]
-            The maximum time to wait for the value to be set. Defaults to None.
+            The maximum time to wait for the value to be set. Defaults to `None`.
         """
         start = value[0]
         end = value[1]
@@ -3304,7 +3260,7 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
         value : Tuple[PatternOrStr, PatternOrStr]
             The expected value. The first element is the start date and the second element is the end date.
         timeout : Optional[Union[int, float]]
-            The maximum time to wait for the value to appear. Defaults to None.
+            The maximum time to wait for the value to appear. Defaults to `None`.
         """
         if all_missing(*value):
             raise ValueError("Both `start_val` and `end_val` can not be `MISSING_TYPE`")
@@ -3334,7 +3290,7 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
         value : AttrValue
             The expected minimum date.
         timeout : Optional[Union[int, float]]
-            The maximum time to wait for the minimum date to appear. Defaults to None.
+            The maximum time to wait for the minimum date to appear. Defaults to `None`.
         """
         # TODO-future; Composable expectations
         self.date_start.expect_min_date(value, timeout=timeout)
@@ -3355,7 +3311,7 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
         value : AttrValue
             The expected maximum date.
         timeout : Optional[Union[int, float]]
-            The maximum time to wait for the maximum date to appear. Defaults to None.
+            The maximum time to wait for the maximum date to appear. Defaults to `None`.
         """
         # TODO-future; Composable expectations
         self.date_start.expect_max_date(value, timeout=timeout)
@@ -3376,7 +3332,7 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
         value : AttrValue
             The expected format.
         timeout : Optional[Union[int, float]]
-            The maximum time to wait for the format to appear. Defaults to None.
+            The maximum time to wait for the format to appear. Defaults to `None`.
         """
         # TODO-future; Composable expectations
         self.date_start.expect_format(value, timeout=timeout)
@@ -3397,7 +3353,7 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
         value : AttrValue
             The expected start view.
         timeout : Optional[Union[int, float]]
-            The maximum time to wait for the start view to appear. Defaults to None.
+            The maximum time to wait for the start view to appear. Defaults to `None`.
         """
         # TODO-future; Composable expectations
         self.date_start.expect_startview(value, timeout=timeout)
@@ -3418,7 +3374,7 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
         value : int
             The expected week start.
         timeout : Optional[Union[int, float]]
-            The maximum time to wait for the week start to appear. Defaults to None.
+            The maximum time to wait for the week start to appear. Defaults to `None`.
         """
         # TODO-future; Composable expectations
         self.date_start.expect_weekstart(value, timeout=timeout)
@@ -3439,7 +3395,7 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
         value : AttrValue
             The expected language.
         timeout : Optional[Union[int, float]]
-            The maximum time to wait for the language to appear. Defaults to None.
+            The maximum time to wait for the language to appear. Defaults to `None`.
         """
         # TODO-future; Composable expectations
         self.date_start.expect_language(value, timeout=timeout)
@@ -3460,7 +3416,7 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
         value : PatternOrStr
             The expected separator.
         timeout : Optional[Union[int, float]]
-            The maximum time to wait for the separator to appear. Defaults to None.
+            The maximum time to wait for the separator to appear. Defaults to `None`.
         """
         playwright_expect(self.loc_separator).to_have_text(value, timeout=timeout)
 
@@ -3481,7 +3437,7 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
         value : Literal["true", "false"]
             The expected autoclose value.
         timeout : Optional[Union[int, float]]
-            The maximum time to wait for the value to appear. Defaults to None.
+            The maximum time to wait for the value to appear. Defaults to `None`.
         """
         # TODO-future; Composable expectations
         self.date_start.expect_autoclose(value, timeout=timeout)
@@ -3542,7 +3498,7 @@ class _OutputTextValue(_OutputBase):
         value
             The expected value.
         timeout
-            The maximum time to wait for the value to appear. Defaults to None.
+            The maximum time to wait for the value to appear. Defaults to `None`.
         """
         """Note this function will trim value and output text value before comparing them"""
         self.expect.to_have_text(value, timeout=timeout)
@@ -3572,7 +3528,7 @@ class _OutputContainerM:
         tag_name
             The expected container tag.
         timeout
-            The maximum time to wait for the container tag to appear. Defaults to None.
+            The maximum time to wait for the container tag to appear. Defaults to `None`.
         """
         loc = self.loc.locator(f"xpath=self::{tag_name}")
         playwright_expect(loc).to_have_count(1, timeout=timeout)
@@ -3590,7 +3546,7 @@ class _OutputInlineContainerM(_OutputContainerM):
         inline
             Whether the output is inline.
         timeout
-            The maximum time to wait for the output to appear. Defaults to None.
+            The maximum time to wait for the output to appear. Defaults to `None`.
         """
         tag_name = "span" if inline else "div"
         self.expect_container_tag(tag_name, timeout=timeout)
@@ -3628,7 +3584,7 @@ class OutputText(_OutputInlineContainerM, _OutputTextValue):
         Parameters
         ----------
         timeout
-            The maximum time to wait for the value to appear. Defaults to None.
+            The maximum time to wait for the value to appear. Defaults to `None`.
         """
         return self.loc.inner_text(timeout=timeout)
 
@@ -3665,7 +3621,7 @@ class OutputCode(_OutputTextValue):
         placeholder
             Whether the code output has a placeholder.
         timeout
-            The maximum time to wait for the placeholder to appear. Defaults to None.
+            The maximum time to wait for the placeholder to appear. Defaults to `None`.
         """
         _expect_class_value(
             self.loc,
@@ -3748,7 +3704,7 @@ class _OutputImageBase(_OutputInlineContainerM, _OutputBase):
         value
             The expected height.
         timeout
-            The maximum time to wait for the height to appear. Defaults to None.
+            The maximum time to wait for the height to appear. Defaults to `None`.
         """
         expect_to_have_style(self.loc, "height", value, timeout=timeout)
 
@@ -3766,7 +3722,7 @@ class _OutputImageBase(_OutputInlineContainerM, _OutputBase):
         value
             The expected width.
         timeout
-            The maximum time to wait for the width to appear. Defaults to None.
+            The maximum time to wait for the width to appear. Defaults to `None`.
         """
         expect_to_have_style(self.loc, "width", value, timeout=timeout)
 
@@ -3784,7 +3740,7 @@ class _OutputImageBase(_OutputInlineContainerM, _OutputBase):
         value
             The expected src.
         timeout
-            The maximum time to wait for the src to appear. Defaults to None.
+            The maximum time to wait for the src to appear. Defaults to `None`.
         """
         expect_attribute_to_have_value(self.loc_img, "src", value, timeout=timeout)
 
@@ -3802,7 +3758,7 @@ class _OutputImageBase(_OutputInlineContainerM, _OutputBase):
         value
             The expected width.
         timeout
-            The maximum time to wait for the width to appear. Defaults to None.
+            The maximum time to wait for the width to appear. Defaults to `None`.
         """
         expect_attribute_to_have_value(self.loc_img, "width", value, timeout=timeout)
 
@@ -3820,7 +3776,7 @@ class _OutputImageBase(_OutputInlineContainerM, _OutputBase):
         value
             The expected height.
         timeout
-            The maximum time to wait for the height to appear. Defaults to None.
+            The maximum time to wait for the height to appear. Defaults to `None`.
         """
         expect_attribute_to_have_value(self.loc_img, "height", value, timeout=timeout)
 
@@ -3838,7 +3794,7 @@ class _OutputImageBase(_OutputInlineContainerM, _OutputBase):
         value
             The expected alt text.
         timeout
-            The maximum time to wait for the alt text to appear. Defaults to None.
+            The maximum time to wait for the alt text to appear. Defaults to `None`.
         """
         expect_attribute_to_have_value(self.loc_img, "alt", value, timeout=timeout)
 
@@ -3962,7 +3918,7 @@ class OutputTable(_OutputBase):
         col
             The column number.
         timeout
-            The maximum time to wait for the text to appear. Defaults to None.
+            The maximum time to wait for the text to appear. Defaults to `None`.
         """
         assert_type(row, int)
         assert_type(col, int)
@@ -3986,7 +3942,7 @@ class OutputTable(_OutputBase):
         labels
             The expected column labels. If None, it asserts that the table has no column labels.
         timeout
-            The maximum time to wait for the column labels to appear. Defaults to None.
+            The maximum time to wait for the column labels to appear. Defaults to `None`.
         """
         if isinstance(labels, list) and len(labels) == 0:
             labels = None
@@ -4018,7 +3974,7 @@ class OutputTable(_OutputBase):
         text
             The expected text in the column.
         timeout
-            The maximum time to wait for the text to appear. Defaults to None.
+            The maximum time to wait for the text to appear. Defaults to `None`.
         """
         assert_type(col, int)
         playwright_expect(
@@ -4042,7 +3998,7 @@ class OutputTable(_OutputBase):
         n
             The expected number of columns in the table.
         timeout
-            The maximum time to wait for the table to have the expected number of columns. Defaults to None.
+            The maximum time to wait for the table to have the expected number of columns. Defaults to `None`.
         """
         playwright_expect(
             # self.loc.locator("xpath=./table/thead/tr[1]/(td|th)")
@@ -4066,7 +4022,7 @@ class OutputTable(_OutputBase):
         n
             The expected number of rows in the table.
         timeout
-            The maximum time to wait for the table to have the expected number of rows. Defaults to None.
+            The maximum time to wait for the table to have the expected number of rows. Defaults to `None`.
         """
         playwright_expect(self.loc.locator("xpath=./table/tbody/tr")).to_have_count(
             n,
@@ -4126,7 +4082,7 @@ class Sidebar(
         value
             The expected text in the sidebar.
         timeout
-            The maximum time to wait for the text to appear. Defaults to None.
+            The maximum time to wait for the text to appear. Defaults to `None`.
         """
         playwright_expect(self.loc).to_have_text(value, timeout=timeout)
 
@@ -4141,7 +4097,7 @@ class Sidebar(
         position
             The expected position of the sidebar.
         timeout
-            The maximum time to wait for the sidebar to appear. Defaults to None.
+            The maximum time to wait for the sidebar to appear. Defaults to `None`.
         """
         is_right_sidebar = position == "right"
         _expect_class_value(
@@ -4160,7 +4116,7 @@ class Sidebar(
         exists
             True if the sidebar handle should exist, False otherwise.
         timeout
-            The maximum time to wait for the sidebar handle to appear. Defaults to None.
+            The maximum time to wait for the sidebar handle to appear. Defaults to `None`.
         """
         playwright_expect(self.loc_handle).to_have_count(int(exists), timeout=timeout)
 
@@ -4173,7 +4129,7 @@ class Sidebar(
         open
             True if the sidebar should be open, False otherwise.
         timeout
-            The maximum time to wait for the sidebar to open or close. Defaults to None.
+            The maximum time to wait for the sidebar to open or close. Defaults to `None`.
         """
         playwright_expect(self.loc_handle).to_have_attribute(
             "aria-expanded", str(open).lower(), timeout=timeout
@@ -4188,7 +4144,7 @@ class Sidebar(
         open
             True if the sidebar should be open, False otherwise.
         timeout
-            The maximum time to wait for the sidebar to open or close. Defaults to None.
+            The maximum time to wait for the sidebar to open or close. Defaults to `None`.
         """
         if open ^ (self.loc_handle.get_attribute("aria-expanded") == "true"):
             self.toggle(timeout=timeout)
@@ -4200,7 +4156,7 @@ class Sidebar(
         Parameters
         ----------
         timeout
-            The maximum time to wait for the sidebar to toggle. Defaults to None.
+            The maximum time to wait for the sidebar to toggle. Defaults to `None`.
         """
         self.loc_handle.wait_for(state="visible", timeout=timeout)
         self.loc_handle.scroll_into_view_if_needed(timeout=timeout)
@@ -4234,7 +4190,7 @@ class _CardBodyM:
         text
             The expected text or a list of expected texts.
         timeout
-            The maximum time to wait for the text to appear. Defaults to None.
+            The maximum time to wait for the text to appear. Defaults to `None`.
         """
         playwright_expect(self.loc).to_have_text(
             text,
@@ -4272,7 +4228,7 @@ class _CardFooterM:
         text
             The expected text in the footer section.
         timeout
-            The maximum time to wait for the footer text to appear. Defaults to None.
+            The maximum time to wait for the footer text to appear. Defaults to `None`.
         """
         playwright_expect(self.loc_footer).to_have_text(
             text,
@@ -4313,7 +4269,7 @@ class _CardFullScreenM:
         Parameters
         ----------
         timeout
-            The maximum time to wait for the card to open in full screen mode. Defaults to None.
+            The maximum time to wait for the card to open in full screen mode. Defaults to `None`.
         """
         self.loc_title.hover(timeout=timeout)
         self._loc_fullscreen.wait_for(state="visible", timeout=timeout)
@@ -4328,7 +4284,7 @@ class _CardFullScreenM:
         Parameters
         ----------
         timeout
-            The maximum time to wait for the card to close from full screen mode. Defaults to None.
+            The maximum time to wait for the card to close from full screen mode. Defaults to `None`.
         """
         self._loc_close_button.click(timeout=timeout)
 
@@ -4343,7 +4299,7 @@ class _CardFullScreenM:
         open
             True if the card is expected to be in full screen mode, False otherwise.
         timeout
-            The maximum time to wait for the verification. Defaults to None.
+            The maximum time to wait for the verification. Defaults to `None`.
         """
         playwright_expect(self._loc_close_button).to_have_count(
             int(open), timeout=timeout
@@ -4360,7 +4316,7 @@ class _CardFullScreenM:
         available
             True if the value box is expected to be available for full screen mode, False otherwise.
         timeout
-            The maximum time to wait for the expectation to pass. Defaults to None.
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         playwright_expect(self._loc_fullscreen).to_have_count(
             int(available), timeout=timeout
@@ -4439,7 +4395,7 @@ class ValueBox(
         value
             The expected height value.
         timeout
-            The maximum time to wait for the expectation to pass. Defaults to None.
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         expect_to_have_style(self.loc_container, "max-height", value, timeout=timeout)
 
@@ -4457,7 +4413,7 @@ class ValueBox(
         text
             The expected text pattern or string.
         timeout
-            The maximum time to wait for the expectation to pass. Defaults to None.
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
 
         """
         playwright_expect(self.loc_title).to_have_text(
@@ -4479,7 +4435,7 @@ class ValueBox(
         text
             The expected text pattern or string.
         timeout
-            The maximum time to wait for the expectation to pass. Defaults to None.
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         playwright_expect(self.loc).to_have_text(
             text,
@@ -4501,7 +4457,7 @@ class ValueBox(
             The expected text pattern or list of patterns/strings.
             Note: If testing against multiple elements, text should be an array
         timeout
-            The maximum time to wait for the expectation to pass. Defaults to None.
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         playwright_expect(self.loc_body).to_have_text(
             text,
@@ -4577,7 +4533,7 @@ class Card(_WidthLocM, _CardFooterM, _CardBodyM, _CardFullScreenM, _InputWithCon
             The expected text pattern or string
             Note: None if the header is expected to not exist.
         timeout
-            The maximum time to wait for the expectation to pass. Defaults to None.
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         if text is None:
             playwright_expect(self.loc_title).to_have_count(0, timeout=timeout)
@@ -4612,7 +4568,7 @@ class Card(_WidthLocM, _CardFooterM, _CardBodyM, _CardFullScreenM, _InputWithCon
             The expected text pattern or string
             Note: None if the footer is expected to not exist.
         timeout
-            The maximum time to wait for the expectation to pass. Defaults to None.
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         if text is None:
             playwright_expect(self.loc_footer).to_have_count(0, timeout=timeout)
@@ -4628,7 +4584,7 @@ class Card(_WidthLocM, _CardFooterM, _CardBodyM, _CardFullScreenM, _InputWithCon
         value
             The expected maximum height value.
         timeout
-            The maximum time to wait for the expectation to pass. Defaults to None.
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         expect_to_have_style(self.loc_container, "max-height", value, timeout=timeout)
 
@@ -4641,7 +4597,7 @@ class Card(_WidthLocM, _CardFooterM, _CardBodyM, _CardFullScreenM, _InputWithCon
         value
             The expected minimum height value.
         timeout
-            The maximum time to wait for the expectation to pass. Defaults to None.
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         expect_to_have_style(self.loc_container, "min-height", value, timeout=timeout)
 
@@ -4654,7 +4610,7 @@ class Card(_WidthLocM, _CardFooterM, _CardBodyM, _CardFullScreenM, _InputWithCon
         value
             The expected height value.
         timeout
-            The maximum time to wait for the expectation to pass. Defaults to None.
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         expect_to_have_style(self.loc_container, "height", value, timeout=timeout)
 
@@ -4713,7 +4669,7 @@ class Accordion(
         value
             The expected height.
         timeout
-            The maximum time to wait for the height to be visible and interactable. Defaults to None.
+            The maximum time to wait for the height to be visible and interactable. Defaults to `None`.
         """
         expect_to_have_style(self.loc_container, "height", value, timeout=timeout)
 
@@ -4726,7 +4682,7 @@ class Accordion(
         value
             The expected width.
         timeout
-            The maximum time to wait for the width to be visible and interactable. Defaults to None.
+            The maximum time to wait for the width to be visible and interactable. Defaults to `None`.
         """
         expect_to_have_style(self.loc_container, "width", value, timeout=timeout)
 
@@ -4764,7 +4720,7 @@ class Accordion(
         value
             The expected panels.
         timeout
-            The maximum time to wait for the panels to be visible and interactable. Defaults to None.
+            The maximum time to wait for the panels to be visible and interactable. Defaults to `None`.
         """
         _MultipleDomItems.expect_locator_values_in_list(
             page=self.page,
@@ -4790,7 +4746,7 @@ class Accordion(
         selected
             The selected accordion panel(s).
         timeout
-            The maximum time to wait for the accordion panel to be visible and interactable. Defaults to None.
+            The maximum time to wait for the accordion panel to be visible and interactable. Defaults to `None`.
         """
         if isinstance(selected, str):
             selected = [selected]
@@ -4891,7 +4847,7 @@ class AccordionPanel(
         value
             The expected text pattern or string.
         timeout
-            The maximum time to wait for the label to appear. Defaults to None.
+            The maximum time to wait for the label to appear. Defaults to `None`.
         """
         playwright_expect(self.loc_label).to_have_text(value, timeout=timeout)
 
@@ -4904,7 +4860,7 @@ class AccordionPanel(
         value
             The expected text pattern or string.
         timeout
-            The maximum time to wait for the body to appear. Defaults to None.
+            The maximum time to wait for the body to appear. Defaults to `None`.
         """
         playwright_expect(self.loc_body).to_have_text(value, timeout=timeout)
 
@@ -4917,7 +4873,7 @@ class AccordionPanel(
         value
             The expected text pattern or string.
         timeout
-            The maximum time to wait for the icon to appear. Defaults to None.
+            The maximum time to wait for the icon to appear. Defaults to `None`.
         """
         playwright_expect(self.loc_icon).to_have_text(value, timeout=timeout)
 
@@ -4930,7 +4886,7 @@ class AccordionPanel(
         is_open
             True if the accordion panel is expected to be open, False otherwise.
         timeout
-            The maximum time to wait for the expectation to pass. Defaults to None.
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         _expect_class_value(self.loc_body, "show", is_open, timeout=timeout)
 
@@ -4944,7 +4900,7 @@ class AccordionPanel(
         open
             True if the control is expected to be open, False otherwise.
         timeout
-            The maximum time to wait for the control to be visible and interactable. Defaults to None.
+            The maximum time to wait for the control to be visible and interactable. Defaults to `None`.
         """
         self.loc.wait_for(state="visible", timeout=timeout)
         self.loc.scroll_into_view_if_needed(timeout=timeout)
@@ -4959,7 +4915,7 @@ class AccordionPanel(
         Parameters
         ----------
         timeout
-            The maximum time to wait for the control to be visible and interactable. Defaults to None.
+            The maximum time to wait for the control to be visible and interactable. Defaults to `None`.
         """
         self.loc.wait_for(state="visible", timeout=timeout)
         self.loc.scroll_into_view_if_needed(timeout=timeout)
@@ -5047,7 +5003,7 @@ class _OverlayBase(_InputBase):
         Parameters
         ----------
         timeout
-            The maximum time to wait for the overlay container to appear. Defaults to None.
+            The maximum time to wait for the overlay container to appear. Defaults to `None`.
         """
         return self.page.locator(f"#{self._get_overlay_id(timeout=timeout)}")
 
@@ -5060,7 +5016,7 @@ class _OverlayBase(_InputBase):
         value
             The expected text pattern or string.
         timeout
-            The maximum time to wait for the overlay body to appear. Defaults to None.
+            The maximum time to wait for the overlay body to appear. Defaults to `None`.
         """
         playwright_expect(self.get_loc_overlay_body(timeout=timeout)).to_have_text(
             value, timeout=timeout
@@ -5075,7 +5031,7 @@ class _OverlayBase(_InputBase):
         active
             True if the overlay is expected to be active, False otherwise.
         timeout
-            The maximum time to wait for the expectation to pass. Defaults to None.
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         value = re.compile(r".*") if active else None
         return expect_attribute_to_have_value(
@@ -5094,7 +5050,7 @@ class _OverlayBase(_InputBase):
         value
             The expected placement value.
         timeout
-            The maximum time to wait for the expectation to pass. Defaults to None.
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         return expect_attribute_to_have_value(
             loc=self.get_loc_overlay_container(timeout=timeout),
@@ -5148,7 +5104,7 @@ class Popover(_OverlayBase):
         open
             True if the popover is expected to be open, False otherwise.
         timeout
-            The maximum time to wait for the popover to be visible and interactable. Defaults to None.
+            The maximum time to wait for the popover to be visible and interactable. Defaults to `None`.
         """
         if open ^ self.get_loc_overlay_body(timeout=timeout).count() > 0:
             self.toggle()
@@ -5160,7 +5116,7 @@ class Popover(_OverlayBase):
         Parameters
         ----------
         timeout
-            The maximum time to wait for the popover to be visible and interactable. Defaults to None.
+            The maximum time to wait for the popover to be visible and interactable. Defaults to `None`.
         """
         self.loc_trigger.wait_for(state="visible", timeout=timeout)
         self.loc_trigger.scroll_into_view_if_needed(timeout=timeout)
@@ -5219,7 +5175,7 @@ class Tooltip(_OverlayBase):
         open
             True if the tooltip is expected to be open, False otherwise.
         timeout
-            The maximum time to wait for the tooltip to be visible and interactable. Defaults to None.
+            The maximum time to wait for the tooltip to be visible and interactable. Defaults to `None`.
         """
         if open ^ self.get_loc_overlay_body(timeout=timeout).count() > 0:
             self.toggle(timeout=timeout)
@@ -5233,7 +5189,7 @@ class Tooltip(_OverlayBase):
         Parameters
         ----------
         timeout
-            The maximum time to wait for the tooltip to be visible and interactable. Defaults to None.
+            The maximum time to wait for the tooltip to be visible and interactable. Defaults to `None`.
         """
         self.loc_trigger.wait_for(state="visible", timeout=timeout)
         self.loc_trigger.scroll_into_view_if_needed(timeout=timeout)
@@ -5269,7 +5225,7 @@ class _NavItemBase(_InputWithContainer):
         value
             The expected value.
         timeout
-            The maximum time to wait for the expectation to pass. Defaults to None.
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         # data attribute of active tab and compare with value
         playwright_expect(
@@ -5292,7 +5248,7 @@ class _NavItemBase(_InputWithContainer):
         Parameters
         ----------
         timeout
-            The maximum time to wait for the locator to appear. Defaults to None.
+            The maximum time to wait for the locator to appear. Defaults to `None`.
         """
         datatab_id = self.loc_container.get_attribute("data-tabsetid", timeout=timeout)
         return self.page.locator(
@@ -5308,7 +5264,7 @@ class _NavItemBase(_InputWithContainer):
         value
             The expected content.
         timeout
-            The maximum time to wait for the expectation to pass. Defaults to None.
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         playwright_expect(self.get_loc_active_content()).to_have_text(
             value, timeout=timeout
@@ -5328,7 +5284,7 @@ class _NavItemBase(_InputWithContainer):
         value
             The expected nav values.
         timeout
-            The maximum time to wait for the expectation to pass. Defaults to None.
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         _MultipleDomItems.expect_locator_values_in_list(
             page=self.page,
@@ -5354,7 +5310,7 @@ class _NavItemBase(_InputWithContainer):
         value
             The expected nav titles.
         timeout
-            The maximum time to wait for the expectation to pass. Defaults to None.
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         self.expect.to_have_text(value, timeout=timeout)
 
@@ -5414,7 +5370,7 @@ class NavItem(_InputWithContainer):
         Parameters
         ----------
         timeout
-            The maximum time to wait for the nav item to be visible and interactable. Defaults to None.
+            The maximum time to wait for the nav item to be visible and interactable. Defaults to `None`.
         """
         self.loc.click(timeout=timeout)
 
@@ -5427,7 +5383,7 @@ class NavItem(_InputWithContainer):
         active
             True if the nav item is expected to be active, False otherwise.
         timeout
-            The maximum time to wait for the expectation to pass. Defaults to None.
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         _expect_class_value(self.loc, "active", active, timeout=timeout)
 
@@ -5440,7 +5396,7 @@ class NavItem(_InputWithContainer):
         value
             The expected text pattern or string.
         timeout
-            The maximum time to wait for the expectation to pass. Defaults to None.
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         playwright_expect(self.loc_content).to_have_text(value, timeout=timeout)
 
@@ -5717,7 +5673,7 @@ class OutputDataFrame(_InputWithContainer):
         row_number
             The expected number of rows.
         timeout
-            The maximum time to wait for the expectation to pass. Defaults to None.
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         playwright_expect(self.loc_body.locator("> tr")).to_have_count(
             row_number, timeout=timeout
@@ -5743,7 +5699,7 @@ class OutputDataFrame(_InputWithContainer):
         col
             The column number of the cell.
         timeout
-            The maximum time to wait for the expectation to pass. Defaults to None.
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         assert_type(row, int)
         assert_type(col, int)
@@ -5769,7 +5725,7 @@ class OutputDataFrame(_InputWithContainer):
         edit
             True if the data frame is in edit mode, False otherwise.
         timeout
-            The maximum time to wait for the expectation to pass. Defaults to None.
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         if isinstance(labels, list) and len(labels) == 0:
             labels = None
@@ -5839,7 +5795,7 @@ class OutputDataFrame(_InputWithContainer):
         text
             The expected text in the column.
         timeout
-            The maximum time to wait for the expectation to pass. Defaults to None.
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         assert_type(col, int)
         # It's zero based, nth(0) selects the first element.
@@ -5862,7 +5818,7 @@ class OutputDataFrame(_InputWithContainer):
         n
             The expected number of columns.
         timeout
-            The maximum time to wait for the expectation to pass. Defaults to None.
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         playwright_expect(self.loc_column_label).to_have_count(
             n,
@@ -5889,7 +5845,7 @@ class OutputDataFrame(_InputWithContainer):
         class_
             The expected class of the cell.
         timeout
-            The maximum time to wait for the expectation to pass. Defaults to None.
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         expect_to_have_class(
             self.cell_locator(row=row, col=col),
@@ -5911,7 +5867,7 @@ class OutputDataFrame(_InputWithContainer):
         rows
             The list of row numbers to select.
         timeout
-            The maximum time to wait for the action to complete. Defaults to None.
+            The maximum time to wait for the action to complete. Defaults to `None`.
         """
         if len(rows) > 1:
             rows = sorted(rows)
@@ -5985,7 +5941,7 @@ class OutputDataFrame(_InputWithContainer):
         col
             The column number of the cell.
         timeout
-            The maximum time to wait for the action to complete. Defaults to None.
+            The maximum time to wait for the action to complete. Defaults to `None`.
         """
         cell = self.cell_locator(row=row, col=col)
 
@@ -6010,7 +5966,7 @@ class OutputDataFrame(_InputWithContainer):
         col
             The column number to sort.
         timeout
-            The maximum time to wait for the action to complete. Defaults to None.
+            The maximum time to wait for the action to complete. Defaults to `None`.
         """
         self.loc_column_label.nth(col).click(timeout=timeout)
 
@@ -6034,7 +5990,7 @@ class OutputDataFrame(_InputWithContainer):
         text
             The text to filter the column.
         timeout
-            The maximum time to wait for the action to complete. Defaults to None.
+            The maximum time to wait for the action to complete. Defaults to `None`.
         """
         if isinstance(text, str):
             self.loc_column_filter.nth(col).locator("> input").fill(
@@ -6074,7 +6030,7 @@ class OutputDataFrame(_InputWithContainer):
         col
             The column number of the cell.
         timeout
-            The maximum time to wait for the action to complete. Defaults to None.
+            The maximum time to wait for the action to complete. Defaults to `None`.
         """
         self.edit_cell(text, row=row, col=col, timeout=timeout)
         self.cell_locator(row=row, col=col).locator("> textarea").press(save_key)
@@ -6099,7 +6055,7 @@ class OutputDataFrame(_InputWithContainer):
         message
             The expected validation message of the cell.
         timeout
-            The maximum time to wait for the expectation to pass. Defaults to None.
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         playwright_expect(self.cell_locator(row=row, col=col)).to_have_attribute(
             name="title", value=message, timeout=timeout
