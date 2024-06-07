@@ -135,7 +135,6 @@ class ChatInput extends LightElement {
           placeholder="${this.placeholder}"
           @keydown=${this.#onKeyDown}
           @input=${this.#onInput}
-          ?disabled=${this.disabled}
           data-shiny-no-bind-input
         ></textarea>
         <button
@@ -177,6 +176,9 @@ class ChatInput extends LightElement {
   }
 
   #sendInput(): void {
+    if (this.valueIsEmpty) return;
+    if (this.disabled) return;
+
     Shiny.setInputValue!(this.id, this.value, { priority: "event" });
 
     // Emit event so parent element knows to insert the message
@@ -187,13 +189,17 @@ class ChatInput extends LightElement {
     });
     this.dispatchEvent(sentEvent);
 
-    // Clear and disable the inputs after sending (parent will re-enable it)
+    // Clear and 'disable' the input after sending (ChatContainer will re-enable
+    // when response has been received)
     this.textarea.value = "";
     this.disabled = true;
 
-    // Simulate an input event to trigger the textarea autoresize
+    // Simulate an input event (to trigger the textarea autoresize)
     const inputEvent = new Event("input", { bubbles: true, cancelable: true });
     this.textarea.dispatchEvent(inputEvent);
+
+    // Keep focus on the textarea
+    this.textarea.focus();
   }
 }
 
@@ -261,7 +267,7 @@ class ChatContainer extends LightElement {
     this.#scrollToBottom();
 
     if (finalize) {
-      this.#enableInput();
+      this.#finalizeMessage();
     }
   }
 
@@ -293,8 +299,7 @@ class ChatContainer extends LightElement {
       return;
     }
     if (message.type === "message_end") {
-      // end of stream; enable the input
-      this.#enableInput();
+      this.#finalizeMessage();
       return;
     }
 
@@ -321,10 +326,10 @@ class ChatContainer extends LightElement {
 
   #onRemoveLoadingMessage(): void {
     this.#removeLoadingMessage();
-    this.#enableInput();
+    this.#finalizeMessage();
   }
 
-  #enableInput(): void {
+  #finalizeMessage(): void {
     this.input.disabled = false;
   }
 

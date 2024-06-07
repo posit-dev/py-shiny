@@ -12623,7 +12623,6 @@ var ChatInput = class extends LightElement {
           placeholder="${this.placeholder}"
           @keydown=${this.#onKeyDown}
           @input=${this.#onInput}
-          ?disabled=${this.disabled}
           data-shiny-no-bind-input
         ></textarea>
         <button
@@ -12662,6 +12661,10 @@ var ChatInput = class extends LightElement {
     this.button.disabled = this.value.trim().length === 0;
   }
   #sendInput() {
+    if (this.valueIsEmpty)
+      return;
+    if (this.disabled)
+      return;
     Shiny.setInputValue(this.id, this.value, { priority: "event" });
     const sentEvent = new CustomEvent("shiny-chat-input-sent", {
       detail: { content: this.value, role: "user" },
@@ -12673,6 +12676,7 @@ var ChatInput = class extends LightElement {
     this.disabled = true;
     const inputEvent = new Event("input", { bubbles: true, cancelable: true });
     this.textarea.dispatchEvent(inputEvent);
+    this.textarea.focus();
   }
 };
 __decorateClass([
@@ -12734,7 +12738,7 @@ var ChatContainer = class extends LightElement {
     this.messages.appendChild(msg);
     this.#scrollToBottom();
     if (finalize) {
-      this.#enableInput();
+      this.#finalizeMessage();
     }
   }
   #addLoadingMessage() {
@@ -12762,7 +12766,7 @@ var ChatContainer = class extends LightElement {
       return;
     }
     if (message.type === "message_end") {
-      this.#enableInput();
+      this.#finalizeMessage();
       return;
     }
     const messages = this.messages;
@@ -12781,9 +12785,9 @@ var ChatContainer = class extends LightElement {
   }
   #onRemoveLoadingMessage() {
     this.#removeLoadingMessage();
-    this.#enableInput();
+    this.#finalizeMessage();
   }
-  #enableInput() {
+  #finalizeMessage() {
     this.input.disabled = false;
   }
   #scrollToBottom() {
