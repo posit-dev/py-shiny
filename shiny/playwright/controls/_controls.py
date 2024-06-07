@@ -149,11 +149,11 @@ class _InputBaseP(Protocol):
 
 
 class _InputWithContainerP(_InputBaseP, Protocol):
-    """A mixin class representing inputs with a container."""
+    """A protocol class representing inputs with a container."""
 
     loc_container: Locator
     """
-    `loc_container` is the locator of the container of the input.
+    `Locator` for the container of the input.
     """
 
 
