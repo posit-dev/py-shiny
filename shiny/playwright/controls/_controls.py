@@ -1,5 +1,8 @@
 """Facade classes for working with Shiny inputs/outputs in Playwright"""
 
+# TODO-barret; Make all `expect_*(FOO)` values to be `expect_*(value)`
+# TODO-barret; Rename `InputBase` and `InputWithContainer` to generic, not-tied-to-input names
+
 from __future__ import annotations
 
 import json
@@ -117,7 +120,7 @@ def set_text(
     Parameters
     ----------
     loc
-        The Playwright `Locator` of the element.
+        Playwright `Locator` of the element.
     text
         The text to set.
     delay
@@ -151,7 +154,7 @@ class _InputWithContainerP(_InputBaseP, Protocol):
 
     loc_container: Locator
     """
-    `Locator` for the container of the input.
+    Playwright `Locator` for the container of the input.
     """
 
 
@@ -165,11 +168,11 @@ class _InputBase:
     """
     loc: Locator
     """
-    The Playwright `Locator` of the input.
+    Playwright `Locator` of the input.
     """
     page: Page
     """
-    The Playwright `Page` of the Shiny app.
+    Playwright `Page` of the Shiny app.
     """
 
     def __init__(
@@ -189,7 +192,7 @@ class _InputBase:
     @property
     # TODO; Can not publicly find `LocatorAssertions` in `playwright`
     def expect(self):
-        """Expectation method equivalent to `playwright.expect(self.loc)`"""
+        """Expectation method equivalent to `playwright.expect(self.loc)`."""
         # TODO-karan-test: Search for `.loc)` and convert `expect(FOO.loc)` to `FOO.expect`. If we don't like the helper API, we should remove it.
         return playwright_expect(self.loc)
 
@@ -201,7 +204,7 @@ class _InputWithContainer(_InputBase):
 
     loc_container: Locator
     """
-    `Locator` for the container of the input.
+    Playwright `Locator` for the container of the input.
     """
 
     def __init__(
@@ -218,13 +221,13 @@ class _InputWithContainer(_InputBase):
         Parameters
         ----------
         page
-            The Playwright `Page` of the Shiny app.
+            Playwright `Page` of the Shiny app.
         id
             The id of the input.
         loc
-            The Playwright `Locator` of the input.
+            Playwright `Locator` of the input.
         loc_container
-            The Playwright `Locator` of the container of the input.
+            Playwright `Locator` of the container of the input.
         """
         loc_is_str = isinstance(loc, str)
         loc_container_is_str = isinstance(loc_container, str)
@@ -262,7 +265,7 @@ class _InputWithLabel(_InputWithContainer):
 
     loc_label: Locator
     """
-    `loc_label` is the locator of the label of the input.
+    Playwright `Locator` for the label of the input.
     """
 
     def __init__(
@@ -284,11 +287,11 @@ class _InputWithLabel(_InputWithContainer):
         id
             The id of the input.
         loc
-            The Playwright `Locator` of the input.
+            Playwright `Locator` of the input.
         loc_container
-            The Playwright `Locator` of the container of the input.
+            Playwright `Locator` of the container of the input.
         loc_label
-            The Playwright `Locator` of the label of the input. Defaults to `None`.
+            Playwright `Locator` of the label of the input. Defaults to `None`.
         """
         super().__init__(
             page,
@@ -419,7 +422,7 @@ class InputNumeric(
     _WidthLocM,
     _InputWithLabel,
 ):
-    """Input numeric control for :func:`~shiny.ui.input_numeric`"""
+    """Input numeric control for :func:`~shiny.ui.input_numeric`."""
 
     def __init__(self, page: Page, id: str) -> None:
         """
@@ -573,16 +576,7 @@ class InputText(
     _ExpectSpellcheckAttrM,
     _InputWithLabel,
 ):
-    """Input text control for :func:`~shiny.ui.input_text`"""
-
-    loc_container: Locator
-    """
-    The Playwright `Locator` of the container of the input.
-    """
-    loc_label: Locator
-    """
-    The Playwright `Locator` of the label of the input.
-    """
+    """Input text control for :func:`~shiny.ui.input_text`."""
 
     def __init__(self, page: Page, id: str) -> None:
         """
@@ -608,7 +602,7 @@ class InputPassword(
     _ExpectPlaceholderAttrM,
     _InputWithLabel,
 ):
-    """Input password control for :func:`~shiny.ui.input_password`"""
+    """Input password control for :func:`~shiny.ui.input_password`."""
 
     def __init__(self, page: Page, id: str) -> None:
         """
@@ -659,7 +653,7 @@ class InputTextArea(
     _ExpectSpellcheckAttrM,
     _InputWithLabel,
 ):
-    """Input text area control for :func:`~shiny.ui.input_text_area`"""
+    """Input text area control for :func:`~shiny.ui.input_text_area`."""
 
     def __init__(self, page: Page, id: str) -> None:
         """
@@ -783,15 +777,15 @@ class _InputSelectBase(
 ):
     loc_selected: Locator
     """
-    `loc_selected` is the locator of the selected option of the input select.
+    Playwright `Locator` for the selected option of the input select.
     """
     loc_choices: Locator
     """
-    `loc_choices` is the locator of the choices of the input select.
+    Playwright `Locator` for the choices of the input select.
     """
     loc_choice_groups: Locator
     """
-    `loc_choice_groups` is the locator of the choice groups of the input select.
+    Playwright `Locator` for the choice groups of the input select.
     """
 
     def __init__(
@@ -999,7 +993,7 @@ class _InputSelectBase(
 
 
 class InputSelect(_InputSelectBase):
-    """Input select control for :func:`~shiny.ui.input_select`"""
+    """Input select control for :func:`~shiny.ui.input_select`."""
 
     def __init__(self, page: Page, id: str) -> None:
         """
@@ -1040,7 +1034,7 @@ class InputSelect(_InputSelectBase):
 
 
 class InputSelectize(_InputSelectBase):
-    """Input selectize control for :func:`~shiny.ui.input_selectize`"""
+    """Input selectize control for :func:`~shiny.ui.input_selectize`."""
 
     def __init__(self, page: Page, id: str) -> None:
         super().__init__(
@@ -1088,7 +1082,7 @@ class InputActionButton(
     _WidthLocM,
     _InputActionBase,
 ):
-    """Input action button control for :func:`~shiny.ui.input_action_button`"""
+    """Input action button control for :func:`~shiny.ui.input_action_button`."""
 
     def __init__(
         self,
@@ -1113,7 +1107,7 @@ class InputActionButton(
 
 
 class InputDarkMode(_InputBase):
-    """Input dark mode control for :func:`~shiny.ui.input_dark_mode`"""
+    """Input dark mode control for :func:`~shiny.ui.input_dark_mode`."""
 
     def __init__(
         self,
@@ -1202,7 +1196,7 @@ class InputTaskButton(
     _WidthLocM,
     _InputActionBase,
 ):
-    """Input task button control for :func:`~shiny.ui.input_task_button`"""
+    """Input task button control for :func:`~shiny.ui.input_task_button`."""
 
     # TODO-Karan: Test auto_reset functionality
     def __init__(
@@ -1227,7 +1221,10 @@ class InputTaskButton(
         )
 
     def expect_state(
-        self, value: Literal["ready", "busy"] | str, *, timeout: Timeout = None
+        self,
+        value: Literal["ready", "busy"] | str,
+        *,
+        timeout: Timeout = None,
     ):
         """
         Expect the state of the input task button to have a specific value.
@@ -1324,7 +1321,7 @@ class InputTaskButton(
 
 
 class InputActionLink(_InputActionBase):
-    """Input action link control for :func:`~shiny.ui.input_action_link`"""
+    """Input action link control for :func:`~shiny.ui.input_action_link`."""
 
     def __init__(
         self,
@@ -1370,9 +1367,9 @@ class _InputCheckboxBase(
         id
             The id of the input checkbox.
         loc
-            The Playwright `Locator` of the input checkbox.
+            Playwright `Locator` of the input checkbox.
         loc_label
-            The Playwright `Locator` of the label of the input checkbox.
+            Playwright `Locator` of the label of the input checkbox.
         """
         super().__init__(
             page,
@@ -1429,7 +1426,7 @@ class _InputCheckboxBase(
 
 
 class InputCheckbox(_InputCheckboxBase):
-    """Input checkbox control for :func:`~shiny.ui.input_checkbox`"""
+    """Input checkbox control for :func:`~shiny.ui.input_checkbox`."""
 
     def __init__(
         self,
@@ -1455,7 +1452,7 @@ class InputCheckbox(_InputCheckboxBase):
 
 
 class InputSwitch(_InputCheckboxBase):
-    """Input switch control for :func:`~shiny.ui.input_switch`"""
+    """Input switch control for :func:`~shiny.ui.input_switch`."""
 
     def __init__(
         self,
@@ -1508,7 +1505,7 @@ class _MultipleDomItems:
         Parameters
         ----------
         is_checked
-            Whether the elements are checked, by default MISSING
+            Whether the elements are checked. Defaults to `MISSING`.
         """
         if is_missing(is_checked):
             return ""
@@ -1539,7 +1536,7 @@ class _MultipleDomItems:
         Parameters
         ----------
         page
-            The Playwright page.
+            Playwright `Page` of the Shiny app.
         loc_container
             The container locator.
         el_type
@@ -1549,11 +1546,11 @@ class _MultipleDomItems:
         arr
             The expected values.
         is_checked
-            Whether the elements are checked, by default MISSING
+            Whether the elements are checked. Defaults to `MISSING`.
         timeout
-            The timeout for the expectation, by default None
+            The timeout for the expectation. Defaults to `None`.
         key
-            The key, by default "value"
+            The key. Defaults to `"value"`.
         """
         # Make sure the locator contains all of `arr`
 
@@ -1627,7 +1624,7 @@ class _MultipleDomItems:
         Parameters
         ----------
         page
-            The Playwright page.
+            Playwright `Page` of the Shiny app.
         loc_container
             The container locator.
         el_type
@@ -1637,11 +1634,11 @@ class _MultipleDomItems:
         arr
             The expected values.
         is_checked
-            Whether the elements are checked, by default MISSING
+            Whether the elements are checked. Defaults to `MISSING`.
         timeout
-            The timeout for the expectation, by default None
+            The timeout for the expectation. Defaults to `None`.
         key
-            The key, by default "value"
+            The key. Defaults to `"value"`.
         """
         # Make sure the locator has exactly `arr` values
 
@@ -1711,6 +1708,9 @@ class _MultipleDomItems:
             raise e
 
 
+# TODO-barret; continue from here
+
+
 class _RadioButtonCheckboxGroupBase(_InputWithLabel):
     loc_choice_labels: Locator
 
@@ -1728,7 +1728,7 @@ class _RadioButtonCheckboxGroupBase(_InputWithLabel):
         labels
             The expected labels.
         timeout
-            The timeout for the expectation, by default None.
+            The timeout for the expectation. Defaults to `None`.
         """
         if len(labels) == 1:
             labels_val = labels[0]
@@ -1748,7 +1748,7 @@ class _RadioButtonCheckboxGroupBase(_InputWithLabel):
         inline
             Whether the input is inline.
         timeout
-            The timeout for the expectation, by default None.
+            The timeout for the expectation. Defaults to `None`.
         """
         _expect_class_value(
             self.loc_container,
@@ -1778,7 +1778,7 @@ class InputCheckboxGroup(
         Parameters
         ----------
         page
-            The Playwright page.
+            Playwright `Page` of the Shiny app.
         id
             The id of the checkbox group.
         """
@@ -1825,7 +1825,7 @@ class InputCheckboxGroup(
         selected
             The values of the selected checkboxes.
         timeout
-            The timeout for the action, by default None.
+            The timeout for the action. Defaults to `None`.
         """
         # Having an arr of size 0 is allowed. Will uncheck everything
         assert_type(selected, typing.List[str])
@@ -1877,7 +1877,7 @@ class InputCheckboxGroup(
         choices
             The expected choices.
         timeout
-            The timeout for the expectation, by default None.
+            The timeout for the expectation. Defaults to `None`.
         """
         _MultipleDomItems.expect_locator_values_in_list(
             page=self.page,
@@ -1902,7 +1902,7 @@ class InputCheckboxGroup(
         selected
             The expected values of the selected checkboxes.
         timeout
-            The timeout for the expectation, by default None.
+            The timeout for the expectation. Defaults to `None`.
         """
         # Playwright doesn't like lists of size 0
         if len(selected) == 0:
@@ -1924,19 +1924,19 @@ class InputRadioButtons(
     _WidthContainerM,
     _RadioButtonCheckboxGroupBase,
 ):
-    """Input radio buttons control for :func:`~shiny.ui.input_radio_buttons`"""
+    """Input radio buttons control for :func:`~shiny.ui.input_radio_buttons`."""
 
     loc_selected: Locator
     """
-    The Playwright `Locator` of the selected radio button.
+    Playwright `Locator` of the selected radio button.
     """
     loc_choices: Locator
     """
-    The Playwright `Locator` of the radio button choices.
+    Playwright `Locator` of the radio button choices.
     """
     loc_choice_labels: Locator
     """
-    The Playwright `Locator` of the labels of the radio button choices.
+    Playwright `Locator` of the labels of the radio button choices.
     """
 
     def __init__(
@@ -1949,7 +1949,7 @@ class InputRadioButtons(
         Parameters
         ----------
         page
-            The Playwright page.
+            Playwright `Page` of the Shiny app.
         id
             The id of the radio buttons.
         """
@@ -1995,7 +1995,7 @@ class InputRadioButtons(
         selected
             The value of the selected radio button.
         timeout
-            The timeout for the action, by default None.
+            The timeout for the action. Defaults to `None`.
         """
         assert_type(selected, str)
         # Only need to set.
@@ -2018,7 +2018,7 @@ class InputRadioButtons(
         choices
             The expected choices.
         timeout
-            The timeout for the expectation, by default None.
+            The timeout for the expectation. Defaults to `None`.
         """
         _MultipleDomItems.expect_locator_values_in_list(
             page=self.page,
@@ -2043,7 +2043,7 @@ class InputRadioButtons(
         selected
             The expected value of the selected radio button.
         timeout
-            The timeout for the expectation, by default None.
+            The timeout for the expectation. Defaults to `None`.
         """
         # Playwright doesn't like lists of size 0. Instead, use `None`
         if selected is None:
@@ -2057,19 +2057,19 @@ class InputFile(
     # _ExpectPlaceholderAttrM,
     _InputWithLabel,
 ):
-    """Input file control for :func:`~shiny.ui.input_file`"""
+    """Input file control for :func:`~shiny.ui.input_file`."""
 
     loc_button: Locator
     """
-    The Playwright `Locator` of the button.
+    Playwright `Locator` of the button.
     """
     loc_file_display: Locator
     """
-    The Playwright `Locator` of the file display.
+    Playwright `Locator` of the file display.
     """
     loc_progress: Locator
     """
-    The Playwright `Locator` of the progress bar.
+    Playwright `Locator` of the progress bar.
     """
 
     # id: str,
@@ -2096,7 +2096,7 @@ class InputFile(
         Parameters
         ----------
         page
-            The Playwright page.
+            Playwright `Page` of the Shiny app.
         id
             The id of the file input.
         """
@@ -2130,9 +2130,9 @@ class InputFile(
         file_path
             The path to the file to upload.
         timeout
-            The timeout for the action, by default None.
+            The timeout for the action. Defaults to `None`.
         expect_complete_timeout
-            The timeout for the expectation that the upload is complete, by default 30 * 1000.
+            The timeout for the expectation that the upload is complete. Defaults to `30 * 1000`.
         """
         self.loc.wait_for(state="visible", timeout=timeout)
         self.loc.scroll_into_view_if_needed(timeout=timeout)
@@ -2152,7 +2152,7 @@ class InputFile(
         Parameters
         ----------
         timeout
-            The timeout for the expectation, by default None.
+            The timeout for the expectation. Defaults to `None`.
         """
         expect_to_have_style(self.loc_progress, "width", "100%", timeout=timeout)
 
@@ -2174,7 +2174,7 @@ class InputFile(
         accept
             The expected value of the `accept` attribute.
         timeout
-            The timeout for the expectation, by default None.
+            The timeout for the expectation. Defaults to `None`.
         """
         if isinstance(accept, list):
             accept = ",".join(accept)
@@ -2197,7 +2197,7 @@ class InputFile(
         button_label
             The expected value of the button label.
         timeout
-            The timeout for the expectation, by default None.
+            The timeout for the expectation. Defaults to `None`.
         """
         playwright_expect(self.loc_button).to_have_text(button_label, timeout=timeout)
 
@@ -2215,7 +2215,7 @@ class InputFile(
         capture
             The expected value of the `capture` attribute.
         timeout
-            The timeout for the expectation, by default None.
+            The timeout for the expectation. Defaults to `None`.
         """
         expect_attribute_to_have_value(self.loc, "capture", capture, timeout=timeout)
 
@@ -2229,15 +2229,15 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
 
     loc_irs: Locator
     """
-    The Playwright `Locator` of the input slider.
+    Playwright `Locator` of the input slider.
     """
     loc_irs_ticks: Locator
     """
-    The Playwright `Locator` of the input slider ticks.
+    Playwright `Locator` of the input slider ticks.
     """
     loc_play_pause: Locator
     """
-    The Playwright `Locator` of the play/pause button.
+    Playwright `Locator` of the play/pause button.
     """
 
     def __init__(
@@ -2251,7 +2251,7 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
         Parameters
         ----------
         page
-            The Playwright page.
+            Playwright `Page` of the Shiny app.
         id
             The id of the slider.
         """
@@ -2280,7 +2280,7 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
         value
             The expected tick labels.
         timeout
-            The timeout for the expectation, by default None.
+            The timeout for the expectation. Defaults to `None`.
         """
         if value is None:
             playwright_expect(self.loc_irs_ticks).to_have_count(0)
@@ -2297,7 +2297,7 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
         exists
             Whether the animate button should exist.
         timeout
-            The timeout for the expectation, by default None.
+            The timeout for the expectation. Defaults to `None`.
         """
         animate_count = 1 if exists else 0
         playwright_expect(self.loc_play_pause).to_have_count(animate_count)
@@ -2340,7 +2340,7 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
         Parameters
         ----------
         timeout
-            The timeout for the action, by default None.
+            The timeout for the action. Defaults to `None`.
         """
         self.loc_container.wait_for(state="visible", timeout=timeout)
         self.loc_container.scroll_into_view_if_needed(timeout=timeout)
@@ -2356,7 +2356,7 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
         Parameters
         ----------
         timeout
-            The timeout for the action, by default None.
+            The timeout for the action. Defaults to `None`.
         """
         self.loc_container.wait_for(state="visible", timeout=timeout)
         self.loc_container.scroll_into_view_if_needed(timeout=timeout)
@@ -2374,7 +2374,7 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
         value
             The expected value.
         timeout
-            The timeout for the expectation, by default None.
+            The timeout for the expectation. Defaults to `None`.
         """
         expect_attribute_to_have_value(
             self.loc, "data-min", value=value, timeout=timeout
@@ -2389,7 +2389,7 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
         value
             The expected value.
         timeout
-            The timeout for the expectation, by default None.
+            The timeout for the expectation. Defaults to `None`.
         """
         expect_attribute_to_have_value(
             self.loc, "data-max", value=value, timeout=timeout
@@ -2404,7 +2404,7 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
         value
             The expected value.
         timeout
-            The timeout for the expectation, by default None.
+            The timeout for the expectation. Defaults to `None`.
         """
         expect_attribute_to_have_value(
             self.loc, "data-step", value=value, timeout=timeout
@@ -2419,7 +2419,7 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
         value
             The expected value.
         timeout
-            The timeout for the expectation, by default None.
+            The timeout for the expectation. Defaults to `None`.
         """
         expect_attribute_to_have_value(
             self.loc, "data-grid", value=value, timeout=timeout
@@ -2434,7 +2434,7 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
         value
             The expected value.
         timeout
-            The timeout for the expectation, by default None.
+            The timeout for the expectation. Defaults to `None`.
         """
         expect_attribute_to_have_value(
             self.loc, "data-prettify-separator", value=value, timeout=timeout
@@ -2449,7 +2449,7 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
         value
             The expected value.
         timeout
-            The timeout for the expectation, by default None.
+            The timeout for the expectation. Defaults to `None`.
         """
         expect_attribute_to_have_value(
             self.loc, "data-prefix", value=value, timeout=timeout
@@ -2464,7 +2464,7 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
         value
             The expected value.
         timeout
-            The timeout for the expectation, by default None.
+            The timeout for the expectation. Defaults to `None`.
         """
         expect_attribute_to_have_value(
             self.loc, "data-postfix", value=value, timeout=timeout
@@ -2574,7 +2574,7 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
             y
                 The y-coordinate.
             delay
-                The delay between each move, by default sleep_time.
+                The delay between each move. Defaults to `sleep_time`.
             """
             mouse.move(x, y)
             time.sleep(delay)
@@ -2644,11 +2644,11 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
 
 
 class InputSlider(_InputSliderBase):
-    """Input slider control for :func:`~shiny.ui.input_slider`"""
+    """Input slider control for :func:`~shiny.ui.input_slider`."""
 
     loc_irs_label: Locator
     """
-    The Playwright `Locator` of the input slider label.
+    Playwright `Locator` of the input slider label.
     """
 
     def __init__(
@@ -2719,15 +2719,15 @@ class InputSlider(_InputSliderBase):
 
 
 class InputSliderRange(_InputSliderBase):
-    """Input slider range control for :func:`~shiny.ui.input_slider_range`"""
+    """Input slider range control for :func:`~shiny.ui.input_slider_range`."""
 
     loc_irs_label_from: Locator
     """
-    The Playwright `Locator` of the input slider label for the `from` handle.
+    Playwright `Locator` of the input slider label for the `from` handle.
     """
     loc_irs_label_to: Locator
     """
-    The Playwright `Locator` of the input slider label for the `to` handle.
+    Playwright `Locator` of the input slider label for the `to` handle.
     """
 
     def __init__(
@@ -3129,19 +3129,19 @@ class InputDate(_DateBase):
 
 
 class InputDateRange(_WidthContainerM, _InputWithLabel):
-    """Input date range control for :func:`~shiny.ui.input_date_range`"""
+    """Input date range control for :func:`~shiny.ui.input_date_range`."""
 
     loc_separator: Locator
     """
-    The Playwright `Locator` of the separator between the two input elements.
+    Playwright `Locator` of the separator between the two input elements.
     """
     loc_start: Locator
     """
-    The Playwright `Locator` of the start date input element.
+    Playwright `Locator` of the start date input element.
     """
     loc_end: Locator
     """
-    The Playwright `Locator` of the end date input element.
+    Playwright `Locator` of the end date input element.
     """
     date_start: _DateBase
     """
@@ -3438,11 +3438,11 @@ class _OutputBase:
     """
     loc: Locator
     """
-    The Playwright `Locator` of the output control.
+    Playwright `Locator` of the output control.
     """
     page: Page
     """
-    The Playwright `Page` of the Shiny app.
+    Playwright `Page` of the Shiny app.
     """
 
     def __init__(
@@ -3541,11 +3541,11 @@ class OutputText(
     _OutputInlineContainerM,
     _OutputTextValue,
 ):
-    """Text output control for :func:`~shiny.ui.text_output`"""
+    """Text output control for :func:`~shiny.ui.text_output`."""
 
     loc: Locator
     """
-    The Playwright `Locator` of the text output.
+    Playwright `Locator` of the text output.
     """
 
     def __init__(
@@ -3559,7 +3559,7 @@ class OutputText(
         Parameters
         ----------
         page
-            The Playwright page.
+            Playwright `Page` of the Shiny app.
         id
             The ID of the text output.
         """
@@ -3578,11 +3578,11 @@ class OutputText(
 
 
 class OutputCode(_OutputTextValue):
-    """Code output control for :func:`~shiny.ui.code_output`"""
+    """Code output control for :func:`~shiny.ui.code_output`."""
 
     loc: Locator
     """
-    The Playwright `Locator` of the code output.
+    Playwright `Locator` of the code output.
     """
 
     def __init__(self, page: Page, id: str) -> None:
@@ -3592,7 +3592,7 @@ class OutputCode(_OutputTextValue):
         Parameters
         ----------
         page
-            The Playwright page.
+            Playwright `Page` of the Shiny app.
         id
             The ID of the code output.
         """
@@ -3620,11 +3620,11 @@ class OutputCode(_OutputTextValue):
 
 
 class OutputTextVerbatim(_OutputTextValue):
-    """Verbatim text output control for :func:`~shiny.ui.text_output_verbatim`"""
+    """Verbatim text output control for :func:`~shiny.ui.text_output_verbatim`."""
 
     loc: Locator
     """
-    The Playwright `Locator` of the verbatim text output.
+    Playwright `Locator` of the verbatim text output.
     """
 
     def __init__(self, page: Page, id: str) -> None:
@@ -3634,7 +3634,7 @@ class OutputTextVerbatim(_OutputTextValue):
         Parameters
         ----------
         page
-            The Playwright page.
+            Playwright `Page` of the Shiny app.
         id
             The ID of the verbatim text output.
         """
@@ -3655,7 +3655,7 @@ class _OutputImageBase(_OutputInlineContainerM, _OutputBase):
 
     loc_img: Locator
     """
-    The Playwright `Locator` of the image.
+    Playwright `Locator` of the image.
     """
 
     def __init__(self, page: Page, id: str, loc_classes: str = "") -> None:
@@ -3665,7 +3665,7 @@ class _OutputImageBase(_OutputInlineContainerM, _OutputBase):
         Parameters
         ----------
         page
-            The Playwright page.
+            Playwright `Page` of the Shiny app.
         id
             The ID of the image.
         loc_classes
@@ -3803,7 +3803,7 @@ class OutputImage(_OutputImageBase):
         Parameters
         ----------
         page
-            The Playwright page.
+            Playwright `Page` of the Shiny app.
         id
             The ID of the image.
         """
@@ -3811,11 +3811,11 @@ class OutputImage(_OutputImageBase):
 
 
 class OutputPlot(_OutputImageBase):
-    """Plot output control for :func:`~shiny.ui.plot_output`"""
+    """Plot output control for :func:`~shiny.ui.plot_output`."""
 
     loc: Locator
     """
-    The Playwright `Locator` of the plot output.
+    Playwright `Locator` of the plot output.
     """
 
     def __init__(self, page: Page, id: str) -> None:
@@ -3825,7 +3825,7 @@ class OutputPlot(_OutputImageBase):
         Parameters
         ----------
         page
-            The Playwright page.
+            Playwright `Page` of the Shiny app.
         id
             The ID of the plot.
         """
@@ -3833,7 +3833,7 @@ class OutputPlot(_OutputImageBase):
 
 
 class OutputUi(_OutputInlineContainerM, _OutputBase):
-    """UI output control for :func:`~shiny.ui.ui_output`"""
+    """UI output control for :func:`~shiny.ui.ui_output`."""
 
     def __init__(self, page: Page, id: str) -> None:
         """
@@ -3842,7 +3842,7 @@ class OutputUi(_OutputInlineContainerM, _OutputBase):
         Parameters
         ----------
         page
-            The Playwright page.
+            Playwright `Page` of the Shiny app.
         id
             The ID of the UI output.
         """
@@ -3861,7 +3861,7 @@ class OutputUi(_OutputInlineContainerM, _OutputBase):
 
 # When making selectors, use `xpath` so that direct decendents can be checked
 class OutputTable(_OutputBase):
-    """Table output control for :func:`~shiny.ui.table_output`"""
+    """Table output control for :func:`~shiny.ui.table_output`."""
 
     def __init__(self, page: Page, id: str) -> None:
         """
@@ -3870,7 +3870,7 @@ class OutputTable(_OutputBase):
         Parameters
         ----------
         page
-            The Playwright page.
+            Playwright `Page` of the Shiny app.
         id
             The ID of the table.
         """
@@ -4012,23 +4012,23 @@ class Sidebar(
     _WidthLocM,
     _InputWithContainer,
 ):
-    """Sidebar control for func: `~shiny.ui.sidebar`"""
+    """Sidebar control for func: `~shiny.ui.sidebar`."""
 
     loc_container: Locator
     """
-    `loc_container` is the locator of the container of the input.
+    Playwright `Locator` for the sidebar layout.
     """
     loc: Locator
     """
-    The Playwright `Locator` for the sidebar.
+    Playwright `Locator` for the sidebar.
     """
     loc_handle: Locator
     """
-    The Playwright `Locator` for the handle of the sidebar.
+    Playwright `Locator` for the open/close handle of the sidebar.
     """
     loc_position: Locator
     """
-    The Playwright `Locator` for the position of the sidebar.
+    Playwright `Locator` for the position of the sidebar.
     """
 
     def __init__(self, page: Page, id: str) -> None:
@@ -4038,7 +4038,7 @@ class Sidebar(
         Parameters
         ----------
         page
-            The Playwright page.
+            Playwright `Page` of the Shiny app.
         id
             The ID of the sidebar.
         """
@@ -4092,7 +4092,7 @@ class Sidebar(
         Parameters
         ----------
         exists
-            True if the sidebar handle should exist, False otherwise.
+            `True` if the sidebar open/close handle should exist, `False` otherwise.
         timeout
             The maximum time to wait for the sidebar handle to appear. Defaults to `None`.
         """
@@ -4105,7 +4105,7 @@ class Sidebar(
         Parameters
         ----------
         open
-            True if the sidebar should be open, False otherwise.
+            `True` if the sidebar should be open, `False` to be closed.
         timeout
             The maximum time to wait for the sidebar to open or close. Defaults to `None`.
         """
@@ -4120,7 +4120,7 @@ class Sidebar(
         Parameters
         ----------
         open
-            True if the sidebar should be open, False otherwise.
+            `True` to open the sidebar and `False` to close it.
         timeout
             The maximum time to wait for the sidebar to open or close. Defaults to `None`.
         """
@@ -4148,7 +4148,7 @@ class _CardBodyP(_InputBaseP, Protocol):
 
     loc_body: Locator
     """
-    The Playwright `Locator` for the body element of the card control.
+    Playwright `Locator` for the body element of the card control.
     """
 
 
@@ -4183,7 +4183,7 @@ class _CardFooterLayoutP(_InputBaseP, Protocol):
 
     loc_footer: Locator
     """
-    The Playwright `Locator` for the footer element.
+    Playwright `Locator` for the footer element.
     """
 
 
@@ -4214,68 +4214,69 @@ class _CardFooterM:
         )
 
 
-class _CardFullScreenLayoutP(_OutputBaseP, Protocol):
+class _CardValueBoxFullScreenLayoutP(_OutputBaseP, Protocol):
     """
-    Represents a card full-screen layout for the Playwright controls.
+    Represents a card / Value Box full-screen layout for the Playwright controls.
     """
 
     loc_title: Locator
     """
-    The Playwright `Locator` for the title element.
+    Playwright `Locator` for the title element.
     """
     _loc_fullscreen: Locator
     """
-    The Playwright `Locator` for the full-screen element.
+    Playwright `Locator` for the full-screen element.
     """
     _loc_close_button: Locator
     """
-    The Playwright `Locator` for the close button element.
+    Playwright `Locator` for the close button element.
     """
 
 
-class _CardFullScreenM:
+class _CardValueBoxFullScreenM:
     """
-    Represents a class for managing full screen functionality of a card.
+    Represents a class for managing full screen functionality of a Card or Value Box.
     """
 
+    # TODO-karan-test: Convert `open_full_screen` and `close_full_screen` to `set_full_screen(open:bool)`
     def open_full_screen(
-        self: _CardFullScreenLayoutP, *, timeout: Timeout = None
+        self: _CardValueBoxFullScreenLayoutP, *, timeout: Timeout = None
     ) -> None:
         """
-        Opens the card in full screen mode.
+        Opens the element in full screen mode.
 
         Parameters
         ----------
         timeout
-            The maximum time to wait for the card to open in full screen mode. Defaults to `None`.
+            The maximum time to wait for full screen mode to open. Defaults to `None`.
         """
         self.loc_title.hover(timeout=timeout)
         self._loc_fullscreen.wait_for(state="visible", timeout=timeout)
         self._loc_fullscreen.click(timeout=timeout)
 
     def close_full_screen(
-        self: _CardFullScreenLayoutP, *, timeout: Timeout = None
+        self: _CardValueBoxFullScreenLayoutP, *, timeout: Timeout = None
     ) -> None:
         """
-        Closes the card from full screen mode.
+        Exits full screen mode.
 
         Parameters
         ----------
         timeout
-            The maximum time to wait for the card to close from full screen mode. Defaults to `None`.
+            The maximum time to wait to wait for full screen mode to exit. Defaults to `None`.
         """
         self._loc_close_button.click(timeout=timeout)
 
-    def expect_full_screen_open(
-        self: _CardFullScreenLayoutP, open: bool, *, timeout: Timeout = None
+    def expect_full_screen(
+        self: _CardValueBoxFullScreenLayoutP, open: bool, *, timeout: Timeout = None
     ) -> None:
         """
-        Verifies if the card is expected to be in full screen mode.
+        Verifies if the full screen mode is currently open.
 
         Parameters
         ----------
         open
-            True if the card is expected to be in full screen mode, False otherwise.
+            `True` if the item is to be in full screen mode, `False` otherwise.
         timeout
             The maximum time to wait for the verification. Defaults to `None`.
         """
@@ -4284,15 +4285,18 @@ class _CardFullScreenM:
         )
 
     def expect_full_screen_available(
-        self: _CardFullScreenLayoutP, available: bool, *, timeout: Timeout = None
+        self: _CardValueBoxFullScreenLayoutP,
+        available: bool,
+        *,
+        timeout: Timeout = None,
     ) -> None:
         """
-        Expects the card to be available for full screen mode.
+        Expects whether full screen mode is available for the element.
 
         Parameters
         ----------
         available
-            True if the value box is expected to be available for full screen mode, False otherwise.
+            `True` if the element is expected to be available for full screen mode, False otherwise.
         timeout
             The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
@@ -4303,38 +4307,38 @@ class _CardFullScreenM:
 
 class ValueBox(
     _WidthLocM,
-    _CardFullScreenM,
+    _CardValueBoxFullScreenM,
     _InputWithContainer,
 ):
     """
-    ValueBox control for :func:`~shiny.ui.value_box`
+    Value Box control for :func:`~shiny.ui.value_box`.
     """
 
     loc: Locator
     """
-    `Locator` for the value box's value
+    Playwright `Locator` for the value box's value.
     """
     loc_showcase: Locator
     """
-    `Locator` for the value box showcase
+    Playwright `Locator` for the value box showcase.
     """
     loc_title: Locator
     """
-    `Locator` for the value box title
+    Playwright `Locator` for the value box title.
     """
     loc_body: Locator
     """
-    `Locator` for the value box body
+    Playwright `Locator` for the value box body.
     """
 
     def __init__(self, page: Page, id: str) -> None:
         """
-        Initializes a new instance of the ValueBox class.
+        Initializes a new instance of the `ValueBox` class.
 
         Parameters
         ----------
         page
-            The Playwright page object.
+            Playwright `Page` of the Shiny app.
         id
             The ID of the value box.
 
@@ -4433,7 +4437,8 @@ class ValueBox(
         ----------
         text
             The expected text pattern or list of patterns/strings.
-            Note: If testing against multiple elements, text should be an array
+
+            Note: If testing against multiple elements, text should be an array.
         timeout
             The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
@@ -4443,36 +4448,46 @@ class ValueBox(
         )
 
 
-class Card(_WidthLocM, _CardFooterM, _CardBodyM, _CardFullScreenM, _InputWithContainer):
+class Card(
+    _WidthLocM,
+    _CardFooterM,
+    _CardBodyM,
+    _CardValueBoxFullScreenM,
+    _InputWithContainer,
+):
     """
-    Card control for :func:`~shiny.ui.card`
+    Card control for :func:`~shiny.ui.card`.
     """
 
+    loc_container: Locator
+    """
+    Playwright `Locator` for the card container.
+    """
     loc: Locator
     """
-    `Locator` for the card's value
+    Playwright `Locator` for the card's value.
     """
     loc_title: Locator
     """
-    `Locator` for the card title
+    Playwright `Locator` for the card title.
     """
     loc_footer: Locator
     """
-    `Locator` for the card footer
+    Playwright `Locator` for the card footer.
     """
     loc_body: Locator
     """
-    `Locator` for the card body
+    Playwright `Locator` for the card body.
     """
 
     def __init__(self, page: Page, id: str) -> None:
         """
-        Initializes a new instance of the Card class.
+        Initializes a new instance of the `Card` class.
 
         Parameters
         ----------
         page
-            The Playwright page object.
+            Playwright `Page` of the Shiny app.
         id
             The ID of the card.
         """
@@ -4508,8 +4523,9 @@ class Card(_WidthLocM, _CardFooterM, _CardBodyM, _CardFullScreenM, _InputWithCon
         Parameters
         ----------
         text
-            The expected text pattern or string
-            Note: None if the header is expected to not exist.
+            The expected text pattern or string.
+
+            Note: `None` if the header is expected to not exist.
         timeout
             The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
@@ -4597,29 +4613,29 @@ class Accordion(
     _WidthLocM,
     _InputWithContainer,
 ):
-    """Accordion control for :func:`~shiny.ui.accordion`"""
+    """Accordion control for :func:`~shiny.ui.accordion`."""
 
     loc: Locator
     """
-    `Locator` for the accordion
+    Playwright `Locator` for each accordion items.
     """
     loc_container: Locator
     """
-    `Locator` for the accordion container
+    Playwright `Locator` for the accordion container.
     """
-    loc_open: Locator
-    """
-    `Locator` for the open accordion panel
-    """
+    # loc_open: Locator
+    # """
+    # `Locator` for the open accordion panel
+    # """
 
     def __init__(self, page: Page, id: str) -> None:
         """
-        Initializes a new instance of the Accordion class.
+        Initializes a new instance of the `Accordion` class.
 
         Parameters
         ----------
         page
-            The Playwright page object.
+            Playwright `Page` of the Shiny app.
         id
             The ID of the accordion.
         """
@@ -4629,14 +4645,14 @@ class Accordion(
             loc="> div.accordion-item",
             loc_container=f"div#{id}.accordion.shiny-bound-input",
         )
-        self.loc_open = self.loc.locator(
-            # Return self
-            "xpath=.",
-            # Simple approach as position is not needed
-            has=page.locator(
-                "> div.accordion-collapse.show",
-            ),
-        )
+        # self.loc_open = self.loc.locator(
+        #     # Return self
+        #     "xpath=.",
+        #     # Simple approach as position is not needed
+        #     has=page.locator(
+        #         "> div.accordion-collapse.show",
+        #     ),
+        # )
 
     def expect_height(self, value: StyleValue, *, timeout: Timeout = None) -> None:
         """
@@ -4760,38 +4776,38 @@ class AccordionPanel(
     _InputWithContainer,
 ):
     """
-    AccordionPanel control for :func:`~shiny.ui.accordion_panel`
+    AccordionPanel control for :func:`~shiny.ui.accordion_panel`.
     """
 
     loc_label: Locator
     """
-    `Locator` for the accordion panel label
+    Playwright `Locator` for the accordion panel's label.
     """
     loc_icon: Locator
     """
-    `Locator` for the accordion panel icon
+    Playwright `Locator` for the accordion panel's icon.
     """
     loc_body: Locator
     """
-    `Locator` for the accordion panel body
+    Playwright `Locator` for the accordion panel's body.
     """
     loc_header: Locator
     """
-    `Locator` for the accordion panel header
+    Playwright `Locator` for the accordion panel's header.
     """
-    loc_body_visible: Locator
-    """
-    `Locator` for the visible accordion panel body
-    """
+    # loc_body_visible: Locator
+    # """
+    # Playwright `Locator` for the visible accordion panel body
+    # """
 
     def __init__(self, page: Page, id: str, data_value: str) -> None:
         """
-        Initializes a new instance of the AccordionPanel class.
+        Initializes a new instance of the `AccordionPanel` class.
 
         Parameters
         ----------
         page
-            The Playwright page object.
+            Playwright `Page` of the Shiny app.
         id
             The ID of the accordion panel.
         data_value
@@ -4814,7 +4830,7 @@ class AccordionPanel(
 
         self.loc_body = self.loc.locator("> .accordion-collapse")
         self.loc_header = self.loc.locator("> .accordion-header")
-        self.loc_body_visible = self.loc.locator("> .accordion-collapse.show")
+        self._loc_body_visible = self.loc.locator("> .accordion-collapse.show")
 
     def expect_label(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
         """
@@ -4862,7 +4878,7 @@ class AccordionPanel(
         Parameters
         ----------
         is_open
-            True if the accordion panel is expected to be open, False otherwise.
+            `True` if the accordion panel is expected to be open, `False` otherwise.
         timeout
             The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
@@ -4876,14 +4892,14 @@ class AccordionPanel(
         Parameters
         ----------
         open
-            True if the control is expected to be open, False otherwise.
+            `True` to open the accordion panel, False to close it.
         timeout
             The maximum time to wait for the control to be visible and interactable. Defaults to `None`.
         """
         self.loc.wait_for(state="visible", timeout=timeout)
         self.loc.scroll_into_view_if_needed(timeout=timeout)
         expect_not_to_have_class(self.loc_body, "collapsing", timeout=timeout)
-        if self.loc_body_visible.count() != int(open):
+        if self._loc_body_visible.count() != int(open):
             self.toggle(timeout=timeout)
 
     def toggle(self, *, timeout: Timeout = None) -> None:
@@ -4905,15 +4921,15 @@ class _OverlayBase(_InputBase):
 
     loc_trigger: Locator
     """
-    `loc_trigger` is the locator of the trigger element.
+    Playwright `Locator` for the trigger element.
     """
     loc_overlay_body: Locator
     """
-    `loc_overlay_body` is the locator of the overlay body.
+    Playwright `Locator` for the overlay body.
     """
     loc_overlay_container: Locator
     """
-    `loc_overlay_container` is the locator of the overlay container.
+    Playwright `Locator` for of the overlay container.
     """
 
     def __init__(
@@ -4926,16 +4942,16 @@ class _OverlayBase(_InputBase):
         overlay_selector: str,
     ) -> None:
         """
-        Initializes a new instance of the OverlayBase class.
+        Initializes a new instance of the `OverlayBase` class.
 
         Parameters
         ----------
         page
-            The Playwright `Page` object.
+            Playwright `Page` of the Shiny app.
         id
             The ID of the overlay.
         loc
-            The Playwright `Locator` of the overlay.
+            Playwright `Locator` of the overlay.
         overlay_name
             The name of the overlay.
         overlay_selector
@@ -5007,7 +5023,7 @@ class _OverlayBase(_InputBase):
         Parameters
         ----------
         active
-            True if the overlay is expected to be active, False otherwise.
+            `True` if the overlay is expected to be active, False otherwise.
         timeout
             The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
@@ -5039,29 +5055,29 @@ class _OverlayBase(_InputBase):
 
 
 class Popover(_OverlayBase):
-    """Popover control for :func:`~shiny.ui.popover`"""
+    """Popover control for :func:`~shiny.ui.popover`."""
 
     loc_trigger: Locator
     """
-    `loc_trigger` is the locator of the trigger element.
+    Playwright `Locator` for the trigger element that opens/closes the popover.
     """
     loc_overlay_body: Locator
     """
-    `loc_overlay_body` is the locator of the overlay body.
+    Playwright `Locator` for the popover body.
     """
     loc_overlay_container: Locator
     """
-    `loc_overlay_container` is the locator of the overlay container.
+    Playwright `Locator` for the popover container.
     """
 
     def __init__(self, page: Page, id: str) -> None:
         """
-        Initializes a new instance of the Popover class.
+        Initializes a new instance of the `Popover` class.
 
         Parameters
         ----------
         page
-            The Playwright page object.
+            Playwright `Page` of the Shiny app.
         id
             The ID of the popover.
         """
@@ -5080,7 +5096,7 @@ class Popover(_OverlayBase):
         Parameters
         ----------
         open
-            True if the popover is expected to be open, False otherwise.
+            `True` to open the popover and `False` to close it.
         timeout
             The maximum time to wait for the popover to be visible and interactable. Defaults to `None`.
         """
@@ -5102,37 +5118,37 @@ class Popover(_OverlayBase):
 
 
 class Tooltip(_OverlayBase):
-    """Tooltip control for :func:`~shiny.ui.tooltip`"""
+    """Tooltip control for :func:`~shiny.ui.tooltip`."""
 
     loc_container: Locator
     """
-    `loc_container` is the locator of the container of the input.
+    Playwright `Locator` for the container tooltip.
     """
     loc: Locator
     """
-    `loc` is the locator of the input.
+    Playwright `Locator` for the tooltip content.
     """
     loc_trigger: Locator
     """
-    `loc_trigger` is the locator of the trigger element.
+    Playwright `Locator` for the trigger element.
     """
     loc_overlay_body: Locator
     """
-    `loc_overlay_body` is the locator of the overlay body.
+    Playwright `Locator` for the overlay body.
     """
     loc_overlay_container: Locator
     """
-    `loc_overlay_container` is the locator of the overlay container.
+    Playwright `Locator` for the overlay container.
     """
 
     def __init__(self, page: Page, id: str) -> None:
         """
-        Initializes a new instance of the Tooltip class.
+        Initializes a new instance of the `Tooltip` class.
 
         Parameters
         ----------
         page
-            The Playwright page object.
+            Playwright `Page` of the Shiny app.
         id
             The ID of the tooltip.
         """
@@ -5151,7 +5167,7 @@ class Tooltip(_OverlayBase):
         Parameters
         ----------
         open
-            True if the tooltip is expected to be open, False otherwise.
+            `True` to open the tooltip and `False` to close it.
         timeout
             The maximum time to wait for the tooltip to be visible and interactable. Defaults to `None`.
         """
@@ -5294,28 +5310,28 @@ class _NavItemBase(_InputWithContainer):
 
 
 class NavItem(_InputWithContainer):
-    """NavItem control for :func:`~shiny.ui.nav_item`"""
+    """Navigation item control for :func:`~shiny.ui.nav_item`."""
 
     """
-    `Locator` for the content of the nav item.
+    Playwright `Locator` for the content of the nav item.
     """
     loc: Locator
     """
-    `Locator` for the nav item.
+    Playwright `Locator` for the nav item.
     """
     loc_container: Locator
     """
-    `Locator` for the nav item container.
+    Playwright `Locator` for the nav item container.
     """
 
     def __init__(self, page: Page, id: str, data_value: str) -> None:
         """
-        Initializes a new instance of the NavItem class.
+        Initializes a new instance of the `NavItem` class.
 
         Parameters
         ----------
         page
-            The Playwright page object.
+            Playwright `Page` of the Shiny app.
         id
             The ID of the nav item.
         data_value
@@ -5334,8 +5350,11 @@ class NavItem(_InputWithContainer):
     # get active content instead of assertion
     @property
     def loc_content(self) -> Locator:
-        """Returns the locator for the content of the nav item."""
-        """Note. This requires 2 steps. Will not work if the overlay element is rapidly created during locator fetch"""
+        """
+        Returns the locator for the content of the nav item.
+
+        Note: This requires 2 steps. Will not work if the overlay element is rapidly created during locator fetch
+        """
         datatab_id = self.loc_container.get_attribute("data-tabsetid")
         return self.page.locator(
             f"div.tab-content[data-tabsetid='{datatab_id}'] > div.tab-pane[data-value='{self._data_value}']"
@@ -5359,7 +5378,7 @@ class NavItem(_InputWithContainer):
         Parameters
         ----------
         active
-            True if the nav item is expected to be active, False otherwise.
+            `True` if the nav item is expected to be active, False otherwise.
         timeout
             The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
@@ -5380,25 +5399,25 @@ class NavItem(_InputWithContainer):
 
 
 class NavsetTab(_NavItemBase):
-    """NavsetTab control for :func:`~shiny.ui.navset_tab`"""
+    """NavsetTab control for :func:`~shiny.ui.navset_tab`."""
 
     loc: Locator
     """
-    `Locator` for the nav set tab.
+    Playwright `Locator` for the nav set tab.
     """
     loc_container: Locator
     """
-    `Locator` for the nav set tab container.
+    Playwright `Locator` for the nav set tab container.
     """
 
     def __init__(self, page: Page, id: str) -> None:
         """
-        Initializes a new instance of the NavsetTab class.
+        Initializes a new instance of the `NavsetTab` class.
 
         Parameters
         ----------
         page
-            The Playwright page object.
+            Playwright `Page` of the Shiny app.
         id
             The ID of the nav set tab.
         """
@@ -5411,16 +5430,16 @@ class NavsetTab(_NavItemBase):
 
 
 class NavsetPill(_NavItemBase):
-    """NavsetPill control for :func:`~shiny.ui.navset_pill`"""
+    """NavsetPill control for :func:`~shiny.ui.navset_pill`."""
 
     def __init__(self, page: Page, id: str) -> None:
         """
-        Initializes a new instance of the NavsetPill class.
+        Initializes a new instance of the `NavsetPill` class.
 
         Parameters
         ----------
         page
-            The Playwright page object.
+            Playwright `Page` of the Shiny app.
         id
             The ID of the nav set pill.
         """
@@ -5433,16 +5452,16 @@ class NavsetPill(_NavItemBase):
 
 
 class NavsetUnderline(_NavItemBase):
-    """NavsetUnderline control for :func:`~shiny.ui.navset_underline`"""
+    """NavsetUnderline control for :func:`~shiny.ui.navset_underline`."""
 
     def __init__(self, page: Page, id: str) -> None:
         """
-        Initializes a new instance of the NavsetUnderline class.
+        Initializes a new instance of the `NavsetUnderline` class.
 
         Parameters
         ----------
         page
-            The Playwright page object.
+            Playwright `Page` of the Shiny app.
         id
             The ID of the nav set underline.
         """
@@ -5455,16 +5474,16 @@ class NavsetUnderline(_NavItemBase):
 
 
 class NavsetPillList(_NavItemBase):
-    """NavsetPillList control for :func:`~shiny.ui.navset_pill_list`"""
+    """NavsetPillList control for :func:`~shiny.ui.navset_pill_list`."""
 
     def __init__(self, page: Page, id: str) -> None:
         """
-        Initializes a new instance of the NavsetPillList class.
+        Initializes a new instance of the `NavsetPillList` class.
 
         Parameters
         ----------
         page
-            The Playwright page object.
+            Playwright `Page` of the Shiny app.
         id
             The ID of the nav set pill list.
         """
@@ -5477,16 +5496,16 @@ class NavsetPillList(_NavItemBase):
 
 
 class NavsetCardTab(_NavItemBase):
-    """NavsetCardTab control for :func:`~shiny.ui.navset_card_tab`"""
+    """NavsetCardTab control for :func:`~shiny.ui.navset_card_tab`."""
 
     def __init__(self, page: Page, id: str) -> None:
         """
-        Initializes a new instance of the NavsetCardTab class.
+        Initializes a new instance of the `NavsetCardTab` class.
 
         Parameters
         ----------
         page
-            The Playwright page object.
+            Playwright `Page` of the Shiny app.
         id
             The ID of the nav set card tab.
         """
@@ -5499,16 +5518,16 @@ class NavsetCardTab(_NavItemBase):
 
 
 class NavsetCardPill(_NavItemBase):
-    """NavsetCardPill control for :func:`~shiny.ui.navset_card_pill`"""
+    """NavsetCardPill control for :func:`~shiny.ui.navset_card_pill`."""
 
     def __init__(self, page: Page, id: str) -> None:
         """
-        Initializes a new instance of the NavsetCardPill class.
+        Initializes a new instance of the `NavsetCardPill` class.
 
         Parameters
         ----------
         page
-            The Playwright page object.
+            Playwright `Page` of the Shiny app.
         id
             The ID of the nav set card pill.
         """
@@ -5521,16 +5540,16 @@ class NavsetCardPill(_NavItemBase):
 
 
 class NavsetCardUnderline(_NavItemBase):
-    """NavsetCardUnderline control for :func:`~shiny.ui.navset_card_underline`"""
+    """NavsetCardUnderline control for :func:`~shiny.ui.navset_card_underline`."""
 
     def __init__(self, page: Page, id: str) -> None:
         """
-        Initializes a new instance of the NavsetCardUnderline class.
+        Initializes a new instance of the `NavsetCardUnderline` class.
 
         Parameters
         ----------
         page
-            The Playwright page object.
+            Playwright `Page` of the Shiny app.
         id
             The ID of the nav set card underline.
         """
@@ -5543,16 +5562,16 @@ class NavsetCardUnderline(_NavItemBase):
 
 
 class NavsetHidden(_NavItemBase):
-    """NavsetHidden control for :func:`~shiny.ui.navset_hidden`"""
+    """NavsetHidden control for :func:`~shiny.ui.navset_hidden`."""
 
     def __init__(self, page: Page, id: str) -> None:
         """
-        Initializes a new instance of the NavsetHidden class.
+        Initializes a new instance of the `NavsetHidden` class.
 
         Parameters
         ----------
         page
-            The Playwright page object.
+            Playwright `Page` of the Shiny app.
         id
             The ID of the nav set hidden.
         """
@@ -5565,16 +5584,16 @@ class NavsetHidden(_NavItemBase):
 
 
 class NavsetBar(_NavItemBase):
-    """NavsetBar control for :func:`~shiny.ui.navset_bar`"""
+    """NavsetBar control for :func:`~shiny.ui.navset_bar`."""
 
     def __init__(self, page: Page, id: str) -> None:
         """
-        Initializes a new instance of the NavsetBar class.
+        Initializes a new instance of the `NavsetBar` class.
 
         Parameters
         ----------
         page
-            The Playwright page object.
+            Playwright `Page` of the Shiny app.
         id
             The ID of the nav set bar.
         """
@@ -5588,30 +5607,34 @@ class NavsetBar(_NavItemBase):
 
 class OutputDataFrame(_InputWithContainer):
     """
-    OutputDataFrame control for :func:`~shiny.ui.output_data_frame`
+    OutputDataFrame control for :func:`~shiny.ui.output_data_frame`.
     """
 
+    loc_container: Locator
+    """
+    Playwright `Locator` for the data frame container.
+    """
     loc: Locator
     """
-    `Locator` for the data frame
+    Playwright `Locator` for the data frame.
     """
     loc_head: Locator
     """
-    `Locator` for the data frame columns
+    Playwright `Locator` for the head of the data frame table.
     """
     loc_body: Locator
     """
-    `Locator` for the data frame rows
+    Playwright `Locator` for the body of the data frame table.
     """
 
     def __init__(self, page: Page, id: str) -> None:
         """
-        Initializes a new instance of the OutputDataFrame class.
+        Initializes a new instance of the `OutputDataFrame` class.
 
         Parameters
         ----------
         page
-            The Playwright page object.
+            Playwright `Page` of the Shiny app.
         id
             The ID of the data frame.
         """
@@ -5701,7 +5724,7 @@ class OutputDataFrame(_InputWithContainer):
             The expected column labels.
             Note: None if the column labels are expected to not exist.
         edit
-            True if the data frame is in edit mode, False otherwise.
+            `True` if the data frame is to be in edit mode, `False` otherwise.
         timeout
             The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
@@ -5927,9 +5950,10 @@ class OutputDataFrame(_InputWithContainer):
         cell.click(timeout=timeout)
         cell.locator("> textarea").fill(text)
 
-    # TODO-karan-test: Rename to `set_column_sorting?`
+    # TODO-karan-test: Rename to `set_sort?`
     # TODO-karan-test: Add support for a list of columns
     # TODO-karan-test: Add support for direction
+    # TODO-karan-test: Add method for testing direction
     def set_column_sort(
         self,
         col: int,
@@ -5948,9 +5972,10 @@ class OutputDataFrame(_InputWithContainer):
         """
         self.loc_column_label.nth(col).click(timeout=timeout)
 
-    # TODO-karan-test: Rename to `set_column_filters?`
+    # TODO-karan-test: Rename to `set_filter?`
     # TODO-karan-test: Add support for a list of columns ? If so, all other columns should be reset
     # TODO-karan-test: Add support for a None value reset all filters
+    # TODO-karan-test: Add method for testing direction
     def set_column_filter(
         self,
         col: int,
@@ -6043,17 +6068,17 @@ class OutputDataFrame(_InputWithContainer):
 # TODO: Use mixin for dowloadlink and download button
 class DownloadLink(_InputActionBase):
     """
-    DownloadLink control for :func:`~shiny.ui.download_link`
+    DownloadLink control for :func:`~shiny.ui.download_link`.
     """
 
     def __init__(self, page: Page, id: str) -> None:
         """
-        Initializes a new instance of the DownloadLink class.
+        Initializes a new instance of the `DownloadLink` class.
 
         Parameters
         ----------
         page
-            The Playwright page object.
+            Playwright `Page` of the Shiny app.
         id
             The ID of the download link.
         """
@@ -6074,12 +6099,12 @@ class DownloadButton(
 
     def __init__(self, page: Page, id: str) -> None:
         """
-        Initializes a new instance of the DownloadButton class.
+        Initializes a new instance of the `DownloadButton` class.
 
         Parameters
         ----------
         page
-            The Playwright page object.
+            Playwright `Page` of the Shiny app.
         id
             The ID of the download button.
         """

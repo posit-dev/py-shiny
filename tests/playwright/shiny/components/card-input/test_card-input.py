@@ -27,25 +27,25 @@ def test_card_input(page: Page, app_path: str, sel_card: str, sel_vb: str) -> No
     out_vb = OutputCode(page, "out_value_box")
 
     # Open and close card full screen, check input value ------
-    card.expect_full_screen_open(False)
+    card.expect_full_screen(False)
     out_card.expect_value("False")
 
     card.open_full_screen()
-    card.expect_full_screen_open(True)
+    card.expect_full_screen(True)
     out_card.expect_value("True")
 
     card.close_full_screen()
-    card.expect_full_screen_open(False)
+    card.expect_full_screen(False)
     out_card.expect_value("False")
 
     # Open and close value box full screen, check input value ------
-    vb.expect_full_screen_open(False)
+    vb.expect_full_screen(False)
     out_vb.expect_value("False")
 
     vb.open_full_screen()
-    vb.expect_full_screen_open(True)
+    vb.expect_full_screen(True)
     out_vb.expect_value("True")
 
     vb.close_full_screen()
-    vb.expect_full_screen_open(False)
+    vb.expect_full_screen(False)
     out_vb.expect_value("False")
