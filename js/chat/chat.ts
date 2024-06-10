@@ -4,8 +4,9 @@ import { property } from "lit/decorators.js";
 
 import ClipboardJS from "clipboard";
 import { sanitize } from "dompurify";
+import hljs from "highlight.js/lib/common";
+import { parse } from "marked";
 
-import { marked } from "./_highlight";
 import { createElement } from "./_utils";
 
 type Message = {
@@ -50,7 +51,8 @@ class ChatMessage extends LightElement {
   @property() content = "...";
 
   render(): ReturnType<LitElement["render"]> {
-    const content_html = marked.parse(this.content) as string;
+    // Parse string as markdown and sanitize
+    const content_html = parse(this.content) as string;
     const safe_html = sanitize(content_html);
 
     const icon =
@@ -72,19 +74,26 @@ class ChatMessage extends LightElement {
 
   updated(changedProperties: Map<string, unknown>): void {
     if (changedProperties.has("content")) {
-      this.#enableCodeCopy();
+      this.#highlightAndCodeCopy();
     }
   }
 
-  // When content is parsed in the render() method(), and code is detected/added, a copy
-  // button is added to the code block. This method enables the copy-to-clipboard
-  // functionality.
-  #enableCodeCopy(): void {
-    const btn = this.querySelector(".code-copy-button");
-    if (!btn) return;
-    this.querySelectorAll(".code-copy-button").forEach((btn) => {
-      const code = btn.parentElement as HTMLElement;
-      const clipboard = new ClipboardJS(btn, { target: () => code });
+  // Highlight code blocks after the element is rendered
+  #highlightAndCodeCopy(): void {
+    const el = this.querySelector("pre code");
+    if (!el) return;
+    this.querySelectorAll<HTMLElement>("pre code").forEach((el) => {
+      // Highlight the code
+      hljs.highlightElement(el);
+      // Add a button to the code block to copy to clipboard
+      const btn = createElement("button", {
+        class: "code-copy-button",
+        title: "Copy to clipboard",
+      });
+      btn.innerHTML = '<i class="bi"></i>';
+      el.prepend(btn);
+      // Add the clipboard functionality
+      const clipboard = new ClipboardJS(btn, { target: () => el });
       clipboard.on("success", function (e: ClipboardJS.Event) {
         btn.classList.add("code-copy-button-checked");
         setTimeout(
