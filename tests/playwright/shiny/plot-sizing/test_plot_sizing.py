@@ -41,7 +41,7 @@ def test_output_image_kitchen(page: Page, local_app: ShinyAppProc) -> None:
             img = OutputPlot(page, plotid)
             # These assertions are mostly to ensure that the plots load before we
             # evaluate their sizes
-            img.expect_inline(inline=False)
+            img.expect_inline(False)
             img.expect_img_src(re.compile(r"data:image/png;base64"), timeout=20000)
 
             rect = page.evaluate(
