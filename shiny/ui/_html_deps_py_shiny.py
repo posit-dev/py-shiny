@@ -27,8 +27,8 @@ def data_frame_deps() -> HTMLDependency:
     )
 
 
-def chat_deps() -> HTMLDependency:
-    return HTMLDependency(
+def chat_deps() -> list[HTMLDependency]:
+    dep = HTMLDependency(
         name="shiny-chat-output",
         version=__version__,
         source={
@@ -38,6 +38,8 @@ def chat_deps() -> HTMLDependency:
         script={"src": "chat.js", "type": "module"},
         stylesheet={"href": "chat.css"},
     )
+    # Chat's <textarea> input autoresizes
+    return [dep, autoresize_dependency()]
 
 
 def autoresize_dependency() -> HTMLDependency:

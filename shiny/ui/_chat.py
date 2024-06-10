@@ -24,7 +24,7 @@ from ._chat_types import (
     normalize_message,
     normalize_message_chunk,
 )
-from ._html_deps_py_shiny import autoresize_dependency, chat_deps
+from ._html_deps_py_shiny import chat_deps
 from .fill import as_fill_item, as_fillable_container
 
 __all__ = ("Chat", "chat_ui", "ChatMessage", "ChatMessageChunk")
@@ -161,6 +161,9 @@ class Chat(Generic[T]):
             msg = normalize_message(message)
             self._append_message(msg)
 
+        if msg["role"] != "assistant":
+            raise ValueError("Only assistant messages can be appended to the chat. ")
+
         # print(msg)
 
         msg_type = "shiny-chat-append-message"
@@ -255,25 +258,15 @@ def chat_ui(
     Create a chat UI component.
     """
 
-    messages_tag = Tag("shiny-chat-messages")
-
-    if fill:
-        messages_tag = as_fill_item(messages_tag)
-
     id = resolve_id(id)
 
     res = Tag(
         "shiny-chat-container",
         chat_deps(),
-        messages_tag,
-        Tag(
-            "shiny-chat-input",
-            autoresize_dependency(),
-            placeholder=placeholder,
-            id=f"{id}_user_input",
-        ),
         {"style": f"width: {width}"},
         id=id,
+        placeholder=placeholder,
+        fill=fill,
     )
 
     if fill:

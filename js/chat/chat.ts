@@ -213,11 +213,17 @@ class ChatContainer extends LightElement {
   }
 
   render(): ReturnType<LitElement["render"]> {
-    return html``;
+    const input_id = this.id + "_user_input";
+    return html`
+      <shiny-chat-messages></shiny-chat-messages>
+      <shiny-chat-input id=${input_id}></shiny-chat-input>
+    `;
   }
 
-  connectedCallback(): void {
-    super.connectedCallback();
+  firstUpdated(): void {
+    // Don't attach event listeners until child elements are rendered
+    if (!this.messages) return;
+
     this.addEventListener("shiny-chat-input-sent", this.#onInputSent);
     this.addEventListener("shiny-chat-append-message", this.#onAppend);
     this.addEventListener(
