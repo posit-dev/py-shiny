@@ -1,7 +1,5 @@
 """Facade classes for working with Shiny inputs/outputs in Playwright"""
 
-# TODO-barret; Rename `InputBase` and `InputWithContainer` to generic, not-tied-to-input names
-
 from __future__ import annotations
 
 import json
@@ -142,32 +140,32 @@ def _expect_multiple(loc: Locator, multiple: bool, timeout: Timeout = None) -> N
 ######################################################
 
 
-class _InputBaseP(Protocol):
+class _UiBaseP(Protocol):
     id: str
     loc: Locator
     page: Page
 
 
-class _InputWithContainerP(_InputBaseP, Protocol):
-    """A protocol class representing inputs with a container."""
+class _UiWithContainerP(_UiBaseP, Protocol):
+    """A protocol class representing UI with a container."""
 
     loc_container: Locator
     """
-    Playwright `Locator` for the container of the input.
+    Playwright `Locator` for the container of the UI element.
     """
 
 
-class _InputBase:
-    """A base class representing shiny UI inputs."""
+class _UiBase:
+    """A base class representing shiny UI components."""
 
     # timeout: Timeout
     id: str
     """
-    The browser DOM `id` of the input.
+    The browser DOM `id` of the UI element.
     """
     loc: Locator
     """
-    Playwright `Locator` of the input.
+    Playwright `Locator` of the UI element.
     """
     page: Page
     """
@@ -196,14 +194,14 @@ class _InputBase:
         return playwright_expect(self.loc)
 
 
-class _InputWithContainer(_InputBase):
+class _UiWithContainer(_UiBase):
     """
-    A mixin class representing inputs with a container.
+    A mixin class representing UI with a container.
     """
 
     loc_container: Locator
     """
-    Playwright `Locator` for the container of the input.
+    Playwright `Locator` for the container of the UI element.
     """
 
     def __init__(
@@ -222,11 +220,11 @@ class _InputWithContainer(_InputBase):
         page
             Playwright `Page` of the Shiny app.
         id
-            The id of the input.
+            The id of the UI element.
         loc
-            Playwright `Locator` of the input.
+            Playwright `Locator` of the UI element.
         loc_container
-            Playwright `Locator` of the container of the input.
+            Playwright `Locator` of the container of the UI element.
         """
         loc_is_str = isinstance(loc, str)
         loc_container_is_str = isinstance(loc_container, str)
@@ -259,12 +257,12 @@ class _InputWithContainer(_InputBase):
         self.loc_container = loc_container
 
 
-class _InputWithLabel(_InputWithContainer):
-    """A mixin class representing inputs with a label."""
+class _UiWithLabel(_UiWithContainer):
+    """A mixin class representing UI components with a label."""
 
     loc_label: Locator
     """
-    Playwright `Locator` for the label of the input.
+    Playwright `Locator` for the label of the UI element.
     """
 
     def __init__(
@@ -284,13 +282,13 @@ class _InputWithLabel(_InputWithContainer):
         page
             The page where the input is located.
         id
-            The id of the input.
+            The id of the UI element.
         loc
-            Playwright `Locator` of the input.
+            Playwright `Locator` of the UI element.
         loc_container
-            Playwright `Locator` of the container of the input.
+            Playwright `Locator` of the container of the UI element.
         loc_label
-            Playwright `Locator` of the label of the input. Defaults to `None`.
+            Playwright `Locator` of the label of the UI element. Defaults to `None`.
         """
         super().__init__(
             page,
@@ -332,7 +330,7 @@ class _WidthLocM:
     """
 
     def expect_width(
-        self: _InputBaseP,
+        self: _UiBaseP,
         value: AttrValue,
         *,
         timeout: Timeout = None,
@@ -358,7 +356,7 @@ class _WidthContainerM:
     """
 
     def expect_width(
-        self: _InputWithContainerP,
+        self: _UiWithContainerP,
         value: AttrValue,
         *,
         timeout: Timeout = None,
@@ -379,7 +377,7 @@ class _WidthContainerM:
 
 
 class _SetTextM:
-    def set(self: _InputBaseP, value: str, *, timeout: Timeout = None) -> None:
+    def set(self: _UiBaseP, value: str, *, timeout: Timeout = None) -> None:
         """
         Sets the text value
 
@@ -397,18 +395,18 @@ class _ExpectTextInputValueM:
     """A mixin class for text input values."""
 
     def expect_value(
-        self: _InputBaseP,
+        self: _UiBaseP,
         value: PatternOrStr,
         *,
         timeout: Timeout = None,
     ) -> None:
         """
-        Expect the value of the input to have a specific value.
+        Expect the value of the text input to have a specific value.
 
         Parameters
         ----------
         value
-            The expected value of the input.
+            The expected value of the text input.
         timeout
             The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
@@ -419,7 +417,7 @@ class InputNumeric(
     _SetTextM,
     _ExpectTextInputValueM,
     _WidthLocM,
-    _InputWithLabel,
+    _UiWithLabel,
 ):
     """Input numeric control for :func:`~shiny.ui.input_numeric`."""
 
@@ -501,7 +499,7 @@ class _ExpectSpellcheckAttrM:
     """
 
     def expect_spellcheck(
-        self: _InputBaseP,
+        self: _UiBaseP,
         value: Literal["true", "false"] | None,
         *,
         timeout: Timeout = None,
@@ -524,7 +522,7 @@ class _ExpectSpellcheckAttrM:
 
 class _ExpectPlaceholderAttrM:
     def expect_placeholder(
-        self: _InputBaseP,
+        self: _UiBaseP,
         value: AttrValue,
         *,
         timeout: Timeout = None,
@@ -546,7 +544,7 @@ class _ExpectPlaceholderAttrM:
 
 class _ExpectAutocompleteAttrM:
     def expect_autocomplete(
-        self: _InputBaseP,
+        self: _UiBaseP,
         value: AttrValue,
         *,
         timeout: Timeout = None,
@@ -573,7 +571,7 @@ class InputText(
     _ExpectPlaceholderAttrM,
     _ExpectAutocompleteAttrM,
     _ExpectSpellcheckAttrM,
-    _InputWithLabel,
+    _UiWithLabel,
 ):
     """Input text control for :func:`~shiny.ui.input_text`."""
 
@@ -599,7 +597,7 @@ class InputPassword(
     _SetTextM,
     _ExpectTextInputValueM,
     _ExpectPlaceholderAttrM,
-    _InputWithLabel,
+    _UiWithLabel,
 ):
     """Input password control for :func:`~shiny.ui.input_password`."""
 
@@ -650,7 +648,7 @@ class InputTextArea(
     _ExpectPlaceholderAttrM,
     _ExpectAutocompleteAttrM,
     _ExpectSpellcheckAttrM,
-    _InputWithLabel,
+    _UiWithLabel,
 ):
     """Input text area control for :func:`~shiny.ui.input_text_area`."""
 
@@ -772,7 +770,7 @@ class InputTextArea(
 
 class _InputSelectBase(
     _WidthLocM,
-    _InputWithLabel,
+    _UiWithLabel,
 ):
     loc_selected: Locator
     """
@@ -1043,7 +1041,7 @@ class InputSelectize(_InputSelectBase):
         )
 
 
-class _InputActionBase(_InputBase):
+class _InputActionBase(_UiBase):
     def expect_label(
         self,
         value: PatternOrStr,
@@ -1105,7 +1103,7 @@ class InputActionButton(
         )
 
 
-class InputDarkMode(_InputBase):
+class InputDarkMode(_UiBase):
     """Input dark mode control for :func:`~shiny.ui.input_dark_mode`."""
 
     def __init__(
@@ -1355,7 +1353,7 @@ class InputActionLink(_InputActionBase):
 
 class _InputCheckboxBase(
     _WidthContainerM,
-    _InputWithLabel,
+    _UiWithLabel,
 ):
     def __init__(
         self, page: Page, id: str, loc: InitLocator, loc_label: str | None
@@ -1714,7 +1712,7 @@ class _MultipleDomItems:
 # TODO-barret; continue from here
 
 
-class _RadioButtonCheckboxGroupBase(_InputWithLabel):
+class _RadioButtonCheckboxGroupBase(_UiWithLabel):
     loc_choice_labels: Locator
 
     def expect_choice_labels(
@@ -2058,7 +2056,7 @@ class InputRadioButtons(
 
 class InputFile(
     # _ExpectPlaceholderAttrM,
-    _InputWithLabel,
+    _UiWithLabel,
 ):
     """Input file control for :func:`~shiny.ui.input_file`."""
 
@@ -2248,7 +2246,7 @@ class InputFile(
         )
 
 
-class _InputSliderBase(_WidthLocM, _InputWithLabel):
+class _InputSliderBase(_WidthLocM, _UiWithLabel):
 
     loc_irs: Locator
     """
@@ -2909,7 +2907,7 @@ class InputSliderRange(_InputSliderBase):
 class _DateBase(
     _SetTextM,
     _WidthContainerM,
-    _InputWithLabel,
+    _UiWithLabel,
 ):
 
     # Due to the `language` parameter, we can't use `datetime.date` as a value type
@@ -3151,7 +3149,7 @@ class InputDate(_DateBase):
         )
 
 
-class InputDateRange(_WidthContainerM, _InputWithLabel):
+class InputDateRange(_WidthContainerM, _UiWithLabel):
     """Input date range control for :func:`~shiny.ui.input_date_range`."""
 
     loc_separator: Locator
@@ -3515,7 +3513,7 @@ class _OutputTextValue(_OutputBase):
 class _OutputContainerP(_OutputBaseP, Protocol):
     def expect_container_tag(
         self: _OutputBaseP,
-        tag_name: Literal["span", "div"] | str,
+        value: Literal["span", "div"] | str,
         *,
         timeout: Timeout = None,
     ) -> None: ...
@@ -3524,7 +3522,7 @@ class _OutputContainerP(_OutputBaseP, Protocol):
 class _OutputContainerM:
     def expect_container_tag(
         self: _OutputBaseP,
-        tag_name: Literal["span", "div"] | str,
+        value: Literal["span", "div"] | str,
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -3533,30 +3531,33 @@ class _OutputContainerM:
 
         Parameters
         ----------
-        tag_name
+        value
             The expected container tag.
         timeout
             The maximum time to wait for the container tag to appear. Defaults to `None`.
         """
-        loc = self.loc.locator(f"xpath=self::{tag_name}")
+        loc = self.loc.locator(f"xpath=self::{value}")
         playwright_expect(loc).to_have_count(1, timeout=timeout)
 
 
 class _OutputInlineContainerM(_OutputContainerM):
     def expect_inline(
-        self: _OutputContainerP, inline: bool = False, *, timeout: Timeout = None
+        self: _OutputContainerP,
+        value: bool = False,
+        *,
+        timeout: Timeout = None,
     ) -> None:
         """
         Asserts that the output is inline.
 
         Parameters
         ----------
-        inline
+        value
             Whether the output is inline.
         timeout
             The maximum time to wait for the output to appear. Defaults to `None`.
         """
-        tag_name = "span" if inline else "div"
+        tag_name = "span" if value else "div"
         self.expect_container_tag(tag_name, timeout=timeout)
 
 
@@ -4070,7 +4071,7 @@ class OutputTable(_OutputBase):
 
 class Sidebar(
     _WidthLocM,
-    _InputWithContainer,
+    _UiWithContainer,
 ):
     """Sidebar control for func: `~shiny.ui.sidebar`."""
 
@@ -4204,7 +4205,7 @@ class Sidebar(
         self.loc_handle.click(timeout=timeout)
 
 
-class _CardBodyP(_InputBaseP, Protocol):
+class _CardBodyP(_UiBaseP, Protocol):
     """
     Represents the body of a card control.
     """
@@ -4220,7 +4221,7 @@ class _CardBodyM:
 
     def expect_body(
         self: _CardBodyP,
-        text: PatternOrStr | list[PatternOrStr],
+        value: PatternOrStr | list[PatternOrStr],
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -4234,12 +4235,12 @@ class _CardBodyM:
             The maximum time to wait for the text to appear. Defaults to `None`.
         """
         playwright_expect(self.loc).to_have_text(
-            text,
+            value,
             timeout=timeout,
         )
 
 
-class _CardFooterLayoutP(_InputBaseP, Protocol):
+class _CardFooterLayoutP(_UiBaseP, Protocol):
     """
     Represents the layout of the footer in a card.
     """
@@ -4257,7 +4258,7 @@ class _CardFooterM:
 
     def expect_footer(
         self: _CardFooterLayoutP,
-        text: PatternOrStr,
+        value: PatternOrStr,
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -4266,13 +4267,13 @@ class _CardFooterM:
 
         Parameters
         ----------
-        text
+        value
             The expected text in the footer section.
         timeout
             The maximum time to wait for the footer text to appear. Defaults to `None`.
         """
         playwright_expect(self.loc_footer).to_have_text(
-            text,
+            value,
             timeout=timeout,
         )
 
@@ -4331,25 +4332,25 @@ class _CardValueBoxFullScreenM:
         self._loc_close_button.click(timeout=timeout)
 
     def expect_full_screen(
-        self: _CardValueBoxFullScreenLayoutP, open: bool, *, timeout: Timeout = None
+        self: _CardValueBoxFullScreenLayoutP, value: bool, *, timeout: Timeout = None
     ) -> None:
         """
         Verifies if the full screen mode is currently open.
 
         Parameters
         ----------
-        open
+        value
             `True` if the item is to be in full screen mode, `False` otherwise.
         timeout
             The maximum time to wait for the verification. Defaults to `None`.
         """
         playwright_expect(self._loc_close_button).to_have_count(
-            int(open), timeout=timeout
+            int(value), timeout=timeout
         )
 
     def expect_full_screen_available(
         self: _CardValueBoxFullScreenLayoutP,
-        available: bool,
+        value: bool,
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -4358,20 +4359,20 @@ class _CardValueBoxFullScreenM:
 
         Parameters
         ----------
-        available
+        value
             `True` if the element is expected to be available for full screen mode, False otherwise.
         timeout
             The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         playwright_expect(self._loc_fullscreen).to_have_count(
-            int(available), timeout=timeout
+            int(value), timeout=timeout
         )
 
 
 class ValueBox(
     _WidthLocM,
     _CardValueBoxFullScreenM,
-    _InputWithContainer,
+    _UiWithContainer,
 ):
     """
     Value Box control for :func:`~shiny.ui.value_box`.
@@ -4516,7 +4517,7 @@ class Card(
     _CardFooterM,
     _CardBodyM,
     _CardValueBoxFullScreenM,
-    _InputWithContainer,
+    _UiWithContainer,
 ):
     """
     Card control for :func:`~shiny.ui.card`.
@@ -4674,7 +4675,7 @@ class Card(
 
 class Accordion(
     _WidthLocM,
-    _InputWithContainer,
+    _UiWithContainer,
 ):
     """Accordion control for :func:`~shiny.ui.accordion`."""
 
@@ -4836,7 +4837,7 @@ class Accordion(
 
 class AccordionPanel(
     _WidthLocM,
-    _InputWithContainer,
+    _UiWithContainer,
 ):
     """
     AccordionPanel control for :func:`~shiny.ui.accordion_panel`.
@@ -4979,7 +4980,7 @@ class AccordionPanel(
         self.loc_header.click(timeout=timeout)
 
 
-class _OverlayBase(_InputBase):
+class _OverlayBase(_UiBase):
     """Base class for overlay controls"""
 
     loc_trigger: Locator
@@ -5253,7 +5254,7 @@ class Tooltip(_OverlayBase):
         self.loc_trigger.hover(timeout=timeout)
 
 
-class _NavItemBase(_InputWithContainer):
+class _NavItemBase(_UiWithContainer):
     """A Base mixin class for Nav and NavItem controls"""
 
     def nav_item(
@@ -5372,7 +5373,7 @@ class _NavItemBase(_InputWithContainer):
         self.expect.to_have_text(value, timeout=timeout)
 
 
-class NavItem(_InputWithContainer):
+class NavItem(_UiWithContainer):
     """Navigation item control for :func:`~shiny.ui.nav_item`."""
 
     """
@@ -5668,7 +5669,7 @@ class NavsetBar(_NavItemBase):
         )
 
 
-class OutputDataFrame(_InputWithContainer):
+class OutputDataFrame(_UiWithContainer):
     """
     OutputDataFrame control for :func:`~shiny.ui.output_data_frame`.
     """
