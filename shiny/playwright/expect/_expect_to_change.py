@@ -2,8 +2,11 @@ import functools
 import time
 from contextlib import contextmanager
 from typing import Any, Callable, Generator
+
 from ..._docstring import no_example
+
 __all__ = ("expect_to_change",)
+
 
 @no_example()
 @contextmanager
@@ -46,6 +49,7 @@ def expect_to_change(
             raise AssertionError("Value did not change")
 
     wait_for_change()
+
 
 @no_example()
 def retry_with_timeout(timeout: float = 30):

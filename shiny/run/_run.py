@@ -9,8 +9,8 @@ from pathlib import PurePath
 from types import TracebackType
 from typing import IO, Any, Callable, Generator, List, Optional, TextIO, Type, Union
 
-from .._utils import random_port
 from .._docstring import no_example
+from .._utils import random_port
 
 __all__ = (
     "ShinyAppProc",
@@ -199,6 +199,7 @@ class ShinyAppProc:
                 "Shiny app exited without ever becoming ready. Waiting for 'Uvicorn running on' in stderr. Last 20 lines of stderr:\n"
                 + "\n".join(error_lines[-20:])
             )
+
 
 @no_example()
 def run_shiny_app(
