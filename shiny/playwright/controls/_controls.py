@@ -3796,7 +3796,7 @@ class OutputDataFrame(_InputWithContainer):
         cell = self.cell_locator(row=row, col=col)
 
         self._cell_scroll_if_needed(row=row, col=col, timeout=timeout)
-        cell.click(timeout=timeout)
+        cell.dblclick(timeout=timeout)
         cell.locator("> textarea").fill(text)
 
     # TODO-karan-test: Rename to `set_column_sorting?`
