@@ -13,6 +13,9 @@ from shiny.render import CellPatch
 
 # TODO-karan-test; Click outside the table. Tab to the column name, hit enter. Verify the table becomes sorted. Tab to an HTML column name, hit enter. Verify the sort does not update.
 
+# TODO-karan-test; Enable rows selection and editable. Select (and verify) a row. Edit a cell content in that row. Verify the row is not focused. Hit escape key. Verify the cell value is not updated. Verify the row is focused. Hit escape key again. Verify the row is not focused. (Possibly verify the container div is focused?)
+# TODO-karan-test; Enable rows selection and editable. Select (and verify) a row. Edit a cell content in that row. Click a cell in another row. Verify the new row is selected and focused. Verify the old row is not selected. Verify the old row cell value was updated.
+
 # TODO-future; Can we maintain pre-processed value and use it within editing?
 # A: Doesn't seem possible for now
 
@@ -89,19 +92,15 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
     # @reactive.effect
     # def _():
     #     print("Filters:", summary_data.filter())
-
     # @reactive.effect
     # def _():
     #     print("Sorting:", summary_data.sort())
-
     # @reactive.effect
     # def _():
     #     print("indices:", summary_data.data_view_rows())
-
     # @reactive.effect
     # def _():
     #     print("Data View:\n", summary_data.data_view(selected=False))
-
     # @reactive.effect
     # def _():
     #     print("Data View (selected):\n", summary_data.data_view(selected=True))
@@ -141,14 +140,14 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
         *,
         patch: CellPatch,
     ):
-        from shinywidgets import output_widget
+        # from shinywidgets import output_widget
 
-        if len(summary_data.cell_patches()) == 0:
-            return ui.card(output_widget("country_detail_pop"), height="400px")
+        # if len(summary_data.cell_patches()) == 0:
+        #     return ui.card(output_widget("country_detail_pop"), height="400px")
 
-        import time
+        # import time
 
-        time.sleep(2)
+        # time.sleep(2)
         if len(summary_data.cell_patches()) > 3:
             import random
 

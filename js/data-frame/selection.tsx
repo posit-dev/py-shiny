@@ -30,6 +30,7 @@ export interface SelectionSet<TKey, TElement extends HTMLElement> {
     onMouseDown: (event: React.MouseEvent<TElement, MouseEvent>) => void;
     onKeyDown: (event: React.KeyboardEvent<TElement>) => void;
   };
+  focusOffset: (start: TKey, offset: number) => TKey | null;
 }
 
 // Keep as strings (and not pointer types) as this is a shape defined by the python side
@@ -114,15 +115,20 @@ export function initSelectionModes(
 }
 
 export function useSelection<TKey, TElement extends HTMLElement>({
-  selectionModes: selectionModes,
+  isEditingCell,
+  selectionModes,
   keyAccessor,
   focusOffset,
+  focusEscape,
   between,
 }: {
+  // cellBeingEdited: { rowIndex: number; columnIndex: number } | null;
+  isEditingCell: boolean;
   selectionModes: SelectionModes;
   keyAccessor: (el: TElement) => TKey;
   focusOffset: (start: TKey, offset: number) => TKey | null;
-  between?: (from: TKey, to: TKey) => ReadonlyArray<TKey>;
+  focusEscape: (el: TElement) => void;
+  between: (from: TKey, to: TKey) => ReadonlyArray<TKey>;
 }): SelectionSet<TKey, TElement> {
   const [selectedKeys, setSelectedKeys] = useState<ImmutableSet<TKey>>(
     ImmutableSet.empty()
@@ -159,6 +165,9 @@ export function useSelection<TKey, TElement extends HTMLElement>({
   };
 
   const onKeyDown = (event: React.KeyboardEvent<TElement>): void => {
+    if (isEditingCell) {
+      return;
+    }
     if (selectionModes.isNone()) {
       return;
     }
@@ -166,6 +175,17 @@ export function useSelection<TKey, TElement extends HTMLElement>({
     const el = event.currentTarget as TElement;
     const key = keyAccessor(el);
     const selected = selectedKeys.has(key);
+
+    if (event.key === "Escape") {
+      focusEscape(el);
+      event.preventDefault();
+      return;
+    }
+
+    // For both row and rows, do not allow for alphanumeric keys to trigger edit mode.
+    // Only allow for this once the anchor is a single cell, such as region selection.
+    // For region selection, allow for alphanumeric keys to trigger edit mode of current cell.
+    // For region selection, allow for enter key to trigger edit mode of current cell.
 
     if (selectionModes.row === SelectionModes._rowEnum.SINGLE) {
       if (event.key === " " || event.key === "Enter") {
@@ -196,7 +216,7 @@ export function useSelection<TKey, TElement extends HTMLElement>({
     }
   };
 
-  return {
+  const selection = {
     has(key: TKey): boolean {
       return selectedKeys.has(key);
     },
@@ -224,7 +244,11 @@ export function useSelection<TKey, TElement extends HTMLElement>({
     itemHandlers() {
       return { onMouseDown, onKeyDown };
     },
+
+    focusOffset,
   };
+
+  return selection;
 }
 
 declare global {

@@ -119,6 +119,27 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
 
   const editCellsIsAllowed = payloadOptions["editable"] === true;
 
+  // const [cellBeingEdited, setCellBeingEdited] = useState<{
+  //   rowIndex: number;
+  //   columnIndex: number;
+  // } | null>(null);
+
+  const [isEditingCell, setIsEditingCell] = useState(false);
+  useEffect(() => {
+    for (const cellEdit of cellEditMap.values()) {
+      if (cellEdit.isEditing) {
+        // setCellBeingEdited({
+        //   rowIndex: cellEdit.rowIndex,
+        //   columnIndex: cellEdit.columnIndex,
+        // });
+        setIsEditingCell(true);
+        return;
+      }
+    }
+    // setCellBeingEdited(null);
+    setIsEditingCell(false);
+  }, [cellEditMap, setIsEditingCell]);
+
   const coldefs = useMemo<ColumnDef<unknown[], unknown>[]>(
     () =>
       columns.map((colname, colIndex) => {
@@ -255,12 +276,18 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
   const canMultiRowSelect = selectionModes.row !== SelectionModes._rowEnum.NONE;
 
   const selection = useSelection<string, HTMLTableRowElement>({
+    isEditingCell,
     selectionModes,
     keyAccessor: (el) => {
-      console.log(el.dataset, el);
       return el.dataset.key!;
     },
-    focusOffset: (key, offset) => {
+    focusEscape: (el) => {
+      setTimeout(() => {
+        el?.blur();
+        containerRef.current?.focus();
+      }, 0);
+    },
+    focusOffset: (key, offset = 0) => {
       const rowModel = table.getSortedRowModel();
       let index = rowModel.rows.findIndex((row) => row.id === key);
       if (index < 0) {
@@ -667,6 +694,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
                           cellEditInfo={cellEditInfo}
                           setData={setData}
                           setCellEditMapAtLoc={setCellEditMapAtLoc}
+                          selection={selection}
                         ></TableBodyCell>
                       );
                     })}
