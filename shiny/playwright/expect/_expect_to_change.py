@@ -2,10 +2,10 @@ import functools
 import time
 from contextlib import contextmanager
 from typing import Any, Callable, Generator
-
+from ..._docstring import no_example
 __all__ = ("expect_to_change",)
 
-
+@no_example()
 @contextmanager
 def expect_to_change(
     func: Callable[[], Any], timeout_secs: float = 10
@@ -47,7 +47,7 @@ def expect_to_change(
 
     wait_for_change()
 
-
+@no_example()
 def retry_with_timeout(timeout: float = 30):
     """
     Decorator that retries a function until 1) it succeeds, 2) fails with a

@@ -6,6 +6,8 @@ from typing import Literal, Union
 import pytest
 
 from ..run._run import shiny_app_gen
+from ..._docstring import no_example
+
 
 __all__ = (
     "create_app_fixture",
@@ -15,7 +17,7 @@ __all__ = (
 
 ScopeName = Literal["session", "package", "module", "class", "function"]
 
-
+@no_example()
 def create_app_fixture(
     app: Union[PurePath, str],
     scope: ScopeName = "module",

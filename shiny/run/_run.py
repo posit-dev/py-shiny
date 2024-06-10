@@ -10,6 +10,7 @@ from types import TracebackType
 from typing import IO, Any, Callable, Generator, List, Optional, TextIO, Type, Union
 
 from .._utils import random_port
+from .._docstring import no_example
 
 __all__ = (
     "ShinyAppProc",
@@ -199,7 +200,7 @@ class ShinyAppProc:
                 + "\n".join(error_lines[-20:])
             )
 
-
+@no_example()
 def run_shiny_app(
     app_file: Union[str, PurePath],
     *,

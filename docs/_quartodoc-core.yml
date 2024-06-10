@@ -214,6 +214,145 @@ quartodoc:
         # uses class.rst template
         - module.ui
         - module.server
+    - title: Testing
+      desc: ""
+      contents:
+        - kind: page
+          path: PlaywrightControls
+          flatten: true
+          summary:
+            name: "Playwright Controls"
+            desc: "Methods for interacting with Shiny app controls."
+          contents:
+            - name: playwright.controls.Accordion
+              dynamic: false
+            - name: playwright.controls.Card
+              dynamic: false
+            - name: playwright.controls.DownloadButton
+              dynamic: false
+            - name: playwright.controls.DownloadLink
+              dynamic: false
+            - name: playwright.controls.InputActionButton
+              dynamic: false
+            - name: playwright.controls.InputActionLink
+              dynamic: false
+            - name: playwright.controls.InputCheckbox
+              dynamic: false
+            - name: playwright.controls.InputCheckboxGroup
+              dynamic: false
+            - name: playwright.controls.InputDarkMode
+              dynamic: false
+            - name: playwright.controls.InputDate
+              dynamic: false
+            - name: playwright.controls.InputDateRange
+              dynamic: false
+            - name: playwright.controls.InputFile
+              dynamic: false
+            - name: playwright.controls.InputNumeric
+              dynamic: false
+            - name: playwright.controls.InputPassword
+              dynamic: false
+            - name: playwright.controls.InputRadioButtons
+              dynamic: false
+            - name: playwright.controls.InputSelect
+              dynamic: false
+            - name: playwright.controls.InputSelectize
+              dynamic: false
+            - name: playwright.controls.InputSlider
+              dynamic: false
+            - name: playwright.controls.InputSliderRange
+              dynamic: false
+            - name: playwright.controls.InputSwitch
+              dynamic: false
+            - name: playwright.controls.InputTaskButton
+              dynamic: false
+            - name: playwright.controls.InputText
+              dynamic: false
+            - name: playwright.controls.InputTextArea
+              dynamic: false
+            - name: playwright.controls.NavItem
+              dynamic: false
+            - name: playwright.controls.NavsetBar
+              dynamic: false
+            - name: playwright.controls.NavsetCardPill
+              dynamic: false
+            - name: playwright.controls.NavsetCardTab
+              dynamic: false
+            - name: playwright.controls.NavsetCardUnderline
+              dynamic: false
+            - name: playwright.controls.NavsetHidden
+              dynamic: false
+            - name: playwright.controls.NavsetPill
+              dynamic: false
+            - name: playwright.controls.NavsetPillList
+              dynamic: false
+            - name: playwright.controls.NavsetTab
+              dynamic: false
+            - name: playwright.controls.NavsetUnderline
+              dynamic: false
+            - name: playwright.controls.OutputCode
+              dynamic: false
+            - name: playwright.controls.OutputDataFrame
+              dynamic: false
+            - name: playwright.controls.OutputImage
+              dynamic: false
+            - name: playwright.controls.OutputPlot
+              dynamic: false
+            - name: playwright.controls.OutputTable
+              dynamic: false
+            - name: playwright.controls.OutputText
+              dynamic: false
+            - name: playwright.controls.OutputTextVerbatim
+              dynamic: false
+            - name: playwright.controls.OutputUi
+              dynamic: false
+            - name: playwright.controls.Popover
+              dynamic: false
+            - name: playwright.controls.Sidebar
+              dynamic: false
+            - name: playwright.controls.Tooltip
+              dynamic: false
+            - name: playwright.controls.ValueBox
+              dynamic: false
+        - kind: page
+          path: PlaywrightExpect
+          flatten: true
+          summary:
+            name: "Playwright Expect"
+            desc: "Methods for testing the state of a Shiny app."
+          contents:
+            - name: playwright.expect.expect_to_change
+              dynamic: false
+            - name: playwright.expect.expect_attribute_to_have_value
+              dynamic: false
+            - name: playwright.expect.expect_to_have_class
+              dynamic: false
+            - name: playwright.expect.expect_not_to_have_class
+              dynamic: false
+            - name: playwright.expect.expect_to_have_style
+              dynamic: false
+        - kind: page
+          path: Pytest
+          flatten: true
+          summary:
+            name: "Pytest"
+            desc: "Fixtures used for testing Shiny apps with Pytest."
+          contents:
+            - name: pytest.create_app_fixture
+              dynamic: false
+            - name: pytest.ScopeName
+              dynamic: false
+        - kind: page
+          path: Run
+          flatten: true
+          summary:
+            name: "Run"
+            desc: "Methods for running a Shiny app locally on a machine"
+          contents:
+            - name: run.run_shiny_app
+              dynamic: false
+            - name: run.ShinyAppProc
+              dynamic: false
     - title: Developer facing tools
       desc: ""
       contents:
@@ -331,6 +470,7 @@ quartodoc:
             - types.SilentException
             - types.SilentCancelOutputException
             - types.SafeException
+
     - title: Deprecated
       desc: ""
       contents:
