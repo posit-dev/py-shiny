@@ -6,9 +6,12 @@ except ImportError:
         " Please install it with this command:"
         "\n\n    pip install playwright"
     )
+# If `pytest` is installed...
 try:
     import pytest  # noqa: F401 # pyright: ignore[reportUnusedImport, reportMissingTypeStubs]
 
+    # At this point, `playwright` and `pytest` are installed.
+    # Try to make sure `pytest-playwright` is installed
     try:
         import pytest_playwright  # noqa: F401 # pyright: ignore[reportUnusedImport, reportMissingTypeStubs]
 
