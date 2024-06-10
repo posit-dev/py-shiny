@@ -10,6 +10,7 @@ from typing import (
     Sequence,
     TypeVar,
     cast,
+    overload,
 )
 
 from htmltools import Tag
@@ -27,7 +28,12 @@ from ._chat_types import (
 from ._html_deps_py_shiny import chat_deps
 from .fill import as_fill_item, as_fillable_container
 
-__all__ = ("Chat", "chat_ui", "ChatMessage", "ChatMessageChunk")
+__all__ = (
+    "Chat",
+    "chat_ui",
+    "ChatMessage",
+    "ChatMessageChunk",
+)
 
 T = TypeVar("T")
 
@@ -57,6 +63,11 @@ class Chat(Generic[T]):
         A function to transform user input before storing it in the chat `.messages()`
         history. This is useful for doing all sorts of RAG-style preprocessing, like
         taking a URL and scraping it for text before sending it to the model.
+    on_error
+        How to handle errors that occur in response to user input. Options are:
+        - "sanitize": Sanitize the error message before displaying it to the user.
+        - "actual": Display the actual error message to the user.
+        - "unhandled": Do not display any error message to the user.
     session
         The :class:`~shiny.Session` instance that the chat should appear in. If not
         provided, the session is inferred via :func:`~shiny.session.get_current_session`.
@@ -70,6 +81,7 @@ class Chat(Generic[T]):
         user_input_transformer: (
             Callable[[str], str] | Callable[[str], Awaitable[str]]
         ) = lambda x: x,
+        on_error: Literal["sanitize", "actual", "unhandled"] = "sanitize",
         session: Optional[Session] = None,
     ):
 
@@ -77,6 +89,7 @@ class Chat(Generic[T]):
         if not _utils.is_async_callable(user_input_transformer):
             user_input_transformer = _utils.wrap_async(user_input_transformer)
         self._user_input_transformer = user_input_transformer
+        self.on_error = on_error
         self._session = require_active_session(session)
 
         # Chunked messages get accumulated (using this property) before changing state
@@ -89,7 +102,7 @@ class Chat(Generic[T]):
             # Initialize message state
             self._messages: reactive.Value[Sequence[ChatMessage]] = reactive.Value(())
 
-            # Populate the chat with initial messages (and ignore system messages)
+            # Store (i.e. append) message state and display non-system messages
             for msg in messages:
                 msg = normalize_message(msg)
                 self._store_message(msg)
@@ -97,14 +110,14 @@ class Chat(Generic[T]):
                     _utils.run_coro_sync(self._send_message(msg))
 
             # When user input is submitted, append it to message state
-            @reactive.effect
-            @reactive.event(self.user_input)
-            async def append_user_input():
+            @self.on_user_submit
+            async def _store_user_input():
+                # TODO: shouldn't NotifyException cause an early exit?
                 input = await self.user_input(transform=True)
                 user_msg = ChatMessage(content=input, role="user")
                 self._store_message(user_msg)
 
-            self._effects.append(append_user_input)
+            self._effects.append(_store_user_input)
 
     def ui(
         self,
@@ -112,6 +125,22 @@ class Chat(Generic[T]):
         width: str = "min(680px, 100%)",
         fill: bool = True,
     ) -> Tag:
+        """
+        Display/locate the chat component in the UI.
+
+        This method is only available in Shiny Express. In Shiny Core, use
+        :func:`~shiny.ui.chat_ui` instead.
+
+        Parameters
+        ----------
+        placeholder
+            The placeholder text to display in the chat input.
+        width
+            The width of the chat container.
+        fill
+            Whether the chat should fill a fillable container.
+        """
+
         if not _express_is_active():
             raise RuntimeError(
                 "The `ui()` method of the `ui.Chat` class only works in a Shiny Express context."
@@ -124,17 +153,45 @@ class Chat(Generic[T]):
             fill=fill,
         )
 
+    @overload
+    def on_user_submit(
+        self, fn: SubmitFunction | SubmitFunctionAsync
+    ) -> reactive.Effect_: ...
+
+    @overload
+    def on_user_submit(
+        self,
+    ) -> Callable[[SubmitFunction | SubmitFunctionAsync], reactive.Effect_]: ...
+
     def on_user_submit(
         self,
         fn: SubmitFunction | SubmitFunctionAsync | None = None,
-        *,
-        error: Literal["sanitize", "actual", "unhandled"] = "sanitize",
     ) -> (
         reactive.Effect_
         | Callable[[SubmitFunction | SubmitFunctionAsync], reactive.Effect_]
     ):
         """
-        Register a callback to run when the user submits a message.
+        Define a function to invoke when user input is submitted.
+
+        Apply this method as a decorator to a function (`fn`) that should be invoked when the
+        user submits a message. The function should take no arguments.
+
+        In many cases, the implementation of `fn` should do at least the following:
+            1. Call `.messages()` to obtain the current chat history.
+            2. Generate a response based on those messages.
+            3. Append the response to the chat history using `.append_message()` or
+              `.append_message_stream()`.
+
+        Parameters
+        ----------
+        fn
+            A function to invoke when user input is submitted.
+
+        Note
+        ----
+        This method creates a reactive effect that only gets invalidated when the user
+        submits a message. Thus, the function `fn` can read other reactive dependencies,
+        but it will only be re-invoked when the user submits a message.
         """
 
         def create_effect(fn: SubmitFunction | SubmitFunctionAsync):
@@ -143,14 +200,15 @@ class Chat(Generic[T]):
             @reactive.effect
             @reactive.event(self.user_input)
             async def handle_user_input():
-                if error == "unhandled":
+                if self.on_error == "unhandled":
                     await afunc()
                 else:
                     try:
                         await afunc()
                     except Exception as e:
                         await self._remove_loading_message()
-                        raise NotifyException(str(e), sanitize=error == "sanitize")
+                        sanitize = self.on_error == "sanitize"
+                        raise NotifyException(str(e), sanitize=sanitize)
 
             self._effects.append(handle_user_input)
 
@@ -165,7 +223,20 @@ class Chat(Generic[T]):
         """
         Reactively read user input
 
-        Most users will want to use `on_user_submit` instead of calling this method directly.
+        Parameters
+        ----------
+        transform
+            Whether to apply the user input transformer to the input.
+
+        Returns
+        -------
+        The user input message (possibly transformed).
+
+        Note
+        ----
+        Most users shouldn't need to use this method directly since `.on_user_submit()`
+        provides a convenient way to respond to user input. This method may be useful,
+        however, if you access the user input before it was transformed.
         """
 
         id = f"{self.id}_user_input"
@@ -178,14 +249,39 @@ class Chat(Generic[T]):
     def messages(self) -> Sequence[ChatMessage]:
         """
         Reactively read chat messages
+
+        Obtain the current chat history within a reactive context. Messages are listed
+        in the order they were added. As a result, when this method is called in a
+        `.on_user_submit()` callback (as it most often is), the last message will be the
+        most recent one submitted by the user. User messages will also reflect the value
+        after applying the `user_input_transformer`.
+
+        Returns
+        -------
+        A sequence of chat messages.
         """
         return self._messages()
 
-    async def append_message(self, message: Any, *, chunk: bool = False) -> None:
+    async def append_message(self, message: Any) -> None:
         """
         Append a message to the chat.
+
+        Parameters
+        ----------
+        message
+            The message to append. A variety of message formats are supported including
+            a string, a dictionary with `content` and `role` keys, or a relevant chat
+            completion object from platforms like OpenAI, Anthropic, Ollama, and others.
+
+        Note
+        ----
+        Use `.append_message_stream()` instead of this method when `stream=True` (or
+        similar) is specified in model's completion method.
         """
 
+        await self._append_message(message)
+
+    async def _append_message(self, message: Any, *, chunk: bool = False) -> None:
         if chunk:
             msg = normalize_message_chunk(message)
             self._store_message_chunk(msg)
@@ -196,6 +292,23 @@ class Chat(Generic[T]):
         await self._send_message(msg, chunk=chunk)
 
     async def append_message_stream(self, message: Iterable[Any] | AsyncIterable[Any]):
+        """
+        Append a message as a stream of message chunks.
+
+        Parameters
+        ----------
+        message
+            An iterable or async iterable of message chunks to append. A variety of
+            message chunk formats are supported, including a string, a dictionary with
+            `content` and `role` keys, or a relevant chat completion object from
+            platforms like OpenAI, Anthropic, Ollama, and others.
+
+        Note
+        ----
+        Use this method (over `.append_message()`) when `stream=True` (or similar) is
+        specified in model's completion method.
+        """
+
         message = _utils.wrap_async_iterable(message)
 
         @reactive.extended_task
@@ -212,21 +325,22 @@ class Chat(Generic[T]):
 
         # Start the message
         msg_start = ChatMessageChunk(content="", type="message_start", role=role)
-        await self.append_message(msg_start, chunk=True)
+        await self._append_message(msg_start, chunk=True)
 
         try:
             async for msg in message:
                 msg = normalize_message_chunk(msg)
-                await self.append_message(msg, chunk=True)
+                await self._append_message(msg, chunk=True)
         finally:
             msg_end = ChatMessageChunk(content="", type="message_end", role=role)
-            await self.append_message(msg_end, chunk=True)
+            await self._append_message(msg_end, chunk=True)
 
     async def _send_message(self, message: ChatMessage, chunk: bool = False):
         # print(msg)
-        msg_type = "shiny-chat-append-message"
         if chunk:
-            msg_type += "-chunk"
+            msg_type = "shiny-chat-append-message-chunk"
+        else:
+            msg_type = "shiny-chat-append-message"
         await self._send_custom_message(msg_type, message)
         # TODO: Joe said it's a good idea to yield here, but I'm not sure why?
         # await asyncio.sleep(0)
@@ -248,7 +362,7 @@ class Chat(Generic[T]):
 
     async def clear_messages(self):
         """
-        Clear all messages in the chat.
+        Clear all chat messages.
         """
         self._messages.set(())
         await self._send_custom_message("shiny-chat-clear-messages", None)
@@ -283,7 +397,22 @@ def chat_ui(
     fill: bool = True,
 ) -> Tag:
     """
-    Create a chat UI component.
+    UI container for a chat component (Shiny Core).
+
+    This function is for locating a :class:`~shiny.ui.Chat` instance in a Shiny Core
+    app. If you are using Shiny Express, you should use the :method:`~shiny.ui.Chat.ui`
+    method instead.
+
+    Parameters
+    ----------
+    id
+        A unique identifier for the chat session.
+    placeholder
+        The placeholder text to display in the chat input.
+    width
+        The width of the chat container.
+    fill
+        Whether the chat should fill the available width.
     """
 
     id = resolve_id(id)
