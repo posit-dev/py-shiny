@@ -37,7 +37,29 @@ SubmitFunctionAsync = Callable[[], Awaitable[None]]
 
 class Chat(Generic[T]):
     """
-    Initialize a chat session.
+    Create a chat component.
+
+    Creates a chat component for displaying and receiving messages. The chat can be
+    used to build conversational interfaces, like chatbots.
+
+    Parameters
+    ----------
+    id
+        A unique identifier for the chat session. In Shiny Core, make sure this id
+        matches a corresponding :func:`~shiny.ui.chat_ui` call in the UI.
+    messages
+        A sequence of messages to display in the chat. Each message can be a
+        dictionary with a `content` and `role` key. The `content` key should contain
+        the message text, and the `role` key can be "assistant", "user", or "system".
+        Note that system messages are not actually displayed in the chat, but will
+        still be stored in the chat's `.messages()`.
+    user_input_transformer
+        A function to transform user input before storing it in the chat `.messages()`
+        history. This is useful for doing all sorts of RAG-style preprocessing, like
+        taking a URL and scraping it for text before sending it to the model.
+    session
+        The :class:`~shiny.Session` instance that the chat should appear in. If not
+        provided, the session is inferred via :func:`~shiny.session.get_current_session`.
     """
 
     def __init__(
@@ -45,10 +67,16 @@ class Chat(Generic[T]):
         id: str,
         *,
         messages: Sequence[ChatMessage] = (),
+        user_input_transformer: (
+            Callable[[str], str] | Callable[[str], Awaitable[str]]
+        ) = lambda x: x,
         session: Optional[Session] = None,
     ):
+
         self.id = id
-        self._messages_init = messages
+        if not _utils.is_async_callable(user_input_transformer):
+            user_input_transformer = _utils.wrap_async(user_input_transformer)
+        self._user_input_transformer = user_input_transformer
         self._session = require_active_session(session)
 
         # Chunked messages get accumulated (using this property) before changing state
@@ -61,19 +89,20 @@ class Chat(Generic[T]):
             # Initialize message state
             self._messages: reactive.Value[Sequence[ChatMessage]] = reactive.Value(())
 
-            # Reflect the message state in the UI
-            for msg in self._messages_init:
-                _utils.run_coro_sync(self.append_message(msg))
+            # Populate the chat with initial messages (and ignore system messages)
+            for msg in messages:
+                msg = normalize_message(msg)
+                self._store_message(msg)
+                if msg["role"] != "system":
+                    _utils.run_coro_sync(self._send_message(msg))
 
             # When user input is submitted, append it to message state
             @reactive.effect
             @reactive.event(self.user_input)
-            def append_user_input():
-                from .. import req
-
-                input = req(self.user_input())
+            async def append_user_input():
+                input = await self.user_input(transform=True)
                 user_msg = ChatMessage(content=input, role="user")
-                self._append_message(user_msg)
+                self._store_message(user_msg)
 
             self._effects.append(append_user_input)
 
@@ -132,16 +161,19 @@ class Chat(Generic[T]):
         else:
             return create_effect(fn)
 
-    def user_input(self) -> str:
+    async def user_input(self, transform: bool = False) -> str:
         """
         Reactively read user input
 
-        Most users will want to use `on_user_submit` instead of reading this directly.
+        Most users will want to use `on_user_submit` instead of calling this method directly.
         """
 
         id = f"{self.id}_user_input"
-        val = self._session.input[id]()
-        return cast(str, val)
+        # Frotend won't allow an empty message to be sent
+        val = cast(str, self._session.input[id]())
+        if not transform:
+            return val
+        return await self._user_input_transformer(val)
 
     def messages(self) -> Sequence[ChatMessage]:
         """
@@ -156,22 +188,12 @@ class Chat(Generic[T]):
 
         if chunk:
             msg = normalize_message_chunk(message)
-            self._append_message_chunk(msg)
+            self._store_message_chunk(msg)
         else:
             msg = normalize_message(message)
-            self._append_message(msg)
+            self._store_message(msg)
 
-        if msg["role"] != "assistant":
-            raise ValueError("Only assistant messages can be appended to the chat. ")
-
-        # print(msg)
-
-        msg_type = "shiny-chat-append-message"
-        if chunk:
-            msg_type += "-chunk"
-        await self._send_custom_message(msg_type, msg)
-        # TODO: Joe said it's a good idea to yield here, but I'm not sure why?
-        # await asyncio.sleep(0)
+        await self._send_message(msg, chunk=chunk)
 
     async def append_message_stream(self, message: Iterable[Any] | AsyncIterable[Any]):
         message = _utils.wrap_async_iterable(message)
@@ -200,21 +222,27 @@ class Chat(Generic[T]):
             msg_end = ChatMessageChunk(content="", type="message_end", role=role)
             await self.append_message(msg_end, chunk=True)
 
+    async def _send_message(self, message: ChatMessage, chunk: bool = False):
+        # print(msg)
+        msg_type = "shiny-chat-append-message"
+        if chunk:
+            msg_type += "-chunk"
+        await self._send_custom_message(msg_type, message)
+        # TODO: Joe said it's a good idea to yield here, but I'm not sure why?
+        # await asyncio.sleep(0)
+
     # For chunk messages, accumulate the chunks until we have a signal that the message
     # has ended
-    def _append_message_chunk(self, msg: ChatMessageChunk):
+    def _store_message_chunk(self, msg: ChatMessageChunk):
         self._final_message += msg["content"]
         if "type" in msg and msg["type"] == "message_end":
             final = ChatMessage(content=self._final_message, role=msg["role"])
-            self._append_message(final)
+            self._store_message(final)
             self._final_message = ""
 
-    def _append_message(self, message: ChatMessage):
-        self._append_messages((message,))
-
-    def _append_messages(self, messages: Sequence[ChatMessage]):
+    def _store_message(self, message: ChatMessage):
         with reactive.isolate():
-            msgs = tuple(self._messages()) + tuple(messages)
+            msgs = tuple(self._messages()) + (message,)
 
         self._messages.set(msgs)
 

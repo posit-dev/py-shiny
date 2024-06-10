@@ -12686,6 +12686,10 @@ __decorateClass([
   n4({ type: Boolean, reflect: true })
 ], ChatInput.prototype, "disabled", 2);
 var ChatContainer = class extends LightElement {
+  constructor() {
+    super(...arguments);
+    this.placeholder = "Enter a message...";
+  }
   get input() {
     return this.querySelector(CHAT_INPUT_TAG);
   }
@@ -12696,7 +12700,10 @@ var ChatContainer = class extends LightElement {
     const input_id = this.id + "_user_input";
     return x`
       <shiny-chat-messages></shiny-chat-messages>
-      <shiny-chat-input id=${input_id}></shiny-chat-input>
+      <shiny-chat-input
+        id=${input_id}
+        placeholder=${this.placeholder}
+      ></shiny-chat-input>
     `;
   }
   firstUpdated() {
@@ -12799,6 +12806,9 @@ var ChatContainer = class extends LightElement {
     this.messages.scrollTop = this.messages.scrollHeight;
   }
 };
+__decorateClass([
+  n4()
+], ChatContainer.prototype, "placeholder", 2);
 customElements.define(CHAT_MESSAGE_TAG, ChatMessage);
 customElements.define(CHAT_MESSAGES_TAG, ChatMessages);
 customElements.define(CHAT_INPUT_TAG, ChatInput);
