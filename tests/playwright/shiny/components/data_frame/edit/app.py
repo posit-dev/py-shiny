@@ -11,6 +11,8 @@ from shiny.render import CellPatch
 # TODO-barret-render.data_frame; Make an example that uses a dataframe that then updates a higher level reactive, that causes the df to update... which causes the table to render completely
 # TODO-barret-render.data_frame; When "updating" data, try to maintain the scroll, filter info when a new `df` is supplied;
 
+# TODO-karan-test; Click outside the table. Tab to the column name, hit enter. Verify the table becomes sorted. Tab to an HTML column name, hit enter. Verify the sort does not update.
+
 # TODO-future; Can we maintain pre-processed value and use it within editing?
 # A: Doesn't seem possible for now
 

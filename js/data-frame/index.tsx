@@ -170,7 +170,13 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
   const dataOriginal = useMemo(() => rowData, [rowData]);
   const [dataState, setData] = useImmer(rowData);
 
-  const { sorting, sortState, sortingTableOptions, setSorting } = useSort();
+  const getColDefs = (): ColumnDef<unknown[], unknown>[] => {
+    return coldefs;
+  };
+
+  const { sorting, sortState, sortingTableOptions, setSorting } = useSort({
+    getColDefs,
+  });
 
   const {
     columnFilters,
