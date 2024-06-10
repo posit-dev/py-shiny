@@ -8,9 +8,9 @@ ui.page_opts(
     fillable_mobile=True,
 )
 
-# Create a chat instance and display it
+# Create and display an empty chat
 chat = ui.Chat(id="chat")
-chat()
+chat.ui()
 
 # Create the LLM client
 llm = ChatOpenAI()

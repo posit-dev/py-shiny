@@ -44,11 +44,11 @@ class Chat(Generic[T]):
         self,
         id: str,
         *,
-        client: Optional[T] = None,
+        messages: Sequence[ChatMessage] = (),
         session: Optional[Session] = None,
     ):
         self.id = id
-        self.client = client
+        self._messages_init = messages
         self._session = require_active_session(session)
 
         # Chunked messages get accumulated (using this property) before changing state
@@ -60,6 +60,10 @@ class Chat(Generic[T]):
         with session_context(self._session):
             # Initialize message state
             self._messages: reactive.Value[Sequence[ChatMessage]] = reactive.Value(())
+
+            # Reflect the message state in the UI
+            for msg in self._messages_init:
+                _utils.run_coro_sync(self.append_message(msg))
 
             # When user input is submitted, append it to message state
             @reactive.effect
@@ -73,21 +77,19 @@ class Chat(Generic[T]):
 
             self._effects.append(append_user_input)
 
-    def __call__(
+    def ui(
         self,
-        messages: Sequence[ChatMessage] = (),
         placeholder: str = "Enter a message...",
         width: str = "min(680px, 100%)",
         fill: bool = True,
     ) -> Tag:
         if not _express_is_active():
             raise RuntimeError(
-                "The `__call__()` method of the `ui.Chat` class only works in a Shiny Express context."
+                "The `ui()` method of the `ui.Chat` class only works in a Shiny Express context."
                 " Use `ui.chat_ui()` instead in Shiny Core to locate the chat UI."
             )
         return chat_ui(
             id=self.id,
-            messages=messages,
             placeholder=placeholder,
             width=width,
             fill=fill,
@@ -245,7 +247,6 @@ class Chat(Generic[T]):
 
 def chat_ui(
     id: str,
-    messages: Sequence[ChatMessage] = (),
     placeholder: str = "Enter a message...",
     width: str = "min(680px, 100%)",
     fill: bool = True,
@@ -254,17 +255,7 @@ def chat_ui(
     Create a chat UI component.
     """
 
-    messages_tag = Tag(
-        "shiny-chat-messages",
-        *[
-            Tag(
-                "shiny-chat-message",
-                content=x["content"],
-                role=x["role"],
-            )
-            for x in messages
-        ],
-    )
+    messages_tag = Tag("shiny-chat-messages")
 
     if fill:
         messages_tag = as_fill_item(messages_tag)

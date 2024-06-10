@@ -8,11 +8,14 @@ ui.page_opts(
     fillable_mobile=True,
 )
 
-# Create a chat instance
-chat = ui.Chat(id="chat")
+# Create a chat instance, with an initial message
+chat = ui.Chat(
+    id="chat",
+    messages=[{"content": "Hello! How can I help you today?", "role": "assistant"}],
+)
 
-# Display the chat with an initial message
-chat(messages=[{"content": "Hello! How can I help you today?", "role": "assistant"}])
+# Display the chat
+chat.ui()
 
 # Create the LLM client (assumes OPENAI_API_KEY is set in the environment)
 client = AsyncOpenAI()

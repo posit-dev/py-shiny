@@ -12,9 +12,9 @@ ui.page_opts(
 with ui.sidebar():
     ui.input_select("model", "Model", ["gpt-4o", "gpt-3.5-turbo"])
 
-# Create and display the chat
+# Create and display an empty chat
 chat = ui.Chat(id="chat")
-chat()
+chat.ui()
 
 # Create the LLM client (assumes OPENAI_API_KEY is set in the environment)
 client = OpenAI()

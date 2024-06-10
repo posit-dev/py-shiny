@@ -8,11 +8,9 @@ ui.page_opts(
     fillable_mobile=True,
 )
 
-# create a chat instance
+# Create and display empty chat
 chat = ui.Chat(id="chat")
-
-# display the chat
-chat
+chat.ui()
 
 # create an LLM client
 client = GenerativeModel()

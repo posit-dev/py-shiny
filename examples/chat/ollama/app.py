@@ -8,11 +8,9 @@ ui.page_opts(
     fillable_mobile=True,
 )
 
-# Create a chat instance
+# Create and display empty chat
 chat = ui.Chat(id="chat")
-
-# Display the chat
-chat
+chat.ui()
 
 
 # on user submit, generate and append a response
