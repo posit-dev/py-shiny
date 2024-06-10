@@ -78,8 +78,8 @@ const opts: Array<BuildOptions> = [
     entryPoints: {
       "chat/chat": "chat/chat.ts",
     },
-    minify: false,
-    sourcemap: false,
+    minify: true,
+    sourcemap: true,
   },
   {
     entryPoints: { "chat/chat": "chat/chat.scss" },

@@ -20,29 +20,27 @@ shiny-chat-container {
       display: grid;
       grid-template-columns: auto minmax(0, 1fr);
       gap: 1rem;
-
-      /* Vertically center the message content */
-      .message-content {
+      > * {
         height: fit-content;
+      }
+      /* Vertically center the 2nd column (message content) */
+      :nth-child(2) {
         align-self: center;
       }
-
-      /* Align the user message to the right */
-      .message-user {
-        grid-column: 2;
-        justify-self: end;
-        padding: 0.5rem 0.75rem;
-        border-radius: 26px;
-        background-color: var(--bs-light-bg-subtle, #fcfcfc);
-        color: var(--bs-light-text-emphasis, #48505f);
-        border: var(--bs-border-width, 1px) solid var(--bs-border-color, #e9ecef);
-      }
-
       /* Make badges more circular */
       .badge {
         --bs-badge-padding-y: 0.65em;
-        height: fit-content;
       }
+    }
+
+    /* Align the user message to the right */
+    shiny-user-message {
+      align-self: flex-end;
+      padding: 0.5rem 0.75rem;
+      border-radius: 26px;
+      background-color: var(--bs-light-bg-subtle, #fcfcfc);
+      color: var(--bs-light-text-emphasis, #48505f);
+      border: var(--bs-border-width, 1px) solid var(--bs-border-color, #e9ecef);
     }
   }
 
