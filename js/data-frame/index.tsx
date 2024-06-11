@@ -1,4 +1,8 @@
 /* eslint-disable react-hooks/rules-of-hooks */
+
+// TODO-barret; double click handler; Edit cell via dbl click. Dbl click again to incorrectly select parent row while maintaining edit mode.
+// TODO-barret; With row selection on and edit mode on... `Enter` should start edit mode on the first visible cell in the row.
+
 import {
   Column,
   ColumnDef,
