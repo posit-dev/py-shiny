@@ -13,12 +13,12 @@ from typing import (
     overload,
 )
 
-from htmltools import Tag
+from htmltools import HTML, Tag
 
 from .. import _utils, reactive
 from .._namespaces import resolve_id
 from ..session import Session, require_active_session, session_context
-from ..types import NotifyException
+from ..types import MISSING, MISSING_TYPE, NotifyException
 from ._chat_types import (
     ChatMessage,
     ChatMessageChunk,
@@ -61,8 +61,15 @@ class Chat(Generic[T]):
         still be stored in the chat's `.messages()`.
     user_input_transformer
         A function to transform user input before storing it in the chat `.messages()`
-        history. This is useful for doing all sorts of RAG-style preprocessing, like
-        taking a URL and scraping it for text before sending it to the model.
+        history. This is useful for implementing RAG workflows, like taking a URL and
+        scraping it for text before sending it to the model.
+    assistant_response_transformer
+        A function to transform role="assistant" messages for display purposes.
+        If the function returns a string, it will be interpreted and parsed as a markdown
+        string on the client (and the resulting HTML is then sanitized). If the function
+        returns HTML, it will be displayed as-is. Note that, for `.append_message_stream()`,
+        the transformer will be applied to each message in the stream, so it should be
+        performant. By default, assistant responses are interpreted as markdown on the client.
     on_error
         How to handle errors that occur in response to user input. Options are:
         - "sanitize": Sanitize the error message before displaying it to the user.
@@ -81,14 +88,23 @@ class Chat(Generic[T]):
         user_input_transformer: (
             Callable[[str], str] | Callable[[str], Awaitable[str]]
         ) = lambda x: x,
+        assistant_response_transformer: (
+            Callable[[str], str | HTML]
+            | Callable[[str], Awaitable[str | HTML]]
+            | MISSING_TYPE
+        ) = MISSING,
         on_error: Literal["sanitize", "actual", "unhandled"] = "sanitize",
         session: Optional[Session] = None,
     ):
 
         self.id = id
-        if not _utils.is_async_callable(user_input_transformer):
-            user_input_transformer = _utils.wrap_async(user_input_transformer)
-        self._user_input_transformer = user_input_transformer
+        self._user_transformer = _utils.wrap_async(user_input_transformer)
+        if isinstance(assistant_response_transformer, MISSING_TYPE):
+            self._assistant_transformer = None
+        else:
+            self._assistant_transformer = _utils.wrap_async(
+                assistant_response_transformer
+            )
         self.on_error = on_error
         self._session = require_active_session(session)
 
@@ -244,7 +260,7 @@ class Chat(Generic[T]):
         val = cast(str, self._session.input[id]())
         if not transform:
             return val
-        return await self._user_input_transformer(val)
+        return await self._user_transformer(val)
 
     def messages(self) -> Sequence[ChatMessage]:
         """
@@ -278,7 +294,6 @@ class Chat(Generic[T]):
         Use `.append_message_stream()` instead of this method when `stream=True` (or
         similar) is specified in model's completion method.
         """
-
         await self._append_message(message)
 
     async def _append_message(self, message: Any, *, chunk: bool = False) -> None:
@@ -324,7 +339,7 @@ class Chat(Generic[T]):
         role = normalize_message_chunk(msg_first)["role"]
 
         # Start the message
-        msg_start = ChatMessageChunk(content="", type="message_start", role=role)
+        msg_start = ChatMessageChunk(content="", chunk_type="message_start", role=role)
         await self._append_message(msg_start, chunk=True)
 
         try:
@@ -332,18 +347,33 @@ class Chat(Generic[T]):
                 msg = normalize_message_chunk(msg)
                 await self._append_message(msg, chunk=True)
         finally:
-            msg_end = ChatMessageChunk(content="", type="message_end", role=role)
+            msg_end = ChatMessageChunk(content="", chunk_type="message_end", role=role)
             await self._append_message(msg_end, chunk=True)
 
+    # Send a message to the UI
     async def _send_message(self, message: ChatMessage, chunk: bool = False):
-        # print(msg)
+        if callable(self._assistant_transformer) and message["role"] == "assistant":
+            message["content"] = await self._assistant_transformer(message["content"])
+            if isinstance(message["content"], HTML):
+                message["content_type"] = "html"
+
+        # print(message)
+
         if chunk:
             msg_type = "shiny-chat-append-message-chunk"
         else:
             msg_type = "shiny-chat-append-message"
+
         await self._send_custom_message(msg_type, message)
         # TODO: Joe said it's a good idea to yield here, but I'm not sure why?
         # await asyncio.sleep(0)
+
+    # Store a message in the chat state
+    def _store_message(self, message: ChatMessage):
+        with reactive.isolate():
+            msgs = tuple(self._messages()) + (message,)
+
+        self._messages.set(msgs)
 
     # For chunk messages, accumulate the chunks until we have a signal that the message
     # has ended
@@ -353,12 +383,6 @@ class Chat(Generic[T]):
             final = ChatMessage(content=self._final_message, role=msg["role"])
             self._store_message(final)
             self._final_message = ""
-
-    def _store_message(self, message: ChatMessage):
-        with reactive.isolate():
-            msgs = tuple(self._messages()) + (message,)
-
-        self._messages.set(msgs)
 
     async def clear_messages(self):
         """

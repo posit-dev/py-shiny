@@ -24,7 +24,7 @@ shiny-chat-container {
         height: fit-content;
       }
       /* Vertically center the 2nd column (message content) */
-      :nth-child(2) {
+      .message-content {
         align-self: center;
       }
       /* Make badges more circular */

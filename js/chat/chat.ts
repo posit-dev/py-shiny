@@ -9,14 +9,18 @@ import { parse } from "marked";
 
 import { createElement } from "./_utils";
 
+type ContentType = "markdown" | "html" | "text";
+
 type Message = {
   content: string;
   role: string;
+  content_type?: ContentType;
 };
 type MessageChunk = {
   content: string;
   role: "user" | "assistant";
-  type?: "message_start" | "message_end";
+  chunk_type?: "message_start" | "message_end";
+  content_type?: ContentType;
 };
 type ShinyChatMessage = {
   id: string;
@@ -49,14 +53,21 @@ class LightElement extends LitElement {
 
 class ChatMessage extends LightElement {
   @property() content = "...";
+  @property() content_type: ContentType = "markdown";
 
   render(): ReturnType<LitElement["render"]> {
-    // Parse string as markdown and sanitize
-    // TODO: allow for customization
-    const content_html = parse(this.content) as string;
-    const safe_html = sanitize(content_html);
+    let content;
+    if (this.content_type === "markdown") {
+      content = unsafeHTML(sanitize(parse(this.content) as string));
+    } else if (this.content_type === "html") {
+      content = unsafeHTML(sanitize(this.content));
+    } else if (this.content_type === "text") {
+      content = this.content;
+    } else {
+      throw new Error(`Unknown content type: ${this.content_type}`);
+    }
 
-    // TODO: we should allow for custom icons
+    // TODO: support custom icons
     return html`
       <span class="badge rounded-pill text-bg-secondary"
         ><svg
@@ -74,7 +85,7 @@ class ChatMessage extends LightElement {
             d="M8.5 1.866a1 1 0 1 0-1 0V3h-2A4.5 4.5 0 0 0 1 7.5V8a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1v1a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1v-.5A4.5 4.5 0 0 0 10.5 3h-2zM14 7.5V13a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7.5A3.5 3.5 0 0 1 5.5 4h5A3.5 3.5 0 0 1 14 7.5"
           /></svg
       ></span>
-      <div class="message-content">${unsafeHTML(safe_html)}</div>
+      <div class="message-content">${content}</div>
     `;
   }
 
@@ -332,11 +343,11 @@ class ChatContainer extends LightElement {
   }
 
   #appendMessageChunk(message: MessageChunk): void {
-    if (message.type === "message_start") {
+    if (message.chunk_type === "message_start") {
       this.#appendMessage(message, false);
       return;
     }
-    if (message.type === "message_end") {
+    if (message.chunk_type === "message_end") {
       this.#finalizeMessage();
       return;
     }
