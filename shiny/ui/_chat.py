@@ -92,6 +92,7 @@ class Chat(Generic[T]):
     ):
 
         self.id = id
+        self.user_input_id = f"{id}_user_input"
         self._user_transformer = _utils.wrap_async(user_input_transformer)
         if isinstance(assistant_response_transformer, MISSING_TYPE):
             self._assistant_transformer = None
@@ -262,8 +263,7 @@ class Chat(Generic[T]):
         however, if you access the user input before it was transformed.
         """
 
-        id = f"{self.id}_user_input"
-        # Frotend won't allow an empty message to be sent
+        id = self.user_input_id
         val = cast(str, self._session.input[id]())
         if not transform:
             return val
