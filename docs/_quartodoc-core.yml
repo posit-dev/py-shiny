@@ -226,6 +226,8 @@ quartodoc:
           contents:
             - name: playwright.controls.Accordion
               dynamic: false
+            - name: playwright.controls.AccordionPanel
+              dynamic: false
             - name: playwright.controls.Card
               dynamic: false
             - name: playwright.controls.DownloadButton
