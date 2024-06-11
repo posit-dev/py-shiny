@@ -319,7 +319,7 @@ quartodoc:
           flatten: true
           summary:
             name: "Playwright Expect"
-            desc: "Methods for testing the state of a Shiny app."
+            desc: "Methods for testing the state of a locator within a Shiny app."
           contents:
             - name: playwright.expect.expect_to_change
               dynamic: false
@@ -347,7 +347,7 @@ quartodoc:
           flatten: true
           summary:
             name: "Run"
-            desc: "Methods for running a Shiny app locally on a machine"
+            desc: "Methods for starting a local Shiny app in the background"
           contents:
             - name: run.run_shiny_app
               dynamic: false
