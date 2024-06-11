@@ -670,7 +670,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
                     {...selection.itemHandlers()}
                   >
                     {selectionModes.row !== SelectionModes._rowEnum.NONE && (
-                      <td className="row-number">{virtualRow.index}</td>
+                      <td className="row-number">{row.index + 1}</td>
                     )}
                     {row.getVisibleCells().map((cell) => {
                       // TODO-barret; Only send in the cell data that is needed;
