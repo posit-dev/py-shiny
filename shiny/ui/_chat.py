@@ -70,11 +70,6 @@ class Chat(Generic[T]):
         returns HTML, it will be displayed as-is. Note that, for `.append_message_stream()`,
         the transformer will be applied to each message in the stream, so it should be
         performant. By default, assistant responses are interpreted as markdown on the client.
-    on_error
-        How to handle errors that occur in response to user input. Options are:
-        - "sanitize": Sanitize the error message before displaying it to the user.
-        - "actual": Display the actual error message to the user.
-        - "unhandled": Do not display any error message to the user.
     session
         The :class:`~shiny.Session` instance that the chat should appear in. If not
         provided, the session is inferred via :func:`~shiny.session.get_current_session`.
@@ -93,7 +88,6 @@ class Chat(Generic[T]):
             | Callable[[str], Awaitable[str | HTML]]
             | MISSING_TYPE
         ) = MISSING,
-        on_error: Literal["sanitize", "actual", "unhandled"] = "sanitize",
         session: Optional[Session] = None,
     ):
 
@@ -105,7 +99,6 @@ class Chat(Generic[T]):
             self._assistant_transformer = _utils.wrap_async(
                 assistant_response_transformer
             )
-        self.on_error = on_error
         self._session = require_active_session(session)
 
         # Chunked messages get accumulated (using this property) before changing state
@@ -125,10 +118,12 @@ class Chat(Generic[T]):
                 if msg["role"] != "system":
                     _utils.run_coro_sync(self._send_message(msg))
 
-            # When user input is submitted, append it to message state
-            @self.on_user_submit
+            # When user input is submitted, transform, and store it in the chat state
+            # (and make sure this runs before other effects since when the user
+            #  calls `.messages()`, they should get the latest user input)
+            @reactive.effect(priority=9999)
+            @reactive.event(self.user_input)
             async def _store_user_input():
-                # TODO: shouldn't NotifyException cause an early exit?
                 input = await self.user_input(transform=True)
                 user_msg = ChatMessage(content=input, role="user")
                 self._store_message(user_msg)
@@ -171,7 +166,10 @@ class Chat(Generic[T]):
 
     @overload
     def on_user_submit(
-        self, fn: SubmitFunction | SubmitFunctionAsync
+        self,
+        fn: SubmitFunction | SubmitFunctionAsync,
+        *,
+        on_error: Literal["sanitize", "actual", "unhandled"] = "sanitize",
     ) -> reactive.Effect_: ...
 
     @overload
@@ -182,6 +180,8 @@ class Chat(Generic[T]):
     def on_user_submit(
         self,
         fn: SubmitFunction | SubmitFunctionAsync | None = None,
+        *,
+        on_error: Literal["sanitize", "actual", "unhandled"] = "sanitize",
     ) -> (
         reactive.Effect_
         | Callable[[SubmitFunction | SubmitFunctionAsync], reactive.Effect_]
@@ -202,6 +202,13 @@ class Chat(Generic[T]):
         ----------
         fn
             A function to invoke when user input is submitted.
+        on_error
+            How to handle errors that occur in response to user input. For options
+            1 and 2, the error message is displayed to the user and the app continues
+            to run. For option 3, the error message is not displayed, and the app stops:
+            - "sanitize": Sanitize the error message before displaying it to the user.
+            - "actual": Display the actual error message to the user.
+            - "unhandled": Do not display any error message to the user.
 
         Note
         ----
@@ -216,14 +223,14 @@ class Chat(Generic[T]):
             @reactive.effect
             @reactive.event(self.user_input)
             async def handle_user_input():
-                if self.on_error == "unhandled":
+                if on_error == "unhandled":
                     await afunc()
                 else:
                     try:
                         await afunc()
                     except Exception as e:
                         await self._remove_loading_message()
-                        sanitize = self.on_error == "sanitize"
+                        sanitize = on_error == "sanitize"
                         raise NotifyException(str(e), sanitize=sanitize)
 
             self._effects.append(handle_user_input)
