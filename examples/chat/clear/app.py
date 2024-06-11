@@ -25,7 +25,7 @@ client = OpenAI()
 async def _():
     response = client.chat.completions.create(
         model=input.model(),
-        messages=chat.messages(),
+        messages=chat.get_messages(),
         stream=True,
     )
     await chat.append_message_stream(response)

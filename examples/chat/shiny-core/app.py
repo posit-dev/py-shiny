@@ -15,7 +15,7 @@ def server(input, output, session):
     async def _():
         response = await client.chat.completions.create(
             model="gpt-4o",
-            messages=chat.messages(),
+            messages=chat.get_messages(),
             stream=True,
         )
         await chat.append_message_stream(response)

@@ -10,11 +10,15 @@ class ChatMessage(TypedDict):
     content: str
     role: Role
     content_type: NotRequired[Literal["markdown", "html"]]
+    # For user messages
+    original_content: NotRequired[str]
 
 
+# Message chunks can only ever come in through `.append_message_stream()`
+# so they should always be an assistant message
 class ChatMessageChunk(TypedDict):
     content: str
-    role: Role
+    role: Literal["assistant"]
     chunk_type: NotRequired[Literal["message_start", "message_end"]]
     content_type: NotRequired[Literal["markdown", "html"]]
 

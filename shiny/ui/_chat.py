@@ -1,14 +1,20 @@
+import copy
+import warnings
 from typing import (
+    AbstractSet,
     Any,
     AsyncIterable,
     Awaitable,
     Callable,
+    Collection,
     Generic,
     Iterable,
     Literal,
     Optional,
+    Protocol,
     Sequence,
     TypeVar,
+    Union,
     cast,
     overload,
 )
@@ -41,6 +47,17 @@ SubmitFunction = Callable[[], None]
 SubmitFunctionAsync = Callable[[], Awaitable[None]]
 
 
+# A duck type for tiktoken.Encoding
+class TiktokEncoding(Protocol):
+    def encode(
+        self,
+        text: str,
+        *,
+        allowed_special: Union[Literal["all"], AbstractSet[str]] = set(),  # noqa: B006
+        disallowed_special: Union[Literal["all"], Collection[str]] = "all",
+    ) -> list[int]: ...
+
+
 class Chat(Generic[T]):
     """
     Create a chat component.
@@ -59,6 +76,15 @@ class Chat(Generic[T]):
         the message text, and the `role` key can be "assistant", "user", or "system".
         Note that system messages are not actually displayed in the chat, but will
         still be stored in the chat's `.messages()`.
+    encoding
+        The encoding method to use for tokenizing messages. This is used to enforce
+        token limits on messages sent to the model. Any encoder that implements
+        tiktoken's `Encoding` protocol can be used. If not provided, a warning is
+        displayed when the chat is created. To disable the warning, set `encoding=None`.
+    token_limits
+        A tuple of two integers. The first integer is the maximum number of tokens
+        that can be sent to the model in a single request. The second integer is the
+        amount of tokens to reserve for the model's response.
     user_input_transformer
         A function to transform user input before storing it in the chat `.messages()`
         history. This is useful for implementing RAG workflows, like taking a URL and
@@ -80,6 +106,8 @@ class Chat(Generic[T]):
         id: str,
         *,
         messages: Sequence[ChatMessage] = (),
+        encoding: TiktokEncoding | MISSING_TYPE | None = MISSING,
+        token_limits: tuple[int, int] = (4096, 400),
         user_input_transformer: (
             Callable[[str], str] | Callable[[str], Awaitable[str]]
         ) = lambda x: x,
@@ -93,6 +121,17 @@ class Chat(Generic[T]):
 
         self.id = id
         self.user_input_id = f"{id}_user_input"
+        if isinstance(encoding, MISSING_TYPE):
+            warnings.warn(
+                "Without an `encoding`, `Chat` won't be able to enforce token limits. "
+                "Consider using `tiktoken` to get an encoding for the relevant model "
+                "or set to `None` to disable this warning.",
+                stacklevel=2,
+            )
+            encoding = None
+        self._encoding = encoding
+        self._token_limits = token_limits
+        self._token_counts: list[int] = []
         self._user_transformer = _utils.wrap_async(user_input_transformer)
         if isinstance(assistant_response_transformer, MISSING_TYPE):
             self._assistant_transformer = None
@@ -123,10 +162,13 @@ class Chat(Generic[T]):
             # (and make sure this runs before other effects since when the user
             #  calls `.messages()`, they should get the latest user input)
             @reactive.effect(priority=9999)
-            @reactive.event(self.user_input)
+            @reactive.event(self.get_user_input)
             async def _store_user_input():
-                input = await self.user_input(transform=True)
-                user_msg = ChatMessage(content=input, role="user")
+                input = self.get_user_input()
+                content = await self._user_transformer(input)
+                user_msg = ChatMessage(
+                    content=content, role="user", original_content=input
+                )
                 self._store_message(user_msg)
 
             self._effects.append(_store_user_input)
@@ -222,7 +264,7 @@ class Chat(Generic[T]):
             afunc = _utils.wrap_async(fn)
 
             @reactive.effect
-            @reactive.event(self.user_input)
+            @reactive.event(self.get_user_input)
             async def handle_user_input():
                 if on_error == "unhandled":
                     await afunc()
@@ -243,47 +285,56 @@ class Chat(Generic[T]):
         else:
             return create_effect(fn)
 
-    async def user_input(self, transform: bool = False) -> str:
+    def get_user_input(self) -> str:
         """
         Reactively read user input
 
-        Parameters
-        ----------
-        transform
-            Whether to apply the user input transformer to the input.
-
         Returns
         -------
-        The user input message (possibly transformed).
+        The user input message (before any transformation).
 
         Note
         ----
-        Most users shouldn't need to use this method directly since `.on_user_submit()`
-        provides a convenient way to respond to user input. This method may be useful,
-        however, if you access the user input before it was transformed.
+        Most users shouldn't need to use this method directly since `.messages()`
+        contains user input. However, this method can be useful when you need to access
+        the un-transformed user input, and/or when you want to take a reactive
+        dependency on user input.
         """
-
         id = self.user_input_id
-        val = cast(str, self._session.input[id]())
-        if not transform:
-            return val
-        return await self._user_transformer(val)
+        return cast(str, self._session.input[id]())
 
-    def messages(self) -> Sequence[ChatMessage]:
+    def get_messages(
+        self, user_input_transformed: bool = True
+    ) -> Sequence[ChatMessage]:
         """
         Reactively read chat messages
 
         Obtain the current chat history within a reactive context. Messages are listed
         in the order they were added. As a result, when this method is called in a
         `.on_user_submit()` callback (as it most often is), the last message will be the
-        most recent one submitted by the user. User messages will also reflect the value
-        after applying the `user_input_transformer`.
+        most recent one submitted by the user.
+
+        Parameters
+        ----------
+        user_input_transformed
+            Whether to return user input messages with the transformation applied. This
+            should be `True` when using the messages for generating responses, and `False`
+            when you need (to save) the original user input.
 
         Returns
         -------
         A sequence of chat messages.
         """
-        return self._messages()
+        messages = self._messages()
+        if user_input_transformed:
+            # TODO: drop the original_content field?
+            return messages
+        else:
+            # Move the original content to the content field for user messages
+            messages2 = copy.copy(messages)
+            for msg in messages2:
+                msg["content"] = msg.get("original_content", msg["content"])
+            return messages2
 
     async def append_message(self, message: Any) -> None:
         """
@@ -358,7 +409,9 @@ class Chat(Generic[T]):
             await self._append_message(msg_end, chunk=True)
 
     # Send a message to the UI
-    async def _send_message(self, message: ChatMessage, chunk: bool = False):
+    async def _send_message(
+        self, message: ChatMessage | ChatMessageChunk, chunk: bool = False
+    ):
         if callable(self._assistant_transformer) and message["role"] == "assistant":
             message["content"] = await self._assistant_transformer(message["content"])
             if isinstance(message["content"], HTML):
@@ -377,16 +430,39 @@ class Chat(Generic[T]):
 
     # Store a message in the chat state
     def _store_message(self, message: ChatMessage):
+        # Get the (current and new) messages
         with reactive.isolate():
-            msgs = tuple(self._messages()) + (message,)
+            messages = tuple(self._messages()) + (message,)
 
-        self._messages.set(msgs)
+        # Exit early if we don't have an encoder / token count
+        if self._encoding is None:
+            self._messages.set(messages)
+            return
+
+        # Otherwise, calculate the token count, and possibly
+        # remove older messages to stay within the token limit
+        token_count = len(self._encoding.encode(message["content"]))
+        self._token_counts.append(token_count)
+
+        # Take the newest messages up to the token limit
+        limit, reserve = self._token_limits
+        max_tokens = limit - reserve
+        messages2: list[ChatMessage] = []
+        for i, message in enumerate(reversed(messages)):
+            if sum(self._token_counts[-i - 1 :]) > max_tokens:
+                self._token_counts = self._token_counts[-i:]
+                break
+            messages2.append(message)
+
+        messages2.reverse()
+
+        self._messages.set(tuple(messages2))
 
     # For chunk messages, accumulate the chunks until we have a signal that the message
     # has ended
     def _store_message_chunk(self, msg: ChatMessageChunk):
         self._final_message += msg["content"]
-        if "type" in msg and msg["type"] == "message_end":
+        if "chunk_type" in msg and msg["chunk_type"] == "message_end":
             final = ChatMessage(content=self._final_message, role=msg["role"])
             self._store_message(final)
             self._final_message = ""

@@ -18,7 +18,7 @@ chat.ui()
 async def _():
     response = ollama.chat(
         model="llama3",
-        messages=chat.messages(),
+        messages=chat.get_messages(),
         stream=True,
     )
     await chat.append_message_stream(response)

@@ -1,3 +1,4 @@
+import tiktoken.load
 from langchain_openai import ChatOpenAI
 from utils import recipe_prompt, scrape_page_with_url
 
@@ -9,7 +10,6 @@ ui.page_opts(
     fillable_mobile=True,
 )
 
-# Create and display the chat
 chat = ui.Chat(
     id="chat",
     messages=[{"role": "system", "content": recipe_prompt}],
@@ -22,5 +22,10 @@ llm = ChatOpenAI(temperature=0)
 
 @chat.on_user_submit
 async def _():
-    response = llm.astream(chat.messages())
+    response = llm.astream(chat.get_messages())
     await chat.append_message_stream(response)
+
+
+import tiktoken
+
+tiktoken.load

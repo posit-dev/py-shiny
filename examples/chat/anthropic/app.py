@@ -21,7 +21,7 @@ client = AsyncAnthropic()
 async def _():
     response = await client.messages.create(
         model="claude-3-opus-20240229",
-        messages=chat.messages(),
+        messages=chat.get_messages(),
         stream=True,
         max_tokens=1000,
     )

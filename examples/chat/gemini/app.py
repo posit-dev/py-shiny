@@ -19,7 +19,7 @@ client = GenerativeModel()
 # on user submit, generate and append a response
 @chat.on_user_submit
 async def _():
-    messages = chat.messages()
+    messages = chat.get_messages()
 
     # Convert messages to the format expected by Google's API
     # TODO: we could automatically do this if client is provided?

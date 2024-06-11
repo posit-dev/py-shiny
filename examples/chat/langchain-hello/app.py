@@ -1,3 +1,4 @@
+import tiktoken
 from langchain_openai import ChatOpenAI
 
 from shiny.express import ui
@@ -8,12 +9,14 @@ ui.page_opts(
     fillable_mobile=True,
 )
 
-# Create and display an empty chat
-chat = ui.Chat(id="chat")
+# Create the chat model
+llm = ChatOpenAI(model="gpt-3.5-turbo")
+
+
+# Create and display an empty chat UI
+chat = ui.Chat(id="chat", encoding=tiktoken.encoding_for_model("gpt-3.5-turbo"))
 chat.ui()
 
-# Create the LLM client
-llm = ChatOpenAI()
 
 # --------------------------------------------------------------------
 # To use a different model, replace the line above with any model that subclasses
@@ -29,7 +32,7 @@ llm = ChatOpenAI()
 @chat.on_user_submit
 async def _():
     # Get all the messages currently in the chat
-    messages = chat.messages()
+    messages = chat.get_messages()
     # Create an async generator from the messages
     stream = llm.astream(messages)
     # Append the response stream into the chat
