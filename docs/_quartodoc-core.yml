@@ -215,7 +215,7 @@ quartodoc:
         - module.ui
         - module.server
     - title: Testing
-      desc: ""
+      desc: "Testing Methods to make it easier to run and test user's Shiny apps."
       contents:
         - kind: page
           path: PlaywrightControls

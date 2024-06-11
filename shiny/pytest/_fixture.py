@@ -5,7 +5,7 @@ from typing import Literal, Union
 
 import pytest
 
-from ..._docstring import no_example
+from .._docstring import no_example
 from ..run._run import shiny_app_gen
 
 __all__ = (
