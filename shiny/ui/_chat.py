@@ -27,8 +27,10 @@ from ..session import Session, require_active_session, session_context
 from ..types import MISSING, MISSING_TYPE, NotifyException
 from ..ui.css import CssUnit, as_css_unit
 from ._chat_types import (
+    AssistantMessage,
     ChatMessage,
-    ChatMessageChunk,
+    UserMessage,
+    assistant_message,
     normalize_message,
     normalize_message_chunk,
 )
@@ -39,13 +41,22 @@ __all__ = (
     "Chat",
     "chat_ui",
     "ChatMessage",
-    "ChatMessageChunk",
 )
 
 T = TypeVar("T")
 
+
+# TODO: UserInput might need to be a list of dicts if we want to support multiple
+# user input content types
+UserInputTransformer = Callable[[str], str]
+UserInputTransformerAsync = Callable[[str], Awaitable[str]]
+AssistantResponseTransformer = Callable[[str], str | HTML]
+AssistantResponseTransformerAsync = Callable[[str], Awaitable[str | HTML]]
 SubmitFunction = Callable[[], None]
 SubmitFunctionAsync = Callable[[], Awaitable[None]]
+
+# A message formats that can be stored/sent to the chat
+FinalMesssage = ChatMessage | UserMessage | AssistantMessage
 
 
 # A duck type for tiktoken.Encoding
@@ -108,13 +119,13 @@ class Chat(Generic[T]):
         *,
         messages: Sequence[ChatMessage] = (),
         encoding: TiktokEncoding | MISSING_TYPE | None = MISSING,
-        token_limits: tuple[int, int] = (4096, 400),
+        token_limits: tuple[int, int] = (4096, 1000),
         user_input_transformer: (
-            Callable[[str], str] | Callable[[str], Awaitable[str]]
+            UserInputTransformer | UserInputTransformerAsync
         ) = lambda x: x,
         assistant_response_transformer: (
-            Callable[[str], str | HTML]
-            | Callable[[str], Awaitable[str | HTML]]
+            AssistantResponseTransformer
+            | AssistantResponseTransformerAsync
             | MISSING_TYPE
         ) = MISSING,
         session: Optional[Session] = None,
@@ -154,7 +165,6 @@ class Chat(Generic[T]):
 
             # Store (i.e. append) message state and display non-system messages
             for msg in messages:
-                msg = normalize_message(msg)
                 self._store_message(msg)
                 if msg["role"] != "system":
                     _utils.run_coro_sync(self._send_message(msg))
@@ -167,7 +177,7 @@ class Chat(Generic[T]):
             async def _store_user_input():
                 input = self.get_user_input()
                 content = await self._user_transformer(input)
-                user_msg = ChatMessage(
+                user_msg = UserMessage(
                     content=content, role="user", original_content=input
                 )
                 self._store_message(user_msg)
@@ -402,30 +412,26 @@ class Chat(Generic[T]):
         _do_stream()
 
     async def _append_message_stream(self, message: AsyncIterable[Any]):
-        # Get the first message just to determine the role
-        miter = message.__aiter__()
-        msg_first = await miter.__anext__()
-        role = normalize_message_chunk(msg_first)["role"]
-
         # Start the message
-        msg_start = ChatMessageChunk(content="", chunk_type="message_start", role=role)
-        await self._append_message(msg_start, chunk=True)
+        start = assistant_message(content="")
+        start["chunk_type"] = "message_start"
+        await self._append_message(start, chunk=True)
 
         try:
             async for msg in message:
                 msg = normalize_message_chunk(msg)
                 await self._append_message(msg, chunk=True)
         finally:
-            msg_end = ChatMessageChunk(content="", chunk_type="message_end", role=role)
-            await self._append_message(msg_end, chunk=True)
+            end = assistant_message(content="")
+            end["chunk_type"] = "message_end"
+            await self._append_message(end, chunk=True)
 
     # Send a message to the UI
-    async def _send_message(
-        self, message: ChatMessage | ChatMessageChunk, chunk: bool = False
-    ):
+    async def _send_message(self, message: FinalMesssage, chunk: bool = False):
         if callable(self._assistant_transformer) and message["role"] == "assistant":
-            message["content"] = await self._assistant_transformer(message["content"])
-            if isinstance(message["content"], HTML):
+            content = await self._assistant_transformer(message["content"])
+            message = assistant_message(content=content)
+            if isinstance(content, HTML):
                 message["content_type"] = "html"
 
         # print(message)
@@ -440,7 +446,9 @@ class Chat(Generic[T]):
         # await asyncio.sleep(0)
 
     # Store a message in the chat state
-    def _store_message(self, message: ChatMessage):
+    def _store_message(self, msg: FinalMesssage):
+        message = ChatMessage(content=msg["content"], role=msg["role"])
+
         # Get the (current and new) messages
         with reactive.isolate():
             messages = tuple(self._messages()) + (message,)
@@ -471,10 +479,10 @@ class Chat(Generic[T]):
 
     # For chunk messages, accumulate the chunks until we have a signal that the message
     # has ended
-    def _store_message_chunk(self, msg: ChatMessageChunk):
+    def _store_message_chunk(self, msg: AssistantMessage):
         self._final_message += msg["content"]
         if "chunk_type" in msg and msg["chunk_type"] == "message_end":
-            final = ChatMessage(content=self._final_message, role=msg["role"])
+            final = assistant_message(content=self._final_message)
             self._store_message(final)
             self._final_message = ""
 
@@ -495,9 +503,7 @@ class Chat(Generic[T]):
     async def _remove_loading_message(self):
         await self._send_custom_message("shiny-chat-remove-loading-message", None)
 
-    async def _send_custom_message(
-        self, handler: str, obj: ChatMessage | ChatMessageChunk | None
-    ):
+    async def _send_custom_message(self, handler: str, obj: FinalMesssage | None):
         await self._session.send_custom_message(
             "shinyChatMessage",
             {

@@ -13,11 +13,6 @@ type ContentType = "markdown" | "html" | "text";
 
 type Message = {
   content: string;
-  role: string;
-  content_type?: ContentType;
-};
-type MessageChunk = {
-  content: string;
   role: "user" | "assistant";
   chunk_type?: "message_start" | "message_end";
   content_type?: ContentType;
@@ -25,7 +20,7 @@ type MessageChunk = {
 type ShinyChatMessage = {
   id: string;
   handler: string;
-  obj: Message | MessageChunk;
+  obj: Message;
 };
 
 // https://github.com/microsoft/TypeScript/issues/28357#issuecomment-748550734
@@ -33,7 +28,7 @@ declare global {
   interface GlobalEventHandlersEventMap {
     "shiny-chat-input-sent": CustomEvent<Message>;
     "shiny-chat-append-message": CustomEvent<Message>;
-    "shiny-chat-append-message-chunk": CustomEvent<MessageChunk>;
+    "shiny-chat-append-message-chunk": CustomEvent<Message>;
     "shiny-chat-clear-messages": CustomEvent;
   }
 }
@@ -338,11 +333,11 @@ class ChatContainer extends LightElement {
     if (message) message.remove();
   }
 
-  #onAppendChunk(event: CustomEvent<MessageChunk>): void {
+  #onAppendChunk(event: CustomEvent<Message>): void {
     this.#appendMessageChunk(event.detail);
   }
 
-  #appendMessageChunk(message: MessageChunk): void {
+  #appendMessageChunk(message: Message): void {
     if (message.chunk_type === "message_start") {
       this.#appendMessage(message, false);
       return;
