@@ -52,6 +52,7 @@ MOD_ID = "testing"
 def mod_ui():
     return ui.TagList(
         ui.card(
+            ui.input_text("joe", "Text:"),
             ui.fill.as_fill_item(
                 ui.output_data_frame("summary_data"),
             ),
