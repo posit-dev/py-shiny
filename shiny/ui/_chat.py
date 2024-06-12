@@ -1,4 +1,3 @@
-import copy
 import warnings
 from typing import (
     AbstractSet,
@@ -56,7 +55,7 @@ SubmitFunction = Callable[[], None]
 SubmitFunctionAsync = Callable[[], Awaitable[None]]
 
 # A message formats that can be stored/sent to the chat
-FinalMesssage = ChatMessage | UserMessage | AssistantMessage
+FullMessage = ChatMessage | UserMessage | AssistantMessage
 
 
 # A duck type for tiktoken.Encoding
@@ -161,7 +160,7 @@ class Chat(Generic[T]):
 
         with session_context(self._session):
             # Initialize message state
-            self._messages: reactive.Value[Sequence[ChatMessage]] = reactive.Value(())
+            self._messages: reactive.Value[Sequence[FullMessage]] = reactive.Value(())
 
             # Store (i.e. append) message state and display non-system messages
             for msg in messages:
@@ -326,7 +325,7 @@ class Chat(Generic[T]):
 
     def get_messages(
         self, user_input_transformed: bool = True
-    ) -> Sequence[ChatMessage]:
+    ) -> Sequence[ChatMessage | UserMessage]:
         """
         Reactively read chat messages
 
@@ -338,24 +337,25 @@ class Chat(Generic[T]):
         Parameters
         ----------
         user_input_transformed
-            Whether to return user input messages with the transformation applied. This
-            should be `True` when using the messages for generating responses, and `False`
-            when you need (to save) the original user input.
+            Whether to return user input messages with transformation applied. This only
+            matters if a `user_input_transformer` was provided to the chat constructor.
+            This should be `True` when passing the messages to a model for response
+            generation, but `False` when you need (to save) the original user input.
 
         Returns
         -------
         A sequence of chat messages.
         """
         messages = self._messages()
-        if user_input_transformed:
-            # TODO: drop the original_content field?
-            return messages
-        else:
-            # Move the original content to the content field for user messages
-            messages2 = copy.copy(messages)
-            for msg in messages2:
-                msg["content"] = msg.get("original_content", msg["content"])
-            return messages2
+
+        res: Sequence[ChatMessage] = []
+        for msg in messages:
+            content = msg["content"]
+            if "original_content" in msg and user_input_transformed:
+                content = msg["original_content"]
+            res.append({"content": content, "role": msg["role"]})
+
+        return res
 
     async def append_message(self, message: Any) -> None:
         """
@@ -427,7 +427,7 @@ class Chat(Generic[T]):
             await self._append_message(end, chunk=True)
 
     # Send a message to the UI
-    async def _send_message(self, message: FinalMesssage, chunk: bool = False):
+    async def _send_message(self, message: FullMessage, chunk: bool = False):
         if callable(self._assistant_transformer) and message["role"] == "assistant":
             content = await self._assistant_transformer(message["content"])
             message = assistant_message(content=content)
@@ -446,9 +446,7 @@ class Chat(Generic[T]):
         # await asyncio.sleep(0)
 
     # Store a message in the chat state
-    def _store_message(self, msg: FinalMesssage):
-        message = ChatMessage(content=msg["content"], role=msg["role"])
-
+    def _store_message(self, message: FullMessage):
         # Get the (current and new) messages
         with reactive.isolate():
             messages = tuple(self._messages()) + (message,)
@@ -471,7 +469,7 @@ class Chat(Generic[T]):
             if sum(self._token_counts[-i - 1 :]) > max_tokens:
                 self._token_counts = self._token_counts[-i:]
                 break
-            messages2.append(message)
+            messages2.append({"content": message["content"], "role": message["role"]})
 
         messages2.reverse()
 
@@ -503,7 +501,7 @@ class Chat(Generic[T]):
     async def _remove_loading_message(self):
         await self._send_custom_message("shiny-chat-remove-loading-message", None)
 
-    async def _send_custom_message(self, handler: str, obj: FinalMesssage | None):
+    async def _send_custom_message(self, handler: str, obj: FullMessage | None):
         await self._session.send_custom_message(
             "shinyChatMessage",
             {

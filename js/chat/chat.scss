@@ -5,6 +5,7 @@ shiny-chat-container {
   flex-direction: column;
   margin: 0 auto;
   gap: 1rem;
+  overflow: auto;
 
   p:last-child {
     margin-bottom: 0;
@@ -13,7 +14,6 @@ shiny-chat-container {
   shiny-chat-messages {
     display: flex;
     flex-direction: column;
-    overflow: auto;
     gap: 1rem;
 
     shiny-chat-message {

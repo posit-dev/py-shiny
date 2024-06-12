@@ -11,7 +11,7 @@ class ChatMessage(TypedDict):
     role: Role
 
 
-# TODO: content should probably be [{"type": "text", "content": "..."}]
+# TODO: content should probably be [{"type": "text", "content": "..."}, {"type": "image", ...}]
 # in order to support multiple content types...
 class UserMessage(TypedDict):
     content: str
@@ -19,6 +19,7 @@ class UserMessage(TypedDict):
     original_content: str
 
 
+# TODO: this should be aware of post-transformed state
 class AssistantMessage(TypedDict):
     content: str
     role: Literal["assistant", "system"]
