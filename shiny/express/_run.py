@@ -118,6 +118,8 @@ def run_express(file: Path) -> Tag | TagList:
 
         var_context: dict[str, object] = {
             "__file__": file_path,
+            "__name__": "app",
+            "__package__": "shiny_express_app" + escape_to_var_name(str(file)),
             expressify_decorator_func_name: _expressify_decorator_function_def,
             "input": InputNotImportedShim(),
         }
@@ -289,3 +291,60 @@ def _normalize_app_opts(app_opts: AppOpts, parent_dir: Path) -> AppOpts:
             app_opts["static_assets"][mount_point] = path
 
     return app_opts
+
+
+import importlib.abc
+import importlib.util
+import types
+from importlib.machinery import ModuleSpec
+from typing import Sequence
+
+from ._utils import escape_to_var_name, unescape_from_var_name
+
+# ======================================================================================
+# Import hook to load Shiny Express app as a package + module
+# ======================================================================================
+
+
+class ShinyExpressAppImportFinder(importlib.abc.MetaPathFinder):
+    def __init__(self):
+        self.loaded_modules: dict[str, ModuleSpec] = {}
+
+    def find_spec(
+        self,
+        fullname: str,
+        path: Sequence[str] | None,
+        target: types.ModuleType | None = None,
+    ) -> ModuleSpec | None:
+        if fullname in self.loaded_modules:
+            return self.loaded_modules[fullname]
+
+        if fullname.startswith("shiny_express_app") and fullname.endswith("_py"):
+            app_path = unescape_from_var_name(
+                fullname.removeprefix("shiny_express_app")
+            )
+            app_dir = str(Path(app_path).parent)
+            spec = importlib.util.spec_from_loader(
+                fullname, ShinyExpressAppLoader(), origin=app_dir
+            )
+            if spec is None:
+                # TODO: Error here?
+                return None
+
+            spec.submodule_search_locations = [app_dir]
+            self.loaded_modules[fullname] = spec
+            return spec
+
+
+class ShinyExpressAppLoader(importlib.abc.Loader):
+    def create_module(self, spec: ModuleSpec):
+        name_no_prefix = spec.name.removeprefix("shiny_express_app")
+        my_module = types.ModuleType(name_no_prefix)
+        return my_module
+
+    def exec_module(self, module: types.ModuleType) -> None:
+        filename = unescape_from_var_name(module.__name__)
+        module.app = wrap_express_app(Path(filename))
+
+
+sys.meta_path.insert(0, ShinyExpressAppImportFinder())
