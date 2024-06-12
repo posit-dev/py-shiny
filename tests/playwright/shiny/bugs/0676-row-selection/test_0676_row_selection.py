@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Page
 
 from shiny.playwright.controls import OutputCode, OutputDataFrame
 from shiny.run import ShinyAppProc
