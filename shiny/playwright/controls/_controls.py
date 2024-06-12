@@ -3513,9 +3513,22 @@ class OutputDataFrame(_InputWithContainer):
         col
             The column number of the cell.
         """
-        return self.loc_body.locator(f"> tr[data-index='{row}']").locator(
-            # nth-child starts from index = 1
-            f"> td:nth-child({col + 1}),  > th:nth-child({col + 1})"
+
+        return (
+            # Find the direct row
+            self.loc_body.locator(f"> tr[data-index='{row}']")
+            # Find all direct td's and th's (these are independent sets)
+            .locator("> td, > th")
+            # Remove all results that contain the `row-number` class
+            .locator(
+                # self
+                "xpath=.",
+                has=self.page.locator(
+                    "xpath=self::*[not(contains(@class, 'row-number'))]"
+                ),
+            )
+            # Return the first result
+            .nth(col)
         )
 
     def expect_n_row(self, row_number: int, *, timeout: Timeout = None):
