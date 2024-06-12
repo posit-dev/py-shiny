@@ -1,7 +1,5 @@
 /* eslint-disable react-hooks/rules-of-hooks */
 
-// TODO-barret-future; Use `useMemo` instead of `useState` for _reactive calculations_.
-// TODO-barret-future; Document all `useState` usage. Also try to use `useMemo` instead.
 // TODO-barret-future; Try to group all related code into a file and make index.tsx as small as possible. Try to move all logic into files and keep the main full of `useFOO` functions.
 
 import {
@@ -124,26 +122,14 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
 
   const editCellsIsAllowed = payloadOptions["editable"] === true;
 
-  // const [cellBeingEdited, setCellBeingEdited] = useState<{
-  //   rowIndex: number;
-  //   columnIndex: number;
-  // } | null>(null);
-
-  const [isEditingCell, setIsEditingCell] = useState(false);
-  useEffect(() => {
+  const isEditingCell = useMemo<boolean>(() => {
     for (const cellEdit of cellEditMap.values()) {
       if (cellEdit.isEditing) {
-        // setCellBeingEdited({
-        //   rowIndex: cellEdit.rowIndex,
-        //   columnIndex: cellEdit.columnIndex,
-        // });
-        setIsEditingCell(true);
-        return;
+        return true;
       }
     }
-    // setCellBeingEdited(null);
-    setIsEditingCell(false);
-  }, [cellEditMap, setIsEditingCell]);
+    return false;
+  }, [cellEditMap]);
 
   const coldefs = useMemo<ColumnDef<unknown[], unknown>[]>(
     () =>

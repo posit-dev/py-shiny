@@ -83,7 +83,7 @@ interface TableBodyCellProps {
   setData: (fn: (draft: unknown[][]) => void) => void;
   cellEditInfo: CellEdit | undefined;
   setCellEditMapAtLoc: SetCellEditMapAtLoc;
-  selection: SelectionSet<string, HTMLTableCellElement>;
+  selection: SelectionSet<string, HTMLTableRowElement>;
 }
 
 export const TableBodyCell: FC<TableBodyCellProps> = ({
