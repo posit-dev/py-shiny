@@ -3495,8 +3495,12 @@ class OutputDataFrame(_InputWithContainer):
         )
         self.loc_head = self.loc.locator("> table > thead")
         self.loc_body = self.loc.locator("> table > tbody")
-        self.loc_column_filter = self.loc_head.locator("> tr.filters > th")
-        self.loc_column_label = self.loc_head.locator("> tr > th:not(.filters th)")
+        self.loc_column_filter = self.loc_head.locator(
+            "> tr.filters > th:not(.table-corner)"
+        )
+        self.loc_column_label = self.loc_head.locator(
+            "> tr:not(.filters) > th:not(.table-corner)"
+        )
 
     def cell_locator(self, row: int, col: int) -> Locator:
         """
