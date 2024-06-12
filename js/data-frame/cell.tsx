@@ -37,7 +37,7 @@ export const CellStateEnum = {
   Editing: "Editing",
   Ready: "Ready",
 } as const;
-const CellStateClassEnum = {
+export const CellStateClassEnum = {
   EditSaving: "cell-edit-saving",
   EditSuccess: "cell-edit-success",
   EditFailure: "cell-edit-failure",
@@ -316,25 +316,39 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
 
   // When editing a cell, set up a global click listener to reset edit info when
   // clicking outside of the cell
+  // Use MouseDown event to match how selection is performed to prevent the click from bubbling up
   useEffect(() => {
     if (!isEditing) return;
+    if (!tdRef.current) return;
     if (!inputRef.current) return;
 
     // TODO-barret; Restore cursor position and text selection here
 
+    const onEdtingCellMouseDown = (e: MouseEvent) => {
+      if (!tdRef.current?.contains(e.target as Node)) return;
+      // Prevent the click from bubbling up to the body click listener
+      e.stopPropagation();
+
+      // Do not stop the event from preventing default as we need the click to work for the text area!
+      // e.preventDefault();
+    };
+    const curRef = tdRef.current; // Capture the current ref
+    curRef.addEventListener("mousedown", onEdtingCellMouseDown);
+
     // Set up global click listener to reset edit info
-    const onBodyClick = (e: MouseEvent) => {
+    const onBodyMouseDown = (e: MouseEvent) => {
       if (e.target === inputRef.current) return;
 
       attemptUpdate();
       // Turn off editing for this cell
       resetEditing();
     };
-    document.body.addEventListener("click", onBodyClick);
+    document.body.addEventListener("mousedown", onBodyMouseDown);
 
     // Tear down global click listener when we're done
     return () => {
-      document.body.removeEventListener("click", onBodyClick);
+      curRef.removeEventListener("mousedown", onEdtingCellMouseDown);
+      document.body.removeEventListener("mousedown", onBodyMouseDown);
     };
   }, [
     cellState,

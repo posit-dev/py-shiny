@@ -2,6 +2,7 @@ import * as React from "react";
 import { useState } from "react";
 import { ImmutableSet } from "./immutable-set";
 
+import { CellStateClassEnum, CellStateEnum } from "./cell";
 import type { ValueOf } from "./types";
 
 type CellSelectionNone = { type: "none" };
@@ -120,6 +121,7 @@ export function useSelection<TKey, TElement extends HTMLElement>({
   keyAccessor,
   focusOffset,
   focusEscape,
+  onKeyDownEnter,
   between,
 }: {
   // cellBeingEdited: { rowIndex: number; columnIndex: number } | null;
@@ -128,6 +130,7 @@ export function useSelection<TKey, TElement extends HTMLElement>({
   keyAccessor: (el: TElement) => TKey;
   focusOffset: (start: TKey, offset: number) => TKey | null;
   focusEscape: (el: TElement) => void;
+  onKeyDownEnter: (el: TElement) => void;
   between: (from: TKey, to: TKey) => ReadonlyArray<TKey>;
 }): SelectionSet<TKey, TElement> {
   const [selectedKeys, setSelectedKeys] = useState<ImmutableSet<TKey>>(
@@ -145,6 +148,12 @@ export function useSelection<TKey, TElement extends HTMLElement>({
 
     const el = event.currentTarget as TElement;
     const key = keyAccessor(el);
+    if (isEditingCell) {
+      // Only quit early if that cell is in edit mode
+      if (el.classList.contains(CellStateClassEnum[CellStateEnum.Editing])) {
+        return;
+      }
+    }
 
     const result = performMouseDownAction<TKey, TElement>(
       selectionModes,
@@ -205,7 +214,13 @@ export function useSelection<TKey, TElement extends HTMLElement>({
         }
       }
     } else if (selectionModes.row === SelectionModes._rowEnum.MULTIPLE) {
-      if (event.key === " " || event.key === "Enter") {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        onKeyDownEnter(el);
+        return;
+      }
+
+      if (event.key === " ") {
         setSelectedKeys(selectedKeys.toggle(key));
         event.preventDefault();
       } else if (event.key === "ArrowUp" || event.key === "ArrowDown") {

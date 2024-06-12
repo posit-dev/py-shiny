@@ -1,8 +1,5 @@
 /* eslint-disable react-hooks/rules-of-hooks */
 
-// TODO-barret; double click handler; Edit cell via dbl click. Dbl click again to incorrectly select parent row while maintaining edit mode.
-// TODO-barret; With row selection on and edit mode on... `Enter` should start edit mode on the first visible cell in the row.
-
 import {
   Column,
   ColumnDef,
@@ -313,6 +310,30 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
     },
     between: (fromKey, toKey) =>
       findKeysBetween(table.getSortedRowModel(), fromKey, toKey),
+    onKeyDownEnter: (el) => {
+      // Retrieve all editable cells in the row
+      const childrenNodes = Array(...el.childNodes.values()).filter((node) => {
+        return (
+          node instanceof HTMLElement &&
+          node.classList.contains("cell-editable")
+        );
+      });
+      if (childrenNodes.length === 0) return; // Quit early
+
+      // Find the first editable cell in the row
+      const firstItem = findFirstItemInView(
+        containerRef.current!,
+        childrenNodes
+      );
+      if (!firstItem) return; // Quit early
+
+      // Submit the double click event to the cell to trigger edit mode for the cell
+      const doubleClickEvent = new MouseEvent("dblclick", {
+        bubbles: true,
+        cancelable: true,
+      });
+      firstItem.dispatchEvent(doubleClickEvent);
+    },
   });
 
   useEffect(() => {
