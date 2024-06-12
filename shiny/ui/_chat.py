@@ -19,12 +19,13 @@ from typing import (
     overload,
 )
 
-from htmltools import HTML, Tag
+from htmltools import HTML, Tag, TagAttrValue, css
 
 from .. import _utils, reactive
 from .._namespaces import resolve_id
 from ..session import Session, require_active_session, session_context
 from ..types import MISSING, MISSING_TYPE, NotifyException
+from ..ui.css import CssUnit, as_css_unit
 from ._chat_types import (
     ChatMessage,
     ChatMessageChunk,
@@ -125,7 +126,7 @@ class Chat(Generic[T]):
             warnings.warn(
                 "Without an `encoding`, `Chat` won't be able to enforce token limits. "
                 "Consider using `tiktoken` to get an encoding for the relevant model "
-                "or set to `None` to disable this warning.",
+                "or set to `Chat(encoding=None)` to disable this warning.",
                 stacklevel=2,
             )
             encoding = None
@@ -175,12 +176,15 @@ class Chat(Generic[T]):
 
     def ui(
         self,
+        *,
         placeholder: str = "Enter a message...",
-        width: str = "min(680px, 100%)",
+        width: CssUnit = "min(680px, 100%)",
+        height: CssUnit = "auto",
         fill: bool = True,
+        **kwargs: TagAttrValue,
     ) -> Tag:
         """
-        Display/locate the chat component in the UI.
+        Place a chat component in the UI.
 
         This method is only available in Shiny Express. In Shiny Core, use
         :func:`~shiny.ui.chat_ui` instead.
@@ -188,11 +192,16 @@ class Chat(Generic[T]):
         Parameters
         ----------
         placeholder
-            The placeholder text to display in the chat input.
+            Placeholder text for the chat input.
         width
             The width of the chat container.
+        height
+            The height of the chat container.
         fill
-            Whether the chat should fill a fillable container.
+            Whether the chat should vertically take available space inside a fillable
+            container.
+        kwargs
+            Additional attributes for the chat container element.
         """
 
         if not _express_is_active():
@@ -204,7 +213,9 @@ class Chat(Generic[T]):
             id=self.id,
             placeholder=placeholder,
             width=width,
+            height=height,
             fill=fill,
+            **kwargs,
         )
 
     @overload
@@ -499,27 +510,34 @@ class Chat(Generic[T]):
 
 def chat_ui(
     id: str,
+    *,
     placeholder: str = "Enter a message...",
-    width: str = "min(680px, 100%)",
+    width: CssUnit = "min(680px, 100%)",
+    height: CssUnit = "auto",
     fill: bool = True,
+    **kwargs: TagAttrValue,
 ) -> Tag:
     """
     UI container for a chat component (Shiny Core).
 
     This function is for locating a :class:`~shiny.ui.Chat` instance in a Shiny Core
-    app. If you are using Shiny Express, you should use the :method:`~shiny.ui.Chat.ui`
-    method instead.
+    app. If you are using Shiny Express, use the :method:`~shiny.ui.Chat.ui` method
+    instead.
 
     Parameters
     ----------
     id
-        A unique identifier for the chat session.
+        A unique identifier for the chat UI.
     placeholder
-        The placeholder text to display in the chat input.
+        Placeholder text for the chat input.
     width
         The width of the chat container.
+    height
+        The height of the chat container.
     fill
-        Whether the chat should fill the available width.
+        Whether the chat should vertically take available space inside a fillable container.
+    kwargs
+        Additional attributes for the chat container element.
     """
 
     id = resolve_id(id)
@@ -527,10 +545,16 @@ def chat_ui(
     res = Tag(
         "shiny-chat-container",
         chat_deps(),
-        {"style": f"width: {width}"},
+        {
+            "style": css(
+                width=as_css_unit(width),
+                height=as_css_unit(height),
+            )
+        },
         id=id,
         placeholder=placeholder,
         fill=fill,
+        **kwargs,
     )
 
     if fill:
