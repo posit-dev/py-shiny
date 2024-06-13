@@ -177,6 +177,9 @@ class Theme(Tagifiable):
     def preset(self, value: ShinyThemePreset) -> None:
         check_is_valid_preset(value)
         self._preset = value
+        self._reset_css()
+
+    def _reset_css(self) -> None:
         self._css = ""
         self._css_temp_srcdir = None
 
@@ -247,7 +250,7 @@ class Theme(Tagifiable):
         """
         functions = self._combine_args_kwargs(*args, kwargs=kwargs)
         self._functions.extend(functions)
-        self._css = ""
+        self._reset_css()
         return self
 
     def add_defaults(
@@ -282,7 +285,7 @@ class Theme(Tagifiable):
 
         # Add args to the front of _defaults
         self._defaults = dedent_array(defaults) + self._defaults
-        self._css = ""
+        self._reset_css()
 
         return self
 
@@ -310,7 +313,7 @@ class Theme(Tagifiable):
         """
         mixins = self._combine_args_kwargs(*args, kwargs=kwargs)
         self._mixins.extend(mixins)
-        self._css = ""
+        self._reset_css()
         return self
 
     def add_rules(
@@ -337,7 +340,7 @@ class Theme(Tagifiable):
         """
         rules = self._combine_args_kwargs(*args, kwargs=kwargs)
         self._rules.extend(rules)
-        self._css = ""
+        self._reset_css()
         return self
 
     def to_sass(self) -> str:
