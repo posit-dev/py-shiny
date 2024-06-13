@@ -45,10 +45,10 @@ def test_theme_stores_values_correctly():
         "name": None,
         "_functions": ["@function get-color($color) { @return $color; }"],
         "_defaults": [
-            "$headings-color: red;",
-            "$bar-color: purple;",
-            "$select-color-text: green;",
-            "$bslib-dashboard-design: true;",
+            "$headings-color: red !default;",
+            "$bar-color: purple !default;",
+            "$select-color-text: green !default;",
+            "$bslib-dashboard-design: true !default;",
         ],
         "_mixins": ["@mixin alert { color: $alert; }"],
         "_rules": [
@@ -120,8 +120,8 @@ def test_theme_keywords():
 
     assert theme._functions == ["$my-function: function;"]
     assert theme._defaults == [
-        "$my-default2: false;",
-        "$my-default1: true;",
+        "$my-default2: false !default;",
+        "$my-default1: true !default;",
     ]
     assert theme._mixins == ["$my-mixin: 1;"]
     assert theme._rules == [
