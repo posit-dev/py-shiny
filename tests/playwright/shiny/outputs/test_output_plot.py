@@ -14,7 +14,7 @@ def test_output_plot_kitchen(page: Page, app: ShinyAppProc) -> None:
 
     plot = OutputPlot(page, "p")
 
-    plot.expect_inline(inline=False)
+    plot.expect_inline(False)
     plot.expect_height("400px")
     plot.expect_width("100%")
 
