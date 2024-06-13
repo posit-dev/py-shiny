@@ -12,6 +12,7 @@ from ._html_deps_shinyverse import (
     components_dependencies as bslib_component_dependencies,
 )
 from ._include_helpers import check_path, include_css
+from ._theme import Theme
 
 """
 HTML dependencies for external dependencies Bootstrap, ionrangeslider, datepicker, selectize, and jQuery UI.
@@ -22,7 +23,7 @@ For...
 * shinyverse dependencies (e.g. bslib, htmltools), see `shiny.ui._html_deps_shinyverse`
 """
 
-ThemeProvider = Union[Tagifiable, HTMLDependency, List[HTMLDependency]]
+ThemeProvider = Union[Theme, Tagifiable, HTMLDependency, List[HTMLDependency]]
 
 
 def shiny_page_theme_deps(theme: str | Path | ThemeProvider | None) -> TagList:
@@ -30,6 +31,8 @@ def shiny_page_theme_deps(theme: str | Path | ThemeProvider | None) -> TagList:
 
     if theme is None:
         deps_theme = None
+    elif isinstance(theme, Theme):
+        deps_theme = theme._html_dependency()
     elif isinstance(theme, str) and theme.startswith(("http", "//")):
         deps_theme = head_content(link(rel="stylesheet", href=theme, type="text/css"))
     elif isinstance(theme, (str, Path)):

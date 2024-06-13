@@ -17,7 +17,7 @@ from typing import (
     cast,
 )
 
-from htmltools import HTMLDependency, Tagifiable
+from htmltools import HTMLDependency
 from packaging.version import Version
 
 from .._docstring import no_example
@@ -55,7 +55,7 @@ class SassCompileArgs(TypedDict):
 
 
 @no_example()
-class Theme(Tagifiable):
+class Theme:
     """
     Create a custom Shiny theme.
 
@@ -425,7 +425,7 @@ class Theme(Tagifiable):
             all_files=False,
         )
 
-    def html_dependency(self) -> HTMLDependency:
+    def _html_dependency(self) -> HTMLDependency:
         """
         Create an `HTMLDependency` object from the theme.
 
@@ -467,12 +467,6 @@ class Theme(Tagifiable):
             source={"subdir": srcdir},
             stylesheet={"href": css_name},
         )
-
-    def tagify(self) -> HTMLDependency:
-        """
-        Create an :class:`~htmltools.HTMLDependency` object from the theme.
-        """
-        return self.html_dependency()
 
 
 def dedent_array(x: list[str] | tuple[str, ...]) -> list[str]:
