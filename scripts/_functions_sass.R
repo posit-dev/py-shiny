@@ -49,7 +49,7 @@ bs_full_theme <- function(theme, path_sass_markers) {
 }
 
 bslib_component_sass <- function() {
-  bslib:::component_dependency_sass_layer()
+  bslib:::component_dependency_sass_files()
 }
 
 shiny_sass <- function(bs_version) {
