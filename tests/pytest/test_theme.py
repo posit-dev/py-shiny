@@ -146,7 +146,7 @@ def test_page_theme_wins():
     ui = page_bootstrap(
         input_dark_mode(),
         input_date_range("date", "Date Range"),
-        input_selectize("select", "Select", choices="A B C D E".split()),
+        input_selectize("select", "Select", choices=["A", "B"]),
         input_slider("slider", "Slider", min=0, max=100, value=50),
         theme=Theme("shiny"),
     )
