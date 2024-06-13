@@ -1,6 +1,13 @@
 import pytest
 
-from shiny.ui import Theme
+from shiny.ui import (
+    Theme,
+    input_dark_mode,
+    input_date_range,
+    input_selectize,
+    input_slider,
+    page_bootstrap,
+)
 from shiny.ui._theme import (
     ShinyThemePreset,
     shiny_theme_presets,
@@ -133,3 +140,30 @@ def test_theme_keywords():
 def test_theme_is_not_tagifiable():
     with pytest.raises(SyntaxError, match="not meant to be used"):
         Theme("shiny").tagify()
+
+
+def test_page_theme_wins():
+    ui = page_bootstrap(
+        input_dark_mode(),
+        input_date_range("date", "Date Range"),
+        input_selectize("select", "Select", choices="A B C D E".split()),
+        input_slider("slider", "Slider", min=0, max=100, value=50),
+        theme=Theme("shiny"),
+    )
+
+    deps = ui.get_dependencies()
+    no_css = [
+        "shiny",
+        "bslib-components",
+        "ionrangeslider",
+        "bootstrap-datepicker",
+        "selectize",
+    ]
+
+    for dep in deps:
+        if dep.name in no_css:
+            # These components should have CSS suppressed by the page-level
+            # dependency from shiny_page_theme_deps(). If this test fails, it means
+            # that our assumptions about how htmltools' dependency resolution works
+            # have changed.
+            assert dep.stylesheet == []
