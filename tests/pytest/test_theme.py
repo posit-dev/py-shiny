@@ -128,3 +128,8 @@ def test_theme_keywords():
         "$my-rule: 3.141596;",
         "$my-other-rule: null;",
     ]
+
+
+def test_theme_is_not_tagifiable():
+    with pytest.raises(SyntaxError, match="not meant to be used"):
+        Theme("shiny").tagify()

@@ -468,6 +468,13 @@ class Theme:
             stylesheet={"href": css_name},
         )
 
+    def tagify(self) -> None:
+        raise SyntaxError(
+            "The `Theme` class is not meant to be used as a standalone HTML tag. "
+            "Instead, pass the `Theme` object directly to the `theme` argument of any "
+            "Shiny page function.",
+        )
+
 
 def dedent_array(x: list[str] | tuple[str, ...]) -> list[str]:
     return [dedent(y) for y in x]
