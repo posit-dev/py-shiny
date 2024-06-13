@@ -59,6 +59,10 @@ def shiny_page_theme_deps(theme: str | Path | ThemeProvider | None) -> TagList:
         # but are also included at the component level. This page-level dependency will
         # win in Shiny apps, but the component-level dependencies will win in other
         # contexts where we don't have a page function.
+        #
+        # Note: this approach is only intended for legacy bundled components. If you're
+        # contemplating following this approach for a new component, please reconsider
+        # and explore styling the component with CSS variables instead.
         shiny_deps(include_css=False),
         bslib_component_dependencies(include_css=False),
         ionrangeslider_deps(include_css=False),
