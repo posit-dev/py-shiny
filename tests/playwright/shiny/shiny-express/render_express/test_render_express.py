@@ -1,5 +1,7 @@
-from conftest import ShinyAppProc, create_doc_example_core_fixture
+from conftest import create_doc_example_core_fixture
 from playwright.sync_api import Page, expect
+
+from shiny.run import ShinyAppProc
 
 app = create_doc_example_core_fixture("render_express")
 

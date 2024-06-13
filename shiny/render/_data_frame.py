@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import warnings
 
+# TODO-barret; Should `.input_cell_selection()` ever return None? Is that value even helpful? Empty lists would be much more user friendly.
+# * For next release: Agreed to remove `None` type.
+# * For this release: Immediately make PR to remove `.input_` from `.input_cell_selection()`
 # TODO-barret-render.data_frame; Docs
 # TODO-barret-render.data_frame; Add examples!
 from typing import (
@@ -20,11 +23,13 @@ from htmltools import Tag
 
 from .. import reactive, ui
 from .._docstring import add_example
-from .._typing_extensions import TypedDict
+from .._typing_extensions import Annotated, TypedDict
 from .._utils import wrap_async
 from ..session._utils import require_active_session, session_context
+from ..types import ListOrTuple
 from ._data_frame_utils import (
     AbstractTabularData,
+    BrowserCellSelection,
     CellPatch,
     CellPatchProcessed,
     CellSelection,
@@ -42,6 +47,7 @@ from ._data_frame_utils import (
     cell_patch_processed_to_jsonifiable,
     wrap_shiny_html,
 )
+from ._data_frame_utils._unsafe import serialize_numpy_dtype
 
 # as_selection_location_js,
 from .renderer import Jsonifiable, Renderer, ValueFn
@@ -58,24 +64,36 @@ if TYPE_CHECKING:
 from ._data_frame_utils._datagridtable import DataFrameResult
 
 
-class SelectedIndices(TypedDict):
-    rows: tuple[int] | None
-    columns: tuple[int] | None
-
-
 class ColumnSort(TypedDict):
-    id: str
+    col: int
     desc: bool
 
 
 class ColumnFilterStr(TypedDict):
-    id: str
+    col: int
     value: str
 
 
 class ColumnFilterNumber(TypedDict):
-    id: str
-    value: tuple[float, float]
+    col: int
+    value: (
+        tuple[int | float, int | float]
+        | tuple[int | float, None]
+        | tuple[None, int | float]
+        | Annotated[list[int | float | None], 2]
+    )
+
+
+ColumnFilter = Union[ColumnFilterStr, ColumnFilterNumber]
+
+
+class DataViewInfo(TypedDict):
+    sort: tuple[ColumnSort, ...]
+    filter: tuple[ColumnFilter, ...]
+
+    rows: tuple[int, ...]  # sorted and filtered row number
+    selected_rows: tuple[int, ...]  # selected and sorted and filtered row number
+    # selected_columns: tuple[int, ...]  # selected and sorted and filtered row number
 
 
 # # TODO-future; Use `dataframe-api-compat>=0.2.6` to injest dataframes and return standardized dataframe structures
@@ -109,8 +127,6 @@ class ColumnFilterNumber(TypedDict):
 
 
 @add_example()
-@add_example(ex_dir="../api-examples/data_frame_data_view")
-@add_example(ex_dir="../api-examples/data_frame_set_patches")
 class data_frame(Renderer[DataFrameResult]):
     """
     Decorator for a function that returns a pandas `DataFrame` object (or similar) to
@@ -133,16 +149,19 @@ class data_frame(Renderer[DataFrameResult]):
     Row selection
     -------------
     When using the row selection feature, you can access the selected rows by using the
-    `<data_frame_renderer>.input_cell_selection()` method, where `<data_frame_renderer>`
-    is the render function name that corresponds with the `id=` used in
-    :func:`~shiny.ui.outout_data_frame`. Internally, this method retrieves the selected
-    cell information from session's `input.<id>_cell_selection()` value. The value
-    returned will be `None` if the selection mode is `"none"`, or a tuple of
-    integers representing the indices of the selected rows if the selection mode is
-    `"row"` or `"rows"`. If no rows have been selected (while in a non-`"none"` row
-    selection mode), an empty tuple will be returned. To filter a pandas data frame down
-    to the selected rows, use `<data_frame_renderer>.data_view()` or
-    `df.iloc[list(input.<id>_cell_selection()["rows"])]`.
+    `<data_frame_renderer>.cell_selection()` method, where `<data_frame_renderer>`
+    is the `@render.data_frame` function name that corresponds with the `id=` used in
+    :func:`~shiny.ui.outout_data_frame`. Internally,
+    `<data_frame_renderer>.cell_selection()` retrieves the selected cell
+    information from session's `input.<data_frame_renderer>_cell_selection()` value and
+    upgrades it for consistent subsetting.
+
+    To filter your pandas data frame (`df`) down to the selected rows, you can use:
+
+    * `df.iloc[list(input.<data_frame_renderer>_cell_selection()["rows"])]`
+    * `df.iloc[list(<data_frame_renderer>.cell_selection()["rows"])]`
+    * `df.iloc[list(<data_frame_renderer>.data_view_info()["selected_rows"])]`
+    * `<data_frame_renderer>.data_view(selected=True)`
 
     Editing cells
     -------------
@@ -242,6 +261,7 @@ class data_frame(Renderer[DataFrameResult]):
     Reactive value of the selected rows of the (sorted and filtered) data.
     """
 
+    @add_example(ex_dir="../api-examples/data_frame_data_view")
     def data_view(self, *, selected: bool = False) -> pd.DataFrame:
         """
         Reactive function that retrieves the data how it is viewed within the browser.
@@ -281,34 +301,67 @@ class data_frame(Renderer[DataFrameResult]):
     Reactive value of the data frame's possible selection modes.
     """
 
-    input_cell_selection: reactive.Calc_[CellSelection | None]
+    cell_selection: reactive.Calc_[CellSelection]
     """
     Reactive value of selected cell information.
 
-    This method is a wrapper around `input.<id>_selected_cells()`, where `<id>` is
+    This method is a wrapper around `input.<id>_cell_selection()`, where `<id>` is
     the `id` of the data frame output. This method returns the selected rows and
     will cause reactive updates as the selected rows change.
+
+    The value has been enhanced from it's vanilla form to include the missing `cols` key
+    (or `rows` key) as a tuple of integers representing all column (or row) numbers.
+    This allows for consistent usage within code when subsetting your data. These
+    missing keys are not sent over the wire as they are independent of the selection.
 
     Returns
     -------
     :
-        * `None` if the selection mode is `"none"`
-        * :class:`~shiny.render.CellSelection` representing the indices of the
-          selected cells.
+        :class:`~shiny.render.CellSelection` representing the indices of the selected
+        cells. If no cells are currently selected, `None` is returned.
     """
 
-    _input_data_view_indices: reactive.Calc_[list[int]]
+    data_view_rows: reactive.Calc_[tuple[int, ...]]
     """
-    Reactive value of the data frame's view indices.
+    Reactive value of the data frame's user view row numbers.
 
-    These are the indices of the data frame that are currently being viewed in the
-    browser after sorting and filtering has been applied
+    This value is a wrapper around `input.<id>_data_view_rows()`, where `<id>` is the
+    `id` of the data frame output.
+
+    Returns
+    -------
+    :
+        The row numbers of the data frame that are currently being viewed in the browser
+        after sorting and filtering has been applied.
     """
     _data_patched: reactive.Calc_[pd.DataFrame]
     """
     Reactive value of the data frame's patched data.
 
-    This is the data frame with all the user's edit patches applied to it.
+    Returns
+    -------
+    :
+        The data frame with all the user's edit patches applied to it.
+    """
+
+    sort: reactive.Calc_[tuple[ColumnSort, ...]]
+    """
+    Reactive value of the data frame's column sorting information.
+
+    Returns
+    -------
+    :
+        An array of `col`umn number and _is `desc`ending_ information.
+    """
+
+    filter: reactive.Calc_[tuple[ColumnFilter, ...]]
+    """
+    Reactive value of the data frame's column filters.
+
+    Returns
+    -------
+    :
+        An array of `col`umn number and `value` information.
     """
 
     def _reset_reactives(self) -> None:
@@ -364,57 +417,53 @@ class data_frame(Renderer[DataFrameResult]):
         self.selection_modes = self_selection_modes
 
         @reactive.calc
-        def self_input_cell_selection() -> CellSelection | None:
-            browser_cell_selection_input = self._get_session().input[
-                f"{self.output_id}_cell_selection"
-            ]()
-
-            browser_cell_selection = as_cell_selection(
-                browser_cell_selection_input,
-                selection_modes=self.selection_modes(),
+        def self_cell_selection() -> CellSelection:
+            browser_cell_selection = cast(
+                BrowserCellSelection,
+                self._get_session().input[f"{self.output_id}_cell_selection"](),
             )
-            if browser_cell_selection["type"] == "none":
-                return None
 
-            return browser_cell_selection
+            cell_selection = as_cell_selection(
+                browser_cell_selection,
+                selection_modes=self.selection_modes(),
+                data=self.data(),
+                data_view_rows=self.data_view_rows(),
+                data_view_cols=tuple(range(self.data().shape[1])),
+            )
 
-        self.input_cell_selection = self_input_cell_selection
+            return cell_selection
 
-        # # Array of sorted column information
-        # # TODO-barret-render.data_frame; Expose and update column sorting
-        # # Do not expose until update methods are provided
-        # @reactive.calc
-        # def self__input_column_sort() -> list[ColumnSort]:
-        #     column_sort = self._get_session().input[f"{self.output_id}_column_sort"]()
-        #     return column_sort
-
-        # self._input_column_sort = self__input_column_sort
-
-        # # Array of column filters applied by user
-        # # TODO-barret-render.data_frame; Expose and update column filters
-        # # Do not expose until update methods are provided
-        # @reactive.calc
-        # def self__input_column_filter() -> list[ColumnFilterStr | ColumnFilterNumber]:
-        #     column_filter = self._get_session().input[
-        #         f"{self.output_id}_column_filter"
-        #     ]()
-        #     return column_filter
-
-        # self._input_column_filter = self__input_column_filter
+        self.cell_selection = self_cell_selection
 
         @reactive.calc
-        def self__input_data_view_indices() -> list[int]:
-            data_view_indices = self._get_session().input[
-                f"{self.output_id}_data_view_indices"
-            ]()
-            return data_view_indices
+        def self_sort() -> tuple[ColumnSort, ...]:
+            column_sort = self._get_session().input[f"{self.output_id}_column_sort"]()
+            return tuple(column_sort)
 
-        self._input_data_view_indices = self__input_data_view_indices
+        self.sort = self_sort
+
+        @reactive.calc
+        def self_filter() -> tuple[ColumnFilter, ...]:
+            column_filter = self._get_session().input[
+                f"{self.output_id}_column_filter"
+            ]()
+            return tuple(column_filter)
+
+        self.filter = self_filter
+
+        @reactive.calc
+        def self_data_view_rows() -> tuple[int, ...]:
+            data_view_rows = self._get_session().input[
+                f"{self.output_id}_data_view_rows"
+            ]()
+            return tuple(data_view_rows)
+
+        self.data_view_rows = self_data_view_rows
 
         # @reactive.calc
         # def self__data_selected() -> pd.DataFrame:
         #     # browser_cell_selection
-        #     bcs = self.input_cell_selection()
+        #     bcs = self.cell_selection()
         #     if bcs is None:
         #         req(False)
         #         raise RuntimeError("This should never be reached for typing purposes")
@@ -484,24 +533,14 @@ class data_frame(Renderer[DataFrameResult]):
                 # Get patched data
                 data = self._data_patched().copy(deep=False)
 
-                # Turn into list for pandas compatibility
-                data_view_indices = list(self._input_data_view_indices())
-
-                # Possibly subset the indices to selected rows
                 if selected:
-                    cell_selection = self.input_cell_selection()
-                    if cell_selection is not None and cell_selection["type"] == "row":
-                        # Use a `set` for faster lookups
-                        selected_row_indices_set = set(cell_selection["rows"])
+                    rows = self.cell_selection()["rows"]
+                else:
+                    rows = self.data_view_rows()
 
-                        # Subset the data view indices to only include the selected rows
-                        data_view_indices = [
-                            index
-                            for index in data_view_indices
-                            if index in selected_row_indices_set
-                        ]
-
-                return data.iloc[data_view_indices]
+                # Turn into list for pandas compatibility
+                rows = list(rows)
+                return data.iloc[rows]
 
         # Helper reactives so that internal calculations can be cached for use in other calculations
         @reactive.calc
@@ -522,6 +561,7 @@ class data_frame(Renderer[DataFrameResult]):
             )
         return self._session
 
+    @add_example(ex_dir="../api-examples/data_frame_data_view")
     def set_patch_fn(self, fn: PatchFn | PatchFnSync) -> None:
         """
         Decorator to set the function that updates a single cell in the data frame.
@@ -543,6 +583,7 @@ class data_frame(Renderer[DataFrameResult]):
         # from .._typing_extensions import Self
         # return self
 
+    @add_example(ex_dir="../api-examples/data_frame_set_patches")
     def set_patches_fn(self, fn: PatchesFn | PatchesFnSync) -> None:
         """
         Decorator to set the function that updates a batch of cells in the data frame.
@@ -828,7 +869,7 @@ class data_frame(Renderer[DataFrameResult]):
     async def update_cell_selection(
         # self, selection: SelectionLocation | CellSelection
         self,
-        selection: CellSelection | Literal["all"] | None,
+        selection: CellSelection | Literal["all"] | None | BrowserCellSelection,
     ) -> None:
         """
         Update the cell selection in the data frame.
@@ -851,6 +892,8 @@ class data_frame(Renderer[DataFrameResult]):
         with reactive.isolate():
             selection_modes = self.selection_modes()
             data = self.data()
+            data_view_rows = self.data_view_rows()
+            data_view_cols = tuple(range(data.shape[1]))
 
         if selection_modes._is_none():
             warnings.warn(
@@ -867,6 +910,8 @@ class data_frame(Renderer[DataFrameResult]):
             selection,
             selection_modes=selection_modes,
             data=data,
+            data_view_rows=data_view_rows,
+            data_view_cols=data_view_cols,
         )
 
         if cell_selection["type"] == "none":
@@ -891,3 +936,129 @@ class data_frame(Renderer[DataFrameResult]):
             "updateCellSelection",
             {"cellSelection": cell_selection},
         )
+
+    @add_example(ex_dir="../api-examples/data_frame_update_sort")
+    async def update_sort(
+        self,
+        sort: ListOrTuple[ColumnSort | int] | int | ColumnSort | None,
+    ) -> None:
+        """
+        Update the column sorting in the data frame.
+
+        The sort will be applied in reverse order so that the first value has the highest
+        precedence. This mean _ties_ will go to the second sort column (and so on).
+
+        Parameters
+        ----------
+        sort
+            A list of column sorting information. If `None`, sorting will be removed. `int` values will be upgraded to `{"col": int, "desc": <DESC>}` where `<DESC>` is `True` if the column is number like and `False` otherwise.
+        """
+        if sort is None:
+            sort = ()
+        elif isinstance(sort, int):
+            sort = (sort,)
+        elif isinstance(sort, (list, tuple)):
+            ...
+        else:
+            raise TypeError(
+                f"Expected `sort` to be a `list`, `tuple`, `int`, or `None`. Received `{type(sort)}`"
+            )
+
+        vals: list[ColumnSort] = []
+        if len(sort) > 0:
+            with reactive.isolate():
+                data = self.data()
+            ncol = len(data.columns)
+
+            for val in sort:
+                val_dict: ColumnSort
+                if isinstance(val, int):
+                    col: pd.Series[Any] = data.iloc[:, val]
+                    desc = serialize_numpy_dtype(col)["type"] == "numeric"
+                    val_dict = {"col": val, "desc": desc}
+                val_dict: ColumnSort = (
+                    val if isinstance(val, dict) else {"col": val, "desc": True}
+                )
+                assert isinstance(val_dict, dict)
+                assert isinstance(val_dict["col"], int)
+                assert 0 <= val_dict["col"] < ncol
+                assert isinstance(val_dict["desc"], bool)
+                vals.append(val_dict)
+
+        await self._send_message_to_browser(
+            "updateColumnSort",
+            {"sort": vals},
+        )
+
+    @add_example(ex_dir="../api-examples/data_frame_update_filter")
+    async def update_filter(
+        self,
+        filter: ListOrTuple[ColumnFilter] | None,
+    ) -> None:
+        """
+        Update the column filtering in the data frame.
+
+        Parameters
+        ----------
+        filter
+            A list of column filtering information. If `None`, filtering will be removed.
+        """
+
+        assert filter is None or isinstance(filter, (list, tuple))
+
+        if filter is None:
+            filter = []
+        else:
+            with reactive.isolate():
+                data = self.data()
+            ncol = len(data.columns)
+
+            for column_filter, i in zip(filter, range(len(filter))):
+                assert isinstance(column_filter, dict)
+                assert isinstance(column_filter["col"], int)
+                assert 0 <= column_filter["col"] < ncol
+                if isinstance(column_filter["value"], str):
+                    ...
+                elif isinstance(column_filter["value"], (list, tuple)):
+                    assert len(column_filter["value"]) == 2
+                    if (
+                        column_filter["value"][0] is None
+                        and column_filter["value"][1] is None
+                    ):
+                        raise TypeError(
+                            "Expected `filter[{i}]['value']` to be a `str` or a `list`/`tuple` of type `int` or `None`. Received `None` for both values."
+                        )
+                    assert isinstance(
+                        column_filter["value"][0], (int, float, type(None))
+                    )
+                    assert isinstance(
+                        column_filter["value"][1], (int, float, type(None))
+                    )
+                else:
+                    raise TypeError(
+                        f"Expected `filter[{i}]['value']` to be a `str` or a `list`/`tuple` of type `int` or `None`. Received `{type(column_filter['value'])}`"
+                    )
+
+        await self._send_message_to_browser(
+            "updateColumnFilter",
+            {"filter": filter},
+        )
+
+    def input_cell_selection(self) -> CellSelection | None:
+        """
+        [Deprecated] Reactive value of selected cell information.
+
+        Please use `~shiny.render.data_frame`'s `.cell_selection()` method instead.
+        """
+
+        from .._deprecated import warn_deprecated
+
+        warn_deprecated(
+            "`@render.data_frame`'s `.input_cell_selection()` method is deprecated. Please use `.cell_selection()` instead."
+        )
+
+        cell_selection = self.cell_selection()
+        if cell_selection["type"] == "none":
+            return None
+
+        return self.cell_selection()

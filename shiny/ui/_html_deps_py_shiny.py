@@ -3,6 +3,7 @@ from __future__ import annotations
 from htmltools import HTMLDependency
 
 from .. import __version__
+from . import busy_indicators
 
 """
 HTML dependencies for internal dependencies such as dataframe or text area's autoresize.
@@ -51,4 +52,15 @@ def spin_dependency() -> HTMLDependency:
         __version__,
         source={"package": "shiny", "subdir": "www/shared/py-shiny/spin"},
         stylesheet={"href": "spin.css"},
+    )
+
+
+def busy_indicators_dep() -> HTMLDependency:
+    return HTMLDependency(
+        "shiny-busy-indicators",
+        __version__,
+        source={"package": "shiny", "subdir": "www/shared/busy-indicators"},
+        stylesheet={"href": "busy-indicators.css"},
+        head=busy_indicators.use(),  # Enable busy indicators by default.
+        all_files=True,
     )

@@ -1,10 +1,9 @@
-import pytest
-from conftest import ShinyAppProc
-from controls import OutputTextVerbatim
 from playwright.sync_api import Page
 
+from shiny.playwright.controls import OutputTextVerbatim
+from shiny.run import ShinyAppProc
 
-@pytest.mark.skip(reason="Flaky test. Fix before renabling")
+
 def test_output_image_kitchen(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 

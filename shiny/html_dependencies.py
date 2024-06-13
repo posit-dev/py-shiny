@@ -4,25 +4,31 @@ import os
 
 from htmltools import HTMLDependency
 
+from . import __version__
+from .ui._html_deps_py_shiny import busy_indicators_dep
+
 
 def shiny_deps(include_css: bool = True) -> list[HTMLDependency]:
-    in_dev_mode = os.getenv("SHINY_DEV_MODE") == "1"
-
     deps = [
         HTMLDependency(
             name="shiny",
-            version="0.0.1",
+            version=__version__,
             source={"package": "shiny", "subdir": "www/shared/"},
             script={"src": "shiny.js"},
             # This CSS is now rendered against default Bootstrap
             stylesheet={"href": "shiny.min.css"} if include_css else None,
-            head=(
-                "<script>window.__SHINY_DEV_MODE__ = true;</script>"
-                if in_dev_mode
-                else None
-            ),
-        )
+        ),
+        busy_indicators_dep(),
     ]
+
+    if os.getenv("SHINY_DEV_MODE") == "1":
+        deps.append(
+            HTMLDependency(
+                "shiny-devmode",
+                version=__version__,
+                head="<script>window.__SHINY_DEV_MODE__ = true;</script>",
+            )
+        )
 
     return deps
 

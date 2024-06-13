@@ -2,6 +2,7 @@ import * as React from "react";
 import { useState } from "react";
 import { ImmutableSet } from "./immutable-set";
 
+import { CellStateClassEnum, CellStateEnum } from "./cell";
 import type { ValueOf } from "./types";
 
 type CellSelectionNone = { type: "none" };
@@ -30,13 +31,14 @@ export interface SelectionSet<TKey, TElement extends HTMLElement> {
     onMouseDown: (event: React.MouseEvent<TElement, MouseEvent>) => void;
     onKeyDown: (event: React.KeyboardEvent<TElement>) => void;
   };
+  focusOffset: (start: TKey, offset: number) => TKey | null;
 }
 
 // Keep as strings (and not pointer types) as this is a shape defined by the python side
 export type SelectionModesProp = {
   row: "none" | "single" | "multiple";
   col: "none" | "single" | "multiple";
-  rect: "none" | "region" | "cell";
+  rect: "none" | "cell" | "region";
 };
 export class SelectionModes {
   static readonly _NONE = "none";
@@ -44,8 +46,8 @@ export class SelectionModes {
   static readonly _ROW_MULTIPLE = "multiple";
   static readonly _COL_SINGLE = "single";
   static readonly _col_multiple = "multiple";
-  static readonly _RECT_REGION = "region";
   static readonly _RECT_CELL = "cell";
+  static readonly _RECT_REGION = "region";
 
   static readonly _rowEnum = {
     NONE: SelectionModes._NONE,
@@ -90,7 +92,7 @@ export class SelectionModes {
     this.rect = rect;
   }
 
-  is_none(): boolean {
+  isNone(): boolean {
     return (
       this.row === SelectionModes._rowEnum.NONE &&
       this.col === SelectionModes._colEnum.NONE &&
@@ -99,7 +101,7 @@ export class SelectionModes {
   }
 }
 
-export function initRowSelectionModes(
+export function initSelectionModes(
   selectionModesOption: SelectionModesProp | undefined
 ): SelectionModes {
   // If no option was provided, default to multinative mode
@@ -113,12 +115,26 @@ export function initRowSelectionModes(
   });
 }
 
-export function useSelection<TKey, TElement extends HTMLElement>(
-  selectionModes: SelectionModes,
-  keyAccessor: (el: TElement) => TKey,
-  focusOffset: (start: TKey, offset: number) => TKey | null,
-  between?: (from: TKey, to: TKey) => ReadonlyArray<TKey>
-): SelectionSet<TKey, TElement> {
+export function useSelection<TKey, TElement extends HTMLElement>({
+  isEditingCell,
+  editCellsIsAllowed,
+  selectionModes,
+  keyAccessor,
+  focusOffset,
+  focusEscape,
+  onKeyDownEnter,
+  between,
+}: {
+  // cellBeingEdited: { rowIndex: number; columnIndex: number } | null;
+  isEditingCell: boolean;
+  editCellsIsAllowed: boolean;
+  selectionModes: SelectionModes;
+  keyAccessor: (el: TElement) => TKey;
+  focusOffset: (start: TKey, offset: number) => TKey | null;
+  focusEscape: (el: TElement) => void;
+  onKeyDownEnter: (el: TElement) => void;
+  between: (from: TKey, to: TKey) => ReadonlyArray<TKey>;
+}): SelectionSet<TKey, TElement> {
   const [selectedKeys, setSelectedKeys] = useState<ImmutableSet<TKey>>(
     ImmutableSet.empty()
   );
@@ -128,12 +144,18 @@ export function useSelection<TKey, TElement extends HTMLElement>(
   const [anchor, setAnchor] = useState<TKey | null>(null);
 
   const onMouseDown = (event: React.MouseEvent<TElement, MouseEvent>): void => {
-    if (selectionModes.is_none()) {
+    if (selectionModes.isNone()) {
       return;
     }
 
     const el = event.currentTarget as TElement;
     const key = keyAccessor(el);
+    if (isEditingCell) {
+      // Only quit early if that cell is in edit mode
+      if (el.classList.contains(CellStateClassEnum[CellStateEnum.Editing])) {
+        return;
+      }
+    }
 
     const result = performMouseDownAction<TKey, TElement>(
       selectionModes,
@@ -154,7 +176,10 @@ export function useSelection<TKey, TElement extends HTMLElement>(
   };
 
   const onKeyDown = (event: React.KeyboardEvent<TElement>): void => {
-    if (selectionModes.is_none()) {
+    if (isEditingCell) {
+      return;
+    }
+    if (selectionModes.isNone()) {
       return;
     }
 
@@ -162,14 +187,29 @@ export function useSelection<TKey, TElement extends HTMLElement>(
     const key = keyAccessor(el);
     const selected = selectedKeys.has(key);
 
+    if (event.key === "Escape") {
+      focusEscape(el);
+      event.preventDefault();
+      return;
+    }
+
+    // For both row and rows, do not allow for alphanumeric keys to trigger edit mode.
+    // Only allow for this once the anchor is a single cell, such as region selection.
+    // For region selection, allow for alphanumeric keys to trigger edit mode of current cell.
+    // For region selection, allow for enter key to trigger edit mode of current cell.
+
     if (selectionModes.row === SelectionModes._rowEnum.SINGLE) {
       if (event.key === " " || event.key === "Enter") {
-        if (selectedKeys.has(key)) {
-          setSelectedKeys(ImmutableSet.empty());
-        } else {
-          setSelectedKeys(ImmutableSet.just(key));
-        }
         event.preventDefault();
+        if (editCellsIsAllowed && event.key === "Enter") {
+          onKeyDownEnter(el);
+        } else {
+          if (selectedKeys.has(key)) {
+            setSelectedKeys(ImmutableSet.empty());
+          } else {
+            setSelectedKeys(ImmutableSet.just(key));
+          }
+        }
       } else if (event.key === "ArrowUp" || event.key === "ArrowDown") {
         const targetKey = focusOffset(key, event.key === "ArrowUp" ? -1 : 1);
         if (targetKey) {
@@ -181,8 +221,12 @@ export function useSelection<TKey, TElement extends HTMLElement>(
       }
     } else if (selectionModes.row === SelectionModes._rowEnum.MULTIPLE) {
       if (event.key === " " || event.key === "Enter") {
-        setSelectedKeys(selectedKeys.toggle(key));
         event.preventDefault();
+        if (editCellsIsAllowed && event.key === "Enter") {
+          onKeyDownEnter(el);
+        } else {
+          setSelectedKeys(selectedKeys.toggle(key));
+        }
       } else if (event.key === "ArrowUp" || event.key === "ArrowDown") {
         if (focusOffset(key, event.key === "ArrowUp" ? -1 : 1)) {
           event.preventDefault();
@@ -191,7 +235,7 @@ export function useSelection<TKey, TElement extends HTMLElement>(
     }
   };
 
-  return {
+  const selection = {
     has(key: TKey): boolean {
       return selectedKeys.has(key);
     },
@@ -204,8 +248,8 @@ export function useSelection<TKey, TElement extends HTMLElement>(
       }
     },
 
-    setMultiple(key_arr: TKey[]) {
-      setSelectedKeys(ImmutableSet.just(...key_arr));
+    setMultiple(keyArr: TKey[]) {
+      setSelectedKeys(ImmutableSet.just(...keyArr));
     },
 
     clear() {
@@ -219,7 +263,11 @@ export function useSelection<TKey, TElement extends HTMLElement>(
     itemHandlers() {
       return { onMouseDown, onKeyDown };
     },
+
+    focusOffset,
   };
+
+  return selection;
 }
 
 declare global {

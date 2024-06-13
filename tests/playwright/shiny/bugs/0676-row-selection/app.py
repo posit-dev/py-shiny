@@ -24,7 +24,7 @@ app_ui = ui.page_fluid(
     ),
     ui.p(
         "Selected rows: ",
-        ui.output_code("debug"),
+        ui.output_code("selected_rows"),
     ),
     class_="p-3",
 )
@@ -44,8 +44,8 @@ def server(input: Inputs, output: Outputs, session: Session):
         return grid.data_view(selected=True)
 
     @render.code
-    def debug():
-        return str((grid.input_cell_selection() or {}).get("rows", ()))
+    def selected_rows():
+        return str(grid.cell_selection()["rows"])
 
 
-app = App(app_ui, server, debug=True)
+app = App(app_ui, server, debug=False)

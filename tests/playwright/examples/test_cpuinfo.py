@@ -2,8 +2,10 @@
 
 import re
 
-from conftest import ShinyAppProc, create_example_fixture
+from conftest import create_example_fixture
 from playwright.sync_api import Page, expect
+
+from shiny.run import ShinyAppProc
 
 cpuinfo_app = create_example_fixture("cpuinfo")
 

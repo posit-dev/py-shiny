@@ -1,6 +1,13 @@
-from controls import LayoutNavsetTab
+import pytest
 from playwright.sync_api import Page, expect
-from utils.deploy_utils import create_deploys_app_url_fixture, skip_if_not_chrome
+from utils.deploy_utils import (
+    create_deploys_app_url_fixture,
+    reruns,
+    reruns_delay,
+    skip_if_not_chrome,
+)
+
+from shiny.playwright.controls import NavsetTab
 
 TIMEOUT = 2 * 60 * 1000
 
@@ -8,6 +15,7 @@ app_url = create_deploys_app_url_fixture("shiny_express_page_default")
 
 
 @skip_if_not_chrome
+@pytest.mark.flaky(reruns=reruns, reruns_delay=reruns_delay)
 def test_page_default(page: Page, app_url: str) -> None:
     page.goto(app_url)
 
@@ -18,12 +26,12 @@ def test_page_default(page: Page, app_url: str) -> None:
 
     # Perform these tests second as their locators are not stable over time.
     # (They require that a locator be realized before finding the second locator)
-    nav_html = LayoutNavsetTab(page, "express_navset_tab")
+    nav_html = NavsetTab(page, "express_navset_tab")
     nav_html.expect_content("pre 0pre 1pre 2")
     nav_html.set("div")
     nav_html.expect_content("div 0\ndiv 1\ndiv 2")
     nav_html.set("span")
     nav_html.expect_content("span 0span 1span 2")
 
-    navset_card_tab = LayoutNavsetTab(page, "express_navset_card_tab")
+    navset_card_tab = NavsetTab(page, "express_navset_card_tab")
     navset_card_tab.expect_content("")

@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from colors import bg_color, fg_color
-from conftest import ShinyAppProc
-from controls import Sidebar, _expect_class_value
 from playwright.sync_api import Page, expect
+
+from shiny.playwright.controls import Sidebar
+from shiny.playwright.controls._controls import _expect_class_value
+from shiny.run import ShinyAppProc
 
 
 def test_colors_are_rgb() -> None:

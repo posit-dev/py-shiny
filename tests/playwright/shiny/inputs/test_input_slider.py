@@ -1,6 +1,8 @@
-from conftest import ShinyAppProc, create_doc_example_core_fixture
-from controls import InputSlider, OutputTextVerbatim
+from conftest import create_doc_example_core_fixture
 from playwright.sync_api import Page, expect
+
+from shiny.playwright.controls import InputSlider, OutputTextVerbatim
+from shiny.run import ShinyAppProc
 
 slider_app = create_doc_example_core_fixture("input_slider")
 template_app = create_doc_example_core_fixture("template")

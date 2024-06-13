@@ -8,6 +8,8 @@ import type { CellState } from "./cell";
 // enableMapSet();
 
 export type CellEdit = {
+  // rowIndex: number;
+  // columnIndex: number;
   value?: string;
   state?: CellState;
   errorTitle?: string;
@@ -37,10 +39,16 @@ export const useCellEditMap = () => {
       const key = makeCellEditMapKey(rowIndex, columnIndex);
       const obj = draft.get(key) ?? ({} as CellEdit);
       obj_fn(obj);
+      // obj.rowIndex = rowIndex;
+      // obj.columnIndex = columnIndex;
       draft.set(key, obj);
     });
   };
-  return { cellEditMap, setCellEditMap, setCellEditMapAtLoc } as const;
+  return {
+    cellEditMap,
+    // setCellEditMap,
+    setCellEditMapAtLoc,
+  } as const;
 };
 
 export const makeCellEditMapKey = (rowIndex: number, columnIndex: number) => {

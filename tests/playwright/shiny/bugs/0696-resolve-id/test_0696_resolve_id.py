@@ -6,8 +6,12 @@ import os
 from pathlib import Path
 
 import pytest
-from conftest import ShinyAppProc
-from controls import (
+from examples.example_apps import reruns, reruns_delay
+from mod_state import expect_default_mod_state, expect_mod_state
+from playwright.sync_api import Page
+
+from shiny._utils import guess_mime_type
+from shiny.playwright.controls import (
     DownloadButton,
     DownloadLink,
     InputActionButton,
@@ -32,11 +36,7 @@ from controls import (
     OutputTextVerbatim,
     OutputUi,
 )
-from examples.example_apps import reruns, reruns_delay
-from mod_state import expect_default_mod_state, expect_mod_state
-from playwright.sync_api import Page
-
-from shiny._utils import guess_mime_type
+from shiny.run import ShinyAppProc
 
 img_path = Path(__file__).parent / "imgs"
 penguin_imgs = [str(img_path / img) for img in os.listdir(img_path)]
@@ -109,7 +109,6 @@ def expect_default_outputs(page: Page, module_id: str):
 
 # Sidebars do not seem to work on webkit. Skipping test on webkit
 @pytest.mark.flaky(reruns=reruns, reruns_delay=reruns_delay)
-@pytest.mark.skip_browser("webkit")
 def test_module_support(page: Page, local_app: ShinyAppProc) -> None:
     page.set_viewport_size({"width": 3000, "height": 6000})
     page.goto(local_app.url)

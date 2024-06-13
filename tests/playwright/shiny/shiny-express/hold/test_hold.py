@@ -1,7 +1,7 @@
-from conftest import ShinyAppProc
-from controls import OutputTextVerbatim
-from playwright.sync_api import Page
-from playwright.sync_api import expect as playwright_expect
+from playwright.sync_api import Page, expect
+
+from shiny.playwright.controls import OutputTextVerbatim
+from shiny.run import ShinyAppProc
 
 
 def test_express_page_fluid(page: Page, local_app: ShinyAppProc) -> None:
@@ -10,5 +10,5 @@ def test_express_page_fluid(page: Page, local_app: ShinyAppProc) -> None:
     txt = OutputTextVerbatim(page, "visible")
     txt.expect_value("40")
 
-    playwright_expect(page.locator("#visible")).to_have_count(1)
-    playwright_expect(page.locator("#hidden")).to_have_count(0)
+    expect(page.locator("#visible")).to_have_count(1)
+    expect(page.locator("#hidden")).to_have_count(0)

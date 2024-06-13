@@ -10,7 +10,7 @@ with ui.accordion(open=["Panel 1", "Panel 2"]):
 
     with ui.accordion_panel("Panel 2"):
 
-        @render.text
+        @render.code
         def txt():
             return f"n = {input.n()}"
 

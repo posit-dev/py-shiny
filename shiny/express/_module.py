@@ -1,6 +1,7 @@
 import functools
 from typing import Callable, TypeVar
 
+from .._docstring import add_example
 from .._typing_extensions import Concatenate, ParamSpec
 from ..module import Id
 from ..session._session import Inputs, Outputs, Session
@@ -14,6 +15,7 @@ R = TypeVar("R")
 __all__ = ("module",)
 
 
+@add_example(ex_dir="../api-examples/express_module")
 def module(
     fn: Callable[Concatenate[Inputs, Outputs, Session, P], R]
 ) -> Callable[Concatenate[Id, P], R]:

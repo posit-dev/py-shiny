@@ -1,11 +1,19 @@
-from controls import Accordion
+import pytest
 from playwright.sync_api import Page
-from utils.deploy_utils import create_deploys_app_url_fixture, skip_if_not_chrome
+from utils.deploy_utils import (
+    create_deploys_app_url_fixture,
+    reruns,
+    reruns_delay,
+    skip_if_not_chrome,
+)
+
+from shiny.playwright.controls import Accordion
 
 app_url = create_deploys_app_url_fixture("shiny_express_accordion")
 
 
 @skip_if_not_chrome
+@pytest.mark.flaky(reruns=reruns, reruns_delay=reruns_delay)
 def test_express_accordion(page: Page, app_url: str) -> None:
     page.goto(app_url)
 

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import json
 import pathlib
+import platform
 import re
-import sys
 import time
 import typing
 from typing import Literal, Optional, Protocol
@@ -15,13 +15,23 @@ from playwright.sync_api import expect as playwright_expect
 
 # Import `shiny`'s typing extentions.
 # Since this is a private file, tell pyright to ignore the import
-from shiny._typing_extensions import (
-    TypeGuard,  # pyright: ignore[reportPrivateImportUsage]
+from ..._typing_extensions import TypeGuard, assert_type
+from ...types import MISSING, MISSING_TYPE
+from .._types import (
+    AttrValue,
+    ListPatternOrStr,
+    OptionalFloat,
+    PatternOrStr,
+    StyleValue,
+    Timeout,
 )
-from shiny._typing_extensions import (
-    assert_type,  # pyright: ignore[reportPrivateImportUsage]
+from ..expect import (
+    expect_attribute_to_have_value,
+    expect_not_to_have_class,
+    expect_to_have_class,
+    expect_to_have_style,
 )
-from shiny.types import MISSING, MISSING_TYPE
+from ..expect._expect import _attr_match_str, _expect_class_value, _xpath_match_str
 
 """
 Questions:
@@ -63,21 +73,6 @@ Questions:
   * If a method is used inconsistently, make/use a helper method
 """
 
-
-OptionalStr = Optional[str]
-OptionalInt = Optional[int]
-OptionalFloat = Optional[float]
-OptionalBool = Optional[bool]
-
-PatternStr = typing.Pattern[str]
-PatternOrStr = typing.Union[str, PatternStr]
-ListPatternOrStr = typing.Union[
-    typing.List[PatternOrStr], typing.List[str], typing.List[PatternStr]
-]
-AttrValue = typing.Union[PatternOrStr, None]
-StyleValue = typing.Union[PatternOrStr, None]
-
-Timeout = typing.Union[float, None]
 InitLocator = typing.Union[Locator, str]
 
 R = typing.TypeVar("R")
@@ -116,117 +111,23 @@ def set_text(
     delay: OptionalFloat = None,
     timeout: Timeout = None,
 ) -> None:
+    """
+    Sets the text of a DOM element.
+
+    Parameters
+    ----------
+    loc
+        Playwright `Locator` of the element.
+    text
+        The text to set.
+    delay
+        The delay between key presses in milliseconds. Defaults to `None`.
+    timeout
+        The maximum time to wait for the text to be set. Defaults to `None`.
+    """
     # TODO-future; Composable set() method
     loc.fill("", timeout=timeout)  # Reset the value
     loc.type(text, delay=delay, timeout=timeout)  # Type the value
-
-
-def expect_attr(
-    loc: Locator,
-    name: str,
-    value: AttrValue,
-    timeout: Timeout = None,
-) -> None:
-    """Expect an attribute to have a value. If `value` is `None`, then the attribute should not exist."""
-    if value is None:
-        # if isinstance(value, type(None)):
-        # Not allowed to have any value for the attribute
-        playwright_expect(loc).not_to_have_attribute(
-            name, re.compile(r".*"), timeout=timeout
-        )
-        return
-
-    playwright_expect(loc).to_have_attribute(name=name, value=value, timeout=timeout)
-
-
-def _expect_class_value(
-    loc: Locator,
-    cls: str,
-    has_class: bool,
-    timeout: Timeout = None,
-) -> None:
-    """Expect a locator to have (or not to have) a class value"""
-    if has_class:
-        expect_to_have_class(loc, cls, timeout=timeout)
-    else:
-        expect_not_to_have_class(loc, cls, timeout=timeout)
-
-
-def expect_to_have_class(
-    loc: Locator,
-    cls: str,
-    timeout: Timeout = None,
-) -> None:
-    """Expect a locator to contain a class value"""
-    cls_regex = re.compile(rf"(^|\s+){re.escape(cls)}(\s+|$)")
-    playwright_expect(loc).to_have_class(cls_regex, timeout=timeout)
-
-
-def expect_not_to_have_class(
-    loc: Locator,
-    cls: str,
-    timeout: Timeout = None,
-) -> None:
-    """Expect a locator not to contain a class value"""
-    cls_regex = re.compile(rf"(^|\s+){re.escape(cls)}(\s+|$)")
-    playwright_expect(loc).not_to_have_class(cls_regex, timeout=timeout)
-
-
-def _style_match_str(key: str, value: PatternOrStr) -> PatternStr:
-    if isinstance(value, str):
-        value_str = re.escape(value)
-    else:
-        value_str = value.pattern
-    return re.compile(rf"(^|;)\s*{re.escape(key)}\s*:\s*{value_str}\s*(;|$)")
-
-
-def _attr_match_str(key: str, value: str) -> str:
-    # Escape double quotes
-    value_str = value.replace('"', '\\"')
-    # `key` is `value`
-    return f'{key}="{value_str}"'
-    # assert_type(value, re.Pattern[str])
-    # # `key` contains `value`
-    # return f'{key}*="{value.pattern}"'
-
-
-def _xpath_match_str(key: str, value: PatternOrStr) -> str:
-    if isinstance(value, str):
-        # Escape double quotes
-        value_str = value.replace('"', '\\"')
-        # `key` is `value`
-        return f'@{key}="{value_str}"'
-    else:
-        # Disabling type assertion for earlier versions of Python
-        if sys.version_info >= (3, 10):
-            assert_type(value, re.Pattern[str])
-
-        # `key` contains `value`
-        return f'matches(@{key}, "{value.pattern}")'
-
-
-def expect_to_have_style(
-    loc: Locator,
-    css_key: str,
-    # Str representation for value. Will be put in a regex with `css_key`
-    css_value: StyleValue,
-    timeout: Timeout = None,
-) -> None:
-    """Expect the `style` attribute to have a value. If `value` is `None`, then the style attribute should not exist."""
-    if css_value is None:
-        # Not allowed to have any value for the style
-        playwright_expect(loc).not_to_have_attribute(
-            "style",
-            re.compile(rf"\b{re.escape(css_key)}\s*:"),
-            timeout=timeout,
-        )
-        return
-
-    playwright_expect(loc).to_have_attribute(
-        "style",
-        _style_match_str(css_key, css_value),
-        timeout=timeout,
-    )
 
 
 def _expect_multiple(loc: Locator, multiple: bool, timeout: Timeout = None) -> None:
@@ -239,21 +140,37 @@ def _expect_multiple(loc: Locator, multiple: bool, timeout: Timeout = None) -> N
 ######################################################
 
 
-class _InputBaseP(Protocol):
+class _UiBaseP(Protocol):
     id: str
     loc: Locator
     page: Page
 
 
-class _InputWithContainerP(_InputBaseP, Protocol):
+class _UiWithContainerP(_UiBaseP, Protocol):
+    """A protocol class representing UI with a container."""
+
     loc_container: Locator
+    """
+    Playwright `Locator` for the container of the UI element.
+    """
 
 
-class _InputBase:
+class _UiBase:
+    """A base class representing shiny UI components."""
+
     # timeout: Timeout
     id: str
+    """
+    The browser DOM `id` of the UI element.
+    """
     loc: Locator
+    """
+    Playwright `Locator` of the UI element.
+    """
     page: Page
+    """
+    Playwright `Page` of the Shiny app.
+    """
 
     def __init__(
         self,
@@ -272,17 +189,19 @@ class _InputBase:
     @property
     # TODO; Can not publicly find `LocatorAssertions` in `playwright`
     def expect(self):
+        """Expectation method equivalent to `playwright.expect(self.loc)`."""
+        # TODO-karan-test: Search for `.loc)` and convert `expect(FOO.loc)` to `FOO.expect`. If we don't like the helper API, we should remove it.
         return playwright_expect(self.loc)
 
 
-class _InputWithContainer(_InputBase):
+class _UiWithContainer(_UiBase):
     """
-    A mixin class representing inputs with a container.
+    A mixin class representing UI with a container.
     """
 
     loc_container: Locator
     """
-    `loc_container` is the locator of the container of the input.
+    Playwright `Locator` for the container of the UI element.
     """
 
     def __init__(
@@ -299,13 +218,13 @@ class _InputWithContainer(_InputBase):
         Parameters
         ----------
         page
-            The page where the input is located.
+            Playwright `Page` of the Shiny app.
         id
-            The id of the input.
+            The id of the UI element.
         loc
-            The locator of the input.
+            Playwright `Locator` of the UI element.
         loc_container
-            The locator of the container of the input.
+            Playwright `Locator` of the container of the UI element.
         """
         loc_is_str = isinstance(loc, str)
         loc_container_is_str = isinstance(loc_container, str)
@@ -338,7 +257,14 @@ class _InputWithContainer(_InputBase):
         self.loc_container = loc_container
 
 
-class _InputWithLabel(_InputWithContainer):
+class _UiWithLabel(_UiWithContainer):
+    """A mixin class representing UI components with a label."""
+
+    loc_label: Locator
+    """
+    Playwright `Locator` for the label of the UI element.
+    """
+
     def __init__(
         self,
         page: Page,
@@ -348,6 +274,22 @@ class _InputWithLabel(_InputWithContainer):
         loc_container: InitLocator = "div.shiny-input-container",
         loc_label: InitLocator | None = None,
     ) -> None:
+        """
+        Initializes the input with a label.
+
+        Parameters
+        ----------
+        page
+            The page where the input is located.
+        id
+            The id of the UI element.
+        loc
+            Playwright `Locator` of the UI element.
+        loc_container
+            Playwright `Locator` of the container of the UI element.
+        loc_label
+            Playwright `Locator` of the label of the UI element. Defaults to `None`.
+        """
         super().__init__(
             page,
             id=id,
@@ -367,73 +309,107 @@ class _InputWithLabel(_InputWithContainer):
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Expect the label of the input to have a specific text.
+
+        Parameters
+        ----------
+        value
+            The expected text value of the label.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
         playwright_expect(self.loc_label).to_have_text(value, timeout=timeout)
 
 
 class _WidthLocM:
     """
-    A mixin class representing the `loc`'s width.
-    This class provides methods to expect the width attribute of an element.
+    A mixin class representing the `.loc`'s width.
+
+    This class provides methods to expect the width attribute of a DOM element.
     """
 
     def expect_width(
-        self: _InputBaseP,
+        self: _UiBaseP,
         value: AttrValue,
         *,
         timeout: Timeout = None,
     ) -> None:
         """
-        Expect the width attribute of an element to have a specific value.
+        Expect the `width` attribute of a DOM element to have a specific value.
 
         Parameters
         ----------
         value
-            The expected value of the width attribute.
+            The expected value of the `width` attribute.
         timeout
-            The maximum time to wait for the expectation to be fulfilled.
-            Defaults to None.
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
-        expect_attr(self.loc, "width", value=value, timeout=timeout)
+        expect_attribute_to_have_value(self.loc, "width", value=value, timeout=timeout)
 
 
 class _WidthContainerM:
     """
     A mixin class representing the container's width.
-    This class provides methods to expect the width attribute of an element's container.
+
+    This class provides methods to expect the width attribute of a DOM element's container.
     """
 
     def expect_width(
-        self: _InputWithContainerP,
+        self: _UiWithContainerP,
         value: AttrValue,
         *,
         timeout: Timeout = None,
     ) -> None:
         """
-        Expect the width attribute of an element's container to have a specific value.
+        Expect the `width` attribute of a input's container to have a specific value.
 
         Parameters
         ----------
         value
-            The expected value of the width attribute.
+            The expected value of the `width` attribute.
         timeout
-            The maximum time to wait for the expectation to be fulfilled.
-            Defaults to None.
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
-        expect_attr(self.loc_container, "width", value=value, timeout=timeout)
+        expect_attribute_to_have_value(
+            self.loc_container, "width", value=value, timeout=timeout
+        )
 
 
 class _SetTextM:
-    def set(self: _InputBaseP, value: str, *, timeout: Timeout = None) -> None:
+    def set(self: _UiBaseP, value: str, *, timeout: Timeout = None) -> None:
+        """
+        Sets the text value
+
+        Parameters
+        ----------
+        value
+            The text to set.
+        timeout
+            The maximum time to wait for the text to be set. Defaults to `None`.
+        """
         set_text(self.loc, value, timeout=timeout)
 
 
 class _ExpectTextInputValueM:
+    """A mixin class for text input values."""
+
     def expect_value(
-        self: _InputBaseP,
+        self: _UiBaseP,
         value: PatternOrStr,
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Expect the value of the text input to have a specific value.
+
+        Parameters
+        ----------
+        value
+            The expected value of the text input.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
         playwright_expect(self.loc).to_have_value(value, timeout=timeout)
 
 
@@ -441,17 +417,21 @@ class InputNumeric(
     _SetTextM,
     _ExpectTextInputValueM,
     _WidthLocM,
-    _InputWithLabel,
+    _UiWithLabel,
 ):
-    # id: str,
-    # label: TagChild,
-    # value: float,
-    # *,
-    # min: Optional[float] = None,
-    # max: Optional[float] = None,
-    # step: Optional[float] = None,
-    # width: Optional[str] = None,
+    """Input numeric control for :func:`~shiny.ui.input_numeric`."""
+
     def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes the input numeric Playwright control.
+
+        Parameters
+        ----------
+        page
+            The page where the input numeric is located.
+        id
+            The id of the input numeric.
+        """
         super().__init__(
             page,
             id=id,
@@ -464,7 +444,17 @@ class InputNumeric(
         *,
         timeout: Timeout = None,
     ) -> None:
-        expect_attr(self.loc, "min", value=value, timeout=timeout)
+        """
+        Expect the minimum numeric value to be a specific value.
+
+        Parameters
+        ----------
+        value
+            The expected minimum numeric value.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        expect_attribute_to_have_value(self.loc, "min", value=value, timeout=timeout)
 
     def expect_max(
         self,
@@ -472,7 +462,17 @@ class InputNumeric(
         *,
         timeout: Timeout = None,
     ) -> None:
-        expect_attr(self.loc, "max", value=value, timeout=timeout)
+        """
+        Expect the maximum numeric value to be a specific value.
+
+        Parameters
+        ----------
+        value
+            The expected maximum numeric value.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        expect_attribute_to_have_value(self.loc, "max", value=value, timeout=timeout)
 
     def expect_step(
         self,
@@ -480,38 +480,88 @@ class InputNumeric(
         *,
         timeout: Timeout = None,
     ) -> None:
-        expect_attr(self.loc, "step", value=value, timeout=timeout)
+        """
+        Expect step value when incrementing/decrementing the numeric input.
+
+        Parameters
+        ----------
+        value
+            The expected step value for the numeric input.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        expect_attribute_to_have_value(self.loc, "step", value=value, timeout=timeout)
 
 
 class _ExpectSpellcheckAttrM:
+    """
+    A mixin class for the spellcheck attribute.
+    """
+
     def expect_spellcheck(
-        self: _InputBaseP,
+        self: _UiBaseP,
         value: Literal["true", "false"] | None,
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Expect the `spellcheck` attribute of the input to have a specific value.
+
+        Parameters
+        ----------
+        value
+            The expected value of the `spellcheck` attribute.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
         # self.spellcheck.expect_to_have_value(value, timeout=timeout)
-        expect_attr(self.loc, "spellcheck", value=value, timeout=timeout)
+        expect_attribute_to_have_value(
+            self.loc, "spellcheck", value=value, timeout=timeout
+        )
 
 
 class _ExpectPlaceholderAttrM:
     def expect_placeholder(
-        self: _InputBaseP,
+        self: _UiBaseP,
         value: AttrValue,
         *,
         timeout: Timeout = None,
     ) -> None:
-        expect_attr(self.loc, "placeholder", value=value, timeout=timeout)
+        """
+        Expect the `placeholder` attribute of the input to have a specific value.
+
+        Parameters
+        ----------
+        value
+            The expected value of the `placeholder` attribute.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        expect_attribute_to_have_value(
+            self.loc, "placeholder", value=value, timeout=timeout
+        )
 
 
 class _ExpectAutocompleteAttrM:
     def expect_autocomplete(
-        self: _InputBaseP,
+        self: _UiBaseP,
         value: AttrValue,
         *,
         timeout: Timeout = None,
     ) -> None:
-        expect_attr(self.loc, "autocomplete", value=value, timeout=timeout)
+        """
+        Expect the `autocomplete` attribute of the input to have a specific value.
+
+        Parameters
+        ----------
+        value
+            The expected value of the `autocomplete` attribute.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        expect_attribute_to_have_value(
+            self.loc, "autocomplete", value=value, timeout=timeout
+        )
 
 
 class InputText(
@@ -521,17 +571,21 @@ class InputText(
     _ExpectPlaceholderAttrM,
     _ExpectAutocompleteAttrM,
     _ExpectSpellcheckAttrM,
-    _InputWithLabel,
+    _UiWithLabel,
 ):
-    # id: str,
-    # label: TagChild,
-    # value: str = "",
-    # *,
-    # width: Optional[str] = None,
-    # placeholder: Optional[str] = None,
-    # autocomplete: Optional[str] = "off",
-    # spellcheck: Optional[Literal["true", "false"]] = None,
+    """Input text control for :func:`~shiny.ui.input_text`."""
+
     def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes the input text.
+
+        Parameters
+        ----------
+        page
+            The page where the input text is located.
+        id
+            The id of the input text.
+        """
         super().__init__(
             page,
             id=id,
@@ -543,17 +597,21 @@ class InputPassword(
     _SetTextM,
     _ExpectTextInputValueM,
     _ExpectPlaceholderAttrM,
-    _InputWithLabel,
+    _UiWithLabel,
 ):
-    # id: str,
-    # label: TagChild,
-    # value: str = "",
-    # *,
-    # width: Optional[str] = None,
-    # placeholder: Optional[str] = None,
-    ...
+    """Input password control for :func:`~shiny.ui.input_password`."""
 
     def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes the input password.
+
+        Parameters
+        ----------
+        page
+            The page where the input password is located.
+        id
+            The id of the input password.
+        """
         super().__init__(
             page,
             id=id,
@@ -568,6 +626,16 @@ class InputPassword(
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Expect the `width` attribute of the input password to have a specific value.
+
+        Parameters
+        ----------
+        value
+            The expected value of the `width` attribute.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
         expect_to_have_style(self.loc_container, "width", value, timeout=timeout)
 
 
@@ -580,22 +648,21 @@ class InputTextArea(
     _ExpectPlaceholderAttrM,
     _ExpectAutocompleteAttrM,
     _ExpectSpellcheckAttrM,
-    _InputWithLabel,
+    _UiWithLabel,
 ):
-    # id: str,
-    # label: TagChild,
-    # value: str = "",
-    # width: Optional[str] = None,
-    # height: Optional[str] = None,
-    # cols: Optional[int] = None,
-    # rows: Optional[int] = None,
-    # placeholder: Optional[str] = None,
-    # resize: Optional[
-    #     Literal["none", "both", "horizontal", "vertical"]
-    # ] = None,
-    # autocomplete: Optional[str] = None,
-    # spellcheck: Optional[Literal["true", "false"]] = None,
+    """Input text area control for :func:`~shiny.ui.input_text_area`."""
+
     def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes the input text area.
+
+        Parameters
+        ----------
+        page
+            The page where the input text area is located.
+        id
+            The id of the input text area.
+        """
         super().__init__(
             page,
             id=id,
@@ -603,6 +670,16 @@ class InputTextArea(
         )
 
     def expect_width(self, value: StyleValue, *, timeout: Timeout = None) -> None:
+        """
+        Expect the `width` attribute of the input text area to have a specific value.
+
+        Parameters
+        ----------
+        value
+            The expected value of the `width` attribute.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
         if value is None:
             expect_to_have_style(self.loc_container, "width", None, timeout=timeout)
             expect_to_have_style(self.loc, "width", "100%", timeout=timeout)
@@ -611,13 +688,43 @@ class InputTextArea(
             expect_to_have_style(self.loc, "width", None, timeout=timeout)
 
     def expect_height(self, value: StyleValue, *, timeout: Timeout = None) -> None:
+        """
+        Expect the `height` attribute of the input text area to have a specific value.
+
+        Parameters
+        ----------
+        value
+            The expected value of the `height` attribute.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
         expect_to_have_style(self.loc, "height", value, timeout=timeout)
 
     def expect_cols(self, value: AttrValue, *, timeout: Timeout = None) -> None:
-        expect_attr(self.loc, "cols", value=value, timeout=timeout)
+        """
+        Expect the `cols` attribute of the input text area to have a specific value.
+
+        Parameters
+        ----------
+        value
+            The expected value of the `cols` attribute.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        expect_attribute_to_have_value(self.loc, "cols", value=value, timeout=timeout)
 
     def expect_rows(self, value: AttrValue, *, timeout: Timeout = None) -> None:
-        expect_attr(self.loc, "rows", value=value, timeout=timeout)
+        """
+        Expect the `rows` attribute of the input text area to have a specific value.
+
+        Parameters
+        ----------
+        value
+            The expected value of the `rows` attribute.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        expect_attribute_to_have_value(self.loc, "rows", value=value, timeout=timeout)
 
     def expect_resize(
         self,
@@ -625,7 +732,17 @@ class InputTextArea(
         *,
         timeout: Timeout = None,
     ) -> None:
-        expect_attr(self.loc, "resize", value=value, timeout=timeout)
+        """
+        Expect the `resize` attribute of the input text area to have a specific value.
+
+        Parameters
+        ----------
+        value
+            The expected value of the `resize` attribute.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        expect_attribute_to_have_value(self.loc, "resize", value=value, timeout=timeout)
 
     def expect_autoresize(
         self,
@@ -633,6 +750,16 @@ class InputTextArea(
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Expect the `autoresize` attribute of the input text area to have a specific value.
+
+        Parameters
+        ----------
+        value
+            The expected value of the `autoresize` attribute.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
         _expect_class_value(
             self.loc,
             "textarea-autoresize",
@@ -643,11 +770,20 @@ class InputTextArea(
 
 class _InputSelectBase(
     _WidthLocM,
-    _InputWithLabel,
+    _UiWithLabel,
 ):
     loc_selected: Locator
+    """
+    Playwright `Locator` for the selected option of the input select.
+    """
     loc_choices: Locator
+    """
+    Playwright `Locator` for the choices of the input select.
+    """
     loc_choice_groups: Locator
+    """
+    Playwright `Locator` for the choice groups of the input select.
+    """
 
     def __init__(
         self,
@@ -656,6 +792,18 @@ class _InputSelectBase(
         *,
         select_class: str = "",
     ) -> None:
+        """
+        Initializes the input select.
+
+        Parameters
+        ----------
+        page
+            The page where the input select is located.
+        id
+            The id of the input select.
+        select_class
+            The class of the select element. Defaults to "".
+        """
         super().__init__(
             page,
             id=id,
@@ -671,6 +819,16 @@ class _InputSelectBase(
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Sets the selected option(s) of the input select.
+
+        Parameters
+        ----------
+        selected
+            The value(s) of the selected option(s).
+        timeout
+            The maximum time to wait for the selection to be set. Defaults to `None`.
+        """
         if isinstance(selected, str):
             selected = [selected]
         self.loc.select_option(value=selected, timeout=timeout)
@@ -682,7 +840,17 @@ class _InputSelectBase(
         *,
         timeout: Timeout = None,
     ) -> None:
-        """Expect choices to be in order"""
+        """
+        Expect the available options of the input select to be an exact match.
+
+        Parameters
+        ----------
+        choices
+            The expected choices of the input select.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+
         # Playwright doesn't like lists of size 0. Instead, check for empty locator
         if len(choices) == 0:
             playwright_expect(self.loc_choices).to_have_count(0, timeout=timeout)
@@ -699,20 +867,29 @@ class _InputSelectBase(
 
     def expect_selected(
         self,
-        selected: PatternOrStr | ListPatternOrStr,
+        value: PatternOrStr | ListPatternOrStr,
         *,
         timeout: Timeout = None,
     ) -> None:
-        """Expect choices to be in order"""
+        """
+        Expect the selected option(s) of the input select to be an exact match.
+
+        Parameters
+        ----------
+        value
+            The expected value(s) of the selected option(s).
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
         # Playwright doesn't like lists of size 0
-        if isinstance(selected, list) and len(selected) == 0:
+        if isinstance(value, list) and len(value) == 0:
             playwright_expect(self.loc_selected).to_have_count(0, timeout=timeout)
             return
 
-        if isinstance(selected, list):
-            self.expect.to_have_values(selected, timeout=timeout)
+        if isinstance(value, list):
+            self.expect.to_have_values(value, timeout=timeout)
         else:
-            self.expect.to_have_value(selected, timeout=timeout)
+            self.expect.to_have_value(value, timeout=timeout)
 
         # _MultipleDomItems.expect_locator_values_in_list(
         #     page=self.page,
@@ -731,7 +908,17 @@ class _InputSelectBase(
         *,
         timeout: Timeout = None,
     ) -> None:
-        """Expect choices to be in order"""
+        """
+        Expect the choice groups of the input select to be an exact match.
+
+        Parameters
+        ----------
+        choice_groups
+            The expected choice groups of the input select.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+
         # Playwright doesn't like lists of size 0. Instead, use `None`
         if len(choice_groups) == 0:
             playwright_expect(self.loc_choice_groups).to_have_count(0, timeout=timeout)
@@ -749,22 +936,52 @@ class _InputSelectBase(
 
     def expect_choice_labels(
         self,
-        choice_labels: ListPatternOrStr,
+        value: ListPatternOrStr,
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Expect the choice labels of the input select to be an exact match.
+
+        Parameters
+        ----------
+        value
+            The expected choice labels of the input select.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
         # Playwright doesn't like lists of size 0. Instead, use `None`
-        if len(choice_labels) == 0:
+        if len(value) == 0:
             playwright_expect(self.loc_choices).to_have_count(0, timeout=timeout)
             return
-        playwright_expect(self.loc_choices).to_have_text(choice_labels, timeout=timeout)
+        playwright_expect(self.loc_choices).to_have_text(value, timeout=timeout)
 
     # multiple: bool = False,
-    def expect_multiple(self, multiple: bool, *, timeout: Timeout = None) -> None:
-        _expect_multiple(self.loc, multiple, timeout=timeout)
+    def expect_multiple(self, value: bool, *, timeout: Timeout = None) -> None:
+        """
+        Expect the input select to allow multiple selections.
+
+        Parameters
+        ----------
+        value
+            Whether the input select allows multiple selections.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        _expect_multiple(self.loc, value, timeout=timeout)
 
     def expect_size(self, value: AttrValue, *, timeout: Timeout = None) -> None:
-        expect_attr(
+        """
+        Expect the size attribute of the input select to have a specific value.
+
+        Parameters
+        ----------
+        value
+            The expected value of the `size` attribute.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        expect_attribute_to_have_value(
             self.loc,
             "size",
             value=value,
@@ -773,15 +990,19 @@ class _InputSelectBase(
 
 
 class InputSelect(_InputSelectBase):
-    # id: str,
-    # label: TagChild,
-    # choices: SelectChoicesArg,
-    # selected: Optional[Union[str, list[str]]] = None,
-    # multiple: bool = False,
-    # selectize: bool = False,
-    # width: Optional[str] = None,
-    # size: Optional[str] = None,
+    """Input select control for :func:`~shiny.ui.input_select`."""
+
     def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes the input select.
+
+        Parameters
+        ----------
+        page
+            The page where the input select is located.
+        id
+            The id of the input select.
+        """
         super().__init__(
             page,
             id=id,
@@ -789,17 +1010,29 @@ class InputSelect(_InputSelectBase):
         )
 
     # selectize: bool = False,
-    def expect_selectize(self, selectize: bool, *, timeout: Timeout = None) -> None:
+    def expect_selectize(self, value: bool, *, timeout: Timeout = None) -> None:
+        """
+        Expect the input select to be selectize.
+
+        Parameters
+        ----------
+        value
+            Whether the input select is selectize.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
         # class_=None if selectize else "form-select",
         _expect_class_value(
             self.loc,
             "form-select",
-            has_class=not selectize,
+            has_class=not value,
             timeout=timeout,
         )
 
 
 class InputSelectize(_InputSelectBase):
+    """Input selectize control for :func:`~shiny.ui.input_selectize`."""
+
     def __init__(self, page: Page, id: str) -> None:
         super().__init__(
             page,
@@ -808,18 +1041,37 @@ class InputSelectize(_InputSelectBase):
         )
 
 
-class _InputActionBase(_InputBase):
+class _InputActionBase(_UiBase):
     def expect_label(
         self,
         value: PatternOrStr,
         *,
         timeout: Timeout = None,
     ) -> None:
-        """Must include icon if present"""
+        """
+        Expect the label of the input button to have a specific value.
+
+        Note: This must include the icon if it is present!
+
+        Parameters
+        ----------
+        value
+            The expected value of the label.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
 
         self.expect.to_have_text(value, timeout=timeout)
 
     def click(self, *, timeout: Timeout = None, **kwargs: object) -> None:
+        """
+        Clicks the input action.
+
+        Parameters
+        ----------
+        timeout
+            The maximum time to wait for the input action to be clicked. Defaults to `None`.
+        """
         self.loc.click(timeout=timeout, **kwargs)  # pyright: ignore[reportArgumentType]
 
 
@@ -827,15 +1079,23 @@ class InputActionButton(
     _WidthLocM,
     _InputActionBase,
 ):
-    # label: TagChild,
-    # icon: TagChild = None,
-    # width: Optional[str] = None,
+    """Input action button control for :func:`~shiny.ui.input_action_button`."""
 
     def __init__(
         self,
         page: Page,
         id: str,
     ) -> None:
+        """
+        Initializes the input action button.
+
+        Parameters
+        ----------
+        page
+            The page where the input action button is located.
+        id
+            The id of the input action button.
+        """
         super().__init__(
             page,
             id=id,
@@ -843,12 +1103,24 @@ class InputActionButton(
         )
 
 
-class InputDarkMode(_InputBase):
+class InputDarkMode(_UiBase):
+    """Input dark mode control for :func:`~shiny.ui.input_dark_mode`."""
+
     def __init__(
         self,
         page: Page,
         id: Optional[str] | None,
     ) -> None:
+        """
+        Initializes the input dark mode.
+
+        Parameters
+        ----------
+        page
+            The page where the input dark mode is located.
+        id
+            The id of the input dark mode.
+        """
         id_selector = "" if id is None else f"#{id}"
 
         super().__init__(
@@ -858,22 +1130,62 @@ class InputDarkMode(_InputBase):
         )
 
     def click(self, *, timeout: Timeout = None):
+        """
+        Clicks the input dark mode.
+
+        Parameters
+        ----------
+        timeout
+            The maximum time to wait for the input dark mode to be clicked. Defaults to `None`.
+        """
         self.loc.click(timeout=timeout)
         return self
 
     def expect_mode(self, value: str, *, timeout: Timeout = None):
-        expect_attr(self.loc, "mode", value=value, timeout=timeout)
+        """
+        Expect the `mode` attribute of the input dark mode to have a specific value.
+
+        Parameters
+        ----------
+        value
+            The expected value of the `mode` attribute.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        expect_attribute_to_have_value(self.loc, "mode", value=value, timeout=timeout)
         self.expect_page_mode(value, timeout=timeout)
         return self
 
     def expect_page_mode(self, value: str, *, timeout: Timeout = None):
-        expect_attr(
+        """
+        Expect the page to have a specific dark mode value.
+
+        Parameters
+        ----------
+        value
+            The expected value of the page's dark mode.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        expect_attribute_to_have_value(
             self.page.locator("html"), "data-bs-theme", value=value, timeout=timeout
         )
         return self
 
     def expect_wc_attribute(self, value: str, *, timeout: Timeout = None):
-        expect_attr(self.loc, "attribute", value=value, timeout=timeout)
+        """
+        Expect the `wc` attribute of the input dark mode to have a specific value.
+
+        Parameters
+        ----------
+        value
+            The expected value of the `wc` attribute.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        expect_attribute_to_have_value(
+            self.loc, "attribute", value=value, timeout=timeout
+        )
         return self
 
 
@@ -881,22 +1193,24 @@ class InputTaskButton(
     _WidthLocM,
     _InputActionBase,
 ):
+    """Input task button control for :func:`~shiny.ui.input_task_button`."""
+
     # TODO-Karan: Test auto_reset functionality
-    # id: str,
-    # label: TagChild,
-    # *args: TagChild,
-    # icon: TagChild = None,
-    # label_busy: TagChild = "Processing...",
-    # icon_busy: TagChild | MISSING_TYPE = MISSING,
-    # width: Optional[str] = None,
-    # type: Optional[str] = "primary",
-    # auto_reset: bool = True,
-    # **kwargs: TagAttrValue,
     def __init__(
         self,
         page: Page,
         id: str,
     ) -> None:
+        """
+        Initializes the input task button.
+
+        Parameters
+        ----------
+        page
+            The page where the input task button is located.
+        id
+            The id of the input task button.
+        """
         super().__init__(
             page,
             id=id,
@@ -904,9 +1218,22 @@ class InputTaskButton(
         )
 
     def expect_state(
-        self, value: Literal["ready", "busy"] | str, *, timeout: Timeout = None
+        self,
+        value: Literal["ready", "busy"] | str,
+        *,
+        timeout: Timeout = None,
     ):
-        expect_attr(
+        """
+        Expect the state of the input task button to have a specific value.
+
+        Parameters
+        ----------
+        value
+            The expected value of the state of the input task button.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        expect_attribute_to_have_value(
             self.loc.locator("> bslib-switch-inline"),
             name="case",
             value=value,
@@ -914,23 +1241,79 @@ class InputTaskButton(
         )
 
     def expect_label(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+        """
+        Expect the label of the input task button to have a specific value.
+
+        Parameters
+        ----------
+        value
+            The expected value of the label.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
         self.expect_label_ready(value, timeout=timeout)
 
     def expect_label_ready(self, value: PatternOrStr, *, timeout: Timeout = None):
+        """
+        Expect the label of a ready input task button to have a specific value.
+
+        Parameters
+        ----------
+        value
+            The expected value of the label.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
         self.expect_label_state("ready", value, timeout=timeout)
 
     def expect_label_busy(self, value: PatternOrStr, *, timeout: Timeout = None):
+        """
+        Expect the label of a busy input task button to have a specific value.
+
+        Parameters
+        ----------
+        value
+            The expected value of the label.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
         self.expect_label_state("busy", value, timeout=timeout)
 
     def expect_label_state(
-        self, state: str, value: PatternOrStr, *, timeout: Timeout = None
+        self,
+        state: str,
+        value: PatternOrStr,
+        *,
+        timeout: Timeout = None,
     ):
+        """
+        Expect the label of the input task button to have a specific value in a specific state.
+
+        Parameters
+        ----------
+        state
+            The state of the input task button.
+        value
+            The expected value of the label.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
         playwright_expect(
             self.loc.locator(f"> bslib-switch-inline > span[slot='{state}']")
         ).to_have_text(value, timeout=timeout)
 
     def expect_auto_reset(self, value: bool, timeout: Timeout = None):
-        expect_attr(
+        """
+        Expect the `auto-reset` attribute of the input task button to have a specific value.
+
+        Parameters
+        ----------
+        value
+            The expected value of the `auto-reset` attribute.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        expect_attribute_to_have_value(
             self.loc,
             name="data-auto-reset",
             value="" if value else None,
@@ -939,14 +1322,23 @@ class InputTaskButton(
 
 
 class InputActionLink(_InputActionBase):
-    # label: TagChild,
-    # icon: TagChild = None,
+    """Input action link control for :func:`~shiny.ui.input_action_link`."""
 
     def __init__(
         self,
         page: Page,
         id: str,
     ) -> None:
+        """
+        Initializes the input action link.
+
+        Parameters
+        ----------
+        page
+            The page where the input action link is located.
+        id
+            The id of the input action link.
+        """
         super().__init__(
             page,
             id=id,
@@ -961,14 +1353,25 @@ class InputActionLink(_InputActionBase):
 
 class _InputCheckboxBase(
     _WidthContainerM,
-    _InputWithLabel,
+    _UiWithLabel,
 ):
-    # label: TagChild
-    # value: bool = False
-    # width: Optional[str] = None
     def __init__(
         self, page: Page, id: str, loc: InitLocator, loc_label: str | None
     ) -> None:
+        """
+        Initializes the input checkbox.
+
+        Parameters
+        ----------
+        page
+            The page where the input checkbox is located.
+        id
+            The id of the input checkbox.
+        loc
+            Playwright `Locator` of the input checkbox.
+        loc_label
+            Playwright `Locator` of the label of the input checkbox.
+        """
         super().__init__(
             page,
             id=id,
@@ -977,6 +1380,16 @@ class _InputCheckboxBase(
         )
 
     def set(self, value: bool, *, timeout: Timeout = None, **kwargs: object) -> None:
+        """
+        Sets the input checkbox.
+
+        Parameters
+        ----------
+        value
+            The value of the input checkbox.
+        timeout
+            The maximum time to wait for the input checkbox to be set. Defaults to `None`.
+        """
         self.loc.wait_for(state="visible", timeout=timeout)
         self.loc.scroll_into_view_if_needed(timeout=timeout)
         self.loc.set_checked(
@@ -984,11 +1397,29 @@ class _InputCheckboxBase(
         )
 
     def toggle(self, *, timeout: Timeout = None, **kwargs: object) -> None:
+        """
+        Toggles the input checkbox.
+
+        Parameters
+        ----------
+        timeout
+            The maximum time to wait for the input checkbox to be toggled. Defaults to `None`.
+        """
         self.loc.wait_for(state="visible", timeout=timeout)
         self.loc.scroll_into_view_if_needed(timeout=timeout)
         self.loc.click(timeout=timeout, **kwargs)  # pyright: ignore[reportArgumentType]
 
     def expect_checked(self, value: bool, *, timeout: Timeout = None) -> None:
+        """
+        Expect the input checkbox to be checked.
+
+        Parameters
+        ----------
+        value
+            Whether the input checkbox is checked.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
         if value:
             self.expect.to_be_checked(timeout=timeout)
         else:
@@ -996,11 +1427,23 @@ class _InputCheckboxBase(
 
 
 class InputCheckbox(_InputCheckboxBase):
+    """Input checkbox control for :func:`~shiny.ui.input_checkbox`."""
+
     def __init__(
         self,
         page: Page,
         id: str,
     ) -> None:
+        """
+        Initializes the input checkbox.
+
+        Parameters
+        ----------
+        page
+            The page where the input checkbox is located.
+        id
+            The id of the input checkbox.
+        """
         super().__init__(
             page,
             id=id,
@@ -1010,11 +1453,23 @@ class InputCheckbox(_InputCheckboxBase):
 
 
 class InputSwitch(_InputCheckboxBase):
+    """Input switch control for :func:`~shiny.ui.input_switch`."""
+
     def __init__(
         self,
         page: Page,
         id: str,
     ) -> None:
+        """
+        Initializes the input switch.
+
+        Parameters
+        ----------
+        page
+            The page where the input switch is located.
+        id
+            The id of the input switch.
+        """
         super().__init__(
             page,
             id=id,
@@ -1029,12 +1484,30 @@ class _MultipleDomItems:
         arr: ListPatternOrStr,
         msg: str,
     ) -> None:
+        """
+        Assert that the array is unique.
+
+        Parameters
+        ----------
+        arr
+            The array to check.
+        msg
+            The error message.
+        """
         assert len(arr) == len(list(dict.fromkeys(arr))), msg
 
     @staticmethod
     def checked_css_str(
         is_checked: bool | MISSING_TYPE = MISSING,
     ) -> str:
+        """
+        Get the CSS string for checked elements.
+
+        Parameters
+        ----------
+        is_checked
+            Whether the elements are checked. Defaults to `MISSING`.
+        """
         if is_missing(is_checked):
             return ""
         if is_checked:
@@ -1055,6 +1528,31 @@ class _MultipleDomItems:
         timeout: Timeout = None,
         key: str = "value",
     ) -> None:
+        """
+        Expect the locator to contain the values in the list.
+
+        The matching values must exist and be in order, but other values may also exist
+        within the container.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        loc_container
+            The container locator.
+        el_type
+            The element type.
+        arr_name
+            The variable name.
+        arr
+            The expected values.
+        is_checked
+            Whether the elements are checked. Defaults to `MISSING`.
+        timeout
+            The timeout for the expectation. Defaults to `None`.
+        key
+            The key. Defaults to `"value"`.
+        """
         # Make sure the locator contains all of `arr`
 
         assert_type(arr, typing.List[str])
@@ -1118,6 +1616,31 @@ class _MultipleDomItems:
         timeout: Timeout = None,
         key: str = "value",
     ) -> None:
+        """
+        Expect the locator to contain the values in the list.
+
+        The matching values must exist and be in order. No other matching values will be
+        allowed within the container.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        loc_container
+            The container locator.
+        el_type
+            The element type locator.
+        arr_name
+            The array name.
+        arr
+            The expected values.
+        is_checked
+            Whether the elements are checked. Defaults to `MISSING`.
+        timeout
+            The timeout for the expectation. Defaults to `None`.
+        key
+            The key. Defaults to `"value"`.
+        """
         # Make sure the locator has exactly `arr` values
 
         # Make sure the locator has len(uniq_arr) input elements
@@ -1186,29 +1709,52 @@ class _MultipleDomItems:
             raise e
 
 
-class _RadioButtonCheckboxGroupBase(_InputWithLabel):
+# TODO-barret; continue from here
+
+
+class _RadioButtonCheckboxGroupBase(_UiWithLabel):
     loc_choice_labels: Locator
 
     def expect_choice_labels(
         self,
-        labels: ListPatternOrStr,
+        value: ListPatternOrStr,
         *,
         timeout: Timeout = None,
     ) -> None:
-        if len(labels) == 1:
-            labels_val = labels[0]
+        """
+        Expect the labels of the choices.
+
+        Parameters
+        ----------
+        value
+            The expected labels.
+        timeout
+            The timeout for the expectation. Defaults to `None`.
+        """
+        if len(value) == 1:
+            labels_val = value[0]
         else:
-            labels_val = labels
+            labels_val = value
         playwright_expect(self.loc_choice_labels).to_have_text(
             labels_val,
             timeout=timeout,
         )
 
-    def expect_inline(self, inline: bool, *, timeout: Timeout = None) -> None:
+    def expect_inline(self, value: bool, *, timeout: Timeout = None) -> None:
+        """
+        Expect the input to be inline.
+
+        Parameters
+        ----------
+        value
+            Whether the input is inline.
+        timeout
+            The timeout for the expectation. Defaults to `None`.
+        """
         _expect_class_value(
             self.loc_container,
             "shiny-input-container-inline",
-            has_class=inline,
+            has_class=value,
             timeout=timeout,
         )
 
@@ -1227,6 +1773,16 @@ class InputCheckboxGroup(
         page: Page,
         id: str,
     ) -> None:
+        """
+        Initialize the InputCheckboxGroup.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The id of the checkbox group.
+        """
         super().__init__(
             page,
             id=id,
@@ -1262,6 +1818,16 @@ class InputCheckboxGroup(
         timeout: Timeout = None,
         **kwargs: object,
     ) -> None:
+        """
+        Set the selected checkboxes.
+
+        Parameters
+        ----------
+        selected
+            The values of the selected checkboxes.
+        timeout
+            The timeout for the action. Defaults to `None`.
+        """
         # Having an arr of size 0 is allowed. Will uncheck everything
         assert_type(selected, typing.List[str])
 
@@ -1300,27 +1866,47 @@ class InputCheckboxGroup(
 
     def expect_choices(
         self,
-        choices: ListPatternOrStr,
+        value: ListPatternOrStr,
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Expect the checkbox choices.
+
+        Parameters
+        ----------
+        value
+            The expected choices.
+        timeout
+            The timeout for the expectation. Defaults to `None`.
+        """
         _MultipleDomItems.expect_locator_values_in_list(
             page=self.page,
             loc_container=self.loc_container,
             el_type="input[type=checkbox]",
             arr_name="choices",
-            arr=choices,
+            arr=value,
             timeout=timeout,
         )
 
     def expect_selected(
         self,
-        selected: ListPatternOrStr,
+        value: ListPatternOrStr,
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Expect the selected checkboxes.
+
+        Parameters
+        ----------
+        value
+            The expected values of the selected checkboxes.
+        timeout
+            The timeout for the expectation. Defaults to `None`.
+        """
         # Playwright doesn't like lists of size 0
-        if len(selected) == 0:
+        if len(value) == 0:
             playwright_expect(self.loc_selected).to_have_count(0, timeout=timeout)
             return
 
@@ -1329,7 +1915,7 @@ class InputCheckboxGroup(
             loc_container=self.loc_container,
             el_type="input[type=checkbox]",
             arr_name="selected",
-            arr=selected,
+            arr=value,
             timeout=timeout,
             is_checked=True,
         )
@@ -1339,17 +1925,35 @@ class InputRadioButtons(
     _WidthContainerM,
     _RadioButtonCheckboxGroupBase,
 ):
-    # id: str,
-    # label: TagChild,
-    # choices: ChoicesArg,
-    # selected: Optional[str] = None,
-    # inline: bool = False,
-    # width: Optional[str] = None,
+    """Input radio buttons control for :func:`~shiny.ui.input_radio_buttons`."""
+
+    loc_selected: Locator
+    """
+    Playwright `Locator` of the selected radio button.
+    """
+    loc_choices: Locator
+    """
+    Playwright `Locator` of the radio button choices.
+    """
+    loc_choice_labels: Locator
+    """
+    Playwright `Locator` of the labels of the radio button choices.
+    """
+
     def __init__(
         self,
         page: Page,
         id: str,
     ) -> None:
+        """Initialize the InputRadioButtons.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The id of the radio buttons.
+        """
         super().__init__(
             page,
             id=id,
@@ -1384,6 +1988,16 @@ class InputRadioButtons(
         timeout: Timeout = None,
         **kwargs: object,
     ) -> None:
+        """
+        Set the selected radio button.
+
+        Parameters
+        ----------
+        selected
+            The value of the selected radio button.
+        timeout
+            The timeout for the action. Defaults to `None`.
+        """
         assert_type(selected, str)
         # Only need to set.
         # The Browser will _unset_ the previously selected radio button
@@ -1393,40 +2007,71 @@ class InputRadioButtons(
 
     def expect_choices(
         self,
-        choices: ListPatternOrStr,
+        value: ListPatternOrStr,
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Expect the radio button choices.
+
+        Parameters
+        ----------
+        value
+            The expected choices.
+        timeout
+            The timeout for the expectation. Defaults to `None`.
+        """
         _MultipleDomItems.expect_locator_values_in_list(
             page=self.page,
             loc_container=self.loc_container,
             el_type="input[type=radio]",
             arr_name="choices",
-            arr=choices,
+            arr=value,
             timeout=timeout,
         )
 
     def expect_selected(
         self,
-        selected: PatternOrStr | None,
+        value: PatternOrStr | None,
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Expect the selected radio button.
+
+        Parameters
+        ----------
+        value
+            The expected value of the selected radio button.
+        timeout
+            The timeout for the expectation. Defaults to `None`.
+        """
         # Playwright doesn't like lists of size 0. Instead, use `None`
-        if selected is None:
+        if value is None:
             playwright_expect(self.loc_selected).to_have_count(0, timeout=timeout)
             return
 
-        playwright_expect(self.loc_selected).to_have_value(selected, timeout=timeout)
+        playwright_expect(self.loc_selected).to_have_value(value, timeout=timeout)
 
 
 class InputFile(
     # _ExpectPlaceholderAttrM,
-    _InputWithLabel,
+    _UiWithLabel,
 ):
+    """Input file control for :func:`~shiny.ui.input_file`."""
+
     loc_button: Locator
+    """
+    Playwright `Locator` of the button.
+    """
     loc_file_display: Locator
+    """
+    Playwright `Locator` of the file display.
+    """
     loc_progress: Locator
+    """
+    Playwright `Locator` of the progress bar.
+    """
 
     # id: str,
     # label: TagChild,
@@ -1446,6 +2091,16 @@ class InputFile(
         page: Page,
         id: str,
     ) -> None:
+        """
+        Initialize the InputFile.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The id of the file input.
+        """
         super().__init__(
             page,
             id=id,
@@ -1468,6 +2123,18 @@ class InputFile(
         timeout: Timeout = None,
         expect_complete_timeout: Timeout = 30 * 1000,
     ) -> None:
+        """
+        Set the file upload.
+
+        Parameters
+        ----------
+        file_path
+            The path to the file to upload.
+        timeout
+            The timeout for the action. Defaults to `None`.
+        expect_complete_timeout
+            The timeout for the expectation that the upload is complete. Defaults to `30 * 1000`.
+        """
         self.loc.wait_for(state="visible", timeout=timeout)
         self.loc.scroll_into_view_if_needed(timeout=timeout)
         self.loc.set_input_files(file_path, timeout=timeout)
@@ -1480,71 +2147,135 @@ class InputFile(
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Expect the file upload to be complete.
+
+        Parameters
+        ----------
+        timeout
+            The timeout for the expectation. Defaults to `None`.
+        """
         expect_to_have_style(self.loc_progress, "width", "100%", timeout=timeout)
 
     # TODO-future; Test multiple file upload
-    def expect_multiple(self, multiple: bool, *, timeout: Timeout = None) -> None:
-        _expect_multiple(self.loc, multiple, timeout=timeout)
+    def expect_multiple(self, value: bool, *, timeout: Timeout = None) -> None:
+        """
+        Expect the `multiple` attribute to have a specific value.
+
+        Parameters
+        ----------
+        value
+            The expected value of the `multiple` attribute.
+        timeout
+            The timeout for the expectation. Defaults to `None`.
+        """
+        _expect_multiple(self.loc, value, timeout=timeout)
 
     def expect_accept(
         self,
-        accept: list[str] | AttrValue,
+        value: list[str] | AttrValue,
         *,
         timeout: Timeout = None,
     ) -> None:
-        if isinstance(accept, list):
-            accept = ",".join(accept)
-        expect_attr(self.loc, "accept", accept, timeout=timeout)
+        """
+        Expect the `accept` attribute to have a specific value.
 
-    def expect_width(self, width: StyleValue, *, timeout: Timeout = None) -> None:
-        expect_to_have_style(self.loc_container, "width", width, timeout=timeout)
+        Parameters
+        ----------
+        value
+            The expected value of the `accept` attribute.
+        timeout
+            The timeout for the expectation. Defaults to `None`.
+        """
+        if isinstance(value, list):
+            value = ",".join(value)
+        expect_attribute_to_have_value(self.loc, "accept", value, timeout=timeout)
+
+    def expect_width(self, value: StyleValue, *, timeout: Timeout = None) -> None:
+        """
+        Expect the width of the input file to have a specific value.
+
+        Parameters
+        ----------
+        value
+            The expected value of the width.
+        timeout
+            The timeout for the expectation. Defaults to `None`.
+        """
+        expect_to_have_style(self.loc_container, "width", value, timeout=timeout)
 
     def expect_button_label(
         self,
-        button_label: PatternOrStr,
+        value: PatternOrStr,
         *,
         timeout: Timeout = None,
     ) -> None:
-        playwright_expect(self.loc_button).to_have_text(button_label, timeout=timeout)
+        """
+        Expect the button label to have a specific value.
+
+        Parameters
+        ----------
+        value
+            The expected value of the button label.
+        timeout
+            The timeout for the expectation. Defaults to `None`.
+        """
+        playwright_expect(self.loc_button).to_have_text(value, timeout=timeout)
 
     def expect_capture(
         self,
-        capture: Literal["environment", "user"] | None,
+        value: Literal["environment", "user"] | None,
         *,
         timeout: Timeout = None,
     ) -> None:
-        expect_attr(self.loc, "capture", capture, timeout=timeout)
+        """
+        Expect the `capture` attribute to have a specific value.
+
+        Parameters
+        ----------
+        value
+            The expected value of the `capture` attribute.
+        timeout
+            The timeout for the expectation. Defaults to `None`.
+        """
+        expect_attribute_to_have_value(self.loc, "capture", value, timeout=timeout)
 
     def expect_placeholder(self, value: AttrValue, *, timeout: Timeout = None) -> None:
-        expect_attr(self.loc_file_display, "placeholder", value=value, timeout=timeout)
+        expect_attribute_to_have_value(
+            self.loc_file_display, "placeholder", value=value, timeout=timeout
+        )
 
 
-class _InputSliderBase(_WidthLocM, _InputWithLabel):
-    # id: str,
-    # label: TagChild,
-    # min: SliderValueArg,
-    # max: SliderValueArg,
-    # value: Union[SliderValueArg, Iterable[SliderValueArg]],
-    # step: Optional[SliderStepArg] = None,
-    # ticks: bool = True,
-    # animate: Union[bool, AnimationOptions] = False,
-    # width: Optional[str] = None,
-    # sep: str = ",",
-    # pre: Optional[str] = None,
-    # post: Optional[str] = None,
-    # time_format: Optional[str] = None,
-    # timezone: Optional[str] = None,
-    # drag_range: bool = True,
+class _InputSliderBase(_WidthLocM, _UiWithLabel):
 
     loc_irs: Locator
+    """
+    Playwright `Locator` of the input slider.
+    """
     loc_irs_ticks: Locator
+    """
+    Playwright `Locator` of the input slider ticks.
+    """
     loc_play_pause: Locator
+    """
+    Playwright `Locator` of the play/pause button.
+    """
 
     def __init__(
         self,
         page: Page,
         id: str,
     ) -> None:
+        """
+        Initialize the InputSlider.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The id of the slider.
+        """
         super().__init__(
             page,
             id=id,
@@ -1562,6 +2293,16 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Expect the tick labels of the input slider.
+
+        Parameters
+        ----------
+        value
+            The expected tick labels.
+        timeout
+            The timeout for the expectation. Defaults to `None`.
+        """
         if value is None:
             playwright_expect(self.loc_irs_ticks).to_have_count(0)
             return
@@ -1569,6 +2310,16 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
         playwright_expect(self.loc_irs_ticks).to_have_text(value, timeout=timeout)
 
     def expect_animate(self, exists: bool, *, timeout: Timeout = None) -> None:
+        """
+        Expect the animate button to exist.
+
+        Parameters
+        ----------
+        exists
+            Whether the animate button should exist.
+        timeout
+            The timeout for the expectation. Defaults to `None`.
+        """
         animate_count = 1 if exists else 0
         playwright_expect(self.loc_play_pause).to_have_count(animate_count)
 
@@ -1586,14 +2337,14 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
         # TODO-future; Composable expectations
         self.expect_animate(exists=True, timeout=timeout)
         if not_is_missing(loop):
-            expect_attr(
+            expect_attribute_to_have_value(
                 self.loc_play_pause,
                 "data-loop",
                 "" if loop else None,
                 timeout=timeout,
             )
         if not_is_missing(interval):
-            expect_attr(
+            expect_attribute_to_have_value(
                 self.loc_play_pause,
                 "data-interval",
                 str(interval),
@@ -1604,6 +2355,14 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
     # become `play` over and over again. Instead, have explicit `play` and `pause`
     # methods.
     def click_play(self, *, timeout: Timeout = None) -> None:
+        """
+        Click the play button.
+
+        Parameters
+        ----------
+        timeout
+            The timeout for the action. Defaults to `None`.
+        """
         self.loc_container.wait_for(state="visible", timeout=timeout)
         self.loc_container.scroll_into_view_if_needed(timeout=timeout)
         _expect_class_value(
@@ -1612,6 +2371,14 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
         self.loc_play_pause.click()
 
     def click_pause(self, *, timeout: Timeout = None) -> None:
+        """
+        Click the pause button.
+
+        Parameters
+        ----------
+        timeout
+            The timeout for the action. Defaults to `None`.
+        """
         self.loc_container.wait_for(state="visible", timeout=timeout)
         self.loc_container.scroll_into_view_if_needed(timeout=timeout)
         _expect_class_value(
@@ -1620,25 +2387,109 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
         self.loc_play_pause.click()
 
     def expect_min(self, value: AttrValue, *, timeout: Timeout = None) -> None:
-        expect_attr(self.loc, "data-min", value=value, timeout=timeout)
+        """
+        Expect the input element to have the expected `min` attribute value.
+
+        Parameters
+        ----------
+        value
+            The expected value.
+        timeout
+            The timeout for the expectation. Defaults to `None`.
+        """
+        expect_attribute_to_have_value(
+            self.loc, "data-min", value=value, timeout=timeout
+        )
 
     def expect_max(self, value: AttrValue, *, timeout: Timeout = None) -> None:
-        expect_attr(self.loc, "data-max", value=value, timeout=timeout)
+        """
+        Expect the input element to have the expected `max` attribute value.
+
+        Parameters
+        ----------
+        value
+            The expected value.
+        timeout
+            The timeout for the expectation. Defaults to `None`.
+        """
+        expect_attribute_to_have_value(
+            self.loc, "data-max", value=value, timeout=timeout
+        )
 
     def expect_step(self, value: AttrValue, *, timeout: Timeout = None) -> None:
-        expect_attr(self.loc, "data-step", value=value, timeout=timeout)
+        """
+        Expect the input element to have the expected `step` attribute value.
+
+        Parameters
+        ----------
+        value
+            The expected value.
+        timeout
+            The timeout for the expectation. Defaults to `None`.
+        """
+        expect_attribute_to_have_value(
+            self.loc, "data-step", value=value, timeout=timeout
+        )
 
     def expect_ticks(self, value: AttrValue, *, timeout: Timeout = None) -> None:
-        expect_attr(self.loc, "data-grid", value=value, timeout=timeout)
+        """
+        Expect the input element to have the expected `data-ticks` attribute value.
+
+        Parameters
+        ----------
+        value
+            The expected value.
+        timeout
+            The timeout for the expectation. Defaults to `None`.
+        """
+        expect_attribute_to_have_value(
+            self.loc, "data-grid", value=value, timeout=timeout
+        )
 
     def expect_sep(self, value: AttrValue, *, timeout: Timeout = None) -> None:
-        expect_attr(self.loc, "data-prettify-separator", value=value, timeout=timeout)
+        """
+        Expect the input element to have the expected `data-sep` attribute value.
+
+        Parameters
+        ----------
+        value
+            The expected value.
+        timeout
+            The timeout for the expectation. Defaults to `None`.
+        """
+        expect_attribute_to_have_value(
+            self.loc, "data-prettify-separator", value=value, timeout=timeout
+        )
 
     def expect_pre(self, value: AttrValue, *, timeout: Timeout = None) -> None:
-        expect_attr(self.loc, "data-prefix", value=value, timeout=timeout)
+        """
+        Expect the input element to have the expected `data-pre` attribute value.
+
+        Parameters
+        ----------
+        value
+            The expected value.
+        timeout
+            The timeout for the expectation. Defaults to `None`.
+        """
+        expect_attribute_to_have_value(
+            self.loc, "data-prefix", value=value, timeout=timeout
+        )
 
     def expect_post(self, value: AttrValue, *, timeout: Timeout = None) -> None:
-        expect_attr(self.loc, "data-postfix", value=value, timeout=timeout)
+        """
+        Expect the input element to have the expected `data-post` attribute value.
+
+        Parameters
+        ----------
+        value
+            The expected value.
+        timeout
+            The timeout for the expectation. Defaults to `None`.
+        """
+        expect_attribute_to_have_value(
+            self.loc, "data-postfix", value=value, timeout=timeout
+        )
 
     # def expect_data_type(
     #     self, value: AttrValue, *, timeout: Timeout = None
@@ -1646,13 +2497,49 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
     #     expect_attr(self.loc, "data-data-type", value=value, timeout=timeout)
 
     def expect_time_format(self, value: AttrValue, *, timeout: Timeout = None) -> None:
-        expect_attr(self.loc, "data-time-format", value=value, timeout=timeout)
+        """
+        Asserts that the input element has the expected `data-time-format` attribute value.
+
+        Parameters
+        ----------
+        value
+            The expected value.
+        timeout
+            The maximum time to wait for the value to appear. Defaults to `None`.
+        """
+        expect_attribute_to_have_value(
+            self.loc, "data-time-format", value=value, timeout=timeout
+        )
 
     def expect_timezone(self, value: AttrValue, *, timeout: Timeout = None) -> None:
-        expect_attr(self.loc, "data-timezone", value=value, timeout=timeout)
+        """
+        Asserts that the input element has the expected `data-timezone` attribute value.
+
+        Parameters
+        ----------
+        value
+            The expected value.
+        timeout
+            The maximum time to wait for the value to appear. Defaults to `None`.
+        """
+        expect_attribute_to_have_value(
+            self.loc, "data-timezone", value=value, timeout=timeout
+        )
 
     def expect_drag_range(self, value: AttrValue, *, timeout: Timeout = None) -> None:
-        expect_attr(self.loc, "data-drag-interval", value=value, timeout=timeout)
+        """
+        Asserts that the input element has the expected `data-drag-range` attribute value.
+
+        Parameters
+        ----------
+        value
+            The expected value.
+        timeout
+            The maximum time to wait for the value to appear. Defaults to `None`.
+        """
+        expect_attribute_to_have_value(
+            self.loc, "data-drag-interval", value=value, timeout=timeout
+        )
 
     def _wait_for_container(self, *, timeout: Timeout = None) -> None:
         self.loc_container.wait_for(state="visible", timeout=timeout)
@@ -1698,6 +2585,18 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
         sleep_time = 0.05
 
         def slow_move(x: float, y: float, delay: float = sleep_time) -> None:
+            """
+            Slowly move the mouse to the given coordinates.
+
+            Parameters
+            ----------
+            x
+                The x-coordinate.
+            y
+                The y-coordinate.
+            delay
+                The delay between each move. Defaults to `sleep_time`.
+            """
             mouse.move(x, y)
             time.sleep(delay)
 
@@ -1766,17 +2665,42 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
 
 
 class InputSlider(_InputSliderBase):
+    """Input slider control for :func:`~shiny.ui.input_slider`."""
+
     loc_irs_label: Locator
+    """
+    Playwright `Locator` of the input slider label.
+    """
 
     def __init__(
         self,
         page: Page,
         id: str,
     ) -> None:
+        """
+        Initialize the InputSlider object.
+
+        Parameters
+        ----------
+        page
+            The Playwright Page object.
+        id
+            The id of the input element.
+        """
         super().__init__(page, id=id)
         self.loc_irs_label = self.loc_irs.locator("> .irs > .irs-single")
 
     def expect_value(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+        """
+        Asserts that the input element has the expected value.
+
+        Parameters
+        ----------
+        value
+            The expected value.
+        timeout
+            The maximum time to wait for the value to appear. Defaults to `None`.
+        """
         playwright_expect(self.loc_irs_label).to_have_text(value, timeout=timeout)
 
     def set(
@@ -1786,6 +2710,18 @@ class InputSlider(_InputSliderBase):
         max_err_values: int = 15,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Set the value of the slider.
+
+        Parameters
+        ----------
+        value
+            The value to set the slider to.
+        max_err_values
+            The maximum number of error values to display if the value is not found. Defaults to 15.
+        timeout
+            The maximum time to wait for the value to appear. Defaults to `None`.
+        """
         self._wait_for_container(timeout=timeout)
 
         handle = self.loc_irs.locator("> .irs-handle")
@@ -1804,14 +2740,32 @@ class InputSlider(_InputSliderBase):
 
 
 class InputSliderRange(_InputSliderBase):
+    """Input slider range control for :func:`~shiny.ui.input_slider_range`."""
+
     loc_irs_label_from: Locator
+    """
+    Playwright `Locator` of the input slider label for the `from` handle.
+    """
     loc_irs_label_to: Locator
+    """
+    Playwright `Locator` of the input slider label for the `to` handle.
+    """
 
     def __init__(
         self,
         page: Page,
         id: str,
     ) -> None:
+        """
+        Initialize the InputSliderRange object.
+
+        Parameters
+        ----------
+        page
+            The Playwright Page object.
+        id
+            The id of the input element.
+        """
         super().__init__(page, id=id)
         self.loc_irs_label_from = self.loc_irs.locator("> .irs > .irs-from")
         self.loc_irs_label_to = self.loc_irs.locator("> .irs > .irs-to")
@@ -1826,6 +2780,16 @@ class InputSliderRange(_InputSliderBase):
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Asserts that the input element has the expected value.
+
+        Parameters
+        ----------
+        value
+            The expected value.
+        timeout
+            The maximum time to wait for the value to appear. Defaults to `None`.
+        """
         if all_missing(*value):
             raise ValueError("Both `value` tuple entries cannot be `MISSING_TYPE`")
         from_val = value[0]
@@ -1874,6 +2838,18 @@ class InputSliderRange(_InputSliderBase):
         max_err_values: int = 15,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Set the value of the slider.
+
+        Parameters
+        ----------
+        value
+            The value to set the slider to.
+        max_err_values
+            The maximum number of error values to display if the value is not found. Defaults to 15.
+        timeout
+            The maximum time to wait for the value to appear. Defaults to `None`.
+        """
         if all_missing(*value):
             raise ValueError("Both `value` tuple entries cannot be `MISSING_TYPE`")
 
@@ -1931,21 +2907,8 @@ class InputSliderRange(_InputSliderBase):
 class _DateBase(
     _SetTextM,
     _WidthContainerM,
-    _InputWithLabel,
+    _UiWithLabel,
 ):
-    # id: str,
-    # label: TagChild,
-    # value: Optional[Union[date, str]] = None,
-    # min: Optional[Union[date, str]] = None,
-    # max: Optional[Union[date, str]] = None,
-    # format: str = "yyyy-mm-dd",
-    # startview: str = "month",
-    # weekstart: int = 0,
-    # language: str = "en",
-    # width: Optional[str] = None,
-    # autoclose: bool = True,
-    # datesdisabled: Optional[list[str]] = None,
-    # daysofweekdisabled: Optional[list[int]] = None,
 
     # Due to the `language` parameter, we can't use `datetime.date` as a value type
 
@@ -1955,6 +2918,16 @@ class _DateBase(
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Asserts that the input element has the expected value.
+
+        Parameters
+        ----------
+        value
+            The expected value.
+        timeout
+            The maximum time to wait for the value to appear. Defaults to `None`.
+        """
         # if value is None:
         #     self.expect.to_be_empty(timeout=timeout)
         # else:
@@ -1966,7 +2939,19 @@ class _DateBase(
         *,
         timeout: Timeout = None,
     ) -> None:
-        expect_attr(self.loc, "data-min-date", value=value, timeout=timeout)
+        """
+        Asserts that the input element has the expected `data-min-date` attribute value.
+
+        Parameters
+        ----------
+        value
+            The expected `data-min-date` attribute value.
+        timeout
+            The maximum time to wait for the value to appear. Defaults to `None`.
+        """
+        expect_attribute_to_have_value(
+            self.loc, "data-min-date", value=value, timeout=timeout
+        )
 
     def expect_max_date(
         self,
@@ -1974,7 +2959,19 @@ class _DateBase(
         *,
         timeout: Timeout = None,
     ) -> None:
-        expect_attr(self.loc, "data-max-date", value=value, timeout=timeout)
+        """
+        Asserts that the input element has the expected `data-max-date` attribute value.
+
+        Parameters
+        ----------
+        value
+            The expected `data-max-date` attribute value.
+        timeout
+            The maximum time to wait for the value to appear. Defaults to `None`.
+        """
+        expect_attribute_to_have_value(
+            self.loc, "data-max-date", value=value, timeout=timeout
+        )
 
     def expect_format(
         self,
@@ -1982,7 +2979,19 @@ class _DateBase(
         *,
         timeout: Timeout = None,
     ) -> None:
-        expect_attr(self.loc, "data-date-format", value=value, timeout=timeout)
+        """
+        Asserts that the input element has the expected `data-date-format` attribute value.
+
+        Parameters
+        ----------
+        value
+            The expected `data-date-format` attribute value.
+        timeout
+            The maximum time to wait for the value to appear. Defaults to `None`.
+        """
+        expect_attribute_to_have_value(
+            self.loc, "data-date-format", value=value, timeout=timeout
+        )
 
     def expect_startview(
         self,
@@ -1990,7 +2999,19 @@ class _DateBase(
         *,
         timeout: Timeout = None,
     ) -> None:
-        expect_attr(self.loc, "data-date-start-view", value=value, timeout=timeout)
+        """
+        Asserts that the input element has the expected `data-date-start-view` attribute value.
+
+        Parameters
+        ----------
+        value
+            The expected `data-date-start-view` attribute value.
+        timeout
+            The maximum time to wait for the value to appear. Defaults to `None`.
+        """
+        expect_attribute_to_have_value(
+            self.loc, "data-date-start-view", value=value, timeout=timeout
+        )
 
     def expect_weekstart(
         self,
@@ -1998,9 +3019,21 @@ class _DateBase(
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Asserts that the input element has the expected `data-date-week-start` attribute value.
+
+        Parameters
+        ----------
+        value
+            The expected `data-date-week-start` attribute value.
+        timeout
+            The maximum time to wait for the value to appear. Defaults to `None`.
+        """
         if isinstance(value, int):
             value = str(value)
-        expect_attr(self.loc, "data-date-week-start", value=value, timeout=timeout)
+        expect_attribute_to_have_value(
+            self.loc, "data-date-week-start", value=value, timeout=timeout
+        )
 
     def expect_language(
         self,
@@ -2008,7 +3041,19 @@ class _DateBase(
         *,
         timeout: Timeout = None,
     ) -> None:
-        expect_attr(self.loc, "data-date-language", value=value, timeout=timeout)
+        """
+        Asserts that the input element has the expected `data-date-language` attribute value.
+
+        Parameters
+        ----------
+        value
+            The expected `data-date-language` attribute value.
+        timeout
+            The maximum time to wait for the value to appear. Defaults to `None`.
+        """
+        expect_attribute_to_have_value(
+            self.loc, "data-date-language", value=value, timeout=timeout
+        )
 
     # autoclose: bool = True,
     def expect_autoclose(
@@ -2017,7 +3062,19 @@ class _DateBase(
         *,
         timeout: Timeout = None,
     ) -> None:
-        expect_attr(self.loc, "data-date-autoclose", value=value, timeout=timeout)
+        """
+        Asserts that the input element has the expected `data-date-autoclose` attribute value.
+
+        Parameters
+        ----------
+        value
+            The expected `data-date-autoclose` attribute value.
+        timeout
+            The maximum time to wait for the value to appear. Defaults to `None`.
+        """
+        expect_attribute_to_have_value(
+            self.loc, "data-date-autoclose", value=value, timeout=timeout
+        )
 
     def expect_datesdisabled(
         self,
@@ -2025,10 +3082,20 @@ class _DateBase(
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Asserts that the input element has the expected `data-date-dates-disabled` attribute value.
+
+        Parameters
+        ----------
+        value
+            The expected `data-date-dates-disabled` attribute value.
+        timeout
+            The maximum time to wait for the value to appear. Defaults to `None`.
+        """
         if isinstance(value, list):
             assert len(value) > 0, "`value` must be `None` or a non-empty list"
         value_str = "null" if value is None else json.dumps(value)
-        expect_attr(
+        expect_attribute_to_have_value(
             self.loc,
             "data-date-dates-disabled",
             value=value_str,
@@ -2041,10 +3108,20 @@ class _DateBase(
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Asserts that the input element has the expected `data-date-days-of-week-disabled` attribute value.
+
+        Parameters
+        ----------
+        value
+            The expected `data-date-days-of-week-disabled` attribute value.
+        timeout
+            The maximum time to wait for the value to appear. Defaults to `None`.
+        """
         if isinstance(value, list):
             assert len(value) > 0, "`value` must be `None` or a non-empty list"
         value_str = "null" if value is None else json.dumps(value)
-        expect_attr(
+        expect_attribute_to_have_value(
             self.loc,
             "data-date-days-of-week-disabled",
             value=value_str,
@@ -2054,6 +3131,16 @@ class _DateBase(
 
 class InputDate(_DateBase):
     def __init__(self, page: Page, id: str) -> None:
+        """
+        Initialize an InputDate object.
+
+        Parameters
+        ----------
+        page
+            The page object.
+        id
+            The id of the input element.
+        """
         super().__init__(
             page,
             id=id,
@@ -2062,29 +3149,41 @@ class InputDate(_DateBase):
         )
 
 
-class InputDateRange(_WidthContainerM, _InputWithLabel):
-    # id: str,
-    # label: TagChild,
-    # *,
-    # start: Optional[Union[date, str]] = None,
-    # end: Optional[Union[date, str]] = None,
-    # min: Optional[Union[date, str]] = None,
-    # max: Optional[Union[date, str]] = None,
-    # format: str = "yyyy-mm-dd",
-    # startview: str = "month",
-    # weekstart: int = 0,
-    # language: str = "en",
-    # separator: str = " to ",
-    # width: Optional[str] = None,
-    # autoclose: bool = True,
+class InputDateRange(_WidthContainerM, _UiWithLabel):
+    """Input date range control for :func:`~shiny.ui.input_date_range`."""
 
     loc_separator: Locator
+    """
+    Playwright `Locator` of the separator between the two input elements.
+    """
     loc_start: Locator
+    """
+    Playwright `Locator` of the start date input element.
+    """
     loc_end: Locator
+    """
+    Playwright `Locator` of the end date input element.
+    """
     date_start: _DateBase
+    """
+    The start date input element.
+    """
     date_end: _DateBase
+    """
+    The end date input element.
+    """
 
     def __init__(self, page: Page, id: str) -> None:
+        """
+        Initialize an InputDateRange object.
+
+        Parameters
+        ----------
+        page
+            The page object.
+        id
+            The id of the input element.
+        """
         super().__init__(
             page,
             id=id,
@@ -2118,6 +3217,16 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Sets the value of the input element.
+
+        Parameters
+        ----------
+        value
+            The value to set. The first element is the start date and the second element is the end date.
+        timeout
+            The maximum time to wait for the value to be set. Defaults to `None`.
+        """
         start = value[0]
         end = value[1]
         # TODO-future; Composable set() methods?
@@ -2136,6 +3245,16 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Asserts that the input element has the expected value.
+
+        Parameters
+        ----------
+        value
+            The expected value. The first element is the start date and the second element is the end date.
+        timeout
+            The maximum time to wait for the value to appear. Defaults to `None`.
+        """
         if all_missing(*value):
             raise ValueError("Both `start_val` and `end_val` can not be `MISSING_TYPE`")
         start_val = value[0]
@@ -2156,6 +3275,16 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Asserts that the input element has the expected minimum date.
+
+        Parameters
+        ----------
+        value
+            The expected minimum date.
+        timeout
+            The maximum time to wait for the minimum date to appear. Defaults to `None`.
+        """
         # TODO-future; Composable expectations
         self.date_start.expect_min_date(value, timeout=timeout)
         self.date_end.expect_min_date(value, timeout=timeout)
@@ -2167,6 +3296,16 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Asserts that the input element has the expected maximum date.
+
+        Parameters
+        ----------
+        value
+            The expected maximum date.
+        timeout
+            The maximum time to wait for the maximum date to appear. Defaults to `None`.
+        """
         # TODO-future; Composable expectations
         self.date_start.expect_max_date(value, timeout=timeout)
         self.date_end.expect_max_date(value, timeout=timeout)
@@ -2178,6 +3317,16 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Asserts that the input element has the expected format.
+
+        Parameters
+        ----------
+        value
+            The expected format.
+        timeout
+            The maximum time to wait for the format to appear. Defaults to `None`.
+        """
         # TODO-future; Composable expectations
         self.date_start.expect_format(value, timeout=timeout)
         self.date_end.expect_format(value, timeout=timeout)
@@ -2189,6 +3338,16 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Asserts that the input element has the expected start view.
+
+        Parameters
+        ----------
+        value
+            The expected start view.
+        timeout
+            The maximum time to wait for the start view to appear. Defaults to `None`.
+        """
         # TODO-future; Composable expectations
         self.date_start.expect_startview(value, timeout=timeout)
         self.date_end.expect_startview(value, timeout=timeout)
@@ -2200,6 +3359,16 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Asserts that the input element has the expected week start.
+
+        Parameters
+        ----------
+        value
+            The expected week start.
+        timeout
+            The maximum time to wait for the week start to appear. Defaults to `None`.
+        """
         # TODO-future; Composable expectations
         self.date_start.expect_weekstart(value, timeout=timeout)
         self.date_end.expect_weekstart(value, timeout=timeout)
@@ -2211,6 +3380,16 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Asserts that the input element has the expected language.
+
+        Parameters
+        ----------
+        value
+            The expected language.
+        timeout
+            The maximum time to wait for the language to appear. Defaults to `None`.
+        """
         # TODO-future; Composable expectations
         self.date_start.expect_language(value, timeout=timeout)
         self.date_end.expect_language(value, timeout=timeout)
@@ -2222,6 +3401,16 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Asserts that the input element has the expected separator.
+
+        Parameters
+        ----------
+        value
+            The expected separator.
+        timeout
+            The maximum time to wait for the separator to appear. Defaults to `None`.
+        """
         playwright_expect(self.loc_separator).to_have_text(value, timeout=timeout)
 
     # width: Optional[str] = None,
@@ -2233,6 +3422,16 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Asserts that the input element has the expected autoclose value.
+
+        Parameters
+        ----------
+        value
+            The expected autoclose value.
+        timeout
+            The maximum time to wait for the value to appear. Defaults to `None`.
+        """
         # TODO-future; Composable expectations
         self.date_start.expect_autoclose(value, timeout=timeout)
         self.date_end.expect_autoclose(value, timeout=timeout)
@@ -2250,9 +3449,22 @@ class _OutputBaseP(Protocol):
 
 
 class _OutputBase:
+    """
+    Base class for output controls.
+    """
+
     id: str
+    """
+    The ID of the output control.
+    """
     loc: Locator
+    """
+    Playwright `Locator` of the output control.
+    """
     page: Page
+    """
+    Playwright `Page` of the Shiny app.
+    """
 
     def __init__(
         self,
@@ -2284,6 +3496,16 @@ class _OutputTextValue(_OutputBase):
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Asserts that the output has the expected value.
+
+        Parameters
+        ----------
+        value
+            The expected value.
+        timeout
+            The maximum time to wait for the value to appear. Defaults to `None`.
+        """
         """Note this function will trim value and output text value before comparing them"""
         self.expect.to_have_text(value, timeout=timeout)
 
@@ -2291,7 +3513,7 @@ class _OutputTextValue(_OutputBase):
 class _OutputContainerP(_OutputBaseP, Protocol):
     def expect_container_tag(
         self: _OutputBaseP,
-        tag_name: Literal["span", "div"] | str,
+        value: Literal["span", "div"] | str,
         *,
         timeout: Timeout = None,
     ) -> None: ...
@@ -2300,73 +3522,195 @@ class _OutputContainerP(_OutputBaseP, Protocol):
 class _OutputContainerM:
     def expect_container_tag(
         self: _OutputBaseP,
-        tag_name: Literal["span", "div"] | str,
+        value: Literal["span", "div"] | str,
         *,
         timeout: Timeout = None,
     ) -> None:
-        loc = self.loc.locator(f"xpath=self::{tag_name}")
+        """
+        Asserts that the output has the expected container tag.
+
+        Parameters
+        ----------
+        value
+            The expected container tag.
+        timeout
+            The maximum time to wait for the container tag to appear. Defaults to `None`.
+        """
+        loc = self.loc.locator(f"xpath=self::{value}")
         playwright_expect(loc).to_have_count(1, timeout=timeout)
 
 
 class _OutputInlineContainerM(_OutputContainerM):
     def expect_inline(
-        self: _OutputContainerP, inline: bool = False, *, timeout: Timeout = None
+        self: _OutputContainerP,
+        value: bool = False,
+        *,
+        timeout: Timeout = None,
     ) -> None:
-        tag_name = "span" if inline else "div"
+        """
+        Asserts that the output is inline.
+
+        Parameters
+        ----------
+        value
+            Whether the output is inline.
+        timeout
+            The maximum time to wait for the output to appear. Defaults to `None`.
+        """
+        tag_name = "span" if value else "div"
         self.expect_container_tag(tag_name, timeout=timeout)
 
 
-class OutputText(_OutputInlineContainerM, _OutputTextValue):
+class OutputText(
+    _OutputInlineContainerM,
+    _OutputTextValue,
+):
+    """Text output control for :func:`~shiny.ui.text_output`."""
+
+    loc: Locator
+    """
+    Playwright `Locator` of the text output.
+    """
+
     def __init__(
         self,
         page: Page,
         id: str,
     ) -> None:
+        """
+        Initializes a text output.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The ID of the text output.
+        """
         super().__init__(page, id=id, loc=f"#{id}.shiny-text-output")
 
     def get_value(self, *, timeout: Timeout = None) -> str:
+        """
+        Gets the text value of the output.
+
+        Parameters
+        ----------
+        timeout
+            The maximum time to wait for the value to appear. Defaults to `None`.
+        """
         return self.loc.inner_text(timeout=timeout)
 
 
 class OutputCode(_OutputTextValue):
+    """Code output control for :func:`~shiny.ui.code_output`."""
+
+    loc: Locator
+    """
+    Playwright `Locator` of the code output.
+    """
+
     def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes a code output.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The ID of the code output.
+        """
         super().__init__(page, id=id, loc=f"pre#{id}.shiny-text-output")
 
     def expect_has_placeholder(
-        self, placeholder: bool = False, *, timeout: Timeout = None
+        self,
+        value: bool = False,
+        *,
+        timeout: Timeout = None,
     ) -> None:
+        """
+        Asserts that the code output has the expected placeholder.
+
+        Parameters
+        ----------
+        value
+            Whether the code output has a placeholder.
+        timeout
+            The maximum time to wait for the placeholder to appear. Defaults to `None`.
+        """
         _expect_class_value(
             self.loc,
             cls="noplaceholder",
-            has_class=not placeholder,
+            has_class=not value,
             timeout=timeout,
         )
 
 
 class OutputTextVerbatim(_OutputTextValue):
+    """Verbatim text output control for :func:`~shiny.ui.text_output_verbatim`."""
+
+    loc: Locator
+    """
+    Playwright `Locator` of the verbatim text output.
+    """
+
     def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes a verbatim text output.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The ID of the verbatim text output.
+        """
         super().__init__(page, id=id, loc=f"pre#{id}.shiny-text-output")
 
     def expect_has_placeholder(
-        self, placeholder: bool = False, *, timeout: Timeout = None
+        self,
+        value: bool = False,
+        *,
+        timeout: Timeout = None,
     ) -> None:
+        """
+        Asserts that the verbatim text output has the expected placeholder.
+
+        Parameters
+        ----------
+        value
+            Whether the verbatim text output has a placeholder.
+        timeout
+            The maximum time to wait for the placeholder to appear. Defaults to `None`.
+        """
         _expect_class_value(
             self.loc,
             cls="noplaceholder",
-            has_class=not placeholder,
+            has_class=not value,
             timeout=timeout,
         )
 
 
 class _OutputImageBase(_OutputInlineContainerM, _OutputBase):
-    # id: str
-    # width: str = "100%"
-    # height: str = "400px"
-    # inline: bool = False
 
     loc_img: Locator
+    """
+    Playwright `Locator` of the image.
+    """
 
     def __init__(self, page: Page, id: str, loc_classes: str = "") -> None:
+        """
+        Initializes an image output.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The ID of the image.
+        loc_classes
+            Additional classes to locate the image. Defaults to "".
+        """
         super().__init__(
             page,
             id=id,
@@ -2380,6 +3724,16 @@ class _OutputImageBase(_OutputInlineContainerM, _OutputBase):
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Asserts that the image has the expected height.
+
+        Parameters
+        ----------
+        value
+            The expected height.
+        timeout
+            The maximum time to wait for the height to appear. Defaults to `None`.
+        """
         expect_to_have_style(self.loc, "height", value, timeout=timeout)
 
     def expect_width(
@@ -2388,6 +3742,16 @@ class _OutputImageBase(_OutputInlineContainerM, _OutputBase):
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Asserts that the image has the expected width.
+
+        Parameters
+        ----------
+        value
+            The expected width.
+        timeout
+            The maximum time to wait for the width to appear. Defaults to `None`.
+        """
         expect_to_have_style(self.loc, "width", value, timeout=timeout)
 
     def expect_img_src(
@@ -2396,7 +3760,17 @@ class _OutputImageBase(_OutputInlineContainerM, _OutputBase):
         *,
         timeout: Timeout = None,
     ) -> None:
-        expect_attr(self.loc_img, "src", value, timeout=timeout)
+        """
+        Asserts that the image has the expected src.
+
+        Parameters
+        ----------
+        value
+            The expected src.
+        timeout
+            The maximum time to wait for the src to appear. Defaults to `None`.
+        """
+        expect_attribute_to_have_value(self.loc_img, "src", value, timeout=timeout)
 
     def expect_img_width(
         self,
@@ -2404,7 +3778,17 @@ class _OutputImageBase(_OutputInlineContainerM, _OutputBase):
         *,
         timeout: Timeout = None,
     ) -> None:
-        expect_attr(self.loc_img, "width", value, timeout=timeout)
+        """
+        Asserts that the image has the expected width.
+
+        Parameters
+        ----------
+        value
+            The expected width.
+        timeout
+            The maximum time to wait for the width to appear. Defaults to `None`.
+        """
+        expect_attribute_to_have_value(self.loc_img, "width", value, timeout=timeout)
 
     def expect_img_height(
         self,
@@ -2412,7 +3796,17 @@ class _OutputImageBase(_OutputInlineContainerM, _OutputBase):
         *,
         timeout: Timeout = None,
     ) -> None:
-        expect_attr(self.loc_img, "height", value, timeout=timeout)
+        """
+        Asserts that the image has the expected height.
+
+        Parameters
+        ----------
+        value
+            The expected height.
+        timeout
+            The maximum time to wait for the height to appear. Defaults to `None`.
+        """
+        expect_attribute_to_have_value(self.loc_img, "height", value, timeout=timeout)
 
     def expect_img_alt(
         self,
@@ -2420,7 +3814,17 @@ class _OutputImageBase(_OutputInlineContainerM, _OutputBase):
         *,
         timeout: Timeout = None,
     ) -> None:
-        expect_attr(self.loc_img, "alt", value, timeout=timeout)
+        """
+        Asserts that the image has the expected alt text.
+
+        Parameters
+        ----------
+        value
+            The expected alt text.
+        timeout
+            The maximum time to wait for the alt text to appear. Defaults to `None`.
+        """
+        expect_attribute_to_have_value(self.loc_img, "alt", value, timeout=timeout)
 
     # def expect_img_style(
     #     self,
@@ -2433,135 +3837,272 @@ class _OutputImageBase(_OutputInlineContainerM, _OutputBase):
 
 class OutputImage(_OutputImageBase):
     def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes an image output.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The ID of the image.
+        """
         super().__init__(page, id=id)
 
 
 class OutputPlot(_OutputImageBase):
-    # shiny-plot-output
-    # id: str
-    # width: str = "100%"
-    # height: str = "400px"
-    # inline: bool = False
+    """Plot output control for :func:`~shiny.ui.plot_output`."""
+
+    loc: Locator
+    """
+    Playwright `Locator` of the plot output.
+    """
+
     def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes a plot output.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The ID of the plot.
+        """
         super().__init__(page, id=id, loc_classes=".shiny-plot-output")
 
 
 class OutputUi(_OutputInlineContainerM, _OutputBase):
-    # id: str,
-    # inline: bool = False,
-    # container: Optional[TagFunction] = None,
+    """UI output control for :func:`~shiny.ui.ui_output`."""
+
     def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes a UI output.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The ID of the UI output.
+        """
         super().__init__(page, id=id, loc=f"#{id}")
 
     # TODO-future; Should we try verify that `recalculating` class is not present? Do this for all outputs!
-    def expect_empty(self, empty: bool, *, timeout: Timeout = None) -> None:
-        if empty:
+    def expect_empty(self, value: bool, *, timeout: Timeout = None) -> None:
+        """
+        Asserts that the output is empty.
+
+        Parameters
+        ----------
+        value
+            Whether the output is empty.
+        timeout
+            The maximum time to wait for the output to be empty. Defaults to `None`.
+        """
+        if value:
             self.expect.to_be_empty(timeout=timeout)
         else:
             self.expect.not_to_be_empty(timeout=timeout)
 
-    def expect_text(self, text: str, *, timeout: Timeout = None) -> None:
-        self.expect.to_have_text(text, timeout=timeout)
+    def expect_text(self, value: str, *, timeout: Timeout = None) -> None:
+        """
+        Asserts that the output has the expected text.
+
+        Parameters
+        ----------
+        value
+            The expected text.
+        timeout
+            The maximum time to wait for the text to appear. Defaults to `None`.
+        """
+
+        self.expect.to_have_text(value, timeout=timeout)
 
 
 # When making selectors, use `xpath` so that direct decendents can be checked
 class OutputTable(_OutputBase):
-    # id: str,
-    # **kwargs: TagAttrArg
+    """Table output control for :func:`~shiny.ui.table_output`."""
+
     def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes a table output.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The ID of the table.
+        """
         super().__init__(page, id=id, loc=f"#{id}")
 
     def expect_cell(
         self,
-        text: PatternOrStr,
+        value: PatternOrStr,
         row: int,
         col: int,
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Asserts that the table cell has the expected text.
+
+        Parameters
+        ----------
+        value
+            The expected text in the cell.
+        row
+            The row number.
+        col
+            The column number.
+        timeout
+            The maximum time to wait for the text to appear. Defaults to `None`.
+        """
         assert_type(row, int)
         assert_type(col, int)
         playwright_expect(
             self.loc.locator(
                 f"xpath=./table/tbody/tr[{row}]/td[{col}] | ./table/tbody/tr[{row}]/th[{col}]"
             )
-        ).to_have_text(text, timeout=timeout)
+        ).to_have_text(value, timeout=timeout)
 
     def expect_column_labels(
         self,
-        labels: ListPatternOrStr | None,
+        value: ListPatternOrStr | None,
         *,
         timeout: Timeout = None,
     ) -> None:
-        if isinstance(labels, list) and len(labels) == 0:
-            labels = None
+        """
+        Asserts that the table has the expected column labels.
 
-        if labels is None:
+        Parameters
+        ----------
+        value
+            The expected column labels. If None, it asserts that the table has no column labels.
+        timeout
+            The maximum time to wait for the column labels to appear. Defaults to `None`.
+        """
+        if isinstance(value, list) and len(value) == 0:
+            value = None
+
+        if value is None:
             playwright_expect(
                 self.loc.locator("xpath=./table/thead/tr/th")
             ).to_have_count(0, timeout=timeout)
         else:
             playwright_expect(
                 self.loc.locator("xpath=./table/thead/tr/th")
-            ).to_have_text(labels, timeout=timeout)
+            ).to_have_text(value, timeout=timeout)
 
     def expect_column_text(
         self,
         col: int,
         # Can't use `None` as we don't know how many rows exist
-        text: ListPatternOrStr,
+        value: ListPatternOrStr,
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Asserts that the column has the expected text.
+
+        Parameters
+        ----------
+        col
+            The column number.
+        value
+            The expected text in the column.
+        timeout
+            The maximum time to wait for the text to appear. Defaults to `None`.
+        """
         assert_type(col, int)
         playwright_expect(
             self.loc.locator(f"xpath=./table/tbody/tr/td[{col}]")
         ).to_have_text(
-            text,
+            value,
             timeout=timeout,
         )
 
     def expect_n_col(
         self,
-        n: int,
+        value: int,
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Asserts that the table has the expected number of columns.
+
+        Parameters
+        ----------
+        value
+            The expected number of columns in the table.
+        timeout
+            The maximum time to wait for the table to have the expected number of columns. Defaults to `None`.
+        """
         playwright_expect(
             # self.loc.locator("xpath=./table/thead/tr[1]/(td|th)")
             self.loc.locator("xpath=./table/thead/tr[1]/td | ./table/thead/tr[1]/th")
         ).to_have_count(
-            n,
+            value,
             timeout=timeout,
         )
 
     def expect_n_row(
         self,
-        n: int,
+        value: int,
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Asserts that the table has the expected number of rows.
+
+        Parameters
+        ----------
+        value
+            The expected number of rows in the table.
+        timeout
+            The maximum time to wait for the table to have the expected number of rows. Defaults to `None`.
+        """
         playwright_expect(self.loc.locator("xpath=./table/tbody/tr")).to_have_count(
-            n,
+            value,
             timeout=timeout,
         )
 
 
 class Sidebar(
     _WidthLocM,
-    _InputWithContainer,
+    _UiWithContainer,
 ):
-    # *args: TagChild | TagAttrs,
-    # width: CssUnit = 250,
-    # position: Literal["left", "right"] = "left",
-    # open: Literal["desktop", "open", "closed", "always"] = "desktop",
-    # id: Optional[str] = None,
-    # title: TagChild | str = None,
-    # bg: Optional[str] = None,
-    # fg: Optional[str] = None,
-    # class_: Optional[str] = None,  # TODO-future; Consider using `**kwargs` instead
-    # max_height_mobile: Optional[str | float] = None,
+    """Sidebar control for func: `~shiny.ui.sidebar`."""
+
+    loc_container: Locator
+    """
+    Playwright `Locator` for the sidebar layout.
+    """
+    loc: Locator
+    """
+    Playwright `Locator` for the sidebar.
+    """
+    loc_handle: Locator
+    """
+    Playwright `Locator` for the open/close handle of the sidebar.
+    """
+    loc_position: Locator
+    """
+    Playwright `Locator` for the position of the sidebar.
+    """
+
     def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes a sidebar control.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The ID of the sidebar.
+        """
         super().__init__(
             page,
             id=id,
@@ -2572,45 +4113,106 @@ class Sidebar(
         self.loc_position = self.loc.locator("..")
 
     def expect_text(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+        """
+        Asserts that the sidebar has the expected text.
+
+        Parameters
+        ----------
+        value
+            The expected text in the sidebar.
+        timeout
+            The maximum time to wait for the text to appear. Defaults to `None`.
+        """
         playwright_expect(self.loc).to_have_text(value, timeout=timeout)
 
     def expect_position(
-        self, position: Literal["left", "right"], *, timeout: Timeout = None
+        self,
+        value: Literal["left", "right"],
+        *,
+        timeout: Timeout = None,
     ) -> None:
-        is_right_sidebar = position == "right"
+        """
+        Asserts that the sidebar is in the expected position.
+
+        Parameters
+        ----------
+        value
+            The expected position of the sidebar.
+        timeout
+            The maximum time to wait for the sidebar to appear. Defaults to `None`.
+        """
+        is_right_sidebar = value == "right"
         _expect_class_value(
             self.loc_position,
-            f"sidebar-{position}",
+            f"sidebar-{value}",
             is_right_sidebar,
             timeout=timeout,
         )
 
     def expect_handle(self, exists: bool, *, timeout: Timeout = None) -> None:
+        """
+        Asserts that the sidebar handle exists or does not exist.
+
+        Parameters
+        ----------
+        exists
+            `True` if the sidebar open/close handle should exist, `False` otherwise.
+        timeout
+            The maximum time to wait for the sidebar handle to appear. Defaults to `None`.
+        """
         playwright_expect(self.loc_handle).to_have_count(int(exists), timeout=timeout)
 
-    def expect_open(self, open: bool, *, timeout: Timeout = None) -> None:
+    def expect_open(self, value: bool, *, timeout: Timeout = None) -> None:
+        """
+        Expect the sidebar to be open or closed.
+
+        Parameters
+        ----------
+        value
+            `True` if the sidebar should be open, `False` to be closed.
+        timeout
+            The maximum time to wait for the sidebar to open or close. Defaults to `None`.
+        """
         playwright_expect(self.loc_handle).to_have_attribute(
-            "aria-expanded", str(open).lower(), timeout=timeout
+            "aria-expanded", str(value).lower(), timeout=timeout
         )
 
     def set(self, open: bool, *, timeout: Timeout = None) -> None:
+        """
+        Sets the sidebar to be open or closed.
+
+        Parameters
+        ----------
+        open
+            `True` to open the sidebar and `False` to close it.
+        timeout
+            The maximum time to wait for the sidebar to open or close. Defaults to `None`.
+        """
         if open ^ (self.loc_handle.get_attribute("aria-expanded") == "true"):
             self.toggle(timeout=timeout)
 
     def toggle(self, *, timeout: Timeout = None) -> None:
+        """
+        Toggles the sidebar open or closed.
+
+        Parameters
+        ----------
+        timeout
+            The maximum time to wait for the sidebar to toggle. Defaults to `None`.
+        """
         self.loc_handle.wait_for(state="visible", timeout=timeout)
         self.loc_handle.scroll_into_view_if_needed(timeout=timeout)
         self.loc_handle.click(timeout=timeout)
 
 
-class _CardBodyP(_InputBaseP, Protocol):
+class _CardBodyP(_UiBaseP, Protocol):
     """
     Represents the body of a card control.
     """
 
     loc_body: Locator
     """
-    The locator for the body element of the card control.
+    Playwright `Locator` for the body element of the card control.
     """
 
 
@@ -2619,7 +4221,7 @@ class _CardBodyM:
 
     def expect_body(
         self: _CardBodyP,
-        text: PatternOrStr | list[PatternOrStr],
+        value: PatternOrStr | list[PatternOrStr],
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -2630,22 +4232,22 @@ class _CardBodyM:
         text
             The expected text or a list of expected texts.
         timeout
-            The maximum time to wait for the text to appear. Defaults to None.
+            The maximum time to wait for the text to appear. Defaults to `None`.
         """
         playwright_expect(self.loc).to_have_text(
-            text,
+            value,
             timeout=timeout,
         )
 
 
-class _CardFooterLayoutP(_InputBaseP, Protocol):
+class _CardFooterLayoutP(_UiBaseP, Protocol):
     """
     Represents the layout of the footer in a card.
     """
 
     loc_footer: Locator
     """
-    The locator for the footer element.
+    Playwright `Locator` for the footer element.
     """
 
 
@@ -2656,7 +4258,7 @@ class _CardFooterM:
 
     def expect_footer(
         self: _CardFooterLayoutP,
-        text: PatternOrStr,
+        value: PatternOrStr,
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -2665,138 +4267,142 @@ class _CardFooterM:
 
         Parameters
         ----------
-        text
+        value
             The expected text in the footer section.
         timeout
-            The maximum time to wait for the footer text to appear. Defaults to None.
+            The maximum time to wait for the footer text to appear. Defaults to `None`.
         """
         playwright_expect(self.loc_footer).to_have_text(
-            text,
+            value,
             timeout=timeout,
         )
 
 
-class _CardFullScreenLayoutP(_OutputBaseP, Protocol):
+class _CardValueBoxFullScreenLayoutP(_OutputBaseP, Protocol):
     """
-    Represents a card full-screen layout for the Playwright controls.
+    Represents a card / Value Box full-screen layout for the Playwright controls.
     """
 
     loc_title: Locator
     """
-    The locator for the title element.
+    Playwright `Locator` for the title element.
     """
     _loc_fullscreen: Locator
     """
-    The locator for the full-screen element.
+    Playwright `Locator` for the full-screen element.
     """
     _loc_close_button: Locator
     """
-    The locator for the close button element.
+    Playwright `Locator` for the close button element.
     """
 
 
-class _CardFullScreenM:
+class _CardValueBoxFullScreenM:
     """
-    Represents a class for managing full screen functionality of a card.
+    Represents a class for managing full screen functionality of a Card or Value Box.
     """
 
+    # TODO-karan-test: Convert `open_full_screen` and `close_full_screen` to `set_full_screen(open:bool)`
     def open_full_screen(
-        self: _CardFullScreenLayoutP, *, timeout: Timeout = None
+        self: _CardValueBoxFullScreenLayoutP, *, timeout: Timeout = None
     ) -> None:
         """
-        Opens the card in full screen mode.
+        Opens the element in full screen mode.
 
         Parameters
         ----------
         timeout
-            The maximum time to wait for the card to open in full screen mode. Defaults to None.
+            The maximum time to wait for full screen mode to open. Defaults to `None`.
         """
         self.loc_title.hover(timeout=timeout)
         self._loc_fullscreen.wait_for(state="visible", timeout=timeout)
         self._loc_fullscreen.click(timeout=timeout)
 
     def close_full_screen(
-        self: _CardFullScreenLayoutP, *, timeout: Timeout = None
+        self: _CardValueBoxFullScreenLayoutP, *, timeout: Timeout = None
     ) -> None:
         """
-        Closes the card from full screen mode.
+        Exits full screen mode.
 
         Parameters
         ----------
         timeout
-            The maximum time to wait for the card to close from full screen mode. Defaults to None.
+            The maximum time to wait to wait for full screen mode to exit. Defaults to `None`.
         """
         self._loc_close_button.click(timeout=timeout)
 
-    def expect_full_screen_open(
-        self: _CardFullScreenLayoutP, open: bool, *, timeout: Timeout = None
+    def expect_full_screen(
+        self: _CardValueBoxFullScreenLayoutP, value: bool, *, timeout: Timeout = None
     ) -> None:
         """
-        Verifies if the card is expected to be in full screen mode.
+        Verifies if the full screen mode is currently open.
 
         Parameters
         ----------
-        open
-            True if the card is expected to be in full screen mode, False otherwise.
+        value
+            `True` if the item is to be in full screen mode, `False` otherwise.
         timeout
-            The maximum time to wait for the verification. Defaults to None.
+            The maximum time to wait for the verification. Defaults to `None`.
         """
         playwright_expect(self._loc_close_button).to_have_count(
-            int(open), timeout=timeout
+            int(value), timeout=timeout
         )
 
     def expect_full_screen_available(
-        self: _CardFullScreenLayoutP, available: bool, *, timeout: Timeout = None
+        self: _CardValueBoxFullScreenLayoutP,
+        value: bool,
+        *,
+        timeout: Timeout = None,
     ) -> None:
         """
-        Expects the card to be available for full screen mode.
+        Expects whether full screen mode is available for the element.
 
         Parameters
         ----------
-        available
-            True if the value box is expected to be available for full screen mode, False otherwise.
+        value
+            `True` if the element is expected to be available for full screen mode, False otherwise.
         timeout
-            The maximum time to wait for the expectation to pass. Defaults to None.
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         playwright_expect(self._loc_fullscreen).to_have_count(
-            int(available), timeout=timeout
+            int(value), timeout=timeout
         )
 
 
 class ValueBox(
     _WidthLocM,
-    _CardFullScreenM,
-    _InputWithContainer,
+    _CardValueBoxFullScreenM,
+    _UiWithContainer,
 ):
     """
-    ValueBox control for :func:`~shiny.ui.value_box`
+    Value Box control for :func:`~shiny.ui.value_box`.
     """
 
     loc: Locator
     """
-    `Locator` for the value box's value
+    Playwright `Locator` for the value box's value.
     """
     loc_showcase: Locator
     """
-    `Locator` for the value box showcase
+    Playwright `Locator` for the value box showcase.
     """
     loc_title: Locator
     """
-    `Locator` for the value box title
+    Playwright `Locator` for the value box title.
     """
     loc_body: Locator
     """
-    `Locator` for the value box body
+    Playwright `Locator` for the value box body.
     """
 
     def __init__(self, page: Page, id: str) -> None:
         """
-        Initializes a new instance of the ValueBox class.
+        Initializes a new instance of the `ValueBox` class.
 
         Parameters
         ----------
         page
-            The Playwright page object.
+            Playwright `Page` of the Shiny app.
         id
             The ID of the value box.
 
@@ -2835,13 +4441,13 @@ class ValueBox(
         value
             The expected height value.
         timeout
-            The maximum time to wait for the expectation to pass. Defaults to None.
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         expect_to_have_style(self.loc_container, "max-height", value, timeout=timeout)
 
     def expect_title(
         self,
-        text: PatternOrStr,
+        value: PatternOrStr,
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -2850,20 +4456,20 @@ class ValueBox(
 
         Parameters
         ----------
-        text
+        value
             The expected text pattern or string.
         timeout
-            The maximum time to wait for the expectation to pass. Defaults to None.
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
 
         """
         playwright_expect(self.loc_title).to_have_text(
-            text,
+            value,
             timeout=timeout,
         )
 
     def expect_value(
         self,
-        text: PatternOrStr,
+        value: PatternOrStr,
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -2872,19 +4478,19 @@ class ValueBox(
 
         Parameters
         ----------
-        text
+        value
             The expected text pattern or string.
         timeout
-            The maximum time to wait for the expectation to pass. Defaults to None.
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         playwright_expect(self.loc).to_have_text(
-            text,
+            value,
             timeout=timeout,
         )
 
     def expect_body(
         self,
-        text: PatternOrStr | list[PatternOrStr],
+        value: PatternOrStr | list[PatternOrStr],
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -2893,48 +4499,59 @@ class ValueBox(
 
         Parameters
         ----------
-        text
+        value
             The expected text pattern or list of patterns/strings.
-            Note: If testing against multiple elements, text should be an array
+
+            Note: If testing against multiple elements, text should be an array.
         timeout
-            The maximum time to wait for the expectation to pass. Defaults to None.
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         playwright_expect(self.loc_body).to_have_text(
-            text,
+            value,
             timeout=timeout,
         )
 
 
-class Card(_WidthLocM, _CardFooterM, _CardBodyM, _CardFullScreenM, _InputWithContainer):
+class Card(
+    _WidthLocM,
+    _CardFooterM,
+    _CardBodyM,
+    _CardValueBoxFullScreenM,
+    _UiWithContainer,
+):
     """
-    Card control for :func:`~shiny.ui.card`
+    Card control for :func:`~shiny.ui.card`.
     """
 
+    loc_container: Locator
+    """
+    Playwright `Locator` for the card container.
+    """
     loc: Locator
     """
-    `Locator` for the card's value
+    Playwright `Locator` for the card's value.
     """
     loc_title: Locator
     """
-    `Locator` for the card title
+    Playwright `Locator` for the card title.
     """
     loc_footer: Locator
     """
-    `Locator` for the card footer
+    Playwright `Locator` for the card footer.
     """
     loc_body: Locator
     """
-    `Locator` for the card body
+    Playwright `Locator` for the card body.
     """
 
     def __init__(self, page: Page, id: str) -> None:
         """
-        Initializes a new instance of the Card class.
+        Initializes a new instance of the `Card` class.
 
         Parameters
         ----------
         page
-            The Playwright page object.
+            Playwright `Page` of the Shiny app.
         id
             The ID of the card.
         """
@@ -2960,7 +4577,7 @@ class Card(_WidthLocM, _CardFooterM, _CardBodyM, _CardFullScreenM, _InputWithCon
 
     def expect_header(
         self,
-        text: PatternOrStr | None,
+        value: PatternOrStr | None,
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -2969,16 +4586,17 @@ class Card(_WidthLocM, _CardFooterM, _CardBodyM, _CardFullScreenM, _InputWithCon
 
         Parameters
         ----------
-        text
-            The expected text pattern or string
-            Note: None if the header is expected to not exist.
+        value
+            The expected text pattern or string.
+
+            Note: `None` if the header is expected to not exist.
         timeout
-            The maximum time to wait for the expectation to pass. Defaults to None.
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
-        if text is None:
+        if value is None:
             playwright_expect(self.loc_title).to_have_count(0, timeout=timeout)
         else:
-            playwright_expect(self.loc_title).to_have_text(text, timeout=timeout)
+            playwright_expect(self.loc_title).to_have_text(value, timeout=timeout)
 
     # def expect_body(
     #     self,
@@ -2995,7 +4613,7 @@ class Card(_WidthLocM, _CardFooterM, _CardBodyM, _CardFullScreenM, _InputWithCon
 
     def expect_footer(
         self,
-        text: PatternOrStr | None,
+        value: PatternOrStr | None,
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -3004,16 +4622,16 @@ class Card(_WidthLocM, _CardFooterM, _CardBodyM, _CardFullScreenM, _InputWithCon
 
         Parameters
         ----------
-        text
+        value
             The expected text pattern or string
             Note: None if the footer is expected to not exist.
         timeout
-            The maximum time to wait for the expectation to pass. Defaults to None.
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
-        if text is None:
+        if value is None:
             playwright_expect(self.loc_footer).to_have_count(0, timeout=timeout)
         else:
-            playwright_expect(self.loc_footer).to_have_text(text, timeout=timeout)
+            playwright_expect(self.loc_footer).to_have_text(value, timeout=timeout)
 
     def expect_max_height(self, value: StyleValue, *, timeout: Timeout = None) -> None:
         """
@@ -3024,7 +4642,7 @@ class Card(_WidthLocM, _CardFooterM, _CardBodyM, _CardFullScreenM, _InputWithCon
         value
             The expected maximum height value.
         timeout
-            The maximum time to wait for the expectation to pass. Defaults to None.
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         expect_to_have_style(self.loc_container, "max-height", value, timeout=timeout)
 
@@ -3037,7 +4655,7 @@ class Card(_WidthLocM, _CardFooterM, _CardBodyM, _CardFullScreenM, _InputWithCon
         value
             The expected minimum height value.
         timeout
-            The maximum time to wait for the expectation to pass. Defaults to None.
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         expect_to_have_style(self.loc_container, "min-height", value, timeout=timeout)
 
@@ -3050,43 +4668,80 @@ class Card(_WidthLocM, _CardFooterM, _CardBodyM, _CardFullScreenM, _InputWithCon
         value
             The expected height value.
         timeout
-            The maximum time to wait for the expectation to pass. Defaults to None.
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         expect_to_have_style(self.loc_container, "height", value, timeout=timeout)
 
 
 class Accordion(
     _WidthLocM,
-    _InputWithContainer,
+    _UiWithContainer,
 ):
-    # *args: AccordionPanel | TagAttrs,
-    # id: Optional[str] = None,
-    # open: Optional[bool | str | list[str]] = None,
-    # multiple: bool = True,
-    # class_: Optional[str] = None,
-    # width: Optional[CssUnit] = None,
-    # height: Optional[CssUnit] = None,
-    # **kwargs: TagAttrValue,
+    """Accordion control for :func:`~shiny.ui.accordion`."""
+
+    loc: Locator
+    """
+    Playwright `Locator` for each accordion items.
+    """
+    loc_container: Locator
+    """
+    Playwright `Locator` for the accordion container.
+    """
+    # loc_open: Locator
+    # """
+    # `Locator` for the open accordion panel
+    # """
+
     def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes a new instance of the `Accordion` class.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The ID of the accordion.
+        """
         super().__init__(
             page,
             id=id,
             loc="> div.accordion-item",
             loc_container=f"div#{id}.accordion.shiny-bound-input",
         )
-        self.loc_open = self.loc.locator(
-            # Return self
-            "xpath=.",
-            # Simple approach as position is not needed
-            has=page.locator(
-                "> div.accordion-collapse.show",
-            ),
-        )
+        # self.loc_open = self.loc.locator(
+        #     # Return self
+        #     "xpath=.",
+        #     # Simple approach as position is not needed
+        #     has=page.locator(
+        #         "> div.accordion-collapse.show",
+        #     ),
+        # )
 
     def expect_height(self, value: StyleValue, *, timeout: Timeout = None) -> None:
+        """
+        Expects the accordion to have the specified height.
+
+        Parameters
+        ----------
+        value
+            The expected height.
+        timeout
+            The maximum time to wait for the height to be visible and interactable. Defaults to `None`.
+        """
         expect_to_have_style(self.loc_container, "height", value, timeout=timeout)
 
     def expect_width(self, value: StyleValue, *, timeout: Timeout = None) -> None:
+        """
+        Expects the accordion to have the specified width.
+
+        Parameters
+        ----------
+        value
+            The expected width.
+        timeout
+            The maximum time to wait for the width to be visible and interactable. Defaults to `None`.
+        """
         expect_to_have_style(self.loc_container, "width", value, timeout=timeout)
 
     def expect_open(
@@ -3115,6 +4770,16 @@ class Accordion(
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Expects the accordion to have the specified panels.
+
+        Parameters
+        ----------
+        value
+            The expected panels.
+        timeout
+            The maximum time to wait for the panels to be visible and interactable. Defaults to `None`.
+        """
         _MultipleDomItems.expect_locator_values_in_list(
             page=self.page,
             loc_container=self.loc_container,
@@ -3131,6 +4796,16 @@ class Accordion(
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Sets the state of the accordion panel.
+
+        Parameters
+        ----------
+        selected
+            The selected accordion panel(s).
+        timeout
+            The maximum time to wait for the accordion panel to be visible and interactable. Defaults to `None`.
+        """
         if isinstance(selected, str):
             selected = [selected]
         for element in self.loc.element_handles():
@@ -3149,21 +4824,59 @@ class Accordion(
         self,
         data_value: str,
     ) -> AccordionPanel:
+        """
+        Returns the accordion panel with the specified data value.
+
+        Parameters
+        ----------
+        data_value
+            The data value of the accordion panel.
+        """
         return AccordionPanel(self.page, self.id, data_value)
 
 
 class AccordionPanel(
     _WidthLocM,
-    _InputWithContainer,
+    _UiWithContainer,
 ):
-    #    self,
-    #     *args: TagChild | TagAttrs,
-    #     data_value: str,
-    #     icon: TagChild | None,
-    #     title: TagChild | None,
-    #     id: str | None,
-    #     **kwargs: TagAttrValue,
+    """
+    AccordionPanel control for :func:`~shiny.ui.accordion_panel`.
+    """
+
+    loc_label: Locator
+    """
+    Playwright `Locator` for the accordion panel's label.
+    """
+    loc_icon: Locator
+    """
+    Playwright `Locator` for the accordion panel's icon.
+    """
+    loc_body: Locator
+    """
+    Playwright `Locator` for the accordion panel's body.
+    """
+    loc_header: Locator
+    """
+    Playwright `Locator` for the accordion panel's header.
+    """
+    # loc_body_visible: Locator
+    # """
+    # Playwright `Locator` for the visible accordion panel body
+    # """
+
     def __init__(self, page: Page, id: str, data_value: str) -> None:
+        """
+        Initializes a new instance of the `AccordionPanel` class.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The ID of the accordion panel.
+        data_value
+            The data value of the accordion panel.
+        """
         super().__init__(
             page,
             id=id,
@@ -3181,35 +4894,108 @@ class AccordionPanel(
 
         self.loc_body = self.loc.locator("> .accordion-collapse")
         self.loc_header = self.loc.locator("> .accordion-header")
-        self.loc_body_visible = self.loc.locator("> .accordion-collapse.show")
+        self._loc_body_visible = self.loc.locator("> .accordion-collapse.show")
 
     def expect_label(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+        """
+        Expects the accordion panel label to have the specified text.
+
+        Parameters
+        ----------
+        value
+            The expected text pattern or string.
+        timeout
+            The maximum time to wait for the label to appear. Defaults to `None`.
+        """
         playwright_expect(self.loc_label).to_have_text(value, timeout=timeout)
 
     def expect_body(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+        """
+        Expects the accordion panel body to have the specified text.
+
+        Parameters
+        ----------
+        value
+            The expected text pattern or string.
+        timeout
+            The maximum time to wait for the body to appear. Defaults to `None`.
+        """
         playwright_expect(self.loc_body).to_have_text(value, timeout=timeout)
 
     def expect_icon(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+        """
+        Expects the accordion panel icon to have the specified text.
+
+        Parameters
+        ----------
+        value
+            The expected text pattern or string.
+        timeout
+            The maximum time to wait for the icon to appear. Defaults to `None`.
+        """
         playwright_expect(self.loc_icon).to_have_text(value, timeout=timeout)
 
-    def expect_open(self, is_open: bool, *, timeout: Timeout = None) -> None:
-        _expect_class_value(self.loc_body, "show", is_open, timeout=timeout)
+    def expect_open(self, value: bool, *, timeout: Timeout = None) -> None:
+        """
+        Expects the accordion panel to be open or closed.
+
+        Parameters
+        ----------
+        value
+            `True` if the accordion panel is expected to be open, `False` otherwise.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
+        _expect_class_value(self.loc_body, "show", value, timeout=timeout)
 
     # user sends value of Open: true | false
     def set(self, open: bool, *, timeout: Timeout = None) -> None:
+        """
+        Sets the state of the control to open or closed.
+
+        Parameters
+        ----------
+        open
+            `True` to open the accordion panel, False to close it.
+        timeout
+            The maximum time to wait for the control to be visible and interactable. Defaults to `None`.
+        """
         self.loc.wait_for(state="visible", timeout=timeout)
         self.loc.scroll_into_view_if_needed(timeout=timeout)
         expect_not_to_have_class(self.loc_body, "collapsing", timeout=timeout)
-        if self.loc_body_visible.count() != int(open):
+        if self._loc_body_visible.count() != int(open):
             self.toggle(timeout=timeout)
 
     def toggle(self, *, timeout: Timeout = None) -> None:
+        """
+        Toggles the state of the control.
+
+        Parameters
+        ----------
+        timeout
+            The maximum time to wait for the control to be visible and interactable. Defaults to `None`.
+        """
         self.loc.wait_for(state="visible", timeout=timeout)
         self.loc.scroll_into_view_if_needed(timeout=timeout)
         self.loc_header.click(timeout=timeout)
 
 
-class _OverlayBase(_InputBase):
+class _OverlayBase(_UiBase):
+    """Base class for overlay controls"""
+
+    loc_trigger: Locator
+    """
+    Playwright `Locator` for the trigger element.
+    """
+    loc_overlay_body: Locator
+    """
+    Playwright `Locator` for the overlay body.
+    """
+    loc_overlay_container: Locator
+    """
+    Playwright `Locator` for of the overlay container.
+    """
+
     def __init__(
         self,
         page: Page,
@@ -3219,6 +5005,22 @@ class _OverlayBase(_InputBase):
         overlay_name: str,
         overlay_selector: str,
     ) -> None:
+        """
+        Initializes a new instance of the `OverlayBase` class.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The ID of the overlay.
+        loc
+            Playwright `Locator` of the overlay.
+        overlay_name
+            The name of the overlay.
+        overlay_selector
+            The selector of the overlay.
+        """
         super().__init__(page, id=id, loc=loc)
         self._overlay_name = overlay_name
         self._overlay_selector = overlay_selector
@@ -3253,24 +5055,62 @@ class _OverlayBase(_InputBase):
         )
 
     def get_loc_overlay_container(self, *, timeout: Timeout = None) -> Locator:
+        """
+        Returns the locator for the overlay container.
+
+        Parameters
+        ----------
+        timeout
+            The maximum time to wait for the overlay container to appear. Defaults to `None`.
+        """
         return self.page.locator(f"#{self._get_overlay_id(timeout=timeout)}")
 
     def expect_body(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+        """
+        Expects the overlay body to have the specified text.
+
+        Parameters
+        ----------
+        value
+            The expected text pattern or string.
+        timeout
+            The maximum time to wait for the overlay body to appear. Defaults to `None`.
+        """
         playwright_expect(self.get_loc_overlay_body(timeout=timeout)).to_have_text(
             value, timeout=timeout
         )
 
-    def expect_active(self, active: bool, *, timeout: Timeout = None) -> None:
-        value = re.compile(r".*") if active else None
-        return expect_attr(
+    def expect_active(self, value: bool, *, timeout: Timeout = None) -> None:
+        """
+        Expects the overlay to be active or inactive.
+
+        Parameters
+        ----------
+        value
+            `True` if the overlay is expected to be active, False otherwise.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
+        attr_value = re.compile(r".*") if value else None
+        return expect_attribute_to_have_value(
             loc=self.loc_trigger,
             timeout=timeout,
             name="aria-describedby",
-            value=value,
+            value=attr_value,
         )
 
     def expect_placement(self, value: str, *, timeout: Timeout = None) -> None:
-        return expect_attr(
+        """
+        Expects the overlay to have the specified placement.
+
+        Parameters
+        ----------
+        value
+            The expected placement value.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
+        return expect_attribute_to_have_value(
             loc=self.get_loc_overlay_container(timeout=timeout),
             timeout=timeout,
             name="data-popper-placement",
@@ -3279,14 +5119,32 @@ class _OverlayBase(_InputBase):
 
 
 class Popover(_OverlayBase):
-    # trigger: TagChild,
-    # *args: TagChild | TagAttrs,
-    # title: Optional[TagChild] = None,
-    # id: Optional[str] = None,
-    # placement: Literal["auto", "top", "right", "bottom", "left"] = "auto",
-    # options: Optional[dict[str, Any]] = None,
-    # **kwargs: TagAttrValue,
+    """Popover control for :func:`~shiny.ui.popover`."""
+
+    loc_trigger: Locator
+    """
+    Playwright `Locator` for the trigger element that opens/closes the popover.
+    """
+    loc_overlay_body: Locator
+    """
+    Playwright `Locator` for the popover body.
+    """
+    loc_overlay_container: Locator
+    """
+    Playwright `Locator` for the popover container.
+    """
+
     def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes a new instance of the `Popover` class.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The ID of the popover.
+        """
         super().__init__(
             page,
             id=id,
@@ -3296,23 +5154,68 @@ class Popover(_OverlayBase):
         )
 
     def set(self, open: bool, timeout: Timeout = None) -> None:
+        """
+        Sets the state of the popover.
+
+        Parameters
+        ----------
+        open
+            `True` to open the popover and `False` to close it.
+        timeout
+            The maximum time to wait for the popover to be visible and interactable. Defaults to `None`.
+        """
         if open ^ self.get_loc_overlay_body(timeout=timeout).count() > 0:
             self.toggle()
 
     def toggle(self, timeout: Timeout = None) -> None:
+        """
+        Toggles the state of the popover.
+
+        Parameters
+        ----------
+        timeout
+            The maximum time to wait for the popover to be visible and interactable. Defaults to `None`.
+        """
         self.loc_trigger.wait_for(state="visible", timeout=timeout)
         self.loc_trigger.scroll_into_view_if_needed(timeout=timeout)
         self.loc_trigger.click(timeout=timeout)
 
 
 class Tooltip(_OverlayBase):
-    # trigger: TagChild,
-    # *args: TagChild | TagAttrs,
-    # id: Optional[str] = None,
-    # placement: Literal["auto", "top", "right", "bottom", "left"] = "auto",
-    # options: Optional[dict[str, object]] = None,
-    # **kwargs: TagAttrValue,
+    """Tooltip control for :func:`~shiny.ui.tooltip`."""
+
+    loc_container: Locator
+    """
+    Playwright `Locator` for the container tooltip.
+    """
+    loc: Locator
+    """
+    Playwright `Locator` for the tooltip content.
+    """
+    loc_trigger: Locator
+    """
+    Playwright `Locator` for the trigger element.
+    """
+    loc_overlay_body: Locator
+    """
+    Playwright `Locator` for the overlay body.
+    """
+    loc_overlay_container: Locator
+    """
+    Playwright `Locator` for the overlay container.
+    """
+
     def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes a new instance of the `Tooltip` class.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The ID of the tooltip.
+        """
         super().__init__(
             page,
             id=id,
@@ -3322,28 +5225,66 @@ class Tooltip(_OverlayBase):
         )
 
     def set(self, open: bool, timeout: Timeout = None) -> None:
+        """
+        Sets the state of the tooltip.
+
+        Parameters
+        ----------
+        open
+            `True` to open the tooltip and `False` to close it.
+        timeout
+            The maximum time to wait for the tooltip to be visible and interactable. Defaults to `None`.
+        """
         if open ^ self.get_loc_overlay_body(timeout=timeout).count() > 0:
             self.toggle(timeout=timeout)
         if not open:
             self.get_loc_overlay_body(timeout=timeout).click()
 
     def toggle(self, timeout: Timeout = None) -> None:
+        """
+        Toggles the state of the tooltip.
+
+        Parameters
+        ----------
+        timeout
+            The maximum time to wait for the tooltip to be visible and interactable. Defaults to `None`.
+        """
         self.loc_trigger.wait_for(state="visible", timeout=timeout)
         self.loc_trigger.scroll_into_view_if_needed(timeout=timeout)
         self.loc_trigger.hover(timeout=timeout)
 
 
-class _LayoutNavItemBase(_InputWithContainer):
+class _NavItemBase(_UiWithContainer):
+    """A Base mixin class for Nav and NavItem controls"""
+
     def nav_item(
         self,
         value: str,
-    ) -> LayoutNavItem:
-        return LayoutNavItem(self.page, self.id, value)
+    ) -> NavItem:
+        return NavItem(self.page, self.id, value)
 
     def set(self, value: str, *, timeout: Timeout = None) -> None:
+        """
+        Sets the state of the control to open or closed.
+
+        Parameters
+        ----------
+        value
+            The selected nav item.
+        """
         self.nav_item(value).click(timeout=timeout)
 
     def expect_value(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+        """
+        Expects the control to have the specified value.
+
+        Parameters
+        ----------
+        value
+            The expected value.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
         # data attribute of active tab and compare with value
         playwright_expect(
             self.loc_container.locator('a[role="tab"].active')
@@ -3359,12 +5300,30 @@ class _LayoutNavItemBase(_InputWithContainer):
     #     )
 
     def get_loc_active_content(self, *, timeout: Timeout = None) -> Locator:
+        """
+        Returns the locator for the active content.
+
+        Parameters
+        ----------
+        timeout
+            The maximum time to wait for the locator to appear. Defaults to `None`.
+        """
         datatab_id = self.loc_container.get_attribute("data-tabsetid", timeout=timeout)
         return self.page.locator(
             f"div.tab-content[data-tabsetid='{datatab_id}'] > div.tab-pane.active"
         )
 
     def expect_content(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+        """
+        Expects the control to have the specified content.
+
+        Parameters
+        ----------
+        value
+            The expected content.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
         playwright_expect(self.get_loc_active_content()).to_have_text(
             value, timeout=timeout
         )
@@ -3375,6 +5334,16 @@ class _LayoutNavItemBase(_InputWithContainer):
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Expects the control to have the specified nav values.
+
+        Parameters
+        ----------
+        value
+            The expected nav values.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
         _MultipleDomItems.expect_locator_values_in_list(
             page=self.page,
             loc_container=self.loc_container,
@@ -3391,16 +5360,47 @@ class _LayoutNavItemBase(_InputWithContainer):
         *,
         timeout: Timeout = None,
     ) -> None:
+        """
+        Expects the control to have the specified nav titles.
+
+        Parameters
+        ----------
+        value
+            The expected nav titles.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
         self.expect.to_have_text(value, timeout=timeout)
 
 
-class LayoutNavItem(_InputWithContainer):
-    # *args: NavSetArg,
-    # id: Optional[str] = None,
-    # selected: Optional[str] = None,
-    # header: TagChild = None,
-    # footer: TagChild = None,
+class NavItem(_UiWithContainer):
+    """Navigation item control for :func:`~shiny.ui.nav_item`."""
+
+    """
+    Playwright `Locator` for the content of the nav item.
+    """
+    loc: Locator
+    """
+    Playwright `Locator` for the nav item.
+    """
+    loc_container: Locator
+    """
+    Playwright `Locator` for the nav item container.
+    """
+
     def __init__(self, page: Page, id: str, data_value: str) -> None:
+        """
+        Initializes a new instance of the `NavItem` class.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The ID of the nav item.
+        data_value
+            The data value of the nav item.
+        """
         super().__init__(
             page,
             id=id,
@@ -3414,29 +5414,77 @@ class LayoutNavItem(_InputWithContainer):
     # get active content instead of assertion
     @property
     def loc_content(self) -> Locator:
-        """Note. This requires 2 steps. Will not work if the overlay element is rapidly created during locator fetch"""
+        """
+        Returns the locator for the content of the nav item.
+
+        Note: This requires 2 steps. Will not work if the overlay element is rapidly created during locator fetch
+        """
         datatab_id = self.loc_container.get_attribute("data-tabsetid")
         return self.page.locator(
             f"div.tab-content[data-tabsetid='{datatab_id}'] > div.tab-pane[data-value='{self._data_value}']"
         )
 
     def click(self, *, timeout: Timeout = None) -> None:
+        """
+        Clicks the nav item.
+
+        Parameters
+        ----------
+        timeout
+            The maximum time to wait for the nav item to be visible and interactable. Defaults to `None`.
+        """
         self.loc.click(timeout=timeout)
 
-    def expect_active(self, active: bool, *, timeout: Timeout = None) -> None:
-        _expect_class_value(self.loc, "active", active, timeout=timeout)
+    def expect_active(self, value: bool, *, timeout: Timeout = None) -> None:
+        """
+        Expects the nav item to be active or inactive.
+
+        Parameters
+        ----------
+        active
+            `True` if the nav item is expected to be active, False otherwise.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
+        _expect_class_value(self.loc, "active", value, timeout=timeout)
 
     def expect_content(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+        """
+        Expects the nav item content to have the specified text.
+
+        Parameters
+        ----------
+        value
+            The expected text pattern or string.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
         playwright_expect(self.loc_content).to_have_text(value, timeout=timeout)
 
 
-class LayoutNavsetTab(_LayoutNavItemBase):
-    # *args: NavSetArg,
-    # id: Optional[str] = None,
-    # selected: Optional[str] = None,
-    # header: TagChild = None,
-    # footer: TagChild = None,
+class NavsetTab(_NavItemBase):
+    """NavsetTab control for :func:`~shiny.ui.navset_tab`."""
+
+    loc: Locator
+    """
+    Playwright `Locator` for the nav set tab.
+    """
+    loc_container: Locator
+    """
+    Playwright `Locator` for the nav set tab container.
+    """
+
     def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes a new instance of the `NavsetTab` class.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The ID of the nav set tab.
+        """
         super().__init__(
             page,
             id=id,
@@ -3445,8 +5493,20 @@ class LayoutNavsetTab(_LayoutNavItemBase):
         )
 
 
-class LayoutNavSetPill(_LayoutNavItemBase):
+class NavsetPill(_NavItemBase):
+    """NavsetPill control for :func:`~shiny.ui.navset_pill`."""
+
     def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes a new instance of the `NavsetPill` class.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The ID of the nav set pill.
+        """
         super().__init__(
             page,
             id=id,
@@ -3455,8 +5515,20 @@ class LayoutNavSetPill(_LayoutNavItemBase):
         )
 
 
-class LayoutNavSetUnderline(_LayoutNavItemBase):
+class NavsetUnderline(_NavItemBase):
+    """NavsetUnderline control for :func:`~shiny.ui.navset_underline`."""
+
     def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes a new instance of the `NavsetUnderline` class.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The ID of the nav set underline.
+        """
         super().__init__(
             page,
             id=id,
@@ -3465,8 +5537,20 @@ class LayoutNavSetUnderline(_LayoutNavItemBase):
         )
 
 
-class LayoutNavSetPillList(_LayoutNavItemBase):
+class NavsetPillList(_NavItemBase):
+    """NavsetPillList control for :func:`~shiny.ui.navset_pill_list`."""
+
     def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes a new instance of the `NavsetPillList` class.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The ID of the nav set pill list.
+        """
         super().__init__(
             page,
             id=id,
@@ -3475,8 +5559,20 @@ class LayoutNavSetPillList(_LayoutNavItemBase):
         )
 
 
-class LayoutNavSetCardTab(_LayoutNavItemBase):
+class NavsetCardTab(_NavItemBase):
+    """NavsetCardTab control for :func:`~shiny.ui.navset_card_tab`."""
+
     def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes a new instance of the `NavsetCardTab` class.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The ID of the nav set card tab.
+        """
         super().__init__(
             page,
             id=id,
@@ -3485,8 +5581,20 @@ class LayoutNavSetCardTab(_LayoutNavItemBase):
         )
 
 
-class LayoutNavSetCardPill(_LayoutNavItemBase):
+class NavsetCardPill(_NavItemBase):
+    """NavsetCardPill control for :func:`~shiny.ui.navset_card_pill`."""
+
     def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes a new instance of the `NavsetCardPill` class.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The ID of the nav set card pill.
+        """
         super().__init__(
             page,
             id=id,
@@ -3495,8 +5603,20 @@ class LayoutNavSetCardPill(_LayoutNavItemBase):
         )
 
 
-class LayoutNavSetCardUnderline(_LayoutNavItemBase):
+class NavsetCardUnderline(_NavItemBase):
+    """NavsetCardUnderline control for :func:`~shiny.ui.navset_card_underline`."""
+
     def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes a new instance of the `NavsetCardUnderline` class.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The ID of the nav set card underline.
+        """
         super().__init__(
             page,
             id=id,
@@ -3505,8 +5625,20 @@ class LayoutNavSetCardUnderline(_LayoutNavItemBase):
         )
 
 
-class LayoutNavSetHidden(_LayoutNavItemBase):
+class NavsetHidden(_NavItemBase):
+    """NavsetHidden control for :func:`~shiny.ui.navset_hidden`."""
+
     def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes a new instance of the `NavsetHidden` class.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The ID of the nav set hidden.
+        """
         super().__init__(
             page,
             id=id,
@@ -3515,8 +5647,20 @@ class LayoutNavSetHidden(_LayoutNavItemBase):
         )
 
 
-class LayoutNavSetBar(_LayoutNavItemBase):
+class NavsetBar(_NavItemBase):
+    """NavsetBar control for :func:`~shiny.ui.navset_bar`."""
+
     def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes a new instance of the `NavsetBar` class.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The ID of the nav set bar.
+        """
         super().__init__(
             page,
             id=id,
@@ -3525,32 +5669,36 @@ class LayoutNavSetBar(_LayoutNavItemBase):
         )
 
 
-class OutputDataFrame(_InputWithContainer):
+class OutputDataFrame(_UiWithContainer):
     """
-    OutputDataFrame control for :func:`~shiny.ui.output_data_frame`
+    OutputDataFrame control for :func:`~shiny.ui.output_data_frame`.
     """
 
+    loc_container: Locator
+    """
+    Playwright `Locator` for the data frame container.
+    """
     loc: Locator
     """
-    `Locator` for the data frame
+    Playwright `Locator` for the data frame.
     """
     loc_head: Locator
     """
-    `Locator` for the data frame columns
+    Playwright `Locator` for the head of the data frame table.
     """
     loc_body: Locator
     """
-    `Locator` for the data frame rows
+    Playwright `Locator` for the body of the data frame table.
     """
 
     def __init__(self, page: Page, id: str) -> None:
         """
-        Initializes a new instance of the OutputDataFrame class.
+        Initializes a new instance of the `OutputDataFrame` class.
 
         Parameters
         ----------
         page
-            The Playwright page object.
+            Playwright `Page` of the Shiny app.
         id
             The ID of the data frame.
         """
@@ -3562,32 +5710,60 @@ class OutputDataFrame(_InputWithContainer):
         )
         self.loc_head = self.loc.locator("> table > thead")
         self.loc_body = self.loc.locator("> table > tbody")
-        self.loc_column_filter = self.loc_head.locator("> tr.filters > th")
-        self.loc_column_label = self.loc_head.locator("> tr > th:not(.filters th)")
-
-    def cell_locator(self, row: int, col: int) -> Locator:
-        return self.loc_body.locator(f"> tr:nth-child({row + 1})").locator(
-            f"> td:nth-child({col + 1}),  > th:nth-child({col + 1})"
+        self.loc_column_filter = self.loc_head.locator(
+            "> tr.filters > th:not(.table-corner)"
+        )
+        self.loc_column_label = self.loc_head.locator(
+            "> tr:not(.filters) > th:not(.table-corner)"
         )
 
-    def expect_n_row(self, row_number: int, *, timeout: Timeout = None):
+    def cell_locator(self, row: int, col: int) -> Locator:
+        """
+        Returns the locator for a specific cell in the data frame.
+
+        Parameters
+        ----------
+        row
+            The row number of the cell.
+        col
+            The column number of the cell.
+        """
+
+        return (
+            # Find the direct row
+            self.loc_body.locator(f"> tr[data-index='{row}']")
+            # Find all direct td's and th's (these are independent sets)
+            .locator("> td, > th")
+            # Remove all results that contain the `row-number` class
+            .locator(
+                # self
+                "xpath=.",
+                has=self.page.locator(
+                    "xpath=self::*[not(contains(@class, 'row-number'))]"
+                ),
+            )
+            # Return the first result
+            .nth(col)
+        )
+
+    def expect_n_row(self, value: int, *, timeout: Timeout = None):
         """
         Expects the number of rows in the data frame.
 
         Parameters
         ----------
-        row_number
+        value
             The expected number of rows.
         timeout
-            The maximum time to wait for the expectation to pass. Defaults to None.
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         playwright_expect(self.loc_body.locator("> tr")).to_have_count(
-            row_number, timeout=timeout
+            value, timeout=timeout
         )
 
     def expect_cell(
         self,
-        text: PatternOrStr,
+        value: PatternOrStr,
         *,
         row: int,
         col: int,
@@ -3598,24 +5774,25 @@ class OutputDataFrame(_InputWithContainer):
 
         Parameters
         ----------
-        text
+        value
             The expected text in the cell.
         row
             The row number of the cell.
         col
             The column number of the cell.
         timeout
-            The maximum time to wait for the expectation to pass. Defaults to None.
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         assert_type(row, int)
         assert_type(col, int)
+        self._cell_scroll_if_needed(row=row, col=col, timeout=timeout)
         playwright_expect(self.cell_locator(row, col)).to_have_text(
-            text, timeout=timeout
+            value, timeout=timeout
         )
 
     def expect_column_labels(
         self,
-        labels: ListPatternOrStr | None,
+        value: ListPatternOrStr | None,
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -3624,27 +5801,69 @@ class OutputDataFrame(_InputWithContainer):
 
         Parameters
         ----------
-        labels
+        value
             The expected column labels.
+
             Note: None if the column labels are expected to not exist.
         edit
-            True if the data frame is in edit mode, False otherwise.
+            `True` if the data frame is to be in edit mode, `False` otherwise.
         timeout
-            The maximum time to wait for the expectation to pass. Defaults to None.
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
-        if isinstance(labels, list) and len(labels) == 0:
-            labels = None
+        if isinstance(value, list) and len(value) == 0:
+            value = None
 
-        if labels is None:
+        if value is None:
             playwright_expect(self.loc_column_label).to_have_count(0, timeout=timeout)
         else:
             playwright_expect(self.loc_column_label).to_have_text(
-                labels, timeout=timeout
+                value, timeout=timeout
             )
+
+    def _cell_scroll_if_needed(self, *, row: int, col: int, timeout: Timeout):
+        """
+        Scrolls the cell into view if needed.
+
+        Parameters
+        ----------
+        row
+            The row number of the cell.
+        col
+            The column number of the cell.
+        timeout
+            The maximum time to wait for the action to complete.
+        """
+        # Check first and last row data-index and make sure `row` is included
+
+        cell = self.cell_locator(row=row, col=col)
+
+        # Scroll down if top number is larger
+        while not cell.is_visible(timeout=timeout):
+            first_row = self.loc_body.locator("> tr[data-index]").first
+            first_row_index = first_row.get_attribute("data-index")
+            if first_row_index is None:
+                break
+            if int(first_row_index) >= row:
+                first_row.scroll_into_view_if_needed(timeout=timeout)
+            else:
+                # First row index is lower than `row`
+                break
+        # Scroll up if bottom number is smaller
+        while not cell.is_visible(timeout=timeout):
+            last_row = self.loc_body.locator("> tr[data-index]").last
+            last_row_index = last_row.get_attribute("data-index")
+            if last_row_index is None:
+                break
+            if int(last_row_index) <= row:
+                last_row.scroll_into_view_if_needed(timeout=timeout)
+            else:
+                # Last row index is higher than `row`
+                break
+        cell.scroll_into_view_if_needed(timeout=timeout)
 
     def expect_column_label(
         self,
-        text: ListPatternOrStr,
+        value: ListPatternOrStr,
         *,
         col: int,
         timeout: Timeout = None,
@@ -3654,23 +5873,23 @@ class OutputDataFrame(_InputWithContainer):
 
         Parameters
         ----------
+        value
+            The expected text in the column.
         col
             The column number.
-        text
-            The expected text in the column.
         timeout
-            The maximum time to wait for the expectation to pass. Defaults to None.
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         assert_type(col, int)
         # It's zero based, nth(0) selects the first element.
         playwright_expect(self.loc_column_label.nth(col - 1)).to_have_text(
-            text,
+            value,
             timeout=timeout,
         )
 
     def expect_n_col(
         self,
-        n: int,
+        value: int,
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -3679,19 +5898,19 @@ class OutputDataFrame(_InputWithContainer):
 
         Parameters
         ----------
-        n
+        value
             The expected number of columns.
         timeout
-            The maximum time to wait for the expectation to pass. Defaults to None.
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         playwright_expect(self.loc_column_label).to_have_count(
-            n,
+            value,
             timeout=timeout,
         )
 
     def expect_cell_class(
         self,
-        class_: str,
+        value: str,
         *,
         row: int,
         col: int,
@@ -3702,24 +5921,64 @@ class OutputDataFrame(_InputWithContainer):
 
         Parameters
         ----------
+        value
+            The expected class of the cell.
         row
             The row number of the cell.
         col
             The column number of the cell.
-        class_
-            The expected class of the cell.
         timeout
-            The maximum time to wait for the expectation to pass. Defaults to None.
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         expect_to_have_class(
             self.cell_locator(row=row, col=col),
-            class_,
+            value,
             timeout=timeout,
         )
 
+    def select_rows(
+        self,
+        value: list[int],
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Selects the rows in the data frame.
+
+        Parameters
+        ----------
+        value
+            The list of row numbers to select.
+        timeout
+            The maximum time to wait for the action to complete. Defaults to `None`.
+        """
+        if len(value) > 1:
+            value = sorted(value)
+            # check if the items in the row contain all numbers from index 0 to index -1
+            if value == list(range(value[0], value[-1] + 1)):
+                self.page.keyboard.down("Shift")
+                self.cell_locator(row=value[0], col=0).click(timeout=timeout)
+                self.cell_locator(row=value[-1], col=0).click(timeout=timeout)
+                self.page.keyboard.up("Shift")
+            else:
+                # if operating system is MacOs use Meta (Cmd) else use Ctrl key
+                if platform.system() == "Darwin":
+                    self.page.keyboard.down("Meta")
+                else:
+                    self.page.keyboard.down("Control")
+                for row in value:
+                    self._cell_scroll_if_needed(row=row, col=0, timeout=timeout)
+                    self.cell_locator(row=row, col=0).click(timeout=timeout)
+                if platform.system() == "Darwin":
+                    self.page.keyboard.up("Meta")
+                else:
+                    self.page.keyboard.up("Control")
+        else:
+            self.cell_locator(row=value[0], col=0).click(timeout=timeout)
+
     def expect_class_state(
         self,
-        state: str,
+        value: str,
         *,
         row: int,
         col: int,
@@ -3727,18 +5986,29 @@ class OutputDataFrame(_InputWithContainer):
     ):
         """
         Expects the state of the class in the data frame.
+
+        Parameters
+        ----------
+        value
+            The expected state of the class.
+        row
+            The row number of the cell.
+        col
+            The column number of the cell.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
-        if state == "ready":
+        if value == "ready":
             playwright_expect(self.cell_locator(row=row, col=col)).not_to_have_class(
                 "cell-edit-editing", timeout=timeout
             )
-        elif state == "editing":
+        elif value == "editing":
             self.expect_cell_class("cell-edit-editing", row=row, col=col)
-        elif state == "saving":
+        elif value == "saving":
             self.expect_cell_class("cell-edit-saving", row=row, col=col)
-        elif state == "failure":
+        elif value == "failure":
             self.expect_cell_class("cell-edit-failure", row=row, col=col)
-        elif state == "success":
+        elif value == "success":
             self.expect_cell_class("cell-edit-success", row=row, col=col)
         else:
             raise ValueError(
@@ -3765,13 +6035,18 @@ class OutputDataFrame(_InputWithContainer):
         col
             The column number of the cell.
         timeout
-            The maximum time to wait for the action to complete. Defaults to None.
+            The maximum time to wait for the action to complete. Defaults to `None`.
         """
         cell = self.cell_locator(row=row, col=col)
-        cell.scroll_into_view_if_needed(timeout=timeout)
-        cell.click()
+
+        self._cell_scroll_if_needed(row=row, col=col, timeout=timeout)
+        cell.dblclick(timeout=timeout)
         cell.locator("> textarea").fill(text)
 
+    # TODO-karan-test: Rename to `set_sort?`
+    # TODO-karan-test: Add support for a list of columns
+    # TODO-karan-test: Add support for direction
+    # TODO-karan-test: Add method for testing direction
     def set_column_sort(
         self,
         col: int,
@@ -3786,10 +6061,14 @@ class OutputDataFrame(_InputWithContainer):
         col
             The column number to sort.
         timeout
-            The maximum time to wait for the action to complete. Defaults to None.
+            The maximum time to wait for the action to complete. Defaults to `None`.
         """
         self.loc_column_label.nth(col).click(timeout=timeout)
 
+    # TODO-karan-test: Rename to `set_filter?`
+    # TODO-karan-test: Add support for a list of columns ? If so, all other columns should be reset
+    # TODO-karan-test: Add support for a None value reset all filters
+    # TODO-karan-test: Add method for testing direction
     def set_column_filter(
         self,
         col: int,
@@ -3807,7 +6086,7 @@ class OutputDataFrame(_InputWithContainer):
         text
             The text to filter the column.
         timeout
-            The maximum time to wait for the action to complete. Defaults to None.
+            The maximum time to wait for the action to complete. Defaults to `None`.
         """
         if isinstance(text, str):
             self.loc_column_filter.nth(col).locator("> input").fill(
@@ -3847,14 +6126,14 @@ class OutputDataFrame(_InputWithContainer):
         col
             The column number of the cell.
         timeout
-            The maximum time to wait for the action to complete. Defaults to None.
+            The maximum time to wait for the action to complete. Defaults to `None`.
         """
         self.edit_cell(text, row=row, col=col, timeout=timeout)
         self.cell_locator(row=row, col=col).locator("> textarea").press(save_key)
 
     def expect_cell_title(
         self,
-        message: str,
+        value: str,
         *,
         row: int,
         col: int,
@@ -3865,23 +6144,37 @@ class OutputDataFrame(_InputWithContainer):
 
         Parameters
         ----------
+        value
+            The expected validation message of the cell.
         row
             The row number of the cell.
         col
             The column number of the cell.
-        message
-            The expected validation message of the cell.
         timeout
-            The maximum time to wait for the expectation to pass. Defaults to None.
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         playwright_expect(self.cell_locator(row=row, col=col)).to_have_attribute(
-            name="title", value=message, timeout=timeout
+            name="title", value=value, timeout=timeout
         )
 
 
 # TODO: Use mixin for dowloadlink and download button
 class DownloadLink(_InputActionBase):
+    """
+    DownloadLink control for :func:`~shiny.ui.download_link`.
+    """
+
     def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes a new instance of the `DownloadLink` class.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The ID of the download link.
+        """
         super().__init__(
             page,
             id=id,
@@ -3893,7 +6186,21 @@ class DownloadButton(
     _WidthLocM,
     _InputActionBase,
 ):
+    """
+    DownloadButton control for :func:`~shiny.ui.download_button`
+    """
+
     def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes a new instance of the `DownloadButton` class.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The ID of the download button.
+        """
         super().__init__(
             page,
             id=id,

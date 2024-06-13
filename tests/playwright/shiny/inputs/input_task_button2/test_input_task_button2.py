@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from conftest import ShinyAppProc
-from controls import InputTaskButton, OutputText
 from playwright.sync_api import Page
+
+from shiny.playwright.controls import InputTaskButton, OutputText
+from shiny.run import ShinyAppProc
 
 
 def click_extended_task_button(
