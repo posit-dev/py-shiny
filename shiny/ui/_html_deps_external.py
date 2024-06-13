@@ -23,10 +23,10 @@ For...
 * shinyverse dependencies (e.g. bslib, htmltools), see `shiny.ui._html_deps_shinyverse`
 """
 
-ThemeProvider = Union[Theme, Tagifiable, HTMLDependency, List[HTMLDependency]]
+ThemeProvider = Union[Tagifiable, HTMLDependency, List[HTMLDependency]]
 
 
-def shiny_page_theme_deps(theme: str | Path | ThemeProvider | None) -> TagList:
+def shiny_page_theme_deps(theme: str | Path | Theme | ThemeProvider | None) -> TagList:
     deps_bootstrap = bootstrap_deps(include_css=theme is None)
 
     if theme is None:

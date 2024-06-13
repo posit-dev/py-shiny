@@ -25,7 +25,7 @@ def page_opts(
     title: str | MISSING_TYPE = MISSING,
     window_title: str | MISSING_TYPE = MISSING,
     lang: str | MISSING_TYPE = MISSING,
-    theme: str | Path | ThemeProvider | MISSING_TYPE = MISSING,
+    theme: str | Path | ui.Theme | ThemeProvider | MISSING_TYPE = MISSING,
     page_fn: Callable[..., Tag] | None | MISSING_TYPE = MISSING,
     fillable: bool | MISSING_TYPE = MISSING,
     full_width: bool | MISSING_TYPE = MISSING,
@@ -61,9 +61,10 @@ def page_opts(
         will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
         default, `None`, results in an empty string.
     theme
-        A path to a local or online CSS file that will replace the Bootstrap CSS
-        bundled by default with a Shiny app. This file should be a complete
-        `bootstrap.css` or `bootstrap.min.css` file.
+        A custom Shiny theme created using the :class:`~shiny.ui.Theme` class, or a path
+        to a local or online CSS file that will replace the Bootstrap CSS bundled by
+        default with a Shiny app. This file should be a complete `bootstrap.css` or
+        `bootstrap.min.css` file.
 
         For advanced uses, you can also pass a :class:`~htmltools.Tagifiable` object.
         In this case, Shiny will suppress the default Bootstrap CSS.
