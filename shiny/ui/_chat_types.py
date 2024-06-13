@@ -16,7 +16,9 @@ class ChatMessage(TypedDict):
 class UserMessage(TypedDict):
     content: str
     role: Literal["user"]
-    original_content: str
+    original_content: NotRequired[str]
+    token_count: NotRequired[int]
+    encoding: NotRequired[object]
 
 
 # TODO: this should be aware of post-transformed state
@@ -24,8 +26,11 @@ class AssistantMessage(TypedDict):
     content: str
     role: Literal["assistant", "system"]
     content_type: Literal["markdown", "html"]
+    original_content: NotRequired[str]
     # For chunked messages
     chunk_type: NotRequired[Literal["message_start", "message_end"]]
+    token_count: NotRequired[int]
+    encoding_name: NotRequired[str]
 
 
 # A helper to supply defaults

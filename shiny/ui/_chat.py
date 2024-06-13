@@ -1,19 +1,14 @@
-import warnings
 from typing import (
-    AbstractSet,
     Any,
     AsyncIterable,
     Awaitable,
     Callable,
-    Collection,
     Generic,
     Iterable,
     Literal,
     Optional,
-    Protocol,
     Sequence,
     TypeVar,
-    Union,
     cast,
     overload,
 )
@@ -25,6 +20,7 @@ from .._namespaces import resolve_id
 from ..session import Session, require_active_session, session_context
 from ..types import MISSING, MISSING_TYPE, NotifyException
 from ..ui.css import CssUnit, as_css_unit
+from ._chat_tokenizer import TokenEncoding, TokenizersEncoding, get_default_tokenizer
 from ._chat_types import (
     AssistantMessage,
     ChatMessage,
@@ -58,17 +54,6 @@ SubmitFunctionAsync = Callable[[], Awaitable[None]]
 FullMessage = ChatMessage | UserMessage | AssistantMessage
 
 
-# A duck type for tiktoken.Encoding
-class TiktokEncoding(Protocol):
-    def encode(
-        self,
-        text: str,
-        *,
-        allowed_special: Union[Literal["all"], AbstractSet[str]] = set(),  # noqa: B006
-        disallowed_special: Union[Literal["all"], Collection[str]] = "all",
-    ) -> list[int]: ...
-
-
 class Chat(Generic[T]):
     """
     Create a chat component.
@@ -87,15 +72,12 @@ class Chat(Generic[T]):
         the message text, and the `role` key can be "assistant", "user", or "system".
         Note that system messages are not actually displayed in the chat, but will
         still be stored in the chat's `.messages()`.
-    encoding
-        The encoding method to use for tokenizing messages. This is used to enforce
-        token limits on messages sent to the model. Any encoder that implements
-        tiktoken's `Encoding` protocol can be used. If not provided, a warning is
-        displayed when the chat is created. To disable the warning, set `encoding=None`.
-    token_limits
-        A tuple of two integers. The first integer is the maximum number of tokens
-        that can be sent to the model in a single request. The second integer is the
-        amount of tokens to reserve for the model's response.
+    tokenizer
+        The tokenizer to use for calculating token counts, which is required to impose
+        `token_limits` in `.get_messages()`. By default, a pre-trained tokenizer is
+        attempted to be loaded the tokenizers library (if available). A custom tokenizer
+        can be provided by following the `TokenEncoding` (tiktoken or tozenizer)
+        protocol. If token limits are of no concern, provide `None`.
     user_input_transformer
         A function to transform user input before storing it in the chat `.messages()`
         history. This is useful for implementing RAG workflows, like taking a URL and
@@ -117,8 +99,7 @@ class Chat(Generic[T]):
         id: str,
         *,
         messages: Sequence[ChatMessage] = (),
-        encoding: TiktokEncoding | MISSING_TYPE | None = MISSING,
-        token_limits: tuple[int, int] = (4096, 1000),
+        tokenizer: TokenEncoding | MISSING_TYPE | None = MISSING,
         user_input_transformer: (
             UserInputTransformer | UserInputTransformerAsync
         ) = lambda x: x,
@@ -132,17 +113,12 @@ class Chat(Generic[T]):
 
         self.id = id
         self.user_input_id = f"{id}_user_input"
-        if isinstance(encoding, MISSING_TYPE):
-            warnings.warn(
-                "Without an `encoding`, `Chat` won't be able to enforce token limits. "
-                "Consider using `tiktoken` to get an encoding for the relevant model "
-                "or set to `Chat(encoding=None)` to disable this warning.",
-                stacklevel=2,
-            )
-            encoding = None
-        self._encoding = encoding
-        self._token_limits = token_limits
-        self._token_counts: list[int] = []
+
+        if isinstance(tokenizer, MISSING_TYPE):
+            self._tokenizer = get_default_tokenizer()
+        else:
+            self._tokenizer = tokenizer
+
         self._user_transformer = _utils.wrap_async(user_input_transformer)
         if isinstance(assistant_response_transformer, MISSING_TYPE):
             self._assistant_transformer = None
@@ -164,7 +140,7 @@ class Chat(Generic[T]):
 
             # Store (i.e. append) message state and display non-system messages
             for msg in messages:
-                self._store_message(msg)
+                _utils.run_coro_sync(self._store_message(msg))
                 if msg["role"] != "system":
                     _utils.run_coro_sync(self._send_message(msg))
 
@@ -172,14 +148,9 @@ class Chat(Generic[T]):
             # (and make sure this runs before other effects since when the user
             #  calls `.messages()`, they should get the latest user input)
             @reactive.effect(priority=9999)
-            @reactive.event(self.get_user_input)
             async def _store_user_input():
-                input = self.get_user_input()
-                content = await self._user_transformer(input)
-                user_msg = UserMessage(
-                    content=content, role="user", original_content=input
-                )
-                self._store_message(user_msg)
+                msg = ChatMessage(content=self.get_user_input(), role="user")
+                _utils.run_coro_sync(self._store_message(msg))
 
             self._effects.append(_store_user_input)
 
@@ -324,8 +295,12 @@ class Chat(Generic[T]):
         return cast(str, self._session.input[id]())
 
     def get_messages(
-        self, user_input_transformed: bool = True
-    ) -> Sequence[ChatMessage | UserMessage]:
+        self,
+        *,
+        token_limits: tuple[int, int] | None = (4096, 1000),
+        user_transform: bool = True,
+        assistant_transform: bool = False,
+    ) -> Sequence[ChatMessage]:
         """
         Reactively read chat messages
 
@@ -336,24 +311,38 @@ class Chat(Generic[T]):
 
         Parameters
         ----------
-        user_input_transformed
+        token_limits
+            A tuple of two integers. The first integer is the maximum number of tokens
+            that can be sent to the model in a single request. The second integer is the
+            amount of tokens to reserve for the model's response.
+            Can also be `None` to disable message trimming based on token counts.
+        user_transform
             Whether to return user input messages with transformation applied. This only
             matters if a `user_input_transformer` was provided to the chat constructor.
             This should be `True` when passing the messages to a model for response
             generation, but `False` when you need (to save) the original user input.
+        assistant_transform
+            Whether to return assistant messages with transformation applied. This only
+            matters if an `assistant_response_transformer` was provided to the chat
+            constructor.
 
         Returns
         -------
         A sequence of chat messages.
         """
-        messages = self._messages()
+
+        messages = self._get_trimmed_messages(token_limits=token_limits)
 
         res: Sequence[ChatMessage] = []
-        for msg in messages:
-            content = msg["content"]
-            if "original_content" in msg and user_input_transformed:
-                content = msg["original_content"]
-            res.append({"content": content, "role": msg["role"]})
+        for m in messages:
+            msg = ChatMessage(content=m["content"], role=m["role"])
+            if "original_content" in m:
+                original = (user_transform and m["role"] == "user") or (
+                    assistant_transform and m["role"] == "assistant"
+                )
+                if original:
+                    msg["content"] = m["original_content"]
+            res.append(msg)
 
         return res
 
@@ -378,10 +367,10 @@ class Chat(Generic[T]):
     async def _append_message(self, message: Any, *, chunk: bool = False) -> None:
         if chunk:
             msg = normalize_message_chunk(message)
-            self._store_message_chunk(msg)
+            await self._store_message_chunk(msg)
         else:
             msg = normalize_message(message)
-            self._store_message(msg)
+            await self._store_message(msg)
 
         await self._send_message(msg, chunk=chunk)
 
@@ -428,12 +417,6 @@ class Chat(Generic[T]):
 
     # Send a message to the UI
     async def _send_message(self, message: FullMessage, chunk: bool = False):
-        if callable(self._assistant_transformer) and message["role"] == "assistant":
-            content = await self._assistant_transformer(message["content"])
-            message = assistant_message(content=content)
-            if isinstance(content, HTML):
-                message["content_type"] = "html"
-
         # print(message)
 
         if chunk:
@@ -446,42 +429,76 @@ class Chat(Generic[T]):
         # await asyncio.sleep(0)
 
     # Store a message in the chat state
-    def _store_message(self, message: FullMessage):
+    async def _store_message(self, message: FullMessage):
+        # First, apply transformers if relevant (& remember the original content)
+        if message["role"] == "user" and callable(self._user_transformer):
+            message = UserMessage(
+                content=await self._user_transformer(message["content"]),
+                original_content=message["content"],
+                role="user",
+            )
+
+        if message["role"] == "assistant" and callable(self._assistant_transformer):
+            content = message["content"]
+            message = assistant_message(
+                content=await self._assistant_transformer(content),
+            )
+            message["original_content"] = content
+            if isinstance(message["content"], HTML):
+                message["content_type"] = "html"
+
+        # Next, calculate the token count
+        if self._tokenizer is not None:
+            encoded = self._tokenizer.encode(message["content"])
+            if isinstance(encoded, TokenizersEncoding):
+                token_count = len(encoded.ids)
+            else:
+                token_count = len(encoded)
+            message["token_count"] = token_count  # type: ignore
+
         # Get the (current and new) messages
         with reactive.isolate():
             messages = tuple(self._messages()) + (message,)
 
-        # Exit early if we don't have an encoder / token count
-        if self._encoding is None:
-            self._messages.set(messages)
-            return
+        self._messages.set(messages)
 
-        # Otherwise, calculate the token count, and possibly
-        # remove older messages to stay within the token limit
-        token_count = len(self._encoding.encode(message["content"]))
-        self._token_counts.append(token_count)
+    def _get_trimmed_messages(
+        self,
+        *,
+        token_limits: tuple[int, int] | None = (4096, 1000),
+    ) -> Sequence[FullMessage]:
+        messages = self._messages()
+
+        if token_limits is None:
+            return messages
+
+        # Can't trim if we don't have token counts
+        token_counts = [m.get("token_count", None) for m in messages]
+        if None in token_counts:
+            return messages
+
+        token_counts = cast(list[int], token_counts)
 
         # Take the newest messages up to the token limit
-        limit, reserve = self._token_limits
+        limit, reserve = token_limits
         max_tokens = limit - reserve
-        messages2: list[ChatMessage] = []
-        for i, message in enumerate(reversed(messages)):
-            if sum(self._token_counts[-i - 1 :]) > max_tokens:
-                self._token_counts = self._token_counts[-i:]
+        messages2: list[FullMessage] = []
+        for i, m in enumerate(reversed(messages)):
+            if sum(token_counts[-i - 1 :]) > max_tokens:
                 break
-            messages2.append({"content": message["content"], "role": message["role"]})
+            messages2.append(m)
 
         messages2.reverse()
 
-        self._messages.set(tuple(messages2))
+        return tuple(messages2)
 
     # For chunk messages, accumulate the chunks until we have a signal that the message
     # has ended
-    def _store_message_chunk(self, msg: AssistantMessage):
+    async def _store_message_chunk(self, msg: AssistantMessage):
         self._final_message += msg["content"]
         if "chunk_type" in msg and msg["chunk_type"] == "message_end":
             final = assistant_message(content=self._final_message)
-            self._store_message(final)
+            await self._store_message(final)
             self._final_message = ""
 
     async def clear_messages(self):
