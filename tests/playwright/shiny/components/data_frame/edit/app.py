@@ -11,6 +11,12 @@ from shiny.render import CellPatch
 # TODO-barret-render.data_frame; Make an example that uses a dataframe that then updates a higher level reactive, that causes the df to update... which causes the table to render completely
 # TODO-barret-render.data_frame; When "updating" data, try to maintain the scroll, filter info when a new `df` is supplied;
 
+# TODO-karan-test; Click outside the table. Tab to the column name, hit enter. Verify the table becomes sorted. Tab to an HTML column name, hit enter. Verify the sort does not update.
+
+# TODO-karan-test; Enable rows selection and editable. Select (and verify) a row. Edit a cell content in that row. Verify the row is not focused. Hit escape key. Verify the cell value is not updated. Verify the row is focused. Hit escape key again. Verify the row is not focused. (Possibly verify the container div is focused?)
+# TODO-karan-test; Enable rows selection and editable. Select (and verify) a row. Edit a cell content in that row. Click a cell in another row. Verify the new row is selected and focused. Verify the old row is not selected. Verify the old row cell value was updated.
+# TODO-karan-test; Enable rows selection and editable. Select (and verify) a row. Hit enter to edit the first cell in that row. Hit escape key. Verify the same row is focused. Scroll right and display an html column in the left part of the view. Hit enter to edit the first visible non-html cell in that row. Verify that cell is editing.
+
 # TODO-future; Can we maintain pre-processed value and use it within editing?
 # A: Doesn't seem possible for now
 
@@ -47,6 +53,7 @@ MOD_ID = "testing"
 def mod_ui():
     return ui.TagList(
         ui.card(
+            ui.input_text("joe", "Text:"),
             ui.fill.as_fill_item(
                 ui.output_data_frame("summary_data"),
             ),
@@ -72,43 +79,33 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
         # return df
         return render.DataGrid(
             df,
-            selection_mode="rows",
-            editable=False,
+            selection_mode=("rows"),
+            editable=True,
             filters=True,
         )
         # return render.DataTable(df, selection_mode="none", editable=True)
-        # return render.DataGrid(df, selection_mode="rows", editable=True)
+        return render.DataGrid(df, selection_mode="rows", editable=True)
         # return render.DataTable(df, selection_mode="rows", editable=True)
-        return render.DataGrid(df, selection_mode="rows", editable=False)
+        # return render.DataGrid(df, selection_mode="rows", editable=False)
         # return render.DataTable(df, selection_mode="rows", editable=False)
 
     from shiny import reactive
 
-    @reactive.effect
-    def _():
-        print(
-            "Filters:",
-            summary_data.filter(),
-        )
-
-    @reactive.effect
-    def _():
-        print(
-            "Sorting:",
-            summary_data.sort(),
-        )
-
-    @reactive.effect
-    def _():
-        print("indices:", summary_data.data_view_rows())
-
-    @reactive.effect
-    def _():
-        print("Data View:\n", summary_data.data_view(selected=False))
-
-    @reactive.effect
-    def _():
-        print("Data View (selected):\n", summary_data.data_view(selected=True))
+    # @reactive.effect
+    # def _():
+    #     print("Filters:", summary_data.filter())
+    # @reactive.effect
+    # def _():
+    #     print("Sorting:", summary_data.sort())
+    # @reactive.effect
+    # def _():
+    #     print("indices:", summary_data.data_view_rows())
+    # @reactive.effect
+    # def _():
+    #     print("Data View:\n", summary_data.data_view(selected=False))
+    # @reactive.effect
+    # def _():
+    #     print("Data View (selected):\n", summary_data.data_view(selected=True))
 
     @reactive.effect
     def _():
@@ -145,14 +142,14 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
         *,
         patch: CellPatch,
     ):
-        from shinywidgets import output_widget
+        # from shinywidgets import output_widget
 
-        if len(summary_data.cell_patches()) == 0:
-            return ui.card(output_widget("country_detail_pop"), height="400px")
+        # if len(summary_data.cell_patches()) == 0:
+        #     return ui.card(output_widget("country_detail_pop"), height="400px")
 
-        import time
+        # import time
 
-        time.sleep(2)
+        # time.sleep(2)
         if len(summary_data.cell_patches()) > 3:
             import random
 

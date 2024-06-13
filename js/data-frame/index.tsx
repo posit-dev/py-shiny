@@ -1,4 +1,7 @@
 /* eslint-disable react-hooks/rules-of-hooks */
+
+// TODO-barret-future; Try to group all related code into a file and make index.tsx as small as possible. Try to move all logic into files and keep the main full of `useFOO` functions.
+
 import {
   Column,
   ColumnDef,
@@ -30,11 +33,7 @@ import { getCellEditMapObj, useCellEditMap } from "./cell-edit-map";
 import { findFirstItemInView, getStyle } from "./dom-utils";
 import { ColumnFiltersState, Filter, FilterValue, useFilters } from "./filter";
 import type { CellSelection, SelectionModesProp } from "./selection";
-import {
-  SelectionModes,
-  initRowSelectionModes,
-  useSelection,
-} from "./selection";
+import { SelectionModes, initSelectionModes, useSelection } from "./selection";
 import { SortingState, useSort } from "./sort";
 import { SortArrow } from "./sort-arrows";
 import css from "./styles.scss";
@@ -123,6 +122,15 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
 
   const editCellsIsAllowed = payloadOptions["editable"] === true;
 
+  const isEditingCell = useMemo<boolean>(() => {
+    for (const cellEdit of cellEditMap.values()) {
+      if (cellEdit.isEditing) {
+        return true;
+      }
+    }
+    return false;
+  }, [cellEditMap]);
+
   const coldefs = useMemo<ColumnDef<unknown[], unknown>[]>(
     () =>
       columns.map((colname, colIndex) => {
@@ -174,7 +182,13 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
   const dataOriginal = useMemo(() => rowData, [rowData]);
   const [dataState, setData] = useImmer(rowData);
 
-  const { sorting, sortState, sortingTableOptions, setSorting } = useSort();
+  const getColDefs = (): ColumnDef<unknown[], unknown>[] => {
+    return coldefs;
+  };
+
+  const { sorting, sortState, sortingTableOptions, setSorting } = useSort({
+    getColDefs,
+  });
 
   const {
     columnFilters,
@@ -247,16 +261,25 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
 
   // ### Row selection ###############################################################
 
-  const rowSelectionModes = initRowSelectionModes(selectionModesProp);
+  const selectionModes = initSelectionModes(selectionModesProp);
 
-  const canSelect = !rowSelectionModes.is_none();
-  const canMultiRowSelect =
-    rowSelectionModes.row !== SelectionModes._rowEnum.NONE;
+  const canSelect = !selectionModes.isNone();
+  const canMultiRowSelect = selectionModes.row !== SelectionModes._rowEnum.NONE;
 
-  const rowSelection = useSelection<string, HTMLTableRowElement>(
-    rowSelectionModes,
-    (el) => el.dataset.key!,
-    (key, offset) => {
+  const selection = useSelection<string, HTMLTableRowElement>({
+    isEditingCell,
+    editCellsIsAllowed,
+    selectionModes,
+    keyAccessor: (el) => {
+      return el.dataset.key!;
+    },
+    focusEscape: (el) => {
+      setTimeout(() => {
+        el?.blur();
+        containerRef.current?.focus();
+      }, 0);
+    },
+    focusOffset: (key, offset = 0) => {
       const rowModel = table.getSortedRowModel();
       let index = rowModel.rows.findIndex((row) => row.id === key);
       if (index < 0) {
@@ -276,9 +299,33 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
       }, 0);
       return targetKey;
     },
-    (fromKey, toKey) =>
-      findKeysBetween(table.getSortedRowModel(), fromKey, toKey)
-  );
+    between: (fromKey, toKey) =>
+      findKeysBetween(table.getSortedRowModel(), fromKey, toKey),
+    onKeyDownEnter: (el) => {
+      // Retrieve all editable cells in the row
+      const childrenNodes = Array(...el.childNodes.values()).filter((node) => {
+        return (
+          node instanceof HTMLElement &&
+          node.classList.contains("cell-editable")
+        );
+      });
+      if (childrenNodes.length === 0) return; // Quit early
+
+      // Find the first editable cell in the row
+      const firstItem = findFirstItemInView(
+        containerRef.current!,
+        childrenNodes
+      );
+      if (!firstItem) return; // Quit early
+
+      // Submit the double click event to the cell to trigger edit mode for the cell
+      const doubleClickEvent = new MouseEvent("dblclick", {
+        bubbles: true,
+        cancelable: true,
+      });
+      firstItem.dispatchEvent(doubleClickEvent);
+    },
+  });
 
   useEffect(() => {
     const handleCellSelection = (
@@ -290,13 +337,13 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
       const cellSelection = event.detail.cellSelection;
 
       if (cellSelection.type === "none") {
-        rowSelection.clear();
+        selection.clear();
         return;
         // } else if (cellSelection.type === "all") {
         //   rowSelection.setMultiple(rowData.map((_, i) => String(i)));
         //   return;
       } else if (cellSelection.type === "row") {
-        rowSelection.setMultiple(cellSelection.rows.map(String));
+        selection.setMultiple(cellSelection.rows.map(String));
         return;
       } else {
         console.error("Unhandled cell selection update:", cellSelection);
@@ -319,7 +366,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
         handleCellSelection as EventListener
       );
     };
-  }, [id, rowSelection, rowData]);
+  }, [id, selection, rowData]);
 
   useEffect(() => {
     const handleColumnSort = (
@@ -392,10 +439,10 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
   useEffect(() => {
     if (!id) return;
     let shinyValue: CellSelection | null = null;
-    if (rowSelectionModes.is_none()) {
+    if (selectionModes.isNone()) {
       shinyValue = null;
-    } else if (rowSelectionModes.row !== SelectionModes._rowEnum.NONE) {
-      const rowSelectionKeys = rowSelection.keys().toList();
+    } else if (selectionModes.row !== SelectionModes._rowEnum.NONE) {
+      const rowSelectionKeys = selection.keys().toList();
       const rowsById = table.getSortedRowModel().rowsById;
       shinyValue = {
         type: "row",
@@ -409,10 +456,10 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
           .filter((x): x is number => x !== null),
       };
     } else {
-      console.error("Unhandled row selection mode:", rowSelectionModes);
+      console.error("Unhandled row selection mode:", selectionModes);
     }
     Shiny.setInputValue!(`${id}_cell_selection`, shinyValue);
-  }, [id, rowSelection, rowSelectionModes, table, table.getSortedRowModel]);
+  }, [id, selection, selectionModes, table, table.getSortedRowModel]);
 
   useEffect(() => {
     if (!id) return;
@@ -470,8 +517,8 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
   useEffect(() => {
     if (!id) return;
     let shinyValue: number[] | null = null;
-    if (rowSelectionModes.row !== SelectionModes._rowEnum.NONE) {
-      const rowSelectionKeys = rowSelection.keys().toList();
+    if (selectionModes.row !== SelectionModes._rowEnum.NONE) {
+      const rowSelectionKeys = selection.keys().toList();
       const rowsById = table.getSortedRowModel().rowsById;
       shinyValue = rowSelectionKeys
         .map((key) => {
@@ -484,7 +531,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
         .sort();
     }
     Shiny.setInputValue!(`${id}_selected_rows`, shinyValue);
-  }, [id, rowSelection, rowSelectionModes, table]);
+  }, [id, selection, selectionModes, table]);
 
   // ### End row selection ############################################################
 
@@ -492,14 +539,6 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
   // type TKey = DOMStringMap[string]: string
   type TKey = typeof HTMLTableRowElement.prototype.dataset.key;
   type TElement = HTMLTableRowElement;
-
-  if (editCellsIsAllowed && canSelect) {
-    // TODO-barret; maybe listen for a double click?
-    // Is is possible to rerender on double click independent of the row selection?
-    console.error(
-      "Should not have editable and row selection at the same time"
-    );
-  }
 
   // ### End editable cells ###########################################################
 
@@ -522,7 +561,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
   useEffect(() => {
     return () => {
       table.resetSorting();
-      rowSelection.clear();
+      selection.clear();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [payload]);
@@ -551,6 +590,8 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
     className += " html-fill-item";
   }
 
+  const includeRowNumbers = selectionModes.row !== SelectionModes._rowEnum.NONE;
+
   return (
     <>
       <div
@@ -569,6 +610,8 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
           <thead ref={theadRef} style={{ backgroundColor: bgcolor }}>
             {table.getHeaderGroups().map((headerGroup, i) => (
               <tr key={headerGroup.id} aria-rowindex={i + 1}>
+                {includeRowNumbers && <th className="table-corner"></th>}
+
                 {headerGroup.headers.map((header) => {
                   const headerContent = header.isPlaceholder ? undefined : (
                     <div
@@ -607,6 +650,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
             ))}
             {withFilters && (
               <tr className="filters">
+                {includeRowNumbers && <th className="table-corner"></th>}
                 {table.getFlatHeaders().map((header) => {
                   return (
                     <th key={`filter-${header.id}`}>
@@ -633,10 +677,13 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
                     aria-rowindex={virtualRow.index + headerRowCount}
                     data-key={row.id}
                     ref={measureEl}
-                    aria-selected={rowSelection.has(row.id)}
+                    aria-selected={selection.has(row.id)}
                     tabIndex={-1}
-                    {...rowSelection.itemHandlers()}
+                    {...selection.itemHandlers()}
                   >
+                    {selectionModes.row !== SelectionModes._rowEnum.NONE && (
+                      <td className="row-number">{row.index + 1}</td>
+                    )}
                     {row.getVisibleCells().map((cell) => {
                       // TODO-barret; Only send in the cell data that is needed;
                       const rowIndex = cell.row.index;
@@ -663,6 +710,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
                           cellEditInfo={cellEditInfo}
                           setData={setData}
                           setCellEditMapAtLoc={setCellEditMapAtLoc}
+                          selection={selection}
                         ></TableBodyCell>
                       );
                     })}
