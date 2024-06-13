@@ -117,6 +117,7 @@ export function initSelectionModes(
 
 export function useSelection<TKey, TElement extends HTMLElement>({
   isEditingCell,
+  editCellsIsAllowed,
   selectionModes,
   keyAccessor,
   focusOffset,
@@ -126,6 +127,7 @@ export function useSelection<TKey, TElement extends HTMLElement>({
 }: {
   // cellBeingEdited: { rowIndex: number; columnIndex: number } | null;
   isEditingCell: boolean;
+  editCellsIsAllowed: boolean;
   selectionModes: SelectionModes;
   keyAccessor: (el: TElement) => TKey;
   focusOffset: (start: TKey, offset: number) => TKey | null;
@@ -198,12 +200,16 @@ export function useSelection<TKey, TElement extends HTMLElement>({
 
     if (selectionModes.row === SelectionModes._rowEnum.SINGLE) {
       if (event.key === " " || event.key === "Enter") {
-        if (selectedKeys.has(key)) {
-          setSelectedKeys(ImmutableSet.empty());
-        } else {
-          setSelectedKeys(ImmutableSet.just(key));
-        }
         event.preventDefault();
+        if (editCellsIsAllowed && event.key === "Enter") {
+          onKeyDownEnter(el);
+        } else {
+          if (selectedKeys.has(key)) {
+            setSelectedKeys(ImmutableSet.empty());
+          } else {
+            setSelectedKeys(ImmutableSet.just(key));
+          }
+        }
       } else if (event.key === "ArrowUp" || event.key === "ArrowDown") {
         const targetKey = focusOffset(key, event.key === "ArrowUp" ? -1 : 1);
         if (targetKey) {
@@ -214,15 +220,13 @@ export function useSelection<TKey, TElement extends HTMLElement>({
         }
       }
     } else if (selectionModes.row === SelectionModes._rowEnum.MULTIPLE) {
-      if (event.key === "Enter") {
+      if (event.key === " " || event.key === "Enter") {
         event.preventDefault();
-        onKeyDownEnter(el);
-        return;
-      }
-
-      if (event.key === " ") {
-        setSelectedKeys(selectedKeys.toggle(key));
-        event.preventDefault();
+        if (editCellsIsAllowed && event.key === "Enter") {
+          onKeyDownEnter(el);
+        } else {
+          setSelectedKeys(selectedKeys.toggle(key));
+        }
       } else if (event.key === "ArrowUp" || event.key === "ArrowDown") {
         if (focusOffset(key, event.key === "ArrowUp" ? -1 : 1)) {
           event.preventDefault();

@@ -268,6 +268,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
 
   const selection = useSelection<string, HTMLTableRowElement>({
     isEditingCell,
+    editCellsIsAllowed,
     selectionModes,
     keyAccessor: (el) => {
       return el.dataset.key!;
