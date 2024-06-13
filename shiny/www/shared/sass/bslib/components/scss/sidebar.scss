@@ -1,6 +1,6 @@
 // User-facing variables, use for theming
 $bslib-sidebar-bg: rgba(var(--bs-emphasis-color-rgb, 0,0,0), 0.05) !default;
-$bslib-sidebar-fg: var(--bs-emphasis-color, black) !default;
+$bslib-sidebar-fg: null !default;
 $bslib-sidebar-toggle-bg: rgba(var(--bs-emphasis-color-rgb, 0,0,0), 0.1) !default;
 $bslib-sidebar-border: var(--bs-card-border-width, #{$card-border-width}) solid var(--bs-card-border-color, #{$card-border-color}) !default;
 
@@ -367,6 +367,15 @@ $bslib-sidebar-column-sidebar: Min(calc(100% - var(--_padding-icon)), var(--_sid
         padding-top: var(--_toggle-collective-height);
         padding-left: var(--_padding);
         padding-right: var(--_padding);
+      }
+
+      // Soften main area when sidebar is expanded over content
+      > .main {
+        opacity: 0.33;
+        transition: opacity var(--_transition-easing-x) var(--_transition-duration);
+      }
+      &.sidebar-collapsed > .main {
+        opacity: 1;
       }
     }
   }

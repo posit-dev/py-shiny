@@ -134,10 +134,8 @@ $bslib-checkbox-radio-margin-right: 0.35em !default;
     --bslib-dashboard-sidebar-main-bg: var(--#{$prefix}body-bg);
     --bslib-dashboard-main-bg: rgb(247, 247, 247);
     --#{$prefix}card-border-color: var(--bslib-dashboard-border-color-translucent, var(--#{$prefix}border-color-translucent));
-    --bslib-dashboard-card-cap-bg: var(--#{$prefix}body-bg);
     --bslib-dashboard-card-header-font-weight: #{$font-weight-semibold};
-    --bslib-sidebar-bg: var(--#{$prefix}body-bg);
-    --bslib-sidebar-fg: var(--#{$prefix}color);
+    --bslib-sidebar-bg: RGBA(var(--#{$prefix}body-bg-rgb), 0.05);
   }
 
   @include color-mode(dark) {
@@ -145,7 +143,11 @@ $bslib-checkbox-radio-margin-right: 0.35em !default;
   }
 
   .bslib-card {
-    --#{$prefix}card-cap-bg: var(--bslib-dashboard-card-cap-bg);
+    // We don't want to get in the way of $card-cap-bg, which is used by the shiny preset
+    // when the dashboard design is disabled. This next line disables the default background
+    // color of the card header, giving us the white card headers we want, without also
+    // blocking inheritence via `.text-bg-{theme}` classes or others.
+    --#{$prefix}card-cap-bg: ;
     .card-header, .card-footer {
       font-size: 0.9rem;
     }

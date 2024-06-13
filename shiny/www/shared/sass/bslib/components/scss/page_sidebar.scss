@@ -1,5 +1,7 @@
 $bslib-page-sidebar-title-bg: if($navbar-bg, $navbar-bg, $dark) !default;
 $bslib-page-sidebar-title-color: color-contrast($bslib-page-sidebar-title-bg) !default;
+$bslib-page-main-min-width: map_get($grid-breakpoints, sm) !default;
+$bslib-page-main-min-height: map_get($grid-breakpoints, sm) !default;
 $bslib-sidebar-padding: $spacer * 1.5 !default;
 
 :root {
@@ -18,5 +20,13 @@ $bslib-sidebar-padding: $spacer * 1.5 !default;
   .bslib-page-title {
     margin-bottom: 0;
     line-height: var(--#{$prefix}body-line-height);
+  }
+
+}
+
+@include media-breakpoint-up(sm) {
+  .bslib-page-main {
+    min-width: var(--bslib-page-main-min-width, #{$bslib-page-main-min-width});
+    min-height: var(--bslib-page-main-min-height, #{$bslib-page-main-min-height});
   }
 }
