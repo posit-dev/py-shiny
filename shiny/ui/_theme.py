@@ -199,6 +199,7 @@ class Theme(Tagifiable):
         *args: str,
         allow_both: bool = True,
         kwargs: dict[str, str | float | int | bool | None],
+        is_default: bool = False,
     ) -> list[str]:
         if not allow_both and len(args) > 0 and len(kwargs) > 0:
             # Python forces positional arguments to come _before_ kwargs, but default
@@ -208,6 +209,7 @@ class Theme(Tagifiable):
             return []
 
         values: list[str] = list(args)
+        default = " !default" if is_default else ""
 
         if len(kwargs) > 0:
             for key, value in kwargs.items():
@@ -216,7 +218,7 @@ class Theme(Tagifiable):
                     value = "true" if value else "false"
                 elif value is None:
                     value = "null"
-                values.append(f"${key}: {value};")
+                values.append(f"${key}: {value}{default};")
 
         return dedent_array(values)
 
@@ -269,9 +271,14 @@ class Theme(Tagifiable):
             should be Sass variable names using underscore casing that will be
             transformed automatically to kebab-case. For example,
             `.add_defaults(primary_color="#ff0000")` is equivalent to
-            `.add_defaults("$primary-color: #ff0000;")`.
+            `.add_defaults("$primary-color: #ff0000 !default;")`.
         """
-        defaults = self._combine_args_kwargs(*args, kwargs=kwargs, allow_both=False)
+        defaults = self._combine_args_kwargs(
+            *args,
+            kwargs=kwargs,
+            allow_both=False,
+            is_default=True,
+        )
 
         # Add args to the front of _defaults
         self._defaults = dedent_array(defaults) + self._defaults
