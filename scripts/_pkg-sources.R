@@ -1,6 +1,6 @@
 list(
-  bslib = "rstudio/bslib@chore/component-deps-as-sass",
-  shiny = "rstudio/shiny@chore/dependecy-as-sass",
+  bslib = "rstudio/bslib@main",
+  shiny = "rstudio/shiny@main",
   sass = "sass",
   htmltools = "rstudio/htmltools@main"
 )
