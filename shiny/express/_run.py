@@ -163,7 +163,7 @@ def create_express_app(file: Path, package_name: str) -> App:
     return app
 
 
-def run_express(file: Path, package_name: str) -> Tag | TagList:
+def run_express(file: Path, package_name: str | None = None) -> Tag | TagList:
     """
     Run the code in a Shiny Express app file and return the UI. This is to be run in
     both the UI-rendering phase and the server-rendering phase of a Shiny Express app.
