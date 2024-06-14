@@ -44,6 +44,7 @@ bs_full_theme <- function(theme, path_sass_markers) {
     selectize = shiny_sass_selectize(bs_version),
     ionrangeslider = shiny_sass_ionrangeslider(),
     daterange = shiny_sass_daterange_picker(),
+    # The next layer must come last so that its text appears where a user layer would
     marker = sass_layer_file(path_sass_markers),
   )
 }
