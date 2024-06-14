@@ -23,13 +23,18 @@ shiny-chat-container {
       > * {
         height: fit-content;
       }
+      .message-icon {
+        border-radius: 50%;
+        border: var(--bs-border-width, 1px) solid var(--bs-border-color, #e9ecef);
+        > * {
+          margin: 0.5rem;
+          height: 20px;
+          width: 20px;
+        }
+      }
       /* Vertically center the 2nd column (message content) */
       .message-content {
         align-self: center;
-      }
-      /* Make badges more circular */
-      .badge {
-        --bs-badge-padding-y: 0.65em;
       }
     }
 
@@ -38,8 +43,7 @@ shiny-chat-container {
       align-self: flex-end;
       padding: 0.5rem 0.75rem;
       border-radius: 26px;
-      background-color: var(--bs-light-bg-subtle, #fcfcfc);
-      color: var(--bs-light-text-emphasis, #48505f);
+      background-color: RGBA(var(--bs-primary-rgb, 0, 123, 194), 0.06);
       border: var(--bs-border-width, 1px) solid var(--bs-border-color, #e9ecef);
     }
   }
@@ -50,13 +54,26 @@ shiny-chat-container {
     bottom: 0;
     padding: 0.25rem;
     background-color: var(--bs-body-bg, white);
-
-    .btn {
-      --bs-btn-padding-x: 0.75em;
-      --bs-btn-padding-y: 0.25em;
-    }
     textarea {
       resize: none;
+      border-radius: 26px !important;
+      padding-right: 36px !important;
+    }
+    button {
+      position: absolute;
+      bottom: 11px;
+      right: 12px;
+      background-color: transparent;
+      color: var(--bs-primary, #007bc2);
+      border: none;
+      padding: 0;
+      cursor: pointer;
+      line-height: 16px;
+      border-radius: 50%;
+      &:disabled {
+        cursor: not-allowed;
+        color: var(--bs-disabled-color, #6c757d);
+      }
     }
   }
 }

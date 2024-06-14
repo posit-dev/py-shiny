@@ -1,5 +1,4 @@
 # pyright: basic
-import tiktoken
 from openai import AsyncOpenAI
 
 from shiny.express import ui
@@ -13,7 +12,6 @@ ui.page_opts(
 # Create a chat instance, with an initial message
 chat = ui.Chat(
     id="chat",
-    encoding=tiktoken.encoding_for_model("gpt-4o"),
     messages=[
         {"content": "Hello! How can I help you today?", "role": "assistant"},
     ],
@@ -22,7 +20,6 @@ chat = ui.Chat(
 
 # Display the chat
 chat.ui()
-
 
 # Create the LLM client (assumes OPENAI_API_KEY is set in the environment)
 client = AsyncOpenAI()

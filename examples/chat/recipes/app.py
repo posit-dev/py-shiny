@@ -1,4 +1,4 @@
-import tiktoken.load
+# import shiny_validate as sv
 from langchain_openai import ChatOpenAI
 from utils import recipe_prompt, scrape_page_with_url
 
@@ -12,20 +12,26 @@ ui.page_opts(
 
 chat = ui.Chat(
     id="chat",
-    messages=[{"role": "system", "content": recipe_prompt}],
+    messages=[
+        {"role": "system", "content": recipe_prompt},
+        {
+            "role": "assistant",
+            "content": "Hello! I'm a recipe extractor. Please enter a URL to a recipe page. For example, <https://www.thechunkychef.com/epic-dry-rubbed-baked-chicken-wings/>",
+        },
+    ],
     user_input_transformer=scrape_page_with_url,
 )
 chat.ui(placeholder="Enter a recipe URL...")
 
 llm = ChatOpenAI(temperature=0)
 
+# TODO: get input validation working
+# iv = sv.InputValidator()
+# iv.add_rule(chat.user_input_id, sv.check.url())
+
 
 @chat.on_user_submit
 async def _():
-    response = llm.astream(chat.get_messages())
-    await chat.append_message_stream(response)
-
-
-import tiktoken
-
-tiktoken.load
+    # iv.enable()
+    response = await llm.ainvoke(chat.get_messages())
+    await chat.append_message(response)

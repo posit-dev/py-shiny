@@ -142,7 +142,7 @@ class Chat(Generic[T]):
             for msg in messages:
                 _utils.run_coro_sync(self._store_message(msg))
                 if msg["role"] != "system":
-                    _utils.run_coro_sync(self._send_message(msg))
+                    _utils.run_coro_sync(self._send_append_message(msg))
 
             # When user input is submitted, transform, and store it in the chat state
             # (and make sure this runs before other effects since when the user
@@ -150,7 +150,7 @@ class Chat(Generic[T]):
             @reactive.effect(priority=9999)
             async def _store_user_input():
                 msg = ChatMessage(content=self.get_user_input(), role="user")
-                _utils.run_coro_sync(self._store_message(msg))
+                await self._store_message(msg)
 
             self._effects.append(_store_user_input)
 
@@ -276,24 +276,6 @@ class Chat(Generic[T]):
         else:
             return create_effect(fn)
 
-    def get_user_input(self) -> str:
-        """
-        Reactively read user input
-
-        Returns
-        -------
-        The user input message (before any transformation).
-
-        Note
-        ----
-        Most users shouldn't need to use this method directly since `.messages()`
-        contains user input. However, this method can be useful when you need to access
-        the un-transformed user input, and/or when you want to take a reactive
-        dependency on user input.
-        """
-        id = self.user_input_id
-        return cast(str, self._session.input[id]())
-
     def get_messages(
         self,
         *,
@@ -372,7 +354,7 @@ class Chat(Generic[T]):
             msg = normalize_message(message)
             await self._store_message(msg)
 
-        await self._send_message(msg, chunk=chunk)
+        await self._send_append_message(msg, chunk=chunk)
 
     async def append_message_stream(self, message: Iterable[Any] | AsyncIterable[Any]):
         """
@@ -416,7 +398,7 @@ class Chat(Generic[T]):
             await self._append_message(end, chunk=True)
 
     # Send a message to the UI
-    async def _send_message(self, message: FullMessage, chunk: bool = False):
+    async def _send_append_message(self, message: FullMessage, chunk: bool = False):
         # print(message)
 
         if chunk:
@@ -500,6 +482,45 @@ class Chat(Generic[T]):
             final = assistant_message(content=self._final_message)
             await self._store_message(final)
             self._final_message = ""
+
+    def get_user_input(self) -> str:
+        """
+        Reactively read user input
+
+        Returns
+        -------
+        The user input message (before any transformation).
+
+        Note
+        ----
+        Most users shouldn't need to use this method directly since `.messages()`
+        contains user input. However, this method can be useful when you need to access
+        the un-transformed user input, and/or when you want to take a reactive
+        dependency on user input.
+        """
+        id = self.user_input_id
+        return cast(str, self._session.input[id]())
+
+    def set_user_input(self, value: str):
+        """
+        Set the user input value.
+
+        Parameters
+        ----------
+        value
+            The value to set the user input to.
+        """
+
+        _utils.run_coro_sync(
+            self._session.send_custom_message(
+                "shinyChatMessage",
+                {
+                    "id": self.id,
+                    "handler": "shiny-chat-set-user-input",
+                    "obj": value,
+                },
+            )
+        )
 
     async def clear_messages(self):
         """
