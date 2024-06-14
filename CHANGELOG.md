@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `@render.data_frame`'s `<ID>.cell_selection()` no longer returns a `None` value and now always returns a dictionary containing both the `rows` and `cols` keys. This is done to achieve more consistent author code when working with cell selection. When the value's `type="none"`, both `rows` and `cols` are empty tuples. When `type="row"`, `cols` represents all column numbers of the data. In the future, when `type="col"`, `rows` will represent all row numbers of the data. These extra values are not available in `input.<ID>_cell_selection()` as they are independent of cells being selected and are removed to reduce information being sent to and from the browser. (#1376)
 
+* Relative imports, like `from . import utils`, now can be used in Shiny Express apps. (#1464)
 
 ### Bug fixes
 
