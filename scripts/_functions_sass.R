@@ -62,6 +62,8 @@ shiny_sass_selectize <- function(bs_version) {
 }
 
 shiny_sass_ionrangeslider <- function() {
+  # iorangeslider sass files include a variable declaration that uses
+  # `$component-active-bg` and needs to be forced into the rules layer
   sass::sass_layer(rules = shiny:::ionRangeSliderDependencySass())
 }
 
