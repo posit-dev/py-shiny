@@ -136,16 +136,26 @@ find_sass_file <- function(file) {
 #' all imported files, including `@import` statements in imported files.
 #' @return A character vector of absolute paths to all imported Sass files.
 theme_files_used <- function(theme_sass_lines) {
-  imports <- grep("^\\s*@import \"", theme_sass_lines, value = TRUE)
+  imports <- grep("^\\s*@import [\"']", theme_sass_lines, value = TRUE)
   if (!length(imports)) {
     return()
   }
 
   imports <- trimws(imports)
-  imports <- gsub("^@import \"([^\"]+?)\";", 'identity("\\1")', imports)
+  imports <- gsub("^@import \"([^\"]+?)\";", "\\1", imports)
+  imports <- gsub("^@import '([^']+?)';", "\\1", imports)
 
-  files <- vapply(imports, \(x) eval(parse(text = x)), character(1))
-  files_ret <- files <- unique(files)
+  if (any(grepl("^@import", imports))) {
+    uncaught <- imports[grepl("^@import", imports)]
+    cli::cli_abort(
+      c(
+        "Unexpected import statement(s): {.val {uncaught}}",
+        i = "Please update {.fn theme_files_used} in {.path {path_root('scripts/_functions_sass.R')}}."
+      )
+    )
+  }
+
+  files_ret <- files <- unique(imports)
 
   for (file in files) {
     if (!file_exists(file)) {
