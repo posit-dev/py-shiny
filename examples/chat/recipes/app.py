@@ -10,7 +10,15 @@ ui.page_opts(
     fillable_mobile=True,
 )
 
-chat = ui.Chat(
+
+# Create a subclass of ui.Chat to handle the recipe extraction
+class RecipeChat(ui.Chat):
+    async def transform_user_input(self, input: str) -> str:
+        return await scrape_page_with_url(input)
+
+
+# Initialize the chat (with a system prompt and starting message)
+chat = RecipeChat(
     id="chat",
     messages=[
         {"role": "system", "content": recipe_prompt},
@@ -19,8 +27,8 @@ chat = ui.Chat(
             "content": "Hello! I'm a recipe extractor. Please enter a URL to a recipe page. For example, <https://www.thechunkychef.com/epic-dry-rubbed-baked-chicken-wings/>",
         },
     ],
-    user_input_transformer=scrape_page_with_url,
 )
+
 chat.ui(placeholder="Enter a recipe URL...")
 
 llm = ChatOpenAI(temperature=0)

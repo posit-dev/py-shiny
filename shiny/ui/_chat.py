@@ -41,12 +41,6 @@ __all__ = (
 T = TypeVar("T")
 
 
-# TODO: UserInput might need to be a list of dicts if we want to support multiple
-# user input content types
-UserInputTransformer = Callable[[str], str]
-UserInputTransformerAsync = Callable[[str], Awaitable[str]]
-AssistantResponseTransformer = Callable[[str], str | HTML]
-AssistantResponseTransformerAsync = Callable[[str], Awaitable[str | HTML]]
 SubmitFunction = Callable[[], None]
 SubmitFunctionAsync = Callable[[], Awaitable[None]]
 
@@ -78,17 +72,6 @@ class Chat(Generic[T]):
         attempted to be loaded the tokenizers library (if available). A custom tokenizer
         can be provided by following the `TokenEncoding` (tiktoken or tozenizer)
         protocol. If token limits are of no concern, provide `None`.
-    user_input_transformer
-        A function to transform user input before storing it in the chat `.messages()`
-        history. This is useful for implementing RAG workflows, like taking a URL and
-        scraping it for text before sending it to the model.
-    assistant_response_transformer
-        A function to transform role="assistant" messages for display purposes.
-        If the function returns a string, it will be interpreted and parsed as a markdown
-        string on the client (and the resulting HTML is then sanitized). If the function
-        returns HTML, it will be displayed as-is. Note that, for `.append_message_stream()`,
-        the transformer will be applied to each message in the stream, so it should be
-        performant. By default, assistant responses are interpreted as markdown on the client.
     session
         The :class:`~shiny.Session` instance that the chat should appear in. If not
         provided, the session is inferred via :func:`~shiny.session.get_current_session`.
@@ -100,14 +83,6 @@ class Chat(Generic[T]):
         *,
         messages: Sequence[ChatMessage] = (),
         tokenizer: TokenEncoding | MISSING_TYPE | None = MISSING,
-        user_input_transformer: (
-            UserInputTransformer | UserInputTransformerAsync
-        ) = lambda x: x,
-        assistant_response_transformer: (
-            AssistantResponseTransformer
-            | AssistantResponseTransformerAsync
-            | MISSING_TYPE
-        ) = MISSING,
         session: Optional[Session] = None,
     ):
 
@@ -119,13 +94,6 @@ class Chat(Generic[T]):
         else:
             self._tokenizer = tokenizer
 
-        self._user_transformer = _utils.wrap_async(user_input_transformer)
-        if isinstance(assistant_response_transformer, MISSING_TYPE):
-            self._assistant_transformer = None
-        else:
-            self._assistant_transformer = _utils.wrap_async(
-                assistant_response_transformer
-            )
         self._session = require_active_session(session)
 
         # Chunked messages get accumulated (using this property) before changing state
@@ -280,8 +248,8 @@ class Chat(Generic[T]):
         self,
         *,
         token_limits: tuple[int, int] | None = (4096, 1000),
-        user_transform: bool = True,
-        assistant_transform: bool = False,
+        apply_user_transform: bool = True,
+        apply_assistant_transform: bool = False,
     ) -> Sequence[ChatMessage]:
         """
         Reactively read chat messages
@@ -298,14 +266,14 @@ class Chat(Generic[T]):
             that can be sent to the model in a single request. The second integer is the
             amount of tokens to reserve for the model's response.
             Can also be `None` to disable message trimming based on token counts.
-        user_transform
+        apply_user_transform
             Whether to return user input messages with transformation applied. This only
-            matters if a `user_input_transformer` was provided to the chat constructor.
+            matters if a `user_input_transform` was provided to the chat constructor.
             This should be `True` when passing the messages to a model for response
             generation, but `False` when you need (to save) the original user input.
-        assistant_transform
+        apply_assistant_transform
             Whether to return assistant messages with transformation applied. This only
-            matters if an `assistant_response_transformer` was provided to the chat
+            matters if an `assistant_response_transform` was provided to the chat
             constructor.
 
         Returns
@@ -319,8 +287,8 @@ class Chat(Generic[T]):
         for m in messages:
             msg = ChatMessage(content=m["content"], role=m["role"])
             if "original_content" in m:
-                original = (user_transform and m["role"] == "user") or (
-                    assistant_transform and m["role"] == "assistant"
+                original = (apply_user_transform and m["role"] == "user") or (
+                    apply_assistant_transform and m["role"] == "assistant"
                 )
                 if original:
                     msg["content"] = m["original_content"]
@@ -413,21 +381,20 @@ class Chat(Generic[T]):
     # Store a message in the chat state
     async def _store_message(self, message: FullMessage):
         # First, apply transformers if relevant (& remember the original content)
-        if message["role"] == "user" and callable(self._user_transformer):
-            message = UserMessage(
-                content=await self._user_transformer(message["content"]),
-                original_content=message["content"],
-                role="user",
-            )
+        original_content = message["content"]
+        if message["role"] == "user":
+            content = await self.transform_user_input(original_content)
+            message = {"content": content, "role": "user"}
+            if original_content != content:
+                message["original_content"] = original_content  # type: ignore
 
-        if message["role"] == "assistant" and callable(self._assistant_transformer):
-            content = message["content"]
-            message = assistant_message(
-                content=await self._assistant_transformer(content),
-            )
-            message["original_content"] = content
-            if isinstance(message["content"], HTML):
-                message["content_type"] = "html"
+        if message["role"] == "assistant":
+            content = await self.transform_assistant_response(original_content)
+            message = {"content": content, "role": "assistant"}
+            if original_content != content:
+                message["original_content"] = content  # type: ignore
+            if isinstance(content, HTML):
+                message["content_type"] = "html"  # type: ignore
 
         # Next, calculate the token count
         if self._tokenizer is not None:
@@ -521,6 +488,48 @@ class Chat(Generic[T]):
                 },
             )
         )
+
+    async def transform_user_input(self, input: str) -> str:
+        """
+        Transform user input before storing it in the chat state.
+
+        A function to transform user input before storing it in the chat `.messages()`
+        history. This is useful for implementing RAG workflows, like taking a URL and
+        scraping it for text before sending it to the model.
+
+        Parameters
+        ----------
+        input
+            The user input message.
+
+        Returns
+        -------
+        The transformed user input message.
+        """
+        return input
+
+    async def transform_assistant_response(self, response: str) -> str | HTML:
+        """
+        Transform assistant responses before they are displayed in the chat.
+
+        A function to transform role="assistant" messages for display purposes. If the
+        function returns a string, it will be interpreted and parsed as a markdown
+        string on the client (and the resulting HTML is then sanitized). If the function
+        returns HTML, it will be displayed as-is. Note that, for
+        `.append_message_stream()`, the transformer will be applied to each message in
+        the stream, so it should be performant. By default, assistant responses are
+        interpreted as markdown on the client.
+
+        Parameters
+        ----------
+        response
+            The assistant response message.
+
+        Returns
+        -------
+        The transformed assistant response message.
+        """
+        return response
 
     async def clear_messages(self):
         """
