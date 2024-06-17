@@ -49,7 +49,7 @@ deps: $(PYBIN) dev-htmltools dev-shinylive ## Install build dependencies
 	$(PYBIN)/pip install pip --upgrade
 	$(PYBIN)/pip install ..[doc]
 
-quartodoc: quartodoc_build_core quartodoc_build_express quartodoc_post ## Build quartodocs for express and core
+quartodoc: quartodoc_build_core quartodoc_build_express quartodoc_build_test quartodoc_post ## Build quartodocs for express and core
 
 ## Build interlinks for API docs
 quartodoc_interlinks: $(PYBIN)
