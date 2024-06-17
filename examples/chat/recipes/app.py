@@ -1,5 +1,5 @@
-# import shiny_validate as sv
-from langchain_openai import ChatOpenAI
+# from langchain_openai import ChatOpenAI
+from openai import AsyncOpenAI
 from utils import recipe_prompt, scrape_page_with_url
 
 from shiny.express import ui
@@ -11,14 +11,21 @@ ui.page_opts(
 )
 
 
-# Create a subclass of ui.Chat to handle the recipe extraction
-class RecipeChat(ui.Chat):
-    async def transform_user_input(self, input: str) -> str:
+# A function to transform user input
+# Note that, if an exception occurs, the function will return a message to the user
+# "short-circuiting" the conversation and asking the user to try again.
+async def transform_user_input(input: str) -> str | dict:
+    try:
         return await scrape_page_with_url(input)
+    except Exception:
+        return {
+            "role": "assistant",
+            "content": "I'm sorry, I couldn't extract content from that URL. Please try again. ",
+        }
 
 
 # Initialize the chat (with a system prompt and starting message)
-chat = RecipeChat(
+chat = ui.Chat(
     id="chat",
     messages=[
         {"role": "system", "content": recipe_prompt},
@@ -27,19 +34,17 @@ chat = RecipeChat(
             "content": "Hello! I'm a recipe extractor. Please enter a URL to a recipe page. For example, <https://www.thechunkychef.com/epic-dry-rubbed-baked-chicken-wings/>",
         },
     ],
+    transform_user_input=transform_user_input,
 )
 
 chat.ui(placeholder="Enter a recipe URL...")
 
-llm = ChatOpenAI(temperature=0)
-
-# TODO: get input validation working
-# iv = sv.InputValidator()
-# iv.add_rule(chat.user_input_id, sv.check.url())
+llm = AsyncOpenAI()
 
 
 @chat.on_user_submit
 async def _():
-    # iv.enable()
-    response = await llm.ainvoke(chat.get_messages())
-    await chat.append_message(response)
+    response = await llm.chat.completions.create(
+        model="gpt-4o", messages=chat.get_messages(), temperature=0, stream=True
+    )
+    await chat.append_message_stream(response)

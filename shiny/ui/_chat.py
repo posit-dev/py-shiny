@@ -20,15 +20,9 @@ from .._namespaces import resolve_id
 from ..session import Session, require_active_session, session_context
 from ..types import MISSING, MISSING_TYPE, NotifyException
 from ..ui.css import CssUnit, as_css_unit
+from ._chat_normalize import normalize_message, normalize_message_chunk
 from ._chat_tokenizer import TokenEncoding, TokenizersEncoding, get_default_tokenizer
-from ._chat_types import (
-    AssistantMessage,
-    ChatMessage,
-    UserMessage,
-    assistant_message,
-    normalize_message,
-    normalize_message_chunk,
-)
+from ._chat_types import ChatMessage, ClientMessage, StoredMessage, TransformedMessage
 from ._html_deps_py_shiny import chat_deps
 from .fill import as_fill_item, as_fillable_container
 
@@ -41,11 +35,16 @@ __all__ = (
 T = TypeVar("T")
 
 
+# TODO: UserInput might need to be a list of dicts if we want to support multiple
+# user input content types
+TransformUserInput = Callable[[str], str | ChatMessage]
+TransformUserInputAsync = Callable[[str], Awaitable[str | ChatMessage]]
+TransformAssistantResponse = Callable[[str], str | HTML]
+TransformAssistantResponseAsync = Callable[[str], Awaitable[str | HTML]]
 SubmitFunction = Callable[[], None]
 SubmitFunctionAsync = Callable[[], Awaitable[None]]
 
-# A message formats that can be stored/sent to the chat
-FullMessage = ChatMessage | UserMessage | AssistantMessage
+ChunkOption = Literal["start", "end"] | bool
 
 
 class Chat(Generic[T]):
@@ -66,6 +65,17 @@ class Chat(Generic[T]):
         the message text, and the `role` key can be "assistant", "user", or "system".
         Note that system messages are not actually displayed in the chat, but will
         still be stored in the chat's `.messages()`.
+    transform_user_input
+        A function to transform user input before storing it in the chat `.messages()`
+        history. This is useful for implementing RAG workflows, like taking a URL and
+        scraping it for text before sending it to the model.
+    transform_assistant_response
+        A function to transform role="assistant" messages for display purposes.
+        If the function returns a string, it will be interpreted and parsed as a markdown
+        string on the client (and the resulting HTML is then sanitized). If the function
+        returns HTML, it will be displayed as-is. Note that, for `.append_message_stream()`,
+        the transformer will be applied to each message in the stream, so it should be
+        performant. By default, assistant responses are interpreted as markdown on the client.
     tokenizer
         The tokenizer to use for calculating token counts, which is required to impose
         `token_limits` in `.get_messages()`. By default, a pre-trained tokenizer is
@@ -82,6 +92,12 @@ class Chat(Generic[T]):
         id: str,
         *,
         messages: Sequence[ChatMessage] = (),
+        transform_user_input: (
+            TransformUserInput | TransformUserInputAsync
+        ) = lambda x: x,
+        transform_assistant_response: (
+            TransformAssistantResponse | TransformAssistantResponseAsync
+        ) = lambda x: x,
         tokenizer: TokenEncoding | MISSING_TYPE | None = MISSING,
         session: Optional[Session] = None,
     ):
@@ -94,33 +110,57 @@ class Chat(Generic[T]):
         else:
             self._tokenizer = tokenizer
 
+        self._transform_user = _utils.wrap_async(transform_user_input)
+        self._transform_assistant = _utils.wrap_async(transform_assistant_response)
         self._session = require_active_session(session)
 
         # Chunked messages get accumulated (using this property) before changing state
         self._final_message = ""
+
+        # If a user input message is transformed into a response, we need to cancel
+        # the next user input submit handling
+        self._suspend_input_handler: bool = False
 
         # Keep track of effects so we can destroy them when the chat is destroyed
         self._effects: list[reactive.Effect_] = []
 
         with session_context(self._session):
             # Initialize message state
-            self._messages: reactive.Value[Sequence[FullMessage]] = reactive.Value(())
+            self._messages: reactive.Value[tuple[StoredMessage, ...]] = reactive.Value(
+                ()
+            )
 
-            # Store (i.e. append) message state and display non-system messages
+            # Initialize the chat with the provided messages
             for msg in messages:
-                _utils.run_coro_sync(self._store_message(msg))
-                if msg["role"] != "system":
+                msg_post = _utils.run_coro_sync(self._transform_message(msg))
+                # If transform changed the role, we effectively treat it as 2 messages
+                if msg["role"] != msg_post["role"]:
+                    msg = self._store_message(as_transformed_message(msg))
                     _utils.run_coro_sync(self._send_append_message(msg))
+                msg_post = self._store_message(msg_post)
+                _utils.run_coro_sync(self._send_append_message(msg_post))
 
             # When user input is submitted, transform, and store it in the chat state
             # (and make sure this runs before other effects since when the user
             #  calls `.messages()`, they should get the latest user input)
             @reactive.effect(priority=9999)
-            async def _store_user_input():
+            @reactive.event(self.get_user_input)
+            async def _on_user_input():
                 msg = ChatMessage(content=self.get_user_input(), role="user")
-                await self._store_message(msg)
+                msg_post = await self._transform_message(msg)
+                if msg_post["role"] == "user":
+                    self._store_message(msg_post)
+                else:
+                    # If role changes, treat it as 2 messages
+                    self._store_message(as_transformed_message(msg))
+                    msg_post = self._store_message(msg_post)
+                    await self._send_append_message(msg_post)
 
-            self._effects.append(_store_user_input)
+                # Since the transform has effectively handled the user input, cancel any
+                # subsequent user input handling
+                self._suspend_input_handler = msg_post["role"] != "user"
+
+            self._effects.append(_on_user_input)
 
     def ui(
         self,
@@ -225,6 +265,10 @@ class Chat(Generic[T]):
             @reactive.effect
             @reactive.event(self.get_user_input)
             async def handle_user_input():
+                if self._suspend_input_handler:
+                    from .. import req
+
+                    req(False)
                 if on_error == "unhandled":
                     await afunc()
                 else:
@@ -250,7 +294,7 @@ class Chat(Generic[T]):
         token_limits: tuple[int, int] | None = (4096, 1000),
         apply_user_transform: bool = True,
         apply_assistant_transform: bool = False,
-    ) -> Sequence[ChatMessage]:
+    ) -> tuple[ChatMessage, ...]:
         """
         Reactively read chat messages
 
@@ -283,18 +327,17 @@ class Chat(Generic[T]):
 
         messages = self._get_trimmed_messages(token_limits=token_limits)
 
-        res: Sequence[ChatMessage] = []
+        res: list[ChatMessage] = []
         for m in messages:
             msg = ChatMessage(content=m["content"], role=m["role"])
-            if "original_content" in m:
-                original = (apply_user_transform and m["role"] == "user") or (
-                    apply_assistant_transform and m["role"] == "assistant"
-                )
-                if original:
-                    msg["content"] = m["original_content"]
+            original = (apply_user_transform and m["role"] == "user") or (
+                apply_assistant_transform and m["role"] == "assistant"
+            )
+            if original:
+                msg["content"] = m["original_content"] or m["content"]
             res.append(msg)
 
-        return res
+        return tuple(res)
 
     async def append_message(self, message: Any) -> None:
         """
@@ -314,14 +357,16 @@ class Chat(Generic[T]):
         """
         await self._append_message(message)
 
-    async def _append_message(self, message: Any, *, chunk: bool = False) -> None:
+    async def _append_message(
+        self, message: Any, *, chunk: ChunkOption = False
+    ) -> None:
         if chunk:
             msg = normalize_message_chunk(message)
-            await self._store_message_chunk(msg)
         else:
             msg = normalize_message(message)
-            await self._store_message(msg)
 
+        msg = await self._transform_message(msg)
+        msg = self._store_message(msg, chunk=chunk)
         await self._send_append_message(msg, chunk=chunk)
 
     async def append_message_stream(self, message: Iterable[Any] | AsyncIterable[Any]):
@@ -344,6 +389,7 @@ class Chat(Generic[T]):
 
         message = _utils.wrap_async_iterable(message)
 
+        # TODO: why does the combination of extended_task+NotifyException+error in normalizer not lead to an error?
         @reactive.extended_task
         async def _do_stream():
             await self._append_message_stream(message)
@@ -351,78 +397,127 @@ class Chat(Generic[T]):
         _do_stream()
 
     async def _append_message_stream(self, message: AsyncIterable[Any]):
-        # Start the message
-        start = assistant_message(content="")
-        start["chunk_type"] = "message_start"
-        await self._append_message(start, chunk=True)
+        empty = ChatMessage(content="", role="assistant")
+        await self._append_message(empty, chunk="start")
 
         try:
             async for msg in message:
                 msg = normalize_message_chunk(msg)
                 await self._append_message(msg, chunk=True)
         finally:
-            end = assistant_message(content="")
-            end["chunk_type"] = "message_end"
-            await self._append_message(end, chunk=True)
+            await self._append_message(empty, chunk="end")
 
     # Send a message to the UI
-    async def _send_append_message(self, message: FullMessage, chunk: bool = False):
-        # print(message)
+    async def _send_append_message(
+        self,
+        message: StoredMessage,
+        chunk: ChunkOption = False,
+    ):
+        if message["role"] == "system":
+            # System messages are not displayed in the chat
+            return
 
         if chunk:
             msg_type = "shiny-chat-append-message-chunk"
         else:
             msg_type = "shiny-chat-append-message"
 
-        await self._send_custom_message(msg_type, message)
+        msg = ClientMessage(
+            content=message["content"],
+            role=message["role"],
+            content_type=message.get("content_type", "markdown"),
+            chunk_type=message.get("chunk_type", None),
+        )
+
+        # print(msg)
+
+        await self._send_custom_message(msg_type, msg)
         # TODO: Joe said it's a good idea to yield here, but I'm not sure why?
         # await asyncio.sleep(0)
 
-    # Store a message in the chat state
-    async def _store_message(self, message: FullMessage):
-        # First, apply transformers if relevant (& remember the original content)
+    async def _transform_message(self, message: ChatMessage) -> TransformedMessage:
+
+        res: TransformedMessage = {
+            **message,
+            "original_content": None,
+            "content_type": "markdown",
+        }
+
         original_content = message["content"]
+        content = original_content
+
         if message["role"] == "user":
-            content = await self.transform_user_input(original_content)
-            message = {"content": content, "role": "user"}
-            if original_content != content:
-                message["original_content"] = original_content  # type: ignore
+            content = await self._transform_user(original_content)
+            # User transform can return a message object, which might change the role
+            if isinstance(content, dict) and "role" in content and "content" in content:
+                res["role"] = content["role"]
+                content = content["content"]
 
-        if message["role"] == "assistant":
-            content = await self.transform_assistant_response(original_content)
-            message = {"content": content, "role": "assistant"}
-            if original_content != content:
-                message["original_content"] = content  # type: ignore
+        elif message["role"] == "assistant":
+            content = await self._transform_assistant(original_content)
             if isinstance(content, HTML):
-                message["content_type"] = "html"  # type: ignore
+                res["content_type"] = "html"
 
-        # Next, calculate the token count
+        if original_content != content:
+            res["original_content"] = content
+
+        res["content"] = content
+
+        return res
+
+    # Just before storing, handle chunk msg type and calculate tokens
+    def _store_message(
+        self,
+        message: TransformedMessage,
+        chunk: ChunkOption = False,
+    ) -> StoredMessage:
+
+        msg: StoredMessage = {
+            **message,
+            "token_count": None,
+            "chunk_type": None,
+        }
+
+        if chunk:
+            self._final_message += message["content"]
+            if isinstance(chunk, str):
+                msg["chunk_type"] = (
+                    "message_start" if chunk == "start" else "message_end"
+                )
+            # Don't count tokens or invalidate until the end of the chunk
+            if chunk == "end":
+                msg["content"] = self._final_message
+                self._final_message = ""
+            else:
+                return msg
+
         if self._tokenizer is not None:
             encoded = self._tokenizer.encode(message["content"])
             if isinstance(encoded, TokenizersEncoding):
                 token_count = len(encoded.ids)
             else:
                 token_count = len(encoded)
-            message["token_count"] = token_count  # type: ignore
+            msg["token_count"] = token_count
 
-        # Get the (current and new) messages
         with reactive.isolate():
-            messages = tuple(self._messages()) + (message,)
+            messages = self._messages() + (msg,)
 
         self._messages.set(messages)
+
+        return msg
 
     def _get_trimmed_messages(
         self,
         *,
         token_limits: tuple[int, int] | None = (4096, 1000),
-    ) -> Sequence[FullMessage]:
+    ) -> tuple[StoredMessage, ...]:
         messages = self._messages()
 
         if token_limits is None:
             return messages
 
         # Can't trim if we don't have token counts
-        token_counts = [m.get("token_count", None) for m in messages]
+        token_counts = [m["token_count"] for m in messages]
         if None in token_counts:
             return messages
 
@@ -431,7 +526,7 @@ class Chat(Generic[T]):
         # Take the newest messages up to the token limit
         limit, reserve = token_limits
         max_tokens = limit - reserve
-        messages2: list[FullMessage] = []
+        messages2: list[StoredMessage] = []
         for i, m in enumerate(reversed(messages)):
             if sum(token_counts[-i - 1 :]) > max_tokens:
                 break
@@ -440,15 +535,6 @@ class Chat(Generic[T]):
         messages2.reverse()
 
         return tuple(messages2)
-
-    # For chunk messages, accumulate the chunks until we have a signal that the message
-    # has ended
-    async def _store_message_chunk(self, msg: AssistantMessage):
-        self._final_message += msg["content"]
-        if "chunk_type" in msg and msg["chunk_type"] == "message_end":
-            final = assistant_message(content=self._final_message)
-            await self._store_message(final)
-            self._final_message = ""
 
     def get_user_input(self) -> str:
         """
@@ -489,48 +575,6 @@ class Chat(Generic[T]):
             )
         )
 
-    async def transform_user_input(self, input: str) -> str:
-        """
-        Transform user input before storing it in the chat state.
-
-        A function to transform user input before storing it in the chat `.messages()`
-        history. This is useful for implementing RAG workflows, like taking a URL and
-        scraping it for text before sending it to the model.
-
-        Parameters
-        ----------
-        input
-            The user input message.
-
-        Returns
-        -------
-        The transformed user input message.
-        """
-        return input
-
-    async def transform_assistant_response(self, response: str) -> str | HTML:
-        """
-        Transform assistant responses before they are displayed in the chat.
-
-        A function to transform role="assistant" messages for display purposes. If the
-        function returns a string, it will be interpreted and parsed as a markdown
-        string on the client (and the resulting HTML is then sanitized). If the function
-        returns HTML, it will be displayed as-is. Note that, for
-        `.append_message_stream()`, the transformer will be applied to each message in
-        the stream, so it should be performant. By default, assistant responses are
-        interpreted as markdown on the client.
-
-        Parameters
-        ----------
-        response
-            The assistant response message.
-
-        Returns
-        -------
-        The transformed assistant response message.
-        """
-        return response
-
     async def clear_messages(self):
         """
         Clear all chat messages.
@@ -548,7 +592,7 @@ class Chat(Generic[T]):
     async def _remove_loading_message(self):
         await self._send_custom_message("shiny-chat-remove-loading-message", None)
 
-    async def _send_custom_message(self, handler: str, obj: FullMessage | None):
+    async def _send_custom_message(self, handler: str, obj: ClientMessage | None):
         await self._session.send_custom_message(
             "shinyChatMessage",
             {
@@ -622,3 +666,11 @@ def _express_is_active() -> bool:
         return True
     except RuntimeError:
         return False
+
+
+def as_transformed_message(message: ChatMessage) -> TransformedMessage:
+    return TransformedMessage(
+        **message,
+        original_content=None,
+        content_type="markdown",
+    )
