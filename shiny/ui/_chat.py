@@ -98,20 +98,21 @@ class Chat(Generic[T]):
         transform_assistant_response: (
             TransformAssistantResponse | TransformAssistantResponseAsync
         ) = lambda x: x,
+        # TODO: can we default to actual unless in production?
+        on_error: Literal["sanitize", "actual", "unhandled"] = "sanitize",
         tokenizer: TokenEncoding | MISSING_TYPE | None = MISSING,
         session: Optional[Session] = None,
     ):
 
         self.id = id
         self.user_input_id = f"{id}_user_input"
-
+        self._transform_user = _utils.wrap_async(transform_user_input)
+        self._transform_assistant = _utils.wrap_async(transform_assistant_response)
         if isinstance(tokenizer, MISSING_TYPE):
             self._tokenizer = get_default_tokenizer()
         else:
             self._tokenizer = tokenizer
-
-        self._transform_user = _utils.wrap_async(transform_user_input)
-        self._transform_assistant = _utils.wrap_async(transform_assistant_response)
+        self.on_error = on_error
         self._session = require_active_session(session)
 
         # Chunked messages get accumulated (using this property) before changing state
@@ -269,15 +270,10 @@ class Chat(Generic[T]):
                     from .. import req
 
                     req(False)
-                if on_error == "unhandled":
+                try:
                     await afunc()
-                else:
-                    try:
-                        await afunc()
-                    except Exception as e:
-                        await self._remove_loading_message()
-                        sanitize = on_error == "sanitize"
-                        raise NotifyException(str(e), sanitize=sanitize)
+                except Exception as e:
+                    await self._raise_exception(e)
 
             self._effects.append(handle_user_input)
 
@@ -287,6 +283,17 @@ class Chat(Generic[T]):
             return create_effect
         else:
             return create_effect(fn)
+
+    async def _raise_exception(
+        self,
+        e: BaseException,
+    ) -> None:
+        if self.on_error == "unhandled":
+            raise e
+        else:
+            await self._remove_loading_message()
+            sanitize = self.on_error == "sanitize"
+            raise NotifyException(str(e), sanitize=sanitize)
 
     def get_messages(
         self,
@@ -389,12 +396,28 @@ class Chat(Generic[T]):
 
         message = _utils.wrap_async_iterable(message)
 
-        # TODO: why does the combination of extended_task+NotifyException+error in normalizer not lead to an error?
+        # Run the stream in the background to get non-blocking behavior
         @reactive.extended_task
-        async def _do_stream():
+        async def _stream_task():
             await self._append_message_stream(message)
 
-        _do_stream()
+        _stream_task()
+
+        # Since the task runs in the background (outside/beyond the current context,
+        # if any), we need to manually raise any exceptions that occur
+        try:
+            ctx = reactive.get_current_context()
+        except Exception:
+            return
+
+        @reactive.effect
+        async def _handle_error():
+            e = _stream_task.error()
+            if e:
+                await self._raise_exception(e)
+
+        ctx.on_invalidate(_handle_error.destroy)
+        self._effects.append(_handle_error)
 
     async def _append_message_stream(self, message: AsyncIterable[Any]):
         empty = ChatMessage(content="", role="assistant")
@@ -414,7 +437,7 @@ class Chat(Generic[T]):
         chunk: ChunkOption = False,
     ):
         if message["role"] == "system":
-            # System messages are not displayed in the chat
+            # System messages are not displayed in the UI
             return
 
         if chunk:

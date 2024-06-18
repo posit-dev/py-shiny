@@ -114,7 +114,6 @@ class OpenAINormalizer(StringNormalizer):
 
     def normalize_chunk(self, chunk: Any) -> ChatMessage:
         x = cast("ChatCompletionChunk", chunk)
-        # "1" + 1
         return super().normalize_chunk(x.choices[0].delta.content)
 
     def can_normalize(self, message: Any) -> bool:
