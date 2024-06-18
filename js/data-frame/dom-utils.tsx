@@ -2,7 +2,7 @@
 // scroll container
 export function findFirstItemInView(
   scrollContainer: HTMLElement,
-  items: NodeList,
+  items: NodeList | ChildNode[] | Element[] | HTMLElement[],
   extraPadding?: {
     top?: number;
     right?: number;

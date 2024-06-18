@@ -24,6 +24,11 @@ shiny-data-frame {
   --shiny-datagrid-grid-body-hover-bgcolor: var(--shiny-datagrid-grid-header-bgcolor);
   --shiny-datagrid-grid-body-selected-bgcolor: #b4d5fe;
   --shiny-datagrid-grid-body-selected-color: var(--bs-dark);
+  --shiny-datagrid-grid-header-selected-bgcolor: color-mix(
+    in srgb,
+    var(--shiny-datagrid-grid-header-bgcolor) 30%,
+    var(--shiny-datagrid-grid-body-selected-bgcolor)
+  );
 
   // 2024-03-01: Greg: Do not use warning or info bs colors! Their contrast on white is not enough
   // Saved cells
@@ -185,6 +190,13 @@ shiny-data-frame .shiny-data-grid.shiny-data-grid-grid {
 
       > td {
         padding: var(--shiny-datagrid-padding);
+      }
+
+      &:not([aria-selected="true"]) > td.row-number {
+        background-color: var(--shiny-datagrid-grid-header-bgcolor);
+      }
+      &[aria-selected="true"] > td.row-number {
+        background-color: var(--shiny-datagrid-grid-header-selected-bgcolor);
       }
     }
   }

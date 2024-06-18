@@ -1,11 +1,7 @@
 import { ResponseValue, makeRequestPromise } from "./request";
 
 import { CellStateEnum } from "./cell";
-import {
-  CellEdit,
-  SetCellEditMapAtLoc,
-  makeCellEditMapKey,
-} from "./cell-edit-map";
+import { SetCellEditMapAtLoc } from "./cell-edit-map";
 import type { PatchInfo } from "./types";
 
 export type CellPatch = {

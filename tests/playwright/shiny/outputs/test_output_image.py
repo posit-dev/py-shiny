@@ -14,7 +14,7 @@ def test_output_image_kitchen(page: Page, app: ShinyAppProc) -> None:
 
     img = OutputImage(page, "image")
 
-    img.expect_inline(inline=False)
+    img.expect_inline(False)
 
     img.expect_img_src(re.compile(r"data:image/png;base64"))
     img.expect_img_height(None)

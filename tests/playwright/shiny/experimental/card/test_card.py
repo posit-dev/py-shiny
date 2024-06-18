@@ -20,8 +20,8 @@ def test_card(page: Page, local_app: ShinyAppProc) -> None:
             "\nThis is still the body.\n",
         ]
     )
-    card.expect_full_screen_open(False)
+    card.expect_full_screen(False)
     card.open_full_screen()
-    card.expect_full_screen_open(True)
+    card.expect_full_screen(True)
     card.close_full_screen()
-    card.expect_full_screen_open(False)
+    card.expect_full_screen(False)
