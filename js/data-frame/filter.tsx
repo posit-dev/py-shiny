@@ -2,20 +2,12 @@ import {
   ColumnFiltersState,
   FiltersOptions,
   Header,
-  TableOptions,
   getFacetedMinMaxValues,
   getFacetedRowModel,
   getFacetedUniqueValues,
   getFilteredRowModel,
 } from "@tanstack/react-table";
-import React, {
-  FC,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import React, { FC, useState } from "react";
 import { FilterNumeric } from "./filter-numeric";
 
 type FilterValueString = string;

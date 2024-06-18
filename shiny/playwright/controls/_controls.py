@@ -5711,8 +5711,12 @@ class OutputDataFrame(_UiWithContainer):
         )
         self.loc_head = self.loc.locator("> table > thead")
         self.loc_body = self.loc.locator("> table > tbody")
-        self.loc_column_filter = self.loc_head.locator("> tr.filters > th")
-        self.loc_column_label = self.loc_head.locator("> tr > th:not(.filters th)")
+        self.loc_column_filter = self.loc_head.locator(
+            "> tr.filters > th:not(.table-corner)"
+        )
+        self.loc_column_label = self.loc_head.locator(
+            "> tr:not(.filters) > th:not(.table-corner)"
+        )
 
     def cell_locator(self, row: int, col: int) -> Locator:
         """
@@ -5725,9 +5729,22 @@ class OutputDataFrame(_UiWithContainer):
         col
             The column number of the cell.
         """
-        return self.loc_body.locator(f"> tr[data-index='{row}']").locator(
-            # nth-child starts from index = 1
-            f"> td:nth-child({col + 1}),  > th:nth-child({col + 1})"
+
+        return (
+            # Find the direct row
+            self.loc_body.locator(f"> tr[data-index='{row}']")
+            # Find all direct td's and th's (these are independent sets)
+            .locator("> td, > th")
+            # Remove all results that contain the `row-number` class
+            .locator(
+                # self
+                "xpath=.",
+                has=self.page.locator(
+                    "xpath=self::*[not(contains(@class, 'row-number'))]"
+                ),
+            )
+            # Return the first result
+            .nth(col)
         )
 
     def expect_n_row(self, value: int, *, timeout: Timeout = None):
@@ -6024,7 +6041,7 @@ class OutputDataFrame(_UiWithContainer):
         cell = self.cell_locator(row=row, col=col)
 
         self._cell_scroll_if_needed(row=row, col=col, timeout=timeout)
-        cell.click(timeout=timeout)
+        cell.dblclick(timeout=timeout)
         cell.locator("> textarea").fill(text)
 
     # TODO-karan-test: Rename to `set_sort?`

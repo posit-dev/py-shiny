@@ -424,14 +424,4 @@ def as_selection_modes(
 
     selection_mode_set = cast(Set[SelectionMode], set(selection_mode_val))
 
-    # TODO-barret-render.data_frame; Fix user cell edit/select interaction model to make this work!
-    # Disable selection_mode if `editable=True``
-    if editable and not selection_mode_set.issubset(none_set):
-        warnings.warn(
-            '`editable` can not currently be `True` while `selection_mode` != `"none"`. '
-            'Setting `selection_mode=("none",)`',
-            stacklevel=3,
-        )
-        return SelectionModes(selection_mode_set={"none"})
-
     return SelectionModes(selection_mode_set=selection_mode_set)
