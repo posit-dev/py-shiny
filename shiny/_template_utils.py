@@ -322,3 +322,22 @@ def copy_template_files(
         (app_dir / "app-core.py").rename(app_dir / "app.py")
 
     return app_dir
+
+
+def add_test_file(app_dir: Path):
+    test_file = app_dir / "test_app.py"
+    test_file.write_text(
+"""
+from shiny.playwright.controls import <import_required_control>
+from shiny.run import ShinyAppProc
+from playwright.sync_api import Page
+from shiny.pytest import create_app_fixture
+
+app = create_app_fixture(f"{app_dir}/app.py")
+
+
+def test_app(page: Page, app: ShinyAppProc):
+    page.goto(app.url)
+    # Add tests code here
+"""
+    )

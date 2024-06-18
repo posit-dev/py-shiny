@@ -504,6 +504,32 @@ package_template_choices = {
 
 
 @main.command(
+    help="""Add a test file for a specified app.
+
+Add an empty test file for a specified app. You will be prompted with
+a destination folder. If you don't provide a destination folder, it will be added in the current working
+directory based on the app name.
+
+After creating the shiny app file, you can use `pytest` to run the tests:
+
+        pytest APPDIR/test_APPNAME.py
+"""
+)
+@click.option(
+    "--app",
+    "-a",
+    type=str,
+    help="Please provide the path to the app for which you want to create a test file.",
+)
+def add_tests(
+    app_dir: Path,
+) -> None:
+    from ._template_utils import add_test_file
+
+    add_test_file(app_dir)
+
+
+@main.command(
     help="""Create a Shiny application from a template.
 
 Create an app based on a template. You will be prompted with
