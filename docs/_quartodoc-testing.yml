@@ -5,162 +5,98 @@ quartodoc:
   package: shiny
   rewrite_all_pages: false
   sidebar: api/testing/_sidebar.yml
-  dynamic: true
+  dynamic: false
   renderer:
     style: _renderer.py
     show_signature_annotations: false
   sections:
-    - title: Testing
-      desc: "Testing Methods to make it easier to run and test user's Shiny apps."
+    # - title: Testing
+    #   desc: "Testing Methods to make it easier to run and test user's Shiny apps."
+    #   contents:
+    #     - kind: page
+    #       path: PlaywrightControls
+    #       flatten: true
+    #       summary:
+    #         name: "Playwright Controls"
+    #         desc: "Methods for interacting with Shiny app controls."
+    - title: UI Layouts
+      desc: Methods for interacting with Shiny app multiple UI component controls.
       contents:
-        - kind: page
-          path: PlaywrightControls
-          flatten: true
-          summary:
-            name: "Playwright Controls"
-            desc: "Methods for interacting with Shiny app controls."
-        - title: UI Layouts
-          desc: Methods for interacting with Shiny app multiple UI component controls.
-          contents:
-            - name: playwright.controls.Accordion
-              dynamic: false
-            - name: playwright.controls.AccordionPanel
-              dynamic: false
-            - name: playwright.controls.Card
-              dynamic: false
-            - name: playwright.controls.Popover
-              dynamic: false
-            - name: playwright.controls.Sidebar
-              dynamic: false
-            - name: playwright.controls.Tooltip
-              dynamic: false
-        - title: UI Inputs
-          desc: Methods for interacting with Shiny app input value controls.
-          contents:
-            - name: playwright.controls.InputActionLink
-              dynamic: false
-            - name: playwright.controls.InputCheckbox
-              dynamic: false
-            - name: playwright.controls.InputCheckboxGroup
-              dynamic: false
-            - name: playwright.controls.InputDarkMode
-              dynamic: false
-            - name: playwright.controls.InputDate
-              dynamic: false
-            - name: playwright.controls.InputDateRange
-              dynamic: false
-            - name: playwright.controls.InputFile
-              dynamic: false
-            - name: playwright.controls.InputNumeric
-              dynamic: false
-            - name: playwright.controls.InputPassword
-              dynamic: false
-            - name: playwright.controls.InputRadioButtons
-              dynamic: false
-            - name: playwright.controls.InputSelect
-              dynamic: false
-            - name: playwright.controls.InputSelectize
-              dynamic: false
-            - name: playwright.controls.InputSlider
-              dynamic: false
-            - name: playwright.controls.InputSliderRange
-              dynamic: false
-            - name: playwright.controls.InputSwitch
-              dynamic: false
-            - name: playwright.controls.InputTaskButton
-              dynamic: false
-            - name: playwright.controls.InputText
-              dynamic: false
-            - name: playwright.controls.InputTextArea
-        - title: Value boxes
-          desc: Methods for interacting with Shiny app valuebox controls.
-          contents:
-            - name: playwright.controls.ValueBox
-              dynamic: false
-        - title: Navigation (tab) panels
-          desc: Methods for interacting with Shiny app UI content controls.
-          contents:
-            - name: playwright.controls.NavItem
-              dynamic: false
-            - name: playwright.controls.NavsetBar
-              dynamic: false
-            - name: playwright.controls.NavsetCardPill
-              dynamic: false
-            - name: playwright.controls.NavsetCardTab
-              dynamic: false
-            - name: playwright.controls.NavsetCardUnderline
-              dynamic: false
-            - name: playwright.controls.NavsetHidden
-              dynamic: false
-            - name: playwright.controls.NavsetPill
-              dynamic: false
-            - name: playwright.controls.NavsetPillList
-              dynamic: false
-            - name: playwright.controls.NavsetTab
-              dynamic: false
-            - name: playwright.controls.NavsetUnderline
-              dynamic: false
-        - title: Upload and download
-          desc: Create UI for uploading and downloading files.
-          contents:
-            - name: playwright.controls.DownloadButton
-              dynamic: false
-            - name: playwright.controls.DownloadLink
-              dynamic: false
-        - title: Rendering outputs
-          desc: Render output in a variety of ways.
-          contents:
-            - name: playwright.controls.OutputCode
-              dynamic: false
-            - name: playwright.controls.OutputDataFrame
-              dynamic: false
-            - name: playwright.controls.OutputImage
-              dynamic: false
-            - name: playwright.controls.OutputPlot
-              dynamic: false
-            - name: playwright.controls.OutputTable
-              dynamic: false
-            - name: playwright.controls.OutputText
-              dynamic: false
-            - name: playwright.controls.OutputTextVerbatim
-              dynamic: false
-            - name: playwright.controls.OutputUi
-        - kind: page
-          path: PlaywrightExpect
-          flatten: true
-          summary:
-            name: "Playwright Expect"
-            desc: "Methods for testing the state of a locator within a Shiny app."
-          contents:
-            - name: playwright.expect.expect_to_change
-              dynamic: false
-            - name: playwright.expect.expect_attribute_to_have_value
-              dynamic: false
-            - name: playwright.expect.expect_to_have_class
-              dynamic: false
-            - name: playwright.expect.expect_not_to_have_class
-              dynamic: false
-            - name: playwright.expect.expect_to_have_style
-              dynamic: false
-        - kind: page
-          path: Pytest
-          flatten: true
-          summary:
-            name: "Pytest"
-            desc: "Fixtures used for testing Shiny apps with Pytest."
-          contents:
-            - name: pytest.create_app_fixture
-              dynamic: false
-            - name: pytest.ScopeName
-              dynamic: false
-        - kind: page
-          path: Run
-          flatten: true
-          summary:
-            name: "Run"
-            desc: "Methods for starting a local Shiny app in the background"
-          contents:
-            - name: run.run_shiny_app
-              dynamic: false
-            - name: run.ShinyAppProc
-              dynamic: false
+        - playwright.controls.Accordion
+        - playwright.controls.AccordionPanel
+        - playwright.controls.Card
+        - playwright.controls.Popover
+        - playwright.controls.Sidebar
+        - playwright.controls.Tooltip
+    - title: UI Inputs
+      desc: Methods for interacting with Shiny app input value controls.
+      contents:
+        - playwright.controls.InputActionLink
+        - playwright.controls.InputCheckbox
+        - playwright.controls.InputCheckboxGroup
+        - playwright.controls.InputDarkMode
+        - playwright.controls.InputDate
+        - playwright.controls.InputDateRange
+        - playwright.controls.InputFile
+        - playwright.controls.InputNumeric
+        - playwright.controls.InputPassword
+        - playwright.controls.InputRadioButtons
+        - playwright.controls.InputSelect
+        - playwright.controls.InputSelectize
+        - playwright.controls.InputSlider
+        - playwright.controls.InputSliderRange
+        - playwright.controls.InputSwitch
+        - playwright.controls.InputTaskButton
+        - playwright.controls.InputText
+        - playwright.controls.InputTextArea
+    - title: Value boxes
+      desc: Methods for interacting with Shiny app valuebox controls.
+      contents:
+        - playwright.controls.ValueBox
+    - title: Navigation (tab) panels
+      desc: Methods for interacting with Shiny app UI content controls.
+      contents:
+        - playwright.controls.NavItem
+        - playwright.controls.NavsetBar
+        - playwright.controls.NavsetCardPill
+        - playwright.controls.NavsetCardTab
+        - playwright.controls.NavsetCardUnderline
+        - playwright.controls.NavsetHidden
+        - playwright.controls.NavsetPill
+        - playwright.controls.NavsetPillList
+        - playwright.controls.NavsetTab
+        - playwright.controls.NavsetUnderline
+    - title: Upload and download
+      desc: Methods for interacting with Shiny app uploading and downloading controls.
+      contents:
+        - playwright.controls.DownloadButton
+        - playwright.controls.DownloadLink
+    - title: Rendering outputs
+      desc: Render output in a variety of ways.
+      contents:
+        - playwright.controls.OutputCode
+        - playwright.controls.OutputDataFrame
+        - playwright.controls.OutputImage
+        - playwright.controls.OutputPlot
+        - playwright.controls.OutputTable
+        - playwright.controls.OutputText
+        - playwright.controls.OutputTextVerbatim
+        - playwright.controls.OutputUi
+    - title: "Playwright Expect"
+      desc: "Methods for testing the state of a locator within a Shiny app."
+      contents:
+        - playwright.expect.expect_to_change
+        - playwright.expect.expect_attribute_to_have_value
+        - playwright.expect.expect_to_have_class
+        - playwright.expect.expect_not_to_have_class
+        - playwright.expect.expect_to_have_style
+    - title: "Pytest"
+      desc: "Fixtures used for testing Shiny apps with Pytest."
+      contents:
+        - pytest.create_app_fixture
+        - pytest.ScopeName
+    - title: "Run"
+      desc: "Methods for starting a local Shiny app in the background"
+      contents:
+        - run.run_shiny_app
+        - run.ShinyAppProc

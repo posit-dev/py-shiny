@@ -521,6 +521,7 @@ After creating the shiny app file, you can use `pytest` to run the tests:
     type=str,
     help="Please provide the path to the app for which you want to create a test file.",
 )
+# Param for app.py, param for test_name
 def add_tests(
     app_dir: Path,
 ) -> None:
