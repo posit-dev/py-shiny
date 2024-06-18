@@ -76,6 +76,15 @@ class Chat(Generic[T]):
         returns HTML, it will be displayed as-is. Note that, for `.append_message_stream()`,
         the transformer will be applied to each message in the stream, so it should be
         performant. By default, assistant responses are interpreted as markdown on the client.
+    on_error
+        How to handle errors that occur in response to user input. For options 1-3, the
+        error message is displayed to the user and the app continues to run. For option
+        4, the error message is not displayed, and the app stops:
+            - "auto": Sanitize the error message if the app is set to sanitize errors,
+                otherwise display the actual error message.
+            - "sanitize": Sanitize the error message before displaying it to the user.
+            - "actual": Display the actual error message to the user.
+            - "unhandled": Do not display any error message to the user.
     tokenizer
         The tokenizer to use for calculating token counts, which is required to impose
         `token_limits` in `.get_messages()`. By default, a pre-trained tokenizer is
@@ -98,8 +107,7 @@ class Chat(Generic[T]):
         transform_assistant_response: (
             TransformAssistantResponse | TransformAssistantResponseAsync
         ) = lambda x: x,
-        # TODO: can we default to actual unless in production?
-        on_error: Literal["sanitize", "actual", "unhandled"] = "sanitize",
+        on_error: Literal["auto", "sanitize", "actual", "unhandled"] = "auto",
         tokenizer: TokenEncoding | MISSING_TYPE | None = MISSING,
         session: Optional[Session] = None,
     ):
@@ -112,8 +120,16 @@ class Chat(Generic[T]):
             self._tokenizer = get_default_tokenizer()
         else:
             self._tokenizer = tokenizer
-        self.on_error = on_error
         self._session = require_active_session(session)
+
+        # Default to sanitizing until we know the app isn't sanitizing errors
+        if on_error == "auto":
+            on_error = "sanitize"
+            app = self._session.app
+            if app is not None and not app.sanitize_errors:  # type: ignore
+                on_error = "actual"
+
+        self.on_error = on_error
 
         # Chunked messages get accumulated (using this property) before changing state
         self._final_message = ""
@@ -209,10 +225,7 @@ class Chat(Generic[T]):
 
     @overload
     def on_user_submit(
-        self,
-        fn: SubmitFunction | SubmitFunctionAsync,
-        *,
-        on_error: Literal["sanitize", "actual", "unhandled"] = "sanitize",
+        self, fn: SubmitFunction | SubmitFunctionAsync
     ) -> reactive.Effect_: ...
 
     @overload
@@ -221,10 +234,7 @@ class Chat(Generic[T]):
     ) -> Callable[[SubmitFunction | SubmitFunctionAsync], reactive.Effect_]: ...
 
     def on_user_submit(
-        self,
-        fn: SubmitFunction | SubmitFunctionAsync | None = None,
-        *,
-        on_error: Literal["sanitize", "actual", "unhandled"] = "sanitize",
+        self, fn: SubmitFunction | SubmitFunctionAsync | None = None
     ) -> (
         reactive.Effect_
         | Callable[[SubmitFunction | SubmitFunctionAsync], reactive.Effect_]
@@ -245,13 +255,6 @@ class Chat(Generic[T]):
         ----------
         fn
             A function to invoke when user input is submitted.
-        on_error
-            How to handle errors that occur in response to user input. For options
-            1 and 2, the error message is displayed to the user and the app continues
-            to run. For option 3, the error message is not displayed, and the app stops:
-            - "sanitize": Sanitize the error message before displaying it to the user.
-            - "actual": Display the actual error message to the user.
-            - "unhandled": Do not display any error message to the user.
 
         Note
         ----
