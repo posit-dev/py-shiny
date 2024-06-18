@@ -280,7 +280,9 @@ def check_if_missing_expected_example(el, converted):
         return
 
     def is_no_ex_decorator(x):
-        if x == "no_example()":
+        # With griffe<0.42.0, it kept parentheses on decorators, but as of 0.42.0, it
+        # removes them. At some point in the future we can just use the no-parens case.
+        if x == "no_example()" or x == "no_example":
             return True
 
         no_ex_decorators = [
