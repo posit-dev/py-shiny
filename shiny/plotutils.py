@@ -225,7 +225,7 @@ def near_points(
     # For no current coordinfo
     if coordinfo is None:
         if add_dist:
-            new_df["dist"] = np.NaN
+            new_df["dist"] = np.nan
 
         if all_rows:
             new_df["selected_"] = False
