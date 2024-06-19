@@ -3,15 +3,14 @@ from typing import (
     AsyncIterable,
     Awaitable,
     Callable,
-    Generic,
     Iterable,
     Literal,
     Optional,
     Sequence,
-    TypeVar,
     cast,
     overload,
 )
+from weakref import WeakValueDictionary
 
 from htmltools import HTML, Tag, TagAttrValue, css
 
@@ -32,8 +31,6 @@ __all__ = (
     "ChatMessage",
 )
 
-T = TypeVar("T")
-
 
 # TODO: UserInput might need to be a list of dicts if we want to support multiple
 # user input content types
@@ -47,7 +44,7 @@ SubmitFunctionAsync = Callable[[], Awaitable[None]]
 ChunkOption = Literal["start", "end"] | bool
 
 
-class Chat(Generic[T]):
+class Chat:
     """
     Create a chat component.
 
@@ -141,6 +138,7 @@ class Chat(Generic[T]):
         # Keep track of effects so we can destroy them when the chat is destroyed
         self._effects: list[reactive.Effect_] = []
 
+        # Initialize chat state and user input effect
         with session_context(self._session):
             # Initialize message state
             self._messages: reactive.Value[tuple[StoredMessage, ...]] = reactive.Value(
@@ -178,6 +176,13 @@ class Chat(Generic[T]):
                 self._suspend_input_handler = msg_post["role"] != "user"
 
             self._effects.append(_on_user_input)
+
+        # Prevent repeated calls to Chat() with the same id from accumulating effects
+        instance_id = self.id + "_session" + self._session.id
+        instance = CHAT_INSTANCES.pop(instance_id, None)
+        if instance is not None:
+            instance.destroy()
+        CHAT_INSTANCES[instance_id] = self
 
     def ui(
         self,
@@ -614,6 +619,7 @@ class Chat(Generic[T]):
         """
         for x in self._effects:
             x.destroy()
+        self._effects.clear()
 
     async def _remove_loading_message(self):
         await self._send_custom_message("shiny-chat-remove-loading-message", None)
@@ -700,3 +706,6 @@ def as_transformed_message(message: ChatMessage) -> TransformedMessage:
         original_content=None,
         content_type="markdown",
     )
+
+
+CHAT_INSTANCES: WeakValueDictionary[str, Chat] = WeakValueDictionary()
