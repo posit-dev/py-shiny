@@ -1,4 +1,3 @@
-import tiktoken
 from langchain_openai import ChatOpenAI
 
 from shiny.express import ui
@@ -9,14 +8,12 @@ ui.page_opts(
     fillable_mobile=True,
 )
 
-# Create the chat model
-llm = ChatOpenAI(model="gpt-3.5-turbo")
-
-
 # Create and display an empty chat UI
-chat = ui.Chat(id="chat", encoding=tiktoken.encoding_for_model("gpt-3.5-turbo"))
+chat = ui.Chat(id="chat")
 chat.ui()
 
+# Create the chat model
+llm = ChatOpenAI()
 
 # --------------------------------------------------------------------
 # To use a different model, replace the line above with any model that subclasses

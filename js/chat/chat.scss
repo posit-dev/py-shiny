@@ -1,6 +1,10 @@
 @use "highlight_styles" as highlight_styles;
 
 shiny-chat-container {
+  --shiny-chat-border: var(--bs-border-width, 1px) solid var(--bs-border-color, #e9ecef);
+  --shiny-chat-border-radius: 26px;
+  --shiny-chat-user-message-bg: RGBA(var(--bs-primary-rgb, 0, 123, 194), 0.06);
+
   display: flex;
   flex-direction: column;
   margin: 0 auto;
@@ -25,7 +29,7 @@ shiny-chat-container {
       }
       .message-icon {
         border-radius: 50%;
-        border: var(--bs-border-width, 1px) solid var(--bs-border-color, #e9ecef);
+        border: var(--shiny-chat-border);
         > * {
           margin: 0.5rem;
           height: 20px;
@@ -42,9 +46,9 @@ shiny-chat-container {
     shiny-user-message {
       align-self: flex-end;
       padding: 0.5rem 0.75rem;
-      border-radius: 26px;
-      background-color: RGBA(var(--bs-primary-rgb, 0, 123, 194), 0.06);
-      border: var(--bs-border-width, 1px) solid var(--bs-border-color, #e9ecef);
+      border-radius: var(--shiny-chat-border-radius);
+      background-color: var(--shiny-chat-user-message-bg);
+      border: var(--shiny-chat-border);
     }
   }
 
@@ -53,10 +57,9 @@ shiny-chat-container {
     position: sticky;
     bottom: 0;
     padding: 0.25rem;
-    background-color: var(--bs-body-bg, white);
     textarea {
+      --bs-border-radius: var(--shiny-chat-border-radius);
       resize: none;
-      border-radius: 26px !important;
       padding-right: 36px !important;
       max-height: 175px;
     }
@@ -73,7 +76,7 @@ shiny-chat-container {
       border-radius: 50%;
       &:disabled {
         cursor: not-allowed;
-        color: var(--bs-disabled-color, #6c757d);
+        color: var(--bs-gray-500, #8d959e);
       }
     }
   }
