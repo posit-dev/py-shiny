@@ -1,4 +1,4 @@
-from openai import AsyncOpenAI
+from langchain_openai import ChatOpenAI
 
 from shiny import App, ui
 
@@ -8,16 +8,14 @@ app_ui = ui.page_fillable(
 
 
 def server(input, output, session):
-    chat = ui.Chat("chat")
-    client = AsyncOpenAI()
+    chat = ui.Chat(id="chat")
+
+    # Create the LLM client (assumes OPENAI_API_KEY is set in the environment)
+    llm = ChatOpenAI()
 
     @chat.on_user_submit
     async def _():
-        response = await client.chat.completions.create(
-            model="gpt-4o",
-            messages=chat.get_messages(),
-            stream=True,
-        )
+        response = llm.astream(chat.get_messages())
         await chat.append_message_stream(response)
 
 

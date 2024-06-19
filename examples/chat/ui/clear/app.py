@@ -1,4 +1,4 @@
-from openai import OpenAI
+from langchain_openai import ChatOpenAI
 
 from shiny import reactive
 from shiny.express import input, ui
@@ -12,25 +12,20 @@ ui.page_opts(
 with ui.sidebar():
     ui.input_select("model", "Model", ["gpt-4o", "gpt-3.5-turbo"])
 
-# Create and display an empty chat
 chat = ui.Chat(id="chat")
 chat.ui()
 
 # Create the LLM client (assumes OPENAI_API_KEY is set in the environment)
-client = OpenAI()
+client = ChatOpenAI()
 
 
-# on user submit, generate and append a response
 @chat.on_user_submit
 async def _():
-    response = client.chat.completions.create(
-        model=input.model(),
-        messages=chat.get_messages(),
-        stream=True,
-    )
+    response = await client.astream(chat.get_messages())
     await chat.append_message_stream(response)
 
 
+# Clear the chat when the model changes
 @reactive.effect
 @reactive.event(input.model)
 async def _():

@@ -8,7 +8,6 @@ ui.page_opts(
     fillable_mobile=True,
 )
 
-# Create a chat instance, with an initial message
 chat = ui.Chat(
     id="chat",
     messages=[
@@ -25,7 +24,6 @@ with ui.sidebar(width=300, style="height:100%", position="right"):
 llm = ChatOpenAI()
 
 
-# on user submit, generate and append a response
 @chat.on_user_submit
 async def _():
     response = llm.astream(chat.get_messages())

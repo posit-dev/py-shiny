@@ -1,4 +1,4 @@
-from langchain_openai import OpenAI
+from langchain_openai import ChatOpenAI
 
 from shiny.express import input, render, ui
 
@@ -7,6 +7,7 @@ ui.input_select("model", "Model", choices=["gpt-4o", "gpt-3.5-turbo"])
 
 @render.express
 def chat_ui():
+
     chat = ui.Chat(
         id="chat",
         messages=[
@@ -16,9 +17,11 @@ def chat_ui():
             }
         ],
     )
+
     chat.ui()
 
-    llm = OpenAI(model=input.model())
+    # Create the LLM client (assumes OPENAI_API_KEY is set in the environment)
+    llm = ChatOpenAI(model=input.model())
 
     @chat.on_user_submit
     async def _():
