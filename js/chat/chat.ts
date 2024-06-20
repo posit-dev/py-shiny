@@ -36,6 +36,15 @@ declare global {
   }
 }
 
+interface EventHandlerMap {
+  "shiny-chat-input-sent": (event: CustomEvent<Message>) => void;
+  "shiny-chat-append-message": (event: CustomEvent<Message>) => void;
+  "shiny-chat-append-message-chunk": (event: CustomEvent<Message>) => void;
+  "shiny-chat-clear-messages": () => void;
+  "shiny-chat-set-user-input": (event: CustomEvent<string>) => void;
+  "shiny-chat-remove-loading-message": () => void;
+}
+
 const CHAT_MESSAGE_TAG = "shiny-chat-message";
 const CHAT_USER_MESSAGE_TAG = "shiny-user-message";
 const CHAT_MESSAGES_TAG = "shiny-chat-messages";
@@ -241,63 +250,39 @@ class ChatContainer extends LightElement {
     `;
   }
 
+  private eventHandlerMap: {
+    [K in keyof EventHandlerMap]: EventHandlerMap[K];
+  } = {
+    "shiny-chat-input-sent": this.#onInputSent.bind(this),
+    "shiny-chat-append-message": this.#onAppend.bind(this),
+    "shiny-chat-append-message-chunk": this.#onAppendChunk.bind(this),
+    "shiny-chat-clear-messages": this.#onClear.bind(this),
+    "shiny-chat-set-user-input": this.#onSetUserInput.bind(this),
+    "shiny-chat-remove-loading-message":
+      this.#onRemoveLoadingMessage.bind(this),
+  };
+
   firstUpdated(): void {
     // Don't attach event listeners until child elements are rendered
     if (!this.messages) return;
 
-    this.addEventListener(
-      "shiny-chat-input-sent",
-      this.#wrapEventHandler(this.#onInputSent)
-    );
-    this.addEventListener(
-      "shiny-chat-append-message",
-      this.#wrapEventHandler(this.#onAppend)
-    );
-    this.addEventListener(
-      "shiny-chat-append-message-chunk",
-      this.#wrapEventHandler(this.#onAppendChunk)
-    );
-    this.addEventListener(
-      "shiny-chat-clear-messages",
-      this.#wrapEventHandler(this.#onClear)
-    );
-    this.addEventListener(
-      "shiny-chat-set-user-input",
-      this.#wrapEventHandler(this.#onSetUserInput)
-    );
-    this.addEventListener(
-      "shiny-chat-remove-loading-message",
-      this.#wrapEventHandler(this.#onRemoveLoadingMessage)
-    );
+    for (const [type, handler] of Object.entries(this.eventHandlerMap)) {
+      this.addEventListener(
+        type as keyof EventHandlerMap,
+        this.#wrapEventHandler(handler)
+      );
+    }
   }
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
 
-    this.removeEventListener(
-      "shiny-chat-input-sent",
-      this.#wrapEventHandler(this.#onInputSent)
-    );
-    this.removeEventListener(
-      "shiny-chat-append-message",
-      this.#wrapEventHandler(this.#onAppend)
-    );
-    this.removeEventListener(
-      "shiny-chat-append-message-chunk",
-      this.#wrapEventHandler(this.#onAppendChunk)
-    );
-    this.removeEventListener(
-      "shiny-chat-clear-messages",
-      this.#wrapEventHandler(this.#onClear)
-    );
-    this.removeEventListener(
-      "shiny-chat-set-user-input",
-      this.#wrapEventHandler(this.#onSetUserInput)
-    );
-    this.removeEventListener(
-      "shiny-chat-remove-loading-message",
-      this.#wrapEventHandler(this.#onRemoveLoadingMessage)
-    );
+    for (const [type, handler] of Object.entries(this.eventHandlerMap)) {
+      this.removeEventListener(
+        type as keyof EventHandlerMap,
+        this.#wrapEventHandler(handler)
+      );
+    }
   }
 
   // Wrapper to enqueue events if we're in the middle of a message stream
@@ -407,7 +392,7 @@ class ChatContainer extends LightElement {
     this.input.setInputValue(event.detail);
   }
 
-  #onRemoveLoadingMessage(event: CustomEvent<Message>): void {
+  #onRemoveLoadingMessage(): void {
     this.#removeLoadingMessage();
     this.#finalizeMessage();
   }
@@ -418,38 +403,13 @@ class ChatContainer extends LightElement {
 
   #flushEventQueue(): void {
     const nextQueue: CustomEvent[] = [];
-
     for (const event of this.eventQueue) {
-      if (!this.#canHandleEvent(event)) {
+      if (this.#canHandleEvent(event)) {
+        this.eventHandlerMap[event.type as keyof EventHandlerMap](event);
+      } else {
         nextQueue.push(event);
-        continue;
-      }
-
-      // TODO: better way to look up event handlers based on event type
-      switch (event.type as keyof GlobalEventHandlersEventMap) {
-        case "shiny-chat-input-sent":
-          this.#onInputSent(event);
-          break;
-        case "shiny-chat-append-message":
-          this.#onAppend(event);
-          break;
-        case "shiny-chat-append-message-chunk":
-          this.#onAppendChunk(event);
-          break;
-        case "shiny-chat-clear-messages":
-          this.#onClear();
-          break;
-        case "shiny-chat-set-user-input":
-          this.#onSetUserInput(event);
-          break;
-        case "shiny-chat-remove-loading-message":
-          this.#onRemoveLoadingMessage(event);
-          break;
-        default:
-          throw new Error(`Unknown event type: ${event.type}`);
       }
     }
-
     this.eventQueue = nextQueue;
   }
 
