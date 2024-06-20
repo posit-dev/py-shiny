@@ -76,9 +76,12 @@ def _(col: PlSeries) -> _GridDType:
             type_ = "string"
     elif col.dtype.is_numeric():
         type_ = "numeric"
-    elif col.dtype.is_(pl.Categorical):
+
+    elif col.dtype.is_(pl.Categorical()):
         categories = col.cat.get_categories().to_list()
         return {"type": "categorical", "categories": categories}
+    else:
+        type_ = "unknown"
 
     return {"type": type_}
 
@@ -109,3 +112,14 @@ def _(data: PlDataFrame) -> dict[str, Any]:
     # write_json only does rows (as dictionaries; but we need lists)
     # serialize only does columns
     ...
+
+
+@singledispatch
+def subset_frame(data, rows=None, col=None): ...
+
+
+# pandas DataFrame methods called
+# iat
+# loc
+# copy
+# shape
