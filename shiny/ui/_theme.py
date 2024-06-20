@@ -159,7 +159,7 @@ class Theme:
 
         # If the theme has been customized and rendered once, we store the tempdir
         # so that we can re-use the already compiled CSS file.
-        self._css_temp_srcdir: Optional[str] = None
+        self._css_temp_srcdir: Optional[tempfile.TemporaryDirectory[str]] = None
 
     @staticmethod
     def available_presets() -> tuple[ShinyThemePreset, ...]:
@@ -180,6 +180,8 @@ class Theme:
 
     def _reset_css(self) -> None:
         self._css = ""
+        if self._css_temp_srcdir is not None:
+            self._css_temp_srcdir.cleanup()
         self._css_temp_srcdir = None
 
     def _has_customizations(self) -> bool:
@@ -442,14 +444,12 @@ class Theme:
             return HTMLDependency(
                 name=dep_name,
                 version=Version(self._version),
-                source={"subdir": self._css_temp_srcdir},
+                source={"subdir": self._css_temp_srcdir.name},
                 stylesheet={"href": css_name},
             )
 
-        tmpdir = tempfile.mkdtemp()
-        srcdir = os.path.join(tmpdir, dep_name)
-        os.mkdir(srcdir)
-        css_path = os.path.join(srcdir, css_name)
+        srcdir = tempfile.TemporaryDirectory()
+        css_path = os.path.join(srcdir.name, css_name)
 
         with open(css_path, "w") as css_file:
             css_file.write(self.to_css())
@@ -458,7 +458,7 @@ class Theme:
         return HTMLDependency(
             name=dep_name,
             version=Version(self._version),
-            source={"subdir": srcdir},
+            source={"subdir": srcdir.name},
             stylesheet={"href": css_name},
         )
 
