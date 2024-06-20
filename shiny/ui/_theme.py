@@ -366,6 +366,11 @@ class Theme:
         """
         Compile the theme to CSS and return the result as a string.
 
+        Parameters
+        ----------
+        compile_args
+            A dictionary of keyword arguments to pass to :func:`sass.compile`.
+
         Returns
         -------
         :
