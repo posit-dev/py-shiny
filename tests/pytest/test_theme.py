@@ -119,13 +119,16 @@ def test_theme_defaults_positional_or_keyword():
 
 def test_theme_keywords():
     theme = Theme("shiny")
-    theme.add_functions(my_function="function")
+    with pytest.raises(TypeError, match="my_function"):
+        # Named kwargs aren't allowed in `.add_functions()` (anti-pattern)
+        theme.add_functions(my_function="function")  # type: ignore
+
     theme.add_defaults(my_default1=True)
     theme.add_defaults(my_default2=False)
     theme.add_mixins(my_mixin=1)
     theme.add_rules(my_rule=3.141596, my_other_rule=None)
 
-    assert theme._functions == ["$my-function: function;"]
+    assert theme._functions == []
     assert theme._defaults == [
         "$my-default2: false !default;",
         "$my-default1: true !default;",
