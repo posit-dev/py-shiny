@@ -196,8 +196,8 @@ class Theme:
             and not self._has_customizations()
         )
 
+    @staticmethod
     def _combine_args_kwargs(
-        self,
         *args: str,
         allow_both: bool = True,
         kwargs: dict[str, str | float | int | bool | None],
