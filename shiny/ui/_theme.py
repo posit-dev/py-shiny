@@ -184,6 +184,11 @@ class Theme:
             self._css_temp_srcdir.cleanup()
         self._css_temp_srcdir = None
 
+    def __del__(self) -> None:
+        # Clean up the temporary directory if the theme object is garbage collected
+        if self._css_temp_srcdir is not None:
+            self._css_temp_srcdir.cleanup()
+
     def _has_customizations(self) -> bool:
         return (
             len(self._functions) > 0
