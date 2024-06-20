@@ -74,7 +74,7 @@ class Theme:
     default with Shiny. Use `pip install libsass` or `pip install shiny[theme]` to
     install it.
 
-    Customized themes rare compiled to CSS when the theme is used. The `Theme` class
+    Customized themes are compiled to CSS when the theme is used. The `Theme` class
     caches the compiled CSS so that it's only compiled for the first user to load your
     app, but you can speed up app loading (and avoid the runtime `libsass` dependency)
     by pre-compiling the theme CSS and saving it to a file. To do this, use the
@@ -162,8 +162,8 @@ class Theme:
         # so that we can re-use the already compiled CSS file.
         self._css_temp_srcdir: Optional[str] = None
 
-    @classmethod
-    def available_presets(cls) -> tuple[ShinyThemePreset, ...]:
+    @staticmethod
+    def available_presets() -> tuple[ShinyThemePreset, ...]:
         """
         Get a list of available theme presets.
         """
@@ -274,7 +274,7 @@ class Theme:
         )
 
         # Add args to the front of _defaults
-        self._defaults = dedent_array(defaults) + self._defaults
+        self._defaults[:0] = defaults
         self._reset_css()
 
         return self
