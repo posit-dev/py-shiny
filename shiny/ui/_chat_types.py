@@ -32,3 +32,4 @@ class ClientMessage(TypedDict):
     role: Role
     content_type: Literal["markdown", "html"]
     chunk_type: Literal["message_start", "message_end"] | None
+    msg_id: str | None

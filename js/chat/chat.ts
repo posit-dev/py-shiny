@@ -14,8 +14,9 @@ type ContentType = "markdown" | "html" | "text";
 type Message = {
   content: string;
   role: "user" | "assistant";
-  chunk_type?: "message_start" | "message_end";
-  content_type?: ContentType;
+  chunk_type: "message_start" | "message_end" | null;
+  content_type: ContentType;
+  msg_id: string | null;
 };
 type ShinyChatMessage = {
   id: string;
@@ -31,6 +32,7 @@ declare global {
     "shiny-chat-append-message-chunk": CustomEvent<Message>;
     "shiny-chat-clear-messages": CustomEvent;
     "shiny-chat-set-user-input": CustomEvent<string>;
+    "shiny-chat-remove-loading-message": CustomEvent;
   }
 }
 
@@ -216,6 +218,10 @@ class ChatInput extends LightElement {
 class ChatContainer extends LightElement {
   @property() placeholder = "Enter a message...";
 
+  // The msg_id of a message stream currently in progress
+  private messageStreamId: string | null = null;
+  private eventQueue: CustomEvent[] = [];
+
   private get input(): ChatInput {
     return this.querySelector(CHAT_INPUT_TAG) as ChatInput;
   }
@@ -239,33 +245,78 @@ class ChatContainer extends LightElement {
     // Don't attach event listeners until child elements are rendered
     if (!this.messages) return;
 
-    this.addEventListener("shiny-chat-input-sent", this.#onInputSent);
-    this.addEventListener("shiny-chat-append-message", this.#onAppend);
+    this.addEventListener(
+      "shiny-chat-input-sent",
+      this.#wrapEventHandler(this.#onInputSent)
+    );
+    this.addEventListener(
+      "shiny-chat-append-message",
+      this.#wrapEventHandler(this.#onAppend)
+    );
     this.addEventListener(
       "shiny-chat-append-message-chunk",
-      this.#onAppendChunk
+      this.#wrapEventHandler(this.#onAppendChunk)
     );
-    this.addEventListener("shiny-chat-clear-messages", this.#onClear);
-    this.addEventListener("shiny-chat-set-user-input", this.#onSetUserInput);
+    this.addEventListener(
+      "shiny-chat-clear-messages",
+      this.#wrapEventHandler(this.#onClear)
+    );
+    this.addEventListener(
+      "shiny-chat-set-user-input",
+      this.#wrapEventHandler(this.#onSetUserInput)
+    );
     this.addEventListener(
       "shiny-chat-remove-loading-message",
-      this.#onRemoveLoadingMessage
+      this.#wrapEventHandler(this.#onRemoveLoadingMessage)
     );
   }
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.removeEventListener("shiny-chat-input-sent", this.#onInputSent);
-    this.removeEventListener("shiny-chat-append-message", this.#onAppend);
+
+    this.removeEventListener(
+      "shiny-chat-input-sent",
+      this.#wrapEventHandler(this.#onInputSent)
+    );
+    this.removeEventListener(
+      "shiny-chat-append-message",
+      this.#wrapEventHandler(this.#onAppend)
+    );
     this.removeEventListener(
       "shiny-chat-append-message-chunk",
-      this.#onAppendChunk
+      this.#wrapEventHandler(this.#onAppendChunk)
     );
-    this.removeEventListener("shiny-chat-clear-messages", this.#onClear);
-    this.removeEventListener("shiny-chat-set-user-input", this.#onSetUserInput);
+    this.removeEventListener(
+      "shiny-chat-clear-messages",
+      this.#wrapEventHandler(this.#onClear)
+    );
+    this.removeEventListener(
+      "shiny-chat-set-user-input",
+      this.#wrapEventHandler(this.#onSetUserInput)
+    );
     this.removeEventListener(
       "shiny-chat-remove-loading-message",
-      this.#onRemoveLoadingMessage
+      this.#wrapEventHandler(this.#onRemoveLoadingMessage)
+    );
+  }
+
+  // Wrapper to enqueue events if we're in the middle of a message stream
+  #wrapEventHandler(eventHandler: (event: CustomEvent) => void) {
+    return (event: CustomEvent): void => {
+      this.#canHandleEvent(event)
+        ? eventHandler.call(this, event)
+        : this.eventQueue.push(event);
+    };
+  }
+
+  // Can handle the event now if no message stream is in progress or if the is a part of
+  // the current message stream
+  #canHandleEvent(event: CustomEvent): boolean {
+    const id = this.messageStreamId;
+    if (id === null) return true;
+    const e = event as CustomEvent<Message>;
+    return (
+      e.type === "shiny-chat-append-message-chunk" && id == e.detail.msg_id
     );
   }
 
@@ -320,11 +371,14 @@ class ChatContainer extends LightElement {
 
   #appendMessageChunk(message: Message): void {
     if (message.chunk_type === "message_start") {
+      this.messageStreamId = message.msg_id;
       this.#appendMessage(message, false);
       return;
     }
     if (message.chunk_type === "message_end") {
       this.#finalizeMessage();
+      this.messageStreamId = null;
+      this.#flushEventQueue();
       return;
     }
 
@@ -353,13 +407,50 @@ class ChatContainer extends LightElement {
     this.input.setInputValue(event.detail);
   }
 
-  #onRemoveLoadingMessage(): void {
+  #onRemoveLoadingMessage(event: CustomEvent<Message>): void {
     this.#removeLoadingMessage();
     this.#finalizeMessage();
   }
 
   #finalizeMessage(): void {
     this.input.disabled = false;
+  }
+
+  #flushEventQueue(): void {
+    const nextQueue: CustomEvent[] = [];
+
+    for (const event of this.eventQueue) {
+      if (!this.#canHandleEvent(event)) {
+        nextQueue.push(event);
+        continue;
+      }
+
+      // TODO: better way to look up event handlers based on event type
+      switch (event.type as keyof GlobalEventHandlersEventMap) {
+        case "shiny-chat-input-sent":
+          this.#onInputSent(event);
+          break;
+        case "shiny-chat-append-message":
+          this.#onAppend(event);
+          break;
+        case "shiny-chat-append-message-chunk":
+          this.#onAppendChunk(event);
+          break;
+        case "shiny-chat-clear-messages":
+          this.#onClear();
+          break;
+        case "shiny-chat-set-user-input":
+          this.#onSetUserInput(event);
+          break;
+        case "shiny-chat-remove-loading-message":
+          this.#onRemoveLoadingMessage(event);
+          break;
+        default:
+          throw new Error(`Unknown event type: ${event.type}`);
+      }
+    }
+
+    this.eventQueue = nextQueue;
   }
 
   #scrollToBottom(): void {

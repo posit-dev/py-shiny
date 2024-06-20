@@ -373,7 +373,7 @@ class Chat:
         await self._append_message(message)
 
     async def _append_message(
-        self, message: Any, *, chunk: ChunkOption = False
+        self, message: Any, *, chunk: ChunkOption = False, msg_id: str | None = None
     ) -> None:
         if chunk:
             msg = normalize_message_chunk(message)
@@ -382,7 +382,7 @@ class Chat:
 
         msg = await self._transform_message(msg)
         msg = self._store_message(msg, chunk=chunk)
-        await self._send_append_message(msg, chunk=chunk)
+        await self._send_append_message(msg, chunk=chunk, msg_id=msg_id)
 
     async def append_message_stream(self, message: Iterable[Any] | AsyncIterable[Any]):
         """
@@ -428,21 +428,24 @@ class Chat:
         self._effects.append(_handle_error)
 
     async def _append_message_stream(self, message: AsyncIterable[Any]):
+        msg_id = _utils.private_random_id()
+
         empty = ChatMessage(content="", role="assistant")
-        await self._append_message(empty, chunk="start")
+        await self._append_message(empty, chunk="start", msg_id=msg_id)
 
         try:
             async for msg in message:
                 msg = normalize_message_chunk(msg)
-                await self._append_message(msg, chunk=True)
+                await self._append_message(msg, chunk=True, msg_id=msg_id)
         finally:
-            await self._append_message(empty, chunk="end")
+            await self._append_message(empty, chunk="end", msg_id=msg_id)
 
     # Send a message to the UI
     async def _send_append_message(
         self,
         message: StoredMessage,
         chunk: ChunkOption = False,
+        msg_id: str | None = None,
     ):
         if message["role"] == "system":
             # System messages are not displayed in the UI
@@ -458,6 +461,7 @@ class Chat:
             role=message["role"],
             content_type=message.get("content_type", "markdown"),
             chunk_type=message.get("chunk_type", None),
+            msg_id=msg_id,
         )
 
         # print(msg)
@@ -509,21 +513,23 @@ class Chat:
             "chunk_type": None,
         }
 
+        content = message["content"]
+
         if chunk:
-            self._final_message += message["content"]
+            self._final_message += content
             if isinstance(chunk, str):
                 msg["chunk_type"] = (
                     "message_start" if chunk == "start" else "message_end"
                 )
             # Don't count tokens or invalidate until the end of the chunk
             if chunk == "end":
-                msg["content"] = self._final_message
+                content = self._final_message
                 self._final_message = ""
             else:
                 return msg
 
         if self._tokenizer is not None:
-            encoded = self._tokenizer.encode(message["content"])
+            encoded = self._tokenizer.encode(content)
             if isinstance(encoded, TokenizersEncoding):
                 token_count = len(encoded.ids)
             else:
