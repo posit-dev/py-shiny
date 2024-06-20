@@ -19,7 +19,7 @@ from typing import (
 from htmltools import HTMLDependency
 from packaging.version import Version
 
-from .._docstring import no_example
+from .._docstring import add_example
 from .._typing_extensions import NotRequired, TypedDict
 from .._versions import bootstrap
 from ._theme_presets import (
@@ -53,7 +53,7 @@ class SassCompileArgs(TypedDict):
     importers: NotRequired[Iterable[tuple[int, SassImporterFunction]] | None]
 
 
-@no_example()
+@add_example()
 class Theme:
     """
     Create a custom Shiny theme.
@@ -101,7 +101,7 @@ class Theme:
     from shiny import ui
 
     ui = ui.page_fluid(
-        # App content...
+        # App content here
         title="My App",
         theme="my_theme.css",
     )
@@ -126,6 +126,7 @@ class Theme:
     ------
     ValueError
         If the `preset` is not a valid theme preset.
+
     """
 
     def __init__(
