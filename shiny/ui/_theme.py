@@ -4,7 +4,7 @@ import copy
 import os
 import pathlib
 import tempfile
-from textwrap import dedent
+import textwrap
 from typing import (
     Any,
     Callable,
@@ -223,7 +223,7 @@ class Theme:
                     value = "null"
                 values.append(f"${key}: {value}{default};")
 
-        return dedent_array(values)
+        return [textwrap.dedent(x) for x in values]
 
     def add_functions(self: T, *args: str) -> T:
         """
@@ -464,10 +464,6 @@ class Theme:
             "Instead, pass the `Theme` object directly to the `theme` argument of any "
             "Shiny page function.",
         )
-
-
-def dedent_array(x: list[str] | tuple[str, ...]) -> list[str]:
-    return [dedent(y) for y in x]
 
 
 def path_pkg_preset(preset: ShinyThemePreset, *args: str) -> str:
