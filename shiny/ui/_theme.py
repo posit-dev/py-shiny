@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import copy
 import os
 import pathlib
 import tempfile
@@ -375,11 +374,11 @@ class Theme:
             or changing the preset will invalidate the cache.
         """
         if self._css:
-            return copy.copy(self._css)
+            return self._css
 
         if self._can_use_precompiled():
             self._css = self._read_precompiled_css()
-            return copy.copy(self._css)
+            return self._css
 
         check_libsass_installed()
         import sass
@@ -396,7 +395,7 @@ class Theme:
             ),
         )
 
-        return copy.copy(self._css)
+        return self._css
 
     def _read_precompiled_css(self) -> str:
         path = path_pkg_preset(self._preset, "preset.min.css")
