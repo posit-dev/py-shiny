@@ -439,26 +439,19 @@ class Theme:
         dep_name = f"shiny-theme-{self.name or self._preset}"
         css_name = f"{dep_name}.min.css"
 
-        # Re-use already compiled CSS file if possible
-        if self._css and self._css_temp_srcdir is not None:
-            return HTMLDependency(
-                name=dep_name,
-                version=Version(self._version),
-                source={"subdir": self._css_temp_srcdir.name},
-                stylesheet={"href": css_name},
-            )
+        if self._css_temp_srcdir is None:
+            self._css_temp_srcdir = tempfile.TemporaryDirectory()
 
-        srcdir = tempfile.TemporaryDirectory()
-        css_path = os.path.join(srcdir.name, css_name)
+        css_path = os.path.join(self._css_temp_srcdir.name, css_name)
 
-        with open(css_path, "w") as css_file:
-            css_file.write(self.to_css())
+        if not os.path.exists(css_path):
+            with open(css_path, "w") as css_file:
+                css_file.write(self.to_css())
 
-        self._css_temp_srcdir = srcdir
         return HTMLDependency(
             name=dep_name,
             version=Version(self._version),
-            source={"subdir": srcdir.name},
+            source={"subdir": self._css_temp_srcdir.name},
             stylesheet={"href": css_name},
         )
 
