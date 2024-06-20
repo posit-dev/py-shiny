@@ -120,17 +120,6 @@ class TransformerParams(Generic[P]):
         self.kwargs = kwargs
 
 
-def empty_params() -> TransformerParams[P]:
-    """
-    Return `TransformerParams` definition with no parameters.
-    """
-
-    def inner(*args: P.args, **kwargs: P.kwargs) -> TransformerParams[P]:
-        return TransformerParams[P](*args, **kwargs)
-
-    return inner()
-
-
 # ======================================================================================
 # Renderer / RendererSync / RendererAsync base class
 # ======================================================================================
@@ -544,7 +533,9 @@ class OutputTransformer(Generic[IT, OT, P]):
         params: TransformerParams[P] | None = None,
     ) -> OutputRenderer[OT] | OutputRendererDecorator[IT, OT]:
         if params is None:
-            params = self.params()
+            params = (
+                self.params()
+            )  # pyright: ignore[reportCallIssue] ; Missing param spec args; False positive error as we know there should be no args.
         if not isinstance(params, TransformerParams):
             raise TypeError(
                 "Expected `params` to be of type `TransformerParams` but received "
@@ -560,7 +551,10 @@ class OutputTransformer(Generic[IT, OT, P]):
         self._fn = fn
         self.ValueFn = ValueFn[IT]
         self.OutputRenderer = OutputRenderer[OT]
-        self.OutputRendererDecorator = OutputRendererDecorator[IT, OT]
+
+        self.OutputRendererDecorator = OutputRendererDecorator[
+            IT, OT
+        ]  # pyright: ignore[reportAttributeAccessIssue] ; False positive error as the types should match the class definition. Not worrying about it as this code is deprecated.
 
 
 @overload
