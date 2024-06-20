@@ -10,7 +10,7 @@ ui.page_opts(
 with ui.sidebar(title="Parameters"):
     ui.input_numeric("n", "N", min=0, max=100, value=20)
     ui.input_slider("m", "M", min=0, max=100, value=50)
-    ui.input_selectize("letter", "Letter", choices="A B C D E".split())
+    ui.input_selectize("letter", "Letter", choices=["A", "B", "C"]),
 
 ui.h2("Output")
 
