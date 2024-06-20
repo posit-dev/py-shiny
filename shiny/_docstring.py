@@ -163,8 +163,8 @@ def add_example(
                 and f != app_file_name
                 and f != "app.py"
                 and f != ".DS_Store"
-                and not "venv" in path_parts
-                and not ".venv" in path_parts
+                and "venv" not in path_parts
+                and ".venv" not in path_parts
                 and not f.startswith("app-")
                 and not str(rel_f).startswith("__")
             )
