@@ -225,11 +225,7 @@ class Theme:
 
         return dedent_array(values)
 
-    def add_functions(
-        self: T,
-        *args: str,
-        **kwargs: str | float | int | bool | None,
-    ) -> T:
+    def add_functions(self: T, *args: str) -> T:
         """
         Add custom Sass functions to the theme.
 
@@ -241,14 +237,8 @@ class Theme:
         ----------
         *args
             The Sass functions to add as a single or multiple strings.
-        **kwargs
-            Keyword arguments containing function declarations to add. The keys
-            should be Sass variable names using underscore casing that will be
-            transformed automatically to kebab-case. For example,
-            `.add_functions(primary_color="#ff0000")` is equivalent to
-            `.add_functions("$primary-color: #ff0000;")`.
         """
-        functions = self._combine_args_kwargs(*args, kwargs=kwargs)
+        functions = self._combine_args_kwargs(*args, kwargs={})
         self._functions.extend(functions)
         self._reset_css()
         return self
