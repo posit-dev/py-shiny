@@ -32,6 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Relative imports, like `from . import utils`, now can be used in Shiny Express apps. (#1464)
 
+* `ui.Theme` allows you to create custom themes for your Shiny app by recompiling [Bootstrap](https://getbootstrap.com/) and Shiny's Sass files with your own customizations. Themes created with `ui.Theme` can be passed directly to the `theme` argument of `ui.page_*()` functions to apply the theme to the entire app. This feature requires the [libsass package](https://sass.github.io/libsass-python/) which can be installed with `pip install libsass`. (#1358)
+
 ### Bug fixes
 
 * Fixed #1440: When a Shiny Express app with a `www/` subdirectory was deployed to shinyapps.io or a Connect server, it would not start correctly. (#1442)
