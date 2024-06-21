@@ -3,22 +3,19 @@
 # pyright: reportArgumentType = false
 # pyright: reportUnknownMemberType = false
 
+# TODO-barret-render.data_frame; Make an example that uses a dataframe that then updates a higher level reactive, that causes the df to update... which causes the table to render completely
+# TODO-barret-render.data_frame; When "updating" data, try to maintain the scroll, filter info when a new `df` is supplied;
+# TODO-karan-test; Click outside the table. Tab to the column name, hit enter. Verify the table becomes sorted. Tab to an HTML column name, hit enter. Verify the sort does not update.
+# TODO-karan-test; Enable rows selection and editable. Select (and verify) a row. Edit a cell content in that row. Verify the row is not focused. Hit escape key. Verify the cell value is not updated. Verify the row is focused. Hit escape key again. Verify the row is not focused. (Possibly verify the container div is focused?)
+# TODO-karan-test; Enable rows selection and editable. Select (and verify) a row. Edit a cell content in that row. Click a cell in another row. Verify the new row is selected and focused. Verify the old row is not selected. Verify the old row cell value was updated.
+# TODO-karan-test; Enable rows selection and editable. Select (and verify) a row. Hit enter to edit the first cell in that row. Hit escape key. Verify the same row is focused. Scroll right and display an html column in the left part of the view. Hit enter to edit the first visible non-html cell in that row. Verify that cell is editing.
+# TODO-future; Can we maintain pre-processed value and use it within editing?
+# A: Doesn't seem possible for now
+import great_tables as gt
 from palmerpenguins import load_penguins_raw
 
 from shiny import App, Inputs, Outputs, Session, module, render, ui
 from shiny.render import CellPatch
-
-# TODO-barret-render.data_frame; Make an example that uses a dataframe that then updates a higher level reactive, that causes the df to update... which causes the table to render completely
-# TODO-barret-render.data_frame; When "updating" data, try to maintain the scroll, filter info when a new `df` is supplied;
-
-# TODO-karan-test; Click outside the table. Tab to the column name, hit enter. Verify the table becomes sorted. Tab to an HTML column name, hit enter. Verify the sort does not update.
-
-# TODO-karan-test; Enable rows selection and editable. Select (and verify) a row. Edit a cell content in that row. Verify the row is not focused. Hit escape key. Verify the cell value is not updated. Verify the row is focused. Hit escape key again. Verify the row is not focused. (Possibly verify the container div is focused?)
-# TODO-karan-test; Enable rows selection and editable. Select (and verify) a row. Edit a cell content in that row. Click a cell in another row. Verify the new row is selected and focused. Verify the old row is not selected. Verify the old row cell value was updated.
-# TODO-karan-test; Enable rows selection and editable. Select (and verify) a row. Hit enter to edit the first cell in that row. Hit escape key. Verify the same row is focused. Scroll right and display an html column in the left part of the view. Hit enter to edit the first visible non-html cell in that row. Verify that cell is editing.
-
-# TODO-future; Can we maintain pre-processed value and use it within editing?
-# A: Doesn't seem possible for now
 
 # Load the dataset
 penguins = load_penguins_raw()
@@ -74,11 +71,28 @@ app_ui = ui.page_fillable(
 
 @module.server
 def mod_server(input: Inputs, output: Outputs, session: Session):
+
     @render.data_frame
     def summary_data():
+
+        df_gt = gt.GT(df).tab_style(
+            [
+                gt.style.fill(color="purple"),
+                gt.style.borders(color="green", style="dashed"),
+            ],
+            gt.loc.body("Species", [1, 2]),
+        )
         # return df
         return render.DataGrid(
             df,
+            selection_mode=("rows"),
+            editable=True,
+            filters=True,
+            styles=df_gt._styles,
+        )
+        # Ideal
+        return render.DataGrid(
+            df_gt,
             selection_mode=("rows"),
             editable=True,
             filters=True,

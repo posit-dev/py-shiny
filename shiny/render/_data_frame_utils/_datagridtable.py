@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-# TODO-barret-future; make DataTable and DataGrid generic? By currently accepting `object`, it is difficult to capture the generic type of the data.
 import abc
 import json
+
+# TODO-barret-future; make DataTable and DataGrid generic? By currently accepting `object`, it is difficult to capture the generic type of the data.
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -15,7 +16,10 @@ from typing import (
     runtime_checkable,
 )
 
+import great_tables as gt
+import great_tables._gt_data as gt_data
 from htmltools import TagNode
+from typing_extensions import TypeAlias
 
 from ..._docstring import add_example, no_example
 from ..._typing_extensions import TypedDict
@@ -43,10 +47,46 @@ if TYPE_CHECKING:
         "DataGrid",
         "DataTable",
     ]
+
 else:
     # The parent class of `data_frame` needs something to hold onto
     # To avoid loading pandas, we use `object` as a placeholder
     DataFrameResult = Union[None, object, "DataGrid", "DataTable"]
+
+# CellStyle = gt._styles.CellStyle
+StyleInfo = gt_data.StyleInfo
+
+
+# @dataclass(frozen=True)
+# class StyleInfo:
+#     locname: str
+#     locnum: int
+#     grpname: str | None = None
+#     colname: str | None = None
+#     rownum: int | None = None
+#     colnum: int | None = None
+#     styles: list[CellStyle] = field(default_factory=list)
+
+
+def style_info_to_jsonifiable(
+    style_info: StyleInfo,
+    *,
+    column_names: list[str],
+) -> dict[str, Jsonifiable]:
+    assert style_info.colname is not None
+    return {
+        "locname": style_info.locname,
+        "locnum": style_info.locnum,
+        "grpname": style_info.grpname,
+        # "colname": style_info.colname,
+        "rownum": style_info.rownum,
+        # "colnum": style_info.colnum,
+        "colnum": column_names.index(style_info.colname),
+        "styles": "".join([style._to_html_style() for style in style_info.styles]),
+    }
+
+
+Styles: TypeAlias = list[StyleInfo]
 
 
 class AbstractTabularData(abc.ABC):
@@ -139,6 +179,7 @@ class DataGrid(AbstractTabularData):
     filters: bool
     editable: bool
     selection_modes: SelectionModes
+    styles: Styles
 
     def __init__(
         self,
@@ -151,6 +192,7 @@ class DataGrid(AbstractTabularData):
         editable: bool = False,
         selection_mode: SelectionModeInput = "none",
         row_selection_mode: RowSelectionModeDeprecated = "deprecated",
+        styles: Styles = [],
     ):
 
         self.data = cast_to_pandas(
@@ -170,8 +212,20 @@ class DataGrid(AbstractTabularData):
             row_selection_mode=row_selection_mode,
         )
 
+        # if styles is None:
+        #     styles = []
+        # if not isinstance(styles, list):
+        #     styles = [styles]
+        if not all(isinstance(style, StyleInfo) for style in styles):
+            raise TypeError(
+                "The DataGrid() constructor expected 'styles' to be a "
+                "list of `StyleInfo` objects"
+            )
+        self.styles = styles
+
     def to_payload(self) -> dict[str, Jsonifiable]:
         res = serialize_pandas_df(self.data)
+
         res["options"] = dict(
             width=self.width,
             height=self.height,
@@ -180,7 +234,15 @@ class DataGrid(AbstractTabularData):
             editable=self.editable,
             style="grid",
             fill=self.height is None,
+            styles=[
+                style_info_to_jsonifiable(
+                    style,
+                    column_names=self.data.columns.tolist(),
+                )
+                for style in self.styles
+            ],
         )
+        print(res)
         return res
 
 
