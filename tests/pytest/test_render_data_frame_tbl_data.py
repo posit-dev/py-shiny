@@ -2,17 +2,24 @@ from datetime import datetime
 
 import pandas as pd
 import polars as pl
+import polars.testing
 import pytest
 
-from shiny.render._data_frame_utils._tbl_data import serialize_dtype, serialize_frame
+from shiny.render._data_frame_utils._tbl_data import (
+    copy_frame,
+    get_frame_cell,
+    serialize_dtype,
+    serialize_frame,
+    subset_frame,
+)
 from shiny.ui import HTML, h1
 
 DATA = {
-    "num": [1, 2, 3],
-    "chr": ["a", "b", "c"],
-    "cat": ["a", "a", "c"],
-    "dt": [datetime.now()] * 3,
-    "struct": [{"x": 1}, {"x": 2}, {"x": 3}],
+    "num": [1, 2],
+    "chr": ["a", "b"],
+    "cat": ["a", "a"],
+    "dt": [datetime(2000, 1, 2)] * 2,
+    "struct": [{"x": 1}, {"x": 2}],
 }
 
 params_frames = [
@@ -24,6 +31,21 @@ params_frames = [
 @pytest.fixture(params=params_frames, scope="function")
 def df(request) -> pd.DataFrame:
     return request.param(DATA)
+
+
+def assert_frame_equal(src, target, use_index=False):
+    if isinstance(src, pd.DataFrame):
+        if use_index:
+            pd.testing.assert_frame_equal(src, target)
+        else:
+            pd.testing.assert_frame_equal(
+                src.reset_index(drop=True),
+                target.reset_index(drop=True),
+            )
+    elif isinstance(src, pl.DataFrame):
+        pl.testing.assert_frame_equal(src, target)
+    else:
+        raise NotImplementedError(f"Unsupported data type: {type(src)}")
 
 
 # TODO: explicitly pass dtype= when doing Series construction
@@ -53,3 +75,45 @@ def df(request) -> pd.DataFrame:
 )
 def test_serialize_dtype(ser, res_type):
     assert serialize_dtype(ser)["type"] == res_type
+
+
+def test_serialize_frame(df):
+    # TODO: pandas converts datetime entries to int, but Polars
+    # preserves the datetime object.
+    if isinstance(df, pl.DataFrame):
+        pytest.xfail()
+
+    res = serialize_frame(df)
+    assert res == {
+        "columns": ["num", "chr", "cat", "dt", "struct"],
+        "index": [0, 1],
+        "data": [
+            [1, "a", "a", 946771200000, {"x": 1}],
+            [2, "b", "a", 946771200000, {"x": 2}],
+        ],
+        "typeHints": [
+            {"type": "numeric"},
+            {"type": "string"},
+            {"type": "string"},
+            {"type": "unknown"},
+            {"type": "unknown"},
+        ],
+    }
+
+
+def test_subset_frame(df):
+    # TODO: this assumes subset_frame doesn't reset index
+    res = subset_frame(df, [1], ["chr", "num"])
+    dst = df.__class__({"chr": ["b"], "num": [2]})
+
+    assert_frame_equal(res, dst)
+
+
+def test_get_frame_cell(df):
+    assert get_frame_cell(df, 1, 1) == "b"
+
+
+def test_copy_frame(df):
+    new_df = copy_frame(df)
+
+    assert new_df is not df

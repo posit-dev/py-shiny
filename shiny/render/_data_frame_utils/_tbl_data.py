@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 from abc import ABC
 from functools import singledispatch
-from typing import TYPE_CHECKING, Any, Literal, Union
+from typing import TYPE_CHECKING, Any, Literal, Optional, Union
 
-from typing_extensions import NotRequired, TypedDict
+from typing_extensions import NotRequired, TypeAlias, TypedDict
 
 from ._databackend import AbstractBackend
 
@@ -93,6 +95,11 @@ class _FrameJson(TypedDict):
     columns: list[str]  # column names
     index: list[Any]  # pandas index values
     data: list[list[Any]]  # each entry is a row of len(columns)
+    typeHints: list[_FrameHintEntry]
+
+
+class _FrameHintEntry(TypedDict):
+    type: "str"
 
 
 @singledispatch
@@ -111,15 +118,88 @@ def _(data: PdDataFrame) -> dict[str, Any]:
 def _(data: PlDataFrame) -> dict[str, Any]:
     # write_json only does rows (as dictionaries; but we need lists)
     # serialize only does columns
-    ...
+    named_cols = data.to_dict(as_series=False)
+    type_hints = list(map(serialize_dtype, data))
+    return {
+        "columns": list(named_cols),
+        "index": list(range(len(data))),
+        "data": list(named_cols.values()),
+        "typeHints": type_hints,
+    }
+
+
+# subset_frame -------------------------------------------------------------------------
+
+_RowsList: TypeAlias = Optional[list[int]]
+_ColsList: TypeAlias = Optional[list[str]]
 
 
 @singledispatch
-def subset_frame(data, rows=None, col=None): ...
+def subset_frame(
+    data: DataFrameLike, rows: _RowsList = None, cols: _ColsList = None
+) -> DataFrameLike:
+    # Note that this type signature assumes column names are strings things.
+    # This is always true in Polars, but not in Pandas (e.g. a column name could be an
+    # int, or even a tuple of ints)
+    raise TypeError(f"Unsupported type: {type(col)}")
 
 
-# pandas DataFrame methods called
-# iat
-# loc
-# copy
-# shape
+@subset_frame.register
+def _(data: PlDataFrame, rows: _RowsList = None, cols: _ColsList = None) -> PlDataFrame:
+    return data[rows, cols]
+
+
+@subset_frame.register
+def _(data: PdDataFrame, rows: _RowsList = None, cols: _ColsList = None) -> PdDataFrame:
+    # iloc requires integer positions, so we convert column name strings to ints, or
+    # the slice default.
+    if cols is not None:
+        indx_cols = data.columns.get_indexer_for(cols)
+    else:
+        indx_cols = slice(None)
+
+    return data.iloc[rows, indx_cols]
+
+
+# get_frame_cell -----------------------------------------------------------------------
+
+
+@singledispatch
+def get_frame_cell(data: DataFrameLike, row: int, col: int) -> Any:
+    raise TypeError(f"Unsupported type: {type(col)}")
+
+
+@get_frame_cell.register
+def _(data: PdDataFrame, row: int, col: int) -> Any:
+    return data.iat[row, col]
+
+
+@get_frame_cell.register
+def _(data: PlDataFrame, row: int, col: int) -> Any:
+    return data[row, col]
+
+
+# shape --------------------------------------------------------------------------------
+
+
+@singledispatch
+def shape(data: DataFrameLike) -> tuple[int, ...]:
+    return data.shape
+
+
+# copy_frame ---------------------------------------------------------------------------
+
+
+@singledispatch
+def copy_frame(data: DataFrameLike) -> DataFrameLike:
+    raise TypeError(f"Unsupported type: {type(col)}")
+
+
+@copy_frame.register
+def _(data: PdDataFrame) -> PdDataFrame:
+    return data.copy()
+
+
+@copy_frame.register
+def _(data: PlDataFrame) -> PlDataFrame:
+    return data.clone()
