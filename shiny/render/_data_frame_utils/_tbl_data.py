@@ -141,7 +141,7 @@ def subset_frame(
     # Note that this type signature assumes column names are strings things.
     # This is always true in Polars, but not in Pandas (e.g. a column name could be an
     # int, or even a tuple of ints)
-    raise TypeError(f"Unsupported type: {type(col)}")
+    raise TypeError(f"Unsupported type: {type(data)}")
 
 
 @subset_frame.register
@@ -166,7 +166,7 @@ def _(data: PdDataFrame, rows: _RowsList = None, cols: _ColsList = None) -> PdDa
 
 @singledispatch
 def get_frame_cell(data: DataFrameLike, row: int, col: int) -> Any:
-    raise TypeError(f"Unsupported type: {type(col)}")
+    raise TypeError(f"Unsupported type: {type(data)}")
 
 
 @get_frame_cell.register
@@ -192,7 +192,7 @@ def shape(data: DataFrameLike) -> tuple[int, ...]:
 
 @singledispatch
 def copy_frame(data: DataFrameLike) -> DataFrameLike:
-    raise TypeError(f"Unsupported type: {type(col)}")
+    raise TypeError(f"Unsupported type: {type(data)}")
 
 
 @copy_frame.register
