@@ -4,9 +4,9 @@ import seaborn as sns
 from shiny import App, Inputs, Outputs, Session, render, ui
 
 df = pd.DataFrame(
-    sns.load_dataset(
+    sns.load_dataset(  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
         "iris"
-    )  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
+    )
 )
 app_ui = ui.page_fluid(
     ui.h2("Iris Dataset"),

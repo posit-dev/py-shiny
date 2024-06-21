@@ -4,8 +4,9 @@ import typing
 from pathlib import PurePath
 from typing import Literal
 
-from conftest import run_shiny_app
 from playwright.sync_api import ConsoleMessage, Page
+
+from shiny.run import ShinyAppProc, run_shiny_app
 
 here_tests_e2e_examples = PurePath(__file__).parent
 pyshiny_root = here_tests_e2e_examples.parent.parent.parent
@@ -154,7 +155,7 @@ def wait_for_idle_app(
 
 
 def validate_example(page: Page, ex_app_path: str) -> None:
-    app = run_shiny_app(pyshiny_root / ex_app_path, wait_for_start=True)
+    sa: ShinyAppProc = run_shiny_app(pyshiny_root / ex_app_path, wait_for_start=True)
 
     console_errors: typing.List[str] = []
 
@@ -168,8 +169,8 @@ def validate_example(page: Page, ex_app_path: str) -> None:
     page.on("console", on_console_msg)
 
     # Makes sure the app is closed when exiting the code block
-    with app:
-        page.goto(app.url)
+    with sa:
+        page.goto(sa.url)
 
         app_name = os.path.basename(os.path.dirname(ex_app_path))
         short_app_path = f"{os.path.basename(os.path.dirname(os.path.dirname(ex_app_path)))}/{app_name}"
@@ -187,7 +188,7 @@ def validate_example(page: Page, ex_app_path: str) -> None:
             )
 
         # Check for py-shiny errors
-        error_lines = str(app.stderr).splitlines()
+        error_lines = str(sa.stderr).splitlines()
 
         # Remove any errors that are allowed
         error_lines = [

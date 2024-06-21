@@ -18,6 +18,7 @@ from ._patch import (
     cell_patch_processed_to_jsonifiable,
 )
 from ._selection import (
+    BrowserCellSelection,
     CellSelection,
     SelectionMode,
     SelectionModes,
@@ -40,6 +41,7 @@ __all__ = (
     "PatchFnSync",
     "assert_patches_shape",
     "cell_patch_processed_to_jsonifiable",
+    "BrowserCellSelection",
     "CellSelection",
     "SelectionMode",
     "SelectionModes",

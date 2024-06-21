@@ -1,8 +1,13 @@
 from __future__ import annotations
 
-from conftest import ShinyAppProc
-from controls import InputActionButton, OutputDataFrame, OutputTextVerbatim
 from playwright.sync_api import Page
+
+from shiny.playwright.controls import (
+    InputActionButton,
+    OutputDataFrame,
+    OutputTextVerbatim,
+)
+from shiny.run import ShinyAppProc
 
 
 def test_row_selection(page: Page, local_app: ShinyAppProc) -> None:

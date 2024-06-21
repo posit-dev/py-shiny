@@ -1,8 +1,10 @@
 import re
 
-from conftest import ShinyAppProc, create_doc_example_core_fixture
-from controls import OutputImage
+from conftest import create_doc_example_core_fixture
 from playwright.sync_api import Page
+
+from shiny.playwright.controls import OutputImage
+from shiny.run import ShinyAppProc
 
 app = create_doc_example_core_fixture("output_image")
 
@@ -12,7 +14,7 @@ def test_output_image_kitchen(page: Page, app: ShinyAppProc) -> None:
 
     img = OutputImage(page, "image")
 
-    img.expect_inline(inline=False)
+    img.expect_inline(False)
 
     img.expect_img_src(re.compile(r"data:image/png;base64"))
     img.expect_img_height(None)

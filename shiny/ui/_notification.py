@@ -98,7 +98,7 @@ def notification_remove(id: str, *, session: Optional[Session] = None) -> str:
     """
     Remove a notification.
 
-    :func:`~shiny.ui.notification_remove` provides a way to remove a notification programatically.
+    :func:`~shiny.ui.notification_remove` provides a way to remove a notification programmatically.
     Notifications can also be removed manually by the user, or automatically after a
     specififed amont of time passes.
 

@@ -14,6 +14,7 @@ import React, {
 } from "react";
 import { CellEdit, SetCellEditMapAtLoc } from "./cell-edit-map";
 import { updateCellsData } from "./data-update";
+import { SelectionSet } from "./selection";
 import type { PatchInfo } from "./types";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -36,7 +37,7 @@ export const CellStateEnum = {
   Editing: "Editing",
   Ready: "Ready",
 } as const;
-const CellStateClassEnum = {
+export const CellStateClassEnum = {
   EditSaving: "cell-edit-saving",
   EditSuccess: "cell-edit-success",
   EditFailure: "cell-edit-failure",
@@ -82,6 +83,7 @@ interface TableBodyCellProps {
   setData: (fn: (draft: unknown[][]) => void) => void;
   cellEditInfo: CellEdit | undefined;
   setCellEditMapAtLoc: SetCellEditMapAtLoc;
+  selection: SelectionSet<string, HTMLTableRowElement>;
 }
 
 export const TableBodyCell: FC<TableBodyCellProps> = ({
@@ -98,6 +100,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
   cellEditInfo,
   setData,
   setCellEditMapAtLoc,
+  selection,
 }) => {
   const initialValue = cell.getValue() as
     | string
@@ -121,11 +124,11 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
   // * When editing a cell:
   //   * On esc key:
   //     * √ Restore prior value / state / error
-  //     * Move focus from input to td
+  //     * √ Move focus from input to td
   //   * On enter key:
   //     * √ Save value
   //     * √ Move to the cell below (or above w/ shift) and edit the new cell
-  //     * Should shift+enter add a newline in a cell?
+  //     * X Should shift+enter add a newline in a cell?
   //   * On tab key:
   //     * √ Save value
   //     * √ Move to the cell to the right (or left w/ shift) and edit the new cell
@@ -137,8 +140,8 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
   // * When focused on a td:
   //   * Allow for arrow key navigation
   //   * Have enter key enter edit mode for a cell
-  //   * When a td is focused, Have esc key move focus to the table
-  //   * When table is focused, Have esc key blur the focus
+  //   * √ When a td is focused, Have esc key move focus to the table
+  //   * X When table is focused, Have esc key blur the focus
   // TODO-barret-future; Combat edit mode being independent of selection mode
   // * In row / column selection mode, allow for arrow key navigation by focusing on a single cell, not a TR
   // * If a cell is focused,
@@ -168,14 +171,17 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     if (e.key !== "Escape") return;
     // Prevent default behavior
     e.preventDefault();
+    e.stopPropagation();
 
     // Turn off editing and the _temp_ edit value
     resetEditing();
+    selection.focusOffset(rowId, 0);
   };
   const handleTab = (e: ReactKeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key !== "Tab") return;
     // Prevent default behavior
     e.preventDefault();
+    e.stopPropagation();
 
     const hasShift = e.shiftKey;
 
@@ -209,6 +215,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     if (e.key !== "Enter") return;
     // Prevent default behavior
     e.preventDefault();
+    e.stopPropagation();
 
     const hasShift = e.shiftKey;
 
@@ -309,25 +316,39 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
 
   // When editing a cell, set up a global click listener to reset edit info when
   // clicking outside of the cell
+  // Use MouseDown event to match how selection is performed to prevent the click from bubbling up
   useEffect(() => {
     if (!isEditing) return;
+    if (!tdRef.current) return;
     if (!inputRef.current) return;
 
     // TODO-barret; Restore cursor position and text selection here
 
+    const onEdtingCellMouseDown = (e: MouseEvent) => {
+      if (!tdRef.current?.contains(e.target as Node)) return;
+      // Prevent the click from bubbling up to the body click listener
+      e.stopPropagation();
+
+      // Do not stop the event from preventing default as we need the click to work for the text area!
+      // e.preventDefault();
+    };
+    const curRef = tdRef.current; // Capture the current ref
+    curRef.addEventListener("mousedown", onEdtingCellMouseDown);
+
     // Set up global click listener to reset edit info
-    const onBodyClick = (e: MouseEvent) => {
+    const onBodyMouseDown = (e: MouseEvent) => {
       if (e.target === inputRef.current) return;
 
       attemptUpdate();
       // Turn off editing for this cell
       resetEditing();
     };
-    document.body.addEventListener("click", onBodyClick);
+    document.body.addEventListener("mousedown", onBodyMouseDown);
 
     // Tear down global click listener when we're done
     return () => {
-      document.body.removeEventListener("click", onBodyClick);
+      curRef.removeEventListener("mousedown", onEdtingCellMouseDown);
+      document.body.removeEventListener("mousedown", onBodyMouseDown);
     };
   }, [
     cellState,
@@ -373,7 +394,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
   // };
   // useAutosizeTextArea(inputRef.current, value as string);
 
-  let onClick:
+  let onCellDoubleClick:
     | ((e: ReactMouseEvent<HTMLTableCellElement>) => void)
     | undefined = undefined;
   let content: ReactElement | ReturnType<typeof flexRender> | undefined =
@@ -417,7 +438,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
       // Only allow transition to edit mode if the cell can be edited
       if (editCellsIsAllowed && !isHtmlColumn) {
         addToTableCellClass("cell-editable");
-        onClick = (e: ReactMouseEvent<HTMLTableCellElement>) => {
+        onCellDoubleClick = (e: ReactMouseEvent<HTMLTableCellElement>) => {
           // Do not prevent default or stop propagation here!
           // Other methods need to be able to handle the event as well. e.g. `onBodyClick` above.
           // e.preventDefault();
@@ -463,7 +484,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
   return (
     <td
       ref={tdRef}
-      onClick={onClick}
+      onDoubleClick={onCellDoubleClick}
       title={cellTitle}
       className={tableCellClass}
     >

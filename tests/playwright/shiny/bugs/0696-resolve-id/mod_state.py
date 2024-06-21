@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import datetime
 
-from controls import OutputTextVerbatim
 from playwright.sync_api import Page
+
+from shiny.playwright.controls import OutputTextVerbatim
 
 
 def expect_state(

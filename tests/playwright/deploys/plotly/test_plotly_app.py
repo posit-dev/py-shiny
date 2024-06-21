@@ -8,7 +8,7 @@ from utils.deploy_utils import (
 )
 
 TIMEOUT = 2 * 60 * 1000
-app_url = create_deploys_app_url_fixture("example_deploy_app_A")
+app_url = create_deploys_app_url_fixture("example_deploy_app_a1")
 
 
 @skip_if_not_chrome

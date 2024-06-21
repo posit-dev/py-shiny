@@ -1,8 +1,9 @@
 # pyright: reportUnknownMemberType=false
 
-from conftest import ShinyAppProc, create_example_fixture
-from controls import (
-    MISSING,
+from conftest import create_example_fixture
+from playwright.sync_api import Page, expect
+
+from shiny.playwright.controls import (
     InputCheckbox,
     InputCheckboxGroup,
     InputDate,
@@ -14,7 +15,8 @@ from controls import (
     InputSliderRange,
     InputText,
 )
-from playwright.sync_api import Page, expect
+from shiny.run import ShinyAppProc
+from shiny.types import MISSING
 
 inputs_update_app = create_example_fixture("inputs-update")
 

@@ -1,6 +1,8 @@
-from conftest import ShinyAppProc
-from controls import ValueBox, expect_to_have_class
 from playwright.sync_api import Page
+
+from shiny.playwright.controls import ValueBox
+from shiny.playwright.controls._controls import expect_to_have_class
+from shiny.run import ShinyAppProc
 
 
 def get_value_box_bg_color(value_box: ValueBox) -> str:
@@ -58,12 +60,12 @@ def test_valuebox(page: Page, local_app: ShinyAppProc) -> None:
     assert get_value_box_bg_color(value_box1) == "rgb(193, 0, 0)"
     assert get_value_box_fg_color(value_box1) == "rgb(255, 255, 255)"
     value_box1.expect_full_screen_available(True)
-    value_box1.expect_full_screen_open(False)
+    value_box1.expect_full_screen(False)
     value_box1.open_full_screen()
-    value_box1.expect_full_screen_open(True)
+    value_box1.expect_full_screen(True)
     value_box1.expect_body(["Inside the fullscreen"])
     value_box1.close_full_screen()
-    value_box1.expect_full_screen_open(False)
+    value_box1.expect_full_screen(False)
 
     value_box2 = ValueBox(page, "valuebox2")
     value_box2.expect_height(None)

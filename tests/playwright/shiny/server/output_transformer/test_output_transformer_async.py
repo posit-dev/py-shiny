@@ -1,6 +1,7 @@
-from conftest import ShinyAppProc
-from controls import OutputTextVerbatim
 from playwright.sync_api import Page
+
+from shiny.playwright.controls import OutputTextVerbatim
+from shiny.run import ShinyAppProc
 
 
 def test_output_transformer(page: Page, local_app: ShinyAppProc) -> None:

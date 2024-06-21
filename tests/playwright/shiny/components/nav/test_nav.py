@@ -2,18 +2,19 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from conftest import ShinyAppProc
-from controls import (
-    LayoutNavSetBar,
-    LayoutNavSetCardPill,
-    LayoutNavSetCardTab,
-    LayoutNavSetCardUnderline,
-    LayoutNavSetPill,
-    LayoutNavSetPillList,
-    LayoutNavsetTab,
-    LayoutNavSetUnderline,
-)
 from playwright.sync_api import Page
+
+from shiny.playwright.controls import (
+    NavsetBar,
+    NavsetCardPill,
+    NavsetCardTab,
+    NavsetCardUnderline,
+    NavsetPill,
+    NavsetPillList,
+    NavsetTab,
+    NavsetUnderline,
+)
+from shiny.run import ShinyAppProc
 
 
 def test_nav(page: Page, local_app: ShinyAppProc) -> None:
@@ -25,26 +26,26 @@ def test_nav(page: Page, local_app: ShinyAppProc) -> None:
     @dataclass
     class LayoutInfo:
         control: type[
-            LayoutNavSetBar
-            | LayoutNavSetCardPill
-            | LayoutNavSetCardTab
-            | LayoutNavSetCardUnderline
-            | LayoutNavSetPill
-            | LayoutNavSetPillList
-            | LayoutNavsetTab
-            | LayoutNavSetUnderline
+            NavsetBar
+            | NavsetCardPill
+            | NavsetCardTab
+            | NavsetCardUnderline
+            | NavsetPill
+            | NavsetPillList
+            | NavsetTab
+            | NavsetUnderline
         ]
         verify: str
 
     nav_data: list[LayoutInfo] = [
-        LayoutInfo(LayoutNavsetTab, "navset_tab()"),
-        LayoutInfo(LayoutNavSetPill, "navset_pill()"),
-        LayoutInfo(LayoutNavSetUnderline, "navset_underline()"),
-        LayoutInfo(LayoutNavSetCardTab, "navset_card_tab()"),
-        LayoutInfo(LayoutNavSetCardPill, "navset_card_pill()"),
-        LayoutInfo(LayoutNavSetCardUnderline, "navset_card_underline()"),
-        LayoutInfo(LayoutNavSetPillList, "navset_pill_list()"),
-        LayoutInfo(LayoutNavSetBar, "page_navbar()"),
+        LayoutInfo(NavsetTab, "navset_tab()"),
+        LayoutInfo(NavsetPill, "navset_pill()"),
+        LayoutInfo(NavsetUnderline, "navset_underline()"),
+        LayoutInfo(NavsetCardTab, "navset_card_tab()"),
+        LayoutInfo(NavsetCardPill, "navset_card_pill()"),
+        LayoutInfo(NavsetCardUnderline, "navset_card_underline()"),
+        LayoutInfo(NavsetPillList, "navset_pill_list()"),
+        LayoutInfo(NavsetBar, "page_navbar()"),
     ]
 
     for nav_info in nav_data:

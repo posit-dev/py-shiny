@@ -1,6 +1,7 @@
-from conftest import ShinyAppProc
-from controls import Popover
 from playwright.sync_api import Page
+
+from shiny.playwright.controls import Popover
+from shiny.run import ShinyAppProc
 
 
 def test_popover(page: Page, local_app: ShinyAppProc) -> None:

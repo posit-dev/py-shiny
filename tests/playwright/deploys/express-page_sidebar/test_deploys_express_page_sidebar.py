@@ -1,5 +1,4 @@
 import pytest
-from controls import OutputTextVerbatim, Sidebar
 from playwright.sync_api import Page
 from utils.deploy_utils import (
     create_deploys_app_url_fixture,
@@ -7,6 +6,8 @@ from utils.deploy_utils import (
     reruns_delay,
     skip_if_not_chrome,
 )
+
+from shiny.playwright.controls import OutputTextVerbatim, Sidebar
 
 app_url = create_deploys_app_url_fixture("express_page_sidebar")
 
