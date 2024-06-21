@@ -147,7 +147,7 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
     #     print(summary_data._type_hints())
     from shinywidgets import render_widget
 
-    from shiny import reactive
+    # from shiny import reactive
 
     @render_widget
     def country_detail_pop():

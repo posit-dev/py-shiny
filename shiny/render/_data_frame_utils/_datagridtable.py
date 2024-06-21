@@ -8,6 +8,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Literal,
+    Optional,
     Protocol,
     TypeVar,
     Union,
@@ -16,10 +17,8 @@ from typing import (
     runtime_checkable,
 )
 
-import great_tables as gt
 import great_tables._gt_data as gt_data
 from htmltools import TagNode
-from typing_extensions import TypeAlias
 
 from ..._docstring import add_example, no_example
 from ..._typing_extensions import TypedDict
@@ -53,6 +52,7 @@ else:
     # To avoid loading pandas, we use `object` as a placeholder
     DataFrameResult = Union[None, object, "DataGrid", "DataTable"]
 
+# import great_tables as gt
 # CellStyle = gt._styles.CellStyle
 StyleInfo = gt_data.StyleInfo
 
@@ -86,7 +86,7 @@ def style_info_to_jsonifiable(
     }
 
 
-Styles: TypeAlias = list[StyleInfo]
+Styles = list[StyleInfo]
 
 
 class AbstractTabularData(abc.ABC):
@@ -192,7 +192,7 @@ class DataGrid(AbstractTabularData):
         editable: bool = False,
         selection_mode: SelectionModeInput = "none",
         row_selection_mode: RowSelectionModeDeprecated = "deprecated",
-        styles: Styles = [],
+        styles: Optional[Styles] = None,
     ):
 
         self.data = cast_to_pandas(
@@ -212,8 +212,8 @@ class DataGrid(AbstractTabularData):
             row_selection_mode=row_selection_mode,
         )
 
-        # if styles is None:
-        #     styles = []
+        if styles is None:
+            styles = []
         # if not isinstance(styles, list):
         #     styles = [styles]
         if not all(isinstance(style, StyleInfo) for style in styles):
