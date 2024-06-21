@@ -83,7 +83,7 @@ quartodoc_build_test: $(PYBIN) quartodoc_interlinks
 	. $(PYBIN)/activate \
 	  && echo "::group::quartodoc build testing docs" \
 	  && quartodoc build --config _quartodoc-testing.yml --verbose \
-	  && mv objects.json _objects_express.json \
+	  && mv objects.json _objects_test.json \
 	  && echo "::endgroup::"
 
 ## Clean up after quartodoc build
