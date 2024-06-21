@@ -110,21 +110,16 @@ function toStyleInfo(styleInfo: StyleInfo | InitStyleInfo): StyleInfo {
   return styleInfo as StyleInfo;
 }
 
-// TODO-barret look for CSS parser from browser
-// Naive method to convert css string to object
-// Adapted from https://stackoverflow.com/a/68853314/591574
+// Use a DOM element to convert CSS string to object
+const cssStringToObjDomElement = document.createElement("cssStringToObj");
 function cssStringToObj(strVal: string): { [key: string]: string } {
-  const jsonInner = strVal
-    .replace(/;\s*$/, "")
-    .replace(/;/g, '", "')
-    .replace(/: /g, '": "');
-  const cssJsonStr = `{"${jsonInner}"}`;
+  cssStringToObjDomElement.style.cssText = strVal;
+  const style = cssStringToObjDomElement.style;
 
-  const obj: { [key: string]: string } = JSON.parse(cssJsonStr);
-
-  const keyValues = Object.keys(obj).map((key) => {
-    const camelCased = key.replace(/-[a-z]/g, (g) => g[1].toUpperCase());
-    return { [camelCased]: obj[key] };
+  const ret: { [key: string]: string } = {};
+  Array.from(style).forEach((key) => {
+    ret[key] = style.getPropertyValue(key);
   });
-  return Object.assign({}, ...keyValues);
+
+  return ret;
 }
