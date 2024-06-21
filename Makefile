@@ -214,3 +214,10 @@ install-deps: FORCE ## install dependencies
 # ## If caching is ever used, we could run:
 # install-deps: FORCE ## install latest dependencies
 # 	pip install --editable ".[dev,test]" --upgrade --upgrade-strategy eager
+
+upgrade-html-deps: FORCE ## Upgrade Shiny's HTMLDependencies
+	@if ! Rscript -e "q()"; then \
+	  echo "Error: Upgrading HTML dependencies requires R, but R is not installed or not in your PATH. Please install R and try again."; \
+	  exit 1; \
+	fi
+	@scripts/htmlDependencies.R
