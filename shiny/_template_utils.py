@@ -324,20 +324,109 @@ def copy_template_files(
     return app_dir
 
 
-def add_test_file(app_dir: Path):
-    test_file = app_dir / "test_app.py"
-    test_file.write_text(
-"""
-from shiny.playwright.controls import <import_required_control>
-from shiny.run import ShinyAppProc
+def add_test_file(
+    *,
+    app_file: Path | None,
+    test_file: Path | None,
+):
+
+    if app_file is None:
+
+        def path_exists(x: Path) -> bool | str:
+            if not isinstance(x, (str, Path)):
+                return False
+            if Path(x).is_dir():
+                return "Please provide a file path to your Shiny app"
+            return Path(x).exists() or f"Shiny app file can not be found: {x}"
+
+        app_file_val = questionary.path(
+            "Enter the path to the app file:",
+            default=build_path_string("app.py"),
+            validate=path_exists,
+        ).ask()
+    else:
+        app_file_val = app_file
+    if app_file_val is None:
+        sys.exit(1)
+    app_file = Path(app_file_val)
+
+    if test_file is None:
+
+        def path_does_not_exist(x: Path) -> bool | str:
+            if not isinstance(x, (str, Path)):
+                return False
+            if Path(x).is_dir():
+                return "Please provide a file path for your test file."
+            return (
+                not Path(x).exists()
+            ) or "Test file already exists. Please provide a new file name."
+
+        test_file_val = questionary.path(
+            "Enter the path to the test file:",
+            default=build_path_string(
+                os.path.relpath(app_file.parent / "tests" / "test_app.py", ".")
+            ),
+            validate=path_does_not_exist,
+        ).ask()
+    else:
+        test_file_val = test_file
+
+    if test_file_val is None:
+        sys.exit(1)
+    test_file = Path(test_file_val)
+
+    # Make sure app file exists
+    if not app_file.exists():
+        raise FileExistsError("App file does not exist: ", test_file)
+    # Make sure output test file doesn't exist
+    if test_file.exists():
+        raise FileExistsError("Test file already exists: ", test_file)
+
+    # if app path directory is the same as the test file directory, use `local_app`
+    # otherwise, use `create_app_fixture`
+    is_same_dir = app_file.parent == test_file.parent
+
+    # Make sure test file directory exists
+    test_file.parent.mkdir(parents=True, exist_ok=True)
+
+    # Write template to test file
+    header = """\
 from playwright.sync_api import Page
-from shiny.pytest import create_app_fixture
 
-app = create_app_fixture(f"{app_dir}/app.py")
+from shiny.playwright.controls import <IMPORT REQUIRED CONTROLS>
+"""
+    if not is_same_dir:
+        header = (
+            header
+            + """from shiny.pytest import create_app_fixture
+"""
+        )
+    header = (
+        header
+        + """\
+from shiny.run import ShinyAppProc"""
+    )
 
-
-def test_app(page: Page, app: ShinyAppProc):
+    test_body = """\
     page.goto(app.url)
     # Add tests code here
 """
-    )
+
+    test_name = test_file.name.replace(".py", "")
+
+    if is_same_dir:
+        middle = f"""\
+
+def {test_name}(page: Page, local_app: ShinyAppProc):
+"""
+    else:
+        rel_path = os.path.relpath(app_file, test_file.parent)
+        middle = f"""\
+
+app = create_app_fixture("{rel_path}")
+
+
+def {test_name}(page: Page, app: ShinyAppProc):
+"""
+
+    test_file.write_text("\n".join([header, middle, test_body]))
