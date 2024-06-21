@@ -126,7 +126,6 @@ class Theme:
     ------
     ValueError
         If the `preset` is not a valid theme preset.
-
     """
 
     def __init__(
@@ -138,6 +137,8 @@ class Theme:
         check_is_valid_preset(preset)
         self._preset: ShinyThemePreset = preset
         self.name = name
+        # 2024-06-21: `version` is not exposed because we currently support only BS 5.
+        # In the future, the Bootstrap version could be chosen by the user on init.
         self._version = bootstrap
         self._include_paths: list[str] = []
 
