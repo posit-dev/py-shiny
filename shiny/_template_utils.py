@@ -346,6 +346,7 @@ def add_test_file(
         ).ask()
     else:
         app_file_val = app_file
+    # User quit early
     if app_file_val is None:
         sys.exit(1)
     app_file = Path(app_file_val)
@@ -357,9 +358,11 @@ def add_test_file(
                 return False
             if Path(x).is_dir():
                 return "Please provide a file path for your test file."
-            return (
-                not Path(x).exists()
-            ) or "Test file already exists. Please provide a new file name."
+            if Path(x).exists():
+                return "Test file already exists. Please provide a new file name."
+            if not Path(x).name.startswith("test_"):
+                return "Test file must start with 'test_'"
+            return True
 
         test_file_val = questionary.path(
             "Enter the path to the test file:",
@@ -371,6 +374,7 @@ def add_test_file(
     else:
         test_file_val = test_file
 
+    # User quit early
     if test_file_val is None:
         sys.exit(1)
     test_file = Path(test_file_val)
@@ -381,52 +385,48 @@ def add_test_file(
     # Make sure output test file doesn't exist
     if test_file.exists():
         raise FileExistsError("Test file already exists: ", test_file)
+    if not test_file.name.startswith("test_"):
+        return "Test file must start with 'test_'"
 
     # if app path directory is the same as the test file directory, use `local_app`
     # otherwise, use `create_app_fixture`
     is_same_dir = app_file.parent == test_file.parent
 
-    # Make sure test file directory exists
-    test_file.parent.mkdir(parents=True, exist_ok=True)
+    test_name = test_file.name.replace(".py", "")
+    rel_path = os.path.relpath(app_file, test_file.parent)
 
-    # Write template to test file
-    header = """\
+    template = (
+        f"""\
 from playwright.sync_api import Page
 
 from shiny.playwright.controls import <IMPORT REQUIRED CONTROLS>
-"""
-    if not is_same_dir:
-        header = (
-            header
-            + """from shiny.pytest import create_app_fixture
-"""
-        )
-    header = (
-        header
-        + """\
-from shiny.run import ShinyAppProc"""
-    )
+from shiny.run import ShinyAppProc
 
-    test_body = """\
-    page.goto(app.url)
-    # Add tests code here
-"""
-
-    test_name = test_file.name.replace(".py", "")
-
-    if is_same_dir:
-        middle = f"""\
 
 def {test_name}(page: Page, local_app: ShinyAppProc):
+
+    page.goto(local_app.url)
+    # Add tests code here
 """
-    else:
-        rel_path = os.path.relpath(app_file, test_file.parent)
-        middle = f"""\
+        if is_same_dir
+        else f"""\
+from playwright.sync_api import Page
+
+from shiny.playwright.controls import <IMPORT REQUIRED CONTROLS>
+from shiny.pytest import create_app_fixture
+from shiny.run import ShinyAppProc
 
 app = create_app_fixture("{rel_path}")
 
 
 def {test_name}(page: Page, app: ShinyAppProc):
-"""
 
-    test_file.write_text("\n".join([header, middle, test_body]))
+    page.goto(app.url)
+    # Add tests code here
+"""
+    )
+    # Make sure test file directory exists
+    test_file.parent.mkdir(parents=True, exist_ok=True)
+
+    # Write template to test file
+    test_file.write_text(template)
