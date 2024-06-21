@@ -377,7 +377,8 @@ class Theme:
         Parameters
         ----------
         compile_args
-            A dictionary of keyword arguments to pass to :func:`sass.compile`.
+            A dictionary of keyword arguments to pass to
+            [`sass.compile()`](https://sass.github.io/libsass-python/sass.html#sass.compile).
 
         Returns
         -------
