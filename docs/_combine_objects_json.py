@@ -59,7 +59,7 @@ objects_ret = QuartodocObject(
 
 print("Core:", objects_core.count)
 print("Express:", objects_express.count)
-print("Test:", objects_test.count)
+print("Testing:", objects_test.count)
 print("Combined:", objects_ret.count)
 
 # Save combined objects file info

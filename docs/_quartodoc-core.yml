@@ -331,7 +331,6 @@ quartodoc:
             - types.SilentException
             - types.SilentCancelOutputException
             - types.SafeException
-
     - title: Deprecated
       desc: ""
       contents:

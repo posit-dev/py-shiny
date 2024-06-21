@@ -81,7 +81,7 @@ quartodoc_build_express: $(PYBIN) quartodoc_interlinks
 ## Build test API docs
 quartodoc_build_test: $(PYBIN) quartodoc_interlinks
 	. $(PYBIN)/activate \
-	  && echo "::group::quartodoc build test docs" \
+	  && echo "::group::quartodoc build testing docs" \
 	  && quartodoc build --config _quartodoc-testing.yml --verbose \
 	  && mv objects.json _objects_express.json \
 	  && echo "::endgroup::"
