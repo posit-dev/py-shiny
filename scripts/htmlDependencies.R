@@ -168,6 +168,6 @@ copy_shiny_preset_to_base_bootstrap()
 # Generate Python Files -------------------------------------------------------------
 cli::cli_h2("Generate Python files")
 
-write_python_preset_choices(PRESETS, BUNDLED_PRESETS)
+write_python_preset_choices(VERSION_BOOTSTRAP, PRESETS, BUNDLED_PRESETS)
 write_versions_py(bootstrap = VERSION_BOOTSTRAP, requirejs = VERSION_REQUIREJS)
 write_spinners_py(WWW_SHARED)

@@ -397,7 +397,7 @@ compile_theme_sass <- function(preset, presets_precompiled, output_dir) {
 #' Write the Python preset choices to `_theme_presets.py`.
 #' @param presets A character vector of preset names.
 #' @param presets_precompiled A character vector of preset names that were precompiled.
-write_python_preset_choices <- function(presets, presets_precompiled) {
+write_python_preset_choices <- function(version, presets, presets_precompiled) {
   path_presets_py <- path_root("shiny", "ui", "_theme_presets.py")
   cli::cli_progress_step("Generate {.path {path_rel(path_presets_py)}}")
 
@@ -417,7 +417,12 @@ shiny_theme_presets: tuple[ShinyThemePreset, ...] = (
 
 shiny_theme_presets_bundled: tuple[ShinyThemePreset, ...] = (
 %s
-))"
+)
+
+shiny_theme_presets_bootswatch: tuple[ShinyThemePreset, ...] = (
+%s
+)
+)"
 
   py_lines <- function(x) {
     x <- paste(sprintf('"%s"', x), collapse = ",\n    ")
@@ -425,7 +430,13 @@ shiny_theme_presets_bundled: tuple[ShinyThemePreset, ...] = (
   }
 
   writeLines(
-    sprintf(template, py_lines(presets), py_lines(presets), py_lines(presets_precompiled)),
+    sprintf(
+      template,
+      py_lines(presets),
+      py_lines(presets),
+      py_lines(presets_precompiled),
+      py_lines(bslib::bootswatch_themes(version))
+    ),
     path_presets_py
   )
 

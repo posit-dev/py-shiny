@@ -68,3 +68,32 @@ shiny_theme_presets_bundled: tuple[ShinyThemePreset, ...] = (
     "bootstrap",
     "shiny",
 )
+
+shiny_theme_presets_bootswatch: tuple[ShinyThemePreset, ...] = (
+    "cerulean",
+    "cosmo",
+    "cyborg",
+    "darkly",
+    "flatly",
+    "journal",
+    "litera",
+    "lumen",
+    "lux",
+    "materia",
+    "minty",
+    "morph",
+    "pulse",
+    "quartz",
+    "sandstone",
+    "simplex",
+    "sketchy",
+    "slate",
+    "solar",
+    "spacelab",
+    "superhero",
+    "united",
+    "vapor",
+    "yeti",
+    "zephyr",
+)
+
