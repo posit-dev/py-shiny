@@ -242,7 +242,6 @@ class DataGrid(AbstractTabularData):
                 for style in self.styles
             ],
         )
-        print(res)
         return res
 
 

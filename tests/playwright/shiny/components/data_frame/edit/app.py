@@ -25,7 +25,11 @@ df = df.head(15)
 
 
 # Add some HTML content to the dataframe!
-df["Sample Number"] = df["Sample Number"].apply(  # pyright: ignore[reportCallIssue]
+df = df.astype({"Sample Number": "object"})
+# df.loc[:, "Sample Number"] = df.loc[:, "Sample Number"].astype("object")
+df.loc[:, "Sample Number"] = df.loc[
+    :, "Sample Number"
+].apply(  # pyright: ignore[reportCallIssue]
     lambda x: ui.HTML(  # pyright: ignore[reportUnknownLambdaType]
         str(
             ui.tags.strong(
@@ -37,10 +41,21 @@ df["Sample Number"] = df["Sample Number"].apply(  # pyright: ignore[reportCallIs
 
 
 # Use a non-standard index, just in case
-df["test_index"] = [
+df.loc[:, "test_index"] = [
     f"Row {i}" for i in range(0, df.shape[0])
 ]  # pyright: ignore[reportUnknownArgumentType]
 df.set_index("test_index", drop=True, inplace=True)
+
+
+# import numpy as np
+# import pandas as pd
+
+# np.random.seed(0)
+# df2 = pd.DataFrame(np.random.randn(10, 4), columns=["A", "B", "C", "D"])
+# df2.style
+
+# df = df2.style
+# print(df, dir(df))
 
 
 MOD_ID = "testing"
@@ -103,8 +118,6 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
         # return render.DataGrid(df, selection_mode="rows", editable=False)
         # return render.DataTable(df, selection_mode="rows", editable=False)
 
-    from shiny import reactive
-
     # @reactive.effect
     # def _():
     #     print("Filters:", summary_data.filter())
@@ -120,24 +133,21 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
     # @reactive.effect
     # def _():
     #     print("Data View (selected):\n", summary_data.data_view(selected=True))
-
-    @reactive.effect
-    def _():
-        print("Cell Selection:", summary_data.cell_selection())
-
+    # @reactive.effect
+    # def _():
+    #     print("Cell Selection:", summary_data.cell_selection())
     # @reactive.effect
     # def _():
     #     print(summary_data.data())
     #     print(summary_data.data_patched())
     #     print(summary_data.cell_patches())
-
     # from shiny import reactive
-
     # @reactive.effect
     # def _():
     #     print(summary_data._type_hints())
-
     from shinywidgets import render_widget
+
+    from shiny import reactive
 
     @render_widget
     def country_detail_pop():
