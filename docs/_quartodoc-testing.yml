@@ -10,15 +10,6 @@ quartodoc:
     style: _renderer.py
     show_signature_annotations: false
   sections:
-    # - title: Testing
-    #   desc: "Testing Methods to make it easier to run and test user's Shiny apps."
-    #   contents:
-    #     - kind: page
-    #       path: PlaywrightControls
-    #       flatten: true
-    #       summary:
-    #         name: "Playwright Controls"
-    #         desc: "Methods for interacting with Shiny app controls."
     - title: UI Layouts
       desc: Methods for interacting with Shiny app multiple UI component controls.
       contents:
