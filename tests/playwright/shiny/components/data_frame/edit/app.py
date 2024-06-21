@@ -100,16 +100,16 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
         # return df
         return render.DataGrid(
             df,
-            selection_mode=("rows"),
-            editable=True,
-            filters=True,
+            # selection_mode=("rows"),
+            # editable=True,
+            # filters=True,
             styles=df_gt._styles,
         )
         # Ideal
         return render.DataGrid(
             df_gt,
-            selection_mode=("rows"),
-            editable=True,
+            # selection_mode=("rows"),
+            # editable=True,
             filters=True,
         )
         # return render.DataTable(df, selection_mode="none", editable=True)
