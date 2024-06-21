@@ -441,6 +441,17 @@ copy_shiny_preset_to_base_bootstrap <- function() {
   cli::cli_progress_step("Copy shiny preset to {.path {path_rel(path_bootstrap)}}")
 
   preset_shiny_lines <- readLines(path_preset_shiny)
+
+  if (!grepl("font|family", preset_shiny_lines[1])) {
+    cli::cli_abort(
+      c(
+        "Expected a font import in {.path {path_preset_shiny}}:1",
+        x = "{.val {preset_shiny_lines[1]}}",
+        i = "Please update {.fn copy_shiny_preset_to_base_bootstrap} in {.path {path_root('scripts/_functions_sass.R')}}."
+      )
+    )
+  }
+
   preset_shiny_lines[1] <- sub(
     "^@import url\\([^)]+\\)",
     "@import url(\"font.css\")",
