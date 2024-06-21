@@ -98,7 +98,7 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
             gt.loc.body("Species", [1, 2]),
         )
         # return df
-        return render.DataGrid(
+        return render.DataTable(
             df,
             # selection_mode=("rows"),
             # editable=True,

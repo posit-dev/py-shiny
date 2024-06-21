@@ -7,6 +7,7 @@ import json
 from typing import (
     TYPE_CHECKING,
     Any,
+    List,
     Literal,
     Optional,
     Protocol,
@@ -68,6 +69,20 @@ StyleInfo = gt_data.StyleInfo
 #     styles: list[CellStyle] = field(default_factory=list)
 
 
+def styles_to_jsonifiable(
+    styles: list[StyleInfo],
+    *,
+    column_names: list[str],
+) -> list[dict[str, Jsonifiable]]:
+    return [
+        style_info_to_jsonifiable(
+            style,
+            column_names=column_names,
+        )
+        for style in styles
+    ]
+
+
 def style_info_to_jsonifiable(
     style_info: StyleInfo,
     *,
@@ -86,7 +101,20 @@ def style_info_to_jsonifiable(
     }
 
 
-Styles = list[StyleInfo]
+def as_styles(styles: Styles | None) -> Styles:
+
+    if styles is None:
+        styles = []
+    # if not isinstance(styles, list):
+    #     styles = [styles]
+    if not all(isinstance(style, StyleInfo) for style in styles):
+        raise TypeError(
+            "Expected 'styles' to be `None` or a list of `StyleInfo` objects"
+        )
+    return styles
+
+
+Styles = List[StyleInfo]
 
 
 class AbstractTabularData(abc.ABC):
@@ -211,17 +239,7 @@ class DataGrid(AbstractTabularData):
             editable=self.editable,
             row_selection_mode=row_selection_mode,
         )
-
-        if styles is None:
-            styles = []
-        # if not isinstance(styles, list):
-        #     styles = [styles]
-        if not all(isinstance(style, StyleInfo) for style in styles):
-            raise TypeError(
-                "The DataGrid() constructor expected 'styles' to be a "
-                "list of `StyleInfo` objects"
-            )
-        self.styles = styles
+        self.styles = as_styles(styles)
 
     def to_payload(self) -> dict[str, Jsonifiable]:
         res = serialize_pandas_df(self.data)
@@ -234,13 +252,10 @@ class DataGrid(AbstractTabularData):
             editable=self.editable,
             style="grid",
             fill=self.height is None,
-            styles=[
-                style_info_to_jsonifiable(
-                    style,
-                    column_names=self.data.columns.tolist(),
-                )
-                for style in self.styles
-            ],
+            styles=styles_to_jsonifiable(
+                self.styles,
+                column_names=self.data.columns.tolist(),
+            ),
         )
         return res
 
@@ -326,6 +341,7 @@ class DataTable(AbstractTabularData):
         editable: bool = False,
         selection_mode: SelectionModeInput = "none",
         row_selection_mode: Literal["deprecated"] = "deprecated",
+        styles: Optional[Styles] = None,
     ):
 
         self.data = cast_to_pandas(
@@ -344,6 +360,7 @@ class DataTable(AbstractTabularData):
             editable=self.editable,
             row_selection_mode=row_selection_mode,
         )
+        self.styles = as_styles(styles)
 
     def to_payload(self) -> dict[str, Jsonifiable]:
         res = serialize_pandas_df(self.data)
@@ -354,6 +371,10 @@ class DataTable(AbstractTabularData):
             filters=self.filters,
             editable=self.editable,
             style="table",
+            styles=styles_to_jsonifiable(
+                self.styles,
+                column_names=self.data.columns.tolist(),
+            ),
         )
         return res
 
