@@ -9,6 +9,7 @@ from pathlib import PurePath
 from types import TracebackType
 from typing import IO, Any, Callable, Generator, List, Optional, TextIO, Type, Union
 
+from .._docstring import no_example
 from .._utils import random_port
 
 __all__ = (
@@ -200,6 +201,7 @@ class ShinyAppProc:
             )
 
 
+@no_example()
 def run_shiny_app(
     app_file: Union[str, PurePath],
     *,

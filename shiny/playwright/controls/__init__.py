@@ -1,5 +1,6 @@
 from ._controls import (
     Accordion,
+    AccordionPanel,
     Card,
     DownloadButton,
     DownloadLink,
@@ -77,6 +78,7 @@ __all__ = [
     "ValueBox",
     "Card",
     "Accordion",
+    "AccordionPanel",
     "Sidebar",
     "Popover",
     "Tooltip",

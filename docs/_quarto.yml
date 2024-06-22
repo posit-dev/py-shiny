@@ -22,6 +22,8 @@ website:
         file: api/express/index.qmd
       - text: "Core API"
         file: api/core/index.qmd
+      - text: "Testing API"
+        file: api/test/index.qmd
     right:
       - icon: github
         href: https://github.com/posit-dev/py-shiny
