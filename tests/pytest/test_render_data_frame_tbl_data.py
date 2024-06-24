@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pandas as pd
 import polars as pl
@@ -66,7 +66,8 @@ def assert_frame_equal(src, target, use_index=False):
         (pd.Series([1.1]), "numeric"),
         (pd.Series(["a"], dtype="object"), "string"),
         (pd.Series(["a"], dtype="string"), "string"),
-        (pd.Series([datetime.now()], dtype="datetime64[ns]"), "unknown"),
+        (pd.Series([datetime.now()], dtype="datetime64[ns]"), "datetime"),
+        (pd.Series([pd.Timedelta(days=1)]), "timedelta"),
         (pd.Series(["a"], dtype="category"), "categorical"),
         (pd.Series([{"x": 1}]), "unknown"),
         (pd.Series([h1("yo")]), "html"),
@@ -88,14 +89,14 @@ def test_serialize_frame(df):
         "columns": ["num", "chr", "cat", "dt", "struct"],
         "index": [0, 1],
         "data": [
-            [1, "a", "a", 946771200000, {"x": 1}],
-            [2, "b", "a", 946771200000, {"x": 2}],
+            [1, "a", "a", "2000-01-02T00:00:00.000", {"x": 1}],
+            [2, "b", "a", "2000-01-02T00:00:00.000", {"x": 2}],
         ],
         "typeHints": [
             {"type": "numeric"},
             {"type": "string"},
             {"type": "string"},
-            {"type": "unknown"},
+            {"type": "datetime"},
             {"type": "unknown"},
         ],
     }

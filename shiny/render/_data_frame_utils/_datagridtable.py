@@ -348,9 +348,14 @@ def serialize_pandas_df(df: "pd.DataFrame") -> dict[str, Any]:
                     wrap_shiny_html_with_session
                 )
 
+    # note that date_format iso converts durations to ISO8601 Durations.
+    # e.g. 1 Day -> P1DT0H0M0S
+    # see https://en.wikipedia.org/wiki/ISO_8601#Durations
     res = json.loads(
         # {index: [index], columns: [columns], data: [values]}
-        df.to_json(None, orient="split")  # pyright: ignore[reportUnknownMemberType]
+        df.to_json(
+            None, orient="split", date_format="iso"
+        )  # pyright: ignore[reportUnknownMemberType]
     )
 
     res["typeHints"] = type_hints

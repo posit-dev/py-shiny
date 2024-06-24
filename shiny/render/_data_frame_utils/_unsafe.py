@@ -74,6 +74,10 @@ def serialize_numpy_dtype(
             "type": "categorical",
             "categories": [str(x) for x in col.cat.categories.to_list()],
         }
+    elif t in {"datetime64", "datetime"}:
+        t = "datetime"
+    elif t in {"timedelta", "timedelta64"}:
+        t = "timedelta"
     else:
         if col_contains_shiny_html(col):
             t = "html"
