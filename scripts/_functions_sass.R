@@ -419,8 +419,7 @@ shiny_theme_presets_bundled: tuple[ShinyThemePreset, ...] = (
 
 shiny_theme_presets_bootswatch: tuple[ShinyThemePreset, ...] = (
 %s
-)
-)"
+))"
 
   py_lines <- function(x) {
     x <- paste(sprintf('"%s"', x), collapse = ",\n    ")

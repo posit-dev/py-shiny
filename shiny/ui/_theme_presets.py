@@ -96,4 +96,3 @@ shiny_theme_presets_bootswatch: tuple[ShinyThemePreset, ...] = (
     "yeti",
     "zephyr",
 )
-
