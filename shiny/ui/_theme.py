@@ -416,7 +416,7 @@ class Theme:
         return f"shiny-theme-{self.name or self._preset}"
 
     def _css_name(self) -> str:
-        return f"bootstrap.min.css"
+        return "bootstrap.min.css"
 
     def _css_precompiled_path(self) -> str:
         return path_pkg_preset(self._preset, self._css_name())
