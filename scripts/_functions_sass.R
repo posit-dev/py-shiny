@@ -24,9 +24,7 @@ write_sass_layer_markers <- function(dir) {
 
 #' Create a base Bootstrap theme via {bslib}.
 bslib_bs_theme <- function(version, preset = "shiny") {
-  theme <- bs_theme(version, preset = preset)
-  # The bs3compat layer is for legacy markup only and isn't needed in py-shiny
-  bs_remove(theme, "bs3compat")
+  bs_theme(version, preset = preset)
 }
 
 #' Create a full Shiny theme bundle with all dependencies.

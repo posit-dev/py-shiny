@@ -42,6 +42,7 @@
 .table th[align=left] { text-align: left; }
 .table th[align=right] { text-align: right; }
 .table th[align=center] { text-align: center; }
+@import "../../bslib/bs3compat/_rules.scss";
 @import "../../bslib/bslib-scss/bslib.scss";
 @import "../../bslib/lib/bsw5/dist/simplex/_bootswatch.scss";
 .btn-default:not(.btn-primary):not(.btn-info):not(.btn-success):not(.btn-warning):not(.btn-danger):not(.btn-dark):not(.btn-light):not([class*='btn-outline-']) {
