@@ -1,0 +1,93 @@
+quartodoc:
+  style: pkgdown
+  dir: api/testing
+  out_index: index.qmd
+  package: shiny
+  rewrite_all_pages: false
+  sidebar: api/testing/_sidebar.yml
+  dynamic: false
+  renderer:
+    style: _renderer.py
+    show_signature_annotations: false
+  sections:
+    - title: UI Layouts
+      desc: Methods for interacting with Shiny app multiple UI component controls.
+      contents:
+        - playwright.controls.Accordion
+        - playwright.controls.AccordionPanel
+        - playwright.controls.Card
+        - playwright.controls.Popover
+        - playwright.controls.Sidebar
+        - playwright.controls.Tooltip
+    - title: UI Inputs
+      desc: Methods for interacting with Shiny app input value controls.
+      contents:
+        - playwright.controls.InputActionLink
+        - playwright.controls.InputCheckbox
+        - playwright.controls.InputCheckboxGroup
+        - playwright.controls.InputDarkMode
+        - playwright.controls.InputDate
+        - playwright.controls.InputDateRange
+        - playwright.controls.InputFile
+        - playwright.controls.InputNumeric
+        - playwright.controls.InputPassword
+        - playwright.controls.InputRadioButtons
+        - playwright.controls.InputSelect
+        - playwright.controls.InputSelectize
+        - playwright.controls.InputSlider
+        - playwright.controls.InputSliderRange
+        - playwright.controls.InputSwitch
+        - playwright.controls.InputTaskButton
+        - playwright.controls.InputText
+        - playwright.controls.InputTextArea
+    - title: Value boxes
+      desc: Methods for interacting with Shiny app valuebox controls.
+      contents:
+        - playwright.controls.ValueBox
+    - title: Navigation (tab) panels
+      desc: Methods for interacting with Shiny app UI content controls.
+      contents:
+        - playwright.controls.NavItem
+        - playwright.controls.NavsetBar
+        - playwright.controls.NavsetCardPill
+        - playwright.controls.NavsetCardTab
+        - playwright.controls.NavsetCardUnderline
+        - playwright.controls.NavsetHidden
+        - playwright.controls.NavsetPill
+        - playwright.controls.NavsetPillList
+        - playwright.controls.NavsetTab
+        - playwright.controls.NavsetUnderline
+    - title: Upload and download
+      desc: Methods for interacting with Shiny app uploading and downloading controls.
+      contents:
+        - playwright.controls.DownloadButton
+        - playwright.controls.DownloadLink
+    - title: Rendering outputs
+      desc: Render output in a variety of ways.
+      contents:
+        - playwright.controls.OutputCode
+        - playwright.controls.OutputDataFrame
+        - playwright.controls.OutputImage
+        - playwright.controls.OutputPlot
+        - playwright.controls.OutputTable
+        - playwright.controls.OutputText
+        - playwright.controls.OutputTextVerbatim
+        - playwright.controls.OutputUi
+    - title: "Playwright Expect"
+      desc: "Methods for testing the state of a locator within a Shiny app."
+      contents:
+        - playwright.expect.expect_to_change
+        - playwright.expect.expect_attribute_to_have_value
+        - playwright.expect.expect_to_have_class
+        - playwright.expect.expect_not_to_have_class
+        - playwright.expect.expect_to_have_style
+    - title: "Pytest"
+      desc: "Fixtures used for testing Shiny apps with Pytest."
+      contents:
+        - pytest.create_app_fixture
+        - pytest.ScopeName
+    - title: "Run"
+      desc: "Methods for starting a local Shiny app in the background"
+      contents:
+        - run.run_shiny_app
+        - run.ShinyAppProc

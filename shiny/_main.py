@@ -511,6 +511,45 @@ package_template_choices = {
 }
 
 
+@main.group(help="""Add files to enhance your Shiny app.""")
+def add() -> None:
+    pass
+
+
+@add.command(
+    help="""Add a test file for a specified Shiny app.
+
+Add an empty test file for a specified app. You will be prompted with a destination
+folder. If you don't provide a destination folder, it will be added in the current
+working directory based on the app name.
+
+After creating the shiny app file, you can use `pytest` to run the tests:
+
+        pytest TEST_FILE
+"""
+)
+@click.option(
+    "--app",
+    "-a",
+    type=str,
+    help="Please provide the path to the app file for which you want to create a test file.",
+)
+@click.option(
+    "--test-file",
+    "-t",
+    type=str,
+    help="Please provide the name of the test file you want to create. The basename of the test file should start with `test_` and be unique across all test files.",
+)
+# Param for app.py, param for test_name
+def test(
+    app: Path | None,
+    test_file: Path | None,
+) -> None:
+    from ._template_utils import add_test_file
+
+    add_test_file(app_file=app, test_file=test_file)
+
+
 @main.command(
     help="""Create a Shiny application from a template.
 

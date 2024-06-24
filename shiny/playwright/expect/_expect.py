@@ -8,6 +8,7 @@ import sys
 from playwright.sync_api import Locator
 from playwright.sync_api import expect as playwright_expect
 
+from ..._docstring import no_example
 from ..._typing_extensions import assert_type
 from .._types import AttrValue, PatternOrStr, PatternStr, StyleValue, Timeout
 
@@ -21,6 +22,7 @@ __all__ = (
 )
 
 
+@no_example()
 def expect_attribute_to_have_value(
     loc: Locator,
     name: str,
@@ -39,6 +41,7 @@ def expect_attribute_to_have_value(
     playwright_expect(loc).to_have_attribute(name=name, value=value, timeout=timeout)
 
 
+@no_example()
 def expect_to_have_class(
     loc: Locator,
     cls: str,
@@ -49,6 +52,7 @@ def expect_to_have_class(
     playwright_expect(loc).to_have_class(cls_regex, timeout=timeout)
 
 
+@no_example()
 def expect_not_to_have_class(
     loc: Locator,
     cls: str,
@@ -59,6 +63,7 @@ def expect_not_to_have_class(
     playwright_expect(loc).not_to_have_class(cls_regex, timeout=timeout)
 
 
+@no_example()
 def expect_to_have_style(
     loc: Locator,
     css_key: str,
