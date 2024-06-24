@@ -412,20 +412,29 @@ class Theme:
 
         return self._css
 
+    def _dep_name(self) -> str:
+        return f"shiny-theme-{self.name or self._preset}"
+
+    def _css_name(self) -> str:
+        return f"bootstrap.min.css"
+
+    def _css_precompiled_path(self) -> str:
+        return path_pkg_preset(self._preset, self._css_name())
+
     def _read_precompiled_css(self) -> str:
-        path = path_pkg_preset(self._preset, "preset.min.css")
+        path = self._css_precompiled_path()
         with open(path, "r") as f:
             return f.read()
 
     def _html_dependency_precompiled(self) -> HTMLDependency:
         return HTMLDependency(
-            name=f"shiny-theme-{self._preset}",
+            name=self._dep_name(),
             version=self._version,
             source={
                 "package": "shiny",
                 "subdir": f"www/shared/sass/preset/{self._preset}",
             },
-            stylesheet={"href": "preset.min.css"},
+            stylesheet={"href": self._css_name()},
             all_files=False,
         )
 
@@ -444,8 +453,8 @@ class Theme:
         if self._can_use_precompiled():
             return self._html_dependency_precompiled()
 
-        dep_name = f"shiny-theme-{self.name or self._preset}"
-        css_name = f"{dep_name}.min.css"
+        dep_name = self._dep_name()
+        css_name = self._css_name()
 
         if self._css_temp_srcdir is None:
             self._css_temp_srcdir = tempfile.TemporaryDirectory()
@@ -479,8 +488,8 @@ def path_pkg_preset(preset: ShinyThemePreset, *args: str) -> str:
     --------
 
     ```python
-    path_pkg_preset("shiny", "preset.min.css")
-    #> "{shiny}/www/shared/sass/preset/shiny/preset.min.css"
+    path_pkg_preset("shiny", "bootstrap.min.css")
+    #> "{shiny}/www/shared/sass/preset/shiny/bootstrap.min.css"
     ```
     """
     return os.path.realpath(path_pkg_www("sass", "preset", str(preset), *args))

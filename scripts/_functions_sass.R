@@ -346,7 +346,7 @@ prepare_and_write_theme_sass_files <- function(version, presets, path_sass_marke
 #'   `NULL`.
 compile_theme_sass <- function(preset, presets_precompiled, output_dir) {
   path_preset_scss <- path(output_dir, "preset", preset, "preset.scss")
-  path_preset_compiled <- path(path_dir(path_preset_scss), "preset.min.css")
+  path_preset_compiled <- path(path_dir(path_preset_scss), "bootstrap.min.css")
 
   verb <- if (preset %in% presets_precompiled) "Pre-compil" else "Test"
   path_out <- ""
@@ -444,7 +444,7 @@ shiny_theme_presets_bootswatch: tuple[ShinyThemePreset, ...] = (
 #' replaces the `@import` statement in the Bootstrap CSS file with the correct path to
 #' the font CSS file to re-enable pre-downloaded fonts.
 copy_shiny_preset_to_base_bootstrap <- function() {
-  path_preset_shiny <- path_root("shiny", "www", "shared", "sass", "preset", "shiny", "preset.min.css")
+  path_preset_shiny <- path_root("shiny", "www", "shared", "sass", "preset", "shiny", "bootstrap.min.css")
   path_bootstrap <- path_root("shiny", "www", "shared", "bootstrap", "bootstrap.min.css")
   cli::cli_progress_step("Copy shiny preset to {.path {path_rel(path_bootstrap)}}")
 
