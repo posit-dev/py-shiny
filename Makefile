@@ -66,8 +66,8 @@ typings/chat:
 	pyright --createstub langchain_core
 	@echo "Creating openai stubs"
 	# pyright --createstub openai
-	@echo "Creating tokenizer stubs"
-	pyright --createstub tokenizer
+	@echo "Creating tokenizers stubs"
+	pyright --createstub tokenizers
 typings/folium:
 	@echo "Creating folium stubs"
 	pyright --createstub folium

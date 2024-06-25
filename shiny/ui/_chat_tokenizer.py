@@ -60,7 +60,7 @@ def get_default_tokenizer() -> TokenizersTokenizer | None:
     except Exception:
         warnings.warn(
             "Unable to obtain a default tokenizer. "
-            "Consider setting the tokenizer manually via `Chat`'s `set_tokenizer()` method.",
+            "Consider setting the tokenizer manually via `Chat()`'s `tokenizer` parameter.",
             stacklevel=2,
         )
         return None
