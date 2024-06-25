@@ -63,7 +63,7 @@ class DictNormalizer(BaseMessageNormalizer):
         return isinstance(chunk, dict)
 
     @staticmethod
-    def _check_dict(x: Any) -> dict[str, Any]:
+    def _check_dict(x: Any) -> "dict[str, Any]":
         if "content" not in x:
             raise ValueError("Message must have 'content' key")
         if "role" in x and x["role"] not in ["assistant", "system"]:
@@ -195,12 +195,12 @@ class AnthropicNormalizer(BaseMessageNormalizer):
 
 class GoogleNormalizer(BaseMessageNormalizer):
     def normalize(self, message: Any) -> ChatMessage:
-        msg = cast("GenerateContentResponse", message)
-        return ChatMessage(content=msg.text, role="assistant")
+        x = cast("GenerateContentResponse", message)
+        return ChatMessage(content=x.text, role="assistant")
 
     def normalize_chunk(self, chunk: Any) -> ChatMessage:
-        cnk = cast("GenerateContentResponse", chunk)
-        return ChatMessage(content=cnk.text, role="assistant")
+        x = cast("GenerateContentResponse", chunk)
+        return ChatMessage(content=x.text, role="assistant")
 
     def can_normalize(self, message: Any) -> bool:
         try:
@@ -218,11 +218,11 @@ class GoogleNormalizer(BaseMessageNormalizer):
 
 class OllamaNormalizer(DictNormalizer):
     def normalize(self, message: Any) -> ChatMessage:
-        x = cast(dict[str, Any], message["message"])
+        x = cast("dict[str, Any]", message["message"])
         return super().normalize(x)
 
-    def normalize_chunk(self, chunk: dict[str, Any]) -> ChatMessage:
-        msg = cast(dict[str, Any], chunk["message"])
+    def normalize_chunk(self, chunk: "dict[str, Any]") -> ChatMessage:
+        msg = cast("dict[str, Any]", chunk["message"])
         return super().normalize_chunk(msg)
 
     def can_normalize(self, message: Any) -> bool:
