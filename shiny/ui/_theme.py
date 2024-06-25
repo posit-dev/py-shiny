@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import pathlib
+import re
 import tempfile
 import textwrap
 from typing import (
@@ -434,7 +435,7 @@ class Theme:
     def _dep_create(self, css_path: str | pathlib.Path) -> HTMLDependency:
         css_path = pathlib.Path(css_path)
         return HTMLDependency(
-            name=self._dep_name(),
+            name=make_valid_path_str(self._dep_name()),
             version=self._version,
             source={"subdir": str(css_path.parent)},
             stylesheet={"href": css_path.name},
@@ -510,3 +511,7 @@ def check_libsass_installed() -> None:
             "The 'libsass' package is required to compile custom themes. "
             "Please install it with `pip install libsass` or `pip install shiny[theme]`.",
         )
+
+
+def make_valid_path_str(x: str) -> str:
+    return re.sub(r"[^a-zA-Z0-9_.-]+", "-", x).lower()

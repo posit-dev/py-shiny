@@ -197,3 +197,14 @@ def test_page_theme_wins(page_fn: Callable[..., Tag], theme: Theme | None):
             # that our assumptions about how htmltools' dependency resolution works
             # have changed.
             assert dep.stylesheet == []
+
+
+def test_theme_dep_name_is_valid_path_part():
+    theme = Theme("shiny")
+    assert theme._dep_create("foo.css").name == "shiny-theme-shiny"
+
+    theme = Theme("bootstrap", name="default")
+    assert theme._dep_create("foo.css").name == "shiny-theme-default"
+
+    theme = Theme("sketchy", name="My Special Sketchy")
+    assert theme._dep_create("foo.css").name == "shiny-theme-my-special-sketchy"
