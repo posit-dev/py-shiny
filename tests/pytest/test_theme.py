@@ -3,7 +3,7 @@ from typing import Callable
 import pytest
 from htmltools import Tag
 
-import shiny.express
+from shiny import App
 from shiny.ui import (
     Theme,
     input_dark_mode,
@@ -177,7 +177,9 @@ def test_page_theme_wins(page_fn: Callable[..., Tag], theme: Theme | None):
         theme=theme,
     )
 
-    deps = ui.get_dependencies()
+    app = App(ui, lambda inputs: None)._render_page(ui, "lib")
+
+    deps = app["dependencies"]
     no_css = [
         "shiny",
         "bslib-components",

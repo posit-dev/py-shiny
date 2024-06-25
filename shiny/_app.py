@@ -438,7 +438,9 @@ class App:
         ui_res = copy.copy(ui)
         # Make sure requirejs, jQuery, and Shiny come before any other dependencies.
         # (see require_deps() for a comment about why we even include it)
-        ui_res.insert(0, [require_deps(), jquery_deps(), *shiny_deps()])
+        ui_res.insert(
+            0, [require_deps(), jquery_deps(), *shiny_deps(include_css=False)]
+        )
         rendered = HTMLDocument(ui_res).render(lib_prefix=lib_prefix)
         self._ensure_web_dependencies(rendered["dependencies"])
         return rendered
@@ -449,7 +451,7 @@ class App:
 
         doc = HTMLTextDocument(
             page_html,
-            deps=[require_deps(), jquery_deps(), *shiny_deps()],
+            deps=[require_deps(), jquery_deps(), *shiny_deps(include_css=False)],
             deps_replace_pattern='<meta name="shiny-dependency-placeholder" content="">',
         )
 
