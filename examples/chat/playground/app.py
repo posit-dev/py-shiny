@@ -37,7 +37,7 @@ with ui.sidebar(position="right"):
     ui.input_slider("max_tokens", "Max Tokens", min=1, max=4096, step=1, value=100)
 
 
-@render.express
+@render.express(fill=True, fillable=True)
 def chat_ui():
     chat = ui.Chat(id="chat")
 
