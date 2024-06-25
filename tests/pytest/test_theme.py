@@ -1,5 +1,9 @@
-import pytest
+from typing import Callable
 
+import pytest
+from htmltools import Tag
+
+import shiny.express
 from shiny.ui import (
     Theme,
     input_dark_mode,
@@ -7,6 +11,9 @@ from shiny.ui import (
     input_selectize,
     input_slider,
     page_bootstrap,
+    page_fillable,
+    page_sidebar,
+    sidebar,
 )
 from shiny.ui._theme import (
     ShinyThemePreset,
@@ -145,13 +152,29 @@ def test_theme_is_not_tagifiable():
         Theme("shiny").tagify()
 
 
-def test_page_theme_wins():
-    ui = page_bootstrap(
+def _page_sidebar(*args, **kwargs) -> Tag:  # type: ignore
+    return page_sidebar(sidebar("Sidebar"), *args, **kwargs)  # type: ignore
+
+
+@pytest.mark.parametrize(
+    "page_fn",
+    [
+        page_bootstrap,
+        page_fillable,
+        _page_sidebar,  # type: ignore
+    ],
+)
+@pytest.mark.parametrize(
+    "theme",
+    [None, Theme("shiny"), Theme("bootstrap"), Theme("sketchy")],
+)
+def test_page_theme_wins(page_fn: Callable[..., Tag], theme: Theme | None):
+    ui = page_fn(
         input_dark_mode(),
         input_date_range("date", "Date Range"),
         input_selectize("select", "Select", choices=["A", "B"]),
         input_slider("slider", "Slider", min=0, max=100, value=50),
-        theme=Theme("shiny"),
+        theme=theme,
     )
 
     deps = ui.get_dependencies()
