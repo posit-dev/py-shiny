@@ -17,7 +17,6 @@ from typing import (
 )
 
 from htmltools import HTMLDependency
-from packaging.version import Version
 
 from .._docstring import add_example
 from .._typing_extensions import NotRequired, TypedDict
@@ -412,31 +411,37 @@ class Theme:
 
         return self._css
 
+    # Third party theme-providers, e.g. shinyswatch, can override the next three methods
+    # to customize the HTML Dependency object that is returned by the theme or to
+    # provide pre-compiled CSS files.
     def _dep_name(self) -> str:
+        """A method returning the name of the HTML dependency."""
         return f"shiny-theme-{self.name or self._preset}"
 
-    def _css_name(self) -> str:
+    def _dep_css_name(self) -> str:
+        """A method returning the name of the CSS file used in the HTML dependency."""
         return "bootstrap.min.css"
 
-    def _css_precompiled_path(self) -> str:
-        return path_pkg_preset(self._preset, self._css_name())
+    def _dep_css_precompiled_path(self) -> str | pathlib.Path:
+        """A method returning the path to the precompiled CSS file."""
+        return path_pkg_preset(self._preset, self._dep_css_name())
 
     def _read_precompiled_css(self) -> str:
-        path = self._css_precompiled_path()
+        path = self._dep_css_precompiled_path()
         with open(path, "r") as f:
             return f.read()
 
-    def _html_dependency_precompiled(self) -> HTMLDependency:
+    def _dep_create(self, css_path: str | pathlib.Path) -> HTMLDependency:
+        css_path = pathlib.Path(css_path)
         return HTMLDependency(
             name=self._dep_name(),
             version=self._version,
-            source={
-                "package": "shiny",
-                "subdir": f"www/shared/sass/preset/{self._preset}",
-            },
-            stylesheet={"href": self._css_name()},
-            all_files=False,
+            source={"subdir": str(css_path.parent)},
+            stylesheet={"href": css_path.name},
         )
+
+    def _html_dependency_precompiled(self) -> HTMLDependency:
+        return self._dep_create(css_path=self._dep_css_precompiled_path())
 
     def _html_dependency(self) -> HTMLDependency:
         """
@@ -453,8 +458,7 @@ class Theme:
         if self._can_use_precompiled():
             return self._html_dependency_precompiled()
 
-        dep_name = self._dep_name()
-        css_name = self._css_name()
+        css_name = self._dep_css_name()
 
         if self._css_temp_srcdir is None:
             self._css_temp_srcdir = tempfile.TemporaryDirectory()
@@ -465,12 +469,7 @@ class Theme:
             with open(css_path, "w") as css_file:
                 css_file.write(self.to_css())
 
-        return HTMLDependency(
-            name=dep_name,
-            version=Version(self._version),
-            source={"subdir": self._css_temp_srcdir.name},
-            stylesheet={"href": css_name},
-        )
+        return self._dep_create(css_path)
 
     def tagify(self) -> None:
         raise SyntaxError(
