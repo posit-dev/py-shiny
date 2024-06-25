@@ -1,6 +1,6 @@
 from playwright.sync_api import Page, expect
 
-from shiny.playwright.controls import InputCheckbox
+from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
 
@@ -9,7 +9,7 @@ def test_async_app(page: Page, local_app: ShinyAppProc) -> None:
 
     # Non-module version
 
-    cb_show = InputCheckbox(page, "show")
+    cb_show = controller.InputCheckbox(page, "show")
     expect(cb_show.loc).to_be_visible()
     expect(cb_show.loc).not_to_be_checked()
 
@@ -22,7 +22,7 @@ def test_async_app(page: Page, local_app: ShinyAppProc) -> None:
 
     # Module version
 
-    cb_mod_show = InputCheckbox(page, "mod-show")
+    cb_mod_show = controller.InputCheckbox(page, "mod-show")
     expect(cb_mod_show.loc).to_be_visible()
     expect(cb_mod_show.loc).not_to_be_checked()
 

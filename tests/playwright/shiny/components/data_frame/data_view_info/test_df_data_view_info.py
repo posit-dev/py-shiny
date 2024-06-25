@@ -1,18 +1,18 @@
 from playwright.sync_api import Page
 
-from shiny.playwright.controls import OutputDataFrame, OutputTextVerbatim
+from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
 
 def test_validate_html_columns(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 
-    data_frame = OutputDataFrame(page, "testing-penguins_df")
+    data_frame = controller.OutputDataFrame(page, "testing-penguins_df")
 
-    sort = OutputTextVerbatim(page, "testing-sort")
-    filter = OutputTextVerbatim(page, "testing-filter")
-    rows = OutputTextVerbatim(page, "testing-rows")
-    selected_rows = OutputTextVerbatim(page, "testing-selected_rows")
+    sort = controller.OutputTextVerbatim(page, "testing-sort")
+    filter = controller.OutputTextVerbatim(page, "testing-filter")
+    rows = controller.OutputTextVerbatim(page, "testing-rows")
+    selected_rows = controller.OutputTextVerbatim(page, "testing-selected_rows")
 
     sort.expect_value("()")
     filter.expect_value("()")

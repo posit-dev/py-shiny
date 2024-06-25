@@ -23,6 +23,6 @@ try:
         )
 except ImportError:
     pass
-from . import controls, expect
+from . import controller, expect
 
-__all__ = ["expect", "controls"]
+__all__ = ["expect", "controller"]
