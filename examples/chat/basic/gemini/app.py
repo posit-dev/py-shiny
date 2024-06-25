@@ -22,7 +22,6 @@ async def _():
     messages = chat.get_messages()
 
     # Convert messages to the format expected by Google's API
-    # TODO: we could automatically do this if client is provided?
     contents = [
         {
             "role": "model" if x["role"] == "assistant" else x["role"],
