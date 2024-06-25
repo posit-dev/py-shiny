@@ -10,20 +10,6 @@ ui.page_opts(
     fillable_mobile=True,
 )
 
-
-# A function to transform user input
-# Note that, if an exception occurs, the function will return a message to the user
-# "short-circuiting" the conversation and asking the user to try again.
-async def transform_user_input(input: str) -> str | dict:
-    try:
-        return await scrape_page_with_url(input)
-    except Exception:
-        return {
-            "role": "assistant",
-            "content": "I'm sorry, I couldn't extract content from that URL. Please try again. ",
-        }
-
-
 # Initialize the chat (with a system prompt and starting message)
 chat = ui.Chat(
     id="chat",
@@ -34,12 +20,25 @@ chat = ui.Chat(
             "content": "Hello! I'm a recipe extractor. Please enter a URL to a recipe page. For example, <https://www.thechunkychef.com/epic-dry-rubbed-baked-chicken-wings/>",
         },
     ],
-    transform_user_input=transform_user_input,
 )
 
 chat.ui(placeholder="Enter a recipe URL...")
 
 llm = AsyncOpenAI()
+
+
+# A function to transform user input
+# Note that, if an exception occurs, the function will return a message to the user
+# "short-circuiting" the conversation and asking the user to try again.
+@chat.transform_user_input
+async def try_scrape_page(input: str) -> str | None:
+    try:
+        return await scrape_page_with_url(input)
+    except Exception:
+        await chat.append_message(
+            "I'm sorry, I couldn't extract content from that URL. Please try again. "
+        )
+        return None
 
 
 @chat.on_user_submit

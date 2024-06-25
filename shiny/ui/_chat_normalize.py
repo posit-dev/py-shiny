@@ -50,11 +50,11 @@ class StringNormalizer(BaseMessageNormalizer):
 class DictNormalizer(BaseMessageNormalizer):
     def normalize(self, message: Any) -> ChatMessage:
         x = self._check_dict(message)
-        return ChatMessage(content=x["content"], role="assistant")
+        return ChatMessage(content=x["content"], role=x.get("role", "assistant"))
 
     def normalize_chunk(self, chunk: Any) -> ChatMessage:
         x = self._check_dict(chunk)
-        return ChatMessage(content=x["content"], role="assistant")
+        return ChatMessage(content=x["content"], role=x.get("role", "assistant"))
 
     def can_normalize(self, message: Any) -> bool:
         return isinstance(message, dict)

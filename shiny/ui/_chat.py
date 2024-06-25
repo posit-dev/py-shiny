@@ -34,8 +34,8 @@ __all__ = (
 
 # TODO: UserInput might need to be a list of dicts if we want to support multiple
 # user input content types
-TransformUserInput = Callable[[str], str | ChatMessage]
-TransformUserInputAsync = Callable[[str], Awaitable[str | ChatMessage]]
+TransformUserInput = Callable[[str], str | None]
+TransformUserInputAsync = Callable[[str], Awaitable[str | None]]
 TransformAssistantResponse = Callable[[str], str | HTML]
 TransformAssistantResponseAsync = Callable[[str], Awaitable[str | HTML]]
 SubmitFunction = Callable[[], None]
@@ -61,18 +61,7 @@ class Chat:
         dictionary with a `content` and `role` key. The `content` key should contain
         the message text, and the `role` key can be "assistant", "user", or "system".
         Note that system messages are not actually displayed in the chat, but will
-        still be stored in the chat's `.messages()`.
-    transform_user_input
-        A function to transform user input before storing it in the chat `.messages()`
-        history. This is useful for implementing RAG workflows, like taking a URL and
-        scraping it for text before sending it to the model.
-    transform_assistant_response
-        A function to transform role="assistant" messages for display purposes.
-        If the function returns a string, it will be interpreted and parsed as a markdown
-        string on the client (and the resulting HTML is then sanitized). If the function
-        returns HTML, it will be displayed as-is. Note that, for `.append_message_stream()`,
-        the transformer will be applied to each message in the stream, so it should be
-        performant. By default, assistant responses are interpreted as markdown on the client.
+        still be stored in the chat's `.get_messages()`.
     on_error
         How to handle errors that occur in response to user input. For options 1-3, the
         error message is displayed to the user and the app continues to run. For option
@@ -98,12 +87,6 @@ class Chat:
         id: str,
         *,
         messages: Sequence[ChatMessage] = (),
-        transform_user_input: (
-            TransformUserInput | TransformUserInputAsync
-        ) = lambda x: x,
-        transform_assistant_response: (
-            TransformAssistantResponse | TransformAssistantResponseAsync
-        ) = lambda x: x,
         on_error: Literal["auto", "sanitize", "actual", "unhandled"] = "auto",
         tokenizer: TokenEncoding | MISSING_TYPE | None = MISSING,
         session: Optional[Session] = None,
@@ -111,8 +94,8 @@ class Chat:
 
         self.id = id
         self.user_input_id = f"{id}_user_input"
-        self._transform_user = _utils.wrap_async(transform_user_input)
-        self._transform_assistant = _utils.wrap_async(transform_assistant_response)
+        self._transform_user: TransformUserInputAsync | None = None
+        self._transform_assistant: TransformAssistantResponseAsync | None = None
         if isinstance(tokenizer, MISSING_TYPE):
             self._tokenizer = get_default_tokenizer()
         else:
@@ -147,33 +130,21 @@ class Chat:
 
             # Initialize the chat with the provided messages
             for msg in messages:
-                msg_post = _utils.run_coro_sync(self._transform_message(msg))
-                # If transform changed the role, we effectively treat it as 2 messages
-                if msg["role"] != msg_post["role"]:
-                    msg = self._store_message(as_transformed_message(msg))
-                    _utils.run_coro_sync(self._send_append_message(msg))
-                msg_post = self._store_message(msg_post)
-                _utils.run_coro_sync(self._send_append_message(msg_post))
+                _utils.run_coro_sync(self.append_message(msg))
 
             # When user input is submitted, transform, and store it in the chat state
             # (and make sure this runs before other effects since when the user
-            #  calls `.messages()`, they should get the latest user input)
+            #  calls `.get_messages()`, they should get the latest user input)
             @reactive.effect(priority=9999)
             @reactive.event(self.get_user_input)
             async def _on_user_input():
                 msg = ChatMessage(content=self.get_user_input(), role="user")
                 msg_post = await self._transform_message(msg)
-                if msg_post["role"] == "user":
+                if msg_post is not None:
                     self._store_message(msg_post)
+                    self._suspend_input_handler = False
                 else:
-                    # If role changes, treat it as 2 messages
-                    self._store_message(as_transformed_message(msg))
-                    msg_post = self._store_message(msg_post)
-                    await self._send_append_message(msg_post)
-
-                # Since the transform has effectively handled the user input, cancel any
-                # subsequent user input handling
-                self._suspend_input_handler = msg_post["role"] != "user"
+                    self._suspend_input_handler = True
 
             self._effects.append(_on_user_input)
 
@@ -251,7 +222,7 @@ class Chat:
         user submits a message. The function should take no arguments.
 
         In many cases, the implementation of `fn` should do at least the following:
-            1. Call `.messages()` to obtain the current chat history.
+            1. Call `.get_messages()` to obtain the current chat history.
             2. Generate a response based on those messages.
             3. Append the response to the chat history using `.append_message()` or
               `.append_message_stream()`.
@@ -381,6 +352,8 @@ class Chat:
             msg = normalize_message(message)
 
         msg = await self._transform_message(msg)
+        if msg is None:
+            return
         msg = self._store_message(msg, chunk=chunk)
         await self._send_append_message(msg, chunk=chunk, msg_id=msg_id)
 
@@ -470,7 +443,97 @@ class Chat:
         # TODO: Joe said it's a good idea to yield here, but I'm not sure why?
         # await asyncio.sleep(0)
 
-    async def _transform_message(self, message: ChatMessage) -> TransformedMessage:
+    @overload
+    def transform_user_input(
+        self, fn: TransformUserInput | TransformUserInputAsync
+    ) -> None: ...
+
+    @overload
+    def transform_user_input(
+        self,
+    ) -> Callable[[TransformUserInput | TransformUserInputAsync], None]: ...
+
+    def transform_user_input(
+        self, fn: TransformUserInput | TransformUserInputAsync | None = None
+    ) -> None | Callable[[TransformUserInput | TransformUserInputAsync], None]:
+        """
+        Define a function to transform user input.
+
+        Apply this method as a decorator to a function (`fn`) that transforms user input
+        before storing it in the chat messages returned by `.get_messages()`. This is
+        useful for implementing RAG workflows, like taking a URL and scraping it for
+        text before sending it to the model.
+
+        Parameters
+        ----------
+        fn
+            A function to transform user input before storing it in the chat messages
+            returned by `.get_messages()`. If `fn` returns `None`, the user input is
+            effectively ignored, and `.on_user_submit()` callbacks are suspended until
+            more input is submitted. This behavior is often useful to catch and handle
+            errors that occur during transformation. In this case, the transform
+            function should append an error message to the chat (via
+            `.append_message()`) to inform the user of the error.
+        """
+
+        def _set_transform(fn: TransformUserInput | TransformUserInputAsync):
+            self._transform_user = _utils.wrap_async(fn)
+
+        if fn is None:
+            return _set_transform
+        else:
+            return _set_transform(fn)
+
+    @overload
+    def transform_assistant_response(
+        self, fn: TransformAssistantResponse | TransformAssistantResponseAsync
+    ) -> None: ...
+
+    @overload
+    def transform_assistant_response(
+        self,
+    ) -> Callable[
+        [TransformAssistantResponse | TransformAssistantResponseAsync], None
+    ]: ...
+
+    def transform_assistant_response(
+        self,
+        fn: TransformAssistantResponse | TransformAssistantResponseAsync | None = None,
+    ) -> (
+        None
+        | Callable[[TransformAssistantResponse | TransformAssistantResponseAsync], None]
+    ):
+        """
+        Define a function to transform assistant responses.
+
+        Apply this method as a decorator to a function (`fn`) that transforms assistant
+        responses before displaying them in the chat. This is useful for post-processing
+        model responses before displaying them to the user.
+
+        Parameters
+        ----------
+        fn
+            A function to transform role="assistant" messages. If the function returns a
+            string, it will be interpreted and parsed as a markdown string on the client
+            (and the resulting HTML is then sanitized). If the function returns
+            :class:`shiny.ui.HTML`, it will be displayed as-is. Note that, for
+            `.append_message_stream()`, the transformer will be applied to each message
+            in the stream, so it should be performant.
+        """
+
+        def _set_transform(
+            fn: TransformAssistantResponse | TransformAssistantResponseAsync,
+        ):
+            self._transform_assistant = _utils.wrap_async(fn)
+
+        if fn is None:
+            return _set_transform
+        else:
+            return _set_transform(fn)
+
+    async def _transform_message(
+        self, message: ChatMessage
+    ) -> TransformedMessage | None:
 
         res: TransformedMessage = {
             **message,
@@ -481,17 +544,16 @@ class Chat:
         original_content = message["content"]
         content = original_content
 
-        if message["role"] == "user":
+        if message["role"] == "user" and self._transform_user is not None:
             content = await self._transform_user(original_content)
-            # User transform can return a message object, which might change the role
-            if isinstance(content, dict) and "role" in content and "content" in content:
-                res["role"] = content["role"]
-                content = content["content"]
 
-        elif message["role"] == "assistant":
+        elif message["role"] == "assistant" and self._transform_assistant is not None:
             content = await self._transform_assistant(original_content)
             if isinstance(content, HTML):
                 res["content_type"] = "html"
+
+        if content is None:
+            return None
 
         if original_content != content:
             res["original_content"] = content
@@ -583,7 +645,7 @@ class Chat:
 
         Note
         ----
-        Most users shouldn't need to use this method directly since `.messages()`
+        Most users shouldn't need to use this method directly since `.get_messages()`
         contains user input. However, this method can be useful when you need to access
         the un-transformed user input, and/or when you want to take a reactive
         dependency on user input.
