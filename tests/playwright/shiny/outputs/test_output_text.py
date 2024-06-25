@@ -1,7 +1,7 @@
 from conftest import create_doc_example_core_fixture
 from playwright.sync_api import Page
 
-from shiny.playwright.controls import InputText, OutputText, OutputTextVerbatim
+from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
 app = create_doc_example_core_fixture("output_text")
@@ -10,10 +10,10 @@ app = create_doc_example_core_fixture("output_text")
 def test_output_text_kitchen(page: Page, app: ShinyAppProc) -> None:
     page.goto(app.url)
 
-    txt = InputText(page, "txt")
-    text = OutputText(page, "text")
-    verb = OutputTextVerbatim(page, "verb")
-    verb_no_placeholder = OutputTextVerbatim(page, "verb_no_placeholder")
+    txt = controller.InputText(page, "txt")
+    text = controller.OutputText(page, "text")
+    verb = controller.OutputTextVerbatim(page, "verb")
+    verb_no_placeholder = controller.OutputTextVerbatim(page, "verb_no_placeholder")
 
     txt.set("")  # Reset text
 

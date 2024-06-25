@@ -1,13 +1,13 @@
 from playwright.sync_api import Page
 
-from shiny.playwright.controls import OutputDataFrame
+from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
 
 def test_validate_html_columns(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 
-    data_frame = OutputDataFrame(page, "iris_df")
+    data_frame = controller.OutputDataFrame(page, "iris_df")
     # Data frame with html content in the first two columns; Edit a cell in the third column and try to hit `shift + tab`. It should not submit the edit in the current cell and stay at the current cell (not moving to the second or first column)
     data_frame.expect_cell("1.4", row=0, col=2)
     data_frame.save_cell("152", row=0, col=2, save_key="Shift+Tab")

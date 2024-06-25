@@ -3,11 +3,7 @@ from urllib.parse import urlparse
 
 from playwright.sync_api import Page, expect
 
-from shiny.playwright.controls import (
-    InputRadioButtons,
-    InputTaskButton,
-    OutputTextVerbatim,
-)
+from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
 
@@ -29,8 +25,8 @@ def get_pulse_computed_property(page: Page, property_name: str) -> str:
 
 def test_busy_indicators(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
-    spinner_type = InputRadioButtons(page, "busy_indicator_type")
-    render_button = InputTaskButton(page, "rerender")
+    spinner_type = controller.InputRadioButtons(page, "busy_indicator_type")
+    render_button = controller.InputTaskButton(page, "rerender")
 
     # Verify spinner indicator behavior
     spinner_properties = [
@@ -51,7 +47,7 @@ def test_busy_indicators(page: Page, local_app: ShinyAppProc) -> None:
         assert get_spinner_computed_property(page, element_id, "width") == height
 
     # Verify pulse indicator behavior
-    output_txt = OutputTextVerbatim(page, "counter")
+    output_txt = controller.OutputTextVerbatim(page, "counter")
     output_txt.expect_value("0")
     spinner_type.set("pulse")
     render_button.click()

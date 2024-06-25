@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from playwright.sync_api import FilePayload, Page, expect
 
-from shiny.playwright.controls import InputFile, OutputTable, OutputTextVerbatim
+from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
 
 def test_input_file_kitchen(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 
-    file1 = InputFile(page, "file1")
+    file1 = controller.InputFile(page, "file1")
 
     expect(file1.loc_label).to_have_text("Choose CSV File")
     expect(file1.loc_button).to_have_text("Browse...")
@@ -38,15 +38,15 @@ def test_input_file_kitchen(page: Page, local_app: ShinyAppProc) -> None:
 
     file1.expect_complete()
 
-    output_table = OutputTable(page, "summary")
+    output_table = controller.OutputTable(page, "summary")
 
     output_table.expect_column_labels(["Row Count", "Column Count", "Column Names"])
     output_table.expect_n_row(1)
 
-    file2 = InputFile(page, "file2")
+    file2 = controller.InputFile(page, "file2")
     file2.set([file_info, file_info2])
     expect(file2.loc_file_display).to_have_value("2 files")
-    OutputTextVerbatim(page, "file2_info").expect_value(
+    controller.OutputTextVerbatim(page, "file2_info").expect_value(
         """File name: mtcars.csv
 File type: text/csv
 File size: 129 bytes

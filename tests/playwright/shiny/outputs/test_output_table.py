@@ -1,7 +1,7 @@
 from conftest import create_doc_example_core_fixture
 from playwright.sync_api import Page
 
-from shiny.playwright.controls import OutputTable
+from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
 app = create_doc_example_core_fixture("output_table")
@@ -10,7 +10,7 @@ app = create_doc_example_core_fixture("output_table")
 def test_output_plot_kitchen(page: Page, app: ShinyAppProc) -> None:
     page.goto(app.url)
 
-    table = OutputTable(page, "result")
+    table = controller.OutputTable(page, "result")
 
     table.expect_n_col(11)
     table.expect_n_row(32)

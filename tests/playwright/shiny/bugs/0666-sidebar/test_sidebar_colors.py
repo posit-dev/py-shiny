@@ -3,8 +3,8 @@ from __future__ import annotations
 from colors import bg_color, fg_color
 from playwright.sync_api import Page, expect
 
-from shiny.playwright.controls import Sidebar
-from shiny.playwright.controls._controls import _expect_class_value
+from shiny.playwright import controller
+from shiny.playwright.controller._controls import _expect_class_value
 from shiny.run import ShinyAppProc
 
 
@@ -38,7 +38,7 @@ def test_sidebar_bg_colors(page: Page, local_app: ShinyAppProc) -> None:
         expect(sidebar).to_have_css("background-color", bg_color)
         expect(sidebar).to_have_css("color", fg_color)
 
-    s1 = Sidebar(page, "s1")
+    s1 = controller.Sidebar(page, "s1")
     s1.expect_position("left")
-    s2 = Sidebar(page, "s2")
+    s2 = controller.Sidebar(page, "s2")
     s2.expect_position("right")
