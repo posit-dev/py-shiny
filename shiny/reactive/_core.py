@@ -346,7 +346,7 @@ def invalidate_later(
     # graphs from being gc'd.
     unsub: Optional[Callable[[], None]] = None
 
-    async def _task(ctx: Context, deadline: float):
+    async def _task(ctx: Context, deadline: float) -> None:
         nonlocal cancellable
         try:
             delay = deadline - time.monotonic()
