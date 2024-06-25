@@ -11,7 +11,7 @@ quartodoc:
     show_signature_annotations: false
   sections:
     - title: UI Layouts
-      desc: Methods for interacting with Shiny app multiple UI component controls.
+      desc: Methods for interacting with Shiny app multiple UI component controller.
       contents:
         - playwright.controller.Accordion
         - playwright.controller.AccordionPanel
@@ -20,7 +20,7 @@ quartodoc:
         - playwright.controller.Sidebar
         - playwright.controller.Tooltip
     - title: UI Inputs
-      desc: Methods for interacting with Shiny app input value controls.
+      desc: Methods for interacting with Shiny app input value controller.
       contents:
         - playwright.controller.InputActionLink
         - playwright.controller.InputCheckbox
@@ -41,11 +41,11 @@ quartodoc:
         - playwright.controller.InputText
         - playwright.controller.InputTextArea
     - title: Value boxes
-      desc: Methods for interacting with Shiny app valuebox controls.
+      desc: Methods for interacting with Shiny app valuebox controller.
       contents:
         - playwright.controller.ValueBox
     - title: Navigation (tab) panels
-      desc: Methods for interacting with Shiny app UI content controls.
+      desc: Methods for interacting with Shiny app UI content controller.
       contents:
         - playwright.controller.NavItem
         - playwright.controller.NavsetBar
@@ -58,7 +58,7 @@ quartodoc:
         - playwright.controller.NavsetTab
         - playwright.controller.NavsetUnderline
     - title: Upload and download
-      desc: Methods for interacting with Shiny app uploading and downloading controls.
+      desc: Methods for interacting with Shiny app uploading and downloading controller.
       contents:
         - playwright.controller.DownloadButton
         - playwright.controller.DownloadLink
