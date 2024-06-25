@@ -9,6 +9,7 @@ from typing import (
     Literal,
     Optional,
     Sequence,
+    Union,
     cast,
     overload,
 )
@@ -36,14 +37,14 @@ __all__ = (
 
 # TODO: UserInput might need to be a list of dicts if we want to support multiple
 # user input content types
-TransformUserInput = Callable[[str], str | None]
-TransformUserInputAsync = Callable[[str], Awaitable[str | None]]
-TransformAssistantResponse = Callable[[str], str | HTML]
-TransformAssistantResponseAsync = Callable[[str], Awaitable[str | HTML]]
+TransformUserInput = Callable[[str], Union[str, None]]
+TransformUserInputAsync = Callable[[str], Awaitable[Union[str, None]]]
+TransformAssistantResponse = Callable[[str], Union[str, HTML]]
+TransformAssistantResponseAsync = Callable[[str], Awaitable[Union[str, HTML]]]
 SubmitFunction = Callable[[], None]
 SubmitFunctionAsync = Callable[[], Awaitable[None]]
 
-ChunkOption = Literal["start", "end"] | bool
+ChunkOption = Literal["start", "end", True, False]
 
 
 class Chat:
@@ -622,7 +623,7 @@ class Chat:
         if None in token_counts:
             return messages
 
-        token_counts = cast(list[int], token_counts)
+        token_counts = cast("list[int]", token_counts)
 
         # Take the newest messages up to the token limit
         limit, reserve = token_limits
