@@ -7,7 +7,7 @@ from utils.deploy_utils import (
     skip_if_not_chrome,
 )
 
-from shiny.playwright.controls import OutputTextVerbatim, Sidebar
+from shiny.playwright import controller
 
 app_url = create_deploys_app_url_fixture("express_page_sidebar")
 
@@ -17,7 +17,7 @@ app_url = create_deploys_app_url_fixture("express_page_sidebar")
 def test_express_page_sidebar(page: Page, app_url: str) -> None:
     page.goto(app_url)
 
-    sidebar = Sidebar(page, "sidebar")
+    sidebar = controller.Sidebar(page, "sidebar")
     sidebar.expect_text("SidebarTitle Sidebar Content")
-    output_txt = OutputTextVerbatim(page, "txt")
+    output_txt = controller.OutputTextVerbatim(page, "txt")
     output_txt.expect_value("50")

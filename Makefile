@@ -1,6 +1,6 @@
 # https://www.gnu.org/software/make/manual/make.html#Phony-Targets
 # Prerequisites of .PHONY are always interpreted as literal target names, never as patterns (even if they contain ‘%’ characters).
-# # .PHONY: help clean% check% format% docs% lint test pyright playwright% install% testrail% coverage release js-*
+# # .PHONY: help clean% check% format% docs% lint test pyright playwright% install% coverage release js-*
 # Using `FORCE` as prerequisite to _force_ the target to always run; https://www.gnu.org/software/make/manual/make.html#index-FORCE
 FORCE: ;
 
@@ -161,9 +161,6 @@ PYTEST_DEPLOYS_BROWSERS:= --browser chromium
 install-playwright: FORCE
 	playwright install --with-deps
 
-install-trcli: FORCE
-	$(if $(shell which trcli), @echo -n, $(shell pip install trcli))
-
 install-rsconnect: FORCE
 	pip install git+https://github.com/rstudio/rsconnect-python.git#egg=rsconnect-python
 
@@ -190,10 +187,6 @@ playwright-deploys: install-rsconnect
 # end-to-end tests on all py-shiny examples with playwright; (SUB_FILE="" within tests/playwright/examples/)
 playwright-examples: FORCE
 	$(MAKE) playwright TEST_FILE="tests/playwright/examples/$(SUB_FILE)"
-
-# end-to-end tests with playwright and generate junit report
-testrail-junit: install-playwright install-trcli
-	pytest tests/playwright/shiny/$(SUB_FILE) --junitxml=report.xml $(PYTEST_BROWSERS)
 
 coverage: FORCE ## check combined code coverage (must run e2e last)
 	pytest --cov-report term-missing --cov=shiny tests/pytest/ tests/playwright/shiny/$(SUB_FILE) $(PYTEST_BROWSERS)

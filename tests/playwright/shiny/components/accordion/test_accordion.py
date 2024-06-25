@@ -2,7 +2,7 @@ import pytest
 from examples.example_apps import reruns, reruns_delay
 from playwright.sync_api import Page
 
-from shiny.playwright.controls import Accordion, InputActionButton, OutputTextVerbatim
+from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
 
@@ -10,15 +10,15 @@ from shiny.run import ShinyAppProc
 def test_accordion(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 
-    acc = Accordion(page, "acc")
+    acc = controller.Accordion(page, "acc")
     acc_panel_A = acc.accordion_panel("Section A")
-    output_txt_verbatim = OutputTextVerbatim(page, "acc_txt")
-    alternate_button = InputActionButton(page, "alternate")
-    open_all_button = InputActionButton(page, "open_all")
-    close_all_button = InputActionButton(page, "close_all")
-    toggle_b_button = InputActionButton(page, "toggle_b")
-    toggle_updates_button = InputActionButton(page, "toggle_updates")
-    toggle_efg_button = InputActionButton(page, "toggle_efg")
+    output_txt_verbatim = controller.OutputTextVerbatim(page, "acc_txt")
+    alternate_button = controller.InputActionButton(page, "alternate")
+    open_all_button = controller.InputActionButton(page, "open_all")
+    close_all_button = controller.InputActionButton(page, "close_all")
+    toggle_b_button = controller.InputActionButton(page, "toggle_b")
+    toggle_updates_button = controller.InputActionButton(page, "toggle_updates")
+    toggle_efg_button = controller.InputActionButton(page, "toggle_efg")
 
     output_txt_verbatim.expect_value("input.acc(): ('Section A',)")
 

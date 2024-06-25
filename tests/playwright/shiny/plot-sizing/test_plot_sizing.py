@@ -2,7 +2,7 @@ import re
 
 from playwright.sync_api import Page
 
-from shiny.playwright.controls import OutputPlot
+from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
 
@@ -38,7 +38,7 @@ def test_output_image_kitchen(page: Page, local_app: ShinyAppProc) -> None:
     for tab, plots in plotids_by_tab.items():
         page.click(f"a[data-toggle='tab'][data-value='{tab}']")
         for plotid in plots:
-            img = OutputPlot(page, plotid)
+            img = controller.OutputPlot(page, plotid)
             # These assertions are mostly to ensure that the plots load before we
             # evaluate their sizes
             img.expect_inline(False)

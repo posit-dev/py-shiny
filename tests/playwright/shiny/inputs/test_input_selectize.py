@@ -1,7 +1,7 @@
 from conftest import create_doc_example_core_fixture
 from playwright.sync_api import Page, expect
 
-from shiny.playwright.controls import InputSelectize
+from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
 app = create_doc_example_core_fixture("input_selectize")
@@ -10,7 +10,7 @@ app = create_doc_example_core_fixture("input_selectize")
 def test_input_selectize_kitchen(page: Page, app: ShinyAppProc) -> None:
     page.goto(app.url)
 
-    state = InputSelectize(page, "state")
+    state = controller.InputSelectize(page, "state")
 
     expect(state.loc_label).to_have_text("Choose a state:")
     state.expect_label("Choose a state:")

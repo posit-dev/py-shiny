@@ -1,7 +1,7 @@
 from conftest import create_doc_example_core_fixture
 from playwright.sync_api import Page, expect
 
-from shiny.playwright.controls import InputCheckbox, OutputUi
+from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
 app = create_doc_example_core_fixture("input_checkbox")
@@ -10,9 +10,9 @@ app = create_doc_example_core_fixture("input_checkbox")
 def test_input_checkbox_kitchen(page: Page, app: ShinyAppProc) -> None:
     page.goto(app.url)
 
-    somevalue = InputCheckbox(page, "somevalue")
+    somevalue = controller.InputCheckbox(page, "somevalue")
     # use output_ui
-    output_txt = OutputUi(page, "value")
+    output_txt = controller.OutputUi(page, "value")
     expect(somevalue.loc_label).to_have_text("Some value")
     somevalue.expect_label("Some value")
 
