@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Callable, Optional
 
 import pytest
 from htmltools import Tag
@@ -168,7 +168,7 @@ def _page_sidebar(*args, **kwargs) -> Tag:  # type: ignore
     "theme",
     [None, Theme("shiny"), Theme("bootstrap", name="default"), Theme("sketchy")],
 )
-def test_page_theme_wins(page_fn: Callable[..., Tag], theme: Theme | None):
+def test_page_theme_wins(page_fn: Callable[..., Tag], theme: Optional[Theme] = None):
     ui = page_fn(
         input_dark_mode(),
         input_date_range("date", "Date Range"),
