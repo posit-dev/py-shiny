@@ -7,7 +7,7 @@ from utils.deploy_utils import (
     skip_if_not_chrome,
 )
 
-from shiny.playwright.controls import OutputDataFrame
+from shiny.playwright import controller
 
 app_url = create_deploys_app_url_fixture("shiny-express-dataframe")
 
@@ -17,5 +17,5 @@ app_url = create_deploys_app_url_fixture("shiny-express-dataframe")
 def test_express_dataframe_deploys(page: Page, app_url: str) -> None:
     page.goto(app_url)
 
-    dataframe = OutputDataFrame(page, "sample_data_frame")
+    dataframe = controller.controller.OutputDataFrame(page, "sample_data_frame")
     dataframe.expect_n_row(6)

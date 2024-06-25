@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 from playwright.sync_api import Page
 
-from shiny.playwright.controls import Card, OutputCode, ValueBox
+from shiny.playwright import controller
 from shiny.run import ShinyAppProc, run_shiny_app
 
 
@@ -21,10 +21,10 @@ def test_card_input(page: Page, app_path: str, sel_card: str, sel_vb: str) -> No
 
     page.goto(sa.url)
 
-    card = Card(page, sel_card)
-    vb = ValueBox(page, sel_vb)
-    out_card = OutputCode(page, "out_card")
-    out_vb = OutputCode(page, "out_value_box")
+    card = controller.Card(page, sel_card)
+    vb = controller.ValueBox(page, sel_vb)
+    out_card = controller.OutputCode(page, "out_card")
+    out_vb = controller.OutputCode(page, "out_value_box")
 
     # Open and close card full screen, check input value ------
     card.expect_full_screen(False)

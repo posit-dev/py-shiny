@@ -399,20 +399,20 @@ def add_test_file(
         f"""\
 from playwright.sync_api import Page
 
-from shiny.playwright.controls import <IMPORT REQUIRED CONTROLS>
+from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
 
 def {test_name}(page: Page, local_app: ShinyAppProc):
 
     page.goto(local_app.url)
-    # Add tests code here
+    # Add test code here
 """
         if is_same_dir
         else f"""\
 from playwright.sync_api import Page
 
-from shiny.playwright.controls import <IMPORT REQUIRED CONTROLS>
+from shiny.playwright import controller
 from shiny.pytest import create_app_fixture
 from shiny.run import ShinyAppProc
 
@@ -422,7 +422,7 @@ app = create_app_fixture("{rel_path}")
 def {test_name}(page: Page, app: ShinyAppProc):
 
     page.goto(app.url)
-    # Add tests code here
+    # Add test code here
 """
     )
     # Make sure test file directory exists

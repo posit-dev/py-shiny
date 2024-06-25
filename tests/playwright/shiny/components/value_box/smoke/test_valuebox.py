@@ -1,7 +1,7 @@
 import pytest
 from playwright.sync_api import Page
 
-from shiny.playwright.controls import ValueBox
+from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
 
@@ -9,7 +9,7 @@ from shiny.run import ShinyAppProc
 def test_valuebox(page: Page, local_app: ShinyAppProc, value_box_id: str) -> None:
     page.goto(local_app.url)
 
-    value_box = ValueBox(page, value_box_id)
+    value_box = controller.ValueBox(page, value_box_id)
     value_box.expect_full_screen(False)
     value_box.open_full_screen()
     value_box.expect_full_screen(True)
