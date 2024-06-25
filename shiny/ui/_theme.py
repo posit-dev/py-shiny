@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import pathlib
 import re
+import shutil
 import tempfile
 import textwrap
 from typing import (
@@ -161,7 +162,7 @@ class Theme:
 
         # If the theme has been customized and rendered once, we store the tempdir
         # so that we can re-use the already compiled CSS file.
-        self._css_temp_srcdir: Optional[tempfile.TemporaryDirectory[str]] = None
+        self._css_temp_srcdir: Optional[str] = None
 
     @staticmethod
     def available_presets() -> tuple[ShinyThemePreset, ...]:
@@ -183,8 +184,8 @@ class Theme:
     def _reset_css(self) -> None:
         self._css = ""
         if self._css_temp_srcdir is not None:
-            self._css_temp_srcdir.cleanup()
-        self._css_temp_srcdir = None
+            shutil.rmtree(self._css_temp_srcdir)
+            self._css_temp_srcdir = None
 
     def _has_customizations(self) -> bool:
         return (
@@ -457,9 +458,9 @@ class Theme:
         css_name = self._dep_css_name()
 
         if self._css_temp_srcdir is None:
-            self._css_temp_srcdir = tempfile.TemporaryDirectory(delete=False)
+            self._css_temp_srcdir = tempfile.mkdtemp()
 
-        css_path = os.path.join(self._css_temp_srcdir.name, css_name)
+        css_path = os.path.join(self._css_temp_srcdir, css_name)
 
         if not os.path.exists(css_path):
             with open(css_path, "w") as css_file:
