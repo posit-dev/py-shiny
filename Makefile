@@ -59,15 +59,6 @@ clean-test: FORCE
 typings/appdirs:
 	@echo "Creating appdirs stubs"
 	pyright --createstub appdirs
-typings/chat:
-	@echo "Creating anthropic stubs"
-	# pyright --createstub anthropic
-	@echo "Creating langchain_core stubs"
-	pyright --createstub langchain_core
-	@echo "Creating openai stubs"
-	# pyright --createstub openai
-	@echo "Creating tokenizers stubs"
-	pyright --createstub tokenizers
 typings/folium:
 	@echo "Creating folium stubs"
 	pyright --createstub folium
@@ -84,7 +75,7 @@ typings/matplotlib/__init__.pyi:
 	mv typings/python-type-stubs/stubs/matplotlib typings/
 	rm -rf typings/python-type-stubs
 
-pyright-typings: typings/appdirs typings/chat typings/folium typings/uvicorn typings/seaborn typings/matplotlib/__init__.pyi
+pyright-typings: typings/appdirs typings/folium typings/uvicorn typings/seaborn typings/matplotlib/__init__.pyi
 
 check: check-format check-lint check-types check-tests  ## check code, style, types, and test (basic CI)
 check-fix: format check-lint check-types check-tests ## check and format code, style, types, and test
