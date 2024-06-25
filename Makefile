@@ -61,7 +61,7 @@ typings/appdirs:
 	pyright --createstub appdirs
 typings/chat:
 	@echo "Creating anthropic stubs"
-	pyright --createstub anthropic
+	# pyright --createstub anthropic
 	@echo "Creating langchain_core stubs"
 	pyright --createstub langchain_core
 	@echo "Creating openai stubs"
