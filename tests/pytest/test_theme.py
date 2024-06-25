@@ -166,7 +166,7 @@ def _page_sidebar(*args, **kwargs) -> Tag:  # type: ignore
 )
 @pytest.mark.parametrize(
     "theme",
-    [None, Theme("shiny"), Theme("bootstrap"), Theme("sketchy")],
+    [None, Theme("shiny"), Theme("bootstrap", name="default"), Theme("sketchy")],
 )
 def test_page_theme_wins(page_fn: Callable[..., Tag], theme: Theme | None):
     ui = page_fn(
@@ -189,7 +189,9 @@ def test_page_theme_wins(page_fn: Callable[..., Tag], theme: Theme | None):
     ]
 
     for dep in deps:
-        if dep.name in no_css:
+        if theme is not None and dep.name.startswith("shiny-theme"):
+            assert dep.stylesheet[0]["data-shiny-theme"] == theme.name or theme._preset  # type: ignore
+        elif dep.name in no_css:
             # These components should have CSS suppressed by the page-level
             # dependency from shiny_page_theme_deps(). If this test fails, it means
             # that our assumptions about how htmltools' dependency resolution works
