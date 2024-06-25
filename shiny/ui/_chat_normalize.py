@@ -1,3 +1,4 @@
+import sys
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Optional, Union, cast
 
@@ -6,9 +7,16 @@ from ._chat_types import ChatMessage
 if TYPE_CHECKING:
     from anthropic.types import Message as AnthropicMessage
     from anthropic.types import MessageStreamEvent
-    from google.generativeai.types.generation_types import (  # pyright: ignore[reportMissingTypeStubs]
-        GenerateContentResponse,
-    )
+
+    if sys.version_info >= (3, 9):
+        from google.generativeai.types.generation_types import (  # pyright: ignore[reportMissingTypeStubs]
+            GenerateContentResponse,
+        )
+    else:
+
+        class GenerateContentResponse:
+            text: str
+
     from langchain_core.messages import BaseMessage, BaseMessageChunk
     from openai.types.chat import ChatCompletion, ChatCompletionChunk
 
@@ -204,11 +212,12 @@ class GoogleNormalizer(BaseMessageNormalizer):
 
     def can_normalize(self, message: Any) -> bool:
         try:
-            from google.generativeai.types.generation_types import (  # pyright: ignore[reportMissingTypeStubs]
-                GenerateContentResponse,
-            )
+            import google.generativeai.types.generation_types as gtypes  # pyright: ignore[reportMissingTypeStubs, reportMissingImports]
 
-            return isinstance(message, GenerateContentResponse)
+            return isinstance(
+                message,
+                gtypes.GenerateContentResponse,  # pyright: ignore[reportUnknownMemberType]
+            )
         except Exception:
             return False
 
