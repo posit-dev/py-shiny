@@ -2,16 +2,16 @@ from __future__ import annotations
 
 from playwright.sync_api import Page
 
-from shiny.playwright.controls import OutputDataFrame, OutputTextVerbatim
+from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
 
 def test_row_selection(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 
-    df = OutputDataFrame(page, "df1")
-    selected_rows = OutputTextVerbatim(page, "selected_rows")
-    cell_selection = OutputTextVerbatim(page, "cell_selection")
+    df = controller.OutputDataFrame(page, "df1")
+    selected_rows = controller.OutputTextVerbatim(page, "selected_rows")
+    cell_selection = controller.OutputTextVerbatim(page, "cell_selection")
 
     df.expect_n_row(3)
     selected_rows.expect_value("Input selected rows: ()")

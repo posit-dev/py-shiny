@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from playwright.sync_api import Page
 
-from shiny.playwright.controls import (
+from shiny.playwright.controller import (
     NavsetBar,
     NavsetCardPill,
     NavsetCardTab,

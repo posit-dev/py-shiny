@@ -9,7 +9,7 @@ from conftest import create_example_fixture
 from examples.example_apps import reruns, reruns_delay
 from playwright.sync_api import Locator, Page, expect
 
-from shiny.playwright.controls import InputSelect, InputSwitch
+from shiny.playwright import controller
 from shiny.playwright.expect import expect_to_change
 from shiny.run import ShinyAppProc
 
@@ -94,13 +94,13 @@ def test_full_width(page: Page, data_frame_app: ShinyAppProc, grid_container: Lo
     width1 = get_width()
     # Switch to narrow mode
     with expect_to_change(get_width):
-        InputSwitch(page, "fullwidth").toggle()
+        controller.InputSwitch(page, "fullwidth").toggle()
     width2 = get_width()
 
     assert width2 < width1
 
     # Switch back to full width
-    InputSwitch(page, "fullwidth").toggle()
+    controller.InputSwitch(page, "fullwidth").toggle()
 
 
 @pytest.mark.flaky(reruns=reruns, delay=reruns_delay)
@@ -113,12 +113,12 @@ def test_table_switch(
     scroll_to_end: Callable[[], None],
 ):
     page.goto(data_frame_app.url)
-    select_dataset = InputSelect(page, "dataset")
+    select_dataset = controller.InputSelect(page, "dataset")
 
     scroll_to_end()
 
     # Switch to table
-    InputSwitch(page, "gridstyle").toggle()
+    controller.InputSwitch(page, "gridstyle").toggle()
     expect(grid_container).not_to_have_class(re.compile(r"\bshiny-data-grid-grid\b"))
     expect(grid_container).to_have_class(re.compile(r"\bshiny-data-grid-table\b"))
 
@@ -143,7 +143,7 @@ def test_sort(
     grid_container: Locator,
 ):
     page.goto(data_frame_app.url)
-    select_dataset = InputSelect(page, "dataset")
+    select_dataset = controller.InputSelect(page, "dataset")
     select_dataset.set("diamonds")
     select_dataset.expect.to_have_value("diamonds")
 
@@ -181,7 +181,7 @@ def test_multi_selection(
     snapshot: Any,
 ):
     page.goto(data_frame_app.url)
-    InputSelect(page, "selection_mode").set("rows")
+    controller.InputSelect(page, "selection_mode").set("rows")
     first_cell = grid_container.locator("tbody tr:first-child td:first-child")
 
     def detail_text():
@@ -215,7 +215,7 @@ def test_single_selection(
     snapshot: Any,
 ):
     page.goto(data_frame_app.url)
-    InputSelect(page, "selection_mode").set("row")
+    controller.InputSelect(page, "selection_mode").set("row")
     first_cell = grid_container.locator("tbody tr:first-child td:first-child")
 
     def detail_text():
@@ -262,7 +262,7 @@ def test_filter_table(
 ):
     page.goto(data_frame_app.url)
 
-    InputSwitch(page, "gridstyle").toggle()
+    controller.InputSwitch(page, "gridstyle").toggle()
     expect(grid_container).not_to_have_class(re.compile(r"\bshiny-data-grid-grid\b"))
     expect(grid_container).to_have_class(re.compile(r"\bshiny-data-grid-table\b"))
 
@@ -355,7 +355,7 @@ def _filter_test_impl(
     expect(grid.locator("tbody tr")).to_have_count(5)
 
     # Ensure changing dataset resets filters
-    select_dataset = InputSelect(page, "dataset")
+    select_dataset = controller.InputSelect(page, "dataset")
     select_dataset.set("attention")
     select_dataset.expect.to_have_value("attention")
     expect(page.get_by_text("Unnamed: 0")).to_be_attached()
@@ -368,5 +368,5 @@ def test_filter_disable(page: Page, data_frame_app: ShinyAppProc):
     page.goto(data_frame_app.url)
 
     expect(page.locator("tr.filters")).to_be_attached()
-    InputSwitch(page, "filters").toggle()
+    controller.InputSwitch(page, "filters").toggle()
     expect(page.locator("tr.filters")).not_to_be_attached()

@@ -3,7 +3,7 @@ import re
 from conftest import create_doc_example_core_fixture
 from playwright.sync_api import Page
 
-from shiny.playwright.controls import OutputImage
+from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
 app = create_doc_example_core_fixture("output_image")
@@ -12,7 +12,7 @@ app = create_doc_example_core_fixture("output_image")
 def test_output_image_kitchen(page: Page, app: ShinyAppProc) -> None:
     page.goto(app.url)
 
-    img = OutputImage(page, "image")
+    img = controller.OutputImage(page, "image")
 
     img.expect_inline(False)
 

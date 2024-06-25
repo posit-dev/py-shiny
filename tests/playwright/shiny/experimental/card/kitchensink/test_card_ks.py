@@ -1,10 +1,10 @@
 from playwright.sync_api import Page
 
-from shiny.playwright.controls import Card
+from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
 
-def get_body_tag_name(card: Card) -> str:
+def get_body_tag_name(card: controller.Card) -> str:
     body_tag_name = (
         card.loc_body.locator("*").nth(0).evaluate("el => el.tagName.toLowerCase()")
     )
@@ -23,7 +23,7 @@ Fullscreen Availability and State: The tests check whether the fullscreen featur
 def test_card_kitchensink(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 
-    card = Card(page, "card1")
+    card = controller.Card(page, "card1")
     card.expect_max_height(None)
     card.expect_min_height(None)
     card.expect_height(None)
@@ -40,7 +40,7 @@ def test_card_kitchensink(page: Page, local_app: ShinyAppProc) -> None:
     card.close_full_screen()
     card.expect_full_screen(False)
 
-    card = Card(page, "card2")
+    card = controller.Card(page, "card2")
     card.expect_max_height(None)
     card.expect_min_height(None)
     card.expect_height(None)
@@ -53,7 +53,7 @@ def test_card_kitchensink(page: Page, local_app: ShinyAppProc) -> None:
     card.expect_full_screen(False)
     card.expect_full_screen_available(False)
 
-    card = Card(page, "card3")
+    card = controller.Card(page, "card3")
     card.expect_max_height("500px")
     card.expect_min_height("200px")
     card.expect_header("Fill is False. Fullscreen is False")

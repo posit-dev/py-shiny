@@ -7,7 +7,7 @@ from utils.deploy_utils import (
     skip_if_not_chrome,
 )
 
-from shiny.playwright.controls import Card, OutputTextVerbatim
+from shiny.playwright import controller
 
 app_url = create_deploys_app_url_fixture("express_page_fillable")
 
@@ -17,8 +17,8 @@ app_url = create_deploys_app_url_fixture("express_page_fillable")
 def test_express_page_fillable(page: Page, app_url: str) -> None:
     page.goto(app_url)
 
-    card = Card(page, "card")
-    output_txt = OutputTextVerbatim(page, "txt")
+    card = controller.Card(page, "card")
+    output_txt = controller.OutputTextVerbatim(page, "txt")
     output_txt.expect_value("50")
     bounding_box = card.loc.bounding_box()
     assert bounding_box is not None

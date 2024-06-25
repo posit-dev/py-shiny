@@ -1,7 +1,7 @@
 from conftest import create_doc_example_core_fixture
 from playwright.sync_api import Page, expect
 
-from shiny.playwright.controls import InputSlider, OutputTextVerbatim
+from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
 slider_app = create_doc_example_core_fixture("input_slider")
@@ -13,7 +13,7 @@ def test_input_slider_kitchen(page: Page, slider_app: ShinyAppProc) -> None:
 
     # page.set_default_timeout(1000)
 
-    obs = InputSlider(page, "obs")
+    obs = controller.InputSlider(page, "obs")
 
     expect(obs.loc_label).to_have_text("Number of bins:")
 
@@ -63,8 +63,8 @@ def test_input_slider_kitchen(page: Page, slider_app: ShinyAppProc) -> None:
 def test_input_slider_output(page: Page, template_app: ShinyAppProc) -> None:
     page.goto(template_app.url)
 
-    slider = InputSlider(page, "n")
-    txt = OutputTextVerbatim(page, "txt")
+    slider = controller.InputSlider(page, "n")
+    txt = controller.OutputTextVerbatim(page, "txt")
 
     txt.expect_value("n*2 is 40")
     slider.expect_label("N")

@@ -19,6 +19,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
+* Expose `shiny.playwright`, `shiny.run`, and `shiny.pytest` modules that allow users to testing their Shiny apps.  (#1448, #1456, #1481)
+  * `shiny.playwright` contains `controller` and `expect` submodules. `controller` will contain many classes to interact with (and verify!) your Shiny app using Playwright. `expect` contains expectation functions that enhance standard Playwright expectation methods.
+  * `shiny.run` contains the `run_shiny_app` command and the return type `ShinyAppProc`. `ShinyAppProc` can be used to type the Shiny app pytest fixtures.
+  * `shiny.pytest` contains pytest test fixtures. The `local_app` pytest fixture is automatically available and runs a sibling `app.py` file. Where as `create_app_fixture(PATH_TO_APP)` allows for a Shiny app to be instantiated from a different folder.
+
+* Added CLI command `shiny add test` to add a test file to an existing Shiny app. (#1461)
+
 * `@render.data_frame` has added a few new methods:
   * `.data_view_rows()` is a reactive value representing the sorted and filtered row numbers. This value wraps `input.<ID>_data_view_rows()`(#1374)
   * `.sort()` is a reactive value representing the sorted column information (dictionaries containing `col: int` and `desc: bool`). This value wraps `input.<ID>_sort()`. (#1374)
@@ -61,8 +68,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * `@render.data_frame`'s method `.input_cell_selection()` has been renamed to `.cell_selection()`. Please use `.cell_selection()` and consider `.input_cell_selection()` deprecated. (#1407)
 
 ### New features
-
-* Expose shiny.pytest, shiny.run and shiny.playwright modules that allow users to testing their Shiny apps. (#1448, #1456)
 
 * Added busy indicators to provide users with a visual cue when the server is busy calculating outputs or otherwise serving requests to the client. More specifically, a spinner is shown on each calculating/recalculating output, and a pulsing banner is shown at the top of the page when the app is otherwise busy. Use the new `ui.busy_indicator.options()` function to customize the appearance of the busy indicators and `ui.busy_indicator.use()` to disable/enable them. (#918)
 

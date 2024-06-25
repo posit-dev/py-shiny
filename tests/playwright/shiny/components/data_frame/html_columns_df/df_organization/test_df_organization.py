@@ -1,17 +1,17 @@
 from playwright.sync_api import Page
 
-from shiny.playwright.controls import InputActionButton, OutputCode, OutputDataFrame
+from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
 
 def test_dataframe_organization_methods(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
-    data_frame = OutputDataFrame(page, "iris_df")
-    data_view_rows = OutputCode(page, "data_view_rows")
-    data_view_selected_true = OutputCode(page, "data_view_selected_true")
-    data_view_selected_false = OutputCode(page, "data_view_selected_false")
-    cell_selection = OutputCode(page, "cell_selection")
-    reset_df = InputActionButton(page, "reset_df")
+    data_frame = controller.OutputDataFrame(page, "iris_df")
+    data_view_rows = controller.OutputCode(page, "data_view_rows")
+    data_view_selected_true = controller.OutputCode(page, "data_view_selected_true")
+    data_view_selected_false = controller.OutputCode(page, "data_view_selected_false")
+    cell_selection = controller.OutputCode(page, "cell_selection")
+    reset_df = controller.InputActionButton(page, "reset_df")
 
     def reset_data_frame():
         reset_df.click()
@@ -61,7 +61,7 @@ def test_dataframe_organization_methods(page: Page, local_app: ShinyAppProc) -> 
     cell_selection.expect_value("()")
     # filter programmatically
     reset_data_frame()
-    InputActionButton(page, "update_filter").click()
+    controller.InputActionButton(page, "update_filter").click()
     data_view_rows.expect_value("(3, 4, 5)")
     data_view_selected_true.expect_value("[]")
     data_view_selected_false.expect_value("[  51 100 101]")
@@ -84,7 +84,7 @@ def test_dataframe_organization_methods(page: Page, local_app: ShinyAppProc) -> 
     reset_data_frame()
 
     # sort columns programmatically
-    InputActionButton(page, "update_sort").click()
+    controller.InputActionButton(page, "update_sort").click()
     data_view_rows.expect_value("(0, 4, 3, 2, 1, 5)")
     data_view_selected_true.expect_value("[]")
     data_view_selected_false.expect_value("[  0 100  51  50   1 101]")

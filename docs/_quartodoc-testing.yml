@@ -11,68 +11,68 @@ quartodoc:
     show_signature_annotations: false
   sections:
     - title: UI Layouts
-      desc: Methods for interacting with Shiny app multiple UI component controls.
+      desc: Methods for interacting with Shiny app multiple UI component controller.
       contents:
-        - playwright.controls.Accordion
-        - playwright.controls.AccordionPanel
-        - playwright.controls.Card
-        - playwright.controls.Popover
-        - playwright.controls.Sidebar
-        - playwright.controls.Tooltip
+        - playwright.controller.Accordion
+        - playwright.controller.AccordionPanel
+        - playwright.controller.Card
+        - playwright.controller.Popover
+        - playwright.controller.Sidebar
+        - playwright.controller.Tooltip
     - title: UI Inputs
-      desc: Methods for interacting with Shiny app input value controls.
+      desc: Methods for interacting with Shiny app input value controller.
       contents:
-        - playwright.controls.InputActionLink
-        - playwright.controls.InputCheckbox
-        - playwright.controls.InputCheckboxGroup
-        - playwright.controls.InputDarkMode
-        - playwright.controls.InputDate
-        - playwright.controls.InputDateRange
-        - playwright.controls.InputFile
-        - playwright.controls.InputNumeric
-        - playwright.controls.InputPassword
-        - playwright.controls.InputRadioButtons
-        - playwright.controls.InputSelect
-        - playwright.controls.InputSelectize
-        - playwright.controls.InputSlider
-        - playwright.controls.InputSliderRange
-        - playwright.controls.InputSwitch
-        - playwright.controls.InputTaskButton
-        - playwright.controls.InputText
-        - playwright.controls.InputTextArea
+        - playwright.controller.InputActionLink
+        - playwright.controller.InputCheckbox
+        - playwright.controller.InputCheckboxGroup
+        - playwright.controller.InputDarkMode
+        - playwright.controller.InputDate
+        - playwright.controller.InputDateRange
+        - playwright.controller.InputFile
+        - playwright.controller.InputNumeric
+        - playwright.controller.InputPassword
+        - playwright.controller.InputRadioButtons
+        - playwright.controller.InputSelect
+        - playwright.controller.InputSelectize
+        - playwright.controller.InputSlider
+        - playwright.controller.InputSliderRange
+        - playwright.controller.InputSwitch
+        - playwright.controller.InputTaskButton
+        - playwright.controller.InputText
+        - playwright.controller.InputTextArea
     - title: Value boxes
-      desc: Methods for interacting with Shiny app valuebox controls.
+      desc: Methods for interacting with Shiny app valuebox controller.
       contents:
-        - playwright.controls.ValueBox
+        - playwright.controller.ValueBox
     - title: Navigation (tab) panels
-      desc: Methods for interacting with Shiny app UI content controls.
+      desc: Methods for interacting with Shiny app UI content controller.
       contents:
-        - playwright.controls.NavItem
-        - playwright.controls.NavsetBar
-        - playwright.controls.NavsetCardPill
-        - playwright.controls.NavsetCardTab
-        - playwright.controls.NavsetCardUnderline
-        - playwright.controls.NavsetHidden
-        - playwright.controls.NavsetPill
-        - playwright.controls.NavsetPillList
-        - playwright.controls.NavsetTab
-        - playwright.controls.NavsetUnderline
+        - playwright.controller.NavItem
+        - playwright.controller.NavsetBar
+        - playwright.controller.NavsetCardPill
+        - playwright.controller.NavsetCardTab
+        - playwright.controller.NavsetCardUnderline
+        - playwright.controller.NavsetHidden
+        - playwright.controller.NavsetPill
+        - playwright.controller.NavsetPillList
+        - playwright.controller.NavsetTab
+        - playwright.controller.NavsetUnderline
     - title: Upload and download
-      desc: Methods for interacting with Shiny app uploading and downloading controls.
+      desc: Methods for interacting with Shiny app uploading and downloading controller.
       contents:
-        - playwright.controls.DownloadButton
-        - playwright.controls.DownloadLink
+        - playwright.controller.DownloadButton
+        - playwright.controller.DownloadLink
     - title: Rendering outputs
       desc: Render output in a variety of ways.
       contents:
-        - playwright.controls.OutputCode
-        - playwright.controls.OutputDataFrame
-        - playwright.controls.OutputImage
-        - playwright.controls.OutputPlot
-        - playwright.controls.OutputTable
-        - playwright.controls.OutputText
-        - playwright.controls.OutputTextVerbatim
-        - playwright.controls.OutputUi
+        - playwright.controller.OutputCode
+        - playwright.controller.OutputDataFrame
+        - playwright.controller.OutputImage
+        - playwright.controller.OutputPlot
+        - playwright.controller.OutputTable
+        - playwright.controller.OutputText
+        - playwright.controller.OutputTextVerbatim
+        - playwright.controller.OutputUi
     - title: "Playwright Expect"
       desc: "Methods for testing the state of a locator within a Shiny app."
       contents:
