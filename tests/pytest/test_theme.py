@@ -168,7 +168,7 @@ def _page_sidebar(*args, **kwargs) -> Tag:  # type: ignore
     "theme",
     [None, Theme("shiny"), Theme("bootstrap", name="default"), Theme("sketchy")],
 )
-def test_page_theme_wins(page_fn: Callable[..., Tag], theme: Optional[Theme] = None):
+def test_page_theme_wins(page_fn: Callable[..., Tag], theme: Optional[Theme]):
     ui = page_fn(
         input_dark_mode(),
         input_date_range("date", "Date Range"),
