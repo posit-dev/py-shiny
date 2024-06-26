@@ -479,8 +479,9 @@ class Theme:
     def tagify(self) -> None:
         raise SyntaxError(
             "The `Theme` class is not meant to be used as a standalone HTML tag. "
-            "Instead, pass the `Theme` object directly to the `theme` argument of any "
-            "Shiny page function.",
+            "Instead, pass the `Theme` object directly to the `theme` argument of "
+            "`shiny.express.ui.page_opts()` (Shiny Express) "
+            "or any `shiny.ui.page_*()` function (Shiny Core)."
         )
 
 
