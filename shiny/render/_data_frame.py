@@ -47,6 +47,7 @@ from ._data_frame_utils import (
     cell_patch_processed_to_jsonifiable,
     wrap_shiny_html,
 )
+from ._data_frame_utils._selection import SelectionModeInput
 from ._data_frame_utils._unsafe import serialize_numpy_dtype
 
 # as_selection_location_js,
@@ -1062,3 +1063,90 @@ class data_frame(Renderer[DataFrameResult]):
             return None
 
         return self.cell_selection()
+
+
+# TODO-barret; Make request to GT: Add class for gt location
+
+# TODO-barret; Are GT formatters eager or lazy?
+# GT styles are eager! THis causes issues with dynamic style locations
+# Need to track movement of columns
+
+# SKIP!: ONLY SUPPORT GT and editable==False; Sprint for next 24 hrs!
+
+# THIS v1 release;
+# * styles= Callable[[data], Styles] | Styles
+# * styles function will return json format which is
+#   Styles = list[StyleInfo]
+#   StyleInfo = {loc: "body", rows: int | List[int], columns: int | str | List[int | str], style: str? | dict[str, Jsonifiable]? | None, class_: str | None, }
+# * Call styles fn after each edit (and on init); Send full styles for each cell
+# Support `rows: List[bool]`?
+
+# r-shinylive: bundle ALL packages, R... it should work out of the box with no internet
+
+# mydf.iloc[row_nums, col_nums]
+# mydf["mpg"] > 20
+
+# myints = [i for i, val in enumerate(range(mybools)) if val]
+# mybools = [val in myints for i, val in enumerate(range(nrow))]
+
+
+import great_tables as gt
+
+
+class great_tables(Renderer[gt.GT], data_frame):
+
+    gt: reactive.Calc_[gt.GT]
+    """
+    Reactive value of the data frame's rendered GT object.
+    """
+
+    def _init_reactives(self) -> None:
+        super()._init_reactives()
+        from .. import req
+
+        @reactive.calc
+        def self_value():
+            value = self._value()
+            req(value)
+
+            if not isinstance(value, gt.GT):
+                raise TypeError(
+                    f"Unsupported type returned from render function: {type(value)}. Expected `gt.GT`"
+                )
+
+            return value
+
+        self.value = self_value
+
+        @reactive.calc
+        def self_gt() -> gt.GT:
+            value = self._value()
+            req(value)
+
+            if not isinstance(value, gt.GT):
+                raise TypeError(
+                    f"Unsupported type returned from render function: {type(value)}. Expected `gt.GT`"
+                )
+
+            return value
+
+    def __init__(
+        self,
+        fn: ValueFn[gt.GT],
+        *,
+        width: str | float | None = "fit-content",
+        height: str | float | None = None,
+        summary: bool | str = True,
+        filters: bool = False,
+        editable: bool = False,
+        selection_mode: SelectionModeInput = "none",
+    ):
+        super().__init__(fn)
+        self._init_args = {
+            "width": width,
+            "height": height,
+            "summary": summary,
+            "filters": filters,
+            "editable": editable,
+            "selection_mode": selection_mode,
+        }

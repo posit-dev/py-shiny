@@ -14,7 +14,7 @@
 import great_tables as gt
 from palmerpenguins import load_penguins_raw
 
-from shiny import App, Inputs, Outputs, Session, module, render, ui
+from shiny import App, Inputs, Outputs, Session, module, reactive, render, req, ui
 from shiny.render import CellPatch
 
 # Load the dataset
@@ -65,12 +65,9 @@ MOD_ID = "testing"
 def mod_ui():
     return ui.TagList(
         ui.card(
-            ui.input_text("joe", "Text:"),
-            ui.fill.as_fill_item(
-                ui.output_data_frame("summary_data"),
-            ),
+            ui.output_data_frame("selected_summary_data"),
+            ui.output_data_frame("summary_data"),
             height="400px",
-            fillable=True,
         ),
     )
 
@@ -88,19 +85,48 @@ app_ui = ui.page_fillable(
 def mod_server(input: Inputs, output: Outputs, session: Session):
 
     @render.data_frame
+    def selected_summary_data():
+        return summary_data.data_view(selected=True)
+
+    @reactive.effect
+    async def _():
+        req(summary_data.data_view_rows())
+        await summary_data.update_cell_selection(
+            {
+                "type": "row",
+                "rows": [0, 2],
+            }
+        )
+
+    @render.data_frame
     def summary_data():
 
-        df_gt = gt.GT(df).tab_style(
-            [
-                gt.style.fill(color="purple"),
-                gt.style.borders(color="green", style="dashed"),
-            ],
-            gt.loc.body("Species", [1, 2]),
+        df_gt = (
+            gt.GT(df)
+            .tab_style(
+                [
+                    gt.style.fill(color="purple"),
+                    gt.style.borders(color="green", style="dashed"),
+                ],
+                gt.loc.body("Species", [1, 2]),
+            )
+            .tab_style(
+                gt.style.fill(color="yellow"),
+                gt.loc.body("Region", [2]),
+            )
+            .tab_style(
+                gt.style.fill(color="red"),
+                gt.loc.body("Island"),
+            )
         )
+        # NOTE - Styles in GT are greedy!
+        # Q: Cell editing should not be allowed as styles would be applied given the original data
+        #   * Once GT becomes not greedy, we can unlock this.
+        # Styles can be subsetted by looking for the row value
         # return df
         return render.DataTable(
             df,
-            # selection_mode=("rows"),
+            selection_mode=("rows"),
             # editable=True,
             # filters=True,
             styles=df_gt._styles,
