@@ -53,6 +53,9 @@ class SassCompileArgs(TypedDict):
     importers: NotRequired[Iterable[tuple[int, SassImporterFunction]] | None]
 
 
+theme_temporary_directories: set[tempfile.TemporaryDirectory[str]] = set()
+
+
 @add_example()
 class Theme:
     """
@@ -184,7 +187,27 @@ class Theme:
         self._css = ""
         if self._css_temp_srcdir is not None:
             self._css_temp_srcdir.cleanup()
+            theme_temporary_directories.discard(self._css_temp_srcdir)
         self._css_temp_srcdir = None
+
+    def _get_css_tempdir(self) -> str:
+        """
+        Get or create a temporary directory for storing compiled CSS.
+
+        Creates a directory via `tempfile.TemporaryDirectory` that is cleaned up
+        automatically when any references to the directory are removed. When a `Theme()`
+        is created and passed directly to the `theme` argument of a Shiny page function,
+        the UI is rendered and the theme object, no longer needed, is garbage collected.
+        To avoid cleaning up the temporary directory before its files are served, we
+        keep a reference to the directory in the `theme_temporary_directories` set.
+        """
+        if self._css_temp_srcdir is not None:
+            return self._css_temp_srcdir.name
+
+        tempdir = tempfile.TemporaryDirectory()
+        theme_temporary_directories.add(tempdir)
+        self._css_temp_srcdir = tempdir
+        return tempdir.name
 
     def _has_customizations(self) -> bool:
         return (
@@ -455,11 +478,7 @@ class Theme:
             return self._html_dependency_precompiled()
 
         css_name = self._dep_css_name()
-
-        if self._css_temp_srcdir is None:
-            self._css_temp_srcdir = tempfile.TemporaryDirectory(delete=False)
-
-        css_path = os.path.join(self._css_temp_srcdir.name, css_name)
+        css_path = os.path.join(self._get_css_tempdir(), css_name)
 
         if not os.path.exists(css_path):
             with open(css_path, "w") as css_file:
