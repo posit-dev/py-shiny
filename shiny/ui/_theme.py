@@ -456,7 +456,10 @@ class Theme:
             name=make_valid_path_str(self._dep_name()),
             version=self._version,
             source={"subdir": str(css_path.parent)},
-            stylesheet={"href": css_path.name},
+            stylesheet={
+                "href": css_path.name,
+                "data-shiny-theme": self.name or self._preset,  # type: ignore
+            },
         )
 
     def _html_dependency_precompiled(self) -> HTMLDependency:

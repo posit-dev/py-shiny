@@ -206,3 +206,11 @@ def test_theme_dep_name_is_valid_path_part():
 
     theme = Theme("sketchy", name="My Special Sketchy")
     assert theme._dep_create("foo.css").name == "shiny-theme-my-special-sketchy"
+
+
+def test_theme_dependency_has_data_attribute():
+    theme = Theme("shiny")
+    assert theme._html_dependency().stylesheet[0]["data-shiny-theme"] == "shiny"  # type: ignore
+
+    theme = Theme("shiny", name="My Fancy Theme")
+    assert theme._html_dependency().stylesheet[0]["data-shiny-theme"] == "My Fancy Theme"  # type: ignore
