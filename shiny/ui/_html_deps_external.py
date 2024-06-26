@@ -26,50 +26,24 @@ For...
 ThemeProvider = Union[Tagifiable, HTMLDependency, List[HTMLDependency]]
 
 
-def mark_shiny_theme_stylesheets(dep: HTMLDependency, name: str = "") -> HTMLDependency:
-    if not isinstance(dep, HTMLDependency):
-        raise ValueError(
-            "Expected an HTMLDependency, but received a value with type "
-            f"{type(dep)}."
-        )
-
-    if len(dep.stylesheet) > 0:
-        for sheet in dep.stylesheet:
-            sheet["data-shiny-theme"] = name  # type: ignore
-
-    return dep
-
-
 def shiny_page_theme_deps(theme: str | Path | Theme | ThemeProvider | None) -> TagList:
     deps_bootstrap = bootstrap_deps(include_css=theme is None)
 
     if theme is None:
         deps_theme = None
     elif isinstance(theme, Theme):
-        deps_theme = mark_shiny_theme_stylesheets(
-            theme._html_dependency(),
-            name=theme.name or theme._preset,
-        )
+        deps_theme = theme._html_dependency()
     elif isinstance(theme, str) and theme.startswith(("http", "//")):
-        theme_link = link(
-            rel="stylesheet", href=theme, type="text/css", data_shiny_theme=""
-        )
-        deps_theme = head_content(theme_link)
+        deps_theme = head_content(link(rel="stylesheet", href=theme, type="text/css"))
     elif isinstance(theme, (str, Path)):
         check_path(theme)
-        theme_link = include_css(theme)
-        theme_link.attrs["data-shiny-theme"] = ""
-        deps_theme = head_content(theme_link)
-    elif isinstance(theme, HTMLDependency):
-        deps_theme = mark_shiny_theme_stylesheets(theme)
+        deps_theme = head_content(include_css(theme))
+    elif isinstance(theme, Tagifiable) or isinstance(theme, HTMLDependency):
+        deps_theme = theme
     elif isinstance(theme, list) and all(
         [isinstance(dep, HTMLDependency) for dep in theme]
     ):
-        deps_theme = [mark_shiny_theme_stylesheets(t) for t in theme]
-    elif isinstance(theme, Tagifiable):
-        deps_theme = TagList(theme.tagify())
-        for dep in deps_theme.get_dependencies():
-            mark_shiny_theme_stylesheets(dep)
+        deps_theme = theme
     else:
         raise ValueError(
             "Invalid `theme`. "
