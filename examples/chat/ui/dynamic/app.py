@@ -1,3 +1,10 @@
+# -----------------------------------------------------------------------------
+# A basic example of dynamically re-rendering a Shiny Chat instance with different models.
+# To run it, you'll need an OpenAI API key.
+# To get one, follow the instructions at https://platform.openai.com/docs/quickstart
+# -----------------------------------------------------------------------------
+import os
+
 from langchain_openai import ChatOpenAI
 
 from shiny.express import input, render, ui
@@ -20,8 +27,11 @@ def chat_ui():
 
     chat.ui()
 
-    # Create the LLM client (assumes OPENAI_API_KEY is set in the environment)
-    llm = ChatOpenAI(model=input.model())
+    llm = ChatOpenAI(
+        model=input.model(),
+        # Provide your API key here (or set the environment variable)
+        api_key=os.environ.get("OPENAI_API_KEY"),
+    )
 
     @chat.on_user_submit
     async def _():

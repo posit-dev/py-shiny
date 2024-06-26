@@ -1,3 +1,11 @@
+# ------------------------------------------------------------------------------------
+# A Shiny Chat example showing how to use different language models via LangChain.
+# To run it with all the different providers/models, you'll need API keys for each.
+# Namely, OPENAI_API_KEY, ANTHROPIC_API_KEY, and GOOGLE_API_KEY.
+# To see how to get these keys, see the relevant basic examples.
+# (i.e., ../basic/openai/app.py, ../basic/anthropic/app.py, ../basic/gemini/app.py)
+# ------------------------------------------------------------------------------------
+
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_google_vertexai import VertexAI

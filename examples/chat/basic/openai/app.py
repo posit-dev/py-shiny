@@ -1,8 +1,18 @@
-# pyright: basic
+# ------------------------------------------------------------------------------------
+# A basic Shiny Chat example using OpenAI's GPT-4o model.
+# To run it, you'll need OpenAI API key.
+# To get one, follow the instructions at https://platform.openai.com/docs/quickstart
+# ------------------------------------------------------------------------------------
+import os
+
 from openai import AsyncOpenAI
 
 from shiny.express import ui
 
+# Provide your API key here (or set the environment variable)
+llm = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+
+# Set some Shiny page options
 ui.page_opts(
     title="Hello OpenAI Chat",
     fillable=True,
@@ -15,22 +25,22 @@ chat = ui.Chat(
     messages=[
         {"content": "Hello! How can I help you today?", "role": "assistant"},
     ],
-    # assistant_response_transformer=lambda x: HTML(f"<h1>{x}</h1"),
 )
 
 # Display the chat
 chat.ui()
 
-# Create the LLM client (assumes OPENAI_API_KEY is set in the environment)
-client = AsyncOpenAI()
 
-
-# on user submit, generate and append a response
+# Define a callback to run when the user submits a message
 @chat.on_user_submit
 async def _():
-    response = await client.chat.completions.create(
+    # Get messages currently in the chat
+    messages = chat.get_messages()
+    # Create a response message stream
+    response = await llm.chat.completions.create(
         model="gpt-4o",
-        messages=chat.get_messages(),
+        messages=messages,
         stream=True,
     )
+    # Append the response stream into the chat
     await chat.append_message_stream(response)

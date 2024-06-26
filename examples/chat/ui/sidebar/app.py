@@ -1,13 +1,27 @@
+# -----------------------------------------------------------------------------
+# An example of placing a Shiny Chat instance in a sidebar (and having it fill the sidebar).
+# To run it, you'll need an OpenAI API key.
+# To get one, follow the instructions at https://platform.openai.com/docs/quickstart
+# -----------------------------------------------------------------------------
+import os
+
 from langchain_openai import ChatOpenAI
 
 from shiny.express import ui
 
+# Provide your API key here (or set the environment variable)
+llm = ChatOpenAI(
+    api_key=os.environ.get("OPENAI_API_KEY"),
+)
+
+# Set some Shiny page options
 ui.page_opts(
     title="Hello Sidebar Chat",
     fillable=True,
     fillable_mobile=True,
 )
 
+# Create a chat instance, with an initial message
 chat = ui.Chat(
     id="chat",
     messages=[
@@ -20,13 +34,14 @@ with ui.sidebar(width=300, style="height:100%", position="right"):
     chat.ui(height="100%")
 
 
-# Create the LLM client (assumes OPENAI_API_KEY is set in the environment)
-llm = ChatOpenAI()
-
-
+# Define a callback to run when the user submits a message
 @chat.on_user_submit
 async def _():
-    response = llm.astream(chat.get_messages())
+    # Get messages currently in the chat
+    messages = chat.get_messages()
+    # Create a response message stream
+    response = llm.astream(messages)
+    # Append the response stream into the chat
     await chat.append_message_stream(response)
 
 

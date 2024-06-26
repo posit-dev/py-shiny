@@ -1,9 +1,19 @@
-# from langchain_openai import ChatOpenAI
+# ------------------------------------------------------------------------------------
+# A simple recipe extractor chatbot that extracts recipes from URLs using the OpenAI API.
+# To run it, you'll need an OpenAI API key.
+# To get one, follow the instructions at https://platform.openai.com/docs/quickstart
+# ------------------------------------------------------------------------------------
+import os
+
 from openai import AsyncOpenAI
 from utils import recipe_prompt, scrape_page_with_url
 
 from shiny.express import ui
 
+# Provide your API key here (or set the environment variable)
+llm = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+
+# Set some Shiny page options
 ui.page_opts(
     title="Recipe Extractor Chat",
     fillable=True,
@@ -23,8 +33,6 @@ chat = ui.Chat(
 )
 
 chat.ui(placeholder="Enter a recipe URL...")
-
-llm = AsyncOpenAI()
 
 
 # A function to transform user input

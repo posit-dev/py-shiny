@@ -1,7 +1,15 @@
+# ------------------------------------------------------------------------------------
+# A basic Shiny Chat example using Ollama.
+# To run it, you'll need an Ollama server running locally.
+# To download and run the server, see https://github.com/ollama/ollama
+# To install the Ollama Python client, see https://github.com/ollama/ollama-python
+# ------------------------------------------------------------------------------------
+
 import ollama
 
 from shiny.express import ui
 
+# Set some Shiny page options
 ui.page_opts(
     title="Hello Ollama Chat",
     fillable=True,
@@ -13,12 +21,17 @@ chat = ui.Chat(id="chat")
 chat.ui()
 
 
-# on user submit, generate and append a response
+# Define a callback to run when the user submits a message
 @chat.on_user_submit
 async def _():
+    # Get messages currently in the chat
+    messages = chat.get_messages()
+    # Create a response message stream
+    # Assumes you've run `ollama run llama3` to start the server
     response = ollama.chat(
         model="llama3",
-        messages=chat.get_messages(),
+        messages=messages,
         stream=True,
     )
+    # Append the response stream into the chat
     await chat.append_message_stream(response)
