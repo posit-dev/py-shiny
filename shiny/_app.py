@@ -438,8 +438,12 @@ class App:
         ui_res = copy.copy(ui)
         # Make sure requirejs, jQuery, and Shiny come before any other dependencies.
         # (see require_deps() for a comment about why we even include it)
+        has_bootstrap = any(
+            [dep.name == "bootstrap" for dep in ui_res.get_dependencies()]
+        )
         ui_res.insert(
-            0, [require_deps(), jquery_deps(), *shiny_deps(include_css=False)]
+            0,
+            [require_deps(), jquery_deps(), *shiny_deps(include_css=not has_bootstrap)],
         )
         rendered = HTMLDocument(ui_res).render(lib_prefix=lib_prefix)
         self._ensure_web_dependencies(rendered["dependencies"])
