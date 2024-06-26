@@ -5,17 +5,7 @@ import pathlib
 import re
 import tempfile
 import textwrap
-from typing import (
-    Any,
-    Callable,
-    Iterable,
-    Literal,
-    Optional,
-    Sequence,
-    TypeVar,
-    Union,
-    cast,
-)
+from typing import Any, Literal, Optional, Sequence, TypeVar
 
 from htmltools import HTMLDependency
 
@@ -32,13 +22,6 @@ from ._utils import path_pkg_www
 T = TypeVar("T", bound="Theme")
 
 
-SassImporterReturnValue = Union["tuple[str]", "tuple[str, str]", "tuple[str, str, str]"]
-SassImporterFunction = Union[
-    Callable[[str], SassImporterReturnValue],
-    Callable[[str, str], SassImporterReturnValue],
-]
-
-
 class SassCompileArgs(TypedDict):
     output_style: NotRequired[Literal["nested", "expanded", "compact", "compressed"]]
     source_comments: NotRequired[bool]
@@ -50,7 +33,7 @@ class SassCompileArgs(TypedDict):
     precision: NotRequired[int]
     custom_functions: NotRequired[Any]  # not worth the effort, it's a complicated type
     indented: NotRequired[bool]
-    importers: NotRequired[Iterable[tuple[int, SassImporterFunction]] | None]
+    importers: NotRequired[Any]  # not worth the effort, it's a complicated type
 
 
 theme_temporary_directories: set[tempfile.TemporaryDirectory[str]] = set()
@@ -416,17 +399,21 @@ class Theme:
         check_libsass_installed()
         import sass
 
-        if compile_args is None:
-            compile_args = {"output_style": "compressed"}
+        args: SassCompileArgs = {} if compile_args is None else compile_args
 
-        self._css = cast(
-            str,
-            sass.compile(
-                string=self.to_sass(),
-                include_paths=self._include_paths,
-                **compile_args,  # type: ignore
-            ),
-        )
+        if "include_paths" in args:
+            raise ValueError(
+                "The 'include_paths' argument is not allowed in 'compile_args'. "
+                "Use the 'include_paths' argument of the Theme constructor instead.",
+            )
+
+        args: SassCompileArgs = {
+            "output_style": "compressed",
+            "include_paths": self._include_paths,
+            **args,
+        }
+
+        self._css = sass.compile(string=self.to_sass(), **args)
 
         return self._css
 
