@@ -455,7 +455,7 @@ class App:
 
         doc = HTMLTextDocument(
             page_html,
-            deps=[require_deps(), jquery_deps(), *shiny_deps(include_css=False)],
+            deps=[require_deps(), jquery_deps(), *shiny_deps(include_css=True)],
             deps_replace_pattern='<meta name="shiny-dependency-placeholder" content="">',
         )
 
