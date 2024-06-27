@@ -1,16 +1,20 @@
 # ------------------------------------------------------------------------------------
-# A basic Shiny Chat example powered by Anthropic's Claude model.
-# To run it, you'll need an Anthropic API key.
-# To get one, follow the instructions at https://docs.anthropic.com/en/api/getting-started
+# A basic Shiny Chat powered by Anthropic's Claude model with Bedrock.
+# To run it, you'll need an AWS Bedrock configuration.
+# To get started, follow the instructions at https://aws.amazon.com/bedrock/claude/
+# as well as https://github.com/anthropics/anthropic-sdk-python#aws-bedrock
 # ------------------------------------------------------------------------------------
-import os
-
-from anthropic import AsyncAnthropic
+from anthropic import AnthropicBedrock
 
 from shiny.express import ui
 
-# Provide your API key here (or set the environment variable)
-llm = AsyncAnthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+# Provide your AWS info here (or set the environment variable)
+llm = AnthropicBedrock(
+    # aws_secret_key="..."
+    # aws_access_key="..."
+    # aws_region="..."
+    # aws_account_id="..."
+)
 
 # Set some Shiny page options
 ui.page_opts(
@@ -31,7 +35,7 @@ async def _():
     messages = chat.get_messages()
     # Create a response message stream
     response = await llm.messages.create(
-        model="claude-3-opus-20240229",
+        model="anthropic.claude-3-sonnet-20240229-v1:0",
         messages=messages,
         stream=True,
         max_tokens=1000,

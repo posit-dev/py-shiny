@@ -1,5 +1,5 @@
 # ------------------------------------------------------------------------------------
-# A basic Shiny Chat example using Google's Gemini model.
+# A basic Shiny Chat example powered by Google's Gemini model.
 # To run it, you'll need a Google API key.
 # To get one, follow the instructions at https://ai.google.dev/gemini-api/docs/get-started/tutorial?lang=python
 # ------------------------------------------------------------------------------------

@@ -1,16 +1,22 @@
 # ------------------------------------------------------------------------------------
-# A basic Shiny Chat example powered by OpenAI's GPT-4o model.
+# A basic Shiny Chat example powered by OpenAI running on Azure.
 # To run it, you'll need OpenAI API key.
-# To get setup, follow the instructions at https://platform.openai.com/docs/quickstart
+# To get setup, follow the instructions at https://learn.microsoft.com/en-us/azure/ai-services/openai/quickstart?tabs=command-line%2Cpython-new&pivots=programming-language-python#create-a-new-python-application
 # ------------------------------------------------------------------------------------
 import os
 
-from openai import AsyncOpenAI
+from openai import AzureOpenAI
 
 from shiny.express import ui
 
-# Provide your API key here (or set the environment variable)
-llm = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+# # Provide your Azure info here (or set the environment variable)
+llm = AzureOpenAI(
+    api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+    api_version="2024-02-01",
+    azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+)
+
+deployment_name = "REPLACE_WITH_YOUR_DEPLOYMENT_NAME"
 
 # Set some Shiny page options
 ui.page_opts(
@@ -38,7 +44,7 @@ async def _():
     messages = chat.get_messages()
     # Create a response message stream
     response = await llm.chat.completions.create(
-        model="gpt-4o",
+        model=deployment_name,
         messages=messages,
         stream=True,
     )

@@ -139,9 +139,9 @@ class Chat:
             # (and make sure this runs before other effects since when the user
             #  calls `.get_messages()`, they should get the latest user input)
             @reactive.effect(priority=9999)
-            @reactive.event(self.get_user_input)
+            @reactive.event(self.get_user_message)
             async def _on_user_input():
-                msg = ChatMessage(content=self.get_user_input(), role="user")
+                msg = ChatMessage(content=self.get_user_message(), role="user")
                 msg_post = await self._transform_message(msg)
                 if msg_post is not None:
                     self._store_message(msg_post)
@@ -246,7 +246,7 @@ class Chat:
             afunc = _utils.wrap_async(fn)
 
             @reactive.effect
-            @reactive.event(self.get_user_input)
+            @reactive.event(self.get_user_message)
             async def handle_user_input():
                 if self._suspend_input_handler:
                     from .. import req
@@ -638,9 +638,9 @@ class Chat:
 
         return tuple(messages2)
 
-    def get_user_input(self) -> str:
+    def get_user_message(self) -> str:
         """
-        Reactively read user input
+        Reactively read the user's message.
 
         Returns
         -------
@@ -656,9 +656,9 @@ class Chat:
         id = self.user_input_id
         return cast(str, self._session.input[id]())
 
-    def set_user_input(self, value: str):
+    def set_user_message(self, value: str):
         """
-        Set the user input value.
+        Set the user's message.
 
         Parameters
         ----------

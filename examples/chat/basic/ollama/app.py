@@ -1,5 +1,5 @@
 # ------------------------------------------------------------------------------------
-# A basic Shiny Chat example using Ollama.
+# A basic Shiny Chat example powered by Ollama.
 # To run it, you'll need an Ollama server running locally.
 # To download and run the server, see https://github.com/ollama/ollama
 # To install the Ollama Python client, see https://github.com/ollama/ollama-python

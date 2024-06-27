@@ -1,5 +1,5 @@
 # ------------------------------------------------------------------------------------
-# A basic Shiny Chat example using OpenAI via LangChain.
+# A basic Shiny Chat example powered by OpenAI via LangChain.
 # To run it, you'll need OpenAI API key.
 # To get one, follow the instructions at https://platform.openai.com/docs/quickstart
 # To use other providers/models via LangChain, see https://python.langchain.com/v0.1/docs/modules/model_io/chat/quick_start/
