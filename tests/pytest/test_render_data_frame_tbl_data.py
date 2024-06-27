@@ -1,5 +1,7 @@
+from dataclasses import dataclass
 from datetime import datetime
 
+import htmltools
 import pandas as pd
 import polars as pl
 import polars.testing
@@ -14,12 +16,34 @@ from shiny.render._data_frame_utils._tbl_data import (
 )
 from shiny.ui import HTML, h1
 
+
+class C:
+    x: int
+
+    def __init__(self, x: int):
+        self.x = x
+
+    def __str__(self):
+        return f"<{self.__class__.__name__} object>"
+
+
+@dataclass
+class D:
+    y: int
+
+
 DATA = {
     "num": [1, 2],
     "chr": ["a", "b"],
     "cat": ["a", "a"],
     "dt": [datetime(2000, 1, 2)] * 2,
+    # TODO: mock session in tests (needed for registering dependencies)
+    # "html": [htmltools.span("span content")] * 2,
+    # "html_str": [htmltools.HTML("<strong>bolded</strong>")] * 2,
+    # TODO: ts code to stringify objects
     "struct": [{"x": 1}, {"x": 2}],
+    "arr": [[1, 2], [3, 4]],
+    "object": [C(1), D(2)],
 }
 
 params_frames = [
@@ -86,17 +110,19 @@ def test_serialize_frame(df):
 
     res = serialize_frame(df)
     assert res == {
-        "columns": ["num", "chr", "cat", "dt", "struct"],
+        "columns": ["num", "chr", "cat", "dt", "struct", "arr", "object"],
         "index": [0, 1],
         "data": [
-            [1, "a", "a", "2000-01-02T00:00:00.000", {"x": 1}],
-            [2, "b", "a", "2000-01-02T00:00:00.000", {"x": 2}],
+            [1, "a", "a", "2000-01-02T00:00:00.000", {"x": 1}, [1, 2], "<C object>"],
+            [2, "b", "a", "2000-01-02T00:00:00.000", {"x": 2}, [3, 4], "D(y=2)"],
         ],
         "typeHints": [
             {"type": "numeric"},
             {"type": "string"},
             {"type": "string"},
             {"type": "datetime"},
+            {"type": "unknown"},
+            {"type": "unknown"},
             {"type": "unknown"},
         ],
     }

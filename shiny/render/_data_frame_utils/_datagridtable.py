@@ -354,7 +354,7 @@ def serialize_pandas_df(df: "pd.DataFrame") -> dict[str, Any]:
     res = json.loads(
         # {index: [index], columns: [columns], data: [values]}
         df.to_json(
-            None, orient="split", date_format="iso"
+            None, orient="split", date_format="iso", default_handler=str
         )  # pyright: ignore[reportUnknownMemberType]
     )
 
