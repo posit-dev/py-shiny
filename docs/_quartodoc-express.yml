@@ -162,6 +162,7 @@ quartodoc:
     - title: UI as HTML
       desc: Tools for creating HTML/CSS/JS
       contents:
+        - express.ui.Theme
         - express.ui.markdown
         - express.ui.include_css
         - express.ui.include_js

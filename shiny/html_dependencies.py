@@ -8,17 +8,19 @@ from . import __version__
 from .ui._html_deps_py_shiny import busy_indicators_dep
 
 
-def shiny_deps() -> list[HTMLDependency]:
+def shiny_deps(include_css: bool = True) -> list[HTMLDependency]:
     deps = [
         HTMLDependency(
             name="shiny",
             version=__version__,
             source={"package": "shiny", "subdir": "www/shared/"},
             script={"src": "shiny.js"},
-            stylesheet={"href": "shiny.min.css"},
+            # This CSS is now rendered against default Bootstrap
+            stylesheet={"href": "shiny.min.css"} if include_css else None,
         ),
         busy_indicators_dep(),
     ]
+
     if os.getenv("SHINY_DEV_MODE") == "1":
         deps.append(
             HTMLDependency(

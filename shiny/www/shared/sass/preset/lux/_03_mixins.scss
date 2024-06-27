@@ -1,0 +1,13 @@
+$bslib-preset-type: bootswatch;
+$bslib-preset-name: lux;
+@import "../../bslib/lib/bsw5/dist/lux/_variables.scss";
+$enable-cssgrid: true !default;
+@import "../../bslib/bs3compat/_defaults.scss";
+@import "../../bslib/lib/bs5/scss/_variables.scss";
+@import "../../bslib/lib/bs5/scss/_variables-dark.scss";
+$bootstrap-version: 5;
+$bslib-preset-name: null !default;
+$bslib-preset-type: null !default;
+@import "../../bslib/lib/bs5/scss/_maps.scss";
+@import "../../bslib/lib/bs5/scss/_mixins.scss";
+@import "../../bslib/bs3compat/_declarations.scss";
