@@ -21,14 +21,12 @@ if TYPE_CHECKING:
 # pyright: reportUnknownMemberType=false
 # pyright: reportUnknownParameterType=false
 # pyright: reportUnknownVariableType=false
-
-
-class DataFrameDtypeOriginal(TypedDict):
-    type: str
+# pyright: reportAttributeAccessIssue=false
+# pyrigth: reportMissingParameterType=false
 
 
 class DataFrameDtypeSubset(TypedDict):
-    type: Literal["numeric", "string", "html", "unknown"]
+    type: Literal["numeric", "string", "html", "datetime", "timedelta", "unknown"]
 
 
 class DataFrameDtypeCategories(TypedDict):
@@ -37,7 +35,6 @@ class DataFrameDtypeCategories(TypedDict):
 
 
 DataFrameDtype = Union[
-    DataFrameDtypeOriginal,
     DataFrameDtypeSubset,
     DataFrameDtypeCategories,
 ]
@@ -53,7 +50,7 @@ def col_contains_shiny_html(col: SeriesLike) -> bool:
 
 def serialize_numpy_dtype(
     col: "pd.Series[Any]",
-) -> DataFrameDtypeOriginal | DataFrameDtypeSubset | DataFrameDtypeCategories:
+) -> DataFrameDtype:
     import pandas as pd
 
     t = pd.api.types.infer_dtype(col)

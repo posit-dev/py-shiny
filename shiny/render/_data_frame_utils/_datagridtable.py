@@ -353,9 +353,9 @@ def serialize_pandas_df(df: "pd.DataFrame") -> dict[str, Any]:
     # see https://en.wikipedia.org/wiki/ISO_8601#Durations
     res = json.loads(
         # {index: [index], columns: [columns], data: [values]}
-        df.to_json(
+        df.to_json(  # pyright: ignore[reportUnknownMemberType]
             None, orient="split", date_format="iso", default_handler=str
-        )  # pyright: ignore[reportUnknownMemberType]
+        )
     )
 
     res["typeHints"] = type_hints

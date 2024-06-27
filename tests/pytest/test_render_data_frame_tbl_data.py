@@ -1,17 +1,18 @@
 from dataclasses import dataclass
 from datetime import datetime
 
-import htmltools
 import pandas as pd
 import polars as pl
 import polars.testing
 import pytest
+from typing_extensions import TypeAlias
 
 from shiny.render._data_frame_utils._tbl_data import (
     copy_frame,
     get_frame_cell,
     serialize_dtype,
     serialize_frame,
+    shape,
     subset_frame,
 )
 from shiny.ui import HTML, h1
@@ -51,10 +52,17 @@ params_frames = [
     pytest.param(pl.DataFrame, id="polars"),
 ]
 
+DataFrameLike: TypeAlias = "pd.DataFrame | pl.DataFrame"
+
 
 @pytest.fixture(params=params_frames, scope="function")
-def df(request) -> pd.DataFrame:
+def df(request) -> DataFrameLike:
     return request.param(DATA)
+
+
+@pytest.fixture(params=params_frames, scope="function")
+def small_df(request) -> DataFrameLike:
+    return request.param({"x": [1, 2], "y": [3, 4]})
 
 
 def assert_frame_equal(src, target, use_index=False):
@@ -144,3 +152,20 @@ def test_copy_frame(df):
     new_df = copy_frame(df)
 
     assert new_df is not df
+
+
+def test_subset_frame_rows_single(small_df):
+    res = subset_frame(small_df, [1])
+
+    assert_frame_equal(res, small_df.__class__({"x": [2], "y": [4]}))
+
+
+def test_subset_frame_cols_single(small_df):
+    # TODO: include test of polars
+    res = subset_frame(small_df, cols=["y"])
+
+    assert_frame_equal(res, small_df.__class__({"y": [3, 4]}))
+
+
+def test_shape(small_df):
+    assert shape(small_df) == (2, 2)

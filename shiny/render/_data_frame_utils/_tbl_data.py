@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from abc import ABC
 from functools import singledispatch
-from typing import TYPE_CHECKING, Any, Literal, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 
-from typing_extensions import NotRequired, TypeAlias, TypedDict
+from typing_extensions import TypeAlias, TypedDict
 
 from ._databackend import AbstractBackend
 
@@ -12,9 +12,11 @@ if TYPE_CHECKING:
     import pandas as pd
     import polars as pl
 
+    from ._unsafe import DataFrameDtype
+
     PdDataFrame = pd.DataFrame
     PlDataFrame = pl.DataFrame
-    PdSeries = pd.Series
+    PdSeries = pd.Series[Any]
     PlSeries = pl.Series
 
     SeriesLike = Union[PdSeries, PlSeries]
@@ -48,25 +50,25 @@ else:
 # serialize_dtype ----------------------------------------------------------------------
 
 
-class _GridDType(TypedDict):
-    type: Literal["string", "numeric", "categorical", "html", "unknown"]
-    categories: NotRequired[list[str]]
-
-
 @singledispatch
-def serialize_dtype(col: SeriesLike) -> _GridDType:
+def serialize_dtype(col: SeriesLike) -> DataFrameDtype:
     raise TypeError(f"Unsupported type: {type(col)}")
 
 
-@serialize_dtype.register
-def _(col: PdSeries) -> _GridDType:
+# TODO: we can't import DataFrameDtype at runtime, due to circular dependency. So
+# we import it during type checking. But this means we have to explicitly register
+# the dispatch type below.
+
+
+@serialize_dtype.register(PdSeries)
+def _(col: PdSeries) -> DataFrameDtype:
     from ._unsafe import serialize_numpy_dtype
 
     return serialize_numpy_dtype(col)
 
 
-@serialize_dtype.register
-def _(col: PlSeries) -> _GridDType:
+@serialize_dtype.register(PlSeries)
+def _(col: PlSeries) -> DataFrameDtype:
     import polars as pl
 
     from ._unsafe import col_contains_shiny_html
@@ -103,19 +105,19 @@ class _FrameHintEntry(TypedDict):
 
 
 @singledispatch
-def serialize_frame(data: DataFrameLike) -> dict[str, Any]:
+def serialize_frame(data: DataFrameLike) -> _FrameJson:
     raise TypeError(f"Unsupported type: {type(data)}")
 
 
 @serialize_frame.register
-def _(data: PdDataFrame) -> dict[str, Any]:
+def _(data: PdDataFrame) -> _FrameJson:
     from ._datagridtable import serialize_pandas_df
 
     return serialize_pandas_df(data)
 
 
 @serialize_frame.register
-def _(data: PlDataFrame) -> dict[str, Any]:
+def _(data: PlDataFrame) -> _FrameJson:
     # write_json only does rows (as dictionaries; but we need lists)
     # serialize only does columns
     named_cols = data.to_dict(as_series=False)
@@ -129,6 +131,7 @@ def _(data: PlDataFrame) -> dict[str, Any]:
 
 
 # subset_frame -------------------------------------------------------------------------
+# TODO: this should replace use of iloc
 
 _RowsList: TypeAlias = Optional[list[int]]
 _ColsList: TypeAlias = Optional[list[str]]
@@ -138,15 +141,14 @@ _ColsList: TypeAlias = Optional[list[str]]
 def subset_frame(
     data: DataFrameLike, rows: _RowsList = None, cols: _ColsList = None
 ) -> DataFrameLike:
+    """Return a subsetted DataFrame, based on row positions and column names.
+
+    Note that when None is passed, all rows or columns get included.
+    """
     # Note that this type signature assumes column names are strings things.
     # This is always true in Polars, but not in Pandas (e.g. a column name could be an
     # int, or even a tuple of ints)
     raise TypeError(f"Unsupported type: {type(data)}")
-
-
-@subset_frame.register
-def _(data: PlDataFrame, rows: _RowsList = None, cols: _ColsList = None) -> PlDataFrame:
-    return data[rows, cols]
 
 
 @subset_frame.register
@@ -158,7 +160,16 @@ def _(data: PdDataFrame, rows: _RowsList = None, cols: _ColsList = None) -> PdDa
     else:
         indx_cols = slice(None)
 
-    return data.iloc[rows, indx_cols]
+    indx_rows = rows if rows is not None else slice(None)
+
+    return data.iloc[indx_rows, indx_cols]
+
+
+@subset_frame.register
+def _(data: PlDataFrame, rows: _RowsList = None, cols: _ColsList = None) -> PlDataFrame:
+    indx_cols = cols if cols is not None else slice(None)
+    indx_rows = rows if rows is not None else slice(None)
+    return data[indx_rows, indx_cols]
 
 
 # get_frame_cell -----------------------------------------------------------------------

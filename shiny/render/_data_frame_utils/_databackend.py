@@ -2,6 +2,12 @@
 #
 # See https://github.com/machow/databackend
 
+# pyright: reportMissingTypeArgument=false
+# pyright: reportUnknownArgumentType=false
+# pyright: reportUnknownMemberType=false
+# pyright: reportUnknownParameterType=false
+# pyright: reportUnknownVariableType=false
+
 import importlib
 import sys
 from abc import ABCMeta

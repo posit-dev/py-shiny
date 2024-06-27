@@ -4,7 +4,7 @@ import htmltools
 import pandas as pd
 import polars as pl
 
-from shiny.express import input, render, ui
+from shiny.express import render, ui
 
 DATA = {
     "num": [1, 2],
