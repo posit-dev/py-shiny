@@ -662,7 +662,7 @@ class Chat:
 
         return tuple(messages2)
 
-    async def get_user_input(self, transform: bool = True) -> str | None:
+    def get_user_input(self, transform: bool = True) -> str | None:
         """
         Reactively read the user's message.
 
@@ -685,7 +685,7 @@ class Chat:
         """
         val = self._get_user_input()
         if transform and self._transform_user is not None:
-            return await self._transform_user(val)
+            return _utils.run_coro_sync(self._transform_user(val))
         else:
             return val
 
