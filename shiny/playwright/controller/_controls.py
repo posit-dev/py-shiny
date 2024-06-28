@@ -5747,6 +5747,7 @@ class OutputDataFrame(_UiWithContainer):
             .nth(col)
         )
 
+    # TODO-barret; Should this be called `expect_row_count()`?
     def expect_n_row(self, value: int, *, timeout: Timeout = None):
         """
         Expects the number of rows in the data frame.
@@ -5761,6 +5762,92 @@ class OutputDataFrame(_UiWithContainer):
         playwright_expect(self.loc_body.locator("> tr")).to_have_count(
             value, timeout=timeout
         )
+
+    def expect_selected_n_row(self, value: int, *, timeout: Timeout = None):
+        """
+        Expects the number of selected rows in the data frame.
+
+        Parameters
+        ----------
+        value
+            The expected number of selected rows.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
+        playwright_expect(
+            self.loc_body.locator("tr[aria-selected=true]")
+        ).to_have_count(value, timeout=timeout)
+
+    def expect_selected_rows(self, rows: list[int], *, timeout: Timeout = None):
+        """
+        Expects the specified rows to be selected.
+
+        Parameters
+        ----------
+        rows
+            The row numbers.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
+        # * given container...
+        # * Add that container has all known rows
+        # * Verify that selected row count is of size N
+        big_loc = self.loc_body
+        assert len(rows) > 0
+        for row in rows:
+            big_loc = big_loc.locator(
+                "xpath=.",  # return "self"
+                has=self.page.locator(
+                    f"> tr[data-index='{row}'][aria-selected='true']"
+                ),
+            )
+
+        try:
+            playwright_expect(
+                big_loc.locator("> tr[aria-selected='true']")
+            ).to_have_count(len(rows), timeout=timeout)
+        except AssertionError as e:
+            # Debug expections
+
+            # Expecting container to exist (count = 1)
+            playwright_expect(self.loc_body).to_have_count(1, timeout=timeout)
+
+            for row in rows:
+                # Expecting item `{item}` to exist in container
+                # Perform exact matches on strings.
+                playwright_expect(
+                    # Simple approach as position is not needed
+                    self.loc_body.locator(
+                        f"> tr[aria-selected='true'][data-index='{row}']",
+                    )
+                ).to_have_count(1, timeout=timeout)
+
+            # Could not find the reason why. Raising the original error.
+            raise e
+
+    def expect_row_focus_state(
+        self, in_focus: bool = True, *, row: int, timeout: Timeout = None
+    ):
+        """
+        Expects the focus state of the specified row.
+
+        Parameters
+        ----------
+        row
+            The row number.
+        in_focus
+            `True` if the row is expected to be in focus, `False` otherwise.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
+        if in_focus:
+            playwright_expect(
+                self.loc_body.locator(f"> tr[data-index='{row}']")
+            ).to_be_focused(timeout=timeout)
+        else:
+            playwright_expect(
+                self.loc_body.locator(f"> tr[data-index='{row}']")
+            ).not_to_be_focused(timeout=timeout)
 
     def expect_cell(
         self,
