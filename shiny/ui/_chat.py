@@ -146,11 +146,18 @@ class Chat:
             @reactive.event(self._get_user_input)
             async def _on_user_input():
                 msg = ChatMessage(content=self._get_user_input(), role="user")
+                # It's possible that during the transform, a message is appended, so get
+                # the length now, so we can insert the new message at the right index
+                n_pre = len(self._messages())
                 msg_post = await self._transform_message(msg)
                 if msg_post is not None:
                     self._store_message(msg_post)
                     self._suspend_input_handler = False
                 else:
+                    # A transformed value of None is a special signal to suspend input
+                    # handling (i.e., don't generate a response)
+                    self._store_message(as_transformed_message(msg), index=n_pre)
+                    await self._remove_loading_message()
                     self._suspend_input_handler = True
 
             self._effects.append(_on_user_input)
@@ -596,6 +603,7 @@ class Chat:
         self,
         message: TransformedMessage,
         chunk: ChunkOption = False,
+        index: int | None = None,
     ) -> StoredMessage:
 
         msg: StoredMessage = {
@@ -626,9 +634,14 @@ class Chat:
             msg["token_count"] = token_count
 
         with reactive.isolate():
-            messages = self._messages() + (msg,)
+            messages = self._messages()
 
-        self._messages.set(messages)
+        if index is None:
+            index = len(messages)
+
+        messages = list(messages)
+        messages.insert(index, msg)
+        self._messages.set(tuple(messages))
 
         return msg
 
