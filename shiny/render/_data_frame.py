@@ -428,6 +428,8 @@ class data_frame(Renderer[DataFrameResult]):
                 selection_modes=self.selection_modes(),
                 data=self.data(),
                 data_view_rows=self.data_view_rows(),
+                # TODO-barret: replace methods like .shape, .loc. .iat with those from
+                # _tbl_data.py, test in the playright app.
                 data_view_cols=tuple(range(self.data().shape[1])),
             )
 

@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, Literal, Protocol, Union, runtime_checkab
 from htmltools import HTML, MetadataNode, Tagifiable
 
 from ..._typing_extensions import TypedDict, TypeGuard
+from ._tbl_data import PdDataFrame, SeriesLike
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -20,14 +21,12 @@ if TYPE_CHECKING:
 # pyright: reportUnknownMemberType=false
 # pyright: reportUnknownParameterType=false
 # pyright: reportUnknownVariableType=false
-
-
-class DataFrameDtypeOriginal(TypedDict):
-    type: str
+# pyright: reportAttributeAccessIssue=false
+# pyrigth: reportMissingParameterType=false
 
 
 class DataFrameDtypeSubset(TypedDict):
-    type: Literal["numeric", "string", "html", "unknown"]
+    type: Literal["numeric", "string", "html", "datetime", "timedelta", "unknown"]
 
 
 class DataFrameDtypeCategories(TypedDict):
@@ -36,23 +35,22 @@ class DataFrameDtypeCategories(TypedDict):
 
 
 DataFrameDtype = Union[
-    DataFrameDtypeOriginal,
     DataFrameDtypeSubset,
     DataFrameDtypeCategories,
 ]
 
 
-def serialize_numpy_dtypes(df: "pd.DataFrame") -> list[DataFrameDtype]:
+def serialize_numpy_dtypes(df: PdDataFrame) -> list[DataFrameDtype]:
     return [serialize_numpy_dtype(col) for _, col in df.items()]
 
 
-def col_contains_shiny_html(col: "pd.Series") -> bool:
+def col_contains_shiny_html(col: SeriesLike) -> bool:
     return any(is_shiny_html(val) for _, val in enumerate(col))
 
 
 def serialize_numpy_dtype(
     col: "pd.Series[Any]",
-) -> DataFrameDtypeOriginal | DataFrameDtypeSubset | DataFrameDtypeCategories:
+) -> DataFrameDtype:
     import pandas as pd
 
     t = pd.api.types.infer_dtype(col)
@@ -73,6 +71,10 @@ def serialize_numpy_dtype(
             "type": "categorical",
             "categories": [str(x) for x in col.cat.categories.to_list()],
         }
+    elif t in {"datetime64", "datetime"}:
+        t = "datetime"
+    elif t in {"timedelta", "timedelta64"}:
+        t = "timedelta"
     else:
         if col_contains_shiny_html(col):
             t = "html"
