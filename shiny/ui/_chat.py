@@ -46,6 +46,8 @@ SubmitFunctionAsync = Callable[[], Awaitable[None]]
 
 ChunkOption = Literal["start", "end", True, False]
 
+PendingMessage = tuple[Any, ChunkOption, str | None]
+
 
 class Chat:
     """
@@ -116,6 +118,8 @@ class Chat:
 
         # Chunked messages get accumulated (using this property) before changing state
         self._final_message = ""
+        self._current_stream_id: str | None = None
+        self._pending_messages: list[PendingMessage] = []
 
         # If a user input message is transformed into a response, we need to cancel
         # the next user input submit handling
@@ -347,8 +351,18 @@ class Chat:
         await self._append_message(message)
 
     async def _append_message(
-        self, message: Any, *, chunk: ChunkOption = False, msg_id: str | None = None
+        self, message: Any, *, chunk: ChunkOption = False, stream_id: str | None = None
     ) -> None:
+        # If currently we're in a stream, handle other messages (outside the stream) later
+        if not self._can_append_message(stream_id):
+            self._pending_messages.append((message, chunk, stream_id))
+            return
+
+        self._current_stream_id = stream_id
+
+        if chunk == "end":
+            self._current_stream_id = None
+
         if chunk:
             msg = normalize_message_chunk(message)
         else:
@@ -358,7 +372,7 @@ class Chat:
         if msg is None:
             return
         msg = self._store_message(msg, chunk=chunk)
-        await self._send_append_message(msg, chunk=chunk, msg_id=msg_id)
+        await self._send_append_message(msg, chunk=chunk)
 
     async def append_message_stream(self, message: Iterable[Any] | AsyncIterable[Any]):
         """
@@ -404,24 +418,37 @@ class Chat:
         self._effects.append(_handle_error)
 
     async def _append_message_stream(self, message: AsyncIterable[Any]):
-        msg_id = _utils.private_random_id()
+        id = _utils.private_random_id()
 
         empty = ChatMessage(content="", role="assistant")
-        await self._append_message(empty, chunk="start", msg_id=msg_id)
+        await self._append_message(empty, chunk="start", stream_id=id)
 
         try:
             async for msg in message:
-                msg = normalize_message_chunk(msg)
-                await self._append_message(msg, chunk=True, msg_id=msg_id)
+                await self._append_message(msg, chunk=True, stream_id=id)
         finally:
-            await self._append_message(empty, chunk="end", msg_id=msg_id)
+            await self._append_message(empty, chunk="end", stream_id=id)
+            await self._flush_pending_messages()
+
+    async def _flush_pending_messages(self):
+        still_pending: list[PendingMessage] = []
+        for msg, chunk, stream_id in self._pending_messages:
+            if self._can_append_message(stream_id):
+                await self._append_message(msg, chunk=chunk, stream_id=stream_id)
+            else:
+                still_pending.append((msg, chunk, stream_id))
+        self._pending_messages = still_pending
+
+    def _can_append_message(self, stream_id: str | None) -> bool:
+        if self._current_stream_id is None:
+            return True
+        return self._current_stream_id == stream_id
 
     # Send a message to the UI
     async def _send_append_message(
         self,
         message: StoredMessage,
         chunk: ChunkOption = False,
-        msg_id: str | None = None,
     ):
         if message["role"] == "system":
             # System messages are not displayed in the UI
@@ -437,7 +464,6 @@ class Chat:
             role=message["role"],
             content_type=message.get("content_type", "markdown"),
             chunk_type=message.get("chunk_type", None),
-            msg_id=msg_id,
         )
 
         # print(msg)
@@ -578,23 +604,21 @@ class Chat:
             "chunk_type": None,
         }
 
-        content = message["content"]
-
         if chunk:
-            self._final_message += content
+            self._final_message += msg["content"]
             if isinstance(chunk, str):
                 msg["chunk_type"] = (
                     "message_start" if chunk == "start" else "message_end"
                 )
             # Don't count tokens or invalidate until the end of the chunk
             if chunk == "end":
-                content = self._final_message
+                msg["content"] = self._final_message
                 self._final_message = ""
             else:
                 return msg
 
         if self._tokenizer is not None:
-            encoded = self._tokenizer.encode(content)
+            encoded = self._tokenizer.encode(msg["content"])
             if isinstance(encoded, TokenizersEncoding):
                 token_count = len(encoded.ids)
             else:

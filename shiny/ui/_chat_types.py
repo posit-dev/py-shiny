@@ -29,9 +29,6 @@ class StoredMessage(TransformedMessage):
 
 
 # A message that can be sent to the client
-class ClientMessage(TypedDict):
-    content: str
-    role: Role
+class ClientMessage(ChatMessage):
     content_type: Literal["markdown", "html"]
     chunk_type: Literal["message_start", "message_end"] | None
-    msg_id: str | None

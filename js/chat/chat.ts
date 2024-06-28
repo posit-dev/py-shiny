@@ -16,7 +16,6 @@ type Message = {
   role: "user" | "assistant";
   chunk_type: "message_start" | "message_end" | null;
   content_type: ContentType;
-  msg_id: string | null;
 };
 type ShinyChatMessage = {
   id: string;
@@ -34,15 +33,6 @@ declare global {
     "shiny-chat-set-user-input": CustomEvent<string>;
     "shiny-chat-remove-loading-message": CustomEvent;
   }
-}
-
-interface EventHandlerMap {
-  "shiny-chat-input-sent": (event: CustomEvent<Message>) => void;
-  "shiny-chat-append-message": (event: CustomEvent<Message>) => void;
-  "shiny-chat-append-message-chunk": (event: CustomEvent<Message>) => void;
-  "shiny-chat-clear-messages": () => void;
-  "shiny-chat-set-user-input": (event: CustomEvent<string>) => void;
-  "shiny-chat-remove-loading-message": () => void;
 }
 
 const CHAT_MESSAGE_TAG = "shiny-chat-message";
@@ -227,10 +217,6 @@ class ChatInput extends LightElement {
 class ChatContainer extends LightElement {
   @property() placeholder = "Enter a message...";
 
-  // The msg_id of a message stream currently in progress
-  private messageStreamId: string | null = null;
-  private eventQueue: CustomEvent[] = [];
-
   private get input(): ChatInput {
     return this.querySelector(CHAT_INPUT_TAG) as ChatInput;
   }
@@ -250,58 +236,38 @@ class ChatContainer extends LightElement {
     `;
   }
 
-  private eventHandlerMap: {
-    [K in keyof EventHandlerMap]: EventHandlerMap[K];
-  } = {
-    "shiny-chat-input-sent": this.#onInputSent.bind(this),
-    "shiny-chat-append-message": this.#onAppend.bind(this),
-    "shiny-chat-append-message-chunk": this.#onAppendChunk.bind(this),
-    "shiny-chat-clear-messages": this.#onClear.bind(this),
-    "shiny-chat-set-user-input": this.#onSetUserInput.bind(this),
-    "shiny-chat-remove-loading-message":
-      this.#onRemoveLoadingMessage.bind(this),
-  };
-
   firstUpdated(): void {
     // Don't attach event listeners until child elements are rendered
     if (!this.messages) return;
 
-    for (const [type, handler] of Object.entries(this.eventHandlerMap)) {
-      this.addEventListener(
-        type as keyof EventHandlerMap,
-        this.#wrapEventHandler(handler)
-      );
-    }
+    this.addEventListener("shiny-chat-input-sent", this.#onInputSent);
+    this.addEventListener("shiny-chat-append-message", this.#onAppend);
+    this.addEventListener(
+      "shiny-chat-append-message-chunk",
+      this.#onAppendChunk
+    );
+    this.addEventListener("shiny-chat-clear-messages", this.#onClear);
+    this.addEventListener("shiny-chat-set-user-input", this.#onSetUserInput);
+    this.addEventListener(
+      "shiny-chat-remove-loading-message",
+      this.#onRemoveLoadingMessage
+    );
   }
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
 
-    for (const [type, handler] of Object.entries(this.eventHandlerMap)) {
-      this.removeEventListener(
-        type as keyof EventHandlerMap,
-        this.#wrapEventHandler(handler)
-      );
-    }
-  }
-
-  // Wrapper to enqueue events if we're in the middle of a message stream
-  #wrapEventHandler(eventHandler: (event: CustomEvent) => void) {
-    return (event: CustomEvent): void => {
-      this.#canHandleEvent(event)
-        ? eventHandler.call(this, event)
-        : this.eventQueue.push(event);
-    };
-  }
-
-  // Can handle the event now if no message stream is in progress or if the is a part of
-  // the current message stream
-  #canHandleEvent(event: CustomEvent): boolean {
-    const id = this.messageStreamId;
-    if (id === null) return true;
-    const e = event as CustomEvent<Message>;
-    return (
-      e.type === "shiny-chat-append-message-chunk" && id == e.detail.msg_id
+    this.removeEventListener("shiny-chat-input-sent", this.#onInputSent);
+    this.removeEventListener("shiny-chat-append-message", this.#onAppend);
+    this.removeEventListener(
+      "shiny-chat-append-message-chunk",
+      this.#onAppendChunk
+    );
+    this.removeEventListener("shiny-chat-clear-messages", this.#onClear);
+    this.removeEventListener("shiny-chat-set-user-input", this.#onSetUserInput);
+    this.removeEventListener(
+      "shiny-chat-remove-loading-message",
+      this.#onRemoveLoadingMessage
     );
   }
 
@@ -356,14 +322,11 @@ class ChatContainer extends LightElement {
 
   #appendMessageChunk(message: Message): void {
     if (message.chunk_type === "message_start") {
-      this.messageStreamId = message.msg_id;
       this.#appendMessage(message, false);
       return;
     }
     if (message.chunk_type === "message_end") {
       this.#finalizeMessage();
-      this.messageStreamId = null;
-      this.#flushEventQueue();
       return;
     }
 
@@ -399,18 +362,6 @@ class ChatContainer extends LightElement {
 
   #finalizeMessage(): void {
     this.input.disabled = false;
-  }
-
-  #flushEventQueue(): void {
-    const nextQueue: CustomEvent[] = [];
-    for (const event of this.eventQueue) {
-      if (this.#canHandleEvent(event)) {
-        this.eventHandlerMap[event.type as keyof EventHandlerMap](event);
-      } else {
-        nextQueue.push(event);
-      }
-    }
-    this.eventQueue = nextQueue;
   }
 
   #scrollToBottom(): void {
