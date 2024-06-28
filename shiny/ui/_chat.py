@@ -9,6 +9,7 @@ from typing import (
     Literal,
     Optional,
     Sequence,
+    Tuple,
     Union,
     cast,
     overload,
@@ -46,7 +47,7 @@ SubmitFunctionAsync = Callable[[], Awaitable[None]]
 
 ChunkOption = Literal["start", "end", True, False]
 
-PendingMessage = tuple[Any, ChunkOption, str | None]
+PendingMessage = Tuple[Any, ChunkOption, str | None]
 
 
 class Chat:
