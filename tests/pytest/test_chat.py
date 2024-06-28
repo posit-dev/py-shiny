@@ -118,8 +118,8 @@ def test_openai_normalization():
     )
 
     # Make sure return type of OpenAI().chat.completions hasn't changed
-    assert isinstance(OpenAI().chat.completions, Completions)
-    assert isinstance(AsyncOpenAI().chat.completions, AsyncCompletions)
+    assert isinstance(OpenAI(api_key="fake").chat.completions, Completions)
+    assert isinstance(AsyncOpenAI(api_key="fake").chat.completions, AsyncCompletions)
 
     assert (
         Completions.create.__annotations__["return"]
