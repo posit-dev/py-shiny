@@ -143,9 +143,9 @@ class Chat:
             # (and make sure this runs before other effects since when the user
             #  calls `.get_messages()`, they should get the latest user input)
             @reactive.effect(priority=9999)
-            @reactive.event(self.get_user_message)
+            @reactive.event(self._get_user_input)
             async def _on_user_input():
-                msg = ChatMessage(content=self.get_user_message(), role="user")
+                msg = ChatMessage(content=self._get_user_input(), role="user")
                 msg_post = await self._transform_message(msg)
                 if msg_post is not None:
                     self._store_message(msg_post)
@@ -250,7 +250,7 @@ class Chat:
             afunc = _utils.wrap_async(fn)
 
             @reactive.effect
-            @reactive.event(self.get_user_message)
+            @reactive.event(self._get_user_input)
             async def handle_user_input():
                 if self._suspend_input_handler:
                     from .. import req
@@ -662,9 +662,15 @@ class Chat:
 
         return tuple(messages2)
 
-    def get_user_message(self) -> str:
+    async def get_user_input(self, transform: bool = True) -> str | None:
         """
         Reactively read the user's message.
+
+        Parameters
+        ----------
+        transform
+            Whether to apply the user input transformation function (if one was
+            provided).
 
         Returns
         -------
@@ -672,11 +678,18 @@ class Chat:
 
         Note
         ----
-        Most users shouldn't need to use this method directly since `.get_messages()`
-        contains user input. However, this method can be useful when you need to access
-        the un-transformed user input, and/or when you want to take a reactive
-        dependency on user input.
+        Most users shouldn't need to use this method directly since the last item in
+        `.get_messages()` contains the most recent user input. It can be useful for:
+          1. Taking a reactive dependency on the user's input outside of a `.on_user_submit()` callback.
+          2. Maintaining message state separately from `.get_messages()`.
         """
+        val = self._get_user_input()
+        if transform and self._transform_user is not None:
+            return await self._transform_user(val)
+        else:
+            return val
+
+    def _get_user_input(self) -> str:
         id = self.user_input_id
         return cast(str, self._session.input[id]())
 
