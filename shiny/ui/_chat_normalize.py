@@ -1,6 +1,6 @@
 import sys
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Optional, Union, cast
+from typing import TYPE_CHECKING, Any, Optional, cast
 
 from ._chat_types import ChatMessage
 
@@ -187,16 +187,14 @@ class AnthropicNormalizer(BaseMessageNormalizer):
             # The actual MessageStreamEvent is a generic, so isinstance() can't
             # be used to check the type. Instead, we manually construct the relevant
             # union of relevant classes...
-            MessageStreamEvent = Union[
-                RawMessageStartEvent,
-                RawMessageDeltaEvent,
-                RawMessageStopEvent,
-                RawContentBlockStartEvent,
-                RawContentBlockDeltaEvent,
-                RawContentBlockStopEvent,
-            ]
-
-            return isinstance(chunk, MessageStreamEvent)
+            return (
+                isinstance(chunk, RawContentBlockDeltaEvent)
+                or isinstance(chunk, RawContentBlockStartEvent)
+                or isinstance(chunk, RawContentBlockStopEvent)
+                or isinstance(chunk, RawMessageDeltaEvent)
+                or isinstance(chunk, RawMessageStartEvent)
+                or isinstance(chunk, RawMessageStopEvent)
+            )
         except Exception:
             return False
 
