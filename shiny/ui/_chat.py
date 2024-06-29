@@ -47,7 +47,7 @@ SubmitFunctionAsync = Callable[[], Awaitable[None]]
 
 ChunkOption = Literal["start", "end", True, False]
 
-PendingMessage = Tuple[Any, ChunkOption, str | None]
+PendingMessage = Tuple[Any, ChunkOption, Union[str, None]]
 
 
 class Chat:

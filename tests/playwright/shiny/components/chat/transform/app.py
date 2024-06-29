@@ -1,3 +1,5 @@
+from typing import Union
+
 from shiny.express import render, ui
 
 # Set some Shiny page options
@@ -11,7 +13,7 @@ chat.ui()
 
 
 @chat.transform_user_input
-async def capitalize(input: str) -> str | None:
+async def capitalize(input: str) -> Union[str, None]:
     if input == "return None":
         return None
     elif input == "return custom message":
