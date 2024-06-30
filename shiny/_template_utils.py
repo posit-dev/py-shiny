@@ -430,3 +430,7 @@ def {test_name}(page: Page, app: ShinyAppProc):
 
     # Write template to test file
     test_file.write_text(template)
+
+    # next steps
+    print("\nNext steps:")
+    print("- Run `pytest` in your terminal to run all the tests")
