@@ -23,7 +23,9 @@ from ._stub_session import ExpressStubSession
 from .expressify_decorator._func_displayhook import _expressify_decorator_function_def
 from .expressify_decorator._node_transformers import (
     DisplayFuncsTransformer,
+    ImportSharedSessionContextTransformer,
     expressify_decorator_func_name,
+    session_context_func_name,
 )
 
 __all__ = (
@@ -183,6 +185,7 @@ def run_express(file: Path, package_name: str | None = None) -> Tag | TagList:
 
     tree = ast.parse(content, file)
     tree = DisplayFuncsTransformer().visit(tree)
+    tree = ImportSharedSessionContextTransformer("shared").visit(tree)
     tree = ast.fix_missing_locations(tree)
 
     ui_result: Tag | TagList = TagList()
@@ -205,6 +208,7 @@ def run_express(file: Path, package_name: str | None = None) -> Tag | TagList:
             "__name__": "app",
             "__package__": package_name,
             expressify_decorator_func_name: _expressify_decorator_function_def,
+            session_context_func_name: session_context,
             "input": InputNotImportedShim(),
         }
 
