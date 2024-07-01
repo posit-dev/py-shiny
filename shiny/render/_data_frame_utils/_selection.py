@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Literal, Set, Union, cast
 from ..._deprecated import warn_deprecated
 from ..._typing_extensions import TypedDict
 from ...types import Jsonifiable, ListOrTuple
+from ._utils import to_int_tuple_or_none
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -230,21 +231,6 @@ class CellSelection(TypedDict):
 # ####################
 
 
-def to_tuple_or_none(x: int | ListOrTuple[int] | None) -> tuple[int, ...] | None:
-    if x is None:
-        return None
-    if isinstance(x, int):
-        return (x,)
-
-    assert isinstance(x, (list, tuple))
-    x = tuple(x)
-    # if len(x) == 0:
-    #     return None
-    for i in x:
-        assert isinstance(i, int)
-    return x
-
-
 def as_browser_cell_selection(
     x: BrowserCellSelection | CellSelection | Literal["all"] | None,
     *,
@@ -297,8 +283,8 @@ def as_browser_cell_selection(
     # Can't handle lists of dictionaries right now
     assert isinstance(x, dict)
 
-    row_value = to_tuple_or_none(x.get("rows", None))
-    col_value = to_tuple_or_none(x.get("cols", None))
+    row_value = to_int_tuple_or_none(x.get("rows", None))
+    col_value = to_int_tuple_or_none(x.get("cols", None))
 
     assert "type" in x, "`type` field is required in CellSelection"
 

@@ -34,7 +34,7 @@ import type { CellSelection, SelectionModesProp } from "./selection";
 import { SelectionModes, initSelectionModes, useSelection } from "./selection";
 import { SortingState, useSort } from "./sort";
 import { SortArrow } from "./sort-arrows";
-import { getCellStyle, useStyleInfoMap } from "./style-info";
+import { StyleInfo, getCellStyle, useStyleInfoMap } from "./style-info";
 import css from "./styles.scss";
 import { useTabindexGroup } from "./tabindex-group";
 import { useSummary } from "./table-summary";
@@ -124,6 +124,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
    * Currently only the "data" location is supported.
    */
   const styleInfoMap = _useStyleInfo.styleInfoMap;
+  const { resetStyleInfos, setStyleInfos } = _useStyleInfo;
 
   const _cellEditMap = useCellEditMap();
   /**
@@ -480,6 +481,28 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
   }, [columns, id, setColumnFilters]);
 
   useEffect(() => {
+    const handleStyles = (event: CustomEvent<{ styles: StyleInfo[] }>) => {
+      const styles = event.detail.styles;
+      resetStyleInfos();
+      setStyleInfos(styles);
+    };
+
+    if (!id) return;
+
+    const element = document.getElementById(id);
+    if (!element) return;
+
+    element.addEventListener("updateStyles", handleStyles as EventListener);
+
+    return () => {
+      element.removeEventListener(
+        "updateStyles",
+        handleStyles as EventListener
+      );
+    };
+  }, [setStyleInfos]);
+
+  useEffect(() => {
     if (!id) return;
     let shinyValue: CellSelection | null = null;
     if (selectionModes.isNone()) {
@@ -738,7 +761,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
                       );
                       const cellStyle = getCellStyle(
                         styleInfoMap,
-                        "data",
+                        "body",
                         rowIndex,
                         columnIndex
                       );

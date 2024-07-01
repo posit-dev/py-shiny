@@ -47,7 +47,7 @@ from ._data_frame_utils import (
     cell_patch_processed_to_jsonifiable,
     wrap_shiny_html,
 )
-from ._data_frame_utils._selection import SelectionModeInput
+from ._data_frame_utils._styles import as_browser_style_infos
 from ._data_frame_utils._unsafe import serialize_numpy_dtype
 
 # as_selection_location_js,
@@ -718,6 +718,8 @@ class data_frame(Renderer[DataFrameResult]):
                 cell_patch_processed_to_jsonifiable(processed_patch)
             )
 
+        await self._attempt_update_cell_style()
+
         # Return the processed patches to the client
         return processed_patches
 
@@ -762,6 +764,24 @@ class data_frame(Renderer[DataFrameResult]):
         self._cell_patch_map.set(cell_patch_map)
 
         return cell_patch_processed
+
+    async def _attempt_update_cell_style(self) -> None:
+        with session_context(self._get_session()):
+
+            rendered_value = self._value()
+            if not isinstance(rendered_value, (DataGrid, DataTable)):
+                return
+
+            styles_fn = rendered_value.styles
+            if not callable(styles_fn):
+                return
+
+            new_styles = as_browser_style_infos(styles_fn, data=self._data_patched())
+
+            await self._send_message_to_browser(
+                "updateStyles",
+                {"styles": new_styles},
+            )
 
     # TODO-barret-render.data_frame; Add `update_cell_value()` method
     # def _update_cell_value(
@@ -1088,65 +1108,3 @@ class data_frame(Renderer[DataFrameResult]):
 
 # myints = [i for i, val in enumerate(range(mybools)) if val]
 # mybools = [val in myints for i, val in enumerate(range(nrow))]
-
-
-import great_tables as gt
-
-
-class great_tables(Renderer[gt.GT], data_frame):
-
-    gt: reactive.Calc_[gt.GT]
-    """
-    Reactive value of the data frame's rendered GT object.
-    """
-
-    def _init_reactives(self) -> None:
-        super()._init_reactives()
-        from .. import req
-
-        @reactive.calc
-        def self_value():
-            value = self._value()
-            req(value)
-
-            if not isinstance(value, gt.GT):
-                raise TypeError(
-                    f"Unsupported type returned from render function: {type(value)}. Expected `gt.GT`"
-                )
-
-            return value
-
-        self.value = self_value
-
-        @reactive.calc
-        def self_gt() -> gt.GT:
-            value = self._value()
-            req(value)
-
-            if not isinstance(value, gt.GT):
-                raise TypeError(
-                    f"Unsupported type returned from render function: {type(value)}. Expected `gt.GT`"
-                )
-
-            return value
-
-    def __init__(
-        self,
-        fn: ValueFn[gt.GT],
-        *,
-        width: str | float | None = "fit-content",
-        height: str | float | None = None,
-        summary: bool | str = True,
-        filters: bool = False,
-        editable: bool = False,
-        selection_mode: SelectionModeInput = "none",
-    ):
-        super().__init__(fn)
-        self._init_args = {
-            "width": width,
-            "height": height,
-            "summary": summary,
-            "filters": filters,
-            "editable": editable,
-            "selection_mode": selection_mode,
-        }

@@ -7,9 +7,7 @@ import json
 from typing import (
     TYPE_CHECKING,
     Any,
-    List,
     Literal,
-    Optional,
     Protocol,
     TypeVar,
     Union,
@@ -18,7 +16,6 @@ from typing import (
     runtime_checkable,
 )
 
-import great_tables._gt_data as gt_data
 from htmltools import TagNode
 
 from ..._docstring import add_example, no_example
@@ -31,6 +28,7 @@ from ._selection import (
     SelectionModes,
     as_selection_modes,
 )
+from ._styles import StyleFn, StyleInfo, as_browser_style_infos, as_style_infos
 from ._unsafe import is_shiny_html, serialize_numpy_dtypes
 
 if TYPE_CHECKING:
@@ -53,88 +51,10 @@ else:
     # To avoid loading pandas, we use `object` as a placeholder
     DataFrameResult = Union[None, object, "DataGrid", "DataTable"]
 
-# import great_tables as gt
-# CellStyle = gt._styles.CellStyle
-StyleInfo = gt_data.StyleInfo
-
-
-# @dataclass(frozen=True)
-# class StyleInfo:
-#     locname: str
-#     locnum: int
-#     grpname: str | None = None
-#     colname: str | None = None
-#     rownum: int | None = None
-#     colnum: int | None = None
-#     styles: list[CellStyle] = field(default_factory=list)
-
-
-def styles_to_jsonifiable(
-    styles: list[StyleInfo],
-    *,
-    column_names: list[str],
-) -> list[dict[str, Jsonifiable]]:
-    return [
-        style_info_to_jsonifiable(
-            style,
-            column_names=column_names,
-        )
-        for style in styles
-    ]
-
-
-def style_info_to_jsonifiable(
-    style_info: StyleInfo,
-    *,
-    column_names: list[str],
-) -> dict[str, Jsonifiable]:
-    assert style_info.colname is not None
-    return {
-        "locname": style_info.locname,
-        "locnum": style_info.locnum,
-        "grpname": style_info.grpname,
-        # "colname": style_info.colname,
-        "rownum": style_info.rownum,
-        # "colnum": style_info.colnum,
-        "colnum": column_names.index(style_info.colname),
-        "styles": "".join([style._to_html_style() for style in style_info.styles]),
-    }
-
-
-def as_styles(styles: Styles | None) -> Styles:
-
-    if styles is None:
-        styles = []
-    # if not isinstance(styles, list):
-    #     styles = [styles]
-    if not all(isinstance(style, StyleInfo) for style in styles):
-        raise TypeError(
-            "Expected 'styles' to be `None` or a list of `StyleInfo` objects"
-        )
-    return styles
-
-
-Styles = List[StyleInfo]
-
 
 class AbstractTabularData(abc.ABC):
     @abc.abstractmethod
     def to_payload(self) -> dict[str, Jsonifiable]: ...
-
-
-def as_editable(
-    editable: bool,
-    *,
-    name: str,
-) -> bool:
-    editable = bool(editable)
-    # if editable:
-    #     print(
-    #         f"`{name}(editable=true)` is an experimental feature. "
-    #         "If you find any bugs or would like different behavior, "
-    #         "please make an issue at https://github.com/posit-dev/py-shiny/issues/new"
-    #     )
-    return editable
 
 
 @add_example(ex_dir="../../api-examples/data_frame")
@@ -207,7 +127,7 @@ class DataGrid(AbstractTabularData):
     filters: bool
     editable: bool
     selection_modes: SelectionModes
-    styles: Styles
+    styles: list[StyleInfo] | StyleFn
 
     def __init__(
         self,
@@ -219,8 +139,8 @@ class DataGrid(AbstractTabularData):
         filters: bool = False,
         editable: bool = False,
         selection_mode: SelectionModeInput = "none",
+        styles: StyleInfo | list[StyleInfo] | StyleFn | None = None,
         row_selection_mode: RowSelectionModeDeprecated = "deprecated",
-        styles: Optional[Styles] = None,
     ):
 
         self.data = cast_to_pandas(
@@ -232,14 +152,14 @@ class DataGrid(AbstractTabularData):
         self.height = height
         self.summary = summary
         self.filters = filters
-        self.editable = as_editable(editable, name="DataGrid")
+        self.editable = bool(editable)
         self.selection_modes = as_selection_modes(
             selection_mode,
             name="DataGrid",
             editable=self.editable,
             row_selection_mode=row_selection_mode,
         )
-        self.styles = as_styles(styles)
+        self.styles = as_style_infos(styles)
 
     def to_payload(self) -> dict[str, Jsonifiable]:
         res = serialize_pandas_df(self.data)
@@ -252,9 +172,9 @@ class DataGrid(AbstractTabularData):
             editable=self.editable,
             style="grid",
             fill=self.height is None,
-            styles=styles_to_jsonifiable(
+            styles=as_browser_style_infos(
                 self.styles,
-                column_names=self.data.columns.tolist(),
+                data=self.data,
             ),
         )
         return res
@@ -329,6 +249,7 @@ class DataTable(AbstractTabularData):
     summary: bool | str
     filters: bool
     selection_modes: SelectionModes
+    styles: list[StyleInfo] | StyleFn
 
     def __init__(
         self,
@@ -341,7 +262,7 @@ class DataTable(AbstractTabularData):
         editable: bool = False,
         selection_mode: SelectionModeInput = "none",
         row_selection_mode: Literal["deprecated"] = "deprecated",
-        styles: Optional[Styles] = None,
+        styles: StyleInfo | list[StyleInfo] | StyleFn | None = None,
     ):
 
         self.data = cast_to_pandas(
@@ -353,14 +274,14 @@ class DataTable(AbstractTabularData):
         self.height = height
         self.summary = summary
         self.filters = filters
-        self.editable = as_editable(editable, name="DataTable")
+        self.editable = bool(editable)
         self.selection_modes = as_selection_modes(
             selection_mode,
             name="DataTable",
             editable=self.editable,
             row_selection_mode=row_selection_mode,
         )
-        self.styles = as_styles(styles)
+        self.styles = as_style_infos(styles)
 
     def to_payload(self) -> dict[str, Jsonifiable]:
         res = serialize_pandas_df(self.data)
@@ -371,9 +292,9 @@ class DataTable(AbstractTabularData):
             filters=self.filters,
             editable=self.editable,
             style="table",
-            styles=styles_to_jsonifiable(
+            styles=as_browser_style_infos(
                 self.styles,
-                column_names=self.data.columns.tolist(),
+                data=self.data,
             ),
         )
         return res
