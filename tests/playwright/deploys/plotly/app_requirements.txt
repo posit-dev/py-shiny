@@ -1,5 +1,5 @@
 pandas
 plotly
-git+https://github.com/posit-dev/py-htmltools.git#egg=htmltools
+htmltools
 git+https://github.com/posit-dev/py-shinywidgets.git#egg=shinywidgets
 
