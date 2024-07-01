@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, Literal, Union
+from typing import TYPE_CHECKING, Callable, Literal, Union, Tuple, Dict, List
 
 from ..._typing_extensions import NotRequired, Required, TypedDict
 from ...types import Jsonifiable, ListOrTuple
@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
     DataFrameValue = pd.DataFrame
 
-    StyleFn = Callable[[DataFrameValue], list["StyleInfo"]]
+    StyleFn = Callable[[DataFrameValue], List["StyleInfo"]]
 
 else:
     StyleFn = Callable
@@ -38,7 +38,7 @@ StyleInfoBody = TypedDict(
         "cols": NotRequired[
             Union[str, int, ListOrTuple[str], ListOrTuple[int], ListOrTuple[bool], None]
         ],
-        "style": NotRequired[Union[dict[str, Jsonifiable], None]],
+        "style": NotRequired[Union[Dict[str, Jsonifiable], None]],
         "class": NotRequired[Union[str, None]],
     },
 )
@@ -48,9 +48,9 @@ BrowserStyleInfoBody = TypedDict(
     "BrowserStyleInfoBody",
     {
         "location": Required[Literal["body"]],
-        "rows": Required[Union[tuple[int, ...], None]],
-        "cols": Required[Union[tuple[int, ...], None]],
-        "style": Required[Union[dict[str, Jsonifiable], None]],
+        "rows": Required[Union[Tuple[int, ...], None]],
+        "cols": Required[Union[Tuple[int, ...], None]],
+        "style": Required[Union[Dict[str, Jsonifiable], None]],
         "class": Required[Union[str, None]],
     },
 )
