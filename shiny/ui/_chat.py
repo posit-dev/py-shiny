@@ -632,7 +632,12 @@ class Chat:
             return msg
 
         if self._tokenizer is not None:
-            encoded = self._tokenizer.encode(msg["content"])
+            # Always tokenize the "original" content for assistant messages
+            if msg["role"] == "assistant":
+                content = msg["original_content"] or msg["content"]
+            else:
+                content = msg["content"]
+            encoded = self._tokenizer.encode(content)
             if isinstance(encoded, TokenizersEncoding):
                 token_count = len(encoded.ids)
             else:
@@ -681,7 +686,8 @@ class Chat:
 
         return tuple(messages2)
 
-    def get_user_input(self, transform: bool = True) -> str | None:
+    # TODO: Barret; can we make this sync?
+    async def get_user_input(self, transform: bool = True) -> str | None:
         """
         Reactively read the user's message.
 
@@ -706,7 +712,7 @@ class Chat:
         """
         val = self._get_user_input()
         if transform and self._transform_user is not None:
-            return _utils.run_coro_sync(self._transform_user(val))
+            return await self._transform_user(val)
         else:
             return val
 
