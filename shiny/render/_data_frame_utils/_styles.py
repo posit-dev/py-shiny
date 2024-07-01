@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, Literal, Union, Tuple, Dict, List
+from typing import TYPE_CHECKING, Callable, Dict, List, Literal, Tuple, Union
 
 from ..._typing_extensions import NotRequired, Required, TypedDict
 from ...types import Jsonifiable, ListOrTuple
