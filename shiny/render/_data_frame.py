@@ -47,6 +47,7 @@ from ._data_frame_utils import (
     cell_patch_processed_to_jsonifiable,
     wrap_shiny_html,
 )
+from ._data_frame_utils._styles import as_browser_style_infos
 from ._data_frame_utils._unsafe import serialize_numpy_dtype
 
 # as_selection_location_js,
@@ -717,6 +718,8 @@ class data_frame(Renderer[DataFrameResult]):
                 cell_patch_processed_to_jsonifiable(processed_patch)
             )
 
+        await self._attempt_update_cell_style()
+
         # Return the processed patches to the client
         return processed_patches
 
@@ -761,6 +764,24 @@ class data_frame(Renderer[DataFrameResult]):
         self._cell_patch_map.set(cell_patch_map)
 
         return cell_patch_processed
+
+    async def _attempt_update_cell_style(self) -> None:
+        with session_context(self._get_session()):
+
+            rendered_value = self._value()
+            if not isinstance(rendered_value, (DataGrid, DataTable)):
+                return
+
+            styles_fn = rendered_value.styles
+            if not callable(styles_fn):
+                return
+
+            new_styles = as_browser_style_infos(styles_fn, data=self._data_patched())
+
+            await self._send_message_to_browser(
+                "updateStyles",
+                {"styles": new_styles},
+            )
 
     # TODO-barret-render.data_frame; Add `update_cell_value()` method
     # def _update_cell_value(
@@ -1062,3 +1083,28 @@ class data_frame(Renderer[DataFrameResult]):
             return None
 
         return self.cell_selection()
+
+
+# TODO-barret; Make request to GT: Add class for gt location
+
+# TODO-barret; Are GT formatters eager or lazy?
+# GT styles are eager! THis causes issues with dynamic style locations
+# Need to track movement of columns
+
+# SKIP!: ONLY SUPPORT GT and editable==False; Sprint for next 24 hrs!
+
+# THIS v1 release;
+# * styles= Callable[[data], Styles] | Styles
+# * styles function will return json format which is
+#   Styles = list[StyleInfo]
+#   StyleInfo = {loc: "body", rows: int | List[int], columns: int | str | List[int | str], style: str? | dict[str, Jsonifiable]? | None, class_: str | None, }
+# * Call styles fn after each edit (and on init); Send full styles for each cell
+# Support `rows: List[bool]`?
+
+# r-shinylive: bundle ALL packages, R... it should work out of the box with no internet
+
+# mydf.iloc[row_nums, col_nums]
+# mydf["mpg"] > 20
+
+# myints = [i for i, val in enumerate(range(mybools)) if val]
+# mybools = [val in myints for i, val in enumerate(range(nrow))]

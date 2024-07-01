@@ -230,21 +230,6 @@ class CellSelection(TypedDict):
 # ####################
 
 
-def to_tuple_or_none(x: int | ListOrTuple[int] | None) -> tuple[int, ...] | None:
-    if x is None:
-        return None
-    if isinstance(x, int):
-        return (x,)
-
-    assert isinstance(x, (list, tuple))
-    x = tuple(x)
-    # if len(x) == 0:
-    #     return None
-    for i in x:
-        assert isinstance(i, int)
-    return x
-
-
 def as_browser_cell_selection(
     x: BrowserCellSelection | CellSelection | Literal["all"] | None,
     *,
@@ -297,8 +282,23 @@ def as_browser_cell_selection(
     # Can't handle lists of dictionaries right now
     assert isinstance(x, dict)
 
-    row_value = to_tuple_or_none(x.get("rows", None))
-    col_value = to_tuple_or_none(x.get("cols", None))
+    def to_int_tuple_or_none(
+        arr: int | ListOrTuple[int] | None, *, name: str
+    ) -> tuple[int, ...] | None:
+        if arr is None:
+            return None
+        if not isinstance(arr, (list, tuple)):
+            arr = (arr,)
+
+        for item in arr:
+            if not isinstance(item, int):
+                raise TypeError(
+                    f"Expected cell selection's `{name}` to be an int. Received {type(item)}"
+                )
+        return tuple(arr)
+
+    rows = to_int_tuple_or_none(x.get("rows", None), name="rows")
+    cols = to_int_tuple_or_none(x.get("cols", None), name="cols")
 
     assert "type" in x, "`type` field is required in CellSelection"
 
@@ -311,22 +311,22 @@ def as_browser_cell_selection(
                 "Current selection modes do not support row based selection. "
                 f"Current selection modes: {selection_modes}"
             )
-        assert row_value is not None
-        return {"type": "row", "rows": row_value}
+        assert rows is not None
+        return {"type": "row", "rows": rows}
     if x["type"] == "col":
-        assert col_value is not None
-        return {"type": "col", "cols": col_value}
+        assert cols is not None
+        return {"type": "col", "cols": cols}
     if x["type"] == "rect":
         if not selection_modes._has_rect():
             raise ValueError(
                 "Current selection modes do not support cell based selection. "
                 f"Current selection modes: {selection_modes}"
             )
-        assert row_value is not None
-        assert col_value is not None
-        assert len(row_value) > 0
-        assert len(col_value) > 0
-        return {"type": "rect", "rows": row_value, "cols": col_value}
+        assert rows is not None
+        assert cols is not None
+        assert len(rows) > 0
+        assert len(cols) > 0
+        return {"type": "rect", "rows": rows, "cols": cols}
 
     raise ValueError(f"Unhandled CellSelection['type']: {x['type']}")
 
