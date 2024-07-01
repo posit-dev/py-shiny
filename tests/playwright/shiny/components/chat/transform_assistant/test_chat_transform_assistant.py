@@ -1,0 +1,40 @@
+from playwright.sync_api import Page, expect
+
+from shiny import ui
+from shiny.playwright import controller
+from shiny.run import ShinyAppProc
+
+
+def test_validate_chat_transform_assistant(page: Page, local_app: ShinyAppProc) -> None:
+    page.goto(local_app.url)
+
+    chat = controller.Chat(page, "chat")
+
+    expect(chat.loc).to_be_visible()
+    expect(chat.loc_input_button).to_be_disabled()
+
+    user_msg = "hello"
+    chat.set_user_input(user_msg)
+    chat.send_user_input()
+    code = chat.loc_latest_message.locator("code")
+    expect(code).to_have_text("hello")
+
+    user_msg2 = "return HTML"
+    chat.set_user_input(user_msg2)
+    chat.send_user_input()
+    bold = chat.loc_latest_message.locator("b")
+    expect(bold).to_have_text("Transformed response")
+
+    message_state = controller.OutputCode(page, "message_state")
+    message_state_expected = tuple(
+        [
+            {"content": "hello", "role": "user"},
+            {"content": "Transformed response: `hello`", "role": "assistant"},
+            {"content": "return HTML", "role": "user"},
+            {
+                "content": ui.HTML("<b>Transformed response</b>: return HTML"),
+                "role": "assistant",
+            },
+        ]
+    )
+    message_state.expect_value(str(message_state_expected))
