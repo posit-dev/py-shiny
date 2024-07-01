@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
+from shiny import App, Inputs, reactive, render, req, ui
 
 
 def make_panel(letter: str) -> ui.AccordionPanel:
@@ -28,7 +28,7 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session) -> None:
+def server(input: Inputs) -> None:
     @reactive.calc
     def acc() -> list[str]:
         acc_val: list[str] | None = input.acc()

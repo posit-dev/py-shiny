@@ -3,19 +3,19 @@ from __future__ import annotations
 __all__ = ("Progress",)
 
 from types import TracebackType
-from typing import TYPE_CHECKING, Optional, Type
+from typing import Optional, Type
 from warnings import warn
 
-from .._docstring import add_example
+from .._deprecated import _session_param_docs as _session_param
+from .._docstring import add_example, doc_format
 from .._utils import rand_hex
 from ..session import require_active_session
 from ..session._session import UpdateProgressMessage
-
-if TYPE_CHECKING:
-    from ..session import Session
+from ..types import MISSING, MISSING_TYPE
 
 
 @add_example()
+@doc_format(session_param=_session_param)
 class Progress:
     """
     Initialize a progress bar.
@@ -33,9 +33,7 @@ class Progress:
     max
         The value that represents the end of the progress bar. Must be greater than
         ``min``.
-    session
-        The :class:`~shiny.Session` instance that the progress bar should appear in. If not
-        provided, the session is inferred via :func:`~shiny.session.get_current_session`.
+    {session_param}
     """
 
     _style = "notification"
@@ -45,7 +43,10 @@ class Progress:
     value: float | None
 
     def __init__(
-        self, min: int = 0, max: int = 1, session: Optional[Session] = None
+        self,
+        min: int = 0,
+        max: int = 1,
+        session: MISSING_TYPE = MISSING,
     ) -> None:
         self.min = min
         self.max = max

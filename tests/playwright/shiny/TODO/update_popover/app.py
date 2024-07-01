@@ -1,4 +1,4 @@
-from shiny import App, Inputs, Outputs, Session, reactive, req, ui
+from shiny import App, Inputs, reactive, req, ui
 
 app_ui = ui.page_fluid(
     ui.input_action_button("btn_update", "Update popover phrase", class_="mt-3 me-3"),
@@ -13,7 +13,7 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     @reactive.effect
     def _():
         # Immediately display popover

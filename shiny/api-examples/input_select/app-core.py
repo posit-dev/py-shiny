@@ -1,4 +1,4 @@
-from shiny import App, Inputs, Outputs, Session, render, ui
+from shiny import App, Inputs, render, ui
 
 app_ui = ui.page_fluid(
     ui.input_select(
@@ -14,7 +14,7 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     @render.text
     def value():
         return "You choose: " + str(input.state())

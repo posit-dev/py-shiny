@@ -7,16 +7,14 @@ __all__ = (
     "modal_remove",
 )
 
-from typing import TYPE_CHECKING, Literal, Optional
+from typing import Literal, Optional
 
 from htmltools import HTML, Tag, TagAttrs, TagAttrValue, TagChild, div, tags
 
-from .._docstring import add_example
+from .._deprecated import _session_param_docs as _session_param
+from .._docstring import add_example, doc_format
 from ..session import require_active_session
 from ..types import MISSING, MISSING_TYPE
-
-if TYPE_CHECKING:
-    from ..session import Session
 
 
 @add_example(ex_dir="../api-examples/modal")
@@ -159,7 +157,11 @@ def modal(
 
 
 @add_example(ex_dir="../api-examples/modal")
-def modal_show(modal: Tag, session: Optional[Session] = None) -> None:
+@doc_format(session_param=_session_param)
+def modal_show(
+    modal: Tag,
+    session: MISSING_TYPE = MISSING,
+) -> None:
     """
     Show a modal dialog.
 
@@ -170,22 +172,21 @@ def modal_show(modal: Tag, session: Optional[Session] = None) -> None:
     ----------
     modal
         Typically a :func:`~shiny.ui.modal` instance.
-    session
-        The :class:`~shiny.Session` instance to display the modal in. If not provided,
-        the session is inferred via :func:`~shiny.session.get_current_session`.
+    {session_param}
 
     See Also
     --------
     * :func:`~shiny.ui.modal_remove`
     * :func:`~shiny.ui.modal`
     """
-    session = require_active_session(session)
-    msg = session._process_ui(modal)
-    session._send_message_sync({"modal": {"type": "show", "message": msg}})
+    active_session = require_active_session(session)
+    msg = active_session._process_ui(modal)
+    active_session._send_message_sync({"modal": {"type": "show", "message": msg}})
 
 
 @add_example(ex_dir="../api-examples/modal")
-def modal_remove(session: Optional[Session] = None) -> None:
+@doc_format(session_param=_session_param)
+def modal_remove(session: MISSING_TYPE = MISSING) -> None:
     """
     Remove a modal dialog box.
 
@@ -195,14 +196,12 @@ def modal_remove(session: Optional[Session] = None) -> None:
 
     Parameters
     ----------
-    session
-        The :class:`~shiny.Session` instance that contains the modal to remove. If not
-        provided, the session is inferred via :func:`~shiny.session.get_current_session`.
+    {session_param}
 
     See Also
     --------
     * :func:`~shiny.ui.modal_show`
     * :func:`~shiny.ui.modal`
     """
-    session = require_active_session(session)
-    session._send_message_sync({"modal": {"type": "remove", "message": None}})
+    active_session = require_active_session(session)
+    active_session._send_message_sync({"modal": {"type": "remove", "message": None}})

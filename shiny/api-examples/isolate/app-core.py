@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from shiny import App, Inputs, Outputs, Session, reactive, render, ui
+from shiny import App, Inputs, reactive, render, ui
 
 app_ui = ui.page_fluid(
     ui.input_slider("n", "Number of observations", min=0, max=1000, value=500),
@@ -10,7 +10,7 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     @render.plot(alt="A histogram")
     def plot():
         # Take a reactive dependency on the action button...

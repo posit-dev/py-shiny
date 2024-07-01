@@ -15,7 +15,7 @@ from htmltools import (
 from ..._deprecated import warn_deprecated
 from ..._namespaces import resolve_id
 from ..._utils import drop_none
-from ...session import Session, require_active_session
+from ...session import require_active_session, session_context
 from ...types import MISSING, MISSING_TYPE
 from ...ui import AccordionPanel as MainAccordionPanel
 from ...ui import accordion as main_accordion
@@ -173,7 +173,7 @@ def as_width_unit(x: str | float | int) -> str:
 def toggle_switch(
     id: str,
     value: Optional[bool] = None,
-    session: Optional[Session] = None,
+    session: MISSING_TYPE = MISSING,
 ) -> None:
     """Defunct. Please do not use method."""
     warn_deprecated(
@@ -185,12 +185,12 @@ def toggle_switch(
     if value is not None and not isinstance(value, bool):
         raise TypeError("`value` must be `None` or a single boolean value.")
     msg = drop_none({"id": resolve_id(id), "value": value})
-    session = require_active_session(session)
+    active_session = require_active_session(session)
 
     async def callback():
-        await session.send_custom_message("bslib.toggle-input-binary", msg)
+        await active_session.send_custom_message("bslib.toggle-input-binary", msg)
 
-    session.on_flush(callback, once=True)
+    active_session.on_flush(callback, once=True)
 
 
 ######################
@@ -323,40 +323,35 @@ def tooltip(
 
 
 # Deprecated 2023-08-23
-def tooltip_update(id: str, *args: TagChild, session: Optional[Session] = None) -> None:
+def tooltip_update(id: str, *args: TagChild, session: MISSING_TYPE = MISSING) -> None:
     """Deprecated. Please use :func:`~shiny.ui.update_tooltip()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.tooltip_update()` is deprecated. "
         "This method will be removed in a future version, "
         "please use `shiny.ui.update_tooltip()` instead."
     )
-    main_update_tooltip(
-        id,
-        *args,
-        session=session,
-    )
+    # Used to check session value
+    with session_context(require_active_session(session)):
+        main_update_tooltip(id, *args)
 
 
 # Deprecated 2023-09-12
-def update_tooltip(id: str, *args: TagChild, session: Optional[Session] = None) -> None:
+def update_tooltip(id: str, *args: TagChild, session: MISSING_TYPE = MISSING) -> None:
     """Deprecated. Please use :func:`~shiny.ui.update_tooltip()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.update_tooltip()` is deprecated. "
         "This method will be removed in a future version, "
         "please use `shiny.ui.update_tooltip()` instead."
     )
-    main_update_tooltip(
-        id,
-        *args,
-        session=session,
-    )
+    with session_context(require_active_session(session)):
+        main_update_tooltip(id, *args)
 
 
 # Deprecated 2023-08-23
 def tooltip_toggle(
     id: str,
     show: Optional[bool] = None,
-    session: Optional[Session] = None,
+    session: MISSING_TYPE = MISSING,
 ) -> None:
     """Deprecated. Please use :func:`~shiny.ui.update_tooltip()`."""
     warn_deprecated(
@@ -364,18 +359,15 @@ def tooltip_toggle(
         "This method will be removed in a future version, "
         "please use `shiny.ui.update_tooltip()` instead."
     )
-    main_update_tooltip(
-        id=id,
-        show=show,
-        session=session,
-    )
+    with session_context(require_active_session(session)):
+        main_update_tooltip(id=id, show=show)
 
 
 # Deprecated 2023-09-12
 def toggle_tooltip(
     id: str,
     show: Optional[bool] = None,
-    session: Optional[Session] = None,
+    session: MISSING_TYPE = MISSING,
 ) -> None:
     """Deprecated. Please use :func:`~shiny.ui.update_tooltip()` instead."""
     warn_deprecated(
@@ -383,11 +375,8 @@ def toggle_tooltip(
         "This method will be removed in a future version, "
         "please use `shiny.ui.update_tooltip()` instead."
     )
-    main_update_tooltip(
-        id=id,
-        show=show,
-        session=session,
-    )
+    with session_context(require_active_session(session)):
+        main_update_tooltip(id=id, show=show)
 
 
 ######################
@@ -515,7 +504,7 @@ def layout_sidebar(
 def toggle_sidebar(
     id: str,
     open: Literal["toggle", "open", "closed", "always"] | bool | None = None,
-    session: Session | None = None,
+    session: MISSING_TYPE = MISSING,
 ) -> None:
     """Deprecated. Please use :func:`~shiny.ui.update_sidebar()` instead."""
     warn_deprecated(
@@ -524,11 +513,8 @@ def toggle_sidebar(
         "please use `shiny.ui.update_sidebar()` instead."
     )
     open_val = (open is True) or (open == "open")
-    return main_update_sidebar(
-        id,
-        show=open_val,
-        session=session,
-    )
+    with session_context(require_active_session(session)):
+        return main_update_sidebar(id, show=open_val)
 
 
 # ----------------------------
@@ -541,7 +527,7 @@ def toggle_sidebar(
 def sidebar_toggle(
     id: str,
     open: Literal["toggle", "open", "closed", "always"] | bool | None = None,
-    session: Session | None = None,
+    session: MISSING_TYPE = MISSING,
 ) -> None:
     """Deprecated. Please use :func:`~shiny.ui.update_sidebar()` instead of
     `shiny.experimental.ui.sidebar_toggle()`."""
@@ -551,11 +537,8 @@ def sidebar_toggle(
         "please use `shiny.ui.update_sidebar()` instead."
     )
     open_val = (open is True) or (open == "open")
-    main_update_sidebar(
-        id=id,
-        show=open_val,
-        session=session,
-    )
+    with session_context(require_active_session(session)):
+        main_update_sidebar(id=id, show=open_val)
 
 
 # Deprecated 2023-06-13
@@ -689,7 +672,7 @@ def popover(
 def toggle_popover(
     id: str,
     show: Optional[bool] = None,
-    session: Optional[Session] = None,
+    session: MISSING_TYPE = MISSING,
 ) -> None:
     """Deprecated. Please use :func:`~shiny.ui.update_popover()` instead."""
     warn_deprecated(
@@ -697,7 +680,8 @@ def toggle_popover(
         "This method will be removed in a future version, "
         "please use `shiny.ui.update_popover()` instead."
     )
-    return main_update_popover(id, show, session=session)
+    with session_context(require_active_session(session)):
+        return main_update_popover(id, show)
 
 
 # Deprecated 2023-09-12
@@ -705,7 +689,7 @@ def update_popover(
     id: str,
     *args: TagChild,
     title: Optional[TagChild] = None,
-    session: Optional[Session] = None,
+    session: MISSING_TYPE = MISSING,
 ) -> None:
     """Deprecated. Please use :func:`~shiny.ui.update_popover()` instead."""
     warn_deprecated(
@@ -713,7 +697,8 @@ def update_popover(
         "This method will be removed in a future version, "
         "please use `shiny.ui.update_popover()` instead."
     )
-    return main_update_popover(id, *args, title=title, session=session)
+    with session_context(require_active_session(session)):
+        return main_update_popover(id, *args, title=title)
 
 
 # ######################
@@ -786,7 +771,7 @@ def accordion_panel(
 def accordion_panel_set(
     id: str,
     values: bool | str | list[str],
-    session: Optional[Session] = None,
+    session: MISSING_TYPE = MISSING,
 ) -> None:
     """Deprecated. Please use :func:`~shiny.ui.update_accordion()` instead."""
     warn_deprecated(
@@ -794,14 +779,15 @@ def accordion_panel_set(
         "This method will be removed in a future version, "
         "please use `shiny.ui.update_accordion()` instead."
     )
-    return main_update_accordion(id, show=values, session=session)
+    with session_context(require_active_session(session)):
+        return main_update_accordion(id, show=values)
 
 
 # # Deprecated 2023-09-12
 def accordion_panel_open(
     id: str,
     values: bool | str | list[str],
-    session: Optional[Session] = None,
+    session: MISSING_TYPE = MISSING,
 ) -> None:
     """Deprecated. Please use :func:`~shiny.ui.update_accordion_panel(id, value, show=True)` or :func:`~shiny.ui.update_accordion(id, show = True)` instead."""
     warn_deprecated(
@@ -810,22 +796,23 @@ def accordion_panel_open(
         "please use `shiny.ui.shiny.ui.update_accordion_panel(id, value, show=True)` or `shiny.ui.update_accordion(id, show = True)` instead."
     )
 
-    if isinstance(values, bool):
-        main_update_accordion(id, show=True, session=session)
-        return
+    with session_context(require_active_session(session)):
+        if isinstance(values, bool):
+            main_update_accordion(id, show=True)
+            return
 
-    if not isinstance(values, list):
-        values = [values]
+        if not isinstance(values, list):
+            values = [values]
 
-    for value in values:
-        main_update_accordion_panel(id, value, show=True, session=session)
+        for value in values:
+            main_update_accordion_panel(id, value, show=True)
 
 
 # # Deprecated 2023-09-12
 def accordion_panel_close(
     id: str,
     values: bool | str | list[str],
-    session: Optional[Session] = None,
+    session: MISSING_TYPE = MISSING,
 ) -> None:
     """Deprecated. Please use :func:`~shiny.ui.update_accordion_panel(id, value, show=False)` or :func:`~shiny.ui.update_accordion(id, show = False)` instead."""
     warn_deprecated(
@@ -833,15 +820,16 @@ def accordion_panel_close(
         "This method will be removed in a future version, "
         "please use `shiny.ui.update_accordion_panel(id, value, show=False)` or `shiny.ui.update_accordion(id, show = False)` instead."
     )
-    if isinstance(values, bool):
-        main_update_accordion(id, show=False, session=session)
-        return
+    with session_context(require_active_session(session)):
+        if isinstance(values, bool):
+            main_update_accordion(id, show=False)
+            return
 
-    if not isinstance(values, list):
-        values = [values]
+        if not isinstance(values, list):
+            values = [values]
 
-    for value in values:
-        main_update_accordion_panel(id, value, show=False, session=session)
+        for value in values:
+            main_update_accordion_panel(id, value, show=False)
 
 
 # # Deprecated 2023-09-12
@@ -850,7 +838,7 @@ def accordion_panel_insert(
     panel: AccordionPanel,
     target: Optional[str] = None,
     position: Literal["after", "before"] = "after",
-    session: Optional[Session] = None,
+    session: MISSING_TYPE = MISSING,
 ) -> None:
     """Deprecated. Please use :func:`~shiny.ui.insert_accordion_panel()` instead."""
     warn_deprecated(
@@ -858,20 +846,20 @@ def accordion_panel_insert(
         "This method will be removed in a future version, "
         "please use `shiny.ui.insert_accordion_panel()` instead."
     )
-    return main_insert_accordion_panel(
-        id,
-        panel,
-        target=target,
-        position=position,
-        session=session,
-    )
+    with session_context(require_active_session(session)):
+        return main_insert_accordion_panel(
+            id,
+            panel,
+            target=target,
+            position=position,
+        )
 
 
 # # Deprecated 2023-09-12
 def accordion_panel_remove(
     id: str,
     target: str | list[str],
-    session: Optional[Session] = None,
+    session: MISSING_TYPE = MISSING,
 ) -> None:
     """Deprecated. Please use :func:`~shiny.ui.remove_accordion_panel()` instead."""
     warn_deprecated(
@@ -879,11 +867,11 @@ def accordion_panel_remove(
         "This method will be removed in a future version, "
         "please use `shiny.ui.remove_accordion_panel()` instead."
     )
-    return main_remove_accordion_panel(
-        id,
-        target=target,
-        session=session,
-    )
+    with session_context(require_active_session(session)):
+        return main_remove_accordion_panel(
+            id,
+            target=target,
+        )
 
 
 # Deprecated 2023-09-12
@@ -894,7 +882,7 @@ def update_accordion_panel(
     title: TagChild | None | MISSING_TYPE = MISSING,
     value: str | None | MISSING_TYPE = MISSING,
     icon: TagChild | None | MISSING_TYPE = MISSING,
-    session: Optional[Session] = None,
+    session: MISSING_TYPE = MISSING,
 ) -> None:
     """Deprecated. Please use :func:`~shiny.ui.update_accordion_panel()` instead."""
     warn_deprecated(
@@ -902,15 +890,15 @@ def update_accordion_panel(
         "This method will be removed in a future version, "
         "please use `shiny.ui.update_accordion_panel()` instead."
     )
-    return main_update_accordion_panel(
-        id,
-        target,
-        *body,
-        title=title,
-        value=value,
-        icon=icon,
-        session=session,
-    )
+    with session_context(require_active_session(session)):
+        return main_update_accordion_panel(
+            id,
+            target,
+            *body,
+            title=title,
+            value=value,
+            icon=icon,
+        )
 
 
 # ######################

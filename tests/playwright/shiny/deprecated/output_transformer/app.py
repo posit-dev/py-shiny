@@ -123,7 +123,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     def no_output():
         return input.caption()
 
-    @output
+    @output  # performs type checking
     # Without parentheses
     @render_capitalize
     def no_parens():

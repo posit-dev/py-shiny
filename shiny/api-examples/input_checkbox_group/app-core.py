@@ -1,4 +1,4 @@
-from shiny import App, Inputs, Outputs, Session, render, req, ui
+from shiny import App, Inputs, render, req, ui
 
 app_ui = ui.page_fluid(
     ui.input_checkbox_group(
@@ -14,7 +14,7 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     @render.ui
     def val():
         req(input.colors())

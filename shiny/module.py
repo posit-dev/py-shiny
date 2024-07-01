@@ -40,7 +40,7 @@ def server(
     from .session import require_active_session, session_context
 
     def wrapper(id: Id, *args: P.args, **kwargs: P.kwargs) -> R:
-        sess = require_active_session(None)
+        sess = require_active_session()
         child_sess = sess.make_scope(id)
         with session_context(child_sess):
             return fn(child_sess.input, child_sess.output, child_sess, *args, **kwargs)

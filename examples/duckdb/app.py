@@ -66,7 +66,7 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input, output, session):
+def server(input):
     mod_counter = reactive.value(0)
 
     query_output_server("initial_query", con=con, remove_id="initial_query")

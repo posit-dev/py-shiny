@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
-from shiny import App, Inputs, Outputs, Session, reactive, render, ui
+from shiny import App, Inputs, reactive, render, ui
 from shiny.plotutils import brushed_points
 
 path = Path(__file__).parent / "boulder_temp.csv"
@@ -38,7 +38,7 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     annotated_data = reactive.value(weather_df)
 
     @reactive.calc

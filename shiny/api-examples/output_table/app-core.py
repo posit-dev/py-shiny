@@ -2,7 +2,7 @@ import pathlib
 
 import pandas as pd
 
-from shiny import App, Inputs, Outputs, Session, render, ui
+from shiny import App, Inputs, render, ui
 
 dir = pathlib.Path(__file__).parent
 mtcars = pd.read_csv(dir / "mtcars.csv")
@@ -25,7 +25,7 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     @render.table
     def result():
         if not input.highlight():

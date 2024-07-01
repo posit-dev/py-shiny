@@ -1,6 +1,6 @@
 from data import adjectives, animals, dark_color, light_color
 
-from shiny import App, Inputs, Outputs, Session, reactive, render, ui
+from shiny import App, Inputs, reactive, render, ui
 
 app_ui = ui.page_fixed(
     ui.h1("Toggle Sidebars"),
@@ -56,7 +56,7 @@ app_ui = ui.page_fixed(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session) -> None:
+def server(input: Inputs):
     @render.ui
     def ui_content():
         return f"Hello, {input.adjective()} {input.animal()}!"

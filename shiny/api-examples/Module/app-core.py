@@ -38,7 +38,7 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     counter_server("counter1")
     counter_server("counter2")
 

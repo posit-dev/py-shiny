@@ -23,7 +23,7 @@ def module(
 
     @functools.wraps(fn)
     def wrapper(id: Id, *args: P.args, **kwargs: P.kwargs) -> R:
-        parent_session = require_active_session(None)
+        parent_session = require_active_session()
         module_session = parent_session.make_scope(id)
 
         with session_context(module_session):

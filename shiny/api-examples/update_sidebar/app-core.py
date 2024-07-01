@@ -1,4 +1,4 @@
-from shiny import App, Inputs, Outputs, Session, reactive, render, ui
+from shiny import App, Inputs, reactive, render, ui
 
 app_ui = ui.page_sidebar(
     ui.sidebar("Sidebar content", id="sidebar"),
@@ -11,7 +11,7 @@ app_ui = ui.page_sidebar(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     @reactive.effect
     @reactive.event(input.open_sidebar)
     def _():

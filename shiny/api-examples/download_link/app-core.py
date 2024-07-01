@@ -2,14 +2,14 @@ import asyncio
 import random
 from datetime import date
 
-from shiny import App, Inputs, Outputs, Session, render, ui
+from shiny import App, Inputs, render, ui
 
 app_ui = ui.page_fluid(
     ui.download_link("downloadData", "Download"),
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     @render.download(
         filename=lambda: f"新型-{date.today().isoformat()}-{random.randint(100, 999)}.csv"
     )

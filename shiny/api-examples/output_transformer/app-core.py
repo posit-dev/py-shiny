@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Literal, overload
 
-from shiny import App, Inputs, Outputs, Session, ui
+from shiny import App, Inputs, ui
 from shiny.render.transformer import (
     TransformerMetadata,
     ValueFn,
@@ -117,7 +117,7 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     # Without parentheses
     @render_capitalize
     def no_parens():

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Literal, Optional, cast
+from typing import Literal, Optional, cast
 
 from htmltools import (
     HTML,
@@ -16,8 +16,9 @@ from htmltools import (
     tags,
 )
 
+from .._deprecated import _session_param_docs as _session_param
 from .._deprecated import warn_deprecated
-from .._docstring import add_example, no_example
+from .._docstring import add_example, doc_format, no_example
 from .._namespaces import ResolvedId, resolve_id_or_none
 from .._typing_extensions import TypedDict
 from .._utils import private_random_id
@@ -29,9 +30,6 @@ from ._tag import consolidate_attrs, trinary
 from ._utils import css_no_sub
 from .css import CssUnit, as_css_padding, as_css_unit
 from .fill import as_fill_item, as_fillable_container
-
-if TYPE_CHECKING:
-    from ..session import Session
 
 __all__ = (
     "Sidebar",
@@ -760,11 +758,12 @@ def _get_layout_sidebar_sidebar(
 
 
 @add_example()
+@doc_format(session_param=_session_param)
 def update_sidebar(
     id: str,
     *,
     show: Optional[bool] = None,
-    session: Optional[Session] = None,
+    session: MISSING_TYPE = MISSING,
 ) -> None:
     """
     Update a sidebar's visibility.
@@ -777,15 +776,14 @@ def update_sidebar(
         The `id` of the :func:`~shiny.ui.sidebar` to toggle.
     show
         The desired visible state of the sidebar, where `True` opens the sidebar and `False` closes the sidebar (if not already in that state).
-    session
-        A Shiny session object (the default should almost always be used).
+    {session_param}
 
     See Also
     --------
     * :func:`~shiny.ui.sidebar`
     * :func:`~shiny.ui.layout_sidebar`
     """
-    session = require_active_session(session)
+    active_session = require_active_session(session)
 
     # method: Literal["toggle", "open", "close"]
     # if open is None or open == "toggle":
@@ -806,9 +804,9 @@ def update_sidebar(
         method = "open" if bool(show) else "close"
 
         def callback() -> None:
-            session.send_input_message(id, {"method": method})
+            active_session.send_input_message(id, {"method": method})
 
-        session.on_flush(callback, once=True)
+        active_session.on_flush(callback, once=True)
 
 
 def _collapse_icon() -> TagChild:

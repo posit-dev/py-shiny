@@ -1,4 +1,4 @@
-from shiny import App, Inputs, Outputs, Session, reactive, ui
+from shiny import App, Inputs, reactive, ui
 
 app_ui = ui.page_fluid(
     ui.tags.p("The first radio button group controls the second"),
@@ -11,7 +11,7 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     @reactive.effect
     def _():
         x = input.inRadioButtons()

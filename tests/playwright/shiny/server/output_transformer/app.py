@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Optional, overload
 
-from shiny import App, Inputs, Outputs, Session, ui
+from shiny import App, Inputs, ui
 from shiny.render.transformer import (
     TransformerMetadata,
     ValueFn,
@@ -67,7 +67,7 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     @render_test_text
     def t1():
         return "t1; no call"

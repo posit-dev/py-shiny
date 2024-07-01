@@ -9,7 +9,7 @@ import scoredata
 from plotly_streaming import render_plotly_streaming
 from shinywidgets import output_widget
 
-from shiny import App, Inputs, Outputs, Session, reactive, render, ui
+from shiny import App, Inputs, reactive, render, ui
 
 THRESHOLD_MID = 0.85
 THRESHOLD_MID_COLOR = "rgb(0, 137, 26)"
@@ -137,7 +137,7 @@ def app_ui(req):
     )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     @reactive.calc
     def recent_df():
         """

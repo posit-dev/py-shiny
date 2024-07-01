@@ -1,4 +1,4 @@
-from shiny import App, Inputs, Outputs, Session, reactive, ui
+from shiny import App, Inputs, reactive, ui
 
 app_ui = ui.page_fluid(
     ui.input_slider("controller", "Controller", min=0, max=1, value=0, step=1),
@@ -6,7 +6,7 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     @reactive.effect
     def _():
         # True if controller is odd, False if even.

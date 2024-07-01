@@ -123,7 +123,7 @@ class Renderer(Generic[IT]):
 
     This value **will not** contain a module prefix (or session name-spacing). To get
     the fully resolved ID, call
-    `shiny.session.require_active_session(None).ns(self.output_id)`.
+    `shiny.session.require_active_session().ns(self.output_id)`.
 
     An initial value of `.__name__` (set within `Renderer.__call__(_fn)`) will be used
     until the output renderer is registered within the session.
@@ -312,7 +312,7 @@ class Renderer(Generic[IT]):
             # (w/ module support)
             from ...session import require_active_session
 
-            session = require_active_session(None)
+            session = require_active_session()
             ns_name = session.output._ns(self.__name__)
             session.output.remove(ns_name)
             self._auto_registered = False

@@ -1,11 +1,11 @@
-from shiny import App, Inputs, Outputs, Session, reactive, ui
+from shiny import App, Inputs, reactive, ui
 
 app_ui = ui.page_fluid(
     ui.input_selectize("x", "Server side selectize", choices=[], multiple=True),
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     @reactive.effect
     def _():
         ui.update_selectize(

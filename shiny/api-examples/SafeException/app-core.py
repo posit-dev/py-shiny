@@ -1,10 +1,10 @@
-from shiny import App, Inputs, Outputs, Session, render, ui
+from shiny import App, Inputs, render, ui
 from shiny.types import SafeException
 
 app_ui = ui.page_fluid(ui.output_ui("safe"), ui.output_ui("unsafe"))
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     @render.ui
     def safe():
         raise SafeException("This is a safe exception")

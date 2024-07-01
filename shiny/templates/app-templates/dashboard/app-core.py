@@ -53,7 +53,7 @@ app_ui = ui.page_sidebar(
 )
 
 
-def server(input, output, session):
+def server(input):
     @reactive.calc
     def filtered_df():
         filt_df = df[df["species"].isin(input.species())]

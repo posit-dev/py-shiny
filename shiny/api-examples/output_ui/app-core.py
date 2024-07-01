@@ -1,4 +1,4 @@
-from shiny import App, Inputs, Outputs, Session, reactive, render, ui
+from shiny import App, Inputs, reactive, render, ui
 
 app_ui = ui.page_fluid(
     ui.input_action_button("add", "Add more controls"),
@@ -6,7 +6,7 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     @render.ui
     @reactive.event(input.add)
     def moreControls():
