@@ -19,6 +19,7 @@ from weakref import WeakValueDictionary
 from htmltools import HTML, Tag, TagAttrValue, css
 
 from .. import _utils, reactive
+from .._docstring import add_example
 from .._namespaces import resolve_id
 from ..session import Session, require_active_session, session_context
 from ..types import MISSING, MISSING_TYPE, NotifyException
@@ -50,12 +51,14 @@ ChunkOption = Literal["start", "end", True, False]
 PendingMessage = Tuple[Any, ChunkOption, Union[str, None]]
 
 
+@add_example(ex_dir="../api-examples/chat")
 class Chat:
     """
-    Create a chat component.
+    Create a chat interface.
 
-    Creates a chat component for displaying and receiving messages. The chat can be
-    used to build conversational interfaces, like chatbots.
+    The chat interface is a component that allows users to submit messages and receive
+    responses. The chat interface can be used to build conversational AI applications,
+    chatbots, and more.
 
     Parameters
     ----------
@@ -72,11 +75,12 @@ class Chat:
         How to handle errors that occur in response to user input. For options 1-3, the
         error message is displayed to the user and the app continues to run. For option
         4, the error message is not displayed, and the app stops:
-            - "auto": Sanitize the error message if the app is set to sanitize errors,
-                otherwise display the actual error message.
-            - "sanitize": Sanitize the error message before displaying it to the user.
-            - "actual": Display the actual error message to the user.
-            - "unhandled": Do not display any error message to the user.
+
+        * "auto": Sanitize the error message if the app is set to sanitize errors, otherwise display the actual error message.
+        * "sanitize": Sanitize the error message before displaying it to the user.
+        * "actual": Display the actual error message to the user.
+        * "unhandled": Do not display any error message to the user.
+
     tokenizer
         The tokenizer to use for calculating token counts, which is required to impose
         `token_limits` in `.get_messages()`. By default, a pre-trained tokenizer is
@@ -237,10 +241,10 @@ class Chat:
         user submits a message. The function should take no arguments.
 
         In many cases, the implementation of `fn` should do at least the following:
-            1. Call `.get_messages()` to obtain the current chat history.
-            2. Generate a response based on those messages.
-            3. Append the response to the chat history using `.append_message()` or
-              `.append_message_stream()`.
+
+        1. Call `.get_messages()` to obtain the current chat history.
+        2. Generate a response based on those messages.
+        3. Append the response to the chat history using `.append_message()` or `.append_message_stream()`.
 
         Parameters
         ----------
@@ -694,8 +698,10 @@ class Chat:
         ----
         Most users shouldn't need to use this method directly since the last item in
         `.get_messages()` contains the most recent user input. It can be useful for:
+
           1. Taking a reactive dependency on the user's input outside of a `.on_user_submit()` callback.
           2. Maintaining message state separately from `.get_messages()`.
+
         """
         val = self._get_user_input()
         if transform and self._transform_user is not None:
@@ -757,6 +763,7 @@ class Chat:
         )
 
 
+@add_example(ex_dir="../api-examples/chat")
 def chat_ui(
     id: str,
     *,
