@@ -14,7 +14,7 @@ def gt_style_str_to_obj(style_str: str) -> dict[str, Jsonifiable]:
         if not style_part:
             continue
         key, value = style_part.split(":")
-        style_obj[key] = value
+        style_obj[key] = value.strip()
     return style_obj
 
 

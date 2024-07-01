@@ -37,10 +37,21 @@ def test_validate_column_labels(page: Page, local_app: ShinyAppProc) -> None:
         },
     ]
 
+    light_blue_style: dict[str, Jsonifiable] = {
+        "location": "body",
+        "rows": None,
+        "cols": None,
+        "style": {"background-color": "lightblue"},
+    }
+    light_blue_with_style: list[dict[str, Jsonifiable]] = [light_blue_style]
+    for style in styles:
+        light_blue_with_style.append(style)
+
     def expect_styles(
         df: controller.OutputDataFrame, styles: list[dict[str, Jsonifiable]]
     ):
         def style_for_cell(row: int, col: int) -> dict[str, Jsonifiable] | None:
+            last_val: dict[str, Jsonifiable] | None = None
             for style in styles:
                 if isinstance(style["rows"], list):
                     if row not in style["rows"]:
@@ -49,8 +60,8 @@ def test_validate_column_labels(page: Page, local_app: ShinyAppProc) -> None:
                     if col not in style["cols"]:
                         continue
                 assert isinstance(style["style"], dict)
-                return style["style"]
-            return None
+                last_val = style["style"]
+            return last_val
 
         for row in range(0, 5):
             for col in range(0, 6):
@@ -72,9 +83,9 @@ def test_validate_column_labels(page: Page, local_app: ShinyAppProc) -> None:
                     )
 
     expect_styles(fn_styles, [styles[0]])
-    expect_styles(list_styles, styles)
+    expect_styles(list_styles, light_blue_with_style)
 
-    fn_styles.edit_cell("new value", row=0, col=0)
+    fn_styles.save_cell("new value", row=0, col=0, save_key="Enter")
     expect_styles(fn_styles, [styles[0], styles[1]])
 
     fn_styles.edit_cell("new value2", row=0, col=0)
