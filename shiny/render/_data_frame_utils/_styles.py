@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, Literal, NotRequired, Required
+from typing import TYPE_CHECKING, Callable, Literal, Required
 
-from ..._typing_extensions import TypedDict
+from ..._typing_extensions import NotRequired, TypedDict
 from ...types import Jsonifiable, ListOrTuple
 
 if TYPE_CHECKING:
