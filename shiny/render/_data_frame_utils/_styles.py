@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, Literal
+from typing import TYPE_CHECKING, Callable, Literal, Union
 
 from ..._typing_extensions import NotRequired, Required, TypedDict
 from ...types import Jsonifiable, ListOrTuple
@@ -34,12 +34,12 @@ StyleInfoBody = TypedDict(
     "StyleInfoBody",
     {
         "location": Required[Literal["body"]],
-        "rows": NotRequired[int | ListOrTuple[int] | ListOrTuple[bool] | None],
+        "rows": NotRequired[Union[int, ListOrTuple[int], ListOrTuple[bool], None]],
         "cols": NotRequired[
-            str | int | ListOrTuple[str] | ListOrTuple[int] | ListOrTuple[bool] | None
+            Union[str, int, ListOrTuple[str], ListOrTuple[int], ListOrTuple[bool], None]
         ],
-        "style": NotRequired[dict[str, Jsonifiable] | None],
-        "class": NotRequired[str | None],
+        "style": NotRequired[Union[dict[str, Jsonifiable], None]],
+        "class": NotRequired[Union[str, None]],
     },
 )
 StyleInfo = StyleInfoBody
@@ -48,10 +48,10 @@ BrowserStyleInfoBody = TypedDict(
     "BrowserStyleInfoBody",
     {
         "location": Required[Literal["body"]],
-        "rows": Required[tuple[int, ...] | None],
-        "cols": Required[tuple[int, ...] | None],
-        "style": Required[dict[str, Jsonifiable] | None],
-        "class": Required[str | None],
+        "rows": Required[Union[tuple[int, ...], None]],
+        "cols": Required[Union[tuple[int, ...], None]],
+        "style": Required[Union[dict[str, Jsonifiable], None]],
+        "class": Required[Union[str, None]],
     },
 )
 BrowserStyleInfo = BrowserStyleInfoBody
