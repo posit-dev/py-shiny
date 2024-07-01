@@ -334,7 +334,7 @@ class ChatContainer extends LightElement {
     const lastMessage = messages.lastElementChild as HTMLElement;
     if (!lastMessage) throw new Error("No messages found in the chat output");
     const content = lastMessage.getAttribute("content");
-    lastMessage.setAttribute("content", content + message.content);
+    lastMessage.setAttribute("content", message.content);
 
     // Don't scroll to bottom if the user has scrolled up a bit
     if (

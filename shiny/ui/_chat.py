@@ -122,7 +122,7 @@ class Chat:
         self.on_error = on_error
 
         # Chunked messages get accumulated (using this property) before changing state
-        self._final_message = ""
+        self._current_stream_message = ""
         self._current_stream_id: str | None = None
         self._pending_messages: list[PendingMessage] = []
 
@@ -370,15 +370,20 @@ class Chat:
             self._pending_messages.append((message, chunk, stream_id))
             return
 
+        # Update current stream state
         self._current_stream_id = stream_id
-
         if chunk == "end":
             self._current_stream_id = None
 
-        if chunk:
-            msg = normalize_message_chunk(message)
-        else:
+        if not chunk:
             msg = normalize_message(message)
+        else:
+            msg = normalize_message_chunk(message)
+            # Update the current stream message
+            self._current_stream_message += msg["content"]
+            msg["content"] = self._current_stream_message
+            if chunk == "end":
+                self._current_stream_message = ""
 
         msg = await self._transform_message(msg)
         if msg is None:
@@ -471,11 +476,17 @@ class Chat:
         else:
             msg_type = "shiny-chat-append-message"
 
+        chunk_type = None
+        if chunk == "start":
+            chunk_type = "message_start"
+        elif chunk == "end":
+            chunk_type = "message_end"
+
         msg = ClientMessage(
             content=message["content"],
             role=message["role"],
             content_type=message.get("content_type", "markdown"),
-            chunk_type=message.get("chunk_type", None),
+            chunk_type=chunk_type,
         )
 
         # print(msg)
@@ -614,21 +625,11 @@ class Chat:
         msg: StoredMessage = {
             **message,
             "token_count": None,
-            "chunk_type": None,
         }
 
-        if chunk:
-            self._final_message += msg["content"]
-            if isinstance(chunk, str):
-                msg["chunk_type"] = (
-                    "message_start" if chunk == "start" else "message_end"
-                )
-            # Don't count tokens or invalidate until the end of the chunk
-            if chunk == "end":
-                msg["content"] = self._final_message
-                self._final_message = ""
-            else:
-                return msg
+        # Don't actually store chunks until the end
+        if chunk is True or chunk == "start":
+            return msg
 
         if self._tokenizer is not None:
             encoded = self._tokenizer.encode(msg["content"])

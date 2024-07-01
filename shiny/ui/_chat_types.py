@@ -24,8 +24,6 @@ class TransformedMessage(ChatMessage):
 class StoredMessage(TransformedMessage):
     # Number of tokens in the content
     token_count: int | None
-    # For chunked messages
-    chunk_type: Literal["message_start", "message_end"] | None
 
 
 # A message that can be sent to the client
