@@ -8,9 +8,10 @@ from google.generativeai import GenerativeModel
 
 from shiny.express import ui
 
-# Set the environment variable GOOGLE_API_KEY to your Google API key
-# import os
-# os.environ["GOOGLE_API_KEY"] = "your_google_api_key"
+# You'll need to set the GOOGLE_API_KEY environment variable to your Google API key.
+# We recommend putting it in a .env file and loading it with `dotenv`:
+# from dotenv import load_dotenv
+# load_dotenv()
 llm = GenerativeModel()
 
 # Set some Shiny page options

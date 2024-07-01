@@ -9,7 +9,10 @@ from openai import AzureOpenAI
 
 from shiny.express import ui
 
-# # Provide your Azure info here (or set the environment variable)
+# Although you can set API keys here, it's recommended to put it in an .env file
+# and load it with `dotenv` so your keys aren't exposed with your code.
+# from dotenv import load_dotenv
+# load_dotenv()
 llm = AzureOpenAI(
     api_key=os.getenv("AZURE_OPENAI_API_KEY"),
     api_version="2024-02-01",
