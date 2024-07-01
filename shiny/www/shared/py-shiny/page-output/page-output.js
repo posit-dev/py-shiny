@@ -1,6 +1,9 @@
 // page-output/page-output.ts
 var PageOutputBinding = class extends Shiny.OutputBinding {
-  originalBodyTagAttrs = null;
+  constructor() {
+    super(...arguments);
+    this.originalBodyTagAttrs = null;
+  }
   find(scope) {
     return $(scope).find(".shiny-page-output");
   }
