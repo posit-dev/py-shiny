@@ -117,7 +117,11 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
   const theadRef = useRef<HTMLTableSectionElement>(null);
   const tbodyRef = useRef<HTMLTableSectionElement>(null);
 
-  const _useStyleInfo = useStyleInfoMap(payloadOptions["styles"]);
+  const _useStyleInfo = useStyleInfoMap({
+    initStyleInfos: payloadOptions["styles"],
+    nrow: tableDataProp.length,
+    ncol: columns.length,
+  });
   /**
    * Contains all style information for the full table.
    *

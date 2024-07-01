@@ -35,6 +35,12 @@ def test_validate_column_labels(page: Page, local_app: ShinyAppProc) -> None:
             "cols": [4],  # "Island",
             "style": {"background-color": "red"},
         },
+        {
+            "location": "body",
+            "rows": [1],
+            "cols": [5],  # "Stage",
+            "style": {"background-color": "green"},
+        },
     ]
 
     light_blue_style: dict[str, Jsonifiable] = {

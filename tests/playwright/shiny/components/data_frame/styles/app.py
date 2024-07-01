@@ -75,8 +75,8 @@ df_styles: list[StyleInfo] = [
     {
         "location": "body",
         "rows": [False, True, False, False, False],
-        "cols": [4],  # "Island",
-        "style": {"background-color": "red"},
+        "cols": [False, False, False, False, True, True],  # "Stage",
+        "style": {"background-color": "green"},
     },
 ]
 

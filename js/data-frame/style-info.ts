@@ -10,8 +10,8 @@ export type CellStyle = { [key: string]: string | null };
 
 type StyleInfoBody = {
   location: "body";
-  rows: number[];
-  cols: number[];
+  rows: number[] | null;
+  cols: number[] | null;
   style?: CellStyle;
   class?: string;
 };
@@ -52,9 +52,15 @@ export type ResetStyleInfos = () => void;
  * @param initStyleInfos Array of initial style information
  * @returns {{styleInfoMap: StyleInfoMap, setStyleInfo: SetStyleInfo}} where `styleInfoMap` is a map of style information and `setStyleInfo` is a function to update the map
  */
-export const useStyleInfoMap = (
-  initStyleInfos: StyleInfo[]
-): {
+export const useStyleInfoMap = ({
+  initStyleInfos,
+  nrow,
+  ncol,
+}: {
+  initStyleInfos: StyleInfo[];
+  nrow: number;
+  ncol: number;
+}): {
   styleInfoMap: StyleInfoMap;
   setStyleInfo: SetStyleInfo;
   setStyleInfos: SetStyleInfos;
@@ -68,8 +74,10 @@ export const useStyleInfoMap = (
       const { location, rows, cols } = styleInfo;
 
       setStyleInfoMap((draft) => {
-        for (const rowIndex of rows) {
-          for (const columnIndex of cols) {
+        const rowArr = rows ?? Array.from({ length: nrow }, (_, i) => i);
+        const colArr = cols ?? Array.from({ length: ncol }, (_, j) => j);
+        for (const rowIndex of rowArr) {
+          for (const columnIndex of colArr) {
             const key = makeStyleInfoMapKey({
               location,
               rowIndex,
@@ -86,7 +94,7 @@ export const useStyleInfoMap = (
         }
       });
     },
-    [setStyleInfoMap]
+    [ncol, nrow, setStyleInfoMap]
   );
 
   const resetStyleInfos = useCallback(() => {
