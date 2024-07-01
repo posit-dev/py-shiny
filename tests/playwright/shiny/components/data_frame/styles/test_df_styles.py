@@ -38,7 +38,7 @@ def test_validate_column_labels(page: Page, local_app: ShinyAppProc) -> None:
         {
             "location": "body",
             "rows": [1],
-            "cols": [5],  # "Stage",
+            "cols": [4, 5],  # "Island", "Stage",
             "style": {"background-color": "green"},
         },
     ]
@@ -94,5 +94,11 @@ def test_validate_column_labels(page: Page, local_app: ShinyAppProc) -> None:
     fn_styles.save_cell("new value", row=0, col=0, save_key="Enter")
     expect_styles(fn_styles, [styles[0], styles[1]])
 
-    fn_styles.edit_cell("new value2", row=0, col=0)
-    expect_styles(fn_styles, [])
+    fn_styles.save_cell("new value2", row=0, col=0, save_key="Enter")
+    expect_styles(fn_styles, [styles[0], styles[1], styles[2]])
+
+    fn_styles.save_cell("new value3", row=0, col=0, save_key="Enter")
+    expect_styles(fn_styles, [styles[0], styles[1], styles[2], styles[3]])
+
+    fn_styles.save_cell("new value4", row=0, col=0, save_key="Enter")
+    expect_styles(fn_styles, [styles[0]])
