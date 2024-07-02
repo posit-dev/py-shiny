@@ -10,8 +10,9 @@ chat = ui.Chat(id="chat")
 chat.ui()
 
 
+# TODO: test with append_message_stream() as well
 @chat.transform_assistant_response
-async def transform(content: str) -> str:
+def transform(content: str) -> str:
     if content == "return HTML":
         return ui.HTML(f"<b>Transformed response</b>: {content}")
     else:
@@ -20,7 +21,7 @@ async def transform(content: str) -> str:
 
 @chat.on_user_submit
 async def _():
-    user = chat.get_user_input()
+    user = await chat.get_user_input()
     await chat.append_message(user)
 
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 from typing import (
     Any,
     AsyncIterable,
@@ -43,6 +44,16 @@ TransformUserInput = Callable[[str], Union[str, None]]
 TransformUserInputAsync = Callable[[str], Awaitable[Union[str, None]]]
 TransformAssistantResponse = Callable[[str], Union[str, HTML]]
 TransformAssistantResponseAsync = Callable[[str], Awaitable[Union[str, HTML]]]
+TransformAssistantResponseChunk = Callable[[str, str, bool], Union[str, HTML]]
+TransformAssistantResponseChunkAsync = Callable[
+    [str, str, bool], Awaitable[Union[str, HTML]]
+]
+TransformAssistantResponseFunction = Union[
+    TransformAssistantResponse,
+    TransformAssistantResponseAsync,
+    TransformAssistantResponseChunk,
+    TransformAssistantResponseChunkAsync,
+]
 SubmitFunction = Callable[[], None]
 SubmitFunctionAsync = Callable[[], Awaitable[None]]
 
@@ -105,7 +116,7 @@ class Chat:
         self.id = id
         self.user_input_id = f"{id}_user_input"
         self._transform_user: TransformUserInputAsync | None = None
-        self._transform_assistant: TransformAssistantResponseAsync | None = None
+        self._transform_assistant: TransformAssistantResponseChunkAsync | None = None
         if isinstance(tokenizer, MISSING_TYPE):
             self._tokenizer = get_default_tokenizer()
         else:
@@ -297,8 +308,7 @@ class Chat:
         self,
         *,
         token_limits: tuple[int, int] | None = (4096, 1000),
-        apply_user_transform: bool = True,
-        apply_assistant_transform: bool = False,
+        as_client: Literal[False, "user", "assistant", True] = False,
     ) -> tuple[ChatMessage, ...]:
         """
         Reactively read chat messages
@@ -315,32 +325,36 @@ class Chat:
             that can be sent to the model in a single request. The second integer is the
             amount of tokens to reserve for the model's response.
             Can also be `None` to disable message trimming based on token counts.
-        apply_user_transform
-            Whether to return user input messages with transformation applied. This only
-            matters if a `user_input_transform` was provided to the chat constructor.
-            This should be `True` when passing the messages to a model for response
-            generation, but `False` when you need (to save) the original user input.
-        apply_assistant_transform
-            Whether to return assistant messages with transformation applied. This only
-            matters if an `assistant_response_transform` was provided to the chat
-            constructor.
+        as_client
+            Whether to return messages as they appear in the client (UI). This only
+            matters if `transform_user_input` or `transform_assistant_response` is
+            provided. The default, `False`, gives post-transformed user messages and
+            pre-transformed assistant messages, which is often the desired format for
+            response generation. If `True`, pre-transformed user messages and
+            post-transformed assistant messages are returned (i.e., the client
+            representation). If `"user"` or `"assistant"`, messages for the respective
+            role are returned in "client representation".
+
 
         Returns
         -------
-        A sequence of chat messages.
+        A tuple of chat messages.
         """
 
         messages = self._get_trimmed_messages(token_limits=token_limits)
 
         res: list[ChatMessage] = []
         for m in messages:
-            msg = ChatMessage(content=m["content"], role=m["role"])
-            original = (apply_user_transform and m["role"] == "user") or (
-                apply_assistant_transform and m["role"] == "assistant"
-            )
-            if original:
-                msg["content"] = m["original_content"] or m["content"]
-            res.append(msg)
+            content = m["content_server"]
+
+            if as_client is True:
+                content = m["content_client"]
+            elif as_client == "user" and m["role"] == "user":
+                content = m["content_client"]
+            elif as_client == "assistant" and m["role"] == "assistant":
+                content = m["content_client"]
+
+            res.append(ChatMessage(content=content, role=m["role"]))
 
         return tuple(res)
 
@@ -375,17 +389,21 @@ class Chat:
         if chunk == "end":
             self._current_stream_id = None
 
-        if not chunk:
+        if chunk is False:
             msg = normalize_message(message)
+            chunk_content = None
         else:
             msg = normalize_message_chunk(message)
             # Update the current stream message
-            self._current_stream_message += msg["content"]
+            chunk_content = msg["content"]
+            self._current_stream_message += chunk_content
             msg["content"] = self._current_stream_message
             if chunk == "end":
                 self._current_stream_message = ""
 
-        msg = await self._transform_message(msg)
+        msg = await self._transform_message(
+            msg, chunk=chunk, chunk_content=chunk_content
+        )
         if msg is None:
             return
         msg = self._store_message(msg, chunk=chunk)
@@ -482,10 +500,13 @@ class Chat:
         elif chunk == "end":
             chunk_type = "message_end"
 
+        content = message["content_client"]
+        content_type = "html" if isinstance(content, HTML) else "markdown"
+
         msg = ClientMessage(
-            content=message["content"],
+            content=content,
             role=message["role"],
-            content_type=message.get("content_type", "markdown"),
+            content_type=content_type,
             chunk_type=chunk_type,
         )
 
@@ -509,9 +530,9 @@ class Chat:
         self, fn: TransformUserInput | TransformUserInputAsync | None = None
     ) -> None | Callable[[TransformUserInput | TransformUserInputAsync], None]:
         """
-        Define a function to transform user input.
+        Transform user input.
 
-        Apply this method as a decorator to a function (`fn`) that transforms user input
+        Use this method as a decorator on a function (`fn`) that transforms user input
         before storing it in the chat messages returned by `.get_messages()`. This is
         useful for implementing RAG workflows, like taking a URL and scraping it for
         text before sending it to the model.
@@ -538,45 +559,72 @@ class Chat:
 
     @overload
     def transform_assistant_response(
-        self, fn: TransformAssistantResponse | TransformAssistantResponseAsync
+        self, fn: TransformAssistantResponseFunction
     ) -> None: ...
 
     @overload
     def transform_assistant_response(
         self,
-    ) -> Callable[
-        [TransformAssistantResponse | TransformAssistantResponseAsync], None
-    ]: ...
+    ) -> Callable[[TransformAssistantResponseFunction], None]: ...
 
     def transform_assistant_response(
         self,
-        fn: TransformAssistantResponse | TransformAssistantResponseAsync | None = None,
-    ) -> (
-        None
-        | Callable[[TransformAssistantResponse | TransformAssistantResponseAsync], None]
-    ):
+        fn: TransformAssistantResponseFunction | None = None,
+    ) -> None | Callable[[TransformAssistantResponseFunction], None]:
         """
-        Define a function to transform assistant responses.
+        Transform assistant responses.
 
-        Apply this method as a decorator to a function (`fn`) that transforms assistant
+        Use this method as a decorator on a function (`fn`) that transforms assistant
         responses before displaying them in the chat. This is useful for post-processing
         model responses before displaying them to the user.
 
         Parameters
         ----------
         fn
-            A function to transform role="assistant" messages. If the function returns a
-            string, it will be interpreted and parsed as a markdown string on the client
-            (and the resulting HTML is then sanitized). If the function returns
-            :class:`shiny.ui.HTML`, it will be displayed as-is. Note that, for
-            `.append_message_stream()`, the transformer will be applied to each message
-            in the stream, so it should be performant.
+            A function that takes a string and returns a string or
+            :class:`shiny.ui.HTML`. If `fn` returns a string, it gets interpreted and
+            parsed as a markdown on the client (and the resulting HTML is then
+            sanitized). If `fn` returns :class:`shiny.ui.HTML`, it will be displayed
+            as-is.
+
+        Note
+        ----
+        When doing an `.append_message_stream()`, `fn` gets called on every chunk of the
+        response (thus, it should be performant), and can optionally access more
+        information (i.e., arguments) about the stream. The 1st argument (required)
+        contains the accumulated content, the 2nd argument (optional) contains the
+        current chunk, and the 3rd argument (optional) is a boolean indicating whether
+        this chunk is the last one in the stream.
         """
 
         def _set_transform(
-            fn: TransformAssistantResponse | TransformAssistantResponseAsync,
+            fn: TransformAssistantResponseFunction,
         ):
-            self._transform_assistant = _utils.wrap_async(fn)
+            nparams = len(inspect.signature(fn).parameters)
+            if nparams == 1:
+                fn = cast(
+                    TransformAssistantResponse | TransformAssistantResponseAsync, fn
+                )
+                fn = _utils.wrap_async(fn)
+
+                async def _transform_wrapper(
+                    content: str, chunk: str | None, done: bool
+                ):
+                    return await fn(content)
+
+                self._transform_assistant = _transform_wrapper
+
+            elif nparams == 3:
+                fn = cast(
+                    TransformAssistantResponseChunk
+                    | TransformAssistantResponseChunkAsync,
+                    fn,
+                )
+                self._transform_assistant = _utils.wrap_async(fn)
+            else:
+                raise Exception(
+                    "A @transform_assistant_response function must take 1 or 3 arguments"
+                )
 
         if fn is None:
             return _set_transform
@@ -584,33 +632,33 @@ class Chat:
             return _set_transform(fn)
 
     async def _transform_message(
-        self, message: ChatMessage
+        self,
+        message: ChatMessage,
+        chunk: ChunkOption = False,
+        chunk_content: str | None = None,
     ) -> TransformedMessage | None:
 
         res: TransformedMessage = {
-            **message,
-            "original_content": None,
-            "content_type": "markdown",
+            "content_client": message["content"],
+            "content_server": message["content"],
+            "content_transformed": False,
+            "role": message["role"],
         }
 
-        original_content = message["content"]
-        content = original_content
-
         if message["role"] == "user" and self._transform_user is not None:
-            content = await self._transform_user(original_content)
+            res["content_transformed"] = True
+            content = await self._transform_user(message["content"])
+            if content is None:
+                return None
+            res["content_server"] = content
 
         elif message["role"] == "assistant" and self._transform_assistant is not None:
-            content = await self._transform_assistant(original_content)
-            if isinstance(content, HTML):
-                res["content_type"] = "html"
-
-        if content is None:
-            return None
-
-        if original_content != content:
-            res["original_content"] = content
-
-        res["content"] = content
+            res["content_transformed"] = True
+            res["content_client"] = await self._transform_assistant(
+                message["content"],
+                chunk_content or "",
+                chunk == "end" or chunk is False,
+            )
 
         return res
 
@@ -632,12 +680,7 @@ class Chat:
             return msg
 
         if self._tokenizer is not None:
-            # Always tokenize the "original" content for assistant messages
-            if msg["role"] == "assistant":
-                content = msg["original_content"] or msg["content"]
-            else:
-                content = msg["content"]
-            encoded = self._tokenizer.encode(content)
+            encoded = self._tokenizer.encode(msg["content_server"])
             if isinstance(encoded, TokenizersEncoding):
                 token_count = len(encoded.ids)
             else:
@@ -838,9 +881,10 @@ def _express_is_active() -> bool:
 
 def as_transformed_message(message: ChatMessage) -> TransformedMessage:
     return TransformedMessage(
-        **message,
-        original_content=None,
-        content_type="markdown",
+        content_client=message["content"],
+        content_server=message["content"],
+        content_transformed=False,
+        role=message["role"],
     )
 
 

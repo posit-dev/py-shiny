@@ -13,11 +13,11 @@ class ChatMessage(TypedDict):
 
 
 # A message once transformed have been applied
-class TransformedMessage(ChatMessage):
-    # Content before any transformations
-    original_content: str | None
-    # Only relevant for assistant messages at the moment
-    content_type: Literal["markdown", "html"]
+class TransformedMessage(TypedDict):
+    content_client: str
+    content_server: str
+    content_transformed: bool
+    role: Role
 
 
 # A message that has been stored in the server-side chat history
