@@ -154,6 +154,7 @@ def add_example(
 
         other_files: list[str] = []
         for abs_f in Path(example_dir).glob("**/*"):
+            path_parts = Path(abs_f).parts
             rel_f = abs_f.relative_to(example_dir)
             f = os.path.basename(abs_f)
             is_support_file = (
@@ -161,6 +162,8 @@ def add_example(
                 and f != app_file_name
                 and f != "app.py"
                 and f != ".DS_Store"
+                and "venv" not in path_parts
+                and ".venv" not in path_parts
                 and not f.startswith("app-")
                 and not str(rel_f).startswith("__")
             )

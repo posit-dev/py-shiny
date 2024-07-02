@@ -49,7 +49,7 @@ deps: $(PYBIN) dev-htmltools dev-shinylive ## Install build dependencies
 	$(PYBIN)/pip install pip --upgrade
 	$(PYBIN)/pip install ..[doc]
 
-quartodoc: quartodoc_build_core quartodoc_build_express quartodoc_post ## Build quartodocs for express and core
+quartodoc: quartodoc_build_core quartodoc_build_express quartodoc_build_test quartodoc_post ## Build quartodocs for express and core
 
 ## Build interlinks for API docs
 quartodoc_interlinks: $(PYBIN)
@@ -76,6 +76,14 @@ quartodoc_build_express: $(PYBIN) quartodoc_interlinks
 	  && echo "::group::quartodoc build express docs" \
 	  && quartodoc build --config _quartodoc-express.yml --verbose \
 	  && mv objects.json _objects_express.json \
+	  && echo "::endgroup::"
+
+## Build test API docs
+quartodoc_build_test: $(PYBIN) quartodoc_interlinks
+	. $(PYBIN)/activate \
+	  && echo "::group::quartodoc build testing docs" \
+	  && quartodoc build --config _quartodoc-testing.yml --verbose \
+	  && mv objects.json _objects_test.json \
 	  && echo "::endgroup::"
 
 ## Clean up after quartodoc build

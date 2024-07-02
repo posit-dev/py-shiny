@@ -1,13 +1,13 @@
 from playwright.sync_api import Page
 
-from shiny.playwright.controls import Card
+from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
 
 def test_card(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 
-    card = Card(page, "card1")
+    card = controller.Card(page, "card1")
     card.expect_max_height(None)
     card.expect_min_height(None)
     card.expect_height(None)

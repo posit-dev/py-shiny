@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-# TODO-barret-future; make DataTable and DataGrid generic? By currently accepting `object`, it is difficult to capture the generic type of the data.
 import abc
 import json
+
+# TODO-barret-future; make DataTable and DataGrid generic? By currently accepting `object`, it is difficult to capture the generic type of the data.
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -27,6 +28,7 @@ from ._selection import (
     SelectionModes,
     as_selection_modes,
 )
+from ._styles import StyleFn, StyleInfo, as_browser_style_infos, as_style_infos
 from ._unsafe import is_shiny_html, serialize_numpy_dtypes
 
 if TYPE_CHECKING:
@@ -43,6 +45,7 @@ if TYPE_CHECKING:
         "DataGrid",
         "DataTable",
     ]
+
 else:
     # The parent class of `data_frame` needs something to hold onto
     # To avoid loading pandas, we use `object` as a placeholder
@@ -52,21 +55,6 @@ else:
 class AbstractTabularData(abc.ABC):
     @abc.abstractmethod
     def to_payload(self) -> dict[str, Jsonifiable]: ...
-
-
-def as_editable(
-    editable: bool,
-    *,
-    name: str,
-) -> bool:
-    editable = bool(editable)
-    # if editable:
-    #     print(
-    #         f"`{name}(editable=true)` is an experimental feature. "
-    #         "If you find any bugs or would like different behavior, "
-    #         "please make an issue at https://github.com/posit-dev/py-shiny/issues/new"
-    #     )
-    return editable
 
 
 @add_example(ex_dir="../../api-examples/data_frame")
@@ -139,6 +127,7 @@ class DataGrid(AbstractTabularData):
     filters: bool
     editable: bool
     selection_modes: SelectionModes
+    styles: list[StyleInfo] | StyleFn
 
     def __init__(
         self,
@@ -150,6 +139,7 @@ class DataGrid(AbstractTabularData):
         filters: bool = False,
         editable: bool = False,
         selection_mode: SelectionModeInput = "none",
+        styles: StyleInfo | list[StyleInfo] | StyleFn | None = None,
         row_selection_mode: RowSelectionModeDeprecated = "deprecated",
     ):
 
@@ -162,16 +152,18 @@ class DataGrid(AbstractTabularData):
         self.height = height
         self.summary = summary
         self.filters = filters
-        self.editable = as_editable(editable, name="DataGrid")
+        self.editable = bool(editable)
         self.selection_modes = as_selection_modes(
             selection_mode,
             name="DataGrid",
             editable=self.editable,
             row_selection_mode=row_selection_mode,
         )
+        self.styles = as_style_infos(styles)
 
     def to_payload(self) -> dict[str, Jsonifiable]:
         res = serialize_pandas_df(self.data)
+
         res["options"] = dict(
             width=self.width,
             height=self.height,
@@ -180,6 +172,10 @@ class DataGrid(AbstractTabularData):
             editable=self.editable,
             style="grid",
             fill=self.height is None,
+            styles=as_browser_style_infos(
+                self.styles,
+                data=self.data,
+            ),
         )
         return res
 
@@ -253,6 +249,7 @@ class DataTable(AbstractTabularData):
     summary: bool | str
     filters: bool
     selection_modes: SelectionModes
+    styles: list[StyleInfo] | StyleFn
 
     def __init__(
         self,
@@ -265,6 +262,7 @@ class DataTable(AbstractTabularData):
         editable: bool = False,
         selection_mode: SelectionModeInput = "none",
         row_selection_mode: Literal["deprecated"] = "deprecated",
+        styles: StyleInfo | list[StyleInfo] | StyleFn | None = None,
     ):
 
         self.data = cast_to_pandas(
@@ -276,13 +274,14 @@ class DataTable(AbstractTabularData):
         self.height = height
         self.summary = summary
         self.filters = filters
-        self.editable = as_editable(editable, name="DataTable")
+        self.editable = bool(editable)
         self.selection_modes = as_selection_modes(
             selection_mode,
             name="DataTable",
             editable=self.editable,
             row_selection_mode=row_selection_mode,
         )
+        self.styles = as_style_infos(styles)
 
     def to_payload(self) -> dict[str, Jsonifiable]:
         res = serialize_pandas_df(self.data)
@@ -293,6 +292,10 @@ class DataTable(AbstractTabularData):
             filters=self.filters,
             editable=self.editable,
             style="table",
+            styles=as_browser_style_infos(
+                self.styles,
+                data=self.data,
+            ),
         )
         return res
 

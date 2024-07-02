@@ -19,6 +19,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
+* Expose `shiny.playwright`, `shiny.run`, and `shiny.pytest` modules that allow users to testing their Shiny apps.  (#1448, #1456, #1481)
+  * `shiny.playwright` contains `controller` and `expect` submodules. `controller` will contain many classes to interact with (and verify!) your Shiny app using Playwright. `expect` contains expectation functions that enhance standard Playwright expectation methods.
+  * `shiny.run` contains the `run_shiny_app` command and the return type `ShinyAppProc`. `ShinyAppProc` can be used to type the Shiny app pytest fixtures.
+  * `shiny.pytest` contains pytest test fixtures. The `local_app` pytest fixture is automatically available and runs a sibling `app.py` file. Where as `create_app_fixture(PATH_TO_APP)` allows for a relative path to a Shiny app to be instantiated from a different folder.
+
+* Added CLI command `shiny add test` to add a test file to an existing Shiny app. (#1461)
+
 * `@render.data_frame` has added a few new methods:
   * `.data_view_rows()` is a reactive value representing the sorted and filtered row numbers. This value wraps `input.<ID>_data_view_rows()`(#1374)
   * `.sort()` is a reactive value representing the sorted column information (dictionaries containing `col: int` and `desc: bool`). This value wraps `input.<ID>_sort()`. (#1374)
@@ -31,6 +38,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * `@render.data_frame`'s `<ID>.cell_selection()` no longer returns a `None` value and now always returns a dictionary containing both the `rows` and `cols` keys. This is done to achieve more consistent author code when working with cell selection. When the value's `type="none"`, both `rows` and `cols` are empty tuples. When `type="row"`, `cols` represents all column numbers of the data. In the future, when `type="col"`, `rows` will represent all row numbers of the data. These extra values are not available in `input.<ID>_cell_selection()` as they are independent of cells being selected and are removed to reduce information being sent to and from the browser. (#1376)
 
 * Relative imports, like `from . import utils`, now can be used in Shiny Express apps. (#1464)
+
+* `ui.Theme` allows you to create custom themes for your Shiny app by recompiling [Bootstrap](https://getbootstrap.com/) and Shiny's Sass files with your own customizations. Themes created with `ui.Theme` can be passed directly to the `theme` argument of `express.ui.page_opts()` (Shiny Express) or `ui.page_*()` functions (Shiny Core) to apply the theme to the entire app. This feature requires the [libsass package](https://sass.github.io/libsass-python/) which can be installed with `pip install libsass`. (#1358)
 
 ### Bug fixes
 
@@ -59,8 +68,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * `@render.data_frame`'s method `.input_cell_selection()` has been renamed to `.cell_selection()`. Please use `.cell_selection()` and consider `.input_cell_selection()` deprecated. (#1407)
 
 ### New features
-
-* Expose shiny.pytest, shiny.run and shiny.playwright modules that allow users to testing their Shiny apps. (#1448, #1456)
 
 * Added busy indicators to provide users with a visual cue when the server is busy calculating outputs or otherwise serving requests to the client. More specifically, a spinner is shown on each calculating/recalculating output, and a pulsing banner is shown at the top of the page when the app is otherwise busy. Use the new `ui.busy_indicator.options()` function to customize the appearance of the busy indicators and `ui.busy_indicator.use()` to disable/enable them. (#918)
 

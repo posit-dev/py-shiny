@@ -4,20 +4,20 @@ import platform
 
 from playwright.sync_api import Page, expect
 
-from shiny.playwright.controls import OutputCode, OutputDataFrame
+from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
 
 def test_row_selection(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 
-    my_df = OutputDataFrame(page, "my_df")
-    selected_df = OutputDataFrame(page, "selected_df")
-    selected_rows = OutputCode(page, "selected_rows")
+    my_df = controller.OutputDataFrame(page, "my_df")
+    selected_df = controller.OutputDataFrame(page, "selected_df")
+    selected_rows = controller.OutputCode(page, "selected_rows")
 
     # TODO-karan-test: We should add a locator for selected rows
     # TODO-karan-test; We should add a expected selected row count method?
-    def expect_selected_count(x: OutputDataFrame, n: int) -> None:
+    def expect_selected_count(x: controller.OutputDataFrame, n: int) -> None:
         expect(x.loc_body.locator("tr[aria-selected=true]")).to_have_count(n)
 
     my_df.expect_n_row(10)

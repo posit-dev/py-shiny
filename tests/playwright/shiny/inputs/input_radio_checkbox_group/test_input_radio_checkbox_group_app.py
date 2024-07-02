@@ -2,21 +2,21 @@ from __future__ import annotations
 
 from playwright.sync_api import Page, expect
 
-from shiny.playwright.controls import InputCheckboxGroup, InputRadioButtons
-from shiny.playwright.controls._controls import PatternOrStr
+from shiny.playwright import controller
+from shiny.playwright.controller._controls import PatternOrStr
 from shiny.run import ShinyAppProc
 
 
 def test_input_checkbox_group_kitchen(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 
-    radio1 = InputRadioButtons(page, "radio1")
-    radio2 = InputRadioButtons(page, "radio2")
-    check1 = InputCheckboxGroup(page, "check1")
-    check2 = InputCheckboxGroup(page, "check2")
+    radio1 = controller.InputRadioButtons(page, "radio1")
+    radio2 = controller.InputRadioButtons(page, "radio2")
+    check1 = controller.InputCheckboxGroup(page, "check1")
+    check2 = controller.InputCheckboxGroup(page, "check2")
 
     def assert_radio_check(
-        x: InputRadioButtons | InputCheckboxGroup,
+        x: controller.InputRadioButtons | controller.InputCheckboxGroup,
         label: str,
         choices: list[PatternOrStr],
         choice_labels: list[PatternOrStr],
@@ -27,7 +27,7 @@ def test_input_checkbox_group_kitchen(page: Page, local_app: ShinyAppProc) -> No
         x.expect_label(label)
         x.expect_choices(choices)
         x.expect_choice_labels(choice_labels)
-        if isinstance(x, InputRadioButtons):
+        if isinstance(x, controller.InputRadioButtons):
             if not isinstance(selected, str):
                 raise TypeError("selected must be a string for radio buttons")
             x.expect_selected(selected)
@@ -90,13 +90,13 @@ def test_locator_debugging(page: Page, local_app: ShinyAppProc) -> None:
 
     # Non-existent div
     try:
-        not_exist = InputRadioButtons(page, "does-not-exist")
+        not_exist = controller.InputRadioButtons(page, "does-not-exist")
         not_exist.expect_choices(["a", "b", "c"], timeout=timeout)
     except AssertionError as e:
         assert "expected to have count '1'" in str(e)
         assert "Actual value: 0" in str(e)
 
-    check1 = InputCheckboxGroup(page, "check1")
+    check1 = controller.InputCheckboxGroup(page, "check1")
 
     # Make sure it works
     check1.expect_choices(["red", "green", "blue"])
@@ -127,13 +127,13 @@ def test_locator_existance(page: Page, local_app: ShinyAppProc) -> None:
 
     # Non-existent div
     try:
-        not_exist = InputCheckboxGroup(page, "does-not-exist")
+        not_exist = controller.InputCheckboxGroup(page, "does-not-exist")
         not_exist.set(["green"], timeout=timeout)
     except AssertionError as e:
         assert "expected to have count '1'" in str(e)
         assert "Actual value: 0" in str(e)
 
-    check1 = InputCheckboxGroup(page, "check1")
+    check1 = controller.InputCheckboxGroup(page, "check1")
 
     # Make sure it works
     check1.set([])

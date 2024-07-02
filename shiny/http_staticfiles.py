@@ -11,6 +11,8 @@ not true when running in native Python, we want to be as safe as possible.
 
 from __future__ import annotations
 
+import re
+
 __all__ = (
     "StaticFiles",
     "FileResponse",
@@ -53,7 +55,9 @@ else:
         async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
             if scope["type"] != "http":
                 raise AssertionError("StaticFiles can't handle non-http request")
-            path = scope["path"]
+            # following starlette >=0.33, tested to be compatible with 0.32-0.37.2
+            root_path = scope.get("route_root_path", scope.get("root_path", ""))
+            path = scope.get("route_path", re.sub(r"^" + root_path, "", scope["path"]))
             path_segments = path.split("/")
             final_path, trailing_slash = _traverse_url_path(self.dir, path_segments)
             if final_path is None:

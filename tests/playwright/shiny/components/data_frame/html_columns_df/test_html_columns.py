@@ -1,22 +1,18 @@
 from playwright.sync_api import Page
 
-from shiny.playwright.controls import (
-    InputActionButton,
-    OutputDataFrame,
-    OutputTextVerbatim,
-)
+from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
 
 def test_validate_html_columns(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 
-    data_frame = OutputDataFrame(page, "penguins_df")
+    data_frame = controller.OutputDataFrame(page, "penguins_df")
 
     # verify shiny reactive output UI in cell
-    output_txt = OutputTextVerbatim(page, "test_cell_text")
+    output_txt = controller.OutputTextVerbatim(page, "test_cell_text")
     output_txt.expect_value("test_cell_value 0")
-    test_button = InputActionButton(page, "test_cell_button")
+    test_button = controller.InputActionButton(page, "test_cell_button")
     test_button.click()
     output_txt.expect_value("test_cell_value 1")
 

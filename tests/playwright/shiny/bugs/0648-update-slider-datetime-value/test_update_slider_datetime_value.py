@@ -4,7 +4,7 @@ from typing import Optional
 
 from playwright.sync_api import Page, expect
 
-from shiny.playwright.controls import InputActionButton, InputSlider, OutputTextVerbatim
+from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
 
@@ -16,9 +16,9 @@ def test_slider_app(page: Page, local_app: ShinyAppProc) -> None:
         min: tuple[Optional[str], Optional[str]] = (None, None),
         max: tuple[Optional[str], Optional[str]] = (None, None),
     ):
-        slider_times = InputSlider(page, f"{id}-times")
-        btn_reset = InputActionButton(page, f"{id}-reset")
-        out_txt = OutputTextVerbatim(page, f"{id}-txt")
+        slider_times = controller.InputSlider(page, f"{id}-times")
+        btn_reset = controller.InputActionButton(page, f"{id}-reset")
+        out_txt = controller.OutputTextVerbatim(page, f"{id}-txt")
 
         if value[0] is not None:
             out_txt.expect_value(value[0])

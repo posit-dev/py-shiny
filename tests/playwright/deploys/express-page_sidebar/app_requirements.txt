@@ -1,2 +1,2 @@
-git+https://github.com/posit-dev/py-htmltools.git#egg=htmltools
+htmltools
 

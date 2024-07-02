@@ -1,27 +1,33 @@
 from playwright.sync_api import Page
 
-from shiny.playwright.controls import InputActionButton, OutputTextVerbatim
+from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
 
 def expect_row_selection(page: Page, prefix_main: str, prefix_secondary: str):
     # TODO: Karan, add Dataframe helpers methods for selected_rows
 
-    main_txt_rows = OutputTextVerbatim(page, f"{prefix_main}selected_rows")
-    other_txt_rows = OutputTextVerbatim(page, f"{prefix_secondary}selected_rows")
+    main_txt_rows = controller.OutputTextVerbatim(page, f"{prefix_main}selected_rows")
+    other_txt_rows = controller.OutputTextVerbatim(
+        page, f"{prefix_secondary}selected_rows"
+    )
 
-    main_selected_row_count = OutputTextVerbatim(
+    main_selected_row_count = controller.OutputTextVerbatim(
         page, f"{prefix_main}selected_row_count"
     )
-    other_selected_row_count = OutputTextVerbatim(
+    other_selected_row_count = controller.OutputTextVerbatim(
         page, f"{prefix_secondary}selected_row_count"
     )
 
-    main_grid_row_count = OutputTextVerbatim(page, f"{prefix_main}grid_row_count")
-    other_grid_row_count = OutputTextVerbatim(page, f"{prefix_secondary}grid_row_count")
+    main_grid_row_count = controller.OutputTextVerbatim(
+        page, f"{prefix_main}grid_row_count"
+    )
+    other_grid_row_count = controller.OutputTextVerbatim(
+        page, f"{prefix_secondary}grid_row_count"
+    )
 
-    main_select_btn = InputActionButton(page, f"{prefix_main}select")
-    main_clear_btn = InputActionButton(page, f"{prefix_main}clear")
+    main_select_btn = controller.InputActionButton(page, f"{prefix_main}select")
+    main_clear_btn = controller.InputActionButton(page, f"{prefix_main}clear")
 
     main_txt_rows.expect_value("()")
     other_txt_rows.expect_value("()")

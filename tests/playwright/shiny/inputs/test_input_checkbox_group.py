@@ -1,7 +1,7 @@
 from conftest import create_doc_example_core_fixture
 from playwright.sync_api import Page, expect
 
-from shiny.playwright.controls import InputCheckboxGroup
+from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
 app = create_doc_example_core_fixture("input_checkbox_group")
@@ -10,7 +10,7 @@ app = create_doc_example_core_fixture("input_checkbox_group")
 def test_input_checkbox_group_kitchen(page: Page, app: ShinyAppProc) -> None:
     page.goto(app.url)
 
-    colors = InputCheckboxGroup(page, "colors")
+    colors = controller.InputCheckboxGroup(page, "colors")
 
     expect(colors.loc_label).to_have_text("Choose color(s):")
     colors.expect_label("Choose color(s):")

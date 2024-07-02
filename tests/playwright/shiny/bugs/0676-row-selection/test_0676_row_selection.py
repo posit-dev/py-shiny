@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from playwright.sync_api import Page
 
-from shiny.playwright.controls import OutputCode, OutputDataFrame
+from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
 
@@ -12,9 +12,9 @@ def test_row_selection(page: Page, local_app: ShinyAppProc) -> None:
     # The purpose of this test is to make sure that the data grid can work on Pandas
     # data frames that use an index that is not simply 0-based integers.
 
-    grid = OutputDataFrame(page, "grid")
-    detail = OutputDataFrame(page, "detail")
-    selected_rows = OutputCode(page, "selected_rows")
+    grid = controller.OutputDataFrame(page, "grid")
+    detail = controller.OutputDataFrame(page, "detail")
+    selected_rows = controller.OutputCode(page, "selected_rows")
 
     grid.expect_cell("three", row=2, col=0)
     detail.expect_n_row(0)

@@ -7,14 +7,14 @@ from typing import Literal
 from conftest import create_doc_example_core_fixture
 from playwright.sync_api import Page, expect
 
-from shiny.playwright.controls import InputDateRange
+from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
 app = create_doc_example_core_fixture("input_date_range")
 
 
 def expect_date_range(
-    date: InputDateRange,
+    date: controller.InputDateRange,
     start_value: str | Literal["today"] = "today",
     end_value: str | Literal["today"] = "today",
     *,
@@ -52,7 +52,7 @@ def expect_date_range(
 def test_input_date_kitchen(page: Page, app: ShinyAppProc) -> None:
     page.goto(app.url)
 
-    daterange1 = InputDateRange(page, "daterange1")
+    daterange1 = controller.InputDateRange(page, "daterange1")
 
     daterange1.expect_label("Date range:")
     expect(daterange1.loc_label).to_have_text("Date range:")
@@ -62,10 +62,10 @@ def test_input_date_kitchen(page: Page, app: ShinyAppProc) -> None:
     daterange1.set(("2012-02-02", "2012-11-15"))
     expect_date_range(daterange1, "2012-02-02", "2012-11-15")
 
-    expect_date_range(InputDateRange(page, "daterange2"))
+    expect_date_range(controller.InputDateRange(page, "daterange2"))
 
     expect_date_range(
-        InputDateRange(page, "daterange3"),
+        controller.InputDateRange(page, "daterange3"),
         "01/01/01",
         "12/31/10",
         format="mm/dd/yy",
@@ -75,16 +75,16 @@ def test_input_date_kitchen(page: Page, app: ShinyAppProc) -> None:
     )
 
     expect_date_range(
-        InputDateRange(page, "daterange4"),
+        controller.InputDateRange(page, "daterange4"),
         str(datetime.date(2001, 1, 1)),
         str(datetime.date(2010, 12, 31)),
     )
     expect_date_range(
-        InputDateRange(page, "daterange5"),
+        controller.InputDateRange(page, "daterange5"),
         language="de",
         weekstart=1,
     )
     expect_date_range(
-        InputDateRange(page, "daterange6"),
+        controller.InputDateRange(page, "daterange6"),
         startview="decade",
     )

@@ -16,17 +16,17 @@ export function useSort<TData>({
 }): {
   sorting: SortingState;
   setSorting: React.Dispatch<React.SetStateAction<SortingState>>;
-  sortState: { sorting: SortingState };
-  sortingTableOptions: SortingOptions<TData>;
+  sortTableStateOptions: { sorting: SortingState };
+  sortTableOptions: SortingOptions<TData>;
 } {
   const [sorting, setSorting] = useState<SortingState>([]);
 
   return {
     sorting,
-    sortState: {
+    sortTableStateOptions: {
       sorting,
     },
-    sortingTableOptions: {
+    sortTableOptions: {
       onSortingChange: (sortUpdater: Updater<SortingState>) => {
         const newSorting: SortingState =
           typeof sortUpdater === "function"

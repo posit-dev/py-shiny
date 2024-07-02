@@ -3,7 +3,7 @@ import re
 from conftest import create_doc_example_core_fixture
 from playwright.sync_api import Locator, Page, expect
 
-from shiny.playwright.controls import InputTextArea, OutputTextVerbatim
+from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
 app = create_doc_example_core_fixture("input_text_area")
@@ -14,7 +14,7 @@ default_txt = "Data summary\nwith\nmultiple\nlines"
 def test_input_text_area_kitchen(page: Page, app: ShinyAppProc) -> None:
     page.goto(app.url)
 
-    caption = InputTextArea(page, "caption_regular")
+    caption = controller.InputTextArea(page, "caption_regular")
     caption.expect.to_have_value(default_txt)
     expect(caption.loc).to_have_value(default_txt)
 
@@ -37,13 +37,13 @@ def test_input_text_area_kitchen(page: Page, app: ShinyAppProc) -> None:
     caption.expect_spellcheck(None)
     caption.expect_autoresize(False)
 
-    InputTextArea(page, "caption_autoresize").expect_autoresize(True)
+    controller.InputTextArea(page, "caption_autoresize").expect_autoresize(True)
 
 
 def test_input_text_typical(page: Page, app: ShinyAppProc) -> None:
     page.goto(app.url)
 
-    caption = InputTextArea(page, "caption_regular")
+    caption = controller.InputTextArea(page, "caption_regular")
     caption.expect.to_have_value(default_txt)
     caption.set("test value")
     caption.expect.not_to_have_value(default_txt)
@@ -53,10 +53,10 @@ def test_input_text_typical(page: Page, app: ShinyAppProc) -> None:
 def test_input_text_app(page: Page, app: ShinyAppProc) -> None:
     page.goto(app.url)
 
-    caption = InputTextArea(page, "caption_regular")
+    caption = controller.InputTextArea(page, "caption_regular")
     caption.expect.to_have_value(default_txt)
 
-    value = OutputTextVerbatim(page, "value_regular")
+    value = controller.OutputTextVerbatim(page, "value_regular")
     value.expect_value(default_txt)
 
     caption.set("test value")
@@ -78,8 +78,8 @@ def get_box_height(locator: Locator) -> float:
 def test_autoresize(page: Page, app: ShinyAppProc) -> None:
     page.goto(app.url)
 
-    input_area = InputTextArea(page, "caption_autoresize")
-    output_txt_verbatim = OutputTextVerbatim(page, "value_autoresize")
+    input_area = controller.InputTextArea(page, "caption_autoresize")
+    output_txt_verbatim = controller.OutputTextVerbatim(page, "value_autoresize")
     input_area.set("test value")
     # use bounding box approach since height is dynamic
     initial_height = get_box_height(input_area.loc)
