@@ -25,7 +25,7 @@ async def _():
     await chat.append_message(user)
 
 
-"Message state:"
+"chat.messages():"
 
 
 @render.code
@@ -33,6 +33,9 @@ def message_state():
     return str(chat.messages())
 
 
+"chat.messages(transform_assistant=True):"
+
+
 @render.code
 def message_state2():
-    return str(chat.messages(as_client="assistant"))
+    return str(chat.messages(transform_assistant=True))
