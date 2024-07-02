@@ -5,7 +5,6 @@ import pandas as pd
 from palmerpenguins import load_penguins_raw
 
 from shiny import App, Inputs, render, ui
-from shiny.render._data_frame_utils._styles import StyleInfo
 
 # Load the dataset
 penguins = load_penguins_raw()
@@ -43,7 +42,7 @@ df = df.iloc[0:5, 0:6]
 # )
 # df_styles = gt_styles(df_gt)
 
-df_styles: list[StyleInfo] = [
+df_styles: list[render.StyleInfo] = [
     {
         "location": "body",
         "rows": None,
@@ -105,11 +104,11 @@ def server(input: Inputs):
 
         counter = 0
 
-        def df_styles_fn(data: pd.DataFrame) -> list[StyleInfo]:
+        def df_styles_fn(data: pd.DataFrame) -> list[render.StyleInfo]:
             nonlocal counter
             counter = (counter + 1) % len(df_styles)
 
-            ret: list[StyleInfo] = []
+            ret: list[render.StyleInfo] = []
             for style in df_styles:
                 style_val = style.get("style", None)
                 if style_val is None:
