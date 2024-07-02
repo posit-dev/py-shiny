@@ -1709,9 +1709,6 @@ class _MultipleDomItems:
             raise e
 
 
-# TODO-barret; continue from here
-
-
 class _RadioButtonCheckboxGroupBase(_UiWithLabel):
     loc_choice_labels: Locator
 

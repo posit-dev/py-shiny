@@ -1,9 +1,12 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Any, Union
 
 import pandas as pd
 import polars as pl
-import polars.testing
+import polars.testing as pl_testing
 import pytest
 from typing_extensions import TypeAlias
 
@@ -52,21 +55,30 @@ params_frames = [
     pytest.param(pl.DataFrame, id="polars"),
 ]
 
-DataFrameLike: TypeAlias = "pd.DataFrame | pl.DataFrame"
+DataFrameLike: TypeAlias = Union[pd.DataFrame, pl.DataFrame]
+# SeriesLike: TypeAlias = Union[
+#     pd.Series[Any],
+#     pl.Series,
+# ]
 
 
 @pytest.fixture(params=params_frames, scope="function")
-def df(request) -> DataFrameLike:
+def df(request: pytest.FixtureRequest) -> DataFrameLike:
     return request.param(DATA)
 
 
 @pytest.fixture(params=params_frames, scope="function")
-def small_df(request) -> DataFrameLike:
+def small_df(request: pytest.FixtureRequest) -> DataFrameLike:
     return request.param({"x": [1, 2], "y": [3, 4]})
 
 
-def assert_frame_equal(src, target, use_index=False):
+def assert_frame_equal(
+    src: pd.DataFrame | pl.DataFrame,
+    target: pd.DataFrame | pl.DataFrame,
+    use_index: bool = False,
+):
     if isinstance(src, pd.DataFrame):
+        assert isinstance(target, pd.DataFrame)
         if use_index:
             pd.testing.assert_frame_equal(src, target)
         else:
@@ -75,7 +87,8 @@ def assert_frame_equal(src, target, use_index=False):
                 target.reset_index(drop=True),
             )
     elif isinstance(src, pl.DataFrame):
-        pl.testing.assert_frame_equal(src, target)
+        assert isinstance(target, pl.DataFrame)
+        pl_testing.assert_frame_equal(src, target)
     else:
         raise NotImplementedError(f"Unsupported data type: {type(src)}")
 
@@ -83,7 +96,7 @@ def assert_frame_equal(src, target, use_index=False):
 # TODO: explicitly pass dtype= when doing Series construction
 @pytest.mark.parametrize(
     "ser, res_type",
-    [
+    [  # pyright: ignore[reportUnknownArgumentType] # We are explicitly setting some values to `unkown`
         # polars ----
         (pl.Series([1]), "numeric"),
         (pl.Series([1.1]), "numeric"),
@@ -106,11 +119,17 @@ def assert_frame_equal(src, target, use_index=False):
         (pd.Series([HTML("yo")]), "html"),
     ],
 )
-def test_serialize_dtype(ser, res_type):
+def test_serialize_dtype(
+    ser: Union[
+        "pd.Series[Any]",
+        pl.Series,
+    ],
+    res_type: str,
+):
     assert serialize_dtype(ser)["type"] == res_type
 
 
-def test_serialize_frame(df):
+def test_serialize_frame(df: DataFrameLike):
     # TODO: pandas converts datetime entries to int, but Polars
     # preserves the datetime object.
     if isinstance(df, pl.DataFrame):
@@ -136,7 +155,7 @@ def test_serialize_frame(df):
     }
 
 
-def test_subset_frame(df):
+def test_subset_frame(df: DataFrameLike):
     # TODO: this assumes subset_frame doesn't reset index
     res = subset_frame(df, [1], ["chr", "num"])
     dst = df.__class__({"chr": ["b"], "num": [2]})
@@ -144,28 +163,28 @@ def test_subset_frame(df):
     assert_frame_equal(res, dst)
 
 
-def test_get_frame_cell(df):
+def test_get_frame_cell(df: DataFrameLike):
     assert get_frame_cell(df, 1, 1) == "b"
 
 
-def test_copy_frame(df):
+def test_copy_frame(df: DataFrameLike):
     new_df = copy_frame(df)
 
     assert new_df is not df
 
 
-def test_subset_frame_rows_single(small_df):
+def test_subset_frame_rows_single(small_df: DataFrameLike):
     res = subset_frame(small_df, [1])
 
     assert_frame_equal(res, small_df.__class__({"x": [2], "y": [4]}))
 
 
-def test_subset_frame_cols_single(small_df):
+def test_subset_frame_cols_single(small_df: DataFrameLike):
     # TODO: include test of polars
     res = subset_frame(small_df, cols=["y"])
 
     assert_frame_equal(res, small_df.__class__({"y": [3, 4]}))
 
 
-def test_shape(small_df):
+def test_shape(small_df: DataFrameLike):
     assert shape(small_df) == (2, 2)

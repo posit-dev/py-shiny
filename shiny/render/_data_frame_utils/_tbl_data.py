@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, Union
 
 # from ...types import Jsonifiable
 from ._databackend import AbstractBackend
+from ._types import ColsList, FrameDtype, FrameJson, RowsList
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -18,8 +19,6 @@ if TYPE_CHECKING:
 
     SeriesLike = Union[PdSeries, PlSeries]
     DataFrameLike = Union[PdDataFrame, PlDataFrame]
-
-    from ._types import ColsList, FrameDtype, FrameJson, RowsList
 
 else:
 
