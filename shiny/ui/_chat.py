@@ -312,15 +312,21 @@ class Chat:
         self,
         *,
         token_limits: tuple[int, int] | None = (4096, 1000),
-        as_client: Literal[False, "user", "assistant", True] = False,
+        transform_user: Literal["all", "last", "none"] = "all",
+        transform_assistant: bool = False,
     ) -> tuple[ChatMessage, ...]:
         """
         Reactively read chat messages
 
-        Obtain the current chat history within a reactive context. Messages are listed
-        in the order they were added. As a result, when this method is called in a
-        `.on_user_submit()` callback (as it most often is), the last message will be the
-        most recent one submitted by the user.
+        Obtain chat messages within a reactive context. The default behavior is
+        intended for passing messages along to a model for response generation where
+        you typically want to:
+
+        1. Cap the number of tokens sent in a single request (i.e., `token_limits`).
+        2. Apply user input transformations (i.e., `transform_user`), if any.
+        3. Not apply assistant response transformations (i.e., `transform_assistant`)
+           since these are predominantly for display purposes (i.e., the model shouldn't
+           concern itself with how the responses are displayed).
 
         Parameters
         ----------
@@ -329,16 +335,21 @@ class Chat:
             that can be sent to the model in a single request. The second integer is the
             amount of tokens to reserve for the model's response.
             Can also be `None` to disable message trimming based on token counts.
-        as_client
-            Whether to return messages as they appear in the client (UI). This only
-            matters if `transform_user_input` or `transform_assistant_response` is
-            provided. The default, `False`, gives post-transformed user messages and
-            pre-transformed assistant messages, which is often the desired format for
-            response generation. If `True`, pre-transformed user messages and
-            post-transformed assistant messages are returned (i.e., the client
-            representation). If `"user"` or `"assistant"`, messages for the respective
-            role are returned in "client representation".
+        transform_user
+            Whether to return user input messages with transformation applied. This only
+            matters if a `transform_user_input` was provided to the chat constructor.
+            This should be `True` when passing the messages to a model for response
+            generation, but `False` when you need (to save) the original user input.
+        transform_assistant
+            Whether to return assistant messages with transformation applied. This only
+            matters if an `transform_assistant_response` was provided to the chat
+            constructor.
 
+        Note
+        ----
+        Messages are listed in the order they were added. As a result, when this method
+        is called in a `.on_user_submit()` callback (as it most often is), the last
+        message will be the most recent one submitted by the user.
 
         Returns
         -------
@@ -348,17 +359,16 @@ class Chat:
         messages = self._get_trimmed_messages(token_limits=token_limits)
 
         res: list[ChatMessage] = []
-        for m in messages:
-            content = m["content_server"]
-
-            if as_client is True:
-                content = m["content_client"]
-            elif as_client == "user" and m["role"] == "user":
-                content = m["content_client"]
-            elif as_client == "assistant" and m["role"] == "assistant":
-                content = m["content_client"]
-
-            res.append(ChatMessage(content=content, role=m["role"]))
+        for i, m in enumerate(messages):
+            transform = False
+            if m["role"] == "assistant":
+                transform = transform_assistant
+            elif m["role"] == "user":
+                transform = transform_user == "all" or (
+                    transform_user == "last" and i == len(messages) - 1
+                )
+            content_key = m["transform_key" if transform else "pre_transform_key"]
+            res.append(ChatMessage(content=m[content_key], role=m["role"]))
 
         return tuple(res)
 
@@ -643,23 +653,17 @@ class Chat:
         chunk_content: str | None = None,
     ) -> TransformedMessage | None:
 
-        res: TransformedMessage = {
-            "content_client": message["content"],
-            "content_server": message["content"],
-            "content_transformed": False,
-            "role": message["role"],
-        }
+        res = as_transformed_message(message)
+        key = res["transform_key"]
 
         if message["role"] == "user" and self._transform_user is not None:
-            res["content_transformed"] = True
             content = await self._transform_user(message["content"])
             if content is None:
                 return None
-            res["content_server"] = content
+            res[key] = content
 
         elif message["role"] == "assistant" and self._transform_assistant is not None:
-            res["content_transformed"] = True
-            res["content_client"] = await self._transform_assistant(
+            res[key] = await self._transform_assistant(
                 message["content"],
                 chunk_content or "",
                 chunk == "end" or chunk is False,
@@ -737,7 +741,7 @@ class Chat:
 
         return tuple(messages2)
 
-    def user_input(self, transform: bool = True) -> str | None:
+    def user_input(self, transform: bool = False) -> str | None:
         """
         Reactively read the user's message.
 
@@ -887,11 +891,19 @@ def _express_is_active() -> bool:
 
 
 def as_transformed_message(message: ChatMessage) -> TransformedMessage:
+    if message["role"] == "user":
+        transform_key = "content_server"
+        pre_transform_key = "content_client"
+    else:
+        transform_key = "content_client"
+        pre_transform_key = "content_server"
+
     return TransformedMessage(
         content_client=message["content"],
         content_server=message["content"],
-        content_transformed=False,
         role=message["role"],
+        transform_key=transform_key,
+        pre_transform_key=pre_transform_key,
     )
 
 

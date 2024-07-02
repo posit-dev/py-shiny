@@ -16,8 +16,9 @@ class ChatMessage(TypedDict):
 class TransformedMessage(TypedDict):
     content_client: str
     content_server: str
-    content_transformed: bool
     role: Role
+    transform_key: Literal["content_client", "content_server"]
+    pre_transform_key: Literal["content_client", "content_server"]
 
 
 # A message that has been stored in the server-side chat history
