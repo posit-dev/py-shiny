@@ -1,3 +1,5 @@
+import { StyleInfo } from "./style-info";
+
 export type ValueOf<T> = T[keyof T];
 
 export const EditModeEnum = {
@@ -31,6 +33,7 @@ export interface PandasData<TIndex> {
   options: DataGridOptions;
   typeHints?: ReadonlyArray<TypeHint>;
   editable?: boolean;
+  styles: StyleInfo[];
 }
 
 export interface PatchInfo {

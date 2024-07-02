@@ -1,5 +1,4 @@
 import { ColumnDef, RowModel, flexRender } from "@tanstack/react-table";
-import { VirtualItem } from "@tanstack/react-virtual";
 import { Cell } from "@tanstack/table-core";
 import React, {
   FC,
@@ -15,6 +14,7 @@ import React, {
 import { CellEdit, SetCellEditMapAtLoc } from "./cell-edit-map";
 import { updateCellsData } from "./data-update";
 import { SelectionSet } from "./selection";
+import { CellStyle } from "./style-info";
 import type { PatchInfo } from "./types";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -82,6 +82,7 @@ interface TableBodyCellProps {
   getSortedRowModel: () => RowModel<unknown[]>;
   setData: (fn: (draft: unknown[][]) => void) => void;
   cellEditInfo: CellEdit | undefined;
+  cellStyle: CellStyle | undefined;
   setCellEditMapAtLoc: SetCellEditMapAtLoc;
   selection: SelectionSet<string, HTMLTableRowElement>;
 }
@@ -98,6 +99,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
   editCellsIsAllowed,
   getSortedRowModel,
   cellEditInfo,
+  cellStyle,
   setData,
   setCellEditMapAtLoc,
   selection,
@@ -487,6 +489,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
       onDoubleClick={onCellDoubleClick}
       title={cellTitle}
       className={tableCellClass}
+      style={{ ...cellStyle }}
     >
       {editContent}
       {content}

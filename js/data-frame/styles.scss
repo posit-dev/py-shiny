@@ -30,6 +30,8 @@ shiny-data-frame {
     var(--shiny-datagrid-grid-body-selected-bgcolor)
   );
 
+  --shiny-datagrid-table-cell-edit-background-color: var(--bs-body-bg);
+
   // 2024-03-01: Greg: Do not use warning or info bs colors! Their contrast on white is not enough
   // Saved cells
   --shiny-datagrid-table-cell-edit-success-border-color: color-mix(in srgb, var(--bs-success) 20%, transparent);
@@ -305,6 +307,7 @@ shiny-data-frame .shiny-data-grid > table > tbody > tr > td.cell-edit-editing {
     padding: var(--shiny-datagrid-padding);
     // We could use `inset: 0px`, but firefox doesn't render it properly.
     // Instead, use top, left, width, height
+    background-color: var(--shiny-datagrid-table-cell-edit-background-color);
     top: 0;
     left: 0;
     width: 100%;
@@ -312,7 +315,7 @@ shiny-data-frame .shiny-data-grid > table > tbody > tr > td.cell-edit-editing {
 
     border: none;
 
-    background-color: inherit;
+    // background-color: inherit;
     // overflow: hidden;
     resize: none;
   }
