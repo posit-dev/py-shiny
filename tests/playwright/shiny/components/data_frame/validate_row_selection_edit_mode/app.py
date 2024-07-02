@@ -4,7 +4,7 @@ from shiny import App, Inputs, Outputs, Session, render, ui
 
 df = load_penguins_raw()
 
-df["Species"] = df["Species"].apply(lambda x: ui.HTML(f"<u>{x}</u>"))  # type: ignore
+df["Species"] = df["Species"].apply(lambda x: ui.HTML(f"<u>{x}</u>"))  # pyright: ignore
 
 
 app_ui = ui.page_fluid(

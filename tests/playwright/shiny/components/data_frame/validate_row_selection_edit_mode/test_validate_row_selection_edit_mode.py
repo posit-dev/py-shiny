@@ -27,7 +27,7 @@ def test_validate_row_selection_in_edit_mode(
     page.keyboard.press("Escape")
     data_frame.expect_row_focus_state(False, row=1)
 
-    # TODO-karan-test; Enable rows selection and editable.
+    # Enable rows selection and editable.
     # Select (and verify) a row. Edit a cell content in that row.
     # Click a cell in another row. Verify the new row is selected and focused.
     # Verify the old row is not selected. Verify the old row cell value was updated.
@@ -40,7 +40,7 @@ def test_validate_row_selection_in_edit_mode(
     data_frame.expect_row_focus_state(False, row=1)
     data_frame.expect_cell("N2A2", row=1, col=6)
 
-    # TODO-karan-test; Enable rows selection and editable.
+    # Enable rows selection and editable.
     # Select (and verify) a row. Hit enter to edit the first cell in that row.
     # Hit escape key. Verify the same row is focused.
     # Scroll right and display an html column in the left part of the view.
@@ -57,7 +57,7 @@ def test_validate_row_selection_in_edit_mode(
     page.keyboard.press("Enter")
     data_frame.expect_class_state("editing", row=1, col=0)
 
-    # TODO-karan-test; Click outside the table/Press Escape to exit row focus.
+    # Click outside the table/Press Escape to exit row focus.
     # Tab to the column name, hit enter. Verify the table becomes sorted.
     # Tab to an HTML column name, hit enter. Verify the sort does not update.
     page.keyboard.press("Escape")
