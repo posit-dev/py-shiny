@@ -33,7 +33,15 @@ def main() -> None:
 
 stop_shortcut = "Ctrl+C"
 
-RELOAD_INCLUDES_DEFAULT = ("*.py", "*.css", "*.js", "*.htm", "*.html", "*.png")
+RELOAD_INCLUDES_DEFAULT = (
+    "*.py",
+    "*.css",
+    "*.scss",
+    "*.js",
+    "*.htm",
+    "*.html",
+    "*.png",
+)
 RELOAD_EXCLUDES_DEFAULT = (".*", "*.py[cod]", "__pycache__", "env", "venv")
 
 

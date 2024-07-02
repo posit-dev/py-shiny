@@ -158,6 +158,7 @@ from ._sidebar import (
     sidebar,
     update_sidebar,
 )
+from ._theme import Theme
 from ._tooltip import tooltip
 from ._utils import js_eval
 from ._valuebox import (
@@ -327,6 +328,8 @@ __all__ = (
     "showcase_top_right",
     "ValueBoxTheme",
     "ShowcaseLayout",
+    # _theme
+    "Theme",
     # _tooltip
     "tooltip",
     # _progress

@@ -5707,7 +5707,7 @@ class OutputDataFrame(_UiWithContainer):
             page,
             id=id,
             loc_container=f"#{id}.html-fill-item",
-            loc="> div > div.shiny-data-grid-grid",
+            loc="> div > div.shiny-data-grid",
         )
         self.loc_head = self.loc.locator("> table > thead")
         self.loc_body = self.loc.locator("> table > tbody")

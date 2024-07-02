@@ -16,14 +16,12 @@ import {
 import { Virtualizer, useVirtualizer } from "@tanstack/react-virtual";
 import React, {
   FC,
-  ReactElement,
   StrictMode,
   useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
-  useState,
 } from "react";
 import { Root, createRoot } from "react-dom/client";
 import { ErrorsMessageValue } from "rstudio-shiny/srcts/types/src/shiny/shinyapp";
@@ -36,12 +34,13 @@ import type { CellSelection, SelectionModesProp } from "./selection";
 import { SelectionModes, initSelectionModes, useSelection } from "./selection";
 import { SortingState, useSort } from "./sort";
 import { SortArrow } from "./sort-arrows";
+import { StyleInfo, getCellStyle, useStyleInfoMap } from "./style-info";
 import css from "./styles.scss";
 import { useTabindexGroup } from "./tabindex-group";
 import { useSummary } from "./table-summary";
-import { EditModeEnum, PandasData, PatchInfo, TypeHint } from "./types";
+import { PandasData, PatchInfo, TypeHint } from "./types";
 
-// TODO-barret set selected cell as input! (Might be a followup?)
+// TODO-barret-future set selected cell as input! (Might be a followup?)
 
 // TODO-barret; Type support
 // export interface PandasData<TIndex> {
@@ -109,7 +108,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
   const {
     columns,
     typeHints,
-    data: rowData,
+    data: tableDataProp,
     options: payloadOptions,
   } = payload;
   const { width, height, fill, filters: withFilters } = payloadOptions;
@@ -118,10 +117,42 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
   const theadRef = useRef<HTMLTableSectionElement>(null);
   const tbodyRef = useRef<HTMLTableSectionElement>(null);
 
-  const { cellEditMap, setCellEditMapAtLoc } = useCellEditMap();
+  const _useStyleInfo = useStyleInfoMap({
+    initStyleInfos: payloadOptions["styles"],
+    nrow: tableDataProp.length,
+    ncol: columns.length,
+  });
+  /**
+   * Contains all style information for the full table.
+   *
+   * Currently only the "data" location is supported.
+   */
+  const styleInfoMap = _useStyleInfo.styleInfoMap;
+  const { resetStyleInfos, setStyleInfos } = _useStyleInfo;
 
+  const _cellEditMap = useCellEditMap();
+  /**
+   * Contains all cell state and edit information
+   *
+   * If a cell's state is not in this map, it is assumed to be in the default display state.
+   */
+  const cellEditMap = _cellEditMap.cellEditMap;
+  /**
+   * Set a cell's state or edit value in the `cellEditMap`
+   */
+  const setCellEditMapAtLoc = _cellEditMap.setCellEditMapAtLoc;
+
+  /**
+   * Determines if the user is allowed to edit cells in the table.
+   */
   const editCellsIsAllowed = payloadOptions["editable"] === true;
+  ("Barret");
 
+  /**
+   * Determines if any cell is currently being edited
+   *
+   * This is currently being used to prevent row selection when a cell is being edited.
+   */
   const isEditingCell = useMemo<boolean>(() => {
     for (const cellEdit of cellEditMap.values()) {
       if (cellEdit.isEditing) {
@@ -131,6 +162,9 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
     return false;
   }, [cellEditMap]);
 
+  /**
+   * Column definitions for the table
+   */
   const coldefs = useMemo<ColumnDef<unknown[], unknown>[]>(
     () =>
       columns.map((colname, colIndex) => {
@@ -179,16 +213,30 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
   // }
   // const [autoResetPageIndex, skipAutoResetPageIndex] = useSkipper();
 
-  const dataOriginal = useMemo(() => rowData, [rowData]);
-  const [dataState, setData] = useImmer(rowData);
+  /**
+   * Copy of the original data
+   */
+  const dataOriginal = useMemo(() => tableDataProp, [tableDataProp]);
+
+  const _tableData = useImmer(tableDataProp);
+  /** Up-to-date data for the table */
+  const tableData = _tableData[0];
+  /** Function to update the data in the table */
+  const setTableData = _tableData[1];
 
   const getColDefs = (): ColumnDef<unknown[], unknown>[] => {
     return coldefs;
   };
 
-  const { sorting, sortState, sortingTableOptions, setSorting } = useSort({
-    getColDefs,
-  });
+  const _sort = useSort({ getColDefs });
+  /** Sorting state of the table */
+  const sorting = _sort.sorting;
+  /** Table options specific for sorting */
+  const sortTableStateOptions = _sort.sortTableStateOptions;
+  /** Sorting state of the table */
+  const sortTableOptions = _sort.sortTableOptions;
+  /** Set the sorting state of the table */
+  const setSorting = _sort.setSorting;
 
   const {
     columnFilters,
@@ -198,14 +246,14 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
   } = useFilters<unknown[]>(withFilters);
 
   const options: TableOptions<unknown[]> = {
-    data: dataState,
+    data: tableData,
     columns: coldefs,
     state: {
-      ...sortState,
+      ...sortTableStateOptions,
       ...columnFiltersState,
     },
     getCoreRowModel: getCoreRowModel(),
-    ...sortingTableOptions,
+    ...sortTableOptions,
     ...filtersTableOptions,
     // debugAll: true,
     // Provide our updateCellsData function to our table meta
@@ -366,7 +414,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
         handleCellSelection as EventListener
       );
     };
-  }, [id, selection, rowData]);
+  }, [id, selection, tableData]);
 
   useEffect(() => {
     const handleColumnSort = (
@@ -435,6 +483,28 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
       );
     };
   }, [columns, id, setColumnFilters]);
+
+  useEffect(() => {
+    const handleStyles = (event: CustomEvent<{ styles: StyleInfo[] }>) => {
+      const styles = event.detail.styles;
+      resetStyleInfos();
+      setStyleInfos(styles);
+    };
+
+    if (!id) return;
+
+    const element = document.getElementById(id);
+    if (!element) return;
+
+    element.addEventListener("updateStyles", handleStyles as EventListener);
+
+    return () => {
+      element.removeEventListener(
+        "updateStyles",
+        handleStyles as EventListener
+      );
+    };
+  }, [setStyleInfos]);
 
   useEffect(() => {
     if (!id) return;
@@ -569,7 +639,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
   const headerRowCount = table.getHeaderGroups().length;
 
   // Assume we're scrolling until proven otherwise
-  let scrollingClass = rowData.length > 0 ? "scrolling" : "";
+  let scrollingClass = tableData.length > 0 ? "scrolling" : "";
   const scrollHeight = containerRef.current?.scrollHeight;
   const clientHeight = containerRef.current?.clientHeight;
   if (scrollHeight && clientHeight && scrollHeight <= clientHeight) {
@@ -601,7 +671,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
       >
         <table
           className={tableClass + (withFilters ? " filtering" : "")}
-          aria-rowcount={dataState.length}
+          aria-rowcount={tableData.length}
           aria-multiselectable={canMultiRowSelect}
           style={{
             width: width === null || width === "auto" ? undefined : "100%",
@@ -693,6 +763,12 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
                         rowIndex,
                         columnIndex
                       );
+                      const cellStyle = getCellStyle(
+                        styleInfoMap,
+                        "body",
+                        rowIndex,
+                        columnIndex
+                      );
 
                       return (
                         <TableBodyCell
@@ -708,7 +784,8 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
                           columnIndex={columnIndex}
                           getSortedRowModel={table.getSortedRowModel}
                           cellEditInfo={cellEditInfo}
-                          setData={setData}
+                          cellStyle={cellStyle}
+                          setData={setTableData}
                           setCellEditMapAtLoc={setCellEditMapAtLoc}
                           selection={selection}
                         ></TableBodyCell>
