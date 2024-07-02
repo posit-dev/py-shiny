@@ -21,7 +21,7 @@ def transform(content: str) -> str:
 
 @chat.on_user_submit
 async def _():
-    user = await chat.get_user_input()
+    user = chat.get_user_input()
     await chat.append_message(user)
 
 

@@ -151,6 +151,10 @@ class Chat:
                 ()
             )
 
+            self._latest_user_input: reactive.Value[StoredMessage | None] = (
+                reactive.Value(None)
+            )
+
             # Initialize the chat with the provided messages
             for msg in messages:
                 _utils.run_coro_sync(self.append_message(msg))
@@ -695,7 +699,10 @@ class Chat:
 
         messages = list(messages)
         messages.insert(index, msg)
+
         self._messages.set(tuple(messages))
+        if msg["role"] == "user":
+            self._latest_user_input.set(msg)
 
         return msg
 
@@ -729,8 +736,7 @@ class Chat:
 
         return tuple(messages2)
 
-    # TODO: Barret; can we make this sync?
-    async def get_user_input(self, transform: bool = True) -> str | None:
+    def get_user_input(self, transform: bool = True) -> str | None:
         """
         Reactively read the user's message.
 
@@ -753,11 +759,11 @@ class Chat:
           2. Maintaining message state separately from `.get_messages()`.
 
         """
-        val = self._get_user_input()
-        if transform and self._transform_user is not None:
-            return await self._transform_user(val)
-        else:
-            return val
+        msg = self._latest_user_input()
+        if msg is None:
+            return None
+        key = "content_server" if transform else "content_client"
+        return msg[key]
 
     def _get_user_input(self) -> str:
         id = self.user_input_id
