@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, Dict, List, Literal, Tuple, Union
+from typing import TYPE_CHECKING, Callable, List
 
-from ..._typing_extensions import NotRequired, Required, TypedDict
-from ...types import Jsonifiable, ListOrTuple
+from ...types import ListOrTuple
+from ._types import BrowserStyleInfo, StyleInfo
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -16,53 +16,13 @@ else:
     StyleFn = Callable
     DataFrameValue = object
 
-# great_tables's StyleInfo
-# @dataclass(frozen=True)
-# class StyleInfo:
-#     locname: str
-#     locnum: int
-#     grpname: str | None = None
-#     colname: str | None = None
-#     rownum: int | None = None
-#     colnum: int | None = None
-#     styles: list[CellStyle] = field(default_factory=list)
-
-
-# https://typing.readthedocs.io/en/latest/spec/typeddict.html#alternative-syntax
-# Use alternative syntax for TypedDict to avoid key error with `class`:
-StyleInfoBody = TypedDict(
-    "StyleInfoBody",
-    {
-        "location": Required[Literal["body"]],
-        "rows": NotRequired[Union[int, ListOrTuple[int], ListOrTuple[bool], None]],
-        "cols": NotRequired[
-            Union[str, int, ListOrTuple[str], ListOrTuple[int], ListOrTuple[bool], None]
-        ],
-        "style": NotRequired[Union[Dict[str, Jsonifiable], None]],
-        "class": NotRequired[Union[str, None]],
-    },
-)
-StyleInfo = StyleInfoBody
-
-BrowserStyleInfoBody = TypedDict(
-    "BrowserStyleInfoBody",
-    {
-        "location": Required[Literal["body"]],
-        "rows": Required[Union[Tuple[int, ...], None]],
-        "cols": Required[Union[Tuple[int, ...], None]],
-        "style": Required[Union[Dict[str, Jsonifiable], None]],
-        "class": Required[Union[str, None]],
-    },
-)
-BrowserStyleInfo = BrowserStyleInfoBody
-
 
 def style_info_to_browser_style_info(
     info: StyleInfo,
     *,
     nrow: int,
     browser_column_names: ListOrTuple[str],
-) -> BrowserStyleInfo:
+) -> BrowserStyleInfo | None:
     if not isinstance(info, dict):
         raise TypeError("`StyleInfo` objects must be a dictionary. Received: ", info)
 
@@ -86,7 +46,7 @@ def style_info_to_browser_style_info(
         assert isinstance(class_, str), "`StyleInfo` `class` value must be a string"
 
     if style is None and class_ is None:
-        raise ValueError("`StyleInfo` objects must at least have `style` or `class`")
+        return None
 
     return {
         "location": location,
@@ -239,7 +199,8 @@ def as_browser_style_infos(
     if not isinstance(style_infos, list):
         style_infos = [style_infos]
     nrow = data.shape[0]
-    return [
+
+    browser_infos = [
         style_info_to_browser_style_info(
             info,
             nrow=nrow,
@@ -247,3 +208,4 @@ def as_browser_style_infos(
         )
         for info in style_infos
     ]
+    return [browser_info for browser_info in browser_infos if browser_info is not None]

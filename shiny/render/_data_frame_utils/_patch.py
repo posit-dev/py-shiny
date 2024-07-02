@@ -7,7 +7,7 @@ from typing import Protocol, Sequence, cast
 from htmltools import TagNode
 
 from ..._typing_extensions import TypedDict
-from ..renderer._utils import JsonifiableDict
+from ...types import JsonifiableDict
 from ._datagridtable import CellHtml
 
 # CellValue = str | TagList | Tag | HTML

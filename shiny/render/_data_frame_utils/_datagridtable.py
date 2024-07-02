@@ -6,7 +6,6 @@ import json
 # TODO-barret-future; make DataTable and DataGrid generic? By currently accepting `object`, it is difficult to capture the generic type of the data.
 from typing import (
     TYPE_CHECKING,
-    Any,
     Literal,
     Protocol,
     TypeVar,
@@ -29,6 +28,7 @@ from ._selection import (
     as_selection_modes,
 )
 from ._styles import StyleFn, StyleInfo, as_browser_style_infos, as_style_infos
+from ._types import FrameJson
 from ._unsafe import is_shiny_html, serialize_numpy_dtypes
 
 if TYPE_CHECKING:
@@ -54,7 +54,7 @@ else:
 
 class AbstractTabularData(abc.ABC):
     @abc.abstractmethod
-    def to_payload(self) -> dict[str, Jsonifiable]: ...
+    def to_payload(self) -> FrameJson: ...
 
 
 @add_example(ex_dir="../../api-examples/data_frame")
@@ -161,22 +161,23 @@ class DataGrid(AbstractTabularData):
         )
         self.styles = as_style_infos(styles)
 
-    def to_payload(self) -> dict[str, Jsonifiable]:
-        res = serialize_pandas_df(self.data)
-
-        res["options"] = dict(
-            width=self.width,
-            height=self.height,
-            summary=self.summary,
-            filters=self.filters,
-            editable=self.editable,
-            style="grid",
-            fill=self.height is None,
-            styles=as_browser_style_infos(
-                self.styles,
-                data=self.data,
-            ),
-        )
+    def to_payload(self) -> FrameJson:
+        res: FrameJson = {
+            **serialize_pandas_df(self.data),
+            "options": {
+                "width": self.width,
+                "height": self.height,
+                "summary": self.summary,
+                "filters": self.filters,
+                "editable": self.editable,
+                "style": "grid",
+                "fill": self.height is None,
+                "styles": as_browser_style_infos(
+                    self.styles,
+                    data=self.data,
+                ),
+            },
+        }
         return res
 
 
@@ -283,24 +284,26 @@ class DataTable(AbstractTabularData):
         )
         self.styles = as_style_infos(styles)
 
-    def to_payload(self) -> dict[str, Jsonifiable]:
-        res = serialize_pandas_df(self.data)
-        res["options"] = dict(
-            width=self.width,
-            height=self.height,
-            summary=self.summary,
-            filters=self.filters,
-            editable=self.editable,
-            style="table",
-            styles=as_browser_style_infos(
-                self.styles,
-                data=self.data,
-            ),
-        )
+    def to_payload(self) -> FrameJson:
+        res: FrameJson = {
+            **serialize_pandas_df(self.data),
+            "options": {
+                "width": self.width,
+                "height": self.height,
+                "summary": self.summary,
+                "filters": self.filters,
+                "editable": self.editable,
+                "style": "table",
+                "styles": as_browser_style_infos(
+                    self.styles,
+                    data=self.data,
+                ),
+            },
+        }
         return res
 
 
-def serialize_pandas_df(df: "pd.DataFrame") -> dict[str, Any]:
+def serialize_pandas_df(df: "pd.DataFrame") -> FrameJson:
 
     columns = df.columns.tolist()
     columns_set = set(columns)

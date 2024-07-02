@@ -7,7 +7,8 @@ from typing import TYPE_CHECKING, Literal, Set, Union, cast
 
 from ..._deprecated import warn_deprecated
 from ..._typing_extensions import TypedDict
-from ...types import Jsonifiable, ListOrTuple
+from ...types import ListOrTuple
+from ._types import FrameRenderSelectionModes
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -39,7 +40,7 @@ class SelectionModes:
     col: Literal["none", "single", "multiple"]
     rect: Literal["none", "cell", "region"]
 
-    def as_dict(self) -> dict[str, Jsonifiable]:
+    def as_dict(self) -> FrameRenderSelectionModes:
         return {
             "row": self.row,
             "col": self.col,

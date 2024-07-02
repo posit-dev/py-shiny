@@ -356,5 +356,7 @@ Jsonifiable = Union[
     None,
     List["Jsonifiable"],
     Tuple["Jsonifiable"],
-    Dict[str, "Jsonifiable"],
+    "JsonifiableDict",
 ]
+
+JsonifiableDict = Dict[str, Jsonifiable]

@@ -20,8 +20,12 @@ def _load_class(mod_name: str, cls_name: str):
 
 class _AbstractBackendMeta(ABCMeta):
     def register_backend(cls, mod_name: str, cls_name: str):
-        cls._backends.append((mod_name, cls_name))
-        cls._abc_caches_clear()
+        cls._backends.append(  # pyright: ignore[reportGeneralTypeIssues, reportAttributeAccessIssue]
+            (mod_name, cls_name)
+        )
+
+        # """Clear the caches (for debugging or testing)"""
+        cls._abc_caches_clear()  # pyright: ignore[reportGeneralTypeIssues,reportAttributeAccessIssue]
 
 
 class AbstractBackend(metaclass=_AbstractBackendMeta):
@@ -31,7 +35,7 @@ class AbstractBackend(metaclass=_AbstractBackendMeta):
             cls._backends = []
 
     @classmethod
-    def __subclasshook__(cls, subclass):
+    def __subclasshook__(cls, subclass: type):
         for mod_name, cls_name in cls._backends:
             if mod_name not in sys.modules:
                 # module isn't loaded, so it can't be the subclass

@@ -6,12 +6,13 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal, Protocol, Union, runtime_checkable
+from typing import TYPE_CHECKING, Any
 
 from htmltools import HTML, MetadataNode, Tagifiable
 
-from ..._typing_extensions import TypedDict, TypeGuard
+from ..._typing_extensions import TypeGuard
 from ._tbl_data import PdDataFrame, SeriesLike
+from ._types import FrameDtype, ReprHtml
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -25,22 +26,7 @@ if TYPE_CHECKING:
 # pyrigth: reportMissingParameterType=false
 
 
-class DataFrameDtypeSubset(TypedDict):
-    type: Literal["numeric", "string", "html", "datetime", "timedelta", "unknown"]
-
-
-class DataFrameDtypeCategories(TypedDict):
-    type: Literal["categorical"]
-    categories: list[str]
-
-
-DataFrameDtype = Union[
-    DataFrameDtypeSubset,
-    DataFrameDtypeCategories,
-]
-
-
-def serialize_numpy_dtypes(df: PdDataFrame) -> list[DataFrameDtype]:
+def serialize_numpy_dtypes(df: PdDataFrame) -> list[FrameDtype]:
     return [serialize_numpy_dtype(col) for _, col in df.items()]
 
 
@@ -48,9 +34,15 @@ def col_contains_shiny_html(col: SeriesLike) -> bool:
     return any(is_shiny_html(val) for _, val in enumerate(col))
 
 
+# TODO-barret-test; Add test to assert the union type of `TagNode` contains `str` and (HTML | Tagifiable | MetadataNode | ReprHtml). Until a `is tag renderable` method is available in htmltools, we need to check for these types manually and must stay in sync with the `TagNode` union type.
+# TODO-barret-future; Use `TypeIs[HTML | Tagifiable | MetadataNode | ReprHtml]` when it is available from typing_extensions
+def is_shiny_html(val: Any) -> TypeGuard[HTML | Tagifiable | MetadataNode | ReprHtml]:
+    return isinstance(val, (HTML, Tagifiable, MetadataNode, ReprHtml))
+
+
 def serialize_numpy_dtype(
     col: "pd.Series[Any]",
-) -> DataFrameDtype:
+) -> FrameDtype:
     import pandas as pd
 
     t = pd.api.types.infer_dtype(col)
@@ -82,19 +74,3 @@ def serialize_numpy_dtype(
             t = "unknown"
 
     return {"type": t}
-
-
-# TODO-future; Replace this class with `htmltools.ReprHtml` when it is publically available. Even better... there should be a "is tag-like" method in htmltools that determines if the object could be enhanced by rendering
-@runtime_checkable
-class ReprHtml(Protocol):
-    """
-    Objects with a `_repr_html_()` method.
-    """
-
-    def _repr_html_(self) -> str: ...
-
-
-# TODO-barret-test; Add test to assert the union type of `TagNode` contains `str` and (HTML | Tagifiable | MetadataNode | ReprHtml). Until a `is tag renderable` method is available in htmltools, we need to check for these types manually and must stay in sync with the `TagNode` union type.
-# TODO-barret-future; Use `TypeIs[HTML | Tagifiable | MetadataNode | ReprHtml]` when it is available from typing_extensions
-def is_shiny_html(val: Any) -> TypeGuard[HTML | Tagifiable | MetadataNode | ReprHtml]:
-    return isinstance(val, (HTML, Tagifiable, MetadataNode, ReprHtml))

@@ -2,17 +2,14 @@ from __future__ import annotations
 
 from abc import ABC
 from functools import singledispatch
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Any, Union
 
-from typing_extensions import TypeAlias, TypedDict
-
+# from ...types import Jsonifiable
 from ._databackend import AbstractBackend
 
 if TYPE_CHECKING:
     import pandas as pd
     import polars as pl
-
-    from ._unsafe import DataFrameDtype
 
     PdDataFrame = pd.DataFrame
     PlDataFrame = pl.DataFrame
@@ -21,6 +18,8 @@ if TYPE_CHECKING:
 
     SeriesLike = Union[PdSeries, PlSeries]
     DataFrameLike = Union[PdDataFrame, PlDataFrame]
+
+    from ._types import ColsList, FrameDtype, FrameJson, RowsList
 
 else:
 
@@ -51,7 +50,7 @@ else:
 
 
 @singledispatch
-def serialize_dtype(col: SeriesLike) -> DataFrameDtype:
+def serialize_dtype(col: SeriesLike) -> FrameDtype:
     raise TypeError(f"Unsupported type: {type(col)}")
 
 
@@ -61,14 +60,14 @@ def serialize_dtype(col: SeriesLike) -> DataFrameDtype:
 
 
 @serialize_dtype.register(PdSeries)
-def _(col: PdSeries) -> DataFrameDtype:
+def _(col: PdSeries) -> FrameDtype:
     from ._unsafe import serialize_numpy_dtype
 
     return serialize_numpy_dtype(col)
 
 
 @serialize_dtype.register(PlSeries)
-def _(col: PlSeries) -> DataFrameDtype:
+def _(col: PlSeries) -> FrameDtype:
     import polars as pl
 
     from ._unsafe import col_contains_shiny_html
@@ -93,38 +92,27 @@ def _(col: PlSeries) -> DataFrameDtype:
 # serialize_frame ----------------------------------------------------------------------
 
 
-class _FrameJson(TypedDict):
-    columns: list[str]  # column names
-    index: list[Any]  # pandas index values
-    data: list[list[Any]]  # each entry is a row of len(columns)
-    typeHints: list[_FrameHintEntry]
-
-
-class _FrameHintEntry(TypedDict):
-    type: "str"
-
-
 @singledispatch
-def serialize_frame(data: DataFrameLike) -> _FrameJson:
+def serialize_frame(data: DataFrameLike) -> FrameJson:
     raise TypeError(f"Unsupported type: {type(data)}")
 
 
 @serialize_frame.register
-def _(data: PdDataFrame) -> _FrameJson:
+def _(data: PdDataFrame) -> FrameJson:
     from ._datagridtable import serialize_pandas_df
 
     return serialize_pandas_df(data)
 
 
 @serialize_frame.register
-def _(data: PlDataFrame) -> _FrameJson:
+def _(data: PlDataFrame) -> FrameJson:
     # write_json only does rows (as dictionaries; but we need lists)
     # serialize only does columns
     named_cols = data.to_dict(as_series=False)
     type_hints = list(map(serialize_dtype, data))
     return {
         "columns": list(named_cols),
-        "index": list(range(len(data))),
+        # "index": list(range(len(data))),
         "data": list(named_cols.values()),
         "typeHints": type_hints,
     }
@@ -133,13 +121,10 @@ def _(data: PlDataFrame) -> _FrameJson:
 # subset_frame -------------------------------------------------------------------------
 # TODO: this should replace use of iloc
 
-_RowsList: TypeAlias = Optional[list[int]]
-_ColsList: TypeAlias = Optional[list[str]]
-
 
 @singledispatch
 def subset_frame(
-    data: DataFrameLike, rows: _RowsList = None, cols: _ColsList = None
+    data: DataFrameLike, rows: RowsList = None, cols: ColsList = None
 ) -> DataFrameLike:
     """Return a subsetted DataFrame, based on row positions and column names.
 
@@ -152,13 +137,16 @@ def subset_frame(
 
 
 @subset_frame.register
-def _(data: PdDataFrame, rows: _RowsList = None, cols: _ColsList = None) -> PdDataFrame:
+def _(data: PdDataFrame, rows: RowsList = None, cols: ColsList = None) -> PdDataFrame:
     # iloc requires integer positions, so we convert column name strings to ints, or
     # the slice default.
-    if cols is not None:
-        indx_cols = data.columns.get_indexer_for(cols)
-    else:
-        indx_cols = slice(None)
+    indx_cols = (  # pyright: ignore[reportUnknownVariableType]
+        slice(None)
+        if cols is None
+        else data.columns.get_indexer_for(  # pyright: ignore[reportUnknownMemberType]
+            cols
+        )
+    )
 
     indx_rows = rows if rows is not None else slice(None)
 
@@ -166,7 +154,7 @@ def _(data: PdDataFrame, rows: _RowsList = None, cols: _ColsList = None) -> PdDa
 
 
 @subset_frame.register
-def _(data: PlDataFrame, rows: _RowsList = None, cols: _ColsList = None) -> PlDataFrame:
+def _(data: PlDataFrame, rows: RowsList = None, cols: ColsList = None) -> PlDataFrame:
     indx_cols = cols if cols is not None else slice(None)
     indx_rows = rows if rows is not None else slice(None)
     return data[indx_rows, indx_cols]
@@ -182,7 +170,11 @@ def get_frame_cell(data: DataFrameLike, row: int, col: int) -> Any:
 
 @get_frame_cell.register
 def _(data: PdDataFrame, row: int, col: int) -> Any:
-    return data.iat[row, col]
+    return (
+        data.iat[  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+            row, col
+        ]
+    )
 
 
 @get_frame_cell.register

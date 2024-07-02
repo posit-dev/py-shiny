@@ -23,10 +23,9 @@ from htmltools import Tag
 
 from .. import reactive, ui
 from .._docstring import add_example
-from .._typing_extensions import Annotated, TypedDict
 from .._utils import wrap_async
 from ..session._utils import require_active_session, session_context
-from ..types import ListOrTuple
+from ..types import JsonifiableDict, ListOrTuple
 from ._data_frame_utils import (
     AbstractTabularData,
     BrowserCellSelection,
@@ -48,6 +47,12 @@ from ._data_frame_utils import (
     wrap_shiny_html,
 )
 from ._data_frame_utils._styles import as_browser_style_infos
+from ._data_frame_utils._types import (
+    ColumnFilter,
+    ColumnSort,
+    FrameRender,
+    frame_render_to_jsonifiable,
+)
 from ._data_frame_utils._unsafe import serialize_numpy_dtype
 
 # as_selection_location_js,
@@ -63,39 +68,6 @@ if TYPE_CHECKING:
 
 
 from ._data_frame_utils._datagridtable import DataFrameResult
-
-
-class ColumnSort(TypedDict):
-    col: int
-    desc: bool
-
-
-class ColumnFilterStr(TypedDict):
-    col: int
-    value: str
-
-
-class ColumnFilterNumber(TypedDict):
-    col: int
-    value: (
-        tuple[int | float, int | float]
-        | tuple[int | float, None]
-        | tuple[None, int | float]
-        | Annotated[list[int | float | None], 2]
-    )
-
-
-ColumnFilter = Union[ColumnFilterStr, ColumnFilterNumber]
-
-
-class DataViewInfo(TypedDict):
-    sort: tuple[ColumnSort, ...]
-    filter: tuple[ColumnFilter, ...]
-
-    rows: tuple[int, ...]  # sorted and filtered row number
-    selected_rows: tuple[int, ...]  # selected and sorted and filtered row number
-    # selected_columns: tuple[int, ...]  # selected and sorted and filtered row number
-
 
 # # TODO-future; Use `dataframe-api-compat>=0.2.6` to injest dataframes and return standardized dataframe structures
 # # TODO-future: Find this type definition: https://github.com/data-apis/dataframe-api-compat/blob/273c0be45962573985b3a420869d0505a3f9f55d/dataframe_api_compat/polars_standard/dataframe_object.py#L22
@@ -837,7 +809,7 @@ class data_frame(Renderer[DataFrameResult]):
                 "We would be curious to know your use case!"
             )
 
-    async def render(self) -> Jsonifiable:
+    async def render(self) -> JsonifiableDict | None:
         # Reset value
         self._reset_reactives()
         self._reset_patches_handler()
@@ -868,13 +840,14 @@ class data_frame(Renderer[DataFrameResult]):
             )
             self._type_hints.set(type_hints)
 
-            return {
+            ret: FrameRender = {
                 "payload": payload,
                 "patchInfo": {
                     "key": patch_key,
                 },
                 "selectionModes": self.selection_modes().as_dict(),
             }
+            return frame_render_to_jsonifiable(ret)
 
     async def _send_message_to_browser(self, handler: str, obj: dict[str, Any]):
 
