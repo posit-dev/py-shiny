@@ -20,5 +20,4 @@
     "noUncheckedIndexedAccess": true
   },
   "include": ["**/*.tsx", "**/*.ts"],
-  "exclude": ["data-frame/*"],
 }
