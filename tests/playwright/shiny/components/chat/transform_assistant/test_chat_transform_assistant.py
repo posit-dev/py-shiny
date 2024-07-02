@@ -29,6 +29,17 @@ def test_validate_chat_transform_assistant(page: Page, local_app: ShinyAppProc) 
     message_state_expected = tuple(
         [
             {"content": "hello", "role": "user"},
+            {"content": "hello", "role": "assistant"},
+            {"content": "return HTML", "role": "user"},
+            {"content": "return HTML", "role": "assistant"},
+        ]
+    )
+    message_state.expect_value(str(message_state_expected))
+
+    message_state2 = controller.OutputCode(page, "message_state2")
+    message_state_expected2 = tuple(
+        [
+            {"content": "hello", "role": "user"},
             {"content": "Transformed response: `hello`", "role": "assistant"},
             {"content": "return HTML", "role": "user"},
             {
@@ -37,4 +48,4 @@ def test_validate_chat_transform_assistant(page: Page, local_app: ShinyAppProc) 
             },
         ]
     )
-    message_state.expect_value(str(message_state_expected))
+    message_state2.expect_value(str(message_state_expected2))

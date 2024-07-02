@@ -38,3 +38,15 @@ def test_validate_chat_transform(page: Page, local_app: ShinyAppProc) -> None:
         ]
     )
     message_state.expect_value(str(message_state_expected))
+
+    message_state2 = controller.OutputCode(page, "message_state2")
+    message_state_expected2 = tuple(
+        [
+            {"content": user_msg, "role": "user"},
+            {"content": f"Transformed input: {user_msg.upper()}", "role": "assistant"},
+            {"content": "return None", "role": "user"},
+            {"content": "return custom message", "role": "user"},
+            {"content": "Custom message", "role": "assistant"},
+        ]
+    )
+    message_state2.expect_value(str(message_state_expected2))

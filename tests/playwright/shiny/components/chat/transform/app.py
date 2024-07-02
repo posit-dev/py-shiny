@@ -29,9 +29,17 @@ async def _():
     await chat.append_message(f"Transformed input: {user}")
 
 
-"Message state:"
+"chat.messages():"
 
 
 @render.code
 def message_state():
     return str(chat.messages())
+
+
+"chat.messages(as_client='assistant'):"
+
+
+@render.code
+def message_state2():
+    return str(chat.messages(as_client="user"))

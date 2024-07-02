@@ -31,3 +31,8 @@ async def _():
 @render.code
 def message_state():
     return str(chat.messages())
+
+
+@render.code
+def message_state2():
+    return str(chat.messages(as_client="assistant"))
