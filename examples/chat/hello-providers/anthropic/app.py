@@ -12,7 +12,7 @@ from shiny.express import ui
 # Although you can set the API key here, it's recommended to put it in an .env file
 # and load it with `dotenv` so your key isn't exposed with your code.
 # from dotenv import load_dotenv
-# load_dotenv()
+# _ = load_dotenv()
 llm = AsyncAnthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
 
 # Set some Shiny page options

@@ -11,7 +11,7 @@ from shiny.express import ui
 # Although you can set the AWS credentials here, it's recommended to put them in an .env
 # file and load them with `dotenv` so your keys aren't exposed with your code.
 # from dotenv import load_dotenv
-# load_dotenv()
+# _ = load_dotenv()
 llm = AnthropicBedrock(
     # aws_secret_key="..."
     # aws_access_key="..."
