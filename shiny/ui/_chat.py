@@ -222,7 +222,7 @@ class Chat:
         if not _express_is_active():
             raise RuntimeError(
                 "The `ui()` method of the `ui.Chat` class only works in a Shiny Express context."
-                " Use `ui.chat_ui()` instead in Shiny Core to locate the chat UI."
+                " Use `ui.chat_ui()` instead in Shiny Core to insert the chat UI."
             )
         return chat_ui(
             id=self.id,
@@ -612,9 +612,7 @@ class Chat:
                 )
                 fn = _utils.wrap_async(fn)
 
-                async def _transform_wrapper(
-                    content: str, chunk: str | None, done: bool
-                ):
+                async def _transform_wrapper(content: str, chunk: str, done: bool):
                     return await fn(content)
 
                 self._transform_assistant = _transform_wrapper
