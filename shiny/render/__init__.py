@@ -12,7 +12,7 @@ from ._data_frame import (
     DataTable,
     data_frame,
 )
-from ._data_frame_utils import CellSelection
+from ._data_frame_utils import CellSelection, StyleInfo
 from ._deprecated import (  # noqa: F401
     RenderFunction,  # pyright: ignore[reportUnusedImport]
     RenderFunctionAsync,  # pyright: ignore[reportUnusedImport]
@@ -46,4 +46,5 @@ __all__ = (
     "CellPatch",
     "CellValue",
     "CellSelection",
+    "StyleInfo",
 )

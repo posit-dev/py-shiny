@@ -24,6 +24,7 @@ from ._selection import (
     SelectionModes,
     as_cell_selection,
 )
+from ._styles import StyleInfo
 
 __all__ = (
     "AbstractTabularData",
@@ -46,4 +47,5 @@ __all__ = (
     "SelectionMode",
     "SelectionModes",
     "as_cell_selection",
+    "StyleInfo",
 )
