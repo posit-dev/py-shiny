@@ -607,7 +607,8 @@ class Chat:
             nparams = len(inspect.signature(fn).parameters)
             if nparams == 1:
                 fn = cast(
-                    TransformAssistantResponse | TransformAssistantResponseAsync, fn
+                    Union[TransformAssistantResponse, TransformAssistantResponseAsync],
+                    fn,
                 )
                 fn = _utils.wrap_async(fn)
 
@@ -620,8 +621,10 @@ class Chat:
 
             elif nparams == 3:
                 fn = cast(
-                    TransformAssistantResponseChunk
-                    | TransformAssistantResponseChunkAsync,
+                    Union[
+                        TransformAssistantResponseChunk,
+                        TransformAssistantResponseChunkAsync,
+                    ],
                     fn,
                 )
                 self._transform_assistant = _utils.wrap_async(fn)
