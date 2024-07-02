@@ -30,8 +30,8 @@ def create_app_fixture(
     app
         The path to the Shiny app file.
 
-        If `app` is a `Path` or `PurePath` instance and `.is_file()` returns `True`, then this value will be used directly.
-        Note, file paths will be checked from where `pytest` was called, not from the calling function.
+        If `app` is a `Path` or `PurePath` instance and `Path(app).is_file()` returns `True`, then this value will be used directly.
+        Note, `app`'s file path will be checked from where corresponding `pytest` test is collected, not necessarily where `create_app_fixture()` is called.
 
         Otherwise, all `app` paths will be considered to be relative paths from where the test function was collected.
 
