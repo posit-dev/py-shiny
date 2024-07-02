@@ -38,4 +38,4 @@ async def _():
 
 @render.code
 def message_state():
-    return str(chat.get_messages())
+    return str(chat.messages())

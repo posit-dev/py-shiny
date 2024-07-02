@@ -5,9 +5,7 @@ from datetime import datetime
 
 from shiny.ui._chat_normalize import normalize_message, normalize_message_chunk
 
-# TODO:
-# 1. Feed these messages into an actual Chat() instance.
-# 2. Provide multiple chunks and ensure chat.get_messages() accumulates them correctly.
+# TODO: Feed these messages into an actual Chat() instance?
 
 
 def test_string_normalization():

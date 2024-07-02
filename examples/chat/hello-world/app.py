@@ -30,6 +30,6 @@ chat.ui()
 @chat.on_user_submit
 async def _():
     # Get the user's input
-    user = chat.get_user_input()
+    user = chat.user_input()
     # Append a response to the chat
     await chat.append_message(f"You said: {user}")

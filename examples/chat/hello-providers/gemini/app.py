@@ -30,7 +30,7 @@ chat.ui()
 @chat.on_user_submit
 async def _():
     # Get messages currently in the chat
-    messages = chat.get_messages()
+    messages = chat.messages()
 
     # Convert messages to the format expected by Google's API
     contents = [

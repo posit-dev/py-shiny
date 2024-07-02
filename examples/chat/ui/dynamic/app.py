@@ -35,5 +35,5 @@ def chat_ui():
 
     @chat.on_user_submit
     async def _():
-        response = llm.astream(chat.get_messages())
+        response = llm.astream(chat.messages())
         await chat.append_message_stream(response)

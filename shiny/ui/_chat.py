@@ -81,7 +81,7 @@ class Chat:
         dictionary with a `content` and `role` key. The `content` key should contain
         the message text, and the `role` key can be "assistant", "user", or "system".
         Note that system messages are not actually displayed in the chat, but will
-        still be stored in the chat's `.get_messages()`.
+        still be stored in the chat's `.messages()`.
     on_error
         How to handle errors that occur in response to user input. For options 1-3, the
         error message is displayed to the user and the app continues to run. For option
@@ -94,7 +94,7 @@ class Chat:
 
     tokenizer
         The tokenizer to use for calculating token counts, which is required to impose
-        `token_limits` in `.get_messages()`. By default, a pre-trained tokenizer is
+        `token_limits` in `.messages()`. By default, a pre-trained tokenizer is
         attempted to be loaded the tokenizers library (if available). A custom tokenizer
         can be provided by following the `TokenEncoding` (tiktoken or tozenizer)
         protocol. If token limits are of no concern, provide `None`.
@@ -161,11 +161,11 @@ class Chat:
 
             # When user input is submitted, transform, and store it in the chat state
             # (and make sure this runs before other effects since when the user
-            #  calls `.get_messages()`, they should get the latest user input)
+            #  calls `.messages()`, they should get the latest user input)
             @reactive.effect(priority=9999)
-            @reactive.event(self._get_user_input)
+            @reactive.event(self._user_input)
             async def _on_user_input():
-                msg = ChatMessage(content=self._get_user_input(), role="user")
+                msg = ChatMessage(content=self._user_input(), role="user")
                 # It's possible that during the transform, a message is appended, so get
                 # the length now, so we can insert the new message at the right index
                 n_pre = len(self._messages())
@@ -257,7 +257,7 @@ class Chat:
 
         In many cases, the implementation of `fn` should do at least the following:
 
-        1. Call `.get_messages()` to obtain the current chat history.
+        1. Call `.messages()` to obtain the current chat history.
         2. Generate a response based on those messages.
         3. Append the response to the chat history using `.append_message()` or `.append_message_stream()`.
 
@@ -277,7 +277,7 @@ class Chat:
             afunc = _utils.wrap_async(fn)
 
             @reactive.effect
-            @reactive.event(self._get_user_input)
+            @reactive.event(self._user_input)
             async def handle_user_input():
                 if self._suspend_input_handler:
                     from .. import req
@@ -308,7 +308,7 @@ class Chat:
             sanitize = self.on_error == "sanitize"
             raise NotifyException(str(e), sanitize=sanitize)
 
-    def get_messages(
+    def messages(
         self,
         *,
         token_limits: tuple[int, int] | None = (4096, 1000),
@@ -537,20 +537,20 @@ class Chat:
         Transform user input.
 
         Use this method as a decorator on a function (`fn`) that transforms user input
-        before storing it in the chat messages returned by `.get_messages()`. This is
+        before storing it in the chat messages returned by `.messages()`. This is
         useful for implementing RAG workflows, like taking a URL and scraping it for
         text before sending it to the model.
 
         Parameters
         ----------
         fn
-            A function to transform user input before storing it in the chat messages
-            returned by `.get_messages()`. If `fn` returns `None`, the user input is
-            effectively ignored, and `.on_user_submit()` callbacks are suspended until
-            more input is submitted. This behavior is often useful to catch and handle
-            errors that occur during transformation. In this case, the transform
-            function should append an error message to the chat (via
-            `.append_message()`) to inform the user of the error.
+            A function to transform user input before storing it in the chat
+            `.messages()`. If `fn` returns `None`, the user input is effectively
+            ignored, and `.on_user_submit()` callbacks are suspended until more input is
+            submitted. This behavior is often useful to catch and handle errors that
+            occur during transformation. In this case, the transform function should
+            append an error message to the chat (via `.append_message()`) to inform the
+            user of the error.
         """
 
         def _set_transform(fn: TransformUserInput | TransformUserInputAsync):
@@ -736,7 +736,7 @@ class Chat:
 
         return tuple(messages2)
 
-    def get_user_input(self, transform: bool = True) -> str | None:
+    def user_input(self, transform: bool = True) -> str | None:
         """
         Reactively read the user's message.
 
@@ -753,10 +753,10 @@ class Chat:
         Note
         ----
         Most users shouldn't need to use this method directly since the last item in
-        `.get_messages()` contains the most recent user input. It can be useful for:
+        `.messages()` contains the most recent user input. It can be useful for:
 
           1. Taking a reactive dependency on the user's input outside of a `.on_user_submit()` callback.
-          2. Maintaining message state separately from `.get_messages()`.
+          2. Maintaining message state separately from `.messages()`.
 
         """
         msg = self._latest_user_input()
@@ -765,7 +765,7 @@ class Chat:
         key = "content_server" if transform else "content_client"
         return msg[key]
 
-    def _get_user_input(self) -> str:
+    def _user_input(self) -> str:
         id = self.user_input_id
         return cast(str, self._session.input[id]())
 

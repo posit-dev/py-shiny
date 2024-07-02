@@ -52,6 +52,6 @@ async def try_scrape_page(input: str) -> str | None:
 @chat.on_user_submit
 async def _():
     response = await llm.chat.completions.create(
-        model="gpt-4o", messages=chat.get_messages(), temperature=0, stream=True
+        model="gpt-4o", messages=chat.messages(), temperature=0, stream=True
     )
     await chat.append_message_stream(response)

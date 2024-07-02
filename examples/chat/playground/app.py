@@ -73,7 +73,7 @@ def chat_ui():
 
         # Transform ChatMessage(s) into langchain's message types
         messages = [system_message]
-        for message in chat.get_messages():
+        for message in chat.messages():
             role = message["role"]
             content = message["content"]
             if role == "user":
