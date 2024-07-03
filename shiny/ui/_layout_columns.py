@@ -274,7 +274,9 @@ def row_heights_attrs(
     for brk, heights in x_complete.items():
         var = f"--bslib-grid--row-heights--{brk}"
 
-        if isinstance_cssunit(heights):
+        # We'd use isinstance(heights, CssUnit) (needs Python > 3.9)
+        # or isinstance_cssunit(heights) (pyright 1.1.369+ doesn't like it)
+        if isinstance(heights, (str, int, float)):
             heights = [heights]
 
         value = " ".join([maybe_fr_unit(h) for h in heights])
