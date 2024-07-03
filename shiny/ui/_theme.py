@@ -90,13 +90,18 @@ class Theme:
     ```{.python filename="app.py"}
     from pathlib import Path
 
-    from shiny import ui
+    from shiny import App, ui
 
-    ui = ui.page_fluid(
+    app_ui = ui.page_fluid(
         # App content here
         title="My App",
         theme=Path(__file__).parent / "my_theme.css",
     )
+
+    def server(input):
+        pass
+
+    app = App(app_ui, server)
     ```
 
     Parameters
