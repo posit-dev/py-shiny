@@ -57,11 +57,15 @@ class StringNormalizer(BaseMessageNormalizer):
 
 class DictNormalizer(BaseMessageNormalizer):
     def normalize(self, message: Any) -> ChatMessage:
-        x = self._check_dict(message)
+        x = cast("dict[str, Any]", message)
+        if "content" not in x:
+            raise ValueError("Message must have 'content' key")
         return ChatMessage(content=x["content"], role=x.get("role", "assistant"))
 
     def normalize_chunk(self, chunk: Any) -> ChatMessage:
-        x = self._check_dict(chunk)
+        x = cast("dict[str, Any]", chunk)
+        if "content" not in x:
+            raise ValueError("Message must have 'content' key")
         return ChatMessage(content=x["content"], role=x.get("role", "assistant"))
 
     def can_normalize(self, message: Any) -> bool:
@@ -69,14 +73,6 @@ class DictNormalizer(BaseMessageNormalizer):
 
     def can_normalize_chunk(self, chunk: Any) -> bool:
         return isinstance(chunk, dict)
-
-    @staticmethod
-    def _check_dict(x: Any) -> "dict[str, Any]":
-        if "content" not in x:
-            raise ValueError("Message must have 'content' key")
-        if "role" in x and x["role"] not in ["assistant", "system"]:
-            raise ValueError("Role must be 'assistant' or 'system")
-        return x
 
 
 class LangChainNormalizer(BaseMessageNormalizer):
