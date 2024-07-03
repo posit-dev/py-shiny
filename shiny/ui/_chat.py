@@ -67,9 +67,39 @@ class Chat:
     """
     Create a chat interface.
 
-    The chat interface is a component that allows users to submit messages and receive
-    responses. The chat interface can be used to build conversational AI applications,
-    chatbots, and more.
+    A UI component for building conversational interfaces. With it, end users can submit
+    messages, which will cause a `.on_user_submit()` callback to run. In that callback,
+    a response can be generated based on the chat's `.messages()`, and appended to the
+    chat using `.append_message()` or `.append_message_stream()`.
+
+    Here's a rough outline for how to implement a `Chat`:
+
+    ```python
+    from shiny.express import ui
+
+    # Create and display chat instance
+    chat = ui.Chat(id="my_chat")
+    chat.ui()
+
+    # Define a callback to run when the user submits a message
+    @chat.on_user_submit
+    async def _():
+        # Get messages currently in the chat
+        messages = chat.messages()
+        # Create a response message stream
+        response = await my_model.generate_response(messages, stream=True)
+        # Append the response into the chat
+        await chat.append_message_stream(response)
+    ```
+
+    In the outline above, `my_model.generate_response()` is a placeholder for
+    the function that generates a response based on the chat's messages. This function
+    will look different depending on the model you're using, but it will generally
+    involve passing the messages to the model and getting a response back. Also, you'll
+    typically have a choice to `stream=True` the response generation, and in that case,
+    you'll use `.append_message_stream()` instead of `.append_message()` to append the
+    response to the chat. Streaming is preferrable when available since it allows for
+    more responsive and scalable chat interfaces.
 
     Parameters
     ----------
@@ -83,15 +113,15 @@ class Chat:
         Note that system messages are not actually displayed in the chat, but will
         still be stored in the chat's `.messages()`.
     on_error
-        How to handle errors that occur in response to user input. For options 1-3, the
-        error message is displayed to the user and the app continues to run. For option
-        4, the error message is not displayed, and the app stops:
+        How to handle errors that occur in response to user input. When `"unhandled"`,
+        the app will stop running when an error occurs. Otherwise, a notification
+        is displayed to the user and the app continues to run.
 
-        * "auto": Sanitize the error message if the app is set to sanitize errors, otherwise display the actual error message.
-        * "sanitize": Sanitize the error message before displaying it to the user.
-        * "actual": Display the actual error message to the user.
-        * "unhandled": Do not display any error message to the user.
-
+        * `"auto"`: Sanitize the error message if the app is set to sanitize errors,
+          otherwise display the actual error message.
+        * `"actual"`: Display the actual error message to the user.
+        * `"sanitize"`: Sanitize the error message before displaying it to the user.
+        * `"unhandled"`: Do not display any error message to the user.
     tokenizer
         The tokenizer to use for calculating token counts, which is required to impose
         `token_limits` in `.messages()`. By default, a pre-trained tokenizer is
@@ -108,7 +138,7 @@ class Chat:
         id: str,
         *,
         messages: Sequence[ChatMessage] = (),
-        on_error: Literal["auto", "sanitize", "actual", "unhandled"] = "auto",
+        on_error: Literal["auto", "actual", "sanitize", "unhandled"] = "auto",
         tokenizer: TokenEncoding | MISSING_TYPE | None = MISSING,
         session: Optional[Session] = None,
     ):
@@ -201,8 +231,8 @@ class Chat:
         """
         Place a chat component in the UI.
 
-        This method is only available in Shiny Express. In Shiny Core, use
-        :func:`~shiny.ui.chat_ui` instead.
+        This method is only relevant fpr Shiny Express. In Shiny Core, use
+        :func:`~shiny.ui.chat_ui` instead to insert the chat UI.
 
         Parameters
         ----------
@@ -259,7 +289,8 @@ class Chat:
 
         1. Call `.messages()` to obtain the current chat history.
         2. Generate a response based on those messages.
-        3. Append the response to the chat history using `.append_message()` or `.append_message_stream()`.
+        3. Append the response to the chat history using `.append_message()` (
+           or `.append_message_stream()` if the response is streamed).
 
         Parameters
         ----------
@@ -338,8 +369,9 @@ class Chat:
         transform_user
             Whether to return user input messages with transformation applied. This only
             matters if a `transform_user_input` was provided to the chat constructor.
-            This should be `True` when passing the messages to a model for response
-            generation, but `False` when you need (to save) the original user input.
+            The default value of `"all"` means all user input messages are transformed.
+            The value of `"last"` means only the last user input message is transformed.
+            The value of `"none"` means no user input messages are transformed.
         transform_assistant
             Whether to return assistant messages with transformation applied. This only
             matters if an `transform_assistant_response` was provided to the chat
@@ -353,7 +385,8 @@ class Chat:
 
         Returns
         -------
-        A tuple of chat messages.
+        tuple[ChatMessage, ...]
+            A tuple of chat messages.
         """
 
         messages = self._get_trimmed_messages(token_limits=token_limits)
@@ -753,7 +786,8 @@ class Chat:
 
         Returns
         -------
-        The user input message (before any transformation).
+        str | None
+            The user input message (before any transformation).
 
         Note
         ----

@@ -53,16 +53,17 @@ def get_default_tokenizer() -> TokenizersTokenizer | None:
         return Tokenizer.from_pretrained("bert-base-cased")  # type: ignore
     except ImportError:
         warnings.warn(
-            "shiny's `Chat` is unable to impose"
-            "Unable to obtain a default tokenizer without the `tokenizers` package. "
-            "Please install it.",
+            "`Chat` is unable obtain a default tokenizer without the `tokenizers` "
+            "package installed. Please `pip install tokenizers` or set "
+            "`Chat(tokenizer=None)` to disable tokenization.",
             stacklevel=2,
         )
         return None
     except Exception:
         warnings.warn(
             "Unable to obtain a default tokenizer. "
-            "Consider setting the tokenizer manually via `Chat()`'s `tokenizer` parameter.",
+            "Consider providing one to `Chat()`'s `tokenizer` parameter "
+            "(or set it to `None` to disable tokenization).",
             stacklevel=2,
         )
         return None
