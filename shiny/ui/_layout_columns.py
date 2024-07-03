@@ -11,6 +11,7 @@ from ._html_deps_shinyverse import components_dependencies
 from ._layout import wrap_all_in_gap_spaced_container
 from ._tag import consolidate_attrs
 from .css import CssUnit, as_css_unit
+from .css._css_unit import isinstance_cssunit
 from .fill import as_fill_item
 
 T = TypeVar("T")
@@ -273,7 +274,7 @@ def row_heights_attrs(
     for brk, heights in x_complete.items():
         var = f"--bslib-grid--row-heights--{brk}"
 
-        if isinstance(heights, CssUnit):
+        if isinstance_cssunit(heights):
             heights = [heights]
 
         value = " ".join([maybe_fr_unit(h) for h in heights])
