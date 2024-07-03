@@ -1,48 +1,81 @@
 from __future__ import annotations
 
-from abc import ABC
+# TODO-barret; Add fixture for all data frame tests to test pandas and polars
+# TODO-barret; Go through all functions and make sure no `.shape` or `.columns` are used being used directly. There should be no direct usage of any custom data frame type.
 from functools import singledispatch
-from typing import TYPE_CHECKING, Any, Union
+from typing import Any
 
 # from ...types import Jsonifiable
-from ._databackend import AbstractBackend
-from ._types import ColsList, FrameDtype, FrameJson, RowsList
+from ._types import (
+    ColsList,
+    DataFrameLike,
+    FrameDtype,
+    FrameJson,
+    PandasCompatible,
+    PdDataFrame,
+    PdSeries,
+    PlDataFrame,
+    PlSeries,
+    RowsList,
+    SeriesLike,
+)
 
-if TYPE_CHECKING:
-    import pandas as pd
-    import polars as pl
+__all__ = (
+    "as_data_frame_like",
+    "serialize_dtype",
+    "serialize_frame",
+    "subset_frame",
+    "get_frame_cell",
+    "shape",
+    "copy_frame",
+    "frame_column_names",
+)
 
-    PdDataFrame = pd.DataFrame
-    PlDataFrame = pl.DataFrame
-    PdSeries = pd.Series[Any]
-    PlSeries = pl.Series
+# as_frame -----------------------------------------------------------------------------
 
-    SeriesLike = Union[PdSeries, PlSeries]
-    DataFrameLike = Union[PdDataFrame, PlDataFrame]
 
-else:
+@singledispatch
+def as_data_frame_like(
+    data: DataFrameLike | PandasCompatible,
+    error_message_begin: str = "Unsupported type:",
+) -> DataFrameLike:
+    raise TypeError(
+        f"{error_message_begin} {str(type(data))}\n"
+        "Please use either a `pandas.DataFrame`, a `polars.DataFrame`, "
+        "or an object that has a `.to_pandas()` method."
+    )
 
-    class PdDataFrame(AbstractBackend):
-        _backends = [("pandas", "DataFrame")]
 
-    class PlDataFrame(AbstractBackend):
-        _backends = [("polars", "DataFrame")]
+@as_data_frame_like.register
+def _(
+    data: PdDataFrame | PlDataFrame, error_message_begin: str = "ignored"
+) -> DataFrameLike:
+    return data
 
-    class PdSeries(AbstractBackend):
-        _backends = [("pandas", "Series")]
 
-    class PlSeries(AbstractBackend):
-        _backends = [("polars", "Series")]
+@as_data_frame_like.register
+def _(data: PandasCompatible, error_message_begin: str = "ignored") -> DataFrameLike:
+    return data.to_pandas()
 
-    class SeriesLike(ABC): ...
 
-    class DataFrameLike(ABC): ...
+# # frame_columns ------------------------------------------------------------------------
 
-    SeriesLike.register(PdSeries)
-    SeriesLike.register(PlSeries)
+# from ._types import ListSeriesLike
 
-    DataFrameLike.register(PdDataFrame)
-    DataFrameLike.register(PlDataFrame)
+# @singledispatch
+# def frame_columns_series(data: DataFrameLike) -> ListSeriesLike:
+#     raise TypeError(f"Unsupported type: {type(data)}")
+
+
+# @frame_columns_series.register
+# def _(data: PdDataFrame) -> ListSeriesLike:
+#     ret = [cast(PlSeries, data[col]) for col in data.columns]
+#     return ret
+
+
+# @frame_columns_series.register
+# def _(data: PlDataFrame) -> ListSeriesLike:
+#     return data.get_columns()
 
 
 # serialize_dtype ----------------------------------------------------------------------
@@ -60,16 +93,16 @@ def serialize_dtype(col: SeriesLike) -> FrameDtype:
 
 @serialize_dtype.register(PdSeries)
 def _(col: PdSeries) -> FrameDtype:
-    from ._unsafe import serialize_numpy_dtype
+    from ._pandas import serialize_pd_dtype
 
-    return serialize_numpy_dtype(col)
+    return serialize_pd_dtype(col)
 
 
 @serialize_dtype.register(PlSeries)
 def _(col: PlSeries) -> FrameDtype:
     import polars as pl
 
-    from ._unsafe import col_contains_shiny_html
+    from ._html import col_contains_shiny_html
 
     if col.dtype.is_(pl.String):
         if col_contains_shiny_html(col):
@@ -98,9 +131,9 @@ def serialize_frame(data: DataFrameLike) -> FrameJson:
 
 @serialize_frame.register
 def _(data: PdDataFrame) -> FrameJson:
-    from ._datagridtable import serialize_pandas_df
+    from ._pandas import serialize_frame_pd
 
-    return serialize_pandas_df(data)
+    return serialize_frame_pd(data)
 
 
 @serialize_frame.register
@@ -205,3 +238,19 @@ def _(data: PdDataFrame) -> PdDataFrame:
 @copy_frame.register
 def _(data: PlDataFrame) -> PlDataFrame:
     return data.clone()
+
+
+# column_names -------------------------------------------------------------------------
+@singledispatch
+def frame_column_names(data: DataFrameLike) -> list[str]:
+    raise TypeError(f"Unsupported type: {type(data)}")
+
+
+@frame_column_names.register
+def _(data: PdDataFrame) -> list[str]:
+    return data.columns.to_list()
+
+
+@frame_column_names.register
+def _(data: PlDataFrame) -> list[str]:
+    return data.columns

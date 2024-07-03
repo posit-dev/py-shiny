@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from abc import ABC
 from typing import (
+    TYPE_CHECKING,
+    Any,
     Dict,
     List,
     Literal,
@@ -14,6 +17,68 @@ from typing import (
 
 from ..._typing_extensions import Annotated, NotRequired, Required, TypedDict
 from ...types import Jsonifiable, JsonifiableDict, ListOrTuple
+from ._databackend import AbstractBackend
+
+# ---------------------------------------------------------------------
+
+if TYPE_CHECKING:
+    import pandas as pd
+    import polars as pl
+
+    from ...session._utils import RenderedDeps
+
+    PdDataFrame = pd.DataFrame
+    PlDataFrame = pl.DataFrame
+    PdSeries = pd.Series[Any]
+    PlSeries = pl.Series
+
+    ListSeriesLike = Union[list[PdSeries], list[PlSeries]]
+    SeriesLike = Union[PdSeries, PlSeries]
+    DataFrameLike = Union[PdDataFrame, PlDataFrame]
+
+
+else:
+
+    class PdDataFrame(AbstractBackend):
+        _backends = [("pandas", "DataFrame")]
+
+    class PlDataFrame(AbstractBackend):
+        _backends = [("polars", "DataFrame")]
+
+    class PdSeries(AbstractBackend):
+        _backends = [("pandas", "Series")]
+
+    class PlSeries(AbstractBackend):
+        _backends = [("polars", "Series")]
+
+    class ListSeriesLike(ABC): ...
+
+    class SeriesLike(ABC): ...
+
+    class DataFrameLike(ABC): ...
+
+    ListSeriesLike.register(PdSeries)
+    ListSeriesLike.register(PlSeries)
+
+    SeriesLike.register(PdSeries)
+    SeriesLike.register(PlSeries)
+
+    DataFrameLike.register(PdDataFrame)
+    DataFrameLike.register(PlDataFrame)
+
+# ---------------------------------------------------------------------
+
+
+@runtime_checkable
+class PandasCompatible(Protocol):
+    # Signature doesn't matter, runtime_checkable won't look at it anyway
+    def to_pandas(self) -> pd.DataFrame: ...
+
+
+class CellHtml(TypedDict):
+    isShinyHtml: bool
+    obj: RenderedDeps
+
 
 # ---------------------------------------------------------------------
 

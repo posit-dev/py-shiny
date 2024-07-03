@@ -3,14 +3,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Callable, List
 
 from ...types import ListOrTuple
-from ._types import BrowserStyleInfo, StyleInfo
+from ._tbl_data import frame_column_names
+from ._types import BrowserStyleInfo, DataFrameLike, StyleInfo
 
 if TYPE_CHECKING:
-    import pandas as pd
 
-    DataFrameValue = pd.DataFrame
-
-    StyleFn = Callable[[DataFrameValue], List["StyleInfo"]]
+    StyleFn = Callable[[DataFrameLike], List["StyleInfo"]]
 
 else:
     StyleFn = Callable
@@ -184,9 +182,9 @@ def as_style_infos(
 def as_browser_style_infos(
     infos: list[StyleInfo] | StyleFn,
     *,
-    data: DataFrameValue,
+    data: DataFrameLike,
 ) -> list[BrowserStyleInfo]:
-    browser_column_names = data.columns.tolist()
+    browser_column_names = frame_column_names(data)
 
     if callable(infos):
         style_infos = infos(data)

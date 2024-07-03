@@ -7,17 +7,7 @@ import warnings
 # * For this release: Immediately make PR to remove `.input_` from `.input_cell_selection()`
 # TODO-barret-render.data_frame; Docs
 # TODO-barret-render.data_frame; Add examples!
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Awaitable,
-    Callable,
-    Dict,
-    Literal,
-    TypeVar,
-    Union,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, Literal, Union, cast
 
 from htmltools import Tag
 
@@ -42,18 +32,17 @@ from ._data_frame_utils import (
     SelectionModes,
     as_cell_selection,
     assert_patches_shape,
-    cast_to_pandas,
     cell_patch_processed_to_jsonifiable,
     wrap_shiny_html,
 )
 from ._data_frame_utils._styles import as_browser_style_infos
+from ._data_frame_utils._tbl_data import as_data_frame_like, serialize_dtype
 from ._data_frame_utils._types import (
     ColumnFilter,
     ColumnSort,
     FrameRender,
     frame_render_to_jsonifiable,
 )
-from ._data_frame_utils._unsafe import serialize_numpy_dtype
 
 # as_selection_location_js,
 from .renderer import Jsonifiable, Renderer, ValueFn
@@ -62,10 +51,6 @@ if TYPE_CHECKING:
     import pandas as pd
 
     from ..session import Session
-
-    DataFrameT = TypeVar("DataFrameT", bound=pd.DataFrame)
-    # TODO-barret-render.data_frame; Pandas, Polars, api compat, etc.; Today, we only support Pandas
-
 
 from ._data_frame_utils._datagridtable import DataFrameResult
 
@@ -820,7 +805,7 @@ class data_frame(Renderer[DataFrameResult]):
 
         if not isinstance(value, AbstractTabularData):
             value = DataGrid(
-                cast_to_pandas(
+                as_data_frame_like(
                     value,
                     "@render.data_frame doesn't know how to render objects of type",
                 )
@@ -970,7 +955,7 @@ class data_frame(Renderer[DataFrameResult]):
                 val_dict: ColumnSort
                 if isinstance(val, int):
                     col: pd.Series[Any] = data.iloc[:, val]
-                    desc = serialize_numpy_dtype(col)["type"] == "numeric"
+                    desc = serialize_dtype(col)["type"] == "numeric"
                     val_dict = {"col": val, "desc": desc}
                 val_dict: ColumnSort = (
                     val if isinstance(val, dict) else {"col": val, "desc": True}

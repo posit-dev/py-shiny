@@ -8,7 +8,7 @@ from htmltools import TagNode
 
 from ..._typing_extensions import TypedDict
 from ...types import JsonifiableDict
-from ._datagridtable import CellHtml
+from ._types import CellHtml
 
 # CellValue = str | TagList | Tag | HTML
 CellValue = TagNode

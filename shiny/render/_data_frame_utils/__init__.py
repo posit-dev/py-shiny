@@ -1,11 +1,9 @@
 from ._datagridtable import (
     AbstractTabularData,
-    CellHtml,
     DataGrid,
     DataTable,
-    cast_to_pandas,
-    wrap_shiny_html,
 )
+from ._html import wrap_shiny_html
 from ._patch import (
     CellPatch,
     CellPatchProcessed,
@@ -24,12 +22,12 @@ from ._selection import (
     SelectionModes,
     as_cell_selection,
 )
+from ._types import CellHtml
 
 __all__ = (
     "AbstractTabularData",
     "DataGrid",
     "DataTable",
-    "cast_to_pandas",
     "wrap_shiny_html",
     "CellHtml",
     "CellPatch",
