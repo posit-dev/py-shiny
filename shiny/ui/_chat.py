@@ -248,12 +248,6 @@ class Chat:
         kwargs
             Additional attributes for the chat container element.
         """
-
-        if not _express_is_active():
-            raise RuntimeError(
-                "The `ui()` method of the `ui.Chat` class only works in a Shiny Express context."
-                " Use `ui.chat_ui()` instead in Shiny Core to insert the chat UI."
-            )
         return chat_ui(
             id=self.id,
             placeholder=placeholder,
@@ -912,16 +906,6 @@ def chat_ui(
         res = as_fillable_container(as_fill_item(res))
 
     return res
-
-
-def _express_is_active() -> bool:
-    from ..express._run import get_top_level_recall_context_manager
-
-    try:
-        get_top_level_recall_context_manager()
-        return True
-    except RuntimeError:
-        return False
 
 
 def as_transformed_message(message: ChatMessage) -> TransformedMessage:
