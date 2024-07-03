@@ -72,10 +72,11 @@ class Theme:
 
     my_theme = (
         ui.Theme("shiny")
+        .add_defaults(
+            my_purple="#aa00aa",
+        )
         .add_mixins(
-            headings_color="$success",
-            bar_color="$purple",
-            select_color_text="$orange",
+            headings_color="$my-purple",
         )
     )
 
@@ -93,6 +94,7 @@ class Theme:
     from shiny import App, ui
 
     app_ui = ui.page_fluid(
+        ui.h2("Hello, themed Shiny!"),
         # App content here
         title="My App",
         theme=Path(__file__).parent / "my_theme.css",
