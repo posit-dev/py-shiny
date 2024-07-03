@@ -83,6 +83,7 @@ interface TableBodyCellProps {
   setData: (fn: (draft: unknown[][]) => void) => void;
   cellEditInfo: CellEdit | undefined;
   cellStyle: CellStyle | undefined;
+  cellClassName: string | undefined;
   setCellEditMapAtLoc: SetCellEditMapAtLoc;
   selection: SelectionSet<string, HTMLTableRowElement>;
 }
@@ -100,6 +101,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
   getSortedRowModel,
   cellEditInfo,
   cellStyle,
+  cellClassName,
   setData,
   setCellEditMapAtLoc,
   selection,
@@ -402,7 +404,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
   let content: ReactElement | ReturnType<typeof flexRender> | undefined =
     undefined;
   const cellTitle = errorTitle;
-  let tableCellClass: string | undefined = undefined;
+  let tableCellClass: string | undefined = cellClassName;
   const addToTableCellClass = (x: string | undefined) => {
     if (!x) return;
     if (tableCellClass) {

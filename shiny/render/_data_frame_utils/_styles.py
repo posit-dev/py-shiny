@@ -41,7 +41,7 @@ def style_info_to_browser_style_info(
             )
         assert isinstance(style, dict)
 
-    class_ = info.get("class_", None)
+    class_ = info.get("class", None)
     if class_ is not None:
         assert isinstance(class_, str), "`StyleInfo` `class` value must be a string"
 

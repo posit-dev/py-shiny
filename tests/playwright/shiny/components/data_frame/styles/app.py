@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+# TODO-barret; Export render.DataFrameLike
 # pyright: reportMissingTypeStubs = false
-import pandas as pd
 from palmerpenguins import load_penguins_raw
 
 from shiny import App, Inputs, render, ui
@@ -44,6 +44,10 @@ df = df.iloc[0:5, 0:6]
 # df_styles = gt_styles(df_gt)
 
 df_styles: list[StyleInfo] = [
+    {
+        "location": "body",
+        "style": {"color": "darkorange", "font-weight": "bold"},
+    },
     {
         "location": "body",
         "rows": None,
@@ -105,21 +109,33 @@ def server(input: Inputs):
 
         counter = 0
 
-        def df_styles_fn(data: pd.DataFrame) -> list[StyleInfo]:
+        def df_styles_fn(
+            data: render._data_frame_utils._types.DataFrameLike,
+        ) -> list[StyleInfo]:
             nonlocal counter
-            counter = (counter + 1) % len(df_styles)
+            everywhere_styles = [
+                s
+                for s in df_styles
+                if s.get("rows", None) is None and s.get("cols", None) is None
+            ]
+
+            counter = counter + 1
+            if counter > len(df_styles) - len(everywhere_styles):
+                counter = 1
 
             ret: list[StyleInfo] = []
-            for style in df_styles:
-                style_val = style.get("style", None)
-                if style_val is None:
-                    continue
-                if style_val["background-color"] == "lightblue":
-                    continue
-                ret.append(style)
+            for styleInfo in df_styles:
                 if len(ret) >= counter:
                     break
-
+                if "rows" not in styleInfo or "cols" not in styleInfo:
+                    continue
+                if styleInfo["rows"] is None and styleInfo["cols"] is None:
+                    continue
+                style_val = styleInfo.get("style", None)
+                print(style_val)
+                if style_val is None:
+                    continue
+                ret.append(styleInfo)
             return ret
 
         # NOTE - Styles in GT are greedy!

@@ -109,16 +109,29 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
     columns,
     typeHints,
     data: tableDataProp,
-    options: payloadOptions,
+    options: payloadOptions = {
+      width: undefined,
+      height: undefined,
+      fill: false,
+      styles: [],
+    },
   } = payload;
-  const { width, height, fill, filters: withFilters } = payloadOptions;
+  const {
+    width,
+    height,
+    fill,
+    filters: withFilters,
+    styles: initStyleInfos,
+  } = payloadOptions;
 
   const containerRef = useRef<HTMLDivElement>(null);
   const theadRef = useRef<HTMLTableSectionElement>(null);
   const tbodyRef = useRef<HTMLTableSectionElement>(null);
 
+  console.log("ehre", initStyleInfos, payloadOptions);
+
   const _useStyleInfo = useStyleInfoMap({
-    initStyleInfos: payloadOptions["styles"],
+    initStyleInfos: initStyleInfos ?? [],
     nrow: tableDataProp.length,
     ncol: columns.length,
   });
@@ -487,7 +500,6 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
   useEffect(() => {
     const handleStyles = (event: CustomEvent<{ styles: StyleInfo[] }>) => {
       const styles = event.detail.styles;
-      resetStyleInfos();
       setStyleInfos(styles);
     };
 
@@ -504,7 +516,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
         handleStyles as EventListener
       );
     };
-  }, [setStyleInfos]);
+  }, [id, setStyleInfos]);
 
   useEffect(() => {
     if (!id) return;
@@ -763,7 +775,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
                         rowIndex,
                         columnIndex
                       );
-                      const cellStyle = getCellStyle(
+                      const { cellStyle, cellClassName } = getCellStyle(
                         styleInfoMap,
                         "body",
                         rowIndex,
@@ -785,6 +797,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
                           getSortedRowModel={table.getSortedRowModel}
                           cellEditInfo={cellEditInfo}
                           cellStyle={cellStyle}
+                          cellClassName={cellClassName}
                           setData={setTableData}
                           setCellEditMapAtLoc={setCellEditMapAtLoc}
                           selection={selection}
