@@ -63,11 +63,11 @@ class Theme:
     caches the compiled CSS so that it's only compiled for the first user to load your
     app, but you can speed up app loading (and avoid the runtime `libsass` dependency)
     by pre-compiling the theme CSS and saving it to a file. To do this, use the
-    `.to_css()` method to render the theme to a single minified CSS string. Once saved
-    to a file, the CSS can be used in any Shiny app by passing the file path to the
-    `theme` argument instead of the `Theme` object.
+    `.to_css()` method to render the theme to a single minified CSS string.
 
     ```{.python filename="my_theme.py"}
+    from pathlib import Path
+
     from shiny import ui
 
     my_theme = (
@@ -79,17 +79,23 @@ class Theme:
         )
     )
 
-    with open("my_theme.css", "w") as f:
+    with open(Path(__file__).parent / "my_theme.css", "w") as f:
         f.write(my_theme.to_css())
     ```
 
+    Run this script with `python my_theme.py` to generate the CSS file. Once saved to a
+    file, the CSS can be used in any Shiny app by passing the file path to the `theme`
+    argument instead of the `Theme` object.
+
     ```{.python filename="app.py"}
+    from pathlib import Path
+
     from shiny import ui
 
     ui = ui.page_fluid(
         # App content here
         title="My App",
-        theme="my_theme.css",
+        theme=Path(__file__).parent / "my_theme.css",
     )
     ```
 
