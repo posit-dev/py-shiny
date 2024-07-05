@@ -1,6 +1,7 @@
 from playwright.sync_api import Page
 
 from shiny.playwright import controller
+from shiny.render._data_frame import ColumnFilterNumber, ColumnFilterStr
 from shiny.run import ShinyAppProc
 
 
@@ -43,7 +44,8 @@ def test_validate_html_columns(page: Page, local_app: ShinyAppProc) -> None:
     data_frame.expect_cell("1", row=0, col=1)
 
     # filter by Individual IDs
-    data_frame.set_filter(6, text="N2")
+    filter_text: ColumnFilterStr = {"col": 6, "value": "N2"}
+    data_frame.set_filter(filter_text)
     data_frame.expect_cell("3", row=0, col=1)
 
     # respect filtering even after edits when filters have been applied
@@ -62,7 +64,8 @@ def test_validate_html_columns(page: Page, local_app: ShinyAppProc) -> None:
     data_frame.expect_cell_class("cell-html", row=0, col=0)
 
     # Filter using a range for a column that contains numbers
-    data_frame.set_filter(1, text=["40", "50"])
+    filter_num_range: ColumnFilterNumber = {"col": 1, "value": (40, 50)}
+    data_frame.set_filter(filter_num_range)
     data_frame.expect_cell("40", row=0, col=1)
 
     # Editing a cell in the first row and hitting `shift+enter` should not submit the change and stay editing the current cell

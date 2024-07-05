@@ -6312,23 +6312,32 @@ class OutputDataFrame(_UiWithContainer):
             # reset all filters
             for i in range(0, self.loc_column_filter.count()):
                 self.loc_column_filter.nth(i).locator("> input").clear()
-        else:
-            if isinstance(filter, dict) and "col" in filter and "value" in filter and isinstance(filter["value"], str):
-                self.loc_column_filter.nth(filter["col"]).locator("> input").fill(
-                    str(filter["value"])
-                )
-            elif isinstance(filter, ColumnFilterNumber):
-                header_inputs = self.loc_column_filter.nth(filter["col"]).locator(
-                    "> div > input"
-                )
-                header_inputs.nth(0).fill(
-                    str(filter["value"][0]),
-                    timeout=timeout,
-                )
-                header_inputs.nth(1).fill(
-                    str(filter["value"][1]),
-                    timeout=timeout,
-                )
+        elif (
+            isinstance(filter, dict)
+            and "col" in filter
+            and "value" in filter
+            and isinstance(filter["value"], str)
+        ):
+            self.loc_column_filter.nth(filter["col"]).locator("> input").fill(
+                str(filter["value"])
+            )
+        elif (
+            isinstance(filter, dict)
+            and "col" in filter
+            and "value" in filter
+            and isinstance(filter["value"], (tuple, list))
+        ):
+            header_inputs = self.loc_column_filter.nth(filter["col"]).locator(
+                "> div > input"
+            )
+            header_inputs.nth(0).fill(
+                str(filter["value"][0]),
+                timeout=timeout,
+            )
+            header_inputs.nth(1).fill(
+                str(filter["value"][1]),
+                timeout=timeout,
+            )
 
     def save_cell(
         self,

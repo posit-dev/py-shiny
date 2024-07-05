@@ -1,6 +1,7 @@
 from playwright.sync_api import Page
 
 from shiny.playwright import controller
+from shiny.render._data_frame import ColumnFilterNumber
 from shiny.run import ShinyAppProc
 
 
@@ -54,7 +55,8 @@ def test_dataframe_organization_methods(page: Page, local_app: ShinyAppProc) -> 
     reset_data_frame()
 
     # filter using numbers
-    data_frame.set_filter(col=0, text=["6", "6.9"])
+    filter_num_range: ColumnFilterNumber = {"col": 0, "value": [6, 6.9]}
+    data_frame.set_filter(filter_num_range)
     data_view_rows.expect_value("(3, 4)")
     data_view_selected_true.expect_value("[]")
     data_view_selected_false.expect_value("[ 51 100]")

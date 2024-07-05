@@ -33,10 +33,10 @@ def test_row_selection(page: Page, local_app: ShinyAppProc) -> None:
     selected_df.expect_n_row(2)
     selected_rows.expect_value("(5, 7)")
 
-    filter_criteria: ColumnFilterStr = {"col": 0, "value": "5"}
+    filter_text: ColumnFilterStr = {"col": 0, "value": "5"}
     # # Filter to different row
     # Currently this causes an error
-    my_df.set_filter(filter_criteria)
+    my_df.set_filter(filter_text)
     my_df.expect_n_row(1)
     expect_selected_count(my_df, 1)
     selected_df.expect_n_row(1)
@@ -52,9 +52,9 @@ def test_row_selection(page: Page, local_app: ShinyAppProc) -> None:
 
     # Filter to non selected row
     # Currently this causes an error
-    filter_criteria["value"] = "8"
-    filter_criteria["col"] = 0
-    my_df.set_filter(filter_criteria)
+    filter_text["value"] = "8"
+    filter_text["col"] = 0
+    my_df.set_filter(filter_text)
     my_df.expect_n_row(1)
     expect_selected_count(my_df, 0)
     selected_df.expect_n_row(0)
@@ -69,7 +69,7 @@ def test_row_selection(page: Page, local_app: ShinyAppProc) -> None:
     selected_rows.expect_value("(5, 7)")
 
     # Update selection with new selection while under a filter
-    my_df.set_filter(filter_criteria)
+    my_df.set_filter(filter_text)
     my_df.expect_n_row(1)
     expect_selected_count(my_df, 0)
     selected_df.expect_n_row(0)
