@@ -32,21 +32,21 @@ def test_dataframe_organization_methods(page: Page, local_app: ShinyAppProc) -> 
     cell_selection.expect_value("()")
 
     # sort column by number ascending
-    data_frame.set_sort(0)
+    data_frame.set_sort({"col": 0, "desc": False})
     data_view_rows.expect_value("(1, 0, 5, 4, 3, 2)")
     data_view_selected_true.expect_value("[]")
     data_view_selected_false.expect_value("[  1   0 101 100  51  50]")
     cell_selection.expect_value("()")
 
     # sort column by text ascending
-    data_frame.set_sort(4)
+    data_frame.set_sort([4])
     data_view_rows.expect_value("(0, 1, 2, 3, 4, 5)")
     data_view_selected_true.expect_value("[]")
     data_view_selected_false.expect_value("[  0   1  50  51 100 101]")
     cell_selection.expect_value("()")
 
     # sort column by text descending
-    data_frame.set_sort(4)
+    data_frame.set_sort({"col": 4, "desc": True})
     data_view_rows.expect_value("(4, 5, 2, 3, 0, 1) ")
     data_view_selected_true.expect_value("[]")
     data_view_selected_false.expect_value("[100 101  50  51   0   1]")

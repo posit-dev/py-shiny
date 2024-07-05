@@ -13,7 +13,7 @@ from typing import Literal, Optional, Protocol
 from playwright.sync_api import FilePayload, FloatRect, Locator, Page, Position
 from playwright.sync_api import expect as playwright_expect
 
-from shiny.render._data_frame import ColumnFilterNumber, ColumnFilterStr, ColumnSort
+from shiny.render._data_frame import ColumnFilter, ColumnSort
 
 # Import `shiny`'s typing extentions.
 # Since this is a private file, tell pyright to ignore the import
@@ -6264,7 +6264,7 @@ class OutputDataFrame(_UiWithContainer):
 
     def set_sort(
         self,
-        sort: int | ColumnSort | list[ColumnSort] | None,
+        sort: int | ColumnSort | list[int | ColumnSort] | None,
         *,
         timeout: Timeout = None,
     ):
@@ -6283,22 +6283,81 @@ class OutputDataFrame(_UiWithContainer):
         timeout
             The maximum time to wait for the action to complete. Defaults to `None`.
         """
-        if isinstance(sort, int):
-            self.loc_column_label.nth(sort).click(timeout=timeout)
-        elif isinstance(sort, dict) and "col" in sort and "desc" in sort:
-            self.loc_column_label.nth(sort["col"]).click(timeout=timeout)
-            if sort["desc"] is False:
-                self.loc_column_label.nth(sort["col"]).click(timeout=timeout)
-        elif isinstance(sort, list):
-            for s in sort:
-                self.loc_column_label.nth(s["col"]).click(timeout=timeout)
-                if s["desc"] is False:
-                    self.loc_column_label.nth(s["col"]).click(timeout=timeout)
+
+        def click_loc(loc: Locator, *, shift: bool = False):
+            clickModifier: list[Literal["Shift"]] | None = (
+                ["Shift"] if bool(shift) else None
+            )
+            loc.click(
+                timeout=timeout,
+                modifiers=clickModifier,
+            )
+            # Wait for arrows to react a little bit
+            # This could possible be changed to a `wait_for_change`, but 150ms should be fine
+            self.page.wait_for_timeout(150)
+
+        # Reset arrow sorting by clicking on the arrows until none are found
+        sortingArrows = self.loc_column_label.locator("svg.sort-arrow")
+        while sortingArrows.count() > 0:
+            click_loc(sortingArrows.first)
+
+        # Quit early if no sorting is needed
+        if sort is None:
+            return
+
+        if isinstance(sort, int) | isinstance(sort, dict) and not isinstance(
+            sort, list
+        ):
+            sort = [sort]
+
+        if not isinstance(sort, list):
+            raise ValueError(
+                "Invalid sort value. Must be an int, ColumnSort, list[ColumnSort], or None."
+            )
+
+        # For every sorting info...
+        for sort_info, i in zip(sort, range(len(sort))):
+            # TODO-barret-future; assert column does not have `cell-html` class
+            shift = i > 0
+
+            if isinstance(sort_info, int):
+                sort_info = {"col": sort_info}
+
+            # Verify ColumnSortInfo
+            assert isinstance(
+                sort_info, dict
+            ), f"Invalid sort value at position {i}. Must be an int, ColumnSort, list[ColumnSort], or None."
+            assert (
+                "col" in sort_info
+            ), f"Column index (`col`) at position {i} is required for sorting."
+
+            sort_col = self.loc_column_label.nth(sort_info["col"])
+            expect_not_to_have_class(sort_col, "header-html")
+
+            # If no `desc` key is found, click the column to sort and move on
+            if "desc" not in sort_info:
+                click_loc(sort_col, shift=shift)
+                continue
+
+            # "desc" in sort_info
+            desc_val = bool(sort_info["desc"])
+            sort_col.scroll_into_view_if_needed()
+            for _ in range(2):
+                if desc_val:
+                    # If a descending is found, stop clicking
+                    if sort_col.locator("svg.sort-arrow-down").count() > 0:
+                        break
+                else:
+                    # If a ascending is found, stop clicking
+                    if sort_col.locator("svg.sort-arrow-up").count() > 0:
+                        break
+                click_loc(sort_col, shift=shift)
 
     # TODO-karan-test: Add support for a list of columns ? If so, all other columns should be reset
     def set_filter(
         self,
-        filter: str | ColumnFilterStr | None | ColumnFilterNumber,
+        # TODO-barret support array of filters
+        filter: ColumnFilter | list[ColumnFilter] | None,
         *,
         timeout: Timeout = None,
     ):
@@ -6317,37 +6376,51 @@ class OutputDataFrame(_UiWithContainer):
         timeout
             The maximum time to wait for the action to complete. Defaults to `None`.
         """
+        # reset all filters
+        all_input_handles = self.loc_column_filter.locator(
+            "> input, > div > input"
+        ).element_handles()
+        for input_handle in all_input_handles:
+            input_handle.scroll_into_view_if_needed()
+            input_handle.fill("", timeout=timeout)
+
         if filter is None:
-            # reset all filters
-            for i in range(0, self.loc_column_filter.count()):
-                self.loc_column_filter.nth(i).locator("> input").clear()
-        elif (
-            isinstance(filter, dict)
-            and "col" in filter
-            and "value" in filter
-            and isinstance(filter["value"], str)
-        ):
-            self.loc_column_filter.nth(filter["col"]).locator("> input").fill(
-                str(filter["value"])
+            return
+
+        if isinstance(filter, dict):
+            filter = [filter]
+
+        if not isinstance(filter, list):
+            raise ValueError(
+                "Invalid filter value. Must be a ColumnFilter, list[ColumnFilter], or None."
             )
-        elif (
-            isinstance(filter, dict)
-            and "col" in filter
-            and "value" in filter
-            and isinstance(filter["value"], (tuple, list))
-        ):
-            header_inputs = self.loc_column_filter.nth(filter["col"]).locator(
-                "> div > input"
-            )
-            if filter["value"][0] is not None:
-                header_inputs.nth(0).fill(
-                    str(filter["value"][0]),
-                    timeout=timeout,
-                )
-            if filter["value"][1] is not None:
-                header_inputs.nth(1).fill(
-                    str(filter["value"][1]),
-                    timeout=timeout,
+
+        for filterInfo in filter:
+            if "col" not in filterInfo:
+                raise ValueError("Column index (`col`) is required for filtering.")
+
+            if "value" not in filterInfo:
+                raise ValueError("Filter value (`value`) is required for filtering.")
+
+            filterColumn = self.loc_column_filter.nth(filterInfo["col"])
+
+            if isinstance(filterInfo["value"], str):
+                filterColumn.locator("> input").fill(filterInfo["value"])
+            elif isinstance(filterInfo["value"], (tuple, list)):
+                header_inputs = filterColumn.locator("> div > input")
+                if filterInfo["value"][0] is not None:
+                    header_inputs.nth(0).fill(
+                        str(filterInfo["value"][0]),
+                        timeout=timeout,
+                    )
+                if filterInfo["value"][1] is not None:
+                    header_inputs.nth(1).fill(
+                        str(filterInfo["value"][1]),
+                        timeout=timeout,
+                    )
+            else:
+                raise ValueError(
+                    "Invalid filter value. Must be a string or a tuple/list of two numbers."
                 )
 
     def save_cell(

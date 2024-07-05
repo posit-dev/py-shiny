@@ -710,6 +710,9 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
                       tabIndex={0}
                       onClick={header.column.getToggleSortingHandler()}
                       onKeyDown={makeHeaderKeyDown(header.column)}
+                      className={
+                        header.column.getCanSort() ? undefined : "header-html"
+                      }
                     >
                       {headerContent}
                     </th>
