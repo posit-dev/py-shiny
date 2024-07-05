@@ -1174,14 +1174,14 @@ class InputDarkMode(_UiBase):
         )
         return self
 
-    def expect_wc_attribute(self, value: str, *, timeout: Timeout = None):
+    def expect_ribute(self, value: str, *, timeout: Timeout = None):
         """
-        Expect the `wc` attribute of the input dark mode to have a specific value.
+        Expect the attribute named `attribute` of the input dark mode to have a specific value.
 
         Parameters
         ----------
         value
-            The expected value of the `wc` attribute.
+            The expected value of the `attribute` attribute.
         timeout
             The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
@@ -1398,7 +1398,8 @@ class _InputCheckboxBase(
             value, timeout=timeout, **kwargs  # pyright: ignore[reportArgumentType]
         )
 
-    def toggle(self, *, timeout: Timeout = None, **kwargs: object) -> None:
+    # TODO-karan-test: Convert usage of _toggle() to set()
+    def _toggle(self, *, timeout: Timeout = None, **kwargs: object) -> None:
         """
         Toggles the input checkbox.
 
@@ -1480,6 +1481,7 @@ class InputSwitch(_InputCheckboxBase):
         )
 
 
+# TODO-future: Move class methods to a separate module
 class _MultipleDomItems:
     @staticmethod
     def assert_arr_is_unique(
@@ -1711,9 +1713,6 @@ class _MultipleDomItems:
             raise e
 
 
-# TODO-barret; continue from here
-
-
 class _RadioButtonCheckboxGroupBase(_UiWithLabel):
     loc_choice_labels: Locator
 
@@ -1814,7 +1813,7 @@ class InputCheckboxGroup(
 
     def set(
         self,
-        # Allow `selected` to be a single Pattern to perform matching against many items
+        # TODO-future: Allow `selected` to be a single Pattern to perform matching against many items
         selected: list[str],
         *,
         timeout: Timeout = None,
@@ -2075,19 +2074,6 @@ class InputFile(
     Playwright `Locator` of the progress bar.
     """
 
-    # id: str,
-    # label: TagChild,
-    # *,
-    # multiple: bool = False,
-    # accept: Optional[Union[str, list[str]]] = None,
-    # width: Optional[str] = None,
-    # button_label: str = "Browse...",
-    # placeholder: str = "No file selected",
-    # capture: Optional[Literal["environment", "user"]] = None,
-    # with page.expect_file_chooser() as fc_info:
-    #     page.get_by_text("Upload").click()
-    # file_chooser = fc_info.value
-    # file_chooser.set_files("myfile.pdf")
     def __init__(
         self,
         page: Page,
@@ -3700,7 +3686,12 @@ class _OutputImageBase(_OutputInlineContainerM, _OutputBase):
     Playwright `Locator` of the image.
     """
 
-    def __init__(self, page: Page, id: str, loc_classes: str = "") -> None:
+    def __init__(
+        self,
+        page: Page,
+        id: str,
+        loc_classes: str = "",
+    ) -> None:
         """
         Initializes an image output.
 
@@ -3907,20 +3898,6 @@ class OutputUi(_OutputInlineContainerM, _OutputBase):
         else:
             self.expect.not_to_be_empty(timeout=timeout)
 
-    def expect_text(self, value: str, *, timeout: Timeout = None) -> None:
-        """
-        Asserts that the output has the expected text.
-
-        Parameters
-        ----------
-        value
-            The expected text.
-        timeout
-            The maximum time to wait for the text to appear. Defaults to `None`.
-        """
-
-        self.expect.to_have_text(value, timeout=timeout)
-
 
 # When making selectors, use `xpath` so that direct decendents can be checked
 class OutputTable(_OutputBase):
@@ -4025,7 +4002,7 @@ class OutputTable(_OutputBase):
             timeout=timeout,
         )
 
-    def expect_n_col(
+    def expect_num_cols(
         self,
         value: int,
         *,
@@ -4049,7 +4026,7 @@ class OutputTable(_OutputBase):
             timeout=timeout,
         )
 
-    def expect_n_row(
+    def expect_num_rows(
         self,
         value: int,
         *,
@@ -4191,9 +4168,9 @@ class Sidebar(
             The maximum time to wait for the sidebar to open or close. Defaults to `None`.
         """
         if open ^ (self.loc_handle.get_attribute("aria-expanded") == "true"):
-            self.toggle(timeout=timeout)
+            self._toggle(timeout=timeout)
 
-    def toggle(self, *, timeout: Timeout = None) -> None:
+    def _toggle(self, *, timeout: Timeout = None) -> None:
         """
         Toggles the sidebar open or closed.
 
@@ -4958,9 +4935,9 @@ class AccordionPanel(
         self.loc.scroll_into_view_if_needed(timeout=timeout)
         expect_not_to_have_class(self.loc_body, "collapsing", timeout=timeout)
         if self._loc_body_visible.count() != int(open):
-            self.toggle(timeout=timeout)
+            self._toggle(timeout=timeout)
 
-    def toggle(self, *, timeout: Timeout = None) -> None:
+    def _toggle(self, *, timeout: Timeout = None) -> None:
         """
         Toggles the state of the control.
 
@@ -5159,9 +5136,9 @@ class Popover(_OverlayBase):
             The maximum time to wait for the popover to be visible and interactable. Defaults to `None`.
         """
         if open ^ self.get_loc_overlay_body(timeout=timeout).count() > 0:
-            self.toggle()
+            self._toggle()
 
-    def toggle(self, timeout: Timeout = None) -> None:
+    def _toggle(self, timeout: Timeout = None) -> None:
         """
         Toggles the state of the popover.
 
@@ -5230,11 +5207,11 @@ class Tooltip(_OverlayBase):
             The maximum time to wait for the tooltip to be visible and interactable. Defaults to `None`.
         """
         if open ^ self.get_loc_overlay_body(timeout=timeout).count() > 0:
-            self.toggle(timeout=timeout)
+            self._toggle(timeout=timeout)
         if not open:
             self.get_loc_overlay_body(timeout=timeout).click()
 
-    def toggle(self, timeout: Timeout = None) -> None:
+    def _toggle(self, timeout: Timeout = None) -> None:
         """
         Toggles the state of the tooltip.
 
@@ -5879,7 +5856,7 @@ class OutputDataFrame(_UiWithContainer):
         )
 
     # TODO-barret; Should this be called `expect_row_count()`?
-    def expect_n_row(self, value: int, *, timeout: Timeout = None):
+    def expect_num_rows(self, value: int, *, timeout: Timeout = None):
         """
         Expects the number of rows in the data frame.
 
@@ -5894,7 +5871,7 @@ class OutputDataFrame(_UiWithContainer):
             value, timeout=timeout
         )
 
-    def expect_selected_n_row(self, value: int, *, timeout: Timeout = None):
+    def expect_selected_num_rows(self, value: int, *, timeout: Timeout = None):
         """
         Expects the number of selected rows in the data frame.
 
@@ -6106,7 +6083,7 @@ class OutputDataFrame(_UiWithContainer):
             timeout=timeout,
         )
 
-    def expect_n_col(
+    def expect_num_cols(
         self,
         value: int,
         *,

@@ -31,7 +31,7 @@ def test_validate_data_edit_mode(page: Page, local_app: ShinyAppProc) -> None:
     )
 
     data_frame.expect_cell("PAL0708", row=0, col=0)
-    data_frame.expect_n_col(17)
+    data_frame.expect_num_cols(17)
     data_frame.expect_class_state("ready", row=0, col=0)
     data_frame.expect_column_label(["Species"], col=3)
     data_frame.edit_cell("Study0708_edited", row=0, col=0)

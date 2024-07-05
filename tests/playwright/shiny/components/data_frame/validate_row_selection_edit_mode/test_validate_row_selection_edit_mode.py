@@ -19,7 +19,7 @@ def test_validate_row_selection_in_edit_mode(
     data_frame.edit_cell("N2A2", row=1, col=6)
     data_frame.expect_row_focus_state(False, row=1)
     data_frame.expect_class_state("editing", row=1, col=6)
-    data_frame.expect_selected_n_row(1)
+    data_frame.expect_selected_num_rows(1)
     data_frame.expect_selected_rows([1])
     data_frame.save_cell("N3A2", row=1, col=6, save_key="Escape")
     data_frame.expect_cell("N1A2", row=1, col=6)

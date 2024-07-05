@@ -41,7 +41,7 @@ def test_input_file_kitchen(page: Page, local_app: ShinyAppProc) -> None:
     output_table = controller.OutputTable(page, "summary")
 
     output_table.expect_column_labels(["Row Count", "Column Count", "Column Names"])
-    output_table.expect_n_row(1)
+    output_table.expect_num_rows(1)
 
     file2 = controller.InputFile(page, "file2")
     file2.set([file_info, file_info2])

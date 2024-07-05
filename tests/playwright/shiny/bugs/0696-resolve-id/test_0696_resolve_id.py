@@ -25,8 +25,7 @@ def expect_outputs(page: Page, module_id: str, letter: str, count: int):
         return id
 
     dataframe = controller.OutputDataFrame(page, resolve_id("out_data_frame"))
-    # using expect_row_count instead of expect_n_row because the latter returns all the rows on the page
-    dataframe.expect_n_row(count + 1)
+    dataframe.expect_num_rows(count + 1)
 
     controller.OutputText(page, resolve_id("out_text")).expect_value(
         f"Output text content. `input.radio_buttons()`: `{letter}`"
@@ -34,7 +33,7 @@ def expect_outputs(page: Page, module_id: str, letter: str, count: int):
     controller.OutputTextVerbatim(page, resolve_id("out_text_verbatim")).expect_value(
         f"Output text verbatim content. `input.radio_buttons()`: `{letter}`"
     )
-    controller.OutputTable(page, resolve_id("out_table")).expect_n_row(count + 1)
+    controller.OutputTable(page, resolve_id("out_table")).expect_num_rows(count + 1)
 
     # Mirrors ImageTransformer implementation
     src = penguin_imgs[count]
