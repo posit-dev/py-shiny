@@ -1,8 +1,8 @@
 import { SortDirection } from "@tanstack/react-table";
 import React, { FC } from "react";
 
+const sortClassName = "sort-arrow";
 const sortCommonProps = {
-  className: "sort-arrow",
   viewBox: [-1, -1, 2, 2].map((x) => x * 1.4).join(" "),
   width: "100%",
   height: "100%",
@@ -16,7 +16,10 @@ const sortPathCommonProps = {
 };
 
 const sortArrowUp = (
-  <svg xmlns="http://www.w3.org/2000/svg" {...sortCommonProps}>
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    {...{ ...sortCommonProps, className: `${sortClassName} sort-arrow-up` }}
+  >
     <path
       d="M -1 0.5 L 0 -0.5 L 1 0.5"
       {...sortPathCommonProps}
@@ -26,7 +29,10 @@ const sortArrowUp = (
 );
 
 const sortArrowDown = (
-  <svg xmlns="http://www.w3.org/2000/svg" {...sortCommonProps}>
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    {...{ ...sortCommonProps, className: `${sortClassName} sort-arrow-down` }}
+  >
     <path
       d="M -1 -0.5 L 0 0.5 L 1 -0.5"
       {...sortPathCommonProps}
