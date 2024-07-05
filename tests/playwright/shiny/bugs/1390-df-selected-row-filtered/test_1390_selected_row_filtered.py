@@ -5,6 +5,7 @@ import platform
 from playwright.sync_api import Page, expect
 
 from shiny.playwright import controller
+from shiny.render._data_frame import ColumnFilterStr
 from shiny.run import ShinyAppProc
 
 
@@ -32,15 +33,16 @@ def test_row_selection(page: Page, local_app: ShinyAppProc) -> None:
     selected_df.expect_n_row(2)
     selected_rows.expect_value("(5, 7)")
 
+    filter_text: ColumnFilterStr = {"col": 0, "value": "5"}
     # # Filter to different row
     # Currently this causes an error
-    my_df.set_column_filter(0, text="5")
+    my_df.set_filter(filter_text)
     my_df.expect_n_row(1)
     expect_selected_count(my_df, 1)
     selected_df.expect_n_row(1)
     selected_rows.expect_value("(5,)")
     # # Remove the filter
-    my_df.set_column_filter(0, text="")
+    my_df.set_filter(None)
     # Confirm the original data frame returns
     my_df.expect_n_row(10)
     # Confirm the previous row is still selected as no new selection has been made
@@ -50,7 +52,9 @@ def test_row_selection(page: Page, local_app: ShinyAppProc) -> None:
 
     # Filter to non selected row
     # Currently this causes an error
-    my_df.set_column_filter(0, text="8")
+    filter_text["value"] = "8"
+    filter_text["col"] = 0
+    my_df.set_filter(filter_text)
     my_df.expect_n_row(1)
     expect_selected_count(my_df, 0)
     selected_df.expect_n_row(0)
@@ -58,20 +62,20 @@ def test_row_selection(page: Page, local_app: ShinyAppProc) -> None:
 
     # Remove the filter
     # Confirm the original data frame returns
-    my_df.set_column_filter(0, text="")
+    my_df.set_filter(None)
     my_df.expect_n_row(10)
     expect_selected_count(my_df, 2)
     selected_df.expect_n_row(2)
     selected_rows.expect_value("(5, 7)")
 
     # Update selection with new selection while under a filter
-    my_df.set_column_filter(0, text="8")
+    my_df.set_filter(filter_text)
     my_df.expect_n_row(1)
     expect_selected_count(my_df, 0)
     selected_df.expect_n_row(0)
     selected_rows.expect_value("()")
     my_df.select_rows([0])
-    my_df.set_column_filter(0, text="")
+    my_df.set_filter(None)
     my_df.expect_n_row(10)
     expect_selected_count(my_df, 1)
     selected_df.expect_n_row(1)

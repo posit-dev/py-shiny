@@ -30,11 +30,11 @@ def test_card_input(page: Page, app_path: str, sel_card: str, sel_vb: str) -> No
     card.expect_full_screen(False)
     out_card.expect_value("False")
 
-    card.open_full_screen()
+    card.set_full_screen(True)
     card.expect_full_screen(True)
     out_card.expect_value("True")
 
-    card.close_full_screen()
+    card.set_full_screen(False)
     card.expect_full_screen(False)
     out_card.expect_value("False")
 
@@ -42,10 +42,10 @@ def test_card_input(page: Page, app_path: str, sel_card: str, sel_vb: str) -> No
     vb.expect_full_screen(False)
     out_vb.expect_value("False")
 
-    vb.open_full_screen()
+    vb.set_full_screen(True)
     vb.expect_full_screen(True)
     out_vb.expect_value("True")
 
-    vb.close_full_screen()
+    vb.set_full_screen(False)
     vb.expect_full_screen(False)
     out_vb.expect_value("False")

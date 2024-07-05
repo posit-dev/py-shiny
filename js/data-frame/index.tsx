@@ -146,7 +146,6 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
    * Determines if the user is allowed to edit cells in the table.
    */
   const editCellsIsAllowed = payloadOptions["editable"] === true;
-  ("Barret");
 
   /**
    * Determines if any cell is currently being edited
@@ -711,6 +710,9 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
                       tabIndex={0}
                       onClick={header.column.getToggleSortingHandler()}
                       onKeyDown={makeHeaderKeyDown(header.column)}
+                      className={
+                        header.column.getCanSort() ? undefined : "header-html"
+                      }
                     >
                       {headerContent}
                     </th>

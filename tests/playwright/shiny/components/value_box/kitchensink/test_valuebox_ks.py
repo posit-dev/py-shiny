@@ -61,10 +61,10 @@ def test_valuebox(page: Page, local_app: ShinyAppProc) -> None:
     assert get_value_box_fg_color(value_box1) == "rgb(255, 255, 255)"
     value_box1.expect_full_screen_available(True)
     value_box1.expect_full_screen(False)
-    value_box1.open_full_screen()
+    value_box1.set_full_screen(True)
     value_box1.expect_full_screen(True)
     value_box1.expect_body(["Inside the fullscreen"])
-    value_box1.close_full_screen()
+    value_box1.set_full_screen(False)
     value_box1.expect_full_screen(False)
 
     value_box2 = controller.ValueBox(page, "valuebox2")
