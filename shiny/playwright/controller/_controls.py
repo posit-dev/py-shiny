@@ -6269,13 +6269,17 @@ class OutputDataFrame(_UiWithContainer):
         timeout: Timeout = None,
     ):
         """
-        Sorts the column in the data frame.
+        Set or modify the sorting of columns in a table or grid component.
+        This method allows setting single or multiple column sorts, or resetting the sort order.
 
         Parameters
         ----------
         sort
-            The column number to sort.
-            If type is ColumnSort
+            The sorting configuration to apply. Can be one of the following:
+                int: Index of the column to sort by (ascending order by default).
+                ColumnSort: A dictionary specifying a single column sort with 'col' and 'desc' keys.
+                list[ColumnSort]: A list of dictionaries for multi-column sorting.
+                None: No sorting applied (not implemented in the current code).
         timeout
             The maximum time to wait for the action to complete. Defaults to `None`.
         """
@@ -6299,12 +6303,17 @@ class OutputDataFrame(_UiWithContainer):
         timeout: Timeout = None,
     ):
         """
-        Filters the column in the data frame.
+        Set or reset filters for columns in a table or grid component.
+        This method allows setting string filters, numeric range filters, or clearing all filters.
 
         Parameters
         ----------
         filter
-            The criteria for filtering the table
+            The filter to apply. Can be one of the following:
+                None: Resets all filters.
+                str: A string filter (deprecated, use ColumnFilterStr instead).
+                ColumnFilterStr: A dictionary specifying a string filter with 'col' and 'value' keys.
+                ColumnFilterNumber: A dictionary specifying a numeric range filter with 'col' and 'value' keys.
         timeout
             The maximum time to wait for the action to complete. Defaults to `None`.
         """
