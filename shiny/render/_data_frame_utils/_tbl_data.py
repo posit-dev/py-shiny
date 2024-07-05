@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+# TODO-future; Integrate these methods into:
+# * `render/_render.py`; render.table - based on pandas only
+# * `render/_coordmap.py`; .iloc usage
 # TODO-barret; Add fixture for all data frame tests to test pandas and polars
 # TODO-barret; Go through all functions and make sure no `.shape` or `.columns` are used being used directly. There should be no direct usage of any custom data frame type.
 from functools import singledispatch
@@ -90,32 +93,6 @@ def _(data: PdDataFrame) -> ListSeriesLike:
 @frame_columns.register
 def _(data: PlDataFrame) -> ListSeriesLike:
     return data.get_columns()
-
-
-# # get_frame_column ---------------------------------------------------------------------
-
-
-# @singledispatch
-# def get_frame_column(data: DataFrameLike, col: int | str) -> SeriesLike:
-#     raise TypeError(f"Unsupported type: {type(data)}")
-
-
-# @get_frame_column.register
-# def _(data: PdDataFrame, col: int | str) -> PdSeries:
-
-#     col_idx: (  # pyright: ignore[reportUnknownVariableType]
-#         int
-#     ) = data.columns.get_indexer_for(  # pyright: ignore[reportUnknownMemberType]
-#         [col]
-#     )[  # pyright: ignore[] # placeholder value for Black
-#         0
-#     ]
-#     return cast(PdSeries, data.iloc[col_idx])
-
-
-# @get_frame_column.register
-# def _(data: PlDataFrame, col: int | str) -> PlSeries:
-#     return data[col]
 
 
 # apply_frame_patches --------------------------------------------------------------------

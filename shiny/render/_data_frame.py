@@ -422,35 +422,6 @@ class data_frame(Renderer[DataFrameResult]):
 
         self.data_view_rows = self_data_view_rows
 
-        # @reactive.calc
-        # def self__data_selected() -> pd.DataFrame:
-        #     # browser_cell_selection
-        #     bcs = self.cell_selection()
-        #     if bcs is None:
-        #         req(False)
-        #         raise RuntimeError("This should never be reached for typing purposes")
-        #     data_selected = self.data_view(selected=False)
-        #     if bcs["type"] == "none":
-        #         # Empty subset
-        #         return data_selected.iloc[[]]
-        #     elif bcs["type"] == "row":
-        #         # Seems to not work with `tuple[int, ...]`,
-        #         # but converting to a list does!
-        #         rows = list(bcs["rows"])
-        #         return data_selected.iloc[rows]
-        #     elif bcs["type"] == "col":
-        #         # Seems to not work with `tuple[int, ...]`,
-        #         # but converting to a list does!
-        #         cols = list(bcs["cols"])
-        #         return data_selected.iloc[:, cols]
-        #     elif bcs["type"] == "rect":
-        #         return data_selected.iloc[
-        #             bcs["rows"][0] : bcs["rows"][1],
-        #             bcs["cols"][0] : bcs["cols"][1],
-        #         ]
-        #     raise RuntimeError(f"Unhandled selection type: {bcs['type']}")
-        # # self._data_selected = self__data_selected
-
         @reactive.calc
         def self__data_patched() -> DataFrameLike:
             return apply_frame_patches(self.data(), self.cell_patches())
@@ -483,7 +454,7 @@ class data_frame(Renderer[DataFrameResult]):
             else:
                 rows = self.data_view_rows()
 
-            return subset_frame(data=self._data_patched(), rows=rows)
+            return subset_frame(self._data_patched(), rows=rows)
 
         # Helper reactives so that internal calculations can be cached for use in other calculations
         @reactive.calc
@@ -932,7 +903,7 @@ class data_frame(Renderer[DataFrameResult]):
         if len(sort) > 0:
             with reactive.isolate():
                 data = self.data()
-            ncol = len(data.columns)
+            ncol = frame_shape(data)[1]
 
             for val in sort:
                 val_dict: ColumnSort
