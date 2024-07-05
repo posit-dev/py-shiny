@@ -6281,7 +6281,7 @@ class OutputDataFrame(_UiWithContainer):
         """
         if isinstance(sort, int):
             self.loc_column_label.nth(sort).click(timeout=timeout)
-        elif isinstance(sort, ColumnSort):
+        elif isinstance(sort, dict) and "col" in sort and "desc" in sort:
             self.loc_column_label.nth(sort["col"]).click(timeout=timeout)
             if sort["desc"] is False:
                 self.loc_column_label.nth(sort["col"]).click(timeout=timeout)
@@ -6313,9 +6313,9 @@ class OutputDataFrame(_UiWithContainer):
             for i in range(0, self.loc_column_filter.count()):
                 self.loc_column_filter.nth(i).locator("> input").clear()
         else:
-            if isinstance(filter, ColumnFilterStr):
+            if isinstance(filter, dict) and "col" in filter and "value" in filter and isinstance(filter["value"], str):
                 self.loc_column_filter.nth(filter["col"]).locator("> input").fill(
-                    filter["value"]
+                    str(filter["value"])
                 )
             elif isinstance(filter, ColumnFilterNumber):
                 header_inputs = self.loc_column_filter.nth(filter["col"]).locator(
