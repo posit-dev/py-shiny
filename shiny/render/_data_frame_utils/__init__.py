@@ -22,6 +22,7 @@ from ._selection import (
     SelectionModes,
     as_cell_selection,
 )
+from ._styles import StyleInfo
 from ._types import CellHtml
 
 __all__ = (
@@ -44,4 +45,5 @@ __all__ = (
     "SelectionMode",
     "SelectionModes",
     "as_cell_selection",
+    "StyleInfo",
 )

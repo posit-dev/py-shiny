@@ -436,11 +436,13 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
           // style={{ width: "100%", height: "100%" }}
         />
       );
+    } else if (isHtmlColumn) {
+      addToTableCellClass("cell-html");
     } else {
-      // `isEditing` is `false`
+      // `isEditing` is `false` and not an HTML column, so we can allow for double clicks to go into edit mode
 
       // Only allow transition to edit mode if the cell can be edited
-      if (editCellsIsAllowed && !isHtmlColumn) {
+      if (editCellsIsAllowed) {
         addToTableCellClass("cell-editable");
         onCellDoubleClick = (e: ReactMouseEvent<HTMLTableCellElement>) => {
           // Do not prevent default or stop propagation here!
@@ -454,8 +456,6 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
             obj_draft.editValue = getCellValueText(cellValue) as string;
           });
         };
-      } else {
-        addToTableCellClass("cell-html");
       }
     }
     if (isShinyHtml(cellValue)) {

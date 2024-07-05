@@ -41,6 +41,7 @@ from ...ui import (
     AccordionPanel,
     AnimationOptions,
     CardItem,
+    Chat,
     ShowcaseLayout,
     Sidebar,
     SliderStepArg,
@@ -187,6 +188,7 @@ __all__ = (
     "AccordionPanel",
     "AnimationOptions",
     "CardItem",
+    "Chat",
     "ShowcaseLayout",
     "Sidebar",
     "SliderStepArg",
@@ -326,6 +328,8 @@ _known_missing = {
         "output_table",
         "output_ui",
         "output_data_frame",
+        # Chat knows how to render itself in express
+        "chat_ui",
     ),
     # Items from shiny.express.ui that don't have a counterpart in shiny.ui
     "shiny.express.ui": (

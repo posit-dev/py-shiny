@@ -17,7 +17,9 @@
     "moduleDetection": "force",
     "isolatedModules": true,
     "strict": true,
-    "noUncheckedIndexedAccess": true
+    "noUncheckedIndexedAccess": true,
+    "experimentalDecorators": true,
+    "useDefineForClassFields": false,
   },
   "include": ["**/*.tsx", "**/*.ts"],
   "exclude": ["data-frame/*"],

@@ -11,7 +11,7 @@ def test_valuebox(page: Page, local_app: ShinyAppProc, value_box_id: str) -> Non
 
     value_box = controller.ValueBox(page, value_box_id)
     value_box.expect_full_screen(False)
-    value_box.open_full_screen()
+    value_box.set_full_screen(True)
     value_box.expect_full_screen(True)
     if value_box_id == "valuebox1":
         value_box.expect_height(None)
@@ -29,5 +29,5 @@ def test_valuebox(page: Page, local_app: ShinyAppProc, value_box_id: str) -> Non
             .evaluate("el => el.tagName.toLowerCase()")
         )
         assert title_tag_name == "p"
-    value_box.close_full_screen()
+    value_box.set_full_screen(False)
     value_box.expect_full_screen(False)

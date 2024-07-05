@@ -160,6 +160,30 @@ class SilentOperationInProgressException(SilentException):
     pass
 
 
+class NotifyException(Exception):
+    """
+    This exception can be raised in a (non-output) reactive effect
+    to display a message to the user.
+
+    Parameters
+    ----------
+    message
+        The message to display to the user.
+    sanitize
+        If ``True``, the message is sanitized to prevent leaking sensitive information.
+    close
+        If ``True``, the session is closed after the message is displayed.
+    """
+
+    sanitize: bool
+    close: bool
+
+    def __init__(self, message: str, sanitize: bool = True, close: bool = False):
+        super().__init__(message)
+        self.sanitize = sanitize
+        self.close = close
+
+
 class ActionButtonValue(int):
     pass
 

@@ -5,7 +5,6 @@ from __future__ import annotations
 from palmerpenguins import load_penguins_raw
 
 from shiny import App, Inputs, render, ui
-from shiny.render._data_frame_utils._styles import StyleInfo
 
 # Load the dataset
 penguins = load_penguins_raw()
@@ -43,7 +42,7 @@ df = df.iloc[0:5, 0:6]
 # )
 # df_styles = gt_styles(df_gt)
 
-df_styles: list[StyleInfo] = [
+df_styles: list[render.StyleInfo] = [
     {
         "location": "body",
         "style": {"color": "darkorange", "font-weight": "bold"},
@@ -123,8 +122,14 @@ def server(input: Inputs):
             if counter > len(df_styles) - len(everywhere_styles):
                 counter = 1
 
-            ret: list[StyleInfo] = []
-            for styleInfo in df_styles:
+            ret: list[render.StyleInfo] = []
+            for style in df_styles:
+                style_val = style.get("style", None)
+                if style_val is None:
+                    continue
+                if style_val["background-color"] == "lightblue":
+                    continue
+                ret.append(style)
                 if len(ret) >= counter:
                     break
                 if "rows" not in styleInfo or "cols" not in styleInfo:
