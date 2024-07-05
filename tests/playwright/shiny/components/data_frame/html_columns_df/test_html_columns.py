@@ -22,7 +22,7 @@ def test_validate_html_columns(page: Page, local_app: ShinyAppProc) -> None:
 
     # assert patching works
     data_frame.expect_cell("N1A1", row=0, col=6)
-    data_frame.save_cell("N1A11", row=0, col=6, save_key="Enter")
+    data_frame.set_cell("N1A11", row=0, col=6, finish_key="Enter")
     data_frame.expect_cell("ID: N1A11", row=0, col=6)
 
     # assert sorting works
@@ -52,7 +52,7 @@ def test_validate_html_columns(page: Page, local_app: ShinyAppProc) -> None:
     data_frame.expect_cell("152", row=0, col=1)
 
     # if a column is sorted, editing should not change the order
-    data_frame.save_cell("152", row=0, col=1, save_key="Enter")
+    data_frame.set_cell("152", row=0, col=1, finish_key="Enter")
     data_frame.expect_cell("151", row=1, col=1)
 
     # assert HTMLDependency works by verifying javascript variable
@@ -72,7 +72,7 @@ def test_validate_html_columns(page: Page, local_app: ShinyAppProc) -> None:
     data_frame.expect_cell("3", row=0, col=1)
 
     # respect filtering even after edits when filters have been applied
-    data_frame.save_cell("3", row=0, col=1, save_key="Enter")
+    data_frame.set_cell("3", row=0, col=1, finish_key="Enter")
     data_frame.expect_cell("4", row=1, col=1)
 
     # assert that html columns are not editable
@@ -96,17 +96,17 @@ def test_validate_html_columns(page: Page, local_app: ShinyAppProc) -> None:
 
     # Editing a cell in the first row and hitting `shift+enter` should not submit the change and stay editing the current cell
     data_frame.expect_cell("N25A2", row=0, col=6)
-    data_frame.save_cell("NAAAAA", row=0, col=6, save_key="Shift+Enter")
+    data_frame.set_cell("NAAAAA", row=0, col=6, finish_key="Shift+Enter")
     data_frame.expect_cell("N25A2", row=0, col=6)
-    data_frame.save_cell("NBBBBB", row=0, col=6, save_key="Escape")
+    data_frame.set_cell("NBBBBB", row=0, col=6, finish_key="Escape")
     data_frame.expect_cell("N25A2", row=0, col=6)
 
     # Editing a cell in the last row and hitting `enter` should not submit the change and stay editing the current cell
     # data_frame.set_column_filter(7, text="No")
     # Test scrolling to last row
-    data_frame.save_cell("NAAAAA", row=7, col=6, save_key="Enter")
+    data_frame.set_cell("NAAAAA", row=7, col=6, finish_key="Enter")
     data_frame.expect_cell("N29A2", row=7, col=6)
-    data_frame.save_cell("NAAAAA", row=7, col=6, save_key="Escape")
+    data_frame.set_cell("NAAAAA", row=7, col=6, finish_key="Escape")
     data_frame.expect_cell("N29A2", row=7, col=6)
 
     # Test scrolling up to top

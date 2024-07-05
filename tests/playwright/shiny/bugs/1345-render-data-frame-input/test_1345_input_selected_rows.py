@@ -13,7 +13,7 @@ def test_row_selection(page: Page, local_app: ShinyAppProc) -> None:
     selected_rows = controller.OutputTextVerbatim(page, "selected_rows")
     cell_selection = controller.OutputTextVerbatim(page, "cell_selection")
 
-    df.expect_num_rows(3)
+    df.expect_nrow(3)
     selected_rows.expect_value("Input selected rows: ()")
     cell_selection.expect_value("Cell selection rows: ()")
 

@@ -18,4 +18,4 @@ def test_express_dataframe_deploys(page: Page, app_url: str) -> None:
     page.goto(app_url)
 
     dataframe = controller.OutputDataFrame(page, "sample_data_frame")
-    dataframe.expect_num_rows(6)
+    dataframe.expect_nrow(6)

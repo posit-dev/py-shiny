@@ -4002,7 +4002,7 @@ class OutputTable(_OutputBase):
             timeout=timeout,
         )
 
-    def expect_num_cols(
+    def expect_ncol(
         self,
         value: int,
         *,
@@ -4026,7 +4026,7 @@ class OutputTable(_OutputBase):
             timeout=timeout,
         )
 
-    def expect_num_rows(
+    def expect_nrow(
         self,
         value: int,
         *,
@@ -4762,7 +4762,7 @@ class Accordion(
 
     def set(
         self,
-        selected: str | list[str],
+        open: str | list[str],
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -4771,13 +4771,13 @@ class Accordion(
 
         Parameters
         ----------
-        selected
-            The selected accordion panel(s).
+        open
+            The open accordion panel(s).
         timeout
             The maximum time to wait for the accordion panel to be visible and interactable. Defaults to `None`.
         """
-        if isinstance(selected, str):
-            selected = [selected]
+        if isinstance(open, str):
+            open = [open]
         for element in self.loc.element_handles():
             element.wait_for_element_state(state="visible", timeout=timeout)
             element.scroll_into_view_if_needed(timeout=timeout)
@@ -4786,9 +4786,7 @@ class Accordion(
                 raise ValueError(
                     "Accordion panel does not have a `data-value` attribute"
                 )
-            self.accordion_panel(elem_value).set(
-                elem_value in selected, timeout=timeout
-            )
+            self.accordion_panel(elem_value).set(elem_value in open, timeout=timeout)
 
     def accordion_panel(
         self,
@@ -5284,7 +5282,9 @@ class _NavItemBase(_UiWithContainer):
             f"div.tab-content[data-tabsetid='{datatab_id}'] > div.tab-pane.active"
         )
 
-    def expect_content(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+    def _expect_content_text(
+        self, value: PatternOrStr, *, timeout: Timeout = None
+    ) -> None:
         """
         Expects the control to have the specified content.
 
@@ -5419,7 +5419,9 @@ class NavItem(_UiWithContainer):
         """
         _expect_class_value(self.loc, "active", value, timeout=timeout)
 
-    def expect_content(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+    def _expect_content_text(
+        self, value: PatternOrStr, *, timeout: Timeout = None
+    ) -> None:
         """
         Expects the nav item content to have the specified text.
 
@@ -5856,7 +5858,7 @@ class OutputDataFrame(_UiWithContainer):
         )
 
     # TODO-barret; Should this be called `expect_row_count()`?
-    def expect_num_rows(self, value: int, *, timeout: Timeout = None):
+    def expect_nrow(self, value: int, *, timeout: Timeout = None):
         """
         Expects the number of rows in the data frame.
 
@@ -5933,7 +5935,7 @@ class OutputDataFrame(_UiWithContainer):
             # Could not find the reason why. Raising the original error.
             raise e
 
-    def expect_row_focus_state(
+    def _expect_row_focus_state(
         self, in_focus: bool = True, *, row: int, timeout: Timeout = None
     ):
         """
@@ -6057,7 +6059,7 @@ class OutputDataFrame(_UiWithContainer):
                 break
         cell.scroll_into_view_if_needed(timeout=timeout)
 
-    def expect_column_label(
+    def _expect_column_label(
         self,
         value: ListPatternOrStr,
         *,
@@ -6083,7 +6085,7 @@ class OutputDataFrame(_UiWithContainer):
             timeout=timeout,
         )
 
-    def expect_num_cols(
+    def expect_ncol(
         self,
         value: int,
         *,
@@ -6211,7 +6213,7 @@ class OutputDataFrame(_UiWithContainer):
                 "Invalid state. Select one of 'success', 'failure', 'saving', 'editing', 'ready'"
             )
 
-    def edit_cell(
+    def _edit_cell_no_save(
         self,
         text: str,
         *,
@@ -6400,13 +6402,15 @@ class OutputDataFrame(_UiWithContainer):
                     "Invalid filter value. Must be a string or a tuple/list of two numbers."
                 )
 
-    def save_cell(
+    def set_cell(
         self,
         text: str,
         *,
         row: int,
         col: int,
-        save_key: str,
+        finish_key: (
+            Literal["Enter", "Shift+Enter", "Tab", "Shift+Tab", "Escape"] | None
+        ) = None,
         timeout: Timeout = None,
     ) -> None:
         """
@@ -6420,11 +6424,17 @@ class OutputDataFrame(_UiWithContainer):
             The row number of the cell.
         col
             The column number of the cell.
+        finish_key
+            The key to save the value of the cell. If `None` (the default), no key will
+            be pressed and instead the page body will be clicked.
         timeout
             The maximum time to wait for the action to complete. Defaults to `None`.
         """
-        self.edit_cell(text, row=row, col=col, timeout=timeout)
-        self.cell_locator(row=row, col=col).locator("> textarea").press(save_key)
+        self._edit_cell_no_save(text, row=row, col=col, timeout=timeout)
+        if finish_key is None:
+            self.page.locator("body").click()
+        else:
+            self.cell_locator(row=row, col=col).locator("> textarea").press(finish_key)
 
     def expect_cell_title(
         self,
@@ -6435,7 +6445,8 @@ class OutputDataFrame(_UiWithContainer):
         timeout: Timeout = None,
     ) -> None:
         """
-        Expects the validation message of the cell in the data frame.
+        Expects the validation message of the cell in the data frame, which will be in
+        the `title` attribute of the element.
 
         Parameters
         ----------
