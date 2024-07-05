@@ -13,6 +13,8 @@ from typing import Literal, Optional, Protocol
 from playwright.sync_api import FilePayload, FloatRect, Locator, Page, Position
 from playwright.sync_api import expect as playwright_expect
 
+from shiny.render._data_frame import ColumnFilterNumber, ColumnFilterStr, ColumnSort
+
 # Import `shiny`'s typing extentions.
 # Since this is a private file, tell pyright to ignore the import
 from ..._typing_extensions import TypeGuard, assert_type
@@ -4302,34 +4304,25 @@ class _CardValueBoxFullScreenM:
     Represents a class for managing full screen functionality of a Card or Value Box.
     """
 
-    # TODO-karan-test: Convert `open_full_screen` and `close_full_screen` to `set_full_screen(open:bool)`
-    def open_full_screen(
-        self: _CardValueBoxFullScreenLayoutP, *, timeout: Timeout = None
+    def set_full_screen(
+        self: _CardValueBoxFullScreenLayoutP, open: bool, *, timeout: Timeout = None
     ) -> None:
         """
-        Opens the element in full screen mode.
+        Sets the element to full screen mode or exits full screen mode.
 
         Parameters
         ----------
+        open
+            `True` to open the element in full screen mode, `False` to exit full screen mode.
         timeout
-            The maximum time to wait for full screen mode to open. Defaults to `None`.
+            The maximum time to wait for the operation to complete. Defaults to `None`.
         """
-        self.loc_title.hover(timeout=timeout)
-        self._loc_fullscreen.wait_for(state="visible", timeout=timeout)
-        self._loc_fullscreen.click(timeout=timeout)
-
-    def close_full_screen(
-        self: _CardValueBoxFullScreenLayoutP, *, timeout: Timeout = None
-    ) -> None:
-        """
-        Exits full screen mode.
-
-        Parameters
-        ----------
-        timeout
-            The maximum time to wait to wait for full screen mode to exit. Defaults to `None`.
-        """
-        self._loc_close_button.click(timeout=timeout)
+        if open:
+            self.loc_title.hover(timeout=timeout)
+            self._loc_fullscreen.wait_for(state="visible", timeout=timeout)
+            self._loc_fullscreen.click(timeout=timeout)
+        else:
+            self._loc_close_button.click(timeout=timeout)
 
     def expect_full_screen(
         self: _CardValueBoxFullScreenLayoutP, value: bool, *, timeout: Timeout = None
@@ -6269,67 +6262,73 @@ class OutputDataFrame(_UiWithContainer):
         cell.dblclick(timeout=timeout)
         cell.locator("> textarea").fill(text)
 
-    # TODO-karan-test: Rename to `set_sort?`
-    # TODO-karan-test: Add support for a list of columns
-    # TODO-karan-test: Add support for direction
-    # TODO-karan-test: Add method for testing direction
-    def set_column_sort(
+    def set_sort(
         self,
-        col: int,
+        sort: int | ColumnSort | list[ColumnSort] | None,
         *,
         timeout: Timeout = None,
-    ) -> None:
+    ):
         """
         Sorts the column in the data frame.
 
         Parameters
         ----------
-        col
+        sort
             The column number to sort.
+            If type is ColumnSort
         timeout
             The maximum time to wait for the action to complete. Defaults to `None`.
         """
-        self.loc_column_label.nth(col).click(timeout=timeout)
+        if isinstance(sort, int):
+            self.loc_column_label.nth(sort).click(timeout=timeout)
+        elif isinstance(sort, ColumnSort):
+            self.loc_column_label.nth(sort["col"]).click(timeout=timeout)
+            if sort["desc"] is False:
+                self.loc_column_label.nth(sort["col"]).click(timeout=timeout)
+        elif isinstance(sort, list):
+            for s in sort:
+                self.loc_column_label.nth(s["col"]).click(timeout=timeout)
+                if s["desc"] is False:
+                    self.loc_column_label.nth(s["col"]).click(timeout=timeout)
 
-    # TODO-karan-test: Rename to `set_filter?`
     # TODO-karan-test: Add support for a list of columns ? If so, all other columns should be reset
-    # TODO-karan-test: Add support for a None value reset all filters
-    # TODO-karan-test: Add method for testing direction
-    def set_column_filter(
+    def set_filter(
         self,
-        col: int,
+        filter: str | ColumnFilterStr | None | ColumnFilterNumber,
         *,
-        text: str | list[str] | tuple[str, str],
         timeout: Timeout = None,
-    ) -> None:
+    ):
         """
         Filters the column in the data frame.
 
         Parameters
         ----------
-        col
-            The column number to filter.
-        text
-            The text to filter the column.
+        filter
+            The criteria for filtering the table
         timeout
             The maximum time to wait for the action to complete. Defaults to `None`.
         """
-        if isinstance(text, str):
-            self.loc_column_filter.nth(col).locator("> input").fill(
-                text,
-                timeout=timeout,
-            )
+        if filter is None:
+            # reset all filters
+            for i in range(0, self.loc_column_filter.count()):
+                self.loc_column_filter.nth(i).locator("> input").clear()
         else:
-            assert len(text) == 2
-            header_inputs = self.loc_column_filter.nth(col).locator("> div > input")
-            header_inputs.nth(0).fill(
-                text[0],
-                timeout=timeout,
-            )
-            header_inputs.nth(1).fill(
-                text[1],
-                timeout=timeout,
-            )
+            if isinstance(filter, ColumnFilterStr):
+                self.loc_column_filter.nth(filter["col"]).locator("> input").fill(
+                    filter["value"]
+                )
+            elif isinstance(filter, ColumnFilterNumber):
+                header_inputs = self.loc_column_filter.nth(filter["col"]).locator(
+                    "> div > input"
+                )
+                header_inputs.nth(0).fill(
+                    str(filter["value"][0]),
+                    timeout=timeout,
+                )
+                header_inputs.nth(1).fill(
+                    str(filter["value"][1]),
+                    timeout=timeout,
+                )
 
     def save_cell(
         self,

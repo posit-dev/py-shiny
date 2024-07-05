@@ -24,28 +24,28 @@ def test_dataframe_organization_methods(page: Page, local_app: ShinyAppProc) -> 
     reset_data_frame()
 
     # sort column by number descending
-    data_frame.set_column_sort(col=0)
+    data_frame.set_sort(0)
     data_view_rows.expect_value("(2, 3, 4, 5, 0, 1)")
     data_view_selected_true.expect_value("[]")
     data_view_selected_false.expect_value("[ 50  51 100 101   0   1]")
     cell_selection.expect_value("()")
 
     # sort column by number ascending
-    data_frame.set_column_sort(col=0)
+    data_frame.set_sort(0)
     data_view_rows.expect_value("(1, 0, 5, 4, 3, 2)")
     data_view_selected_true.expect_value("[]")
     data_view_selected_false.expect_value("[  1   0 101 100  51  50]")
     cell_selection.expect_value("()")
 
     # sort column by text ascending
-    data_frame.set_column_sort(col=4)
+    data_frame.set_sort(4)
     data_view_rows.expect_value("(0, 1, 2, 3, 4, 5)")
     data_view_selected_true.expect_value("[]")
     data_view_selected_false.expect_value("[  0   1  50  51 100 101]")
     cell_selection.expect_value("()")
 
     # sort column by text descending
-    data_frame.set_column_sort(col=4)
+    data_frame.set_sort(4)
     data_view_rows.expect_value("(4, 5, 2, 3, 0, 1) ")
     data_view_selected_true.expect_value("[]")
     data_view_selected_false.expect_value("[100 101  50  51   0   1]")
@@ -54,7 +54,7 @@ def test_dataframe_organization_methods(page: Page, local_app: ShinyAppProc) -> 
     reset_data_frame()
 
     # filter using numbers
-    data_frame.set_column_filter(col=0, text=["6", "6.9"])
+    data_frame.set_filter(col=0, text=["6", "6.9"])
     data_view_rows.expect_value("(3, 4)")
     data_view_selected_true.expect_value("[]")
     data_view_selected_false.expect_value("[ 51 100]")
@@ -67,7 +67,7 @@ def test_dataframe_organization_methods(page: Page, local_app: ShinyAppProc) -> 
     data_view_selected_false.expect_value("[  51 100 101]")
     cell_selection.expect_value("()")
 
-    data_frame.set_column_sort(3)
+    data_frame.set_sort(3)
     data_view_rows.expect_value("(4, 5, 3)")
     data_view_selected_true.expect_value("[]")
     data_view_selected_false.expect_value("[100 101  51]")

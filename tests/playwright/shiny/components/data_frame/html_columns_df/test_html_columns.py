@@ -23,7 +23,7 @@ def test_validate_html_columns(page: Page, local_app: ShinyAppProc) -> None:
 
     # assert sorting works
     data_frame.expect_cell("1", row=0, col=1)
-    data_frame.set_column_sort(col=1)
+    data_frame.set_sort(1)
     data_frame.expect_cell("152", row=0, col=1)
 
     # if a column is sorted, editing should not change the order
@@ -35,15 +35,15 @@ def test_validate_html_columns(page: Page, local_app: ShinyAppProc) -> None:
     assert test_value == "testing"
 
     # # sorting should not work for columns that are HTML columns
-    data_frame.set_column_sort(col=3)
+    data_frame.set_sort(3)
     data_frame.expect_cell("152", row=0, col=1)
 
     # reset the sorting for column
-    data_frame.set_column_sort(col=1)
+    data_frame.set_sort(1)
     data_frame.expect_cell("1", row=0, col=1)
 
     # filter by Individual IDs
-    data_frame.set_column_filter(6, text="N2")
+    data_frame.set_filter(6, text="N2")
     data_frame.expect_cell("3", row=0, col=1)
 
     # respect filtering even after edits when filters have been applied
@@ -62,7 +62,7 @@ def test_validate_html_columns(page: Page, local_app: ShinyAppProc) -> None:
     data_frame.expect_cell_class("cell-html", row=0, col=0)
 
     # Filter using a range for a column that contains numbers
-    data_frame.set_column_filter(1, text=["40", "50"])
+    data_frame.set_filter(1, text=["40", "50"])
     data_frame.expect_cell("40", row=0, col=1)
 
     # Editing a cell in the first row and hitting `shift+enter` should not submit the change and stay editing the current cell

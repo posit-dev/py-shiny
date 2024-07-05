@@ -1,6 +1,7 @@
 from playwright.sync_api import Page
 
 from shiny.playwright import controller
+from shiny.render._data_frame import ColumnFilterNumber, ColumnFilterStr, ColumnSort
 from shiny.run import ShinyAppProc
 
 
@@ -18,9 +19,11 @@ def test_validate_html_columns(page: Page, local_app: ShinyAppProc) -> None:
     filter.expect_value("()")
     rows.expect_value("(0, 1, 2, 3, 4)")
     selected_rows.expect_value("()")
-
-    data_frame.set_column_sort(col=2)
-    data_frame.set_column_sort(col=2)
+    col: ColumnSort = {
+        "col": 2,
+        "desc": False,
+    }
+    data_frame.set_sort(col)
     sort.expect_value("({'col': 2, 'desc': True},)")
     filter.expect_value("()")
     rows.expect_value("(2, 3, 4, 0, 1)")
@@ -30,10 +33,12 @@ def test_validate_html_columns(page: Page, local_app: ShinyAppProc) -> None:
     data_frame.select_rows([1, 3])  # unselect the rows
     selected_rows.expect_value("()")
 
-    data_frame.set_column_filter(1, text="A2")
+    filter_criteria_str: ColumnFilterStr = {"col": 1, "value": "A2"}
+    data_frame.set_filter(filter_criteria_str)
     sort.expect_value("({'col': 2, 'desc': True},)")
 
-    data_frame.set_column_filter(0, text=["2", ""])
+    filter_criteria_num: ColumnFilterNumber = {"col": 1, "value": (2, None)}
+    data_frame.set_filter(filter_criteria_num)
     filter.expect_value("({'col': 1, 'value': 'A2'}, {'col': 0, 'value': (2, None)})")
 
     rows.expect_value("(3, 1)")
