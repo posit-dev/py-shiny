@@ -109,8 +109,8 @@ def server(input: Inputs):
         counter = 0
 
         def df_styles_fn(
-            data: render._data_frame_utils._types.DataFrameLike,
-        ) -> list[StyleInfo]:
+            data: render.DataFrameLike,
+        ) -> list[render.StyleInfo]:
             nonlocal counter
             everywhere_styles = [
                 s
@@ -123,24 +123,24 @@ def server(input: Inputs):
                 counter = 1
 
             ret: list[render.StyleInfo] = []
-            for style in df_styles:
-                style_val = style.get("style", None)
+            for style_info in df_styles:
+                style_val = style_info.get("style", None)
                 if style_val is None:
                     continue
                 if style_val["background-color"] == "lightblue":
                     continue
-                ret.append(style)
+                ret.append(style_info)
                 if len(ret) >= counter:
                     break
-                if "rows" not in styleInfo or "cols" not in styleInfo:
+                if "rows" not in style_info or "cols" not in style_info:
                     continue
-                if styleInfo["rows"] is None and styleInfo["cols"] is None:
+                if style_info["rows"] is None and style_info["cols"] is None:
                     continue
-                style_val = styleInfo.get("style", None)
+                style_val = style_info.get("style", None)
                 print(style_val)
                 if style_val is None:
                     continue
-                ret.append(styleInfo)
+                ret.append(style_info)
             return ret
 
         # NOTE - Styles in GT are greedy!

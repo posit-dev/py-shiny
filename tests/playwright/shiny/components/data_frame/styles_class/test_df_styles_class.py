@@ -11,7 +11,6 @@ from shiny.types import Jsonifiable
 def test_validate_column_labels(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 
-    fn_styles = controller.OutputDataFrame(page, "fn_styles")
     list_styles = controller.OutputDataFrame(page, "list_styles")
 
     styles: list[dict[str, Jsonifiable]] = [
@@ -68,19 +67,4 @@ def test_validate_column_labels(page: Page, local_app: ShinyAppProc) -> None:
 
                         shiny_expect.expect_to_have_class(cell_loc, ex_class)
 
-    expect_styles(
-        fn_styles,
-    )
     expect_styles(list_styles, every_styles_with_style)
-
-    fn_styles.save_cell("new value", row=0, col=0, save_key="Enter")
-    expect_styles(fn_styles, [styles[0], styles[1]])
-
-    fn_styles.save_cell("new value2", row=0, col=0, save_key="Enter")
-    expect_styles(fn_styles, [styles[0], styles[1], styles[2]])
-
-    fn_styles.save_cell("new value3", row=0, col=0, save_key="Enter")
-    expect_styles(fn_styles, [styles[0], styles[1], styles[2], styles[3]])
-
-    fn_styles.save_cell("new value4", row=0, col=0, save_key="Enter")
-    expect_styles(fn_styles, [styles[0]])

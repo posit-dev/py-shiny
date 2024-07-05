@@ -1,7 +1,11 @@
 from playwright.sync_api import Page
 
 from shiny.playwright import controller
-from shiny.render._data_frame import ColumnFilterNumber, ColumnFilterStr, ColumnSort
+from shiny.render._data_frame_utils._types import (
+    ColumnFilterNumber,
+    ColumnFilterStr,
+    ColumnSort,
+)
 from shiny.run import ShinyAppProc
 
 
