@@ -13,16 +13,15 @@ from typing import (
     Callable,
     Literal,
     Optional,
-    Protocol,
     Union,
     cast,
-    runtime_checkable,
 )
 
 from htmltools import Tag, TagAttrValue, TagChild
 
+from ._data_frame_utils._types import PandasCompatible, PdDataFrame
+
 if TYPE_CHECKING:
-    import pandas as pd
 
     from ..session._utils import RenderedDeps
 
@@ -455,13 +454,7 @@ class image(Renderer[ImgData]):
 # ======================================================================================
 
 
-@runtime_checkable
-class PandasCompatible(Protocol):
-    # Signature doesn't matter, runtime_checkable won't look at it anyway
-    def to_pandas(self) -> "pd.DataFrame": ...
-
-
-TableResult = Union["pd.DataFrame", PandasCompatible, None]
+TableResult = Union[PdDataFrame, PandasCompatible, None]
 
 
 @add_example(ex_dir="../api-examples/output_table")

@@ -65,11 +65,17 @@ def make_server(input: Inputs):
     @render.code
     def grid_row_count():
         grid_data = grid.data()
+        # TODO-barret; remove type check when DataFrameT is implemented
+        assert isinstance(grid_data, render._data_frame_utils._types.PdDataFrame)
         return str(grid_data.index.size)  # pyright: ignore[reportUnknownMemberType]
 
     @render.code
     def selected_row_count():
         grid_selected_data = grid_selected.data()
+        # TODO-barret; remove type check when DataFrameT is implemented
+        assert isinstance(
+            grid_selected_data, render._data_frame_utils._types.PdDataFrame
+        )
         return str(
             grid_selected_data.index.size  # pyright: ignore[reportUnknownMemberType]
         )

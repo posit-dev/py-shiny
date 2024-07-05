@@ -135,7 +135,6 @@ class DataGrid(AbstractTabularData):
         self.selection_modes = as_selection_modes(
             selection_mode,
             name="DataGrid",
-            editable=self.editable,
             row_selection_mode=row_selection_mode,
         )
         self.styles = as_style_infos(styles)
@@ -258,7 +257,6 @@ class DataTable(AbstractTabularData):
         self.selection_modes = as_selection_modes(
             selection_mode,
             name="DataTable",
-            editable=self.editable,
             row_selection_mode=row_selection_mode,
         )
         self.styles = as_style_infos(styles)

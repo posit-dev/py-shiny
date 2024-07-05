@@ -12,10 +12,10 @@ from typing_extensions import TypeAlias
 
 from shiny.render._data_frame_utils._tbl_data import (
     copy_frame,
+    frame_shape,
     get_frame_cell,
     serialize_dtype,
     serialize_frame,
-    shape,
     subset_frame,
 )
 from shiny.ui import HTML, h1
@@ -157,7 +157,7 @@ def test_serialize_frame(df: DataFrameLike):
 
 def test_subset_frame(df: DataFrameLike):
     # TODO: this assumes subset_frame doesn't reset index
-    res = subset_frame(df, [1], ["chr", "num"])
+    res = subset_frame(df, rows=[1], cols=["chr", "num"])
     dst = df.__class__({"chr": ["b"], "num": [2]})
 
     assert_frame_equal(res, dst)
@@ -174,7 +174,7 @@ def test_copy_frame(df: DataFrameLike):
 
 
 def test_subset_frame_rows_single(small_df: DataFrameLike):
-    res = subset_frame(small_df, [1])
+    res = subset_frame(small_df, rows=[1])
 
     assert_frame_equal(res, small_df.__class__({"x": [2], "y": [4]}))
 
@@ -187,4 +187,4 @@ def test_subset_frame_cols_single(small_df: DataFrameLike):
 
 
 def test_shape(small_df: DataFrameLike):
-    assert shape(small_df) == (2, 2)
+    assert frame_shape(small_df) == (2, 2)

@@ -3,15 +3,13 @@ from __future__ import annotations
 # TODO-barret-render.data_frame; Docs
 # TODO-barret-render.data_frame; Add examples of selection!
 import warnings
-from typing import TYPE_CHECKING, Literal, Set, Union, cast
+from typing import Literal, Set, Union, cast
 
 from ..._deprecated import warn_deprecated
 from ..._typing_extensions import TypedDict
 from ...types import ListOrTuple
-from ._types import FrameRenderSelectionModes
-
-if TYPE_CHECKING:
-    import pandas as pd
+from ._tbl_data import frame_shape
+from ._types import DataFrameLike, FrameRenderSelectionModes
 
 NoneSelectionMode = Literal["none"]
 RowSelectionMode = Literal["row", "rows"]
@@ -235,14 +233,14 @@ def as_browser_cell_selection(
     x: BrowserCellSelection | CellSelection | Literal["all"] | None,
     *,
     selection_modes: SelectionModes,
-    data: pd.DataFrame,
+    data: DataFrameLike,
 ) -> BrowserCellSelection:
 
     if x is None or selection_modes._is_none():
         return {"type": "none"}
 
     if x == "all":
-        row_len, col_len = data.shape
+        row_len, col_len = frame_shape(data)
         # Look at the selection modes to determine what to do
         if selection_modes._has_rect():
             if selection_modes.rect == "cell":
@@ -336,7 +334,7 @@ def as_cell_selection(
     x: CellSelection | Literal["all"] | None | BrowserCellSelection,
     *,
     selection_modes: SelectionModes,
-    data: pd.DataFrame,
+    data: DataFrameLike,
     data_view_rows: ListOrTuple[int],
     data_view_cols: ListOrTuple[int],
 ) -> CellSelection:
@@ -381,7 +379,7 @@ def as_cell_selection(
         )
 
     # Make sure the rows are within the data
-    nrow, ncol = data.shape
+    nrow, ncol = frame_shape(data)
     ret["rows"] = tuple(row for row in ret["rows"] if row < nrow)
     ret["cols"] = tuple(col for col in ret["cols"] if col < ncol)
 
@@ -395,7 +393,6 @@ def as_selection_modes(
     selection_mode: SelectionModeInput,
     *,
     name: str,
-    editable: bool,
     row_selection_mode: RowSelectionModeDeprecated = "deprecated",
 ) -> SelectionModes:
     # TODO-barret; Test that as _selection_modes can take and return a SelectionModes object

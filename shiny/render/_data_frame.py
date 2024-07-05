@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import warnings
 
+# TODO-barret; Make DataFrameLikeT generic bound to DataFrameLike. Add this generic type to the DataGrid and DataTable
 # TODO-barret; Should `.input_cell_selection()` ever return None? Is that value even helpful? Empty lists would be much more user friendly.
 # * For next release: Agreed to remove `None` type.
 # * For this release: Immediately make PR to remove `.input_` from `.input_cell_selection()`
@@ -20,7 +21,6 @@ from ._data_frame_utils import (
     AbstractTabularData,
     BrowserCellSelection,
     CellPatch,
-    CellPatchProcessed,
     CellSelection,
     CellValue,
     DataGrid,
@@ -32,15 +32,24 @@ from ._data_frame_utils import (
     SelectionModes,
     as_cell_selection,
     assert_patches_shape,
-    cell_patch_processed_to_jsonifiable,
     wrap_shiny_html,
 )
 from ._data_frame_utils._styles import as_browser_style_infos
-from ._data_frame_utils._tbl_data import as_data_frame_like, serialize_dtype
+from ._data_frame_utils._tbl_data import (
+    apply_frame_patches,
+    as_data_frame_like,
+    frame_columns,
+    frame_shape,
+    serialize_dtype,
+    subset_frame,
+)
 from ._data_frame_utils._types import (
+    CellPatchProcessed,
     ColumnFilter,
     ColumnSort,
+    DataFrameLike,
     FrameRender,
+    cell_patch_processed_to_jsonifiable,
     frame_render_to_jsonifiable,
 )
 
@@ -48,8 +57,6 @@ from ._data_frame_utils._types import (
 from .renderer import Jsonifiable, Renderer, ValueFn
 
 if TYPE_CHECKING:
-    import pandas as pd
-
     from ..session import Session
 
 from ._data_frame_utils._datagridtable import DataFrameResult
@@ -199,7 +206,7 @@ class data_frame(Renderer[DataFrameResult]):
     Reactive value of the data frame's edits provided by the user.
     """
 
-    data: reactive.Calc_[pd.DataFrame]
+    data: reactive.Calc_[DataFrameLike]
     """
     Reactive value of the data frame's output data.
 
@@ -207,20 +214,20 @@ class data_frame(Renderer[DataFrameResult]):
     app's render function. If it is mutated in place, it **will** modify the original
     data.
 
-    Even if the rendered data value was not `pd.DataFrame`, this method currently
-    returns the converted `pd.DataFrame`.
+    Even if the rendered data value was not of type `pd.DataFrame` or `pl.DataFrame`, this method currently
+    converts it to a `pd.DataFrame`.
     """
-    _data_view_all: reactive.Calc_[pd.DataFrame]
+    _data_view_all: reactive.Calc_[DataFrameLike]
     """
     Reactive value of the full (sorted and filtered) data.
     """
-    _data_view_selected: reactive.Calc_[pd.DataFrame]
+    _data_view_selected: reactive.Calc_[DataFrameLike]
     """
     Reactive value of the selected rows of the (sorted and filtered) data.
     """
 
     @add_example(ex_dir="../api-examples/data_frame_data_view")
-    def data_view(self, *, selected: bool = False) -> pd.DataFrame:
+    def data_view(self, *, selected: bool = False) -> DataFrameLike:
         """
         Reactive function that retrieves the data how it is viewed within the browser.
 
@@ -240,7 +247,7 @@ class data_frame(Renderer[DataFrameResult]):
         -------
         :
             A view of the data frame as seen in the browser. Even if the rendered data
-            value was not `pd.DataFrame`, this method currently returns the converted
+            value was not of type `pd.DataFrame` or `pl.DataFrame`, this method currently returns the converted
             `pd.DataFrame`.
 
         See Also
@@ -292,7 +299,7 @@ class data_frame(Renderer[DataFrameResult]):
         The row numbers of the data frame that are currently being viewed in the browser
         after sorting and filtering has been applied.
     """
-    _data_patched: reactive.Calc_[pd.DataFrame]
+    _data_patched: reactive.Calc_[DataFrameLike]
     """
     Reactive value of the data frame's patched data.
 
@@ -329,8 +336,6 @@ class data_frame(Renderer[DataFrameResult]):
 
     def _init_reactives(self) -> None:
 
-        import pandas as pd
-
         from .. import req
 
         # Init
@@ -345,7 +350,7 @@ class data_frame(Renderer[DataFrameResult]):
         self.cell_patches = self_cell_patches
 
         @reactive.calc
-        def self_data() -> pd.DataFrame:
+        def self_data() -> DataFrameLike:
             value = self._value()
             req(value)
 
@@ -353,9 +358,6 @@ class data_frame(Renderer[DataFrameResult]):
                 raise TypeError(
                     f"Unsupported type returned from render function: {type(value)}. Expected `DataGrid` or `DataTable`"
                 )
-
-            if not isinstance(value.data, pd.DataFrame):
-                raise TypeError(f"Unexpected type for self._data: {type(value.data)}")
 
             return value.data
 
@@ -388,7 +390,7 @@ class data_frame(Renderer[DataFrameResult]):
                 data_view_rows=self.data_view_rows(),
                 # TODO-barret: replace methods like .shape, .loc. .iat with those from
                 # _tbl_data.py, test in the playright app.
-                data_view_cols=tuple(range(self.data().shape[1])),
+                data_view_cols=tuple(range(frame_shape(self.data())[1])),
             )
 
             return cell_selection
@@ -450,25 +452,14 @@ class data_frame(Renderer[DataFrameResult]):
         # # self._data_selected = self__data_selected
 
         @reactive.calc
-        def self__data_patched() -> pd.DataFrame:
-            # Enable copy-on-write mode for the data;
-            # Use `deep=False` to avoid copying the full data; CoW will copy the necessary data when modified
-            with pd.option_context("mode.copy_on_write", True):
-                # Apply patches!
-                data = self.data().copy(deep=False)
-                for cell_patch in self.cell_patches():
-                    data.iat[  # pyright: ignore[reportUnknownMemberType]
-                        cell_patch["row_index"],
-                        cell_patch["column_index"],
-                    ] = cell_patch["value"]
-
-                return data
+        def self__data_patched() -> DataFrameLike:
+            return apply_frame_patches(self.data(), self.cell_patches())
 
         self._data_patched = self__data_patched
 
         # Apply filtering and sorting
         # https://github.com/posit-dev/py-shiny/issues/1240
-        def _subset_data_view(selected: bool) -> pd.DataFrame:
+        def _subset_data_view(selected: bool) -> DataFrameLike:
             """
             Helper method to subset data according to what is viewed in the browser;
 
@@ -487,28 +478,20 @@ class data_frame(Renderer[DataFrameResult]):
             would require tuple info of all cells selected.
             """
 
-            # Enable copy-on-write mode for the data;
-            # Use `deep=False` to avoid copying the full data; CoW will copy the necessary data when modified
-            with pd.option_context("mode.copy_on_write", True):
-                # Get patched data
-                data = self._data_patched().copy(deep=False)
+            if selected:
+                rows = self.cell_selection()["rows"]
+            else:
+                rows = self.data_view_rows()
 
-                if selected:
-                    rows = self.cell_selection()["rows"]
-                else:
-                    rows = self.data_view_rows()
-
-                # Turn into list for pandas compatibility
-                rows = list(rows)
-                return data.iloc[rows]
+            return subset_frame(data=self._data_patched(), rows=rows)
 
         # Helper reactives so that internal calculations can be cached for use in other calculations
         @reactive.calc
-        def self__data_view() -> pd.DataFrame:
+        def self__data_view() -> DataFrameLike:
             return _subset_data_view(selected=False)
 
         @reactive.calc
-        def self__data_view_selected() -> pd.DataFrame:
+        def self__data_view_selected() -> DataFrameLike:
             return _subset_data_view(selected=True)
 
         self._data_view_all = self__data_view
@@ -954,7 +937,7 @@ class data_frame(Renderer[DataFrameResult]):
             for val in sort:
                 val_dict: ColumnSort
                 if isinstance(val, int):
-                    col: pd.Series[Any] = data.iloc[:, val]
+                    col = frame_columns(data)[val]
                     desc = serialize_dtype(col)["type"] == "numeric"
                     val_dict = {"col": val, "desc": desc}
                 val_dict: ColumnSort = (

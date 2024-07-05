@@ -15,6 +15,8 @@ from typing import (
     runtime_checkable,
 )
 
+from htmltools import TagNode
+
 from ..._typing_extensions import Annotated, NotRequired, Required, TypedDict
 from ...types import Jsonifiable, JsonifiableDict, ListOrTuple
 from ._databackend import AbstractBackend
@@ -238,3 +240,28 @@ class ReprHtml(Protocol):
     """
 
     def _repr_html_(self) -> str: ...
+
+
+# Cell patches ----------------------------------------------------------
+
+# CellValue = str | TagList | Tag | HTML
+CellValue = TagNode
+
+
+class CellPatch(TypedDict):
+    row_index: int
+    column_index: int
+    value: CellValue
+
+
+class CellPatchProcessed(TypedDict):
+    row_index: int
+    column_index: int
+    value: str | CellHtml
+    # prev_value: CellValue
+
+
+def cell_patch_processed_to_jsonifiable(
+    cell_patch_processed: CellPatchProcessed,
+) -> JsonifiableDict:
+    return cast(JsonifiableDict, dict(cell_patch_processed))

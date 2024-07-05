@@ -47,6 +47,13 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
 
     @render.code
     def data_view_selected_false():  # pyright: ignore[reportUnknownParameterType]
+        # TODO-barret; remove type check when DataFrameT is implemented
+        data_view_all = iris_df.data_view(selected=False)
+        assert isinstance(data_view_all, pd.DataFrame)
+        return str(
+            data_view_all.index.values  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType, reportUnknownArgumentType]
+        )
+
         return str(
             iris_df.data_view(
                 selected=False
@@ -55,6 +62,12 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
 
     @render.code
     def data_view_selected_true():  # pyright: ignore[reportUnknownParameterType]
+        # TODO-barret; remove type check when DataFrameT is implemented
+        data_view_selected = iris_df.data_view(selected=True)
+        assert isinstance(data_view_selected, pd.DataFrame)
+        return str(
+            data_view_selected.index.values  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType, reportUnknownArgumentType]
+        )
         return str(
             iris_df.data_view(
                 selected=True
