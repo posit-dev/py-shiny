@@ -37,7 +37,7 @@ def test_validate_html_columns(page: Page, local_app: ShinyAppProc) -> None:
     data_frame.set_filter(filter_text)
     sort.expect_value("({'col': 2, 'desc': True},)")
 
-    filter_criteria_num: ColumnFilterNumber = {"col": 1, "value": (2, None)}
+    filter_criteria_num: ColumnFilterNumber = {"col": 0, "value": [2, None]}
     data_frame.set_filter(filter_criteria_num)
     filter.expect_value("({'col': 1, 'value': 'A2'}, {'col': 0, 'value': (2, None)})")
 

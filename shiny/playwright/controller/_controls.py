@@ -6339,14 +6339,16 @@ class OutputDataFrame(_UiWithContainer):
             header_inputs = self.loc_column_filter.nth(filter["col"]).locator(
                 "> div > input"
             )
-            header_inputs.nth(0).fill(
-                str(filter["value"][0]),
-                timeout=timeout,
-            )
-            header_inputs.nth(1).fill(
-                str(filter["value"][1]),
-                timeout=timeout,
-            )
+            if filter["value"][0] is not None:
+                header_inputs.nth(0).fill(
+                    str(filter["value"][0]),
+                    timeout=timeout,
+                )
+            if filter["value"][1] is not None:
+                header_inputs.nth(1).fill(
+                    str(filter["value"][1]),
+                    timeout=timeout,
+                )
 
     def save_cell(
         self,
