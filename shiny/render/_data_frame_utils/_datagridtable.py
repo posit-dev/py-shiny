@@ -14,7 +14,7 @@ from ._selection import (
 )
 from ._styles import StyleFn, StyleInfo, as_browser_style_infos, as_style_infos
 from ._tbl_data import as_data_frame_like, serialize_frame
-from ._types import DataFrameLike, FrameJson
+from ._types import DataFrameLike, FrameJson, PandasCompatible
 
 if TYPE_CHECKING:
 
@@ -23,12 +23,13 @@ if TYPE_CHECKING:
         DataFrameLike,
         "DataGrid",
         "DataTable",
+        "PandasCompatible",
     ]
 
 else:
     # The parent class of `data_frame` needs something to hold onto
     # To avoid loading pandas, we use `object` as a placeholder
-    DataFrameResult = Union[None, object, "DataGrid", "DataTable"]
+    DataFrameResult = Union[None, object, "DataGrid", "DataTable", PandasCompatible]
 
 
 class AbstractTabularData(abc.ABC):

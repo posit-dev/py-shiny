@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from astropy.table import Table
+from astropy.table import Table  # pyright: ignore[reportMissingTypeStubs]
 
 from shiny.express import render, ui
 
