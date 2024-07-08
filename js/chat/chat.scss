@@ -55,6 +55,7 @@ shiny-chat-container {
   shiny-chat-input {
     margin-top: auto;
     position: sticky;
+    background-color: var(--bs-body-bg, white);
     bottom: 0;
     padding: 0.25rem;
     textarea {
