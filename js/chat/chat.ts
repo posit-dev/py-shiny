@@ -23,6 +23,10 @@ type ShinyChatMessage = {
   obj: Message;
 };
 
+type requestScrollEvent = {
+  cancelIfScrolledUp: boolean;
+};
+
 // https://github.com/microsoft/TypeScript/issues/28357#issuecomment-748550734
 declare global {
   interface GlobalEventHandlersEventMap {
@@ -32,6 +36,7 @@ declare global {
     "shiny-chat-clear-messages": CustomEvent;
     "shiny-chat-set-user-input": CustomEvent<string>;
     "shiny-chat-remove-loading-message": CustomEvent;
+    "shiny-chat-request-scroll": CustomEvent<requestScrollEvent>;
   }
 }
 
@@ -40,6 +45,16 @@ const CHAT_USER_MESSAGE_TAG = "shiny-user-message";
 const CHAT_MESSAGES_TAG = "shiny-chat-messages";
 const CHAT_INPUT_TAG = "shiny-chat-input";
 const CHAT_CONTAINER_TAG = "shiny-chat-container";
+
+const requestScroll = (el: HTMLElement, cancelIfScrolledUp = false) => {
+  el.dispatchEvent(
+    new CustomEvent("shiny-chat-request-scroll", {
+      detail: { cancelIfScrolledUp },
+      bubbles: true,
+      composed: true,
+    })
+  );
+};
 
 // https://lit.dev/docs/components/shadow-dom/#implementing-createrenderroot
 class LightElement extends LitElement {
@@ -51,6 +66,7 @@ class LightElement extends LitElement {
 class ChatMessage extends LightElement {
   @property() content = "...";
   @property() content_type: ContentType = "markdown";
+  @property({ type: Boolean, reflect: true }) is_streaming = false;
 
   render(): ReturnType<LitElement["render"]> {
     let content;
@@ -77,7 +93,9 @@ class ChatMessage extends LightElement {
   updated(changedProperties: Map<string, unknown>): void {
     if (changedProperties.has("content")) {
       this.#highlightAndCodeCopy();
-      this.#requestScroll();
+      // It's important that the scroll request happens at this point in time, since
+      // otherwise, the content may not be fully rendered yet
+      requestScroll(this, this.is_streaming);
     }
   }
 
@@ -106,18 +124,6 @@ class ChatMessage extends LightElement {
         e.clearSelection();
       });
     });
-  }
-
-  // Request that the parent element to scroll to the bottom when the content is
-  // updated. It's important that the scrolling happens at this point in time, since
-  // otherwise, the content may not be fully rendered yet.
-  #requestScroll(): void {
-    this.dispatchEvent(
-      new CustomEvent("shiny-chat-request-scroll", {
-        bubbles: true,
-        composed: true,
-      })
-    );
   }
 }
 
@@ -238,8 +244,7 @@ class ChatContainer extends LightElement {
     return this.querySelector(CHAT_MESSAGES_TAG) as ChatMessages;
   }
 
-  // Are we currently streaming a message (i.e., append_message_stream())?
-  private isStreaming = false;
+  private resizeObserver!: ResizeObserver;
 
   render(): ReturnType<LitElement["render"]> {
     const input_id = this.id + "_user_input";
@@ -269,6 +274,9 @@ class ChatContainer extends LightElement {
       this.#onRemoveLoadingMessage
     );
     this.addEventListener("shiny-chat-request-scroll", this.#onRequestScroll);
+
+    this.resizeObserver = new ResizeObserver(() => requestScroll(this, true));
+    this.resizeObserver.observe(this);
   }
 
   disconnectedCallback(): void {
@@ -290,6 +298,8 @@ class ChatContainer extends LightElement {
       "shiny-chat-request-scroll",
       this.#onRequestScroll
     );
+
+    this.resizeObserver.disconnect();
   }
 
   // When user submits input, append it to the chat, and add a loading message
@@ -343,16 +353,17 @@ class ChatContainer extends LightElement {
       this.#appendMessage(message, false);
       return;
     }
-    if (message.chunk_type === "message_end") {
-      this.#finalizeMessage();
-      this.isStreaming = false;
-      return;
-    }
-
-    this.isStreaming = true;
 
     const lastMessage = this.messages.lastElementChild as HTMLElement;
     if (!lastMessage) throw new Error("No messages found in the chat output");
+
+    if (message.chunk_type === "message_end") {
+      lastMessage.removeAttribute("is_streaming");
+      this.#finalizeMessage();
+      return;
+    }
+
+    lastMessage.setAttribute("is_streaming", "");
     lastMessage.setAttribute("content", message.content);
   }
 
@@ -373,15 +384,20 @@ class ChatContainer extends LightElement {
     this.input.disabled = false;
   }
 
-  #onRequestScroll(): void {
-    // While streaming, don't scroll if user has scrolled up a bit
-    if (this.isStreaming) {
+  #onRequestScroll(event: CustomEvent<requestScrollEvent>): void {
+    // When streaming or resizing, only scroll if the user near the bottom
+    const { cancelIfScrolledUp } = event.detail;
+    if (cancelIfScrolledUp) {
       if (this.scrollTop + this.clientHeight < this.scrollHeight - 50) {
         return;
       }
     }
 
-    this.scrollTop = this.scrollHeight;
+    // Smooth scroll to the bottom if we're not streaming or resizing
+    this.scroll({
+      top: this.scrollHeight,
+      behavior: cancelIfScrolledUp ? "auto" : "smooth",
+    });
   }
 }
 
