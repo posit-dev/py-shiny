@@ -108,6 +108,9 @@ class ChatMessage extends LightElement {
     });
   }
 
+  // Request that the parent element to scroll to the bottom when the content is
+  // updated. It's important that the scrolling happens at this point in time, since
+  // otherwise, the content may not be fully rendered yet.
   #requestScroll(): void {
     this.dispatchEvent(
       new CustomEvent("shiny-chat-request-scroll", {
