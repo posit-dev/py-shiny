@@ -31,19 +31,19 @@ def test_validate_data_edit_mode(page: Page, local_app: ShinyAppProc) -> None:
     )
 
     data_frame.expect_cell("PAL0708", row=0, col=0)
-    data_frame.expect_n_col(17)
+    data_frame.expect_ncol(17)
     data_frame.expect_class_state("ready", row=0, col=0)
-    data_frame.expect_column_label(["Species"], col=3)
-    data_frame.edit_cell("Study0708_edited", row=0, col=0)
+    data_frame._expect_column_label(["Species"], col=3)
+    data_frame._edit_cell_no_save("Study0708_edited", row=0, col=0)
     data_frame.expect_class_state("editing", row=0, col=0)
-    data_frame.save_cell("Study0708_edited", row=0, col=0, save_key="Enter")
+    data_frame.set_cell("Study0708_edited", row=0, col=0, finish_key="Enter")
     # data_frame.expect_class_state("saving", row=0, col=0)
     data_frame.expect_class_state("editing", row=1, col=0)
     data_frame.expect_class_state("success", row=0, col=0)
     data_frame.expect_cell("Study0708_edited", row=0, col=0)
 
     data_frame.expect_cell("Torgersen", row=0, col=4)
-    data_frame.save_cell("Stonington", row=0, col=4, save_key="Enter")
+    data_frame.set_cell("Stonington", row=0, col=4, finish_key="Enter")
     data_frame.expect_class_state("failure", row=0, col=4)
     data_frame.expect_cell_title(
         "Penguin island should be one of 'Torgersen', 'Biscoe', 'Dream'", row=0, col=4
@@ -51,5 +51,5 @@ def test_validate_data_edit_mode(page: Page, local_app: ShinyAppProc) -> None:
     data_frame.expect_cell("Torgersen", row=0, col=4)
 
     data_frame.expect_cell("39.5", row=1, col=9)
-    data_frame.save_cell("Stonington", row=1, col=9, save_key="Shift+Enter")
+    data_frame.set_cell("Stonington", row=1, col=9, finish_key="Shift+Enter")
     data_frame.expect_class_state("editing", row=0, col=9)

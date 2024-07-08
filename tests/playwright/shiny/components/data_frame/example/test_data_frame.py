@@ -94,13 +94,13 @@ def test_full_width(page: Page, data_frame_app: ShinyAppProc, grid_container: Lo
     width1 = get_width()
     # Switch to narrow mode
     with expect_to_change(get_width):
-        controller.InputSwitch(page, "fullwidth").toggle()
+        controller.InputSwitch(page, "fullwidth")._toggle()
     width2 = get_width()
 
     assert width2 < width1
 
     # Switch back to full width
-    controller.InputSwitch(page, "fullwidth").toggle()
+    controller.InputSwitch(page, "fullwidth")._toggle()
 
 
 @pytest.mark.flaky(reruns=reruns, delay=reruns_delay)
@@ -118,7 +118,7 @@ def test_table_switch(
     scroll_to_end()
 
     # Switch to table
-    controller.InputSwitch(page, "gridstyle").toggle()
+    controller.InputSwitch(page, "gridstyle")._toggle()
     expect(grid_container).not_to_have_class(re.compile(r"\bshiny-data-grid-grid\b"))
     expect(grid_container).to_have_class(re.compile(r"\bshiny-data-grid-table\b"))
 
@@ -262,7 +262,7 @@ def test_filter_table(
 ):
     page.goto(data_frame_app.url)
 
-    controller.InputSwitch(page, "gridstyle").toggle()
+    controller.InputSwitch(page, "gridstyle")._toggle()
     expect(grid_container).not_to_have_class(re.compile(r"\bshiny-data-grid-grid\b"))
     expect(grid_container).to_have_class(re.compile(r"\bshiny-data-grid-table\b"))
 
@@ -368,5 +368,5 @@ def test_filter_disable(page: Page, data_frame_app: ShinyAppProc):
     page.goto(data_frame_app.url)
 
     expect(page.locator("tr.filters")).to_be_attached()
-    controller.InputSwitch(page, "filters").toggle()
+    controller.InputSwitch(page, "filters")._toggle()
     expect(page.locator("tr.filters")).not_to_be_attached()
