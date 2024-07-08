@@ -1,4 +1,4 @@
-function createElement(
+export function createElement(
   tag_name: string,
   attrs: { [key: string]: string | boolean | null }
 ): HTMLElement {
@@ -13,20 +13,3 @@ function createElement(
   }
   return el;
 }
-
-function throttle<T extends (...args: unknown[]) => unknown>(
-  func: T,
-  limit: number
-): (...args: Parameters<T>) => void {
-  let inThrottle: boolean;
-
-  return function (this: unknown, ...args: Parameters<T>): void {
-    if (!inThrottle) {
-      func.apply(this, args);
-      inThrottle = true;
-      setTimeout(() => (inThrottle = false), limit);
-    }
-  };
-}
-
-export { createElement, throttle };

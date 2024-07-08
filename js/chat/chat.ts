@@ -7,7 +7,7 @@ import { sanitize } from "dompurify";
 import hljs from "highlight.js/lib/common";
 import { parse } from "marked";
 
-import { createElement, throttle } from "./_utils";
+import { createElement } from "./_utils";
 
 type ContentType = "markdown" | "html" | "text";
 
@@ -238,15 +238,6 @@ class ChatContainer extends LightElement {
 
   // Are we currently streaming a message (i.e., append_message_stream())?
   private isStreaming = false;
-  // Throttled function to scroll to the bottom of the chat
-  private onRequestScroll;
-
-  constructor() {
-    super();
-
-    // Throttle scroll request (so, while streaming, we scroll only every 250ms)
-    this.onRequestScroll = throttle(this.#maybeScrollToBottom.bind(this), 250);
-  }
 
   render(): ReturnType<LitElement["render"]> {
     const input_id = this.id + "_user_input";
@@ -275,7 +266,7 @@ class ChatContainer extends LightElement {
       "shiny-chat-remove-loading-message",
       this.#onRemoveLoadingMessage
     );
-    this.addEventListener("shiny-chat-request-scroll", this.onRequestScroll);
+    this.addEventListener("shiny-chat-request-scroll", this.#onRequestScroll);
   }
 
   disconnectedCallback(): void {
@@ -293,7 +284,10 @@ class ChatContainer extends LightElement {
       "shiny-chat-remove-loading-message",
       this.#onRemoveLoadingMessage
     );
-    this.removeEventListener("shiny-chat-request-scroll", this.onRequestScroll);
+    this.removeEventListener(
+      "shiny-chat-request-scroll",
+      this.#onRequestScroll
+    );
   }
 
   // When user submits input, append it to the chat, and add a loading message
@@ -377,7 +371,7 @@ class ChatContainer extends LightElement {
     this.input.disabled = false;
   }
 
-  #maybeScrollToBottom(): void {
+  #onRequestScroll(): void {
     // While streaming, don't scroll if user has scrolled up a bit
     if (this.isStreaming) {
       if (this.scrollTop + this.clientHeight < this.scrollHeight - 50) {
