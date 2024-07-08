@@ -31,11 +31,13 @@ from ._types import (
 )
 
 __all__ = (
+    "is_data_frame_like",
     "as_data_frame_like",
+    "frame_columns",
+    "apply_frame_patches",
     "serialize_dtype",
     "serialize_frame",
     "subset_frame",
-    "frame_columns",
     "get_frame_cell",
     "frame_shape",
     "copy_frame",
@@ -47,7 +49,7 @@ __all__ = (
 
 @singledispatch
 def is_data_frame_like(
-    data: DataFrameLike | PandasCompatible,
+    data: object,
 ) -> bool:
     return False
 
