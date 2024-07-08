@@ -22,20 +22,10 @@ def test_validate_column_labels(page: Page, local_app: ShinyAppProc) -> None:
         {
             "location": "body",
             "rows": [1, 2],
-            "cols": "Species",
+            "cols": [2],  # "Species",
             "class": "species",
         },
     ]
-
-    every_styles: dict[str, Jsonifiable] = {
-        "location": "body",
-        "rows": None,
-        "cols": None,
-        "style": {"background-color": "lightblue", "color": "darkorange"},
-    }
-    every_styles_with_style: list[dict[str, Jsonifiable]] = [every_styles]
-    for style in styles:
-        every_styles_with_style.append(style)
 
     def expect_styles(
         df: controller.OutputDataFrame,
@@ -44,12 +34,14 @@ def test_validate_column_labels(page: Page, local_app: ShinyAppProc) -> None:
         def class_for_cell(row: int, col: int) -> list[str]:
             classes: list[str] = []
             for style in styles:
-                if isinstance(style["rows"], list):
-                    if row not in style["rows"]:
-                        continue
-                if isinstance(style["cols"], list):
-                    if col not in style["cols"]:
-                        continue
+                if "rows" in style:
+                    if isinstance(style["rows"], list):
+                        if row not in style["rows"]:
+                            continue
+                if "cols" in style:
+                    if isinstance(style["cols"], list):
+                        if col not in style["cols"]:
+                            continue
                 assert isinstance(style["class"], str)
                 classes.append(style["class"])
             return classes
@@ -67,4 +59,4 @@ def test_validate_column_labels(page: Page, local_app: ShinyAppProc) -> None:
 
                         shiny_expect.expect_to_have_class(cell_loc, ex_class)
 
-    expect_styles(list_styles, every_styles_with_style)
+    expect_styles(list_styles, styles)

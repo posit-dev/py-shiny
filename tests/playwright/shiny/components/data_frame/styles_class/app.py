@@ -35,7 +35,7 @@ app_ui = ui.page_fillable(
             font-weight: bold;
         }
         .species {
-            background-color: lightblue;
+            background-color: lightblue !important;
         }
         """
     ),
