@@ -99,14 +99,14 @@ def test_validate_column_labels(
     expect_styles(fn_styles, [styles[0]])
     expect_styles(list_styles, every_styles_with_style)
 
-    fn_styles.save_cell("new value", row=0, col=0, save_key="Enter")
+    fn_styles.set_cell("new value", row=0, col=0)
     expect_styles(fn_styles, [styles[0], styles[1]])
 
-    fn_styles.save_cell("new value2", row=0, col=0, save_key="Enter")
+    fn_styles.set_cell("new value2", row=0, col=0)
     expect_styles(fn_styles, [styles[0], styles[1], styles[2]])
 
-    fn_styles.save_cell("new value3", row=0, col=0, save_key="Enter")
+    fn_styles.set_cell("new value3", row=0, col=0)
     expect_styles(fn_styles, [styles[0], styles[1], styles[2], styles[3]])
 
-    fn_styles.save_cell("new value4", row=0, col=0, save_key="Enter")
+    fn_styles.set_cell("new value4", row=0, col=0)
     expect_styles(fn_styles, [styles[0]])

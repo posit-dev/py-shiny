@@ -10,7 +10,7 @@ process.argv.forEach((val, index) => {
   }
 });
 
-const outDir = "../shiny/www/shared/py-shiny";
+const outDir = "../shiny/www/py-shiny";
 
 async function bundle_helper(
   options: BuildOptions
