@@ -14,9 +14,8 @@ type ContentType = "markdown" | "html" | "text";
 type Message = {
   content: string;
   role: "user" | "assistant";
-  content_type: ContentType;
   chunk_type: "message_start" | "message_end" | null;
-  request_scroll: boolean;
+  content_type: ContentType;
 };
 type ShinyChatMessage = {
   id: string;
@@ -52,8 +51,6 @@ class LightElement extends LitElement {
 class ChatMessage extends LightElement {
   @property() content = "...";
   @property() content_type: ContentType = "markdown";
-  // Boolean to determine whether to scroll to the bottom after updating content
-  @property({ type: Boolean }) request_scroll = false;
 
   render(): ReturnType<LitElement["render"]> {
     let content;
@@ -80,14 +77,7 @@ class ChatMessage extends LightElement {
   updated(changedProperties: Map<string, unknown>): void {
     if (changedProperties.has("content")) {
       this.#highlightAndCodeCopy();
-
-      if (this.request_scroll) {
-        const event = new CustomEvent("shiny-chat-request-scroll", {
-          bubbles: true,
-          composed: true,
-        });
-        this.dispatchEvent(event);
-      }
+      this.#requestScroll();
     }
   }
 
@@ -116,6 +106,15 @@ class ChatMessage extends LightElement {
         e.clearSelection();
       });
     });
+  }
+
+  #requestScroll(): void {
+    this.dispatchEvent(
+      new CustomEvent("shiny-chat-request-scroll", {
+        bubbles: true,
+        composed: true,
+      })
+    );
   }
 }
 
