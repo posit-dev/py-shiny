@@ -128,8 +128,6 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
   const theadRef = useRef<HTMLTableSectionElement>(null);
   const tbodyRef = useRef<HTMLTableSectionElement>(null);
 
-  console.log("ehre", initStyleInfos, payloadOptions);
-
   const _useStyleInfo = useStyleInfoMap({
     initStyleInfos: initStyleInfos ?? [],
     nrow: tableDataProp.length,

@@ -73,8 +73,6 @@ export const useStyleInfoMap = ({
     (styleInfo: StyleInfo) => {
       const { location, rows, cols } = styleInfo;
 
-      console.log("setStyleInfo", styleInfo);
-
       setStyleInfoMap((draft) => {
         const rowArr = rows ?? Array.from({ length: nrow }, (_, i) => i);
         const colArr = cols ?? Array.from({ length: ncol }, (_, j) => j);
