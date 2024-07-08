@@ -3,6 +3,7 @@
 # pyright: reportArgumentType = false
 # pyright: reportUnknownMemberType = false
 
+import polars as pl
 from palmerpenguins import load_penguins_raw
 
 from shiny import App, Inputs, Outputs, Session, module, render, ui
@@ -10,7 +11,6 @@ from shiny import App, Inputs, Outputs, Session, module, render, ui
 # Load the dataset
 penguins = load_penguins_raw().head(5)[["Sample Number", "Individual ID", "Date Egg"]]
 df = penguins
-MOD_ID = "testing"
 
 
 @module.ui
@@ -23,6 +23,7 @@ def mod_ui():
                     ui.div("Filter: ", ui.output_text_verbatim("filter")),
                     ui.div("Rows: ", ui.output_text_verbatim("rows")),
                     ui.div("Selected Rows: ", ui.output_text_verbatim("selected_rows")),
+                    ui.div("Type: ", ui.output_text_verbatim("df_type")),
                 ),
                 ui.output_data_frame("penguins_df"),
                 width=1 / 2,
@@ -32,18 +33,31 @@ def mod_ui():
 
 
 app_ui = ui.page_fillable(
-    {"class": "p-3"},
-    mod_ui(MOD_ID),
+    ui.navset_card_underline(
+        ui.nav_panel(
+            "pandas",
+            mod_ui("pandas"),
+        ),
+        ui.nav_panel(
+            "polars",
+            mod_ui("polars"),
+        ),
+        id="tab",
+    ),
+    title="Data Frame",
+    id="navbar_id",
 )
 
 
 @module.server
-def mod_server(input: Inputs, output: Outputs, session: Session):
+def mod_server(
+    input: Inputs, output: Outputs, session: Session, dt: render.DataFrameLike
+):
     @render.data_frame
     def penguins_df():
         # return df
         return render.DataGrid(
-            df,
+            dt,
             selection_mode="rows",
             editable=False,
             filters=True,
@@ -70,9 +84,14 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
     def selected_rows():
         return str(penguins_df.cell_selection()["rows"])
 
+    @render.code
+    def df_type():
+        return str(type(dt))
+
 
 def server(input: Inputs, output: Outputs, session: Session):
-    mod_server(MOD_ID)
+    mod_server("pandas", dt=df)
+    mod_server("polars", dt=pl.from_pandas(df))
 
 
 app = App(app_ui, server, debug=False)

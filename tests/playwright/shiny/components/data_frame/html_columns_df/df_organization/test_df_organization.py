@@ -1,3 +1,4 @@
+import pytest
 from playwright.sync_api import Page
 
 from shiny.playwright import controller
@@ -5,14 +6,26 @@ from shiny.render._data_frame_utils._types import ColumnFilterNumber
 from shiny.run import ShinyAppProc
 
 
-def test_dataframe_organization_methods(page: Page, local_app: ShinyAppProc) -> None:
+@pytest.mark.parametrize("tab_name", ["pandas", "polars"])
+def test_dataframe_organization_methods(
+    page: Page, local_app: ShinyAppProc, tab_name: str
+) -> None:
+
     page.goto(local_app.url)
-    data_frame = controller.OutputDataFrame(page, "iris_df")
-    data_view_rows = controller.OutputCode(page, "data_view_rows")
-    data_view_selected_true = controller.OutputCode(page, "data_view_selected_true")
-    data_view_selected_false = controller.OutputCode(page, "data_view_selected_false")
-    cell_selection = controller.OutputCode(page, "cell_selection")
-    reset_df = controller.InputActionButton(page, "reset_df")
+
+    tab = controller.NavsetUnderline(page, "tab")
+    tab.set(tab_name)
+
+    data_frame = controller.OutputDataFrame(page, f"{tab_name}-iris_df")
+    data_view_rows = controller.OutputCode(page, f"{tab_name}-data_view_rows")
+    data_view_selected_true = controller.OutputCode(
+        page, f"{tab_name}-data_view_selected_true"
+    )
+    data_view_selected_false = controller.OutputCode(
+        page, f"{tab_name}-data_view_selected_false"
+    )
+    cell_selection = controller.OutputCode(page, f"{tab_name}-cell_selection")
+    reset_df = controller.InputActionButton(page, f"{tab_name}-reset_df")
 
     def reset_data_frame():
         reset_df.click()

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import polars as pl
+
 # TODO-barret; Export render.DataFrameLike
 # pyright: reportMissingTypeStubs = false
 from palmerpenguins import load_penguins_raw
@@ -41,8 +43,13 @@ app_ui = ui.page_fillable(
     ),
     {"class": "p-3"},
     ui.card(
-        ui.card_header("Styles List:"),
-        ui.output_data_frame("list_styles"),
+        ui.card_header("Pandas Styles List:"),
+        ui.output_data_frame("pd_list_styles"),
+        height="400px",
+    ),
+    ui.card(
+        ui.card_header("Polars Styles List:"),
+        ui.output_data_frame("pl_list_styles"),
         height="400px",
     ),
 )
@@ -51,9 +58,20 @@ app_ui = ui.page_fillable(
 def server(input: Inputs):
 
     @render.data_frame
-    def list_styles():
+    def pd_list_styles():
         return render.DataTable(
             df,
+            selection_mode=("rows"),
+            editable=True,
+            # filters=True,
+            styles=df_styles,
+        )
+
+    @render.data_frame
+    def pl_list_styles():
+
+        return render.DataTable(
+            pl.from_pandas(df),
             selection_mode=("rows"),
             editable=True,
             # filters=True,

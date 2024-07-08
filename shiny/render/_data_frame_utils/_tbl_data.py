@@ -8,6 +8,11 @@ from __future__ import annotations
 from functools import singledispatch
 from typing import Any, cast
 
+from htmltools import TagNode
+
+from ...session import require_active_session
+from ._html import wrap_shiny_html
+
 # from ...types import Jsonifiable
 from ._types import (
     CellPatchProcessed,
@@ -171,6 +176,8 @@ def _(col: PlSeries) -> FrameDtype:
         return {"type": "categorical", "categories": categories}
     else:
         type_ = "unknown"
+        if col_contains_shiny_html(col):
+            type_ = "html"
 
     return {"type": type_}
 
@@ -192,13 +199,28 @@ def _(data: PdDataFrame) -> FrameJson:
 
 @serialize_frame.register
 def _(data: PlDataFrame) -> FrameJson:
+    type_hints = list(map(serialize_dtype, data))
+    data_by_row = list(map(list, data.rows()))
+
+    # Shiny tag support
+    type_hints_type = [type_hint["type"] for type_hint in type_hints]
+    if "html" in type_hints_type:
+        session = require_active_session(None)
+
+        def wrap_shiny_html_with_session(x: TagNode):
+            return wrap_shiny_html(x, session=session)
+
+        html_columns = [i for i, x in enumerate(type_hints_type) if x == "html"]
+
+        for html_column in html_columns:
+            for row in data_by_row:
+                row[html_column] = wrap_shiny_html_with_session(row[html_column])
+
     return {
         # "index": list(range(len(data))),
         "columns": data.columns,
-        # write_json only does rows (as dictionaries; but we need lists)
-        # serialize only does columns
-        "data": data.rows(),
-        "typeHints": list(map(serialize_dtype, data)),
+        "data": data_by_row,
+        "typeHints": type_hints,
     }
 
 

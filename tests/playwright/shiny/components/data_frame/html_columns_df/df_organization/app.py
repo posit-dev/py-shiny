@@ -1,7 +1,8 @@
 import pandas as pd
+import polars as pl
 import seaborn as sns
 
-from shiny import App, Inputs, Outputs, Session, reactive, render, ui
+from shiny import App, Inputs, Outputs, Session, module, reactive, render, ui
 
 df = pd.DataFrame(
     sns.load_dataset(  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
@@ -12,31 +13,44 @@ df = pd.DataFrame(
 distinct_df = df.drop_duplicates(subset=["species"])
 distinct_df = df.iloc[[0, 1, 50, 51, 100, 101]]
 
-app_ui = ui.page_fluid(
-    ui.h2("Iris Dataset"),
-    ui.layout_column_wrap(
-        ui.input_action_button("reset_df", "Reset Dataframe"),
-        ui.input_action_button("update_sort", "Update sort"),
-        ui.input_action_button("update_filter", "Update filter"),
-    ),
-    ui.output_data_frame("iris_df"),
-    ui.h2("Data view indices"),
-    ui.output_text_verbatim("data_view_rows"),
-    ui.h2("Indices when view_selected=True"),
-    ui.output_text_verbatim("data_view_selected_true"),
-    ui.h2("Indices when view_selected=False"),
-    ui.output_text_verbatim("data_view_selected_false"),
-    ui.h2("Show selected cell"),
-    ui.output_text_verbatim("cell_selection"),
-)
+
+@module.ui
+def mod_ui():
+    return ui.TagList(
+        ui.h2("Iris Dataset"),
+        ui.layout_column_wrap(
+            ui.input_action_button("reset_df", "Reset Dataframe"),
+            ui.input_action_button("update_sort", "Update sort"),
+            ui.input_action_button("update_filter", "Update filter"),
+            width=1 / 3,
+        ),
+        ui.br(),
+        ui.output_data_frame("iris_df"),
+        ui.h2("Data view indices"),
+        ui.output_text_verbatim("data_view_rows"),
+        ui.h2("Indices when view_selected=True"),
+        ui.output_text_verbatim("data_view_selected_true"),
+        ui.h2("Indices when view_selected=False"),
+        ui.output_text_verbatim("data_view_selected_false"),
+        ui.h2("Show selected cell"),
+        ui.output_text_verbatim("cell_selection"),
+        ui.h2("Type:"),
+        ui.output_text_verbatim("df_type"),
+    )
 
 
-def server(input: Inputs, output: Outputs, session: Session) -> None:
+@module.server
+def mod_server(
+    input: Inputs, output: Outputs, session: Session, data: render.DataFrameLike
+):
+    @render.text
+    def df_type():
+        return str(type(data))
 
     @render.data_frame
     def iris_df():
         return render.DataGrid(
-            data=distinct_df,
+            data=data,
             filters=True,
             selection_mode="rows",
         )
@@ -49,30 +63,29 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
     def data_view_selected_false():  # pyright: ignore[reportUnknownParameterType]
         # TODO-barret; remove type check when DataFrameT is implemented
         data_view_all = iris_df.data_view(selected=False)
-        assert isinstance(data_view_all, pd.DataFrame)
-        return str(
-            data_view_all.index.values  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType, reportUnknownArgumentType]
-        )
 
-        return str(
-            iris_df.data_view(
-                selected=False
-            ).index.values  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType, reportUnknownArgumentType]
-        )
+        if isinstance(data_view_all, pd.DataFrame):
+            return str(
+                data_view_all.index.values  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType, reportUnknownArgumentType]
+            )
+        elif isinstance(data_view_all, pl.DataFrame):
+            return str(data_view_all.get_column("index").to_list())
+        else:
+            raise ValueError("Invalid data type")
 
     @render.code
     def data_view_selected_true():  # pyright: ignore[reportUnknownParameterType]
         # TODO-barret; remove type check when DataFrameT is implemented
         data_view_selected = iris_df.data_view(selected=True)
-        assert isinstance(data_view_selected, pd.DataFrame)
-        return str(
-            data_view_selected.index.values  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType, reportUnknownArgumentType]
-        )
-        return str(
-            iris_df.data_view(
-                selected=True
-            ).index.values  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType, reportUnknownArgumentType]
-        )
+
+        if isinstance(data_view_selected, pd.DataFrame):
+            return str(
+                data_view_selected.index.values  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType, reportUnknownArgumentType]
+            )
+        elif isinstance(data_view_selected, pl.DataFrame):
+            return str(data_view_selected.get_column("index").to_list())
+        else:
+            raise ValueError("Invalid data type")
 
     @render.code
     def cell_selection():  # pyright: ignore[reportUnknownParameterType]
@@ -94,6 +107,26 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
         await iris_df.update_filter(
             [{"col": 0, "value": [5, 6.9]}, {"col": 4, "value": "v"}]
         )
+
+
+app_ui = ui.page_fluid(
+    ui.navset_card_underline(
+        ui.nav_panel(
+            "pandas",
+            mod_ui("pandas"),
+        ),
+        ui.nav_panel(
+            "polars",
+            mod_ui("polars"),
+        ),
+        id="tab",
+    ),
+)
+
+
+def server(input: Inputs, output: Outputs, session: Session) -> None:
+    mod_server("pandas", distinct_df)
+    mod_server("polars", pl.from_pandas(distinct_df).with_row_index())
 
 
 app = App(app_ui, server)

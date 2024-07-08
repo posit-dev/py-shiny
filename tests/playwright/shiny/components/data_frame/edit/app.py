@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pkgutil
+
 # pyright: reportUnknownMemberType = false
 # pyright: reportMissingTypeStubs = false
 # pyright: reportArgumentType = false
@@ -13,6 +15,7 @@ from __future__ import annotations
 # TODO-future; Can we maintain pre-processed value and use it within editing?
 # A: Doesn't seem possible for now
 import great_tables as gt
+import polars as pl
 from palmerpenguins import load_penguins_raw
 
 from shiny import App, Inputs, Outputs, Session, module, reactive, render, req, ui
@@ -48,6 +51,22 @@ df.loc[:, "test_index"] = [
     f"Row {i}" for i in range(0, df.shape[0])
 ]  # pyright: ignore[reportUnknownArgumentType]
 df.set_index("test_index", drop=True, inplace=True)
+
+
+p = pkgutil.get_data("palmerpenguins", "data/penguins-raw.csv")
+print(p)
+df = (
+    pl.read_csv(p)
+    .head(15)
+    .with_columns(
+        (pl.Series([ui.tags.strong(ui.tags.em(str(x))) for x in range(0, 15)])).alias(
+            "Sample Number"
+        )
+    )
+)
+
+
+print(df)
 
 
 def gt_style_str_to_obj(style_str: str) -> dict[str, Jsonifiable]:
@@ -343,5 +362,5 @@ def server(input: Inputs, output: Outputs, session: Session):
     mod_server(MOD_ID)
 
 
-app = App(app_ui, server, debug=False)
+app = App(app_ui, server, debug=True)
 app.sanitize_errors = True

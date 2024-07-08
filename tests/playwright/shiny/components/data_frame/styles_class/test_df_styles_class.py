@@ -11,7 +11,8 @@ from shiny.types import Jsonifiable
 def test_validate_column_labels(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 
-    list_styles = controller.OutputDataFrame(page, "list_styles")
+    pd_list_styles = controller.OutputDataFrame(page, "pd_list_styles")
+    pl_list_styles = controller.OutputDataFrame(page, "pl_list_styles")
 
     styles: list[dict[str, Jsonifiable]] = [
         {
@@ -59,4 +60,5 @@ def test_validate_column_labels(page: Page, local_app: ShinyAppProc) -> None:
 
                         shiny_expect.expect_to_have_class(cell_loc, ex_class)
 
-    expect_styles(list_styles, styles)
+    expect_styles(pd_list_styles, styles)
+    expect_styles(pl_list_styles, styles)

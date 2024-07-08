@@ -104,7 +104,7 @@ def assert_frame_equal(
         (pl.Series([datetime.now()]), "unknown"),
         (pl.Series(["a"], dtype=pl.Categorical), "categorical"),
         (pl.Series([{"x": 1}]), "unknown"),
-        pytest.param(pl.Series([h1("yo")]), "html", marks=pytest.mark.xfail),
+        (pl.Series([h1("yo")]), "html"),
         pytest.param(pl.Series([HTML("yo")]), "html", marks=pytest.mark.xfail),
         # pandas ----
         (pd.Series([1]), "numeric"),
