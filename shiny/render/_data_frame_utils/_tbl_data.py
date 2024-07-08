@@ -192,20 +192,17 @@ def _(data: PdDataFrame) -> FrameJson:
 
 @serialize_frame.register
 def _(data: PlDataFrame) -> FrameJson:
-    # write_json only does rows (as dictionaries; but we need lists)
-    # serialize only does columns
-    named_cols = data.to_dict(as_series=False)
-    type_hints = list(map(serialize_dtype, data))
     return {
-        "columns": list(named_cols),
         # "index": list(range(len(data))),
-        "data": list(named_cols.values()),
-        "typeHints": type_hints,
+        "columns": data.columns,
+        # write_json only does rows (as dictionaries; but we need lists)
+        # serialize only does columns
+        "data": data.rows(),
+        "typeHints": list(map(serialize_dtype, data)),
     }
 
 
 # subset_frame -------------------------------------------------------------------------
-# TODO: this should replace use of iloc
 
 
 @singledispatch
