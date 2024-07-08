@@ -199,6 +199,8 @@ def _(data: PdDataFrame) -> FrameJson:
 
 @serialize_frame.register
 def _(data: PlDataFrame) -> FrameJson:
+    import json
+
     type_hints = list(map(serialize_dtype, data))
     data_by_row = list(map(list, data.rows()))
 
@@ -216,10 +218,12 @@ def _(data: PlDataFrame) -> FrameJson:
             for row in data_by_row:
                 row[html_column] = wrap_shiny_html_with_session(row[html_column])
 
+    data_val = json.loads(json.dumps(data_by_row, default=str))
+
     return {
         # "index": list(range(len(data))),
         "columns": data.columns,
-        "data": data_by_row,
+        "data": data_val,
         "typeHints": type_hints,
     }
 
@@ -243,7 +247,10 @@ def subset_frame(
 
 @subset_frame.register
 def _(
-    data: PdDataFrame, *, rows: RowsList = None, cols: ColsList = None
+    data: PdDataFrame,
+    *,
+    rows: RowsList = None,
+    cols: ColsList = None,
 ) -> PdDataFrame:
     # Enable copy-on-write mode for the data;
     # Use `deep=False` to avoid copying the full data; CoW will copy the necessary data when modified
@@ -255,9 +262,19 @@ def _(
         indx_cols = (  # pyright: ignore[reportUnknownVariableType]
             slice(None)
             if cols is None
-            else data.columns.get_indexer_for(  # pyright: ignore[reportUnknownMemberType]
-                cols
-            )
+            else [
+                (
+                    # Send in an array of size 1 and retrieve the first element
+                    data.columns.get_indexer_for(  # pyright: ignore[reportUnknownMemberType]
+                        [col]
+                    )[
+                        0
+                    ]
+                    if isinstance(col, str)
+                    else col
+                )
+                for col in cols
+            ]
         )
 
         # Force list when using a non-None value for pandas compatibility
@@ -268,9 +285,16 @@ def _(
 
 @subset_frame.register
 def _(
-    data: PlDataFrame, *, rows: RowsList = None, cols: ColsList = None
+    data: PlDataFrame,
+    *,
+    rows: RowsList = None,
+    cols: ColsList = None,
 ) -> PlDataFrame:
-    indx_cols = cols if cols is not None else slice(None)
+    indx_cols = (
+        [col if isinstance(col, str) else data.columns[col] for col in cols]
+        if cols is not None
+        else slice(None)
+    )
     indx_rows = rows if rows is not None else slice(None)
     return data[indx_rows, indx_cols]
 

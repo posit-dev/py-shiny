@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pytest
 from playwright.sync_api import Page
 
 from shiny.playwright import controller
@@ -8,11 +9,16 @@ from shiny.run import ShinyAppProc
 from shiny.types import Jsonifiable
 
 
-def test_validate_column_labels(page: Page, local_app: ShinyAppProc) -> None:
+@pytest.mark.parametrize("tab_name", ["pandas", "polars"])
+def test_validate_column_labels(
+    page: Page, local_app: ShinyAppProc, tab_name: str
+) -> None:
     page.goto(local_app.url)
 
-    fn_styles = controller.OutputDataFrame(page, "fn_styles")
-    list_styles = controller.OutputDataFrame(page, "list_styles")
+    controller.NavsetUnderline(page, "tab").set(tab_name)
+
+    fn_styles = controller.OutputDataFrame(page, f"{tab_name}-fn_styles")
+    list_styles = controller.OutputDataFrame(page, f"{tab_name}-list_styles")
 
     styles: list[dict[str, Jsonifiable]] = [
         {

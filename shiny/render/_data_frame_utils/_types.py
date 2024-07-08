@@ -165,7 +165,7 @@ class FrameJson(TypedDict):
 
 
 RowsList = Optional[List[int]]
-ColsList = Optional[List[str]]
+ColsList = Optional[List[str | int]]
 
 
 # ---------------------------------------------------------------------

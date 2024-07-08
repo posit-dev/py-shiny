@@ -15,17 +15,22 @@ import pkgutil
 # TODO-future; Can we maintain pre-processed value and use it within editing?
 # A: Doesn't seem possible for now
 import great_tables as gt
+import palmerpenguins  # pyright: ignore[reportMissingTypeStubs]
 import polars as pl
-from palmerpenguins import load_penguins_raw
 
 from shiny import App, Inputs, Outputs, Session, module, reactive, render, req, ui
 from shiny.render import CellPatch
 from shiny.render._data_frame_utils._styles import StyleInfo
 from shiny.types import Jsonifiable
 
+pd_penguins = palmerpenguins.load_penguins_raw()
+pl_penguins = pl.read_csv(
+    pkgutil.get_data("palmerpenguins", "data/penguins-raw.csv"),
+    null_values="NA",
+)
+
 # Load the dataset
-penguins = load_penguins_raw()
-df = penguins
+df = pd_penguins
 
 df = df.head(15)
 
@@ -53,15 +58,10 @@ df.loc[:, "test_index"] = [
 df.set_index("test_index", drop=True, inplace=True)
 
 
-p = pkgutil.get_data("palmerpenguins", "data/penguins-raw.csv")
-print(p)
-df = (
-    pl.read_csv(p)
-    .head(15)
-    .with_columns(
-        (pl.Series([ui.tags.strong(ui.tags.em(str(x))) for x in range(0, 15)])).alias(
-            "Sample Number"
-        )
+# print(p)
+df = pl_penguins.head(15).with_columns(
+    (pl.Series([ui.tags.strong(ui.tags.em(str(x))) for x in range(0, 15)])).alias(
+        "Sample Number"
     )
 )
 
@@ -362,5 +362,5 @@ def server(input: Inputs, output: Outputs, session: Session):
     mod_server(MOD_ID)
 
 
-app = App(app_ui, server, debug=True)
+app = App(app_ui, server, debug=False)
 app.sanitize_errors = True

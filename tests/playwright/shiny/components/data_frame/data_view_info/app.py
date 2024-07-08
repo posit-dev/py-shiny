@@ -1,8 +1,9 @@
+from __future__ import annotations
+
 # pyright: reportUnknownMemberType = false
 # pyright: reportMissingTypeStubs = false
 # pyright: reportArgumentType = false
 # pyright: reportUnknownMemberType = false
-
 import polars as pl
 from palmerpenguins import load_penguins_raw
 

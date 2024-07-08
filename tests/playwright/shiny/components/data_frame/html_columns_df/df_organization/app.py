@@ -11,7 +11,8 @@ df = pd.DataFrame(
 )
 
 distinct_df = df.drop_duplicates(subset=["species"])
-distinct_df = df.iloc[[0, 1, 50, 51, 100, 101]]
+idxs = [0, 1, 50, 51, 100, 101]
+distinct_df = df.iloc[idxs]
 
 
 @module.ui
@@ -66,7 +67,10 @@ def mod_server(
 
         if isinstance(data_view_all, pd.DataFrame):
             return str(
-                data_view_all.index.values  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType, reportUnknownArgumentType]
+                [
+                    int(val)
+                    for val in data_view_all.index.values  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType, reportUnknownArgumentType]
+                ]
             )
         elif isinstance(data_view_all, pl.DataFrame):
             return str(data_view_all.get_column("index").to_list())
@@ -80,10 +84,13 @@ def mod_server(
 
         if isinstance(data_view_selected, pd.DataFrame):
             return str(
-                data_view_selected.index.values  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType, reportUnknownArgumentType]
+                [
+                    int(val)
+                    for val in data_view_selected.index.values  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType, reportUnknownArgumentType]
+                ]
             )
         elif isinstance(data_view_selected, pl.DataFrame):
-            return str(data_view_selected.get_column("index").to_list())
+            return str(data_view_selected["index"].to_list())
         else:
             raise ValueError("Invalid data type")
 
@@ -126,7 +133,9 @@ app_ui = ui.page_fluid(
 
 def server(input: Inputs, output: Outputs, session: Session) -> None:
     mod_server("pandas", distinct_df)
-    mod_server("polars", pl.from_pandas(distinct_df).with_row_index())
+    mod_server(
+        "polars", pl.from_pandas(distinct_df).with_columns(pl.Series("index", idxs))
+    )
 
 
 app = App(app_ui, server)

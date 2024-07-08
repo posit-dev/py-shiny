@@ -54,6 +54,7 @@ type CellHtmlValue = {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const isShinyHtml = (x: any): x is CellHtmlValue => {
   return (
+    x !== null && // Note: x === null has `typeof x === "object"`
     typeof x === "object" &&
     Object.prototype.hasOwnProperty.call(x, "isShinyHtml") &&
     x.isShinyHtml === true

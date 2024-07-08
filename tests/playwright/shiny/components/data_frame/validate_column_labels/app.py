@@ -1,26 +1,48 @@
-from palmerpenguins import load_penguins_raw  # pyright: ignore[reportMissingTypeStubs]
+from __future__ import annotations
 
-from shiny.express import render, ui
+import pkgutil
 
-ui.h2("Column labels w/ and w/o filters")
+import palmerpenguins  # pyright: ignore[reportMissingTypeStubs]
+import polars as pl
 
-ui.h3("With filters")
+from shiny import Inputs, Outputs, Session
+from shiny.express import module, render, ui
 
-
-@render.data_frame
-def w_filters():
-    return render.DataGrid(
-        data=load_penguins_raw().iloc[:, 1:4],
-        filters=True,
+pd_penguins = palmerpenguins.load_penguins_raw()[["Sample Number", "Species", "Region"]]
+pl_penguins = pl.read_csv(
+    pkgutil.get_data(  # pyright: ignore[reportArgumentType]
+        "palmerpenguins", "data/penguins-raw.csv"
     )
+)[["Sample Number", "Species", "Region"]]
 
 
-ui.h3("Without filters")
+@module
+def df_mod(
+    input: Inputs,
+    output: Outputs,
+    session: Session,
+    name: str,
+    data: render.DataFrameLike,
+):
+
+    ui.hr()
+
+    ui.h1(f"{name}")
+
+    ui.h2("Column labels w/ and w/o filters")
+
+    ui.h3("With filters")
+
+    @render.data_frame
+    def w_filters():
+        return render.DataGrid(data, filters=True)
+
+    ui.h3("Without filters")
+
+    @render.data_frame
+    def wo_filters():
+        return render.DataGrid(data, filters=False)
 
 
-@render.data_frame
-def wo_filters():
-    return render.DataGrid(
-        data=load_penguins_raw().iloc[:, 1:4],
-        filters=True,
-    )
+df_mod("pandas", "pandas", pd_penguins)
+df_mod("polars", "polars", pl_penguins)

@@ -26,12 +26,14 @@ def test_dataframe_organization_methods(
     )
     cell_selection = controller.OutputCode(page, f"{tab_name}-cell_selection")
     reset_df = controller.InputActionButton(page, f"{tab_name}-reset_df")
+    update_sort = controller.InputActionButton(page, f"{tab_name}-update_sort")
+    update_filter = controller.InputActionButton(page, f"{tab_name}-update_filter")
 
     def reset_data_frame():
         reset_df.click()
         data_view_rows.expect_value("(0, 1, 2, 3, 4, 5)")
         data_view_selected_true.expect_value("[]")
-        data_view_selected_false.expect_value("[  0   1  50  51 100 101]")
+        data_view_selected_false.expect_value("[0, 1, 50, 51, 100, 101]")
         cell_selection.expect_value("()")
 
     # assert value of unsorted table
@@ -41,28 +43,28 @@ def test_dataframe_organization_methods(
     data_frame.set_sort(0)
     data_view_rows.expect_value("(2, 3, 4, 5, 0, 1)")
     data_view_selected_true.expect_value("[]")
-    data_view_selected_false.expect_value("[ 50  51 100 101   0   1]")
+    data_view_selected_false.expect_value("[50, 51, 100, 101, 0, 1]")
     cell_selection.expect_value("()")
 
     # sort column by number ascending
     data_frame.set_sort({"col": 0, "desc": False})
     data_view_rows.expect_value("(1, 0, 5, 4, 3, 2)")
     data_view_selected_true.expect_value("[]")
-    data_view_selected_false.expect_value("[  1   0 101 100  51  50]")
+    data_view_selected_false.expect_value("[1, 0, 101, 100, 51, 50]")
     cell_selection.expect_value("()")
 
     # sort column by text ascending
     data_frame.set_sort([4])
     data_view_rows.expect_value("(0, 1, 2, 3, 4, 5)")
     data_view_selected_true.expect_value("[]")
-    data_view_selected_false.expect_value("[  0   1  50  51 100 101]")
+    data_view_selected_false.expect_value("[0, 1, 50, 51, 100, 101]")
     cell_selection.expect_value("()")
 
     # sort column by text descending
     data_frame.set_sort({"col": 4, "desc": True})
     data_view_rows.expect_value("(4, 5, 2, 3, 0, 1) ")
     data_view_selected_true.expect_value("[]")
-    data_view_selected_false.expect_value("[100 101  50  51   0   1]")
+    data_view_selected_false.expect_value("[100, 101, 50, 51, 0, 1]")
     cell_selection.expect_value("()")
 
     reset_data_frame()
@@ -72,20 +74,20 @@ def test_dataframe_organization_methods(
     data_frame.set_filter(filter_num_range)
     data_view_rows.expect_value("(3, 4)")
     data_view_selected_true.expect_value("[]")
-    data_view_selected_false.expect_value("[ 51 100]")
+    data_view_selected_false.expect_value("[51, 100]")
     cell_selection.expect_value("()")
     # filter programmatically
     reset_data_frame()
-    controller.InputActionButton(page, "update_filter").click()
+    update_filter.click()
     data_view_rows.expect_value("(3, 4, 5)")
     data_view_selected_true.expect_value("[]")
-    data_view_selected_false.expect_value("[  51 100 101]")
+    data_view_selected_false.expect_value("[51, 100, 101]")
     cell_selection.expect_value("()")
 
     data_frame.set_sort(3)
     data_view_rows.expect_value("(4, 5, 3)")
     data_view_selected_true.expect_value("[]")
-    data_view_selected_false.expect_value("[100 101  51]")
+    data_view_selected_false.expect_value("[100, 101, 51]")
     cell_selection.expect_value("()")
 
     # select single row
@@ -93,21 +95,21 @@ def test_dataframe_organization_methods(
     data_frame.select_rows([1])
     data_view_rows.expect_value("(0, 1, 2, 3, 4, 5)")
     data_view_selected_true.expect_value("[1]")
-    data_view_selected_false.expect_value("[  0   1  50  51 100 101]")
+    data_view_selected_false.expect_value("[0, 1, 50, 51, 100, 101]")
     cell_selection.expect_value("(1,)")
 
     reset_data_frame()
 
     # sort columns programmatically
-    controller.InputActionButton(page, "update_sort").click()
+    update_sort.click()
     data_view_rows.expect_value("(0, 4, 3, 2, 1, 5)")
     data_view_selected_true.expect_value("[]")
-    data_view_selected_false.expect_value("[  0 100  51  50   1 101]")
+    data_view_selected_false.expect_value("[0, 100, 51, 50, 1, 101]")
     cell_selection.expect_value("()")
 
     # select multiple rows
     data_frame.select_rows([3, 1])  # select rows 3 and 1 of (0, 4, 3, 2, 1, 5)
     data_view_rows.expect_value("(0, 4, 3, 2, 1, 5) ")
-    data_view_selected_true.expect_value("[100  50]")
-    data_view_selected_false.expect_value("[  0 100  51  50   1 101]")
+    data_view_selected_true.expect_value("[100, 50]")
+    data_view_selected_false.expect_value("[0, 100, 51, 50, 1, 101]")
     cell_selection.expect_value("(4, 2)")

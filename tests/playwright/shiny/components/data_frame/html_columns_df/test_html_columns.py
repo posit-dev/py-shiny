@@ -6,19 +6,22 @@ from shiny.render._data_frame import ColumnFilter
 from shiny.run import ShinyAppProc
 
 
-def test_validate_html_columns(page: Page, local_app: ShinyAppProc) -> None:
+@pytest.mark.parametrize("df_type", ["pandas", "polars"])
+def test_validate_html_columns(
+    page: Page, local_app: ShinyAppProc, df_type: str
+) -> None:
     page.goto(local_app.url)
 
-    data_frame = controller.OutputDataFrame(page, "penguins_df")
+    data_frame = controller.OutputDataFrame(page, f"{df_type}_df")
 
     # verify shiny reactive output UI in cell
-    output_txt = controller.OutputTextVerbatim(page, "test_cell_text")
-    output_txt.expect_value("test_cell_value 0")
-    test_button = controller.InputActionButton(page, "test_cell_button")
+    output_txt = controller.OutputTextVerbatim(page, f"{df_type}_test_cell_text")
+    output_txt.expect_value(f"{df_type}_test_cell_value 0")
+    test_button = controller.InputActionButton(page, f"{df_type}_test_cell_button")
 
     # Test Shiny reactive output in cell
     test_button.click()
-    output_txt.expect_value("test_cell_value 1")
+    output_txt.expect_value(f"{df_type}_test_cell_value 1")
 
     # assert patching works
     data_frame.expect_cell("N1A1", row=0, col=6)

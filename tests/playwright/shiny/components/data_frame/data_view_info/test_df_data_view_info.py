@@ -1,3 +1,5 @@
+import re
+
 import pytest
 from playwright.sync_api import Page
 
@@ -21,6 +23,10 @@ def test_validate_html_columns(
     data_frame = controller.OutputDataFrame(page, f"{tab_name}-penguins_df")
     tab = controller.NavsetUnderline(page, "tab")
     tab.set(tab_name)
+
+    controller.OutputTextVerbatim(page, f"{tab_name}-df_type").expect_value(
+        re.compile(tab_name)
+    )
 
     sort = controller.OutputTextVerbatim(page, f"{tab_name}-sort")
     filter = controller.OutputTextVerbatim(page, f"{tab_name}-filter")
