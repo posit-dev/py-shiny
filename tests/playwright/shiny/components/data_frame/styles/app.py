@@ -113,7 +113,7 @@ def server(input: Inputs):
         ) -> list[render.StyleInfo]:
             nonlocal counter
 
-            def style_is_everywhere(style_info):
+            def style_is_everywhere(style_info: render.StyleInfo):
                 return (style_info.get("rows", None) is None) and (
                     style_info.get("cols", None) is None
                 )
