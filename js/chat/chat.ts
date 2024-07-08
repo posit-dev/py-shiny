@@ -14,8 +14,9 @@ type ContentType = "markdown" | "html" | "text";
 type Message = {
   content: string;
   role: "user" | "assistant";
-  chunk_type: "message_start" | "message_end" | null;
   content_type: ContentType;
+  chunk_type: "message_start" | "message_end" | null;
+  request_scroll: boolean;
 };
 type ShinyChatMessage = {
   id: string;
@@ -51,6 +52,8 @@ class LightElement extends LitElement {
 class ChatMessage extends LightElement {
   @property() content = "...";
   @property() content_type: ContentType = "markdown";
+  // Boolean to determine whether to scroll to the bottom after updating content
+  @property({ type: Boolean }) request_scroll = false;
 
   render(): ReturnType<LitElement["render"]> {
     let content;
@@ -76,14 +79,15 @@ class ChatMessage extends LightElement {
 
   updated(changedProperties: Map<string, unknown>): void {
     if (changedProperties.has("content")) {
-      this.dispatchEvent(
-        new CustomEvent("shiny-chat-message-content-updated", {
+      this.#highlightAndCodeCopy();
+
+      if (this.request_scroll) {
+        const event = new CustomEvent("shiny-chat-request-scroll", {
           bubbles: true,
           composed: true,
-        })
-      );
-
-      this.#highlightAndCodeCopy();
+        });
+        this.dispatchEvent(event);
+      }
     }
   }
 
@@ -232,21 +236,16 @@ class ChatContainer extends LightElement {
     return this.querySelector(CHAT_MESSAGES_TAG) as ChatMessages;
   }
 
-  // Has the user sent an input message yet?
-  private hasSentInput = false;
   // Are we currently streaming a message (i.e., append_message_stream())?
   private isStreaming = false;
   // Throttled function to scroll to the bottom of the chat
-  private requestScrollToBottom;
+  private onRequestScroll;
 
   constructor() {
     super();
 
-    // Throttle the scrolling so that, while streaming, we don't scroll too often
-    this.requestScrollToBottom = throttle(
-      this.#maybeScrollToBottom.bind(this),
-      250
-    );
+    // Throttle scroll request (so, while streaming, we scroll only every 250ms)
+    this.onRequestScroll = throttle(this.#maybeScrollToBottom.bind(this), 250);
   }
 
   render(): ReturnType<LitElement["render"]> {
@@ -276,10 +275,7 @@ class ChatContainer extends LightElement {
       "shiny-chat-remove-loading-message",
       this.#onRemoveLoadingMessage
     );
-    this.addEventListener(
-      "shiny-chat-message-content-updated",
-      this.requestScrollToBottom
-    );
+    this.addEventListener("shiny-chat-request-scroll", this.onRequestScroll);
   }
 
   disconnectedCallback(): void {
@@ -297,17 +293,13 @@ class ChatContainer extends LightElement {
       "shiny-chat-remove-loading-message",
       this.#onRemoveLoadingMessage
     );
-    this.removeEventListener(
-      "shiny-chat-message-content-updated",
-      this.requestScrollToBottom
-    );
+    this.removeEventListener("shiny-chat-request-scroll", this.onRequestScroll);
   }
 
   // When user submits input, append it to the chat, and add a loading message
   #onInputSent(event: CustomEvent<Message>): void {
     this.#appendMessage(event.detail);
     this.#addLoadingMessage();
-    this.hasSentInput = true;
   }
 
   // Handle an append message event from server
@@ -353,7 +345,6 @@ class ChatContainer extends LightElement {
   #appendMessageChunk(message: Message): void {
     if (message.chunk_type === "message_start") {
       this.#appendMessage(message, false);
-      this.isStreaming = true;
       return;
     }
     if (message.chunk_type === "message_end") {
@@ -361,6 +352,8 @@ class ChatContainer extends LightElement {
       this.isStreaming = false;
       return;
     }
+
+    this.isStreaming = true;
 
     const lastMessage = this.messages.lastElementChild as HTMLElement;
     if (!lastMessage) throw new Error("No messages found in the chat output");
@@ -385,9 +378,6 @@ class ChatContainer extends LightElement {
   }
 
   #maybeScrollToBottom(): void {
-    // Don't scroll until user has sent an input
-    if (!this.hasSentInput) return;
-
     // While streaming, don't scroll if user has scrolled up a bit
     if (this.isStreaming) {
       if (this.scrollTop + this.clientHeight < this.scrollHeight - 50) {

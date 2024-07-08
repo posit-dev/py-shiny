@@ -187,7 +187,7 @@ class Chat:
 
             # Initialize the chat with the provided messages
             for msg in messages:
-                _utils.run_coro_sync(self.append_message(msg))
+                _utils.run_coro_sync(self.append_message(msg, scroll=False))
 
             # When user input is submitted, transform, and store it in the chat state
             # (and make sure this runs before other effects since when the user
@@ -399,7 +399,7 @@ class Chat:
 
         return tuple(res)
 
-    async def append_message(self, message: Any) -> None:
+    async def append_message(self, message: Any, scroll: bool = True) -> None:
         """
         Append a message to the chat.
 
@@ -409,16 +409,23 @@ class Chat:
             The message to append. A variety of message formats are supported including
             a string, a dictionary with `content` and `role` keys, or a relevant chat
             completion object from platforms like OpenAI, Anthropic, Ollama, and others.
+        scroll
+            Whether to scroll to the bottom of the chat after appending the message.
 
         Note
         ----
         Use `.append_message_stream()` instead of this method when `stream=True` (or
         similar) is specified in model's completion method.
         """
-        await self._append_message(message)
+        await self._append_message(message, scroll=scroll)
 
     async def _append_message(
-        self, message: Any, *, chunk: ChunkOption = False, stream_id: str | None = None
+        self,
+        message: Any,
+        *,
+        chunk: ChunkOption = False,
+        stream_id: str | None = None,
+        scroll: bool = True,
     ) -> None:
         # If currently we're in a stream, handle other messages (outside the stream) later
         if not self._can_append_message(stream_id):
@@ -448,9 +455,11 @@ class Chat:
         if msg is None:
             return
         msg = self._store_message(msg, chunk=chunk)
-        await self._send_append_message(msg, chunk=chunk)
+        await self._send_append_message(msg, chunk=chunk, scroll=scroll)
 
-    async def append_message_stream(self, message: Iterable[Any] | AsyncIterable[Any]):
+    async def append_message_stream(
+        self, message: Iterable[Any] | AsyncIterable[Any], scroll: bool = True
+    ):
         """
         Append a message as a stream of message chunks.
 
@@ -461,6 +470,8 @@ class Chat:
             message chunk formats are supported, including a string, a dictionary with
             `content` and `role` keys, or a relevant chat completion object from
             platforms like OpenAI, Anthropic, Ollama, and others.
+        scroll
+            Whether to scroll to the bottom of the chat while appending the message stream.
 
         Note
         ----
@@ -473,7 +484,7 @@ class Chat:
         # Run the stream in the background to get non-blocking behavior
         @reactive.extended_task
         async def _stream_task():
-            await self._append_message_stream(message)
+            await self._append_message_stream(message, scroll=scroll)
 
         _stream_task()
 
@@ -493,17 +504,17 @@ class Chat:
         ctx.on_invalidate(_handle_error.destroy)
         self._effects.append(_handle_error)
 
-    async def _append_message_stream(self, message: AsyncIterable[Any]):
+    async def _append_message_stream(self, message: AsyncIterable[Any], scroll: bool):
         id = _utils.private_random_id()
 
         empty = ChatMessage(content="", role="assistant")
-        await self._append_message(empty, chunk="start", stream_id=id)
+        await self._append_message(empty, chunk="start", stream_id=id, scroll=scroll)
 
         try:
             async for msg in message:
-                await self._append_message(msg, chunk=True, stream_id=id)
+                await self._append_message(msg, chunk=True, stream_id=id, scroll=scroll)
         finally:
-            await self._append_message(empty, chunk="end", stream_id=id)
+            await self._append_message(empty, chunk="end", stream_id=id, scroll=scroll)
             await self._flush_pending_messages()
 
     async def _flush_pending_messages(self):
@@ -525,6 +536,7 @@ class Chat:
         self,
         message: StoredMessage,
         chunk: ChunkOption = False,
+        scroll: bool = True,
     ):
         if message["role"] == "system":
             # System messages are not displayed in the UI
@@ -549,6 +561,7 @@ class Chat:
             role=message["role"],
             content_type=content_type,
             chunk_type=chunk_type,
+            request_scroll=scroll,
         )
 
         # print(msg)

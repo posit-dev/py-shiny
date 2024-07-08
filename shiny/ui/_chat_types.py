@@ -31,3 +31,4 @@ class StoredMessage(TransformedMessage):
 class ClientMessage(ChatMessage):
     content_type: Literal["markdown", "html"]
     chunk_type: Literal["message_start", "message_end"] | None
+    request_scroll: bool
