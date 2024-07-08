@@ -23,13 +23,13 @@ if TYPE_CHECKING:
         DataFrameLike,
         "DataGrid",
         "DataTable",
-        "PandasCompatible",
+        PandasCompatible,
     ]
 
 else:
     # The parent class of `data_frame` needs something to hold onto
     # To avoid loading pandas, we use `object` as a placeholder
-    DataFrameResult = Union[None, object, "DataGrid", "DataTable", PandasCompatible]
+    DataFrameResult = Union[None, object]
 
 
 class AbstractTabularData(abc.ABC):
@@ -111,7 +111,7 @@ class DataGrid(AbstractTabularData):
 
     def __init__(
         self,
-        data: DataFrameLike,
+        data: DataFrameLike | PandasCompatible,
         *,
         width: str | float | None = "fit-content",
         height: str | float | None = None,
@@ -233,7 +233,7 @@ class DataTable(AbstractTabularData):
 
     def __init__(
         self,
-        data: DataFrameLike,
+        data: DataFrameLike | PandasCompatible,
         *,
         width: str | float | None = "fit-content",
         height: str | float | None = "500px",
