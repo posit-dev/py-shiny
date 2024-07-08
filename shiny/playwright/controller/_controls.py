@@ -1174,7 +1174,7 @@ class InputDarkMode(_UiBase):
         )
         return self
 
-    def expect_ribute(self, value: str, *, timeout: Timeout = None):
+    def expect_attribute(self, value: str, *, timeout: Timeout = None):
         """
         Expect the attribute named `attribute` of the input dark mode to have a specific value.
 
