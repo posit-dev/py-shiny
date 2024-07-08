@@ -1,10 +1,7 @@
+# Note - barret 2024-07-08; When we adopt `narwhals` support, we should remove the singledispatch and instead always use `narwhals`. In addition, we should return the native type of a native type was originally provided. (Or maintain the narwhals object, if a narwhals object was provided.)
+
 from __future__ import annotations
 
-# TODO-future; Integrate these methods into:
-# * `render/_render.py`; render.table - based on pandas only
-# * `render/_coordmap.py`; .iloc usage
-# TODO-barret; Add fixture for all data frame tests to test pandas and polars
-# TODO-barret; Go through all functions and make sure no `.shape` or `.columns` are used being used directly. There should be no direct usage of any custom data frame type.
 from functools import singledispatch
 from typing import Any, cast
 
