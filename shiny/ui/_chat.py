@@ -383,7 +383,7 @@ class Chat:
             A tuple of chat messages.
         """
 
-        messages = self._get_trimmed_messages(token_limits=token_limits)
+        messages = self._get_trimmed_messages(self._messages(), token_limits)
 
         res: list[ChatMessage] = []
         for i, m in enumerate(messages):
@@ -738,33 +738,58 @@ class Chat:
 
         return msg
 
+    @staticmethod
     def _get_trimmed_messages(
-        self,
-        *,
+        messages: tuple[StoredMessage, ...],
         token_limits: tuple[int, int] | None = (4096, 1000),
     ) -> tuple[StoredMessage, ...]:
-        messages = self._messages()
-
         if token_limits is None:
             return messages
 
-        # Can't trim if we don't have token counts
-        token_counts = [m["token_count"] for m in messages]
-        if None in token_counts:
-            return messages
+        system_token_count: int = 0
+        token_counts: list[int] = []
+        system_messages: list[str] = []
+        other_messages: list[str] = []
+        for m in messages:
+            count = m["token_count"]
+            if count is None:
+                # Count can be None if the tokenizer is None
+                return messages
+            content = m["content_server"]
+            if m["role"] == "system":
+                system_messages.append(content)
+                system_token_count += count
+            else:
+                other_messages.append(content)
+                token_counts.append(count)
 
-        token_counts = cast("list[int]", token_counts)
-
-        # Take the newest messages up to the token limit
         limit, reserve = token_limits
         max_tokens = limit - reserve
+
+        if system_token_count >= max_tokens:
+            raise ValueError(
+                f"System messages exceed `.messages(token_limits={token_limits})`. "
+                "Consider increasing the 1st value of `token_limit` or setting it to "
+                "`token_limit=None` to disable token limits."
+            )
+
+        max_tokens -= system_token_count
+
         messages2: list[StoredMessage] = []
         for i, m in enumerate(reversed(messages)):
-            if sum(token_counts[-i - 1 :]) > max_tokens:
-                break
-            messages2.append(m)
+            if m["role"] == "system":
+                messages2.append(m)
+            elif sum(token_counts[-i - 1 :]) <= max_tokens:
+                messages2.append(m)
 
         messages2.reverse()
+
+        if len(messages2) == len(system_messages) and len(other_messages) > 0:
+            raise ValueError(
+                f"Only system messages fit within `.messages(token_limits={token_limits})`. "
+                "Consider increasing the 1st value of `token_limit` or setting it to "
+                "`token_limit=None` to disable token limits."
+            )
 
         return tuple(messages2)
 
