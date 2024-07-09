@@ -2,10 +2,6 @@ from __future__ import annotations
 
 import warnings
 
-# TODO-barret; Make DataFrameLikeT generic bound to DataFrameLike. Add this generic type to the DataGrid and DataTable
-# TODO-barret; Should `.input_cell_selection()` ever return None? Is that value even helpful? Empty lists would be much more user friendly.
-# * For next release: Agreed to remove `None` type.
-# * For this release: Immediately make PR to remove `.input_` from `.input_cell_selection()`
 # TODO-barret-render.data_frame; Docs
 # TODO-barret-render.data_frame; Add examples!
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Literal, Union, cast
