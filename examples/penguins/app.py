@@ -8,7 +8,7 @@ import pandas as pd
 import seaborn as sns
 from colors import bg_palette, palette
 
-from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
+from shiny import App, Inputs, reactive, render, req, ui
 
 sns.set_theme()
 
@@ -52,7 +52,7 @@ app_ui = ui.page_sidebar(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     @reactive.calc
     def filtered_df() -> pd.DataFrame:
         """Returns a Pandas data frame that includes only the desired rows"""

@@ -4,7 +4,7 @@ import pandas as pd
 import seaborn as sns
 from plotnine.data import mtcars
 
-from shiny import App, Inputs, Outputs, Session, reactive, render, ui
+from shiny import App, Inputs, reactive, render, ui
 
 nav = ui.navset_pill_list(
     ui.nav_control(ui.p("Choose a package", class_="lead text-center")),
@@ -53,7 +53,7 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     @reactive.calc
     def fake_data():
         n = 5000

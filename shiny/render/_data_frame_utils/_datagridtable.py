@@ -338,7 +338,7 @@ def serialize_pandas_df(df: "pd.DataFrame") -> dict[str, Any]:
 
         with pd.option_context("mode.copy_on_write", True):
             df = df.copy(deep=False)
-            session = require_active_session(None)
+            session = require_active_session()
 
             def wrap_shiny_html_with_session(x: TagNode):
                 return wrap_shiny_html(x, session=session)

@@ -1,4 +1,4 @@
-from shiny import App, Inputs, Outputs, Session, reactive, ui
+from shiny import App, Inputs, reactive, ui
 
 app_ui = ui.page_fluid(
     ui.input_action_button("show", "Show"),
@@ -7,7 +7,7 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     ids: list[str] = []
     n: int = 0
 

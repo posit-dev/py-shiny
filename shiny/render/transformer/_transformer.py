@@ -265,7 +265,7 @@ class OutputRenderer(
         """
         from ...session import require_active_session
 
-        session = require_active_session(None)
+        session = require_active_session()
         return TransformerMetadata(
             session=session,
             name=self.output_id,

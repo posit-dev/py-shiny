@@ -1,6 +1,6 @@
 import random
 
-from shiny import App, Inputs, Outputs, Session, reactive, ui
+from shiny import App, Inputs, reactive, ui
 
 
 def make_panel(letter: str) -> ui.AccordionPanel:
@@ -17,7 +17,7 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     @reactive.effect
     @reactive.event(input.add_panel)
     def _():

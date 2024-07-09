@@ -1,4 +1,4 @@
-from shiny import App, Inputs, Outputs, Session, render, ui
+from shiny import App, Inputs, render, ui
 
 
 def make_items():
@@ -33,7 +33,7 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     @render.text
     def acc_single_val():
         return "input.acc_single(): " + str(input.acc_single())

@@ -663,7 +663,7 @@ class AppSession(Session):
                         await flush()
 
             except ConnectionClosed:
-                ...
+                pass
             except Exception as e:
                 try:
                     # Starting in Python 3.10 this could be traceback.print_exception(e)

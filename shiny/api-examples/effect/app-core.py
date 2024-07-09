@@ -1,9 +1,9 @@
-from shiny import App, Inputs, Outputs, Session, reactive, ui
+from shiny import App, Inputs, reactive, ui
 
 app_ui = ui.page_fluid(ui.input_action_button("btn", "Press me!"))
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     @reactive.effect
     @reactive.event(input.btn)
     def _():

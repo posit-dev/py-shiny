@@ -1,22 +1,24 @@
 __all__ = ("insert_ui", "remove_ui")
 
-from typing import Literal, Optional
+from typing import Literal
 
 from htmltools import TagChild
 
-from .._docstring import add_example
+from .._deprecated import _session_param_docs as _session_param
+from .._docstring import add_example, doc_format
 from ..session import require_active_session
-from ..session._session import Session
+from ..types import MISSING, MISSING_TYPE
 
 
 @add_example()
+@doc_format(session_param=_session_param)
 def insert_ui(
     ui: TagChild,
     selector: str,
     where: Literal["beforeBegin", "afterBegin", "beforeEnd", "afterEnd"] = "beforeEnd",
     multiple: bool = False,
     immediate: bool = False,
-    session: Optional[Session] = None,
+    session: MISSING_TYPE = MISSING,
 ) -> None:
     """
     Insert UI objects.
@@ -48,9 +50,7 @@ def insert_ui(
         Whether the UI object should be immediately inserted or removed, or whether
         Shiny should wait until all outputs have been updated and all effects have been
         run (default).
-    session
-        A :class:`~shiny.Session` instance. If not provided, it is inferred via
-        :func:`~shiny.session.get_current_session`.
+    {session_param}
 
     Note
     ----
@@ -68,28 +68,29 @@ def insert_ui(
     * :class:`~shiny.render.ui`
     """
 
-    session = require_active_session(session)
+    active_session = require_active_session(session)
 
     def callback() -> None:
-        session._send_insert_ui(
+        active_session._send_insert_ui(
             selector=selector,
             multiple=multiple,
             where=where,
-            content=session._process_ui(ui),
+            content=active_session._process_ui(ui),
         )
 
     if immediate:
         callback()
     else:
-        session.on_flushed(callback, once=True)
+        active_session.on_flushed(callback, once=True)
 
 
 @add_example()
+@doc_format(session_param=_session_param)
 def remove_ui(
     selector: str,
     multiple: bool = False,
     immediate: bool = False,
-    session: Optional[Session] = None,
+    session: MISSING_TYPE = MISSING,
 ) -> None:
     """
     Remove UI objects.
@@ -111,9 +112,7 @@ def remove_ui(
         Whether the UI object should be immediately inserted or removed, or whether
         Shiny should wait until all outputs have been updated and all effects have been
         run (default).
-    session
-        A :class:`~shiny.Session` instance. If not provided, it is inferred via
-        :func:`~shiny.session.get_current_session`.
+    {session_param}
 
     See Also
     --------
@@ -121,12 +120,12 @@ def remove_ui(
     * :class:`~shiny.render.ui`
     """
 
-    session = require_active_session(session)
+    active_session = require_active_session(session)
 
     def callback():
-        session._send_remove_ui(selector=selector, multiple=multiple)
+        active_session._send_remove_ui(selector=selector, multiple=multiple)
 
     if immediate:
         callback()
     else:
-        session.on_flushed(callback, once=True)
+        active_session.on_flushed(callback, once=True)

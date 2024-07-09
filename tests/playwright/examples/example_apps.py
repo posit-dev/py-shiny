@@ -47,6 +47,13 @@ output_transformer_errors = [
     "ShinyDeprecationWarning:",
     "shiny.render.transformer.output_transformer()",
 ]
+session_warnings = [
+    # shinywidgets.register_widget() uses `session` when registering widget
+    "ShinyDeprecationWarning: `session=` is deprecated",
+    "session_type_warning()",  # continutation of line above
+    # Brownian
+    "`session=` is deprecated",
+]
 express_warnings = ["Detected Shiny Express app. "]
 app_allow_shiny_errors: typing.Dict[
     str, typing.Union[Literal[True], typing.List[str]]
@@ -64,8 +71,8 @@ app_allow_shiny_errors: typing.Dict[
     "api-examples/output_transformer": [*output_transformer_errors],
     "api-examples/render_express": [*express_warnings],
     "app-templates/multi-page": [*output_transformer_errors],
-    "examples/airmass": [*output_transformer_errors],
-    "examples/brownian": [*output_transformer_errors],
+    "examples/airmass": [*output_transformer_errors, *session_warnings],
+    "examples/brownian": [*output_transformer_errors, *session_warnings],
     "examples/model-score": [*output_transformer_errors],
     "deploys/plotly": [*output_transformer_errors],
 }
@@ -92,6 +99,9 @@ app_allow_external_errors: typing.List[str] = [
     "pd.option_context('mode.use_inf_as_na",  # continutation of line above
 ]
 app_allow_js_errors: typing.Dict[str, typing.List[str]] = {
+    "examples/airmass": [
+        "Failed to load resource: the server responded with a status of 404"
+    ],
     "examples/brownian": ["Failed to acquire camera feed:"],
 }
 

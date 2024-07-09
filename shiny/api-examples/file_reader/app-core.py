@@ -2,7 +2,7 @@ import pathlib
 
 import pandas as pd
 
-from shiny import App, Inputs, Outputs, Session, reactive, render, ui
+from shiny import App, Inputs, reactive, render, ui
 
 dir = pathlib.Path(__file__).parent
 
@@ -14,7 +14,7 @@ def read_file():
     return pd.read_csv(dir / "mtcars.csv")
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     @render.table
     def result():
         return read_file()

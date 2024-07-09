@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-from shiny import App, Inputs, Outputs, Session, render, ui
+from shiny import App, Inputs, render, ui
 
 df = pd.DataFrame(
     dict(
@@ -30,7 +30,7 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     @render.data_frame
     def grid():
         return render.DataGrid(

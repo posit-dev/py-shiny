@@ -1,4 +1,4 @@
-from shiny import App, Inputs, Outputs, Session, reactive, ui
+from shiny import App, Inputs, reactive, ui
 
 items = [
     ui.accordion_panel(f"Section {letter}", f"Some narrative for section {letter}")
@@ -12,7 +12,7 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     @reactive.effect
     @reactive.event(input.set_acc)
     def _():

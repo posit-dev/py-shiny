@@ -2,7 +2,7 @@ import pandas as pd
 import seaborn as sns
 from shinyswatch.theme import darkly
 
-from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
+from shiny import App, Inputs, reactive, render, req, ui
 
 
 def app_ui(req):
@@ -59,7 +59,7 @@ def light_dark_switcher(dark):
     )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     df: reactive.value[pd.DataFrame] = reactive.value()
 
     @reactive.effect

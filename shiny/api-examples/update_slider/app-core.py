@@ -1,4 +1,4 @@
-from shiny import App, reactive, ui
+from shiny import App, Inputs, reactive, ui
 
 app_ui = ui.page_fixed(
     ui.input_slider(
@@ -15,7 +15,7 @@ app_ui = ui.page_fixed(
 )
 
 
-def server(input, output, session):
+def server(input: Inputs):
     @reactive.effect
     def _():
         # You can update the value, min, max, and step.

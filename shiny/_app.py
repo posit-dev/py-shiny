@@ -57,8 +57,10 @@ class App:
         returns a UI definition, if you need the UI definition to be created dynamically
         for each pageview.
     server
-        A function which is called once for each session, ensuring that each session is
-        independent.
+        A function which is called once for each session, ensuring that each app is
+        independent. This function can either take one positional argument (``input:
+        Inputs``) or three positional  arguments (``input: Inputs``, ``output:Outputs``,
+        ``session: Session``).
     static_assets
         Static files to be served by the app. If this is a string or Path object, it
         must be a directory, and it will be mounted at `/`. If this is a dictionary,

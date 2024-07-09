@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from shiny import App, Inputs, Outputs, Session, reactive, render, ui
+from shiny import App, Inputs, reactive, render, ui
 
 app_ui = ui.page_fluid(
     ui.h2(ui.code("@reactive.event")),
@@ -17,7 +17,7 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     @render.text
     def txt_immediate():
         return input.btn_count()

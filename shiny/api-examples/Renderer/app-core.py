@@ -3,7 +3,7 @@ from __future__ import annotations
 # Import the custom renderer implementations
 from renderers import render_capitalize, render_upper
 
-from shiny import App, Inputs, Outputs, Session, ui
+from shiny import App, Inputs, ui
 
 app_ui = ui.page_fluid(
     ui.h1("Capitalization renderer"),
@@ -19,7 +19,7 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     # Hovering over `@render_upper` will display the class documentation
     @render_upper
     def upper():

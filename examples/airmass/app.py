@@ -12,7 +12,7 @@ import timezonefinder
 from astropy.coordinates import AltAz, EarthLocation, SkyCoord
 from location import location_server, location_ui
 
-from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
+from shiny import App, Inputs, reactive, render, req, ui
 
 app_ui = ui.page_fixed(
     ui.tags.h3("Air mass calculator"),
@@ -57,7 +57,7 @@ app_ui = ui.page_fixed(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     loc = location_server("location")
     time_padding = datetime.timedelta(hours=1.5)
 

@@ -824,7 +824,7 @@ class data_frame(Renderer[DataFrameResult]):
         # from creating a renderer in one module and registering it on an output with a
         # different session.
 
-        active_session = require_active_session(None)
+        active_session = require_active_session()
         if self._get_session() != active_session:
             raise RuntimeError(
                 "The session used when creating the renderer "

@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `@render.data_frame`'s input value `input.<ID>_column_filter()` has been deprecated. Please use `<ID>.filter()` to retrieve the same information. (#1374)
 
+* Many `shiny.ui` methods (and `reactive.invalidate_later`) have deprecated their `session` argument. This rarely used argument would pass the `Session` into the method, but it is now considered an anti-pattern. If a custom `session` value is needed, please execute your code within a session context like `with shiny.session.session_context(MY_SESSION):`.  (#793)
+
+* `require_active_session()` will display a warning if a non-`MISSING` value is provided. Please migrate from using `require_active_session(None)` to `require_active_session()`. If a session is still needed, please use the context `with shiny.session.session_context(MY_SESSION):`. (#793)
+
 ### New features
 
 * Added a new `shiny.ui.Chat` class for building conversational interfaces with fully customizable and performant response generation. (#1453)

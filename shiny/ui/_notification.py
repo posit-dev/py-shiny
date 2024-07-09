@@ -2,19 +2,19 @@ from __future__ import annotations
 
 __all__ = ("notification_show", "notification_remove")
 
-from typing import TYPE_CHECKING, Any, Literal, Optional
+from typing import Any, Literal, Optional
 
 from htmltools import TagChild
 
-from .._docstring import add_example, no_example
+from .._deprecated import _session_param_docs as _session_param
+from .._docstring import add_example, doc_format, no_example
 from .._utils import rand_hex
 from ..session import require_active_session
-
-if TYPE_CHECKING:
-    from ..session import Session
+from ..types import MISSING, MISSING_TYPE
 
 
 @add_example()
+@doc_format(session_param=_session_param)
 def notification_show(
     ui: TagChild,
     *,
@@ -23,7 +23,7 @@ def notification_show(
     close_button: bool = True,
     id: Optional[str] = None,
     type: Literal["default", "message", "warning", "error"] = "default",
-    session: Optional[Session] = None,
+    session: MISSING_TYPE = MISSING,
 ) -> str:
     """
     Show a notification to the user.
@@ -54,9 +54,7 @@ def notification_show(
     type
         A string which controls the color of the notification. This should be one of
         "default" (gray), "message" (blue), "warning" (yellow), or "error" (red).
-    session
-        The :class:`~shiny.Session` in which the notification should appear.  If not
-        provided, the session is inferred via :func:`~shiny.session.get_current_session`.
+    {session_param}
 
     Returns
     -------
@@ -69,10 +67,10 @@ def notification_show(
     * :func:`~shiny.ui.modal`
     """
 
-    session = require_active_session(session)
+    active_session = require_active_session(session)
 
-    ui_ = session._process_ui(ui)
-    action_ = session._process_ui(action)
+    ui_ = active_session._process_ui(ui)
+    action_ = active_session._process_ui(action)
 
     id = id if id else rand_hex(8)
 
@@ -88,13 +86,20 @@ def notification_show(
     if duration:
         payload.update({"duration": duration * 1000})
 
-    session._send_message_sync({"notification": {"type": "show", "message": payload}})
+    active_session._send_message_sync(
+        {"notification": {"type": "show", "message": payload}}
+    )
 
     return id
 
 
 @no_example()
-def notification_remove(id: str, *, session: Optional[Session] = None) -> str:
+@doc_format(session_param=_session_param)
+def notification_remove(
+    id: str,
+    *,
+    session: MISSING_TYPE = MISSING,
+) -> str:
     """
     Remove a notification.
 
@@ -106,9 +111,7 @@ def notification_remove(id: str, *, session: Optional[Session] = None) -> str:
     ----------
     id
         The ``id`` of the notification to remove.
-    session
-        The :class:`~shiny.Session` in which the notification appears. If not provided, the session is inferred via
-        :func:`~shiny.session.get_current_session`.
+    {session_param}
 
     Returns
     -------
@@ -124,6 +127,8 @@ def notification_remove(id: str, *, session: Optional[Session] = None) -> str:
     -------
     See :func:`shiny.ui.notification_show`.
     """
-    session = require_active_session(session)
-    session._send_message_sync({"notification": {"type": "remove", "message": id}})
+    active_session = require_active_session(session)
+    active_session._send_message_sync(
+        {"notification": {"type": "remove", "message": id}}
+    )
     return id

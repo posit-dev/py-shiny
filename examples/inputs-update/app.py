@@ -1,6 +1,6 @@
 from datetime import date
 
-from shiny import App, Inputs, Outputs, Session, reactive, ui
+from shiny import App, Inputs, reactive, ui
 
 app_ui = ui.page_fluid(
     ui.panel_title("Changing the values of inputs from the server"),
@@ -87,7 +87,7 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     @reactive.effect
     def _():
         # We'll use these multiple times, so use short var names for

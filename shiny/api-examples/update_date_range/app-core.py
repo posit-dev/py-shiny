@@ -1,6 +1,6 @@
 from datetime import date, timedelta
 
-from shiny import App, Inputs, Outputs, Session, reactive, ui
+from shiny import App, Inputs, reactive, ui
 
 app_ui = ui.page_fluid(
     ui.input_slider("n", "Day of month", min=1, max=30, value=10),
@@ -8,7 +8,7 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     @reactive.effect
     def _():
         d = date(2013, 4, input.n())

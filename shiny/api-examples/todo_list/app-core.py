@@ -20,7 +20,7 @@ app_ui = ui.page_fixed(
 )
 
 
-def server(input, output, session):
+def server(input):
     finished_tasks = reactive.value(0)
     task_counter = reactive.value(0)
 

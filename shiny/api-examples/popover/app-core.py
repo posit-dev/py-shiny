@@ -1,6 +1,6 @@
 from icons import gear_fill
 
-from shiny import App, Inputs, Outputs, Session, render, ui
+from shiny import App, Inputs, render, ui
 
 app_ui = ui.page_fluid(
     ui.popover(
@@ -30,7 +30,7 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     @render.text
     def plot_txt():
         return f"<Making plot using x: {input.x()} and y: {input.y()}>"

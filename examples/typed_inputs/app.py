@@ -2,7 +2,7 @@
 
 import typing
 
-from shiny import App, Inputs, Outputs, Session, reactive, render, ui
+from shiny import App, Inputs, reactive, render, ui
 
 app_ui = ui.page_fluid(
     ui.input_numeric("n", "N", 20),
@@ -24,7 +24,7 @@ class ShinyInputs(Inputs):
     check: reactive.value[bool]
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     # Cast `input` to our ShinyInputs class. This just tells the static type checker
     # that we want it treated as a ShinyInputs object for type checking; it has no
     # run-time effect.

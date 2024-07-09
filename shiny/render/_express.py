@@ -122,7 +122,7 @@ class express(Renderer[None]):
         if len(results) == 0:
             return None
 
-        session = require_active_session(None)
+        session = require_active_session()
         return rendered_deps_to_jsonifiable(
             session._process_ui(
                 TagList(*results)  # pyright: ignore[reportArgumentType]

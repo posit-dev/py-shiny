@@ -70,7 +70,7 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     slider_with_reset_server("one", value=end_time)
     slider_with_reset_server("two", value=(start_time, end_time))
     slider_with_reset_server("three", value=[start_time, end_time])

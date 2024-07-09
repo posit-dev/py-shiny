@@ -41,7 +41,7 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input, output, session):
+def server(input):
     # BROWNIAN MOTION ====
 
     @reactive.calc

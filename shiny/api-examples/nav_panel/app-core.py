@@ -1,6 +1,6 @@
 from typing import List
 
-from shiny import App, Inputs, Outputs, Session, reactive, ui
+from shiny import App, Inputs, reactive, ui
 from shiny.types import NavSetArg
 
 
@@ -65,7 +65,7 @@ app_ui = ui.page_navbar(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     @reactive.effect
     def _():
         print("Current navbar page: ", input.navbar_id())

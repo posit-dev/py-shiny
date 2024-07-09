@@ -1,6 +1,6 @@
 from datetime import date
 
-from shiny import App, Inputs, Outputs, Session, ui
+from shiny import App, Inputs, ui
 
 app_ui = ui.page_fluid(
     ui.input_date_range(
@@ -31,7 +31,7 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     pass
 
 
