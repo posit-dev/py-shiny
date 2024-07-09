@@ -139,7 +139,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
    * Currently only the "data" location is supported.
    */
   const styleInfoMap = _useStyleInfo.styleInfoMap;
-  const { resetStyleInfos, setStyleInfos } = _useStyleInfo;
+  const { setStyleInfos } = _useStyleInfo;
 
   const _cellEditMap = useCellEditMap();
   /**
