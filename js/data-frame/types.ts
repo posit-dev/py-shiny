@@ -24,7 +24,8 @@ export interface DataGridOptions {
   width?: string;
   height?: string;
   fill?: boolean;
-  styles: StyleInfo[];
+  styles?: StyleInfo[];
+  editable?: boolean;
 }
 
 export interface PandasData<TIndex> {
@@ -33,7 +34,6 @@ export interface PandasData<TIndex> {
   data: unknown[][];
   options: DataGridOptions;
   typeHints?: ReadonlyArray<TypeHint>;
-  editable?: boolean;
 }
 
 export interface PatchInfo {
