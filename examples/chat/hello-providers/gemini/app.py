@@ -4,16 +4,18 @@
 # To get one, follow the instructions at https://ai.google.dev/gemini-api/docs/get-started/tutorial?lang=python
 # ------------------------------------------------------------------------------------
 
+from pathlib import Path
+
+from dotenv import load_dotenv
 from google.generativeai import GenerativeModel
 
 from shiny.express import ui
 
-# Either set the GOOGLE_API_KEY environment variable before launching the app, or set
-# it a .env file and load it with `python-dotenv`. Uncomment the lines below to use
-# dotenv.
-# from pathlib import Path
-# from dotenv import load_dotenv
-# _ = load_dotenv(Path(__file__).parent / ".env")
+# Either explicitly set the GOOGLE_API_KEY environment variable before launching the
+# app, or set them in a file named `.env`. The `python-dotenv` package will load `.env`
+# as environment variables which can later be read by `os.getenv()`.
+_ = load_dotenv(Path(__file__).parent / ".env")
+
 llm = GenerativeModel()
 
 # Set some Shiny page options

@@ -5,16 +5,18 @@
 # To use other providers/models via LangChain, see https://python.langchain.com/v0.1/docs/modules/model_io/chat/quick_start/
 # ------------------------------------------------------------------------------------
 import os
+from pathlib import Path
 
+from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 
 from shiny.express import ui
 
-# Either set the OPENAI_API_KEY environment variable before launching the app, or set it
-# a .env file and load it with `python-dotenv`. Uncomment the lines below to use dotenv.
-# from pathlib import Path
-# from dotenv import load_dotenv
-# _ = load_dotenv(Path(__file__).parent / ".env")
+# Either explicitly set the OPENAI_API_KEY environment variable before launching the
+# app, or set them in a file named `.env`. The `python-dotenv` package will load `.env`
+# as environment variables which can later be read by `os.getenv()`.
+_ = load_dotenv(Path(__file__).parent / ".env")
+
 llm = ChatOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 # Set some Shiny page options
