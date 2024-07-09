@@ -62,6 +62,7 @@ from ._bootstrap import (
 from ._card import (
     CardItem,
     card,
+    card_body,
     card_footer,
     card_header,
 )
@@ -196,6 +197,7 @@ __all__ = (
     # _card
     "CardItem",
     "card",
+    "card_body",
     "card_header",
     "card_footer",
     # _chat
