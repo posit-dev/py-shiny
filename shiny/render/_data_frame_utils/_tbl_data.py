@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from functools import singledispatch
-from typing import Any, List, Tuple, cast
+from typing import Any, List, Tuple, cast, overload
 
 from htmltools import TagNode
 
@@ -12,7 +12,7 @@ from ...session import require_active_session
 from ._html import wrap_shiny_html
 
 # from ...types import Jsonifiable
-from ._types import (  # PandasCompatible,
+from ._types import (
     CellPatchProcessed,
     ColsList,
     DataFrameLike,
@@ -20,6 +20,7 @@ from ._types import (  # PandasCompatible,
     FrameDtype,
     FrameJson,
     ListSeriesLike,
+    PandasCompatible,
     PdDataFrame,
     PdSeries,
     PlDataFrame,
@@ -43,6 +44,24 @@ __all__ = (
 )
 
 # as_frame -----------------------------------------------------------------------------
+
+
+@overload
+def as_data_frame_like(data: DataFrameLikeT) -> DataFrameLikeT: ...
+@overload
+def as_data_frame_like(data: PandasCompatible) -> PdDataFrame: ...
+
+
+def as_data_frame_like(
+    data: DataFrameLikeT | PandasCompatible,
+) -> DataFrameLikeT | PdDataFrame:
+    if is_data_frame_like(data):
+        return data
+
+    if "to_pandas" in dir(data):
+        return data.to_pandas()
+
+    raise TypeError(f"Unsupported type: {type(data)}")
 
 
 # @singledispatch

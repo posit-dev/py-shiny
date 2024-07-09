@@ -21,8 +21,8 @@ def code_original():
 # @render.data_frame[render._data_frame_utils._types.PdDataFrame]
 @render.data_frame
 def df_astropy():
-    # return render.DataTable(t)
-    return t
+    return render.DataTable(t)
+    # return t
 
 
 @render.code

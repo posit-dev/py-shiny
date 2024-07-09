@@ -69,7 +69,7 @@ else:
     DataFrameLike.register(PdDataFrame)
     DataFrameLike.register(PlDataFrame)
 
-DataFrameLikeT = TypeVar("DataFrameLikeT", bound=DataFrameLike)
+DataFrameLikeT = TypeVar("DataFrameLikeT", PdDataFrame, PlDataFrame)
 # ---------------------------------------------------------------------
 
 

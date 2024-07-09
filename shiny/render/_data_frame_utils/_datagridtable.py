@@ -3,7 +3,7 @@ from __future__ import annotations
 import abc
 
 # TODO-barret-future; make DataTable and DataGrid generic? By currently accepting `object`, it is difficult to capture the generic type of the data.
-from typing import TYPE_CHECKING, Generic, Literal, Union, overload
+from typing import TYPE_CHECKING, Generic, Literal, TypeVar, Union, overload
 
 from ..._docstring import add_example, no_example
 from ._selection import (
@@ -15,22 +15,25 @@ from ._selection import (
 from ._styles import StyleFn, StyleInfo, as_browser_style_infos, as_style_infos
 
 # from ._tbl_data import as_data_frame_like, is_data_frame_like_type_is,
-from ._tbl_data import is_data_frame_like, serialize_frame
+from ._tbl_data import as_data_frame_like, is_data_frame_like, serialize_frame
 from ._types import (  # PlDataFrame,
     DataFrameLikeT,
     FrameJson,
     PandasCompatible,
     PdDataFrame,
+    PlDataFrame,
 )
+
+DfValueResultT = TypeVar("DfValueResultT", DataFrameLikeT, PandasCompatible)
 
 if TYPE_CHECKING:
 
     DataFrameResult = Union[
         None,
         DataFrameLikeT,
-        "DataGrid[DataFrameLikeT]",
-        "DataTable[DataFrameLikeT]",
-        PandasCompatible,
+        "DataGrid[DfValueResultT, DataFrameLikeT]",
+        "DataTable[DfValueResultT, DataFrameLikeT]",
+        # PandasCompatible,
     ]
 
 else:
@@ -45,7 +48,7 @@ class AbstractTabularData(abc.ABC):
 
 
 @add_example(ex_dir="../../api-examples/data_frame")
-class DataGrid(AbstractTabularData, Generic[DataFrameLikeT]):
+class DataGrid(AbstractTabularData, Generic[DfValueResultT, DataFrameLikeT]):
     """
     Holds the data and options for a :class:`~shiny.render.data_frame` output, for a
     spreadsheet-like view.
@@ -107,7 +110,7 @@ class DataGrid(AbstractTabularData, Generic[DataFrameLikeT]):
     * :class:`~shiny.render.DataTable`
     """
 
-    data: DataFrameLikeT
+    data: DfValueResultT
     width: str | float | None
     height: str | float | None
     summary: bool | str
@@ -116,84 +119,86 @@ class DataGrid(AbstractTabularData, Generic[DataFrameLikeT]):
     selection_modes: SelectionModes
     styles: list[StyleInfo] | StyleFn[DataFrameLikeT]
 
-    @overload
-    def __new__(
-        cls,
-        data: DataFrameLikeT,
-        *,
-        width: str | float | None = "fit-content",
-        height: str | float | None = None,
-        summary: bool | str = True,
-        filters: bool = False,
-        editable: bool = False,
-        selection_mode: SelectionModeInput = "none",
-        styles: StyleInfo | list[StyleInfo] | StyleFn[DataFrameLikeT] | None = None,
-        row_selection_mode: RowSelectionModeDeprecated = "deprecated",
-    ) -> DataGrid[DataFrameLikeT]: ...
+    # @overload
+    # def __new__(
+    #     cls,
+    #     data: DataFrameLikeT,
+    #     *,
+    #     width: str | float | None = "fit-content",
+    #     height: str | float | None = None,
+    #     summary: bool | str = True,
+    #     filters: bool = False,
+    #     editable: bool = False,
+    #     selection_mode: SelectionModeInput = "none",
+    #     styles: StyleInfo | list[StyleInfo] | StyleFn[DataFrameLikeT] | None = None,
+    #     row_selection_mode: RowSelectionModeDeprecated = "deprecated",
+    # ) -> DataGrid[DataFrameLikeT]: ...
 
-    @overload
-    def __new__(
-        cls,
-        data: PandasCompatible,
-        *,
-        width: str | float | None = "fit-content",
-        height: str | float | None = None,
-        summary: bool | str = True,
-        filters: bool = False,
-        editable: bool = False,
-        selection_mode: SelectionModeInput = "none",
-        styles: StyleInfo | list[StyleInfo] | StyleFn[PdDataFrame] | None = None,
-        row_selection_mode: RowSelectionModeDeprecated = "deprecated",
-    ) -> DataGrid[PdDataFrame]: ...
+    # @overload
+    # def __new__(
+    #     cls,
+    #     data: PandasCompatible,
+    #     *,
+    #     width: str | float | None = "fit-content",
+    #     height: str | float | None = None,
+    #     summary: bool | str = True,
+    #     filters: bool = False,
+    #     editable: bool = False,
+    #     selection_mode: SelectionModeInput = "none",
+    #     styles: StyleInfo | list[StyleInfo] | StyleFn[PdDataFrame] | None = None,
+    #     row_selection_mode: RowSelectionModeDeprecated = "deprecated",
+    # ) -> DataGrid[PdDataFrame]: ...
 
-    def __new__(
-        cls,
-        data: DataFrameLikeT | PandasCompatible,
-        *,
-        width: str | float | None = "fit-content",
-        height: str | float | None = None,
-        summary: bool | str = True,
-        filters: bool = False,
-        editable: bool = False,
-        selection_mode: SelectionModeInput = "none",
-        styles: (
-            StyleInfo
-            | list[StyleInfo]
-            | StyleFn[DataFrameLikeT]
-            | StyleFn[PdDataFrame]
-            | None
-        ) = None,
-        row_selection_mode: RowSelectionModeDeprecated = "deprecated",
-    ) -> DataGrid[DataFrameLikeT] | DataGrid[PdDataFrame]:
-        # print("DataGrid.__new__", type(data))
+    # def __new__(
+    #     cls,
+    #     data: DataFrameLikeT | PandasCompatible,
+    #     *,
+    #     width: str | float | None = "fit-content",
+    #     height: str | float | None = None,
+    #     summary: bool | str = True,
+    #     filters: bool = False,
+    #     editable: bool = False,
+    #     selection_mode: SelectionModeInput = "none",
+    #     styles: (
+    #         StyleInfo
+    #         | list[StyleInfo]
+    #         | StyleFn[DataFrameLikeT]
+    #         | StyleFn[PdDataFrame]
+    #         | None
+    #     ) = None,
+    #     row_selection_mode: RowSelectionModeDeprecated = "deprecated",
+    # ) -> DataGrid[DataFrameLikeT] | DataGrid[PdDataFrame]:
+    #     # print("DataGrid.__new__", type(data))
 
-        if is_data_frame_like(data):
-            # print(" -- regular")
-            ret = super().__new__(cls)
-            return ret
-        else:
-            # PandasCompatible
-            # print(" -- to_pandas()")
-            pd_data = data.to_pandas()
-            ret = super(DataGrid, cls).__new__(cls)
-            ret.__init__(  # pyright: ignore[reportUnknownMemberType]
-                pd_data,
-                width=width,
-                height=height,
-                summary=summary,
-                filters=filters,
-                editable=editable,
-                selection_mode=selection_mode,
-                row_selection_mode=row_selection_mode,
-                styles=styles,  # pyright: ignore[reportArgumentType]
-            )
+    #     if is_data_frame_like(data):
+    #         # print(" -- regular")
+    #         ret = super().__new__(cls)
+    #         return ret
+    #     else:
+    #         # PandasCompatible
+    #         # print(" -- to_pandas()")
+    #         pd_data = data.to_pandas()
+    #         ret = super(DataGrid, cls).__new__(cls)
+    #         ret.__init__(  # pyright: ignore[reportUnknownMemberType]
+    #             pd_data,
+    #             width=width,
+    #             height=height,
+    #             summary=summary,
+    #             filters=filters,
+    #             editable=editable,
+    #             selection_mode=selection_mode,
+    #             row_selection_mode=row_selection_mode,
+    #             styles=styles,  # pyright: ignore[reportArgumentType]
+    #         )
 
-            # print("return __new__")
-            return ret
+    #         # print("return __new__")
+    #         return ret
 
-    def __init__(  # pyright: ignore[reportInconsistentConstructor]
+    def __init__(  # py right : ignore[reportInconsistentConstructor]
         self,
-        data: DataFrameLikeT | PandasCompatible,
+        data: DataFrameLikeT
+        # | PandasCompatible
+        ,
         *,
         width: str | float | None = "fit-content",
         height: str | float | None = None,
@@ -205,18 +210,18 @@ class DataGrid(AbstractTabularData, Generic[DataFrameLikeT]):
         row_selection_mode: RowSelectionModeDeprecated = "deprecated",
     ):
 
-        if "data" in self.__dict__:
-            # This is a re-initialization, so we should return early
-            return
+        # if "data" in self.__dict__:
+        #     # This is a re-initialization, so we should return early
+        #     return
+        #
+        # if not is_data_frame_like(data):
+        #     # This should never be reached!!!
+        #     raise TypeError(
+        #         "The DataGrid() constructor didn't expect a 'data' argument of type",
+        #         type(data),
+        #     )
 
-        if not is_data_frame_like(data):
-            # This should never be reached!!!
-            raise TypeError(
-                "The DataGrid() constructor didn't expect a 'data' argument of type",
-                type(data),
-            )
-
-        self.data = data
+        self.data = as_data_frame_like(data)
 
         self.width = width
         self.height = height
@@ -251,7 +256,7 @@ class DataGrid(AbstractTabularData, Generic[DataFrameLikeT]):
 
 
 @no_example()
-class DataTable(AbstractTabularData, Generic[DataFrameLikeT]):
+class DataTable(AbstractTabularData, Generic[DfValueResultT, DataFrameLikeT]):
     """
     Holds the data and options for a :class:`~shiny.render.data_frame` output, for a
     spreadsheet-like view.
@@ -321,84 +326,40 @@ class DataTable(AbstractTabularData, Generic[DataFrameLikeT]):
     selection_modes: SelectionModes
     styles: list[StyleInfo] | StyleFn[DataFrameLikeT]
 
-    @overload
-    def __new__(
-        cls,
-        data: DataFrameLikeT,
-        *,
-        width: str | float | None = "fit-content",
-        height: str | float | None = "500px",
-        summary: bool | str = True,
-        filters: bool = False,
-        editable: bool = False,
-        selection_mode: SelectionModeInput = "none",
-        row_selection_mode: Literal["deprecated"] = "deprecated",
-        styles: StyleInfo | list[StyleInfo] | StyleFn[DataFrameLikeT] | None = None,
-    ) -> DataTable[DataFrameLikeT]: ...
+    # @overload
+    # def __init__(  # pyright: ignore[reportInconsistentConstructor]
+    #     self,
+    #     data: DataFrameLikeT,
+    #     *,
+    #     width: str | float | None = "fit-content",
+    #     height: str | float | None = "500px",
+    #     summary: bool | str = True,
+    #     filters: bool = False,
+    #     editable: bool = False,
+    #     selection_mode: SelectionModeInput = "none",
+    #     row_selection_mode: Literal["deprecated"] = "deprecated",
+    #     styles: StyleInfo | list[StyleInfo] | StyleFn[DataFrameLikeT] | None = None,
+    # ) -> None: ...
 
-    @overload
-    def __new__(
-        cls,
-        data: PandasCompatible,
-        *,
-        width: str | float | None = "fit-content",
-        height: str | float | None = "500px",
-        summary: bool | str = True,
-        filters: bool = False,
-        editable: bool = False,
-        selection_mode: SelectionModeInput = "none",
-        row_selection_mode: Literal["deprecated"] = "deprecated",
-        styles: StyleInfo | list[StyleInfo] | StyleFn[PdDataFrame] | None = None,
-    ) -> DataTable[PdDataFrame]: ...
+    # @overload
+    # def __init__(  # pyright: ignore[reportInconsistentConstructor]
+    #     self,
+    #     data: PandasCompatible,
+    #     *,
+    #     width: str | float | None = "fit-content",
+    #     height: str | float | None = "500px",
+    #     summary: bool | str = True,
+    #     filters: bool = False,
+    #     editable: bool = False,
+    #     selection_mode: SelectionModeInput = "none",
+    #     row_selection_mode: Literal["deprecated"] = "deprecated",
+    #     styles: StyleInfo | list[StyleInfo] | StyleFn[PdDataFrame] | None = None,
+    # ) -> None: ...
 
-    def __new__(
-        cls,
-        data: DataFrameLikeT | PandasCompatible,
-        *,
-        width: str | float | None = "fit-content",
-        height: str | float | None = "500px",
-        summary: bool | str = True,
-        filters: bool = False,
-        editable: bool = False,
-        selection_mode: SelectionModeInput = "none",
-        row_selection_mode: Literal["deprecated"] = "deprecated",
-        styles: (
-            StyleInfo
-            | list[StyleInfo]
-            | StyleFn[DataFrameLikeT]
-            | StyleFn[PdDataFrame]
-            | None
-        ) = None,
-    ) -> DataTable[DataFrameLikeT] | DataTable[PdDataFrame]:
-        # print("DataTable.__new__", type(data))
-
-        if is_data_frame_like(data):
-            # print(" -- regular")
-            ret = super().__new__(cls)
-            return ret
-        else:
-            # PandasCompatible
-            # print(" -- to_pandas()")
-            pd_data = data.to_pandas()
-            ret = super(DataTable, cls).__new__(cls)
-            ret.__init__(  # pyright: ignore[reportUnknownMemberType]
-                pd_data,
-                width=width,
-                height=height,
-                summary=summary,
-                filters=filters,
-                editable=editable,
-                selection_mode=selection_mode,
-                row_selection_mode=row_selection_mode,
-                styles=styles,  # pyright: ignore[reportArgumentType]
-            )
-
-            # print("return __new__")
-            return ret
-
-    def __init__(  # pyright: ignore[reportInconsistentConstructor]
+    def __init__(
         self,
-        data: DataFrameLikeT | PandasCompatible,
+        data: DfValueResultT,
+        # data: DataFrameLikeT,
         *,
         width: str | float | None = "fit-content",
         height: str | float | None = "500px",
