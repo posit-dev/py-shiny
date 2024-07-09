@@ -17,17 +17,17 @@ def test_row_selection(page: Page, local_app: ShinyAppProc) -> None:
     selected_rows = controller.OutputCode(page, "selected_rows")
 
     grid.expect_cell("three", row=2, col=0)
-    detail.expect_n_row(0)
-    detail.expect_n_col(3)
+    detail.expect_nrow(0)
+    detail.expect_ncol(3)
     selected_rows.expect_value("()")
 
     grid.select_rows([2])
-    detail.expect_n_row(1)
+    detail.expect_nrow(1)
     detail.expect_cell("three", row=0, col=0)
     selected_rows.expect_value("(2,)")
 
     # Ensure that keys are in sorted order, not the order in which they were selected
     # row1.click(modifiers=["Shift"])
     grid.loc_body.locator("td").nth(0).click(modifiers=["Shift"])
-    detail.expect_n_row(3)
+    detail.expect_nrow(3)
     selected_rows.expect_value("(0, 1, 2)")

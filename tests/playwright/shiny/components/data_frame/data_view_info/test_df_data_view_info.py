@@ -1,19 +1,37 @@
+import re
+
+import pytest
 from playwright.sync_api import Page
 
 from shiny.playwright import controller
-from shiny.render._data_frame import ColumnFilterNumber, ColumnFilterStr, ColumnSort
+from shiny.render._data_frame_utils._types import (
+    ColumnFilterNumber,
+    ColumnFilterStr,
+    ColumnSort,
+)
 from shiny.run import ShinyAppProc
 
 
-def test_validate_html_columns(page: Page, local_app: ShinyAppProc) -> None:
+@pytest.mark.parametrize("tab_name", ["pandas", "polars"])
+def test_validate_html_columns(
+    page: Page,
+    local_app: ShinyAppProc,
+    tab_name: str,
+) -> None:
     page.goto(local_app.url)
 
-    data_frame = controller.OutputDataFrame(page, "testing-penguins_df")
+    data_frame = controller.OutputDataFrame(page, f"{tab_name}-penguins_df")
+    tab = controller.NavsetUnderline(page, "tab")
+    tab.set(tab_name)
 
-    sort = controller.OutputTextVerbatim(page, "testing-sort")
-    filter = controller.OutputTextVerbatim(page, "testing-filter")
-    rows = controller.OutputTextVerbatim(page, "testing-rows")
-    selected_rows = controller.OutputTextVerbatim(page, "testing-selected_rows")
+    controller.OutputTextVerbatim(page, f"{tab_name}-df_type").expect_value(
+        re.compile(tab_name)
+    )
+
+    sort = controller.OutputTextVerbatim(page, f"{tab_name}-sort")
+    filter = controller.OutputTextVerbatim(page, f"{tab_name}-filter")
+    rows = controller.OutputTextVerbatim(page, f"{tab_name}-rows")
+    selected_rows = controller.OutputTextVerbatim(page, f"{tab_name}-selected_rows")
 
     sort.expect_value("()")
     filter.expect_value("()")

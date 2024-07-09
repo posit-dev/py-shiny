@@ -6,23 +6,26 @@ from shiny.render._data_frame import ColumnFilter
 from shiny.run import ShinyAppProc
 
 
-def test_validate_html_columns(page: Page, local_app: ShinyAppProc) -> None:
+@pytest.mark.parametrize("df_type", ["pandas", "polars"])
+def test_validate_html_columns(
+    page: Page, local_app: ShinyAppProc, df_type: str
+) -> None:
     page.goto(local_app.url)
 
-    data_frame = controller.OutputDataFrame(page, "penguins_df")
+    data_frame = controller.OutputDataFrame(page, f"{df_type}_df")
 
     # verify shiny reactive output UI in cell
-    output_txt = controller.OutputTextVerbatim(page, "test_cell_text")
-    output_txt.expect_value("test_cell_value 0")
-    test_button = controller.InputActionButton(page, "test_cell_button")
+    output_txt = controller.OutputTextVerbatim(page, f"{df_type}_test_cell_text")
+    output_txt.expect_value(f"{df_type}_test_cell_value 0")
+    test_button = controller.InputActionButton(page, f"{df_type}_test_cell_button")
 
     # Test Shiny reactive output in cell
     test_button.click()
-    output_txt.expect_value("test_cell_value 1")
+    output_txt.expect_value(f"{df_type}_test_cell_value 1")
 
     # assert patching works
     data_frame.expect_cell("N1A1", row=0, col=6)
-    data_frame.save_cell("N1A11", row=0, col=6, save_key="Enter")
+    data_frame.set_cell("N1A11", row=0, col=6, finish_key="Enter")
     data_frame.expect_cell("ID: N1A11", row=0, col=6)
 
     # assert sorting works
@@ -52,7 +55,7 @@ def test_validate_html_columns(page: Page, local_app: ShinyAppProc) -> None:
     data_frame.expect_cell("152", row=0, col=1)
 
     # if a column is sorted, editing should not change the order
-    data_frame.save_cell("152", row=0, col=1, save_key="Enter")
+    data_frame.set_cell("152", row=0, col=1, finish_key="Enter")
     data_frame.expect_cell("151", row=1, col=1)
 
     # assert HTMLDependency works by verifying javascript variable
@@ -72,7 +75,7 @@ def test_validate_html_columns(page: Page, local_app: ShinyAppProc) -> None:
     data_frame.expect_cell("3", row=0, col=1)
 
     # respect filtering even after edits when filters have been applied
-    data_frame.save_cell("3", row=0, col=1, save_key="Enter")
+    data_frame.set_cell("3", row=0, col=1, finish_key="Enter")
     data_frame.expect_cell("4", row=1, col=1)
 
     # assert that html columns are not editable
@@ -96,17 +99,17 @@ def test_validate_html_columns(page: Page, local_app: ShinyAppProc) -> None:
 
     # Editing a cell in the first row and hitting `shift+enter` should not submit the change and stay editing the current cell
     data_frame.expect_cell("N25A2", row=0, col=6)
-    data_frame.save_cell("NAAAAA", row=0, col=6, save_key="Shift+Enter")
+    data_frame.set_cell("NAAAAA", row=0, col=6, finish_key="Shift+Enter")
     data_frame.expect_cell("N25A2", row=0, col=6)
-    data_frame.save_cell("NBBBBB", row=0, col=6, save_key="Escape")
+    data_frame.set_cell("NBBBBB", row=0, col=6, finish_key="Escape")
     data_frame.expect_cell("N25A2", row=0, col=6)
 
     # Editing a cell in the last row and hitting `enter` should not submit the change and stay editing the current cell
     # data_frame.set_column_filter(7, text="No")
     # Test scrolling to last row
-    data_frame.save_cell("NAAAAA", row=7, col=6, save_key="Enter")
+    data_frame.set_cell("NAAAAA", row=7, col=6, finish_key="Enter")
     data_frame.expect_cell("N29A2", row=7, col=6)
-    data_frame.save_cell("NAAAAA", row=7, col=6, save_key="Escape")
+    data_frame.set_cell("NAAAAA", row=7, col=6, finish_key="Escape")
     data_frame.expect_cell("N29A2", row=7, col=6)
 
     # Test scrolling up to top

@@ -70,10 +70,10 @@ def test_accordion(page: Page, local_app: ShinyAppProc) -> None:
 
     acc.expect_panels(["updated_section_a", "Section B", "Section C", "Section D"])
     # workaround - toggle it twice Section A
-    acc_panel_updated_A.toggle()
+    acc_panel_updated_A._toggle()
     # add timeout to wait for css animation
     page.wait_for_timeout(100)
-    acc_panel_updated_A.toggle()
+    acc_panel_updated_A._toggle()
     output_txt_verbatim.expect_value(
         "input.acc(): ('updated_section_a', 'Section C', 'Section D')"
     )

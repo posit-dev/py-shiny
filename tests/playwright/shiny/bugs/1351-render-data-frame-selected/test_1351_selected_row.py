@@ -14,18 +14,18 @@ def test_row_selection(page: Page, local_app: ShinyAppProc) -> None:
     clear_table = controller.InputActionButton(page, "clear_table")
     selected_rows = controller.OutputTextVerbatim(page, "number_of_selected_rows")
 
-    df.expect_n_row(0)
+    df.expect_nrow(0)
     selected_rows.expect_value("Selected rows: 0")
 
     add_row.click()
 
-    df.expect_n_row(1)
+    df.expect_nrow(1)
     selected_rows.expect_value("Selected rows: 0")
 
     df.cell_locator(0, 0).click()
     df.select_rows([0])
 
-    df.expect_n_row(1)
+    df.expect_nrow(1)
     selected_rows.expect_value("Selected rows: 1")
 
     clear_table.click()

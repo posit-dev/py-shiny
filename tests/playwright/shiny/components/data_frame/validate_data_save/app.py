@@ -20,13 +20,6 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
             editable=True,
         )
 
-    @render.code
-    def selected_row_count():
-        # grid_selected_data = grid_selected.data()
-        return str(
-            penguins_df.data_view(selected=True)
-        )  # pyright: ignore[reportUnknownMemberType]
-
     @penguins_df.set_patch_fn
     async def upgrade_patch(
         *,

@@ -1174,14 +1174,14 @@ class InputDarkMode(_UiBase):
         )
         return self
 
-    def expect_wc_attribute(self, value: str, *, timeout: Timeout = None):
+    def expect_attribute(self, value: str, *, timeout: Timeout = None):
         """
-        Expect the `wc` attribute of the input dark mode to have a specific value.
+        Expect the attribute named `attribute` of the input dark mode to have a specific value.
 
         Parameters
         ----------
         value
-            The expected value of the `wc` attribute.
+            The expected value of the `attribute` attribute.
         timeout
             The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
@@ -1398,7 +1398,8 @@ class _InputCheckboxBase(
             value, timeout=timeout, **kwargs  # pyright: ignore[reportArgumentType]
         )
 
-    def toggle(self, *, timeout: Timeout = None, **kwargs: object) -> None:
+    # TODO-karan-test: Convert usage of _toggle() to set()
+    def _toggle(self, *, timeout: Timeout = None, **kwargs: object) -> None:
         """
         Toggles the input checkbox.
 
@@ -1480,6 +1481,7 @@ class InputSwitch(_InputCheckboxBase):
         )
 
 
+# TODO-future: Move class methods to a separate module
 class _MultipleDomItems:
     @staticmethod
     def assert_arr_is_unique(
@@ -1711,9 +1713,6 @@ class _MultipleDomItems:
             raise e
 
 
-# TODO-barret; continue from here
-
-
 class _RadioButtonCheckboxGroupBase(_UiWithLabel):
     loc_choice_labels: Locator
 
@@ -1814,7 +1813,7 @@ class InputCheckboxGroup(
 
     def set(
         self,
-        # Allow `selected` to be a single Pattern to perform matching against many items
+        # TODO-future: Allow `selected` to be a single Pattern to perform matching against many items
         selected: list[str],
         *,
         timeout: Timeout = None,
@@ -2075,19 +2074,6 @@ class InputFile(
     Playwright `Locator` of the progress bar.
     """
 
-    # id: str,
-    # label: TagChild,
-    # *,
-    # multiple: bool = False,
-    # accept: Optional[Union[str, list[str]]] = None,
-    # width: Optional[str] = None,
-    # button_label: str = "Browse...",
-    # placeholder: str = "No file selected",
-    # capture: Optional[Literal["environment", "user"]] = None,
-    # with page.expect_file_chooser() as fc_info:
-    #     page.get_by_text("Upload").click()
-    # file_chooser = fc_info.value
-    # file_chooser.set_files("myfile.pdf")
     def __init__(
         self,
         page: Page,
@@ -3700,7 +3686,12 @@ class _OutputImageBase(_OutputInlineContainerM, _OutputBase):
     Playwright `Locator` of the image.
     """
 
-    def __init__(self, page: Page, id: str, loc_classes: str = "") -> None:
+    def __init__(
+        self,
+        page: Page,
+        id: str,
+        loc_classes: str = "",
+    ) -> None:
         """
         Initializes an image output.
 
@@ -3907,20 +3898,6 @@ class OutputUi(_OutputInlineContainerM, _OutputBase):
         else:
             self.expect.not_to_be_empty(timeout=timeout)
 
-    def expect_text(self, value: str, *, timeout: Timeout = None) -> None:
-        """
-        Asserts that the output has the expected text.
-
-        Parameters
-        ----------
-        value
-            The expected text.
-        timeout
-            The maximum time to wait for the text to appear. Defaults to `None`.
-        """
-
-        self.expect.to_have_text(value, timeout=timeout)
-
 
 # When making selectors, use `xpath` so that direct decendents can be checked
 class OutputTable(_OutputBase):
@@ -4025,7 +4002,7 @@ class OutputTable(_OutputBase):
             timeout=timeout,
         )
 
-    def expect_n_col(
+    def expect_ncol(
         self,
         value: int,
         *,
@@ -4049,7 +4026,7 @@ class OutputTable(_OutputBase):
             timeout=timeout,
         )
 
-    def expect_n_row(
+    def expect_nrow(
         self,
         value: int,
         *,
@@ -4191,9 +4168,9 @@ class Sidebar(
             The maximum time to wait for the sidebar to open or close. Defaults to `None`.
         """
         if open ^ (self.loc_handle.get_attribute("aria-expanded") == "true"):
-            self.toggle(timeout=timeout)
+            self._toggle(timeout=timeout)
 
-    def toggle(self, *, timeout: Timeout = None) -> None:
+    def _toggle(self, *, timeout: Timeout = None) -> None:
         """
         Toggles the sidebar open or closed.
 
@@ -4785,7 +4762,7 @@ class Accordion(
 
     def set(
         self,
-        selected: str | list[str],
+        open: str | list[str],
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -4794,13 +4771,13 @@ class Accordion(
 
         Parameters
         ----------
-        selected
-            The selected accordion panel(s).
+        open
+            The open accordion panel(s).
         timeout
             The maximum time to wait for the accordion panel to be visible and interactable. Defaults to `None`.
         """
-        if isinstance(selected, str):
-            selected = [selected]
+        if isinstance(open, str):
+            open = [open]
         for element in self.loc.element_handles():
             element.wait_for_element_state(state="visible", timeout=timeout)
             element.scroll_into_view_if_needed(timeout=timeout)
@@ -4809,9 +4786,7 @@ class Accordion(
                 raise ValueError(
                     "Accordion panel does not have a `data-value` attribute"
                 )
-            self.accordion_panel(elem_value).set(
-                elem_value in selected, timeout=timeout
-            )
+            self.accordion_panel(elem_value).set(elem_value in open, timeout=timeout)
 
     def accordion_panel(
         self,
@@ -4958,9 +4933,9 @@ class AccordionPanel(
         self.loc.scroll_into_view_if_needed(timeout=timeout)
         expect_not_to_have_class(self.loc_body, "collapsing", timeout=timeout)
         if self._loc_body_visible.count() != int(open):
-            self.toggle(timeout=timeout)
+            self._toggle(timeout=timeout)
 
-    def toggle(self, *, timeout: Timeout = None) -> None:
+    def _toggle(self, *, timeout: Timeout = None) -> None:
         """
         Toggles the state of the control.
 
@@ -5159,9 +5134,9 @@ class Popover(_OverlayBase):
             The maximum time to wait for the popover to be visible and interactable. Defaults to `None`.
         """
         if open ^ self.get_loc_overlay_body(timeout=timeout).count() > 0:
-            self.toggle()
+            self._toggle()
 
-    def toggle(self, timeout: Timeout = None) -> None:
+    def _toggle(self, timeout: Timeout = None) -> None:
         """
         Toggles the state of the popover.
 
@@ -5230,11 +5205,11 @@ class Tooltip(_OverlayBase):
             The maximum time to wait for the tooltip to be visible and interactable. Defaults to `None`.
         """
         if open ^ self.get_loc_overlay_body(timeout=timeout).count() > 0:
-            self.toggle(timeout=timeout)
+            self._toggle(timeout=timeout)
         if not open:
             self.get_loc_overlay_body(timeout=timeout).click()
 
-    def toggle(self, timeout: Timeout = None) -> None:
+    def _toggle(self, timeout: Timeout = None) -> None:
         """
         Toggles the state of the tooltip.
 
@@ -5307,7 +5282,9 @@ class _NavItemBase(_UiWithContainer):
             f"div.tab-content[data-tabsetid='{datatab_id}'] > div.tab-pane.active"
         )
 
-    def expect_content(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+    def _expect_content_text(
+        self, value: PatternOrStr, *, timeout: Timeout = None
+    ) -> None:
         """
         Expects the control to have the specified content.
 
@@ -5442,7 +5419,9 @@ class NavItem(_UiWithContainer):
         """
         _expect_class_value(self.loc, "active", value, timeout=timeout)
 
-    def expect_content(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+    def _expect_content_text(
+        self, value: PatternOrStr, *, timeout: Timeout = None
+    ) -> None:
         """
         Expects the nav item content to have the specified text.
 
@@ -5879,7 +5858,7 @@ class OutputDataFrame(_UiWithContainer):
         )
 
     # TODO-barret; Should this be called `expect_row_count()`?
-    def expect_n_row(self, value: int, *, timeout: Timeout = None):
+    def expect_nrow(self, value: int, *, timeout: Timeout = None):
         """
         Expects the number of rows in the data frame.
 
@@ -5894,7 +5873,7 @@ class OutputDataFrame(_UiWithContainer):
             value, timeout=timeout
         )
 
-    def expect_selected_n_row(self, value: int, *, timeout: Timeout = None):
+    def expect_selected_num_rows(self, value: int, *, timeout: Timeout = None):
         """
         Expects the number of selected rows in the data frame.
 
@@ -5956,7 +5935,7 @@ class OutputDataFrame(_UiWithContainer):
             # Could not find the reason why. Raising the original error.
             raise e
 
-    def expect_row_focus_state(
+    def _expect_row_focus_state(
         self, in_focus: bool = True, *, row: int, timeout: Timeout = None
     ):
         """
@@ -6080,7 +6059,7 @@ class OutputDataFrame(_UiWithContainer):
                 break
         cell.scroll_into_view_if_needed(timeout=timeout)
 
-    def expect_column_label(
+    def _expect_column_label(
         self,
         value: ListPatternOrStr,
         *,
@@ -6106,7 +6085,7 @@ class OutputDataFrame(_UiWithContainer):
             timeout=timeout,
         )
 
-    def expect_n_col(
+    def expect_ncol(
         self,
         value: int,
         *,
@@ -6234,7 +6213,7 @@ class OutputDataFrame(_UiWithContainer):
                 "Invalid state. Select one of 'success', 'failure', 'saving', 'editing', 'ready'"
             )
 
-    def edit_cell(
+    def _edit_cell_no_save(
         self,
         text: str,
         *,
@@ -6276,10 +6255,12 @@ class OutputDataFrame(_UiWithContainer):
         ----------
         sort
             The sorting configuration to apply. Can be one of the following:
-                int: Index of the column to sort by (ascending order by default).
-                ColumnSort: A dictionary specifying a single column sort with 'col' and 'desc' keys.
-                list[ColumnSort]: A list of dictionaries for multi-column sorting.
-                None: No sorting applied (not implemented in the current code).
+                * `int`: Index of the column to sort by (ascending order by default).
+                * `ColumnSort`: A dictionary specifying a single column sort with 'col' and 'desc' keys.
+                * `list[int | ColumnSort]`: A list of ints or dictionaries for multi-column sorting.
+                * `None`: No sorting applied (not implemented in the current code).
+
+            If a `desc` values is provided within your `ColumnSort` shaped dictionary, then the direction will be set to that value. If no `desc` value is provided, the column will be sorted in the default sorting order.
         timeout
             The maximum time to wait for the action to complete. Defaults to `None`.
         """
@@ -6369,10 +6350,9 @@ class OutputDataFrame(_UiWithContainer):
         ----------
         filter
             The filter to apply. Can be one of the following:
-                None: Resets all filters.
-                str: A string filter (deprecated, use ColumnFilterStr instead).
-                ColumnFilterStr: A dictionary specifying a string filter with 'col' and 'value' keys.
-                ColumnFilterNumber: A dictionary specifying a numeric range filter with 'col' and 'value' keys.
+                * `None`: Resets all filters.
+                * `ColumnFilterStr`: A dictionary specifying a string filter with 'col' and 'value' keys.
+                * `ColumnFilterNumber`: A dictionary specifying a numeric range filter with 'col' and 'value' keys.
         timeout
             The maximum time to wait for the action to complete. Defaults to `None`.
         """
@@ -6423,13 +6403,15 @@ class OutputDataFrame(_UiWithContainer):
                     "Invalid filter value. Must be a string or a tuple/list of two numbers."
                 )
 
-    def save_cell(
+    def set_cell(
         self,
         text: str,
         *,
         row: int,
         col: int,
-        save_key: str,
+        finish_key: (
+            Literal["Enter", "Shift+Enter", "Tab", "Shift+Tab", "Escape"] | None
+        ) = None,
         timeout: Timeout = None,
     ) -> None:
         """
@@ -6443,11 +6425,17 @@ class OutputDataFrame(_UiWithContainer):
             The row number of the cell.
         col
             The column number of the cell.
+        finish_key
+            The key to save the value of the cell. If `None` (the default), no key will
+            be pressed and instead the page body will be clicked.
         timeout
             The maximum time to wait for the action to complete. Defaults to `None`.
         """
-        self.edit_cell(text, row=row, col=col, timeout=timeout)
-        self.cell_locator(row=row, col=col).locator("> textarea").press(save_key)
+        self._edit_cell_no_save(text, row=row, col=col, timeout=timeout)
+        if finish_key is None:
+            self.page.locator("body").click()
+        else:
+            self.cell_locator(row=row, col=col).locator("> textarea").press(finish_key)
 
     def expect_cell_title(
         self,
@@ -6458,7 +6446,8 @@ class OutputDataFrame(_UiWithContainer):
         timeout: Timeout = None,
     ) -> None:
         """
-        Expects the validation message of the cell in the data frame.
+        Expects the validation message of the cell in the data frame, which will be in
+        the `title` attribute of the element.
 
         Parameters
         ----------

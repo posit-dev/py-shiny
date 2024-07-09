@@ -45,6 +45,7 @@ def expect_attribute_to_have_value(
 def expect_to_have_class(
     loc: Locator,
     cls: str,
+    *,
     timeout: Timeout = None,
 ) -> None:
     """Expect a locator to contain a class value"""
@@ -56,6 +57,7 @@ def expect_to_have_class(
 def expect_not_to_have_class(
     loc: Locator,
     cls: str,
+    *,
     timeout: Timeout = None,
 ) -> None:
     """Expect a locator not to contain a class value"""
@@ -69,6 +71,7 @@ def expect_to_have_style(
     css_key: str,
     # Str representation for value. Will be put in a regex with `css_key`
     css_value: StyleValue,
+    *,
     timeout: Timeout = None,
 ) -> None:
     """Expect the `style` attribute to have a value. If `value` is `None`, then the style attribute should not exist."""

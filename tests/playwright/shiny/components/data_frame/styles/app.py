@@ -1,16 +1,23 @@
 from __future__ import annotations
 
-# pyright: reportMissingTypeStubs = false
-import pandas as pd
-from palmerpenguins import load_penguins_raw
+import pkgutil
 
-from shiny import App, Inputs, render, ui
+# pyright: reportMissingTypeStubs = false
+import palmerpenguins
+import polars as pl
+
+from shiny import App, Inputs, Outputs, Session, module, render, ui
 
 # Load the dataset
-penguins = load_penguins_raw()
-df = penguins
 
-df = df.iloc[0:5, 0:6]
+
+pd_penguins = palmerpenguins.load_penguins_raw().iloc[0:5, 0:6]
+pl_penguins = pl.read_csv(
+    pkgutil.get_data(  # pyright: ignore[reportArgumentType]
+        "palmerpenguins",
+        "data/penguins-raw.csv",
+    )
+)[["studyName", "Sample Number", "Species", "Region", "Island", "Stage"]].head(5)
 
 
 # import great_tables as gt
@@ -43,6 +50,10 @@ df = df.iloc[0:5, 0:6]
 # df_styles = gt_styles(df_gt)
 
 df_styles: list[render.StyleInfo] = [
+    {
+        "location": "body",
+        "style": {"color": "darkorange", "font-weight": "bold"},
+    },
     {
         "location": "body",
         "rows": None,
@@ -79,46 +90,62 @@ df_styles: list[render.StyleInfo] = [
     },
 ]
 
-app_ui = ui.page_fillable(
-    {"class": "p-3"},
-    ui.markdown(
-        "**Instructions**: Edit the cells 3 times. Watch the styles change in the first card."
-    ),
-    ui.card(
-        ui.card_header("Styles Function:"),
-        ui.output_data_frame("fn_styles"),
-        height="400px",
-    ),
-    ui.card(
-        ui.card_header("Styles List:"),
-        ui.output_data_frame("list_styles"),
-        height="400px",
-    ),
-)
+
+@module.ui
+def mod_ui():
+    return ui.TagList(
+        ui.markdown(
+            "**Instructions**: Edit the cells 3 times. Watch the styles change in the first card."
+        ),
+        ui.card(
+            ui.card_header("Styles Function:"),
+            ui.output_data_frame("fn_styles"),
+        ),
+        ui.card(
+            ui.card_header("Styles List:"),
+            ui.output_data_frame("list_styles"),
+        ),
+    )
 
 
-def server(input: Inputs):
-
+@module.server
+def mod_server(
+    input: Inputs,
+    output: Outputs,
+    session: Session,
+    data: render.DataFrameLike,
+):
     @render.data_frame
     def fn_styles():
 
         counter = 0
 
-        def df_styles_fn(data: pd.DataFrame) -> list[render.StyleInfo]:
+        def df_styles_fn(
+            data: render.DataFrameLike,
+        ) -> list[render.StyleInfo]:
             nonlocal counter
-            counter = (counter + 1) % len(df_styles)
+
+            def style_is_everywhere(style_info: render.StyleInfo):
+                return (style_info.get("rows", None) is None) and (
+                    style_info.get("cols", None) is None
+                )
+
+            everywhere_styles = [s for s in df_styles if style_is_everywhere(s)]
+
+            counter = counter + 1
+            if counter > len(df_styles) - len(everywhere_styles):
+                counter = 1
 
             ret: list[render.StyleInfo] = []
-            for style in df_styles:
-                style_val = style.get("style", None)
+            for style_info in df_styles:
+                style_val = style_info.get("style", None)
                 if style_val is None:
                     continue
-                if style_val["background-color"] == "lightblue":
+                if style_is_everywhere(style_info):
                     continue
-                ret.append(style)
+                ret.append(style_info)
                 if len(ret) >= counter:
                     break
-
             return ret
 
         # NOTE - Styles in GT are greedy!
@@ -127,7 +154,7 @@ def server(input: Inputs):
         # Styles can be subsetted by looking for the row value
         # return df
         return render.DataTable(
-            df,
+            data,
             selection_mode=("rows"),
             editable=True,
             # filters=True,
@@ -143,12 +170,26 @@ def server(input: Inputs):
     @render.data_frame
     def list_styles():
         return render.DataTable(
-            df,
+            data,
             selection_mode=("rows"),
             editable=True,
             # filters=True,
             styles=df_styles,
         )
+
+
+app_ui = ui.page_fillable(
+    ui.navset_underline(
+        ui.nav_panel("pandas", mod_ui("pandas")),
+        ui.nav_panel("polars", mod_ui("polars")),
+        id="tab",
+    )
+)
+
+
+def server(input: Inputs):
+    mod_server("pandas", pd_penguins)
+    mod_server("polars", pl_penguins)
 
 
 app = App(app_ui, server, debug=False)

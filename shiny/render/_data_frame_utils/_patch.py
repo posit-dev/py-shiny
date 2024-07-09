@@ -2,35 +2,9 @@ from __future__ import annotations
 
 # TODO-barret-render.data_frame; Docs
 # TODO-barret-render.data_frame; Add examples of patch!
-from typing import Protocol, Sequence, cast
+from typing import Protocol, Sequence
 
-from htmltools import TagNode
-
-from ..._typing_extensions import TypedDict
-from ..renderer._utils import JsonifiableDict
-from ._datagridtable import CellHtml
-
-# CellValue = str | TagList | Tag | HTML
-CellValue = TagNode
-
-
-class CellPatch(TypedDict):
-    row_index: int
-    column_index: int
-    value: CellValue
-
-
-class CellPatchProcessed(TypedDict):
-    row_index: int
-    column_index: int
-    value: str | CellHtml
-    # prev_value: CellValue
-
-
-def cell_patch_processed_to_jsonifiable(
-    cell_patch_processed: CellPatchProcessed,
-) -> JsonifiableDict:
-    return cast(JsonifiableDict, dict(cell_patch_processed))
+from ._types import CellPatch, CellValue
 
 
 class PatchFn(Protocol):
