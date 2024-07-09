@@ -347,7 +347,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
       if (index < 0 || index >= rowModel.rows.length) {
         return null;
       }
-      const targetKey = rowModel.rows[index].id;
+      const targetKey = rowModel.rows[index]!.id;
       rowVirtualizer.scrollToIndex(index);
       setTimeout(() => {
         const targetEl = containerRef.current?.querySelector(
@@ -435,7 +435,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
 
       shinySorting.map((sort) => {
         columnSorting.push({
-          id: columns[sort.col],
+          id: columns[sort.col]!,
           desc: sort.desc,
         });
       });
@@ -469,7 +469,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
       const columnFilters: ColumnFiltersState = [];
       shinyFilters.map((filter) => {
         columnFilters.push({
-          id: columns[filter.col],
+          id: columns[filter.col]!,
           value: filter.value,
         });
       });
@@ -530,7 +530,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
             if (!(key in rowsById)) {
               return null;
             }
-            return rowsById[key].index;
+            return rowsById[key]!.index;
           })
           .filter((x): x is number => x !== null),
       };
@@ -604,7 +604,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
           if (!(key in rowsById)) {
             return null;
           }
-          return rowsById[key].index;
+          return rowsById[key]!.index;
         })
         .filter((x): x is number => x !== null)
         .sort();
@@ -688,7 +688,12 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
         >
           <thead ref={theadRef} style={{ backgroundColor: bgcolor }}>
             {table.getHeaderGroups().map((headerGroup, i) => (
-              <tr key={headerGroup.id} aria-rowindex={i + 1}>
+              <tr
+                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                // @ts-ignore:next-line
+                key={headerGroup.id}
+                aria-rowindex={i + 1}
+              >
                 {includeRowNumbers && <th className="table-corner"></th>}
 
                 {headerGroup.headers.map((header) => {
@@ -713,6 +718,8 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
 
                   return (
                     <th
+                      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                      // @ts-ignore:next-line
                       key={header.id}
                       colSpan={header.colSpan}
                       style={{ width: header.getSize() }}
@@ -734,8 +741,13 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
               <tr className="filters">
                 {includeRowNumbers && <th className="table-corner"></th>}
                 {table.getFlatHeaders().map((header) => {
+                  const thKey = `filter-${header.id}`;
                   return (
-                    <th key={`filter-${header.id}`}>
+                    <th
+                      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                      // @ts-ignore:next-line
+                      key={thKey}
+                    >
                       <Filter header={header} />
                     </th>
                   );
@@ -754,6 +766,8 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
               return (
                 row && (
                   <tr
+                    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                    // @ts-ignore:next-line
                     key={virtualRow.key}
                     data-index={virtualRow.index}
                     aria-rowindex={virtualRow.index + headerRowCount}
@@ -835,7 +849,7 @@ function findKeysBetween<TData>(
   }
   const keys = [];
   for (let i = fromIdx; i <= toIdx; i++) {
-    keys.push(rowModel.rows[i].id);
+    keys.push(rowModel.rows[i]!.id);
   }
   return keys;
 }
@@ -889,7 +903,8 @@ class ShinyDataFrameOutputBinding extends Shiny.OutputBinding {
     return $(scope).find("shiny-data-frame");
   }
 
-  renderValue(el: ShinyDataFrameOutput, data: unknown): void {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  renderValue(el: ShinyDataFrameOutput, data: any): void {
     el.renderValue(data);
   }
 
@@ -921,7 +936,7 @@ function getComputedBgColor(el: HTMLElement | null): string | undefined {
     /^rgba\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*\)$/
   );
 
-  if (bgColor === "transparent" || (m && parseFloat(m[4]) === 0)) {
+  if (bgColor === "transparent" || (m && parseFloat(m[4]!) === 0)) {
     // No background color on this element. See if it has a background image.
     const bgImage = getStyle(el, "background-image");
 
@@ -941,7 +956,7 @@ cssTemplate.innerHTML = `<style>${css}</style>`;
 
 export class ShinyDataFrameOutput extends HTMLElement {
   reactRoot?: Root;
-  errorRoot: HTMLSpanElement;
+  errorRoot!: HTMLSpanElement;
 
   connectedCallback() {
     // Currently not using shadow DOM since Bootstrap's table styling is pretty nice and
