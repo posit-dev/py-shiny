@@ -38,7 +38,7 @@ def input_text(
         A hint as to what can be entered into the control.
     autocomplete
         Whether to enable browser autocompletion of the text input.
-        If `None`, then it will use the browser's default behavior. Possible values
+        If `None`, then it will use the browser's default behavior. Some values
         include "on", "off", "name", "username", and "email". See
         [https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/autocomplete](https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/autocomplete)
         to learn more about `autocomplete`'s supported values.
