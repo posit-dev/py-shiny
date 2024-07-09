@@ -13,13 +13,6 @@ ui.input_checkbox_group(
 )
 
 
-@reactive.effect
-def _():
-    print("stats: ", input.stats())
-    req(input.stats())
-    print("here!", req(input.stats()))
-
-
 @reactive.calc
 def parsed_file():
     file: list[FileInfo] | None = input.file1()
