@@ -777,7 +777,6 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
 
         if not isinstance(value, AbstractTabularData):
             try:
-                print("here!")
                 value = DataGrid(value)
             except TypeError as e:
                 raise TypeError(

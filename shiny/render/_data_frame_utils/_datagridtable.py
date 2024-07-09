@@ -165,16 +165,15 @@ class DataGrid(AbstractTabularData, Generic[DataFrameLikeT]):
         ) = None,
         row_selection_mode: RowSelectionModeDeprecated = "deprecated",
     ) -> DataGrid[DataFrameLikeT] | DataGrid[PdDataFrame]:
-        print("DataGrid.__new__", type(data))
-        # if isinstance(data, (PdDataFrame, PlDataFrame)):
+        # print("DataGrid.__new__", type(data))
 
         if is_data_frame_like(data):
-            print(" -- regular")
+            # print(" -- regular")
             ret = super().__new__(cls)
             return ret
         else:
             # PandasCompatible
-            print(" -- to_pandas()")
+            # print(" -- to_pandas()")
             pd_data = data.to_pandas()
             ret = super(DataGrid, cls).__new__(cls)
             ret.__init__(  # pyright: ignore[reportUnknownMemberType]
@@ -189,7 +188,7 @@ class DataGrid(AbstractTabularData, Generic[DataFrameLikeT]):
                 styles=styles,  # pyright: ignore[reportArgumentType]
             )
 
-            print("return __new__")
+            # print("return __new__")
             return ret
 
     def __init__(  # pyright: ignore[reportInconsistentConstructor]
@@ -371,16 +370,15 @@ class DataTable(AbstractTabularData, Generic[DataFrameLikeT]):
             | None
         ) = None,
     ) -> DataTable[DataFrameLikeT] | DataTable[PdDataFrame]:
-        print("DataTable.__new__", type(data))
-        # if isinstance(data, (PdDataFrame, PlDataFrame)):
+        # print("DataTable.__new__", type(data))
 
         if is_data_frame_like(data):
-            print(" -- regular")
+            # print(" -- regular")
             ret = super().__new__(cls)
             return ret
         else:
             # PandasCompatible
-            print(" -- to_pandas()")
+            # print(" -- to_pandas()")
             pd_data = data.to_pandas()
             ret = super(DataTable, cls).__new__(cls)
             ret.__init__(  # pyright: ignore[reportUnknownMemberType]
@@ -395,7 +393,7 @@ class DataTable(AbstractTabularData, Generic[DataFrameLikeT]):
                 styles=styles,  # pyright: ignore[reportArgumentType]
             )
 
-            print("return __new__")
+            # print("return __new__")
             return ret
 
     def __init__(  # pyright: ignore[reportInconsistentConstructor]
@@ -411,7 +409,7 @@ class DataTable(AbstractTabularData, Generic[DataFrameLikeT]):
         row_selection_mode: Literal["deprecated"] = "deprecated",
         styles: StyleInfo | list[StyleInfo] | StyleFn[DataFrameLikeT] | None = None,
     ):
-        print("DataTable.__init__", type(data))
+        # print("DataTable.__init__", type(data))
 
         if "data" in self.__dict__:
             # This is a re-initialization, so we should return early

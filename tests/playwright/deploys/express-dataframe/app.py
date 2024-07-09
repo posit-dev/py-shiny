@@ -20,5 +20,5 @@ with ui.card(id="card"):
     ui.h2("Below is a sample dataframe")
 
     @render.data_frame
-    def sample_data_frame(id: str = "dataframe"):
+    def sample_data_frame():
         return df
