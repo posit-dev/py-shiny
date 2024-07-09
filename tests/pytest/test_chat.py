@@ -59,7 +59,7 @@ def test_chat_message_trimming():
 
         # Throws since system message is too long
         with pytest.raises(ValueError):
-            chat._get_trimmed_messages(msgs, token_limits=(100, 0))
+            chat._trim_messages(msgs, token_limits=(100, 0))
 
         msgs = (
             as_stored_message(
@@ -72,10 +72,10 @@ def test_chat_message_trimming():
 
         # Throws since only the system message fits
         with pytest.raises(ValueError):
-            chat._get_trimmed_messages(msgs, token_limits=(100, 0))
+            chat._trim_messages(msgs, token_limits=(100, 0))
 
         # Raising the limit should allow both messages to fit
-        trimmed = chat._get_trimmed_messages(msgs, token_limits=(102, 0))
+        trimmed = chat._trim_messages(msgs, token_limits=(102, 0))
         assert len(trimmed) == 2
         contents = [msg["content_server"] for msg in trimmed]
         assert contents == ["System message", "User message"]
@@ -93,7 +93,7 @@ def test_chat_message_trimming():
         )
 
         # Should discard the 1st user message
-        trimmed = chat._get_trimmed_messages(msgs, token_limits=(102, 0))
+        trimmed = chat._trim_messages(msgs, token_limits=(102, 0))
         assert len(trimmed) == 2
         contents = [msg["content_server"] for msg in trimmed]
         assert contents == ["System message", "User message 2"]
@@ -114,7 +114,7 @@ def test_chat_message_trimming():
         )
 
         # Should discard the 1st user message
-        trimmed = chat._get_trimmed_messages(msgs, token_limits=(102, 0))
+        trimmed = chat._trim_messages(msgs, token_limits=(102, 0))
         assert len(trimmed) == 3
         contents = [msg["content_server"] for msg in trimmed]
         assert contents == ["System message", "System message 2", "User message 2"]

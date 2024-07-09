@@ -383,7 +383,9 @@ class Chat:
             A tuple of chat messages.
         """
 
-        messages = self._get_trimmed_messages(self._messages(), token_limits)
+        messages = self._messages()
+        if token_limits is not None:
+            messages = self._trim_messages(messages, token_limits)
 
         res: list[ChatMessage] = []
         for i, m in enumerate(messages):
@@ -739,12 +741,10 @@ class Chat:
         return msg
 
     @staticmethod
-    def _get_trimmed_messages(
+    def _trim_messages(
         messages: tuple[StoredMessage, ...],
-        token_limits: tuple[int, int] | None = (4096, 1000),
+        token_limits: tuple[int, int] = (4096, 1000),
     ) -> tuple[StoredMessage, ...]:
-        if token_limits is None:
-            return messages
 
         system_token_count: int = 0
         token_counts: list[int] = []
@@ -752,8 +752,8 @@ class Chat:
         other_messages: list[str] = []
         for m in messages:
             count = m["token_count"]
+            # Count can be None if the tokenizer is None
             if count is None:
-                # Count can be None if the tokenizer is None
                 return messages
             content = m["content_server"]
             if m["role"] == "system":
