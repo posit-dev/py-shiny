@@ -34,7 +34,7 @@ if TYPE_CHECKING:
     PdSeries = pd.Series[Any]
     PlSeries = pl.Series
 
-    ListSeriesLike = Union[list[PdSeries], list[PlSeries]]
+    ListSeriesLike = Union[List[PdSeries], List[PlSeries]]
     SeriesLike = Union[PdSeries, PlSeries]
     DataFrameLike = Union[PdDataFrame, PlDataFrame]
 
@@ -165,7 +165,7 @@ class FrameJson(TypedDict):
 
 
 RowsList = Optional[List[int]]
-ColsList = Optional[List[str | int]]
+ColsList = Optional[List[Union[str, int]]]
 
 
 # ---------------------------------------------------------------------

@@ -52,7 +52,12 @@ def is_data_frame_like(
 
 
 @is_data_frame_like.register
-def _(data: PdDataFrame | PlDataFrame) -> bool:
+def _(data: PdDataFrame) -> bool:
+    return True
+
+
+@is_data_frame_like.register
+def _(data: PlDataFrame) -> bool:
     return True
 
 
