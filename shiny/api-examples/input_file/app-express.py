@@ -1,6 +1,6 @@
 import pandas as pd
 
-from shiny import reactive, req
+from shiny import reactive
 from shiny.express import input, render, ui
 from shiny.types import FileInfo
 
