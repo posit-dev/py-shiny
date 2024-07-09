@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from functools import singledispatch
-from typing import Any, cast
+from typing import Any, List, cast
 
 from htmltools import TagNode
 
@@ -113,13 +113,13 @@ def _(data: PlDataFrame) -> ListSeriesLike:
 @singledispatch
 def apply_frame_patches(
     data: DataFrameLike,
-    patches: list[CellPatchProcessed],
+    patches: List[CellPatchProcessed],
 ) -> DataFrameLike:
     raise TypeError(f"Unsupported type: {type(data)}")
 
 
 @apply_frame_patches.register
-def _(data: PdDataFrame, patches: list[CellPatchProcessed]) -> PdDataFrame:
+def _(data: PdDataFrame, patches: List[CellPatchProcessed]) -> PdDataFrame:
     import pandas as pd
 
     # Enable copy-on-write mode for the data;
@@ -137,7 +137,7 @@ def _(data: PdDataFrame, patches: list[CellPatchProcessed]) -> PdDataFrame:
 
 
 @apply_frame_patches.register
-def _(data: PlDataFrame, patches: list[CellPatchProcessed]) -> PlDataFrame:
+def _(data: PlDataFrame, patches: List[CellPatchProcessed]) -> PlDataFrame:
     data = data.clone()
     for cell_patch in patches:
         data[cell_patch["row_index"], cell_patch["column_index"]] = cell_patch["value"]
