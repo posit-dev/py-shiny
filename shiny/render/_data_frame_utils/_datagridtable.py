@@ -3,7 +3,7 @@ from __future__ import annotations
 import abc
 
 # TODO-barret-future; make DataTable and DataGrid generic? By currently accepting `object`, it is difficult to capture the generic type of the data.
-from typing import TYPE_CHECKING, Literal, Union
+from typing import TYPE_CHECKING, Generic, Literal, Union, overload
 
 from ..._docstring import add_example, no_example
 from ._selection import (
@@ -13,16 +13,24 @@ from ._selection import (
     as_selection_modes,
 )
 from ._styles import StyleFn, StyleInfo, as_browser_style_infos, as_style_infos
-from ._tbl_data import as_data_frame_like, serialize_frame
-from ._types import DataFrameLike, FrameJson, PandasCompatible
+
+# from ._tbl_data import as_data_frame_like, is_data_frame_like_type_is,
+from ._tbl_data import is_data_frame_like, serialize_frame
+from ._types import (  # PlDataFrame,
+    DataFrameLike,
+    DataFrameLikeT,
+    FrameJson,
+    PandasCompatible,
+    PdDataFrame,
+)
 
 if TYPE_CHECKING:
 
     DataFrameResult = Union[
         None,
-        DataFrameLike,
-        "DataGrid",
-        "DataTable",
+        DataFrameLikeT,
+        "DataGrid[DataFrameLikeT]",
+        "DataTable[DataFrameLikeT]",
         PandasCompatible,
     ]
 
@@ -38,7 +46,7 @@ class AbstractTabularData(abc.ABC):
 
 
 @add_example(ex_dir="../../api-examples/data_frame")
-class DataGrid(AbstractTabularData):
+class DataGrid(AbstractTabularData, Generic[DataFrameLikeT]):
     """
     Holds the data and options for a :class:`~shiny.render.data_frame` output, for a
     spreadsheet-like view.
@@ -100,7 +108,7 @@ class DataGrid(AbstractTabularData):
     * :class:`~shiny.render.DataTable`
     """
 
-    data: DataFrameLike
+    data: DataFrameLikeT
     width: str | float | None
     height: str | float | None
     summary: bool | str
@@ -111,7 +119,7 @@ class DataGrid(AbstractTabularData):
 
     def __init__(
         self,
-        data: DataFrameLike | PandasCompatible,
+        data: DataFrameLikeT | PandasCompatible,
         *,
         width: str | float | None = "fit-content",
         height: str | float | None = None,
@@ -123,10 +131,14 @@ class DataGrid(AbstractTabularData):
         row_selection_mode: RowSelectionModeDeprecated = "deprecated",
     ):
 
-        self.data = as_data_frame_like(
-            data,
-            "The DataGrid() constructor didn't expect a 'data' argument of type",
-        )
+        if not is_data_frame_like(data):
+            # This should never be reached!!!
+            raise TypeError(
+                "The DataGrid() constructor didn't expect a 'data' argument of type",
+                type(data),
+            )
+
+        self.data = data
 
         self.width = width
         self.height = height
@@ -161,7 +173,7 @@ class DataGrid(AbstractTabularData):
 
 
 @no_example()
-class DataTable(AbstractTabularData):
+class DataTable(AbstractTabularData, Generic[DataFrameLikeT]):
     """
     Holds the data and options for a :class:`~shiny.render.data_frame` output, for a
     spreadsheet-like view.
@@ -223,7 +235,7 @@ class DataTable(AbstractTabularData):
     * :class:`~shiny.render.DataGrid`
     """
 
-    data: DataFrameLike
+    data: DataFrameLikeT
     width: str | float | None
     height: str | float | None
     summary: bool | str
@@ -231,9 +243,79 @@ class DataTable(AbstractTabularData):
     selection_modes: SelectionModes
     styles: list[StyleInfo] | StyleFn
 
+    @overload
+    def __new__(
+        cls,
+        data: DataFrameLikeT,
+        *,
+        width: str | float | None = "fit-content",
+        height: str | float | None = "500px",
+        summary: bool | str = True,
+        filters: bool = False,
+        editable: bool = False,
+        selection_mode: SelectionModeInput = "none",
+        row_selection_mode: Literal["deprecated"] = "deprecated",
+        styles: StyleInfo | list[StyleInfo] | StyleFn | None = None,
+    ) -> DataTable[DataFrameLikeT]: ...
+
+    @overload
+    def __new__(
+        cls,
+        data: PandasCompatible,
+        *,
+        width: str | float | None = "fit-content",
+        height: str | float | None = "500px",
+        summary: bool | str = True,
+        filters: bool = False,
+        editable: bool = False,
+        selection_mode: SelectionModeInput = "none",
+        row_selection_mode: Literal["deprecated"] = "deprecated",
+        styles: StyleInfo | list[StyleInfo] | StyleFn | None = None,
+    ) -> DataTable[PdDataFrame]: ...
+
+    def __new__(
+        cls,
+        data: DataFrameLikeT | PandasCompatible,
+        *,
+        width: str | float | None = "fit-content",
+        height: str | float | None = "500px",
+        summary: bool | str = True,
+        filters: bool = False,
+        editable: bool = False,
+        selection_mode: SelectionModeInput = "none",
+        row_selection_mode: Literal["deprecated"] = "deprecated",
+        styles: StyleInfo | list[StyleInfo] | StyleFn | None = None,
+    ) -> DataTable[DataFrameLikeT] | DataTable[PdDataFrame]:
+        print("DataTable.__new__", type(data))
+        # if isinstance(data, (PdDataFrame, PlDataFrame)):
+
+        if is_data_frame_like(data):
+            print(" -- regular")
+            ret = super().__new__(cls)
+            return ret
+        else:
+            # PandasCompatible
+            print(" -- to_pandas()")
+            pd_data = data.to_pandas()
+            ret = super(DataTable, cls).__new__(cls)
+            ret.__init__(
+                pd_data,
+                width=width,
+                height=height,
+                summary=summary,
+                filters=filters,
+                editable=editable,
+                selection_mode=selection_mode,
+                row_selection_mode=row_selection_mode,
+                styles=styles,
+            )
+
+            print("return __new__")
+            return ret
+
     def __init__(
         self,
-        data: DataFrameLike | PandasCompatible,
+        data: DataFrameLikeT | PandasCompatible,
         *,
         width: str | float | None = "fit-content",
         height: str | float | None = "500px",
@@ -244,11 +326,55 @@ class DataTable(AbstractTabularData):
         row_selection_mode: Literal["deprecated"] = "deprecated",
         styles: StyleInfo | list[StyleInfo] | StyleFn | None = None,
     ):
+        print("DataTable.__init__", type(data))
 
-        self.data = as_data_frame_like(
-            data,
-            "The DataTable() constructor didn't expect a 'data' argument of type",
-        )
+        if "data" in self.__dict__:
+            # This is a re-initialization, so we should return early
+            return
+
+        # Do not overwrite the data attribute if it already exists
+        # if "data" not in self.__dict__:
+
+        #     if isinstance(data, DataFrameLike):
+        #         print(data)
+
+        #     from ._tbl_data import is_data_frame_like
+
+        #     if not is_data_frame_like(data):
+        #         print(type(data))
+        #         return
+
+        #     if is_data_frame_like_type_is(data):
+        #         # self.data = data
+        #         ...
+        #         data_val = data
+        #     else:
+        #         raise RuntimeError("This should never happen")
+        #         # self.data: PdDataFrame = data.to_pandas()
+        #         data_val = data.to_pandas()
+        #         ...
+        #     self.data = data_val
+        # if is_data_frame_like_type_guard(data):
+        #     self.data = data
+        # else:
+        #     self.data: PdDataFrame = data.to_pandas()
+        #     ...
+
+        # if isinstance(data, PdDataFrame):
+        #     self.data = data
+        # elif isinstance(data, PlDataFrame):
+        #     self.data = data
+        # elif isinstance(data, PandasCompatible):
+        #     self.data = data.to_pandas()
+
+        if not is_data_frame_like(data):
+            # This should never be reached!!!
+            raise TypeError(
+                "The DataTable() constructor didn't expect a 'data' argument of type",
+                type(data),
+            )
+
+        self.data = data
 
         self.width = width
         self.height = height

@@ -8,7 +8,17 @@ import warnings
 # * For this release: Immediately make PR to remove `.input_` from `.input_cell_selection()`
 # TODO-barret-render.data_frame; Docs
 # TODO-barret-render.data_frame; Add examples!
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, Literal, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Awaitable,
+    Callable,
+    Dict,
+    Generic,
+    Literal,
+    Union,
+    cast,
+)
 
 from htmltools import Tag
 
@@ -35,9 +45,8 @@ from ._data_frame_utils import (
     wrap_shiny_html,
 )
 from ._data_frame_utils._styles import as_browser_style_infos
-from ._data_frame_utils._tbl_data import (
+from ._data_frame_utils._tbl_data import (  # as_data_frame_like,
     apply_frame_patches,
-    as_data_frame_like,
     frame_columns,
     frame_shape,
     serialize_dtype,
@@ -48,6 +57,8 @@ from ._data_frame_utils._types import (
     ColumnFilter,
     ColumnSort,
     DataFrameLike,
+    DataFrameLikeT,
+    FrameDtype,
     FrameRender,
     cell_patch_processed_to_jsonifiable,
     frame_render_to_jsonifiable,
@@ -59,7 +70,7 @@ from .renderer import Jsonifiable, Renderer, ValueFn
 if TYPE_CHECKING:
     from ..session import Session
 
-from ._data_frame_utils._datagridtable import DataFrameResult
+# from ._data_frame_utils._datagridtable import DataFrameResult
 
 # # TODO-future; Use `dataframe-api-compat>=0.2.6` to injest dataframes and return standardized dataframe structures
 # # TODO-future: Find this type definition: https://github.com/data-apis/dataframe-api-compat/blob/273c0be45962573985b3a420869d0505a3f9f55d/dataframe_api_compat/polars_standard/dataframe_object.py#L22
@@ -90,9 +101,25 @@ from ._data_frame_utils._datagridtable import DataFrameResult
 #         )
 #     return df
 
+from ._data_frame_utils._types import PandasCompatible, PdDataFrame
+
+DataFrameResult = Union[
+    None,
+    DataFrameLikeT,
+    DataGrid[DataFrameLikeT],
+    DataTable[DataFrameLikeT],
+    PandasCompatible,
+]
+DataFrameValue = Union[None, DataGrid[DataFrameLikeT], DataTable[DataFrameLikeT]]
+DataFrameData = Union[DataFrameLikeT, PdDataFrame]
+
+# DataFrameValue = Union[None, DataGrid, DataTable[]]
+
+# DataGri
+
 
 @add_example()
-class data_frame(Renderer[DataFrameResult]):
+class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
     """
     Decorator for a function that returns a pandas `DataFrame` object (or similar) to
     render as an interactive table or grid. Features fast virtualized scrolling, sorting,
@@ -164,11 +191,11 @@ class data_frame(Renderer[DataFrameResult]):
       objects you can return from the rendering function to specify options.
     """
 
-    _value: reactive.Value[DataFrameResult | None]
+    _value: reactive.Value[DataFrameValue[DataFrameLikeT] | None]
     """
     Reactive value of the data frame's rendered object.
     """
-    _type_hints: reactive.Value[dict[str, str] | None]
+    _type_hints: reactive.Value[list[FrameDtype] | None]
     """
     Reactive value of the data frame's type hints for each column.
 
@@ -339,8 +366,10 @@ class data_frame(Renderer[DataFrameResult]):
         from .. import req
 
         # Init
-        self._value: reactive.Value[DataFrameResult | None] = reactive.Value(None)
-        self._type_hints: reactive.Value[dict[str, str] | None] = reactive.Value(None)
+        self._value: reactive.Value[DataFrameValue[DataFrameLikeT] | None] = (
+            reactive.Value(None)
+        )
+        self._type_hints: reactive.Value[list[FrameDtype] | None] = reactive.Value(None)
         self._cell_patch_map = reactive.Value({})
 
         @reactive.calc
@@ -721,7 +750,7 @@ class data_frame(Renderer[DataFrameResult]):
     def auto_output_ui(self) -> Tag:
         return ui.output_data_frame(id=self.output_id)
 
-    def __init__(self, fn: ValueFn[DataFrameResult]):
+    def __init__(self, fn: ValueFn[DataFrameResult[DataFrameLikeT]]):
         super().__init__(fn)
 
         # Set reactives from calculated properties
@@ -758,12 +787,14 @@ class data_frame(Renderer[DataFrameResult]):
             return None
 
         if not isinstance(value, AbstractTabularData):
-            value = DataGrid(
-                as_data_frame_like(
-                    value,
+            try:
+                print("here!")
+                value = DataGrid(value)
+            except TypeError as e:
+                raise TypeError(
                     "@render.data_frame doesn't know how to render objects of type",
-                )
-            )
+                    type(value),
+                ) from e
 
         # Set patches url handler for client
         patch_key = self._set_patches_handler()
@@ -772,12 +803,7 @@ class data_frame(Renderer[DataFrameResult]):
         # Use session context so `to_payload()` gets the correct session
         with session_context(self._get_session()):
             payload = value.to_payload()
-
-            type_hints = cast(
-                Union[Dict[str, str], None],
-                payload.get("typeHints", None),
-            )
-            self._type_hints.set(type_hints)
+            self._type_hints.set(payload["typeHints"])
 
             ret: FrameRender = {
                 "payload": payload,

@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 from functools import singledispatch
-from typing import Any, List, Tuple, cast
+from typing import Any, List, Tuple, cast, overload
 
 from htmltools import TagNode
 
+from ..._typing_extensions import TypeIs
 from ...session import require_active_session
 from ._html import wrap_shiny_html
 
@@ -15,6 +16,7 @@ from ._types import (
     CellPatchProcessed,
     ColsList,
     DataFrameLike,
+    DataFrameLikeT,
     FrameDtype,
     FrameJson,
     ListSeriesLike,
@@ -44,48 +46,99 @@ __all__ = (
 # as_frame -----------------------------------------------------------------------------
 
 
-@singledispatch
+# @singledispatch
+# def is_data_frame_like(
+#     data: object,
+# ) -> bool:
+#     return False
+
+
+# @is_data_frame_like.register
+# def _(data: PdDataFrame) -> bool:
+#     return True
+
+
+# @is_data_frame_like.register
+# def _(data: PlDataFrame) -> bool:
+#     return True
+
+
 def is_data_frame_like(
-    data: object,
-) -> bool:
+    data: DataFrameLikeT | object,
+) -> TypeIs[DataFrameLikeT]:
+    if isinstance(data, (PdDataFrame, PlDataFrame)):
+        return True
+
     return False
 
 
-@is_data_frame_like.register
-def _(data: PdDataFrame) -> bool:
-    return True
+# @overload
+# def as_data_frame_like(
+#     data: DataFrameLikeT,
+#     error_message_begin: str = "ignored",
+# ) -> DataFrameLikeT: ...
 
 
-@is_data_frame_like.register
-def _(data: PlDataFrame) -> bool:
-    return True
+# # @overload
+# # def as_data_frame_like(
+# #     data: PlDataFrame,
+# #     error_message_begin: str = "ignored",
+# # ) -> PlDataFrame: ...
+# # @overload
+# # def as_data_frame_like(
+# #     data: PdDataFrame,
+# #     error_message_begin: str = "ignored",
+# # ) -> PdDataFrame: ...
+# @overload
+# def as_data_frame_like(
+#     data: PandasCompatible,
+#     error_message_begin: str = "ignored",
+# ) -> PdDataFrame: ...
 
 
-@singledispatch
-def as_data_frame_like(
-    data: DataFrameLike | PandasCompatible,
-    error_message_begin: str = "Unsupported type:",
-) -> DataFrameLike:
-    raise TypeError(
-        f"{error_message_begin} {str(type(data))}\n"
-        "Please use either a `pandas.DataFrame`, a `polars.DataFrame`, "
-        "or an object that has a `.to_pandas()` method."
-    )
+# def as_data_frame_like(
+#     data: DataFrameLikeT | PandasCompatible,
+#     error_message_begin: str = "Unsupported type:",
+# ) -> DataFrameLikeT | PdDataFrame:
+#     if isinstance(data, PdDataFrame):
+#         return data
+#     if isinstance(data, PlDataFrame):
+#         return data
+#     if isinstance(data, PandasCompatible):
+#         return data.to_pandas()
+
+#     raise TypeError(
+#         f"{error_message_begin} {str(type(data))}\n"
+#         "Please use either a `pandas.DataFrame`, a `polars.DataFrame`, "
+#         "or an object that has a `.to_pandas()` method."
+#     )
 
 
-@as_data_frame_like.register
-def _(data: PdDataFrame, error_message_begin: str = "ignored") -> DataFrameLike:
-    return data
+# @singledispatch
+# def as_data_frame_like(
+#     data: DataFrameLike | PandasCompatible,
+#     error_message_begin: str = "Unsupported type:",
+# ) -> DataFrameLike:
+#     raise TypeError(
+#         f"{error_message_begin} {str(type(data))}\n"
+#         "Please use either a `pandas.DataFrame`, a `polars.DataFrame`, "
+#         "or an object that has a `.to_pandas()` method."
+#     )
 
 
-@as_data_frame_like.register
-def _(data: PlDataFrame, error_message_begin: str = "ignored") -> DataFrameLike:
-    return data
+# @as_data_frame_like.register
+# def _(data: PdDataFrame, error_message_begin: str = "ignored") -> PdDataFrame:
+#     return data
 
 
-@as_data_frame_like.register
-def _(data: PandasCompatible, error_message_begin: str = "ignored") -> DataFrameLike:
-    return data.to_pandas()
+# @as_data_frame_like.register
+# def _(data: PlDataFrame, error_message_begin: str = "ignored") -> PlDataFrame:
+#     return data
+
+
+# @as_data_frame_like.register
+# def _(data: PandasCompatible, error_message_begin: str = "ignored") -> PdDataFrame:
+#     return data.to_pandas()
 
 
 # frame_columns ------------------------------------------------------------------------

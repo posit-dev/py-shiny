@@ -10,6 +10,7 @@ from typing import (
     Optional,
     Protocol,
     Tuple,
+    TypeVar,
     Union,
     cast,
     runtime_checkable,
@@ -68,6 +69,7 @@ else:
     DataFrameLike.register(PdDataFrame)
     DataFrameLike.register(PlDataFrame)
 
+DataFrameLikeT = TypeVar("DataFrameLikeT", bound=DataFrameLike)
 # ---------------------------------------------------------------------
 
 
