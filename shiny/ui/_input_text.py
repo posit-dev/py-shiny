@@ -37,11 +37,11 @@ def input_text(
     placeholder
         A hint as to what can be entered into the control.
     autocomplete
-        Whether to enable browser autocompletion of the text input (default is ``None``).
-        If `None`, then it will use the browser's default behavior. Other possible values
+        Whether to enable browser autocompletion of the text input.
+        If `None`, then it will use the browser's default behavior. Some values
         include "on", "off", "name", "username", and "email". See
-        https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/autocomplete for
-        more.
+        [https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/autocomplete](https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/autocomplete)
+        to learn more about `autocomplete`'s supported values.
     spellcheck
         Whether to enable browser spell checking of the text input (default is ``None``). If
         None, then it will use the browser's default behavior.
