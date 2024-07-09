@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from functools import singledispatch
-from typing import Any, List, cast
+from typing import Any, List, Tuple, cast
 
 from htmltools import TagNode
 
@@ -333,17 +333,17 @@ def _(data: PlDataFrame, row: int, col: int) -> Any:
 
 
 @singledispatch
-def frame_shape(data: DataFrameLike) -> tuple[int, ...]:
+def frame_shape(data: DataFrameLike) -> Tuple[int, ...]:
     raise TypeError(f"Unsupported type: {type(data)}")
 
 
 @frame_shape.register
-def _(data: PdDataFrame) -> tuple[int, ...]:
+def _(data: PdDataFrame) -> Tuple[int, ...]:
     return data.shape
 
 
 @frame_shape.register
-def _(data: PlDataFrame) -> tuple[int, ...]:
+def _(data: PlDataFrame) -> Tuple[int, ...]:
     return data.shape
 
 
@@ -367,15 +367,15 @@ def _(data: PlDataFrame) -> PlDataFrame:
 
 # column_names -------------------------------------------------------------------------
 @singledispatch
-def frame_column_names(data: DataFrameLike) -> list[str]:
+def frame_column_names(data: DataFrameLike) -> List[str]:
     raise TypeError(f"Unsupported type: {type(data)}")
 
 
 @frame_column_names.register
-def _(data: PdDataFrame) -> list[str]:
+def _(data: PdDataFrame) -> List[str]:
     return data.columns.to_list()
 
 
 @frame_column_names.register
-def _(data: PlDataFrame) -> list[str]:
+def _(data: PlDataFrame) -> List[str]:
     return data.columns
