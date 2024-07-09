@@ -9,10 +9,11 @@ from openai import AsyncOpenAI
 
 from shiny.express import ui
 
-# Although you can set the API key here, it's recommended to put it in an .env file
-# and load it with `dotenv` so your key isn't exposed with your code:
+# Either set the OPENAI_API_KEY environment variable before launching the app, or set it
+# a .env file and load it with `python-dotenv`. Uncomment the lines below to use dotenv.
+# from pathlib import Path
 # from dotenv import load_dotenv
-# _ = load_dotenv()
+# _ = load_dotenv(Path(__file__).parent / ".env")
 llm = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 # Set some Shiny page options

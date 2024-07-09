@@ -9,10 +9,12 @@ from openai import AzureOpenAI
 
 from shiny.express import ui
 
-# Although you can set API keys here, it's recommended to put it in an .env file
-# and load it with `dotenv` so your keys aren't exposed with your code.
+# Either set the AZURE_OPENAI_API_KEY and AZURE_OPENAI_ENDPOINT environment variables
+# before launching the app, or set it a .env file and load it with `python-dotenv`.
+# Uncomment the lines below to use dotenv.
+# from pathlib import Path
 # from dotenv import load_dotenv
-# _ = load_dotenv()
+# _ = load_dotenv(Path(__file__).parent / ".env")
 llm = AzureOpenAI(
     api_key=os.getenv("AZURE_OPENAI_API_KEY"),
     api_version="2024-02-01",
