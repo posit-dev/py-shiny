@@ -17,10 +17,11 @@ def code_original():
     return str(type(t))
 
 
-# @render.data_frame
 # TODO-barret; I do NOT want this to be necessary
-@render.data_frame[render._data_frame_utils._types.PdDataFrame]
+# @render.data_frame[render._data_frame_utils._types.PdDataFrame]
+@render.data_frame
 def df_astropy():
+    # return render.DataTable(t)
     return t
 
 
