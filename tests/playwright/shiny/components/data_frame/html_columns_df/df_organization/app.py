@@ -45,7 +45,7 @@ def mod_server(
     input: Inputs,
     output: Outputs,
     session: Session,
-    data: render._data_frame_utils._types.DataFrameLike,
+    data: render._DataFrameLikeT,
 ):
     @render.text
     def df_type():

@@ -17,27 +17,34 @@ def code_original():
     return str(type(t))
 
 
-# TODO-barret; I do NOT want this to be necessary
-# @render.data_frame[render._data_frame_utils._types.PdDataFrame]
-@render.data_frame
+@render.data_frame  # pyright: ignore[reportArgumentType]
 def df_astropy():
-    return render.DataTable(t)
-    # return t
+    return t
 
 
 @render.code
 def code_astropy():
-    return str(type(df_astropy.data()))
+    return str(
+        type(  # pyright: ignore[reportUnknownArgumentType]
+            df_astropy.data()  # pyright: ignore[reportUnknownArgumentType,reportUnknownMemberType]
+        )
+    )
 
 
 ui.h2(ui.code(".data()"))
 
 
 @render.data_frame
-def df_data():
-    return df_astropy.data()
+def df_data():  # pyright: ignore[reportUnknownParameterType]
+    return (
+        df_astropy.data()  # pyright: ignore[reportUnknownVariableType,reportUnknownMemberType]
+    )
 
 
 @render.code
 def code_data():
-    return str(type(df_data.data()))
+    return str(
+        type(  # pyright: ignore[reportUnknownArgumentType]
+            df_data.data()  # pyright: ignore[reportUnknownArgumentType,reportUnknownMemberType]
+        )
+    )

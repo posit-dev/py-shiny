@@ -22,7 +22,7 @@ def df_mod(
     output: Outputs,
     session: Session,
     name: str,
-    data: render.DataFrameLike,
+    data: render._DataFrameLikeT,
 ):
 
     ui.hr()

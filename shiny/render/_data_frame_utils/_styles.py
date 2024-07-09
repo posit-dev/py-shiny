@@ -1,18 +1,12 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, List
+from typing import Callable, List
 
 from ...types import ListOrTuple
 from ._tbl_data import frame_column_names
 from ._types import BrowserStyleInfo, DataFrameLikeT, StyleInfo
 
-if TYPE_CHECKING:
-
-    StyleFn = Callable[[DataFrameLikeT], List["StyleInfo"]]
-
-else:
-    StyleFn = Callable
-    DataFrameValue = object
+StyleFn = Callable[[DataFrameLikeT], List["StyleInfo"]]
 
 
 def style_info_to_browser_style_info(

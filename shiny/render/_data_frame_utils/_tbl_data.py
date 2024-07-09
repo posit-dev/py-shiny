@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from functools import singledispatch
-from typing import Any, List, Tuple, cast, overload
+from typing import Any, List, Tuple, cast
 
 from htmltools import TagNode
 
@@ -46,19 +46,24 @@ __all__ = (
 # as_frame -----------------------------------------------------------------------------
 
 
-@overload
-def as_data_frame_like(data: DataFrameLikeT) -> DataFrameLikeT: ...
-@overload
-def as_data_frame_like(data: PandasCompatible) -> PdDataFrame: ...
-
-
 def as_data_frame_like(
-    data: DataFrameLikeT | PandasCompatible,
-) -> DataFrameLikeT | PdDataFrame:
+    data: DataFrameLikeT,
+) -> DataFrameLikeT:
     if is_data_frame_like(data):
         return data
 
-    if "to_pandas" in dir(data):
+    # Legacy support for non-Pandas/Polars data frames that were previously supported
+    # and converted to pandas
+    if isinstance(data, PandasCompatible):
+        from ..._deprecated import warn_deprecated
+
+        warn_deprecated(
+            "Returned data frame data values that are not Pandas or Polars `DataFrame`s are currently not supported. "
+            "A `.to_pandas()` was found on your object and will be called. "
+            "To remove this warning, please call `.to_pandas()` on your data "
+            "and use the result in your return value. "
+            "In the future, this will raise an error."
+        )
         return data.to_pandas()
 
     raise TypeError(f"Unsupported type: {type(data)}")

@@ -41,7 +41,7 @@ def make_ui(title: str):
     )
 
 
-def make_server(input: Inputs, data: render.DataFrameLike):
+def make_server(input: Inputs, data: render._DataFrameLikeT):
     @render.data_frame
     def grid():
         return render.DataGrid(
@@ -100,7 +100,7 @@ def mod_ui(title: str = "Module"):
 
 @module.server
 def mod_server(
-    input: Inputs, output: Outputs, session: Session, data: render.DataFrameLike
+    input: Inputs, output: Outputs, session: Session, data: render._DataFrameLikeT
 ):
     make_server(input, data)
 

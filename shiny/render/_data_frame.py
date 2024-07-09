@@ -55,7 +55,14 @@ from .renderer import Jsonifiable, Renderer, ValueFn
 if TYPE_CHECKING:
     from ..session import Session
 
-# from ._data_frame_utils._datagridtable import DataFrameResult
+DataFrameResult = Union[
+    None,
+    DataFrameLikeT,
+    "DataGrid[DataFrameLikeT]",
+    "DataTable[DataFrameLikeT]",
+]
+DataFrameValue = Union[None, DataGrid[DataFrameLikeT], DataTable[DataFrameLikeT]]
+
 
 # # TODO-future; Use `dataframe-api-compat>=0.2.6` to injest dataframes and return standardized dataframe structures
 # # TODO-future: Find this type definition: https://github.com/data-apis/dataframe-api-compat/blob/273c0be45962573985b3a420869d0505a3f9f55d/dataframe_api_compat/polars_standard/dataframe_object.py#L22
@@ -85,22 +92,6 @@ if TYPE_CHECKING:
 #             "Expected Standard-compliant DataFrame, or DataFrame with Standard-compliant implementation"
 #         )
 #     return df
-
-from ._data_frame_utils._types import PandasCompatible, PdDataFrame
-
-DataFrameResult = Union[
-    None,
-    DataFrameLikeT,
-    DataGrid[DataFrameLikeT],
-    DataTable[DataFrameLikeT],
-    PandasCompatible,
-]
-DataFrameValue = Union[None, DataGrid[DataFrameLikeT], DataTable[DataFrameLikeT]]
-DataFrameData = Union[DataFrameLikeT, PdDataFrame]
-
-# DataFrameValue = Union[None, DataGrid, DataTable[]]
-
-# DataGri
 
 
 @add_example()
@@ -776,7 +767,7 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
                 value = DataGrid(value)
             except TypeError as e:
                 raise TypeError(
-                    "@render.data_frame doesn't know how to render objects of type",
+                    "@render.data_frame doesn't know how to render objects of type ",
                     type(value),
                 ) from e
 
