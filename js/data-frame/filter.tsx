@@ -1,7 +1,9 @@
 import {
   ColumnFiltersState,
+  FilterMeta,
   FiltersOptions,
   Header,
+  Row,
   getFacetedMinMaxValues,
   getFacetedRowModel,
   getFacetedUniqueValues,
@@ -34,8 +36,13 @@ export function useFilters<TData>(enabled: boolean | undefined): {
         getFacetedUniqueValues: getFacetedUniqueValues<TData>(),
         getFacetedMinMaxValues: getFacetedMinMaxValues<TData>(),
         filterFns: {
-          substring: (row, columnId, value, addMeta) => {
-            return row.getValue(columnId).toString().includes(value);
+          substring: (
+            row: Row<TData>,
+            columnId: string,
+            value: string,
+            addMeta: (meta: FilterMeta) => void
+          ): boolean => {
+            return row.getValue(columnId)?.toString().includes(value) ?? false;
           },
         },
         onColumnFiltersChange: setColumnFilters,

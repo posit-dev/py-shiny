@@ -201,7 +201,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
 
       nextColumnIndex = newColumnIndex;
       // Repeat until the loop if the next column is not an HTML column
-      if (coldefs[newColumnIndex].meta!.isHtmlColumn !== true) {
+      if (coldefs[newColumnIndex]!.meta!.isHtmlColumn !== true) {
         break;
       }
     }
@@ -241,7 +241,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
 
     // Turn on editing in the next cell!
     // Get the original row index
-    const targetRowIndex = rowModel.rows[nextSortedRowIndex].index;
+    const targetRowIndex = rowModel.rows[nextSortedRowIndex]!.index;
     setCellEditMapAtLoc(targetRowIndex, columnIndex, (obj_draft) => {
       obj_draft.isEditing = true;
     });
@@ -479,7 +479,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
 
     return () => {
       // Unbind all Shiny inputs and outputs within the cell
-      window.Shiny.unbindAll(curTdRef);
+      window.Shiny.unbindAll!(curTdRef);
       // Remove DOM elements from cell inserted by `window.Shiny.renderContentAsync`
       curTdRef.replaceChildren("");
     };

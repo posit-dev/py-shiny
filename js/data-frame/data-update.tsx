@@ -70,17 +70,19 @@ export function updateCellsData({
       }
       newPatchesPy = newPatchesPy as CellPatchPy[];
 
-      const newPatches = newPatchesPy.map((patch: CellPatchPy) => {
-        return {
-          rowIndex: patch.row_index,
-          columnIndex: patch.column_index,
-          value: patch.value,
-        };
-      });
+      const newPatches: CellPatch[] = newPatchesPy.map(
+        (patch: CellPatchPy): CellPatch => {
+          return {
+            rowIndex: patch.row_index,
+            columnIndex: patch.column_index,
+            value: patch.value,
+          };
+        }
+      );
 
       setData((draft) => {
         newPatches.forEach(({ rowIndex, columnIndex, value }) => {
-          draft[rowIndex][columnIndex] = value;
+          draft[rowIndex]![columnIndex] = value;
         });
       });
       newPatches.forEach(({ rowIndex, columnIndex, value }) => {
