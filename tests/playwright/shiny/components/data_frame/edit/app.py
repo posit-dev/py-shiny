@@ -29,6 +29,9 @@ pl_penguins = pl.read_csv(
     null_values="NA",
 )
 
+pd_asdf = render.DataTable(pd_penguins)
+pl_asdf = render.DataTable(pl_penguins)
+
 # Load the dataset
 df = pd_penguins
 

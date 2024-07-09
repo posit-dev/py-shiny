@@ -17,7 +17,6 @@ from ._styles import StyleFn, StyleInfo, as_browser_style_infos, as_style_infos
 # from ._tbl_data import as_data_frame_like, is_data_frame_like_type_is,
 from ._tbl_data import is_data_frame_like, serialize_frame
 from ._types import (  # PlDataFrame,
-    DataFrameLike,
     DataFrameLikeT,
     FrameJson,
     PandasCompatible,
@@ -115,9 +114,85 @@ class DataGrid(AbstractTabularData, Generic[DataFrameLikeT]):
     filters: bool
     editable: bool
     selection_modes: SelectionModes
-    styles: list[StyleInfo] | StyleFn
+    styles: list[StyleInfo] | StyleFn[DataFrameLikeT]
 
-    def __init__(
+    @overload
+    def __new__(
+        cls,
+        data: DataFrameLikeT,
+        *,
+        width: str | float | None = "fit-content",
+        height: str | float | None = None,
+        summary: bool | str = True,
+        filters: bool = False,
+        editable: bool = False,
+        selection_mode: SelectionModeInput = "none",
+        styles: StyleInfo | list[StyleInfo] | StyleFn[DataFrameLikeT] | None = None,
+        row_selection_mode: RowSelectionModeDeprecated = "deprecated",
+    ) -> DataGrid[DataFrameLikeT]: ...
+
+    @overload
+    def __new__(
+        cls,
+        data: PandasCompatible,
+        *,
+        width: str | float | None = "fit-content",
+        height: str | float | None = None,
+        summary: bool | str = True,
+        filters: bool = False,
+        editable: bool = False,
+        selection_mode: SelectionModeInput = "none",
+        styles: StyleInfo | list[StyleInfo] | StyleFn[PdDataFrame] | None = None,
+        row_selection_mode: RowSelectionModeDeprecated = "deprecated",
+    ) -> DataGrid[PdDataFrame]: ...
+
+    def __new__(
+        cls,
+        data: DataFrameLikeT | PandasCompatible,
+        *,
+        width: str | float | None = "fit-content",
+        height: str | float | None = None,
+        summary: bool | str = True,
+        filters: bool = False,
+        editable: bool = False,
+        selection_mode: SelectionModeInput = "none",
+        styles: (
+            StyleInfo
+            | list[StyleInfo]
+            | StyleFn[DataFrameLikeT]
+            | StyleFn[PdDataFrame]
+            | None
+        ) = None,
+        row_selection_mode: RowSelectionModeDeprecated = "deprecated",
+    ) -> DataGrid[DataFrameLikeT] | DataGrid[PdDataFrame]:
+        print("DataGrid.__new__", type(data))
+        # if isinstance(data, (PdDataFrame, PlDataFrame)):
+
+        if is_data_frame_like(data):
+            print(" -- regular")
+            ret = super().__new__(cls)
+            return ret
+        else:
+            # PandasCompatible
+            print(" -- to_pandas()")
+            pd_data = data.to_pandas()
+            ret = super(DataGrid, cls).__new__(cls)
+            ret.__init__(  # pyright: ignore[reportUnknownMemberType]
+                pd_data,
+                width=width,
+                height=height,
+                summary=summary,
+                filters=filters,
+                editable=editable,
+                selection_mode=selection_mode,
+                row_selection_mode=row_selection_mode,
+                styles=styles,  # pyright: ignore[reportArgumentType]
+            )
+
+            print("return __new__")
+            return ret
+
+    def __init__(  # pyright: ignore[reportInconsistentConstructor]
         self,
         data: DataFrameLikeT | PandasCompatible,
         *,
@@ -127,9 +202,13 @@ class DataGrid(AbstractTabularData, Generic[DataFrameLikeT]):
         filters: bool = False,
         editable: bool = False,
         selection_mode: SelectionModeInput = "none",
-        styles: StyleInfo | list[StyleInfo] | StyleFn | None = None,
+        styles: StyleInfo | list[StyleInfo] | StyleFn[DataFrameLikeT] | None = None,
         row_selection_mode: RowSelectionModeDeprecated = "deprecated",
     ):
+
+        if "data" in self.__dict__:
+            # This is a re-initialization, so we should return early
+            return
 
         if not is_data_frame_like(data):
             # This should never be reached!!!
@@ -241,7 +320,7 @@ class DataTable(AbstractTabularData, Generic[DataFrameLikeT]):
     summary: bool | str
     filters: bool
     selection_modes: SelectionModes
-    styles: list[StyleInfo] | StyleFn
+    styles: list[StyleInfo] | StyleFn[DataFrameLikeT]
 
     @overload
     def __new__(
@@ -255,7 +334,7 @@ class DataTable(AbstractTabularData, Generic[DataFrameLikeT]):
         editable: bool = False,
         selection_mode: SelectionModeInput = "none",
         row_selection_mode: Literal["deprecated"] = "deprecated",
-        styles: StyleInfo | list[StyleInfo] | StyleFn | None = None,
+        styles: StyleInfo | list[StyleInfo] | StyleFn[DataFrameLikeT] | None = None,
     ) -> DataTable[DataFrameLikeT]: ...
 
     @overload
@@ -270,7 +349,7 @@ class DataTable(AbstractTabularData, Generic[DataFrameLikeT]):
         editable: bool = False,
         selection_mode: SelectionModeInput = "none",
         row_selection_mode: Literal["deprecated"] = "deprecated",
-        styles: StyleInfo | list[StyleInfo] | StyleFn | None = None,
+        styles: StyleInfo | list[StyleInfo] | StyleFn[PdDataFrame] | None = None,
     ) -> DataTable[PdDataFrame]: ...
 
     def __new__(
@@ -284,7 +363,13 @@ class DataTable(AbstractTabularData, Generic[DataFrameLikeT]):
         editable: bool = False,
         selection_mode: SelectionModeInput = "none",
         row_selection_mode: Literal["deprecated"] = "deprecated",
-        styles: StyleInfo | list[StyleInfo] | StyleFn | None = None,
+        styles: (
+            StyleInfo
+            | list[StyleInfo]
+            | StyleFn[DataFrameLikeT]
+            | StyleFn[PdDataFrame]
+            | None
+        ) = None,
     ) -> DataTable[DataFrameLikeT] | DataTable[PdDataFrame]:
         print("DataTable.__new__", type(data))
         # if isinstance(data, (PdDataFrame, PlDataFrame)):
@@ -298,7 +383,7 @@ class DataTable(AbstractTabularData, Generic[DataFrameLikeT]):
             print(" -- to_pandas()")
             pd_data = data.to_pandas()
             ret = super(DataTable, cls).__new__(cls)
-            ret.__init__(
+            ret.__init__(  # pyright: ignore[reportUnknownMemberType]
                 pd_data,
                 width=width,
                 height=height,
@@ -307,13 +392,13 @@ class DataTable(AbstractTabularData, Generic[DataFrameLikeT]):
                 editable=editable,
                 selection_mode=selection_mode,
                 row_selection_mode=row_selection_mode,
-                styles=styles,
+                styles=styles,  # pyright: ignore[reportArgumentType]
             )
 
             print("return __new__")
             return ret
 
-    def __init__(
+    def __init__(  # pyright: ignore[reportInconsistentConstructor]
         self,
         data: DataFrameLikeT | PandasCompatible,
         *,
@@ -324,48 +409,13 @@ class DataTable(AbstractTabularData, Generic[DataFrameLikeT]):
         editable: bool = False,
         selection_mode: SelectionModeInput = "none",
         row_selection_mode: Literal["deprecated"] = "deprecated",
-        styles: StyleInfo | list[StyleInfo] | StyleFn | None = None,
+        styles: StyleInfo | list[StyleInfo] | StyleFn[DataFrameLikeT] | None = None,
     ):
         print("DataTable.__init__", type(data))
 
         if "data" in self.__dict__:
             # This is a re-initialization, so we should return early
             return
-
-        # Do not overwrite the data attribute if it already exists
-        # if "data" not in self.__dict__:
-
-        #     if isinstance(data, DataFrameLike):
-        #         print(data)
-
-        #     from ._tbl_data import is_data_frame_like
-
-        #     if not is_data_frame_like(data):
-        #         print(type(data))
-        #         return
-
-        #     if is_data_frame_like_type_is(data):
-        #         # self.data = data
-        #         ...
-        #         data_val = data
-        #     else:
-        #         raise RuntimeError("This should never happen")
-        #         # self.data: PdDataFrame = data.to_pandas()
-        #         data_val = data.to_pandas()
-        #         ...
-        #     self.data = data_val
-        # if is_data_frame_like_type_guard(data):
-        #     self.data = data
-        # else:
-        #     self.data: PdDataFrame = data.to_pandas()
-        #     ...
-
-        # if isinstance(data, PdDataFrame):
-        #     self.data = data
-        # elif isinstance(data, PlDataFrame):
-        #     self.data = data
-        # elif isinstance(data, PandasCompatible):
-        #     self.data = data.to_pandas()
 
         if not is_data_frame_like(data):
             # This should never be reached!!!

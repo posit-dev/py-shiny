@@ -4,11 +4,11 @@ from typing import TYPE_CHECKING, Callable, List
 
 from ...types import ListOrTuple
 from ._tbl_data import frame_column_names
-from ._types import BrowserStyleInfo, DataFrameLike, StyleInfo
+from ._types import BrowserStyleInfo, DataFrameLikeT, StyleInfo
 
 if TYPE_CHECKING:
 
-    StyleFn = Callable[[DataFrameLike], List["StyleInfo"]]
+    StyleFn = Callable[[DataFrameLikeT], List["StyleInfo"]]
 
 else:
     StyleFn = Callable
@@ -164,8 +164,8 @@ def style_info_rows(
 
 
 def as_style_infos(
-    infos: StyleInfo | list[StyleInfo] | StyleFn | None,
-) -> list[StyleInfo] | StyleFn:
+    infos: StyleInfo | list[StyleInfo] | StyleFn[DataFrameLikeT] | None,
+) -> list[StyleInfo] | StyleFn[DataFrameLikeT]:
 
     if callable(infos):
         return infos
@@ -180,9 +180,9 @@ def as_style_infos(
 
 
 def as_browser_style_infos(
-    infos: list[StyleInfo] | StyleFn,
+    infos: list[StyleInfo] | StyleFn[DataFrameLikeT],
     *,
-    data: DataFrameLike,
+    data: DataFrameLikeT,
 ) -> list[BrowserStyleInfo]:
     browser_column_names = frame_column_names(data)
 

@@ -8,17 +8,7 @@ import warnings
 # * For this release: Immediately make PR to remove `.input_` from `.input_cell_selection()`
 # TODO-barret-render.data_frame; Docs
 # TODO-barret-render.data_frame; Add examples!
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Awaitable,
-    Callable,
-    Dict,
-    Generic,
-    Literal,
-    Union,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Literal, Union, cast
 
 from htmltools import Tag
 
@@ -45,18 +35,17 @@ from ._data_frame_utils import (
     wrap_shiny_html,
 )
 from ._data_frame_utils._styles import as_browser_style_infos
-from ._data_frame_utils._tbl_data import (  # as_data_frame_like,
-    apply_frame_patches,
+from ._data_frame_utils._tbl_data import (
+    apply_frame_patches__typed,
     frame_columns,
     frame_shape,
     serialize_dtype,
-    subset_frame,
+    subset_frame__typed,
 )
 from ._data_frame_utils._types import (
     CellPatchProcessed,
     ColumnFilter,
     ColumnSort,
-    DataFrameLike,
     DataFrameLikeT,
     FrameDtype,
     FrameRender,
@@ -233,7 +222,7 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
     Reactive value of the data frame's edits provided by the user.
     """
 
-    data: reactive.Calc_[DataFrameLike]
+    data: reactive.Calc_[DataFrameLikeT]
     """
     Reactive value of the data frame's output data.
 
@@ -244,17 +233,17 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
     Even if the rendered data value was not of type `pd.DataFrame` or `pl.DataFrame`, this method currently
     converts it to a `pd.DataFrame`.
     """
-    _data_view_all: reactive.Calc_[DataFrameLike]
+    _data_view_all: reactive.Calc_[DataFrameLikeT]
     """
     Reactive value of the full (sorted and filtered) data.
     """
-    _data_view_selected: reactive.Calc_[DataFrameLike]
+    _data_view_selected: reactive.Calc_[DataFrameLikeT]
     """
     Reactive value of the selected rows of the (sorted and filtered) data.
     """
 
     @add_example(ex_dir="../api-examples/data_frame_data_view")
-    def data_view(self, *, selected: bool = False) -> DataFrameLike:
+    def data_view(self, *, selected: bool = False) -> DataFrameLikeT:
         """
         Reactive function that retrieves the data how it is viewed within the browser.
 
@@ -326,7 +315,7 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
         The row numbers of the data frame that are currently being viewed in the browser
         after sorting and filtering has been applied.
     """
-    _data_patched: reactive.Calc_[DataFrameLike]
+    _data_patched: reactive.Calc_[DataFrameLikeT]
     """
     Reactive value of the data frame's patched data.
 
@@ -379,7 +368,7 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
         self.cell_patches = self_cell_patches
 
         @reactive.calc
-        def self_data() -> DataFrameLike:
+        def self_data() -> DataFrameLikeT:
             value = self._value()
             req(value)
 
@@ -452,14 +441,14 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
         self.data_view_rows = self_data_view_rows
 
         @reactive.calc
-        def self__data_patched() -> DataFrameLike:
-            return apply_frame_patches(self.data(), self.cell_patches())
+        def self__data_patched() -> DataFrameLikeT:
+            return apply_frame_patches__typed(self.data(), self.cell_patches())
 
         self._data_patched = self__data_patched
 
         # Apply filtering and sorting
         # https://github.com/posit-dev/py-shiny/issues/1240
-        def _subset_data_view(selected: bool) -> DataFrameLike:
+        def _subset_data_view(selected: bool) -> DataFrameLikeT:
             """
             Helper method to subset data according to what is viewed in the browser;
 
@@ -483,15 +472,15 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
             else:
                 rows = self.data_view_rows()
 
-            return subset_frame(self._data_patched(), rows=rows)
+            return subset_frame__typed(self._data_patched(), rows=rows)
 
         # Helper reactives so that internal calculations can be cached for use in other calculations
         @reactive.calc
-        def self__data_view() -> DataFrameLike:
+        def self__data_view() -> DataFrameLikeT:
             return _subset_data_view(selected=False)
 
         @reactive.calc
-        def self__data_view_selected() -> DataFrameLike:
+        def self__data_view_selected() -> DataFrameLikeT:
             return _subset_data_view(selected=True)
 
         self._data_view_all = self__data_view
@@ -798,7 +787,7 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
 
         # Set patches url handler for client
         patch_key = self._set_patches_handler()
-        self._value.set(value)
+        self._value.set(value)  # pyright: ignore[reportArgumentType]
 
         # Use session context so `to_payload()` gets the correct session
         with session_context(self._get_session()):

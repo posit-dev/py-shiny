@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from functools import singledispatch
-from typing import Any, List, Tuple, cast, overload
+from typing import Any, List, Tuple, cast
 
 from htmltools import TagNode
 
@@ -12,7 +12,7 @@ from ...session import require_active_session
 from ._html import wrap_shiny_html
 
 # from ...types import Jsonifiable
-from ._types import (
+from ._types import (  # PandasCompatible,
     CellPatchProcessed,
     ColsList,
     DataFrameLike,
@@ -20,7 +20,6 @@ from ._types import (
     FrameDtype,
     FrameJson,
     ListSeriesLike,
-    PandasCompatible,
     PdDataFrame,
     PdSeries,
     PlDataFrame,
@@ -31,7 +30,7 @@ from ._types import (
 
 __all__ = (
     "is_data_frame_like",
-    "as_data_frame_like",
+    # "as_data_frame_like",
     "frame_columns",
     "apply_frame_patches",
     "serialize_dtype",
@@ -72,75 +71,6 @@ def is_data_frame_like(
     return False
 
 
-# @overload
-# def as_data_frame_like(
-#     data: DataFrameLikeT,
-#     error_message_begin: str = "ignored",
-# ) -> DataFrameLikeT: ...
-
-
-# # @overload
-# # def as_data_frame_like(
-# #     data: PlDataFrame,
-# #     error_message_begin: str = "ignored",
-# # ) -> PlDataFrame: ...
-# # @overload
-# # def as_data_frame_like(
-# #     data: PdDataFrame,
-# #     error_message_begin: str = "ignored",
-# # ) -> PdDataFrame: ...
-# @overload
-# def as_data_frame_like(
-#     data: PandasCompatible,
-#     error_message_begin: str = "ignored",
-# ) -> PdDataFrame: ...
-
-
-# def as_data_frame_like(
-#     data: DataFrameLikeT | PandasCompatible,
-#     error_message_begin: str = "Unsupported type:",
-# ) -> DataFrameLikeT | PdDataFrame:
-#     if isinstance(data, PdDataFrame):
-#         return data
-#     if isinstance(data, PlDataFrame):
-#         return data
-#     if isinstance(data, PandasCompatible):
-#         return data.to_pandas()
-
-#     raise TypeError(
-#         f"{error_message_begin} {str(type(data))}\n"
-#         "Please use either a `pandas.DataFrame`, a `polars.DataFrame`, "
-#         "or an object that has a `.to_pandas()` method."
-#     )
-
-
-# @singledispatch
-# def as_data_frame_like(
-#     data: DataFrameLike | PandasCompatible,
-#     error_message_begin: str = "Unsupported type:",
-# ) -> DataFrameLike:
-#     raise TypeError(
-#         f"{error_message_begin} {str(type(data))}\n"
-#         "Please use either a `pandas.DataFrame`, a `polars.DataFrame`, "
-#         "or an object that has a `.to_pandas()` method."
-#     )
-
-
-# @as_data_frame_like.register
-# def _(data: PdDataFrame, error_message_begin: str = "ignored") -> PdDataFrame:
-#     return data
-
-
-# @as_data_frame_like.register
-# def _(data: PlDataFrame, error_message_begin: str = "ignored") -> PlDataFrame:
-#     return data
-
-
-# @as_data_frame_like.register
-# def _(data: PandasCompatible, error_message_begin: str = "ignored") -> PdDataFrame:
-#     return data.to_pandas()
-
-
 # frame_columns ------------------------------------------------------------------------
 
 
@@ -161,6 +91,12 @@ def _(data: PlDataFrame) -> ListSeriesLike:
 
 
 # apply_frame_patches --------------------------------------------------------------------
+
+
+def apply_frame_patches__typed(
+    data: DataFrameLikeT, patches: List[CellPatchProcessed]
+) -> DataFrameLikeT:
+    return cast(DataFrameLikeT, apply_frame_patches(data, patches))
 
 
 @singledispatch
@@ -290,6 +226,10 @@ def _(data: PlDataFrame) -> FrameJson:
 
 
 # subset_frame -------------------------------------------------------------------------
+def subset_frame__typed(
+    data: DataFrameLikeT, *, rows: RowsList = None, cols: ColsList = None
+) -> DataFrameLikeT:
+    return cast(DataFrameLikeT, subset_frame(data, rows=rows, cols=cols))
 
 
 @singledispatch

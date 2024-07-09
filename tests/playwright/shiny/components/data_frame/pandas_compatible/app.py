@@ -17,7 +17,9 @@ def code_original():
     return str(type(t))
 
 
-@render.data_frame
+# @render.data_frame
+# TODO-barret; I do NOT want this to be necessary
+@render.data_frame[render._data_frame_utils._types.PdDataFrame]
 def df_astropy():
     return t
 
