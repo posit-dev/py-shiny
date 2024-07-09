@@ -301,8 +301,8 @@ def card_body(
     """
     Card body container
 
-    A general container for the "main content" of a :func:`~shiny.ui.card`. This component is designed
-    to be provided as direct children to :func:`~shiny.ui.card`.
+    A general container for the "main content" of a :func:`~shiny.ui.card`. This
+    component is designed to be provided as direct children to :func:`~shiny.ui.card`.
 
     Parameters
     ----------
