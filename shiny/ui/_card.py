@@ -348,7 +348,6 @@ def card_body(
         (or multiple columns inside a card).
     * :func:`~shiny.ui.card` for creating a card component.
     * :func:`~shiny.ui.card_header` for creating a header within the card.
-    * :func:`~shiny.experimental.ui.card_title` for creating a title within the card body.
     * :func:`~shiny.ui.card_footer` for creating a footer within the card.
     """
     if isinstance(max_height_full_screen, MISSING_TYPE):
