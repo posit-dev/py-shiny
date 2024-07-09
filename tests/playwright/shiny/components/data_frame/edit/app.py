@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pkgutil
+
 # pyright: reportUnknownMemberType = false
 # pyright: reportMissingTypeStubs = false
 # pyright: reportArgumentType = false
@@ -13,16 +15,22 @@ from __future__ import annotations
 # TODO-future; Can we maintain pre-processed value and use it within editing?
 # A: Doesn't seem possible for now
 import great_tables as gt
-from palmerpenguins import load_penguins_raw
+import palmerpenguins  # pyright: ignore[reportMissingTypeStubs]
+import polars as pl
 
 from shiny import App, Inputs, Outputs, Session, module, reactive, render, req, ui
 from shiny.render import CellPatch
 from shiny.render._data_frame_utils._styles import StyleInfo
 from shiny.types import Jsonifiable
 
+pd_penguins = palmerpenguins.load_penguins_raw()
+pl_penguins = pl.read_csv(
+    pkgutil.get_data("palmerpenguins", "data/penguins-raw.csv"),
+    null_values="NA",
+)
+
 # Load the dataset
-penguins = load_penguins_raw()
-df = penguins
+df = pd_penguins
 
 df = df.head(15)
 
@@ -48,6 +56,17 @@ df.loc[:, "test_index"] = [
     f"Row {i}" for i in range(0, df.shape[0])
 ]  # pyright: ignore[reportUnknownArgumentType]
 df.set_index("test_index", drop=True, inplace=True)
+
+
+# print(p)
+df = pl_penguins.head(15).with_columns(
+    (pl.Series([ui.tags.strong(ui.tags.em(str(x))) for x in range(0, 15)])).alias(
+        "Sample Number"
+    )
+)
+
+
+print(df)
 
 
 def gt_style_str_to_obj(style_str: str) -> dict[str, Jsonifiable]:

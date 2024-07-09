@@ -5,7 +5,7 @@ import platform
 from playwright.sync_api import Page, expect
 
 from shiny.playwright import controller
-from shiny.render._data_frame import ColumnFilterStr
+from shiny.render._data_frame_utils._types import ColumnFilterStr
 from shiny.run import ShinyAppProc
 
 

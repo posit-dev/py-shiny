@@ -1,6 +1,16 @@
-from palmerpenguins import load_penguins_raw  # pyright: ignore[reportMissingTypeStubs]
+import pkgutil
+
+import palmerpenguins  # pyright: ignore[reportMissingTypeStubs]
+import polars as pl
 
 from shiny import App, Inputs, Outputs, Session, module, reactive, render, ui
+
+pd_penguins = palmerpenguins.load_penguins_raw()
+pl_penguins = pl.read_csv(
+    pkgutil.get_data(  # pyright: ignore[reportArgumentType]
+        "palmerpenguins", "data/penguins-raw.csv"
+    )
+)
 
 
 def make_ui(title: str):
@@ -31,11 +41,11 @@ def make_ui(title: str):
     )
 
 
-def make_server(input: Inputs):
+def make_server(input: Inputs, data: render.DataFrameLike):
     @render.data_frame
     def grid():
         return render.DataGrid(
-            data=load_penguins_raw(),
+            data=data,
             selection_mode=input.selection_mode(),
             height="300px",
         )
@@ -65,36 +75,49 @@ def make_server(input: Inputs):
     @render.code
     def grid_row_count():
         grid_data = grid.data()
-        return str(grid_data.index.size)  # pyright: ignore[reportUnknownMemberType]
+        nrow, _ = (  # pyright: ignore[reportUnknownVariableType]
+            render._data_frame_utils._tbl_data.frame_shape(  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue]
+                grid_data
+            )
+        )
+        return str(nrow)  # pyright: ignore[reportUnknownArgumentType]
 
     @render.code
     def selected_row_count():
         grid_selected_data = grid_selected.data()
-        return str(
-            grid_selected_data.index.size  # pyright: ignore[reportUnknownMemberType]
+        nrow, _ = (  # pyright: ignore[reportUnknownVariableType]
+            render._data_frame_utils._tbl_data.frame_shape(  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue]
+                grid_selected_data
+            )
         )
+        return str(nrow)  # pyright: ignore[reportUnknownArgumentType]
 
 
 @module.ui
-def mod_ui():
-    return make_ui("Module")
+def mod_ui(title: str = "Module"):
+    return make_ui(title)
 
 
 @module.server
-def mod_server(input: Inputs, output: Outputs, session: Session):
-    make_server(input)
+def mod_server(
+    input: Inputs, output: Outputs, session: Session, data: render.DataFrameLike
+):
+    make_server(input, data)
 
 
 app_ui = ui.page_fluid(
     make_ui("global"),
-    mod_ui("card2"),
+    mod_ui("pandas", "Module - pandas"),
+    mod_ui("polars", "Module - polars"),
 )
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    make_server(input)
+    make_server(input, pd_penguins)
 
-    mod_server("card2")
+    mod_server("pandas", pd_penguins)
+
+    mod_server("polars", pl_penguins)
 
 
 app = App(app_ui, server)

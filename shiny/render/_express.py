@@ -8,13 +8,9 @@ from htmltools import Tag, TagAttrValue, TagFunction, TagList, wrap_displayhook_
 from .. import ui as _ui
 from .._typing_extensions import Self
 from ..session._utils import require_active_session
-from ..types import MISSING, MISSING_TYPE
+from ..types import MISSING, MISSING_TYPE, JsonifiableDict
 from .renderer import AsyncValueFn, Renderer, ValueFn
-from .renderer._utils import (
-    JsonifiableDict,
-    rendered_deps_to_jsonifiable,
-    set_kwargs_value,
-)
+from .renderer._utils import rendered_deps_to_jsonifiable, set_kwargs_value
 
 
 class express(Renderer[None]):

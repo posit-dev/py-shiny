@@ -56,5 +56,8 @@ def expect_row_selection(page: Page, prefix_main: str, prefix_secondary: str):
 
 def test_row_selection(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
-    expect_row_selection(page, "", "card2-")
-    expect_row_selection(page, "card2-", "")
+    expect_row_selection(page, "", "pandas-")
+    expect_row_selection(page, "pandas-", "")
+
+    expect_row_selection(page, "", "polars-")
+    expect_row_selection(page, "polars-", "")

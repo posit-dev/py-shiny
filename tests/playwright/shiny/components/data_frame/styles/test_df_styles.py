@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pytest
 from playwright.sync_api import Page
 
 from shiny.playwright import controller
@@ -8,11 +9,16 @@ from shiny.run import ShinyAppProc
 from shiny.types import Jsonifiable
 
 
-def test_validate_column_labels(page: Page, local_app: ShinyAppProc) -> None:
+@pytest.mark.parametrize("tab_name", ["pandas", "polars"])
+def test_validate_column_labels(
+    page: Page, local_app: ShinyAppProc, tab_name: str
+) -> None:
     page.goto(local_app.url)
 
-    fn_styles = controller.OutputDataFrame(page, "fn_styles")
-    list_styles = controller.OutputDataFrame(page, "list_styles")
+    controller.NavsetUnderline(page, "tab").set(tab_name)
+
+    fn_styles = controller.OutputDataFrame(page, f"{tab_name}-fn_styles")
+    list_styles = controller.OutputDataFrame(page, f"{tab_name}-list_styles")
 
     styles: list[dict[str, Jsonifiable]] = [
         {
@@ -45,15 +51,15 @@ def test_validate_column_labels(page: Page, local_app: ShinyAppProc) -> None:
         },
     ]
 
-    light_blue_style: dict[str, Jsonifiable] = {
+    every_styles: dict[str, Jsonifiable] = {
         "location": "body",
         "rows": None,
         "cols": None,
-        "style": {"background-color": "lightblue"},
+        "style": {"background-color": "lightblue", "color": "darkorange"},
     }
-    light_blue_with_style: list[dict[str, Jsonifiable]] = [light_blue_style]
+    every_styles_with_style: list[dict[str, Jsonifiable]] = [every_styles]
     for style in styles:
-        light_blue_with_style.append(style)
+        every_styles_with_style.append(style)
 
     def expect_styles(
         df: controller.OutputDataFrame, styles: list[dict[str, Jsonifiable]]
@@ -91,7 +97,7 @@ def test_validate_column_labels(page: Page, local_app: ShinyAppProc) -> None:
                     )
 
     expect_styles(fn_styles, [styles[0]])
-    expect_styles(list_styles, light_blue_with_style)
+    expect_styles(list_styles, every_styles_with_style)
 
     fn_styles.set_cell("new value", row=0, col=0)
     expect_styles(fn_styles, [styles[0], styles[1]])
