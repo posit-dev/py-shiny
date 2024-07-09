@@ -74,9 +74,12 @@ def as_data_frame_like(
 
 
 @as_data_frame_like.register
-def _(
-    data: PdDataFrame | PlDataFrame, error_message_begin: str = "ignored"
-) -> DataFrameLike:
+def _(data: PdDataFrame, error_message_begin: str = "ignored") -> DataFrameLike:
+    return data
+
+
+@as_data_frame_like.register
+def _(data: PlDataFrame, error_message_begin: str = "ignored") -> DataFrameLike:
     return data
 
 
@@ -109,7 +112,8 @@ def _(data: PlDataFrame) -> ListSeriesLike:
 
 @singledispatch
 def apply_frame_patches(
-    data: DataFrameLike, patches: list[CellPatchProcessed]
+    data: DataFrameLike,
+    patches: list[CellPatchProcessed],
 ) -> DataFrameLike:
     raise TypeError(f"Unsupported type: {type(data)}")
 
@@ -154,14 +158,14 @@ def serialize_dtype(col: SeriesLike) -> FrameDtype:
 # the dispatch type below.
 
 
-@serialize_dtype.register(PdSeries)
+@serialize_dtype.register
 def _(col: PdSeries) -> FrameDtype:
     from ._pandas import serialize_pd_dtype
 
     return serialize_pd_dtype(col)
 
 
-@serialize_dtype.register(PlSeries)
+@serialize_dtype.register
 def _(col: PlSeries) -> FrameDtype:
     import polars as pl
 
