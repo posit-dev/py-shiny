@@ -1,27 +1,11 @@
 from __future__ import annotations
 
 import abc
-import json
 
 # TODO-barret-future; make DataTable and DataGrid generic? By currently accepting `object`, it is difficult to capture the generic type of the data.
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Literal,
-    Protocol,
-    TypeVar,
-    Union,
-    cast,
-    overload,
-    runtime_checkable,
-)
-
-from htmltools import TagNode
+from typing import TYPE_CHECKING, Literal, Union
 
 from ..._docstring import add_example, no_example
-from ..._typing_extensions import TypedDict
-from ...session._utils import RenderedDeps, require_active_session
-from ...types import Jsonifiable
 from ._selection import (
     RowSelectionModeDeprecated,
     SelectionModeInput,
@@ -29,32 +13,28 @@ from ._selection import (
     as_selection_modes,
 )
 from ._styles import StyleFn, StyleInfo, as_browser_style_infos, as_style_infos
-from ._unsafe import is_shiny_html, serialize_numpy_dtypes
+from ._tbl_data import as_data_frame_like, serialize_frame
+from ._types import DataFrameLike, FrameJson, PandasCompatible
 
 if TYPE_CHECKING:
-    import pandas as pd
-
-    from ...session import Session
-
-    DataFrameT = TypeVar("DataFrameT", bound=pd.DataFrame)
-    # TODO-future; Pandas, Polars, api compat, etc.; Today, we only support Pandas
 
     DataFrameResult = Union[
         None,
-        pd.DataFrame,
+        DataFrameLike,
         "DataGrid",
         "DataTable",
+        PandasCompatible,
     ]
 
 else:
     # The parent class of `data_frame` needs something to hold onto
     # To avoid loading pandas, we use `object` as a placeholder
-    DataFrameResult = Union[None, object, "DataGrid", "DataTable"]
+    DataFrameResult = Union[None, object]
 
 
 class AbstractTabularData(abc.ABC):
     @abc.abstractmethod
-    def to_payload(self) -> dict[str, Jsonifiable]: ...
+    def to_payload(self) -> FrameJson: ...
 
 
 @add_example(ex_dir="../../api-examples/data_frame")
@@ -120,7 +100,7 @@ class DataGrid(AbstractTabularData):
     * :class:`~shiny.render.DataTable`
     """
 
-    data: pd.DataFrame
+    data: DataFrameLike
     width: str | float | None
     height: str | float | None
     summary: bool | str
@@ -131,7 +111,7 @@ class DataGrid(AbstractTabularData):
 
     def __init__(
         self,
-        data: pd.DataFrame | PandasCompatible,
+        data: DataFrameLike | PandasCompatible,
         *,
         width: str | float | None = "fit-content",
         height: str | float | None = None,
@@ -143,7 +123,7 @@ class DataGrid(AbstractTabularData):
         row_selection_mode: RowSelectionModeDeprecated = "deprecated",
     ):
 
-        self.data = cast_to_pandas(
+        self.data = as_data_frame_like(
             data,
             "The DataGrid() constructor didn't expect a 'data' argument of type",
         )
@@ -156,27 +136,27 @@ class DataGrid(AbstractTabularData):
         self.selection_modes = as_selection_modes(
             selection_mode,
             name="DataGrid",
-            editable=self.editable,
             row_selection_mode=row_selection_mode,
         )
         self.styles = as_style_infos(styles)
 
-    def to_payload(self) -> dict[str, Jsonifiable]:
-        res = serialize_pandas_df(self.data)
-
-        res["options"] = dict(
-            width=self.width,
-            height=self.height,
-            summary=self.summary,
-            filters=self.filters,
-            editable=self.editable,
-            style="grid",
-            fill=self.height is None,
-            styles=as_browser_style_infos(
-                self.styles,
-                data=self.data,
-            ),
-        )
+    def to_payload(self) -> FrameJson:
+        res: FrameJson = {
+            **serialize_frame(self.data),
+            "options": {
+                "width": self.width,
+                "height": self.height,
+                "summary": self.summary,
+                "filters": self.filters,
+                "editable": self.editable,
+                "style": "grid",
+                "fill": self.height is None,
+                "styles": as_browser_style_infos(
+                    self.styles,
+                    data=self.data,
+                ),
+            },
+        }
         return res
 
 
@@ -243,7 +223,7 @@ class DataTable(AbstractTabularData):
     * :class:`~shiny.render.DataGrid`
     """
 
-    data: pd.DataFrame
+    data: DataFrameLike
     width: str | float | None
     height: str | float | None
     summary: bool | str
@@ -253,7 +233,7 @@ class DataTable(AbstractTabularData):
 
     def __init__(
         self,
-        data: pd.DataFrame | PandasCompatible,
+        data: DataFrameLike | PandasCompatible,
         *,
         width: str | float | None = "fit-content",
         height: str | float | None = "500px",
@@ -265,7 +245,7 @@ class DataTable(AbstractTabularData):
         styles: StyleInfo | list[StyleInfo] | StyleFn | None = None,
     ):
 
-        self.data = cast_to_pandas(
+        self.data = as_data_frame_like(
             data,
             "The DataTable() constructor didn't expect a 'data' argument of type",
         )
@@ -278,136 +258,24 @@ class DataTable(AbstractTabularData):
         self.selection_modes = as_selection_modes(
             selection_mode,
             name="DataTable",
-            editable=self.editable,
             row_selection_mode=row_selection_mode,
         )
         self.styles = as_style_infos(styles)
 
-    def to_payload(self) -> dict[str, Jsonifiable]:
-        res = serialize_pandas_df(self.data)
-        res["options"] = dict(
-            width=self.width,
-            height=self.height,
-            summary=self.summary,
-            filters=self.filters,
-            editable=self.editable,
-            style="table",
-            styles=as_browser_style_infos(
-                self.styles,
-                data=self.data,
-            ),
-        )
+    def to_payload(self) -> FrameJson:
+        res: FrameJson = {
+            **serialize_frame(self.data),
+            "options": {
+                "width": self.width,
+                "height": self.height,
+                "summary": self.summary,
+                "filters": self.filters,
+                "editable": self.editable,
+                "style": "table",
+                "styles": as_browser_style_infos(
+                    self.styles,
+                    data=self.data,
+                ),
+            },
+        }
         return res
-
-
-def serialize_pandas_df(df: "pd.DataFrame") -> dict[str, Any]:
-
-    columns = df.columns.tolist()
-    columns_set = set(columns)
-    if len(columns_set) != len(columns):
-        raise ValueError(
-            "The column names of the pandas DataFrame are not unique."
-            " This is not supported by the data_frame renderer."
-        )
-
-    # Currently, we don't make use of the index; drop it so we don't error trying to
-    # serialize it or something
-    df = df.reset_index(drop=True)
-
-    # # Can we keep the original column information?
-    # # Maybe we need to inspect the original columns for any "unknown" column type. See if it contains any HTML or Tag objects
-    # for col in columns:
-    #     if df[col].dtype.name == "unknown":
-    #         print(df[col].to_list())
-    #         raise ValueError(
-    #             "The pandas DataFrame contains columns of type 'object'."
-    #             " This is not supported by the data_frame renderer."
-    #         )
-
-    type_hints = serialize_numpy_dtypes(df)
-
-    # Auto opt-in for html columns
-    html_columns = [
-        i for i, type_hint in enumerate(type_hints) if type_hint["type"] == "html"
-    ]
-
-    if len(html_columns) > 0:
-        # Enable copy-on-write mode for the data;
-        # Use `deep=False` to avoid copying the full data; CoW will copy the necessary data when modified
-        import pandas as pd
-
-        with pd.option_context("mode.copy_on_write", True):
-            df = df.copy(deep=False)
-            session = require_active_session(None)
-
-            def wrap_shiny_html_with_session(x: TagNode):
-                return wrap_shiny_html(x, session=session)
-
-            for html_column in html_columns:
-                # _upgrade_ all the HTML columns to `CellHtml` json objects
-                df[df.columns[html_column]] = df[
-                    df.columns[html_column]
-                ].apply(  # pyright: ignore[reportUnknownMemberType]
-                    wrap_shiny_html_with_session
-                )
-
-    res = json.loads(
-        # {index: [index], columns: [columns], data: [values]}
-        df.to_json(None, orient="split")  # pyright: ignore[reportUnknownMemberType]
-    )
-
-    res["typeHints"] = type_hints
-
-    # print(json.dumps(res, indent=4))
-    return res
-
-
-@runtime_checkable
-class PandasCompatible(Protocol):
-    # Signature doesn't matter, runtime_checkable won't look at it anyway
-    def to_pandas(self) -> pd.DataFrame: ...
-
-
-@overload
-def cast_to_pandas(x: DataFrameT, error_message_begin: str) -> DataFrameT: ...
-
-
-@overload
-def cast_to_pandas(x: PandasCompatible, error_message_begin: str) -> pd.DataFrame: ...
-
-
-def cast_to_pandas(
-    x: DataFrameT | PandasCompatible, error_message_begin: str
-) -> DataFrameT | pd.DataFrame:
-    import pandas as pd
-
-    if isinstance(x, pd.DataFrame):
-        return x
-
-    if isinstance(x, PandasCompatible):
-        return x.to_pandas()
-
-    raise TypeError(
-        error_message_begin
-        + f" '{str(type(x))}'. Use either a pandas.DataFrame, or an object"
-        " that has a .to_pandas() method."
-    )
-
-
-class CellHtml(TypedDict):
-    isShinyHtml: bool
-    obj: RenderedDeps
-
-
-@overload
-def wrap_shiny_html(  # pyright: ignore[reportOverlappingOverload]
-    x: TagNode, *, session: Session
-) -> CellHtml: ...
-@overload
-def wrap_shiny_html(x: Jsonifiable, *, session: Session) -> Jsonifiable: ...
-def wrap_shiny_html(
-    x: Jsonifiable | TagNode, *, session: Session
-) -> Jsonifiable | CellHtml:
-    if is_shiny_html(x):
-        return {"isShinyHtml": True, "obj": session._process_ui(x)}
-    return cast(Jsonifiable, x)

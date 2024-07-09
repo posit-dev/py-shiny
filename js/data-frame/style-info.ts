@@ -83,12 +83,30 @@ export const useStyleInfoMap = ({
               rowIndex,
               columnIndex,
             });
+            const prevObj = draft.get(key) ?? { style: {}, class: undefined };
+            let newClass: string | undefined = undefined;
+            if (prevObj.class) {
+              if (styleInfo.class) {
+                newClass = `${prevObj.class} ${styleInfo.class}`;
+              } else {
+                newClass = prevObj.class;
+              }
+            } else {
+              if (styleInfo.class) {
+                newClass = styleInfo.class;
+              } else {
+                newClass = undefined;
+              }
+            }
             draft.set(key, {
-              location: styleInfo.location,
+              location,
               rowIndex,
               columnIndex,
-              style: styleInfo.style,
-              class: styleInfo.class,
+              style: {
+                ...prevObj.style,
+                ...styleInfo.style,
+              },
+              class: newClass,
             });
           }
         }
@@ -105,11 +123,13 @@ export const useStyleInfoMap = ({
 
   const setStyleInfos = useCallback(
     (styleInfos: StyleInfo[]) => {
+      // When settings styleInfos, reset all style infos
+      resetStyleInfos();
       for (const styleInfo of styleInfos) {
         setStyleInfo(styleInfo);
       }
     },
-    [setStyleInfo]
+    [setStyleInfo, resetStyleInfos]
   );
 
   // Init all style infos
@@ -138,9 +158,13 @@ export const getCellStyle = (
   location: StyleLocation,
   rowIndex: number,
   columnIndex: number
-): CellStyle | undefined => {
+): { cellStyle: CellStyle | undefined; cellClassName: string | undefined } => {
   const key = makeStyleInfoMapKey({ location, rowIndex, columnIndex });
-  return x.get(key)?.style;
+  const obj = x.get(key);
+  return {
+    cellStyle: obj?.style,
+    cellClassName: obj?.class,
+  };
 };
 
 // Use a DOM element to convert CSS string to object

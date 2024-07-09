@@ -35,9 +35,9 @@ def test_card_kitchensink(page: Page, local_app: ShinyAppProc) -> None:
         ]
     )
     card.expect_full_screen(False)
-    card.open_full_screen()
+    card.set_full_screen(True)
     card.expect_full_screen(True)
-    card.close_full_screen()
+    card.set_full_screen(False)
     card.expect_full_screen(False)
 
     card = controller.Card(page, "card2")

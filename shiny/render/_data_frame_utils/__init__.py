@@ -1,21 +1,17 @@
 from ._datagridtable import (
     AbstractTabularData,
-    CellHtml,
     DataGrid,
     DataTable,
-    cast_to_pandas,
-    wrap_shiny_html,
 )
+from ._html import wrap_shiny_html
 from ._patch import (
     CellPatch,
-    CellPatchProcessed,
     CellValue,
     PatchesFn,
     PatchesFnSync,
     PatchFn,
     PatchFnSync,
     assert_patches_shape,
-    cell_patch_processed_to_jsonifiable,
 )
 from ._selection import (
     BrowserCellSelection,
@@ -25,12 +21,12 @@ from ._selection import (
     as_cell_selection,
 )
 from ._styles import StyleInfo
+from ._types import CellHtml, CellPatchProcessed, cell_patch_processed_to_jsonifiable
 
 __all__ = (
     "AbstractTabularData",
     "DataGrid",
     "DataTable",
-    "cast_to_pandas",
     "wrap_shiny_html",
     "CellHtml",
     "CellPatch",

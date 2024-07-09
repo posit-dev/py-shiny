@@ -34,7 +34,13 @@ from .. import _utils
 from .._docstring import add_example
 from .._utils import is_async_callable, run_coro_sync
 from .._validation import req
-from ..types import MISSING, MISSING_TYPE, ActionButtonValue, SilentException
+from ..types import (
+    MISSING,
+    MISSING_TYPE,
+    ActionButtonValue,
+    NotifyException,
+    SilentException,
+)
 from ._core import Context, Dependents, ReactiveWarning, isolate
 
 if TYPE_CHECKING:
@@ -583,6 +589,19 @@ class Effect_:
             except SilentException:
                 # It's OK for SilentException to cause an Effect to stop running
                 pass
+            except NotifyException as e:
+                traceback.print_exc()
+
+                if self._session:
+                    from .._app import SANITIZE_ERROR_MSG
+                    from ..ui import notification_show
+
+                    msg = "Error in Effect: " + str(e)
+                    if e.sanitize:
+                        msg = SANITIZE_ERROR_MSG
+                    notification_show(msg, type="error", duration=5000)
+                    if e.close:
+                        await self._session._unhandled_error(e)
             except Exception as e:
                 traceback.print_exc()
 

@@ -10,7 +10,7 @@ process.argv.forEach((val, index) => {
   }
 });
 
-const outDir = "../shiny/www/shared/py-shiny";
+const outDir = "../shiny/www/py-shiny";
 
 async function bundle_helper(
   options: BuildOptions
@@ -71,6 +71,18 @@ const opts: Array<BuildOptions> = [
   },
   {
     entryPoints: { "spin/spin": "spin/spin.scss" },
+    plugins: [sassPlugin({ type: "css", sourceMap: false })],
+    metafile: true,
+  },
+  {
+    entryPoints: {
+      "chat/chat": "chat/chat.ts",
+    },
+    minify: true,
+    sourcemap: true,
+  },
+  {
+    entryPoints: { "chat/chat": "chat/chat.scss" },
     plugins: [sassPlugin({ type: "css", sourceMap: false })],
     metafile: true,
   },

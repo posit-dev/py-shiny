@@ -21,17 +21,32 @@ def data_frame_deps() -> HTMLDependency:
         version=__version__,
         source={
             "package": "shiny",
-            "subdir": "www/shared/py-shiny/data-frame",
+            "subdir": "www/py-shiny/data-frame",
         },
         script={"src": "data-frame.js", "type": "module"},
     )
+
+
+def chat_deps() -> list[HTMLDependency]:
+    dep = HTMLDependency(
+        name="shiny-chat-output",
+        version=__version__,
+        source={
+            "package": "shiny",
+            "subdir": "www/py-shiny/chat",
+        },
+        script={"src": "chat.js", "type": "module"},
+        stylesheet={"href": "chat.css"},
+    )
+    # Chat's <textarea> input autoresizes
+    return [dep, autoresize_dependency()]
 
 
 def autoresize_dependency() -> HTMLDependency:
     return HTMLDependency(
         "shiny-textarea-autoresize",
         __version__,
-        source={"package": "shiny", "subdir": "www/shared/py-shiny/text-area"},
+        source={"package": "shiny", "subdir": "www/py-shiny/text-area"},
         script={"src": "textarea-autoresize.js", "type": "module"},
         stylesheet={"href": "textarea-autoresize.css"},
     )
@@ -41,7 +56,7 @@ def page_output_dependency() -> HTMLDependency:
     return HTMLDependency(
         "shiny-page-output",
         __version__,
-        source={"package": "shiny", "subdir": "www/shared/py-shiny/page-output"},
+        source={"package": "shiny", "subdir": "www/py-shiny/page-output"},
         script={"src": "page-output.js", "type": "module"},
     )
 
@@ -50,7 +65,7 @@ def spin_dependency() -> HTMLDependency:
     return HTMLDependency(
         "shiny-spin",
         __version__,
-        source={"package": "shiny", "subdir": "www/shared/py-shiny/spin"},
+        source={"package": "shiny", "subdir": "www/py-shiny/spin"},
         stylesheet={"href": "spin.css"},
     )
 

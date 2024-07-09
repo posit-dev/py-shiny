@@ -15,12 +15,12 @@ def test_input_dark_mode_follows_system_setting(page: Page, app: ShinyAppProc) -
 
     mode_switch = controller.InputDarkMode(page, "mode")
     mode_switch.expect_mode("light")
-    mode_switch.expect_wc_attribute("data-bs-theme")
+    mode_switch.expect_attribute("data-bs-theme")
 
     page.emulate_media(color_scheme="dark")
     mode_switch = controller.InputDarkMode(page, "mode")
     mode_switch.expect_mode("dark")
-    mode_switch.expect_wc_attribute("data-bs-theme")
+    mode_switch.expect_attribute("data-bs-theme")
 
 
 def test_input_dark_mode_switch(page: Page, app: ShinyAppProc) -> None:

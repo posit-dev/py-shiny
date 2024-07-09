@@ -54,8 +54,8 @@ type CellHtmlValue = {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const isShinyHtml = (x: any): x is CellHtmlValue => {
   return (
-    x !== null &&
-    typeof x !== "string" &&
+    x !== null && // Note: x === null has `typeof x === "object"`
+    typeof x === "object" &&
     Object.prototype.hasOwnProperty.call(x, "isShinyHtml") &&
     x.isShinyHtml === true
   );
@@ -83,6 +83,7 @@ interface TableBodyCellProps {
   setData: (fn: (draft: unknown[][]) => void) => void;
   cellEditInfo: CellEdit | undefined;
   cellStyle: CellStyle | undefined;
+  cellClassName: string | undefined;
   setCellEditMapAtLoc: SetCellEditMapAtLoc;
   selection: SelectionSet<string, HTMLTableRowElement>;
 }
@@ -100,6 +101,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
   getSortedRowModel,
   cellEditInfo,
   cellStyle,
+  cellClassName,
   setData,
   setCellEditMapAtLoc,
   selection,
@@ -402,7 +404,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
   let content: ReactElement | ReturnType<typeof flexRender> | undefined =
     undefined;
   const cellTitle = errorTitle;
-  let tableCellClass: string | undefined = undefined;
+  let tableCellClass: string | undefined = cellClassName;
   const addToTableCellClass = (x: string | undefined) => {
     if (!x) return;
     if (tableCellClass) {
@@ -434,11 +436,13 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
           // style={{ width: "100%", height: "100%" }}
         />
       );
+    } else if (isHtmlColumn) {
+      addToTableCellClass("cell-html");
     } else {
-      // `isEditing` is `false`
+      // `isEditing` is `false` and not an HTML column, so we can allow for double clicks to go into edit mode
 
       // Only allow transition to edit mode if the cell can be edited
-      if (editCellsIsAllowed && !isHtmlColumn) {
+      if (editCellsIsAllowed) {
         addToTableCellClass("cell-editable");
         onCellDoubleClick = (e: ReactMouseEvent<HTMLTableCellElement>) => {
           // Do not prevent default or stop propagation here!
@@ -452,8 +456,6 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
             obj_draft.editValue = getCellValueText(cellValue) as string;
           });
         };
-      } else {
-        addToTableCellClass("cell-html");
       }
     }
     if (isShinyHtml(cellValue)) {

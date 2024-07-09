@@ -16,28 +16,28 @@ def test_validate_row_selection_in_edit_mode(
     data_frame = controller.OutputDataFrame(page, "penguins_df")
 
     data_frame.expect_cell("N1A2", row=1, col=6)
-    data_frame.edit_cell("N2A2", row=1, col=6)
-    data_frame.expect_row_focus_state(False, row=1)
+    data_frame._edit_cell_no_save("N2A2", row=1, col=6)
+    data_frame._expect_row_focus_state(False, row=1)
     data_frame.expect_class_state("editing", row=1, col=6)
-    data_frame.expect_selected_n_row(1)
+    data_frame.expect_selected_num_rows(1)
     data_frame.expect_selected_rows([1])
-    data_frame.save_cell("N3A2", row=1, col=6, save_key="Escape")
+    data_frame.set_cell("N3A2", row=1, col=6, finish_key="Escape")
     data_frame.expect_cell("N1A2", row=1, col=6)
-    data_frame.expect_row_focus_state(True, row=1)
+    data_frame._expect_row_focus_state(True, row=1)
     page.keyboard.press("Escape")
-    data_frame.expect_row_focus_state(False, row=1)
+    data_frame._expect_row_focus_state(False, row=1)
 
     # Enable rows selection and editable.
     # Select (and verify) a row. Edit a cell content in that row.
     # Click a cell in another row. Verify the new row is selected and focused.
     # Verify the old row is not selected. Verify the old row cell value was updated.
     data_frame.expect_cell("N1A2", row=1, col=6)
-    data_frame.edit_cell("N2A2", row=1, col=6)
-    data_frame.expect_row_focus_state(False, row=1)
+    data_frame._edit_cell_no_save("N2A2", row=1, col=6)
+    data_frame._expect_row_focus_state(False, row=1)
     data_frame.expect_class_state("editing", row=1, col=6)
     data_frame.cell_locator(row=2, col=6).click()
-    data_frame.expect_row_focus_state(True, row=2)
-    data_frame.expect_row_focus_state(False, row=1)
+    data_frame._expect_row_focus_state(True, row=2)
+    data_frame._expect_row_focus_state(False, row=1)
     data_frame.expect_cell("N2A2", row=1, col=6)
 
     # Enable rows selection and editable.
@@ -48,11 +48,11 @@ def test_validate_row_selection_in_edit_mode(
     # Verify that cell is editing.
     data_frame.cell_locator(row=1, col=2).click()
     page.keyboard.press("Enter")
-    data_frame.expect_row_focus_state(False, row=1)
+    data_frame._expect_row_focus_state(False, row=1)
     page.keyboard.press("Escape")
-    data_frame.expect_row_focus_state(True, row=1)
+    data_frame._expect_row_focus_state(True, row=1)
     page.keyboard.press("Escape")
-    data_frame.edit_cell("Temp value", row=1, col=16)
+    data_frame._edit_cell_no_save("Temp value", row=1, col=16)
     page.keyboard.press("Escape")
     page.keyboard.press("Enter")
     data_frame.expect_class_state("editing", row=1, col=0)
