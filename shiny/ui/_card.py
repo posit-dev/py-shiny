@@ -368,9 +368,10 @@ def card_body(
     }
     tag = tags.div(
         {
-            "class": "card-body bslib-gap-spacing",
+            "class": "card-body",
             "style": css(**div_style_args),
         },
+        {"class": "bslib-gap-spacing"} if fillable else None,
         *args,
         class_=class_,
         **kwargs,
