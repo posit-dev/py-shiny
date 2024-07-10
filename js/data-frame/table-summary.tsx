@@ -56,6 +56,11 @@ export function useSummary(
     const firstRow = virtualRows[firstIndex];
     const lastRow = virtualRows[lastIndex];
 
+    if (firstRow === undefined || lastRow === undefined) {
+      // This should never happen, but just in case...
+      return null;
+    }
+
     if (firstRow.index === 0 && lastRow.index === nrows - 1) {
       // Viewing all rows; no need for a summary
       return null;
@@ -96,7 +101,7 @@ function findRangeIndex<TItem>(
   let last: number | null = null;
 
   for (let i = 0; i < items.length; i++) {
-    const item = items[i];
+    const item: TItem = items[i]!;
     if (first === null) {
       if (map(item, true) >= start) {
         first = i;

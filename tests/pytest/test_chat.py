@@ -2,10 +2,127 @@ from __future__ import annotations
 
 import sys
 from datetime import datetime
+from typing import cast
 
+import pytest
+
+from shiny import Session
+from shiny._namespaces import ResolvedId, Root
+from shiny.session import session_context
+from shiny.ui import Chat
+from shiny.ui._chat import as_transformed_message
 from shiny.ui._chat_normalize import normalize_message, normalize_message_chunk
+from shiny.ui._chat_types import ChatMessage, StoredMessage
 
-# TODO: Feed these messages into an actual Chat() instance?
+# ----------------------------------------------------------------------
+# Helpers
+# ----------------------------------------------------------------------
+
+
+class _MockSession:
+    ns: ResolvedId = Root
+    app: object = None
+    id: str = "mock-session"
+
+    def on_ended(self, callback: object) -> None:
+        pass
+
+    def _increment_busy_count(self) -> None:
+        pass
+
+
+test_session = cast(Session, _MockSession())
+
+
+def as_stored_message(message: ChatMessage, token_count: int) -> StoredMessage:
+    msg = as_transformed_message(message)
+    return StoredMessage(
+        **msg,
+        token_count=token_count,
+    )
+
+
+# ----------------------------------------------------------------------
+# Unit tests for Chat._get_trimmed_messages()
+# ----------------------------------------------------------------------
+
+
+def test_chat_message_trimming():
+    with session_context(test_session):
+        chat = Chat(id="chat")
+
+        msgs = (
+            as_stored_message(
+                {"content": "System message", "role": "system"}, token_count=101
+            ),
+        )
+
+        # Throws since system message is too long
+        with pytest.raises(ValueError):
+            chat._trim_messages(msgs, token_limits=(100, 0))
+
+        msgs = (
+            as_stored_message(
+                {"content": "System message", "role": "system"}, token_count=100
+            ),
+            as_stored_message(
+                {"content": "User message", "role": "user"}, token_count=1
+            ),
+        )
+
+        # Throws since only the system message fits
+        with pytest.raises(ValueError):
+            chat._trim_messages(msgs, token_limits=(100, 0))
+
+        # Raising the limit should allow both messages to fit
+        trimmed = chat._trim_messages(msgs, token_limits=(102, 0))
+        assert len(trimmed) == 2
+        contents = [msg["content_server"] for msg in trimmed]
+        assert contents == ["System message", "User message"]
+
+        msgs = (
+            as_stored_message(
+                {"content": "System message", "role": "system"}, token_count=100
+            ),
+            as_stored_message(
+                {"content": "User message", "role": "user"}, token_count=10
+            ),
+            as_stored_message(
+                {"content": "User message 2", "role": "user"}, token_count=1
+            ),
+        )
+
+        # Should discard the 1st user message
+        trimmed = chat._trim_messages(msgs, token_limits=(102, 0))
+        assert len(trimmed) == 2
+        contents = [msg["content_server"] for msg in trimmed]
+        assert contents == ["System message", "User message 2"]
+
+        msgs = (
+            as_stored_message(
+                {"content": "System message", "role": "system"}, token_count=50
+            ),
+            as_stored_message(
+                {"content": "User message", "role": "user"}, token_count=10
+            ),
+            as_stored_message(
+                {"content": "System message 2", "role": "system"}, token_count=50
+            ),
+            as_stored_message(
+                {"content": "User message 2", "role": "user"}, token_count=1
+            ),
+        )
+
+        # Should discard the 1st user message
+        trimmed = chat._trim_messages(msgs, token_limits=(102, 0))
+        assert len(trimmed) == 3
+        contents = [msg["content_server"] for msg in trimmed]
+        assert contents == ["System message", "System message 2", "User message 2"]
+
+
+# ----------------------------------------------------------------------
+# Unit tests for normalize_message() and normalize_message_chunk()
+# ----------------------------------------------------------------------
 
 
 def test_string_normalization():

@@ -22,5 +22,4 @@
     "useDefineForClassFields": false,
   },
   "include": ["**/*.tsx", "**/*.ts"],
-  "exclude": ["data-frame/*"],
 }

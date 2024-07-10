@@ -8,7 +8,6 @@ from typing import (
     Callable,
     Iterable,
     Literal,
-    Optional,
     Sequence,
     Tuple,
     Union,
@@ -22,7 +21,7 @@ from htmltools import HTML, Tag, TagAttrValue, css
 from .. import _utils, reactive
 from .._docstring import add_example
 from .._namespaces import resolve_id
-from ..session import Session, require_active_session, session_context
+from ..session import require_active_session, session_context
 from ..types import MISSING, MISSING_TYPE, NotifyException
 from ..ui.css import CssUnit, as_css_unit
 from ._chat_normalize import normalize_message, normalize_message_chunk
@@ -128,9 +127,6 @@ class Chat:
         attempted to be loaded the tokenizers library (if available). A custom tokenizer
         can be provided by following the `TokenEncoding` (tiktoken or tozenizer)
         protocol. If token limits are of no concern, provide `None`.
-    session
-        The :class:`~shiny.Session` instance that the chat should appear in. If not
-        provided, the session is inferred via :func:`~shiny.session.get_current_session`.
     """
 
     def __init__(
@@ -140,7 +136,6 @@ class Chat:
         messages: Sequence[ChatMessage] = (),
         on_error: Literal["auto", "actual", "sanitize", "unhandled"] = "auto",
         tokenizer: TokenEncoding | MISSING_TYPE | None = MISSING,
-        session: Optional[Session] = None,
     ):
 
         self.id = id
@@ -151,7 +146,9 @@ class Chat:
             self._tokenizer = get_default_tokenizer()
         else:
             self._tokenizer = tokenizer
-        self._session = require_active_session(session)
+        # TODO: remove the `None` when this PR lands:
+        # https://github.com/posit-dev/py-shiny/pull/793/files
+        self._session = require_active_session(None)
 
         # Default to sanitizing until we know the app isn't sanitizing errors
         if on_error == "auto":
@@ -186,8 +183,10 @@ class Chat:
             )
 
             # Initialize the chat with the provided messages
-            for msg in messages:
-                _utils.run_coro_sync(self.append_message(msg))
+            @reactive.effect
+            async def _init_chat():
+                for msg in messages:
+                    await self.append_message(msg)
 
             # When user input is submitted, transform, and store it in the chat state
             # (and make sure this runs before other effects since when the user
@@ -210,6 +209,7 @@ class Chat:
                     await self._remove_loading_message()
                     self._suspend_input_handler = True
 
+            self._effects.append(_init_chat)
             self._effects.append(_on_user_input)
 
         # Prevent repeated calls to Chat() with the same id from accumulating effects
@@ -383,7 +383,9 @@ class Chat:
             A tuple of chat messages.
         """
 
-        messages = self._get_trimmed_messages(token_limits=token_limits)
+        messages = self._messages()
+        if token_limits is not None:
+            messages = self._trim_messages(messages, token_limits)
 
         res: list[ChatMessage] = []
         for i, m in enumerate(messages):
@@ -738,33 +740,62 @@ class Chat:
 
         return msg
 
-    def _get_trimmed_messages(
-        self,
-        *,
-        token_limits: tuple[int, int] | None = (4096, 1000),
+    @staticmethod
+    def _trim_messages(
+        messages: tuple[StoredMessage, ...],
+        token_limits: tuple[int, int] = (4096, 1000),
     ) -> tuple[StoredMessage, ...]:
-        messages = self._messages()
 
-        if token_limits is None:
-            return messages
+        n_total, n_reserve = token_limits
+        if n_total <= n_reserve:
+            raise ValueError(
+                f"Invalid token limits: {token_limits}. The 1st value must be greater "
+                "than the 2nd value."
+            )
 
-        # Can't trim if we don't have token counts
-        token_counts = [m["token_count"] for m in messages]
-        if None in token_counts:
-            return messages
+        # Since don't trim system messages, 1st obtain their total token count
+        # (so we can determine how many non-system messages can fit)
+        n_system_tokens: int = 0
+        n_system_messages: int = 0
+        n_other_messages: int = 0
+        for m in messages:
+            count = m["token_count"]
+            # Count can be None if the tokenizer is None
+            if count is None:
+                return messages
+            if m["role"] == "system":
+                n_system_tokens += count
+                n_system_messages += 1
+            else:
+                n_other_messages += 1
 
-        token_counts = cast("list[int]", token_counts)
+        remaining_non_system_tokens = n_total - n_reserve - n_system_tokens
 
-        # Take the newest messages up to the token limit
-        limit, reserve = token_limits
-        max_tokens = limit - reserve
+        if remaining_non_system_tokens <= 0:
+            raise ValueError(
+                f"System messages exceed `.messages(token_limits={token_limits})`. "
+                "Consider increasing the 1st value of `token_limit` or setting it to "
+                "`token_limit=None` to disable token limits."
+            )
+
         messages2: list[StoredMessage] = []
-        for i, m in enumerate(reversed(messages)):
-            if sum(token_counts[-i - 1 :]) > max_tokens:
-                break
-            messages2.append(m)
+        for m in reversed(messages):
+            if m["role"] == "system":
+                messages2.append(m)
+                continue
+            count = cast(int, m["token_count"])  # Already checked this
+            remaining_non_system_tokens -= count
+            if remaining_non_system_tokens >= 0:
+                messages2.append(m)
 
         messages2.reverse()
+
+        if len(messages2) == n_system_messages and n_other_messages > 0:
+            raise ValueError(
+                f"Only system messages fit within `.messages(token_limits={token_limits})`. "
+                "Consider increasing the 1st value of `token_limit` or setting it to "
+                "`token_limit=None` to disable token limits."
+            )
 
         return tuple(messages2)
 
