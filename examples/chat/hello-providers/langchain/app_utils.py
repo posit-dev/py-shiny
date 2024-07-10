@@ -13,8 +13,7 @@ def load_dotenv(dotenv_path: os.PathLike[str] = env_file, **kwargs) -> None:
     try:
         import dotenv
 
-        _ = dotenv.load_dotenv(dotenv_path=dotenv_path, **kwargs)
-        return None
+        dotenv.load_dotenv(dotenv_path=dotenv_path, **kwargs)
     except ImportError:
         import warnings
 
@@ -24,4 +23,3 @@ def load_dotenv(dotenv_path: os.PathLike[str] = env_file, **kwargs) -> None:
             "`pip install python-dotenv`.",
             stacklevel=2,
         )
-        return
