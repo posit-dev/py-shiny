@@ -8,7 +8,6 @@ from typing import (
     Callable,
     Iterable,
     Literal,
-    Optional,
     Sequence,
     Tuple,
     Union,
@@ -22,7 +21,7 @@ from htmltools import HTML, Tag, TagAttrValue, css
 from .. import _utils, reactive
 from .._docstring import add_example
 from .._namespaces import resolve_id
-from ..session import Session, require_active_session, session_context
+from ..session import require_active_session, session_context
 from ..types import MISSING, MISSING_TYPE, NotifyException
 from ..ui.css import CssUnit, as_css_unit
 from ._chat_normalize import normalize_message, normalize_message_chunk
@@ -128,9 +127,6 @@ class Chat:
         attempted to be loaded the tokenizers library (if available). A custom tokenizer
         can be provided by following the `TokenEncoding` (tiktoken or tozenizer)
         protocol. If token limits are of no concern, provide `None`.
-    session
-        The :class:`~shiny.Session` instance that the chat should appear in. If not
-        provided, the session is inferred via :func:`~shiny.session.get_current_session`.
     """
 
     def __init__(
@@ -140,7 +136,6 @@ class Chat:
         messages: Sequence[ChatMessage] = (),
         on_error: Literal["auto", "actual", "sanitize", "unhandled"] = "auto",
         tokenizer: TokenEncoding | MISSING_TYPE | None = MISSING,
-        session: Optional[Session] = None,
     ):
 
         self.id = id
@@ -151,7 +146,9 @@ class Chat:
             self._tokenizer = get_default_tokenizer()
         else:
             self._tokenizer = tokenizer
-        self._session = require_active_session(session)
+        # TODO: remove the `None` when this PR lands:
+        # https://github.com/posit-dev/py-shiny/pull/793/files
+        self._session = require_active_session(None)
 
         # Default to sanitizing until we know the app isn't sanitizing errors
         if on_error == "auto":
