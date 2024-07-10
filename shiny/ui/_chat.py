@@ -746,45 +746,51 @@ class Chat:
         token_limits: tuple[int, int] = (4096, 1000),
     ) -> tuple[StoredMessage, ...]:
 
-        system_token_count: int = 0
-        token_counts: list[int] = []
-        system_messages: list[str] = []
-        other_messages: list[str] = []
+        n_total, n_reserve = token_limits
+        if n_total <= n_reserve:
+            raise ValueError(
+                f"Invalid token limits: {token_limits}. The 1st value must be greater "
+                "than the 2nd value."
+            )
+
+        # Since don't trim system messages, 1st obtain their total token count
+        # (so we can determine how many non-system messages can fit)
+        n_system_tokens: int = 0
+        n_system_messages: int = 0
+        n_other_messages: int = 0
         for m in messages:
             count = m["token_count"]
             # Count can be None if the tokenizer is None
             if count is None:
                 return messages
-            content = m["content_server"]
             if m["role"] == "system":
-                system_messages.append(content)
-                system_token_count += count
+                n_system_tokens += count
+                n_system_messages += 1
             else:
-                other_messages.append(content)
-                token_counts.append(count)
+                n_other_messages += 1
 
-        limit, reserve = token_limits
-        max_tokens = limit - reserve
+        remaining_non_system_tokens = n_total - n_reserve - n_system_tokens
 
-        if system_token_count >= max_tokens:
+        if remaining_non_system_tokens <= 0:
             raise ValueError(
                 f"System messages exceed `.messages(token_limits={token_limits})`. "
                 "Consider increasing the 1st value of `token_limit` or setting it to "
                 "`token_limit=None` to disable token limits."
             )
 
-        max_tokens -= system_token_count
-
         messages2: list[StoredMessage] = []
-        for i, m in enumerate(reversed(messages)):
+        for m in reversed(messages):
             if m["role"] == "system":
                 messages2.append(m)
-            elif sum(token_counts[-i - 1 :]) <= max_tokens:
+                continue
+            count = cast(int, m["token_count"])  # Already checked this
+            remaining_non_system_tokens -= count
+            if remaining_non_system_tokens >= 0:
                 messages2.append(m)
 
         messages2.reverse()
 
-        if len(messages2) == len(system_messages) and len(other_messages) > 0:
+        if len(messages2) == n_system_messages and n_other_messages > 0:
             raise ValueError(
                 f"Only system messages fit within `.messages(token_limits={token_limits})`. "
                 "Consider increasing the 1st value of `token_limit` or setting it to "
