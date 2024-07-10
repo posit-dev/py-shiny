@@ -4,19 +4,23 @@
 # To get started, follow the instructions at https://aws.amazon.com/bedrock/claude/
 # as well as https://github.com/anthropics/anthropic-sdk-python#aws-bedrock
 # ------------------------------------------------------------------------------------
+from pathlib import Path
+
 from anthropic import AnthropicBedrock
+from dotenv import load_dotenv
 
 from shiny.express import ui
 
-# Although you can set the AWS credentials here, it's recommended to put them in an .env
-# file and load them with `dotenv` so your keys aren't exposed with your code.
-# from dotenv import load_dotenv
-# _ = load_dotenv()
+# Either explicitly set the AWS environment variables before launching the app, or set
+# them in a file named `.env`. The `python-dotenv` package will load `.env` as
+# environment variables which can be read by `os.getenv()`.
+_ = load_dotenv(Path(__file__).parent / ".env")
+
 llm = AnthropicBedrock(
-    # aws_secret_key="..."
-    # aws_access_key="..."
-    # aws_region="..."
-    # aws_account_id="..."
+    # aws_secret_key=os.getenv("AWS_SECRET_KEY"),
+    # aws_access_key=os.getenv("AWS_ACCESS_KEY"),
+    # aws_region=os.getenv("AWS_REGION"),
+    # aws_account_id=os.getenv("AWS_ACCOUNT_ID"),
 )
 
 # Set some Shiny page options
