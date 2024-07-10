@@ -4,18 +4,19 @@
 # To get setup, follow the instructions at https://learn.microsoft.com/en-us/azure/ai-services/openai/quickstart?tabs=command-line%2Cpython-new&pivots=programming-language-python#create-a-new-python-application
 # ------------------------------------------------------------------------------------
 import os
-from pathlib import Path
 
-import dotenv
 from openai import AzureOpenAI
 
 from shiny.express import ui
+
+# In Shiny Core, do `from app_utils import load_dotenv`
+from .app_utils import load_dotenv
 
 # Either explicitly set the AZURE_OPENAI_API_KEY and AZURE_OPENAI_ENDPOINT environment
 # variables before launching the app, or set them in a file named `.env`. The
 # `python-dotenv` package will load `.env` as environment variables which can later be
 # read by `os.getenv()`.
-dotenv.load_dotenv(Path(__file__).parent / ".env")
+load_dotenv()
 
 llm = AzureOpenAI(
     api_key=os.getenv("AZURE_OPENAI_API_KEY"),

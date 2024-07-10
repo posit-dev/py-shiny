@@ -4,18 +4,18 @@
 # To get one, follow the instructions at https://docs.anthropic.com/en/api/getting-started
 # ------------------------------------------------------------------------------------
 import os
-from pathlib import Path
 
 from anthropic import AsyncAnthropic
-from dotenv import load_dotenv
 
 from shiny.express import ui
+
+# In Shiny Core, do `from app_utils import load_dotenv`
+from .app_utils import load_dotenv
 
 # Either explicitly set the ANTHROPIC_API_KEY environment variable before launching the
 # app, or set them in a file named `.env`. The `python-dotenv` package will load `.env`
 # as environment variables which can later be read by `os.getenv()`.
-_ = load_dotenv(Path(__file__).parent / ".env")
-
+load_dotenv()
 llm = AsyncAnthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
 
 # Set some Shiny page options

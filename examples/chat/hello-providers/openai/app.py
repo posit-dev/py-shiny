@@ -4,18 +4,18 @@
 # To get setup, follow the instructions at https://platform.openai.com/docs/quickstart
 # ------------------------------------------------------------------------------------
 import os
-from pathlib import Path
 
-from dotenv import load_dotenv
 from openai import AsyncOpenAI
 
 from shiny.express import ui
 
+# In Shiny Core, do `from app_utils import load_dotenv`
+from .app_utils import load_dotenv
+
 # Either explicitly set the OPENAI_API_KEY environment variable before launching the
 # app, or set them in a file named `.env`. The `python-dotenv` package will load `.env`
 # as environment variables which can later be read by `os.getenv()`.
-_ = load_dotenv(Path(__file__).parent / ".env")
-
+load_dotenv()
 llm = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 # Set some Shiny page options
