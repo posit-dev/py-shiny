@@ -186,8 +186,10 @@ class Chat:
             )
 
             # Initialize the chat with the provided messages
-            for msg in messages:
-                _utils.run_coro_sync(self.append_message(msg))
+            @reactive.effect
+            async def _init_chat():
+                for msg in messages:
+                    await self.append_message(msg)
 
             # When user input is submitted, transform, and store it in the chat state
             # (and make sure this runs before other effects since when the user
@@ -210,6 +212,7 @@ class Chat:
                     await self._remove_loading_message()
                     self._suspend_input_handler = True
 
+            self._effects.append(_init_chat)
             self._effects.append(_on_user_input)
 
         # Prevent repeated calls to Chat() with the same id from accumulating effects
