@@ -1,5 +1,5 @@
 import sys
-from typing import TYPE_CHECKING, Literal, TypedDict, Union
+from typing import TYPE_CHECKING, Literal, Union
 
 from ._chat_types import ChatMessage
 
