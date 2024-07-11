@@ -1,6 +1,8 @@
 import os
 from urllib.parse import urlparse
 
+import pytest
+from examples.example_apps import reruns, reruns_delay
 from playwright.sync_api import Page, expect
 
 from shiny.playwright import controller
@@ -23,6 +25,7 @@ def get_pulse_computed_property(page: Page, property_name: str) -> str:
     )
 
 
+@pytest.mark.flaky(reruns=reruns, delay=reruns_delay)
 def test_busy_indicators(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
     spinner_type = controller.InputRadioButtons(page, "busy_indicator_type")

@@ -2,13 +2,9 @@ from __future__ import annotations
 
 import warnings
 
-# TODO-barret; Make DataFrameLikeT generic bound to DataFrameLike. Add this generic type to the DataGrid and DataTable
-# TODO-barret; Should `.input_cell_selection()` ever return None? Is that value even helpful? Empty lists would be much more user friendly.
-# * For next release: Agreed to remove `None` type.
-# * For this release: Immediately make PR to remove `.input_` from `.input_cell_selection()`
 # TODO-barret-render.data_frame; Docs
 # TODO-barret-render.data_frame; Add examples!
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, Literal, Union, cast
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Literal, Union, cast
 
 from htmltools import Tag
 
@@ -36,18 +32,18 @@ from ._data_frame_utils import (
 )
 from ._data_frame_utils._styles import as_browser_style_infos
 from ._data_frame_utils._tbl_data import (
-    apply_frame_patches,
-    as_data_frame_like,
+    apply_frame_patches__typed,
     frame_columns,
     frame_shape,
     serialize_dtype,
-    subset_frame,
+    subset_frame__typed,
 )
 from ._data_frame_utils._types import (
     CellPatchProcessed,
     ColumnFilter,
     ColumnSort,
-    DataFrameLike,
+    DataFrameLikeT,
+    FrameDtype,
     FrameRender,
     cell_patch_processed_to_jsonifiable,
     frame_render_to_jsonifiable,
@@ -59,7 +55,14 @@ from .renderer import Jsonifiable, Renderer, ValueFn
 if TYPE_CHECKING:
     from ..session import Session
 
-from ._data_frame_utils._datagridtable import DataFrameResult
+DataFrameResult = Union[
+    None,
+    DataFrameLikeT,
+    "DataGrid[DataFrameLikeT]",
+    "DataTable[DataFrameLikeT]",
+]
+DataFrameValue = Union[None, DataGrid[DataFrameLikeT], DataTable[DataFrameLikeT]]
+
 
 # # TODO-future; Use `dataframe-api-compat>=0.2.6` to injest dataframes and return standardized dataframe structures
 # # TODO-future: Find this type definition: https://github.com/data-apis/dataframe-api-compat/blob/273c0be45962573985b3a420869d0505a3f9f55d/dataframe_api_compat/polars_standard/dataframe_object.py#L22
@@ -92,7 +95,7 @@ from ._data_frame_utils._datagridtable import DataFrameResult
 
 
 @add_example()
-class data_frame(Renderer[DataFrameResult]):
+class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
     """
     Decorator for a function that returns a pandas `DataFrame` object (or similar) to
     render as an interactive table or grid. Features fast virtualized scrolling, sorting,
@@ -164,11 +167,11 @@ class data_frame(Renderer[DataFrameResult]):
       objects you can return from the rendering function to specify options.
     """
 
-    _value: reactive.Value[DataFrameResult | None]
+    _value: reactive.Value[DataFrameValue[DataFrameLikeT] | None]
     """
     Reactive value of the data frame's rendered object.
     """
-    _type_hints: reactive.Value[dict[str, str] | None]
+    _type_hints: reactive.Value[list[FrameDtype] | None]
     """
     Reactive value of the data frame's type hints for each column.
 
@@ -206,7 +209,7 @@ class data_frame(Renderer[DataFrameResult]):
     Reactive value of the data frame's edits provided by the user.
     """
 
-    data: reactive.Calc_[DataFrameLike]
+    data: reactive.Calc_[DataFrameLikeT]
     """
     Reactive value of the data frame's output data.
 
@@ -217,17 +220,17 @@ class data_frame(Renderer[DataFrameResult]):
     Even if the rendered data value was not of type `pd.DataFrame` or `pl.DataFrame`, this method currently
     converts it to a `pd.DataFrame`.
     """
-    _data_view_all: reactive.Calc_[DataFrameLike]
+    _data_view_all: reactive.Calc_[DataFrameLikeT]
     """
     Reactive value of the full (sorted and filtered) data.
     """
-    _data_view_selected: reactive.Calc_[DataFrameLike]
+    _data_view_selected: reactive.Calc_[DataFrameLikeT]
     """
     Reactive value of the selected rows of the (sorted and filtered) data.
     """
 
     @add_example(ex_dir="../api-examples/data_frame_data_view")
-    def data_view(self, *, selected: bool = False) -> DataFrameLike:
+    def data_view(self, *, selected: bool = False) -> DataFrameLikeT:
         """
         Reactive function that retrieves the data how it is viewed within the browser.
 
@@ -299,7 +302,7 @@ class data_frame(Renderer[DataFrameResult]):
         The row numbers of the data frame that are currently being viewed in the browser
         after sorting and filtering has been applied.
     """
-    _data_patched: reactive.Calc_[DataFrameLike]
+    _data_patched: reactive.Calc_[DataFrameLikeT]
     """
     Reactive value of the data frame's patched data.
 
@@ -339,8 +342,10 @@ class data_frame(Renderer[DataFrameResult]):
         from .. import req
 
         # Init
-        self._value: reactive.Value[DataFrameResult | None] = reactive.Value(None)
-        self._type_hints: reactive.Value[dict[str, str] | None] = reactive.Value(None)
+        self._value: reactive.Value[DataFrameValue[DataFrameLikeT] | None] = (
+            reactive.Value(None)
+        )
+        self._type_hints: reactive.Value[list[FrameDtype] | None] = reactive.Value(None)
         self._cell_patch_map = reactive.Value({})
 
         @reactive.calc
@@ -350,7 +355,7 @@ class data_frame(Renderer[DataFrameResult]):
         self.cell_patches = self_cell_patches
 
         @reactive.calc
-        def self_data() -> DataFrameLike:
+        def self_data() -> DataFrameLikeT:
             value = self._value()
             req(value)
 
@@ -423,14 +428,14 @@ class data_frame(Renderer[DataFrameResult]):
         self.data_view_rows = self_data_view_rows
 
         @reactive.calc
-        def self__data_patched() -> DataFrameLike:
-            return apply_frame_patches(self.data(), self.cell_patches())
+        def self__data_patched() -> DataFrameLikeT:
+            return apply_frame_patches__typed(self.data(), self.cell_patches())
 
         self._data_patched = self__data_patched
 
         # Apply filtering and sorting
         # https://github.com/posit-dev/py-shiny/issues/1240
-        def _subset_data_view(selected: bool) -> DataFrameLike:
+        def _subset_data_view(selected: bool) -> DataFrameLikeT:
             """
             Helper method to subset data according to what is viewed in the browser;
 
@@ -454,15 +459,15 @@ class data_frame(Renderer[DataFrameResult]):
             else:
                 rows = self.data_view_rows()
 
-            return subset_frame(self._data_patched(), rows=rows)
+            return subset_frame__typed(self._data_patched(), rows=rows)
 
         # Helper reactives so that internal calculations can be cached for use in other calculations
         @reactive.calc
-        def self__data_view() -> DataFrameLike:
+        def self__data_view() -> DataFrameLikeT:
             return _subset_data_view(selected=False)
 
         @reactive.calc
-        def self__data_view_selected() -> DataFrameLike:
+        def self__data_view_selected() -> DataFrameLikeT:
             return _subset_data_view(selected=True)
 
         self._data_view_all = self__data_view
@@ -721,7 +726,7 @@ class data_frame(Renderer[DataFrameResult]):
     def auto_output_ui(self) -> Tag:
         return ui.output_data_frame(id=self.output_id)
 
-    def __init__(self, fn: ValueFn[DataFrameResult]):
+    def __init__(self, fn: ValueFn[DataFrameResult[DataFrameLikeT]]):
         super().__init__(fn)
 
         # Set reactives from calculated properties
@@ -758,26 +763,22 @@ class data_frame(Renderer[DataFrameResult]):
             return None
 
         if not isinstance(value, AbstractTabularData):
-            value = DataGrid(
-                as_data_frame_like(
-                    value,
-                    "@render.data_frame doesn't know how to render objects of type",
-                )
-            )
+            try:
+                value = DataGrid(value)
+            except TypeError as e:
+                raise TypeError(
+                    "@render.data_frame doesn't know how to render objects of type ",
+                    type(value),
+                ) from e
 
         # Set patches url handler for client
         patch_key = self._set_patches_handler()
-        self._value.set(value)
+        self._value.set(value)  # pyright: ignore[reportArgumentType]
 
         # Use session context so `to_payload()` gets the correct session
         with session_context(self._get_session()):
             payload = value.to_payload()
-
-            type_hints = cast(
-                Union[Dict[str, str], None],
-                payload.get("typeHints", None),
-            )
-            self._type_hints.set(type_hints)
+            self._type_hints.set(payload["typeHints"])
 
             ret: FrameRender = {
                 "payload": payload,

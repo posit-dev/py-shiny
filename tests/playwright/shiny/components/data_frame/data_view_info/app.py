@@ -52,7 +52,7 @@ app_ui = ui.page_fillable(
 
 @module.server
 def mod_server(
-    input: Inputs, output: Outputs, session: Session, dt: render.DataFrameLike
+    input: Inputs, output: Outputs, session: Session, dt: render._DataFrameLikeT
 ):
     @render.data_frame
     def penguins_df():

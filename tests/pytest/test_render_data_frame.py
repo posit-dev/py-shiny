@@ -44,7 +44,7 @@ def test_as_selection_modes_legacy():
     assert dg.selection_modes.row == SelectionModes(selection_mode_set={"rows"}).row
 
     with pytest.raises(ValueError, match="Unknown row_selection_mode: foo"):
-        render.DataGrid(
+        render.DataGrid(  # pyright: ignore[reportCallIssue]
             df,
             row_selection_mode="foo",  # pyright: ignore[reportArgumentType,reportGeneralTypeIssues]
         )

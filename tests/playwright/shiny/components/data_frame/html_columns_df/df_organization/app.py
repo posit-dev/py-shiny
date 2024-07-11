@@ -42,7 +42,10 @@ def mod_ui():
 
 @module.server
 def mod_server(
-    input: Inputs, output: Outputs, session: Session, data: render.DataFrameLike
+    input: Inputs,
+    output: Outputs,
+    session: Session,
+    data: render._DataFrameLikeT,
 ):
     @render.text
     def df_type():
