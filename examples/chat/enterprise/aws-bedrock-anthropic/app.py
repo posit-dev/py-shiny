@@ -5,11 +5,9 @@
 # as well as https://github.com/anthropics/anthropic-sdk-python#aws-bedrock
 # ------------------------------------------------------------------------------------
 from anthropic import AnthropicBedrock
+from app_utils import load_dotenv
 
 from shiny.express import ui
-
-# In Shiny Core, do `from app_utils import load_dotenv`
-from .app_utils import load_dotenv
 
 # Either explicitly set the AWS environment variables before launching the app, or set
 # them in a file named `.env`. The `python-dotenv` package will load `.env` as
