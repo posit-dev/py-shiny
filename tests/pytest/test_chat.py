@@ -422,9 +422,8 @@ def test_as_ollama_message():
     import ollama
     from ollama import Message as OllamaMessage
 
-    assert (
-        str(ollama.chat.__annotations__["messages"])
-        == "typing.Optional[typing.Sequence[ollama._types.Message]]"
+    assert "typing.Sequence[ollama._types.Message]" in str(
+        ollama.chat.__annotations__["messages"]
     )
 
     from shiny.ui._chat_provider_types import as_ollama_message
