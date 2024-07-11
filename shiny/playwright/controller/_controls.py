@@ -1040,9 +1040,6 @@ class InputSelectize(
 
     def __init__(self, page: Page, id: str) -> None:
         super().__init__(page, id=id, loc=f"#{id} + .selectize-control")
-        # self.loc_something = self.loc.locator(
-        #     "> .selectize-dropdown > .selectize-dropdown-content"
-        # )
         self.loc_items_group = self.loc.locator(
             "> .selectize-dropdown > .selectize-dropdown-content > div.optgroup"
         )
@@ -1159,6 +1156,8 @@ class InputSelectize(
             The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
 
+        self.loc.click()
+        self.loc.press("Escape")
         # Playwright doesn't like lists of size 0. Instead, use `None`
         if len(choice_groups) == 0:
             playwright_expect(self.loc_choice_groups).to_have_count(0, timeout=timeout)
@@ -1192,6 +1191,8 @@ class InputSelectize(
         timeout
             The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
+        self.loc.click()
+        self.loc.press("Escape")
         # Playwright doesn't like lists of size 0. Instead, use `None`
         if len(value) == 0:
             playwright_expect(self.loc_choices).to_have_count(0, timeout=timeout)
