@@ -5,12 +5,10 @@
 # ------------------------------------------------------------------------------------
 import os
 
+from app_utils import load_dotenv
 from openai import AsyncOpenAI
 
 from shiny.express import ui
-
-# In Shiny Core, do `from app_utils import load_dotenv`
-from .app_utils import load_dotenv
 
 # Either explicitly set the OPENAI_API_KEY environment variable before launching the
 # app, or set them in a file named `.env`. The `python-dotenv` package will load `.env`
