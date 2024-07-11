@@ -36,3 +36,6 @@ def test_input_selectize_kitchen(page: Page, app: ShinyAppProc) -> None:
     state.set(["Iowa", "California"])
 
     state.expect_selected(["IA", "CA"])
+
+
+    #TODO-karan: Add test for selectize w/o groups
