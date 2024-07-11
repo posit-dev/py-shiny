@@ -44,6 +44,8 @@ ProviderMessageFormat = Literal[
 ]
 
 
+# TODO: use a strategy pattern to allow others to register
+# their own message formats
 def as_provider_message(
     message: ChatMessage, format: ProviderMessageFormat
 ) -> "ProviderMessage":

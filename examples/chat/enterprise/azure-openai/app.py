@@ -19,7 +19,7 @@ load_dotenv()
 llm = AzureOpenAI(
     api_key=os.getenv("AZURE_OPENAI_API_KEY"),
     api_version="2024-02-01",
-    azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+    azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),  # type: ignore
 )
 
 deployment_name = "REPLACE_WITH_YOUR_DEPLOYMENT_NAME"

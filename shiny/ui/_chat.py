@@ -427,10 +427,15 @@ class Chat:
         Parameters
         ----------
         format
-            The provider message type to return. The default value of `"generic"` means
-            chat messages are returned as :class:`ChatMessage` objects. Other values
-            include `"anthropic"`, `"langchain"`, and `"openai"`, which return provider
-            message objects for the respective platforms.
+            The message format to return. The default value of `MISSING` means
+            chat messages are returned as :class:`ChatMessage` objects (a dictionary
+            with `content` and `role` keys). Other supported formats include:
+
+            * `"anthropic"`: Anthropic message format.
+            * `"google"`: Google message (aka content) format.
+            * `"langchain"`: LangChain message format.
+            * `"openai"`: OpenAI message format.
+            * `"ollama"`: Ollama message format.
         token_limits
             A tuple of two integers. The first integer is the maximum number of tokens
             that can be sent to the model in a single request. The second integer is the
