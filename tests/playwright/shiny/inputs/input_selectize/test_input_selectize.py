@@ -1,14 +1,11 @@
-from conftest import create_doc_example_core_fixture
 from playwright.sync_api import Page, expect
 
 from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
-app = create_doc_example_core_fixture("input_selectize")
 
-
-def test_input_selectize_kitchen(page: Page, app: ShinyAppProc) -> None:
-    page.goto(app.url)
+def test_input_selectize_kitchen(page: Page, local_app: ShinyAppProc) -> None:
+    page.goto(local_app.url)
 
     state = controller.InputSelectize(page, "state")
 
@@ -37,5 +34,22 @@ def test_input_selectize_kitchen(page: Page, app: ShinyAppProc) -> None:
 
     state.expect_selected(["IA", "CA"])
 
+    state3 = controller.InputSelectize(page, "state3")
 
-    #TODO-karan: Add test for selectize w/o groups
+    state3.expect_label("Single Selectize")
+
+    state3.expect_choices(["NY", "NJ", "CT"])
+
+    state3.expect_choice_labels(
+        [
+            "New York",
+            "New Jersey",
+            "Connecticut",
+        ]
+    )
+
+    state3.expect_multiple(False)
+
+    state3.set(["New Jersey"])
+
+    state3.expect_selected(["NJ"])
