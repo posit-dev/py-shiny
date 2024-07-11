@@ -1,5 +1,5 @@
 import sys
-from typing import TYPE_CHECKING, Literal, TypedDict
+from typing import TYPE_CHECKING, Literal, TypedDict, Union
 
 from ._chat_types import ChatMessage
 
@@ -18,25 +18,18 @@ if TYPE_CHECKING:
 
         GoogleMessage = gtypes.ContentDict
     else:
+        GoogleMessage = object
 
-        class GoogleMessage(TypedDict):
-            parts: list[str]
-            role: str
+    LangChainMessage = Union[AIMessage, HumanMessage, SystemMessage]
+    OpenAIMessage = Union[
+        ChatCompletionAssistantMessageParam,
+        ChatCompletionSystemMessageParam,
+        ChatCompletionUserMessageParam,
+    ]
 
-    LangChainMessage = AIMessage | HumanMessage | SystemMessage
-    OpenAIMessage = (
-        ChatCompletionAssistantMessageParam
-        | ChatCompletionSystemMessageParam
-        | ChatCompletionUserMessageParam
-    )
-
-    ProviderMessage = (
-        AnthropicMessage
-        | GoogleMessage
-        | LangChainMessage
-        | OpenAIMessage
-        | OllamaMessage
-    )
+    ProviderMessage = Union[
+        AnthropicMessage, GoogleMessage, LangChainMessage, OpenAIMessage, OllamaMessage
+    ]
 else:
     AnthropicMessage = GoogleMessage = LangChainMessage = OpenAIMessage = (
         OllamaMessage
@@ -78,6 +71,9 @@ def as_anthropic_message(message: ChatMessage) -> "AnthropicMessage":
 
 
 def as_google_message(message: ChatMessage) -> "GoogleMessage":
+    if sys.version_info < (3, 9):
+        raise ValueError("Google requires Python 3.9")
+
     import google.generativeai.types as gtypes  # pyright: ignore[reportMissingTypeStubs]
 
     if message["role"] == "system":
