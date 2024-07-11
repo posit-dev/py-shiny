@@ -47,9 +47,9 @@ chat.ui()
 @chat.on_user_submit
 async def _():
     # Get messages currently in the chat
-    messages = chat.messages()
+    messages = chat.messages(format="openai")
     # Create a response message stream
-    response = await llm.chat.completions.create(
+    response = llm.chat.completions.create(
         model=deployment_name,
         messages=messages,
         stream=True,
