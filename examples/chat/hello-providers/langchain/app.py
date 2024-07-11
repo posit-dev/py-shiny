@@ -15,7 +15,7 @@ from shiny.express import ui
 # app, or set them in a file named `.env`. The `python-dotenv` package will load `.env`
 # as environment variables which can later be read by `os.getenv()`.
 load_dotenv()
-llm = ChatOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+llm = ChatOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))  # type: ignore
 
 # Set some Shiny page options
 ui.page_opts(
@@ -33,8 +33,8 @@ chat.ui()
 @chat.on_user_submit
 async def _():
     # Get messages currently in the chat
-    messages = chat.messages()
+    messages = chat.messages(format="langchain")
     # Create a response message stream
-    response = llm.astream(messages)  # type: ignore
+    response = llm.astream(messages)
     # Append the response stream into the chat
     await chat.append_message_stream(response)

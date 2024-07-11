@@ -32,7 +32,7 @@ chat.ui()
 @chat.on_user_submit
 async def _():
     # Get messages currently in the chat
-    messages = chat.messages()
+    messages = chat.messages(format="anthropic")
     # Create a response message stream
     response = await llm.messages.create(
         model="claude-3-opus-20240229",

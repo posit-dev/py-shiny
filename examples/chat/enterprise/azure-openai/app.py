@@ -19,7 +19,7 @@ load_dotenv()
 llm = AzureOpenAI(
     api_key=os.getenv("AZURE_OPENAI_API_KEY"),
     api_version="2024-02-01",
-    azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+    azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),  # type: ignore
 )
 
 deployment_name = "REPLACE_WITH_YOUR_DEPLOYMENT_NAME"
@@ -47,9 +47,9 @@ chat.ui()
 @chat.on_user_submit
 async def _():
     # Get messages currently in the chat
-    messages = chat.messages()
+    messages = chat.messages(format="openai")
     # Create a response message stream
-    response = await llm.chat.completions.create(
+    response = llm.chat.completions.create(
         model=deployment_name,
         messages=messages,
         stream=True,
