@@ -22,7 +22,7 @@ models = {
     "google": ["gemini-1.5-pro-latest"],
 }
 
-model_choices = {}
+model_choices: dict[str, dict[str, str]] = {}
 for key, value in models.items():
     model_choices[key] = dict(zip(value, value))
 

@@ -1,11 +1,12 @@
 import os
 from pathlib import Path
+from typing import Any
 
 app_dir = Path(__file__).parent
 env_file = app_dir / ".env"
 
 
-def load_dotenv(dotenv_path: os.PathLike[str] = env_file, **kwargs) -> None:
+def load_dotenv(dotenv_path: os.PathLike[str] = env_file, **kwargs: Any) -> None:
     """
     A convenience wrapper around `dotenv.load_dotenv` that warns if `dotenv` is not installed.
     It also returns `None` to make it easier to ignore the return value.

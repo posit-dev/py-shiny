@@ -30,7 +30,7 @@ def chat_ui():
     llm = ChatOpenAI(
         model=input.model(),
         # Provide your API key here (or set the environment variable)
-        api_key=os.environ.get("OPENAI_API_KEY"),
+        api_key=os.environ.get("OPENAI_API_KEY"),  # type: ignore
     )
 
     @chat.on_user_submit

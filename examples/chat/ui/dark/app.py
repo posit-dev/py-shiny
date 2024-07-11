@@ -11,7 +11,7 @@ from shiny.express import ui
 
 # Provide your API key here (or set the environment variable)
 llm = ChatOpenAI(
-    api_key=os.environ.get("OPENAI_API_KEY"),
+    api_key=os.environ.get("OPENAI_API_KEY"),  # type: ignore
 )
 
 # Set some Shiny page options

@@ -15,7 +15,7 @@ from shiny.express import ui
 # app, or set them in a file named `.env`. The `python-dotenv` package will load `.env`
 # as environment variables which can later be read by `os.getenv()`.
 load_dotenv()
-llm = ChatOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+llm = ChatOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))  # type: ignore
 
 # Set some Shiny page options
 ui.page_opts(
