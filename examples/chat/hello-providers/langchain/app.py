@@ -33,8 +33,8 @@ chat.ui()
 @chat.on_user_submit
 async def _():
     # Get messages currently in the chat
-    messages = chat.messages()
+    messages = chat.messages(format="langchain")
     # Create a response message stream
-    response = llm.astream(messages)  # type: ignore
+    response = llm.astream(messages)
     # Append the response stream into the chat
     await chat.append_message_stream(response)

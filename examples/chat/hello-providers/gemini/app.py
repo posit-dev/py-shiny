@@ -30,16 +30,7 @@ chat.ui()
 @chat.on_user_submit
 async def _():
     # Get messages currently in the chat
-    messages = chat.messages()
-
-    # Convert messages to the format expected by Google's API
-    contents = [
-        {
-            "role": "model" if x["role"] == "assistant" else x["role"],
-            "parts": x["content"],
-        }
-        for x in messages
-    ]
+    contents = chat.messages(format="google")
 
     # Generate a response message stream
     response = llm.generate_content(
