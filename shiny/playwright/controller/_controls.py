@@ -1155,7 +1155,6 @@ class InputSelectize(
         timeout
             The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
-
         self.loc.click()
         self.loc.press("Escape")
         # Playwright doesn't like lists of size 0. Instead, use `None`
