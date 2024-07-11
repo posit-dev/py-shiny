@@ -14,7 +14,9 @@ if TYPE_CHECKING:
     )
 
     if sys.version_info >= (3, 9):
-        from google.generativeai.types import ContentDict as GoogleMessage
+        import google.generativeai.types as gtypes  # pyright: ignore[reportMissingTypeStubs]
+
+        GoogleMessage = gtypes.ContentDict
     else:
 
         class GoogleMessage(TypedDict):
@@ -76,13 +78,13 @@ def as_anthropic_message(message: ChatMessage) -> "AnthropicMessage":
 
 
 def as_google_message(message: ChatMessage) -> "GoogleMessage":
-    from google.generativeai.types import ContentDict as GoogleMessage
+    import google.generativeai.types as gtypes  # pyright: ignore[reportMissingTypeStubs]
 
     if message["role"] == "system":
         raise ValueError(
             "Google requires a system prompt to be specified in the `GenerativeModel()` constructor."
         )
-    return GoogleMessage(parts=[message["content"]], role=message["role"])
+    return gtypes.ContentDict(parts=[message["content"]], role=message["role"])
 
 
 def as_langchain_message(message: ChatMessage) -> "LangChainMessage":
