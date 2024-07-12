@@ -47,6 +47,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Fixed #1440: When a Shiny Express app with a `www/` subdirectory was deployed to shinyapps.io or a Connect server, it would not start correctly. (#1442)
 
+* Fixed #1498: Update table related TypeScript dependencies to their latest versions. This fixed an issue where the Row Virtualizer would scroll to the end when hidden. This would cause the DOM to update numerous times, locking up the browser tab for multiple seconds. #1524
+
 ### Other changes
 
 ## [0.10.2] - 2024-05-28
