@@ -1048,7 +1048,9 @@ class InputSelectize(
         self.loc_choice_groups = self._loc_selectize.locator(
             "> .optgroup > .optgroup-header"
         )
-        self.loc_choices = self._loc_selectize.locator(".option")
+        # Do not use `.option` class as we are not guaranteed to have it.
+        # We are only guaranteed to have `data-value` attribute for each _option_
+        self.loc_choices = self._loc_selectize.locator("[data-value]")
         self.loc_selected = self.loc_container.locator(f"select#{id} > option")
 
     def set(
@@ -1071,7 +1073,7 @@ class InputSelectize(
             selected = [selected]
         self._loc_events.click()
         for value in selected:
-            self._loc_selectize.locator(f".option:has-text('{value}')").click(
+            self._loc_selectize.locator(f"[data-value='{value}']").click(
                 timeout=timeout
             )
         self._loc_events.press("Escape")
@@ -1102,7 +1104,7 @@ class InputSelectize(
         _MultipleDomItems.expect_locator_values_in_list(
             page=self.page,
             loc_container=self._loc_selectize,
-            el_type=self.page.locator(".option"),
+            el_type=self.page.locator("[data-value]"),
             arr_name="choices",
             arr=choices,
             key="data-value",
@@ -1144,10 +1146,9 @@ class InputSelectize(
         The click and Escape keypress is used to load the DOM elements
         """
         self._loc_events.click(timeout=timeout)
-        expect_to_have_style(
-            self._loc_dropdown, "visibility", "visible", timeout=timeout
-        )
+        expect_to_have_style(self._loc_dropdown, "display", "block", timeout=timeout)
         self._loc_events.press("Escape", timeout=timeout)
+        expect_to_have_style(self._loc_dropdown, "display", "none", timeout=timeout)
 
     def expect_choice_groups(
         self,

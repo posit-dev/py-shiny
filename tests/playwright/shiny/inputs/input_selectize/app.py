@@ -7,15 +7,15 @@ states = {
 }
 
 state_without_groups = {"NY": "New York", "NJ": "New Jersey", "CT": "Connecticut"}
+state_without_keys = ["New York", "New Jersey", "Connecticut"]
 
 app_ui = ui.page_fluid(
     ui.input_selectize(
-        "state",
+        "state1",
         "Choose a state:",
         states,
         multiple=True,
     ),
-    ui.output_text("value"),
     ui.input_selectize(
         "state2",
         "Selectize Options",
@@ -38,13 +38,36 @@ app_ui = ui.page_fluid(
         multiple=False,
         options={"plugins": ["clear_button"]},
     ),
+    ui.input_selectize(
+        "state4",
+        "Simple Selectize",
+        state_without_keys,
+        multiple=False,
+    ),
+    ui.hr(),
+    ui.output_code("value1"),
+    ui.output_code("value2"),
+    ui.output_code("value3"),
+    ui.output_code("value4"),
 )
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @render.text
-    def value():
-        return "You choose: " + str(input.state())
+    @render.code
+    def value1():
+        return str(input.state1())
+
+    @render.code
+    def value2():
+        return str(input.state2())
+
+    @render.code
+    def value3():
+        return str(input.state3())
+
+    @render.code
+    def value4():
+        return str(input.state4())
 
 
 app = App(app_ui, server)
