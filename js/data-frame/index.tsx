@@ -281,7 +281,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
     paddingStart: theadRef.current?.clientHeight ?? 0,
     // In response to https://github.com/posit-dev/py-shiny/pull/538/files#r1228352446
     // (the default scrollingDelay is 150)
-    scrollingDelay: 10,
+    isScrollingResetDelay: 10,
   });
 
   // Reset scroll when dataset changes
