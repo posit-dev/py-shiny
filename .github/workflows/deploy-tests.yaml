@@ -3,14 +3,10 @@ name: Run deploy tests
 on:
   workflow_dispatch:
   push:
-    branches: ["main", "rc-*"]
-  pull_request:
-  merge_group:
+    branches: ["main", "rc-*", "deploy-**"]
 
 jobs:
   playwright-deploys:
-    needs: [playwright-deploys-precheck]
-    if: github.event_name != 'release' && (github.event_name == 'push' || startsWith(github.head_ref, 'deploy'))
     # Only allow one `playwright-deploys` job to run at a time. (Independent of branch / PR)
     # Only one is allowed to run at a time because it is deploying to the same server location.
     concurrency: playwright-deploys
