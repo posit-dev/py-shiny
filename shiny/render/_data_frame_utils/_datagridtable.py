@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import abc
-
-# TODO-barret-future; make DataTable and DataGrid generic? By currently accepting `object`, it is difficult to capture the generic type of the data.
-from typing import TYPE_CHECKING, Literal, Union
+from typing import TYPE_CHECKING, Generic, Literal, Union
 
 from ..._docstring import add_example, no_example
 from ._selection import (
@@ -14,16 +12,15 @@ from ._selection import (
 )
 from ._styles import StyleFn, StyleInfo, as_browser_style_infos, as_style_infos
 from ._tbl_data import as_data_frame_like, serialize_frame
-from ._types import DataFrameLike, FrameJson, PandasCompatible
+from ._types import DataFrameLikeT, FrameJson
 
 if TYPE_CHECKING:
 
     DataFrameResult = Union[
         None,
-        DataFrameLike,
-        "DataGrid",
-        "DataTable",
-        PandasCompatible,
+        DataFrameLikeT,
+        "DataGrid[DataFrameLikeT]",
+        "DataTable[DataFrameLikeT]",
     ]
 
 else:
@@ -38,7 +35,7 @@ class AbstractTabularData(abc.ABC):
 
 
 @add_example(ex_dir="../../api-examples/data_frame")
-class DataGrid(AbstractTabularData):
+class DataGrid(AbstractTabularData, Generic[DataFrameLikeT]):
     """
     Holds the data and options for a :class:`~shiny.render.data_frame` output, for a
     spreadsheet-like view.
@@ -100,18 +97,18 @@ class DataGrid(AbstractTabularData):
     * :class:`~shiny.render.DataTable`
     """
 
-    data: DataFrameLike
+    data: DataFrameLikeT
     width: str | float | None
     height: str | float | None
     summary: bool | str
     filters: bool
     editable: bool
     selection_modes: SelectionModes
-    styles: list[StyleInfo] | StyleFn
+    styles: list[StyleInfo] | StyleFn[DataFrameLikeT]
 
     def __init__(
         self,
-        data: DataFrameLike | PandasCompatible,
+        data: DataFrameLikeT,
         *,
         width: str | float | None = "fit-content",
         height: str | float | None = None,
@@ -119,14 +116,11 @@ class DataGrid(AbstractTabularData):
         filters: bool = False,
         editable: bool = False,
         selection_mode: SelectionModeInput = "none",
-        styles: StyleInfo | list[StyleInfo] | StyleFn | None = None,
+        styles: StyleInfo | list[StyleInfo] | StyleFn[DataFrameLikeT] | None = None,
         row_selection_mode: RowSelectionModeDeprecated = "deprecated",
     ):
 
-        self.data = as_data_frame_like(
-            data,
-            "The DataGrid() constructor didn't expect a 'data' argument of type",
-        )
+        self.data = as_data_frame_like(data)
 
         self.width = width
         self.height = height
@@ -161,7 +155,7 @@ class DataGrid(AbstractTabularData):
 
 
 @no_example()
-class DataTable(AbstractTabularData):
+class DataTable(AbstractTabularData, Generic[DataFrameLikeT]):
     """
     Holds the data and options for a :class:`~shiny.render.data_frame` output, for a
     spreadsheet-like view.
@@ -223,17 +217,18 @@ class DataTable(AbstractTabularData):
     * :class:`~shiny.render.DataGrid`
     """
 
-    data: DataFrameLike
+    data: DataFrameLikeT
     width: str | float | None
     height: str | float | None
     summary: bool | str
     filters: bool
+    editable: bool
     selection_modes: SelectionModes
-    styles: list[StyleInfo] | StyleFn
+    styles: list[StyleInfo] | StyleFn[DataFrameLikeT]
 
     def __init__(
         self,
-        data: DataFrameLike | PandasCompatible,
+        data: DataFrameLikeT,
         *,
         width: str | float | None = "fit-content",
         height: str | float | None = "500px",
@@ -241,14 +236,10 @@ class DataTable(AbstractTabularData):
         filters: bool = False,
         editable: bool = False,
         selection_mode: SelectionModeInput = "none",
+        styles: StyleInfo | list[StyleInfo] | StyleFn[DataFrameLikeT] | None = None,
         row_selection_mode: Literal["deprecated"] = "deprecated",
-        styles: StyleInfo | list[StyleInfo] | StyleFn | None = None,
     ):
-
-        self.data = as_data_frame_like(
-            data,
-            "The DataTable() constructor didn't expect a 'data' argument of type",
-        )
+        self.data = as_data_frame_like(data)
 
         self.width = width
         self.height = height

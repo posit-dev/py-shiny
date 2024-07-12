@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import polars as pl
 
-# TODO-barret; Export render.DataFrameLike
 # pyright: reportMissingTypeStubs = false
 from palmerpenguins import load_penguins_raw
 

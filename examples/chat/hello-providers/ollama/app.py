@@ -25,7 +25,7 @@ chat.ui()
 @chat.on_user_submit
 async def _():
     # Get messages currently in the chat
-    messages = chat.messages()
+    messages = chat.messages(format="ollama")
     # Create a response message stream
     # Assumes you've run `ollama run llama3` to start the server
     response = ollama.chat(

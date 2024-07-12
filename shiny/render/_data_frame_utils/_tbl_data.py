@@ -7,6 +7,7 @@ from typing import Any, List, Tuple, cast
 
 from htmltools import TagNode
 
+from ..._typing_extensions import TypeIs
 from ...session import require_active_session
 from ._html import wrap_shiny_html
 
@@ -15,6 +16,7 @@ from ._types import (
     CellPatchProcessed,
     ColsList,
     DataFrameLike,
+    DataFrameLikeT,
     FrameDtype,
     FrameJson,
     ListSeriesLike,
@@ -29,7 +31,7 @@ from ._types import (
 
 __all__ = (
     "is_data_frame_like",
-    "as_data_frame_like",
+    # "as_data_frame_like",
     "frame_columns",
     "apply_frame_patches",
     "serialize_dtype",
@@ -44,48 +46,53 @@ __all__ = (
 # as_frame -----------------------------------------------------------------------------
 
 
-@singledispatch
-def is_data_frame_like(
-    data: object,
-) -> bool:
-    return False
-
-
-@is_data_frame_like.register
-def _(data: PdDataFrame) -> bool:
-    return True
-
-
-@is_data_frame_like.register
-def _(data: PlDataFrame) -> bool:
-    return True
-
-
-@singledispatch
 def as_data_frame_like(
-    data: DataFrameLike | PandasCompatible,
-    error_message_begin: str = "Unsupported type:",
-) -> DataFrameLike:
-    raise TypeError(
-        f"{error_message_begin} {str(type(data))}\n"
-        "Please use either a `pandas.DataFrame`, a `polars.DataFrame`, "
-        "or an object that has a `.to_pandas()` method."
-    )
+    data: DataFrameLikeT,
+) -> DataFrameLikeT:
+    if is_data_frame_like(data):
+        return data
+
+    # Legacy support for non-Pandas/Polars data frames that were previously supported
+    # and converted to pandas
+    if isinstance(data, PandasCompatible):
+        from ..._deprecated import warn_deprecated
+
+        warn_deprecated(
+            "Returned data frame data values that are not Pandas or Polars `DataFrame`s are currently not supported. "
+            "A `.to_pandas()` was found on your object and will be called. "
+            "To remove this warning, please call `.to_pandas()` on your data "
+            "and use the result in your return value. "
+            "In the future, this will raise an error."
+        )
+        return data.to_pandas()
+
+    raise TypeError(f"Unsupported type: {type(data)}")
 
 
-@as_data_frame_like.register
-def _(data: PdDataFrame, error_message_begin: str = "ignored") -> DataFrameLike:
-    return data
+# @singledispatch
+# def is_data_frame_like(
+#     data: object,
+# ) -> bool:
+#     return False
 
 
-@as_data_frame_like.register
-def _(data: PlDataFrame, error_message_begin: str = "ignored") -> DataFrameLike:
-    return data
+# @is_data_frame_like.register
+# def _(data: PdDataFrame) -> bool:
+#     return True
 
 
-@as_data_frame_like.register
-def _(data: PandasCompatible, error_message_begin: str = "ignored") -> DataFrameLike:
-    return data.to_pandas()
+# @is_data_frame_like.register
+# def _(data: PlDataFrame) -> bool:
+#     return True
+
+
+def is_data_frame_like(
+    data: DataFrameLikeT | object,
+) -> TypeIs[DataFrameLikeT]:
+    if isinstance(data, (PdDataFrame, PlDataFrame)):
+        return True
+
+    return False
 
 
 # frame_columns ------------------------------------------------------------------------
@@ -108,6 +115,12 @@ def _(data: PlDataFrame) -> ListSeriesLike:
 
 
 # apply_frame_patches --------------------------------------------------------------------
+
+
+def apply_frame_patches__typed(
+    data: DataFrameLikeT, patches: List[CellPatchProcessed]
+) -> DataFrameLikeT:
+    return cast(DataFrameLikeT, apply_frame_patches(data, patches))
 
 
 @singledispatch
@@ -237,6 +250,10 @@ def _(data: PlDataFrame) -> FrameJson:
 
 
 # subset_frame -------------------------------------------------------------------------
+def subset_frame__typed(
+    data: DataFrameLikeT, *, rows: RowsList = None, cols: ColsList = None
+) -> DataFrameLikeT:
+    return cast(DataFrameLikeT, subset_frame(data, rows=rows, cols=cols))
 
 
 @singledispatch

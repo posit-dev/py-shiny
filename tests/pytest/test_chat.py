@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import sys
 from datetime import datetime
-from typing import cast
+from typing import Sequence, Union, cast, get_args, get_origin
 
 import pytest
 
@@ -40,6 +40,13 @@ def as_stored_message(message: ChatMessage, token_count: int) -> StoredMessage:
         **msg,
         token_count=token_count,
     )
+
+
+# Check if a type is part of a Union
+def is_type_in_union(type: object, union: object) -> bool:
+    if get_origin(union) is Union:
+        return type in get_args(union)
+    return False
 
 
 # ----------------------------------------------------------------------
@@ -120,9 +127,16 @@ def test_chat_message_trimming():
         assert contents == ["System message", "System message 2", "User message 2"]
 
 
-# ----------------------------------------------------------------------
-# Unit tests for normalize_message() and normalize_message_chunk()
-# ----------------------------------------------------------------------
+# ------------------------------------------------------------------------------------
+# Unit tests for normalize_message() and normalize_message_chunk().
+#
+# This is where we go from provider's response object to ChatMessage.
+#
+# The general idea is to check that the provider's output message type match our
+# expectations. If these tests fail, it doesn't not necessarily mean that our code is
+# wrong (i.e., updating the test may be sufficient), but we'll still want to be aware
+# and double-check our code.
+# ------------------------------------------------------------------------------------
 
 
 def test_string_normalization():
@@ -285,3 +299,136 @@ def test_openai_normalization():
 
     msg = normalize_message_chunk(chunk)
     assert msg == {"content": "Hello ", "role": "assistant"}
+
+
+# ------------------------------------------------------------------------------------
+# Unit tests for as_provider_message()
+#
+# This is where we go from our ChatMessage to a provider's message object
+#
+# The general idea is to check that the provider's input message type match our
+# expectations. If these tests fail, it doesn't not necessarily mean that our code is
+# wrong (i.e., updating the test may be sufficient), but we'll still want to be aware
+# and double-check our code.
+# ------------------------------------------------------------------------------------
+
+
+def test_as_anthropic_message():
+    from anthropic.resources.messages import AsyncMessages, Messages
+    from anthropic.types import MessageParam
+
+    from shiny.ui._chat_provider_types import as_anthropic_message
+
+    # Make sure return type of llm.messages.create() hasn't changed
+    assert AsyncMessages.create.__annotations__["messages"] == "Iterable[MessageParam]"
+    assert Messages.create.__annotations__["messages"] == "Iterable[MessageParam]"
+
+    msg = ChatMessage(content="I have a question", role="user")
+    assert as_anthropic_message(msg) == MessageParam(
+        content="I have a question", role="user"
+    )
+
+
+def test_as_google_message():
+    from shiny.ui._chat_provider_types import as_google_message
+
+    # Not available for Python 3.8
+    if sys.version_info < (3, 9):
+        return
+
+    from google.generativeai import (  # pyright: ignore[reportMissingTypeStubs]
+        GenerativeModel,
+    )
+
+    generate_content = GenerativeModel.generate_content  # type: ignore
+
+    assert generate_content.__annotations__["contents"] == "content_types.ContentsType"
+
+    from google.generativeai.types import (  # pyright: ignore[reportMissingTypeStubs]
+        content_types,
+    )
+
+    assert is_type_in_union(content_types.ContentDict, content_types.ContentsType)
+
+    msg = ChatMessage(content="I have a question", role="user")
+    assert as_google_message(msg) == content_types.ContentDict(
+        parts=["I have a question"], role="user"
+    )
+
+
+def test_as_langchain_message():
+    from langchain_core.language_models.base import LanguageModelInput
+    from langchain_core.language_models.chat_models import BaseChatModel
+    from langchain_core.messages import (
+        AIMessage,
+        BaseMessage,
+        HumanMessage,
+        MessageLikeRepresentation,
+        SystemMessage,
+    )
+
+    from shiny.ui._chat_provider_types import as_langchain_message
+
+    assert BaseChatModel.invoke.__annotations__["input"] == "LanguageModelInput"
+    assert BaseChatModel.stream.__annotations__["input"] == "LanguageModelInput"
+
+    assert is_type_in_union(Sequence[MessageLikeRepresentation], LanguageModelInput)
+    assert is_type_in_union(BaseMessage, MessageLikeRepresentation)
+
+    assert issubclass(AIMessage, BaseMessage)
+    assert issubclass(HumanMessage, BaseMessage)
+    assert issubclass(SystemMessage, BaseMessage)
+
+    msg = ChatMessage(content="I have a question", role="user")
+    assert as_langchain_message(msg) == HumanMessage(content="I have a question")
+
+
+def test_as_openai_message():
+    from openai.resources.chat.completions import AsyncCompletions, Completions
+    from openai.types.chat import (
+        ChatCompletionAssistantMessageParam,
+        ChatCompletionMessageParam,
+        ChatCompletionSystemMessageParam,
+        ChatCompletionUserMessageParam,
+    )
+
+    from shiny.ui._chat_provider_types import as_openai_message
+
+    assert (
+        Completions.create.__annotations__["messages"]
+        == "Iterable[ChatCompletionMessageParam]"
+    )
+
+    assert (
+        AsyncCompletions.create.__annotations__["messages"]
+        == "Iterable[ChatCompletionMessageParam]"
+    )
+
+    assert is_type_in_union(
+        ChatCompletionAssistantMessageParam, ChatCompletionMessageParam
+    )
+    assert is_type_in_union(
+        ChatCompletionSystemMessageParam, ChatCompletionMessageParam
+    )
+    assert is_type_in_union(ChatCompletionUserMessageParam, ChatCompletionMessageParam)
+
+    msg = ChatMessage(content="I have a question", role="user")
+    assert as_openai_message(msg) == ChatCompletionUserMessageParam(
+        content="I have a question", role="user"
+    )
+
+
+def test_as_ollama_message():
+    import ollama
+    from ollama import Message as OllamaMessage
+
+    assert "typing.Sequence[ollama._types.Message]" in str(
+        ollama.chat.__annotations__["messages"]
+    )
+
+    from shiny.ui._chat_provider_types import as_ollama_message
+
+    msg = ChatMessage(content="I have a question", role="user")
+    assert as_ollama_message(msg) == OllamaMessage(
+        content="I have a question", role="user"
+    )

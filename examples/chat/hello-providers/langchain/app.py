@@ -5,9 +5,8 @@
 # To use other providers/models via LangChain, see https://python.langchain.com/v0.1/docs/modules/model_io/chat/quick_start/
 # ------------------------------------------------------------------------------------
 import os
-from pathlib import Path
 
-from dotenv import load_dotenv
+from app_utils import load_dotenv
 from langchain_openai import ChatOpenAI
 
 from shiny.express import ui
@@ -15,9 +14,8 @@ from shiny.express import ui
 # Either explicitly set the OPENAI_API_KEY environment variable before launching the
 # app, or set them in a file named `.env`. The `python-dotenv` package will load `.env`
 # as environment variables which can later be read by `os.getenv()`.
-_ = load_dotenv(Path(__file__).parent / ".env")
-
-llm = ChatOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+load_dotenv()
+llm = ChatOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))  # type: ignore
 
 # Set some Shiny page options
 ui.page_opts(
@@ -35,7 +33,7 @@ chat.ui()
 @chat.on_user_submit
 async def _():
     # Get messages currently in the chat
-    messages = chat.messages()
+    messages = chat.messages(format="langchain")
     # Create a response message stream
     response = llm.astream(messages)
     # Append the response stream into the chat

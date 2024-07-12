@@ -25,6 +25,16 @@ from ..session import require_active_session, session_context
 from ..types import MISSING, MISSING_TYPE, NotifyException
 from ..ui.css import CssUnit, as_css_unit
 from ._chat_normalize import normalize_message, normalize_message_chunk
+from ._chat_provider_types import (
+    AnthropicMessage,
+    GoogleMessage,
+    LangChainMessage,
+    OllamaMessage,
+    OpenAIMessage,
+    ProviderMessage,
+    ProviderMessageFormat,
+    as_provider_message,
+)
 from ._chat_tokenizer import TokenEncoding, TokenizersEncoding, get_default_tokenizer
 from ._chat_types import ChatMessage, ClientMessage, StoredMessage, TransformedMessage
 from ._html_deps_py_shiny import chat_deps
@@ -133,7 +143,7 @@ class Chat:
         self,
         id: str,
         *,
-        messages: Sequence[ChatMessage] = (),
+        messages: Sequence[Any] = (),
         on_error: Literal["auto", "actual", "sanitize", "unhandled"] = "auto",
         tokenizer: TokenEncoding | MISSING_TYPE | None = MISSING,
     ):
@@ -333,13 +343,74 @@ class Chat:
             sanitize = self.on_error == "sanitize"
             raise NotifyException(str(e), sanitize=sanitize)
 
+    @overload
     def messages(
         self,
         *,
+        format: Literal["anthropic"] = "anthropic",
         token_limits: tuple[int, int] | None = (4096, 1000),
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
-    ) -> tuple[ChatMessage, ...]:
+    ) -> tuple[AnthropicMessage, ...]: ...
+
+    @overload
+    def messages(
+        self,
+        *,
+        format: Literal["google"] = "google",
+        token_limits: tuple[int, int] | None = (4096, 1000),
+        transform_user: Literal["all", "last", "none"] = "all",
+        transform_assistant: bool = False,
+    ) -> tuple[GoogleMessage, ...]: ...
+
+    @overload
+    def messages(
+        self,
+        *,
+        format: Literal["langchain"] = "langchain",
+        token_limits: tuple[int, int] | None = (4096, 1000),
+        transform_user: Literal["all", "last", "none"] = "all",
+        transform_assistant: bool = False,
+    ) -> tuple[LangChainMessage, ...]: ...
+
+    @overload
+    def messages(
+        self,
+        *,
+        format: Literal["openai"] = "openai",
+        token_limits: tuple[int, int] | None = (4096, 1000),
+        transform_user: Literal["all", "last", "none"] = "all",
+        transform_assistant: bool = False,
+    ) -> tuple[OpenAIMessage, ...]: ...
+
+    @overload
+    def messages(
+        self,
+        *,
+        format: Literal["ollama"] = "ollama",
+        token_limits: tuple[int, int] | None = (4096, 1000),
+        transform_user: Literal["all", "last", "none"] = "all",
+        transform_assistant: bool = False,
+    ) -> tuple[OllamaMessage, ...]: ...
+
+    @overload
+    def messages(
+        self,
+        *,
+        format: MISSING_TYPE = MISSING,
+        token_limits: tuple[int, int] | None = (4096, 1000),
+        transform_user: Literal["all", "last", "none"] = "all",
+        transform_assistant: bool = False,
+    ) -> tuple[ChatMessage, ...]: ...
+
+    def messages(
+        self,
+        *,
+        format: MISSING_TYPE | ProviderMessageFormat = MISSING,
+        token_limits: tuple[int, int] | None = (4096, 1000),
+        transform_user: Literal["all", "last", "none"] = "all",
+        transform_assistant: bool = False,
+    ) -> tuple[ChatMessage | ProviderMessage, ...]:
         """
         Reactively read chat messages
 
@@ -355,6 +426,16 @@ class Chat:
 
         Parameters
         ----------
+        format
+            The message format to return. The default value of `MISSING` means
+            chat messages are returned as :class:`ChatMessage` objects (a dictionary
+            with `content` and `role` keys). Other supported formats include:
+
+            * `"anthropic"`: Anthropic message format.
+            * `"google"`: Google message (aka content) format.
+            * `"langchain"`: LangChain message format.
+            * `"openai"`: OpenAI message format.
+            * `"ollama"`: Ollama message format.
         token_limits
             A tuple of two integers. The first integer is the maximum number of tokens
             that can be sent to the model in a single request. The second integer is the
@@ -387,7 +468,7 @@ class Chat:
         if token_limits is not None:
             messages = self._trim_messages(messages, token_limits)
 
-        res: list[ChatMessage] = []
+        res: list[ChatMessage | ProviderMessage] = []
         for i, m in enumerate(messages):
             transform = False
             if m["role"] == "assistant":
@@ -397,7 +478,10 @@ class Chat:
                     transform_user == "last" and i == len(messages) - 1
                 )
             content_key = m["transform_key" if transform else "pre_transform_key"]
-            res.append(ChatMessage(content=m[content_key], role=m["role"]))
+            chat_msg = ChatMessage(content=m[content_key], role=m["role"])
+            if not isinstance(format, MISSING_TYPE):
+                chat_msg = as_provider_message(chat_msg, format)
+            res.append(chat_msg)
 
         return tuple(res)
 

@@ -15,5 +15,6 @@
   "reportImportCycles": "none",
   "reportUnusedFunction": "none",
   "reportPrivateUsage": "none",
-  "reportUnnecessaryIsInstance": "none"
+  "reportUnnecessaryIsInstance": "none",
+  "executionEnvironments": [{ "root": "examples/" }]
 }

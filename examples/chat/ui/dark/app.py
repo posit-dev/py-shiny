@@ -11,7 +11,7 @@ from shiny.express import ui
 
 # Provide your API key here (or set the environment variable)
 llm = ChatOpenAI(
-    api_key=os.environ.get("OPENAI_API_KEY"),
+    api_key=os.environ.get("OPENAI_API_KEY"),  # type: ignore
 )
 
 # Set some Shiny page options
@@ -34,7 +34,7 @@ chat.ui()
 @chat.on_user_submit
 async def _():
     # Get messages currently in the chat
-    messages = chat.messages()
+    messages = chat.messages(format="langchain")
     # Create a response message stream
     stream = llm.astream(messages)
     # Append the response stream into the chat

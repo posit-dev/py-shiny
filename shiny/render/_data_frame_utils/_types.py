@@ -10,6 +10,7 @@ from typing import (
     Optional,
     Protocol,
     Tuple,
+    TypeVar,
     Union,
     cast,
     runtime_checkable,
@@ -67,6 +68,8 @@ else:
 
     DataFrameLike.register(PdDataFrame)
     DataFrameLike.register(PlDataFrame)
+
+DataFrameLikeT = TypeVar("DataFrameLikeT", PdDataFrame, PlDataFrame)
 
 # ---------------------------------------------------------------------
 
@@ -164,8 +167,8 @@ class FrameJson(TypedDict):
     options: NotRequired[FrameJsonOptions]
 
 
-RowsList = Optional[List[int]]
-ColsList = Optional[List[Union[str, int]]]
+RowsList = Optional[ListOrTuple[int]]
+ColsList = Optional[ListOrTuple[Union[str, int]]]
 
 
 # ---------------------------------------------------------------------

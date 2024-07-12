@@ -13,7 +13,10 @@ from ._data_frame import (
     data_frame,
 )
 from ._data_frame_utils import CellSelection
-from ._data_frame_utils._types import DataFrameLike, StyleInfo
+from ._data_frame_utils._types import (  # noqa: F401
+    StyleInfo,
+    DataFrameLikeT as _DataFrameLikeT,  # pyright: ignore[reportUnusedImport]
+)
 from ._deprecated import (  # noqa: F401
     RenderFunction,  # pyright: ignore[reportUnusedImport]
     RenderFunctionAsync,  # pyright: ignore[reportUnusedImport]
@@ -48,5 +51,4 @@ __all__ = (
     "CellValue",
     "CellSelection",
     "StyleInfo",
-    "DataFrameLike",
 )

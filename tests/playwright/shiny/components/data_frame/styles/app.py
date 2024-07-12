@@ -113,7 +113,7 @@ def mod_server(
     input: Inputs,
     output: Outputs,
     session: Session,
-    data: render.DataFrameLike,
+    data: render._DataFrameLikeT,
 ):
     @render.data_frame
     def fn_styles():
@@ -121,7 +121,7 @@ def mod_server(
         counter = 0
 
         def df_styles_fn(
-            data: render.DataFrameLike,
+            data: render._DataFrameLikeT,
         ) -> list[render.StyleInfo]:
             nonlocal counter
 
