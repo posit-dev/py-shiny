@@ -13,7 +13,7 @@ import React, { useMemo } from "react";
 export function useSummary(
   summaryTemplate: string | boolean | undefined,
   scrollContainer: HTMLElement | null,
-  virtualRows: VirtualItem[],
+  virtualRows: VirtualItem<Element>[],
   thead: HTMLTableSectionElement | null,
   nrows: number
 ): JSX.Element | null {

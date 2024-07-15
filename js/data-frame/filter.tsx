@@ -1,7 +1,7 @@
 import {
+  ColumnFiltersOptions,
   ColumnFiltersState,
   FilterMeta,
-  FiltersOptions,
   Header,
   Row,
   getFacetedMinMaxValues,
@@ -25,7 +25,7 @@ export function useFilters<TData>(enabled: boolean | undefined): {
   columnFilters: ColumnFiltersState;
   setColumnFilters: React.Dispatch<React.SetStateAction<ColumnFiltersState>>;
   columnFiltersState: { columnFilters: ColumnFiltersState };
-  filtersTableOptions: FiltersOptions<TData>;
+  filtersTableOptions: ColumnFiltersOptions<TData>;
 } {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]); // can set initial column filter state here
 
