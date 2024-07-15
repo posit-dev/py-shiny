@@ -1032,15 +1032,191 @@ class InputSelect(_InputSelectBase):
         )
 
 
-class InputSelectize(_InputSelectBase):
+class InputSelectize(
+    _UiWithLabel,
+):
     """Controller for :func:`shiny.ui.input_selectize`."""
 
     def __init__(self, page: Page, id: str) -> None:
-        super().__init__(
-            page,
-            id=id,
-            select_class=".selectized",
+        super().__init__(page, id=id, loc=f"#{id} + .selectize-control")
+        self._loc_dropdown = self.loc.locator("> .selectize-dropdown")
+        self._loc_events = self.loc.locator("> .selectize-input")
+        self._loc_selectize = self._loc_dropdown.locator(
+            "> .selectize-dropdown-content"
         )
+        self.loc = self.loc_container.locator(f"select#{id}")
+        self.loc_choice_groups = self._loc_selectize.locator(
+            "> .optgroup > .optgroup-header"
+        )
+        # Do not use `.option` class as we are not guaranteed to have it.
+        # We are only guaranteed to have `data-value` attribute for each _option_
+        self.loc_choices = self._loc_selectize.locator("[data-value]")
+        self.loc_selected = self.loc_container.locator(f"select#{id} > option")
+
+    def set(
+        self,
+        selected: str | list[str],
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Sets the selected option(s) of the input selectize.
+
+        Parameters
+        ----------
+        selected
+            The value(s) of the selected option(s).
+        timeout
+            The maximum time to wait for the selection to be set. Defaults to `None`.
+        """
+        if isinstance(selected, str):
+            selected = [selected]
+        self._loc_events.click()
+        for value in selected:
+            self._loc_selectize.locator(f"[data-value='{value}']").click(
+                timeout=timeout
+            )
+        self._loc_events.press("Escape")
+
+    def expect_choices(
+        self,
+        # TODO-future; support patterns?
+        choices: ListPatternOrStr,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expect the available options of the input selectize to be an exact match.
+
+        Parameters
+        ----------
+        choices
+            The expected choices of the input select.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        self._populate_dom()
+        # Playwright doesn't like lists of size 0. Instead, check for empty locator
+        if len(choices) == 0:
+            playwright_expect(self.loc_choices).to_have_count(0, timeout=timeout)
+            return
+
+        _MultipleDomItems.expect_locator_values_in_list(
+            page=self.page,
+            loc_container=self._loc_selectize,
+            el_type=self.page.locator("[data-value]"),
+            arr_name="choices",
+            arr=choices,
+            key="data-value",
+            timeout=timeout,
+        )
+
+    def expect_selected(
+        self,
+        value: ListPatternOrStr,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expect the selected option(s) of the input select to be an exact match.
+
+        Parameters
+        ----------
+        value
+            The expected value(s) of the selected option(s).
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        # Playwright doesn't like lists of size 0
+        if isinstance(value, list) and len(value) == 0:
+            playwright_expect(self.loc_selected).to_have_count(0, timeout=timeout)
+            return
+
+        _MultipleDomItems.expect_locator_values_in_list(
+            page=self.page,
+            loc_container=self.loc,
+            el_type=self.page.locator("> option"),
+            arr_name="value",
+            arr=value,
+            key="value",
+        )
+
+    def _populate_dom(self, timeout: Timeout = None) -> None:
+        """
+        The click and Escape keypress is used to load the DOM elements
+        """
+        self._loc_events.click(timeout=timeout)
+        expect_to_have_style(self._loc_dropdown, "display", "block", timeout=timeout)
+        self.page.locator("body").click(timeout=timeout)
+        expect_to_have_style(self._loc_dropdown, "display", "none", timeout=timeout)
+
+    def expect_choice_groups(
+        self,
+        choice_groups: ListPatternOrStr,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expect the choice groups of the input select to be an exact match.
+
+        Parameters
+        ----------
+        choice_groups
+            The expected choice groups of the input select.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        self._populate_dom()
+        # Playwright doesn't like lists of size 0. Instead, use `None`
+        if len(choice_groups) == 0:
+            playwright_expect(self.loc_choice_groups).to_have_count(0, timeout=timeout)
+            return
+
+        playwright_expect(self.loc_choice_groups).to_have_text(
+            choice_groups, timeout=timeout
+        )
+
+    def expect_choice_labels(
+        self,
+        value: ListPatternOrStr,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expect the choice labels of the input selectize to be an exact match.
+
+        Parameters
+        ----------
+        value
+            The expected choice labels of the input select.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        self._populate_dom()
+        # Playwright doesn't like lists of size 0. Instead, use `None`
+        if len(value) == 0:
+            playwright_expect(self.loc_choices).to_have_count(0, timeout=timeout)
+            return
+        playwright_expect(self.loc_choices).to_have_text(value, timeout=timeout)
+
+    # multiple: bool = False,
+    def expect_multiple(self, value: bool, *, timeout: Timeout = None) -> None:
+        """
+        Expect the input selectize to allow multiple selections.
+
+        Parameters
+        ----------
+        value
+            Whether the input select allows multiple selections.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        if value:
+            expect_attribute_to_have_value(
+                self.loc, "multiple", "multiple", timeout=timeout
+            )
+        else:
+            expect_attribute_to_have_value(self.loc, "multiple", None, timeout=timeout)
 
 
 class _InputActionBase(_UiBase):
