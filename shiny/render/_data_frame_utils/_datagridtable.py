@@ -3,7 +3,7 @@ from __future__ import annotations
 import abc
 from typing import TYPE_CHECKING, Generic, Literal, Union
 
-from ..._docstring import add_example, no_example
+from ..._docstring import add_example
 from ._selection import (
     RowSelectionModeDeprecated,
     SelectionModeInput,
@@ -34,7 +34,8 @@ class AbstractTabularData(abc.ABC):
     def to_payload(self) -> FrameJson: ...
 
 
-@add_example(ex_dir="../../api-examples/data_frame")
+@add_example(ex_dir="../../../examples/dataframe")
+@add_example("../../api-examples/data_frame_styles")
 class DataGrid(AbstractTabularData, Generic[DataFrameLikeT]):
     """
     Holds the data and options for a :class:`~shiny.render.data_frame` output, for a
@@ -81,6 +82,27 @@ class DataGrid(AbstractTabularData, Generic[DataFrameLikeT]):
         Resolution rules:
         * If `"none"` is supplied, all other values will be ignored.
         * If both `"row"` and `"rows"` are supplied, `"row"` will be dropped (supporting `"rows"`).
+    styles
+        A style info object, a list of style info objects, or a function that receives
+        the (possibly updated) data frame and returns a list of style info objects. The
+        style info objects can be used to apply CSS styles to the data frame. If
+        `styles=None`, no styling will be applied.
+
+        Style info object key/value description:
+        * `location`: This value is required and currently only supports `"body"`.
+        * `rows`: The row numbers to which the style should be applied. If `None`, the
+            style will be applied to all rows.
+        * `cols`: The column numbers to which the style should be applied. If `None`,
+            the style will be applied to all columns.
+        * `style`: A dictionary of CSS properties and values to apply to the selected
+            rows and columns. The keys must be _camelCased_ CSS property names to work
+            properly with react.js (e.g. `backgroundColor` instead of
+            `background-color`).
+        * `class`: A string of CSS class names to apply to the selected rows and columns.
+
+        If both `style` and `class` are missing or `None`, nothing will be applied. If
+        both `rows` and `cols` are missing or `None`, the style will be applied to the
+        complete data frame.
     row_selection_mode
         Deprecated. Please use `selection_mode=` instead.
 
@@ -92,9 +114,9 @@ class DataGrid(AbstractTabularData, Generic[DataFrameLikeT]):
 
     See Also
     --------
-    * :func:`~shiny.ui.output_data_frame`
-    * :class:`~shiny.render.data_frame`
-    * :class:`~shiny.render.DataTable`
+    * :func:`~shiny.ui.output_data_frame` - The UI placeholder for a data frame output.
+    * :class:`~shiny.render.data_frame` - The `render` method for data frames.
+    * :class:`~shiny.render.DataTable` - A more _tabular_ view of the data.
     """
 
     data: DataFrameLikeT
@@ -154,7 +176,8 @@ class DataGrid(AbstractTabularData, Generic[DataFrameLikeT]):
         return res
 
 
-@no_example()
+@add_example(ex_dir="../../../examples/dataframe")
+@add_example("../../api-examples/data_frame_styles")
 class DataTable(AbstractTabularData, Generic[DataFrameLikeT]):
     """
     Holds the data and options for a :class:`~shiny.render.data_frame` output, for a
@@ -201,6 +224,27 @@ class DataTable(AbstractTabularData, Generic[DataFrameLikeT]):
         Resolution rules:
         * If `"none"` is supplied, all other values will be ignored.
         * If both `"row"` and `"rows"` are supplied, `"row"` will be dropped (supporting `"rows"`).
+    styles
+        A style info object, a list of style info objects, or a function that receives
+        the (possibly updated) data frame and returns a list of style info objects. The
+        style info objects can be used to apply CSS styles to the data frame. If
+        `styles=None`, no styling will be applied.
+
+        Style info object key/value description:
+        * `location`: This value is required and currently only supports `"body"`.
+        * `rows`: The row numbers to which the style should be applied. If `None`, the
+            style will be applied to all rows.
+        * `cols`: The column numbers to which the style should be applied. If `None`,
+            the style will be applied to all columns.
+        * `style`: A dictionary of CSS properties and values to apply to the selected
+            rows and columns. The keys must be _camelCased_ CSS property names to work
+            properly with react.js (e.g. `backgroundColor` instead of
+            `background-color`).
+        * `class`: A string of CSS class names to apply to the selected rows and columns.
+
+        If both `style` and `class` are missing or `None`, nothing will be applied. If
+        both `rows` and `cols` are missing or `None`, the style will be applied to the
+        complete data frame.
     row_selection_mode
         Deprecated. Please use `mode={row_selection_mode}_row` instead.
 
@@ -212,9 +256,9 @@ class DataTable(AbstractTabularData, Generic[DataFrameLikeT]):
 
     See Also
     --------
-    * :func:`~shiny.ui.output_data_frame`
-    * :class:`~shiny.render.data_frame`
-    * :class:`~shiny.render.DataGrid`
+    * :func:`~shiny.ui.output_data_frame` - The UI placeholder for a data frame output.
+    * :class:`~shiny.render.data_frame` - The `render` method for data frames.
+    * :class:`~shiny.render.DataTable` - A more _grid_ view of the data.
     """
 
     data: DataFrameLikeT
