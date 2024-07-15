@@ -53,10 +53,14 @@ A possible value for the `open` parameter in :func:`~shiny.ui.sidebar`:
 * `"always"`: the sidebar is always open and cannot be closed
 """
 
+SidebarOpenValueMobile = SidebarOpenValue | Literal["always-above"]
+
+_always_open_mobile = ("always", "always-above")
+
 
 class SidebarOpenSpec(TypedDict):
     desktop: SidebarOpenValue
-    mobile: SidebarOpenValue
+    mobile: SidebarOpenValueMobile
 
 
 @dataclass
@@ -68,7 +72,7 @@ class SidebarOpen:
     desktop: SidebarOpenValue = "open"
     """The initial state of the sidebar on desktop screen sizes."""
 
-    mobile: SidebarOpenValue = "closed"
+    mobile: SidebarOpenValueMobile = "closed"
     """The initial state of the sidebar on mobile screen sizes."""
 
     _VALUES: tuple[SidebarOpenValue, ...] = field(
@@ -79,14 +83,27 @@ class SidebarOpen:
     )
 
     @staticmethod
-    def _values_str() -> str:
-        return f"""'{"', '".join(SidebarOpen._VALUES)}'"""
+    def _values_str(values: tuple[str, ...] | None = None) -> str:
+        quoted = [f'"{x}"' for x in (values or SidebarOpen._VALUES)]
+        ret = ""
+        for i, value in enumerate(quoted):
+            if i > 0 and len(quoted) > 2:
+                ret += ","
+            if i == len(quoted) - 1:
+                ret += " or"
+            if i > 0:
+                ret += " "
+            ret += value
+        return ret
 
     def __post_init__(self):
         if self.desktop not in self._VALUES:
             raise ValueError(f"`desktop` must be one of {self._values_str()}")
-        if self.mobile not in self._VALUES:
-            raise ValueError(f"`mobile` must be one of {self._values_str()}")
+        mobileValues = tuple(str(x) for x in set((*self._VALUES, *_always_open_mobile)))
+        if self.mobile not in mobileValues:
+            raise ValueError(
+                f"`mobile` must be one of {self._values_str(mobileValues)}"
+            )
 
     @classmethod
     def _from_string(cls, open: str) -> SidebarOpen:
@@ -220,7 +237,9 @@ class Sidebar:
         Alternatively, you can provide a dictionary with keys `"desktop"` and `"mobile"`
         to set different initial states for desktop and mobile. For example, when
         `{"desktop": "open", "mobile": "closed"}` the sidebar is initialized in the
-        open state on desktop screens or in the closed state on mobile screens.
+        open state on desktop screens or in the closed state on mobile screens. You can
+        also choose to place an always-open sidebar above the main content on mobile
+        devices by setting `open={"mobile": "always-above"}`.
     id
         A character string. Required if wanting to reactively read (or update) the
         `collapsible` state in a Shiny app.
@@ -319,10 +338,10 @@ class Sidebar:
     def max_height_mobile(self) -> Optional[str]:
         max_height_mobile = self._max_height_mobile
 
-        if max_height_mobile is not None and self.open().mobile != "always":
+        if max_height_mobile is not None and self.open().mobile in _always_open_mobile:
             warnings.warn(
                 "The `shiny.ui.sidebar(max_height_mobile=)` argument only applies to "
-                + "the sidebar when `open` is `'always'` on mobile, but "
+                + f"the sidebar when `open` is {SidebarOpen._values_str(_always_open_mobile)} on mobile, but "
                 + f"`open` is `'{self.open().mobile}'`. "
                 + "The `max_height_mobile` argument will be ignored.",
                 # `stacklevel=2`: Refers to the caller of `.max_height_mobile` property method
@@ -350,6 +369,12 @@ class Sidebar:
 
         return SidebarOpen._as_open(open)
 
+    def _is_always_open(self) -> bool:
+        return (
+            self.open().desktop == "always"
+            and self.open().mobile in _always_open_mobile
+        )
+
     def _get_sidebar_id(self) -> Optional[str]:
         """
         Returns the resolved ID of the sidebar, or `None` if the sidebar is always open.
@@ -359,7 +384,7 @@ class Sidebar:
         if isinstance(self.id, ResolvedId):
             return self.id
 
-        if self.open().desktop == "always" and self.open().mobile == "always":
+        if self._is_always_open():
             return None
 
         return private_random_id("bslib_sidebar")
@@ -367,7 +392,6 @@ class Sidebar:
     def _collapse_tag(self, id: str | None) -> Tag:
         """Create the <button> tag for the collapse button."""
         is_expanded = self.open().desktop == "open" or self.open().mobile == "open"
-        is_always = self.open() == SidebarOpen(desktop="always", mobile="always")
 
         return tags.button(
             _collapse_icon(),
@@ -375,9 +399,11 @@ class Sidebar:
             type="button",
             title="Toggle sidebar",
             aria_expanded=(
-                ("true" if is_expanded else "false") if not is_always else None
+                ("true" if is_expanded else "false")
+                if not self._is_always_open()
+                else None
             ),
-            aria_controls=id if not is_always else None,
+            aria_controls=id if not self._is_always_open() else None,
         )
 
     def _sidebar_tag(self, id: str | None) -> Tag:
@@ -647,22 +673,26 @@ def layout_sidebar(
     if fillable:
         main = as_fillable_container(main)
 
+    if sidebar.open().mobile == "always-above":
+        contents = (sidebar, main)
+    else:
+        contents = (main, sidebar)
+
     res = div(
         {"class": "bslib-sidebar-layout bslib-mb-spacing"},
         {"class": "sidebar-right"} if sidebar.position == "right" else None,
         {"class": "sidebar-collapsed"} if sidebar.open().desktop == "closed" else None,
-        main,
-        sidebar,
+        *contents,
         components_dependencies(),
         _sidebar_init_js(),
         data_bslib_sidebar_init="true",
         data_open_desktop=sidebar.open().desktop,
         data_open_mobile=sidebar.open().mobile,
         data_collapsible_mobile=(
-            "true" if sidebar.open().mobile != "always" else "false"
+            "false" if sidebar.open().mobile in _always_open_mobile else "true"
         ),
         data_collapsible_desktop=(
-            "true" if sidebar.open().desktop != "always" else "false"
+            "false" if sidebar.open().desktop == "always" else "true"
         ),
         data_bslib_sidebar_border=trinary(border),
         data_bslib_sidebar_border_radius=trinary(border_radius),
@@ -700,33 +730,42 @@ def _get_layout_sidebar_sidebar(
 
     if not isinstance(sidebar, Sidebar):
         raise ValueError(
-            "`layout_sidebar()` is not being supplied with a `sidebar()` object. Please supply a `sidebar()` object to `layout_sidebar(sidebar)`."
+            "`layout_sidebar()` is not being supplied with a `sidebar()` object. "
+            "Please supply a `sidebar()` object to `layout_sidebar(sidebar)`."
         )
 
     # Use `original_args` here so `updated_args` can be safely altered in place
     for i, arg in zip(range(len(original_args)), original_args):
         if isinstance(arg, DeprecatedPanelSidebar):
             raise ValueError(
-                "`panel_sidebar()` is not being used as the first argument to `layout_sidebar(sidebar,)`. `panel_sidebar()` has been deprecated and will go away in a future version of Shiny. Please supply `panel_sidebar()` arguments directly to `args` in `layout_sidebar(sidebar)` and use `sidebar()` instead of `panel_sidebar()`."
+                "`panel_sidebar()` is not being used as the first argument to `layout_sidebar(sidebar,)`. "
+                "`panel_sidebar()` has been deprecated and will go away in a future version of Shiny. "
+                "Please supply `panel_sidebar()` arguments directly to `args` in `layout_sidebar(sidebar)` and use `sidebar()` instead of `panel_sidebar()`."
             )
         elif isinstance(arg, Sidebar):
             raise ValueError(
-                "`layout_sidebar()` is being supplied with multiple `sidebar()` objects. Please supply only one `sidebar()` object to `layout_sidebar()`."
+                "`layout_sidebar()` is being supplied with multiple `sidebar()` objects. "
+                "Please supply only one `sidebar()` object to `layout_sidebar()`."
             )
 
         elif isinstance(arg, DeprecatedPanelMain):
             if i != 0:
                 raise ValueError(
-                    "`panel_main()` is not being supplied as the second argument to `layout_sidebar()`. `panel_main()`/`panel_sidebar()` have been deprecated and will go away in a future version of Shiny. Please supply `panel_main()` arguments directly to `args` in `layout_sidebar(sidebar, *args)` and use `sidebar()` instead of `panel_sidebar()`."
+                    "`panel_main()` is not being supplied as the second argument to `layout_sidebar()`. "
+                    "`panel_main()`/`panel_sidebar()` have been deprecated and will go away in a future version of Shiny. "
+                    "Please supply `panel_main()` arguments directly to `args` in `layout_sidebar(sidebar, *args)` and use `sidebar()` instead of `panel_sidebar()`."
                 )
             if not isinstance(sidebar_orig_arg, DeprecatedPanelSidebar):
                 raise ValueError(
-                    "`panel_main()` is not being used with `panel_sidebar()`. `panel_main()`/`panel_sidebar()` have been deprecated and will go away in a future version of Shiny. Please supply `panel_main()` arguments directly to `args` in `layout_sidebar(sidebar, *args)` and use `sidebar()` instead of `panel_sidebar()`."
+                    "`panel_main()` is not being used with `panel_sidebar()`. "
+                    "`panel_main()`/`panel_sidebar()` have been deprecated and will go away in a future version of Shiny. "
+                    "Please supply `panel_main()` arguments directly to `args` in `layout_sidebar(sidebar, *args)` and use `sidebar()` instead of `panel_sidebar()`."
                 )
 
             if len(args) > 2:
                 raise ValueError(
-                    "Unexpected extra legacy `*args` have been supplied to `layout_sidebar()` in addition to `panel_main()` or `panel_sidebar()`. `panel_main()` has been deprecated and will go away in a future version of Shiny. Please supply `panel_main()` arguments directly to `args` in `layout_sidebar(sidebar, *args)` and use `sidebar()` instead of `panel_sidebar()`."
+                    "Unexpected extra legacy `*args` have been supplied to `layout_sidebar()` in addition to `panel_main()` or `panel_sidebar()`. `panel_main()` has been deprecated and will go away in a future version of Shiny. "
+                    "Please supply `panel_main()` arguments directly to `args` in `layout_sidebar(sidebar, *args)` and use `sidebar()` instead of `panel_sidebar()`."
                 )
             # Notes for this point in the code:
             # * We are working with args[0], a `DeprecatedPanelMain`; sidebar was originally a `DeprecatedPanelSidebar`
