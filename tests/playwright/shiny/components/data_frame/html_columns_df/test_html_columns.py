@@ -1,11 +1,13 @@
 import pytest
 from playwright.sync_api import Page
+from utils.deploy_utils import skip_if_not_chrome
 
 from shiny.playwright import controller
 from shiny.render._data_frame import ColumnFilter
 from shiny.run import ShinyAppProc
 
 
+@skip_if_not_chrome
 @pytest.mark.parametrize("df_type", ["pandas", "polars"])
 def test_validate_html_columns(
     page: Page, local_app: ShinyAppProc, df_type: str
@@ -14,11 +16,15 @@ def test_validate_html_columns(
 
     data_frame = controller.OutputDataFrame(page, f"{df_type}_df")
 
-    # verify shiny reactive output UI in cell
+    tab = controller.NavsetCardUnderline(page, "tab")
     output_txt = controller.OutputTextVerbatim(page, f"{df_type}_test_cell_text")
+    test_button = controller.InputActionButton(page, f"{df_type}_test_cell_button")
+
+    tab.set(df_type)
+
+    # verify shiny reactive output UI in cell
     # Add a larger timeout for CI
     output_txt.expect_value(f"{df_type}_test_cell_value 0", timeout=30 * 1000)
-    test_button = controller.InputActionButton(page, f"{df_type}_test_cell_button")
 
     # Test Shiny reactive output in cell
     test_button.click()

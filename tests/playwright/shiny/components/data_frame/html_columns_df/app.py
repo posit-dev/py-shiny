@@ -118,11 +118,21 @@ pl_penguins = (
 
 
 app_ui = ui.page_fluid(
-    ui.h2("Palmer Penguins"),
-    ui.h3("Pandas"),
-    ui.output_data_frame("pandas_df"),
-    ui.h3("Polars"),
-    ui.output_data_frame("polars_df"),
+    ui.navset_card_underline(
+        ui.nav_panel(
+            "init",
+            "Click another tab to initialize the larger output data frames",
+        ),
+        ui.nav_panel(
+            "pandas",
+            ui.output_data_frame("pandas_df"),
+        ),
+        ui.nav_panel(
+            "polars",
+            ui.output_data_frame("polars_df"),
+        ),
+        id="tab",
+    )
 )
 
 
