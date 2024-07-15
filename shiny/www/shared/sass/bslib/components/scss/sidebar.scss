@@ -1,6 +1,6 @@
 // User-facing variables, use for theming
 $bslib-sidebar-bg: rgba(var(--bs-emphasis-color-rgb, 0,0,0), 0.05) !default;
-$bslib-sidebar-fg: null !default;
+$bslib-sidebar-fg: var(--_main-fg) !default;
 $bslib-sidebar-toggle-bg: rgba(var(--bs-emphasis-color-rgb, 0,0,0), 0.1) !default;
 $bslib-sidebar-border: var(--bs-card-border-width, #{$card-border-width}) solid var(--bs-card-border-color, #{$card-border-color}) !default;
 
@@ -33,6 +33,7 @@ $bslib-sidebar-column-sidebar: Min(calc(100% - var(--_padding-icon)), var(--_sid
   --_toggle-position-x: calc(-2.5 * var(--_icon-size) - var(--bs-card-border-width, 1px));
   --_mobile-max-height: var(--bslib-sidebar-mobile-max-height, var(--bslib-sidebar-max-height-mobile));
   --_sidebar-mobile-opacity: var(--bslib-sidebar-mobile-opacity);
+  --_main-mobile-expanded-opacity: var(--bslib-sidebar-main-mobile-expanded-opacity, 0);
   --_sidebar-mobile-max-width: var(--bslib-sidebar-mobile-max-width);
   --_sidebar-mobile-box-shadow: var(--bslib-sidebar-mobile-box-shadow);
   --_column-main: minmax(0, 1fr);
@@ -47,7 +48,10 @@ $bslib-sidebar-column-sidebar: Min(calc(100% - var(--_padding-icon)), var(--_sid
   grid-template-columns: $bslib-sidebar-column-sidebar var(--_column-main);
   position: relative;
 
-  @include transition(grid-template-columns ease-in-out var(--_transition-duration));
+  @include transition(
+    grid-template-columns ease-in-out var(--_transition-duration),
+    background-color linear var(--_transition-duration)
+  );
 
   border: var(--_border);
   border-radius: var(--_border-radius);
@@ -89,7 +93,6 @@ $bslib-sidebar-column-sidebar: Min(calc(100% - var(--_padding-icon)), var(--_sid
     border-bottom-right-radius: 0;
     color: var(--_sidebar-fg);
     background-color: var(--_sidebar-bg);
-    backdrop-filter: blur(5px);
 
     > .sidebar-content {
       display: flex;
@@ -110,7 +113,7 @@ $bslib-sidebar-column-sidebar: Min(calc(100% - var(--_padding-icon)), var(--_sid
         margin-left: calc(-1 * var(--_padding));
         margin-right: calc(-1 * var(--_padding));
         &:last-child {
-            margin-bottom: calc(-1 * var(--_padding));
+          margin-bottom: calc(-1 * var(--_padding));
         }
         &:not(:last-child) {
           margin-bottom: $spacer;
@@ -315,28 +318,66 @@ $bslib-sidebar-column-sidebar: Min(calc(100% - var(--_padding-icon)), var(--_sid
     }
 
     &[data-collapsible-mobile="true"] {
+      // On mobile, when the sidebar is collapsible, we add an additional row
+      // for the collapse toggle. This avoid overlapping the toggle and the
+      // main content when the sidebar is collapsed. When the sidebar expands,
+      // it takes up the entire layout area.
+      grid-template-rows: calc(var(--_icon-button-size) + var(--_padding)) 1fr;
+      > .collapse-toggle {
+        grid-row: 1 / 2; // top row
+      }
+      > .main {
+        grid-row: 2 / 3; // bottom row
+      }
+      > .sidebar {
+        grid-row: 1 / 3; // whole layout
+      }
       // Sidebar layer has to be lifted up to cover other (nested) sidebars
-      &:not(.sidebar-collapsed), &.transitioning {
-        > .sidebar { z-index: $zindex-offcanvas; }
-        > .collapse-toggle { z-index: $zindex-offcanvas; }
+      &:not(.sidebar-collapsed),
+      &.transitioning {
+        > .sidebar {
+          z-index: $zindex-offcanvas;
+        }
+        > .collapse-toggle {
+          z-index: $zindex-offcanvas;
+        }
       }
 
+      > .collapse-toggle {
+        top: unset;
+        position: relative;
+        align-self: center;
+      }
+        
       // Keep toggle on sidebar side when expanded on mobile
       &:not(.sidebar-right) > .collapse-toggle {
         left: var(--_icon-size);
         right: unset;
+        justify-self: left;
       }
 
       &.sidebar-right > .collapse-toggle {
         right: var(--_icon-size);
         left: unset;
+        justify-self: right;
       }
 
       > .sidebar {
         opacity: var(--_sidebar-mobile-opacity, 1);
         max-width: var(--_sidebar-mobile-max-width, 100%);
         box-shadow: var(--_sidebar-mobile-box-shadow);
+      }
+        
+      // Move scrollable region to .sidebar-content to avoid scrolling sidebar
+      // elements underneath the collapse toggle
+      > .sidebar {
         margin: 0;
+        padding-top: var(--_padding-icon);
+      }
+      > .sidebar > .sidebar-content {
+        padding-top: 0;
+        height: 100%;
+        overflow-y: auto;
       }
 
       // When `max-width` is less than 100%, push it to the appropriate side
@@ -362,20 +403,29 @@ $bslib-sidebar-column-sidebar: Min(calc(100% - var(--_padding-icon)), var(--_sid
         }
       }
 
-      // Set padding on main area to account for toggle button
+      // Padding appears in collapse toggle grid region
       > .main {
-        padding-top: var(--_toggle-collective-height);
+        padding-top: 1px;
         padding-left: var(--_padding);
         padding-right: var(--_padding);
       }
 
-      // Soften main area when sidebar is expanded over content
+      // Hide (or soften) main area when sidebar is expanded over content
       > .main {
-        opacity: 0.33;
+        opacity: var(--_main-mobile-expanded-opacity);
         transition: opacity var(--_transition-easing-x) var(--_transition-duration);
       }
       &.sidebar-collapsed > .main {
         opacity: 1;
+      }
+
+      // Move main bg to layout container so that the collapse toggle grid
+      // region has the same background as the main area
+      > .main {
+        background-color: none;
+      }
+      &, &.sidebar-collapsed {
+        background-color: var(--_main-bg);
       }
     }
   }
