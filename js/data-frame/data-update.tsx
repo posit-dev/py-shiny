@@ -90,9 +90,12 @@ export function updateCellsData({
       // This may be overkill, but it guarantees that the incoming patches exit the saving state
       patches.forEach(({ rowIndex, columnIndex, value }) => {
         setCellEditMapAtLoc(rowIndex, columnIndex, (obj_draft) => {
-          obj_draft.value = value;
+          // If the cell is still saving, then set it back to ready.
+          // If not, then something else has changed the cell state, so don't change it.
+          if (obj_draft.state !== CellStateEnum.EditSaving) return;
 
           obj_draft.state = CellStateEnum.Ready;
+          obj_draft.value = value;
           obj_draft.errorTitle = undefined;
         });
       });
