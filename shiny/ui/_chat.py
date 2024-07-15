@@ -466,7 +466,7 @@ class Chat:
 
         messages = self._messages()
         if token_limits is not None:
-            messages = self._trim_messages(messages, token_limits)
+            messages = self._trim_messages(messages, token_limits, format)
 
         res: list[ChatMessage | ProviderMessage] = []
         for i, m in enumerate(messages):
@@ -827,7 +827,8 @@ class Chat:
     @staticmethod
     def _trim_messages(
         messages: tuple[StoredMessage, ...],
-        token_limits: tuple[int, int] = (4096, 1000),
+        token_limits: tuple[int, int],
+        format: MISSING_TYPE | ProviderMessageFormat,
     ) -> tuple[StoredMessage, ...]:
 
         n_total, n_reserve = token_limits
@@ -871,6 +872,11 @@ class Chat:
             remaining_non_system_tokens -= count
             if remaining_non_system_tokens >= 0:
                 messages2.append(m)
+
+        if format == "anthropic":
+            # For anthropic, the first message must be a user message.
+            while messages2[-1]["role"] != "user":
+                messages2.pop()
 
         messages2.reverse()
 
