@@ -47,6 +47,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Fixed #1440: When a Shiny Express app with a `www/` subdirectory was deployed to shinyapps.io or a Connect server, it would not start correctly. (#1442)
 
+* The return type for the data frame patch function now returns a list of `render.CellPatch` objects (which support `htmltools.TagNode` for the `value` attribute). These values will be set inside the data frame's `.data_view()` result. This also means that `.cell_patches()` will be a list of `render.CellPatch` objects.  (#1526)
+
 ### Other changes
 
 ## [0.10.2] - 2024-05-28

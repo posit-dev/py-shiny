@@ -17,8 +17,8 @@ from shiny.render._data_frame import ColumnFilter, ColumnSort
 
 # Import `shiny`'s typing extentions.
 # Since this is a private file, tell pyright to ignore the import
-from ..._typing_extensions import TypeGuard, assert_type
-from ...types import MISSING, MISSING_TYPE
+from ..._typing_extensions import TypeGuard
+from ...types import MISSING, MISSING_TYPE, ListOrTuple
 from .._types import (
     AttrValue,
     ListPatternOrStr,
@@ -817,7 +817,7 @@ class _InputSelectBase(
 
     def set(
         self,
-        selected: str | list[str],
+        selected: str | ListOrTuple[str],
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -1558,8 +1558,11 @@ class _MultipleDomItems:
             The key. Defaults to `"value"`.
         """
         # Make sure the locator contains all of `arr`
-
-        assert_type(arr, typing.List[str])
+        if not isinstance(arr, list):
+            raise TypeError(f"`{arr_name}` must be a list")
+        for item in arr:
+            if not isinstance(item, str):
+                raise TypeError(f"`{arr_name}` must be a list of strings")
 
         # Make sure the locator has len(uniq_arr) input elements
         _MultipleDomItems.assert_arr_is_unique(arr, f"`{arr_name}` must be unique")
@@ -1814,7 +1817,7 @@ class InputCheckboxGroup(
     def set(
         self,
         # TODO-future: Allow `selected` to be a single Pattern to perform matching against many items
-        selected: list[str],
+        selected: ListOrTuple[str],
         *,
         timeout: Timeout = None,
         **kwargs: object,
@@ -1830,7 +1833,11 @@ class InputCheckboxGroup(
             The timeout for the action. Defaults to `None`.
         """
         # Having an arr of size 0 is allowed. Will uncheck everything
-        assert_type(selected, typing.List[str])
+        if not isinstance(selected, list):
+            raise TypeError("`selected` must be a list or tuple")
+        for item in selected:
+            if not isinstance(item, str):
+                raise TypeError("`selected` must be a list of strings")
 
         # Make sure the selected items exist
         # Similar to `self.expect_choices(choices = selected)`, but with
@@ -1999,7 +2006,9 @@ class InputRadioButtons(
         timeout
             The timeout for the action. Defaults to `None`.
         """
-        assert_type(selected, str)
+        if not isinstance(selected, str):
+            raise TypeError("`selected` must be a string")
+
         # Only need to set.
         # The Browser will _unset_ the previously selected radio button
         self.loc_container.locator(
@@ -3938,8 +3947,10 @@ class OutputTable(_OutputBase):
         timeout
             The maximum time to wait for the text to appear. Defaults to `None`.
         """
-        assert_type(row, int)
-        assert_type(col, int)
+        if not isinstance(row, int):
+            raise TypeError("`row` must be an integer")
+        if not isinstance(col, int):
+            raise TypeError("`col` must be an integer")
         playwright_expect(
             self.loc.locator(
                 f"xpath=./table/tbody/tr[{row}]/td[{col}] | ./table/tbody/tr[{row}]/th[{col}]"
@@ -3994,7 +4005,8 @@ class OutputTable(_OutputBase):
         timeout
             The maximum time to wait for the text to appear. Defaults to `None`.
         """
-        assert_type(col, int)
+        if not isinstance(col, int):
+            raise TypeError("`col` must be an integer")
         playwright_expect(
             self.loc.locator(f"xpath=./table/tbody/tr/td[{col}]")
         ).to_have_text(
@@ -5981,8 +5993,10 @@ class OutputDataFrame(_UiWithContainer):
         timeout
             The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
-        assert_type(row, int)
-        assert_type(col, int)
+        if not isinstance(row, int):
+            raise TypeError("`row` must be an integer.")
+        if not isinstance(col, int):
+            raise TypeError("`col` must be an integer.")
         self._cell_scroll_if_needed(row=row, col=col, timeout=timeout)
         playwright_expect(self.cell_locator(row, col)).to_have_text(
             value, timeout=timeout
@@ -6078,7 +6092,8 @@ class OutputDataFrame(_UiWithContainer):
         timeout
             The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
-        assert_type(col, int)
+        if not isinstance(col, int):
+            raise TypeError("`col` must be an integer.")
         # It's zero based, nth(0) selects the first element.
         playwright_expect(self.loc_column_label.nth(col - 1)).to_have_text(
             value,

@@ -12,17 +12,32 @@ if TYPE_CHECKING:
     from ...session import Session
 
 
+def as_cell_html(x: TagNode, *, session: Session) -> CellHtml:
+    return {"isShinyHtml": True, "obj": session._process_ui(x)}
+
+
+# def is_cell_html(val: Any) -> TypeGuard[CellHtml]:
+#     return isinstance(val, dict) and (
+#         val.get("isShinyHtml", False)  # pyright: ignore[reportUnknownMemberType]
+#         is True
+#     )
+
+
 @overload
-def wrap_shiny_html(  # pyright: ignore[reportOverlappingOverload]
+def maybe_as_cell_html(  # pyright: ignore[reportOverlappingOverload]
     x: TagNode, *, session: Session
 ) -> CellHtml: ...
 @overload
-def wrap_shiny_html(x: Jsonifiable, *, session: Session) -> Jsonifiable: ...
-def wrap_shiny_html(
+def maybe_as_cell_html(  # pyright: ignore[reportOverlappingOverload]
+    x: TagNode, *, session: Session
+) -> CellHtml: ...
+@overload
+def maybe_as_cell_html(x: Jsonifiable, *, session: Session) -> Jsonifiable: ...
+def maybe_as_cell_html(
     x: Jsonifiable | TagNode, *, session: Session
 ) -> Jsonifiable | CellHtml:
     if is_shiny_html(x):
-        return {"isShinyHtml": True, "obj": session._process_ui(x)}
+        return as_cell_html(x, session=session)
     return cast(Jsonifiable, x)
 
 

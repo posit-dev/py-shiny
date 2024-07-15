@@ -9,11 +9,11 @@ from htmltools import TagNode
 
 from ..._typing_extensions import TypeIs
 from ...session import require_active_session
-from ._html import wrap_shiny_html
+from ._html import maybe_as_cell_html
 
 # from ...types import Jsonifiable
 from ._types import (
-    CellPatchProcessed,
+    CellPatch,
     ColsList,
     DataFrameLike,
     DataFrameLikeT,
@@ -118,7 +118,7 @@ def _(data: PlDataFrame) -> ListSeriesLike:
 
 
 def apply_frame_patches__typed(
-    data: DataFrameLikeT, patches: List[CellPatchProcessed]
+    data: DataFrameLikeT, patches: List[CellPatch]
 ) -> DataFrameLikeT:
     return cast(DataFrameLikeT, apply_frame_patches(data, patches))
 
@@ -126,13 +126,13 @@ def apply_frame_patches__typed(
 @singledispatch
 def apply_frame_patches(
     data: DataFrameLike,
-    patches: List[CellPatchProcessed],
+    patches: List[CellPatch],
 ) -> DataFrameLike:
     raise TypeError(f"Unsupported type: {type(data)}")
 
 
 @apply_frame_patches.register
-def _(data: PdDataFrame, patches: List[CellPatchProcessed]) -> PdDataFrame:
+def _(data: PdDataFrame, patches: List[CellPatch]) -> PdDataFrame:
     import pandas as pd
 
     # Enable copy-on-write mode for the data;
@@ -150,7 +150,7 @@ def _(data: PdDataFrame, patches: List[CellPatchProcessed]) -> PdDataFrame:
 
 
 @apply_frame_patches.register
-def _(data: PlDataFrame, patches: List[CellPatchProcessed]) -> PlDataFrame:
+def _(data: PlDataFrame, patches: List[CellPatch]) -> PlDataFrame:
     data = data.clone()
     for cell_patch in patches:
         data[cell_patch["row_index"], cell_patch["column_index"]] = cell_patch["value"]
@@ -231,7 +231,7 @@ def _(data: PlDataFrame) -> FrameJson:
         session = require_active_session(None)
 
         def wrap_shiny_html_with_session(x: TagNode):
-            return wrap_shiny_html(x, session=session)
+            return maybe_as_cell_html(x, session=session)
 
         html_columns = [i for i, x in enumerate(type_hints_type) if x == "html"]
 
