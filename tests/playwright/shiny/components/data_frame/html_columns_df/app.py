@@ -114,57 +114,7 @@ pl_penguins = (
         ).alias("Stage"),
     )
     .with_columns(pl.col("Sex").replace("NA", ""))
-    # .replace_column(
-    #     13,
-    #     pl.Series(["" if x == "NA" else x for x in pl_penguins["Sex"].to_list()]).alias(
-    #         "Sex"
-    #     ),
-    # )
 )
-# pl_penguins = pl_penguins.with_columns(
-#     pl.Series([ui.tags.u(x) for x in pl_penguins["Species"].to_list()]).alias(
-#         "Species"
-#     ),
-#     pl.Series([ui.h1(x) for x in pl_penguins["Region"].to_list()]).alias("Region"),
-#     pl.Series(
-#         [
-#             ui.div(
-#                 ui.input_checkbox(f"checkbox_{x}".join(random_generator()), f"{x}"),
-#                 ui.tags.img(
-#                     src="https://dka575ofm4ao0.cloudfront.net/pages-transactional_logos/retina/276517/posit-logo-fullcolor-TM.png",
-#                     height="20%",
-#                     width="20%",
-#                 ),
-#             )
-#             for x in pl_penguins["Island"]
-#         ],
-#     ).alias("Island2"),
-#     # pl.Series(
-#     #     [
-#     #         ui.div(htmlDep) if i == 1 else ui.div(val)
-#     #         for i, val in enumerate(pl_penguins["studyName"])
-#     #     ],
-#     # ).alias("studyName2"),
-#     pl.Series(
-#         [
-#             (
-#                 ui.p(  # pyright: ignore[reportArgumentType]
-#                     ui.input_action_button("polars_test_cell_button", "Test button"),
-#                     ui.output_text_verbatim("polars_test_cell_text", placeholder=True),
-#                 )
-#                 if i == 0
-#                 else ui.div(val)
-#             )
-#             for i, val in enumerate(pl_penguins["Stage"])
-#         ]
-#     ).alias("Stage"),
-# ).drop
-# # pl_penguins[1, 0] = htmlDep
-# # pl_penguins[1, 5] = ui.p(  # pyright: ignore[reportArgumentType]
-# #     ui.input_action_button("polars_test_cell_button", "Test button"),
-# #     ui.output_text_verbatim("test_cell_text", placeholder=True),
-# # )
-print(pl_penguins)
 
 
 app_ui = ui.page_fluid(

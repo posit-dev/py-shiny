@@ -16,7 +16,8 @@ def test_validate_html_columns(
 
     # verify shiny reactive output UI in cell
     output_txt = controller.OutputTextVerbatim(page, f"{df_type}_test_cell_text")
-    output_txt.expect_value(f"{df_type}_test_cell_value 0")
+    # Add a larger timeout for CI
+    output_txt.expect_value(f"{df_type}_test_cell_value 0", timeout=30 * 1000)
     test_button = controller.InputActionButton(page, f"{df_type}_test_cell_button")
 
     # Test Shiny reactive output in cell
