@@ -11,7 +11,6 @@ def test_patch_exits_saving_state(
     local_app: ShinyAppProc,
 ) -> None:
     page.goto(local_app.url)
-    page.set_default_timeout(1000)
 
     my_df = controller.OutputDataFrame(page, "my_df")
 
