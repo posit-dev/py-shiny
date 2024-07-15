@@ -3,7 +3,7 @@ from ._datagridtable import (
     DataGrid,
     DataTable,
 )
-from ._html import wrap_shiny_html
+from ._html import maybe_as_cell_html
 from ._patch import (
     CellPatch,
     CellValue,
@@ -27,7 +27,7 @@ __all__ = (
     "AbstractTabularData",
     "DataGrid",
     "DataTable",
-    "wrap_shiny_html",
+    "maybe_as_cell_html",
     "CellHtml",
     "CellPatch",
     "CellPatchProcessed",
