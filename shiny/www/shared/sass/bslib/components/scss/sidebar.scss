@@ -448,7 +448,14 @@ $bslib-sidebar-column-sidebar: Min(calc(100% - var(--_padding-icon)), var(--_sid
     & > .sidebar {
       max-height: var(--_mobile-max-height);
       overflow-y: auto;
+    }
+
+    &[data-open-mobile="always"] > .sidebar {
       border-top: var(--_vert-border);
+    }
+
+    &[data-open-mobile="always-above"] > .sidebar {
+      border-bottom: var(--_vert-border);
     }
 
     > .collapse-toggle {
