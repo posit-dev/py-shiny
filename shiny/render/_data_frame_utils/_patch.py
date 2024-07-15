@@ -4,6 +4,7 @@ from __future__ import annotations
 # TODO-barret-render.data_frame; Add examples of patch!
 from typing import Protocol, Sequence
 
+from ...types import ListOrTuple
 from ._types import CellPatch, CellValue
 
 
@@ -19,8 +20,8 @@ class PatchesFn(Protocol):
     async def __call__(
         self,
         *,
-        patches: list[CellPatch],
-    ) -> list[CellPatch]: ...
+        patches: tuple[CellPatch, ...],
+    ) -> ListOrTuple[CellPatch]: ...
 
 
 class PatchFnSync(Protocol):
@@ -35,8 +36,8 @@ class PatchesFnSync(Protocol):
     def __call__(
         self,
         *,
-        patches: list[CellPatch],
-    ) -> list[CellPatch]: ...
+        patches: tuple[CellPatch, ...],
+    ) -> ListOrTuple[CellPatch]: ...
 
 
 def assert_patches_shape(x: Sequence[CellPatch]) -> None:
