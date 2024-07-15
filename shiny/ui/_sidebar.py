@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Literal, Optional, cast
+from typing import TYPE_CHECKING, Literal, Optional, Union, cast
 
 from htmltools import (
     HTML,
@@ -53,7 +53,7 @@ A possible value for the `open` parameter in :func:`~shiny.ui.sidebar`:
 * `"always"`: the sidebar is always open and cannot be closed
 """
 
-SidebarOpenValueMobile = SidebarOpenValue | Literal["always-above"]
+SidebarOpenValueMobile = Union[SidebarOpenValue, Literal["always-above"]]
 
 _always_open_mobile = ("always", "always-above")
 
