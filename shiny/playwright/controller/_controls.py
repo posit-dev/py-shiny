@@ -5600,7 +5600,7 @@ class NavItem(_UiWithContainer):
 
         Parameters
         ----------
-        active
+        value
             `True` if the nav item is expected to be active, False otherwise.
         timeout
             The maximum time to wait for the expectation to pass. Defaults to `None`.
@@ -6193,8 +6193,6 @@ class OutputDataFrame(_UiWithContainer):
             The expected column labels.
 
             Note: None if the column labels are expected to not exist.
-        edit
-            `True` if the data frame is to be in edit mode, `False` otherwise.
         timeout
             The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
