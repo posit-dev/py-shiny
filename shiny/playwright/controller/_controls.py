@@ -1147,7 +1147,7 @@ class InputSelectize(
         """
         self._loc_events.click(timeout=timeout)
         expect_to_have_style(self._loc_dropdown, "display", "block", timeout=timeout)
-        self._loc_events.press("Escape", timeout=timeout)
+        self.page.locator("body").click(timeout=timeout)
         expect_to_have_style(self._loc_dropdown, "display", "none", timeout=timeout)
 
     def expect_choice_groups(
