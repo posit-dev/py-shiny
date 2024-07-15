@@ -55,6 +55,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * The main content area of `ui.page_sidebar()` and `ui.page_navbar()` with a page-level `sidebar` now have a minimum height and width to avoid squashed content in fillable layouts. The minimum height and width are controllable via `--bslib-page-main-min-{width,height}` CSS variables. (#1436)
 
+* Added a new option to place an always-open sidebar *above the main content* on mobile screens by providing `open={"mobile": "always-above"}` to `ui.sidebar()`. (#1436)
+
 
 ## [0.10.2] - 2024-05-28
 
