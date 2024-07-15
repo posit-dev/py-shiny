@@ -664,7 +664,7 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
         *,
         row_index: int,
         column_index: int,
-    ) -> CellPatch:
+    ):
         """
         Set the value within the cell patch map.
 
@@ -697,8 +697,6 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
         cell_patch_map = self._cell_patch_map().copy()
         cell_patch_map[(row_index, column_index)] = cell_patch
         self._cell_patch_map.set(cell_patch_map)
-
-        return cell_patch
 
     async def _attempt_update_cell_style(self) -> None:
         with session_context(self._get_session()):
