@@ -1,9 +1,12 @@
 from playwright.sync_api import Page
+from utils.deploy_utils import skip_if_not_chrome
 
 from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
 
+# Edit mode becomes flaky near end of test on CI on webkit.
+@skip_if_not_chrome
 def test_validate_row_selection_in_edit_mode(
     page: Page, local_app: ShinyAppProc
 ) -> None:

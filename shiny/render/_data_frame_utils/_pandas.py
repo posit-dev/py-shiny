@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 from htmltools import TagNode
 
 from ...session._utils import require_active_session
-from ._html import col_contains_shiny_html, wrap_shiny_html
+from ._html import col_contains_shiny_html, maybe_as_cell_html
 from ._tbl_data import PdDataFrame, frame_column_names
 from ._types import FrameDtype, FrameJson
 
@@ -55,7 +55,7 @@ def serialize_frame_pd(df: "pd.DataFrame") -> FrameJson:
             session = require_active_session(None)
 
             def wrap_shiny_html_with_session(x: TagNode):
-                return wrap_shiny_html(x, session=session)
+                return maybe_as_cell_html(x, session=session)
 
             for html_column in html_columns:
                 # _upgrade_ all the HTML columns to `CellHtml` json objects

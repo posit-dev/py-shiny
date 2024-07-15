@@ -28,8 +28,8 @@ from ._data_frame_utils import (
     SelectionModes,
     as_cell_selection,
     assert_patches_shape,
-    wrap_shiny_html,
 )
+from ._data_frame_utils._html import maybe_as_cell_html
 from ._data_frame_utils._styles import as_browser_style_infos
 from ._data_frame_utils._tbl_data import (
     apply_frame_patches__typed,
@@ -195,7 +195,7 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
     patches with updated values.
     """
 
-    _cell_patch_map: reactive.Value[dict[tuple[int, int], CellPatchProcessed]]
+    _cell_patch_map: reactive.Value[dict[tuple[int, int], CellPatch]]
     """
     Reactive dictionary of patches to be applied to the data frame.
 
@@ -204,7 +204,7 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
 
     The key is defined as `(row_index, column_index)`.
     """
-    cell_patches: reactive.Calc_[list[CellPatchProcessed]]
+    cell_patches: reactive.Calc_[list[CellPatch]]
     """
     Reactive value of the data frame's edits provided by the user.
     """
@@ -349,7 +349,7 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
         self._cell_patch_map = reactive.Value({})
 
         @reactive.calc
-        def self_cell_patches() -> list[CellPatchProcessed]:
+        def self_cell_patches() -> list[CellPatch]:
             return list(self._cell_patch_map().values())
 
         self.cell_patches = self_cell_patches
@@ -537,8 +537,8 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
 
         async def patches_fn(
             *,
-            patches: list[CellPatch],
-        ):
+            patches: tuple[CellPatch, ...],
+        ) -> ListOrTuple[CellPatch]:
             ret_patches: list[CellPatch] = []
             for patch in patches:
 
@@ -583,7 +583,7 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
         return self._set_patches_handler_impl(self._patches_handler)
 
     # Do not change this method name unless you update corresponding code in `/js/dataframe/`!!
-    async def _patches_handler(self, patches: list[CellPatch]) -> Jsonifiable:
+    async def _patches_handler(self, patches: tuple[CellPatch, ...]) -> Jsonifiable:
         """
         Accepts edit patches requests from the client and returns the processed patches.
 
@@ -602,7 +602,8 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
 
         with session_context(self._get_session()):
             # Call user's cell update method to retrieve formatted values
-            patches = await self._patches_fn(patches=patches)
+            val = await self._patches_fn(patches=patches)
+            patches = tuple(val)
 
         # Check to make sure `updated_infos` is a list of dicts with the correct keys
         bad_patches_format = not isinstance(patches, list)
@@ -625,21 +626,37 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
                     )
 
         # Add (or overwrite) new cell patches by setting each patch into the cell patch map
-        processed_patches: list[Jsonifiable] = []
         for patch in patches:
-            processed_patch = self._set_cell_patch_map_value(
+            self._set_cell_patch_map_value(
                 value=patch["value"],
                 row_index=patch["row_index"],
                 column_index=patch["column_index"],
             )
-            processed_patches.append(
-                cell_patch_processed_to_jsonifiable(processed_patch)
-            )
+
+        # Upgrade any HTML-like content to `CellHtml` json objects
+        processed_patches: list[CellPatchProcessed] = [
+            {
+                "row_index": patch["row_index"],
+                "column_index": patch["column_index"],
+                # Only upgrade the value if it is necessary
+                "value": maybe_as_cell_html(
+                    patch["value"],
+                    session=self._get_session(),
+                ),
+            }
+            for patch in patches
+        ]
+
+        # Prep the processed patches for sending to the client
+        jsonifiable_patches: list[Jsonifiable] = [
+            cell_patch_processed_to_jsonifiable(ret_processed_patch)
+            for ret_processed_patch in processed_patches
+        ]
 
         await self._attempt_update_cell_style()
 
         # Return the processed patches to the client
-        return processed_patches
+        return jsonifiable_patches
 
     def _set_cell_patch_map_value(
         self,
@@ -647,7 +664,7 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
         *,
         row_index: int,
         column_index: int,
-    ) -> CellPatchProcessed:
+    ):
         """
         Set the value within the cell patch map.
 
@@ -671,17 +688,15 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
         # TODO-barret-render.data_frame; The `value` should be coerced by pandas to the correct type
         # TODO-barret; See https://pandas.pydata.org/pandas-docs/stable/user_guide/basics.html#object-conversion
 
-        cell_patch_processed: CellPatchProcessed = {
+        cell_patch: CellPatch = {
             "row_index": row_index,
             "column_index": column_index,
-            "value": wrap_shiny_html(value, session=self._get_session()),
+            "value": value,
         }
         # Use copy to set the new value
         cell_patch_map = self._cell_patch_map().copy()
-        cell_patch_map[(row_index, column_index)] = cell_patch_processed
+        cell_patch_map[(row_index, column_index)] = cell_patch
         self._cell_patch_map.set(cell_patch_map)
-
-        return cell_patch_processed
 
     async def _attempt_update_cell_style(self) -> None:
         with session_context(self._get_session()):
@@ -704,7 +719,7 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
     # TODO-barret-render.data_frame; Add `update_cell_value()` method
     # def _update_cell_value(
     #     self, value: CellValue, *, row_index: int, column_index: int
-    # ) -> CellPatchProcessed:
+    # ) -> CellPatch:
     #     """
     #     Update the value of a cell in the data frame.
     #
