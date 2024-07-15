@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pandas as pd
 
 from shiny.express import render, ui
