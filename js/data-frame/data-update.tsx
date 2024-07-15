@@ -85,6 +85,18 @@ export function updateCellsData({
           draft[rowIndex]![columnIndex] = value;
         });
       });
+
+      // Set the old patches locations back to success state
+      // This may be overkill, but it guarantees that the incoming patches exit the saving state
+      patches.forEach(({ rowIndex, columnIndex, value }) => {
+        setCellEditMapAtLoc(rowIndex, columnIndex, (obj_draft) => {
+          obj_draft.value = value;
+
+          obj_draft.state = CellStateEnum.Ready;
+          obj_draft.errorTitle = undefined;
+        });
+      });
+      // Set the new patches
       newPatches.forEach(({ rowIndex, columnIndex, value }) => {
         setCellEditMapAtLoc(rowIndex, columnIndex, (obj_draft) => {
           obj_draft.value = value;
@@ -98,7 +110,6 @@ export function updateCellsData({
     .catch((err: string) => {
       patches.forEach(({ rowIndex, columnIndex, value }) => {
         setCellEditMapAtLoc(rowIndex, columnIndex, (obj_draft) => {
-          // Do not overwrite value!
           obj_draft.value = String(value);
 
           obj_draft.state = CellStateEnum.EditFailure;
