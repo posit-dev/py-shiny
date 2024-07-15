@@ -51,6 +51,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * The return type for the data frame patch function now returns a list of `render.CellPatch` objects (which support `htmltools.TagNode` for the `value` attribute). These values will be set inside the data frame's `.data_view()` result. This also means that `.cell_patches()` will be a list of `render.CellPatch` objects.  (#1526)
 
+* Made sure all `@render.data_frame` cells that have been edited are now restored back to ready state to handle the off chance that the returned patches are at different locations the the original edit patches. (#1529)
+
+
 ### Other changes
 
 ## [0.10.2] - 2024-05-28
