@@ -347,7 +347,7 @@ class Chat:
     def messages(
         self,
         *,
-        format: Literal["anthropic"] = "anthropic",
+        format: Literal["anthropic"],
         token_limits: tuple[int, int] | None = (4096, 1000),
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
@@ -357,7 +357,7 @@ class Chat:
     def messages(
         self,
         *,
-        format: Literal["google"] = "google",
+        format: Literal["google"],
         token_limits: tuple[int, int] | None = (4096, 1000),
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
@@ -367,7 +367,7 @@ class Chat:
     def messages(
         self,
         *,
-        format: Literal["langchain"] = "langchain",
+        format: Literal["langchain"],
         token_limits: tuple[int, int] | None = (4096, 1000),
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
@@ -377,7 +377,7 @@ class Chat:
     def messages(
         self,
         *,
-        format: Literal["openai"] = "openai",
+        format: Literal["openai"],
         token_limits: tuple[int, int] | None = (4096, 1000),
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
@@ -387,7 +387,7 @@ class Chat:
     def messages(
         self,
         *,
-        format: Literal["ollama"] = "ollama",
+        format: Literal["ollama"],
         token_limits: tuple[int, int] | None = (4096, 1000),
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
@@ -397,7 +397,7 @@ class Chat:
     def messages(
         self,
         *,
-        format: MISSING_TYPE = MISSING,
+        format: Literal["internal"],
         token_limits: tuple[int, int] | None = (4096, 1000),
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
@@ -406,7 +406,7 @@ class Chat:
     def messages(
         self,
         *,
-        format: MISSING_TYPE | ProviderMessageFormat = MISSING,
+        format: ProviderMessageFormat | Literal["internal"],
         token_limits: tuple[int, int] | None = (4096, 1000),
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
@@ -479,7 +479,7 @@ class Chat:
                 )
             content_key = m["transform_key" if transform else "pre_transform_key"]
             chat_msg = ChatMessage(content=m[content_key], role=m["role"])
-            if not isinstance(format, MISSING_TYPE):
+            if format != "internal":
                 chat_msg = as_provider_message(chat_msg, format)
             res.append(chat_msg)
 
@@ -828,7 +828,7 @@ class Chat:
     def _trim_messages(
         messages: tuple[StoredMessage, ...],
         token_limits: tuple[int, int],
-        format: MISSING_TYPE | ProviderMessageFormat,
+        format: ProviderMessageFormat | Literal["internal"],
     ) -> tuple[StoredMessage, ...]:
 
         n_total, n_reserve = token_limits
