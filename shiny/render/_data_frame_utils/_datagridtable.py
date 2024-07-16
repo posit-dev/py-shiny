@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import abc
-from typing import TYPE_CHECKING, Generic, Literal, Union
+from typing import Generic, Literal
 
 from ..._docstring import add_example
 from ._selection import (
@@ -13,20 +13,6 @@ from ._selection import (
 from ._styles import StyleFn, StyleInfo, as_browser_style_infos, as_style_infos
 from ._tbl_data import as_data_frame_like, serialize_frame
 from ._types import DataFrameLikeT, FrameJson
-
-if TYPE_CHECKING:
-
-    DataFrameResult = Union[
-        None,
-        DataFrameLikeT,
-        "DataGrid[DataFrameLikeT]",
-        "DataTable[DataFrameLikeT]",
-    ]
-
-else:
-    # The parent class of `data_frame` needs something to hold onto
-    # To avoid loading pandas, we use `object` as a placeholder
-    DataFrameResult = Union[None, object]
 
 
 class AbstractTabularData(abc.ABC):
@@ -41,11 +27,20 @@ class DataGrid(AbstractTabularData, Generic[DataFrameLikeT]):
     Holds the data and options for a :class:`~shiny.render.data_frame` output, for a
     spreadsheet-like view.
 
+    This class is used to wrap the returned data frame from a `@render.data_frame`
+    render function. It allows you to specify options for the data grid, such as the
+    width and height of the grid, whether to show a summary message, whether to show
+    filter inputs, whether the cells are editable, and how the cells are selected.
+
+    While there are currently no execution or parameter differences between `DataGrid`
+    and `DataTable` other than CSS styling in the browser, the two classes are kept
+    separate to allow for future extensibility.
+
     Parameters
     ----------
     data
-        A pandas `DataFrame` object, or any object that has a `.to_pandas()` method
-        (e.g., a Polars data frame or Arrow table).
+        A pandas or polars `DataFrame` object. If the object has a `.to_pandas()`
+        method, use the pandas form of your data.
     width
         A _maximum_ amount of horizontal space for the data grid to occupy, in CSS units
         (e.g. `"400px"`) or as a number, which will be interpreted as pixels. The
@@ -157,6 +152,14 @@ class DataGrid(AbstractTabularData, Generic[DataFrameLikeT]):
         self.styles = as_style_infos(styles)
 
     def to_payload(self) -> FrameJson:
+        """
+        Converts the `DataGrid` object to a payload dictionary.
+
+        Returns
+        -------
+        :
+            The payload dictionary representing the `DataGrid` object.
+        """
         res: FrameJson = {
             **serialize_frame(self.data),
             "options": {
@@ -183,11 +186,20 @@ class DataTable(AbstractTabularData, Generic[DataFrameLikeT]):
     Holds the data and options for a :class:`~shiny.render.data_frame` output, for a
     spreadsheet-like view.
 
+    This class is used to wrap the returned data frame from a `@render.data_frame`
+    render function. It allows you to specify options for the data table, such as the
+    width and height of the table, whether to show a summary message, whether to show
+    filter inputs, whether the cells are editable, and how the cells are selected.
+
+    While there are currently no execution or parameter differences between `DataGrid`
+    and `DataTable` other than CSS styling in the browser, the two classes are kept
+    separate to allow for future extensibility.
+
     Parameters
     ----------
     data
-        A pandas `DataFrame` object, or any object that has a `.to_pandas()` method
-        (e.g., a Polars data frame or Arrow table).
+        A pandas or polars `DataFrame` object. If the object has a `.to_pandas()`
+        method, use the pandas form of your data.
     width
         A _maximum_ amount of vertical space for the data table to occupy, in CSS units
         (e.g. `"400px"`) or as a number, which will be interpreted as pixels. The
@@ -298,6 +310,14 @@ class DataTable(AbstractTabularData, Generic[DataFrameLikeT]):
         self.styles = as_style_infos(styles)
 
     def to_payload(self) -> FrameJson:
+        """
+        Converts the `DataTable` object to a payload dictionary.
+
+        Returns
+        -------
+        :
+            The payload dictionary representing the `DataTable` object.
+        """
         res: FrameJson = {
             **serialize_frame(self.data),
             "options": {
