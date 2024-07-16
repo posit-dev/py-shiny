@@ -21,12 +21,40 @@ $bslib-sidebar-padding: $spacer * 1.5 !default;
     margin-bottom: 0;
     line-height: var(--#{$prefix}body-line-height);
   }
+}
 
+@include media-breakpoint-down(lg) {
+  // Remove symmetrical icon gutter from page-sidebar, i.e. show the gutter on
+  // the sidebar side only to make room for content.
+  .bslib-page-sidebar,
+  .bslib-page-navbar>div {
+    >.bslib-sidebar-layout.sidebar-collapsed {
+      &:not(.sidebar-right)>.main {
+        padding-right: var(--_padding);
+      }
+
+      &.sidebar-right>.main {
+        padding-left: var(--_padding);
+      }
+    }
+  }
 }
 
 @include media-breakpoint-up(sm) {
-  .bslib-page-main {
-    min-width: var(--bslib-page-main-min-width, #{$bslib-page-main-min-width});
-    min-height: var(--bslib-page-main-min-height, #{$bslib-page-main-min-height});
-  }
+  // Ensure the page-level main area has a minimum height and width to prevent
+  // overly squished content in small screens, like IDE preview panels.
+  .bslib-sidebar-layout {
+    .bslib-page-main {
+      min-height: var(--bslib-page-main-min-height, #{$bslib-page-main-min-height});
+    }
+
+    // But only apply the width constraint when the sidebar expanded (i.e.
+    // not collapsed or in transition) to prevent overlap with toggle button.
+    &:not(.sidebar-collapsed),
+    &.transitioning {
+      .bslib-page-main {
+        min-width: var(--bslib-page-main-min-width, #{$bslib-page-main-min-width});
+      }
+    }
+  } 
 }

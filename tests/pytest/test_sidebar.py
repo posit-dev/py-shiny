@@ -115,7 +115,7 @@ def test_sidebar_sets_aria_expanded_on_collapse_toggle():
 
 
 def test_sidebar_throws_for_invalid_open():
-    with pytest.raises(ValueError, match="`open` must be a non-empty string"):
+    with pytest.raises(ValueError, match="`open` must be a string matching"):
         ui.sidebar(open="bad")  # pyright: ignore[reportArgumentType]
 
     with pytest.raises(ValueError, match="`open` must be one of"):
