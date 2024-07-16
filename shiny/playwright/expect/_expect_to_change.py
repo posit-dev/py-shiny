@@ -14,10 +14,11 @@ def expect_to_change(
     func: Callable[[], Any], timeout_secs: float = 10
 ) -> Generator[None, None, None]:
     """
-    Context manager that yields when the value returned by func() changes. Use this
-    around code that has a side-effect of changing some state asynchronously (such as
-    all browser actions), to prevent moving onto the next step of the test until this
-    one has actually taken effect.
+    Context manager that yields when the value returned by func() changes.
+
+    Use this around code that has a side-effect of changing some state asynchronously
+    (such as all browser actions), to prevent moving onto the next step of the test
+    until this one has actually taken effect.
 
     Parameters
     ----------

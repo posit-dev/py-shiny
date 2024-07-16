@@ -29,9 +29,24 @@ def expect_attribute_to_have_value(
     value: AttrValue,
     timeout: Timeout = None,
 ) -> None:
-    """Expect an attribute to have a value. If `value` is `None`, then the attribute should not exist."""
+    """
+    Expect an attribute to have a value.
+
+    This method wraps Playwright's Locator expectation `to_have_attribute()` when `value is not `None` and `not_to_have_attribute()` when `value` is `None`. When `value` is `None`, the attribute should not exist and no value should be present.
+
+    Parameters
+    ----------
+    loc
+        The Playwright locator to check.
+    name
+        The attribute name.
+    value
+        The attribute value to check. When `value` is `None`, the attribute should not
+        exist and no value should be present.
+    timeout
+        The maximum time to wait for the attribute to appear
+    """
     if value is None:
-        # if isinstance(value, type(None)):
         # Not allowed to have any value for the attribute
         playwright_expect(loc).not_to_have_attribute(
             name, re.compile(r".*"), timeout=timeout
@@ -44,24 +59,54 @@ def expect_attribute_to_have_value(
 @no_example()
 def expect_to_have_class(
     loc: Locator,
-    cls: str,
+    class_: str,
     *,
     timeout: Timeout = None,
 ) -> None:
-    """Expect a locator to contain a class value"""
-    cls_regex = re.compile(rf"(^|\s+){re.escape(cls)}(\s+|$)")
+    """
+    Expect a locator to contain a class value
+
+    This method wraps Playwright's Locator expectation `to_have_class()`. However, Playwright does not have a method to check for individual class values within the elements `class` value. This method will insert the class value into a regex pattern to check for the class value within the `class` attribute according to word boundaries or the start/end of the `class` string.
+
+    Parameters
+    ----------
+    loc
+        The Playwright locator to check.
+    class_
+        The class value to find.
+    timeout
+        The maximum time to wait for the class to appear.
+    """
+    cls_regex = re.compile(rf"(^|\s+){re.escape(class_)}(\s+|$)")
     playwright_expect(loc).to_have_class(cls_regex, timeout=timeout)
 
 
 @no_example()
 def expect_not_to_have_class(
     loc: Locator,
-    cls: str,
+    class_: str,
     *,
     timeout: Timeout = None,
 ) -> None:
-    """Expect a locator not to contain a class value"""
-    cls_regex = re.compile(rf"(^|\s+){re.escape(cls)}(\s+|$)")
+    """
+    Expect a locator not to contain a class value
+
+    This method wraps Playwright's Locator expectation `not_to_have_class()`. However
+    Playwright does not have a method to check for individual class values within the
+    elements `class` value. This method will insert the class value into a regex pattern
+    to check for the class value within the `class` attribute according to word
+    boundaries or the start/end of the `class` string.
+
+    Parameters
+    ----------
+    loc
+        The Playwright locator to check.
+    class_
+        The class value that should not be found within the resolved locator.
+    timeout
+        The maximum time to wait for the class to disappear.
+    """
+    cls_regex = re.compile(rf"(^|\s+){re.escape(class_)}(\s+|$)")
     playwright_expect(loc).not_to_have_class(cls_regex, timeout=timeout)
 
 
@@ -74,7 +119,20 @@ def expect_to_have_style(
     *,
     timeout: Timeout = None,
 ) -> None:
-    """Expect the `style` attribute to have a value. If `value` is `None`, then the style attribute should not exist."""
+    """
+    Expect the `style` attribute to have a value.
+
+    Parameters
+    ----------
+    loc
+        The Playwright locator to check.
+    css_key
+        The CSS key to check.
+    css_value
+        The CSS value to check. If `None`, then the style attribute should not exist.
+    timeout
+        The maximum time to wait for the style to appear.
+    """
     if css_value is None:
         # Not allowed to have any value for the style
         playwright_expect(loc).not_to_have_attribute(
@@ -93,15 +151,15 @@ def expect_to_have_style(
 
 def _expect_class_value(
     loc: Locator,
-    cls: str,
+    class_: str,
     has_class: bool,
     timeout: Timeout = None,
 ) -> None:
     """Expect a locator to have (or not to have) a class value"""
     if has_class:
-        expect_to_have_class(loc, cls, timeout=timeout)
+        expect_to_have_class(loc, class_, timeout=timeout)
     else:
-        expect_not_to_have_class(loc, cls, timeout=timeout)
+        expect_not_to_have_class(loc, class_, timeout=timeout)
 
 
 def _attr_match_str(key: str, value: str) -> str:

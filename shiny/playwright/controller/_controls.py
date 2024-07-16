@@ -1943,11 +1943,8 @@ class InputCheckboxGroup(
     _WidthContainerM,
     _RadioButtonCheckboxGroupBase,
 ):
-    # label: TagChild,
-    # choices: ChoicesArg,
-    # selected: Optional[Union[str, list[str]]] = None,
-    # inline: bool = False,
-    # width: Optional[str] = None,
+    """Controller for :func:`shiny.ui.input_checkbox_group`."""
+
     def __init__(
         self,
         page: Page,
@@ -2913,7 +2910,7 @@ class InputSlider(_InputSliderBase):
 
 
 class InputSliderRange(_InputSliderBase):
-    """Controller for :func:`shiny.ui.input_slider_range`."""
+    """Controller for :func:`shiny.ui.input_slider` with a slider range."""
 
     loc_irs_label_from: Locator
     """
@@ -3738,7 +3735,7 @@ class OutputText(
     _OutputInlineContainerM,
     _OutputTextValue,
 ):
-    """Controller for :func:`shiny.ui.text_output`."""
+    """Controller for :func:`shiny.ui.output_text`."""
 
     loc: Locator
     """
@@ -3775,7 +3772,7 @@ class OutputText(
 
 
 class OutputCode(_OutputTextValue):
-    """Controller for :func:`shiny.ui.code_output`."""
+    """Controller for :func:`shiny.ui.output_code`."""
 
     loc: Locator
     """
@@ -3820,7 +3817,7 @@ class OutputCode(_OutputTextValue):
 
 
 class OutputTextVerbatim(_OutputTextValue):
-    """Controller for :func:`shiny.ui.text_output_verbatim`."""
+    """Controller for :func:`shiny.ui.output_text_verbatim`."""
 
     loc: Locator
     """
@@ -4029,7 +4026,7 @@ class OutputImage(_OutputImageBase):
 
 
 class OutputPlot(_OutputImageBase):
-    """Controller for :func:`shiny.ui.plot_output`."""
+    """Controller for :func:`shiny.ui.output_plot`."""
 
     loc: Locator
     """
@@ -4051,7 +4048,7 @@ class OutputPlot(_OutputImageBase):
 
 
 class OutputUi(_OutputInlineContainerM, _OutputBase):
-    """Controller for :func:`shiny.ui.ui_output`."""
+    """Controller for :func:`shiny.ui.output_ui`."""
 
     def __init__(self, page: Page, id: str) -> None:
         """
@@ -4086,7 +4083,7 @@ class OutputUi(_OutputInlineContainerM, _OutputBase):
 
 # When making selectors, use `xpath` so that direct decendents can be checked
 class OutputTable(_OutputBase):
-    """Controller for :func:`shiny.ui.table_output`."""
+    """Controller for :func:`shiny.ui.output_table`."""
 
     def __init__(self, page: Page, id: str) -> None:
         """
@@ -4240,7 +4237,7 @@ class Sidebar(
     _WidthLocM,
     _UiWithContainer,
 ):
-    """Controller for func: `shiny.ui.sidebar`."""
+    """Controller for :func:`shiny.ui.sidebar`."""
 
     loc_container: Locator
     """
@@ -5411,14 +5408,14 @@ class Tooltip(_OverlayBase):
         self.loc_trigger.hover(timeout=timeout)
 
 
-class _NavItemBase(_UiWithContainer):
-    """A Base mixin class for Nav and NavItem controls"""
+class _NavPanelBase(_UiWithContainer):
+    """A Base mixin class for Nav controls"""
 
-    def nav_item(
+    def nav_panel(
         self,
         value: str,
-    ) -> NavItem:
-        return NavItem(self.page, self.id, value)
+    ) -> NavPanel:
+        return NavPanel(self.page, self.id, value)
 
     def set(self, value: str, *, timeout: Timeout = None) -> None:
         """
@@ -5429,7 +5426,7 @@ class _NavItemBase(_UiWithContainer):
         value
             The selected nav item.
         """
-        self.nav_item(value).click(timeout=timeout)
+        self.nav_panel(value).click(timeout=timeout)
 
     def expect_value(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
         """
@@ -5532,33 +5529,33 @@ class _NavItemBase(_UiWithContainer):
         self.expect.to_have_text(value, timeout=timeout)
 
 
-class NavItem(_UiWithContainer):
-    """Controller for :func:`shiny.ui.nav_item`."""
+class NavPanel(_UiWithContainer):
+    """Controller for :func:`shiny.ui.nav_panel`."""
 
     """
-    Playwright `Locator` for the content of the nav item.
+    Playwright `Locator` for the content of the nav panel.
     """
     loc: Locator
     """
-    Playwright `Locator` for the nav item.
+    Playwright `Locator` for the nav panel.
     """
     loc_container: Locator
     """
-    Playwright `Locator` for the nav item container.
+    Playwright `Locator` for the nav panel container.
     """
 
     def __init__(self, page: Page, id: str, data_value: str) -> None:
         """
-        Initializes a new instance of the `NavItem` class.
+        Initializes a new instance of the `NavPanel` class.
 
         Parameters
         ----------
         page
             Playwright `Page` of the Shiny app.
         id
-            The ID of the nav item.
+            The ID of the nav panel.
         data_value
-            The data value of the nav item.
+            The data value of the nav panel.
         """
         super().__init__(
             page,
@@ -5574,7 +5571,7 @@ class NavItem(_UiWithContainer):
     @property
     def loc_content(self) -> Locator:
         """
-        Returns the locator for the content of the nav item.
+        Returns the locator for the content of the nav panel.
 
         Note: This requires 2 steps. Will not work if the overlay element is rapidly created during locator fetch
         """
@@ -5585,23 +5582,23 @@ class NavItem(_UiWithContainer):
 
     def click(self, *, timeout: Timeout = None) -> None:
         """
-        Clicks the nav item.
+        Clicks the nav panel.
 
         Parameters
         ----------
         timeout
-            The maximum time to wait for the nav item to be visible and interactable. Defaults to `None`.
+            The maximum time to wait for the nav panel to be visible and interactable. Defaults to `None`.
         """
         self.loc.click(timeout=timeout)
 
     def expect_active(self, value: bool, *, timeout: Timeout = None) -> None:
         """
-        Expects the nav item to be active or inactive.
+        Expects the nav panel to be active or inactive.
 
         Parameters
         ----------
         value
-            `True` if the nav item is expected to be active, False otherwise.
+            `True` if the nav panel is expected to be active, False otherwise.
         timeout
             The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
@@ -5611,7 +5608,7 @@ class NavItem(_UiWithContainer):
         self, value: PatternOrStr, *, timeout: Timeout = None
     ) -> None:
         """
-        Expects the nav item content to have the specified text.
+        Expects the nav panel content to have the specified text.
 
         Parameters
         ----------
@@ -5623,7 +5620,7 @@ class NavItem(_UiWithContainer):
         playwright_expect(self.loc_content).to_have_text(value, timeout=timeout)
 
 
-class NavsetTab(_NavItemBase):
+class NavsetTab(_NavPanelBase):
     """Controller for :func:`shiny.ui.navset_tab`."""
 
     loc: Locator
@@ -5654,7 +5651,7 @@ class NavsetTab(_NavItemBase):
         )
 
 
-class NavsetPill(_NavItemBase):
+class NavsetPill(_NavPanelBase):
     """Controller for :func:`shiny.ui.navset_pill`."""
 
     def __init__(self, page: Page, id: str) -> None:
@@ -5676,7 +5673,7 @@ class NavsetPill(_NavItemBase):
         )
 
 
-class NavsetUnderline(_NavItemBase):
+class NavsetUnderline(_NavPanelBase):
     """Controller for :func:`shiny.ui.navset_underline`."""
 
     def __init__(self, page: Page, id: str) -> None:
@@ -5698,7 +5695,7 @@ class NavsetUnderline(_NavItemBase):
         )
 
 
-class NavsetPillList(_NavItemBase):
+class NavsetPillList(_NavPanelBase):
     """Controller for :func:`shiny.ui.navset_pill_list`."""
 
     def __init__(self, page: Page, id: str) -> None:
@@ -5720,7 +5717,7 @@ class NavsetPillList(_NavItemBase):
         )
 
 
-class NavsetCardTab(_NavItemBase):
+class NavsetCardTab(_NavPanelBase):
     """Controller for :func:`shiny.ui.navset_card_tab`."""
 
     def __init__(self, page: Page, id: str) -> None:
@@ -5742,7 +5739,7 @@ class NavsetCardTab(_NavItemBase):
         )
 
 
-class NavsetCardPill(_NavItemBase):
+class NavsetCardPill(_NavPanelBase):
     """Controller for :func:`shiny.ui.navset_card_pill`."""
 
     def __init__(self, page: Page, id: str) -> None:
@@ -5764,7 +5761,7 @@ class NavsetCardPill(_NavItemBase):
         )
 
 
-class NavsetCardUnderline(_NavItemBase):
+class NavsetCardUnderline(_NavPanelBase):
     """Controller for :func:`shiny.ui.navset_card_underline`."""
 
     def __init__(self, page: Page, id: str) -> None:
@@ -5786,7 +5783,7 @@ class NavsetCardUnderline(_NavItemBase):
         )
 
 
-class NavsetHidden(_NavItemBase):
+class NavsetHidden(_NavPanelBase):
     """Controller for :func:`shiny.ui.navset_hidden`."""
 
     def __init__(self, page: Page, id: str) -> None:
@@ -5808,7 +5805,7 @@ class NavsetHidden(_NavItemBase):
         )
 
 
-class NavsetBar(_NavItemBase):
+class NavsetBar(_NavPanelBase):
     """Controller for :func:`shiny.ui.navset_bar`."""
 
     def __init__(self, page: Page, id: str) -> None:

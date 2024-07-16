@@ -47,7 +47,7 @@ quartodoc:
     - title: Navigation (tab) panels
       desc: Methods for interacting with Shiny app UI content controller.
       contents:
-        - playwright.controller.NavItem
+        - playwright.controller.NavPanel
         - playwright.controller.NavsetBar
         - playwright.controller.NavsetCardPill
         - playwright.controller.NavsetCardTab
