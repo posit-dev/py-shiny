@@ -594,7 +594,7 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
                     and isinstance(patch["row_index"], int)
                     and isinstance(patch["column_index"], int)
                     # # Do not check the value type here. It should be validated by
-                    # # `._set_cell_patch_map_value()` later with more type hint context
+                    # # `._set_cell_patch_map_patches()` later with more type hint context
                     # and isinstance(updated_patch["value"], CellValue)
                 ):
                     raise ValueError(
@@ -604,12 +604,7 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
                     )
 
         # Add (or overwrite) new cell patches by setting each patch into the cell patch map
-        for patch in patches:
-            self._set_cell_patch_map_value(
-                value=patch["value"],
-                row_index=patch["row_index"],
-                column_index=patch["column_index"],
-            )
+        self._set_cell_patch_map_patches(patches)
 
         # Upgrade any HTML-like content to `CellHtml` json objects
         processed_patches: list[CellPatchProcessed] = [
@@ -636,44 +631,39 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
         # Return the processed patches to the client
         return jsonifiable_patches
 
-    def _set_cell_patch_map_value(
+    def _set_cell_patch_map_patches(
         self,
-        value: CellValue,
-        *,
-        row_index: int,
-        column_index: int,
+        patches: ListOrTuple[CellPatch],
     ):
         """
-        Set the value within the cell patch map.
+        Set the patches within the cell patch map.
 
         Parameters
         ----------
-        value
-            The new value to set the cell to.
-        row_index
-            The row index of the cell to update.
-        column_index
-            The column index of the cell to update.
+        patches
+            Set of patches to apply to store in the cell patch map.
         """
-        assert isinstance(
-            row_index, int
-        ), f"Expected `row_index` to be an `int`, got {type(row_index)}"
-        assert isinstance(
-            column_index, int
-        ), f"Expected `column_index` to be an `int`, got {type(column_index)}"
-
-        # TODO-barret-render.data_frame; Check for cell type and compare against self._type_hints
-        # TODO-barret-render.data_frame; The `value` should be coerced by pandas to the correct type
-        # TODO-barret; See https://pandas.pydata.org/pandas-docs/stable/user_guide/basics.html#object-conversion
-
-        cell_patch: CellPatch = {
-            "row_index": row_index,
-            "column_index": column_index,
-            "value": value,
-        }
         # Use copy to set the new value
         cell_patch_map = self._cell_patch_map().copy()
-        cell_patch_map[(row_index, column_index)] = cell_patch
+
+        for patch in patches:
+            row_index = patch["row_index"]
+            column_index = patch["column_index"]
+
+            assert isinstance(
+                row_index, int
+            ), f"Expected `row_index` to be an `int`, got {type(row_index)}"
+            assert isinstance(
+                column_index, int
+            ), f"Expected `column_index` to be an `int`, got {type(column_index)}"
+
+            # TODO-render.data_frame; Possibly check for cell type and compare against self._type_hints
+            # TODO-render.data_frame; The `value` should be coerced by pandas to the correct type
+            # TODO-render.data_frame; See https://pandas.pydata.org/pandas-docs/stable/user_guide/basics.html#object-conversion
+
+            cell_patch_map[(row_index, column_index)] = patch
+
+        # Once all patches are set, update the cell patch map with new version
         self._cell_patch_map.set(cell_patch_map)
 
     async def _attempt_update_cell_style(self) -> None:
@@ -710,8 +700,8 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
     #     column_index
     #         The column index of the cell to update.
     #     """
-    #     cell_patch_processed = self._set_cell_patch_map_value(
-    #         value, row_index=row_index, column_index=column_index
+    #     cell_patch_processed = self._set_cell_patch_map_patches(
+    #         {value: value, row_index: row_index, column_index: column_index}
     #     )
     #     # TODO-barret-render.data_frame; Send message to client to update cell value
     #     return cell_patch_processed
