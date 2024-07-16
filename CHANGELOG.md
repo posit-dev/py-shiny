@@ -58,6 +58,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Other changes
 
+* `ui.input_action_button()` and `ui.update_action_button()` gain a `disabled` argument. When the button is disabled, it appears grayed out and cannot be clicked. (#1465)
+
 ## [0.10.2] - 2024-05-28
 
 ### Bug fixes
