@@ -147,6 +147,9 @@ def test_sort(
     select_dataset.set("diamonds")
     select_dataset.expect.to_have_value("diamonds")
 
+    selection_mode = controller.InputSelect(page, "selection_mode")
+    selection_mode.set("none")
+
     # Table cell locators
     header_clarity = grid_container.locator("tr:first-child th:nth-child(4)")
     first_cell_clarity = grid_container.locator("tr:first-child td:nth-child(4)")
@@ -276,6 +279,8 @@ def _filter_test_impl(
     summary: Locator,
     snapshot: Any,
 ):
+    controller.InputSelect(page, "selection_mode").set("none")
+
     filters = grid.locator("tr.filters")
 
     filter_subidir_min = filters.locator("> th:nth-child(1) > div > input:nth-child(1)")
