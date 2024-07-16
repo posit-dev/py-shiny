@@ -29,7 +29,7 @@ def expect_not_to_have_attribute(
     timeout: Timeout = None,
 ) -> None:
     """
-    Expect that no attribute exists
+    Expect that the attribute does not exist.
 
     This method wraps Playwright's Locator expectation `not_to_have_attribute()` and
     sets the value to a regular expression that matches anything.
@@ -61,12 +61,12 @@ def expect_to_have_class(
     timeout: Timeout = None,
 ) -> None:
     """
-    Expect a locator to contain a class value
+    Expect a CSS class value is found.
 
     This method wraps Playwright's Locator expectation [`to_have_class()`
     method](https://playwright.dev/python/docs/api/class-locatorassertions#locator-assertions-to-have-class).
     However, Playwright does not have an easy method to check for individual class
-    values within the elements `class` value.
+    values _within_ the elements `class` value.
 
     This method will insert the class value
     into a regex pattern to check for the class value within the `class` attribute
@@ -97,12 +97,12 @@ def expect_not_to_have_class(
     timeout: Timeout = None,
 ) -> None:
     """
-    Expect a locator not to contain a class value
+    Expect a CSS class value is not found.
 
     This method wraps Playwright's Locator expectation [`not_to_have_class()`
     method](https://playwright.dev/python/docs/api/class-locatorassertions#locator-assertions-not-to-have-class).
     However, Playwright does not have an easy method to check for individual class
-    values within the elements `class` value.
+    values _within_ the elements `class` value.
 
     This method will insert the class string
     value into a regex pattern to check for the class value within the `class` attribute
@@ -173,7 +173,7 @@ def expect_not_to_have_style(
     timeout: Timeout = None,
 ) -> None:
     """
-    Expect a key within `style` attribute to not exist
+    Expect a key within `style` attribute to not exist.
 
     Convenience method to check if a CSS key does not exist within the `style`
     attribute. The `key` is escaped within a regular expression that checks within

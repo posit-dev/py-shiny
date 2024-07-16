@@ -4027,6 +4027,8 @@ class _OutputImageBase(_OutputInlineContainerM, _OutputBase):
 
 
 class OutputImage(_OutputImageBase):
+    """Controller for :func:`shiny.ui.output_image`."""
+
     def __init__(self, page: Page, id: str) -> None:
         """
         Initializes an image output.
@@ -4409,7 +4411,7 @@ class _CardBodyM:
 
         Parameters
         ----------
-        text
+        value
             The expected text or a list of expected texts.
         timeout
             The maximum time to wait for the text to appear. Defaults to `None`.
