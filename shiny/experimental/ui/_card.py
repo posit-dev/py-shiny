@@ -18,96 +18,17 @@ from htmltools import (
 )
 
 from ..._docstring import add_example
-from ...types import MISSING, MISSING_TYPE
-from ...ui._card import CardItem, WrapperCallable, _card_impl, card_body
+from ...ui._card import CardItem, card_body
 from ...ui.css import CssUnit, as_css_unit
 from ...ui.fill import as_fill_item, as_fillable_container
 
 __all__ = (
-    # Worried about `wrapper`
-    "card",
     # Do not want to expose card_body yet
     "card_body",
     # Questioning:
     "card_title",
     "card_image",
 )
-
-
-def card(
-    *args: TagChild | TagAttrs | CardItem,
-    full_screen: bool = False,
-    height: Optional[CssUnit] = None,
-    max_height: Optional[CssUnit] = None,
-    min_height: Optional[CssUnit] = None,
-    fill: bool = True,
-    class_: Optional[str] = None,
-    wrapper: WrapperCallable | None | MISSING_TYPE = MISSING,
-    **kwargs: TagAttrValue,
-) -> Tag:
-    """
-    A Bootstrap card component
-
-    A card is a general purpose container that groups related UI elements together with a border
-    and optional padding. To learn more about `card()`s, see [the bslib card
-    article](https://rstudio.github.io/bslib/articles/cards.html).
-
-    Parameters
-    ----------
-    *args
-        Unnamed arguments can be any valid child of an :class:`~htmltools.Tag` (This
-        includes card items such as :func:`~shiny.experimental.ui.card_body`).
-    full_screen
-        If `True`, an icon will appear when the user's pointer hovers over the card body. Clicking the
-        icon expands the card to fit viewport size.
-    height, max_height, min_height
-        Any valid CSS unit (e.g., `height="200px"`). These will not apply when a card is made
-        `full_screen`. In this case, consider setting a `height` in
-        :func:`~shiny.experimental.ui.card_body`.
-    fill
-        Whether or not to allow the card to grow/shrink to fit a fillable container with
-        an opinionated height (e.g., :func:`~shiny.ui.page_fillable`).
-    class_
-        Additional CSS classes for the returned Tag.
-    wrapper
-        A function that returns a UI element to call on any unnamed arguments in `*args`
-        that are not already card item(s) (like
-        :func:`~shiny.ui.card_header`,
-        :func:`~shiny.experimental.ui.card_body`, etc.). Note that non-card items are
-        grouped together into one `wrapper` call (e.g. given `card("a", "b",
-        card_body("c"), "d")`, `wrapper` would be called twice, once with `"a"` and
-        `"b"` and once with `"d"`).
-    **kwargs
-        HTML attributes on the returned Tag.
-
-    Returns
-    -------
-    :
-        A :func:`~shiny.ui.tags.div` tag.
-
-    See Also
-    --------
-    * :func:`~shiny.ui.layout_column_wrap` for laying out multiple cards
-      or multiple columns inside a card.
-    * :func:`~shiny.ui.card_header` for creating a header within a card.
-    * :func:`~shiny.experimental.ui.card_title` for creating a title within a card body.
-    * :func:`~shiny.experimental.ui.card_body` for putting content inside a card.
-    * :func:`~shiny.ui.card_footer` for creating a footer within a card.
-    * :func:`~shiny.experimental.ui.card_image` for adding an image to a card.
-    """
-    return _card_impl(
-        *args,
-        full_screen=full_screen,
-        height=height,
-        max_height=max_height,
-        min_height=min_height,
-        fill=fill,
-        class_=class_,
-        wrapper=wrapper,
-        id=None,
-        **kwargs,
-    )
-
 
 ############################################################################
 
