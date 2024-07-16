@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from htmltools import TagAttrs, TagAttrValue, TagChild
+from htmltools import TagAttrs, TagAttrValue, TagChild, TagFunction, Tagifiable, tags
 
 from ..._deprecated import warn_deprecated
 from ...types import MISSING, MISSING_TYPE
@@ -74,6 +74,50 @@ def card_body(
         class_=class_,
         **kwargs,
     )
+
+
+def card_title(
+    *args: TagChild | TagAttrs,
+    container: TagFunction = tags.h5,
+    **kwargs: TagAttrValue,
+) -> Tagifiable:
+    """
+    Deprecated. Please use :func:`~shiny.ui.tags.h5()` instead.
+
+    :func:`~shiny.experimental.ui.card_title` creates a general container for the "title" of
+    a :func:`~shiny.ui.card`. This component is designed
+    to be provided as a direct child to :func:`~shiny.ui.card`.
+
+    Parameters
+    ----------
+    *args
+        Contents to appear in the card's title, or tag attributes to pass to the
+        resolved :class:`~htmltools.Tag` object.
+    container
+        Method for the returned :class:`~htmltools.Tag` object. Defaults to
+        :func:`~shiny.ui.tags.h5`.
+    **kwargs
+        Additional HTML attributes for the returned :class:`~htmltools.Tag` object.
+
+    Returns
+    -------
+    :
+        An :class:`~htmltools.Tag` object.
+
+    See Also
+    --------
+    * :func:`~shiny.ui.card` for creating a card component.
+    * :func:`~shiny.ui.card_header` for creating a header within a card.
+    * :func:`~shiny.experimental.ui.card_body` for putting content inside a card.
+    * :func:`~shiny.ui.card_footer` for creating a footer within a card.
+    * :func:`~shiny.experimental.ui.card_image` for adding an image to a card.
+    """
+    warn_deprecated(
+        "`shiny.experimental.ui.card_title()` was deprecated in shiny 1.0.0 "
+        "and will be removed in a future version of shiny. "
+        "Please use `shiny.ui.tags.h5()` instead."
+    )
+    return container(*args, **kwargs)
 
 
 __all__ = (
