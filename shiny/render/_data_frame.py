@@ -64,36 +64,6 @@ DataFrameResult = Union[
 DataFrameValue = Union[None, DataGrid[DataFrameLikeT], DataTable[DataFrameLikeT]]
 
 
-# # TODO-future; Use `dataframe-api-compat>=0.2.6` to injest dataframes and return standardized dataframe structures
-# # TODO-future: Find this type definition: https://github.com/data-apis/dataframe-api-compat/blob/273c0be45962573985b3a420869d0505a3f9f55d/dataframe_api_compat/polars_standard/dataframe_object.py#L22
-# # Related: https://data-apis.org/dataframe-api-compat/quick_start/
-# # Related: https://github.com/data-apis/dataframe-api-compat
-# # Related: `.collect()` is needed. Boo. : https://data-apis.org/dataframe-api-compat/basics/dataframe/#__tabbed_2_2
-# from dataframe_api import DataFrame as DataFrameStandard
-# class ConsortiumNamespaceDataframe(Protocol):
-#     def __dataframe_namespace__(self) -> DataFrameStandard: ...
-# class ConsortiumStandardDataframe(Protocol):
-#     def __dataframe_consortium_standard__(self,api_version: str) -> DataFrameStandard: ...
-# # https://data-apis.org/dataframe-protocol/latest/purpose_and_scope.html#this-dataframe-protocol
-# def get_compliant_df(
-#     df: ConsortiumNamespaceDataframe | ConsortiumStandardDataframe,
-# ) -> DataFrameStandard:
-#     """Utility function to support programming against a dataframe API"""
-#     if hasattr(df, "__dataframe_namespace__"):
-#         # Is already Standard-compliant DataFrame, nothing to do here.
-#         pass
-#     elif hasattr(df, "__dataframe_consortium_standard__"):
-#         # Convert to Standard-compliant DataFrame.
-#         df = df.__dataframe_consortium_standard__(api_version="2023.11-beta")
-#     else:
-#         # Here we can raise an exception if we only want to support compliant dataframes,
-#         # or convert to our default choice of dataframe if we want to accept (e.g.) dicts
-#         raise TypeError(
-#             "Expected Standard-compliant DataFrame, or DataFrame with Standard-compliant implementation"
-#         )
-#     return df
-
-
 @add_example()
 class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
     """
