@@ -73,10 +73,58 @@ def update_action_button(
     *,
     label: Optional[str] = None,
     icon: TagChild = None,
+    disabled: Optional[bool] = None,
     session: Optional[Session] = None,
 ) -> None:
     """
     Change the label and/or icon of an action button on the client.
+
+    Parameters
+    ----------
+    id
+        An input id.
+    label
+        An input label.
+    icon
+        An icon to appear inline with the button/link.
+    disabled
+        If `True`, disable the button making it unclickable; if `False`, the button will
+        become enabled and clickable.
+    session
+        A :class:`~shiny.Session` instance. If not provided, it is inferred via
+        :func:`~shiny.session.get_current_session`.
+
+    Note
+    ----
+    {note}
+
+    See Also
+    --------
+    * :func:`~shiny.input_action_button`
+    """
+
+    session = require_active_session(session)
+    # TODO: supporting a TagChild for label would require changes to shiny.js
+    # https://github.com/rstudio/shiny/issues/1140
+    msg = {
+        "label": label,
+        "icon": session._process_ui(icon)["html"] if icon else None,
+        "disabled": disabled,
+    }
+    session.send_input_message(id, drop_none(msg))
+
+
+@add_example(ex_dir="../api-examples/update_action_button")
+@doc_format(note=_note)
+def update_action_link(
+    id: str,
+    *,
+    label: Optional[str] = None,
+    icon: TagChild = None,
+    session: Optional[Session] = None,
+) -> None:
+    """
+    Change the label and/or icon of an action link on the client.
 
     Parameters
     ----------
@@ -96,18 +144,17 @@ def update_action_button(
 
     See Also
     --------
-    * :func:`~shiny.input_action_button`
+    * :func:`~shiny.input_action_link`
     """
 
     session = require_active_session(session)
     # TODO: supporting a TagChild for label would require changes to shiny.js
     # https://github.com/rstudio/shiny/issues/1140
-    msg = {"label": label, "icon": session._process_ui(icon)["html"] if icon else None}
+    msg = {
+        "label": label,
+        "icon": session._process_ui(icon)["html"] if icon else None,
+    }
     session.send_input_message(id, drop_none(msg))
-
-
-update_action_link = update_action_button
-update_action_link.__doc__ = update_action_button.__doc__
 
 
 # -----------------------------------------------------------------------------
