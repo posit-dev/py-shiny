@@ -3810,7 +3810,7 @@ class OutputCode(_OutputTextValue):
         """
         _expect_class_value(
             self.loc,
-            cls="noplaceholder",
+            class_="noplaceholder",
             has_class=not value,
             timeout=timeout,
         )
@@ -3855,7 +3855,7 @@ class OutputTextVerbatim(_OutputTextValue):
         """
         _expect_class_value(
             self.loc,
-            cls="noplaceholder",
+            class_="noplaceholder",
             has_class=not value,
             timeout=timeout,
         )
