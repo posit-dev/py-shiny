@@ -25,6 +25,10 @@ class express(Renderer[None]):
     :func:`~sys.displayhook()` on the result. This has the effect of "capturing" the
     output of each line.
 
+    This decorator can be thought of as a combination of :class:`~shiny.render.ui` (for
+    rendering and sending the dynamic UI to the client), and `~shiny.express.expressify`
+    (for capturing the output of each line).
+
     Returns
     -------
     :
