@@ -67,9 +67,10 @@ DataFrameValue = Union[None, DataGrid[DataFrameLikeT], DataTable[DataFrameLikeT]
 @add_example()
 class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
     """
-    Decorator for a function that returns a pandas `DataFrame` object (or similar) to
-    render as an interactive table or grid. Features fast virtualized scrolling, sorting,
-    filtering, and row selection (single or multiple).
+    Decorator for a function that returns a [pandas](https://pandas.pydata.org/) or
+    [polars](https://pola.rs/) `DataFrame` object to render as an interactive table or
+    grid. Features fast virtualized scrolling, sorting, filtering, and row selection
+    (single or multiple).
 
     Returns
     -------
@@ -79,10 +80,8 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
         1. A :class:`~shiny.render.DataGrid` or :class:`~shiny.render.DataTable` object,
            which can be used to customize the appearance and behavior of the data frame
            output.
-        2. A pandas `DataFrame` object. (Equivalent to
-           `shiny.render.DataGrid(df)`.)
-        3. Any object that has a `.to_pandas()` method (e.g., a Polars data frame or
-           Arrow table). (Equivalent to `shiny.render.DataGrid(df.to_pandas())`.)
+        2. A pandas `DataFrame` object or a polars `DataFrame` object. This object will
+           be internally upgraded to `shiny.render.DataGrid(df)`.
 
     Row selection
     -------------
@@ -94,12 +93,14 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
     information from session's `input.<data_frame_renderer>_cell_selection()` value and
     upgrades it for consistent subsetting.
 
-    To filter your pandas data frame (`df`) down to the selected rows, you can use:
+    For example, to filter your pandas data frame (`df`) down to the selected rows you can use:
 
     * `df.iloc[list(input.<data_frame_renderer>_cell_selection()["rows"])]`
     * `df.iloc[list(<data_frame_renderer>.cell_selection()["rows"])]`
-    * `df.iloc[list(<data_frame_renderer>.data_view_info()["selected_rows"])]`
     * `<data_frame_renderer>.data_view(selected=True)`
+
+    The last method (`.data_view(selected=True)`) will also apply any sorting,
+    filtering, or edits that has been applied by the user.
 
     Editing cells
     -------------
@@ -115,11 +116,11 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
     possible that alterations to `data_view` could alter the original `data` data frame.
 
     To access the original data, use `<data_frame_renderer>.data()`. This is a quick
-    reference to the original data frame (converted to a `pandas.DataFrame`) that was
-    returned from the app's render function. If it is mutated in place, it **will**
-    modify the original data.
+    reference to the original pandas or polars data frame that was returned from the
+    app's render function. If it is mutated in place, it **will** modify the original
+    data.
 
-    Note... if the data frame renderer is re-rendered due to reactivity, then (currently)
+    Note... if the data frame renderer is re-rendered due to reactivity, then
     the user's edits, sorting, and filtering will be lost. We hope to improve upon this
     in the future.
 
@@ -152,7 +153,8 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
     """
     User-defined function to update a single cell in the data frame.
 
-    Defaults to return the value as is.
+    The function takes a single keyword argument `patch` and (by default) returns the
+    patch's value.
     """
     _patches_fn: PatchesFn
     """
@@ -233,7 +235,6 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
         else:
             return self._data_view_all()
 
-    # TODO-barret-render.data_frame; Allow for DataTable and DataGrid to accept SelectionModes
     selection_modes: reactive.Calc_[SelectionModes]
     """
     Reactive value of the data frame's possible selection modes.
@@ -272,6 +273,7 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
         The row numbers of the data frame that are currently being viewed in the browser
         after sorting and filtering has been applied.
     """
+
     _data_patched: reactive.Calc_[DataFrameLikeT]
     """
     Reactive value of the data frame's patched data.
@@ -299,7 +301,7 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
     Returns
     -------
     :
-        An array of `col`umn number and `value` information.
+        An array of `col`umn number and `value` information. If the column type is a number, a tuple of `(min, max)` is used for `value`. If no min (or max) value is set, `None` is used in its place. If the column type is a string, the string value is used for `value`.
     """
 
     def _reset_reactives(self) -> None:
@@ -484,6 +486,12 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
         return more, less, or the same number of patches as the input patches. This
         allows for the app author to own more control over which columns are updated and
         how they are updated.
+
+        Parameters
+        ----------
+        fn
+            A function that accepts a kwarg `patches` and returns a list of (possibly
+            updated) patches to apply to the data frame.
         """
         self._patches_fn = wrap_async(  # pyright: ignore[reportGeneralTypeIssues,reportAttributeAccessIssue]
             fn
