@@ -127,6 +127,21 @@ def test_chat_message_trimming():
         contents = [msg["content_server"] for msg in trimmed]
         assert contents == ["System message", "System message 2", "User message 2"]
 
+        msgs = (
+            as_stored_message(
+                {"content": "Assistant message", "role": "assistant"}, token_count=50
+            ),
+            as_stored_message(
+                {"content": "User message", "role": "user"}, token_count=10
+            ),
+        )
+
+        # Anthropic requires 1st message to be a user message
+        trimmed = chat._trim_messages(msgs, token_limits=(30, 0), format="anthropic")
+        assert len(trimmed) == 1
+        contents = [msg["content_server"] for msg in trimmed]
+        assert contents == ["User message"]
+
 
 # ------------------------------------------------------------------------------------
 # Unit tests for normalize_message() and normalize_message_chunk().
