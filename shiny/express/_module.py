@@ -19,6 +19,27 @@ __all__ = ("module",)
 def module(
     fn: Callable[Concatenate[Inputs, Outputs, Session, P], R]
 ) -> Callable[Concatenate[Id, P], R]:
+    """
+    Create a Shiny module using Shiny Express syntax
+
+    This function is used to create a Shiny module, where the code inside the function
+    uses Shiny Express syntax. This is in contrast to the pair of functions
+    :func:`~shiny.module.ui()` and :func:`~shiny.module.server()`, which are used to
+    create Shiny modules with Core syntax.
+
+    Parameters
+    ----------
+    fn
+        The function that defines the module. The first three parameters of this
+        function must be `input`, `output`, and `session`. Any additional parameters can
+        used to pass information to the module.
+
+    See Also
+    --------
+    * ~shiny.module.ui
+    * ~shiny.module.server
+    * ~shiny.express.expressify
+    """
     fn = expressify(fn)
 
     @functools.wraps(fn)
