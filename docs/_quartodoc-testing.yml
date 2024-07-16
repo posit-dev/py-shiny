@@ -9,6 +9,8 @@ quartodoc:
   renderer:
     style: _renderer.py
     show_signature_annotations: false
+  options:
+    include_inherited: true
   sections:
     - title: UI Layouts
       desc: Methods for interacting with Shiny app multiple UI component controller.
