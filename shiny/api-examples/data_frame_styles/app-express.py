@@ -1,6 +1,6 @@
 import pandas as pd
 
-from shiny import App, Inputs, render, ui
+from shiny.express import render, ui
 
 green_styles = [
     {
@@ -24,6 +24,37 @@ df = pd.DataFrame(
         "d": range(n * 3, n * 4),
         "e": range(n * 4, n * 5),
     }
+)
+
+ui.h2("Data Frame with Styles applied to 4 cells")
+
+
+@render.data_frame
+def my_df():
+    return render.DataGrid(
+        df,
+        styles=green_styles,
+    )
+
+
+ui.hr()
+
+ui.h2("Custom styles applied to all cells within a data frame ", ui.HTML("&#128075;"))
+
+ui.tags.style(
+    ui.HTML(
+        """
+    .posit-bg {
+        background-color: #242a26 ;
+    }
+    .posit-blue-bg {
+        background-color: #447099 ;
+    }
+    .posit-orange-bg {
+        background-color: #ED642F ;
+    }
+    """
+    )
 )
 
 hi_styles = [
@@ -75,44 +106,9 @@ hi_pd = pd.DataFrame(
 )
 
 
-app_ui = ui.page_fillable(
-    ui.hr(),
-    ui.h2(
-        "Custom styles applied to all cells within a data frame ", ui.HTML("&#128075;")
-    ),
-    ui.tags.style(
-        ui.HTML(
-            """
-        .posit-bg {
-            background-color: #242a26 ;
-        }
-        .posit-blue-bg {
-            background-color: #447099 ;
-        }
-        .posit-orange-bg {
-            background-color: #ED642F ;
-        }
-        """
-        )
-    ),
-    ui.h2("Data Frame with Styles applied to 4 cells"),
-)
-
-
-def server(input: Inputs):
-    @render.data_frame
-    def my_df():
-        return render.DataGrid(
-            df,
-            styles=green_styles,
-        )
-
-    @render.data_frame
-    def hi_df():
-        return render.DataGrid(
-            hi_pd,
-            styles=hi_styles,
-        )
-
-
-app = App(app_ui, server)
+@render.data_frame
+def hi_df():
+    return render.DataGrid(
+        hi_pd,
+        styles=hi_styles,
+    )

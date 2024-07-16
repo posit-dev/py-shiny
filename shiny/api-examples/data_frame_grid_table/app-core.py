@@ -15,7 +15,7 @@ app_ui = ui.page_fluid(
             "row": "Single row",
             "rows": "Multiple rows",
         },
-        selected="none",
+        selected="rows",
     ),
     ui.input_switch("filters", "Filters", True),
     ui.input_switch("editable", "Editable", True),
