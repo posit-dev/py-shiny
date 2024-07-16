@@ -9,6 +9,7 @@ import pytest
 from shiny import Session
 from shiny._namespaces import ResolvedId, Root
 from shiny.session import session_context
+from shiny.types import MISSING
 from shiny.ui import Chat
 from shiny.ui._chat import as_transformed_message
 from shiny.ui._chat_normalize import normalize_message, normalize_message_chunk
@@ -66,7 +67,7 @@ def test_chat_message_trimming():
 
         # Throws since system message is too long
         with pytest.raises(ValueError):
-            chat._trim_messages(msgs, token_limits=(100, 0))
+            chat._trim_messages(msgs, token_limits=(100, 0), format=MISSING)
 
         msgs = (
             as_stored_message(
@@ -79,10 +80,10 @@ def test_chat_message_trimming():
 
         # Throws since only the system message fits
         with pytest.raises(ValueError):
-            chat._trim_messages(msgs, token_limits=(100, 0))
+            chat._trim_messages(msgs, token_limits=(100, 0), format=MISSING)
 
         # Raising the limit should allow both messages to fit
-        trimmed = chat._trim_messages(msgs, token_limits=(102, 0))
+        trimmed = chat._trim_messages(msgs, token_limits=(102, 0), format=MISSING)
         assert len(trimmed) == 2
         contents = [msg["content_server"] for msg in trimmed]
         assert contents == ["System message", "User message"]
@@ -100,7 +101,7 @@ def test_chat_message_trimming():
         )
 
         # Should discard the 1st user message
-        trimmed = chat._trim_messages(msgs, token_limits=(102, 0))
+        trimmed = chat._trim_messages(msgs, token_limits=(102, 0), format=MISSING)
         assert len(trimmed) == 2
         contents = [msg["content_server"] for msg in trimmed]
         assert contents == ["System message", "User message 2"]
@@ -121,10 +122,25 @@ def test_chat_message_trimming():
         )
 
         # Should discard the 1st user message
-        trimmed = chat._trim_messages(msgs, token_limits=(102, 0))
+        trimmed = chat._trim_messages(msgs, token_limits=(102, 0), format=MISSING)
         assert len(trimmed) == 3
         contents = [msg["content_server"] for msg in trimmed]
         assert contents == ["System message", "System message 2", "User message 2"]
+
+        msgs = (
+            as_stored_message(
+                {"content": "Assistant message", "role": "assistant"}, token_count=50
+            ),
+            as_stored_message(
+                {"content": "User message", "role": "user"}, token_count=10
+            ),
+        )
+
+        # Anthropic requires 1st message to be a user message
+        trimmed = chat._trim_messages(msgs, token_limits=(30, 0), format="anthropic")
+        assert len(trimmed) == 1
+        contents = [msg["content_server"] for msg in trimmed]
+        assert contents == ["User message"]
 
 
 # ------------------------------------------------------------------------------------
