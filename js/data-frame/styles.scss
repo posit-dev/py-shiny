@@ -284,6 +284,13 @@ shiny-data-frame {
   }
 }
 
+// When table corner is present, ensure it has a minimum width
+// but make sure it doesn't take up extra space
+shiny-data-frame .table-corner {
+  width: 0;
+  min-width: 25px;
+}
+
 /*
  *
  * # CELL EDITING STYLES
