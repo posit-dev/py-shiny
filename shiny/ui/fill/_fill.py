@@ -215,15 +215,3 @@ def is_fill_item(tag: object) -> bool:
     # renders_to_tag_class(x, FILL_ITEM_CLASS, ".html-widget")
 
     return isinstance(tag, Tag) and tag.has_class(FILL_ITEM_CLASS)
-
-
-def add_fill_classes(
-    tag: Tag, fill_item: bool = True, fillable_container: bool = True
-) -> Tag:
-    if fill_item:
-        tag.add_class(FILL_ITEM_CLASS)
-    if fillable_container:
-        tag.add_class(FILL_CONTAINER_CLASS)
-    if fill_item or fillable_container:
-        tag.append(fill_dependency())
-    return tag

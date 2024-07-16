@@ -41,7 +41,7 @@ from ._sidebar import Sidebar, SidebarOpen, layout_sidebar
 from ._tag import consolidate_attrs
 from ._utils import get_window_title
 from .css import CssUnit, as_css_padding, as_css_unit
-from .fill._fill import add_fill_classes, as_fillable_container
+from .fill._fill import as_fill_item, as_fillable_container
 
 page_sidebar_default: SidebarOpen = SidebarOpen(desktop="open", mobile="always")
 
@@ -144,11 +144,8 @@ def page_sidebar(
 
 
 def page_main_container(*args: TagChild) -> Tag:
-    return add_fill_classes(
-        tags.main({"class": "bslib-page-main bslib-gap-spacing"}, *args),
-        fill_item=True,
-        fillable_container=True,
-    )
+    main = tags.main({"class": "bslib-page-main bslib-gap-spacing"}, *args)
+    return as_fillable_container(as_fill_item(main))
 
 
 @no_example()
