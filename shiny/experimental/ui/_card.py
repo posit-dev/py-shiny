@@ -190,6 +190,7 @@ def card_image(
     container: ImgContainer = card_body,
     **kwargs: TagAttrValue,
 ) -> Tagifiable:
+    # TODO-future: Must be updated to match rstudio/bslib#1076 before moving from exp.
     """
     A card image container
 
