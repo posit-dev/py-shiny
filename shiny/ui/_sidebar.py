@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Literal, Optional, Union, cast
+from typing import TYPE_CHECKING, Literal, Optional, cast
 
 from htmltools import (
     HTML,
@@ -53,14 +53,10 @@ A possible value for the `open` parameter in :func:`~shiny.ui.sidebar`:
 * `"always"`: the sidebar is always open and cannot be closed
 """
 
-SidebarOpenValueMobile = Union[SidebarOpenValue, Literal["always-above"]]
-
-_always_open_mobile = ("always", "always-above")
-
 
 class SidebarOpenSpec(TypedDict):
     desktop: SidebarOpenValue
-    mobile: SidebarOpenValueMobile
+    mobile: SidebarOpenValue | Literal["always-above"]
 
 
 @dataclass
@@ -72,7 +68,7 @@ class SidebarOpen:
     desktop: SidebarOpenValue = "open"
     """The initial state of the sidebar on desktop screen sizes."""
 
-    mobile: SidebarOpenValueMobile = "closed"
+    mobile: SidebarOpenValue | Literal["always-above"] = "closed"
     """The initial state of the sidebar on mobile screen sizes."""
 
     _VALUES: tuple[SidebarOpenValue, ...] = field(
@@ -82,28 +78,26 @@ class SidebarOpen:
         compare=False,
     )
 
-    @staticmethod
-    def _values_str(values: tuple[str, ...] | None = None) -> str:
-        quoted = [f'"{x}"' for x in (values or SidebarOpen._VALUES)]
-        ret = ""
-        for i, value in enumerate(quoted):
-            if i > 0 and len(quoted) > 2:
-                ret += ","
-            if i == len(quoted) - 1:
-                ret += " or"
-            if i > 0:
-                ret += " "
-            ret += value
-        return ret
+    _VALUES_MOBILE: tuple[SidebarOpenValue | Literal["always-above"], ...] = field(
+        default=("open", "closed", "always", "always-above"),
+        repr=False,
+        hash=False,
+        compare=False,
+    )
 
     def __post_init__(self):
         if self.desktop not in self._VALUES:
-            raise ValueError(f"`desktop` must be one of {self._values_str()}")
-        mobileValues = tuple(str(x) for x in set((*self._VALUES, *_always_open_mobile)))
-        if self.mobile not in mobileValues:
-            raise ValueError(
-                f"`mobile` must be one of {self._values_str(mobileValues)}"
-            )
+            raise ValueError(f"`desktop` must be one of: {self._VALUES}.")
+        if self.mobile not in self._VALUES_MOBILE:
+            raise ValueError(f"`mobile` must be one of: {self._VALUES_MOBILE}.")
+
+    def _is_always_open(
+        self, on: Literal["desktop", "mobile", "both"] = "both"
+    ) -> bool:
+        desktop = self.desktop == "always"
+        mobile = self.mobile in ("always", "always-above")
+        switch = {"desktop": desktop, "mobile": mobile, "both": desktop and mobile}
+        return switch[on]
 
     @classmethod
     def _from_string(cls, open: str) -> SidebarOpen:
@@ -130,7 +124,7 @@ class SidebarOpen:
             A :class:`~shiny.ui.SidebarOpen` object.
         """
         bad_value = ValueError(
-            f"`open` must be a non-empty string of one of {SidebarOpen._values_str()}."
+            f"`open` must be a string matching one of: {SidebarOpen._VALUES}."
         )
 
         if not isinstance(open, str) or len(open) == 0:
@@ -155,7 +149,7 @@ class SidebarOpen:
             return cls._from_string(open)
 
         raise ValueError(
-            f"""`open` must be one of {SidebarOpen._values_str()}, """
+            f"""`open` must be one of {SidebarOpen._VALUES}, """
             + "or a dictionary with keys `desktop` and `mobile` using these values."
         )
 
@@ -338,10 +332,10 @@ class Sidebar:
     def max_height_mobile(self) -> Optional[str]:
         max_height_mobile = self._max_height_mobile
 
-        if max_height_mobile is not None and self.open().mobile in _always_open_mobile:
+        if max_height_mobile is not None and not self.open()._is_always_open("mobile"):
             warnings.warn(
                 "The `shiny.ui.sidebar(max_height_mobile=)` argument only applies to "
-                + f"the sidebar when `open` is {SidebarOpen._values_str(_always_open_mobile)} on mobile, but "
+                + "the sidebar when `open` is 'always' or 'always-above' on mobile, but "
                 + f"`open` is `'{self.open().mobile}'`. "
                 + "The `max_height_mobile` argument will be ignored.",
                 # `stacklevel=2`: Refers to the caller of `.max_height_mobile` property method
@@ -369,11 +363,10 @@ class Sidebar:
 
         return SidebarOpen._as_open(open)
 
-    def _is_always_open(self) -> bool:
-        return (
-            self.open().desktop == "always"
-            and self.open().mobile in _always_open_mobile
-        )
+    def _is_always_open(
+        self, on: Literal["desktop", "mobile", "both"] = "both"
+    ) -> bool:
+        return self.open()._is_always_open(on)
 
     def _get_sidebar_id(self) -> Optional[str]:
         """
@@ -689,10 +682,10 @@ def layout_sidebar(
         data_open_desktop=sidebar.open().desktop,
         data_open_mobile=sidebar.open().mobile,
         data_collapsible_mobile=(
-            "false" if sidebar.open().mobile in _always_open_mobile else "true"
+            "false" if sidebar.open()._is_always_open("mobile") else "true"
         ),
         data_collapsible_desktop=(
-            "false" if sidebar.open().desktop == "always" else "true"
+            "false" if sidebar.open()._is_always_open("desktop") else "true"
         ),
         data_bslib_sidebar_border=trinary(border),
         data_bslib_sidebar_border_radius=trinary(border_radius),
