@@ -77,10 +77,11 @@ quartodoc:
       desc: "Methods for testing the state of a locator within a Shiny app."
       contents:
         - playwright.expect.expect_to_change
-        - playwright.expect.expect_attribute_to_have_value
+        - playwright.expect.expect_not_to_have_attribute
         - playwright.expect.expect_to_have_class
         - playwright.expect.expect_not_to_have_class
         - playwright.expect.expect_to_have_style
+        - playwright.expect.expect_not_to_have_style
     - title: "Pytest"
       desc: "Fixtures used for testing Shiny apps with Pytest."
       contents:

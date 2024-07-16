@@ -10,50 +10,47 @@ from playwright.sync_api import expect as playwright_expect
 
 from ..._docstring import no_example
 from ..._typing_extensions import assert_type
-from .._types import AttrValue, PatternOrStr, PatternStr, StyleValue, Timeout
+from .._types import PatternOrStr, PatternStr, Timeout
 
-# Internal method only!
-# "_expect_class_value",
 __all__ = (
-    "expect_attribute_to_have_value",
+    "expect_not_to_have_attribute",
     "expect_to_have_class",
     "expect_not_to_have_class",
     "expect_to_have_style",
+    "expect_not_to_have_style",
 )
 
 
 @no_example()
-def expect_attribute_to_have_value(
+def expect_not_to_have_attribute(
     loc: Locator,
     name: str,
-    value: AttrValue,
+    *,
     timeout: Timeout = None,
 ) -> None:
     """
-    Expect an attribute to have a value.
+    Expect that no attribute exists
 
-    This method wraps Playwright's Locator expectation `to_have_attribute()` when `value is not `None` and `not_to_have_attribute()` when `value` is `None`. When `value` is `None`, the attribute should not exist and no value should be present.
+    This method wraps Playwright's Locator expectation `not_to_have_attribute()` and
+    sets the value to a regular expression that matches anything.
+
+    If you'd like to check for a specific value, use Playwright's
+    `expect(loc).to_have_attribute()` method, instead.
 
     Parameters
     ----------
     loc
         The Playwright locator to check.
     name
-        The attribute name.
-    value
-        The attribute value to check. When `value` is `None`, the attribute should not
-        exist and no value should be present.
+        The attribute name that should **not** be found within the resolved locator.
     timeout
         The maximum time to wait for the attribute to appear
     """
-    if value is None:
-        # Not allowed to have any value for the attribute
-        playwright_expect(loc).not_to_have_attribute(
-            name, re.compile(r".*"), timeout=timeout
-        )
-        return
-
-    playwright_expect(loc).to_have_attribute(name=name, value=value, timeout=timeout)
+    # Not allowed to have any value for the attribute
+    playwright_expect(loc).not_to_have_attribute(
+        name, re.compile(r".*"), timeout=timeout
+    )
+    return
 
 
 @no_example()
@@ -66,7 +63,14 @@ def expect_to_have_class(
     """
     Expect a locator to contain a class value
 
-    This method wraps Playwright's Locator expectation `to_have_class()`. However, Playwright does not have a method to check for individual class values within the elements `class` value. This method will insert the class value into a regex pattern to check for the class value within the `class` attribute according to word boundaries or the start/end of the `class` string.
+    This method wraps Playwright's Locator expectation [`to_have_class()`
+    method](https://playwright.dev/python/docs/api/class-locatorassertions#locator-assertions-to-have-class).
+    However, Playwright does not have an easy method to check for individual class
+    values within the elements `class` value.
+
+    This method will insert the class value
+    into a regex pattern to check for the class value within the `class` attribute
+    according to word boundaries or the start/end of the `class` string.
 
     Parameters
     ----------
@@ -76,6 +80,10 @@ def expect_to_have_class(
         The class value to find.
     timeout
         The maximum time to wait for the class to appear.
+
+    See Also
+    --------
+    * :func:`shiny.playwright.expect.expect_not_to_have_class`
     """
     cls_regex = re.compile(rf"(^|\s+){re.escape(class_)}(\s+|$)")
     playwright_expect(loc).to_have_class(cls_regex, timeout=timeout)
@@ -91,20 +99,27 @@ def expect_not_to_have_class(
     """
     Expect a locator not to contain a class value
 
-    This method wraps Playwright's Locator expectation `not_to_have_class()`. However
-    Playwright does not have a method to check for individual class values within the
-    elements `class` value. This method will insert the class value into a regex pattern
-    to check for the class value within the `class` attribute according to word
-    boundaries or the start/end of the `class` string.
+    This method wraps Playwright's Locator expectation [`not_to_have_class()`
+    method](https://playwright.dev/python/docs/api/class-locatorassertions#locator-assertions-not-to-have-class).
+    However, Playwright does not have an easy method to check for individual class
+    values within the elements `class` value.
+
+    This method will insert the class string
+    value into a regex pattern to check for the class value within the `class` attribute
+    according to word boundaries or the start/end of the `class` string.
 
     Parameters
     ----------
     loc
         The Playwright locator to check.
     class_
-        The class value that should not be found within the resolved locator.
+        The class value that should **not** be found within the resolved locator.
     timeout
         The maximum time to wait for the class to disappear.
+
+    See Also
+    --------
+    * :func:`shiny.playwright.expect.expect_to_have_class`
     """
     cls_regex = re.compile(rf"(^|\s+){re.escape(class_)}(\s+|$)")
     playwright_expect(loc).not_to_have_class(cls_regex, timeout=timeout)
@@ -113,53 +128,82 @@ def expect_not_to_have_class(
 @no_example()
 def expect_to_have_style(
     loc: Locator,
-    css_key: str,
+    key: str,
     # Str representation for value. Will be put in a regex with `css_key`
-    css_value: StyleValue,
+    value: PatternOrStr,
     *,
     timeout: Timeout = None,
 ) -> None:
     """
     Expect the `style` attribute to have a value.
 
+    This is different than Playwright's [`to_have_css(key, value)`
+    method](https://playwright.dev/python/docs/api/class-locatorassertions#locator-assertions-to-have-css),
+    as that method will check for the computed style of the element. Whereas this method
+    will check the `style` attribute directly.
+
     Parameters
     ----------
     loc
         The Playwright locator to check.
-    css_key
+    key
         The CSS key to check.
-    css_value
-        The CSS value to check. If `None`, then the style attribute should not exist.
+    value
+        The CSS value to check.
     timeout
         The maximum time to wait for the style to appear.
+
+    See Also
+    --------
+    * :func:`shiny.playwright.expect.expect_not_to_have_style`
     """
-    if css_value is None:
-        # Not allowed to have any value for the style
-        playwright_expect(loc).not_to_have_attribute(
-            "style",
-            re.compile(rf"\b{re.escape(css_key)}\s*:"),
-            timeout=timeout,
-        )
-        return
 
     playwright_expect(loc).to_have_attribute(
         "style",
-        _style_match_str(css_key, css_value),
+        _style_match_str(key, value),
         timeout=timeout,
     )
 
 
-def _expect_class_value(
+@no_example()
+def expect_not_to_have_style(
     loc: Locator,
-    class_: str,
-    has_class: bool,
+    key: str,
+    *,
     timeout: Timeout = None,
 ) -> None:
-    """Expect a locator to have (or not to have) a class value"""
-    if has_class:
-        expect_to_have_class(loc, class_, timeout=timeout)
-    else:
-        expect_not_to_have_class(loc, class_, timeout=timeout)
+    """
+    Expect a key within `style` attribute to not exist
+
+    Convenience method to check if a CSS key does not exist within the `style`
+    attribute. The `key` is escaped within a regular expression that checks within
+    word boundaries or the start/end of the `style` string.
+
+    This is different than Playwright's [`to_have_css(key, value)`
+    method](https://playwright.dev/python/docs/api/class-locatorassertions#locator-assertions-to-have-css),
+    as that method will check for the computed style of the element. Whereas this method
+    will check the `style` attribute directly.
+
+    Parameters
+    ----------
+    loc
+        The Playwright locator to check.
+    key
+        The CSS key to check.
+    timeout
+        The maximum time to wait for the style to appear.
+
+    See Also
+    --------
+    * :func:`shiny.playwright.expect.expect_to_have_style
+    """
+    # Not allowed to have any value for the style
+    playwright_expect(loc).not_to_have_attribute(
+        "style",
+        re.compile(rf"\b{re.escape(key)}\s*:"),
+        timeout=timeout,
+    )
+    return
 
 
 def _attr_match_str(key: str, value: str) -> str:
