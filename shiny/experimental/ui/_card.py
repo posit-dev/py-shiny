@@ -23,8 +23,6 @@ from ...ui.css import CssUnit, as_css_unit
 from ...ui.fill import as_fill_item, as_fillable_container
 
 __all__ = (
-    # Do not want to expose card_body yet
-    "card_body",
     # Questioning:
     "card_title",
     "card_image",

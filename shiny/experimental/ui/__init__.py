@@ -1,11 +1,10 @@
 # Experimental
 
 from ._card import (
-    card_body,
     card_image,
     card_title,
 )
-from ._deprecated import card
+from ._deprecated import card, card_body
 
 __all__ = (
     # Deprecated
