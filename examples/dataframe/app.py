@@ -23,7 +23,7 @@ def app_ui(req):
                 "row": "Single row",
                 "rows": "Multiple rows",
             },
-            selected="multiple",
+            selected="rows",
         ),
         ui.input_switch("editable", "Edit", False),
         ui.input_switch("filters", "Filters", True),

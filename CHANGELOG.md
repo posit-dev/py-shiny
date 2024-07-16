@@ -35,7 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   * `.update_sort(sort=)` allows app authors to programmatically update the sorting of the data frame. (#1374)
   * `.update_filter(filter=)` allows app authors to programmatically update the filtering of the data frame. (#1374)
 
-* `@render.data_frame` now accepts both a non-`"none"` `selection_mode` value and `editable=True`. (#1454)
+* `@render.data_frame` now accepts both a non-`"none"` `selection_mode` value and `editable=True`. When both settings are enabled, row numbers are displayed in the first column. (#1454, #1534)
 
 * `@render.data_frame`'s `<ID>.cell_selection()` no longer returns a `None` value and now always returns a dictionary containing both the `rows` and `cols` keys. This is done to achieve more consistent author code when working with cell selection. When the value's `type="none"`, both `rows` and `cols` are empty tuples. When `type="row"`, `cols` represents all column numbers of the data. In the future, when `type="col"`, `rows` will represent all row numbers of the data. These extra values are not available in `input.<ID>_cell_selection()` as they are independent of cells being selected and are removed to reduce information being sent to and from the browser. (#1376)
 

@@ -723,7 +723,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
                       // @ts-ignore:next-line
                       key={header.id}
                       colSpan={header.colSpan}
-                      style={{ width: header.getSize() }}
+                      style={{ minWidth: header.getSize() }}
                       scope="col"
                       tabIndex={0}
                       onClick={header.column.getToggleSortingHandler()}
