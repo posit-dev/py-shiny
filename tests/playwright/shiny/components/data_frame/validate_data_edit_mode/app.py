@@ -14,7 +14,9 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
     @render.data_frame
     def penguins_df():
         return render.DataGrid(
-            data=load_penguins_raw(),  # pyright: ignore[reportUnknownArgumentType]
+            data=load_penguins_raw().head(
+                5
+            ),  # pyright: ignore[reportUnknownArgumentType]
             filters=True,
             editable=True,
         )

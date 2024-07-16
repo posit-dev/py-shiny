@@ -35,7 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   * `.update_sort(sort=)` allows app authors to programmatically update the sorting of the data frame. (#1374)
   * `.update_filter(filter=)` allows app authors to programmatically update the filtering of the data frame. (#1374)
 
-* `@render.data_frame` now accepts both a non-`"none"` `selection_mode` value and `editable=True`. (#1454)
+* `@render.data_frame` now accepts both a non-`"none"` `selection_mode` value and `editable=True`. When both settings are enabled, row numbers are displayed in the first column. (#1454, #1534)
 
 * `@render.data_frame`'s `<ID>.cell_selection()` no longer returns a `None` value and now always returns a dictionary containing both the `rows` and `cols` keys. This is done to achieve more consistent author code when working with cell selection. When the value's `type="none"`, both `rows` and `cols` are empty tuples. When `type="row"`, `cols` represents all column numbers of the data. In the future, when `type="col"`, `rows` will represent all row numbers of the data. These extra values are not available in `input.<ID>_cell_selection()` as they are independent of cells being selected and are removed to reduce information being sent to and from the browser. (#1376)
 
@@ -50,6 +50,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Fixed #1498: Update table related TypeScript dependencies to their latest versions. This fixed an issue where the Row Virtualizer would scroll to the end when hidden. This would cause the DOM to update numerous times, locking up the browser tab for multiple seconds. #1524
 
 * The return type for the data frame patch function now returns a list of `render.CellPatch` objects (which support `htmltools.TagNode` for the `value` attribute). These values will be set inside the data frame's `.data_view()` result. This also means that `.cell_patches()` will be a list of `render.CellPatch` objects.  (#1526)
+
+* Made sure all `@render.data_frame` cells that have been edited are now restored back to ready state to handle the off chance that the returned patches are at different locations the the original edit patches. (#1529)
+
+* `remove_all_fill(tag)` no longer modifies the original `tag` input and instead returns a modified copy of `tag`. (#1538)
+
 
 ### Other changes
 
