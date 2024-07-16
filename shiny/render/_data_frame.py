@@ -13,23 +13,23 @@ from .._docstring import add_example
 from .._utils import wrap_async
 from ..session._utils import require_active_session, session_context
 from ..types import JsonifiableDict, ListOrTuple
-from ._data_frame_utils import (
-    AbstractTabularData,
-    BrowserCellSelection,
+from ._data_frame_utils._datagridtable import AbstractTabularData, DataGrid, DataTable
+from ._data_frame_utils._html import maybe_as_cell_html
+from ._data_frame_utils._patch import (
     CellPatch,
-    CellSelection,
     CellValue,
-    DataGrid,
-    DataTable,
     PatchesFn,
     PatchesFnSync,
     PatchFn,
     PatchFnSync,
-    SelectionModes,
-    as_cell_selection,
     assert_patches_shape,
 )
-from ._data_frame_utils._html import maybe_as_cell_html
+from ._data_frame_utils._selection import (
+    BrowserCellSelection,
+    CellSelection,
+    SelectionModes,
+    as_cell_selection,
+)
 from ._data_frame_utils._styles import as_browser_style_infos
 from ._data_frame_utils._tbl_data import (
     apply_frame_patches__typed,
