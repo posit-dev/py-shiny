@@ -53,6 +53,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Made sure all `@render.data_frame` cells that have been edited are now restored back to ready state to handle the off chance that the returned patches are at different locations the the original edit patches. (#1529)
 
+* `remove_all_fill(tag)` no longer modifies the original `tag` input and instead returns a modified copy of `tag`. (#1538)
+
 
 ### Other changes
 
