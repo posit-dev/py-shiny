@@ -10,7 +10,7 @@ app_ui = ui.page_fluid(
         """
     ),
     x.ui.card(
-        x.ui.card_header(
+        ui.card_header(
             "These two images are in their own individual card_body() container"
         ),
         x.ui.card_image(
@@ -21,7 +21,7 @@ app_ui = ui.page_fluid(
             file=None,
             src="https://posit.co/wp-content/uploads/2022/10/Posit-logo-h-full-color-RGB-TM.svg",
         ),
-        x.ui.card_header("These two images are in the same card_body() container"),
+        ui.card_header("These two images are in the same card_body() container"),
         x.ui.card_image(
             file=None,
             src="https://posit.co/wp-content/uploads/2022/10/Posit-logo-h-full-color-RGB-TM.svg",
