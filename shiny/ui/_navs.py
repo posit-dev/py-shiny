@@ -1093,7 +1093,7 @@ class NavSetBar(NavSet):
         else:
             tab_content = contents
             if self._is_page_level:
-                # TODO: This could also be applied to the non-sidebar page layout above
+                # TODO-future: This could also be applied to the non-sidebar page layout above
                 from ._page import page_main_container
 
                 tab_content = page_main_container(*contents)
