@@ -1,5 +1,6 @@
+import pytest
 from playwright.sync_api import Page
-from utils.deploy_utils import skip_if_not_chrome
+from utils.deploy_utils import reruns, reruns_delay, skip_if_not_chrome
 
 from shiny.playwright import controller
 from shiny.run import ShinyAppProc
@@ -7,6 +8,7 @@ from shiny.run import ShinyAppProc
 
 # Edit mode becomes flaky near end of test on CI on webkit.
 @skip_if_not_chrome
+@pytest.mark.flaky(reruns=reruns, reruns_delay=reruns_delay)
 def test_validate_row_selection_in_edit_mode(
     page: Page, local_app: ShinyAppProc
 ) -> None:
