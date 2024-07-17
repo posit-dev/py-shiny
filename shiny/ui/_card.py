@@ -301,8 +301,8 @@ def card_body(
     """
     Card body container
 
-    A general container for the "main content" of a :func:`~shiny.ui.card`. This component is designed
-    to be provided as direct children to :func:`~shiny.ui.card`.
+    A general container for the "main content" of a :func:`~shiny.ui.card`. This
+    component is designed to be provided as direct children to :func:`~shiny.ui.card`.
 
     Parameters
     ----------
@@ -348,7 +348,6 @@ def card_body(
         (or multiple columns inside a card).
     * :func:`~shiny.ui.card` for creating a card component.
     * :func:`~shiny.ui.card_header` for creating a header within the card.
-    * :func:`~shiny.experimental.ui.card_title` for creating a title within the card body.
     * :func:`~shiny.ui.card_footer` for creating a footer within the card.
     """
     if isinstance(max_height_full_screen, MISSING_TYPE):
@@ -368,9 +367,10 @@ def card_body(
     }
     tag = tags.div(
         {
-            "class": "card-body bslib-gap-spacing",
+            "class": "card-body",
             "style": css(**div_style_args),
         },
+        {"class": "bslib-gap-spacing"} if fillable else None,
         *args,
         class_=class_,
         **kwargs,

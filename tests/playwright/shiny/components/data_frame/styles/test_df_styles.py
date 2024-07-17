@@ -84,9 +84,7 @@ def test_validate_column_labels(
 
                 if ex_cell_style is None:
 
-                    shiny_expect.expect_to_have_style(
-                        cell_loc, "background-color", None
-                    )
+                    shiny_expect.expect_not_to_have_style(cell_loc, "background-color")
                 else:
                     assert isinstance(ex_cell_style, dict)
                     assert "background-color" in ex_cell_style

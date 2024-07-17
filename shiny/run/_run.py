@@ -219,6 +219,10 @@ def run_shiny_app(
     ----------
     app_file
         The path to the Shiny app file.
+    start_attempts
+        Number of attempts to try and start the Shiny app. If the random port is already
+        in use, a new random port will be chosen and another attempt will be made. If
+        all attempts have been made, an error will be raised.
     port
         The port to run the app on. If 0, a random port will be chosen.
     cwd
@@ -229,6 +233,12 @@ def run_shiny_app(
         The maximum number of seconds to wait for the app to become ready.
     bufsize
         The buffer size to use for stdout and stderr.
+
+    Returns
+    -------
+    :
+        A :class:`shiny.run.ShinyAppProc` object representing the running
+        Shiny app process.
     """
     shiny_port = port if port != 0 else random_port()
 

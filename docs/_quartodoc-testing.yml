@@ -9,6 +9,8 @@ quartodoc:
   renderer:
     style: _renderer.py
     show_signature_annotations: false
+  options:
+    include_inherited: true
   sections:
     - title: UI Layouts
       desc: Methods for interacting with Shiny app multiple UI component controller.
@@ -47,7 +49,7 @@ quartodoc:
     - title: Navigation (tab) panels
       desc: Methods for interacting with Shiny app UI content controller.
       contents:
-        - playwright.controller.NavItem
+        - playwright.controller.NavPanel
         - playwright.controller.NavsetBar
         - playwright.controller.NavsetCardPill
         - playwright.controller.NavsetCardTab
@@ -77,10 +79,11 @@ quartodoc:
       desc: "Methods for testing the state of a locator within a Shiny app."
       contents:
         - playwright.expect.expect_to_change
-        - playwright.expect.expect_attribute_to_have_value
+        - playwright.expect.expect_not_to_have_attribute
         - playwright.expect.expect_to_have_class
         - playwright.expect.expect_not_to_have_class
         - playwright.expect.expect_to_have_style
+        - playwright.expect.expect_not_to_have_style
     - title: "Pytest"
       desc: "Fixtures used for testing Shiny apps with Pytest."
       contents:
