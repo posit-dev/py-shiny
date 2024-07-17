@@ -68,6 +68,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Other changes
 
+* `ui.input_action_button()` and `ui.update_action_button()` gain a `disabled` argument. When the button is disabled, it appears grayed out and cannot be clicked. (#1465)
+
 * The main content area of `ui.page_sidebar()` and `ui.page_navbar()` with a page-level `sidebar` now have a minimum height and width to avoid squashed content in fillable layouts. The minimum height and width are controllable via `--bslib-page-main-min-{width,height}` CSS variables. (#1436)
 
 * Added a new option to place an always-open sidebar *above the main content* on mobile screens by providing `open={"mobile": "always-above"}` to `ui.sidebar()`. (#1436)
