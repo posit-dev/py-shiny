@@ -53,6 +53,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `ui.Theme` allows you to create custom themes for your Shiny app by recompiling [Bootstrap](https://getbootstrap.com/) and Shiny's Sass files with your own customizations. Themes created with `ui.Theme` can be passed directly to the `theme` argument of `express.ui.page_opts()` (Shiny Express) or `ui.page_*()` functions (Shiny Core) to apply the theme to the entire app. This feature requires the [libsass package](https://sass.github.io/libsass-python/) which can be installed with `pip install libsass`. (#1358)
 
+* `ui.card_body()` can be used to wrap the contents of elements in `ui.card()`, allowing you to change parameters like `fillable` or `padding` and `gap` for groups of elements in the card. (#1506)
+
 ### Bug fixes
 
 * Fixed #1440: When a Shiny Express app with a `www/` subdirectory was deployed to shinyapps.io or a Connect server, it would not start correctly. (#1442)

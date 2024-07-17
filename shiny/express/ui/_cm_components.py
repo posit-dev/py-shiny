@@ -23,6 +23,7 @@ __all__ = (
     "layout_column_wrap",
     "layout_columns",
     "card",
+    "card_body",
     "card_header",
     "card_footer",
     "accordion",
@@ -469,6 +470,91 @@ def card(
             height=height,
             max_height=max_height,
             min_height=min_height,
+            fill=fill,
+            class_=class_,
+            **kwargs,
+        ),
+    )
+
+
+@add_example()
+def card_body(
+    *,
+    fillable: bool = True,
+    min_height: Optional[CssUnit] = None,
+    max_height: Optional[CssUnit] = None,
+    max_height_full_screen: Optional[CssUnit] | MISSING_TYPE = MISSING,
+    height: Optional[CssUnit] = None,
+    padding: Optional[CssUnit | list[CssUnit]] = None,
+    gap: Optional[CssUnit] = None,
+    fill: bool = True,
+    class_: Optional[str] = None,
+    **kwargs: TagAttrValue,
+) -> RecallContextManager[CardItem]:
+    # For a general overview of the :func:`~shiny.ui.card` API, see [this article](https://rstudio.github.io/bslib/articles/cards.html).
+    """
+    Card body container
+
+    A general container for the "main content" of a :func:`~shiny.ui.card`. This
+    component is designed to be provided as direct children to :func:`~shiny.ui.card`.
+
+    Parameters
+    ----------
+    *args
+        Contents to the card's body. Or tag attributes that are supplied to the
+        resolved :class:`~htmltools.Tag` object.
+    fillable
+        Whether or not the card item should be a fillable (i.e. flexbox) container.
+    min_height,max_height,max_height_full_screen
+        Any valid CSS length unit. If `max_height_full_screen` is missing, it is set to
+        `max_height`.
+    height
+        Any valid CSS unit (e.g., `height="200px"`). Doesn't apply when a card is made
+        `full_screen` (in this case, consider setting a `height` in
+        `card_body()`).
+    padding
+        Padding to use for the body. This can be a numeric vector
+        (which will be interpreted as pixels) or a character vector with valid CSS
+        lengths. The length can be between one and four. If one, then that value
+        will be used for all four sides. If two, then the first value will be used
+        for the top and bottom, while the second value will be used for left and
+        right. If three, then the first will be used for top, the second will be
+        left and right, and the third will be bottom. If four, then the values will
+        be interpreted as top, right, bottom, and left respectively.
+    gap
+        A CSS length unit defining the `gap` (i.e., spacing) between elements provided
+        to `*args`. This argument is only applicable when `fillable = TRUE`.
+    fill
+        Whether to allow this element to grow/shrink to fit its `card` container.
+    class_
+        Additional CSS classes for the returned Tag.
+    **kwargs
+        Additional HTML attributes for the returned Tag.
+
+    Returns
+    -------
+    :
+        A :class:`~shiny.ui.CardItem` object.
+
+    See Also
+    --------
+    * :func:`~shiny.ui.layout_column_wrap` for laying out multiple cards
+        (or multiple columns inside a card).
+    * :func:`~shiny.ui.card` for creating a card component.
+    * :func:`~shiny.ui.card_header` for creating a header within the card.
+    * :func:`~shiny.ui.card_footer` for creating a footer within the card.
+    """
+
+    return RecallContextManager(
+        ui.card_body,
+        kwargs=dict(
+            fillable=fillable,
+            min_height=min_height,
+            max_height=max_height,
+            max_height_full_screen=max_height_full_screen,
+            height=height,
+            padding=padding,
+            gap=gap,
             fill=fill,
             class_=class_,
             **kwargs,
