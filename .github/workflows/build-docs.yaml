@@ -70,7 +70,12 @@ jobs:
           cd shinylive-repo
           make all
 
-      # TODO-future; Install updated shinylive assets via updated py-shinylive pkg
+      - name: Use local build of shinylive for building docs
+        if: github.ref == 'refs/heads/main'
+        run: |
+          . venv/bin/activate
+          cd shinylive-repo
+          shinylive assets install-from-local ./build
 
       # =====================================================
       # Build site

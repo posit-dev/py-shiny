@@ -1,20 +1,13 @@
 # Experimental
 
-from ._card import (
-    WrapperCallable,
-    ImgContainer,
-    card,
-    card_body,
-    card_image,
-    card_title,
-)
+from ._card import card_image
+from ._deprecated import card, card_body, card_title
 
 __all__ = (
-    # Card
-    "WrapperCallable",
-    "ImgContainer",
+    # Deprecated
     "card",
-    "card_title",
     "card_body",
+    "card_title",
+    # Still experimental
     "card_image",
 )
