@@ -155,8 +155,6 @@ from ._progress import Progress
 from ._sidebar import (
     Sidebar,
     layout_sidebar,
-    panel_main,
-    panel_sidebar,
     sidebar,
     update_sidebar,
 )
@@ -189,8 +187,6 @@ __all__ = (
     "sidebar",
     "layout_sidebar",
     "update_sidebar",
-    "panel_sidebar",
-    "panel_main",
     # _layout
     "layout_columns",
     "layout_column_wrap",
