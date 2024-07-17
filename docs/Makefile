@@ -80,6 +80,9 @@ quartodoc_build_express: $(PYBIN) quartodoc_interlinks
 
 ## Build test API docs
 quartodoc_build_test: $(PYBIN) quartodoc_interlinks
+	$(eval export SHINY_ADD_EXAMPLES=true)
+	$(eval export IN_QUARTODOC=true)
+	$(eval export SHINY_MODE=express)
 	. $(PYBIN)/activate \
 	  && echo "::group::quartodoc build testing docs" \
 	  && quartodoc build --config _quartodoc-testing.yml --verbose \
