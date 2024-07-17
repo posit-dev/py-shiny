@@ -343,22 +343,17 @@ quartodoc:
         - render.transformer.output_transformer
         - render.transformer.resolve_value_fn
     - title: Experimental
-      desc: "These methods are under consideration and are considered unstable. However, if there is a method you are excited about, please let us know!"
+      desc: >
+        These methods are under consideration and are considered unstable.
+        However, if there is a method you are excited about, please let us know!
       contents:
         - kind: page
           path: ExCard
           summary:
             name: "Card"
-            desc: "Cards are a common organizing unit for modern user interfaces (UI). At their core, they're just rectangular containers with borders and padding. However, when utilized properly to group related information, they help users better digest, engage, and navigate through content."
+            desc: >
+              Additional card components that compliment [ui.card](ui.card.qmd).
           flatten: true
           contents:
-            - name: experimental.ui.card_body
-              dynamic: false
-            - name: experimental.ui.card_title
-              dynamic: false
             - name: experimental.ui.card_image
-              dynamic: false
-            - name: experimental.ui.ImgContainer
-              dynamic: false
-            - name: experimental.ui.WrapperCallable
               dynamic: false
