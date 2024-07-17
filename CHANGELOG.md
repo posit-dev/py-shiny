@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Deprecated functions in `shiny.experimental` have been removed. By and large, these functions are now available in the main `shiny` namespace. (#1540)
 
+* We've deprecated several card-related `shiny.experimental.ui` functions that were moved to the main `shiny.ui` namespace in v0.6.0. Both `card()` and `card_body()` are no longer experimental and can be called via `shiny.ui.card()` and `shiny.ui.card_body()` directly. `shiny.experimental.ui.card_title()` is now deprecated, but can be replaced with `shiny.ui.tags.h5()` or `shiny.ui.card_header()`. (#1543)
+
 ### New features
 
 * Added a new `shiny.ui.Chat` class for building conversational interfaces with fully customizable and performant response generation. (#1453)
