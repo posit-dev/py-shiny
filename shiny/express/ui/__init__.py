@@ -293,9 +293,6 @@ _known_missing = {
     "shiny.ui": (
         "column",  # Deprecated in favor of layout_columns
         "row",  # Deprecated in favor of layout_columns
-        "nav",  # Deprecated in favor of nav_panel
-        "navset_pill_card",  # Deprecated
-        "navset_tab_card",  # Deprecated
         "page_bootstrap",
         "page_fixed",
         "page_sidebar",

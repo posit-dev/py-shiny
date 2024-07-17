@@ -14,10 +14,6 @@ __all__ = (
     "navset_pill_list",
     "navset_hidden",
     "navset_bar",
-    # Deprecated - 2023-08-15
-    "navset_pill_card",
-    "navset_tab_card",
-    "nav",
 )
 
 import collections.abc
@@ -27,7 +23,6 @@ from typing import Any, Literal, Optional, Sequence, cast
 
 from htmltools import MetadataNode, Tag, TagAttrs, TagChild, TagList, css, div, tags
 
-from .._deprecated import warn_deprecated
 from .._docstring import add_example, no_example
 from .._namespaces import resolve_id_or_none
 from .._utils import private_random_int
@@ -1367,76 +1362,3 @@ def navset_title(
 
 def nav_random_int() -> str:
     return private_random_int(1000, 1000000)
-
-
-##############################################
-# Deprecated
-##############################################
-# Deprecated 2023-08-15
-def navset_pill_card(
-    *args: NavSetArg,
-    id: Optional[str] = None,
-    selected: Optional[str] = None,
-    header: TagChild = None,
-    footer: TagChild = None,
-    placement: Literal["above", "below"] = "above",
-) -> NavSetCard:
-    """Deprecated. Please use `navset_card_pill()` instead of `navset_pill_card()`."""
-    warn_deprecated(
-        "`navset_pill_card()` is deprecated. "
-        "This method will be removed in a future version, "
-        "please use :func:`~shiny.ui.navset_card_pill` instead."
-    )
-    return navset_card_pill(
-        *args,
-        id=id,
-        selected=selected,
-        header=header,
-        footer=footer,
-        placement=placement,
-    )
-
-
-# Deprecated 2023-08-15
-def navset_tab_card(
-    *args: NavSetArg,
-    id: Optional[str] = None,
-    selected: Optional[str] = None,
-    header: TagChild = None,
-    footer: TagChild = None,
-) -> NavSetCard:
-    """Deprecated. Please use `navset_card_tab()` instead of `navset_tab_card()`."""
-    warn_deprecated(
-        "`navset_tab_card()` is deprecated. "
-        "This method will be removed in a future version, "
-        "please use :func:`~shiny.ui.navset_card_tab` instead."
-    )
-    return navset_card_tab(
-        *args,
-        id=id,
-        selected=selected,
-        header=header,
-        footer=footer,
-    )
-
-
-# Deprecated 2023-12-07
-@no_example()
-def nav(
-    title: TagChild,
-    *args: TagChild,
-    value: Optional[str] = None,
-    icon: TagChild = None,
-) -> NavPanel:
-    """Deprecated. Please use `nav_panel()` instead of `nav()`."""
-    warn_deprecated(
-        "`nav()` is deprecated. "
-        "This method will be removed in a future version, "
-        "please use :func:`~shiny.ui.nav_panel` instead."
-    )
-    return nav_panel(
-        title,
-        *args,
-        value=value,
-        icon=icon,
-    )

@@ -111,7 +111,6 @@ from ._layout_columns import layout_columns
 from ._markdown import markdown
 from ._modal import modal, modal_button, modal_remove, modal_show
 from ._navs import (
-    nav,
     nav_control,
     nav_menu,
     nav_panel,
@@ -122,11 +121,8 @@ from ._navs import (
     navset_card_underline,
     navset_hidden,
     navset_pill,
-    # Deprecated
-    navset_pill_card,
     navset_pill_list,
     navset_tab,
-    navset_tab_card,
     navset_underline,
 )
 from ._notification import notification_remove, notification_show
@@ -295,10 +291,6 @@ __all__ = (
     "navset_pill_list",
     "navset_hidden",
     "navset_bar",
-    # # Deprecated
-    "navset_pill_card",
-    "navset_tab_card",
-    "nav",
     # _notification
     "notification_show",
     "notification_remove",
