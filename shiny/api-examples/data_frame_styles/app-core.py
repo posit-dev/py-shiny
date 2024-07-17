@@ -76,9 +76,7 @@ hi_pd = pd.DataFrame(
 
 
 app_ui = ui.page_fillable(
-    ui.h2(
-        "Custom styles applied to all cells within a data frame ", ui.HTML("&#128075;")
-    ),
+    ui.h2("Data Frame with Styles applied to 4 cells"),
     ui.output_data_frame("my_df"),
     ui.hr(),
     ui.tags.style(
@@ -96,7 +94,9 @@ app_ui = ui.page_fillable(
         """
         )
     ),
-    ui.h2("Data Frame with Styles applied to 4 cells"),
+    ui.h2(
+        "Custom styles applied to all cells within a data frame ", ui.HTML("&#128075;")
+    ),
     ui.output_data_frame("hi_df"),
 )
 
