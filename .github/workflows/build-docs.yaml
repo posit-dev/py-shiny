@@ -49,7 +49,6 @@ jobs:
       # Shinylive
       # =====================================================
       - name: Check out shinylive
-        if: github.ref == 'refs/heads/main'
         uses: actions/checkout@v4
         with:
           repository: rstudio/shinylive
@@ -57,7 +56,6 @@ jobs:
           path: shinylive-repo
 
       - name: Update shinylive's copy of shiny and htmltools
-        if: github.ref == 'refs/heads/main'
         run: |
           cd shinylive-repo
           make submodules
@@ -65,7 +63,6 @@ jobs:
           make submodules-pull-htmltools
 
       - name: Build shinylive
-        if: github.ref == 'refs/heads/main'
         run: |
           cd shinylive-repo
           make all
