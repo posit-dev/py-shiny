@@ -196,7 +196,9 @@ class ChatInput extends LightElement {
   }
 
   #onInput(): void {
-    this.button.disabled = this.value.trim().length === 0;
+    this.button.disabled = this.disabled
+      ? true
+      : this.value.trim().length === 0;
   }
 
   // Determine whether the button should be enabled/disabled on first render
@@ -388,7 +390,7 @@ class ChatContainer extends LightElement {
     // When streaming or resizing, only scroll if the user near the bottom
     const { cancelIfScrolledUp } = event.detail;
     if (cancelIfScrolledUp) {
-      if (this.scrollTop + this.clientHeight < this.scrollHeight - 50) {
+      if (this.scrollTop + this.clientHeight < this.scrollHeight - 100) {
         return;
       }
     }
