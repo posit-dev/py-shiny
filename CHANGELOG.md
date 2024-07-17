@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Deprecations
 
+* `@render.data_frame`, `render.DataGrid`, and `render.DataTable` have deprecated support for data frame types that are `pandas` compatible. Please call `.to_pandas()` on your data before it is returned to the renderer (#1502). Currently, both `polars` and `pandas` data frames are supported (#1474). If you'd like to add support for a new data frame type, please open an issue or a pull request.
+
 * `@render.data_frame`'s `.cell_selection()` will no longer return `None` when the selection mode is `"none"`. In addition, missing `rows` or `cols` information will be populated with appropiate values. This allows for consistent handling of the cell selection object. (#1374)
 
 * `@render.data_frame`'s input value `input.<ID>_data_view_indices()` has been deprecated. Please use `<ID>.data_view_rows()` to retrieve the same information. (#1377)
@@ -24,11 +26,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Added a new `shiny.ui.Chat` class for building conversational interfaces with fully customizable and performant response generation. (#1453)
 
 * Expose `shiny.playwright`, `shiny.run`, and `shiny.pytest` modules that allow users to testing their Shiny apps.  (#1448, #1456, #1481)
-  * `shiny.playwright` contains `controller` and `expect` submodules. `controller` will contain many classes to interact with (and verify!) your Shiny app using Playwright. `expect` contains expectation functions that enhance standard Playwright expectation methods.
+  * `shiny.playwright` contains `controller` and `expect` submodules. `controller` will contain **many** classes to interact with (and verify!) your Shiny app using Playwright. `expect` contains expectation functions that enhance standard Playwright expectation methods.
   * `shiny.run` contains the `run_shiny_app` command and the return type `ShinyAppProc`. `ShinyAppProc` can be used to type the Shiny app pytest fixtures.
   * `shiny.pytest` contains pytest test fixtures. The `local_app` pytest fixture is automatically available and runs a sibling `app.py` file. Where as `create_app_fixture(PATH_TO_APP)` allows for a relative path to a Shiny app to be instantiated from a different folder.
 
 * Added CLI command `shiny add test` to add a test file to an existing Shiny app. (#1461)
+
+* `@render.data_frame`, `render.DataGrid`, and `render.DataTable` now support `polars` data frames (#1474).
+
+* `@render.data_frame`, `render.DataGrid`, and `render.DataTable` are now type aware. This means that the data frame renderer object's `.data()` and `.data_view()` methods will return the same type of data given the the renderer. E.g. If a `DataGrid` wrapping a `polars` data frame is returned to the renderer function, `.data_view()` will return `polars` data.  (#1502)
+
+* `@render.data_frame`'s `render.DataGrid` and `render.DataTable` added support for cell styling with the new `styles=` parameter. This parameter can receive a style info object (or a list of style info objects), or a function that accepts a data frame and returns a list of style info objects. Each style info object can contain the `rows` and `cols` locations where the inline `style` and/or CSS `class` should be applied. (#1475)
 
 * `@render.data_frame` has added a few new methods:
   * `.data_view_rows()` is a reactive value representing the sorted and filtered row numbers. This value wraps `input.<ID>_data_view_rows()`(#1374)
@@ -37,7 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   * `.update_sort(sort=)` allows app authors to programmatically update the sorting of the data frame. (#1374)
   * `.update_filter(filter=)` allows app authors to programmatically update the filtering of the data frame. (#1374)
 
-* `@render.data_frame` now accepts both a non-`"none"` `selection_mode` value and `editable=True`. When both settings are enabled, row numbers are displayed in the first column. (#1454, #1534)
+* `@render.data_frame` now accepts both a non-`"none"` `selection_mode` value and `editable=True`. (#1454, #1534)
 
 * `@render.data_frame`'s `<ID>.cell_selection()` no longer returns a `None` value and now always returns a dictionary containing both the `rows` and `cols` keys. This is done to achieve more consistent author code when working with cell selection. When the value's `type="none"`, both `rows` and `cols` are empty tuples. When `type="row"`, `cols` represents all column numbers of the data. In the future, when `type="col"`, `rows` will represent all row numbers of the data. These extra values are not available in `input.<ID>_cell_selection()` as they are independent of cells being selected and are removed to reduce information being sent to and from the browser. (#1376)
 

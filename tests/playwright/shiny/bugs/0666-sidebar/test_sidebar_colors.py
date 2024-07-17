@@ -4,7 +4,7 @@ from colors import bg_color, fg_color
 from playwright.sync_api import Page, expect
 
 from shiny.playwright import controller
-from shiny.playwright.controller._controls import _expect_class_value
+from shiny.playwright.expect._internal import expect_class_to_have_value
 from shiny.run import ShinyAppProc
 
 
@@ -29,7 +29,11 @@ def test_sidebar_bg_colors(page: Page, local_app: ShinyAppProc) -> None:
         expect(main_layout).to_have_attribute("data-open-desktop", open_desktop)
         expect(main_layout).to_have_attribute("data-open-mobile", open_mobile)
 
-        _expect_class_value(main_layout, "sidebar-right", position_val == "right")
+        expect_class_to_have_value(
+            main_layout,
+            "sidebar-right",
+            has_class=position_val == "right",
+        )
 
         expect(content).to_have_text(f"Main content - {i}")
         expect(sidebar).to_have_text(f"Sidebar content - {i}")
