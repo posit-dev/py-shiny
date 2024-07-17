@@ -148,22 +148,32 @@ $bslib-checkbox-radio-margin-right: 0.35em !default;
     // color of the card header, giving us the white card headers we want, without also
     // blocking inheritence via `.text-bg-{theme}` classes or others.
     --#{$prefix}card-cap-bg: ;
-    .card-header, .card-footer {
+
+    .card-header,
+    .card-footer {
       font-size: 0.9rem;
     }
+
     .card-header {
       font-weight: var(--bslib-dashboard-card-header-font-weight);
       line-height: 1.375rem;
     }
   }
 
-  // Set the background color of page dashboard class...
-  .bslib-page-dashboard,
-  // or of global main content area in a page_navbar() with a global sidebar
-  .main:has(.tab-content > .bslib-page-dashboard.active) {
+  // Set the background color of page dashboard class with a sidebar layout...
+  .bslib-sidebar-layout {
+    &:has(> .bslib-page-dashboard),
+    // or of global main content area in a page_navbar() with a global sidebar
+    &:has(.tab-content > .bslib-page-dashboard.active) {
+      // or of main area of a page_sidebar()
+      --_main-bg: var(--bslib-dashboard-main-bg);
+      ;
+    }
+  }
+
+  // ... or `page_navbar(nav_panel(class = "bslib-page-dashboard"), sidebar = NULL)`
+  .bslib-page-navbar .tab-content > .bslib-page-dashboard.active {
     background-color: var(--bslib-dashboard-main-bg);
-    // or of main area of a page_sidebar()
-    --_main-bg: var(--bslib-dashboard-main-bg);
   }
 
   .bslib-page-navbar, .bslib-page-dashboard {
@@ -288,6 +298,7 @@ $icon-classes: ("bi", "fa", "fas", "far", "fab", "material-icons") !default;
 #shiny-modal-wrapper:has( ~ .modal-backdrop) .modal {
   // Blur the background when the modal has a backdrop
   backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
 }
 
 // Progress Bars & Notifications

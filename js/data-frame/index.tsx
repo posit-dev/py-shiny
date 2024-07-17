@@ -670,7 +670,8 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
     className += " html-fill-item";
   }
 
-  const includeRowNumbers = selectionModes.row !== SelectionModes._rowEnum.NONE;
+  const includeRowNumbers =
+    false && selectionModes.row !== SelectionModes._rowEnum.NONE;
 
   return (
     <>
@@ -723,7 +724,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
                       // @ts-ignore:next-line
                       key={header.id}
                       colSpan={header.colSpan}
-                      style={{ width: header.getSize() }}
+                      style={{ minWidth: header.getSize() }}
                       scope="col"
                       tabIndex={0}
                       onClick={header.column.getToggleSortingHandler()}
@@ -778,7 +779,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
                     tabIndex={-1}
                     {...selection.itemHandlers()}
                   >
-                    {selectionModes.row !== SelectionModes._rowEnum.NONE && (
+                    {includeRowNumbers && (
                       <td className="row-number">{row.index + 1}</td>
                     )}
                     {row.getVisibleCells().map((cell) => {

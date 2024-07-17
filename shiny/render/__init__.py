@@ -12,7 +12,7 @@ from ._data_frame import (
     DataTable,
     data_frame,
 )
-from ._data_frame_utils import CellSelection
+from ._data_frame_utils._selection import CellSelection
 from ._data_frame_utils._types import (  # noqa: F401
     StyleInfo,
     DataFrameLikeT as _DataFrameLikeT,  # pyright: ignore[reportUnusedImport]

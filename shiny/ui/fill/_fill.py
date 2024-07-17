@@ -127,8 +127,8 @@ def remove_all_fill(
     Returns
     -------
     :
-        The original :class:`~htmltools.Tag` object with filling layout attributes
-        removed.
+        A copy of the original :class:`~htmltools.Tag` object with filling layout
+        attributes removed.
 
 
     See Also
@@ -137,9 +137,10 @@ def remove_all_fill(
     * :func:`~shiny.ui.fill.as_fillable_container`
     """
 
-    tag.remove_class(FILL_CONTAINER_CLASS)
-    tag.remove_class(FILL_ITEM_CLASS)
-    return tag
+    res = copy(tag)
+    res.remove_class(FILL_CONTAINER_CLASS)
+    res.remove_class(FILL_ITEM_CLASS)
+    return res
 
 
 # Method currently not exposed, but implemented within bslib

@@ -53,7 +53,7 @@ def test_validate_column_labels(page: Page, local_app: ShinyAppProc) -> None:
                 classes = class_for_cell(row, col)
 
                 if len(classes) == 0:
-                    shiny_expect.expect_attribute_to_have_value(cell_loc, "class", None)
+                    shiny_expect.expect_not_to_have_attribute(cell_loc, "class")
                 else:
                     for ex_class in classes:
                         assert isinstance(ex_class, str)

@@ -30,24 +30,6 @@
         > .main > .html-fill-item {
           flex: 0 0 auto;
         }
-
-        &:not(.sidebar-right) {
-          > .main {
-            padding-left: var(--_padding-icon);
-            padding-top: var(--_padding);
-          }
-          > .collapse-toggle {
-            left: calc(var(--_icon-size) / 2);
-          }
-        }
-        &.sidebar-right {
-          > .main {
-            padding-right: var(--_padding-icon);
-          }
-          > .collapse-toggle {
-            right: calc(var(--_icon-size) / 2);
-          }
-        }
       }
     }
   }

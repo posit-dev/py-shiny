@@ -276,6 +276,8 @@ def _filter_test_impl(
     summary: Locator,
     snapshot: Any,
 ):
+    controller.InputSelect(page, "selection_mode").set("none")
+
     filters = grid.locator("tr.filters")
 
     filter_subidir_min = filters.locator("> th:nth-child(1) > div > input:nth-child(1)")
