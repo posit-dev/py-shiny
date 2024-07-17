@@ -12,6 +12,7 @@ from shiny.run import ShinyAppProc
 def test_validate_row_selection_in_edit_mode(
     page: Page, local_app: ShinyAppProc
 ) -> None:
+    page.set_viewport_size({"width": 1920 * 2, "height": 1080 * 2})
     page.goto(local_app.url)
 
     # Select (and verify) a row. Edit a cell content in that row.
@@ -61,7 +62,9 @@ def test_validate_row_selection_in_edit_mode(
     page.keyboard.press("Escape")
     page.keyboard.press("Enter")
     data_frame.expect_class_state(
-        "editing", row=1, col=5
+        "editing",
+        row=1,
+        col=0,
     )  # Stage column begins to be edited.
 
     # Click outside the table/Press Escape to exit row focus.
