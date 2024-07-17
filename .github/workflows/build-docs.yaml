@@ -73,6 +73,7 @@ jobs:
       - name: Link to local build of shinylive for building docs
         if: github.ref == 'refs/heads/main'
         run: |
+          . venv/bin/activate
           cd shinylive-repo
           shinylive assets link-from-local ./build
 
