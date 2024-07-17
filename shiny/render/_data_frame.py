@@ -13,23 +13,23 @@ from .._docstring import add_example
 from .._utils import wrap_async
 from ..session._utils import require_active_session, session_context
 from ..types import JsonifiableDict, ListOrTuple
-from ._data_frame_utils import (
-    AbstractTabularData,
-    BrowserCellSelection,
+from ._data_frame_utils._datagridtable import AbstractTabularData, DataGrid, DataTable
+from ._data_frame_utils._html import maybe_as_cell_html
+from ._data_frame_utils._patch import (
     CellPatch,
-    CellSelection,
     CellValue,
-    DataGrid,
-    DataTable,
     PatchesFn,
     PatchesFnSync,
     PatchFn,
     PatchFnSync,
-    SelectionModes,
-    as_cell_selection,
     assert_patches_shape,
 )
-from ._data_frame_utils._html import maybe_as_cell_html
+from ._data_frame_utils._selection import (
+    BrowserCellSelection,
+    CellSelection,
+    SelectionModes,
+    as_cell_selection,
+)
 from ._data_frame_utils._styles import as_browser_style_infos
 from ._data_frame_utils._tbl_data import (
     apply_frame_patches__typed,
@@ -64,42 +64,13 @@ DataFrameResult = Union[
 DataFrameValue = Union[None, DataGrid[DataFrameLikeT], DataTable[DataFrameLikeT]]
 
 
-# # TODO-future; Use `dataframe-api-compat>=0.2.6` to injest dataframes and return standardized dataframe structures
-# # TODO-future: Find this type definition: https://github.com/data-apis/dataframe-api-compat/blob/273c0be45962573985b3a420869d0505a3f9f55d/dataframe_api_compat/polars_standard/dataframe_object.py#L22
-# # Related: https://data-apis.org/dataframe-api-compat/quick_start/
-# # Related: https://github.com/data-apis/dataframe-api-compat
-# # Related: `.collect()` is needed. Boo. : https://data-apis.org/dataframe-api-compat/basics/dataframe/#__tabbed_2_2
-# from dataframe_api import DataFrame as DataFrameStandard
-# class ConsortiumNamespaceDataframe(Protocol):
-#     def __dataframe_namespace__(self) -> DataFrameStandard: ...
-# class ConsortiumStandardDataframe(Protocol):
-#     def __dataframe_consortium_standard__(self,api_version: str) -> DataFrameStandard: ...
-# # https://data-apis.org/dataframe-protocol/latest/purpose_and_scope.html#this-dataframe-protocol
-# def get_compliant_df(
-#     df: ConsortiumNamespaceDataframe | ConsortiumStandardDataframe,
-# ) -> DataFrameStandard:
-#     """Utility function to support programming against a dataframe API"""
-#     if hasattr(df, "__dataframe_namespace__"):
-#         # Is already Standard-compliant DataFrame, nothing to do here.
-#         pass
-#     elif hasattr(df, "__dataframe_consortium_standard__"):
-#         # Convert to Standard-compliant DataFrame.
-#         df = df.__dataframe_consortium_standard__(api_version="2023.11-beta")
-#     else:
-#         # Here we can raise an exception if we only want to support compliant dataframes,
-#         # or convert to our default choice of dataframe if we want to accept (e.g.) dicts
-#         raise TypeError(
-#             "Expected Standard-compliant DataFrame, or DataFrame with Standard-compliant implementation"
-#         )
-#     return df
-
-
 @add_example()
 class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
     """
-    Decorator for a function that returns a pandas `DataFrame` object (or similar) to
-    render as an interactive table or grid. Features fast virtualized scrolling, sorting,
-    filtering, and row selection (single or multiple).
+    Decorator for a function that returns a [pandas](https://pandas.pydata.org/) or
+    [polars](https://pola.rs/) `DataFrame` object to render as an interactive table or
+    grid. Features fast virtualized scrolling, sorting, filtering, and row selection
+    (single or multiple).
 
     Returns
     -------
@@ -109,10 +80,8 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
         1. A :class:`~shiny.render.DataGrid` or :class:`~shiny.render.DataTable` object,
            which can be used to customize the appearance and behavior of the data frame
            output.
-        2. A pandas `DataFrame` object. (Equivalent to
-           `shiny.render.DataGrid(df)`.)
-        3. Any object that has a `.to_pandas()` method (e.g., a Polars data frame or
-           Arrow table). (Equivalent to `shiny.render.DataGrid(df.to_pandas())`.)
+        2. A pandas `DataFrame` object or a polars `DataFrame` object. This object will
+           be internally upgraded to `shiny.render.DataGrid(df)`.
 
     Row selection
     -------------
@@ -124,12 +93,14 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
     information from session's `input.<data_frame_renderer>_cell_selection()` value and
     upgrades it for consistent subsetting.
 
-    To filter your pandas data frame (`df`) down to the selected rows, you can use:
+    For example, to filter your pandas data frame (`df`) down to the selected rows you can use:
 
     * `df.iloc[list(input.<data_frame_renderer>_cell_selection()["rows"])]`
     * `df.iloc[list(<data_frame_renderer>.cell_selection()["rows"])]`
-    * `df.iloc[list(<data_frame_renderer>.data_view_info()["selected_rows"])]`
     * `<data_frame_renderer>.data_view(selected=True)`
+
+    The last method (`.data_view(selected=True)`) will also apply any sorting,
+    filtering, or edits that has been applied by the user.
 
     Editing cells
     -------------
@@ -145,11 +116,11 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
     possible that alterations to `data_view` could alter the original `data` data frame.
 
     To access the original data, use `<data_frame_renderer>.data()`. This is a quick
-    reference to the original data frame (converted to a `pandas.DataFrame`) that was
-    returned from the app's render function. If it is mutated in place, it **will**
-    modify the original data.
+    reference to the original pandas or polars data frame that was returned from the
+    app's render function. If it is mutated in place, it **will** modify the original
+    data.
 
-    Note... if the data frame renderer is re-rendered due to reactivity, then (currently)
+    Note... if the data frame renderer is re-rendered due to reactivity, then
     the user's edits, sorting, and filtering will be lost. We hope to improve upon this
     in the future.
 
@@ -182,7 +153,8 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
     """
     User-defined function to update a single cell in the data frame.
 
-    Defaults to return the value as is.
+    The function takes a single keyword argument `patch` and (by default) returns the
+    patch's value.
     """
     _patches_fn: PatchesFn
     """
@@ -263,7 +235,6 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
         else:
             return self._data_view_all()
 
-    # TODO-barret-render.data_frame; Allow for DataTable and DataGrid to accept SelectionModes
     selection_modes: reactive.Calc_[SelectionModes]
     """
     Reactive value of the data frame's possible selection modes.
@@ -302,6 +273,7 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
         The row numbers of the data frame that are currently being viewed in the browser
         after sorting and filtering has been applied.
     """
+
     _data_patched: reactive.Calc_[DataFrameLikeT]
     """
     Reactive value of the data frame's patched data.
@@ -329,7 +301,7 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
     Returns
     -------
     :
-        An array of `col`umn number and `value` information.
+        An array of `col`umn number and `value` information. If the column type is a number, a tuple of `(min, max)` is used for `value`. If no min (or max) value is set, `None` is used in its place. If the column type is a string, the string value is used for `value`.
     """
 
     def _reset_reactives(self) -> None:
@@ -514,6 +486,12 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
         return more, less, or the same number of patches as the input patches. This
         allows for the app author to own more control over which columns are updated and
         how they are updated.
+
+        Parameters
+        ----------
+        fn
+            A function that accepts a kwarg `patches` and returns a list of (possibly
+            updated) patches to apply to the data frame.
         """
         self._patches_fn = wrap_async(  # pyright: ignore[reportGeneralTypeIssues,reportAttributeAccessIssue]
             fn
@@ -616,7 +594,7 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
                     and isinstance(patch["row_index"], int)
                     and isinstance(patch["column_index"], int)
                     # # Do not check the value type here. It should be validated by
-                    # # `._set_cell_patch_map_value()` later with more type hint context
+                    # # `._set_cell_patch_map_patches()` later with more type hint context
                     # and isinstance(updated_patch["value"], CellValue)
                 ):
                     raise ValueError(
@@ -626,12 +604,7 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
                     )
 
         # Add (or overwrite) new cell patches by setting each patch into the cell patch map
-        for patch in patches:
-            self._set_cell_patch_map_value(
-                value=patch["value"],
-                row_index=patch["row_index"],
-                column_index=patch["column_index"],
-            )
+        self._set_cell_patch_map_patches(patches)
 
         # Upgrade any HTML-like content to `CellHtml` json objects
         processed_patches: list[CellPatchProcessed] = [
@@ -658,44 +631,39 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
         # Return the processed patches to the client
         return jsonifiable_patches
 
-    def _set_cell_patch_map_value(
+    def _set_cell_patch_map_patches(
         self,
-        value: CellValue,
-        *,
-        row_index: int,
-        column_index: int,
+        patches: ListOrTuple[CellPatch],
     ):
         """
-        Set the value within the cell patch map.
+        Set the patches within the cell patch map.
 
         Parameters
         ----------
-        value
-            The new value to set the cell to.
-        row_index
-            The row index of the cell to update.
-        column_index
-            The column index of the cell to update.
+        patches
+            Set of patches to apply to store in the cell patch map.
         """
-        assert isinstance(
-            row_index, int
-        ), f"Expected `row_index` to be an `int`, got {type(row_index)}"
-        assert isinstance(
-            column_index, int
-        ), f"Expected `column_index` to be an `int`, got {type(column_index)}"
-
-        # TODO-barret-render.data_frame; Check for cell type and compare against self._type_hints
-        # TODO-barret-render.data_frame; The `value` should be coerced by pandas to the correct type
-        # TODO-barret; See https://pandas.pydata.org/pandas-docs/stable/user_guide/basics.html#object-conversion
-
-        cell_patch: CellPatch = {
-            "row_index": row_index,
-            "column_index": column_index,
-            "value": value,
-        }
         # Use copy to set the new value
         cell_patch_map = self._cell_patch_map().copy()
-        cell_patch_map[(row_index, column_index)] = cell_patch
+
+        for patch in patches:
+            row_index = patch["row_index"]
+            column_index = patch["column_index"]
+
+            assert isinstance(
+                row_index, int
+            ), f"Expected `row_index` to be an `int`, got {type(row_index)}"
+            assert isinstance(
+                column_index, int
+            ), f"Expected `column_index` to be an `int`, got {type(column_index)}"
+
+            # TODO-render.data_frame; Possibly check for cell type and compare against self._type_hints
+            # TODO-render.data_frame; The `value` should be coerced by pandas to the correct type
+            # TODO-render.data_frame; See https://pandas.pydata.org/pandas-docs/stable/user_guide/basics.html#object-conversion
+
+            cell_patch_map[(row_index, column_index)] = patch
+
+        # Once all patches are set, update the cell patch map with new version
         self._cell_patch_map.set(cell_patch_map)
 
     async def _attempt_update_cell_style(self) -> None:
@@ -732,8 +700,8 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
     #     column_index
     #         The column index of the cell to update.
     #     """
-    #     cell_patch_processed = self._set_cell_patch_map_value(
-    #         value, row_index=row_index, column_index=column_index
+    #     cell_patch_processed = self._set_cell_patch_map_patches(
+    #         {value: value, row_index: row_index, column_index: column_index}
     #     )
     #     # TODO-barret-render.data_frame; Send message to client to update cell value
     #     return cell_patch_processed

@@ -61,7 +61,7 @@ def as_data_frame_like(
             "Returned data frame data values that are not Pandas or Polars `DataFrame`s are currently not supported. "
             "A `.to_pandas()` was found on your object and will be called. "
             "To remove this warning, please call `.to_pandas()` on your data "
-            "and use the result in your return value. "
+            "and use the pandas result in your returned value. "
             "In the future, this will raise an error."
         )
         return data.to_pandas()

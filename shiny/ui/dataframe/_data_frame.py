@@ -28,7 +28,7 @@ def output_data_frame(id: str) -> Tag:
 
     See Also
     --------
-    * :class:`~shiny.render.data_frame`
+    * :class:`shiny.render.data_frame`
     """
     return as_fillable_container(
         as_fill_item(

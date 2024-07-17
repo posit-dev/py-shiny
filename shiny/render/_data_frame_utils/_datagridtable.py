@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import abc
-from typing import TYPE_CHECKING, Generic, Literal, Union
+from typing import Generic, Literal
 
-from ..._docstring import add_example, no_example
+from ..._docstring import add_example
 from ._selection import (
     RowSelectionModeDeprecated,
     SelectionModeInput,
@@ -14,37 +14,33 @@ from ._styles import StyleFn, StyleInfo, as_browser_style_infos, as_style_infos
 from ._tbl_data import as_data_frame_like, serialize_frame
 from ._types import DataFrameLikeT, FrameJson
 
-if TYPE_CHECKING:
-
-    DataFrameResult = Union[
-        None,
-        DataFrameLikeT,
-        "DataGrid[DataFrameLikeT]",
-        "DataTable[DataFrameLikeT]",
-    ]
-
-else:
-    # The parent class of `data_frame` needs something to hold onto
-    # To avoid loading pandas, we use `object` as a placeholder
-    DataFrameResult = Union[None, object]
-
 
 class AbstractTabularData(abc.ABC):
     @abc.abstractmethod
     def to_payload(self) -> FrameJson: ...
 
 
-@add_example(ex_dir="../../api-examples/data_frame")
+@add_example(ex_dir="../../api-examples/data_frame_grid_table")
+@add_example(ex_dir="../../api-examples/data_frame_styles")
 class DataGrid(AbstractTabularData, Generic[DataFrameLikeT]):
     """
     Holds the data and options for a :class:`~shiny.render.data_frame` output, for a
     spreadsheet-like view.
 
+    This class is used to wrap the returned data frame from a `@render.data_frame`
+    render function. It allows you to specify options for the data grid, such as the
+    width and height of the grid, whether to show a summary message, whether to show
+    filter inputs, whether the cells are editable, and how the cells are selected.
+
+    While there are currently no execution or parameter differences between `DataGrid`
+    and `DataTable` other than CSS styling in the browser, the two classes are kept
+    separate to allow for future extensibility.
+
     Parameters
     ----------
     data
-        A pandas `DataFrame` object, or any object that has a `.to_pandas()` method
-        (e.g., a Polars data frame or Arrow table).
+        A pandas or polars `DataFrame` object. If the object has a `.to_pandas()`
+        method, use the pandas form of your data.
     width
         A _maximum_ amount of horizontal space for the data grid to occupy, in CSS units
         (e.g. `"400px"`) or as a number, which will be interpreted as pixels. The
@@ -81,6 +77,27 @@ class DataGrid(AbstractTabularData, Generic[DataFrameLikeT]):
         Resolution rules:
         * If `"none"` is supplied, all other values will be ignored.
         * If both `"row"` and `"rows"` are supplied, `"row"` will be dropped (supporting `"rows"`).
+    styles
+        A style info object, a list of style info objects, or a function that receives
+        the (possibly updated) data frame and returns a list of style info objects. The
+        style info objects can be used to apply CSS styles to the data frame. If
+        `styles=None`, no styling will be applied.
+
+        Style info object key/value description:
+        * `location`: This value is required and currently only supports `"body"`.
+        * `rows`: The row numbers to which the style should be applied. If `None`, the
+            style will be applied to all rows.
+        * `cols`: The column numbers to which the style should be applied. If `None`,
+            the style will be applied to all columns.
+        * `style`: A dictionary of CSS properties and values to apply to the selected
+            rows and columns. The keys must be _camelCased_ CSS property names to work
+            properly with react.js (e.g. `backgroundColor` instead of
+            `background-color`).
+        * `class`: A string of CSS class names to apply to the selected rows and columns.
+
+        If both `style` and `class` are missing or `None`, nothing will be applied. If
+        both `rows` and `cols` are missing or `None`, the style will be applied to the
+        complete data frame.
     row_selection_mode
         Deprecated. Please use `selection_mode=` instead.
 
@@ -92,9 +109,9 @@ class DataGrid(AbstractTabularData, Generic[DataFrameLikeT]):
 
     See Also
     --------
-    * :func:`~shiny.ui.output_data_frame`
-    * :class:`~shiny.render.data_frame`
-    * :class:`~shiny.render.DataTable`
+    * :func:`~shiny.ui.output_data_frame` - The UI placeholder for a data frame output.
+    * :class:`~shiny.render.data_frame` - The `render` method for data frames.
+    * :class:`~shiny.render.DataTable` - A more _tabular_ view of the data.
     """
 
     data: DataFrameLikeT
@@ -135,6 +152,14 @@ class DataGrid(AbstractTabularData, Generic[DataFrameLikeT]):
         self.styles = as_style_infos(styles)
 
     def to_payload(self) -> FrameJson:
+        """
+        Converts the `DataGrid` object to a payload dictionary.
+
+        Returns
+        -------
+        :
+            The payload dictionary representing the `DataGrid` object.
+        """
         res: FrameJson = {
             **serialize_frame(self.data),
             "options": {
@@ -154,17 +179,27 @@ class DataGrid(AbstractTabularData, Generic[DataFrameLikeT]):
         return res
 
 
-@no_example()
+@add_example(ex_dir="../../api-examples/data_frame_grid_table")
+@add_example(ex_dir="../../api-examples/data_frame_styles")
 class DataTable(AbstractTabularData, Generic[DataFrameLikeT]):
     """
     Holds the data and options for a :class:`~shiny.render.data_frame` output, for a
     spreadsheet-like view.
 
+    This class is used to wrap the returned data frame from a `@render.data_frame`
+    render function. It allows you to specify options for the data table, such as the
+    width and height of the table, whether to show a summary message, whether to show
+    filter inputs, whether the cells are editable, and how the cells are selected.
+
+    While there are currently no execution or parameter differences between `DataGrid`
+    and `DataTable` other than CSS styling in the browser, the two classes are kept
+    separate to allow for future extensibility.
+
     Parameters
     ----------
     data
-        A pandas `DataFrame` object, or any object that has a `.to_pandas()` method
-        (e.g., a Polars data frame or Arrow table).
+        A pandas or polars `DataFrame` object. If the object has a `.to_pandas()`
+        method, use the pandas form of your data.
     width
         A _maximum_ amount of vertical space for the data table to occupy, in CSS units
         (e.g. `"400px"`) or as a number, which will be interpreted as pixels. The
@@ -201,6 +236,27 @@ class DataTable(AbstractTabularData, Generic[DataFrameLikeT]):
         Resolution rules:
         * If `"none"` is supplied, all other values will be ignored.
         * If both `"row"` and `"rows"` are supplied, `"row"` will be dropped (supporting `"rows"`).
+    styles
+        A style info object, a list of style info objects, or a function that receives
+        the (possibly updated) data frame and returns a list of style info objects. The
+        style info objects can be used to apply CSS styles to the data frame. If
+        `styles=None`, no styling will be applied.
+
+        Style info object key/value description:
+        * `location`: This value is required and currently only supports `"body"`.
+        * `rows`: The row numbers to which the style should be applied. If `None`, the
+            style will be applied to all rows.
+        * `cols`: The column numbers to which the style should be applied. If `None`,
+            the style will be applied to all columns.
+        * `style`: A dictionary of CSS properties and values to apply to the selected
+            rows and columns. The keys must be _camelCased_ CSS property names to work
+            properly with react.js (e.g. `backgroundColor` instead of
+            `background-color`).
+        * `class`: A string of CSS class names to apply to the selected rows and columns.
+
+        If both `style` and `class` are missing or `None`, nothing will be applied. If
+        both `rows` and `cols` are missing or `None`, the style will be applied to the
+        complete data frame.
     row_selection_mode
         Deprecated. Please use `mode={row_selection_mode}_row` instead.
 
@@ -212,9 +268,9 @@ class DataTable(AbstractTabularData, Generic[DataFrameLikeT]):
 
     See Also
     --------
-    * :func:`~shiny.ui.output_data_frame`
-    * :class:`~shiny.render.data_frame`
-    * :class:`~shiny.render.DataGrid`
+    * :func:`~shiny.ui.output_data_frame` - The UI placeholder for a data frame output.
+    * :class:`~shiny.render.data_frame` - The `render` method for data frames.
+    * :class:`~shiny.render.DataTable` - A more _grid_ view of the data.
     """
 
     data: DataFrameLikeT
@@ -254,6 +310,14 @@ class DataTable(AbstractTabularData, Generic[DataFrameLikeT]):
         self.styles = as_style_infos(styles)
 
     def to_payload(self) -> FrameJson:
+        """
+        Converts the `DataTable` object to a payload dictionary.
+
+        Returns
+        -------
+        :
+            The payload dictionary representing the `DataTable` object.
+        """
         res: FrameJson = {
             **serialize_frame(self.data),
             "options": {

@@ -3,7 +3,7 @@ import pytest
 
 from shiny import render
 from shiny._deprecated import ShinyDeprecationWarning
-from shiny.render._data_frame_utils import SelectionModes
+from shiny.render._data_frame_utils._selection import SelectionModes
 
 
 def test_data_frame_needs_unique_col_names():
