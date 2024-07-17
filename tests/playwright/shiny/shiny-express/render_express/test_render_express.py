@@ -10,12 +10,5 @@ EXPECT_TIMEOUT = 30 * 1000
 
 def test_render_express(page: Page, app: ShinyAppProc) -> None:
     page.goto(app.url)
-    expect(page.get_by_text("Text outside of render express call")).to_have_count(
-        1, timeout=EXPECT_TIMEOUT
-    )
-    expect(page.get_by_text("Text inside of render express call")).to_have_count(
-        1, timeout=EXPECT_TIMEOUT
-    )
-    expect(page.get_by_text("Dynamic slider value: 50")).to_have_count(
-        1, timeout=EXPECT_TIMEOUT
-    )
+    expect(page.get_by_text("Name")).to_have_count(1, timeout=EXPECT_TIMEOUT)
+    expect(page.get_by_text("Socrates")).to_have_count(1, timeout=EXPECT_TIMEOUT)
