@@ -16,12 +16,10 @@ def test_validate_column_labels(page: Page, local_app: ShinyAppProc) -> None:
 
     styles: list[dict[str, Jsonifiable]] = [
         {
-            "location": "body",
             "style": {"color": "darkorange", "font-weight": "bold"},
             "class": "everywhere",
         },
         {
-            "location": "body",
             "rows": [1, 2],
             "cols": [2],  # "Species",
             "class": "species",

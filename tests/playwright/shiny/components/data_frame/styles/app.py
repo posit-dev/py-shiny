@@ -51,17 +51,14 @@ pl_penguins = pl.read_csv(
 
 df_styles: list[render.StyleInfo] = [
     {
-        "location": "body",
         "style": {"color": "darkorange", "font-weight": "bold"},
     },
     {
-        "location": "body",
         "rows": None,
         "cols": None,
         "style": {"background-color": "lightblue"},
     },
     {
-        "location": "body",
         "rows": [1, 2],
         "cols": "Species",
         "style": {

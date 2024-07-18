@@ -4,7 +4,6 @@ from shiny import App, Inputs, render, ui
 
 green_styles = [
     {
-        "location": "body",
         "rows": [2, 4],
         "cols": [2, 4],
         "style": {
@@ -28,7 +27,6 @@ df = pd.DataFrame(
 
 hi_styles = [
     {
-        "location": "body",
         # No `rows` or `cols` means apply to all cells
         "class": "posit-bg",
         "style": {
@@ -37,7 +35,6 @@ hi_styles = [
         },
     },
     {
-        "location": "body",
         "rows": [3],
         "cols": [2],
         "class": "posit-blue-bg",
@@ -47,12 +44,10 @@ hi_styles = [
         },
     },
     {
-        "location": "body",
         "cols": [1, 3, 5],
         "class": "posit-blue-bg",
     },
     {
-        "location": "body",
         "cols": [7],
         "rows": [0, 1, 2, 3, 5],
         "class": "posit-orange-bg",
