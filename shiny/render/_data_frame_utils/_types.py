@@ -208,7 +208,7 @@ FrameDtype = Union[
 StyleInfoBody = TypedDict(
     "StyleInfoBody",
     {
-        "location": Required[Literal["body"]],
+        "location": NotRequired[Literal["body"]],
         "rows": NotRequired[Union[int, ListOrTuple[int], ListOrTuple[bool], None]],
         "cols": NotRequired[
             Union[str, int, ListOrTuple[str], ListOrTuple[int], ListOrTuple[bool], None]

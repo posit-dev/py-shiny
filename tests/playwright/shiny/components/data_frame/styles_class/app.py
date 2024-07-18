@@ -17,7 +17,6 @@ df = df.iloc[0:5, 0:6]
 
 df_styles: list[StyleInfo] = [
     {
-        "location": "body",
         "class": "everywhere",
     },
     {

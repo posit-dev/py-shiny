@@ -22,7 +22,6 @@ def test_validate_column_labels(
 
     styles: list[dict[str, Jsonifiable]] = [
         {
-            "location": "body",
             "rows": [1, 2],
             "cols": [2],  # "Species",
             "style": {
@@ -32,19 +31,16 @@ def test_validate_column_labels(
             },
         },
         {
-            "location": "body",
             "rows": [2],
             "cols": [3],  # "Region",
             "style": {"background-color": "yellow"},
         },
         {
-            "location": "body",
             "rows": None,
             "cols": [4],  # "Island",
             "style": {"background-color": "red"},
         },
         {
-            "location": "body",
             "rows": [1],
             "cols": [4, 5],  # "Island", "Stage",
             "style": {"background-color": "green"},

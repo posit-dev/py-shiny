@@ -84,7 +84,7 @@ class DataGrid(AbstractTabularData, Generic[DataFrameLikeT]):
         `styles=None`, no styling will be applied.
 
         Style info object key/value description:
-        * `location`: This value is required and currently only supports `"body"`.
+        * `location`: This value `"body"` and is not required.
         * `rows`: The row numbers to which the style should be applied. If `None`, the
             style will be applied to all rows.
         * `cols`: The column numbers to which the style should be applied. If `None`,
@@ -243,7 +243,7 @@ class DataTable(AbstractTabularData, Generic[DataFrameLikeT]):
         `styles=None`, no styling will be applied.
 
         Style info object key/value description:
-        * `location`: This value is required and currently only supports `"body"`.
+        * `location`: This value `"body"` and is not required.
         * `rows`: The row numbers to which the style should be applied. If `None`, the
             style will be applied to all rows.
         * `cols`: The column numbers to which the style should be applied. If `None`,
