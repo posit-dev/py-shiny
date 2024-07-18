@@ -5,7 +5,6 @@ from shiny import App, module, reactive, render, ui
 
 app_ui = ui.page_fixed(
     {"class": "my-5"},
-    shinyswatch.theme.minty(),
     ui.panel_title("Shiny TodoMVC"),
     ui.layout_sidebar(
         ui.sidebar(
@@ -15,6 +14,7 @@ app_ui = ui.page_fixed(
         ui.output_text("cleared_tasks"),
         ui.div(id="tasks", style="margin-top: 0.5em"),
     ),
+    theme=shinyswatch.theme.minty(),
 )
 
 
