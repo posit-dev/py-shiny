@@ -34,7 +34,7 @@ def app_ui(req):
             right="10px",
             bottom="10px",
         ),
-        theme=shinyswatch.theme.darkly() if dark else None,
+        theme=shinyswatch.theme.darkly if dark else None,
         class_="p-3",
     )
 

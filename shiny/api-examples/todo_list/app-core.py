@@ -14,7 +14,7 @@ app_ui = ui.page_fixed(
         ui.output_text("cleared_tasks"),
         ui.div(id="tasks", style="margin-top: 0.5em"),
     ),
-    theme=shinyswatch.theme.minty(),
+    theme=shinyswatch.theme.minty,
 )
 
 

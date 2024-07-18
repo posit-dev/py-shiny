@@ -62,7 +62,7 @@ app_ui = ui.page_fluid(
             ),
         ),
     ),
-    theme=shinyswatch.theme.flatly(),
+    theme=shinyswatch.theme.flatly,
 )
 
 
