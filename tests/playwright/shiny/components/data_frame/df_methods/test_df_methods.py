@@ -7,9 +7,7 @@ from shiny.run import ShinyAppProc
 
 
 @pytest.mark.parametrize("tab_name", ["pandas", "polars"])
-def test_dataframe_organization_methods(
-    page: Page, local_app: ShinyAppProc, tab_name: str
-) -> None:
+def test_dataframe_methods(page: Page, local_app: ShinyAppProc, tab_name: str) -> None:
 
     page.goto(local_app.url)
 
