@@ -76,7 +76,7 @@ jobs:
       - name: Run End-to-End tests
         timeout-minutes: 20
         run: |
-          make playwright-shiny SUB_FILE=". -vv" ${{ steps.browsers.outputs.browsers }}
+          make playwright-shiny ${{ steps.browsers.outputs.browsers }}
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -119,7 +119,7 @@ jobs:
       - name: Run example app tests
         timeout-minutes: 20
         run: |
-          make playwright-examples SUB_FILE=". -vv" ${{ steps.browsers.outputs.browsers }}
+          make playwright-examples ${{ steps.browsers.outputs.browsers }}
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -149,7 +149,7 @@ jobs:
         env:
           DEPLOY_APPS: "false"
         run: |
-          make playwright-deploys SUB_FILE=". -vv"
+          make playwright-deploys
 
       - uses: actions/upload-artifact@v4
         if: failure()
