@@ -19,8 +19,13 @@ def style_info_to_browser_style_info(
         raise TypeError("`StyleInfo` objects must be a dictionary. Received: ", info)
 
     location = info.get("location", None)
+    if location is None:
+        location = "body"
+
     if location != "body":
-        raise ValueError(f"Unsupported `StyleInfo` location: {location}")
+        raise ValueError(
+            f"`StyleInfo` `location` value must be 'body', not '{location}'"
+        )
 
     rows = style_info_rows(info, nrow=nrow)
     cols = style_info_cols(info, browser_column_names=browser_column_names)
