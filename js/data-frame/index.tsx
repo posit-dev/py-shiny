@@ -648,13 +648,29 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
 
   const headerRowCount = table.getHeaderGroups().length;
 
-  // Assume we're scrolling until proven otherwise
-  let scrollingClass = tableData.length > 0 ? "scrolling" : "";
-  const scrollHeight = containerRef.current?.scrollHeight;
-  const clientHeight = containerRef.current?.clientHeight;
-  if (scrollHeight && clientHeight && scrollHeight <= clientHeight) {
-    scrollingClass = "";
-  }
+  // Maintain the .scrolling class: present if the amount of data in the table causes
+  // vertical overflow, absent if not.
+  useLayoutEffect(() => {
+    // If no data, we're definitely not scrolling. Otherwise, we need to test.
+    let scrolling = tableData.length > 0;
+    if (scrolling) {
+      // We need to add .scrolling before comparing scrollHeight/clientHeight. If not,
+      // then if there's already a scrollworthy amount of data, we might get stuck in
+      // non-scrolling state because the clientHeight is expanding within a fixed
+      // container. (See https://github.com/posit-dev/py-shiny/issues/1549)
+      containerRef.current?.classList.add("scrolling");
+      const scrollHeight = containerRef.current?.scrollHeight;
+      const clientHeight = containerRef.current?.clientHeight;
+      if (scrollHeight && clientHeight && scrollHeight <= clientHeight) {
+        scrolling = false;
+      }
+    }
+    containerRef.current?.classList.toggle("scrolling", scrolling);
+  }, [
+    tableData.length,
+    containerRef.current?.scrollHeight,
+    containerRef.current?.clientHeight,
+  ]);
 
   const makeHeaderKeyDown =
     (column: Column<unknown[], unknown>) => (event: React.KeyboardEvent) => {
@@ -665,7 +681,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
 
   const measureEl = useVirtualizerMeasureWorkaround(rowVirtualizer);
 
-  let className = `shiny-data-grid ${containerClass} ${scrollingClass}`;
+  let className = `shiny-data-grid ${containerClass}`;
   if (fill) {
     className += " html-fill-item";
   }
