@@ -96,10 +96,10 @@ getType: function(el) {
 
 @input_handlers.add("shiny.date")
 def _(
-    value: str | list[str], name: ResolvedId, session: Session
+    value: None | str | list[str], name: ResolvedId, session: Session
 ) -> date | None | tuple[date | None, date | None]:
 
-    if isinstance(value, str):
+    if isinstance(value, str) or value is None:
         return _safe_strptime_date(value)
     else:
         return (
