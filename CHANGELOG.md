@@ -7,29 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
-### Deprecations
-
-* `@render.data_frame`, `render.DataGrid`, and `render.DataTable` have deprecated support for data frame types that are `pandas` compatible. Please call `.to_pandas()` on your data before it is returned to the renderer (#1502). Currently, both `polars` and `pandas` data frames are supported (#1474). If you'd like to add support for a new data frame type, please open an issue or a pull request.
-
-* `@render.data_frame`'s `.cell_selection()` will no longer return `None` when the selection mode is `"none"`. In addition, missing `rows` or `cols` information will be populated with appropiate values. This allows for consistent handling of the cell selection object. (#1374)
-
-* `@render.data_frame`'s input value `input.<ID>_data_view_indices()` has been deprecated. Please use `<ID>.data_view_rows()` to retrieve the same information. (#1377)
-
-* `@render.data_frame`'s input value `input.<ID>_column_sort()` has been deprecated. Please use `<ID>.sort()` to retrieve the same information. (#1374)
-
-* `@render.data_frame`'s input value `input.<ID>_column_filter()` has been deprecated. Please use `<ID>.filter()` to retrieve the same information. (#1374)
-
-* Deprecated functions in `shiny.experimental` have been removed. By and large, these functions are now available in the main `shiny` namespace. (#1540)
-
-* We've deprecated several card-related `shiny.experimental.ui` functions that were moved to the main `shiny.ui` namespace in v0.6.0. Both `card()` and `card_body()` are no longer experimental and can be called via `shiny.ui.card()` and `shiny.ui.card_body()` directly. `shiny.experimental.ui.card_title()` is now deprecated, but can be replaced with `shiny.ui.tags.h5()` or `shiny.ui.card_header()`. (#1543)
-
-* The following deprecated functions have now been removed (#1546):
-  * `shiny.ui.panel_sidebar()` was deprecated in v0.6.0; use `shiny.ui.sidebar()` instead.
-  * `shiny.ui.panel_main()` was deprecated in v0.6.0; instead pass items directly to `shiny.ui.layout_sidebar()`.
-  * `shiny.ui.navset_pill_card()` was deprecated in v0.6.0; use `shiny.ui.navset_card_pill()` instead.
-  * `shiny.ui.navset_tab_card()` was deprecated in v0.6.0; use `shiny.ui.navset_card_tab()` instead.
-  * `shiny.ui.nav()` was deprecated in v0.6.1; use `shiny.ui.nav_panel()` instead.
-
 ### New features
 
 * Added a new `shiny.ui.Chat` class for building conversational interfaces with fully customizable and performant response generation. (#1453)
@@ -64,6 +41,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `ui.card_body()` can be used to wrap the contents of elements in `ui.card()`, allowing you to change parameters like `fillable` or `padding` and `gap` for groups of elements in the card. (#1506)
 
+### Other changes
+
+* `ui.input_action_button()` and `ui.update_action_button()` gain a `disabled` argument. When the button is disabled, it appears grayed out and cannot be clicked. (#1465)
+
+* The main content area of `ui.page_sidebar()` and `ui.page_navbar()` with a page-level `sidebar` now have a minimum height and width to avoid squashed content in fillable layouts. The minimum height and width are controllable via `--bslib-page-main-min-{width,height}` CSS variables. (#1436)
+
+* Added a new option to place an always-open sidebar *above the main content* on mobile screens by providing `open={"mobile": "always-above"}` to `ui.sidebar()`. (#1436)
+
 ### Bug fixes
 
 * Fixed #1440: When a Shiny Express app with a `www/` subdirectory was deployed to shinyapps.io or a Connect server, it would not start correctly. (#1442)
@@ -76,14 +61,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `remove_all_fill(tag)` no longer modifies the original `tag` input and instead returns a modified copy of `tag`. (#1538)
 
+### Deprecations
 
-### Other changes
+* The following deprecated functions have now been removed (#1546):
+  * `shiny.ui.panel_sidebar()` was deprecated in v0.6.0; use `shiny.ui.sidebar()` instead.
+  * `shiny.ui.panel_main()` was deprecated in v0.6.0; instead pass items directly to `shiny.ui.layout_sidebar()`.
+  * `shiny.ui.navset_pill_card()` was deprecated in v0.6.0; use `shiny.ui.navset_card_pill()` instead.
+  * `shiny.ui.navset_tab_card()` was deprecated in v0.6.0; use `shiny.ui.navset_card_tab()` instead.
+  * `shiny.ui.nav()` was deprecated in v0.6.1; use `shiny.ui.nav_panel()` instead.
 
-* `ui.input_action_button()` and `ui.update_action_button()` gain a `disabled` argument. When the button is disabled, it appears grayed out and cannot be clicked. (#1465)
+* `@render.data_frame`, `render.DataGrid`, and `render.DataTable` have deprecated support for data frame types that are `pandas` compatible. Please call `.to_pandas()` on your data before it is returned to the renderer (#1502). Currently, both `polars` and `pandas` data frames are supported (#1474). If you'd like to add support for a new data frame type, please open an issue or a pull request.
 
-* The main content area of `ui.page_sidebar()` and `ui.page_navbar()` with a page-level `sidebar` now have a minimum height and width to avoid squashed content in fillable layouts. The minimum height and width are controllable via `--bslib-page-main-min-{width,height}` CSS variables. (#1436)
+* `@render.data_frame`'s `.cell_selection()` will no longer return `None` when the selection mode is `"none"`. In addition, missing `rows` or `cols` information will be populated with appropiate values. This allows for consistent handling of the cell selection object. (#1374)
 
-* Added a new option to place an always-open sidebar *above the main content* on mobile screens by providing `open={"mobile": "always-above"}` to `ui.sidebar()`. (#1436)
+* `@render.data_frame`'s input value `input.<ID>_data_view_indices()` has been deprecated. Please use `<ID>.data_view_rows()` to retrieve the same information. (#1377)
+
+* `@render.data_frame`'s input value `input.<ID>_column_sort()` has been deprecated. Please use `<ID>.sort()` to retrieve the same information. (#1374)
+
+* `@render.data_frame`'s input value `input.<ID>_column_filter()` has been deprecated. Please use `<ID>.filter()` to retrieve the same information. (#1374)
+
+* Deprecated functions in `shiny.experimental` have been removed. By and large, these functions are now available in the main `shiny` namespace. (#1540)
+
+* We've deprecated several card-related `shiny.experimental.ui` functions that were moved to the main `shiny.ui` namespace in v0.6.0. Both `card()` and `card_body()` are no longer experimental and can be called via `shiny.ui.card()` and `shiny.ui.card_body()` directly. `shiny.experimental.ui.card_title()` is now deprecated, but can be replaced with `shiny.ui.tags.h5()` or `shiny.ui.card_header()`. (#1543)
 
 
 ## [0.10.2] - 2024-05-28
