@@ -2,7 +2,7 @@ import urllib.request
 from pathlib import Path
 
 import duckdb
-import shinyswatch.theme as theme
+import shinyswatch
 from query import query_output_server, query_output_ui
 
 from shiny import App, reactive, ui
@@ -31,7 +31,6 @@ con = duckdb.connect(str(db_file), read_only=True)
 button_style = {"style": "margin: 15px"}
 
 app_ui = ui.page_fluid(
-    theme.flatly(),
     ui.panel_title("DuckDB query explorer"),
     ui.row(
         ui.column(
@@ -63,6 +62,7 @@ app_ui = ui.page_fluid(
             ),
         ),
     ),
+    theme=shinyswatch.theme.flatly,
 )
 
 
