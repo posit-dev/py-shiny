@@ -340,9 +340,6 @@ quartodoc:
     - title: Deprecated
       desc: ""
       contents:
-        - ui.panel_main
-        - ui.panel_sidebar
-        - ui.nav
         - render.transformer.output_transformer
         - render.transformer.resolve_value_fn
     - title: Experimental

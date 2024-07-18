@@ -23,6 +23,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * We've deprecated several card-related `shiny.experimental.ui` functions that were moved to the main `shiny.ui` namespace in v0.6.0. Both `card()` and `card_body()` are no longer experimental and can be called via `shiny.ui.card()` and `shiny.ui.card_body()` directly. `shiny.experimental.ui.card_title()` is now deprecated, but can be replaced with `shiny.ui.tags.h5()` or `shiny.ui.card_header()`. (#1543)
 
+* The following deprecated functions have now been removed (#1546):
+  * `shiny.ui.panel_sidebar()` was deprecated in v0.6.0; use `shiny.ui.sidebar()` instead.
+  * `shiny.ui.panel_main()` was deprecated in v0.6.0; instead pass items directly to `shiny.ui.layout_sidebar()`.
+  * `shiny.ui.navset_pill_card()` was deprecated in v0.6.0; use `shiny.ui.navset_card_pill()` instead.
+  * `shiny.ui.navset_tab_card()` was deprecated in v0.6.0; use `shiny.ui.navset_card_tab()` instead.
+  * `shiny.ui.nav()` was deprecated in v0.6.1; use `shiny.ui.nav_panel()` instead.
+
 ### New features
 
 * Added a new `shiny.ui.Chat` class for building conversational interfaces with fully customizable and performant response generation. (#1453)

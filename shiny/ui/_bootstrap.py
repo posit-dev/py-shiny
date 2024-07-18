@@ -128,11 +128,6 @@ def panel_well(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
     -------
     :
         A UI element.
-
-    See Also
-    --------
-    * :func:`~shiny.ui.panel_sidebar`
-    * :func:`~shiny.ui.panel_main`
     """
     return div({"class": "well"}, *args, **kwargs)
 

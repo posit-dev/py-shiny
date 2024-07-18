@@ -16,7 +16,7 @@ def test_colors_are_rgb() -> None:
 def test_sidebar_bg_colors(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 
-    for i in range(1, 5):
+    for i in range(3, 5):
         content = page.locator(f"#m{i}")
         sidebar = page.locator(f"#s{i}")
 
@@ -42,7 +42,7 @@ def test_sidebar_bg_colors(page: Page, local_app: ShinyAppProc) -> None:
         expect(sidebar).to_have_css("background-color", bg_color)
         expect(sidebar).to_have_css("color", fg_color)
 
-    s1 = controller.Sidebar(page, "s1")
-    s1.expect_position("left")
-    s2 = controller.Sidebar(page, "s2")
-    s2.expect_position("right")
+    s3 = controller.Sidebar(page, "s3")
+    s3.expect_position("left")
+    s4 = controller.Sidebar(page, "s4")
+    s4.expect_position("right")

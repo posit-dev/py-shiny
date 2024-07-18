@@ -56,7 +56,7 @@ app_ui = ui.page_fluid(
     ui.busy_indicators.use(spinners=False, pulse=False),
     ui.h3("CPU Usage %", class_="mt-2"),
     ui.layout_sidebar(
-        ui.panel_sidebar(
+        ui.sidebar(
             ui.input_select(
                 "cmap",
                 "Colormap",
@@ -71,33 +71,31 @@ app_ui = ui.page_fluid(
             ui.input_switch("hold", "Freeze output", value=False),
             class_="mb-3",
         ),
-        ui.panel_main(
+        ui.div(
+            {"class": "card mb-3"},
             ui.div(
-                {"class": "card mb-3"},
-                ui.div(
-                    {"class": "card-body"},
-                    ui.h5({"class": "card-title mt-0"}, "Graphs"),
-                    ui.output_plot("plot", height=f"{ncpu * 40}px"),
-                ),
-                ui.div(
-                    {"class": "card-footer"},
-                    ui.input_numeric("sample_count", "Number of samples per graph", 50),
-                ),
+                {"class": "card-body"},
+                ui.h5({"class": "card-title mt-0"}, "Graphs"),
+                ui.output_plot("plot", height=f"{ncpu * 40}px"),
             ),
             ui.div(
-                {"class": "card"},
-                ui.div(
-                    {"class": "card-body"},
-                    ui.h5({"class": "card-title m-0"}, "Heatmap"),
-                ),
-                ui.div(
-                    {"class": "card-body overflow-auto pt-0"},
-                    ui.output_table("table"),
-                ),
-                ui.div(
-                    {"class": "card-footer"},
-                    ui.input_numeric("table_rows", "Rows to display", 5),
-                ),
+                {"class": "card-footer"},
+                ui.input_numeric("sample_count", "Number of samples per graph", 50),
+            ),
+        ),
+        ui.div(
+            {"class": "card"},
+            ui.div(
+                {"class": "card-body"},
+                ui.h5({"class": "card-title m-0"}, "Heatmap"),
+            ),
+            ui.div(
+                {"class": "card-body overflow-auto pt-0"},
+                ui.output_table("table"),
+            ),
+            ui.div(
+                {"class": "card-footer"},
+                ui.input_numeric("table_rows", "Rows to display", 5),
             ),
         ),
     ),

@@ -228,13 +228,13 @@ def prefix_bare_functions_with_func(s: str) -> str:
     The See Also section in the Shiny docs has bare function references, ones that lack
     a leading :func: and backticks. This function fixes them.
 
-    If there are bare function references, like "~shiny.ui.panel_sidebar", this will
+    If there are bare function references, like "~shiny.ui.sidebar", this will
     prepend with :func: and wrap in backticks.
 
     For example, if the input is this:
-        "~shiny.ui.panel_sidebar  :func:`~shiny.ui.panel_sidebar`"
+        "~shiny.ui.sidebar  :func:`~shiny.ui.sidebar`"
     This function will return:
-        ":func:`~shiny.ui.panel_sidebar`  :func:`~shiny.ui.panel_sidebar`"
+        ":func:`~shiny.ui.sidebar`  :func:`~shiny.ui.sidebar`"
     """
 
     def replacement(match: re.Match[str]) -> str:

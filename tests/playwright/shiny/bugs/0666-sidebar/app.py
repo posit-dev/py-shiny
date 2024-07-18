@@ -11,15 +11,16 @@ app_ui = ui.page_fluid(
         }}
         """
     ),
-    ui.layout_sidebar(
-        ui.panel_sidebar("Sidebar content - 1", id="s1"),
-        ui.panel_main("Main content - 1", id="m1"),
-    ),
-    ui.layout_sidebar(
-        ui.panel_sidebar("Sidebar content - 2", id="s2"),
-        ui.panel_main("Main content - 2", id="m2"),
-        "right",
-    ),
+    # Deprecated and removed in py-shiny v1.0.0
+    # ui.layout_sidebar(
+    #     ui.panel_sidebar("Sidebar content - 1", id="s1"),
+    #     ui.panel_main("Main content - 1", id="m1"),
+    # ),
+    # ui.layout_sidebar(
+    #     ui.panel_sidebar("Sidebar content - 2", id="s2"),
+    #     ui.panel_main("Main content - 2", id="m2"),
+    #     "right",
+    # ),
     ui.layout_sidebar(
         ui.sidebar("Sidebar content - 3", id="s3"),
         "Main content - 3",
