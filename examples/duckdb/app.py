@@ -2,7 +2,7 @@ import urllib.request
 from pathlib import Path
 
 import duckdb
-import shinyswatch.theme as theme
+import shinyswatch
 from query import query_output_server, query_output_ui
 
 from shiny import App, reactive, ui
@@ -62,7 +62,7 @@ app_ui = ui.page_fluid(
             ),
         ),
     ),
-    theme=theme.flatly(),
+    theme=shinyswatch.theme.flatly,
 )
 
 

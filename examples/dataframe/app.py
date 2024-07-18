@@ -1,6 +1,6 @@
 import pandas as pd
 import seaborn as sns
-from shinyswatch.theme import darkly
+import shinyswatch
 
 from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
 
@@ -12,7 +12,6 @@ def app_ui(req):
         ui.head_content(
             ui.tags.meta(name="viewport", content="width=device-width, initial-scale=1")
         ),
-        darkly() if dark else None,
         light_dark_switcher(dark),
         ui.input_select("dataset", "Dataset", sns.get_dataset_names()),
         ui.input_select(
@@ -35,6 +34,7 @@ def app_ui(req):
             right="10px",
             bottom="10px",
         ),
+        theme=shinyswatch.theme.darkly if dark else None,
         class_="p-3",
     )
 

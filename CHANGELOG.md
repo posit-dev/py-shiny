@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Fixed bug where calling `.update_filter(None)` on a data frame renderer did not visually reset non-numeric column filters. (It did reset the column's filtering, just not the label). Now it resets filter's label. (#1557)
 
+* Require shinyswatch >= 0.7.0 and updated examples accordingly. (#1558)
+
+### Bug fixes
+
 ### Deprecations
 
 ## [1.0.0] - 2024-07-18
