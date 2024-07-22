@@ -29,35 +29,35 @@ runs:
       - name: Create virtual environment
         shell: bash
         run: |
-          uv venv
+          uv venv venv
 
       - name: Install dependencies
         shell: bash
         run: |
           uv pip install "htmltools @ git+https://github.com/posit-dev/py-htmltools.git"
 
-          source .venv/bin/activate && \
+          source venv/bin/activate && \
             make install-deps
 
       - name: Install
         shell: bash
         run: |
-          source .venv/bin/activate && \
-            make install
+          # source venv/bin/activate && \
+          #   make install
 
-          # source .venv/bin/activate
+          source venv/bin/activate
 
-          # # make clean
+          # make clean
 
-          # # make dist
-          # uv pip install setuptools
-          # python setup.py sdist
-          # python setup.py bdist_wheel
-          # ls -l dist
+          # make dist
+          uv pip install setuptools
+          python setup.py sdist
+          python setup.py bdist_wheel
+          ls -l dist
 
-          # # make install
-          # uv pip uninstall shiny
-          # uv pip install dist/shiny*.whl
+          # make install
+          uv pip uninstall shiny
+          uv pip install dist/shiny*.whl
 
       - name: Install backports.tarfile
         if: ${{ startsWith(inputs.python-version, '3.8') }}
