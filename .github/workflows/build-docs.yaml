@@ -18,13 +18,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+      - name: Setup py-shiny
+        uses: ./.github/py-shiny/setup
         with:
           python-version: ${{ matrix.python-version }}
-
-      - name: Upgrade pip
-        run: python -m pip install --upgrade pip
 
       # =====================================================
       # API docs
@@ -36,14 +33,15 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd docs
-          make ../venv
-          make deps
+          . venv/bin/activate && \
+            uv pip install -e ".[dev,test,doc]" \
+              "htmltools @ git+https://github.com/posit-dev/py-htmltools.git" \
+              "shinylive @ git+https://github.com/posit-dev/py-shinylive.git"
 
       - name: Run quartodoc
         run: |
-          cd docs
-          make quartodoc
+          . venv/bin/activate && \
+            make docs-quartodoc
 
       # =====================================================
       # Shinylive
