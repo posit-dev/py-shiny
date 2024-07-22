@@ -14,6 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       is-draft: ${{ steps.is-draft.outputs.value }}
+      os-versions: ${{ steps.os-versions.outputs.values }}
       python-versions: ${{ steps.python-versions.outputs.values }}
       browsers: ${{ steps.browsers.outputs.values }}
     steps:
@@ -21,6 +22,15 @@ jobs:
         id: is-draft
         run: |
           echo 'value=${{ github.event.pull_request.draft }}' > $GITHUB_OUTPUT
+
+      - name: OS versions
+        id: os-versions
+        run: |
+          if [[ ${{ steps.is-draft.outputs.value }} == "true" ]]; then
+            echo 'values=["ubuntu-latest", "windows-latest", "macOS-latest"]' > $GITHUB_OUTPUT
+          else
+            echo 'values=["ubuntu-latest"]' > $GITHUB_OUTPUT
+          fi
 
       - name: Python versions
         id: python-versions
