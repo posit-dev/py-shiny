@@ -41,7 +41,7 @@ jobs:
         timeout-minutes: 20
         run: |
           . venv/bin/activate && \
-            make playwright-shiny SUB_FILE=". -vv" ${{ steps.browsers.outputs.browsers }}
+            make playwright-shiny SUB_FILE=". -vv --numprocesses 4" ${{ steps.browsers.outputs.browsers }}
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -90,7 +90,7 @@ jobs:
         timeout-minutes: 20
         run: |
           . venv/bin/activate && \
-            make playwright-examples SUB_FILE=". -vv" ${{ steps.browsers.outputs.browsers }}
+            make playwright-examples SUB_FILE=". -vv --numprocesses 4" ${{ steps.browsers.outputs.browsers }}
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
