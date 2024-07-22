@@ -10,53 +10,10 @@ on:
   workflow_dispatch:
 
 jobs:
-  # config:
-  #   runs-on: ubuntu-latest
-  #   outputs:
-  #     is-draft: ${{ steps.is-draft.outputs.value }}
-  #     os-versions: ${{ steps.os-versions.outputs.values }}
-  #     python-versions: ${{ steps.python-versions.outputs.values }}
-  #     browsers: ${{ steps.browsers.outputs.values }}
-  #   steps:
-  #     - name: Is Draft
-  #       id: is-draft
-  #       run: |
-  #         echo 'value=${{ github.event.pull_request.draft }}' > $GITHUB_OUTPUT
-
-  #     - name: OS versions
-  #       id: os-versions
-  #       run: |
-  #         if [[ ${{ steps.is-draft.outputs.value }} == "true" ]]; then
-  #           echo 'values=["ubuntu-latest", "windows-latest", "macOS-latest"]' > $GITHUB_OUTPUT
-  #         else
-  #           echo 'values=["ubuntu-latest"]' > $GITHUB_OUTPUT
-  #         fi
-
-  #     - name: Python versions
-  #       id: python-versions
-  #       run: |
-  #         if [[ ${{ steps.is-draft.outputs.value }} == "true" ]]; then
-  #           echo 'values=["3.12", "3.11", "3.10", "3.9", "3.8"]' > $GITHUB_OUTPUT
-  #         else
-  #           echo 'values=["3.12", "3.8"]' > $GITHUB_OUTPUT
-  #         fi
-
-  #     - name: Browsers
-  #       id: browsers
-  #       run: |
-  #         if [[ ${{ steps.is-draft.outputs.value }} == "true" ]]; then
-  #           echo 'values=["chromium", "firefox", "webkit"]' > $GITHUB_OUTPUT
-  #         else
-  #           echo 'values=["chromium"]' > $GITHUB_OUTPUT
-  #         fi
-
   playwright-shiny:
     runs-on: ubuntu-latest
-    # needs: [config]
     strategy:
       matrix:
-        # python-version: ${{ fromJson(needs.config.outputs.python-versions) }}
-        # browser: ${{ fromJson(needs.config.outputs.browsers) }}
         python-version: ["3.12", "3.11", "3.10", "3.9", "3.8"]
         browser: ["chromium", "firefox", "webkit"]
         exclude:
@@ -80,11 +37,6 @@ jobs:
         with:
           browser: ${{ matrix.browser }}
 
-      # TODO-barret remove
-      - name: Display browser
-        shell: bash
-        run: echo '${{ steps.browsers.outputs.browsers }}'
-
       - name: Run End-to-End tests
         timeout-minutes: 20
         run: |
@@ -99,11 +51,8 @@ jobs:
 
   playwright-examples:
     runs-on: ubuntu-latest
-    # needs: [config]
     strategy:
       matrix:
-        # python-version: ${{ fromJson(needs.config.outputs.python-versions) }}
-        # browser: ${{ fromJson(needs.config.outputs.browsers) }}
         python-version: ["3.12", "3.11", "3.10", "3.9", "3.8"]
         browser: ["chromium", "firefox", "webkit"]
         exclude:
