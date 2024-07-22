@@ -26,6 +26,11 @@ runs:
         run: |
           pip install uv
 
+      - name: Create virtual environment
+        shell: bash
+        run: |
+          uv venv
+
       - name: Pip list
         shell: bash
         run: |
@@ -35,12 +40,14 @@ runs:
         shell: bash
         run: |
           uv pip install https://github.com/rstudio/py-htmltools/tarball/main
+          source .venv/bin/activate
           make install-deps
 
       - name: Install
         shell: bash
         run: |
-          uv pip install -e ".[dev,test]"
+          source .venv/bin/activate
+          make install
 
       - name: Install backports.tarfile
         if: ${{ startsWith(inputs.python-version, '3.8') }}
