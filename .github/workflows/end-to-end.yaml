@@ -40,8 +40,8 @@ jobs:
       - name: Run End-to-End tests
         timeout-minutes: 20
         run: |
-          source .venv/bin/activate
-          make playwright-shiny SUB_FILE=". -vv" ${{ steps.browsers.outputs.browsers }}
+          source venv/bin/activate && \
+            make playwright-shiny SUB_FILE=". -vv" ${{ steps.browsers.outputs.browsers }}
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -89,8 +89,8 @@ jobs:
       - name: Run example app tests
         timeout-minutes: 20
         run: |
-          source .venv/bin/activate
-          make playwright-examples SUB_FILE=". -vv" ${{ steps.browsers.outputs.browsers }}
+          source venv/bin/activate && \
+            make playwright-examples SUB_FILE=". -vv" ${{ steps.browsers.outputs.browsers }}
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
