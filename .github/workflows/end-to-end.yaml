@@ -10,12 +10,44 @@ on:
   workflow_dispatch:
 
 jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      is-draft: ${{ steps.is-draft.outputs.value }}
+      python-versions: ${{ steps.python-versions.outputs.values }}
+      browsers: ${{ steps.browsers.outputs.values }}
+    steps:
+      - name: Is Draft
+        id: is-draft
+        run: |
+          echo 'value=${{ github.event.pull_request.draft }}' > $GITHUB_OUTPUT
+
+      - name: Python versions
+        id: python-versions
+        run: |
+          if [[ ${{ steps.is-draft.outputs.value }} == "true" ]]; then
+            echo 'values=["3.12", "3.11", "3.10", "3.9", "3.8"]' > $GITHUB_OUTPUT
+          else
+            echo 'values=["3.12", "3.8"]' > $GITHUB_OUTPUT
+          fi
+
+      - name: Browsers
+        id: browsers
+        run: |
+          if [[ ${{ steps.is-draft.outputs.value }} == "true" ]]; then
+            echo 'values=["chromium", "firefox", "webkit"]' > $GITHUB_OUTPUT
+          else
+            echo 'values=["chromium"]' > $GITHUB_OUTPUT
+          fi
+
   playwright-shiny:
     runs-on: ${{ matrix.os }}
+    needs: [setup]
     strategy:
       matrix:
-        python-version: ["3.12", "3.11", "3.10", "3.9", "3.8"]
         os: [ubuntu-latest]
+        python-version: ${{ fromJson(needs.setup.outputs.python-versions) }}
+        browser: ${{ fromJson(needs.setup.outputs.browsers) }}
       fail-fast: false
 
     steps:
@@ -29,7 +61,9 @@ jobs:
         uses: ./.github/py-shiny/pytest-browsers
         id: browsers
         with:
-          all-browsers: ${{ startsWith(github.head_ref, 'playwright') }}
+          browser: ${{ matrix.browser }}
+
+      # TODO-barret remove
       - name: Display browser
         shell: bash
         run: echo '${{ steps.browsers.outputs.browsers }}'
@@ -46,10 +80,12 @@ jobs:
 
   playwright-examples:
     runs-on: ${{ matrix.os }}
+    needs: [setup]
     strategy:
       matrix:
-        python-version: ["3.12", "3.11", "3.10", "3.9", "3.8"]
         os: [ubuntu-latest]
+        python-version: ${{ fromJson(needs.setup.outputs.python-versions) }}
+        browser: ${{ fromJson(needs.setup.outputs.browsers) }}
       fail-fast: false
 
     steps:
@@ -58,6 +94,11 @@ jobs:
         uses: ./.github/py-shiny/setup
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Determine browsers for testing
+        uses: ./.github/py-shiny/pytest-browsers
+        id: browsers
+        with:
+          browser: ${{ matrix.browser }}
 
       - name: Install node.js
         uses: actions/setup-node@v4
@@ -70,11 +111,6 @@ jobs:
         run: |
           npm ci
 
-      - name: Determine browsers for testing
-        uses: ./.github/py-shiny/pytest-browsers
-        id: browsers
-        with:
-          all-browsers: ${{ startsWith(github.head_ref, 'playwright') }}
       - name: Run example app tests
         timeout-minutes: 20
         run: |
@@ -88,11 +124,13 @@ jobs:
 
   playwright-deploys-precheck:
     runs-on: ${{ matrix.os }}
+    needs: [setup]
     strategy:
       matrix:
         # Matches deploy server python version
         python-version: ["3.10"]
         os: [ubuntu-latest]
+        browser: ${{ fromJson(needs.setup.outputs.browsers) }}
       fail-fast: false
 
     steps:
@@ -101,6 +139,11 @@ jobs:
         uses: ./.github/py-shiny/setup
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Determine browsers for testing
+        uses: ./.github/py-shiny/pytest-browsers
+        id: browsers
+        with:
+          all-browsers: ${{ ! needs.setup.outputs.is-draft }}
 
       - name: Test that deployable example apps work
         timeout-minutes: 5 # ~10s locally
