@@ -27,16 +27,20 @@ jobs:
 
       - name: Install rsconnect
         run: |
-          . venv/bin/activate && \
-            uv pip install "rsconnect_python @ git+https://github.com/rstudio/rsconnect-python.git"
+          # pip install rsconnect
+          if [ "${{ runner.os }}" == "Windows" ]; then; venv\Scripts\activate; else; . venv/bin/activate; fi
+
+          uv pip install "rsconnect_python @ git+https://github.com/rstudio/rsconnect-python.git"
 
       - name: Test that deployable example apps work
         timeout-minutes: 5 # ~10s locally
         env:
           DEPLOY_APPS: "false"
         run: |
-          . venv/bin/activate && \
-            make playwright-deploys SUB_FILE=". -vv"
+          # make playwright-deploys
+          if [ "${{ runner.os }}" == "Windows" ]; then; venv\Scripts\activate; else; . venv/bin/activate; fi
+
+          make playwright-deploys SUB_FILE=". -vv"
 
       - name: Deploy apps and run tests (on `push` or `deploy**` branches)
         env:
@@ -50,8 +54,10 @@ jobs:
         # Given we are waiting for external servers to finish,
         # we can have many local processes waiting for deployment to finish
         run: |
-          . venv/bin/activate && \
-            make playwright-deploys SUB_FILE=". -vv --numprocesses 12"
+          # make playwright-deploys
+          if [ "${{ runner.os }}" == "Windows" ]; then; venv\Scripts\activate; else; . venv/bin/activate; fi
+
+          make playwright-deploys SUB_FILE=". -vv --numprocesses 12"
 
       - uses: actions/upload-artifact@v4
         if: failure()
