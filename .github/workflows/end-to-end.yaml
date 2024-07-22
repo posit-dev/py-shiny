@@ -10,55 +10,61 @@ on:
   workflow_dispatch:
 
 jobs:
-  setup:
+  # config:
+  #   runs-on: ubuntu-latest
+  #   outputs:
+  #     is-draft: ${{ steps.is-draft.outputs.value }}
+  #     os-versions: ${{ steps.os-versions.outputs.values }}
+  #     python-versions: ${{ steps.python-versions.outputs.values }}
+  #     browsers: ${{ steps.browsers.outputs.values }}
+  #   steps:
+  #     - name: Is Draft
+  #       id: is-draft
+  #       run: |
+  #         echo 'value=${{ github.event.pull_request.draft }}' > $GITHUB_OUTPUT
+
+  #     - name: OS versions
+  #       id: os-versions
+  #       run: |
+  #         if [[ ${{ steps.is-draft.outputs.value }} == "true" ]]; then
+  #           echo 'values=["ubuntu-latest", "windows-latest", "macOS-latest"]' > $GITHUB_OUTPUT
+  #         else
+  #           echo 'values=["ubuntu-latest"]' > $GITHUB_OUTPUT
+  #         fi
+
+  #     - name: Python versions
+  #       id: python-versions
+  #       run: |
+  #         if [[ ${{ steps.is-draft.outputs.value }} == "true" ]]; then
+  #           echo 'values=["3.12", "3.11", "3.10", "3.9", "3.8"]' > $GITHUB_OUTPUT
+  #         else
+  #           echo 'values=["3.12", "3.8"]' > $GITHUB_OUTPUT
+  #         fi
+
+  #     - name: Browsers
+  #       id: browsers
+  #       run: |
+  #         if [[ ${{ steps.is-draft.outputs.value }} == "true" ]]; then
+  #           echo 'values=["chromium", "firefox", "webkit"]' > $GITHUB_OUTPUT
+  #         else
+  #           echo 'values=["chromium"]' > $GITHUB_OUTPUT
+  #         fi
+
+  e2e-shiny:
     runs-on: ubuntu-latest
-    outputs:
-      is-draft: ${{ steps.is-draft.outputs.value }}
-      os-versions: ${{ steps.os-versions.outputs.values }}
-      python-versions: ${{ steps.python-versions.outputs.values }}
-      browsers: ${{ steps.browsers.outputs.values }}
-    steps:
-      - name: Is Draft
-        id: is-draft
-        run: |
-          echo 'value=${{ github.event.pull_request.draft }}' > $GITHUB_OUTPUT
-
-      - name: OS versions
-        id: os-versions
-        run: |
-          if [[ ${{ steps.is-draft.outputs.value }} == "true" ]]; then
-            echo 'values=["ubuntu-latest", "windows-latest", "macOS-latest"]' > $GITHUB_OUTPUT
-          else
-            echo 'values=["ubuntu-latest"]' > $GITHUB_OUTPUT
-          fi
-
-      - name: Python versions
-        id: python-versions
-        run: |
-          if [[ ${{ steps.is-draft.outputs.value }} == "true" ]]; then
-            echo 'values=["3.12", "3.11", "3.10", "3.9", "3.8"]' > $GITHUB_OUTPUT
-          else
-            echo 'values=["3.12", "3.8"]' > $GITHUB_OUTPUT
-          fi
-
-      - name: Browsers
-        id: browsers
-        run: |
-          if [[ ${{ steps.is-draft.outputs.value }} == "true" ]]; then
-            echo 'values=["chromium", "firefox", "webkit"]' > $GITHUB_OUTPUT
-          else
-            echo 'values=["chromium"]' > $GITHUB_OUTPUT
-          fi
-
-  playwright-shiny:
-    runs-on: ${{ matrix.os }}
-    needs: [setup]
+    # needs: [config]
     strategy:
       matrix:
-        os: [ubuntu-latest]
-        python-version: ${{ fromJson(needs.setup.outputs.python-versions) }}
-        browser: ${{ fromJson(needs.setup.outputs.browsers) }}
-        barret: ${{ (needs.setup.outputs.is-draft || fromJson('[1,2]')) || fromJson('[3,4]') }}
+        # python-version: ${{ fromJson(needs.config.outputs.python-versions) }}
+        # browser: ${{ fromJson(needs.config.outputs.browsers) }}
+        python-version: ["3.12", "3.11", "3.10", "3.9", "3.8"]
+        browser: ["chromium", "firefox", "webkit"]
+        exclude:
+          - python-version: ${{ github.event.pull_request.draft && '3.11' }}
+          - python-version: ${{ github.event.pull_request.draft && '3.10' }}
+          - python-version: ${{ github.event.pull_request.draft && '3.9' }}
+          - browser: ${{ github.event.pull_request.draft && 'firefox' }}
+          - browser: ${{ github.event.pull_request.draft && 'webkit' }}
       fail-fast: false
 
     steps:
@@ -86,18 +92,25 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: "playright-shiny-${{ matrix.os }}-${{ matrix.python-version }}-results"
+          name: "playright-shiny-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.browser }}-results"
           path: test-results/
           retention-days: 5
 
-  playwright-examples:
-    runs-on: ${{ matrix.os }}
-    needs: [setup]
+  e2e-examples:
+    runs-on: ubuntu-latest
+    # needs: [config]
     strategy:
       matrix:
-        os: [ubuntu-latest]
-        python-version: ${{ fromJson(needs.setup.outputs.python-versions) }}
-        browser: ${{ fromJson(needs.setup.outputs.browsers) }}
+        # python-version: ${{ fromJson(needs.config.outputs.python-versions) }}
+        # browser: ${{ fromJson(needs.config.outputs.browsers) }}
+        python-version: ["3.12", "3.11", "3.10", "3.9", "3.8"]
+        browser: ["chromium", "firefox", "webkit"]
+        exclude:
+          - python-version: ${{ github.event.pull_request.draft && '3.11' }}
+          - python-version: ${{ github.event.pull_request.draft && '3.10' }}
+          - python-version: ${{ github.event.pull_request.draft && '3.9' }}
+          - browser: ${{ github.event.pull_request.draft && 'firefox' }}
+          - browser: ${{ github.event.pull_request.draft && 'webkit' }}
       fail-fast: false
 
     steps:
@@ -130,19 +143,16 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: "playright-examples-${{ matrix.os }}-${{ matrix.python-version }}-results"
+          name: "playright-examples-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.browser }}-results"
           path: test-results/
           retention-days: 5
 
-  playwright-deploys-precheck:
-    runs-on: ${{ matrix.os }}
-    needs: [setup]
+  e2e-deploys-precheck:
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         # Matches deploy server python version
         python-version: ["3.10"]
-        os: [ubuntu-latest]
-        browser: ${{ fromJson(needs.setup.outputs.browsers) }}
       fail-fast: false
 
     steps:
@@ -155,7 +165,7 @@ jobs:
         uses: ./.github/py-shiny/pytest-browsers
         id: browsers
         with:
-          all-browsers: ${{ ! needs.setup.outputs.is-draft }}
+          all-browsers: ${{ ! github.event.pull_request.draft }}
 
       - name: Test that deployable example apps work
         timeout-minutes: 5 # ~10s locally
@@ -167,6 +177,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: "playright-examples-${{ matrix.os }}-${{ matrix.python-version }}-results"
+          name: "playright-examples-${{ runner.os }}-${{ matrix.python-version }}-results"
           path: test-results/
           retention-days: 5
