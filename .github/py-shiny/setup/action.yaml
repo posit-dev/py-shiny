@@ -43,11 +43,29 @@ runs:
           source .venv/bin/activate
           make install-deps
 
+      - name: Pip list
+        shell: bash
+        run: |
+          uv pip list
+
       - name: Install
         shell: bash
         run: |
+          # make install
+
           source .venv/bin/activate
-          make install
+
+          make clean
+
+          # make dist
+          uv pip install setuptools
+          python setup.py sdist
+          python setup.py bdist_wheel
+          ls -l dist
+
+          # make install
+          uv pip uninstall -y shiny
+          uv pip install dist/shiny*.whl
 
       - name: Install backports.tarfile
         if: ${{ startsWith(inputs.python-version, '3.8') }}
