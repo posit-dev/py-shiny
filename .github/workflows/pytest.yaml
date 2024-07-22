@@ -39,25 +39,25 @@ jobs:
       - name: Run unit tests
         if: steps.install.outcome == 'success' && (success() || failure())
         run: |
-          source venv/bin/activate && \
+          . venv/bin/activate && \
             make check-tests
 
       - name: Type check
         if: steps.install.outcome == 'success' && (success() || failure())
         run: |
-          source venv/bin/activate && \
+          . venv/bin/activate && \
             make check-types
 
       - name: Lint code
         if: steps.install.outcome == 'success' && (success() || failure())
         run: |
-          source venv/bin/activate && \
+          . venv/bin/activate && \
             make check-lint
 
       - name: Verify code formatting
         if: steps.install.outcome == 'success' && (success() || failure())
         run: |
-          source venv/bin/activate && \
+          . venv/bin/activate && \
             make check-format
 
   pypi:
