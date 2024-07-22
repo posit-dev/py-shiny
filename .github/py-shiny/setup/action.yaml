@@ -56,7 +56,7 @@ runs:
 
           source .venv/bin/activate
 
-          make clean
+          # make clean
 
           # make dist
           uv pip install setuptools
