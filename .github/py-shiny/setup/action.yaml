@@ -21,29 +21,34 @@ runs:
         shell: bash
         run: python -m pip install --upgrade pip
 
+      - name: Install `uv`
+        shell: bash
+        run: |
+          pip install uv
+
       - name: Pip list
         shell: bash
         run: |
-          pip list
+          uv pip list
 
       - name: Install dependencies
         shell: bash
         run: |
-          pip install https://github.com/rstudio/py-htmltools/tarball/main
+          uv pip install https://github.com/rstudio/py-htmltools/tarball/main
           make install-deps
 
       - name: Install
         shell: bash
         run: |
-          make install
+          uv pip install -e ".[dev,test]"
 
       - name: Install backports.tarfile
         if: ${{ startsWith(inputs.python-version, '3.8') }}
         shell: bash
         run: |
-          pip install backports.tarfile
+          uv pip install backports.tarfile
 
       - name: Pip list
         shell: bash
         run: |
-          pip list
+          uv pip list
