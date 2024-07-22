@@ -13,7 +13,7 @@ on:
 
 jobs:
   check:
-    runs-on: matrix.os
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         # "3.10" must be a string; otherwise it is interpreted as 3.1.
