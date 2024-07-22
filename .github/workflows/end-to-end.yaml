@@ -58,6 +58,7 @@ jobs:
         os: [ubuntu-latest]
         python-version: ${{ fromJson(needs.setup.outputs.python-versions) }}
         browser: ${{ fromJson(needs.setup.outputs.browsers) }}
+        barret: ${{ (needs.setup.outputs.is-draft || fromJson('[1,2]')) || fromJson('[3,4]') }}
       fail-fast: false
 
     steps:
