@@ -172,7 +172,7 @@ playwright-shiny: FORCE
 	$(MAKE) playwright TEST_FILE="tests/playwright/shiny/$(SUB_FILE)"
 
 # end-to-end tests on deployed apps with playwright; (SUB_FILE="" within tests/playwright/deploys/)
-playwright-deploys: install-rsconnect
+playwright-deploys: FORCE
 	$(MAKE) playwright TEST_FILE="tests/playwright/deploys/$(SUB_FILE)" PYTEST_BROWSERS="$(PYTEST_DEPLOYS_BROWSERS)"
 
 # end-to-end tests on all py-shiny examples with playwright; (SUB_FILE="" within tests/playwright/examples/)

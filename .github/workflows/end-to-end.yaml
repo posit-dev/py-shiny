@@ -118,12 +118,18 @@ jobs:
         with:
           all-browsers: ${{ ! github.event.pull_request.draft }}
 
+      - name: Install rsconnect
+        run: |
+          . venv/bin/activate && \
+            uv pip install "rsconnect @ git+https://github.com/rstudio/rsconnect-python.git"
+
       - name: Test that deployable example apps work
         timeout-minutes: 5 # ~10s locally
         env:
           DEPLOY_APPS: "false"
         run: |
-          make playwright-deploys SUB_FILE=". -vv"
+          . venv/bin/activate && \
+            make playwright-deploys SUB_FILE=". -vv"
 
       - uses: actions/upload-artifact@v4
         if: failure()
