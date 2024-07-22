@@ -19,6 +19,13 @@ jobs:
         # "3.10" must be a string; otherwise it is interpreted as 3.1.
         python-version: ["3.12", "3.11", "3.10", "3.9", "3.8"]
         os: [ubuntu-latest, windows-latest, macOS-latest]
+        exclude:
+          - python-version: ${{ github.event.pull_request.draft && '3.11' }}
+          - python-version: ${{ github.event.pull_request.draft && '3.10' }}
+          - python-version: ${{ github.event.pull_request.draft && '3.9' }}
+          - os: ${{ github.event.pull_request.draft && 'windows-latest' }}
+          - os: ${{ github.event.pull_request.draft && 'macOS-latest' }}
+
       fail-fast: false
 
     steps:
