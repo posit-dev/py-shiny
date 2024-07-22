@@ -1,4 +1,4 @@
-name: End-to-End Tests
+name: Playwright
 
 on:
   push:
@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  playwright-shiny:
+  shiny:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -49,7 +49,7 @@ jobs:
           path: test-results/
           retention-days: 5
 
-  playwright-examples:
+  examples:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -98,7 +98,7 @@ jobs:
           path: test-results/
           retention-days: 5
 
-  playwright-deploys-precheck:
+  deploys-precheck:
     runs-on: ubuntu-latest
     strategy:
       matrix:
