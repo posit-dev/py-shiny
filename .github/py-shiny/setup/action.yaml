@@ -36,7 +36,7 @@ runs:
         shell: bash
         run: |
           # make install-deps
-          if [ "${{ runner.os }}" == "Windows" ]; then; venv\Scripts\activate; else; . venv/bin/activate; fi
+          if [ "${{ runner.os }}" == "Windows" ]; then venv\Scripts\activate; else . venv/bin/activate; fi
 
           uv pip install "htmltools @ git+https://github.com/posit-dev/py-htmltools.git"
           uv pip install -e ".[dev,test]"
@@ -45,7 +45,7 @@ runs:
         shell: bash
         run: |
           # make install
-          if [ "${{ runner.os }}" == "Windows" ]; then; venv\Scripts\activate; else; . venv/bin/activate; fi
+          if [ "${{ runner.os }}" == "Windows" ]; then venv\Scripts\activate; else . venv/bin/activate; fi
 
           # make clean
 
@@ -64,7 +64,7 @@ runs:
         shell: bash
         run: |
           # pip install backports.tarfile
-          if [ "${{ runner.os }}" == "Windows" ]; then; venv\Scripts\activate; else; . venv/bin/activate; fi
+          if [ "${{ runner.os }}" == "Windows" ]; then venv\Scripts\activate; else . venv/bin/activate; fi
 
           uv pip install backports.tarfile
 
@@ -72,6 +72,6 @@ runs:
         shell: bash
         run: |
           # pip list
-          if [ "${{ runner.os }}" == "Windows" ]; then; venv\Scripts\activate; else; . venv/bin/activate; fi
+          if [ "${{ runner.os }}" == "Windows" ]; then venv\Scripts\activate; else . venv/bin/activate; fi
 
           uv pip list
