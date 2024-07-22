@@ -19,7 +19,8 @@ runs:
 
       - name: Upgrade pip
         shell: bash
-        run: python -m pip install --upgrade pip
+        run: |
+          python -m pip install --upgrade pip
 
       - name: Install `uv`
         shell: bash
@@ -38,7 +39,6 @@ runs:
           . venv/bin/activate && \
             uv pip install "htmltools @ git+https://github.com/posit-dev/py-htmltools.git" && \
             uv pip install -e ".[dev,test]"
-
 
       - name: Install
         shell: bash
