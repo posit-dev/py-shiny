@@ -64,7 +64,7 @@ runs:
           ls -l dist
 
           # make install
-          uv pip uninstall -y shiny
+          uv pip uninstall shiny
           uv pip install dist/shiny*.whl
 
       - name: Install backports.tarfile
