@@ -34,9 +34,8 @@ runs:
       - name: Install dependencies
         shell: bash
         run: |
-          uv pip install "htmltools @ git+https://github.com/posit-dev/py-htmltools.git"
-
-          source venv/bin/activate && \
+          . venv/bin/activate && \
+            uv pip install "htmltools @ git+https://github.com/posit-dev/py-htmltools.git" && \
             make install-deps
 
       - name: Install
@@ -45,7 +44,7 @@ runs:
           # source venv/bin/activate && \
           #   make install
 
-          source venv/bin/activate
+          . venv/bin/activate
 
           # make clean
 
@@ -63,9 +62,11 @@ runs:
         if: ${{ startsWith(inputs.python-version, '3.8') }}
         shell: bash
         run: |
-          uv pip install backports.tarfile
+          . venv/bin/activate && \
+            uv pip install backports.tarfile
 
       - name: Pip list
         shell: bash
         run: |
-          uv pip list
+          . venv/bin/activate && \
+            uv pip list
