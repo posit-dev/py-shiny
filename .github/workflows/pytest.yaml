@@ -100,6 +100,7 @@ jobs:
           password: ${{ secrets.PYPI_API_TOKEN }}
 
   playwright-shiny:
+    if: github.event_name != 'release'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -139,6 +140,7 @@ jobs:
           retention-days: 5
 
   playwright-examples:
+    if: github.event_name != 'release'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -188,6 +190,7 @@ jobs:
           retention-days: 5
 
   playwright-deploys-precheck:
+    if: github.event_name != 'release'
     runs-on: ubuntu-latest
     strategy:
       matrix:
