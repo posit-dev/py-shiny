@@ -39,7 +39,7 @@ runs:
       - name: Install dependencies
         shell: bash
         run: |
-          uv pip install https://github.com/rstudio/py-htmltools/tarball/main
+          uv pip install "htmltools @ git+https://github.com/posit-dev/py-htmltools.git"
           source .venv/bin/activate
           make install-deps
 
