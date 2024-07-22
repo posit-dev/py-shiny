@@ -41,7 +41,8 @@ runs:
         run: |
           uv pip install "htmltools @ git+https://github.com/posit-dev/py-htmltools.git"
           source .venv/bin/activate
-          make install-deps
+          # make install-deps
+          uv pip install -e ".[dev,test]"
 
       - name: Pip list
         shell: bash
