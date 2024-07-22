@@ -34,9 +34,11 @@ runs:
       - name: Install dependencies
         shell: bash
         run: |
+          # make install-deps
           . venv/bin/activate && \
             uv pip install "htmltools @ git+https://github.com/posit-dev/py-htmltools.git" && \
-            make install-deps
+            uv pip install -e ".[dev,test]"
+
 
       - name: Install
         shell: bash
