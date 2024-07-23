@@ -10,8 +10,6 @@ from shiny.express import output_args
 from shiny.express import ui as xui
 from shiny.express._run import run_express
 
-from ._utils import skip_on_windows
-
 
 def test_express_ui_is_complete():
     """
@@ -102,7 +100,6 @@ def test_hold():
         sys.displayhook = old_displayhook
 
 
-@skip_on_windows
 def test_recall_context_manager():
     # A Shiny Express app that uses a RecallContextManager (ui.card_header()) without
     # `with`. It is used within another RecallContextManager (ui.card()), but that one
@@ -125,9 +122,9 @@ with ui.card():
         )
     )
 
-    with tempfile.NamedTemporaryFile(mode="w+t") as temp_file:
-        temp_file.write(card_app_express_text)
-        temp_file.flush()
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_file = Path(temp_dir, "temp.file")
+        temp_file.write_text(card_app_express_text)
         res = run_express(Path(temp_file.name)).tagify()
 
     assert str(res) == str(card_app_core)
