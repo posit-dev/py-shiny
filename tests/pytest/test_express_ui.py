@@ -9,6 +9,7 @@ from shiny import render, ui
 from shiny.express import output_args
 from shiny.express import ui as xui
 from shiny.express._run import run_express
+from tests.playwright.utils.deploy_utils import skip_on_windows
 
 
 def test_express_ui_is_complete():
@@ -100,6 +101,7 @@ def test_hold():
         sys.displayhook = old_displayhook
 
 
+@skip_on_windows
 def test_recall_context_manager():
     # A Shiny Express app that uses a RecallContextManager (ui.card_header()) without
     # `with`. It is used within another RecallContextManager (ui.card()), but that one

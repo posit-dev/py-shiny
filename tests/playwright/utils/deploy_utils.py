@@ -40,6 +40,15 @@ deploy_locations = ["connect", "shinyapps"]
 CallableT = TypeVar("CallableT", bound=Callable[..., Any])
 
 
+def skip_on_windows(fn: CallableT) -> CallableT:
+    fn = pytest.mark.skipif(
+        sys.platform.startswith("win"),
+        reason="Does not run on windows",
+    )(fn)
+
+    return fn
+
+
 def skip_if_not_chrome(fn: CallableT) -> CallableT:
     # # Keeping commented to allow for easier local debugging
     # import platform
