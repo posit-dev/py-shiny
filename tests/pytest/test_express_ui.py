@@ -4,12 +4,12 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from _utils import skip_on_windows
 
 from shiny import render, ui
 from shiny.express import output_args
 from shiny.express import ui as xui
 from shiny.express._run import run_express
-from tests.playwright.utils.deploy_utils import skip_on_windows
 
 
 def test_express_ui_is_complete():
