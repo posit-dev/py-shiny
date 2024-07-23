@@ -1,5 +1,5 @@
-name: 'Custom merge queue browsers'
-description: 'Trim down pytest browsers for any github event other than merge_group.'
+name: 'Trim down pytest browsers'
+description: 'Trim down pytest browsers so the browser tabs are not shut down between tests, speeding up testing.'
 inputs:
   browser:
     description: 'Browser to use for testing'

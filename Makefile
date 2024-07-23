@@ -26,10 +26,10 @@ for line in sys.stdin:
 endef
 export PRINT_HELP_PYSCRIPT
 
-BROWSER := python -c "$$BROWSER_PYSCRIPT"
+BROWSER := python3 -c "$$BROWSER_PYSCRIPT"
 
 help: FORCE
-	@python -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
+	@python3 -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
 
 clean: clean-build clean-pyc clean-test ## remove all build, test, coverage and Python artifacts
 
@@ -98,7 +98,7 @@ check-pyright: pyright-typings
 	pyright
 check-pytest: FORCE
 	@echo "-------- Running tests with pytest ----------"
-	python3 tests/pytest/asyncio_prevent.py
+	python tests/pytest/asyncio_prevent.py
 	pytest
 
 # Check types with pyright
@@ -192,6 +192,13 @@ dist: clean ## builds source and wheel package
 	python3 setup.py sdist
 	python3 setup.py bdist_wheel
 	ls -l dist
+ci-dist: FORCE
+	$(MAKE) clean
+	pip install setuptools
+	python setup.py sdist
+	python setup.py bdist_wheel
+	ls -l dist
+
 
 ## install the package to the active Python's site-packages
 # Note that instead of --force-reinstall, we uninstall and then install, because
@@ -200,9 +207,30 @@ dist: clean ## builds source and wheel package
 install: dist
 	pip uninstall -y shiny
 	python3 -m pip install dist/shiny*.whl
+ci-install-wheel: FORCE
+	$(MAKE) ci-dist
+	# make install
+	uv pip uninstall shiny
+	uv pip install dist/shiny*.whl
 
 install-deps: FORCE ## install dependencies
 	pip install -e ".[dev,test]" --upgrade
+ci-install-deps: FORCE
+	uv pip install "htmltools @ git+https://github.com/posit-dev/py-htmltools.git"
+	uv pip install -e ".[dev,test]"
+
+install-docs: FORCE
+	pip install -e ".[dev,test,doc]"
+	pip install https://github.com/posit-dev/py-htmltools/tarball/main
+	pip install https://github.com/posit-dev/py-shinylive/tarball/main
+ci-install-docs: FORCE
+	uv pip install -e ".[dev,test,doc]"
+	uv pip install "htmltools @ git+https://github.com/posit-dev/py-htmltools.git" \
+			"shinylive @ git+https://github.com/posit-dev/py-shinylive.git"
+
+ci-install-rsconnect: FORCE
+	uv pip install "rsconnect-python @ git+https://github.com/rstudio/rsconnect-python.git"
+
 
 # ## If caching is ever used, we could run:
 # install-deps: FORCE ## install latest dependencies

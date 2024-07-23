@@ -5,7 +5,6 @@ on:
   push:
     branches: ["main"]
   pull_request:
-  merge_group:
 
 jobs:
   build-docs:
@@ -33,10 +32,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          # install docs dependencies
-          uv pip install -e ".[dev,test,doc]"
-          uv pip install "htmltools @ git+https://github.com/posit-dev/py-htmltools.git" \
-              "shinylive @ git+https://github.com/posit-dev/py-shinylive.git"
+          make ci-install-docs
 
       - name: Run quartodoc
         run: |
@@ -77,7 +73,7 @@ jobs:
       # =====================================================
 
       - name: Build site
-        if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'merge_group' || startsWith(github.head_ref, 'docs')  }}
+        if: ${{ github.ref == 'refs/heads/main' || (!github.event.pull_request.draft) || startsWith(github.head_ref, 'docs')  }}
         run: |
           cd docs
           make site

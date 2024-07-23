@@ -1,4 +1,7 @@
-.PHONY: help Makefile
+# Using `FORCE` as prerequisite to _force_ the target to always run; https://www.gnu.org/software/make/manual/make.html#index-FORCE
+FORCE: ;
+
+.PHONY: Makefile
 .DEFAULT_GOAL := help
 
 define BROWSER_PYSCRIPT
@@ -21,86 +24,59 @@ for line in sys.stdin:
 endef
 export PRINT_HELP_PYSCRIPT
 
-BROWSER := python -c "$$BROWSER_PYSCRIPT"
+BROWSER := python3 -c "$$BROWSER_PYSCRIPT"
 
-# Use venv from parent
-VENV = ../venv
-PYBIN = $(VENV)/bin
+help: FORCE
+	@python3 -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
 
-# Any targets that depend on $(VENV) or $(PYBIN) will cause the venv to be
-# created. To use the venv, python scripts should run with the prefix $(PYBIN),
-# as in `$(PYBIN)/pip`.
-$(VENV):
-	python3 -m venv $(VENV)
+deps: FORCE ## Install build dependencies
+	cd .. && $(MAKE) install-
 
-$(PYBIN): $(VENV)
-
-
-help:
-	@python -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
-
-dev-htmltools: $(PYBIN)  ## Install development version of htmltools
-	$(PYBIN)/pip install https://github.com/posit-dev/py-htmltools/tarball/main
-
-dev-shinylive: $(PYBIN)  ## Install development version of shinylive
-	$(PYBIN)/pip install https://github.com/posit-dev/py-shinylive/tarball/main
-
-deps: $(PYBIN) dev-htmltools dev-shinylive ## Install build dependencies
-	$(PYBIN)/pip install pip --upgrade
-	$(PYBIN)/pip install ..[doc]
-
-quartodoc: quartodoc_build_core quartodoc_build_express quartodoc_build_test quartodoc_post ## Build quartodocs for express and core
+quartodoc: quartodoc_build_core quartodoc_build_express quartodoc_build_test quartodoc_post ## Build quartodocs for express, core, and testing
 
 ## Build interlinks for API docs
-quartodoc_interlinks: $(PYBIN)
-	. $(PYBIN)/activate \
-	  && quartodoc interlinks
+quartodoc_interlinks: FORCE
+	quartodoc interlinks
 
 ## Build core API docs
-quartodoc_build_core: $(PYBIN) quartodoc_interlinks
+quartodoc_build_core: quartodoc_interlinks FORCE
 	$(eval export SHINY_ADD_EXAMPLES=true)
 	$(eval export IN_QUARTODOC=true)
 	$(eval export SHINY_MODE=core)
-	. $(PYBIN)/activate \
-	  && echo "::group::quartodoc build core docs" \
-	  && quartodoc build --config _quartodoc-core.yml --verbose \
-	  && mv objects.json _objects_core.json \
-	  && echo "::endgroup::"
+	@echo "::group::quartodoc build core docs"
+	quartodoc build --config _quartodoc-core.yml --verbose \
+	  && mv objects.json _objects_core.json
+	@echo "::endgroup::"
 
 ## Build express API docs
-quartodoc_build_express: $(PYBIN) quartodoc_interlinks
+quartodoc_build_express: quartodoc_interlinks FORCE
 	$(eval export SHINY_ADD_EXAMPLES=true)
 	$(eval export IN_QUARTODOC=true)
 	$(eval export SHINY_MODE=express)
-	. $(PYBIN)/activate \
-	  && echo "::group::quartodoc build express docs" \
-	  && quartodoc build --config _quartodoc-express.yml --verbose \
-	  && mv objects.json _objects_express.json \
-	  && echo "::endgroup::"
+	@echo "::group::quartodoc build express docs"
+	quartodoc build --config _quartodoc-express.yml --verbose \
+	  && mv objects.json _objects_express.json
+	@echo "::endgroup::"
 
 ## Build test API docs
-quartodoc_build_test: $(PYBIN) quartodoc_interlinks
+quartodoc_build_test: quartodoc_interlinks FORCE
 	$(eval export SHINY_ADD_EXAMPLES=true)
 	$(eval export IN_QUARTODOC=true)
 	$(eval export SHINY_MODE=express)
-	. $(PYBIN)/activate \
-	  && echo "::group::quartodoc build testing docs" \
-	  && quartodoc build --config _quartodoc-testing.yml --verbose \
-	  && mv objects.json _objects_test.json \
-	  && echo "::endgroup::"
+	@echo "::group::quartodoc build testing docs"
+	quartodoc build --config _quartodoc-testing.yml --verbose \
+	  && mv objects.json _objects_test.json
+	@echo "::endgroup::"
 
 ## Clean up after quartodoc build
-quartodoc_post: $(PYBIN)
-	. $(PYBIN)/activate \
-	  && python _combine_objects_json.py
+quartodoc_post: FORCE
+	python _combine_objects_json.py
 
-site:  ## Build website
-	. $(PYBIN)/activate \
-	  && quarto render
+site: FORCE  ## Build website (quarto render)
+	quarto render
 
-serve:  ## Build website and serve
-	. $(PYBIN)/activate \
-	  && quarto preview --port 8080
+serve: FORCE  ## Build website and serve (quarto preview)
+	&& quarto preview --port 8080
 
-clean:  ## Clean build artifacts
+clean: FORCE  ## Clean build artifacts
 	rm -rf _inv api _site .quarto
