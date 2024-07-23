@@ -34,7 +34,7 @@ jobs:
       - name: Install dependencies
         run: |
           # install docs dependencies
-          if [ "${{ runner.os }}" == "Windows" ]; then venv/Scripts/activate; else . venv/bin/activate; fi
+          # if [ "${{ runner.os }}" == "Windows" ]; then venv/Scripts/activate; else . venv/bin/activate; fi
 
           uv pip install -e ".[dev,test,doc]"
           uv pip install "htmltools @ git+https://github.com/posit-dev/py-htmltools.git" \
@@ -43,7 +43,7 @@ jobs:
       - name: Run quartodoc
         run: |
           # make docs-quartodoc
-          if [ "${{ runner.os }}" == "Windows" ]; then venv/Scripts/activate; else . venv/bin/activate; fi
+          # if [ "${{ runner.os }}" == "Windows" ]; then venv/Scripts/activate; else . venv/bin/activate; fi
 
           make docs-quartodoc
 
@@ -76,7 +76,7 @@ jobs:
         if: github.ref == 'refs/heads/main'
         run: |
           # shinylive assets install-from-local ./build
-          if [ "${{ runner.os }}" == "Windows" ]; then venv/Scripts/activate; else . venv/bin/activate; fi
+          # if [ "${{ runner.os }}" == "Windows" ]; then venv/Scripts/activate; else . venv/bin/activate; fi
 
           cd shinylive-repo
           shinylive assets install-from-local ./build
