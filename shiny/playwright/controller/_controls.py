@@ -1587,7 +1587,6 @@ class _InputCheckboxBase(
             value, timeout=timeout, **kwargs  # pyright: ignore[reportArgumentType]
         )
 
-    # TODO-karan-test: Convert usage of _toggle() to set()
     def _toggle(self, *, timeout: Timeout = None, **kwargs: object) -> None:
         """
         Toggles the input checkbox.
