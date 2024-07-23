@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from _utils import skip_on_windows
+from ._utils import skip_on_windows
 
 from shiny import render, ui
 from shiny.express import output_args
