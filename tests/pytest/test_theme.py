@@ -1,6 +1,7 @@
 from typing import Callable, Optional
 
 import pytest
+from _utils import skip_on_windows
 from htmltools import Tag
 
 from shiny import App
@@ -20,7 +21,6 @@ from shiny.ui._theme import (
     shiny_theme_presets,
     shiny_theme_presets_bundled,
 )
-from tests.playwright.utils.deploy_utils import skip_on_windows
 
 
 def test_theme_stores_values_correctly():
