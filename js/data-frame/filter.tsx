@@ -94,7 +94,10 @@ export const Filter: FC<FilterProps> = ({ header, className, ...props }) => {
   return (
     <input
       {...props}
-      value={header.column.getFilterValue() as string}
+      // If there was a value and now there isn't,
+      // set the filter value to `""` and not `undefined`.
+      // `undefined` will not clear the displayed value.
+      value={(header.column.getFilterValue() as string) || ""}
       className={`form-control form-control-sm ${className}`}
       type="text"
       onChange={(e) => header.column.setFilterValue(e.target.value)}
