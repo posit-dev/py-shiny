@@ -28,7 +28,7 @@ jobs:
       - name: Install rsconnect
         run: |
           # pip install rsconnect
-          if [ "${{ runner.os }}" == "Windows" ]; then venv\Scripts\activate; else . venv/bin/activate; fi
+          if [ "${{ runner.os }}" == "Windows" ]; then venv/Scripts/activate; else . venv/bin/activate; fi
 
           uv pip install "rsconnect_python @ git+https://github.com/rstudio/rsconnect-python.git"
 
@@ -38,7 +38,7 @@ jobs:
           DEPLOY_APPS: "false"
         run: |
           # make playwright-deploys
-          if [ "${{ runner.os }}" == "Windows" ]; then venv\Scripts\activate; else . venv/bin/activate; fi
+          if [ "${{ runner.os }}" == "Windows" ]; then venv/Scripts/activate; else . venv/bin/activate; fi
 
           make playwright-deploys SUB_FILE=". -vv"
 
@@ -55,7 +55,7 @@ jobs:
         # we can have many local processes waiting for deployment to finish
         run: |
           # make playwright-deploys
-          if [ "${{ runner.os }}" == "Windows" ]; then venv\Scripts\activate; else . venv/bin/activate; fi
+          if [ "${{ runner.os }}" == "Windows" ]; then venv/Scripts/activate; else . venv/bin/activate; fi
 
           make playwright-deploys SUB_FILE=". -vv --numprocesses 12"
 
