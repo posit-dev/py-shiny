@@ -188,11 +188,6 @@ release: dist ## package and upload a release
 	twine upload dist/*
 
 dist: clean ## builds source and wheel package
-	pip install setuptools
-	python3 setup.py sdist
-	python3 setup.py bdist_wheel
-	ls -l dist
-ci-dist: FORCE
 	$(MAKE) clean
 	pip install setuptools
 	python setup.py sdist
@@ -206,9 +201,9 @@ ci-dist: FORCE
 # deps wouldn't be installed the first time.
 install: dist
 	pip uninstall -y shiny
-	python3 -m pip install dist/shiny*.whl
+	python -m pip install dist/shiny*.whl
 ci-install-wheel: FORCE
-	$(MAKE) ci-dist
+	$(MAKE) dist
 	# make install
 	uv pip uninstall shiny
 	uv pip install dist/shiny*.whl
