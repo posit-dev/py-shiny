@@ -33,7 +33,8 @@ def test_named_temporary_file_is_not_used():
     * Use a temp dir and create the file in the temp dir. On exit, the dir will be deleted.
         * https://stackoverflow.com/a/77536782/591574
     Possible future fix:
-    * https://github.com/marickmanrho/pip-audit/commit/086ea4d684b41b795d9505b51ce7d079c990dca6
+    * Related Issue: https://github.com/pypa/pip-audit/issues/646
+    * Their fix: https://github.com/marickmanrho/pip-audit/commit/086ea4d684b41b795d9505b51ce7d079c990dca6#diff-a182a096790cc91a1771db39e19b337dec83c579775e46a45956a463b903b616
     """
 
     root_here = Path(__file__).parent.parent.parent
