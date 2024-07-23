@@ -30,7 +30,6 @@ quartodoc:
         - playwright.controller.InputDarkMode
         - playwright.controller.InputDate
         - playwright.controller.InputDateRange
-        - playwright.controller.InputFile
         - playwright.controller.InputNumeric
         - playwright.controller.InputPassword
         - playwright.controller.InputRadioButtons
@@ -62,9 +61,14 @@ quartodoc:
     - title: Upload and download
       desc: Methods for interacting with Shiny app uploading and downloading controller.
       contents:
+        - playwright.controller.InputFile
         - playwright.controller.DownloadButton
         - playwright.controller.DownloadLink
-    - title: Rendering outputs
+    - title: Chat interface
+      desc: Methods for interacting with Shiny app chat controller.
+      contents:
+        - playwright.controller.Chat
+    - title: Rendering Outputs
       desc: Render output in a variety of ways.
       contents:
         - playwright.controller.OutputCode

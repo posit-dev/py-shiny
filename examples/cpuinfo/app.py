@@ -31,8 +31,8 @@ app_ui = ui.page_fluid(
     ui.tags.style(
         """
         /* Don't apply fade effect, it's constantly recalculating */
-        .recalculating {
-            opacity: 1;
+        .recalculating, .recalculating > * {
+            opacity: 1 !important;
         }
         tbody > tr:last-child {
             /*border: 3px solid var(--bs-dark);*/

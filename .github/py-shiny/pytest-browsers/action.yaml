@@ -1,6 +1,10 @@
-name: 'Custom merge queue browsers'
-description: 'Trim down pytest browsers for any github event other than merge_group.'
+name: 'Trim down pytest browsers'
+description: 'Trim down pytest browsers so the browser tabs are not shut down between tests, speeding up testing.'
 inputs:
+  browser:
+    description: 'Browser to use for testing'
+    required: false
+    default: ''
   all-browsers:
     description: 'Force all pytest browsers to used when testing'
     required: false
@@ -16,6 +20,17 @@ runs:
         shell: bash
         id: browsers
         run: |
+          if [ "${{ inputs.browser }}" != "" ]; then
+            BROWSER="${{ inputs.browser }}"
+            if [ "$BROWSER" == "chromium" ] || [ "$BROWSER" == "firefox" ] || [ "$BROWSER" == "webkit" ]; then
+              echo "Using custom browser $BROWSER !"
+              echo "browsers=PYTEST_BROWSERS=\"--browser $BROWSER\"" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "Unknown browser: $BROWSER"
+            exit 1
+          fi
+
           if [ "${{ inputs.all-browsers }}" == "true" ]; then
             echo "Using all browsers!"
             exit 0
