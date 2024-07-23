@@ -11,7 +11,11 @@ def test_validate_chat_append_user_message(page: Page, local_app: ShinyAppProc) 
 
     # Verify starting state
     expect(chat.loc).to_be_visible()
-    chat.expect_latest_message("A user message")
+    expect(chat.loc_messages).to_be_visible()
+    expect(chat.loc_messages).to_have_count(1)
+    html = chat.loc_messages.locator("> *").inner_html()
+    assert "A user message" in html
+    # chat.expect_latest_message("A user message")
 
     # Verify that the message state is as expected
     message_state = controller.OutputCode(page, "message_state")
