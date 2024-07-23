@@ -21,7 +21,7 @@ from shiny.ui._theme import (
     shiny_theme_presets_bundled,
 )
 
-from ._utils import skip_on_windows
+# from ._utils import skip_on_windows
 
 
 def test_theme_stores_values_correctly():
@@ -80,7 +80,7 @@ def test_theme_preset_must_be_valid():
         Theme("not_a_valid_preset")  # type: ignore
 
 
-@skip_on_windows
+# @skip_on_windows
 @pytest.mark.parametrize("preset", shiny_theme_presets)
 def test_theme_css_compiles_and_is_cached(preset: ShinyThemePreset):
     theme = Theme(preset)
@@ -159,7 +159,7 @@ def _page_sidebar(*args, **kwargs) -> Tag:  # type: ignore
     return page_sidebar(sidebar("Sidebar"), *args, **kwargs)  # type: ignore
 
 
-@skip_on_windows
+# @skip_on_windows
 @pytest.mark.parametrize(
     "page_fn",
     [
