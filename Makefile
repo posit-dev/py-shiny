@@ -26,10 +26,10 @@ for line in sys.stdin:
 endef
 export PRINT_HELP_PYSCRIPT
 
-BROWSER := python3 -c "$$BROWSER_PYSCRIPT"
+BROWSER := python -c "$$BROWSER_PYSCRIPT"
 
 help: FORCE
-	@python3 -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
+	@python -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
 
 clean: clean-build clean-pyc clean-test ## remove all build, test, coverage and Python artifacts
 
@@ -188,7 +188,6 @@ release: dist ## package and upload a release
 	twine upload dist/*
 
 dist: clean ## builds source and wheel package
-	$(MAKE) clean
 	pip install setuptools
 	python setup.py sdist
 	python setup.py bdist_wheel
@@ -202,8 +201,7 @@ dist: clean ## builds source and wheel package
 install: dist
 	pip uninstall -y shiny
 	python -m pip install dist/shiny*.whl
-ci-install-wheel: FORCE
-	$(MAKE) dist
+ci-install-wheel: FORCE dist
 	# make install
 	uv pip uninstall shiny
 	uv pip install dist/shiny*.whl

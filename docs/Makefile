@@ -24,13 +24,13 @@ for line in sys.stdin:
 endef
 export PRINT_HELP_PYSCRIPT
 
-BROWSER := python3 -c "$$BROWSER_PYSCRIPT"
+BROWSER := python -c "$$BROWSER_PYSCRIPT"
 
 help: FORCE
-	@python3 -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
+	@python -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
 
 deps: FORCE ## Install build dependencies
-	cd .. && $(MAKE) install-
+	cd .. && $(MAKE) install-docs
 
 quartodoc: quartodoc_build_core quartodoc_build_express quartodoc_build_test quartodoc_post ## Build quartodocs for express, core, and testing
 
@@ -76,7 +76,7 @@ site: FORCE  ## Build website (quarto render)
 	quarto render
 
 serve: FORCE  ## Build website and serve (quarto preview)
-	&& quarto preview --port 8080
+	quarto preview --port 8080
 
 clean: FORCE  ## Clean build artifacts
 	rm -rf _inv api _site .quarto
