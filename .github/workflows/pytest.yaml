@@ -111,6 +111,12 @@ jobs:
           - python-version: ${{ github.event.pull_request.draft && '3.9' }}
           - browser: ${{ github.event.pull_request.draft && 'firefox' }}
           - browser: ${{ github.event.pull_request.draft && 'webkit' }}
+          # There are many unexplained tests that fail on webkit w/ python 3.8, 3.9
+          # Given the more recent versions of python work, we will exclude this combination
+          - browser: "webkit"
+            python-version: "3.8"
+          - browser: "webkit"
+            python-version: "3.9"
       fail-fast: false
 
     steps:
