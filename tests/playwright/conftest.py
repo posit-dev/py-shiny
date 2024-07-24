@@ -4,10 +4,18 @@
 from __future__ import annotations
 
 from pathlib import PurePath
+from typing import Generator
 
 import pytest
-from playwright.sync_api import BrowserContext, Page
+from playwright.sync_api import (
+    BrowserContext,
+    ConsoleMessage,
+    JSHandle,
+    Page,
+    SourceLocation,
+)
 
+from shiny._typing_extensions import TypedDict
 from shiny.pytest import ScopeName as ScopeName
 from shiny.pytest import create_app_fixture
 
@@ -40,11 +48,21 @@ def session_page(browser: BrowserContext) -> Page:
     return browser.new_page()
 
 
+class ConsoleMessageInfo(TypedDict):
+    type: str
+    text: str
+    location: SourceLocation
+    args: list[JSHandle]
+
+
 @pytest.fixture(scope="function")
 # By going to `about:blank`, we _reset_ the page to a known state before each test.
 # It is not perfect, but it is faster than making a new page for each test.
 # This must be done before each test
-def page(session_page: Page) -> Page:
+def page(
+    request: pytest.FixtureRequest,
+    session_page: Page,
+) -> Generator[Page, None, None]:
     """
     Reset the given page to a known state before each test.
 
@@ -53,12 +71,44 @@ def page(session_page: Page) -> Page:
     The default viewport size is set to 1920 x 1080 (1080p) for each test function.
 
     Parameters:
-        session_page (Page): The page to reset.
+        session_page (Page): The page to reset before each test.
     """
     session_page.goto("about:blank")
     # Reset screen size to 1080p
     session_page.set_viewport_size({"width": 1920, "height": 1080})
-    return session_page
+
+    console_msgs: list[ConsoleMessageInfo] = []
+
+    def on_console_msg(msg: ConsoleMessage) -> None:
+        # Do not report missing favicon errors
+        if msg.location["url"].endswith("favicon.ico"):
+            return
+        if msg.type == "warning" and msg.text.startswith("DEPRECATED:"):
+            return
+        # console_msgs.append(msg.text)
+        console_msgs.append(
+            {
+                "type": msg.type,
+                "text": msg.text,
+                "location": msg.location,
+                "args": msg.args,
+            }
+        )
+
+    session_page.on("console", on_console_msg)
+
+    yield session_page
+
+    session_page.remove_listener("console", on_console_msg)
+
+    if request.session.testsfailed:
+        if len(console_msgs) > 0:
+            print("+++++++++ Browser console log ++++++++")
+            for msg in console_msgs:
+                print(msg)
+            print("+++++++++ / Browser console log ++++++++")
+        else:
+            print("No browser console messages captured.")
 
 
 def create_example_fixture(
