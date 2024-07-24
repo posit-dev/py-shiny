@@ -4,6 +4,8 @@ import glob
 from pathlib import Path
 from typing import Dict, Set
 
+from tests.pytest._utils import skip_on_windows
+
 # File names that contain `tempfile.NamedTemporaryFile` but are known to be correct.
 # The key is the file name, the value is a set of lines stripped that contain `NamedTemporaryFile(`  that are known to be correct.
 # This file (test_named_temporary_file.py) is automatically excluded.
@@ -19,6 +21,7 @@ for k, v in known_entries.items():
     known_entries[k] = {x.strip() for x in v}
 
 
+@skip_on_windows
 def test_named_temporary_file_is_not_used():
     """
     Windows does not work well with tempfile.NamedTemporaryFile.
