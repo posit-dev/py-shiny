@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import PurePath
 
-from playwright.sync_api import Page
+from playwright.sync_api import Page, expect
 
 from shiny.playwright.expect import expect_not_to_have_class
 
@@ -170,6 +170,10 @@ def wait_for_idle_app(
         The maximum time to wait for the app's `html` element to not have the `shiny-busy` class.
     """
 
+    # Wait for page to exist
+    expect(page.locator(".shiny-bound-output")).not_to_have_count(0, timeout=timeout)
+
+    # Wait for the app to not be busy
     expect_not_to_have_class(
         page.locator("html"),
         "shiny-busy",
