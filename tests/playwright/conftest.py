@@ -4,20 +4,22 @@
 from __future__ import annotations
 
 from pathlib import PurePath
-from typing import Generator
 
-import pytest
-from playwright.sync_api import (
-    BrowserContext,
-    ConsoleMessage,
-    JSHandle,
-    Page,
-    SourceLocation,
-)
-
-from shiny._typing_extensions import TypedDict
+# from shiny._typing_extensions import TypedDict
 from shiny.pytest import ScopeName as ScopeName
 from shiny.pytest import create_app_fixture
+
+# from typing import Generator
+
+# import pytest
+# from playwright.sync_api import (
+#     BrowserContext,
+#     ConsoleMessage,
+#     JSHandle,
+#     Page,
+#     SourceLocation,
+# )
+
 
 __all__ = (
     "create_doc_example_fixture",
@@ -31,84 +33,84 @@ here = PurePath(__file__).parent
 here_root = here.parent.parent
 
 
-# Make a single page fixture that can be used by all tests
-@pytest.fixture(scope="session")
-# By using a single page, the browser is only launched once and all tests run in the same tab / page.
-def session_page(browser: BrowserContext) -> Page:
-    """
-    Create a new page within the given browser context.
+# # Make a single page fixture that can be used by all tests
+# @pytest.fixture(scope="session")
+# # By using a single page, the browser is only launched once and all tests run in the same tab / page.
+# def session_page(browser: BrowserContext) -> Page:
+#     """
+#     Create a new page within the given browser context.
 
-    Parameters:
-        browser (BrowserContext): The browser context in which to create the new page.
+#     Parameters:
+#         browser (BrowserContext): The browser context in which to create the new page.
 
-    Returns:
-        Page: The newly created page.
+#     Returns:
+#         Page: The newly created page.
 
-    """
-    return browser.new_page()
-
-
-class ConsoleMessageInfo(TypedDict):
-    type: str
-    text: str
-    location: SourceLocation
-    args: list[JSHandle]
+#     """
+#     return browser.new_page()
 
 
-@pytest.fixture(scope="function")
-# By going to `about:blank`, we _reset_ the page to a known state before each test.
-# It is not perfect, but it is faster than making a new page for each test.
-# This must be done before each test
-def page(
-    request: pytest.FixtureRequest,
-    session_page: Page,
-) -> Generator[Page, None, None]:
-    """
-    Reset the given page to a known state before each test.
+# class ConsoleMessageInfo(TypedDict):
+#     type: str
+#     text: str
+#     location: SourceLocation
+#     args: list[JSHandle]
 
-    The page is built on the session_page, which is maintained over the full session.
-    The page will visit "about:blank" to reset between apps.
-    The default viewport size is set to 1920 x 1080 (1080p) for each test function.
 
-    Parameters:
-        session_page (Page): The page to reset before each test.
-    """
-    session_page.goto("about:blank")
-    # Reset screen size to 1080p
-    session_page.set_viewport_size({"width": 1920, "height": 1080})
+# @pytest.fixture(scope="function")
+# # By going to `about:blank`, we _reset_ the page to a known state before each test.
+# # It is not perfect, but it is faster than making a new page for each test.
+# # This must be done before each test
+# def page(
+#     request: pytest.FixtureRequest,
+#     session_page: Page,
+# ) -> Generator[Page, None, None]:
+#     """
+#     Reset the given page to a known state before each test.
 
-    console_msgs: list[ConsoleMessageInfo] = []
+#     The page is built on the session_page, which is maintained over the full session.
+#     The page will visit "about:blank" to reset between apps.
+#     The default viewport size is set to 1920 x 1080 (1080p) for each test function.
 
-    def on_console_msg(msg: ConsoleMessage) -> None:
-        # Do not report missing favicon errors
-        if msg.location["url"].endswith("favicon.ico"):
-            return
-        if msg.type == "warning" and msg.text.startswith("DEPRECATED:"):
-            return
-        # console_msgs.append(msg.text)
-        console_msgs.append(
-            {
-                "type": msg.type,
-                "text": msg.text,
-                "location": msg.location,
-                "args": msg.args,
-            }
-        )
+#     Parameters:
+#         session_page (Page): The page to reset before each test.
+#     """
+#     session_page.goto("about:blank")
+#     # Reset screen size to 1080p
+#     session_page.set_viewport_size({"width": 1920, "height": 1080})
 
-    session_page.on("console", on_console_msg)
+#     console_msgs: list[ConsoleMessageInfo] = []
 
-    yield session_page
+#     def on_console_msg(msg: ConsoleMessage) -> None:
+#         # Do not report missing favicon errors
+#         if msg.location["url"].endswith("favicon.ico"):
+#             return
+#         if msg.type == "warning" and msg.text.startswith("DEPRECATED:"):
+#             return
+#         # console_msgs.append(msg.text)
+#         console_msgs.append(
+#             {
+#                 "type": msg.type,
+#                 "text": msg.text,
+#                 "location": msg.location,
+#                 "args": msg.args,
+#             }
+#         )
 
-    session_page.remove_listener("console", on_console_msg)
+#     session_page.on("console", on_console_msg)
 
-    if request.session.testsfailed:
-        if len(console_msgs) > 0:
-            print("+++++++++ Browser console log ++++++++")
-            for msg in console_msgs:
-                print(msg)
-            print("+++++++++ / Browser console log ++++++++")
-        else:
-            print("No browser console messages captured.")
+#     yield session_page
+
+#     session_page.remove_listener("console", on_console_msg)
+
+#     if request.session.testsfailed:
+#         if len(console_msgs) > 0:
+#             print("+++++++++ Browser console log ++++++++")
+#             for msg in console_msgs:
+#                 print(msg)
+#             print("+++++++++ / Browser console log ++++++++")
+#         else:
+#             print("No browser console messages captured.")
 
 
 def create_example_fixture(
