@@ -7,9 +7,9 @@ from shiny.run import ShinyAppProc
 
 
 def test_validate_chat(page: Page, local_app: ShinyAppProc) -> None:
-    import pytest
+    # import pytest
 
-    pytest.skip("Fails. Needs investigation.")
+    # pytest.skip("Fails. Needs investigation.")
     page.goto(local_app.url)
 
     chat = controller.Chat(page, "chat")

@@ -5,9 +5,9 @@ from shiny.run import ShinyAppProc
 
 
 def test_validate_chat_append_user_message(page: Page, local_app: ShinyAppProc) -> None:
-    import pytest
+    # import pytest
 
-    pytest.skip("Fails. Needs investigation.")
+    # pytest.skip("Fails. Needs investigation.")
 
     page.goto(local_app.url)
 
