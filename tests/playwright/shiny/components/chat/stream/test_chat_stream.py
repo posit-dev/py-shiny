@@ -1,14 +1,15 @@
 import re
 
+from conftest import wait_for_idle_app
 from playwright.sync_api import Page, expect
 
 from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
 
-def test_validate_chat(page_chat: Page, local_app: ShinyAppProc) -> None:
-    page = page_chat
+def test_validate_chat(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
+    wait_for_idle_app(page)
 
     chat = controller.Chat(page, "chat")
     message_state = controller.OutputCode(page, "message_state")

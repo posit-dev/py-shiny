@@ -1,9 +1,12 @@
 # This file is necessary for pytest to find relative module files
 # such as examples/example_apps.py
-
 from __future__ import annotations
 
 from pathlib import PurePath
+
+from playwright.sync_api import Page
+
+from shiny.playwright.expect import expect_not_to_have_class
 
 # from shiny._typing_extensions import TypedDict
 from shiny.pytest import ScopeName as ScopeName
@@ -151,11 +154,24 @@ def create_doc_example_express_fixture(
     return create_doc_example_fixture(example_name, "app-express.py", scope)
 
 
-import pytest
-from playwright.sync_api import Page
+def wait_for_idle_app(
+    page: Page,
+    *,
+    timeout: int = 30 * 1000,
+) -> None:
+    """
+    Wait for the app to not be busy (even if for a moment).
 
+    Parameters
+    ----------
+    page
+        The page to wait for.
+    timeout
+        The maximum time to wait for the app's `html` element to not have the `shiny-busy` class.
+    """
 
-@pytest.fixture(scope="function")
-def page_chat(page: Page) -> Page:
-    page.set_default_timeout(30 * 1000)
-    return page
+    expect_not_to_have_class(
+        page.locator("html"),
+        "shiny-busy",
+        timeout=timeout,
+    )
