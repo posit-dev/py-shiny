@@ -33,8 +33,7 @@ styles_for_questions = questionary.Style(
 )
 # Prebuild some common choices
 cancel_choice: Choice = Choice(title=[("class:secondary", "[Cancel]")], value="cancel")
-# Use windows friendly unicode value for back arrow
-back_choice: Choice = Choice(title=[("class:secondary", "\u2190 Back")], value="back")
+back_choice: Choice = Choice(title=[("class:secondary", "← Back")], value="back")
 
 
 def choice_from_dict(choice_dict: dict[str, str]) -> list[Choice]:
