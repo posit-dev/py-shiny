@@ -201,8 +201,8 @@ dist: clean ## builds source and wheel package
 install: dist
 	pip uninstall -y shiny
 	python -m pip install dist/shiny*.whl
-ci-install-wheel: FORCE dist
-	# make install
+ci-install-wheel: dist FORCE
+	# `uv` version of `make install`
 	uv pip uninstall shiny
 	uv pip install dist/shiny*.whl
 
