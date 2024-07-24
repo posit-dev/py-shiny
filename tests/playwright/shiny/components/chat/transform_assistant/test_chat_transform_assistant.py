@@ -1,4 +1,3 @@
-from conftest import wait_for_idle_app
 from playwright.sync_api import Page, expect
 
 from shiny import ui
@@ -8,7 +7,6 @@ from shiny.run import ShinyAppProc
 
 def test_validate_chat_transform_assistant(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
-    wait_for_idle_app(page)
 
     chat = controller.Chat(page, "chat")
 
@@ -19,7 +17,7 @@ def test_validate_chat_transform_assistant(page: Page, local_app: ShinyAppProc) 
     chat.set_user_input(user_msg)
     chat.send_user_input()
     code = chat.loc_latest_message.locator("code")
-    expect(code).to_have_text("hello")
+    expect(code).to_have_text("hello", timeout=30 * 1000)
 
     user_msg2 = "return HTML"
     chat.set_user_input(user_msg2)

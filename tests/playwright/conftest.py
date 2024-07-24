@@ -4,10 +4,6 @@ from __future__ import annotations
 
 from pathlib import PurePath
 
-from playwright.sync_api import Page, expect
-
-from shiny.playwright.expect import expect_not_to_have_class
-
 # from shiny._typing_extensions import TypedDict
 from shiny.pytest import ScopeName as ScopeName
 from shiny.pytest import create_app_fixture
@@ -152,30 +148,3 @@ def create_doc_example_express_fixture(
 ):
     """Used to create app fixtures from ``app-express.py`` example apps in py-shiny/shiny/api-examples"""
     return create_doc_example_fixture(example_name, "app-express.py", scope)
-
-
-def wait_for_idle_app(
-    page: Page,
-    *,
-    timeout: int = 30 * 1000,
-) -> None:
-    """
-    Wait for the app to not be busy (even if for a moment).
-
-    Parameters
-    ----------
-    page
-        The page to wait for.
-    timeout
-        The maximum time to wait for the app's `html` element to not have the `shiny-busy` class.
-    """
-
-    # Wait for page to exist
-    expect(page.locator(".shiny-bound-output")).not_to_have_count(0, timeout=timeout)
-
-    # Wait for the app to not be busy
-    expect_not_to_have_class(
-        page.locator("html"),
-        "shiny-busy",
-        timeout=timeout,
-    )

@@ -1,6 +1,5 @@
 import re
 
-from conftest import wait_for_idle_app
 from playwright.sync_api import Page, expect
 
 from shiny.playwright import controller
@@ -9,7 +8,6 @@ from shiny.run import ShinyAppProc
 
 def test_validate_chat(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
-    wait_for_idle_app(page)
 
     chat = controller.Chat(page, "chat")
     message_state = controller.OutputCode(page, "message_state")
@@ -25,7 +23,7 @@ def test_validate_chat(page: Page, local_app: ShinyAppProc) -> None:
         "FIFTH FIFTH FIFTH",
     ]
     # Allow for any whitespace between messages
-    chat.expect_messages(re.compile(r"\s*".join(messages)))
+    chat.expect_messages(re.compile(r"\s*".join(messages)), timeout=30 * 1000)
 
     message_state_expected = tuple(
         [{"content": message, "role": "assistant"} for message in messages]

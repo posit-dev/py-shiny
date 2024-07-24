@@ -1,4 +1,3 @@
-from conftest import wait_for_idle_app
 from playwright.sync_api import Page, expect
 
 from shiny.playwright import controller
@@ -7,14 +6,13 @@ from shiny.run import ShinyAppProc
 
 def test_validate_chat_basic(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
-    wait_for_idle_app(page)
 
     chat = controller.Chat(page, "chat")
     expect(chat.loc).to_be_visible()
 
     chat.set_user_input("Hello!")
     chat.send_user_input()
-    chat.expect_latest_message("Hello!")
+    chat.expect_latest_message("Hello!", timeout=30 * 1000)
 
     error_loc = page.locator(".shiny-notification-error")
     expect(error_loc).to_be_visible()
