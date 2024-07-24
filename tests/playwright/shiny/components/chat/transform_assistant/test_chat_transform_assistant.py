@@ -5,7 +5,10 @@ from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
 
-def test_validate_chat_transform_assistant(page: Page, local_app: ShinyAppProc) -> None:
+def test_validate_chat_transform_assistant(
+    page_chat: Page, local_app: ShinyAppProc
+) -> None:
+    page = page_chat
     page.goto(local_app.url)
 
     chat = controller.Chat(page, "chat")

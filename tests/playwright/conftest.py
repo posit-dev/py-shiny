@@ -149,3 +149,13 @@ def create_doc_example_express_fixture(
 ):
     """Used to create app fixtures from ``app-express.py`` example apps in py-shiny/shiny/api-examples"""
     return create_doc_example_fixture(example_name, "app-express.py", scope)
+
+
+import pytest
+from playwright.sync_api import Page
+
+
+@pytest.fixture(scope="function")
+def page_chat(page: Page) -> Page:
+    page.set_default_timeout(30 * 1000)
+    return page

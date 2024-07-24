@@ -4,10 +4,8 @@ from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
 
-def test_validate_chat_transform(page: Page, local_app: ShinyAppProc) -> None:
-    # import pytest
-
-    # pytest.skip("Fails. Needs investigation.")
+def test_validate_chat_transform(page_chat: Page, local_app: ShinyAppProc) -> None:
+    page = page_chat
     page.goto(local_app.url)
 
     chat = controller.Chat(page, "chat")
