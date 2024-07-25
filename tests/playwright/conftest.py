@@ -3,10 +3,8 @@
 from __future__ import annotations
 
 from pathlib import PurePath
-from typing import Generator
 
-import pytest
-from playwright.sync_api import BrowserContext, ConsoleMessage, Page, SourceLocation
+from playwright.sync_api import SourceLocation
 
 from shiny._typing_extensions import TypedDict
 from shiny.pytest import ScopeName as ScopeName
