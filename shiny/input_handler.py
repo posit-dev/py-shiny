@@ -96,7 +96,7 @@ getType: function(el) {
 
 @input_handlers.add("shiny.date")
 def _(
-    value: None | str | list[str], name: ResolvedId, session: Session
+    value: str | list[str] | None, name: ResolvedId, session: Session
 ) -> date | None | tuple[date | None, date | None]:
 
     if isinstance(value, str) or value is None:
