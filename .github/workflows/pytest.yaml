@@ -133,7 +133,7 @@ jobs:
           browser: ${{ matrix.browser }}
           # If anything other than `true`, it will heavily reduce webkit performance
           # Related: https://github.com/microsoft/playwright/issues/18119
-          disable-playwright-diagnostics: ${{ matrix.browser == 'webkit' }}
+          disable-playwright-diagnostics: ${{ matrix.browser == 'webkit' || matrix.browser == 'firefox' }}
 
       - name: Run End-to-End tests
         timeout-minutes: 60
@@ -174,7 +174,7 @@ jobs:
           browser: ${{ matrix.browser }}
           # If anything other than `true`, it will heavily reduce webkit performance
           # Related: https://github.com/microsoft/playwright/issues/18119
-          disable-playwright-diagnostics: ${{ matrix.browser == 'webkit' }}
+          disable-playwright-diagnostics: ${{ matrix.browser == 'webkit' || matrix.browser == 'firefox' }}
 
       - name: Install node.js
         uses: actions/setup-node@v4
