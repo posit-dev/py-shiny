@@ -18,7 +18,7 @@ jobs:
       matrix:
         # "3.10" must be a string; otherwise it is interpreted as 3.1.
         python-version: ["3.12", "3.11", "3.10", "3.9", "3.8"]
-        os: [ubuntu-latest, windows-latest, macOS-latest]
+        os: [ubuntu-20.04, windows-latest, macOS-latest]
         exclude:
           - python-version: ${{ github.event.pull_request.draft && '3.11' }}
           - python-version: ${{ github.event.pull_request.draft && '3.10' }}
@@ -148,7 +148,7 @@ jobs:
 
   playwright-examples:
     if: github.event_name != 'release'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     strategy:
       matrix:
         python-version: ["3.12", "3.11", "3.10", "3.9", "3.8"]
@@ -200,7 +200,7 @@ jobs:
 
   playwright-deploys-precheck:
     if: github.event_name != 'release'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     strategy:
       matrix:
         # Matches deploy server python version
