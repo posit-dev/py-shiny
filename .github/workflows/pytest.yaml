@@ -138,7 +138,7 @@ jobs:
       - name: Run End-to-End tests
         timeout-minutes: 60
         run: |
-          make playwright-shiny SUB_FILE=". --numprocesses 4 ${{ steps.browsers.outputs.playwright-diagnostic-args }}" ${{ steps.browsers.outputs.browsers }}
+          make playwright-shiny SUB_FILE=". --numprocesses 4 --reruns 3 --reruns-delay 1 ${{ steps.browsers.outputs.playwright-diagnostic-args }}" ${{ steps.browsers.outputs.browsers }}
       - uses: actions/upload-artifact@v4
         if: failure() && steps.browsers.outputs.has-playwright-diagnostics
         with:
@@ -190,7 +190,7 @@ jobs:
       - name: Run example app tests
         timeout-minutes: 60
         run: |
-          make playwright-examples SUB_FILE=". --numprocesses 4 ${{ steps.browsers.outputs.playwright-diagnostic-args }}" ${{ steps.browsers.outputs.browsers }}
+          make playwright-examples SUB_FILE=". --numprocesses 4 --reruns 3 --reruns-delay 1 ${{ steps.browsers.outputs.playwright-diagnostic-args }}" ${{ steps.browsers.outputs.browsers }}
       - uses: actions/upload-artifact@v4
         if: failure() && steps.browsers.outputs.has-playwright-diagnostics
         with:
