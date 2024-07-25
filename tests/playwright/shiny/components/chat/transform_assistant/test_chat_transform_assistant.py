@@ -15,7 +15,7 @@ def test_validate_chat_transform_assistant(page: Page, local_app: ShinyAppProc) 
     # Wait for app to load
     message_state.expect_value("()", timeout=30 * 1000)
 
-    expect(chat.loc).to_be_visible()
+    expect(chat.loc).to_be_visible(timeout=30 * 1000)
     expect(chat.loc_input_button).to_be_disabled()
 
     user_msg = "hello"

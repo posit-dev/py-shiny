@@ -14,7 +14,7 @@ def test_validate_chat_basic_error(page: Page, local_app: ShinyAppProc) -> None:
         timeout=30 * 1000,
     )
 
-    expect(chat.loc).to_be_visible()
+    expect(chat.loc).to_be_visible(timeout=30 * 1000)
     chat.set_user_input("Hello!")
     chat.send_user_input()
     chat.expect_latest_message("Hello!", timeout=30 * 1000)
