@@ -11,22 +11,17 @@ function update_height(target) {
   if (target.scrollHeight > 0) {
     target.style.height = "auto";
     target.style.height = target.scrollHeight + "px";
-  } else {
-    const targetRows = target.getAttribute("rows");
-    if (targetRows == "0") {
-      const observer = new IntersectionObserver((entries, observer2) => {
-        entries.forEach((entry) => {
-          if (entry.intersectionRatio > 0) {
-            observer2.unobserve(entry.target);
-            const entryTarget = entry.target;
-            entryTarget.rows = 1;
-            update_height(entryTarget);
-          }
-        });
-      });
-      observer.observe(target);
-    }
+    return;
   }
+  const observer = new IntersectionObserver((entries, observer2) => {
+    entries.forEach((entry) => {
+      if (entry.intersectionRatio > 0) {
+        observer2.unobserve(entry.target);
+        update_height(entry.target);
+      }
+    });
+  });
+  observer.observe(target);
 }
 onDelegatedEvent(
   "input",

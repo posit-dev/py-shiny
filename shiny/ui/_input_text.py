@@ -163,10 +163,7 @@ def input_text_area(
     if autoresize:
         classes.append("textarea-autoresize")
         if rows is None:
-            # Use a placeholder of `_auto_` (an invalid value) to signal that the textarea
-            # should autoresized on load
-            # rows = "_auto_"
-            rows = 0
+            rows = 1
 
     resolved_id = resolve_id(id)
     area = tags.textarea(
