@@ -34,7 +34,6 @@ class ConsoleMessageInfo(TypedDict):
     type: str
     text: str
     location: SourceLocation
-    args: list[JSHandle]
 
 
 @pytest.fixture
@@ -75,7 +74,6 @@ def page(
                 "type": msg.type,
                 "text": msg.text,
                 "location": msg.location,
-                "args": msg.args,
             }
         )
 
