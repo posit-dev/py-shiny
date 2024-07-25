@@ -131,13 +131,16 @@ jobs:
         id: browsers
         with:
           browser: ${{ matrix.browser }}
+          # If anything other than `true`, it will heavily reduce webkit performance
+          # Related: https://github.com/microsoft/playwright/issues/18119
+          disable-playwright-diagnostics: ${{ matrix.browser == 'webkit' }}
 
       - name: Run End-to-End tests
         timeout-minutes: 60
         run: |
-          make playwright-shiny SUB_FILE="." ${{ steps.browsers.outputs.browsers }}
+          make playwright-shiny SUB_FILE=". --numprocesses 4 ${{ steps.browsers.outputs.playwright-diagnostic-args }}" ${{ steps.browsers.outputs.browsers }}
       - uses: actions/upload-artifact@v4
-        if: failure()
+        if: failure() && steps.browsers.outputs.has-playwright-diagnostics
         with:
           name: "playright-shiny-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.browser }}-results"
           path: test-results/
@@ -169,6 +172,9 @@ jobs:
         id: browsers
         with:
           browser: ${{ matrix.browser }}
+          # If anything other than `true`, it will heavily reduce webkit performance
+          # Related: https://github.com/microsoft/playwright/issues/18119
+          disable-playwright-diagnostics: ${{ matrix.browser == 'webkit' }}
 
       - name: Install node.js
         uses: actions/setup-node@v4
@@ -182,11 +188,11 @@ jobs:
           npm ci
 
       - name: Run example app tests
-        timeout-minutes: 20
+        timeout-minutes: 60
         run: |
-          make playwright-examples SUB_FILE=". --numprocesses 4" ${{ steps.browsers.outputs.browsers }}
+          make playwright-examples SUB_FILE=". --numprocesses 4 ${{ steps.browsers.outputs.playwright-diagnostic-args }}" ${{ steps.browsers.outputs.browsers }}
       - uses: actions/upload-artifact@v4
-        if: failure()
+        if: failure() && steps.browsers.outputs.has-playwright-diagnostics
         with:
           name: "playright-examples-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.browser }}-results"
           path: test-results/
