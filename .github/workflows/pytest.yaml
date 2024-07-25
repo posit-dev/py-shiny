@@ -133,9 +133,9 @@ jobs:
           browser: ${{ matrix.browser }}
 
       - name: Run End-to-End tests
-        timeout-minutes: 20
+        timeout-minutes: 60
         run: |
-          make playwright-shiny SUB_FILE=". --numprocesses 4" ${{ steps.browsers.outputs.browsers }}
+          make playwright-shiny SUB_FILE="." ${{ steps.browsers.outputs.browsers }}
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
