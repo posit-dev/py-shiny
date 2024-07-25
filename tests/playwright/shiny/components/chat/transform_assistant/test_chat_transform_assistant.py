@@ -9,6 +9,11 @@ def test_validate_chat_transform_assistant(page: Page, local_app: ShinyAppProc) 
     page.goto(local_app.url)
 
     chat = controller.Chat(page, "chat")
+    message_state = controller.OutputCode(page, "message_state")
+    message_state2 = controller.OutputCode(page, "message_state2")
+
+    # Wait for app to load
+    message_state.expect_value("()", timeout=30 * 1000)
 
     expect(chat.loc).to_be_visible()
     expect(chat.loc_input_button).to_be_disabled()
@@ -25,7 +30,6 @@ def test_validate_chat_transform_assistant(page: Page, local_app: ShinyAppProc) 
     bold = chat.loc_latest_message.locator("b")
     expect(bold).to_have_text("Transformed response")
 
-    message_state = controller.OutputCode(page, "message_state")
     message_state_expected = tuple(
         [
             {"content": "hello", "role": "user"},
@@ -36,7 +40,6 @@ def test_validate_chat_transform_assistant(page: Page, local_app: ShinyAppProc) 
     )
     message_state.expect_value(str(message_state_expected))
 
-    message_state2 = controller.OutputCode(page, "message_state2")
     message_state_expected2 = tuple(
         [
             {"content": "hello", "role": "user"},

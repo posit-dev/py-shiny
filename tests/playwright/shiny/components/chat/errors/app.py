@@ -13,7 +13,9 @@ async def _():
     raise Exception("boom!")
 
 
-# Placeholder to help determine when shiny has loaded via `.shiny-bound-output` being present
-@render.ui
-def _():
-    return ""
+"Message state:"
+
+
+@render.code
+def message_state():
+    return str(chat.messages())
