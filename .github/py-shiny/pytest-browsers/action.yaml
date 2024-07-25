@@ -39,7 +39,7 @@ runs:
           else
             echo "Using playwright diagnostics!"
             echo 'has-playwright-diagnostics=true' >> "$GITHUB_OUTPUT"
-            echo 'playwright-diagnostic-args=' >> "$GITHUB_OUTPUT"
+            echo 'playwright-diagnostic-args=--tracing=retain-on-failure --video=retain-on-failure --screenshot=only-on-failure --full-page-screenshot --output=test-results' >> "$GITHUB_OUTPUT"
           fi
 
           if [ "${{ inputs.browser }}" != "" ]; then
