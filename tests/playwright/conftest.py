@@ -31,7 +31,7 @@ class ConsoleMessageInfo(TypedDict):
 
 
 @pytest.fixture
-def page(
+def page_old(
     request: pytest.FixtureRequest,
     browser: BrowserContext,
     is_chromium: bool,
