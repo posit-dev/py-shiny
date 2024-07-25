@@ -1,3 +1,4 @@
+import narwhals as nw
 import pandas as pd
 import pytest
 

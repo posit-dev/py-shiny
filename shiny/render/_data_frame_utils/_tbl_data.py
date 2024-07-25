@@ -5,6 +5,7 @@ from __future__ import annotations
 from functools import singledispatch
 from typing import Any, List, Tuple, cast
 
+import narwhals.stable.v1 as nw
 from htmltools import TagNode
 
 from ..._typing_extensions import TypeIs
@@ -184,7 +185,7 @@ def _(col: PlSeries) -> FrameDtype:
 
     from ._html import col_contains_shiny_html
 
-    if col.dtype.is_(pl.String):
+    if col.dtype == pl.String():
         if col_contains_shiny_html(col):
             type_ = "html"
         else:
@@ -193,6 +194,30 @@ def _(col: PlSeries) -> FrameDtype:
         type_ = "numeric"
 
     elif col.dtype.is_(pl.Categorical()):
+        categories = col.cat.get_categories().to_list()
+        return {"type": "categorical", "categories": categories}
+    else:
+        type_ = "unknown"
+        if col_contains_shiny_html(col):
+            type_ = "html"
+
+    return {"type": type_}
+
+
+@serialize_dtype.register
+def _(col: nw.Series) -> FrameDtype:
+
+    from ._html import col_contains_shiny_html
+
+    if col.dtype == nw.String():
+        if col_contains_shiny_html(col):
+            type_ = "html"
+        else:
+            type_ = "string"
+    elif col.dtype.is_numeric():
+        type_ = "numeric"
+
+    elif col.dtype == nw.Categorical():
         categories = col.cat.get_categories().to_list()
         return {"type": "categorical", "categories": categories}
     else:
@@ -218,6 +243,8 @@ def _(data: PdDataFrame) -> FrameJson:
     return serialize_frame_pd(data)
 
 
+# TODO: test this
+@serialize_frame.register(nw.DataFrame)
 @serialize_frame.register
 def _(data: PlDataFrame) -> FrameJson:
     import json
@@ -308,6 +335,7 @@ def _(
         return data.iloc[indx_rows, indx_cols]
 
 
+@subset_frame.register(nw.DataFrame)
 @subset_frame.register
 def _(
     data: PlDataFrame,
@@ -321,7 +349,7 @@ def _(
         else slice(None)
     )
     indx_rows = rows if rows is not None else slice(None)
-    return data[indx_rows, indx_cols]
+    return data[indx_cols][indx_rows]
 
 
 # get_frame_cell -----------------------------------------------------------------------
@@ -341,9 +369,10 @@ def _(data: PdDataFrame, row: int, col: int) -> Any:
     )
 
 
+@get_frame_cell.register(nw.DataFrame)
 @get_frame_cell.register
 def _(data: PlDataFrame, row: int, col: int) -> Any:
-    return data[row, col]
+    return data.item(row, col)
 
 
 # shape --------------------------------------------------------------------------------
@@ -359,6 +388,7 @@ def _(data: PdDataFrame) -> Tuple[int, ...]:
     return data.shape
 
 
+@frame_shape.register(nw.DataFrame)
 @frame_shape.register
 def _(data: PlDataFrame) -> Tuple[int, ...]:
     return data.shape
@@ -377,6 +407,7 @@ def _(data: PdDataFrame) -> PdDataFrame:
     return data.copy()
 
 
+@copy_frame.register(nw.DataFrame)
 @copy_frame.register
 def _(data: PlDataFrame) -> PlDataFrame:
     return data.clone()
@@ -393,6 +424,7 @@ def _(data: PdDataFrame) -> List[str]:
     return data.columns.to_list()
 
 
+@frame_column_names.register(nw.DataFrame)
 @frame_column_names.register
 def _(data: PlDataFrame) -> List[str]:
     return data.columns
