@@ -34,6 +34,7 @@ class ConsoleMessageInfo(TypedDict):
 def page(
     request: pytest.FixtureRequest,
     browser: BrowserContext,
+    is_chromium: bool,
 ) -> Generator[Page, None, None]:
     """
     Create a new page.
@@ -71,11 +72,15 @@ def page(
             }
         )
 
-    page.on("console", on_console_msg)
+    # Only record console messages in Chromium
+    # GHA is running out of memory
+    if is_chromium:
+        page.on("console", on_console_msg)
 
     yield page
 
-    page.remove_listener("console", on_console_msg)
+    if is_chromium:
+        page.remove_listener("console", on_console_msg)
 
     if request.session.testsfailed:
         if len(console_msgs) > 0:
