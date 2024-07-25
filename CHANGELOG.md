@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Require shinyswatch >= 0.7.0 and updated examples accordingly. (#1558)
 
+* Fixed bug where an auto resized input text area was not initially auto resized if the element was hidden from view (e.g. in a closed accordion or a hidden tab). (#1560)
+
 ### Bug fixes
 
 ### Deprecations
