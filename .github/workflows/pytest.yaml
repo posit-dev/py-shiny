@@ -38,25 +38,21 @@ jobs:
 
       - name: Run unit tests
         if: steps.install.outcome == 'success' && (success() || failure())
-        shell: bash
         run: |
           make check-tests
 
       - name: Type check
         if: steps.install.outcome == 'success' && (success() || failure())
-        shell: bash
         run: |
           make check-types
 
       - name: Lint code
         if: steps.install.outcome == 'success' && (success() || failure())
-        shell: bash
         run: |
           make check-lint
 
       - name: Verify code formatting
         if: steps.install.outcome == 'success' && (success() || failure())
-        shell: bash
         run: |
           make check-format
 
