@@ -80,6 +80,9 @@ def serialize_frame_pd(df: "pd.DataFrame") -> FrameJson:
 
     res["typeHints"] = type_hints
 
+    if "index" in res:
+        del res["index"]
+
     # print(json.dumps(res, indent=4))
     return res
 

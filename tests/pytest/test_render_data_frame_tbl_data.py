@@ -123,7 +123,7 @@ def assert_frame_equal2(
         (pl.Series([1]), "numeric"),
         (pl.Series([1.1]), "numeric"),
         (pl.Series(["a"]), "string"),
-        (pl.Series([datetime.now()]), "unknown"),
+        (pl.Series([datetime.now()]), "datetime"),
         (pl.Series(["a"], dtype=pl.Categorical), "categorical"),
         (pl.Series([{"x": 1}]), "unknown"),
         (pl.Series([h1("yo")]), "html"),
@@ -163,7 +163,7 @@ def test_serialize_frame(df_f: DataFrameLike):
     res = serialize_frame(df_f)
     assert res == {
         "columns": ["num", "chr", "cat", "dt", "struct", "arr", "object"],
-        "index": [0, 1],
+        # "index": [0, 1],
         "data": [
             [1, "a", "a", "2000-01-02T00:00:00.000", {"x": 1}, [1, 2], "<C object>"],
             [2, "b", "a", "2000-01-02T00:00:00.000", {"x": 2}, [3, 4], "D(y=2)"],
