@@ -52,6 +52,12 @@ def skip_if_not_chrome(fn: CallableT) -> CallableT:
     return fn
 
 
+def skip_on_webkit(fn: CallableT) -> CallableT:
+    fn = pytest.mark.skip_browser("webkit")(fn)
+
+    return fn
+
+
 def run_command(cmd: str) -> str:
     output = subprocess.run(
         cmd,
