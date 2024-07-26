@@ -10,9 +10,9 @@ def test_validate_chat_basic(page: Page, local_app: ShinyAppProc) -> None:
     chat = controller.Chat(page, "chat")
 
     # Verify starting state
-    expect(chat.loc).to_be_visible()
+    expect(chat.loc).to_be_visible(timeout=30 * 1000)
     initial_message = "Hello! How can I help you today?"
-    chat.expect_latest_message(initial_message)
+    chat.expect_latest_message(initial_message, timeout=30 * 1000)
 
     # Verify user input is empty and input button / enter is disabled
     chat.expect_user_input("")

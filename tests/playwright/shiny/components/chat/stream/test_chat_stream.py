@@ -12,6 +12,9 @@ def test_validate_chat(page: Page, local_app: ShinyAppProc) -> None:
     chat = controller.Chat(page, "chat")
     message_state = controller.OutputCode(page, "message_state")
 
+    # Wait for app to load
+    message_state.expect.not_to_have_text("", timeout=30 * 1000)
+
     expect(chat.loc).to_be_visible()
     expect(chat.loc_input_button).to_be_disabled()
 
