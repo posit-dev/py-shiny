@@ -74,12 +74,12 @@ DataFrameLike: TypeAlias = Union[pd.DataFrame, pl.DataFrame]
 
 
 @pytest.fixture(params=params_frames, scope="function")
-def df(request: pytest.FixtureRequest) -> DataFrameLike:
+def df_f(request: pytest.FixtureRequest) -> DataFrameLike:
     return request.param(DATA)
 
 
 @pytest.fixture(params=params_frames, scope="function")
-def small_df(request: pytest.FixtureRequest) -> DataFrameLike:
+def small_df_f(request: pytest.FixtureRequest) -> DataFrameLike:
     return request.param({"x": [1, 2], "y": [3, 4]})
 
 
@@ -154,13 +154,13 @@ def test_serialize_dtype(
     assert serialize_dtype(ser)["type"] == res_type
 
 
-def test_serialize_frame(df: DataFrameLike):
+def test_serialize_frame(df_f: DataFrameLike):
     # TODO: pandas converts datetime entries to int, but Polars
     # preserves the datetime object.
-    if isinstance(df, pl.DataFrame):
+    if isinstance(df_f, pl.DataFrame):
         pytest.xfail()
 
-    res = serialize_frame(df)
+    res = serialize_frame(df_f)
     assert res == {
         "columns": ["num", "chr", "cat", "dt", "struct", "arr", "object"],
         "index": [0, 1],
@@ -180,26 +180,26 @@ def test_serialize_frame(df: DataFrameLike):
     }
 
 
-def test_subset_frame(df: DataFrameLike):
+def test_subset_frame(df_f: DataFrameLike):
     # TODO: this assumes subset_frame doesn't reset index
-    res = subset_frame(df, rows=[1], cols=["chr", "num"])
+    res = subset_frame(df_f, rows=[1], cols=["chr", "num"])
     dst = {"chr": ["b"], "num": [2]}
 
     assert_frame_equal2(res, dst)
 
 
-def test_get_frame_cell(df: DataFrameLike):
-    assert get_frame_cell(df, 1, 1) == "b"
+def test_get_frame_cell(df_f: DataFrameLike):
+    assert get_frame_cell(df_f, 1, 1) == "b"
 
 
-def test_copy_frame(df: DataFrameLike):
-    new_df = copy_frame(df)
+def test_copy_frame(df_f: DataFrameLike):
+    new_df = copy_frame(df_f)
 
-    assert new_df is not df
+    assert new_df is not df_f
 
 
-def test_subset_frame_rows_single(small_df: DataFrameLike):
-    res = subset_frame(small_df, rows=[1])
+def test_subset_frame_rows_single(small_df_f: DataFrameLike):
+    res = subset_frame(small_df_f, rows=[1])
 
     assert_frame_equal2(
         res,
@@ -207,9 +207,9 @@ def test_subset_frame_rows_single(small_df: DataFrameLike):
     )
 
 
-def test_subset_frame_cols_single(small_df: DataFrameLike):
+def test_subset_frame_cols_single(small_df_f: DataFrameLike):
     # TODO: include test of polars
-    res = subset_frame(small_df, cols=["y"])
+    res = subset_frame(small_df_f, cols=["y"])
 
     assert_frame_equal2(
         res,
@@ -217,5 +217,5 @@ def test_subset_frame_cols_single(small_df: DataFrameLike):
     )
 
 
-def test_shape(small_df: DataFrameLike):
-    assert frame_shape(small_df) == (2, 2)
+def test_shape(small_df_f: DataFrameLike):
+    assert frame_shape(small_df_f) == (2, 2)
