@@ -1,9 +1,9 @@
 from playwright.sync_api import Page, expect
+from utils.deploy_utils import skip_on_webkit
 
 from shiny import ui
 from shiny.playwright import controller
 from shiny.run import ShinyAppProc
-from tests.playwright.utils.deploy_utils import skip_on_webkit
 
 
 @skip_on_webkit
