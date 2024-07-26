@@ -98,7 +98,7 @@ check-pyright: pyright-typings
 	pyright
 check-pytest: FORCE
 	@echo "-------- Running tests with pytest ----------"
-	python3 tests/pytest/asyncio_prevent.py
+	python tests/pytest/asyncio_prevent.py
 	pytest
 
 # Check types with pyright
@@ -172,7 +172,7 @@ playwright-shiny: FORCE
 	$(MAKE) playwright TEST_FILE="tests/playwright/shiny/$(SUB_FILE)"
 
 # end-to-end tests on deployed apps with playwright; (SUB_FILE="" within tests/playwright/deploys/)
-playwright-deploys: install-rsconnect
+playwright-deploys: FORCE
 	$(MAKE) playwright TEST_FILE="tests/playwright/deploys/$(SUB_FILE)" PYTEST_BROWSERS="$(PYTEST_DEPLOYS_BROWSERS)"
 
 # end-to-end tests on all py-shiny examples with playwright; (SUB_FILE="" within tests/playwright/examples/)
@@ -189,9 +189,10 @@ release: dist ## package and upload a release
 
 dist: clean ## builds source and wheel package
 	pip install setuptools
-	python3 setup.py sdist
-	python3 setup.py bdist_wheel
+	python setup.py sdist
+	python setup.py bdist_wheel
 	ls -l dist
+
 
 ## install the package to the active Python's site-packages
 # Note that instead of --force-reinstall, we uninstall and then install, because
@@ -199,10 +200,30 @@ dist: clean ## builds source and wheel package
 # deps wouldn't be installed the first time.
 install: dist
 	pip uninstall -y shiny
-	python3 -m pip install dist/shiny*.whl
+	python -m pip install dist/shiny*.whl
+ci-install-wheel: dist FORCE
+	# `uv` version of `make install`
+	uv pip uninstall shiny
+	uv pip install dist/shiny*.whl
 
 install-deps: FORCE ## install dependencies
 	pip install -e ".[dev,test]" --upgrade
+ci-install-deps: FORCE
+	uv pip install "htmltools @ git+https://github.com/posit-dev/py-htmltools.git"
+	uv pip install -e ".[dev,test]"
+
+install-docs: FORCE
+	pip install -e ".[dev,test,doc]"
+	pip install https://github.com/posit-dev/py-htmltools/tarball/main
+	pip install https://github.com/posit-dev/py-shinylive/tarball/main
+ci-install-docs: FORCE
+	uv pip install -e ".[dev,test,doc]"
+	uv pip install "htmltools @ git+https://github.com/posit-dev/py-htmltools.git" \
+			"shinylive @ git+https://github.com/posit-dev/py-shinylive.git"
+
+ci-install-rsconnect: FORCE
+	uv pip install "rsconnect-python @ git+https://github.com/rstudio/rsconnect-python.git"
+
 
 # ## If caching is ever used, we could run:
 # install-deps: FORCE ## install latest dependencies
