@@ -277,7 +277,7 @@ def output_code(id: str, placeholder: bool = True) -> Tag:
     Create a output container for code (monospaced text).
 
     This is similar to :func:`~shiny.ui.output_text`, except that it displays the text
-    in a fixed-width container with a gray-ish background color and border.
+    in a Bootstrap well; a fixed-width container with a gray-ish background color and border.
 
     Parameters
     ----------
