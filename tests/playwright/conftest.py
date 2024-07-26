@@ -4,9 +4,6 @@ from __future__ import annotations
 
 from pathlib import PurePath
 
-from playwright.sync_api import SourceLocation
-
-from shiny._typing_extensions import TypedDict
 from shiny.pytest import ScopeName as ScopeName
 from shiny.pytest import create_app_fixture
 
@@ -20,12 +17,6 @@ __all__ = (
 
 here = PurePath(__file__).parent
 here_root = here.parent.parent
-
-
-class ConsoleMessageInfo(TypedDict):
-    type: str
-    text: str
-    location: SourceLocation
 
 
 def create_example_fixture(
