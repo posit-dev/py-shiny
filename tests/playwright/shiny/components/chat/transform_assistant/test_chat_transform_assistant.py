@@ -1,10 +1,12 @@
 from playwright.sync_api import Page, expect
+from utils.deploy_utils import skip_on_webkit
 
 from shiny import ui
 from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
 
+@skip_on_webkit
 def test_validate_chat_transform_assistant(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 
