@@ -51,12 +51,19 @@ DATA = {
     "object": [C(1), D(2)],
 }
 
+
+def polars_df_to_narwhals(df: dict[str, Any]) -> nw.DataFrame[pl.DataFrame]:
+    return nw.from_native(pl.DataFrame(df), eager_only=True)
+
+
+def polars_series_to_narwhals(ser: pl.Series) -> nw.Series:
+    return nw.from_native(ser, series_only=True, strict=True)
+
+
 params_frames = [
     pytest.param(pd.DataFrame, id="pandas"),
     pytest.param(pl.DataFrame, id="polars"),
-    pytest.param(
-        lambda d: nw.from_native(pl.DataFrame(d), eager_only=True), id="narwhals"
-    ),
+    pytest.param(polars_df_to_narwhals, id="narwhals"),
 ]
 
 DataFrameLike: TypeAlias = Union[pd.DataFrame, pl.DataFrame]
@@ -99,7 +106,7 @@ def assert_frame_equal(
 
 def assert_frame_equal2(
     src: pd.DataFrame | pl.DataFrame,
-    target_dict: dict,
+    target_dict: dict[str, Any],
     use_index: bool = False,
 ):
     src = nw.to_native(src, strict=False)
@@ -142,12 +149,8 @@ def test_serialize_dtype(
     res_type: str,
 ):
     if isinstance(ser, pl.Series):
-        assert (
-            serialize_dtype(nw.from_native(ser, eager_only=True, allow_series=True))[
-                "type"
-            ]
-            == res_type
-        )
+        nw_ser = polars_series_to_narwhals(ser)
+        assert serialize_dtype(nw_ser)["type"] == res_type
     assert serialize_dtype(ser)["type"] == res_type
 
 
