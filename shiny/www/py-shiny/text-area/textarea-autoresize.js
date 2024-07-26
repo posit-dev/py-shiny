@@ -7,9 +7,30 @@ function onDelegatedEvent(eventName, selector, callback) {
     }
   });
 }
+var textAreaIntersectionObserver = null;
+function callUpdateHeightWhenTargetIsVisible(target) {
+  if (textAreaIntersectionObserver === null) {
+    textAreaIntersectionObserver = new IntersectionObserver(
+      (entries, observer) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) {
+            return;
+          }
+          textAreaIntersectionObserver.unobserve(entry.target);
+          update_height(entry.target);
+        });
+      }
+    );
+  }
+  textAreaIntersectionObserver.observe(target);
+}
 function update_height(target) {
-  target.style.height = "auto";
-  target.style.height = target.scrollHeight + "px";
+  if (target.scrollHeight > 0) {
+    target.style.height = "auto";
+    target.style.height = target.scrollHeight + "px";
+  } else {
+    callUpdateHeightWhenTargetIsVisible(target);
+  }
 }
 onDelegatedEvent(
   "input",
