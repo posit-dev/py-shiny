@@ -23,7 +23,7 @@ from typing import Any, Literal, Optional, Sequence, cast
 
 from htmltools import MetadataNode, Tag, TagAttrs, TagChild, TagList, css, div, tags
 
-from .._docstring import add_example, no_example
+from .._docstring import add_example
 from .._namespaces import resolve_id_or_none
 from .._utils import private_random_int
 from ..types import NavSetArg
