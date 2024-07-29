@@ -1,13 +1,15 @@
-from shiny import App, module, ui
+from htmltools import Tag
+
+from shiny import App, Inputs, Outputs, Session, module, ui
 
 
 @module.ui
-def chat_mod_ui():
+def chat_mod_ui() -> Tag:
     return ui.chat_ui(id="chat")
 
 
 @module.server
-def chat_mod_server(input, output, session):
+def chat_mod_server(input: Inputs, output: Outputs, session: Session):
     chat = ui.Chat(id="chat")
 
     @chat.on_user_submit
@@ -23,7 +25,7 @@ app_ui = ui.page_fillable(
 )
 
 
-def server(input, output, session):
+def server(input: Inputs, output: Outputs, session: Session):
     chat_mod_server("foo")
 
 
