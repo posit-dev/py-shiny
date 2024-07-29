@@ -185,7 +185,7 @@ def nav_control(*args: TagChild) -> NavPanel:
     return NavPanel(tags.li(*args))
 
 
-@no_example()
+@add_example()
 def nav_spacer() -> NavPanel:
     """
     Create space between nav items.
