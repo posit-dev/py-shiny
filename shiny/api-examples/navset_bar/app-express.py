@@ -1,6 +1,6 @@
 from shiny.express import ui
 
-with ui.navset_bar(id="tab"):
+with ui.navset_bar(title="Navset Bar", id="tab"):
     with ui.nav_panel("A"):
         "Panel A content"
 
