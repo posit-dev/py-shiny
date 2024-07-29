@@ -85,7 +85,9 @@ def notification_show(
         "type": type,
     }
 
-    if duration:
+    if duration is None:
+        payload.update({"duration": None})
+    elif duration:
         payload.update({"duration": duration * 1000})
 
     session._send_message_sync({"notification": {"type": "show", "message": payload}})
