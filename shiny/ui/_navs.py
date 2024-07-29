@@ -292,7 +292,7 @@ def menu_string_as_nav(x: str | NavSetArg) -> NavSetArg:
     return NavPanel(nav)
 
 
-@no_example()
+@add_example()
 def nav_menu(
     title: TagChild,
     *args: NavPanel | str,

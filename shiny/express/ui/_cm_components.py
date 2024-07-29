@@ -1197,7 +1197,7 @@ def nav_control() -> RecallContextManager[NavPanel]:
     return RecallContextManager(ui.nav_control)
 
 
-@no_example()
+@add_example()
 def nav_menu(
     title: TagChild,
     *,
