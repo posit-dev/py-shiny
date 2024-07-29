@@ -1187,7 +1187,7 @@ def nav_panel(
     )
 
 
-@no_example()
+@add_example()
 def nav_control() -> RecallContextManager[NavPanel]:
     """
     Context manager for a control in the navigation container.

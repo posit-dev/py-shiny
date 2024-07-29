@@ -153,7 +153,7 @@ def nav_panel(
     )
 
 
-@no_example()
+@add_example()
 def nav_control(*args: TagChild) -> NavPanel:
     """
     Place a control in the navigation container.

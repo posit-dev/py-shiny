@@ -8,4 +8,3 @@ with ui.navset_card_pill(id="card_pill"):
             "Page B content"
         with ui.nav_panel("C"):
             "Page C content"
-
