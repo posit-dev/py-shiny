@@ -400,7 +400,7 @@ class NavSet:
 # -----------------------------------------------------------------------------
 # Navigation containers
 # -----------------------------------------------------------------------------
-@no_example()
+@add_example()
 def navset_tab(
     *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
     id: Optional[str] = None,
@@ -457,7 +457,7 @@ def navset_tab(
     )
 
 
-@no_example()
+@add_example()
 def navset_pill(
     *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
     id: Optional[str] = None,
@@ -513,7 +513,7 @@ def navset_pill(
     )
 
 
-@no_example()
+@add_example()
 def navset_underline(
     *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
     id: Optional[str] = None,
@@ -680,7 +680,7 @@ class NavSetCard(NavSet):
         )
 
 
-@no_example()
+@add_example()
 def navset_card_tab(
     *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
     id: Optional[str] = None,
@@ -743,7 +743,7 @@ def navset_card_tab(
     )
 
 
-@no_example()
+@add_example()
 def navset_card_pill(
     *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
     id: Optional[str] = None,
@@ -809,7 +809,7 @@ def navset_card_pill(
     )
 
 
-@no_example()
+@add_example()
 def navset_card_underline(
     *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
     id: Optional[str] = None,
@@ -908,7 +908,7 @@ class NavSetPillList(NavSet):
         )
 
 
-@no_example()
+@add_example()
 def navset_pill_list(
     *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
     id: Optional[str] = None,
@@ -1154,7 +1154,7 @@ def _make_tabs_fillable(
 
 
 # TODO-future; Content should not be indented unless when called from `page_navbar()`
-@no_example()
+@add_example()
 def navset_bar(
     *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
     title: TagChild,

@@ -726,7 +726,7 @@ def accordion_panel(
 # ======================================================================================
 
 
-@no_example()
+@add_example()
 def navset_tab(
     *,
     id: Optional[str] = None,
@@ -763,7 +763,7 @@ def navset_tab(
     )
 
 
-@no_example()
+@add_example()
 def navset_pill(
     *,
     id: Optional[str] = None,
@@ -800,7 +800,7 @@ def navset_pill(
     )
 
 
-@no_example()
+@add_example()
 def navset_underline(
     *,
     id: Optional[str] = None,
@@ -875,7 +875,7 @@ def navset_hidden(
     )
 
 
-@no_example()
+@add_example()
 def navset_card_tab(
     *,
     id: Optional[str] = None,
@@ -918,7 +918,7 @@ def navset_card_tab(
     )
 
 
-@no_example()
+@add_example()
 def navset_card_pill(
     *,
     id: Optional[str] = None,
@@ -961,7 +961,7 @@ def navset_card_pill(
     )
 
 
-@no_example()
+@add_example()
 def navset_card_underline(
     *,
     id: Optional[str] = None,
@@ -1008,7 +1008,7 @@ def navset_card_underline(
     )
 
 
-@no_example()
+@add_example()
 def navset_pill_list(
     *,
     id: Optional[str] = None,
@@ -1053,7 +1053,7 @@ def navset_pill_list(
     )
 
 
-@no_example()
+@add_example()
 def navset_bar(
     *,
     title: TagChild,
