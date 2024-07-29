@@ -147,10 +147,11 @@ class Chat:
         on_error: Literal["auto", "actual", "sanitize", "unhandled"] = "auto",
         tokenizer: TokenEncoding | MISSING_TYPE | None = MISSING,
     ):
+        if not isinstance(id, str):
+            raise TypeError("`id` must be a string.")
 
-        id = resolve_id(id)
-        self.id = id
-        self.user_input_id = ResolvedId(f"{id}_user_input")
+        self.id = resolve_id(id)
+        self.user_input_id = ResolvedId(f"{self.id}_user_input")
         self._transform_user: TransformUserInputAsync | None = None
         self._transform_assistant: TransformAssistantResponseChunkAsync | None = None
         if isinstance(tokenizer, MISSING_TYPE):
