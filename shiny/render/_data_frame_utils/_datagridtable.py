@@ -90,7 +90,7 @@ class DataGrid(AbstractTabularData, Generic[DataFrameLikeT]):
         * `cols`: The column numbers to which the style should be applied. If `None`,
             the style will be applied to all columns.
         * `style`: A dictionary of CSS properties and values to apply to the selected
-            rows and columns. Traditional _kebab-cased_ CSS property names (e.g. 
+            rows and columns. Traditional _kebab-cased_ CSS property names (e.g.
             `background-color`) will work in addition to _camelCased_ CSS property names
             (e.g. `backgroundColor`).
         * `class`: A string of CSS class names to apply to the selected rows and columns.
@@ -249,7 +249,7 @@ class DataTable(AbstractTabularData, Generic[DataFrameLikeT]):
         * `cols`: The column numbers to which the style should be applied. If `None`,
             the style will be applied to all columns.
         * `style`: A dictionary of CSS properties and values to apply to the selected
-            rows and columns. Traditional _kebab-cased_ CSS property names (e.g. 
+            rows and columns. Traditional _kebab-cased_ CSS property names (e.g.
             `background-color`) will work in addition to _camelCased_ CSS property names
             (e.g. `backgroundColor`).
         * `class`: A string of CSS class names to apply to the selected rows and columns.
