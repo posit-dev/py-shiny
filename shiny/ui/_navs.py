@@ -192,18 +192,18 @@ def nav_spacer() -> NavPanel:
 
     See Also
     --------
-    * :func:~shiny.ui.nav_panel
-    * :func:~shiny.ui.nav_menu
-    * :func:~shiny.ui.nav_control
-    * :func:~shiny.ui.navset_bar
-    * :func:~shiny.ui.navset_tab
-    * :func:~shiny.ui.navset_pill
-    * :func:~shiny.ui.navset_underline
-    * :func:~shiny.ui.navset_card_tab
-    * :func:~shiny.ui.navset_card_pill
-    * :func:~shiny.ui.navset_card_underline
-    * :func:~shiny.ui.navset_pill_list
-    * :func:~shiny.ui.navset_hidden
+    * :func:`~shiny.ui.nav_panel`
+    * :func:`~shiny.ui.nav_menu`
+    * :func:`~shiny.ui.nav_control`
+    * :func:`~shiny.ui.navset_bar`
+    * :func:`~shiny.ui.navset_tab`
+    * :func:`~shiny.ui.navset_pill`
+    * :func:`~shiny.ui.navset_underline`
+    * :func:`~shiny.ui.navset_card_tab`
+    * :func:`~shiny.ui.navset_card_pill`
+    * :func:`~shiny.ui.navset_card_underline`
+    * :func:`~shiny.ui.navset_pill_list`
+    * :func:`~shiny.ui.navset_hidden`
 
     Example
     -------
@@ -330,18 +330,18 @@ def nav_menu(
 
     See Also
     --------
-    * :func:~shiny.ui.nav_panel
-    * :func:~shiny.ui.nav_control
-    * :func:~shiny.ui.nav_spacer
-    * :func:~shiny.ui.navset_bar
-    * :func:~shiny.ui.navset_tab
-    * :func:~shiny.ui.navset_pill
-    * :func:~shiny.ui.navset_underline
-    * :func:~shiny.ui.navset_card_tab
-    * :func:~shiny.ui.navset_card_pill
-    * :func:~shiny.ui.navset_card_underline
-    * :func:~shiny.ui.navset_pill_list
-    * :func:~shiny.ui.navset_hidden
+    * :func:`~shiny.ui.nav_panel`
+    * :func:`~shiny.ui.nav_control`
+    * :func:`~shiny.ui.nav_spacer`
+    * :func:`~shiny.ui.navset_bar`
+    * :func:`~shiny.ui.navset_tab`
+    * :func:`~shiny.ui.navset_pill`
+    * :func:`~shiny.ui.navset_underline`
+    * :func:`~shiny.ui.navset_card_tab`
+    * :func:`~shiny.ui.navset_card_pill`
+    * :func:`~shiny.ui.navset_card_underline`
+    * :func:`~shiny.ui.navset_pill_list`
+    * :func:`~shiny.ui.navset_hidden`
 
     Example
     -------
