@@ -4,7 +4,6 @@ app_ui = ui.page_fluid(
     ui.navset_underline(
         ui.nav_panel("A", "Panel A content"),
         ui.nav_spacer(),
-        ui.nav_spacer(),
         ui.nav_panel("B", "Panel B content"),
         ui.nav_panel("C", "Panel C content"),
         id="navset_underline",
