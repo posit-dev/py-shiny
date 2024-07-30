@@ -973,14 +973,18 @@ class Chat:
         await self._send_custom_message("shiny-chat-remove-loading-message", None)
 
     async def _send_custom_message(self, handler: str, obj: ClientMessage | None):
-        await self._session.send_custom_message(
-            "shinyChatMessage",
-            {
-                "id": self.id,
-                "handler": handler,
-                "obj": obj,
-            },
-        )
+
+        async def _do_send():
+            await self._session.send_custom_message(
+                "shinyChatMessage",
+                {
+                    "id": self.id,
+                    "handler": handler,
+                    "obj": obj,
+                },
+            )
+
+        self._session.on_flushed(_do_send, once=True)
 
 
 @add_example(ex_dir="../api-examples/chat")
