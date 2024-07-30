@@ -90,9 +90,9 @@ class DataGrid(AbstractTabularData, Generic[DataFrameLikeT]):
         * `cols`: The column numbers to which the style should be applied. If `None`,
             the style will be applied to all columns.
         * `style`: A dictionary of CSS properties and values to apply to the selected
-            rows and columns. The keys must be _camelCased_ CSS property names to work
-            properly with react.js (e.g. `backgroundColor` instead of
-            `background-color`).
+            rows and columns. Traditional _kebab-cased_ CSS property names (e.g. 
+            `background-color`) will work in addition to _camelCased_ CSS property names
+            (e.g. `backgroundColor`).
         * `class`: A string of CSS class names to apply to the selected rows and columns.
 
         If both `style` and `class` are missing or `None`, nothing will be applied. If
@@ -249,9 +249,9 @@ class DataTable(AbstractTabularData, Generic[DataFrameLikeT]):
         * `cols`: The column numbers to which the style should be applied. If `None`,
             the style will be applied to all columns.
         * `style`: A dictionary of CSS properties and values to apply to the selected
-            rows and columns. The keys must be _camelCased_ CSS property names to work
-            properly with react.js (e.g. `backgroundColor` instead of
-            `background-color`).
+            rows and columns. Traditional _kebab-cased_ CSS property names (e.g. 
+            `background-color`) will work in addition to _camelCased_ CSS property names
+            (e.g. `backgroundColor`).
         * `class`: A string of CSS class names to apply to the selected rows and columns.
 
         If both `style` and `class` are missing or `None`, nothing will be applied. If
