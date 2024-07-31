@@ -955,15 +955,17 @@ class AppSession(Session):
         await self._send_message({"custom": {type: message}})
 
     async def _send_message(self, message: dict[str, object]) -> None:
-        message_str: str = json.dumps(message) + "\n"
+        message_str = json.dumps(message)
         if self._debug:
             print(
                 "SEND: "
-                + re.sub("(?m)base64,[a-zA-Z0-9+/=]+", "[base64 data]", message_str),
+                + re.sub(
+                    "(?m)base64,[a-zA-Z0-9+/=]+", "[base64 data]", message_str + "\n"
+                ),
                 end="",
                 flush=True,
             )
-        await self._conn.send(json.dumps(message))
+        await self._conn.send(message_str)
 
     def _send_message_sync(self, message: dict[str, object]) -> None:
         _utils.run_coro_hybrid(self._send_message(message))
