@@ -1,6 +1,6 @@
-from shiny.express import ui
+from shiny.express import input, render, ui
 
-with ui.navset_card_pill(id="card_pill"):
+with ui.navset_card_pill(id="selected_card_pill"):
     with ui.nav_menu("Nav Menu items"):
         with ui.nav_panel("A"):
             "Page A content"
@@ -8,3 +8,10 @@ with ui.navset_card_pill(id="card_pill"):
             "Page B content"
         with ui.nav_panel("C"):
             "Page C content"
+ui.h5("Selected:")
+# TODO-karan: Add server function to display the selected tab content for remaining navsets.
+
+
+@render.code
+def _():
+    return input.selected_card_pill()
