@@ -9,7 +9,6 @@ with ui.navset_card_pill(id="selected_card_pill"):
         with ui.nav_panel("C"):
             "Page C content"
 ui.h5("Selected:")
-# TODO-karan: Add server function to display the selected tab content for remaining navsets.
 
 
 @render.code

@@ -12,7 +12,6 @@ app_ui = ui.page_fluid(
     ),
     ui.h5("Selected:"),
     ui.output_code("debug"),
-    # TODO-karan: Add server function to display the selected tab content for remaining navsets.
 )
 
 
