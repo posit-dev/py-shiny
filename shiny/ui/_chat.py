@@ -20,7 +20,7 @@ from htmltools import HTML, Tag, TagAttrValue, css
 
 from .. import _utils, reactive
 from .._docstring import add_example
-from .._namespaces import resolve_id
+from .._namespaces import ResolvedId, resolve_id
 from ..session import require_active_session, session_context
 from ..types import MISSING, MISSING_TYPE, NotifyException
 from ..ui.css import CssUnit, as_css_unit
@@ -147,9 +147,11 @@ class Chat:
         on_error: Literal["auto", "actual", "sanitize", "unhandled"] = "auto",
         tokenizer: TokenEncoding | MISSING_TYPE | None = MISSING,
     ):
+        if not isinstance(id, str):
+            raise TypeError("`id` must be a string.")
 
-        self.id = id
-        self.user_input_id = f"{id}_user_input"
+        self.id = resolve_id(id)
+        self.user_input_id = ResolvedId(f"{self.id}_user_input")
         self._transform_user: TransformUserInputAsync | None = None
         self._transform_assistant: TransformAssistantResponseChunkAsync | None = None
         if isinstance(tokenizer, MISSING_TYPE):

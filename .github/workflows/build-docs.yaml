@@ -1,11 +1,14 @@
 name: Build API docs and Shinylive for GitHub Pages
 
+# Allow for `main` branch to build full website and deploy
+# Allow branches that start with `docs-` to build full website, but not deploy
+# Allow for PRs to build quartodoc only. (No shinylive, no site build, no deploy)
+
 on:
   workflow_dispatch:
   push:
-    branches: ["main"]
+    branches: ["main", "docs-**"]
   pull_request:
-  merge_group:
 
 jobs:
   build-docs:
@@ -18,13 +21,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+      - name: Setup py-shiny
+        uses: ./.github/py-shiny/setup
         with:
           python-version: ${{ matrix.python-version }}
-
-      - name: Upgrade pip
-        run: python -m pip install --upgrade pip
 
       # =====================================================
       # API docs
@@ -36,20 +36,17 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd docs
-          make ../venv
-          make deps
+          make ci-install-docs
 
       - name: Run quartodoc
         run: |
-          cd docs
-          make quartodoc
+          make docs-quartodoc
 
       # =====================================================
       # Shinylive
       # =====================================================
       - name: Check out shinylive
-        if: github.ref == 'refs/heads/main'
+        if: github.event_name != 'pull_request'
         uses: actions/checkout@v4
         with:
           repository: rstudio/shinylive
@@ -57,7 +54,7 @@ jobs:
           path: shinylive-repo
 
       - name: Update shinylive's copy of shiny and htmltools
-        if: github.ref == 'refs/heads/main'
+        if: github.event_name != 'pull_request'
         run: |
           cd shinylive-repo
           make submodules
@@ -65,24 +62,22 @@ jobs:
           make submodules-pull-htmltools
 
       - name: Build shinylive
-        if: github.ref == 'refs/heads/main'
+        if: github.event_name != 'pull_request'
         run: |
           cd shinylive-repo
           make all
 
       - name: Use local build of shinylive for building docs
-        if: github.ref == 'refs/heads/main'
+        if: github.event_name != 'pull_request'
         run: |
-          . venv/bin/activate
-          cd shinylive-repo
-          shinylive assets install-from-local ./build
+          cd shinylive-repo && shinylive assets install-from-local ./build
 
       # =====================================================
       # Build site
       # =====================================================
 
       - name: Build site
-        if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'merge_group' || startsWith(github.head_ref, 'docs')  }}
+        if: github.event_name != 'pull_request'
         run: |
           cd docs
           make site
