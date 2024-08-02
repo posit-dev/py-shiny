@@ -5867,6 +5867,28 @@ class NavsetCardUnderline(_NavPanelBase):
             loc="> li.nav-item",
         )
 
+    def expect_placement(
+        self, location: Literal["above", "below"] = "above", *, timeout: Timeout = None
+    ) -> None:
+        """
+        Expects the nav set card underline to have the specified placement.
+
+        Parameters
+        ----------
+        location
+            The expected placement location. Defaults to `'above'`.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
+        if location == "below":
+            playwright_expect(self.loc_container.locator("..")).to_have_class(
+                "card-footer", timeout=timeout
+            )
+        else:
+            playwright_expect(self.loc_container.locator("..")).to_have_class(
+                "card-header", timeout=timeout
+            )
+
 
 class NavsetHidden(_NavPanelBase):
     """Controller for :func:`shiny.ui.navset_hidden`."""
