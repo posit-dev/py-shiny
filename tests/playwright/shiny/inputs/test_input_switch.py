@@ -24,10 +24,10 @@ def test_input_switch_kitchen(page: Page, app: ShinyAppProc) -> None:
 
     somevalue.expect_checked(True)
 
-    somevalue._toggle()
+    somevalue.set(False)
     somevalue.expect_checked(False)
 
-    somevalue._toggle()
+    somevalue.set(True)
     somevalue.expect_checked(True)
 
     expect(controller.OutputUi(page, "value").loc).to_have_text("True")
