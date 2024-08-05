@@ -5,7 +5,7 @@ import { property } from "lit/decorators.js";
 import ClipboardJS from "clipboard";
 import { sanitize } from "dompurify";
 import hljs from "highlight.js/lib/common";
-import { parse } from "marked";
+import { Renderer, parse } from "marked";
 
 import { createElement } from "./_utils";
 
@@ -61,6 +61,40 @@ const requestScroll = (el: HTMLElement, cancelIfScrolledUp = false) => {
   );
 };
 
+// For rendering chat output, we use typical Markdown behavior of passing through raw
+// HTML (albeit sanitizing afterwards).
+//
+// For echoing chat input, we escape HTML. This is not for security reasons but just
+// because it's confusing if the user is using tag-like syntax to demarcate parts of
+// their prompt for other reasons (like <User>/<Assistant> for providing examples to the
+// chat model), and those tags simply vanish.
+const rendererEscapeHTML = new Renderer();
+rendererEscapeHTML.html = (html: string) =>
+  html
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+const markedEscapeOpts = { renderer: rendererEscapeHTML };
+
+function contentToHTML(
+  content: string,
+  content_type: "markdown" | "semi-markdown" | "html" | "text"
+) {
+  if (content_type === "markdown") {
+    return unsafeHTML(sanitize(parse(content) as string));
+  } else if (content_type === "semi-markdown") {
+    return unsafeHTML(sanitize(parse(content, markedEscapeOpts) as string));
+  } else if (content_type === "html") {
+    return unsafeHTML(sanitize(content));
+  } else if (content_type === "text") {
+    return content;
+  } else {
+    throw new Error(`Unknown content type: ${content_type}`);
+  }
+}
+
 // https://lit.dev/docs/components/shadow-dom/#implementing-createrenderroot
 class LightElement extends LitElement {
   createRenderRoot() {
@@ -74,16 +108,7 @@ class ChatMessage extends LightElement {
   @property({ type: Boolean, reflect: true }) is_streaming = false;
 
   render(): ReturnType<LitElement["render"]> {
-    let content;
-    if (this.content_type === "markdown") {
-      content = unsafeHTML(sanitize(parse(this.content) as string));
-    } else if (this.content_type === "html") {
-      content = unsafeHTML(sanitize(this.content));
-    } else if (this.content_type === "text") {
-      content = this.content;
-    } else {
-      throw new Error(`Unknown content type: ${this.content_type}`);
-    }
+    const content = contentToHTML(this.content, this.content_type);
 
     // TODO: support custom icons
     const icon =
@@ -136,7 +161,7 @@ class ChatUserMessage extends LightElement {
   @property() content = "...";
 
   render(): ReturnType<LitElement["render"]> {
-    return html`${this.content}`;
+    return contentToHTML(this.content, "semi-markdown");
   }
 }
 
@@ -361,7 +386,6 @@ class ChatContainer extends LightElement {
   #appendMessageChunk(message: Message): void {
     if (message.chunk_type === "message_start") {
       this.#appendMessage(message, false);
-      return;
     }
 
     const lastMessage = this.messages.lastElementChild as HTMLElement;
@@ -371,10 +395,12 @@ class ChatContainer extends LightElement {
       lastMessage.removeAttribute("is_streaming");
       this.#finalizeMessage();
       return;
+    } else {
+      lastMessage.setAttribute("is_streaming", "");
+      if (!message.chunk_type) {
+        lastMessage.setAttribute("content", message.content);
+      }
     }
-
-    lastMessage.setAttribute("is_streaming", "");
-    lastMessage.setAttribute("content", message.content);
   }
 
   #onClear(): void {
