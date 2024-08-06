@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Union
 
+import narwhals.stable.v1 as nw
 import pandas as pd
 import polars as pl
 import polars.testing as pl_testing
@@ -50,9 +51,19 @@ DATA = {
     "object": [C(1), D(2)],
 }
 
+
+def polars_df_to_narwhals(df: dict[str, Any]) -> nw.DataFrame[pl.DataFrame]:
+    return nw.from_native(pl.DataFrame(df), eager_only=True)
+
+
+def polars_series_to_narwhals(ser: pl.Series) -> nw.Series:
+    return nw.from_native(ser, series_only=True, strict=True)
+
+
 params_frames = [
     pytest.param(pd.DataFrame, id="pandas"),
     pytest.param(pl.DataFrame, id="polars"),
+    pytest.param(polars_df_to_narwhals, id="narwhals"),
 ]
 
 DataFrameLike: TypeAlias = Union[pd.DataFrame, pl.DataFrame]
@@ -63,12 +74,12 @@ DataFrameLike: TypeAlias = Union[pd.DataFrame, pl.DataFrame]
 
 
 @pytest.fixture(params=params_frames, scope="function")
-def df(request: pytest.FixtureRequest) -> DataFrameLike:
+def df_f(request: pytest.FixtureRequest) -> DataFrameLike:
     return request.param(DATA)
 
 
 @pytest.fixture(params=params_frames, scope="function")
-def small_df(request: pytest.FixtureRequest) -> DataFrameLike:
+def small_df_f(request: pytest.FixtureRequest) -> DataFrameLike:
     return request.param({"x": [1, 2], "y": [3, 4]})
 
 
@@ -93,6 +104,17 @@ def assert_frame_equal(
         raise NotImplementedError(f"Unsupported data type: {type(src)}")
 
 
+def assert_frame_equal2(
+    src: pd.DataFrame | pl.DataFrame,
+    target_dict: dict[str, Any],
+    use_index: bool = False,
+):
+    src = nw.to_native(src, strict=False)
+    target = nw.to_native(src, strict=False).__class__(target_dict)
+
+    assert_frame_equal(src, target, use_index)
+
+
 # TODO: explicitly pass dtype= when doing Series construction
 @pytest.mark.parametrize(
     "ser, res_type",
@@ -101,7 +123,7 @@ def assert_frame_equal(
         (pl.Series([1]), "numeric"),
         (pl.Series([1.1]), "numeric"),
         (pl.Series(["a"]), "string"),
-        (pl.Series([datetime.now()]), "unknown"),
+        (pl.Series([datetime.now()]), "datetime"),
         (pl.Series(["a"], dtype=pl.Categorical), "categorical"),
         (pl.Series([{"x": 1}]), "unknown"),
         (pl.Series([h1("yo")]), "html"),
@@ -126,19 +148,22 @@ def test_serialize_dtype(
     ],
     res_type: str,
 ):
+    if isinstance(ser, pl.Series):
+        nw_ser = polars_series_to_narwhals(ser)
+        assert serialize_dtype(nw_ser)["type"] == res_type
     assert serialize_dtype(ser)["type"] == res_type
 
 
-def test_serialize_frame(df: DataFrameLike):
+def test_serialize_frame(df_f: DataFrameLike):
     # TODO: pandas converts datetime entries to int, but Polars
     # preserves the datetime object.
-    if isinstance(df, pl.DataFrame):
+    if isinstance(df_f, pl.DataFrame):
         pytest.xfail()
 
-    res = serialize_frame(df)
+    res = serialize_frame(df_f)
     assert res == {
         "columns": ["num", "chr", "cat", "dt", "struct", "arr", "object"],
-        "index": [0, 1],
+        # "index": [0, 1],
         "data": [
             [1, "a", "a", "2000-01-02T00:00:00.000", {"x": 1}, [1, 2], "<C object>"],
             [2, "b", "a", "2000-01-02T00:00:00.000", {"x": 2}, [3, 4], "D(y=2)"],
@@ -155,36 +180,42 @@ def test_serialize_frame(df: DataFrameLike):
     }
 
 
-def test_subset_frame(df: DataFrameLike):
+def test_subset_frame(df_f: DataFrameLike):
     # TODO: this assumes subset_frame doesn't reset index
-    res = subset_frame(df, rows=[1], cols=["chr", "num"])
-    dst = df.__class__({"chr": ["b"], "num": [2]})
+    res = subset_frame(df_f, rows=[1], cols=["chr", "num"])
+    dst = {"chr": ["b"], "num": [2]}
 
-    assert_frame_equal(res, dst)
-
-
-def test_get_frame_cell(df: DataFrameLike):
-    assert get_frame_cell(df, 1, 1) == "b"
+    assert_frame_equal2(res, dst)
 
 
-def test_copy_frame(df: DataFrameLike):
-    new_df = copy_frame(df)
-
-    assert new_df is not df
+def test_get_frame_cell(df_f: DataFrameLike):
+    assert get_frame_cell(df_f, 1, 1) == "b"
 
 
-def test_subset_frame_rows_single(small_df: DataFrameLike):
-    res = subset_frame(small_df, rows=[1])
+def test_copy_frame(df_f: DataFrameLike):
+    new_df = copy_frame(df_f)
 
-    assert_frame_equal(res, small_df.__class__({"x": [2], "y": [4]}))
+    assert new_df is not df_f
 
 
-def test_subset_frame_cols_single(small_df: DataFrameLike):
+def test_subset_frame_rows_single(small_df_f: DataFrameLike):
+    res = subset_frame(small_df_f, rows=[1])
+
+    assert_frame_equal2(
+        res,
+        {"x": [2], "y": [4]},
+    )
+
+
+def test_subset_frame_cols_single(small_df_f: DataFrameLike):
     # TODO: include test of polars
-    res = subset_frame(small_df, cols=["y"])
+    res = subset_frame(small_df_f, cols=["y"])
 
-    assert_frame_equal(res, small_df.__class__({"y": [3, 4]}))
+    assert_frame_equal2(
+        res,
+        {"y": [3, 4]},
+    )
 
 
-def test_shape(small_df: DataFrameLike):
-    assert frame_shape(small_df) == (2, 2)
+def test_shape(small_df_f: DataFrameLike):
+    assert frame_shape(small_df_f) == (2, 2)

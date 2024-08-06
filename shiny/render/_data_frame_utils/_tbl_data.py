@@ -5,6 +5,7 @@ from __future__ import annotations
 from functools import singledispatch
 from typing import Any, List, Tuple, cast
 
+import narwhals.stable.v1 as nw
 from htmltools import TagNode
 
 from ..._typing_extensions import TypeIs
@@ -184,7 +185,7 @@ def _(col: PlSeries) -> FrameDtype:
 
     from ._html import col_contains_shiny_html
 
-    if col.dtype.is_(pl.String):
+    if col.dtype == pl.String():
         if col_contains_shiny_html(col):
             type_ = "html"
         else:
@@ -193,6 +194,30 @@ def _(col: PlSeries) -> FrameDtype:
         type_ = "numeric"
 
     elif col.dtype.is_(pl.Categorical()):
+        categories = col.cat.get_categories().to_list()
+        return {"type": "categorical", "categories": categories}
+    else:
+        type_ = "unknown"
+        if col_contains_shiny_html(col):
+            type_ = "html"
+
+    return {"type": type_}
+
+
+@serialize_dtype.register
+def _(col: nw.Series) -> FrameDtype:
+
+    from ._html import col_contains_shiny_html
+
+    if col.dtype == nw.String():
+        if col_contains_shiny_html(col):
+            type_ = "html"
+        else:
+            type_ = "string"
+    elif col.dtype.is_numeric():
+        type_ = "numeric"
+
+    elif col.dtype == nw.Categorical():
         categories = col.cat.get_categories().to_list()
         return {"type": "categorical", "categories": categories}
     else:
@@ -218,6 +243,7 @@ def _(data: PdDataFrame) -> FrameJson:
     return serialize_frame_pd(data)
 
 
+# TODO: test this
 @serialize_frame.register
 def _(data: PlDataFrame) -> FrameJson:
     import json
@@ -243,6 +269,51 @@ def _(data: PlDataFrame) -> FrameJson:
 
     return {
         # "index": list(range(len(data))),
+        "columns": data.columns,
+        "data": data_val,
+        "typeHints": type_hints,
+    }
+
+
+@serialize_frame.register(nw.DataFrame)
+def _(data: nw.DataFrame[Any]) -> FrameJson:
+    import json
+
+    type_hints = [serialize_dtype(data[col_name]) for col_name in data.columns]
+    type_hints_type = {type_hint["type"] for type_hint in type_hints}
+
+    data_rows = data.rows(named=False)
+
+    print(data_rows)
+    print(data.rows(named=False))
+
+    # Shiny tag support
+    if "html" in type_hints_type:
+        session = require_active_session(None)
+
+        def wrap_shiny_html_with_session(x: TagNode):
+            return maybe_as_cell_html(x, session=session)
+
+        html_column_positions = [
+            i for i, x in enumerate(type_hints_type) if x == "html"
+        ]
+
+        new_rows: list[tuple[Any, ...]] = []
+
+        # Wrap the corresponding columns with the cell html object
+        for row in data_rows:
+            new_row = list(row)
+            for html_column_position in html_column_positions:
+                new_row[html_column_position] = wrap_shiny_html_with_session(
+                    new_row[html_column_position]
+                )
+            new_rows.append(tuple(new_row))
+
+        data_rows = new_rows
+
+    data_val = json.loads(json.dumps(data_rows, default=str))
+
+    return {
         "columns": data.columns,
         "data": data_val,
         "typeHints": type_hints,
@@ -308,6 +379,7 @@ def _(
         return data.iloc[indx_rows, indx_cols]
 
 
+@subset_frame.register(nw.DataFrame)
 @subset_frame.register
 def _(
     data: PlDataFrame,
@@ -321,7 +393,7 @@ def _(
         else slice(None)
     )
     indx_rows = rows if rows is not None else slice(None)
-    return data[indx_rows, indx_cols]
+    return data[indx_cols][indx_rows]
 
 
 # get_frame_cell -----------------------------------------------------------------------
@@ -341,9 +413,10 @@ def _(data: PdDataFrame, row: int, col: int) -> Any:
     )
 
 
+@get_frame_cell.register(nw.DataFrame)
 @get_frame_cell.register
 def _(data: PlDataFrame, row: int, col: int) -> Any:
-    return data[row, col]
+    return data.item(row, col)
 
 
 # shape --------------------------------------------------------------------------------
@@ -359,6 +432,7 @@ def _(data: PdDataFrame) -> Tuple[int, ...]:
     return data.shape
 
 
+@frame_shape.register(nw.DataFrame)
 @frame_shape.register
 def _(data: PlDataFrame) -> Tuple[int, ...]:
     return data.shape
@@ -377,6 +451,7 @@ def _(data: PdDataFrame) -> PdDataFrame:
     return data.copy()
 
 
+@copy_frame.register(nw.DataFrame)
 @copy_frame.register
 def _(data: PlDataFrame) -> PlDataFrame:
     return data.clone()
@@ -393,6 +468,7 @@ def _(data: PdDataFrame) -> List[str]:
     return data.columns.to_list()
 
 
+@frame_column_names.register(nw.DataFrame)
 @frame_column_names.register
 def _(data: PlDataFrame) -> List[str]:
     return data.columns

@@ -9,6 +9,8 @@ from ...types import Jsonifiable
 from ._types import CellHtml, ReprHtml, SeriesLike
 
 if TYPE_CHECKING:
+    import narwhals.stable.v1 as nw
+
     from ...session import Session
 
 
@@ -41,8 +43,11 @@ def maybe_as_cell_html(
     return cast(Jsonifiable, x)
 
 
-def col_contains_shiny_html(col: SeriesLike) -> bool:
-    return any(is_shiny_html(val) for _, val in enumerate(col))
+def col_contains_shiny_html(col: SeriesLike | nw.Series) -> bool:
+    for val in col:
+        if is_shiny_html(val):
+            return True
+    return False
 
 
 # TODO-barret-test; Add test to assert the union type of `TagNode` contains `str` and (HTML | Tagifiable | MetadataNode | ReprHtml). Until a `is tag renderable` method is available in htmltools, we need to check for these types manually and must stay in sync with the `TagNode` union type.
