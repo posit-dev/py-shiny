@@ -344,7 +344,7 @@ class Chat:
         else:
             await self._remove_loading_message()
             sanitize = self.on_error == "sanitize"
-            raise NotifyException(str(e), sanitize=sanitize)
+            raise NotifyException(str(e), sanitize=sanitize) from e
 
     @overload
     def messages(
@@ -586,7 +586,9 @@ class Chat:
         id = _utils.private_random_id()
 
         empty = ChatMessage(content="", role="assistant")
-        await self._append_message(empty, chunk="start", stream_id=id)
+        async for msg in message:
+            await self._append_message(msg, chunk="start", stream_id=id)
+            break
 
         try:
             async for msg in message:
