@@ -4,7 +4,7 @@ from base64 import b64encode
 from pathlib import Path
 from typing import get_args
 
-from htmltools import Tag, TagChild, TagList, tags
+from htmltools import TagChild, TagList, tags
 
 from .._docstring import add_example, no_example
 from .._utils import private_random_int
@@ -25,6 +25,8 @@ def options(
     spinner_size: str | None = None,
     spinner_delay: str | None = None,
     spinner_selector: str | None = None,
+    fade_opacity: float | None = None,
+    fade_selector: str | None = None,
     pulse_background: str | None = None,
     pulse_height: str | None = None,
     pulse_speed: str | None = None,
@@ -64,6 +66,12 @@ def options(
         A character string containing a CSS selector for scoping the spinner
         customization. The default (`None`) will apply the spinner customization to the
         parent element of the spinner.
+    fade_opacity
+        The opacity (a number between 0 and 1) for recalculating output. Set to 1 to
+        "disable" the fade.
+    fade_selector
+        A string containing a CSS selector for scoping the fade customization. The
+        default (`None`) applies the fade customization to the parent element.
     pulse_background
         A CCS background definition for the pulse. The default uses a
         [linear-gradient](https://developer.mozilla.org/en-US/docs/Web/CSS/gradient/linear-gradient)
@@ -86,6 +94,7 @@ def options(
             delay=spinner_delay,
             selector=spinner_selector,
         ),
+        fade_options(opacity=fade_opacity, selector=fade_selector),
         pulse_options(
             background=pulse_background,
             height=pulse_height,
@@ -157,8 +166,26 @@ def pulse_options(
     return tags.style(":root {" + css_vars + "}")
 
 
+def fade_options(
+    *,
+    opacity: float | None = None,
+    selector: str | None = None,
+) -> TagChild:
+    if opacity is None and selector is None:
+        return None
+
+    css_vars = f"--shiny-fade-opacity: {opacity};" if opacity else ""
+
+    id = None
+    if selector is None:
+        id = f"fade-options-{private_random_int(1000, 1000000)}"
+        selector = f":has(> #{id})"
+
+    return tags.style(f"{selector} {{ {css_vars} }}", id=id)
+
+
 @no_example()
-def use(*, spinners: bool = True, pulse: bool = True) -> Tag:
+def use(*, spinners: bool = True, pulse: bool = True, fade: bool = True) -> TagList:
     """
     Enable/disable busy indication
 
@@ -175,6 +202,9 @@ def use(*, spinners: bool = True, pulse: bool = True) -> Tag:
     pulse
         Whether to show a pulsing banner at the top of the page when the app is
         busy.
+    fade
+        Whether to fade recalculating outputs. A value of `False` is equivalent to
+        `shiny.ui.busy_indicators.options(fade_opacity=1)`.
 
     Note
     ----
@@ -198,4 +228,7 @@ def use(*, spinners: bool = True, pulse: bool = True) -> Tag:
         else:
             js += f"delete document.documentElement.dataset.{key};"
 
-    return tags.script(js)
+    return TagList(
+        tags.script(js),
+        None if fade else fade_options(opacity=1),
+    )
