@@ -256,11 +256,13 @@ class NormalizerRegistry:
     def register(
         self, provider: str, strategy: BaseMessageNormalizer, force: bool = False
     ) -> None:
-        if provider in self._strategies and not force:
-            raise ValueError(f"Provider {provider} already exists in registry")
+        if provider in self._strategies:
+            if force:
+                del self._strategies[provider]
+            else:
+                raise ValueError(f"Provider {provider} already exists in registry")
         # Update the strategies dict such that the new strategy is the first to be considered
-        strategies = {provider: strategy}
-        strategies.update(self._strategies)
+        self._strategies = {provider: strategy, **self._strategies}
 
 
 message_normalizer_registry = NormalizerRegistry()
