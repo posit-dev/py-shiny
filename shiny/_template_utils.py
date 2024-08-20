@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import sys
 import tempfile
 import zipfile
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, cast
+from typing import Generator, Optional, cast
 from urllib.error import URLError
 from urllib.parse import urlparse
 from urllib.request import urlopen
@@ -90,7 +92,7 @@ def template_query(
         app_template_questions(template, mode, dest_dir=dest_dir)
 
 
-def download_and_extract_zip(url: str, temp_dir: Path):
+def download_and_extract_zip(url: str, temp_dir: Path) -> Path:
     try:
         response = urlopen(url)
         data = cast(bytes, response.read())
@@ -104,6 +106,22 @@ def download_and_extract_zip(url: str, temp_dir: Path):
     with zipfile.ZipFile(zip_file_path, "r") as zip_file:
         zip_file.extractall(temp_dir)
 
+    zip_file_path.unlink()
+
+    items = list(temp_dir.iterdir())
+
+    # If we unzipped a single directory, return the path to that directory.
+    # This avoids much nonsense in trying to guess the directory name, which techincally
+    # can be derived from the zip file URL, but it's not worth the effort.
+    directories = [d for d in items if d.is_dir()]
+    files = [f for f in items if f.is_file()]
+
+    # We have exactly one directory and no other files
+    if len(directories) == 1 and len(files) == 0:
+        return directories[0]
+
+    return temp_dir
+
 
 def use_git_template(
     url: str, mode: Optional[str] = None, dest_dir: Optional[Path] = None
@@ -111,27 +129,133 @@ def use_git_template(
     # Github requires that we download the whole repository, so we need to
     # download and unzip the repo, then navigate to the subdirectory.
 
-    parsed_url = urlparse(url)
-    path_parts = parsed_url.path.strip("/").split("/")
-    repo_owner, repo_name, _, branch_name = path_parts[:4]
-    subdirectory = "/".join(path_parts[4:])
-
-    zip_url = f"https://github.com/{repo_owner}/{repo_name}/archive/refs/heads/{branch_name}.zip"
+    spec = parse_github_arg(url)
 
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_dir = Path(temp_dir)
-        download_and_extract_zip(zip_url, temp_dir)
+        template_dir = temp_dir
+        success = False
 
-        template_dir = os.path.join(
-            temp_dir, f"{repo_name}-{branch_name}", subdirectory
-        )
+        # Github uses different formats on the `archive/` endpoints for
+        # refs/heads/{branch}.zip, refs/tags/{tag}.zip, or just {commit}.zip.
+        # It's hard to tell in advance which one is intended, so we try all three in
+        # succession, using the first that works.
+        for zip_url in github_zip_url(spec):
+            try:
+                template_dir = download_and_extract_zip(zip_url, temp_dir)
+                success = True
+                break
+            except Exception as _:
+                pass
+
+        if not success:
+            raise Exception(
+                f"Failed to download repository from GitHub '{url}'."
+                + " Please check the URL or GitHub spec and try again."
+            )
+
+        template_dir = template_dir / spec.path
 
         if not os.path.exists(template_dir):
             raise Exception(f"Template directory '{template_dir}' does not exist")
 
-        directory = repo_name + "-" + branch_name
-        path = temp_dir / directory / subdirectory
-        return app_template_questions(mode=mode, template_dir=path, dest_dir=dest_dir)
+        return app_template_questions(
+            mode=mode, template_dir=Path(template_dir), dest_dir=dest_dir
+        )
+
+
+def github_zip_url(repo_location: GithubRepoLocation) -> Generator[str]:
+    for suffix in ["refs/heads/", "refs/tags/", ""]:
+        url = f"https://github.com/{repo_location.repo_owner}/{repo_location.repo_name}/archive/{suffix}{repo_location.ref}.zip"
+        yield url
+
+
+@dataclass
+class GithubRepoLocation:
+    repo_owner: str
+    repo_name: str
+    ref: str
+    path: str
+
+
+def parse_github_arg(x: str) -> GithubRepoLocation:
+    if re.match(r"^(https?:)//|github[.]com", x):
+        return parse_github_url(x)
+    return parse_github_spec(x)
+
+
+def parse_github_spec(spec: str):
+    """
+    Parses GitHub repo + path spec in the form of:
+
+    * {repo_owner}/{repo_name}@{ref}:{path}
+    * {repo_owner}/{repo_name}:{path}@{ref}
+    * {repo_owner}/{repo_name}:{path}
+    * {repo_owner}/{repo_name}/{path}
+    * {repo_owner}/{repo_name}/{path}@{ref}
+    * {repo_owner}/{repo_name}/{path}?ref={ref}
+    """
+
+    parts = re.split(r"(:|@|[?]ref=|/)", spec)
+
+    if len(parts) < 3:
+        raise ValueError(
+            f"Invalid GitHub spec: {spec!r}"
+            + ". Please use the format: {repo_owner}/{repo_name}@{ref}:{path}"
+        )
+
+    repo_owner, _, repo_name = parts[:3]
+    path = ""
+    ref = ""
+
+    which = "path"
+    for i, part in enumerate(parts[3:]):
+        # special characters indicate a change in which part we're parsing
+        if i == 0 and part == "/":
+            continue
+        if part in ("@", "?ref="):
+            which = "ref"
+            continue
+        if part == ":":
+            which = "path"
+            continue
+        # send each part to the correct repo variable
+        if which == "path":
+            path += part
+        elif which == "ref":
+            ref += part
+
+    if ref == "":
+        ref = "HEAD"
+
+    return GithubRepoLocation(
+        repo_owner=repo_owner,
+        repo_name=repo_name,
+        ref=ref,
+        path=path,
+    )
+
+
+def parse_github_url(x: str) -> GithubRepoLocation:
+    """
+    Parses a GitHub URL
+
+    e.g. "https://github.com/posit-dev/py-shiny-templates/tree/main/dashboard"
+    """
+
+    if not re.match(r"^(https?:)//", x):
+        x = "//" + x
+
+    parsed_url = urlparse(x)
+    path_parts = parsed_url.path.strip("/").split("/")
+    repo_owner, repo_name, _, ref = path_parts[:4]
+    path = "/".join(path_parts[4:])
+    return GithubRepoLocation(
+        repo_owner=repo_owner,
+        repo_name=repo_name,
+        ref=ref,
+        path=path,
+    )
 
 
 def app_template_questions(
