@@ -78,11 +78,15 @@ def as_google_message(message: ChatMessage) -> "GoogleMessage":
 
     import google.generativeai.types as gtypes  # pyright: ignore[reportMissingTypeStubs]
 
-    if message["role"] == "system":
+    role = message["role"]
+
+    if role == "system":
         raise ValueError(
             "Google requires a system prompt to be specified in the `GenerativeModel()` constructor."
         )
-    return gtypes.ContentDict(parts=[message["content"]], role=message["role"])
+    elif role == "assistant":
+        role = "model"
+    return gtypes.ContentDict(parts=[message["content"]], role=role)
 
 
 def as_langchain_message(message: ChatMessage) -> "LangChainMessage":
