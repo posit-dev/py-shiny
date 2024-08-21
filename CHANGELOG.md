@@ -9,13 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
+* `ui.Chat()` gains a new `.update_user_input()` method, which adds the ability to update the input placeholder message. As a result, `.set_user_message()` is now deprecated (since the new method can also be used to update the message). (#1594)
+
 ### Other changes
 
 ### Bug fixes
 
-* An empty `ui.input_date()` value no longer crashes Shiny. (#1528)
+* A handful of fixes for `ui.Chat()`, including:
+  * A fix for use inside Shiny modules. (#1582)
+  * `.messages(format="google")` now returns the correct role. (#1622)
 
-* `ui.Chat()` now works as expected inside Shiny modules. (#1582)
+* An empty `ui.input_date()` value no longer crashes Shiny. (#1528)
 
 * Fixed bug where calling `.update_filter(None)` on a data frame renderer did not visually reset non-numeric column filters. (It did reset the column's filtering, just not the label). Now it resets filter's label. (#1557)
 
