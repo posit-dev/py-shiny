@@ -157,14 +157,14 @@ def use_template_github(
                 extracted_dir = download_and_extract_zip(zip_url, Path(temp_dir))
                 break
             except Exception as err:
-                errors.append(f"{cli_url(zip_url)}:\n{textwrap.indent(str(err), "  ")}")
+                errors.append(str(err))
                 pass
 
         if extracted_dir is None:
             raise click.ClickException(
                 f"Failed to download repository from GitHub {cli_url(github)}. "
                 + "Please check the URL or GitHub spec and try again.\n"
-                + "We tried the following URLs:\n"
+                + "We received the following errors:\n"
                 + textwrap.indent("\n".join(errors), "  ")
             )
 
