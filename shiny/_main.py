@@ -581,7 +581,13 @@ After creating the application, you use `shiny run`:
 @click.option(
     "--github",
     "-g",
-    help="The GitHub URL of the template sub-directory. For example https://github.com/posit-dev/py-shiny-templates/tree/main/dashboard",
+    help="""
+    The GitHub repo containing the template, e.g. 'posit-dev/py-shiny-templates'.
+    Can be in the format '{repo_owner}/{repo_name}', '{repo_owner}/{repo_name}@{ref}',
+    or '{repo_owner}/{repo_name}:{path}@{ref}'.
+    Alternatively, a GitHub URL of the template sub-directory, e.g
+    'https://github.com/posit-dev/py-shiny-templates/tree/main/dashboard'.
+    """,
 )
 @click.option(
     "--dir",
