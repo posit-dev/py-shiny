@@ -215,6 +215,10 @@ def parse_github_spec(spec: str):
     * {repo_owner}/{repo_name}/{path}?ref={ref}
     """
 
+    # We split the spec into parts, using a capture group so that the splitting
+    # characters are retained in the path parts. Then we know that {repo_owner} /
+    # {repo_name} come first in the first three parts, reducing the problem to parsing
+    # ref and path in the remaining parts.
     parts = re.split(r"(:|@|[?]ref=|/)", spec)
 
     if len(parts) < 3:
