@@ -381,7 +381,7 @@ def directory_prompt(
 
     app_dir = questionary.path(
         "Enter destination directory:",
-        default=build_path_string(""),
+        default=path_rel_wd(),
         only_directories=True,
     ).ask()
 
@@ -389,16 +389,16 @@ def directory_prompt(
         sys.exit(1)
 
     if app_dir == ".":
-        app_dir = build_path_string(template_dir.name)
+        app_dir = path_rel_wd(template_dir.name)
 
     return Path(app_dir)
 
 
-def build_path_string(*path: str):
+def path_rel_wd(*path: str):
     """
-    Build a path string that is valid for the current OS
+    Path relative to the working directory, formatted for the current OS
     """
-    return os.path.join(".", *path)
+    return os.path.join(".", *(path or [""]))
 
 
 def copy_template_files(
@@ -465,7 +465,7 @@ def add_test_file(
 
         app_file_val = questionary.path(
             "Enter the path to the app file:",
-            default=build_path_string("app.py"),
+            default=path_rel_wd("app.py"),
             validate=path_exists,
         ).ask()
     else:
@@ -490,7 +490,7 @@ def add_test_file(
 
         test_file_val = questionary.path(
             "Enter the path to the test file:",
-            default=build_path_string(
+            default=path_rel_wd(
                 os.path.relpath(app_file.parent / "tests" / "test_app.py", ".")
             ),
             validate=path_does_not_exist,
