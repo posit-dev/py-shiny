@@ -145,9 +145,8 @@ def use_template_github(
     click.echo(cli_info(f"Using GitHub repository {cli_field(spec_cli)}."))
 
     with tempfile.TemporaryDirectory() as temp_dir:
-        temp_dir = Path(temp_dir)
-        template_dir = temp_dir
-        success = False
+        extracted_dir = None
+        errors: list[str] = []
 
         # Github uses different formats on the `archive/` endpoints for
         # refs/heads/{branch}.zip, refs/tags/{tag}.zip, or just {commit}.zip.
@@ -155,19 +154,21 @@ def use_template_github(
         # succession, using the first that works.
         for zip_url in github_zip_url(spec):
             try:
-                template_dir = download_and_extract_zip(zip_url, temp_dir)
-                success = True
+                extracted_dir = download_and_extract_zip(zip_url, Path(temp_dir))
                 break
-            except Exception:
+            except Exception as err:
+                errors.append(f"{cli_url(zip_url)}:\n{textwrap.indent(str(err), "  ")}")
                 pass
 
-        if not success:
+        if extracted_dir is None:
             raise click.ClickException(
-                f"Failed to download repository from GitHub {cli_url(github)}."
-                + " Please check the URL or GitHub spec and try again."
+                f"Failed to download repository from GitHub {cli_url(github)}. "
+                + "Please check the URL or GitHub spec and try again.\n"
+                + "We tried the following URLs:\n"
+                + textwrap.indent("\n".join(errors), "  ")
             )
 
-        template_dir = template_dir / spec.path
+        template_dir = extracted_dir / spec.path
 
         if not os.path.exists(template_dir):
             raise click.ClickException(
