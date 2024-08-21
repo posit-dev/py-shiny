@@ -106,15 +106,13 @@ def download_and_extract_zip(url: str, temp_dir: Path) -> Path:
     with zipfile.ZipFile(zip_file_path, "r") as zip_file:
         zip_file.extractall(temp_dir)
 
-    zip_file_path.unlink()
-
     items = list(temp_dir.iterdir())
 
     # If we unzipped a single directory, return the path to that directory.
     # This avoids much nonsense in trying to guess the directory name, which technically
     # can be derived from the zip file URL, but it's not worth the effort.
     directories = [d for d in items if d.is_dir()]
-    files = [f for f in items if f.is_file()]
+    files = [f for f in items if f.is_file() and f.name != "repo.zip"]
 
     # We have exactly one directory and no other files
     if len(directories) == 1 and len(files) == 0:
