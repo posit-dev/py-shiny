@@ -111,7 +111,7 @@ def download_and_extract_zip(url: str, temp_dir: Path) -> Path:
     items = list(temp_dir.iterdir())
 
     # If we unzipped a single directory, return the path to that directory.
-    # This avoids much nonsense in trying to guess the directory name, which techincally
+    # This avoids much nonsense in trying to guess the directory name, which technically
     # can be derived from the zip file URL, but it's not worth the effort.
     directories = [d for d in items if d.is_dir()]
     files = [f for f in items if f.is_file()]
@@ -145,7 +145,7 @@ def use_git_template(
                 template_dir = download_and_extract_zip(zip_url, temp_dir)
                 success = True
                 break
-            except Exception as _:
+            except Exception:
                 pass
 
         if not success:
