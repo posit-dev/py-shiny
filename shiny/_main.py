@@ -566,10 +566,7 @@ After creating the application, you use `shiny run`:
 @click.option(
     "--template",
     "-t",
-    type=click.Choice(
-        list({**app_template_choices, **package_template_choices}.values()),
-        case_sensitive=False,
-    ),
+    type=click.STRING,
     help="Choose a template for your new application.",
 )
 @click.option(
@@ -602,20 +599,27 @@ def create(
     template: Optional[str] = None,
     mode: Optional[str] = None,
     github: Optional[str] = None,
-    dir: Optional[str | Path] = None,
+    dir: Optional[Path] = None,
     package_name: Optional[str] = None,
 ) -> None:
     from ._template_utils import template_query, use_git_template
 
-    if github is not None and template is not None:
-        raise click.UsageError("You cannot provide both --github and --template")
+    valid_templates = {**app_template_choices, **package_template_choices}.values()
 
     if isinstance(dir, str):
         dir = Path(dir)
 
     if github is not None:
-        use_git_template(github, mode, dir)
+        use_git_template(github, template=template, mode=mode, dest_dir=dir)
         return
+
+    # TODO: move this into template_query()
+    if template not in valid_templates:
+        raise click.BadOptionUsage(
+            "--template",
+            f"Invalid value for '--template' / '-t': {template} is not one of "
+            + f"""'{"', '".join(valid_templates)}'.""",
+        )
 
     template_query(template, mode, dir, package_name)
 

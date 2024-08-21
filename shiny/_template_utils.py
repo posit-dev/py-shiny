@@ -115,7 +115,10 @@ def download_and_extract_zip(url: str, temp_dir: Path) -> Path:
 
 
 def use_git_template(
-    url: str, mode: Optional[str] = None, dest_dir: Optional[Path] = None
+    url: str,
+    template: str | None = None,
+    mode: str | None = None,
+    dest_dir: Path | None = None,
 ):
     # Github requires that we download the whole repository, so we need to
     # download and unzip the repo, then navigate to the subdirectory.
@@ -151,7 +154,10 @@ def use_git_template(
             raise Exception(f"Template directory '{template_dir}' does not exist")
 
         return app_template_questions(
-            mode=mode, template_dir=Path(template_dir), dest_dir=dest_dir
+            template=template,
+            mode=mode,
+            template_dir=Path(template_dir),
+            dest_dir=dest_dir,
         )
 
 
@@ -259,6 +265,8 @@ def app_template_questions(
         if template is None:
             raise ValueError("You must provide either template or template_dir")
         template_dir = Path(__file__).parent / "templates/app-templates" / template
+    elif template is not None:
+        template_dir = template_dir / template
 
     # Not all apps will be implemented in both express and core so we can
     # avoid the questions if it's a core only app.
