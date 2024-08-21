@@ -608,7 +608,7 @@ def create(
     dir: Optional[Path] = None,
     package_name: Optional[str] = None,
 ) -> None:
-    from ._template_utils import template_query, use_template_github
+    from ._template_utils import use_template_github, use_template_internal
 
     if isinstance(dir, str):
         dir = Path(dir)
@@ -616,16 +616,7 @@ def create(
     if github is not None:
         use_template_github(github, template=template, mode=mode, dest_dir=dir)
     else:
-        # TODO: move this into (and rename) `template_query()`
-        valid_templates = {**app_template_choices, **package_template_choices}.values()
-        if template not in valid_templates:
-            raise click.BadOptionUsage(
-                "--template",
-                f"Invalid value for '--template' / '-t': {template} is not one of "
-                + f"""'{"', '".join(valid_templates)}'.""",
-            )
-
-        template_query(template, mode, dir, package_name)
+        use_template_internal(template, mode, dir, package_name)
 
 
 @main.command(

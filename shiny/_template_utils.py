@@ -37,7 +37,7 @@ def choice_from_dict(choice_dict: dict[str, str]) -> list[Choice]:
     return [Choice(title=key, value=value) for key, value in choice_dict.items()]
 
 
-def template_query(
+def use_template_internal(
     question_state: Optional[str] = None,
     mode: Optional[str] = None,
     dest_dir: Optional[Path] = None,
@@ -66,6 +66,14 @@ def template_query(
         ).ask()
     else:
         template = question_state
+
+    valid_template_choices = {**app_template_choices, **package_template_choices}
+    if template not in valid_template_choices.values():
+        raise click.BadOptionUsage(
+            "--template",
+            f"Invalid value for '--template' / '-t': {template} is not one of "
+            + f"""'{"', '".join(valid_template_choices.values())}'.""",
+        )
 
     # Define the control flow for the top level menu
     if template is None or template == "cancel":
@@ -319,7 +327,7 @@ def app_template_questions(
         if mode is None or mode == "cancel":
             sys.exit(1)
         if mode == "back":
-            template_query()
+            use_template_internal()
             return
 
     dest_dir = directory_prompt(template_dir, dest_dir)
@@ -371,7 +379,7 @@ def js_component_questions(
         ).ask()
 
     if component_type == "back":
-        template_query()
+        use_template_internal()
         return
 
     if component_type is None or component_type == "cancel":
