@@ -52,11 +52,11 @@ __all__ = (
 # user input content types
 TransformUserInput = Callable[[str], Union[str, None]]
 TransformUserInputAsync = Callable[[str], Awaitable[Union[str, None]]]
-TransformAssistantResponse = Callable[[str], Union[str, HTML]]
-TransformAssistantResponseAsync = Callable[[str], Awaitable[Union[str, HTML]]]
-TransformAssistantResponseChunk = Callable[[str, str, bool], Union[str, HTML]]
+TransformAssistantResponse = Callable[[str], Union[str, HTML, None]]
+TransformAssistantResponseAsync = Callable[[str], Awaitable[Union[str, HTML, None]]]
+TransformAssistantResponseChunk = Callable[[str, str, bool], Union[str, HTML, None]]
 TransformAssistantResponseChunkAsync = Callable[
-    [str, str, bool], Awaitable[Union[str, HTML]]
+    [str, str, bool], Awaitable[Union[str, HTML, None]]
 ]
 TransformAssistantResponseFunction = Union[
     TransformAssistantResponse,
@@ -779,11 +779,14 @@ class Chat:
             res[key] = content
 
         elif message["role"] == "assistant" and self._transform_assistant is not None:
-            res[key] = await self._transform_assistant(
+            content = await self._transform_assistant(
                 message["content"],
                 chunk_content or "",
                 chunk == "end" or chunk is False,
             )
+            if content is None:
+                return None
+            res[key] = content
 
         return res
 
