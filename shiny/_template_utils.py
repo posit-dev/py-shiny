@@ -317,6 +317,8 @@ def app_template_questions(
     if mode == "express" and not express_available:
         raise Exception("Express mode not available for that template.")
 
+    dest_dir = directory_prompt(dest_dir, template_dir.name)
+
     if mode is None and express_available:
         mode = questionary.select(
             "Would you like to use Shiny Express?",
@@ -333,8 +335,6 @@ def app_template_questions(
         if mode == "back":
             use_template_internal()
             return
-
-    dest_dir = directory_prompt(template_dir, dest_dir)
 
     app_dir = copy_template_files(
         dest_dir,
@@ -404,7 +404,7 @@ def js_component_questions(
         Path(__file__).parent / "templates/package-templates" / component_type
     )
 
-    dest_dir = directory_prompt(template_dir, dest_dir)
+    dest_dir = directory_prompt(dest_dir, package_name)
 
     app_dir = copy_template_files(
         dest_dir,
@@ -437,21 +437,32 @@ def js_component_questions(
 
 
 def directory_prompt(
-    template_dir: Path, dest_dir: Optional[Path | str | None] = None
+    dest_dir: Optional[Path | str | None] = None,
+    default_dir: Optional[str | None] = None,
 ) -> Path:
     if dest_dir is not None:
-        return Path(dest_dir)
+        dest_dir = Path(dest_dir)
+
+        if dest_dir.exists() and dest_dir.is_file():
+            click.echo(
+                cli_danger(
+                    f"Error: Destination directory {cli_field(str(dest_dir))} is a file, not a directory."
+                )
+            )
+            sys.exit(1)
+        return dest_dir
 
     app_dir = questionary.path(
         "Enter destination directory:",
-        default=path_rel_wd(template_dir.name),
+        default=path_rel_wd(default_dir) if default_dir is not None else "./",
         only_directories=True,
     ).ask()
 
     if app_dir is None:
         sys.exit(1)
 
-    return Path(app_dir)
+    # Perform not-a-file check on the selected `app_dir`
+    return directory_prompt(dest_dir=app_dir)
 
 
 def path_rel_wd(*path: str):

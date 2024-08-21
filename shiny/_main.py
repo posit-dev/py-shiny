@@ -592,6 +592,7 @@ After creating the application, you use `shiny run`:
 @click.option(
     "--dir",
     "-d",
+    type=str,
     help="The destination directory, you will be prompted if this is not provided.",
 )
 @click.option(
@@ -605,12 +606,14 @@ def create(
     template: Optional[str] = None,
     mode: Optional[str] = None,
     github: Optional[str] = None,
-    dir: Optional[Path] = None,
+    dir: Optional[Path | str] = None,
     package_name: Optional[str] = None,
 ) -> None:
     from ._template_utils import use_template_github, use_template_internal
 
-    if isinstance(dir, str):
+    print(f"dir is {dir}")
+
+    if dir is not None:
         dir = Path(dir)
 
     if github is not None:
