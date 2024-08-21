@@ -31,7 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `ui.notification_show(duration=None)` now persists the notification until the app user closes it. (#1577)
 
-### Bug fixes
+* Some copies of Windows 10 have registry entries mapping .js files to content type "text/plain", which was causing all sorts of problems for browsers.
 
 ### Deprecations
 
