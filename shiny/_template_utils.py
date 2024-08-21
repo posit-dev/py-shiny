@@ -119,7 +119,7 @@ def download_and_extract_zip(url: str, temp_dir: Path) -> Path:
 
 
 def use_git_template(
-    url: str,
+    github: str,
     template: str | None = None,
     mode: str | None = None,
     dest_dir: Path | None = None,
@@ -127,7 +127,7 @@ def use_git_template(
     # Github requires that we download the whole repository, so we need to
     # download and unzip the repo, then navigate to the subdirectory.
 
-    spec = parse_github_arg(url)
+    spec = parse_github_arg(github)
     spec_cli = f"{spec.repo_owner}/{spec.repo_name}"
     if spec.ref != "HEAD":
         spec_cli = f"{spec_cli}@{spec.ref}"
@@ -155,7 +155,7 @@ def use_git_template(
 
         if not success:
             raise click.ClickException(
-                f"Failed to download repository from GitHub {cli_url(url)}."
+                f"Failed to download repository from GitHub {cli_url(github)}."
                 + " Please check the URL or GitHub spec and try again."
             )
 
