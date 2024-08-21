@@ -320,7 +320,7 @@ def app_template_questions(
         click.echo(
             cli_verbatim(
                 [
-                    "cd " + str(app_dir),
+                    "cd " + str(app_dir) if app_dir != Path(os.curdir) else "",
                     "pip install -r requirements.txt",
                 ],
                 indent=4,
@@ -392,7 +392,7 @@ def js_component_questions(
     click.echo(
         cli_verbatim(
             [
-                "cd " + str(app_dir),
+                "cd " + str(app_dir) if app_dir != Path(os.curdir) else "",
                 "npm install      # install dependencies",
                 "npm run build    # build the component",
                 "pip install -e . # install the package locally",
@@ -411,15 +411,12 @@ def directory_prompt(
 
     app_dir = questionary.path(
         "Enter destination directory:",
-        default=path_rel_wd(),
+        default=path_rel_wd(template_dir.name),
         only_directories=True,
     ).ask()
 
     if app_dir is None:
         sys.exit(1)
-
-    if app_dir == ".":
-        app_dir = path_rel_wd(template_dir.name)
 
     return Path(app_dir)
 
