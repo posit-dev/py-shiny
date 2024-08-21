@@ -5,6 +5,7 @@ import re
 import shutil
 import sys
 import tempfile
+import textwrap
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -13,6 +14,7 @@ from urllib.error import URLError
 from urllib.parse import urlparse
 from urllib.request import urlopen
 
+import click
 import questionary
 from questionary import Choice
 
@@ -69,9 +71,11 @@ def template_query(
     if template is None or template == "cancel":
         sys.exit(1)
     elif template == "external-gallery":
-        url = "https://shiny.posit.co/py/templates"
-        print(f"Opening <{url}> in your browser.")
-        print("Choose a template and copy the `shiny create` command to use it.")
+        url = cli_url("https://shiny.posit.co/py/templates")
+        click.echo(f"Opening {url} in your browser.")
+        click.echo(
+            f"Choose a template and copy the {cli_code('shiny create')} command to use it."
+        )
         import webbrowser
 
         webbrowser.open(url)
@@ -143,15 +147,18 @@ def use_git_template(
                 pass
 
         if not success:
-            raise Exception(
-                f"Failed to download repository from GitHub '{url}'."
+            raise click.ClickException(
+                f"Failed to download repository from GitHub {cli_url(url)}."
                 + " Please check the URL or GitHub spec and try again."
             )
 
         template_dir = template_dir / spec.path
 
         if not os.path.exists(template_dir):
-            raise Exception(f"Template directory '{template_dir}' does not exist")
+            raise click.ClickException(
+                f"Template directory '{cli_input(spec.path)}' does not exist "
+                + f"in the {cli_field(spec.repo_owner + "/" + spec.repo_name)} repository."
+            )
 
         return app_template_questions(
             template=template,
@@ -196,9 +203,12 @@ def parse_github_spec(spec: str):
     parts = re.split(r"(:|@|[?]ref=|/)", spec)
 
     if len(parts) < 3:
-        raise ValueError(
-            f"Invalid GitHub spec: {spec!r}"
-            + ". Please use the format: {repo_owner}/{repo_name}@{ref}:{path}"
+        raise click.BadParameter(
+            f"Could not parse as GitHub spec: '{cli_input(spec)}'"
+            + ". Please use the format "
+            + cli_field("{repo_owner}/{repo_name}@{ref}:{path}")
+            + ".",
+            param_hint="--github",
         )
 
     repo_owner, _, repo_name = parts[:3]
@@ -302,9 +312,21 @@ def app_template_questions(
         mode=mode,
     )
 
-    print(f"Created Shiny app at {app_dir}")
-    print(f"Next steps open and edit the app file: {app_dir}/app.py")
-    print("You may need to install packages with: `pip install -r requirements.txt`")
+    click.echo(cli_success(f"Created Shiny app at {cli_field(str(app_dir))}"))
+    click.echo()
+    click.echo(cli_action(cli_bold("Next steps:")))
+    if (app_dir / "requirements.txt").exists():
+        click.echo("- Install required dependencies:")
+        click.echo(
+            cli_verbatim(
+                [
+                    "cd " + str(app_dir),
+                    "pip install -r requirements.txt",
+                ],
+                indent=4,
+            )
+        )
+    click.echo(f"- Open and edit the app file: {cli_field(str(app_dir / 'app.py'))}")
 
 
 def js_component_questions(
@@ -361,15 +383,24 @@ def js_component_questions(
     )
 
     # Print messsage saying we're building the component
-    print(f"Setting up {package_name} component package...")
+    click.echo(cli_wait(f"Setting up {cli_field(package_name)} component package..."))
     update_component_name_in_template(app_dir, package_name)
 
-    print("\nNext steps:")
-    print(f"- Run `cd {app_dir}` to change into the new directory")
-    print("- Run `npm install` to install dependencies")
-    print("- Run `npm run build` to build the component")
-    print("- Install package locally with `pip install -e .`")
-    print("- Open and run the example app in the `example-app` directory")
+    click.echo()
+    click.echo(cli_action(cli_bold("Next steps:")))
+    click.echo("- Setup your component:")
+    click.echo(
+        cli_verbatim(
+            [
+                "cd " + str(app_dir),
+                "npm install      # install dependencies",
+                "npm run build    # build the component",
+                "pip install -e . # install the package locally",
+            ],
+            indent=4,
+        )
+    )
+    click.echo(f"- Open and run the example app in the {cli_field('example-app')} directory")
 
 
 def directory_prompt(
@@ -416,9 +447,12 @@ def copy_template_files(
     duplicate_files = [file for file in files_to_check if (app_dir / file).exists()]
 
     if any(duplicate_files):
-        err_files = ", ".join(['"' + file + '"' for file in duplicate_files])
-        print(
-            f"Error: Can't create new files because the following files already exist in the destination directory: {err_files}"
+        err_files = ", ".join([cli_input('"' + file + '"') for file in duplicate_files])
+        click.echo(
+            cli_danger(
+                "Error: Can't create new files because the following files "
+                + f"already exist in the destination directory: {err_files}."
+            )
         )
         sys.exit(1)
 
@@ -452,7 +486,6 @@ def add_test_file(
     app_file: Path | None,
     test_file: Path | None,
 ):
-
     if app_file is None:
 
         def path_exists(x: Path) -> bool | str:
@@ -555,5 +588,59 @@ def {test_name}(page: Page, app: ShinyAppProc):
     test_file.write_text(template)
 
     # next steps
-    print("\nNext steps:")
-    print("- Run `pytest` in your terminal to run all the tests")
+    click.echo()
+    click.echo(cli_action(cli_bold("Next steps:")))
+    click.echo(f"- Run {cli_code('pytest')} in your terminal to run all the tests")
+
+
+def cli_field(x: str):
+    return click.style(x, fg="cyan")
+
+
+def cli_bold(x: str):
+    return click.style(x, bold=True)
+
+
+def cli_ital(x: str):
+    return click.style(x, italic=True)
+
+
+def cli_input(x: str):
+    return click.style(x, fg="green")
+
+
+def cli_code(x: str):
+    return click.style("`" + x + "`", fg="magenta")
+
+
+def cli_verbatim(x: str | list[str], indent: int = 2):
+    lines = [click.style(line, fg="cyan") for line in x if line != ""]
+    return textwrap.indent("\n".join(lines), " " * indent)
+
+
+def cli_url(x: str):
+    return click.style(x, fg="blue", underline=True)
+
+
+def cli_success(x: str):
+    return click.style("\u2713", fg="green") + " " + x
+
+
+def cli_info(x: str):
+    return click.style("\u2139", fg="blue") + " " + x
+
+
+def cli_action(x: str):
+    return click.style("→", fg="blue") + " " + x
+
+
+def cli_warning(x: str):
+    return click.style("!", fg="yellow") + " " + x
+
+
+def cli_danger(x: str):
+    return click.style("\u00d7", fg="red") + " " + x
+
+
+def cli_wait(x: str):
+    return click.style("\u2026", fg="yellow") + " " + x
