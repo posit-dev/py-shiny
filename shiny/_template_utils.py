@@ -183,9 +183,9 @@ def use_template_github(
         )
 
 
-def github_zip_url(repo_location: GithubRepoLocation) -> Generator[str]:
+def github_zip_url(spec: GithubRepoLocation) -> Generator[str]:
     for suffix in ["refs/heads/", "refs/tags/", ""]:
-        url = f"https://github.com/{repo_location.repo_owner}/{repo_location.repo_name}/archive/{suffix}{repo_location.ref}.zip"
+        url = f"https://github.com/{spec.repo_owner}/{spec.repo_name}/archive/{suffix}{spec.ref}.zip"
         yield url
 
 
