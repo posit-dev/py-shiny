@@ -171,8 +171,7 @@ def use_template_github(
 
         if not os.path.exists(template_dir):
             raise click.ClickException(
-                f"Template directory '{cli_input(spec.path)}' does not exist "
-                + f"in the {cli_field(spec.repo_owner + '/' + spec.repo_name)} repository."
+                f"Template directory '{cli_input(spec.path)}' does not exist in {cli_field(spec_cli)}."
             )
 
         return app_template_questions(
