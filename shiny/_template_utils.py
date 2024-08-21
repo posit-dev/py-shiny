@@ -25,14 +25,7 @@ from ._custom_component_template_questions import (
 # CLI flag options.
 from ._main import app_template_choices, package_template_choices
 
-styles_for_questions = questionary.Style(
-    [
-        (
-            "secondary",
-            "italic",
-        ),
-    ]
-)
+styles_for_questions = questionary.Style([("secondary", "italic")])
 # Prebuild some common choices
 cancel_choice: Choice = Choice(title=[("class:secondary", "[Cancel]")], value="cancel")
 back_choice: Choice = Choice(title=[("class:secondary", "← Back")], value="back")
