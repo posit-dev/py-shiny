@@ -608,13 +608,13 @@ def create(
     dir: Optional[Path] = None,
     package_name: Optional[str] = None,
 ) -> None:
-    from ._template_utils import template_query, use_git_template
+    from ._template_utils import template_query, use_template_github
 
     if isinstance(dir, str):
         dir = Path(dir)
 
     if github is not None:
-        use_git_template(github, template=template, mode=mode, dest_dir=dir)
+        use_template_github(github, template=template, mode=mode, dest_dir=dir)
     else:
         # TODO: move this into (and rename) `template_query()`
         valid_templates = {**app_template_choices, **package_template_choices}.values()

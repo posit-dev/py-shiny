@@ -118,7 +118,7 @@ def download_and_extract_zip(url: str, temp_dir: Path) -> Path:
     return temp_dir
 
 
-def use_git_template(
+def use_template_github(
     github: str,
     template: str | None = None,
     mode: str | None = None,
