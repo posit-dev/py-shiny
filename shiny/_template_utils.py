@@ -164,7 +164,7 @@ def use_git_template(
         if not os.path.exists(template_dir):
             raise click.ClickException(
                 f"Template directory '{cli_input(spec.path)}' does not exist "
-                + f"in the {cli_field(spec.repo_owner + "/" + spec.repo_name)} repository."
+                + f"in the {cli_field(spec.repo_owner + '/' + spec.repo_name)} repository."
             )
 
         return app_template_questions(
