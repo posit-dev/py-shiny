@@ -278,6 +278,13 @@ def app_template_questions(
     elif template is not None:
         template_dir = template_dir / template
 
+    # FIXME: We don't have any special syntax of files to signal a "template", which
+    # means that we could end up here with `template_dir` being a repo of templates. If
+    # `template` is missing, we end up copying everything in `template_dir` as if it's
+    # all part of a single big template. When we introduce a way to signal or coordinate
+    # templates in a repo, we will add a check here to avoid copying more than one
+    # template.
+
     # Not all apps will be implemented in both express and core so we can
     # avoid the questions if it's a core only app.
     template_files = [file.name for file in template_dir.iterdir() if file.is_file()]
