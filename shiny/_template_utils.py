@@ -128,6 +128,13 @@ def use_git_template(
     # download and unzip the repo, then navigate to the subdirectory.
 
     spec = parse_github_arg(url)
+    spec_cli = f"{spec.repo_owner}/{spec.repo_name}"
+    if spec.ref != "HEAD":
+        spec_cli = f"{spec_cli}@{spec.ref}"
+    if spec.path:
+        spec_cli = f"{spec_cli}:{spec.path}"
+
+    click.echo(cli_info(f"Using GitHub repository {cli_field(spec_cli)}."))
 
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_dir = Path(temp_dir)
@@ -284,6 +291,11 @@ def app_template_questions(
     # all part of a single big template. When we introduce a way to signal or coordinate
     # templates in a repo, we will add a check here to avoid copying more than one
     # template.
+    click.echo(
+        cli_wait(
+            f"Creating Shiny app from template {cli_bold(cli_field(template_dir.name))}..."
+        )
+    )
 
     # Not all apps will be implemented in both express and core so we can
     # avoid the questions if it's a core only app.
@@ -407,7 +419,9 @@ def js_component_questions(
             indent=4,
         )
     )
-    click.echo(f"- Open and run the example app in the {cli_field('example-app')} directory")
+    click.echo(
+        f"- Open and run the example app in the {cli_field('example-app')} directory"
+    )
 
 
 def directory_prompt(
