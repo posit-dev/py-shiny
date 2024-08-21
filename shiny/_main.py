@@ -566,10 +566,7 @@ After creating the application, you use `shiny run`:
 @click.option(
     "--template",
     "-t",
-    type=click.Choice(
-        list({**app_template_choices, **package_template_choices}.values()),
-        case_sensitive=False,
-    ),
+    type=click.STRING,
     help="Choose a template for your new application.",
 )
 @click.option(
@@ -584,11 +581,18 @@ After creating the application, you use `shiny run`:
 @click.option(
     "--github",
     "-g",
-    help="The GitHub URL of the template sub-directory. For example https://github.com/posit-dev/py-shiny-templates/tree/main/dashboard",
+    help="""
+    The GitHub repo containing the template, e.g. 'posit-dev/py-shiny-templates'.
+    Can be in the format '{repo_owner}/{repo_name}', '{repo_owner}/{repo_name}@{ref}',
+    or '{repo_owner}/{repo_name}:{path}@{ref}'.
+    Alternatively, a GitHub URL of the template sub-directory, e.g
+    'https://github.com/posit-dev/py-shiny-templates/tree/main/dashboard'.
+    """,
 )
 @click.option(
     "--dir",
     "-d",
+    type=str,
     help="The destination directory, you will be prompted if this is not provided.",
 )
 @click.option(
@@ -602,22 +606,20 @@ def create(
     template: Optional[str] = None,
     mode: Optional[str] = None,
     github: Optional[str] = None,
-    dir: Optional[str | Path] = None,
+    dir: Optional[Path | str] = None,
     package_name: Optional[str] = None,
 ) -> None:
-    from ._template_utils import template_query, use_git_template
+    from ._template_utils import use_template_github, use_template_internal
 
-    if github is not None and template is not None:
-        raise click.UsageError("You cannot provide both --github and --template")
+    print(f"dir is {dir}")
 
-    if isinstance(dir, str):
+    if dir is not None:
         dir = Path(dir)
 
     if github is not None:
-        use_git_template(github, mode, dir)
-        return
-
-    template_query(template, mode, dir, package_name)
+        use_template_github(github, template=template, mode=mode, dest_dir=dir)
+    else:
+        use_template_internal(template, mode, dir, package_name)
 
 
 @main.command(

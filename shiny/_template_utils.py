@@ -1,16 +1,20 @@
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import sys
 import tempfile
+import textwrap
 import zipfile
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, cast
+from typing import Generator, Optional, cast
 from urllib.error import URLError
 from urllib.parse import urlparse
 from urllib.request import urlopen
 
+import click
 import questionary
 from questionary import Choice
 
@@ -23,14 +27,7 @@ from ._custom_component_template_questions import (
 # CLI flag options.
 from ._main import app_template_choices, package_template_choices
 
-styles_for_questions = questionary.Style(
-    [
-        (
-            "secondary",
-            "italic",
-        ),
-    ]
-)
+styles_for_questions = questionary.Style([("secondary", "italic")])
 # Prebuild some common choices
 cancel_choice: Choice = Choice(title=[("class:secondary", "[Cancel]")], value="cancel")
 back_choice: Choice = Choice(title=[("class:secondary", "← Back")], value="back")
@@ -40,7 +37,7 @@ def choice_from_dict(choice_dict: dict[str, str]) -> list[Choice]:
     return [Choice(title=key, value=value) for key, value in choice_dict.items()]
 
 
-def template_query(
+def use_template_internal(
     question_state: Optional[str] = None,
     mode: Optional[str] = None,
     dest_dir: Optional[Path] = None,
@@ -70,13 +67,23 @@ def template_query(
     else:
         template = question_state
 
+    valid_template_choices = {**app_template_choices, **package_template_choices}
+    if template not in valid_template_choices.values():
+        raise click.BadOptionUsage(
+            "--template",
+            f"Invalid value for '--template' / '-t': {template} is not one of "
+            + f"""'{"', '".join(valid_template_choices.values())}'.""",
+        )
+
     # Define the control flow for the top level menu
     if template is None or template == "cancel":
         sys.exit(1)
     elif template == "external-gallery":
-        url = "https://shiny.posit.co/py/templates"
-        print(f"Opening <{url}> in your browser.")
-        print("Choose a template and copy the `shiny create` command to use it.")
+        url = cli_url("https://shiny.posit.co/py/templates")
+        click.echo(f"Opening {url} in your browser.")
+        click.echo(
+            f"Choose a template and copy the {cli_code('shiny create')} command to use it."
+        )
         import webbrowser
 
         webbrowser.open(url)
@@ -90,7 +97,7 @@ def template_query(
         app_template_questions(template, mode, dest_dir=dest_dir)
 
 
-def download_and_extract_zip(url: str, temp_dir: Path):
+def download_and_extract_zip(url: str, temp_dir: Path) -> Path:
     try:
         response = urlopen(url)
         data = cast(bytes, response.read())
@@ -104,34 +111,177 @@ def download_and_extract_zip(url: str, temp_dir: Path):
     with zipfile.ZipFile(zip_file_path, "r") as zip_file:
         zip_file.extractall(temp_dir)
 
+    items = list(temp_dir.iterdir())
 
-def use_git_template(
-    url: str, mode: Optional[str] = None, dest_dir: Optional[Path] = None
+    # If we unzipped a single directory, return the path to that directory.
+    # This avoids much nonsense in trying to guess the directory name, which technically
+    # can be derived from the zip file URL, but it's not worth the effort.
+    directories = [d for d in items if d.is_dir()]
+    files = [f for f in items if f.is_file() and f.name != "repo.zip"]
+
+    # We have exactly one directory and no other files
+    if len(directories) == 1 and len(files) == 0:
+        return directories[0]
+
+    return temp_dir
+
+
+def use_template_github(
+    github: str,
+    template: str | None = None,
+    mode: str | None = None,
+    dest_dir: Path | None = None,
 ):
     # Github requires that we download the whole repository, so we need to
     # download and unzip the repo, then navigate to the subdirectory.
 
-    parsed_url = urlparse(url)
-    path_parts = parsed_url.path.strip("/").split("/")
-    repo_owner, repo_name, _, branch_name = path_parts[:4]
-    subdirectory = "/".join(path_parts[4:])
+    spec = parse_github_arg(github)
+    spec_cli = f"{spec.repo_owner}/{spec.repo_name}"
+    if spec.ref != "HEAD":
+        spec_cli = f"{spec_cli}@{spec.ref}"
+    if spec.path:
+        spec_cli = f"{spec_cli}:{spec.path}"
 
-    zip_url = f"https://github.com/{repo_owner}/{repo_name}/archive/refs/heads/{branch_name}.zip"
+    click.echo(cli_info(f"Using GitHub repository {cli_field(spec_cli)}."))
 
     with tempfile.TemporaryDirectory() as temp_dir:
-        temp_dir = Path(temp_dir)
-        download_and_extract_zip(zip_url, temp_dir)
+        extracted_dir = None
+        errors: list[str] = []
 
-        template_dir = os.path.join(
-            temp_dir, f"{repo_name}-{branch_name}", subdirectory
-        )
+        # Github uses different formats on the `archive/` endpoints for
+        # refs/heads/{branch}.zip, refs/tags/{tag}.zip, or just {commit}.zip.
+        # It's hard to tell in advance which one is intended, so we try all three in
+        # succession, using the first that works.
+        for zip_url in github_zip_url(spec):
+            try:
+                extracted_dir = download_and_extract_zip(zip_url, Path(temp_dir))
+                break
+            except Exception as err:
+                errors.append(str(err))
+                pass
+
+        if extracted_dir is None:
+            raise click.ClickException(
+                f"Failed to download repository from GitHub {cli_url(github)}. "
+                + "Please check the URL or GitHub spec and try again.\n"
+                + "We received the following errors:\n"
+                + textwrap.indent("\n".join(errors), "  ")
+            )
+
+        template_dir = extracted_dir / spec.path
 
         if not os.path.exists(template_dir):
-            raise Exception(f"Template directory '{template_dir}' does not exist")
+            raise click.ClickException(
+                f"Template directory '{cli_input(spec.path)}' does not exist in {cli_field(spec_cli)}."
+            )
 
-        directory = repo_name + "-" + branch_name
-        path = temp_dir / directory / subdirectory
-        return app_template_questions(mode=mode, template_dir=path, dest_dir=dest_dir)
+        return app_template_questions(
+            template=template,
+            mode=mode,
+            template_dir=Path(template_dir),
+            dest_dir=dest_dir,
+        )
+
+
+def github_zip_url(spec: GithubRepoLocation) -> Generator[str]:
+    for suffix in ["refs/heads/", "refs/tags/", ""]:
+        url = f"https://github.com/{spec.repo_owner}/{spec.repo_name}/archive/{suffix}{spec.ref}.zip"
+        yield url
+
+
+@dataclass
+class GithubRepoLocation:
+    repo_owner: str
+    repo_name: str
+    ref: str
+    path: str
+
+
+def parse_github_arg(x: str) -> GithubRepoLocation:
+    if re.match(r"^(https?:)//|github[.]com", x):
+        return parse_github_url(x)
+    return parse_github_spec(x)
+
+
+def parse_github_spec(spec: str):
+    """
+    Parses GitHub repo + path spec in the form of:
+
+    * {repo_owner}/{repo_name}@{ref}:{path}
+    * {repo_owner}/{repo_name}:{path}@{ref}
+    * {repo_owner}/{repo_name}:{path}
+    * {repo_owner}/{repo_name}/{path}
+    * {repo_owner}/{repo_name}/{path}@{ref}
+    * {repo_owner}/{repo_name}/{path}?ref={ref}
+    """
+
+    # We split the spec into parts, using a capture group so that the splitting
+    # characters are retained in the path parts. Then we know that {repo_owner} /
+    # {repo_name} come first in the first three parts, reducing the problem to parsing
+    # ref and path in the remaining parts.
+    parts = re.split(r"(:|@|[?]ref=|/)", spec)
+
+    if len(parts) < 3:
+        raise click.BadParameter(
+            f"Could not parse as GitHub spec: '{cli_input(spec)}'"
+            + ". Please use the format "
+            + cli_field("{repo_owner}/{repo_name}@{ref}:{path}")
+            + ".",
+            param_hint="--github",
+        )
+
+    repo_owner, _, repo_name = parts[:3]
+    path = ""
+    ref = ""
+
+    which = "path"
+    for i, part in enumerate(parts[3:]):
+        # special characters indicate a change in which part we're parsing
+        if i == 0 and part == "/":
+            continue
+        if part in ("@", "?ref="):
+            which = "ref"
+            continue
+        if part == ":":
+            which = "path"
+            continue
+        # send each part to the correct repo variable
+        if which == "path":
+            path += part
+        elif which == "ref":
+            ref += part
+
+    if ref == "":
+        ref = "HEAD"
+
+    return GithubRepoLocation(
+        repo_owner=repo_owner,
+        repo_name=repo_name,
+        ref=ref,
+        path=path,
+    )
+
+
+def parse_github_url(x: str) -> GithubRepoLocation:
+    """
+    Parses a GitHub URL
+
+    e.g. "https://github.com/posit-dev/py-shiny-templates/tree/main/dashboard"
+    """
+
+    if not re.match(r"^(https?:)//", x):
+        x = "//" + x
+
+    parsed_url = urlparse(x)
+    path_parts = parsed_url.path.strip("/").split("/")
+    repo_owner, repo_name, _, ref = path_parts[:4]
+    path = "/".join(path_parts[4:])
+    return GithubRepoLocation(
+        repo_owner=repo_owner,
+        repo_name=repo_name,
+        ref=ref,
+        path=path,
+    )
 
 
 def app_template_questions(
@@ -144,6 +294,20 @@ def app_template_questions(
         if template is None:
             raise ValueError("You must provide either template or template_dir")
         template_dir = Path(__file__).parent / "templates/app-templates" / template
+    elif template is not None:
+        template_dir = template_dir / template
+
+    # FIXME: We don't have any special syntax of files to signal a "template", which
+    # means that we could end up here with `template_dir` being a repo of templates. If
+    # `template` is missing, we end up copying everything in `template_dir` as if it's
+    # all part of a single big template. When we introduce a way to signal or coordinate
+    # templates in a repo, we will add a check here to avoid copying more than one
+    # template.
+    click.echo(
+        cli_wait(
+            f"Creating Shiny app from template {cli_bold(cli_field(template_dir.name))}..."
+        )
+    )
 
     # Not all apps will be implemented in both express and core so we can
     # avoid the questions if it's a core only app.
@@ -152,6 +316,8 @@ def app_template_questions(
 
     if mode == "express" and not express_available:
         raise Exception("Express mode not available for that template.")
+
+    dest_dir = directory_prompt(dest_dir, template_dir.name)
 
     if mode is None and express_available:
         mode = questionary.select(
@@ -167,10 +333,8 @@ def app_template_questions(
         if mode is None or mode == "cancel":
             sys.exit(1)
         if mode == "back":
-            template_query()
+            use_template_internal()
             return
-
-    dest_dir = directory_prompt(template_dir, dest_dir)
 
     app_dir = copy_template_files(
         dest_dir,
@@ -179,9 +343,21 @@ def app_template_questions(
         mode=mode,
     )
 
-    print(f"Created Shiny app at {app_dir}")
-    print(f"Next steps open and edit the app file: {app_dir}/app.py")
-    print("You may need to install packages with: `pip install -r requirements.txt`")
+    click.echo(cli_success(f"Created Shiny app at {cli_field(str(app_dir))}"))
+    click.echo()
+    click.echo(cli_action(cli_bold("Next steps:")))
+    if (app_dir / "requirements.txt").exists():
+        click.echo("- Install required dependencies:")
+        click.echo(
+            cli_verbatim(
+                [
+                    "cd " + str(app_dir) if app_dir != Path(os.curdir) else "",
+                    "pip install -r requirements.txt",
+                ],
+                indent=4,
+            )
+        )
+    click.echo(f"- Open and edit the app file: {cli_field(str(app_dir / 'app.py'))}")
 
 
 def js_component_questions(
@@ -207,7 +383,7 @@ def js_component_questions(
         ).ask()
 
     if component_type == "back":
-        template_query()
+        use_template_internal()
         return
 
     if component_type is None or component_type == "cancel":
@@ -228,7 +404,7 @@ def js_component_questions(
         Path(__file__).parent / "templates/package-templates" / component_type
     )
 
-    dest_dir = directory_prompt(template_dir, dest_dir)
+    dest_dir = directory_prompt(dest_dir, package_name)
 
     app_dir = copy_template_files(
         dest_dir,
@@ -238,43 +414,62 @@ def js_component_questions(
     )
 
     # Print messsage saying we're building the component
-    print(f"Setting up {package_name} component package...")
+    click.echo(cli_wait(f"Setting up {cli_field(package_name)} component package..."))
     update_component_name_in_template(app_dir, package_name)
 
-    print("\nNext steps:")
-    print(f"- Run `cd {app_dir}` to change into the new directory")
-    print("- Run `npm install` to install dependencies")
-    print("- Run `npm run build` to build the component")
-    print("- Install package locally with `pip install -e .`")
-    print("- Open and run the example app in the `example-app` directory")
+    click.echo()
+    click.echo(cli_action(cli_bold("Next steps:")))
+    click.echo("- Setup your component:")
+    click.echo(
+        cli_verbatim(
+            [
+                "cd " + str(app_dir) if app_dir != Path(os.curdir) else "",
+                "npm install      # install dependencies",
+                "npm run build    # build the component",
+                "pip install -e . # install the package locally",
+            ],
+            indent=4,
+        )
+    )
+    click.echo(
+        f"- Open and run the example app in the {cli_field('example-app')} directory"
+    )
 
 
 def directory_prompt(
-    template_dir: Path, dest_dir: Optional[Path | str | None] = None
+    dest_dir: Optional[Path | str | None] = None,
+    default_dir: Optional[str | None] = None,
 ) -> Path:
     if dest_dir is not None:
-        return Path(dest_dir)
+        dest_dir = Path(dest_dir)
+
+        if dest_dir.exists() and dest_dir.is_file():
+            click.echo(
+                cli_danger(
+                    f"Error: Destination directory {cli_field(str(dest_dir))} is a file, not a directory."
+                )
+            )
+            sys.exit(1)
+        return dest_dir
 
     app_dir = questionary.path(
         "Enter destination directory:",
-        default=build_path_string(""),
+        default=path_rel_wd(default_dir) if default_dir is not None else "./",
         only_directories=True,
     ).ask()
 
     if app_dir is None:
         sys.exit(1)
 
-    if app_dir == ".":
-        app_dir = build_path_string(template_dir.name)
-
-    return Path(app_dir)
+    # Perform not-a-file check on the selected `app_dir`
+    return directory_prompt(dest_dir=app_dir)
 
 
-def build_path_string(*path: str):
+def path_rel_wd(*path: str):
     """
-    Build a path string that is valid for the current OS
+    Path relative to the working directory, formatted for the current OS
     """
-    return os.path.join(".", *path)
+    return os.path.join(".", *(path or [""]))
 
 
 def copy_template_files(
@@ -293,9 +488,12 @@ def copy_template_files(
     duplicate_files = [file for file in files_to_check if (app_dir / file).exists()]
 
     if any(duplicate_files):
-        err_files = ", ".join(['"' + file + '"' for file in duplicate_files])
-        print(
-            f"Error: Can't create new files because the following files already exist in the destination directory: {err_files}"
+        err_files = ", ".join([cli_input('"' + file + '"') for file in duplicate_files])
+        click.echo(
+            cli_danger(
+                "Error: Can't create new files because the following files "
+                + f"already exist in the destination directory: {err_files}."
+            )
         )
         sys.exit(1)
 
@@ -329,7 +527,6 @@ def add_test_file(
     app_file: Path | None,
     test_file: Path | None,
 ):
-
     if app_file is None:
 
         def path_exists(x: Path) -> bool | str:
@@ -341,7 +538,7 @@ def add_test_file(
 
         app_file_val = questionary.path(
             "Enter the path to the app file:",
-            default=build_path_string("app.py"),
+            default=path_rel_wd("app.py"),
             validate=path_exists,
         ).ask()
     else:
@@ -366,7 +563,7 @@ def add_test_file(
 
         test_file_val = questionary.path(
             "Enter the path to the test file:",
-            default=build_path_string(
+            default=path_rel_wd(
                 os.path.relpath(app_file.parent / "tests" / "test_app.py", ".")
             ),
             validate=path_does_not_exist,
@@ -432,5 +629,59 @@ def {test_name}(page: Page, app: ShinyAppProc):
     test_file.write_text(template)
 
     # next steps
-    print("\nNext steps:")
-    print("- Run `pytest` in your terminal to run all the tests")
+    click.echo()
+    click.echo(cli_action(cli_bold("Next steps:")))
+    click.echo(f"- Run {cli_code('pytest')} in your terminal to run all the tests")
+
+
+def cli_field(x: str):
+    return click.style(x, fg="cyan")
+
+
+def cli_bold(x: str):
+    return click.style(x, bold=True)
+
+
+def cli_ital(x: str):
+    return click.style(x, italic=True)
+
+
+def cli_input(x: str):
+    return click.style(x, fg="green")
+
+
+def cli_code(x: str):
+    return click.style("`" + x + "`", fg="magenta")
+
+
+def cli_verbatim(x: str | list[str], indent: int = 2):
+    lines = [click.style(line, fg="cyan") for line in x if line != ""]
+    return textwrap.indent("\n".join(lines), " " * indent)
+
+
+def cli_url(x: str):
+    return click.style(x, fg="blue", underline=True)
+
+
+def cli_success(x: str):
+    return click.style("\u2713", fg="green") + " " + x
+
+
+def cli_info(x: str):
+    return click.style("\u2139", fg="blue") + " " + x
+
+
+def cli_action(x: str):
+    return click.style("→", fg="blue") + " " + x
+
+
+def cli_warning(x: str):
+    return click.style("!", fg="yellow") + " " + x
+
+
+def cli_danger(x: str):
+    return click.style("\u00d7", fg="red") + " " + x
+
+
+def cli_wait(x: str):
+    return click.style("\u2026", fg="yellow") + " " + x
