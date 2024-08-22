@@ -78,6 +78,13 @@ class ShinyTemplate:
     type: str = "app"
     title: str | None = None
     description: str | None = None
+    _express_available: bool | None = None
+
+    @property
+    def express_available(self) -> bool:
+        if self._express_available is None:
+            self._express_available = (self.path / "app-express.py").exists()
+        return self._express_available
 
 
 def find_templates(path: Path | str = ".") -> list[ShinyTemplate]:
@@ -447,24 +454,17 @@ def app_template_questions(
     dest_dir: Optional[Path] = None,
 ):
     template_dir = template.path
+    template_cli_name = cli_bold(cli_field(template.title or template.name))
 
-    click.echo(
-        cli_wait(
-            f"Creating {cli_bold(cli_field(template.title or template.name))} Shiny app..."
+    if mode == "express" and not template.express_available:
+        raise click.BadParameter(
+            f"Express mode not available for the {template_cli_name} template."
         )
-    )
 
-    # Not all apps will be implemented in both express and core so we can
-    # avoid the questions if it's a core only app.
-    template_files = [file.name for file in template_dir.iterdir() if file.is_file()]
-    express_available = "app-express.py" in template_files
-
-    if mode == "express" and not express_available:
-        raise Exception("Express mode not available for that template.")
-
+    click.echo(cli_wait(f"Creating {template_cli_name} Shiny app..."))
     dest_dir = directory_prompt(dest_dir, template_dir.name)
 
-    if mode is None and express_available:
+    if mode is None and template.express_available:
         mode = questionary.select(
             "Would you like to use Shiny Express?",
             [
@@ -484,7 +484,7 @@ def app_template_questions(
     app_dir = copy_template_files(
         dest_dir,
         template_dir=template_dir,
-        express_available=express_available,
+        express_available=template.express_available,
         mode=mode,
     )
 
@@ -563,7 +563,7 @@ def js_component_questions(
         mode=None,
     )
 
-    # Print messsage saying we're building the component
+    # Print message saying we're building the component
     click.echo(cli_wait(f"Setting up {cli_field(package_name)} component package..."))
     update_component_name_in_template(app_dir, package_name)
 
