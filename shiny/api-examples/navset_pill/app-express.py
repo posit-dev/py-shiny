@@ -1,6 +1,6 @@
-from shiny.express import ui
+from shiny.express import input, render, ui
 
-with ui.navset_pill(id="tab"):
+with ui.navset_pill(id="selected_navset_pill"):
     with ui.nav_panel("A"):
         "Panel A content"
 
@@ -18,3 +18,9 @@ with ui.navset_pill(id="tab"):
         "Description:"
         with ui.nav_control():
             ui.a("Shiny", href="https://shiny.posit.co", target="_blank")
+ui.h5("Selected:")
+
+
+@render.code
+def _():
+    return input.selected_navset_pill()
