@@ -23,9 +23,28 @@ from ._custom_component_template_questions import (
     update_component_name_in_template,
 )
 
-# The choices are specified in _main because they populate the
-# CLI flag options.
-from ._main import app_template_choices, package_template_choices
+# These templates are copied over from the `shiny/templates/app_templates`
+# directory. The process for adding new ones is to add your app folder to
+# that directory, and then add another entry to this dictionary.
+app_template_choices = {
+    "Basic app": "basic-app",
+    "Sidebar layout": "basic-sidebar",
+    "Basic dashboard": "dashboard",
+    "Intermediate dashboard": "dashboard-tips",
+    "Navigating multiple pages/panels": "basic-navigation",
+    "Custom JavaScript component ...": "js-component",
+    "Choose from the Shiny Templates website": "external-gallery",
+}
+
+# These are templates which produce a Python package and have content filled in at
+# various places based on the user input. You can add new ones by following the
+# examples in `shiny/templates/package-templates` and then adding entries to this
+# dictionary.
+package_template_choices = {
+    "Input component": "js-input",
+    "Output component": "js-output",
+    "React component": "js-react",
+}
 
 styles_for_questions = questionary.Style([("secondary", "italic")])
 # Prebuild some common choices

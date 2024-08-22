@@ -484,33 +484,6 @@ def try_import_module(module: str) -> Optional[types.ModuleType]:
     return importlib.import_module(module)
 
 
-# The template choices are defined here instead of in `_template_utils.py` in
-# order to delay loading the questionary package until shiny create is called.
-
-# These templates are copied over from the `shiny/templates/app_templates`
-# directory. The process for adding new ones is to add your app folder to
-# that directory, and then add another entry to this dictionary.
-app_template_choices = {
-    "Basic app": "basic-app",
-    "Sidebar layout": "basic-sidebar",
-    "Basic dashboard": "dashboard",
-    "Intermediate dashboard": "dashboard-tips",
-    "Navigating multiple pages/panels": "basic-navigation",
-    "Custom JavaScript component ...": "js-component",
-    "Choose from the Shiny Templates website": "external-gallery",
-}
-
-# These are templates which produce a Python package and have content filled in at
-# various places based on the user input. You can add new ones by following the
-# examples in `shiny/templates/package-templates` and then adding entries to this
-# dictionary.
-package_template_choices = {
-    "Input component": "js-input",
-    "Output component": "js-output",
-    "React component": "js-react",
-}
-
-
 @main.group(help="""Add files to enhance your Shiny app.""")
 def add() -> None:
     pass
