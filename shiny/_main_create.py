@@ -18,14 +18,47 @@ import click
 import questionary
 from questionary import Choice
 
-from ._custom_component_template_questions import (
+from ._main_create_custom import (
     ComponentNameValidator,
     update_component_name_in_template,
 )
+from ._main_utils import (
+    cli_action,
+    cli_bold,
+    cli_code,
+    cli_danger,
+    cli_field,
+    cli_info,
+    cli_input,
+    cli_success,
+    cli_url,
+    cli_verbatim,
+    cli_wait,
+    directory_prompt,
+)
 
-# The choices are specified in _main because they populate the
-# CLI flag options.
-from ._main import app_template_choices, package_template_choices
+# These templates are copied over from the `shiny/templates/app_templates`
+# directory. The process for adding new ones is to add your app folder to
+# that directory, and then add another entry to this dictionary.
+app_template_choices = {
+    "Basic app": "basic-app",
+    "Sidebar layout": "basic-sidebar",
+    "Basic dashboard": "dashboard",
+    "Intermediate dashboard": "dashboard-tips",
+    "Navigating multiple pages/panels": "basic-navigation",
+    "Custom JavaScript component ...": "js-component",
+    "Choose from the Shiny Templates website": "external-gallery",
+}
+
+# These are templates which produce a Python package and have content filled in at
+# various places based on the user input. You can add new ones by following the
+# examples in `shiny/templates/package-templates` and then adding entries to this
+# dictionary.
+package_template_choices = {
+    "Input component": "js-input",
+    "Output component": "js-output",
+    "React component": "js-react",
+}
 
 styles_for_questions = questionary.Style([("secondary", "italic")])
 # Prebuild some common choices
@@ -436,42 +469,6 @@ def js_component_questions(
     )
 
 
-def directory_prompt(
-    dest_dir: Optional[Path | str | None] = None,
-    default_dir: Optional[str | None] = None,
-) -> Path:
-    if dest_dir is not None:
-        dest_dir = Path(dest_dir)
-
-        if dest_dir.exists() and dest_dir.is_file():
-            click.echo(
-                cli_danger(
-                    f"Error: Destination directory {cli_field(str(dest_dir))} is a file, not a directory."
-                )
-            )
-            sys.exit(1)
-        return dest_dir
-
-    app_dir = questionary.path(
-        "Enter destination directory:",
-        default=path_rel_wd(default_dir) if default_dir is not None else "./",
-        only_directories=True,
-    ).ask()
-
-    if app_dir is None:
-        sys.exit(1)
-
-    # Perform not-a-file check on the selected `app_dir`
-    return directory_prompt(dest_dir=app_dir)
-
-
-def path_rel_wd(*path: str):
-    """
-    Path relative to the working directory, formatted for the current OS
-    """
-    return os.path.join(".", *(path or [""]))
-
-
 def copy_template_files(
     app_dir: Path,
     template_dir: Path,
@@ -520,168 +517,3 @@ def copy_template_files(
         (app_dir / "app-core.py").rename(app_dir / "app.py")
 
     return app_dir
-
-
-def add_test_file(
-    *,
-    app_file: Path | None,
-    test_file: Path | None,
-):
-    if app_file is None:
-
-        def path_exists(x: Path) -> bool | str:
-            if not isinstance(x, (str, Path)):
-                return False
-            if Path(x).is_dir():
-                return "Please provide a file path to your Shiny app"
-            return Path(x).exists() or f"Shiny app file can not be found: {x}"
-
-        app_file_val = questionary.path(
-            "Enter the path to the app file:",
-            default=path_rel_wd("app.py"),
-            validate=path_exists,
-        ).ask()
-    else:
-        app_file_val = app_file
-    # User quit early
-    if app_file_val is None:
-        sys.exit(1)
-    app_file = Path(app_file_val)
-
-    if test_file is None:
-
-        def path_does_not_exist(x: Path) -> bool | str:
-            if not isinstance(x, (str, Path)):
-                return False
-            if Path(x).is_dir():
-                return "Please provide a file path for your test file."
-            if Path(x).exists():
-                return "Test file already exists. Please provide a new file name."
-            if not Path(x).name.startswith("test_"):
-                return "Test file must start with 'test_'"
-            return True
-
-        test_file_val = questionary.path(
-            "Enter the path to the test file:",
-            default=path_rel_wd(
-                os.path.relpath(app_file.parent / "tests" / "test_app.py", ".")
-            ),
-            validate=path_does_not_exist,
-        ).ask()
-    else:
-        test_file_val = test_file
-
-    # User quit early
-    if test_file_val is None:
-        sys.exit(1)
-    test_file = Path(test_file_val)
-
-    # Make sure app file exists
-    if not app_file.exists():
-        raise FileExistsError("App file does not exist: ", test_file)
-    # Make sure output test file doesn't exist
-    if test_file.exists():
-        raise FileExistsError("Test file already exists: ", test_file)
-    if not test_file.name.startswith("test_"):
-        return "Test file must start with 'test_'"
-
-    # if app path directory is the same as the test file directory, use `local_app`
-    # otherwise, use `create_app_fixture`
-    is_same_dir = app_file.parent == test_file.parent
-
-    test_name = test_file.name.replace(".py", "")
-    rel_path = os.path.relpath(app_file, test_file.parent)
-
-    template = (
-        f"""\
-from playwright.sync_api import Page
-
-from shiny.playwright import controller
-from shiny.run import ShinyAppProc
-
-
-def {test_name}(page: Page, local_app: ShinyAppProc):
-
-    page.goto(local_app.url)
-    # Add test code here
-"""
-        if is_same_dir
-        else f"""\
-from playwright.sync_api import Page
-
-from shiny.playwright import controller
-from shiny.pytest import create_app_fixture
-from shiny.run import ShinyAppProc
-
-app = create_app_fixture("{rel_path}")
-
-
-def {test_name}(page: Page, app: ShinyAppProc):
-
-    page.goto(app.url)
-    # Add test code here
-"""
-    )
-    # Make sure test file directory exists
-    test_file.parent.mkdir(parents=True, exist_ok=True)
-
-    # Write template to test file
-    test_file.write_text(template)
-
-    # next steps
-    click.echo()
-    click.echo(cli_action(cli_bold("Next steps:")))
-    click.echo(f"- Run {cli_code('pytest')} in your terminal to run all the tests")
-
-
-def cli_field(x: str):
-    return click.style(x, fg="cyan")
-
-
-def cli_bold(x: str):
-    return click.style(x, bold=True)
-
-
-def cli_ital(x: str):
-    return click.style(x, italic=True)
-
-
-def cli_input(x: str):
-    return click.style(x, fg="green")
-
-
-def cli_code(x: str):
-    return click.style("`" + x + "`", fg="magenta")
-
-
-def cli_verbatim(x: str | list[str], indent: int = 2):
-    lines = [click.style(line, fg="cyan") for line in x if line != ""]
-    return textwrap.indent("\n".join(lines), " " * indent)
-
-
-def cli_url(x: str):
-    return click.style(x, fg="blue", underline=True)
-
-
-def cli_success(x: str):
-    return click.style("\u2713", fg="green") + " " + x
-
-
-def cli_info(x: str):
-    return click.style("\u2139", fg="blue") + " " + x
-
-
-def cli_action(x: str):
-    return click.style("→", fg="blue") + " " + x
-
-
-def cli_warning(x: str):
-    return click.style("!", fg="yellow") + " " + x
-
-
-def cli_danger(x: str):
-    return click.style("\u00d7", fg="red") + " " + x
-
-
-def cli_wait(x: str):
-    return click.style("\u2026", fg="yellow") + " " + x

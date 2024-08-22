@@ -6,8 +6,11 @@ import pytest
 from example_apps import get_apps, reruns, reruns_delay, validate_example
 from playwright.sync_api import Page
 
-from shiny._main import app_template_choices
-from shiny._template_utils import GithubRepoLocation, parse_github_arg
+from shiny._main_create import (
+    GithubRepoLocation,
+    app_template_choices,
+    parse_github_arg,
+)
 
 
 def subprocess_create(
