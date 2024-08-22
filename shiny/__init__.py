@@ -37,6 +37,7 @@ else:
 
 
 __all__ = (
+    "__version__",
     # public sub-packages
     "quarto",
     "reactive",
