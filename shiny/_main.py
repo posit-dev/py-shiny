@@ -484,10 +484,10 @@ def try_import_module(module: str) -> Optional[types.ModuleType]:
     return importlib.import_module(module)
 
 
-# The template choices are defined here instead of in `_template_utiles.py` in
+# The template choices are defined here instead of in `_template_utils.py` in
 # order to delay loading the questionary package until shiny create is called.
 
-# These templates are copied over fromt the `shiny/templates/app_templates`
+# These templates are copied over from the `shiny/templates/app_templates`
 # directory. The process for adding new ones is to add your app folder to
 # that directory, and then add another entry to this dictionary.
 app_template_choices = {
