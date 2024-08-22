@@ -7,7 +7,7 @@ from pathlib import Path
 import click
 import questionary
 
-from ._main_create import cli_action, cli_bold, cli_code, path_rel_wd
+from ._main_utils import cli_action, cli_bold, cli_code, path_rel_wd
 
 
 def add_test_file(
