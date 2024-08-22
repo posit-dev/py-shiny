@@ -6,7 +6,7 @@ import pytest
 from example_apps import get_apps, reruns, reruns_delay, validate_example
 from playwright.sync_api import Page
 
-from shiny._template_utils import (
+from shiny._main_create import (
     GithubRepoLocation,
     app_template_choices,
     parse_github_arg,

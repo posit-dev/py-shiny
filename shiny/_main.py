@@ -518,7 +518,7 @@ def test(
     app: Path | None,
     test_file: Path | None,
 ) -> None:
-    from ._template_utils import add_test_file
+    from ._main_create import add_test_file
 
     add_test_file(app_file=app, test_file=test_file)
 
@@ -582,7 +582,7 @@ def create(
     dir: Optional[Path | str] = None,
     package_name: Optional[str] = None,
 ) -> None:
-    from ._template_utils import use_template_github, use_template_internal
+    from ._main_create import use_template_github, use_template_internal
 
     print(f"dir is {dir}")
 
