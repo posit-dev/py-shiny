@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import re
 import shutil
@@ -66,8 +67,69 @@ cancel_choice: Choice = Choice(title=[("class:secondary", "[Cancel]")], value="c
 back_choice: Choice = Choice(title=[("class:secondary", "← Back")], value="back")
 
 
-def choice_from_dict(choice_dict: dict[str, str]) -> list[Choice]:
-    return [Choice(title=key, value=value) for key, value in choice_dict.items()]
+def choice_from_templates(templates: list[ShinyTemplate]) -> list[Choice]:
+    return [Choice(title=t.title, value=t.name) for t in templates]
+
+
+@dataclass
+class ShinyTemplate:
+    name: str
+    path: Path
+    type: str = "app"
+    title: str | None = None
+    description: str | None = None
+
+
+def find_templates(path: Path | str = ".") -> list[ShinyTemplate]:
+    path = Path(path)
+    templates: list[ShinyTemplate] = []
+
+    template_files = sorted(path.glob("**/_template.json"))
+    for tf in template_files:
+        with tf.open() as f:
+            template = json.load(f)
+            templates.append(
+                ShinyTemplate(
+                    name=template["name"],
+                    title=template.get("title"),
+                    path=tf.parent.absolute(),
+                    type=template.get("type", "app"),
+                    description=template.get("description"),
+                )
+            )
+
+    return templates
+
+
+def template_by_name(templates: list[ShinyTemplate], name: str) -> ShinyTemplate | None:
+    for template in templates:
+        if template.name == name:
+            return template
+    return None
+
+
+class ShinyInternalTemplates:
+    def __init__(self):
+        self.templates: list[ShinyTemplate] | None = None
+
+    def _templates(self) -> list[ShinyTemplate]:
+        if self.templates is not None:
+            return self.templates
+        self.templates = find_templates(Path(__file__).parent / "templates")
+        return self.templates
+
+    @property
+    def apps(self) -> list[ShinyTemplate]:
+        templates = self._templates()
+        return [t for t in templates if t.type == "app"]
+
+    @property
+    def packages(self) -> list[ShinyTemplate]:
+        templates = self._templates()
+        return [t for t in templates if t.type == "package"]
+
+
+shiny_internal_templates = ShinyInternalTemplates()
 
 
 def use_template_internal(
@@ -91,27 +153,41 @@ def use_template_internal(
         "js-component": Start the questions for creating a custom JavaScript component.
     """
 
+    app_templates = shiny_internal_templates.apps
+    pkg_templates = shiny_internal_templates.packages
+
+    menu_choices = [
+        Choice(title="Custom JavaScript component...", value="js-component"),
+        Choice(
+            title="Choose from the Shiny Templates website", value="external-gallery"
+        ),
+        cancel_choice,
+    ]
+
     if question_state is None:
-        template = questionary.select(
+        question_state = questionary.select(
             "Which template would you like to use?:",
-            choices=[*choice_from_dict(app_template_choices), cancel_choice],
+            choices=[
+                *choice_from_templates(app_templates),
+                *menu_choices,
+            ],
             style=styles_for_questions,
         ).ask()
-    else:
-        template = question_state
 
-    valid_template_choices = {**app_template_choices, **package_template_choices}
-    if template not in valid_template_choices.values():
-        raise click.BadOptionUsage(
-            "--template",
-            f"Invalid value for '--template' / '-t': {template} is not one of "
-            + f"""'{"', '".join(valid_template_choices.values())}'.""",
-        )
-
-    # Define the control flow for the top level menu
-    if template is None or template == "cancel":
+    if question_state is None or question_state == "cancel":
         sys.exit(1)
-    elif template == "external-gallery":
+
+    template = template_by_name([*app_templates, *pkg_templates], question_state)
+
+    if template is not None:
+        if template.type == "app":
+            return app_template_questions(template, mode, dest_dir=dest_dir)
+        if template.type == "package":
+            return js_component_questions(
+                template, dest_dir=dest_dir, package_name=package_name
+            )
+
+    if question_state == "external-gallery":
         url = cli_url("https://shiny.posit.co/py/templates")
         click.echo(f"Opening {url} in your browser.")
         click.echo(
@@ -121,13 +197,16 @@ def use_template_internal(
 
         webbrowser.open(url)
         sys.exit(0)
-    elif template == "js-component":
+    elif question_state == "js-component":
         js_component_questions(dest_dir=dest_dir, package_name=package_name)
-        return
-    elif template in package_template_choices.values():
-        js_component_questions(template, dest_dir=dest_dir, package_name=package_name)
     else:
-        app_template_questions(template, mode, dest_dir=dest_dir)
+        valid_choices = [t.name for t in app_templates + pkg_templates]
+        if question_state not in valid_choices:
+            raise click.BadOptionUsage(
+                "--template",
+                f"Invalid value for '--template' / '-t': {question_state} is not one of "
+                + f"""'{"', '".join(valid_choices)}'.""",
+            )
 
 
 def download_and_extract_zip(url: str, temp_dir: Path) -> Path:
@@ -161,7 +240,7 @@ def download_and_extract_zip(url: str, temp_dir: Path) -> Path:
 
 def use_template_github(
     github: str,
-    template: str | None = None,
+    template_name: str | None = None,
     mode: str | None = None,
     dest_dir: Path | None = None,
 ):
@@ -208,10 +287,55 @@ def use_template_github(
                 f"Template directory '{cli_input(spec.path)}' does not exist in {cli_field(spec_cli)}."
             )
 
+        templates = find_templates(template_dir)
+
+        if not templates:
+            # Legacy: repo doesn't have _template.json files, so we have to rely on
+            # paths, i.e. template_dir / template_name
+            if template_name is None:
+                # warn that we're assuming the repo spec points to the template directly
+                click.echo(
+                    cli_info(
+                        f"Using {cli_field(spec_cli)} as the template. "
+                        + f"Use {cli_code('--template')} to specify a template otherwise."
+                    )
+                )
+                template_name = template_dir.name
+            else:
+                template_dir = template_dir / template_name
+
+            template = ShinyTemplate(
+                name=template_name,
+                title=f"Template from {spec_cli}",
+                path=template_dir,
+            )
+        elif template_name:
+            # Repo has templates and the user already picked one
+            template = template_by_name(templates, template_name)
+            if not template:
+                raise click.ClickException(
+                    f"Template '{cli_input(template_name)}' not found in {cli_field(spec_cli)}."
+                )
+        else:
+            # Has templates, but the user needs to pick one
+            template_name = questionary.select(
+                "Which template would you like to use?:",
+                choices=[*choice_from_templates(templates), cancel_choice],
+                style=styles_for_questions,
+            ).ask()
+
+            if template_name is None or template_name == "cancel":
+                sys.exit(1)
+
+            template = template_by_name(templates, template_name)
+            if not template:
+                raise click.ClickException(
+                    f"Template '{cli_input(template_name)}' not found in {cli_field(spec_cli)}."
+                )
+
         return app_template_questions(
             template=template,
             mode=mode,
-            template_dir=Path(template_dir),
             dest_dir=dest_dir,
         )
 
@@ -318,27 +442,15 @@ def parse_github_url(x: str) -> GithubRepoLocation:
 
 
 def app_template_questions(
-    template: Optional[str] = None,
+    template: ShinyTemplate,
     mode: Optional[str] = None,
-    template_dir: Optional[Path] = None,
     dest_dir: Optional[Path] = None,
 ):
-    if template_dir is None:
-        if template is None:
-            raise ValueError("You must provide either template or template_dir")
-        template_dir = Path(__file__).parent / "templates/app-templates" / template
-    elif template is not None:
-        template_dir = template_dir / template
+    template_dir = template.path
 
-    # FIXME: We don't have any special syntax of files to signal a "template", which
-    # means that we could end up here with `template_dir` being a repo of templates. If
-    # `template` is missing, we end up copying everything in `template_dir` as if it's
-    # all part of a single big template. When we introduce a way to signal or coordinate
-    # templates in a repo, we will add a check here to avoid copying more than one
-    # template.
     click.echo(
         cli_wait(
-            f"Creating Shiny app from template {cli_bold(cli_field(template_dir.name))}..."
+            f"Creating {cli_bold(cli_field(template.title or template.name))} Shiny app..."
         )
     )
 
@@ -394,7 +506,7 @@ def app_template_questions(
 
 
 def js_component_questions(
-    component_type: Optional[str] = None,
+    component_type: Optional[str | ShinyTemplate] = None,
     dest_dir: Optional[Path] = None,
     package_name: Optional[str] = None,
 ):
@@ -408,7 +520,7 @@ def js_component_questions(
         component_type = questionary.select(
             "What kind of component do you want to build?:",
             choices=[
-                *choice_from_dict(package_template_choices),
+                *choice_from_templates(shiny_internal_templates.packages),
                 back_choice,
                 cancel_choice,
             ],
@@ -422,6 +534,15 @@ def js_component_questions(
     if component_type is None or component_type == "cancel":
         sys.exit(1)
 
+    if isinstance(component_type, ShinyTemplate):
+        template = component_type
+    else:
+        template = template_by_name(shiny_internal_templates.packages, component_type)
+
+    if template is None:
+        # Validation should have happened in `use_template_internal()`
+        raise ValueError(f"Package template for {component_type} not found.")
+
     # Ask what the user wants the name of their component to be
     if package_name is None:
         package_name = questionary.text(
@@ -433,15 +554,11 @@ def js_component_questions(
         if package_name is None:
             sys.exit(1)
 
-    template_dir = (
-        Path(__file__).parent / "templates/package-templates" / component_type
-    )
-
     dest_dir = directory_prompt(dest_dir, package_name)
 
     app_dir = copy_template_files(
         dest_dir,
-        template_dir=template_dir,
+        template_dir=template.path,
         express_available=False,
         mode=None,
     )
@@ -499,6 +616,8 @@ def copy_template_files(
 
     for item in template_dir.iterdir():
         if item.is_file():
+            if item.name == "_template.json":
+                continue
             shutil.copy(item, app_dir / item.name)
         else:
             if item.name != "__pycache__":

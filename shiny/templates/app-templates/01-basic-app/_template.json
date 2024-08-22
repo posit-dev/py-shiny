@@ -1,0 +1,6 @@
+{
+  "type": "app",
+  "name": "basic-app",
+  "title": "Basic app",
+  "description": "A basic Shiny app template."
+}

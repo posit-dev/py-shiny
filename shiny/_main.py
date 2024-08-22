@@ -584,13 +584,11 @@ def create(
 ) -> None:
     from ._main_create import use_template_github, use_template_internal
 
-    print(f"dir is {dir}")
-
     if dir is not None:
         dir = Path(dir)
 
     if github is not None:
-        use_template_github(github, template=template, mode=mode, dest_dir=dir)
+        use_template_github(github, template_name=template, mode=mode, dest_dir=dir)
     else:
         use_template_internal(template, mode, dir, package_name)
 

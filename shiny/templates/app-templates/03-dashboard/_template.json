@@ -1,0 +1,6 @@
+{
+  "type": "app",
+  "name": "dashboard",
+  "title": "Basic dashboard",
+  "description": "A basic, single page dashboard with value boxes, two plots in cards and a sidebar."
+}

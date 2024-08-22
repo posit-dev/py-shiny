@@ -1,0 +1,6 @@
+{
+  "type": "package",
+  "name": "js-react",
+  "title": "React component",
+  "description": "A Python package template providing a custom React-based Shiny component."
+}

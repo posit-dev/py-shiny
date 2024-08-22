@@ -1,0 +1,6 @@
+{
+  "type": "app",
+  "name": "dashboard-tips",
+  "title": "Intermediate dashboard",
+  "description": "An intermediate dashboard with value boxes, several plots in cards and a sidebar."
+}
