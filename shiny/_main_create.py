@@ -160,21 +160,10 @@ def use_internal_template(
         Choice(
             title="Choose from the Shiny Templates website", value="external-gallery"
         ),
-        cancel_choice,
     ]
 
     if question_state is None:
-        question_state = questionary.select(
-            "Which template would you like to use?:",
-            choices=[
-                *choice_from_templates(app_templates),
-                *menu_choices,
-            ],
-            style=styles_for_questions,
-        ).ask()
-
-    if question_state is None or question_state == "cancel":
-        sys.exit(1)
+        question_state = question_choose_template(app_templates, *menu_choices)
 
     template = template_by_name([*app_templates, *pkg_templates], question_state)
 
@@ -237,6 +226,26 @@ def use_internal_package_template(
         raise ValueError(f"Package template for {input} not found.")
 
     package_template_questions(template, dest_dir=dest_dir, package_name=package_name)
+
+
+def question_choose_template(
+    templates: list[ShinyTemplate],
+    *extras: Choice,
+) -> str:
+    """
+    Ask the user to pick one of the templates. Includes and handles the cancel choice.
+    """
+
+    choice = questionary.select(
+        "Which template would you like to use?",
+        choices=[*choice_from_templates(templates), *extras, cancel_choice],
+        style=styles_for_questions,
+    ).ask()
+
+    if choice is None or choice == "cancel":
+        sys.exit(1)
+
+    return choice
 
 
 def download_and_extract_zip(url: str, temp_dir: Path) -> Path:
@@ -349,16 +358,9 @@ def use_github_template(
                 )
         else:
             # Has templates, but the user needs to pick one
-            template_name = questionary.select(
-                "Which template would you like to use?:",
-                choices=[*choice_from_templates(templates), cancel_choice],
-                style=styles_for_questions,
-            ).ask()
-
-            if template_name is None or template_name == "cancel":
-                sys.exit(1)
-
+            template_name = question_choose_template(templates)
             template = template_by_name(templates, template_name)
+
             if not template:
                 raise click.ClickException(
                     f"Template '{cli_input(template_name)}' not found in {cli_field(spec_cli)}."
