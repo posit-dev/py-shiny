@@ -132,7 +132,7 @@ class ShinyInternalTemplates:
 shiny_internal_templates = ShinyInternalTemplates()
 
 
-def use_template_internal(
+def use_internal_template(
     question_state: Optional[str] = None,
     mode: Optional[str] = None,
     dest_dir: Optional[Path] = None,
@@ -146,7 +146,6 @@ def use_template_internal(
     You can also specify a question state to return to another level. For example if you
     were at level 5 of a question chain and wanted to return to level 4.
     This is not that useful currently because we only have two levels of questions.
-
 
     :param question_state: The question state you would like to return to. Currently, the options are:
         "cancel": Cancel the operation and exit.
@@ -183,7 +182,7 @@ def use_template_internal(
         if template.type == "app":
             return app_template_questions(template, mode, dest_dir=dest_dir)
         if template.type == "package":
-            return js_component_questions(
+            return package_template_questions(
                 template, dest_dir=dest_dir, package_name=package_name
             )
 
@@ -198,7 +197,7 @@ def use_template_internal(
         webbrowser.open(url)
         sys.exit(0)
     elif question_state == "js-component":
-        js_component_questions(dest_dir=dest_dir, package_name=package_name)
+        use_internal_package_template(dest_dir=dest_dir, package_name=package_name)
     else:
         valid_choices = [t.name for t in app_templates + pkg_templates]
         if question_state not in valid_choices:
@@ -207,6 +206,37 @@ def use_template_internal(
                 f"Invalid value for '--template' / '-t': {question_state} is not one of "
                 + f"""'{"', '".join(valid_choices)}'.""",
             )
+
+
+def use_internal_package_template(
+    dest_dir: Optional[Path] = None,
+    package_name: Optional[str] = None,
+):
+    input = questionary.select(
+        "What kind of component do you want to build?",
+        choices=[
+            *choice_from_templates(shiny_internal_templates.packages),
+            back_choice,
+            cancel_choice,
+        ],
+        style=styles_for_questions,
+    ).ask()
+
+    if input == "back":
+        use_internal_template()
+        return
+
+    if input is None or input == "cancel":
+        sys.exit(1)
+
+    template = template_by_name(shiny_internal_templates.packages, input)
+
+    if template is None:
+        # This should be valid because we're selecting from the list of templates
+        # but just in case and to make type checkers happy
+        raise ValueError(f"Package template for {input} not found.")
+
+    package_template_questions(template, dest_dir=dest_dir, package_name=package_name)
 
 
 def download_and_extract_zip(url: str, temp_dir: Path) -> Path:
@@ -238,11 +268,12 @@ def download_and_extract_zip(url: str, temp_dir: Path) -> Path:
     return temp_dir
 
 
-def use_template_github(
+def use_github_template(
     github: str,
     template_name: str | None = None,
     mode: str | None = None,
     dest_dir: Path | None = None,
+    package_name: str | None = None,
 ):
     # Github requires that we download the whole repository, so we need to
     # download and unzip the repo, then navigate to the subdirectory.
@@ -333,11 +364,14 @@ def use_template_github(
                     f"Template '{cli_input(template_name)}' not found in {cli_field(spec_cli)}."
                 )
 
-        return app_template_questions(
-            template=template,
-            mode=mode,
-            dest_dir=dest_dir,
-        )
+        if template.type == "package":
+            return package_template_questions(
+                template,
+                dest_dir=dest_dir,
+                package_name=package_name,
+            )
+        else:
+            return app_template_questions(template, dest_dir=dest_dir, mode=mode)
 
 
 def github_zip_url(spec: GithubRepoLocation) -> Generator[str]:
@@ -471,7 +505,7 @@ def app_template_questions(
         if mode is None or mode == "cancel":
             sys.exit(1)
         if mode == "back":
-            use_template_internal()
+            use_internal_template()
             return
 
     app_dir = copy_template_files(template, dest_dir, mode=mode)
@@ -493,44 +527,11 @@ def app_template_questions(
     click.echo(f"- Open and edit the app file: {cli_field(str(app_dir / 'app.py'))}")
 
 
-def js_component_questions(
-    component_type: Optional[str | ShinyTemplate] = None,
+def package_template_questions(
+    template: ShinyTemplate,
     dest_dir: Optional[Path] = None,
     package_name: Optional[str] = None,
 ):
-    """
-    Hand question branch for the custom js templates. This should handle the entire rest
-    of the question flow and is responsible for placing files etc. Currently it repeats
-    a lot of logic from the default flow but as the custom templates get more
-    complicated the logic will diverge
-    """
-    if component_type is None:
-        component_type = questionary.select(
-            "What kind of component do you want to build?:",
-            choices=[
-                *choice_from_templates(shiny_internal_templates.packages),
-                back_choice,
-                cancel_choice,
-            ],
-            style=styles_for_questions,
-        ).ask()
-
-    if component_type == "back":
-        use_template_internal()
-        return
-
-    if component_type is None or component_type == "cancel":
-        sys.exit(1)
-
-    if isinstance(component_type, ShinyTemplate):
-        template = component_type
-    else:
-        template = template_by_name(shiny_internal_templates.packages, component_type)
-
-    if template is None:
-        # Validation should have happened in `use_template_internal()`
-        raise ValueError(f"Package template for {component_type} not found.")
-
     # Ask what the user wants the name of their component to be
     if package_name is None:
         package_name = questionary.text(
@@ -542,11 +543,12 @@ def js_component_questions(
         if package_name is None:
             sys.exit(1)
 
-    dest_dir = directory_prompt(dest_dir, package_name)
+    app_dir = copy_template_files(
+        template,
+        dest_dir=directory_prompt(dest_dir, package_name),
+        mode=None,
+    )
 
-    app_dir = copy_template_files(template, dest_dir, mode=None)
-
-    # Print message saying we're building the component
     click.echo(cli_wait(f"Setting up {cli_field(package_name)} component package..."))
     update_component_name_in_template(app_dir, package_name)
 
