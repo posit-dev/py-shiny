@@ -38,29 +38,6 @@ from ._main_utils import (
     directory_prompt,
 )
 
-# These templates are copied over from the `shiny/templates/app_templates`
-# directory. The process for adding new ones is to add your app folder to
-# that directory, and then add another entry to this dictionary.
-app_template_choices = {
-    "Basic app": "basic-app",
-    "Sidebar layout": "basic-sidebar",
-    "Basic dashboard": "dashboard",
-    "Intermediate dashboard": "dashboard-tips",
-    "Navigating multiple pages/panels": "basic-navigation",
-    "Custom JavaScript component ...": "js-component",
-    "Choose from the Shiny Templates website": "external-gallery",
-}
-
-# These are templates which produce a Python package and have content filled in at
-# various places based on the user input. You can add new ones by following the
-# examples in `shiny/templates/package-templates` and then adding entries to this
-# dictionary.
-package_template_choices = {
-    "Input component": "js-input",
-    "Output component": "js-output",
-    "React component": "js-react",
-}
-
 styles_for_questions = questionary.Style([("secondary", "italic")])
 # Prebuild some common choices
 cancel_choice: Choice = Choice(title=[("class:secondary", "[Cancel]")], value="cancel")
@@ -116,6 +93,22 @@ def template_by_name(templates: list[ShinyTemplate], name: str) -> ShinyTemplate
 
 
 class ShinyInternalTemplates:
+    """
+    Shiny's Internal Templates
+
+    Internal templates that are built into the shiny package are always available via
+    `shiny create`. These templates are stored in the `shiny/templates` directory and
+    are divided into `app-templates` and `package-templates`.
+
+    To add a new template, create the template subfolder in either of the two template
+    folders and add a `_template.json` file. See `ShinyTemplate` for expected fields.
+
+    * `use_template_internal()` is the initial menu seen, which presents `app-templates`
+      with additional choices.
+    * package-templates are also referred to as `js-components` in the code base, these
+      templates appear as a submenu and are handled by `js_component_questions()`.
+    """
+
     def __init__(self):
         self.templates: list[ShinyTemplate] | None = None
 
