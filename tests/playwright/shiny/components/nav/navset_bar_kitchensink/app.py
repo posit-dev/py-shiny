@@ -9,9 +9,9 @@ def navset_sidebar():
 
 navset_bars = [
     {
-        "title": "navset_bar_default_static_top_position_selected",
-        "id": "navset_bar_default_static_top_position_selected",
-        "position": "static-top",
+        "title": "navset_bar_fixed_top_position_selected",
+        "id": "navset_bar_fixed_top_position_selected",
+        "position": "fixed-top",
         "selected": "B",
     },
     {
@@ -28,6 +28,7 @@ navset_bars = [
         "collapsible": True,
         "bg": "DodgerBlue",
         "inverse": True,
+        "position": "sticky-top",
     },
     {
         "title": "navset_bar_collapsible_underline_fixed_gap",
