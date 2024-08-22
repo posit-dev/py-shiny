@@ -481,12 +481,7 @@ def app_template_questions(
             use_template_internal()
             return
 
-    app_dir = copy_template_files(
-        dest_dir,
-        template_dir=template_dir,
-        express_available=template.express_available,
-        mode=mode,
-    )
+    app_dir = copy_template_files(template, dest_dir, mode=mode)
 
     click.echo(cli_success(f"Created Shiny app at {cli_field(str(app_dir))}"))
     click.echo()
@@ -556,12 +551,7 @@ def js_component_questions(
 
     dest_dir = directory_prompt(dest_dir, package_name)
 
-    app_dir = copy_template_files(
-        dest_dir,
-        template_dir=template.path,
-        express_available=False,
-        mode=None,
-    )
+    app_dir = copy_template_files(template, dest_dir, mode=None)
 
     # Print message saying we're building the component
     click.echo(cli_wait(f"Setting up {cli_field(package_name)} component package..."))
@@ -587,19 +577,18 @@ def js_component_questions(
 
 
 def copy_template_files(
-    app_dir: Path,
-    template_dir: Path,
-    express_available: bool,
+    template: ShinyTemplate,
+    dest_dir: Path,
     mode: Optional[str] = None,
 ):
-    files_to_check = [file.name for file in template_dir.iterdir()]
+    files_to_check = [file.name for file in template.path.iterdir()]
 
     if "__pycache__" in files_to_check:
         files_to_check.remove("__pycache__")
 
     files_to_check.append("app.py")
 
-    duplicate_files = [file for file in files_to_check if (app_dir / file).exists()]
+    duplicate_files = [file for file in files_to_check if (dest_dir / file).exists()]
 
     if any(duplicate_files):
         err_files = ", ".join([cli_input('"' + file + '"') for file in duplicate_files])
@@ -611,28 +600,28 @@ def copy_template_files(
         )
         sys.exit(1)
 
-    if not app_dir.exists():
-        app_dir.mkdir()
+    if not dest_dir.exists():
+        dest_dir.mkdir()
 
-    for item in template_dir.iterdir():
+    for item in template.path.iterdir():
         if item.is_file():
             if item.name == "_template.json":
                 continue
-            shutil.copy(item, app_dir / item.name)
+            shutil.copy(item, dest_dir / item.name)
         else:
             if item.name != "__pycache__":
-                shutil.copytree(item, app_dir / item.name)
+                shutil.copytree(item, dest_dir / item.name)
 
-    def rename_unlink(file_to_rename: str, file_to_delete: str, dir: Path = app_dir):
+    def rename_unlink(file_to_rename: str, file_to_delete: str, dir: Path = dest_dir):
         (dir / file_to_rename).rename(dir / "app.py")
         (dir / file_to_delete).unlink()
 
-    if express_available:
+    if template.express_available:
         if mode == "express":
             rename_unlink("app-express.py", "app-core.py")
         if mode == "core":
             rename_unlink("app-core.py", "app-express.py")
-    if (app_dir / "app-core.py").exists():
-        (app_dir / "app-core.py").rename(app_dir / "app.py")
+    if (dest_dir / "app-core.py").exists():
+        (dest_dir / "app-core.py").rename(dest_dir / "app.py")
 
-    return app_dir
+    return dest_dir
