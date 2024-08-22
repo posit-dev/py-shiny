@@ -518,7 +518,7 @@ def test(
     app: Path | None,
     test_file: Path | None,
 ) -> None:
-    from ._main_create import add_test_file
+    from ._main_add_test import add_test_file
 
     add_test_file(app_file=app, test_file=test_file)
 
