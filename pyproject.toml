@@ -1,3 +1,16 @@
+[build-system]
+requires = ["setuptools>=60", "wheel", "setuptools_scm>=8.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = {find = {include = ["shiny", "shiny.*"]}}
+package-data = {shiny = ["py.typed"]}
+include-package-data = true
+
+[tool.setuptools_scm]
+write_to = "shiny/_version.py"
+local_scheme = "no-local-version"
+
 [project]
 name = "shiny"
 dynamic = ["version"]
@@ -119,14 +132,11 @@ Documentation = "https://shiny.posit.co/py/"
 Repository = "https://github.com/posit-dev/py-shiny"
 "Bug Tracker" = "https://github.com/posit-dev/py-shiny/issues"
 
-[build-system]
-requires = ["setuptools>=60", "wheel", "setuptools_scm>=8.0"]
-build-backend = "setuptools.build_meta"
+[project.scripts]
+shiny = "shiny._main:main"
 
-[tool.setuptools]
-packages = {find = {include = ["shiny", "shiny.*"]}}
-package-data = {shiny = ["py.typed"]}
-include-package-data = true
+[project.entry-points.pytest11]
+shiny-test = "shiny.pytest._pytest"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -138,13 +148,3 @@ ignore = ["E302", "E501", "F403", "F405", "W503", "E203", "E701", "E704"]
 [tool.isort]
 profile = "black"
 skip = ["__init__.py", "typings/", "_dev/", ".venv", "venv", ".tox", "build"]
-
-[project.scripts]
-shiny = "shiny._main:main"
-
-[project.entry-points.pytest11]
-shiny-test = "shiny.pytest._pytest"
-
-[tool.setuptools_scm]
-write_to = "shiny/_version.py"
-local_scheme = "no-local-version"
