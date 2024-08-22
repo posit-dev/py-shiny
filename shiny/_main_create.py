@@ -110,13 +110,13 @@ class ShinyInternalTemplates:
     """
 
     def __init__(self):
-        self.templates: list[ShinyTemplate] | None = None
+        self.templates: dict[str, list[ShinyTemplate]] = {}
 
-    def _templates(self) -> list[ShinyTemplate]:
-        if self.templates is not None:
-            return self.templates
-        self.templates = find_templates(Path(__file__).parent / "templates")
-        return self.templates
+    def _templates(self, dir: str = "templates") -> list[ShinyTemplate]:
+        if dir in self.templates:
+            return self.templates[dir]
+        self.templates[dir] = find_templates(Path(__file__).parent / dir)
+        return self.templates[dir]
 
     @property
     def apps(self) -> list[ShinyTemplate]:
@@ -127,6 +127,14 @@ class ShinyInternalTemplates:
     def packages(self) -> list[ShinyTemplate]:
         templates = self._templates()
         return [t for t in templates if t.type == "package"]
+
+    @property
+    def chat_hello_providers(self) -> list[ShinyTemplate]:
+        return self._templates("../examples/chat/hello-providers")
+
+    @property
+    def chat_enterprise(self) -> list[ShinyTemplate]:
+        return self._templates("../examples/chat/enterprise")
 
 
 shiny_internal_templates = ShinyInternalTemplates()
@@ -154,18 +162,25 @@ def use_internal_template(
 
     app_templates = shiny_internal_templates.apps
     pkg_templates = shiny_internal_templates.packages
+    chat_templates = [
+        *shiny_internal_templates.chat_hello_providers,
+        *shiny_internal_templates.chat_enterprise,
+    ]
 
     menu_choices = [
-        Choice(title="Custom JavaScript component...", value="js-component"),
+        Choice(title="Custom JavaScript component...", value="_js-component"),
+        Choice(title="Generative AI templates...", value="_chat-ai"),
         Choice(
-            title="Choose from the Shiny Templates website", value="external-gallery"
+            title="Choose from the Shiny Templates website", value="_external-gallery"
         ),
     ]
 
     if question_state is None:
         question_state = question_choose_template(app_templates, *menu_choices)
 
-    template = template_by_name([*app_templates, *pkg_templates], question_state)
+    template = template_by_name(
+        [*app_templates, *pkg_templates, *chat_templates], question_state
+    )
 
     if template is not None:
         if template.type == "app":
@@ -175,7 +190,7 @@ def use_internal_template(
                 template, dest_dir=dest_dir, package_name=package_name
             )
 
-    if question_state == "external-gallery":
+    if question_state == "_external-gallery":
         url = cli_url("https://shiny.posit.co/py/templates")
         click.echo(f"Opening {url} in your browser.")
         click.echo(
@@ -185,8 +200,10 @@ def use_internal_template(
 
         webbrowser.open(url)
         sys.exit(0)
-    elif question_state == "js-component":
+    elif question_state == "_js-component":
         use_internal_package_template(dest_dir=dest_dir, package_name=package_name)
+    elif question_state == "_chat-ai":
+        use_internal_chat_ai_template(dest_dir=dest_dir, package_name=package_name)
     else:
         valid_choices = [t.name for t in app_templates + pkg_templates]
         if question_state not in valid_choices:
@@ -226,6 +243,61 @@ def use_internal_package_template(
         raise ValueError(f"Package template for {input} not found.")
 
     package_template_questions(template, dest_dir=dest_dir, package_name=package_name)
+
+
+def use_internal_chat_ai_template(
+    input: str | None = None,
+    dest_dir: Optional[Path] = None,
+    package_name: Optional[str] = None,
+):
+    if input is None:
+        input = questionary.select(
+            "Which kind of generative AI template would you like to use?",
+            choices=[
+                Choice(title="By provider...", value="_chat-ai_hello-providers"),
+                Choice(title="Enterprise providers...", value="_chat-ai_enterprise"),
+                back_choice,
+                cancel_choice,
+            ],
+            style=styles_for_questions,
+        ).ask()
+
+        if input is None or input == "cancel":
+            sys.exit(1)
+
+        if input == "back":
+            use_internal_template(dest_dir=dest_dir, package_name=package_name)
+            return
+
+        use_internal_chat_ai_template(
+            input, dest_dir=dest_dir, package_name=package_name
+        )
+        return
+
+    template_choices = (
+        shiny_internal_templates.chat_enterprise
+        if input == "_chat-ai_enterprise"
+        else shiny_internal_templates.chat_hello_providers
+    )
+
+    choice = question_choose_template(template_choices, back_choice)
+
+    if choice == "back":
+        use_internal_chat_ai_template(dest_dir=dest_dir, package_name=package_name)
+        return
+
+    template = template_by_name(
+        [
+            *shiny_internal_templates.chat_hello_providers,
+            *shiny_internal_templates.chat_enterprise,
+        ],
+        choice,
+    )
+
+    if template is None:
+        raise ValueError(f"Chat AI template for {choice} not found.")
+
+    app_template_questions(template, dest_dir=dest_dir, mode=None)
 
 
 def question_choose_template(
