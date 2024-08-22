@@ -18,13 +18,13 @@ app_ui = ui.page_fluid(
         title="Navset Bar",
     ),
     ui.h5("Selected:"),
-    ui.output_code("debug"),
+    ui.output_code("selected"),
 )
 
 
 def server(input, output, session):
     @render.code
-    def debug():
+    def selected():
         return input.selected_navset_bar()
 
 
