@@ -1,5 +1,12 @@
 """Facade classes for working with Shiny inputs/outputs in Playwright"""
 
+# TODO-barret; Possibly move all navset's loc_containers to the parent element (e.g. NavsetCardUnderline should have the container be the containing card.) The `.loc` will then point to the `ul` that has the id
+# TODO-barret; This should be the container and the `ul#{id}.navbar-nav` should be the loc
+# TODO-barret; Maybe add a `loc_nav_item` that contains `> li.nav-item`?
+# TODO-barret; Note: We have access to the panel via `.nav_panel("key")`
+# TODO-barret; Maybe add `.loc_sidebar` for the sidebar?
+
+
 from __future__ import annotations
 
 import json
@@ -154,6 +161,15 @@ class _UiWithContainerP(_UiBaseP, Protocol):
     loc_container: Locator
     """
     Playwright `Locator` for the container of the UI element.
+    """
+
+
+class _UiWithSidebarP(_UiWithContainerP, Protocol):
+    """A protocol class representing UI with an associated sidebar."""
+
+    loc_sidebar: Locator
+    """
+    Playwright `Locator` for its sidebar of the UI element.
     """
 
 
@@ -5351,7 +5367,7 @@ class Popover(_OverlayBase):
             The maximum time to wait for the popover to be visible and interactable. Defaults to `None`.
         """
         if open ^ self.get_loc_overlay_body(timeout=timeout).count() > 0:
-            self._toggle()
+            self._toggle(timeout=timeout)
 
     def _toggle(self, timeout: Timeout = None) -> None:
         """
@@ -5440,7 +5456,24 @@ class Tooltip(_OverlayBase):
         self.loc_trigger.hover(timeout=timeout)
 
 
-class _NavSetBase(_UiWithContainer):
+class _ExpectNavsetSidebarM:
+    def expect_sidebar(
+        self: _UiWithSidebarP, exists: bool, *, timeout: Timeout = None
+    ) -> None:
+        """
+        Assert whether or not the sidebar exists within the navset.
+
+        Parameters
+        ----------
+        exists
+            `True` if the sidebar exists within the navset.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
+        playwright_expect(self.loc_sidebar).to_have_count(int(exists), timeout=timeout)
+
+
+class _NavsetBase(_UiWithContainer):
     """A Base mixin class for Nav controls"""
 
     def nav_panel(
@@ -5599,6 +5632,10 @@ class NavPanel(_UiWithContainer):
     """
     Playwright `Locator` for the nav panel container.
     """
+    panel_value: str
+    """
+    The `data-value` attribute used to identify the nav panel within the larger navset.
+    """
 
     def __init__(self, page: Page, id: str, panel_value: str) -> None:
         """
@@ -5681,7 +5718,7 @@ class NavPanel(_UiWithContainer):
         playwright_expect(self.loc_content).to_have_text(value, timeout=timeout)
 
 
-class NavsetTab(_NavSetBase):
+class NavsetTab(_NavsetBase):
     """Controller for :func:`shiny.ui.navset_tab`."""
 
     loc: Locator
@@ -5712,7 +5749,7 @@ class NavsetTab(_NavSetBase):
         )
 
 
-class NavsetPill(_NavSetBase):
+class NavsetPill(_NavsetBase):
     """Controller for :func:`shiny.ui.navset_pill`."""
 
     def __init__(self, page: Page, id: str) -> None:
@@ -5734,7 +5771,7 @@ class NavsetPill(_NavSetBase):
         )
 
 
-class NavsetUnderline(_NavSetBase):
+class NavsetUnderline(_NavsetBase):
     """Controller for :func:`shiny.ui.navset_underline`."""
 
     def __init__(self, page: Page, id: str) -> None:
@@ -5756,7 +5793,7 @@ class NavsetUnderline(_NavSetBase):
         )
 
 
-class NavsetPillList(_NavSetBase):
+class NavsetPillList(_NavsetBase):
     """Controller for :func:`shiny.ui.navset_pill_list`."""
 
     def __init__(self, page: Page, id: str) -> None:
@@ -5796,7 +5833,33 @@ class NavsetPillList(_NavSetBase):
             )
 
 
-class NavsetCardTab(_NavSetBase):
+class _NavsetCardBase(_NavsetBase):
+    def __init__(
+        self,
+        page: Page,
+        *,
+        id: str,
+        loc: InitLocator,
+        loc_container: InitLocator,
+    ) -> None:
+        """
+        Shim class to add consistent `.loc_sidebar` definition
+        """
+        super().__init__(
+            page,
+            id=id,
+            loc_container=loc_container,
+            loc=loc,
+        )
+        self.loc_sidebar = self.loc_container.locator("..").locator(
+            "+ .bslib-sidebar-layout"
+        )
+
+
+class NavsetCardTab(
+    _ExpectNavsetSidebarM,
+    _NavsetCardBase,
+):
     """Controller for :func:`shiny.ui.navset_card_tab`."""
 
     def __init__(self, page: Page, id: str) -> None:
@@ -5818,7 +5881,10 @@ class NavsetCardTab(_NavSetBase):
         )
 
 
-class NavsetCardPill(_NavSetBase):
+class NavsetCardPill(
+    _ExpectNavsetSidebarM,
+    _NavsetCardBase,
+):
     """Controller for :func:`shiny.ui.navset_card_pill`."""
 
     def __init__(self, page: Page, id: str) -> None:
@@ -5840,7 +5906,10 @@ class NavsetCardPill(_NavSetBase):
         )
 
 
-class NavsetCardUnderline(_NavSetBase):
+class NavsetCardUnderline(
+    _ExpectNavsetSidebarM,
+    _NavsetCardBase,
+):
     """Controller for :func:`shiny.ui.navset_card_underline`."""
 
     def __init__(self, page: Page, id: str) -> None:
@@ -5883,23 +5952,8 @@ class NavsetCardUnderline(_NavSetBase):
                 "card-header", timeout=timeout
             )
 
-    def expect_sidebar(self, sidebar: bool, *, timeout: Timeout = None) -> None:
-        """
-        Expects the navset card underline to have the specified sidebar.
 
-        Parameters
-        ----------
-        sidebar
-            `True` if the sidebar is expected to be visible, `False` otherwise.
-        timeout
-            The maximum time to wait for the expectation to pass. Defaults to `None`.
-        """
-        playwright_expect(
-            self.loc_container.locator("..").locator("+ .bslib-sidebar-layout")
-        ).to_have_count(int(sidebar), timeout=timeout)
-
-
-class NavsetHidden(_NavSetBase):
+class NavsetHidden(_NavsetBase):
     """Controller for :func:`shiny.ui.navset_hidden`."""
 
     def __init__(self, page: Page, id: str) -> None:
@@ -5921,7 +5975,10 @@ class NavsetHidden(_NavSetBase):
         )
 
 
-class NavsetBar(_NavSetBase):
+class NavsetBar(
+    _ExpectNavsetSidebarM,
+    _NavsetBase,
+):
     """Controller for :func:`shiny.ui.navset_bar`."""
 
     def __init__(self, page: Page, id: str) -> None:
@@ -5941,12 +5998,15 @@ class NavsetBar(_NavSetBase):
             loc_container=f"ul#{id}.navbar-nav",
             loc="> li.nav-item",
         )
+        self._loc_navbar = self.loc_container.locator("..").locator("..").locator("..")
 
-    def _loc_navbar(self) -> Locator:
-        """
-        Returns the locator for the navbar.
-        """
-        return self.loc_container.locator("..").locator("..").locator("..")
+        # This location is different than the _NavsetCardBase.loc_sidebar. A custom value is written here.
+        self.loc_sidebar = (
+            self.loc_container.locator("..")
+            .locator("..")
+            .locator("..")
+            .locator("+ div > .bslib-sidebar-layout")
+        )
 
     def expect_position(
         self,
@@ -5967,11 +6027,14 @@ class NavsetBar(_NavSetBase):
             The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         if position == "static-top":
-            playwright_expect(self._loc_navbar()).not_to_have_class(
-                re.compile(rf"{position}"), timeout=timeout
+            # static-top class is not provided by the code.
+            # Therefore we must check that all other classes are **not** found
+            playwright_expect(self._loc_navbar).not_to_have_class(
+                re.compile(r"(^|\s+)(fixed-top|fixed-bottom|sticky-top)(\s+|$)"),
+                timeout=timeout,
             )
         else:
-            playwright_expect(self._loc_navbar()).to_have_class(
+            playwright_expect(self._loc_navbar).to_have_class(
                 re.compile(rf"{position}"), timeout=timeout
             )
 
@@ -5984,7 +6047,7 @@ class NavsetBar(_NavSetBase):
         timeout
             The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
-        playwright_expect(self._loc_navbar()).to_have_class(
+        playwright_expect(self._loc_navbar).to_have_class(
             re.compile("navbar-inverse"), timeout=timeout
         )
 
@@ -6000,28 +6063,8 @@ class NavsetBar(_NavSetBase):
             The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         _expect_style_to_have_value(
-            self._loc_navbar(), "background-color", f"{bg} !important", timeout=timeout
+            self._loc_navbar, "background-color", f"{bg} !important", timeout=timeout
         )
-
-    def expect_sidebar(self, sidebar: bool, *, timeout: Timeout = None) -> None:
-        """
-        Expects the navset bar to have the specified sidebar.
-
-        Parameters
-        ----------
-        sidebar
-            `True` if the sidebar is expected to be visible, `False` otherwise.
-        timeout
-            The maximum time to wait for the expectation to pass. Defaults to `None`.
-        """
-        if sidebar:
-            playwright_expect(
-                self.get_loc_active_content().locator("..").locator("..").locator("..")
-            ).to_have_class(re.compile("bslib-sidebar-layout"), timeout=timeout)
-        else:
-            playwright_expect(
-                self.get_loc_active_content().locator("..").locator("..").locator("..")
-            ).not_to_have_class(re.compile("bslib-sidebar-layout"), timeout=timeout)
 
     def expect_gap(self, gap: str, *, timeout: Timeout = None) -> None:
         """
