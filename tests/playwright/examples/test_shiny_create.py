@@ -8,8 +8,8 @@ from playwright.sync_api import Page
 
 from shiny._main_create import (
     GithubRepoLocation,
-    app_template_choices,
     parse_github_arg,
+    shiny_internal_templates,
 )
 
 
@@ -53,10 +53,10 @@ def test_template_examples(page: Page, ex_app_path: str) -> None:
     validate_example(page, ex_app_path)
 
 
-app_templates = list(app_template_choices.values())
-app_templates.remove("external-gallery")  # Not actually a template
-app_templates.remove("js-component")  # Several templates that can't be easily tested
+app_templates = [t.name for t in shiny_internal_templates.apps]
+pkg_templates = [t.name for t in shiny_internal_templates.packages]
 assert len(app_templates) > 0
+assert len(pkg_templates) > 0
 
 
 @pytest.mark.flaky(reruns=reruns, reruns_delay=reruns_delay)
@@ -76,7 +76,7 @@ def test_create_express(app_template: str, page: Page):
 
 
 @pytest.mark.flaky(reruns=reruns, reruns_delay=reruns_delay)
-@pytest.mark.parametrize("app_template", ["js-input", "js-output", "js-react"])
+@pytest.mark.parametrize("app_template", pkg_templates)
 def test_create_js(app_template: str):
     with tempfile.TemporaryDirectory("example_apps") as tmpdir:
         subprocess_create(app_template, dest_dir=tmpdir, package_name="my_component")
