@@ -6052,9 +6052,9 @@ class NavsetBar(_NavSetBase):
             The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         if layout == "fluid":
-            playwright_expect(self.loc_container.locator("..")).to_have_class(
-                re.compile("container-fluid"), timeout=timeout
-            )
+            playwright_expect(
+                self.loc_container.locator("..").locator("..")
+            ).to_have_class(re.compile("container-fluid"), timeout=timeout)
         else:
             playwright_expect(self.loc_container.locator("..")).to_have_class(
                 re.compile("container"), timeout=timeout

@@ -36,6 +36,7 @@ def test_navset_bar_kitchensink(page: Page, local_app: ShinyAppProc) -> None:
     navset_bar_with_sidebar_collapsible_bg_inverse.expect_inverse()
     navset_bar_with_sidebar_collapsible_bg_inverse.expect_bg("DodgerBlue")
     navset_bar_with_sidebar_collapsible_bg_inverse.expect_sidebar(True)
+    navset_bar_with_sidebar_collapsible_bg_inverse.expect_layout("fluid")
 
     navset_bar_collapsible_underline_fixed_gap = controller.NavsetBar(
         page, "navset_bar_collapsible_underline_fixed_gap"
