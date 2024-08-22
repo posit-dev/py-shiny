@@ -32,7 +32,7 @@ def do_run_model():
     # Show the modal, blocking interaction with the UI
     ui.modal_show(the_modal())
 
-    result = run_model(delay=2)
+    result = run_model(delay=4)
 
     # Now that we have model results, remove the modal
     # and update the model result reactive value
