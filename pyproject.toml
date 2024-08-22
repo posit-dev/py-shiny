@@ -147,3 +147,4 @@ shiny-test = "shiny.pytest._pytest"
 
 [tool.setuptools_scm]
 write_to = "shiny/_version.py"
+local_scheme = "no-local-version"
