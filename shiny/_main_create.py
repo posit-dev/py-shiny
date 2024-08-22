@@ -18,7 +18,7 @@ import click
 import questionary
 from questionary import Choice
 
-from ._custom_component_template_questions import (
+from ._main_create_custom import (
     ComponentNameValidator,
     update_component_name_in_template,
 )
