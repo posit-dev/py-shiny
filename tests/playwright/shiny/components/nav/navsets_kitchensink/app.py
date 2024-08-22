@@ -91,6 +91,7 @@ navset_configs: Dict[str, Dict[str, Dict[str, Any]]] = {
         },
         "default": {},
         "selected": {"selected": "navset_card_pill_b"},
+        "with_sidebar": {"sidebar": navset_sidebar()},
     },
     "navset_card_tab": {
         "with_header_footer": {
@@ -100,6 +101,7 @@ navset_configs: Dict[str, Dict[str, Dict[str, Any]]] = {
         },
         "default": {},
         "selected": {"selected": "navset_card_tab_b"},
+        "with_sidebar": {"sidebar": navset_sidebar()},
     },
     "navset_card_underline": {
         "with_header_footer": {
