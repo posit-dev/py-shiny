@@ -5474,7 +5474,8 @@ class _ExpectNavsetSidebarM:
 
 
 class _NavsetTitleM:
-    """ A mixin class for Navset title controls """
+    """A mixin class for Navset title controls"""
+
     def expect_title(
         self: _UiBaseP, value: PatternOrStr, *, timeout: Timeout = None
     ) -> None:
