@@ -3,6 +3,9 @@
   "name": "basic-app",
   "title": "Basic app",
   "description": "A basic Shiny app template.",
+  "next_steps": [
+    "Run the app with `shiny run app.py`."
+  ],
   "follow_up": [
     {
       "type": "info",
