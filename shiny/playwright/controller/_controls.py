@@ -5499,7 +5499,7 @@ class _ExpectNavsetTitleM:
         playwright_expect(self.loc_title).to_have_text(value, timeout=timeout)
 
 
-class _NavsetPlacementM:
+class _ExpectNavsetPlacementM:
     def expect_placement(
         self: _UiWithContainerP,
         location: Literal["above", "below"] = "above",
@@ -5935,7 +5935,7 @@ class NavsetCardTab(_NavsetCardBase):
         )
 
 
-class NavsetCardPill(_NavsetPlacementM, _NavsetCardBase):
+class NavsetCardPill(_ExpectNavsetPlacementM, _NavsetCardBase):
     """Controller for :func:`shiny.ui.navset_card_pill`."""
 
     def __init__(self, page: Page, id: str) -> None:
@@ -5957,7 +5957,7 @@ class NavsetCardPill(_NavsetPlacementM, _NavsetCardBase):
         )
 
 
-class NavsetCardUnderline(_NavsetPlacementM, _NavsetCardBase):
+class NavsetCardUnderline(_ExpectNavsetPlacementM, _NavsetCardBase):
     """Controller for :func:`shiny.ui.navset_card_underline`."""
 
     def __init__(self, page: Page, id: str) -> None:
