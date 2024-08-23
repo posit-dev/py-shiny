@@ -50,6 +50,36 @@ def choice_from_templates(templates: list[ShinyTemplate]) -> list[Choice]:
 
 @dataclass
 class ShinyTemplate:
+    """
+    Shiny Template
+
+    This class receives metadata for a Shiny template from a `_template.json` file.
+    (Alternatively, a template can be created from just `name` and `path` for legacy
+    reasons.)
+
+    Attributes
+    ----------
+    name
+        The name of the Shiny template.
+    path
+        The path to the `_template.json` file or the root directory of the template.
+    type
+        The type of the template (e.g. "app", "package"), default: 'app'.
+    title
+        A brief title for the template, if provided.
+    description
+        A longer description of the template, if provided.
+    next_steps
+        A list of next steps or instructions related to this template, shown after the
+        default instructions are displayed. In the `_template.json` file, this field
+        can be a single string or an array of strings.
+    follow_up
+        A list of follow-up actions or information related to this template. In the
+        `_template.json` file, this field can be a single string, an array of strings,
+        or an object with a `text` field and an optional `type` field. The `type` field
+        can be "action", "info", "warning", "danger", or "text".
+    """
+
     name: str
     path: Path
     type: str = "app"
@@ -61,6 +91,11 @@ class ShinyTemplate:
 
     @property
     def express_available(self) -> bool:
+        """
+        Does the template include an Express variant, denoted by the presence of an
+        `app-express.py` file?
+        """
+
         if self._express_available is None:
             self._express_available = (self.path / "app-express.py").exists()
         return self._express_available
@@ -70,10 +105,12 @@ class ShinyTemplateFollowUp:
     def __init__(
         self,
         text: str,
-        type: Literal["action", "info", "warning", "danger", "text"] | str = "text",
+        type: str = "text",
     ):
         self.text = text
-        self.type = type
+        self.type: Literal["action", "info", "warning", "danger", "text"] = "text"
+        if type in ("action", "info", "warning", "danger"):
+            self.type = type
 
 
 def find_templates(path: Path | str = ".") -> list[ShinyTemplate]:
