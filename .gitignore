@@ -115,3 +115,6 @@ docs/source/reference/
 _dev/
 tests/playwright/deploys/**/requirements.txt
 test-results/
+
+# setuptools_scm
+shiny/_version.py

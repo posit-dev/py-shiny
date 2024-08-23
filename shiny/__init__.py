@@ -1,6 +1,6 @@
 """A package for building reactive web applications."""
 
-__version__ = "1.0.0.9000"
+from ._version import __version__
 
 from ._shinyenv import is_pyodide as _is_pyodide
 
@@ -37,6 +37,7 @@ else:
 
 
 __all__ = (
+    "__version__",
     # public sub-packages
     "quarto",
     "reactive",
