@@ -30,6 +30,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Setup py-shiny
         id: install
         uses: ./.github/py-shiny/setup
@@ -63,6 +65,8 @@ jobs:
     needs: [check]
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: "Set up Python 3.10"
         uses: actions/setup-python@v4
         with:
@@ -117,6 +121,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Setup py-shiny
         uses: ./.github/py-shiny/setup
         with:
@@ -159,6 +165,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Setup py-shiny
         uses: ./.github/py-shiny/setup
         with:
@@ -205,6 +213,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Setup py-shiny
         uses: ./.github/py-shiny/setup
         with:
