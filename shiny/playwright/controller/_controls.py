@@ -5473,6 +5473,26 @@ class _ExpectNavsetSidebarM:
         playwright_expect(self.loc_sidebar).to_have_count(int(exists), timeout=timeout)
 
 
+class _NavsetTitleM:
+    """ A mixin class for Navset title controls """
+    def expect_title(
+        self: _UiBaseP, value: PatternOrStr, *, timeout: Timeout = None
+    ) -> None:
+        """
+        Expects the navset title to have the specified text.
+
+        Parameters
+        ----------
+        value
+            The expected text pattern or string.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
+        playwright_expect(self.page.locator(f"span:has(+ ul#{self.id})")).to_have_text(
+            value, timeout=timeout
+        )
+
+
 class _NavsetBase(_UiWithContainer):
     """A Base mixin class for Nav controls"""
 
@@ -5539,21 +5559,6 @@ class _NavsetBase(_UiWithContainer):
         datatab_id = self.loc_container.get_attribute("data-tabsetid", timeout=timeout)
         return self.page.locator(
             f"div.tab-content[data-tabsetid='{datatab_id}'] > div.tab-pane.active"
-        )
-
-    def expect_title(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
-        """
-        Expects the nav panel to have the specified title.
-
-        Parameters
-        ----------
-        value
-            The expected title.
-        timeout
-            The maximum time to wait for the expectation to pass. Defaults to `None`.
-        """
-        playwright_expect(self.page.locator(f"span:has(+ ul#{self.id})")).to_have_text(
-            value, timeout=timeout
         )
 
     def _expect_content_text(
@@ -5858,6 +5863,7 @@ class _NavsetCardBase(_NavsetBase):
 
 class NavsetCardTab(
     _ExpectNavsetSidebarM,
+    _NavsetTitleM,
     _NavsetCardBase,
 ):
     """Controller for :func:`shiny.ui.navset_card_tab`."""
@@ -5883,6 +5889,7 @@ class NavsetCardTab(
 
 class NavsetCardPill(
     _ExpectNavsetSidebarM,
+    _NavsetTitleM,
     _NavsetCardBase,
 ):
     """Controller for :func:`shiny.ui.navset_card_pill`."""
@@ -5908,6 +5915,7 @@ class NavsetCardPill(
 
 class NavsetCardUnderline(
     _ExpectNavsetSidebarM,
+    _NavsetTitleM,
     _NavsetCardBase,
 ):
     """Controller for :func:`shiny.ui.navset_card_underline`."""
@@ -5977,6 +5985,7 @@ class NavsetHidden(_NavsetBase):
 
 class NavsetBar(
     _ExpectNavsetSidebarM,
+    _NavsetTitleM,
     _NavsetBase,
 ):
     """Controller for :func:`shiny.ui.navset_bar`."""
