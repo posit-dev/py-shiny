@@ -4,44 +4,6 @@ from shiny.express import expressify, ui
 
 ui.page_opts(title="Navsets kitchensink App")
 
-all_content: Dict[str, Dict[str, str]] = {
-    "pill": {
-        "navset_pill_a": "navset_pill_a content",
-        "navset_pill_b": "navset_pill_b content",
-        "navset_pill_c": "navset_pill_c content",
-    },
-    "underline": {
-        "navset_underline_a": "navset_underline_a content",
-        "navset_underline_b": "navset_underline_b content",
-        "navset_underline_c": "navset_underline_c content",
-    },
-    "tab": {
-        "navset_tab_a": "navset_tab_a content",
-        "navset_tab_b": "navset_tab_b content",
-        "navset_tab_c": "navset_tab_c content",
-    },
-    "pill_list": {
-        "navset_pill_list_a": "navset_pill_list_a content",
-        "navset_pill_list_b": "navset_pill_list_b content",
-        "navset_pill_list_c": "navset_pill_list_c content",
-    },
-    "card_pill": {
-        "navset_card_pill_a": "navset_card_pill_a content",
-        "navset_card_pill_b": "navset_card_pill_b content",
-        "navset_card_pill_c": "navset_card_pill_c content",
-    },
-    "card_tab": {
-        "navset_card_tab_a": "navset_card_tab_a content",
-        "navset_card_tab_b": "navset_card_tab_b content",
-        "navset_card_tab_c": "navset_card_tab_c content",
-    },
-    "card_underline": {
-        "navset_card_underline_a": "navset_card_underline_a content",
-        "navset_card_underline_b": "navset_card_underline_b content",
-        "navset_card_underline_c": "navset_card_underline_c content",
-    },
-}
-
 
 def navset_sidebar():
     from shiny import ui as core_ui
@@ -90,6 +52,7 @@ navset_configs: Dict[str, Dict[str, Dict[str, Any]]] = {
             "footer": "navset_card_pill_with_header_footer footer",
         },
         "default": {},
+        "placement": {"placement": "below"},
         "selected": {"selected": "navset_card_pill_b"},
         "with_sidebar": {"sidebar": navset_sidebar()},
     },
@@ -107,6 +70,13 @@ navset_configs: Dict[str, Dict[str, Dict[str, Any]]] = {
         "with_header_footer": {
             "title": "navset_card_underline_with_header_footer",
             "header": "navset_card_underline_with_header_footer header",
+            # "header": core_ui.CardItem(
+            #     core_ui.TagList(
+            #         "navset_card_underline_with_header_footer header1",
+            #         core_ui.br(),
+            #         "navset_card_underline_with_header_footer header2",
+            #     )
+            # ),
             "footer": "navset_card_underline_with_header_footer footer",
         },
         "default": {},
@@ -118,26 +88,17 @@ navset_configs: Dict[str, Dict[str, Dict[str, Any]]] = {
 
 
 @expressify
-def create_navset(navset_type: str, content_type: str) -> None:
+def create_navset(navset_type: str) -> None:
     navset_function = getattr(ui, navset_type)
-    content = all_content[content_type]
 
     for navset_id, params in navset_configs[navset_type].items():
         with navset_function(id=f"{navset_type}_{navset_id}", **params):
-            for panel_id, panel_content in content.items():
-                with ui.nav_panel(panel_id):
-                    ui.markdown(panel_content)
+            for suffix in ["a", "b", "c"]:
+                with ui.nav_panel(f"{navset_type}_{suffix}"):
+                    ui.markdown(f"{navset_type}_{suffix} content")
 
 
 with ui.navset_tab(id="navsets_collection"):
-    for navset_type, content_type in [
-        ("navset_pill", "pill"),
-        ("navset_underline", "underline"),
-        ("navset_tab", "tab"),
-        ("navset_pill_list", "pill_list"),
-        ("navset_card_pill", "card_pill"),
-        ("navset_card_tab", "card_tab"),
-        ("navset_card_underline", "card_underline"),
-    ]:
+    for navset_type in navset_configs.keys():
         with ui.nav_panel(navset_type):
-            create_navset(navset_type, content_type)
+            create_navset(navset_type)

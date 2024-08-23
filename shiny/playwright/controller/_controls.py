@@ -173,6 +173,15 @@ class _UiWithSidebarP(_UiWithContainerP, Protocol):
     """
 
 
+class _UiWithTitleP(_UiWithContainerP, Protocol):
+    """A protocol class representing UI with an associated title."""
+
+    loc_title: Locator
+    """
+    Playwright `Locator` for its title of the UI element.
+    """
+
+
 class _UiBase:
     """A base class representing shiny UI components."""
 
@@ -1783,9 +1792,7 @@ class _MultipleDomItems:
         # Find all items in set
         for item in arr:
             # Given the container, make sure it contains this locator
-            loc_container = loc_container.locator(
-                # Return self
-                "xpath=.",
+            loc_container = loc_container.filter(
                 # Simple approach as position is not needed
                 has=page.locator(
                     f"{el_type}[{_attr_match_str(key, item)}]{is_checked_str}",
@@ -1887,11 +1894,7 @@ class _MultipleDomItems:
             )
 
             # Given the container, make sure it contains this locator
-            loc_container = loc_container.locator(
-                # Return self
-                "xpath=.",
-                has=has_locator,
-            )
+            loc_container = loc_container.filter(has=has_locator)
 
         # Make sure other items are not in set
         # If we know all elements are contained in the container,
@@ -4905,9 +4908,7 @@ class Accordion(
             loc="> div.accordion-item",
             loc_container=f"div#{id}.accordion.shiny-bound-input",
         )
-        # self.loc_open = self.loc.locator(
-        #     # Return self
-        #     "xpath=.",
+        # self.loc_open = self.loc.filter(
         #     # Simple approach as position is not needed
         #     has=page.locator(
         #         "> div.accordion-collapse.show",
@@ -5458,7 +5459,10 @@ class Tooltip(_OverlayBase):
 
 class _ExpectNavsetSidebarM:
     def expect_sidebar(
-        self: _UiWithSidebarP, exists: bool, *, timeout: Timeout = None
+        self: _UiWithSidebarP,
+        exists: bool,
+        *,
+        timeout: Timeout = None,
     ) -> None:
         """
         Assert whether or not the sidebar exists within the navset.
@@ -5473,11 +5477,14 @@ class _ExpectNavsetSidebarM:
         playwright_expect(self.loc_sidebar).to_have_count(int(exists), timeout=timeout)
 
 
-class _NavsetTitleM:
+class _ExpectNavsetTitleM:
     """A mixin class for Navset title controls"""
 
     def expect_title(
-        self: _UiBaseP, value: PatternOrStr, *, timeout: Timeout = None
+        self: _UiWithTitleP,
+        value: PatternOrStr,
+        *,
+        timeout: Timeout = None,
     ) -> None:
         """
         Expects the navset title to have the specified text.
@@ -5489,8 +5496,29 @@ class _NavsetTitleM:
         timeout
             The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
-        playwright_expect(self.page.locator(f"span:has(+ ul#{self.id})")).to_have_text(
-            value, timeout=timeout
+        playwright_expect(self.loc_title).to_have_text(value, timeout=timeout)
+
+
+class _NavsetPlacementM:
+    def expect_placement(
+        self: _UiWithContainerP,
+        location: Literal["above", "below"] = "above",
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expects the navset to have the specified placement.
+
+        Parameters
+        ----------
+        location
+            The expected placement location. Defaults to `'above'`.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
+        ex_class = "card-header" if location == "above" else "card-footer"
+        playwright_expect(self.loc_container.locator("..")).to_have_class(
+            ex_class, timeout=timeout
         )
 
 
@@ -5622,6 +5650,20 @@ class _NavsetBase(_UiWithContainer):
             The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         self.expect.to_have_text(value, timeout=timeout)
+
+    # # 2024-08-23-barret:
+    # # These two functions are not implemented due to the inability to create a locator
+    # # as some of the text contents are not contained within a defined parent element.
+    # # This makes querying the header only (or footer only) impossible. When they are
+    # # used within `navset_card_*()`, the header or footer _could_ be given within a
+    # # `core_ui.CardItem()`. This CardItem could contain a TagList, putting us back into
+    # # the same situation. Therefore, no move is currently the safe move. If we want to
+    # # expose anything, maybe we could expose the navset card body container, but there
+    # # is no container for the non-card navsets. :-(
+    # def expect_header():
+    #     raise NotImplementedError("Not implemented yet")
+    # def expect_footer():
+    #     raise NotImplementedError("Not implemented yet")
 
 
 class NavPanel(_UiWithContainer):
@@ -5839,7 +5881,11 @@ class NavsetPillList(_NavsetBase):
             )
 
 
-class _NavsetCardBase(_NavsetBase):
+class _NavsetCardBase(
+    _ExpectNavsetSidebarM,
+    _ExpectNavsetTitleM,
+    _NavsetBase,
+):
     def __init__(
         self,
         page: Page,
@@ -5860,13 +5906,14 @@ class _NavsetCardBase(_NavsetBase):
         self.loc_sidebar = self.loc_container.locator("..").locator(
             "+ .bslib-sidebar-layout"
         )
+        self.loc_title = (
+            self.loc_container.locator("..")
+            .locator("> span")
+            .filter(has=self.page.locator(f"+ ul#{self.id}"))
+        )
 
 
-class NavsetCardTab(
-    _ExpectNavsetSidebarM,
-    _NavsetTitleM,
-    _NavsetCardBase,
-):
+class NavsetCardTab(_NavsetCardBase):
     """Controller for :func:`shiny.ui.navset_card_tab`."""
 
     def __init__(self, page: Page, id: str) -> None:
@@ -5888,11 +5935,7 @@ class NavsetCardTab(
         )
 
 
-class NavsetCardPill(
-    _ExpectNavsetSidebarM,
-    _NavsetTitleM,
-    _NavsetCardBase,
-):
+class NavsetCardPill(_NavsetPlacementM, _NavsetCardBase):
     """Controller for :func:`shiny.ui.navset_card_pill`."""
 
     def __init__(self, page: Page, id: str) -> None:
@@ -5914,11 +5957,7 @@ class NavsetCardPill(
         )
 
 
-class NavsetCardUnderline(
-    _ExpectNavsetSidebarM,
-    _NavsetTitleM,
-    _NavsetCardBase,
-):
+class NavsetCardUnderline(_NavsetPlacementM, _NavsetCardBase):
     """Controller for :func:`shiny.ui.navset_card_underline`."""
 
     def __init__(self, page: Page, id: str) -> None:
@@ -5938,28 +5977,6 @@ class NavsetCardUnderline(
             loc_container=f".bslib-card > div > ul#{id}.nav-underline",
             loc="> li.nav-item",
         )
-
-    def expect_placement(
-        self, location: Literal["above", "below"] = "above", *, timeout: Timeout = None
-    ) -> None:
-        """
-        Expects the navset card underline to have the specified placement.
-
-        Parameters
-        ----------
-        location
-            The expected placement location. Defaults to `'above'`.
-        timeout
-            The maximum time to wait for the expectation to pass. Defaults to `None`.
-        """
-        if location == "below":
-            playwright_expect(self.loc_container.locator("..")).to_have_class(
-                "card-footer", timeout=timeout
-            )
-        else:
-            playwright_expect(self.loc_container.locator("..")).to_have_class(
-                "card-header", timeout=timeout
-            )
 
 
 class NavsetHidden(_NavsetBase):
@@ -5986,7 +6003,7 @@ class NavsetHidden(_NavsetBase):
 
 class NavsetBar(
     _ExpectNavsetSidebarM,
-    _NavsetTitleM,
+    _ExpectNavsetTitleM,
     _NavsetBase,
 ):
     """Controller for :func:`shiny.ui.navset_bar`."""
@@ -6010,7 +6027,11 @@ class NavsetBar(
         )
         self._loc_navbar = self.loc_container.locator("..").locator("..").locator("..")
 
-        # This location is different than the _NavsetCardBase.loc_sidebar. A custom value is written here.
+        # This location is different than the `_NavsetCardBase.loc_title`
+        self.loc_title = (
+            self.loc_container.locator("..").locator("..").locator("> .navbar-brand")
+        )
+        # This location is different than the `_NavsetCardBase.loc_sidebar`
         self.loc_sidebar = (
             self.loc_container.locator("..")
             .locator("..")

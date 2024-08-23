@@ -41,23 +41,21 @@ def test_navset_kitchensink(page: Page, local_app: ShinyAppProc) -> None:
         navset_selected._expect_content_text(selected_content)
         navset_selected.expect_value(f"{navset_name}_b")
 
-        navset_with_header_footer = getattr(
-            controller, f"{navset_name.replace('_', ' ').title().replace(' ', '')}"
-        )(page, f"{navset_name}_with_header_footer")
-        # TODO-karan: uncomment test to check for header & footer content once class is added
+        # TODO-future: uncomment test to check for header & footer content once class is added
         # navset_with_header_footer.expect_header(f"{navset_name}_with_header_footer header")
         # navset_with_header_footer.expect_footer(f"{navset_name}_with_header_footer footer")
         if navset_name.startswith("navset_card"):
+            navset_with_header_footer = getattr(
+                controller, f"{navset_name.replace('_', ' ').title().replace(' ', '')}"
+            )(page, f"{navset_name}_with_header_footer")
             navset_with_header_footer.expect_title(f"{navset_name}_with_header_footer")
 
-        if navset_name == "navset_card_underline":
-            # check sidebar which has been enabled just for navset_card_underline
             navset_card_underline_with_sidebar = getattr(
                 controller, f"{navset_name.replace('_', ' ').title().replace(' ', '')}"
             )(page, f"{navset_name}_with_sidebar")
             navset_card_underline_with_sidebar.expect_sidebar(True)
 
-            # check placement which has been enabled just for navset_card_underline
+        if navset_name in {"navset_card_underline", "navset_card_pill"}:
             navset_card_underline_placement = getattr(
                 controller, f"{navset_name.replace('_', ' ').title().replace(' ', '')}"
             )(page, f"{navset_name}_placement")
