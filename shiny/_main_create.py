@@ -8,9 +8,9 @@ import sys
 import tempfile
 import textwrap
 import zipfile
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Generator, Optional, cast
+from typing import Generator, Literal, Optional, cast
 from urllib.error import URLError
 from urllib.parse import urlparse
 from urllib.request import urlopen
@@ -55,6 +55,8 @@ class ShinyTemplate:
     type: str = "app"
     title: str | None = None
     description: str | None = None
+    next_steps: list[str] = field(default_factory=list)
+    follow_up: list[ShinyTemplateFollowUp] = field(default_factory=list)
     _express_available: bool | None = None
 
     @property
@@ -62,6 +64,16 @@ class ShinyTemplate:
         if self._express_available is None:
             self._express_available = (self.path / "app-express.py").exists()
         return self._express_available
+
+
+class ShinyTemplateFollowUp:
+    def __init__(
+        self,
+        text: str,
+        type: Literal["action", "info", "warning", "danger", "text"] | str = "text",
+    ):
+        self.text = text
+        self.type = type
 
 
 def find_templates(path: Path | str = ".") -> list[ShinyTemplate]:
@@ -72,6 +84,19 @@ def find_templates(path: Path | str = ".") -> list[ShinyTemplate]:
     for tf in template_files:
         with tf.open() as f:
             template = json.load(f)
+
+            # "next_steps" and "follow_up" can be either a string or an array of strings
+            # or an array of dictionaries (follow_up only)
+            follow_up_raw: str | list[dict[str, str]] = template.get("follow_up", [])
+            if isinstance(follow_up_raw, str):
+                follow_up_raw = [{"text": follow_up_raw}]
+
+            follow_up = [ShinyTemplateFollowUp(**f) for f in follow_up_raw]
+
+            next_steps: str | list[str] = template.get("next_steps", [])
+            if isinstance(next_steps, str):
+                next_steps = [next_steps]
+
             templates.append(
                 ShinyTemplate(
                     name=template["name"],
@@ -79,6 +104,8 @@ def find_templates(path: Path | str = ".") -> list[ShinyTemplate]:
                     path=tf.parent.absolute(),
                     type=template.get("type", "app"),
                     description=template.get("description"),
+                    follow_up=follow_up,
+                    next_steps=next_steps,
                 )
             )
 
@@ -600,6 +627,8 @@ def app_template_questions(
         )
     click.echo(f"- Open and edit the app file: {cli_field(str(app_dir / 'app.py'))}")
 
+    click_echo_next_steps_and_follow_up(template)
+
 
 def package_template_questions(
     template: ShinyTemplate,
@@ -643,6 +672,8 @@ def package_template_questions(
     click.echo(
         f"- Open and run the example app in the {cli_field('example-app')} directory"
     )
+
+    click_echo_next_steps_and_follow_up(template)
 
 
 def copy_template_files(
@@ -694,3 +725,28 @@ def copy_template_files(
         (dest_dir / "app-core.py").rename(dest_dir / "app.py")
 
     return dest_dir
+
+
+def click_echo_next_steps_and_follow_up(template: ShinyTemplate):
+    for next_step in template.next_steps:
+        click.echo(f"- {next_step}")
+
+    if len(template.follow_up) > 0:
+        click.echo()
+        for follow_up in template.follow_up:
+            click.echo(cli_follow_up(follow_up))
+
+
+def cli_follow_up(follow_up: ShinyTemplateFollowUp):
+    if follow_up.type == "text":
+        return follow_up.text
+    if follow_up.type == "action":
+        return cli_action(follow_up.text)
+    if follow_up.type == "info":
+        return cli_info(follow_up.text)
+    if follow_up.type == "warning":
+        return cli_danger(follow_up.text)
+    if follow_up.type == "danger":
+        return cli_danger(follow_up.text)
+
+    return follow_up.text

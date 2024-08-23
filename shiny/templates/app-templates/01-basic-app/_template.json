@@ -2,5 +2,15 @@
   "type": "app",
   "name": "basic-app",
   "title": "Basic app",
-  "description": "A basic Shiny app template."
+  "description": "A basic Shiny app template.",
+  "follow_up": [
+    {
+      "type": "info",
+      "text": "Just getting started with Shiny?"
+    },
+    {
+      "type": "action",
+      "text": "Learn more at https://shiny.posit.co/py/docs/overview.html"
+    }
+  ]
 }
