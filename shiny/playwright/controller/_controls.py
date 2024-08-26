@@ -1,6 +1,5 @@
-"""Facade classes for working with Shiny inputs/outputs in Playwright"""i
+"""Facade classes for working with Shiny inputs/outputs in Playwright"""
 from __future__ import annotations
-# testing comment. Pls delete
 import json
 import pathlib
 import platform
