@@ -1,7 +1,6 @@
-"""Facade classes for working with Shiny inputs/outputs in Playwright"""
-
+"""Facade classes for working with Shiny inputs/outputs in Playwright"""i
 from __future__ import annotations
-
+# testing comment. Pls delete
 import json
 import pathlib
 import platform
@@ -5165,6 +5164,1579 @@ class AccordionPanel(
         self.loc.wait_for(state="visible", timeout=timeout)
         self.loc.scroll_into_view_if_needed(timeout=timeout)
         self.loc_header.click(timeout=timeout)
+
+
+class _OverlayBase(_UiBase):
+    """Base class for overlay controls"""
+
+    loc_trigger: Locator
+    """
+    Playwright `Locator` for the trigger element.
+    """
+    loc_overlay_body: Locator
+    """
+    Playwright `Locator` for the overlay body.
+    """
+    loc_overlay_container: Locator
+    """
+    Playwright `Locator` for of the overlay container.
+    """
+
+    def __init__(
+        self,
+        page: Page,
+        *,
+        id: str,
+        loc: InitLocator,
+        overlay_name: str,
+        overlay_selector: str,
+    ) -> None:
+        """
+        Initializes a new instance of the `OverlayBase` class.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The ID of the overlay.
+        loc
+            Playwright `Locator` of the overlay.
+        overlay_name
+            The name of the overlay.
+        overlay_selector
+            The selector of the overlay.
+        """
+        super().__init__(page, id=id, loc=loc)
+        self._overlay_name = overlay_name
+        self._overlay_selector = overlay_selector
+        self.loc_trigger = self.loc.locator(
+            f" > :last-child[data-bs-toggle='{self._overlay_name}']"
+        )
+
+    def _get_overlay_id(self, *, timeout: Timeout = None) -> str | None:
+        """Note. This requires 2 steps. Will not work if the overlay element is rapidly created during locator fetch"""
+        loc_el = self.loc.locator(
+            f" > :last-child[data-bs-toggle='{self._overlay_name}']"
+        )
+        loc_el.wait_for(state="visible", timeout=timeout)
+        loc_el.scroll_into_view_if_needed(timeout=timeout)
+        return loc_el.get_attribute("aria-describedby")
+
+    # @property
+    # def loc_overlay_body(self) -> Locator:
+    #     # Can not leverage `self.loc_overlay_container` as `self._overlay_selector` must
+    #     # be concatenated directly to the result of `self._get_overlay_id()`
+    #     return self.page.locator(f"#{self._get_overlay_id()}{self._overlay_selector}")
+
+    # @property
+    # def loc_overlay_container(self) -> Locator:
+    #     return self.page.locator(f"#{self._get_overlay_id()}")
+
+    def get_loc_overlay_body(self, *, timeout: Timeout = None) -> Locator:
+        # Can not leverage `self.loc_overlay_container` as `self._overlay_selector` must
+        # be concatenated directly to the result of `self._get_overlay_id()`
+        return self.page.locator(
+            f"#{self._get_overlay_id(timeout=timeout)}{self._overlay_selector}"
+        )
+
+    def get_loc_overlay_container(self, *, timeout: Timeout = None) -> Locator:
+        """
+        Returns the locator for the overlay container.
+
+        Parameters
+        ----------
+        timeout
+            The maximum time to wait for the overlay container to appear. Defaults to `None`.
+        """
+        return self.page.locator(f"#{self._get_overlay_id(timeout=timeout)}")
+
+    def expect_body(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+        """
+        Expects the overlay body to have the specified text.
+
+        Parameters
+        ----------
+        value
+            The expected text pattern or string.
+        timeout
+            The maximum time to wait for the overlay body to appear. Defaults to `None`.
+        """
+        playwright_expect(self.get_loc_overlay_body(timeout=timeout)).to_have_text(
+            value, timeout=timeout
+        )
+
+    def expect_active(self, value: bool, *, timeout: Timeout = None) -> None:
+        """
+        Expects the overlay to be active or inactive.
+
+        Parameters
+        ----------
+        value
+            `True` if the overlay is expected to be active, False otherwise.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
+        attr_value = re.compile(r".*") if value else None
+        return _expect_attribute_to_have_value(
+            loc=self.loc_trigger,
+            timeout=timeout,
+            name="aria-describedby",
+            value=attr_value,
+        )
+
+    def expect_placement(self, value: str, *, timeout: Timeout = None) -> None:
+        """
+        Expects the overlay to have the specified placement.
+
+        Parameters
+        ----------
+        value
+            The expected placement value.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
+        return _expect_attribute_to_have_value(
+            loc=self.get_loc_overlay_container(timeout=timeout),
+            timeout=timeout,
+            name="data-popper-placement",
+            value=value,
+        )
+
+
+class Popover(_OverlayBase):
+    """Controller for :func:`shiny.ui.popover`."""
+
+    loc_trigger: Locator
+    """
+    Playwright `Locator` for the trigger element that opens/closes the popover.
+    """
+    loc_overlay_body: Locator
+    """
+    Playwright `Locator` for the popover body.
+    """
+    loc_overlay_container: Locator
+    """
+    Playwright `Locator` for the popover container.
+    """
+
+    def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes a new instance of the `Popover` class.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The ID of the popover.
+        """
+        super().__init__(
+            page,
+            id=id,
+            loc=f"bslib-popover#{id}",
+            overlay_name="popover",
+            overlay_selector=".popover > div.popover-body",
+        )
+
+    def set(self, open: bool, timeout: Timeout = None) -> None:
+        """
+        Sets the state of the popover.
+
+        Parameters
+        ----------
+        open
+            `True` to open the popover and `False` to close it.
+        timeout
+            The maximum time to wait for the popover to be visible and interactable. Defaults to `None`.
+        """
+        if open ^ self.get_loc_overlay_body(timeout=timeout).count() > 0:
+            self._toggle()
+
+    def _toggle(self, timeout: Timeout = None) -> None:
+        """
+        Toggles the state of the popover.
+
+        Parameters
+        ----------
+        timeout
+            The maximum time to wait for the popover to be visible and interactable. Defaults to `None`.
+        """
+        self.loc_trigger.wait_for(state="visible", timeout=timeout)
+        self.loc_trigger.scroll_into_view_if_needed(timeout=timeout)
+        self.loc_trigger.click(timeout=timeout)
+
+
+class Tooltip(_OverlayBase):
+    """Controller for :func:`shiny.ui.tooltip`."""
+
+    loc_container: Locator
+    """
+    Playwright `Locator` for the container tooltip.
+    """
+    loc: Locator
+    """
+    Playwright `Locator` for the tooltip content.
+    """
+    loc_trigger: Locator
+    """
+    Playwright `Locator` for the trigger element.
+    """
+    loc_overlay_body: Locator
+    """
+    Playwright `Locator` for the overlay body.
+    """
+    loc_overlay_container: Locator
+    """
+    Playwright `Locator` for the overlay container.
+    """
+
+    def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes a new instance of the `Tooltip` class.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The ID of the tooltip.
+        """
+        super().__init__(
+            page,
+            id=id,
+            loc=f"bslib-tooltip#{id}",
+            overlay_name="tooltip",
+            overlay_selector=".tooltip > div.tooltip-inner",
+        )
+
+    def set(self, open: bool, timeout: Timeout = None) -> None:
+        """
+        Sets the state of the tooltip.
+
+        Parameters
+        ----------
+        open
+            `True` to open the tooltip and `False` to close it.
+        timeout
+            The maximum time to wait for the tooltip to be visible and interactable. Defaults to `None`.
+        """
+        if open ^ self.get_loc_overlay_body(timeout=timeout).count() > 0:
+            self._toggle(timeout=timeout)
+        if not open:
+            self.get_loc_overlay_body(timeout=timeout).click()
+
+    def _toggle(self, timeout: Timeout = None) -> None:
+        """
+        Toggles the state of the tooltip.
+
+        Parameters
+        ----------
+        timeout
+            The maximum time to wait for the tooltip to be visible and interactable. Defaults to `None`.
+        """
+        self.loc_trigger.wait_for(state="visible", timeout=timeout)
+        self.loc_trigger.scroll_into_view_if_needed(timeout=timeout)
+        self.loc_trigger.hover(timeout=timeout)
+
+
+class _NavPanelBase(_UiWithContainer):
+    """A Base mixin class for Nav controls"""
+
+    def nav_panel(
+        self,
+        value: str,
+    ) -> NavPanel:
+        return NavPanel(self.page, self.id, value)
+
+    def set(self, value: str, *, timeout: Timeout = None) -> None:
+        """
+        Sets the state of the control to open or closed.
+
+        Parameters
+        ----------
+        value
+            The selected nav item.
+        """
+        self.nav_panel(value).click(timeout=timeout)
+
+    def expect_value(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+        """
+        Expects the control to have the specified value.
+
+        Parameters
+        ----------
+        value
+            The expected value.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
+        # data attribute of active tab and compare with value
+        playwright_expect(
+            self.loc_container.locator('a[role="tab"].active')
+        ).to_have_attribute("data-value", value, timeout=timeout)
+
+    # # TODO-future: Make it a single locator expectation
+    # # get active content instead of assertion
+    # @property
+    # def loc_active_content(self) -> Locator:
+    #     datatab_id = self.loc_container.get_attribute("data-tabsetid")
+    #     return self.page.locator(
+    #         f"div.tab-content[data-tabsetid='{datatab_id}'] > div.tab-pane.active"
+    #     )
+
+    def get_loc_active_content(self, *, timeout: Timeout = None) -> Locator:
+        """
+        Returns the locator for the active content.
+
+        Parameters
+        ----------
+        timeout
+            The maximum time to wait for the locator to appear. Defaults to `None`.
+        """
+        datatab_id = self.loc_container.get_attribute("data-tabsetid", timeout=timeout)
+        return self.page.locator(
+            f"div.tab-content[data-tabsetid='{datatab_id}'] > div.tab-pane.active"
+        )
+
+    def _expect_content_text(
+        self, value: PatternOrStr, *, timeout: Timeout = None
+    ) -> None:
+        """
+        Expects the control to have the specified content.
+
+        Parameters
+        ----------
+        value
+            The expected content.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
+        playwright_expect(self.get_loc_active_content()).to_have_text(
+            value, timeout=timeout
+        )
+
+    def expect_nav_values(
+        self,
+        value: list[PatternOrStr],
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expects the control to have the specified nav values.
+
+        Parameters
+        ----------
+        value
+            The expected nav values.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
+        _MultipleDomItems.expect_locator_values_in_list(
+            page=self.page,
+            loc_container=self.loc_container,
+            el_type="a[role='tab']",
+            arr_name="value",
+            arr=value,
+            key="data-value",
+            timeout=timeout,
+        )
+
+    def expect_nav_titles(
+        self,
+        value: list[PatternOrStr],
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expects the control to have the specified nav titles.
+
+        Parameters
+        ----------
+        value
+            The expected nav titles.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
+        self.expect.to_have_text(value, timeout=timeout)
+
+
+class NavPanel(_UiWithContainer):
+    """Controller for :func:`shiny.ui.nav_panel`."""
+
+    """
+    Playwright `Locator` for the content of the nav panel.
+    """
+    loc: Locator
+    """
+    Playwright `Locator` for the nav panel.
+    """
+    loc_container: Locator
+    """
+    Playwright `Locator` for the nav panel container.
+    """
+
+    def __init__(self, page: Page, id: str, data_value: str) -> None:
+        """
+        Initializes a new instance of the `NavPanel` class.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The ID of the nav panel.
+        data_value
+            The data value of the nav panel.
+        """
+        super().__init__(
+            page,
+            id=id,
+            loc=f"a[role='tab'][data-value='{data_value}']",
+            loc_container=f"ul#{id}",
+        )
+
+        self._data_value: str = data_value
+
+    # TODO-future: Make it a single locator expectation
+    # get active content instead of assertion
+    @property
+    def loc_content(self) -> Locator:
+        """
+        Returns the locator for the content of the nav panel.
+
+        Note: This requires 2 steps. Will not work if the overlay element is rapidly created during locator fetch
+        """
+        datatab_id = self.loc_container.get_attribute("data-tabsetid")
+        return self.page.locator(
+            f"div.tab-content[data-tabsetid='{datatab_id}'] > div.tab-pane[data-value='{self._data_value}']"
+        )
+
+    def click(self, *, timeout: Timeout = None) -> None:
+        """
+        Clicks the nav panel.
+
+        Parameters
+        ----------
+        timeout
+            The maximum time to wait for the nav panel to be visible and interactable. Defaults to `None`.
+        """
+        self.loc.click(timeout=timeout)
+
+    def expect_active(self, value: bool, *, timeout: Timeout = None) -> None:
+        """
+        Expects the nav panel to be active or inactive.
+
+        Parameters
+        ----------
+        value
+            `True` if the nav panel is expected to be active, False otherwise.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
+        _expect_class_to_have_value(
+            self.loc,
+            "active",
+            has_class=value,
+            timeout=timeout,
+        )
+
+    def _expect_content_text(
+        self, value: PatternOrStr, *, timeout: Timeout = None
+    ) -> None:
+        """
+        Expects the nav panel content to have the specified text.
+
+        Parameters
+        ----------
+        value
+            The expected text pattern or string.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
+        playwright_expect(self.loc_content).to_have_text(value, timeout=timeout)
+
+
+class NavsetTab(_NavPanelBase):
+    """Controller for :func:`shiny.ui.navset_tab`."""
+
+    loc: Locator
+    """
+    Playwright `Locator` for the nav set tab.
+    """
+    loc_container: Locator
+    """
+    Playwright `Locator` for the nav set tab container.
+    """
+
+    def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes a new instance of the `NavsetTab` class.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The ID of the nav set tab.
+        """
+        super().__init__(
+            page,
+            id=id,
+            loc_container=f"ul#{id}.nav-tabs",
+            loc="a[role='tab']",
+        )
+
+
+class NavsetPill(_NavPanelBase):
+    """Controller for :func:`shiny.ui.navset_pill`."""
+
+    def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes a new instance of the `NavsetPill` class.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The ID of the nav set pill.
+        """
+        super().__init__(
+            page,
+            id=id,
+            loc_container=f"ul#{id}.nav-pills",
+            loc="> li.nav-item",
+        )
+
+
+class NavsetUnderline(_NavPanelBase):
+    """Controller for :func:`shiny.ui.navset_underline`."""
+
+    def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes a new instance of the `NavsetUnderline` class.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The ID of the nav set underline.
+        """
+        super().__init__(
+            page,
+            id=id,
+            loc_container=f"ul#{id}.nav-underline",
+            loc="> li.nav-item",
+        )
+
+
+class NavsetPillList(_NavPanelBase):
+    """Controller for :func:`shiny.ui.navset_pill_list`."""
+
+    def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes a new instance of the `NavsetPillList` class.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The ID of the nav set pill list.
+        """
+        super().__init__(
+            page,
+            id=id,
+            loc_container=f"ul#{id}.nav-stacked",
+            loc="> li.nav-item",
+        )
+
+
+class NavsetCardTab(_NavPanelBase):
+    """Controller for :func:`shiny.ui.navset_card_tab`."""
+
+    def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes a new instance of the `NavsetCardTab` class.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The ID of the nav set card tab.
+        """
+        super().__init__(
+            page,
+            id=id,
+            loc_container=f".bslib-card > div > ul#{id}.nav-tabs",
+            loc="> li.nav-item",
+        )
+
+
+class NavsetCardPill(_NavPanelBase):
+    """Controller for :func:`shiny.ui.navset_card_pill`."""
+
+    def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes a new instance of the `NavsetCardPill` class.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The ID of the nav set card pill.
+        """
+        super().__init__(
+            page,
+            id=id,
+            loc_container=f".bslib-card > div > ul#{id}.nav-pills",
+            loc="> li.nav-item",
+        )
+
+
+class NavsetCardUnderline(_NavPanelBase):
+    """Controller for :func:`shiny.ui.navset_card_underline`."""
+
+    def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes a new instance of the `NavsetCardUnderline` class.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The ID of the nav set card underline.
+        """
+        super().__init__(
+            page,
+            id=id,
+            loc_container=f".bslib-card > div > ul#{id}.nav-underline",
+            loc="> li.nav-item",
+        )
+
+
+class NavsetHidden(_NavPanelBase):
+    """Controller for :func:`shiny.ui.navset_hidden`."""
+
+    def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes a new instance of the `NavsetHidden` class.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The ID of the nav set hidden.
+        """
+        super().__init__(
+            page,
+            id=id,
+            loc_container=f"ul#{id}.nav-hidden",
+            loc="> li.nav-item",
+        )
+
+
+class NavsetBar(_NavPanelBase):
+    """Controller for :func:`shiny.ui.navset_bar`."""
+
+    def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes a new instance of the `NavsetBar` class.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The ID of the nav set bar.
+        """
+        super().__init__(
+            page,
+            id=id,
+            loc_container=f"ul#{id}.navbar-nav",
+            loc="> li.nav-item",
+        )
+
+
+class Chat(_UiBase):
+    """Controller for :func:`shiny.ui.chat`."""
+
+    loc: Locator
+    """
+    Playwright `Locator` for the chat.
+    """
+    loc_messages: Locator
+    """
+    Playwright `Locator` for the chat messages.
+    """
+    loc_latest_message: Locator
+    """
+    Playwright `Locator` for the last message in the chat.
+    """
+    loc_input_container: Locator
+    """
+    Playwright `Locator` for the chat input container.
+    """
+    loc_input: Locator
+    """
+    Playwright `Locator` for the chat's <textarea> input.
+    """
+    loc_input_button: Locator
+    """
+    Playwright `Locator` for the chat's <button> input.
+    """
+
+    def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes a new instance of the `Chat` class.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The ID of the chat.
+        """
+        super().__init__(
+            page,
+            id=id,
+            loc=f"#{id}",
+        )
+        self.loc_messages = self.loc.locator("> shiny-chat-messages")
+        self.loc_latest_message = self.loc_messages.locator("> :last-child")
+        self.loc_input_container = self.loc.locator("> shiny-chat-input")
+        self.loc_input = self.loc_input_container.locator("textarea")
+        self.loc_input_button = self.loc_input_container.locator("button")
+
+    def expect_latest_message(
+        self,
+        value: PatternOrStr,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expects the last message in the chat.
+
+        Parameters
+        ----------
+        value
+            The expected last message.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
+        playwright_expect(self.loc_latest_message).to_have_text(value, timeout=timeout)
+
+    def expect_messages(
+        self,
+        value: PatternOrStr,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expects the chat messages.
+
+        Parameters
+        ----------
+        value
+            The expected messages.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
+        playwright_expect(self.loc_messages).to_have_text(value, timeout=timeout)
+
+    def set_user_input(
+        self,
+        value: str,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Sets the user message in the chat.
+
+        Parameters
+        ----------
+        value
+            The message to send.
+        timeout
+            The maximum time to wait for the chat input to be visible and interactable. Defaults to `None`.
+        """
+        self.loc_input.type(value, timeout=timeout)
+
+    def send_user_input(
+        self, *, method: Literal["enter", "click"] = "enter", timeout: Timeout = None
+    ) -> None:
+        """
+        Sends the user message in the chat.
+
+        Parameters
+        ----------
+        method
+            The method to send the user message. Defaults to `"enter"`.
+        timeout
+            The maximum time to wait for the chat input to be visible and interactable. Defaults to `None`.
+        """
+        if method == "enter":
+            self.loc_input.press("Enter", timeout=timeout)
+        else:
+            self.loc_input_button.click(timeout=timeout)
+
+    def expect_user_input(
+        self, value: PatternOrStr, *, timeout: Timeout = None
+    ) -> None:
+        """
+        Expects the user message in the chat.
+
+        Parameters
+        ----------
+        value
+            The expected user message.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
+        playwright_expect(self.loc_input).to_have_value(value, timeout=timeout)
+
+
+class OutputDataFrame(_UiWithContainer):
+    """
+    Controller for :func:`shiny.ui.output_data_frame`.
+    """
+
+    loc_container: Locator
+    """
+    Playwright `Locator` for the data frame container.
+    """
+    loc: Locator
+    """
+    Playwright `Locator` for the data frame.
+    """
+    loc_head: Locator
+    """
+    Playwright `Locator` for the head of the data frame table.
+    """
+    loc_body: Locator
+    """
+    Playwright `Locator` for the body of the data frame table.
+    """
+
+    def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes a new instance of the `OutputDataFrame` class.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The ID of the data frame.
+        """
+        super().__init__(
+            page,
+            id=id,
+            loc_container=f"#{id}.html-fill-item",
+            loc="> div > div.shiny-data-grid",
+        )
+        self.loc_head = self.loc.locator("> table > thead")
+        self.loc_body = self.loc.locator("> table > tbody")
+        self.loc_column_filter = self.loc_head.locator(
+            "> tr.filters > th:not(.table-corner)"
+        )
+        self.loc_column_label = self.loc_head.locator(
+            "> tr:not(.filters) > th:not(.table-corner)"
+        )
+
+    def cell_locator(self, row: int, col: int) -> Locator:
+        """
+        Returns the locator for a specific cell in the data frame.
+
+        Parameters
+        ----------
+        row
+            The row number of the cell.
+        col
+            The column number of the cell.
+        """
+
+        return (
+            # Find the direct row
+            self.loc_body.locator(f"> tr[data-index='{row}']")
+            # Find all direct td's and th's (these are independent sets)
+            .locator("> td, > th")
+            # Remove all results that contain the `row-number` class
+            .locator(
+                # self
+                "xpath=.",
+                has=self.page.locator(
+                    "xpath=self::*[not(contains(@class, 'row-number'))]"
+                ),
+            )
+            # Return the first result
+            .nth(col)
+        )
+
+    # TODO-barret; Should this be called `expect_row_count()`?
+    def expect_nrow(self, value: int, *, timeout: Timeout = None):
+        """
+        Expects the number of rows in the data frame.
+
+        Parameters
+        ----------
+        value
+            The expected number of rows.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
+        playwright_expect(self.loc_body.locator("> tr")).to_have_count(
+            value, timeout=timeout
+        )
+
+    def expect_selected_num_rows(self, value: int, *, timeout: Timeout = None):
+        """
+        Expects the number of selected rows in the data frame.
+
+        Parameters
+        ----------
+        value
+            The expected number of selected rows.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
+        playwright_expect(
+            self.loc_body.locator("tr[aria-selected=true]")
+        ).to_have_count(value, timeout=timeout)
+
+    def expect_selected_rows(self, rows: list[int], *, timeout: Timeout = None):
+        """
+        Expects the specified rows to be selected.
+
+        Parameters
+        ----------
+        rows
+            The row numbers.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
+        # * given container...
+        # * Add that container has all known rows
+        # * Verify that selected row count is of size N
+        big_loc = self.loc_body
+        assert len(rows) > 0
+        for row in rows:
+            big_loc = big_loc.locator(
+                "xpath=.",  # return "self"
+                has=self.page.locator(
+                    f"> tr[data-index='{row}'][aria-selected='true']"
+                ),
+            )
+
+        try:
+            playwright_expect(
+                big_loc.locator("> tr[aria-selected='true']")
+            ).to_have_count(len(rows), timeout=timeout)
+        except AssertionError as e:
+            # Debug expections
+
+            # Expecting container to exist (count = 1)
+            playwright_expect(self.loc_body).to_have_count(1, timeout=timeout)
+
+            for row in rows:
+                # Expecting item `{item}` to exist in container
+                # Perform exact matches on strings.
+                playwright_expect(
+                    # Simple approach as position is not needed
+                    self.loc_body.locator(
+                        f"> tr[aria-selected='true'][data-index='{row}']",
+                    )
+                ).to_have_count(1, timeout=timeout)
+
+            # Could not find the reason why. Raising the original error.
+            raise e
+
+    def _expect_row_focus_state(
+        self, in_focus: bool = True, *, row: int, timeout: Timeout = None
+    ):
+        """
+        Expects the focus state of the specified row.
+
+        Parameters
+        ----------
+        row
+            The row number.
+        in_focus
+            `True` if the row is expected to be in focus, `False` otherwise.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
+        if in_focus:
+            playwright_expect(
+                self.loc_body.locator(f"> tr[data-index='{row}']")
+            ).to_be_focused(timeout=timeout)
+        else:
+            playwright_expect(
+                self.loc_body.locator(f"> tr[data-index='{row}']")
+            ).not_to_be_focused(timeout=timeout)
+
+    def expect_cell(
+        self,
+        value: PatternOrStr,
+        *,
+        row: int,
+        col: int,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expects the cell in the data frame to have the specified text.
+
+        Parameters
+        ----------
+        value
+            The expected text in the cell.
+        row
+            The row number of the cell.
+        col
+            The column number of the cell.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
+        if not isinstance(row, int):
+            raise TypeError("`row` must be an integer.")
+        if not isinstance(col, int):
+            raise TypeError("`col` must be an integer.")
+        self._cell_scroll_if_needed(row=row, col=col, timeout=timeout)
+        playwright_expect(self.cell_locator(row, col)).to_have_text(
+            value, timeout=timeout
+        )
+
+    def expect_column_labels(
+        self,
+        value: ListPatternOrStr | None,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expects the column labels in the data frame.
+
+        Parameters
+        ----------
+        value
+            The expected column labels.
+
+            Note: None if the column labels are expected to not exist.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
+        if isinstance(value, list) and len(value) == 0:
+            value = None
+
+        if value is None:
+            playwright_expect(self.loc_column_label).to_have_count(0, timeout=timeout)
+        else:
+            playwright_expect(self.loc_column_label).to_have_text(
+                value, timeout=timeout
+            )
+
+    def _cell_scroll_if_needed(self, *, row: int, col: int, timeout: Timeout):
+        """
+        Scrolls the cell into view if needed.
+
+        Parameters
+        ----------
+        row
+            The row number of the cell.
+        col
+            The column number of the cell.
+        timeout
+            The maximum time to wait for the action to complete.
+        """
+        # Check first and last row data-index and make sure `row` is included
+
+        cell = self.cell_locator(row=row, col=col)
+
+        # Scroll down if top number is larger
+        while not cell.is_visible(timeout=timeout):
+            first_row = self.loc_body.locator("> tr[data-index]").first
+            first_row_index = first_row.get_attribute("data-index")
+            if first_row_index is None:
+                break
+            if int(first_row_index) >= row:
+                first_row.scroll_into_view_if_needed(timeout=timeout)
+            else:
+                # First row index is lower than `row`
+                break
+        # Scroll up if bottom number is smaller
+        while not cell.is_visible(timeout=timeout):
+            last_row = self.loc_body.locator("> tr[data-index]").last
+            last_row_index = last_row.get_attribute("data-index")
+            if last_row_index is None:
+                break
+            if int(last_row_index) <= row:
+                last_row.scroll_into_view_if_needed(timeout=timeout)
+            else:
+                # Last row index is higher than `row`
+                break
+        cell.scroll_into_view_if_needed(timeout=timeout)
+
+    def _expect_column_label(
+        self,
+        value: ListPatternOrStr,
+        *,
+        col: int,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expects the text in the specified column of the data frame.
+
+        Parameters
+        ----------
+        value
+            The expected text in the column.
+        col
+            The column number.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
+        if not isinstance(col, int):
+            raise TypeError("`col` must be an integer.")
+        # It's zero based, nth(0) selects the first element.
+        playwright_expect(self.loc_column_label.nth(col - 1)).to_have_text(
+            value,
+            timeout=timeout,
+        )
+
+    def expect_ncol(
+        self,
+        value: int,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expects the number of columns in the data frame.
+
+        Parameters
+        ----------
+        value
+            The expected number of columns.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
+        playwright_expect(self.loc_column_label).to_have_count(
+            value,
+            timeout=timeout,
+        )
+
+    def expect_cell_class(
+        self,
+        value: str,
+        *,
+        row: int,
+        col: int,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expects the class of the cell
+
+        Parameters
+        ----------
+        value
+            The expected class of the cell.
+        row
+            The row number of the cell.
+        col
+            The column number of the cell.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
+        expect_to_have_class(
+            self.cell_locator(row=row, col=col),
+            value,
+            timeout=timeout,
+        )
+
+    def select_rows(
+        self,
+        value: list[int],
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Selects the rows in the data frame.
+
+        Parameters
+        ----------
+        value
+            The list of row numbers to select.
+        timeout
+            The maximum time to wait for the action to complete. Defaults to `None`.
+        """
+        if len(value) > 1:
+            value = sorted(value)
+            # check if the items in the row contain all numbers from index 0 to index -1
+            if value == list(range(value[0], value[-1] + 1)):
+                self.page.keyboard.down("Shift")
+                self.cell_locator(row=value[0], col=0).click(timeout=timeout)
+                self.cell_locator(row=value[-1], col=0).click(timeout=timeout)
+                self.page.keyboard.up("Shift")
+            else:
+                # if operating system is MacOs use Meta (Cmd) else use Ctrl key
+                if platform.system() == "Darwin":
+                    self.page.keyboard.down("Meta")
+                else:
+                    self.page.keyboard.down("Control")
+                for row in value:
+                    self._cell_scroll_if_needed(row=row, col=0, timeout=timeout)
+                    self.cell_locator(row=row, col=0).click(timeout=timeout)
+                if platform.system() == "Darwin":
+                    self.page.keyboard.up("Meta")
+                else:
+                    self.page.keyboard.up("Control")
+        else:
+            self.cell_locator(row=value[0], col=0).click(timeout=timeout)
+
+    def expect_class_state(
+        self,
+        value: str,
+        *,
+        row: int,
+        col: int,
+        timeout: Timeout = None,
+    ):
+        """
+        Expects the state of the class in the data frame.
+
+        Parameters
+        ----------
+        value
+            The expected state of the class.
+        row
+            The row number of the cell.
+        col
+            The column number of the cell.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
+        if value == "ready":
+            playwright_expect(self.cell_locator(row=row, col=col)).not_to_have_class(
+                "cell-edit-editing", timeout=timeout
+            )
+        elif value == "editing":
+            self.expect_cell_class("cell-edit-editing", row=row, col=col)
+        elif value == "saving":
+            self.expect_cell_class("cell-edit-saving", row=row, col=col)
+        elif value == "failure":
+            self.expect_cell_class("cell-edit-failure", row=row, col=col)
+        elif value == "success":
+            self.expect_cell_class("cell-edit-success", row=row, col=col)
+        else:
+            raise ValueError(
+                "Invalid state. Select one of 'success', 'failure', 'saving', 'editing', 'ready'"
+            )
+
+    def _edit_cell_no_save(
+        self,
+        text: str,
+        *,
+        row: int,
+        col: int,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Edits the cell in the data frame.
+
+        Parameters
+        ----------
+        value
+            The value to edit in the cell.
+        row
+            The row number of the cell.
+        col
+            The column number of the cell.
+        timeout
+            The maximum time to wait for the action to complete. Defaults to `None`.
+        """
+        cell = self.cell_locator(row=row, col=col)
+
+        self._cell_scroll_if_needed(row=row, col=col, timeout=timeout)
+        cell.dblclick(timeout=timeout)
+        cell.locator("> textarea").fill(text)
+
+    def set_sort(
+        self,
+        sort: int | ColumnSort | list[int | ColumnSort] | None,
+        *,
+        timeout: Timeout = None,
+    ):
+        """
+        Set or modify the sorting of columns in a table or grid component.
+        This method allows setting single or multiple column sorts, or resetting the sort order.
+
+        Parameters
+        ----------
+        sort
+            The sorting configuration to apply. Can be one of the following:
+                * `int`: Index of the column to sort by (ascending order by default).
+                * `ColumnSort`: A dictionary specifying a single column sort with 'col' and 'desc' keys.
+                * `list[int | ColumnSort]`: A list of ints or dictionaries for multi-column sorting.
+                * `None`: No sorting applied (not implemented in the current code).
+
+            If a `desc` values is provided within your `ColumnSort` shaped dictionary, then the direction will be set to that value. If no `desc` value is provided, the column will be sorted in the default sorting order.
+        timeout
+            The maximum time to wait for the action to complete. Defaults to `None`.
+        """
+
+        def click_loc(loc: Locator, *, shift: bool = False):
+            clickModifier: list[Literal["Shift"]] | None = (
+                ["Shift"] if bool(shift) else None
+            )
+            loc.click(
+                timeout=timeout,
+                modifiers=clickModifier,
+            )
+            # Wait for arrows to react a little bit
+            # This could possible be changed to a `wait_for_change`, but 150ms should be fine
+            self.page.wait_for_timeout(150)
+
+        # Reset arrow sorting by clicking on the arrows until none are found
+        sortingArrows = self.loc_column_label.locator("svg.sort-arrow")
+        while sortingArrows.count() > 0:
+            click_loc(sortingArrows.first)
+
+        # Quit early if no sorting is needed
+        if sort is None:
+            return
+
+        if isinstance(sort, int) | isinstance(sort, dict) and not isinstance(
+            sort, list
+        ):
+            sort = [sort]
+
+        if not isinstance(sort, list):
+            raise ValueError(
+                "Invalid sort value. Must be an int, ColumnSort, list[ColumnSort], or None."
+            )
+
+        # For every sorting info...
+        for sort_info, i in zip(sort, range(len(sort))):
+            # TODO-barret-future; assert column does not have `cell-html` class
+            shift = i > 0
+
+            if isinstance(sort_info, int):
+                sort_info = {"col": sort_info}
+
+            # Verify ColumnSortInfo
+            assert isinstance(
+                sort_info, dict
+            ), f"Invalid sort value at position {i}. Must be an int, ColumnSort, list[ColumnSort], or None."
+            assert (
+                "col" in sort_info
+            ), f"Column index (`col`) at position {i} is required for sorting."
+
+            sort_col = self.loc_column_label.nth(sort_info["col"])
+            expect_not_to_have_class(sort_col, "header-html")
+
+            # If no `desc` key is found, click the column to sort and move on
+            if "desc" not in sort_info:
+                click_loc(sort_col, shift=shift)
+                continue
+
+            # "desc" in sort_info
+            desc_val = bool(sort_info["desc"])
+            sort_col.scroll_into_view_if_needed()
+            for _ in range(2):
+                if desc_val:
+                    # If a descending is found, stop clicking
+                    if sort_col.locator("svg.sort-arrow-down").count() > 0:
+                        break
+                else:
+                    # If a ascending is found, stop clicking
+                    if sort_col.locator("svg.sort-arrow-up").count() > 0:
+                        break
+                click_loc(sort_col, shift=shift)
+
+    # TODO-karan-test: Add support for a list of columns ? If so, all other columns should be reset
+    def set_filter(
+        self,
+        # TODO-barret support array of filters
+        filter: ColumnFilter | list[ColumnFilter] | None,
+        *,
+        timeout: Timeout = None,
+    ):
+        """
+        Set or reset filters for columns in a table or grid component.
+        This method allows setting string filters, numeric range filters, or clearing all filters.
+
+        Parameters
+        ----------
+        filter
+            The filter to apply. Can be one of the following:
+                * `None`: Resets all filters.
+                * `ColumnFilterStr`: A dictionary specifying a string filter with 'col' and 'value' keys.
+                * `ColumnFilterNumber`: A dictionary specifying a numeric range filter with 'col' and 'value' keys.
+        timeout
+            The maximum time to wait for the action to complete. Defaults to `None`.
+        """
+        # reset all filters
+        all_input_handles = self.loc_column_filter.locator(
+            "> input, > div > input"
+        ).element_handles()
+        for input_handle in all_input_handles:
+            input_handle.scroll_into_view_if_needed()
+            input_handle.fill("", timeout=timeout)
+
+        if filter is None:
+            return
+
+        if isinstance(filter, dict):
+            filter = [filter]
+
+        if not isinstance(filter, list):
+            raise ValueError(
+                "Invalid filter value. Must be a ColumnFilter, list[ColumnFilter], or None."
+            )
+
+        for filterInfo in filter:
+            if "col" not in filterInfo:
+                raise ValueError("Column index (`col`) is required for filtering.")
+
+            if "value" not in filterInfo:
+                raise ValueError("Filter value (`value`) is required for filtering.")
+
+            filterColumn = self.loc_column_filter.nth(filterInfo["col"])
+
+            if isinstance(filterInfo["value"], str):
+                filterColumn.locator("> input").fill(filterInfo["value"])
+            elif isinstance(filterInfo["value"], (tuple, list)):
+                header_inputs = filterColumn.locator("> div > input")
+                if filterInfo["value"][0] is not None:
+                    header_inputs.nth(0).fill(
+                        str(filterInfo["value"][0]),
+                        timeout=timeout,
+                    )
+                if filterInfo["value"][1] is not None:
+                    header_inputs.nth(1).fill(
+                        str(filterInfo["value"][1]),
+                        timeout=timeout,
+                    )
+            else:
+                raise ValueError(
+                    "Invalid filter value. Must be a string or a tuple/list of two numbers."
+                )
+
+    def set_cell(
+        self,
+        text: str,
+        *,
+        row: int,
+        col: int,
+        finish_key: (
+            Literal["Enter", "Shift+Enter", "Tab", "Shift+Tab", "Escape"] | None
+        ) = None,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Saves the value of the cell in the data frame.
+
+        Parameters
+        ----------
+        text
+            The key to save the value of the cell.
+        row
+            The row number of the cell.
+        col
+            The column number of the cell.
+        finish_key
+            The key to save the value of the cell. If `None` (the default), no key will
+            be pressed and instead the page body will be clicked.
+        timeout
+            The maximum time to wait for the action to complete. Defaults to `None`.
+        """
+        self._edit_cell_no_save(text, row=row, col=col, timeout=timeout)
+        if finish_key is None:
+            self.page.locator("body").click()
+        else:
+            self.cell_locator(row=row, col=col).locator("> textarea").press(finish_key)
+
+    def expect_cell_title(
+        self,
+        value: str,
+        *,
+        row: int,
+        col: int,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expects the validation message of the cell in the data frame, which will be in
+        the `title` attribute of the element.
+
+        Parameters
+        ----------
+        value
+            The expected validation message of the cell.
+        row
+            The row number of the cell.
+        col
+            The column number of the cell.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
+        playwright_expect(self.cell_locator(row=row, col=col)).to_have_attribute(
+            name="title", value=value, timeout=timeout
+        )
+
+
+# TODO: Use mixin for dowloadlink and download button
+class DownloadLink(_InputActionBase):
+    """
+    Controller for :func:`shiny.ui.download_link`.
+    """
+
+    def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes a new instance of the `DownloadLink` class.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The ID of the download link.
+        """
+        super().__init__(
+            page,
+            id=id,
+            loc=f"#{id}.shiny-download-link:not(.btn)",
+        )
+
+
+class DownloadButton(
+    _WidthLocM,
+    _InputActionBase,
+):
+    """
+    Controller for :func:`shiny.ui.download_button`
+    """
+
+    def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes a new instance of the `DownloadButton` class.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The ID of the download button.
+        """
+        super().__init__(
+            page,
+            id=id,
+            loc=f"#{id}.btn.shiny-download-link",
+        )
+ny inputs/outputs in Playwright"""
 
 
 class _OverlayBase(_UiBase):
