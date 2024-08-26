@@ -2,5 +2,18 @@
   "type": "app",
   "name": "dashboard-tips",
   "title": "Intermediate dashboard",
-  "description": "An intermediate dashboard with value boxes, several plots in cards and a sidebar."
+  "description": "An intermediate dashboard with value boxes, several plots in cards and a sidebar.",
+  "next_steps": [
+    "Run the app with `shiny run app.py`."
+  ],
+  "follow_up": [
+    {
+      "type": "info",
+      "text": "Just getting started with Shiny?"
+    },
+    {
+      "type": "action",
+      "text": "Learn more at https://shiny.posit.co/py/docs/user-interfaces.html"
+    }
+  ]
 }
