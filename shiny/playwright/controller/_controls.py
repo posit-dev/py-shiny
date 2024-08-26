@@ -15,7 +15,7 @@ from playwright.sync_api import expect as playwright_expect
 
 from shiny.render._data_frame import ColumnFilter, ColumnSort
 
-# Import `shiny`'s typing extentions.
+# Import `shiny`'s typing extentions
 # Since this is a private file, tell pyright to ignore the import
 from ..._typing_extensions import TypeGuard
 from ...types import MISSING, MISSING_TYPE, ListOrTuple
