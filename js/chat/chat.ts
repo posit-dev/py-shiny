@@ -27,6 +27,11 @@ type requestScrollEvent = {
   cancelIfScrolledUp: boolean;
 };
 
+type UpdateUserInput = {
+  value?: string;
+  placeholder?: string;
+};
+
 // https://github.com/microsoft/TypeScript/issues/28357#issuecomment-748550734
 declare global {
   interface GlobalEventHandlersEventMap {
@@ -34,7 +39,7 @@ declare global {
     "shiny-chat-append-message": CustomEvent<Message>;
     "shiny-chat-append-message-chunk": CustomEvent<Message>;
     "shiny-chat-clear-messages": CustomEvent;
-    "shiny-chat-set-user-input": CustomEvent<string>;
+    "shiny-chat-update-user-input": CustomEvent<UpdateUserInput>;
     "shiny-chat-remove-loading-message": CustomEvent;
     "shiny-chat-request-scroll": CustomEvent<requestScrollEvent>;
   }
@@ -270,7 +275,7 @@ class ChatContainer extends LightElement {
       this.#onAppendChunk
     );
     this.addEventListener("shiny-chat-clear-messages", this.#onClear);
-    this.addEventListener("shiny-chat-set-user-input", this.#onSetUserInput);
+    this.addEventListener("shiny-chat-update-user-input", this.#onUpdateUserInput);
     this.addEventListener(
       "shiny-chat-remove-loading-message",
       this.#onRemoveLoadingMessage
@@ -291,7 +296,10 @@ class ChatContainer extends LightElement {
       this.#onAppendChunk
     );
     this.removeEventListener("shiny-chat-clear-messages", this.#onClear);
-    this.removeEventListener("shiny-chat-set-user-input", this.#onSetUserInput);
+    this.removeEventListener(
+      "shiny-chat-update-user-input",
+      this.#onUpdateUserInput
+    );
     this.removeEventListener(
       "shiny-chat-remove-loading-message",
       this.#onRemoveLoadingMessage
@@ -373,8 +381,14 @@ class ChatContainer extends LightElement {
     this.messages.innerHTML = "";
   }
 
-  #onSetUserInput(event: CustomEvent<string>): void {
-    this.input.setInputValue(event.detail);
+  #onUpdateUserInput(event: CustomEvent<UpdateUserInput>): void {
+    const { value, placeholder } = event.detail;
+    if (value !== undefined) {
+      this.input.setInputValue(value);
+    }
+    if (placeholder !== undefined) {
+      this.input.placeholder = placeholder;
+    }
   }
 
   #onRemoveLoadingMessage(): void {

@@ -484,33 +484,6 @@ def try_import_module(module: str) -> Optional[types.ModuleType]:
     return importlib.import_module(module)
 
 
-# The template choices are defined here instead of in `_template_utiles.py` in
-# order to delay loading the questionary package until shiny create is called.
-
-# These templates are copied over fromt the `shiny/templates/app_templates`
-# directory. The process for adding new ones is to add your app folder to
-# that directory, and then add another entry to this dictionary.
-app_template_choices = {
-    "Basic app": "basic-app",
-    "Sidebar layout": "basic-sidebar",
-    "Basic dashboard": "dashboard",
-    "Intermediate dashboard": "dashboard-tips",
-    "Navigating multiple pages/panels": "basic-navigation",
-    "Custom JavaScript component ...": "js-component",
-    "Choose from the Shiny Templates website": "external-gallery",
-}
-
-# These are templates which produce a Python package and have content filled in at
-# various places based on the user input. You can add new ones by following the
-# examples in `shiny/templates/package-templates` and then adding entries to this
-# dictionary.
-package_template_choices = {
-    "Input component": "js-input",
-    "Output component": "js-output",
-    "React component": "js-react",
-}
-
-
 @main.group(help="""Add files to enhance your Shiny app.""")
 def add() -> None:
     pass
@@ -545,7 +518,7 @@ def test(
     app: Path | None,
     test_file: Path | None,
 ) -> None:
-    from ._template_utils import add_test_file
+    from ._main_add_test import add_test_file
 
     add_test_file(app_file=app, test_file=test_file)
 
@@ -566,10 +539,7 @@ After creating the application, you use `shiny run`:
 @click.option(
     "--template",
     "-t",
-    type=click.Choice(
-        list({**app_template_choices, **package_template_choices}.values()),
-        case_sensitive=False,
-    ),
+    type=click.STRING,
     help="Choose a template for your new application.",
 )
 @click.option(
@@ -584,11 +554,18 @@ After creating the application, you use `shiny run`:
 @click.option(
     "--github",
     "-g",
-    help="The GitHub URL of the template sub-directory. For example https://github.com/posit-dev/py-shiny-templates/tree/main/dashboard",
+    help="""
+    The GitHub repo containing the template, e.g. 'posit-dev/py-shiny-templates'.
+    Can be in the format '{repo_owner}/{repo_name}', '{repo_owner}/{repo_name}@{ref}',
+    or '{repo_owner}/{repo_name}:{path}@{ref}'.
+    Alternatively, a GitHub URL of the template sub-directory, e.g
+    'https://github.com/posit-dev/py-shiny-templates/tree/main/dashboard'.
+    """,
 )
 @click.option(
     "--dir",
     "-d",
+    type=str,
     help="The destination directory, you will be prompted if this is not provided.",
 )
 @click.option(
@@ -602,22 +579,20 @@ def create(
     template: Optional[str] = None,
     mode: Optional[str] = None,
     github: Optional[str] = None,
-    dir: Optional[str | Path] = None,
+    dir: Optional[Path | str] = None,
     package_name: Optional[str] = None,
 ) -> None:
-    from ._template_utils import template_query, use_git_template
+    from ._main_create import use_template_github, use_template_internal
 
-    if github is not None and template is not None:
-        raise click.UsageError("You cannot provide both --github and --template")
+    print(f"dir is {dir}")
 
-    if isinstance(dir, str):
+    if dir is not None:
         dir = Path(dir)
 
     if github is not None:
-        use_git_template(github, mode, dir)
-        return
-
-    template_query(template, mode, dir, package_name)
+        use_template_github(github, template=template, mode=mode, dest_dir=dir)
+    else:
+        use_template_internal(template, mode, dir, package_name)
 
 
 @main.command(

@@ -19,8 +19,9 @@ from weakref import WeakValueDictionary
 from htmltools import HTML, Tag, TagAttrValue, css
 
 from .. import _utils, reactive
+from .._deprecated import warn_deprecated
 from .._docstring import add_example
-from .._namespaces import resolve_id
+from .._namespaces import ResolvedId, resolve_id
 from ..session import require_active_session, session_context
 from ..types import MISSING, MISSING_TYPE, NotifyException
 from ..ui.css import CssUnit, as_css_unit
@@ -147,9 +148,11 @@ class Chat:
         on_error: Literal["auto", "actual", "sanitize", "unhandled"] = "auto",
         tokenizer: TokenEncoding | MISSING_TYPE | None = MISSING,
     ):
+        if not isinstance(id, str):
+            raise TypeError("`id` must be a string.")
 
-        self.id = id
-        self.user_input_id = f"{id}_user_input"
+        self.id = resolve_id(id)
+        self.user_input_id = ResolvedId(f"{self.id}_user_input")
         self._transform_user: TransformUserInputAsync | None = None
         self._transform_assistant: TransformAssistantResponseChunkAsync | None = None
         if isinstance(tokenizer, MISSING_TYPE):
@@ -931,26 +934,43 @@ class Chat:
         id = self.user_input_id
         return cast(str, self._session.input[id]())
 
-    def set_user_message(self, value: str):
+    def update_user_input(
+        self, *, value: str | None = None, placeholder: str | None = None
+    ):
         """
-        Set the user's message.
+        Update the user input.
 
         Parameters
         ----------
         value
             The value to set the user input to.
+        placeholder
+            The placeholder text for the user input.
         """
+
+        obj = _utils.drop_none({"value": value, "placeholder": placeholder})
 
         _utils.run_coro_sync(
             self._session.send_custom_message(
                 "shinyChatMessage",
                 {
                     "id": self.id,
-                    "handler": "shiny-chat-set-user-input",
-                    "obj": value,
+                    "handler": "shiny-chat-update-user-input",
+                    "obj": obj,
                 },
             )
         )
+
+    def set_user_message(self, value: str):
+        """
+        Deprecated. Use `update_user_input(value=value)` instead.
+        """
+
+        warn_deprecated(
+            "set_user_message() is deprecated. Use update_user_input(value=value) instead."
+        )
+
+        self.update_user_input(value=value)
 
     async def clear_messages(self):
         """

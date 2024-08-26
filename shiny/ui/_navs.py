@@ -23,7 +23,7 @@ from typing import Any, Literal, Optional, Sequence, cast
 
 from htmltools import MetadataNode, Tag, TagAttrs, TagChild, TagList, css, div, tags
 
-from .._docstring import add_example, no_example
+from .._docstring import add_example
 from .._namespaces import resolve_id_or_none
 from .._utils import private_random_int
 from ..types import NavSetArg
@@ -153,7 +153,7 @@ def nav_panel(
     )
 
 
-@no_example()
+@add_example()
 def nav_control(*args: TagChild) -> NavPanel:
     """
     Place a control in the navigation container.
@@ -185,25 +185,25 @@ def nav_control(*args: TagChild) -> NavPanel:
     return NavPanel(tags.li(*args))
 
 
-@no_example()
+@add_example()
 def nav_spacer() -> NavPanel:
     """
     Create space between nav items.
 
     See Also
     --------
-    * :func:~shiny.ui.nav_panel
-    * :func:~shiny.ui.nav_menu
-    * :func:~shiny.ui.nav_control
-    * :func:~shiny.ui.navset_bar
-    * :func:~shiny.ui.navset_tab
-    * :func:~shiny.ui.navset_pill
-    * :func:~shiny.ui.navset_underline
-    * :func:~shiny.ui.navset_card_tab
-    * :func:~shiny.ui.navset_card_pill
-    * :func:~shiny.ui.navset_card_underline
-    * :func:~shiny.ui.navset_pill_list
-    * :func:~shiny.ui.navset_hidden
+    * :func:`~shiny.ui.nav_panel`
+    * :func:`~shiny.ui.nav_menu`
+    * :func:`~shiny.ui.nav_control`
+    * :func:`~shiny.ui.navset_bar`
+    * :func:`~shiny.ui.navset_tab`
+    * :func:`~shiny.ui.navset_pill`
+    * :func:`~shiny.ui.navset_underline`
+    * :func:`~shiny.ui.navset_card_tab`
+    * :func:`~shiny.ui.navset_card_pill`
+    * :func:`~shiny.ui.navset_card_underline`
+    * :func:`~shiny.ui.navset_pill_list`
+    * :func:`~shiny.ui.navset_hidden`
 
     Example
     -------
@@ -292,7 +292,7 @@ def menu_string_as_nav(x: str | NavSetArg) -> NavSetArg:
     return NavPanel(nav)
 
 
-@no_example()
+@add_example()
 def nav_menu(
     title: TagChild,
     *args: NavPanel | str,
@@ -330,18 +330,18 @@ def nav_menu(
 
     See Also
     --------
-    * :func:~shiny.ui.nav_panel
-    * :func:~shiny.ui.nav_control
-    * :func:~shiny.ui.nav_spacer
-    * :func:~shiny.ui.navset_bar
-    * :func:~shiny.ui.navset_tab
-    * :func:~shiny.ui.navset_pill
-    * :func:~shiny.ui.navset_underline
-    * :func:~shiny.ui.navset_card_tab
-    * :func:~shiny.ui.navset_card_pill
-    * :func:~shiny.ui.navset_card_underline
-    * :func:~shiny.ui.navset_pill_list
-    * :func:~shiny.ui.navset_hidden
+    * :func:`~shiny.ui.nav_panel`
+    * :func:`~shiny.ui.nav_control`
+    * :func:`~shiny.ui.nav_spacer`
+    * :func:`~shiny.ui.navset_bar`
+    * :func:`~shiny.ui.navset_tab`
+    * :func:`~shiny.ui.navset_pill`
+    * :func:`~shiny.ui.navset_underline`
+    * :func:`~shiny.ui.navset_card_tab`
+    * :func:`~shiny.ui.navset_card_pill`
+    * :func:`~shiny.ui.navset_card_underline`
+    * :func:`~shiny.ui.navset_pill_list`
+    * :func:`~shiny.ui.navset_hidden`
 
     Example
     -------
@@ -400,7 +400,7 @@ class NavSet:
 # -----------------------------------------------------------------------------
 # Navigation containers
 # -----------------------------------------------------------------------------
-@no_example()
+@add_example()
 def navset_tab(
     *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
     id: Optional[str] = None,
@@ -457,7 +457,7 @@ def navset_tab(
     )
 
 
-@no_example()
+@add_example()
 def navset_pill(
     *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
     id: Optional[str] = None,
@@ -513,7 +513,7 @@ def navset_pill(
     )
 
 
-@no_example()
+@add_example()
 def navset_underline(
     *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
     id: Optional[str] = None,
@@ -680,7 +680,7 @@ class NavSetCard(NavSet):
         )
 
 
-@no_example()
+@add_example()
 def navset_card_tab(
     *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
     id: Optional[str] = None,
@@ -743,7 +743,7 @@ def navset_card_tab(
     )
 
 
-@no_example()
+@add_example()
 def navset_card_pill(
     *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
     id: Optional[str] = None,
@@ -809,7 +809,7 @@ def navset_card_pill(
     )
 
 
-@no_example()
+@add_example()
 def navset_card_underline(
     *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
     id: Optional[str] = None,
@@ -908,7 +908,7 @@ class NavSetPillList(NavSet):
         )
 
 
-@no_example()
+@add_example()
 def navset_pill_list(
     *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
     id: Optional[str] = None,
@@ -1154,7 +1154,7 @@ def _make_tabs_fillable(
 
 
 # TODO-future; Content should not be indented unless when called from `page_navbar()`
-@no_example()
+@add_example()
 def navset_bar(
     *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
     title: TagChild,

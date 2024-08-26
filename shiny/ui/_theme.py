@@ -56,7 +56,7 @@ class Theme:
 
     **Note: Compiling custom themes requires the
     [libsass](https://pypi.org/project/libsass/) package**, which is not installed by
-    default with Shiny. Use `pip install libsass` or `pip install shiny[theme]` to
+    default with Shiny. Use `pip install libsass` or `pip install "shiny[theme]"` to
     install it.
 
     Customized themes are compiled to CSS when the theme is used. The `Theme` class
@@ -527,7 +527,7 @@ def check_libsass_installed() -> None:
     if importlib.util.find_spec("sass") is None:
         raise ImportError(
             "The 'libsass' package is required to compile custom themes. "
-            "Please install it with `pip install libsass` or `pip install shiny[theme]`.",
+            'Please install it with `pip install libsass` or `pip install "shiny[theme]"`.',
         )
 
 
