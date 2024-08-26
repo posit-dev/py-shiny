@@ -1,5 +1,7 @@
 """Facade classes for working with Shiny inputs/outputs in Playwright"""
+
 from __future__ import annotations
+
 import json
 import pathlib
 import platform
@@ -6735,7 +6737,6 @@ class DownloadButton(
             id=id,
             loc=f"#{id}.btn.shiny-download-link",
         )
-ny inputs/outputs in Playwright"""
 
 
 class _OverlayBase(_UiBase):
