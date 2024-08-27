@@ -43,7 +43,7 @@ if "pyodide" not in sys.modules:
             **kwargs: Any,
         ) -> starlette.responses.Response:
             resp = super().file_response(full_path, *args, **kwargs)
-            if resp.headers["content-type"].startswith("text/plain"):
+            if resp.headers.get("content-type", "").startswith("text/plain"):
                 correct_type = _utils.guess_mime_type(full_path)
                 resp.headers["content-type"] = (
                     f"{correct_type}; charset={resp.charset}"
