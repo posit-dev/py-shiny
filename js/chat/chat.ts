@@ -300,7 +300,10 @@ class ChatContainer extends LightElement {
       this.#onAppendChunk
     );
     this.addEventListener("shiny-chat-clear-messages", this.#onClear);
-    this.addEventListener("shiny-chat-update-user-input", this.#onUpdateUserInput);
+    this.addEventListener(
+      "shiny-chat-update-user-input",
+      this.#onUpdateUserInput
+    );
     this.addEventListener(
       "shiny-chat-remove-loading-message",
       this.#onRemoveLoadingMessage
@@ -391,15 +394,13 @@ class ChatContainer extends LightElement {
     const lastMessage = this.messages.lastElementChild as HTMLElement;
     if (!lastMessage) throw new Error("No messages found in the chat output");
 
-    if (message.chunk_type === "message_end") {
+    if (message.chunk_type === "message_start") {
+      lastMessage.setAttribute("is_streaming", "");
+    } else if (message.chunk_type === "message_end") {
       lastMessage.removeAttribute("is_streaming");
       this.#finalizeMessage();
-      return;
     } else {
-      lastMessage.setAttribute("is_streaming", "");
-      if (!message.chunk_type) {
-        lastMessage.setAttribute("content", message.content);
-      }
+      lastMessage.setAttribute("content", message.content);
     }
   }
 
