@@ -19,7 +19,7 @@ def test_valuebox(page: Page, local_app: ShinyAppProc, value_box_id: str) -> Non
         value_box.expect_value("$1 Billion Dollars")
         value_box.expect_body(["30% VS PREVIOUS 30 DAYS"])
     else:
-        # value_box.expect_height("300px") # TODO-fix-karan;
+        value_box.expect_height("500px")
         value_box.expect_title("title")
         value_box.expect_value("value")
         value_box.expect_body(["content", "more body"])

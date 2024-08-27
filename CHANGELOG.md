@@ -35,6 +35,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Some copies of Windows 10 have registry entries mapping .js files to content type "text/plain", which was causing all sorts of problems for browsers. (#1624)
 
+* Added missing support for `express.ui.navset_card_pill(placement:)`. (#1602)
+
+* Added `.expect_sidebar()` and `.expect_title()` methods for `NavsetCardTab`, `NavsetCardPill`, `NavsetCardUnderline`, and `NavsetBar`. (#1602)
+
+* Added `.expect_placement()` method for `NavsetCardPill` and `NavsetCardUnderline`. (#1602)
+
 ### Deprecations
 
 ## [1.0.0] - 2024-07-18
