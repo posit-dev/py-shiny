@@ -188,7 +188,7 @@ release: dist ## package and upload a release
 	twine upload dist/*
 
 dist: clean ## builds source and wheel package
-	pip install build setuptools
+	pip install build
 	python -m build --sdist
 	python -m build --wheel
 	ls -l dist
@@ -209,6 +209,7 @@ ci-install-wheel: dist FORCE
 install-deps: FORCE ## install dependencies
 	pip install -e ".[dev,test]" --upgrade
 ci-install-deps: FORCE
+	uv pip install setuptools
 	uv pip install "htmltools @ git+https://github.com/posit-dev/py-htmltools.git"
 	uv pip install -e ".[dev,test]"
 
