@@ -200,11 +200,11 @@ class ShinyInternalTemplates:
 
     @property
     def chat_hello_providers(self) -> list[ShinyTemplate]:
-        return self._templates("../examples/chat/hello-providers")
+        return self._templates("templates/chat/hello-providers")
 
     @property
     def chat_enterprise(self) -> list[ShinyTemplate]:
-        return self._templates("../examples/chat/enterprise")
+        return self._templates("templates/chat/enterprise")
 
 
 shiny_internal_templates = ShinyInternalTemplates()
