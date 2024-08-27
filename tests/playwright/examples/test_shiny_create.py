@@ -6,7 +6,11 @@ import pytest
 from example_apps import get_apps, reruns, reruns_delay, validate_example
 from playwright.sync_api import Page
 
-from shiny._main import app_template_choices
+from shiny._main_create import (
+    GithubRepoLocation,
+    app_template_choices,
+    parse_github_arg,
+)
 
 
 def subprocess_create(
@@ -77,3 +81,74 @@ def test_create_js(app_template: str):
     with tempfile.TemporaryDirectory("example_apps") as tmpdir:
         subprocess_create(app_template, dest_dir=tmpdir, package_name="my_component")
         # TODO-Karan: Add test to validate once flag to install packages is implemented
+
+
+def test_parse_github_arg():
+    expected = GithubRepoLocation(
+        repo_owner="posit-dev",
+        repo_name="py-shiny",
+        ref="main",
+        path="shiny/templates/app-templates/basic-app",
+    )
+
+    # * {repo_owner}/{repo_name}@{ref}:{path}
+    actual_ref_path = parse_github_arg(
+        "posit-dev/py-shiny@main:shiny/templates/app-templates/basic-app"
+    )
+    assert actual_ref_path == expected
+
+    # * {repo_owner}/{repo_name}:{path}@{ref}
+    actual_path_ref = parse_github_arg(
+        "posit-dev/py-shiny:shiny/templates/app-templates/basic-app@main"
+    )
+    assert actual_path_ref == expected
+
+    # * {repo_owner}/{repo_name}/{path}@{ref}
+    actual_path_slash_ref = parse_github_arg(
+        "posit-dev/py-shiny/shiny/templates/app-templates/basic-app@main"
+    )
+    assert actual_path_slash_ref == expected
+
+    # * {repo_owner}/{repo_name}/{path}?ref={ref}
+    actual_path_slash_query = parse_github_arg(
+        "posit-dev/py-shiny/shiny/templates/app-templates/basic-app?ref=main"
+    )
+    assert actual_path_slash_query == expected
+
+    actual_path_full = parse_github_arg(
+        "https://github.com/posit-dev/py-shiny/tree/main/shiny/templates/app-templates/basic-app"
+    )
+    assert actual_path_full == expected
+
+    actual_path_part = parse_github_arg(
+        "github.com/posit-dev/py-shiny/tree/main/shiny/templates/app-templates/basic-app"
+    )
+    assert actual_path_part == expected
+
+    # REF is implied, defaults to HEAD
+    expected.ref = "HEAD"
+
+    # * {repo_owner}/{repo_name}:{path}
+    actual_path_colon = parse_github_arg(
+        "posit-dev/py-shiny:shiny/templates/app-templates/basic-app"
+    )
+    assert actual_path_colon == expected
+
+    # * {repo_owner}/{repo_name}/{path}
+    actual_path_slash = parse_github_arg(
+        "posit-dev/py-shiny/shiny/templates/app-templates/basic-app"
+    )
+    assert actual_path_slash == expected
+
+    # complicated ref
+    actual_ref_tag = parse_github_arg(
+        "posit-dev/py-shiny@v0.1.0:shiny/templates/app-templates/basic-app"
+    )
+    expected.ref = "v0.1.0"
+    assert actual_ref_tag == expected
+
+    actual_ref_branch = parse_github_arg(
+        "posit-dev/py-shiny@feat/new-template:shiny/templates/app-templates/basic-app"
+    )
+    expected.ref = "feat/new-template"
+    assert actual_ref_branch == expected

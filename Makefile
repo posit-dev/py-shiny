@@ -188,9 +188,9 @@ release: dist ## package and upload a release
 	twine upload dist/*
 
 dist: clean ## builds source and wheel package
-	pip install setuptools
-	python setup.py sdist
-	python setup.py bdist_wheel
+	pip install build
+	python -m build --sdist
+	python -m build --wheel
 	ls -l dist
 
 

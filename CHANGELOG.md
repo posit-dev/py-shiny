@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `ui.Chat()` gains a new `.update_user_input()` method, which adds the ability to update the input placeholder message. As a result, `.set_user_message()` is now deprecated (since the new method can also be used to update the message). (#1594)
 
+* `shiny create` now supports a succinct format for specifying the GitHub repository via the `--github` flag, e.g. `--github posit-dev/py-shiny-templates`. You can now also use `--github` and `--template` together, in which case `--github` should point to a repository containing a directory matching the name provided in `--template`. (#1623)
+
 ### Other changes
 
 ### Bug fixes
@@ -30,7 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `ui.notification_show(duration=None)` now persists the notification until the app user closes it. (#1577)
 
-### Bug fixes
+* Some copies of Windows 10 have registry entries mapping .js files to content type "text/plain", which was causing all sorts of problems for browsers. (#1624)
 
 ### Deprecations
 

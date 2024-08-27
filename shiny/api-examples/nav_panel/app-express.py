@@ -13,14 +13,3 @@ with ui.nav_panel("Page 2"):
             "Tab 2 content"
         with ui.nav_panel("Tab 3"):
             "Tab 3 content"
-
-ui.nav_spacer()
-
-with ui.nav_menu("Links", align="right"):
-    with ui.nav_control():
-        ui.a("Shiny", href="https://shiny.posit.co/py/", target="_blank")
-    "----"
-    "Plain text"
-    "----"
-    with ui.nav_control():
-        ui.a("Posit", href="https://posit.co", target="_blank")

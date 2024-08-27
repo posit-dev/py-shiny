@@ -53,7 +53,7 @@ def module(
                 module_session.output,
                 module_session,
                 *args,
-                **kwargs
+                **kwargs,
             )
 
     return wrapper
