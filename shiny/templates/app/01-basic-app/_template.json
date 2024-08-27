@@ -4,7 +4,7 @@
   "title": "Basic app",
   "description": "A basic Shiny app template.",
   "next_steps": [
-    "Run the app with `shiny run app.py`."
+    "Run the app with `shiny run app.py` from the app directory."
   ],
   "follow_up": [
     {

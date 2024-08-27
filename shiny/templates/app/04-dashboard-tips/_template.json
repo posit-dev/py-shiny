@@ -4,7 +4,7 @@
   "title": "Intermediate dashboard",
   "description": "An intermediate dashboard with value boxes, several plots in cards and a sidebar.",
   "next_steps": [
-    "Run the app with `shiny run app.py` from the app directory."
+    "Run the app with `shiny run app.py`."
   ],
   "follow_up": [
     {
