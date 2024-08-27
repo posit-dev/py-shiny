@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Other changes
 
+* User input messages to `ui.Chat()` are now interpreted as "semi-markdown" instead of "plain-text". This means markdown syntax renders as expected, but HTML tags aren't treated as HTML. (#1607)
+
 ### Bug fixes
 
 * A handful of fixes for `ui.Chat()`, including:
