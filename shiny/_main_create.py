@@ -190,13 +190,11 @@ class ShinyInternalTemplates:
 
     @property
     def apps(self) -> list[ShinyTemplate]:
-        templates = self._templates()
-        return [t for t in templates if t.type == "app"]
+        return self._templates("templates/app")
 
     @property
     def packages(self) -> list[ShinyTemplate]:
-        templates = self._templates()
-        return [t for t in templates if t.type == "package"]
+        return self._templates("templates/package")
 
     @property
     def chat_hello_providers(self) -> list[ShinyTemplate]:
