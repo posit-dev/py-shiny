@@ -1,0 +1,19 @@
+{
+  "type": "app",
+  "id": "basic-app",
+  "title": "Basic app",
+  "description": "A basic Shiny app template.",
+  "next_steps": [
+    "Run the app with `shiny run app.py` from the app directory."
+  ],
+  "follow_up": [
+    {
+      "type": "info",
+      "text": "Just getting started with Shiny?"
+    },
+    {
+      "type": "action",
+      "text": "Learn more at https://shiny.posit.co/py/docs/overview.html"
+    }
+  ]
+}
