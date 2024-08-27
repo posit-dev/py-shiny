@@ -711,11 +711,11 @@ class Chat:
         Parameters
         ----------
         fn
-            A function that takes a string and returns a string or
-            :class:`shiny.ui.HTML`. If `fn` returns a string, it gets interpreted and
-            parsed as a markdown on the client (and the resulting HTML is then
-            sanitized). If `fn` returns :class:`shiny.ui.HTML`, it will be displayed
-            as-is.
+            A function that takes a string and returns either a string,
+            :class:`shiny.ui.HTML`, or `None`. If `fn` returns a string, it gets
+            interpreted and parsed as a markdown on the client (and the resulting HTML
+            is then sanitized). If `fn` returns :class:`shiny.ui.HTML`, it will be
+            displayed as-is. If `fn` returns `None`, the response is effectively ignored.
 
         Note
         ----
@@ -774,9 +774,6 @@ class Chat:
 
         if message["role"] == "user" and self._transform_user is not None:
             content = await self._transform_user(message["content"])
-            if content is None:
-                return None
-            res[key] = content
 
         elif message["role"] == "assistant" and self._transform_assistant is not None:
             content = await self._transform_assistant(
@@ -784,9 +781,13 @@ class Chat:
                 chunk_content or "",
                 chunk == "end" or chunk is False,
             )
-            if content is None:
-                return None
-            res[key] = content
+        else:
+            return res
+
+        if content is None:
+            return None
+
+        res[key] = content
 
         return res
 
