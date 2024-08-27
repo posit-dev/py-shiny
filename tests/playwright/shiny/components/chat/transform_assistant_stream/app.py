@@ -6,7 +6,7 @@ chat.ui()
 
 
 @chat.transform_assistant_response
-def transform(content: str, chunk: str, done: bool) -> str | None:
+def transform(content: str, chunk: str, done: bool):
     if done:
         return content + "...DONE!"
     else:
