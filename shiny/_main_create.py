@@ -120,7 +120,10 @@ def find_templates(path: Path | str = ".") -> list[ShinyTemplate]:
     template_files = sorted(path.glob("**/_template.json"))
     for tf in template_files:
         with tf.open() as f:
-            template = json.load(f)
+            try:
+                template = json.load(f)
+            except json.JSONDecodeError as err:
+                raise ValueError(f"Error parsing {tf}: {err}")
 
             # "next_steps" and "follow_up" can be either a string or an array of strings
             # or an array of dictionaries (follow_up only)
@@ -134,11 +137,14 @@ def find_templates(path: Path | str = ".") -> list[ShinyTemplate]:
             if isinstance(next_steps, str):
                 next_steps = [next_steps]
 
+            if "name" not in template:
+                raise ValueError(f"Template in {tf} is missing a 'name' field.")
+
             templates.append(
                 ShinyTemplate(
                     name=template["name"],
-                    title=template.get("title"),
                     path=tf.parent.absolute(),
+                    title=template.get("title"),
                     type=template.get("type", "app"),
                     description=template.get("description"),
                     follow_up=follow_up,
@@ -255,8 +261,8 @@ def use_internal_template(
             )
 
     if question_state == "_external-gallery":
-        url = cli_url("https://shiny.posit.co/py/templates")
-        click.echo(f"Opening {url} in your browser.")
+        url = "https://shiny.posit.co/py/templates"
+        click.echo(f"Opening {cli_url(url)} in your browser.")
         click.echo(
             f"Choose a template and copy the {cli_code('shiny create')} command to use it."
         )
