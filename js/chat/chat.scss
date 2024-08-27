@@ -92,7 +92,7 @@ shiny-chat-container {
   Disable the page-level pulse when the chat input is disabled
   (i.e., when a response is being generated and brought into the chat)
 */
-.shiny-busy:has(shiny-chat-input[disabled])::after {
+.shiny-busy:has(shiny-chat-message[busy])::after {
   display: none;
 }
 
