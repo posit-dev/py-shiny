@@ -80,7 +80,7 @@ const markedEscapeOpts = { renderer: rendererEscapeHTML };
 
 function contentToHTML(
   content: string,
-  content_type: "markdown" | "semi-markdown" | "html" | "text"
+  content_type: ContentType | "semi-markdown"
 ) {
   if (content_type === "markdown") {
     return unsafeHTML(sanitize(parse(content) as string));
