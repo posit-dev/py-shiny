@@ -197,10 +197,13 @@ class ShinyInternalTemplates:
     To add a new template, create the template subfolder in either of the two template
     folders and add a `_template.json` file. See `ShinyTemplate` for expected fields.
 
-    * `use_template_internal()` is the initial menu seen, which presents `app-templates`
-      with additional choices.
-    * package-templates are also referred to as `js-components` in the code base, these
-      templates appear as a submenu and are handled by `js_component_questions()`.
+    * `use_template_internal()` is the initial menu seen, which presents `templates/app`
+      templates with additional choices.
+    * `templates/package` templates are also referred to as `js-components` in the code
+      base, these templates appear as a submenu and are handled by
+      `use_internal_package_template()`.
+    * `templates/chat` templates are generative AI templates and are handled by
+      `use_internal_chat_ai_template()`,
     """
 
     def __init__(self):
