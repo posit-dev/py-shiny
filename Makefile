@@ -153,7 +153,7 @@ install-playwright: FORCE
 	playwright install --with-deps
 
 install-rsconnect: FORCE
-	pip install git+https://github.com/rstudio/rsconnect-python.git#egg=rsconnect-python
+	pip install rsconnect-python
 
 # Full test path to playwright tests
 TEST_FILE:="tests/playwright/$(SUB_FILE)"
@@ -222,7 +222,7 @@ ci-install-docs: FORCE
 			"shinylive @ git+https://github.com/posit-dev/py-shinylive.git"
 
 ci-install-rsconnect: FORCE
-	uv pip install "rsconnect-python @ git+https://github.com/rstudio/rsconnect-python.git"
+	uv pip install rsconnect-python
 
 
 # ## If caching is ever used, we could run:
