@@ -263,9 +263,10 @@ class _UiWithContainer(_UiBase):
                 loc = loc_container
 
             else:
-                loc_container = loc_container.filter(
+                loc_container = loc_container.locator(
                     # `page.locator(loc)` is executed from within `loc_container`
-                    has=page.locator(loc)
+                    "xpath=.",
+                    has=page.locator(loc),
                 )
 
                 loc = loc_container.locator(loc)
@@ -1792,7 +1793,8 @@ class _MultipleDomItems:
         # Find all items in set
         for item in arr:
             # Given the container, make sure it contains this locator
-            loc_container = loc_container.filter(
+            loc_container = loc_container.locator(
+                "xpath=.",
                 # Simple approach as position is not needed
                 has=page.locator(
                     f"{el_type}[{_attr_match_str(key, item)}]{is_checked_str}",
@@ -1894,7 +1896,11 @@ class _MultipleDomItems:
             )
 
             # Given the container, make sure it contains this locator
-            loc_container = loc_container.filter(has=has_locator)
+            loc_container = loc_container.locator(
+                # Return self
+                "xpath=.",
+                has=has_locator,
+            )
 
         # Make sure other items are not in set
         # If we know all elements are contained in the container,
@@ -4908,7 +4914,8 @@ class Accordion(
             loc="> div.accordion-item",
             loc_container=f"div#{id}.accordion.shiny-bound-input",
         )
-        # self.loc_open = self.loc.filter(
+        # self.loc_open = self.loc.locator(
+        #   "xpath=.",
         #     # Simple approach as position is not needed
         #     has=page.locator(
         #         "> div.accordion-collapse.show",
@@ -5909,7 +5916,7 @@ class _NavsetCardBase(
         self.loc_title = (
             self.loc_container.locator("..")
             .locator("> span")
-            .filter(has=self.page.locator(f"+ ul#{self.id}"))
+            .locator("xpath=.", has=self.page.locator(f"+ ul#{self.id}"))
         )
 
 
