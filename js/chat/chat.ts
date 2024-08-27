@@ -105,7 +105,8 @@ class LightElement extends LitElement {
 class ChatMessage extends LightElement {
   @property() content = "...";
   @property() content_type: ContentType = "markdown";
-  @property({ type: Boolean, reflect: true }) is_streaming = false;
+  @property({ type: Boolean, reflect: true }) streaming = false;
+  @property({ type: Boolean, reflect: true }) busy = false;
 
   render(): ReturnType<LitElement["render"]> {
     const content = contentToHTML(this.content, this.content_type);
@@ -125,7 +126,7 @@ class ChatMessage extends LightElement {
       this.#highlightAndCodeCopy();
       // It's important that the scroll request happens at this point in time, since
       // otherwise, the content may not be fully rendered yet
-      requestScroll(this, this.is_streaming);
+      requestScroll(this, this.streaming);
     }
   }
 
@@ -276,6 +277,11 @@ class ChatContainer extends LightElement {
     return this.querySelector(CHAT_MESSAGES_TAG) as ChatMessages;
   }
 
+  private get lastMessage(): ChatMessage | null {
+    const last = this.messages.lastElementChild;
+    return last ? (last as ChatMessage) : null;
+  }
+
   private resizeObserver!: ResizeObserver;
 
   render(): ReturnType<LitElement["render"]> {
@@ -366,11 +372,10 @@ class ChatContainer extends LightElement {
 
   #addLoadingMessage(): void {
     const loading_message = {
-      // https://github.com/n3r4zzurr0/svg-spinners/blob/main/svg-css/3-dots-fade.svg
-      content:
-        '<svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><style>.spinner_S1WN{animation:spinner_MGfb .8s linear infinite;animation-delay:-.8s}.spinner_Km9P{animation-delay:-.65s}.spinner_JApP{animation-delay:-.5s}@keyframes spinner_MGfb{93.75%,100%{opacity:.2}}</style><circle class="spinner_S1WN" cx="4" cy="12" r="3"/><circle class="spinner_S1WN spinner_Km9P" cx="12" cy="12" r="3"/><circle class="spinner_S1WN spinner_JApP" cx="20" cy="12" r="3"/></svg>',
+      content: "",
       role: "assistant",
       id: `${this.id}-loading-message`,
+      busy: "",
     };
     const message = createElement(CHAT_MESSAGE_TAG, loading_message);
     this.messages.appendChild(message);
@@ -391,13 +396,13 @@ class ChatContainer extends LightElement {
       this.#appendMessage(message, false);
     }
 
-    const lastMessage = this.messages.lastElementChild as HTMLElement;
+    const lastMessage = this.lastMessage;
     if (!lastMessage) throw new Error("No messages found in the chat output");
 
     if (message.chunk_type === "message_start") {
-      lastMessage.setAttribute("is_streaming", "");
+      lastMessage.setAttribute("streaming", "");
+      lastMessage.setAttribute("busy", "");
     } else if (message.chunk_type === "message_end") {
-      lastMessage.removeAttribute("is_streaming");
       this.#finalizeMessage();
     } else {
       lastMessage.setAttribute("content", message.content);
@@ -425,6 +430,8 @@ class ChatContainer extends LightElement {
 
   #finalizeMessage(): void {
     this.input.disabled = false;
+    this.lastMessage?.removeAttribute("busy");
+    this.lastMessage?.removeAttribute("streaming");
   }
 
   #onRequestScroll(event: CustomEvent<requestScrollEvent>): void {

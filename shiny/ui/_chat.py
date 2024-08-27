@@ -584,20 +584,16 @@ class Chat:
 
     async def _append_message_stream(self, message: AsyncIterable[Any]):
         id = _utils.private_random_id()
-        is_start = True
+
+        empty = ChatMessage(content="", role="assistant")
+        await self._append_message(empty, chunk="start", stream_id=id)
+
         try:
             async for msg in message:
-                await self._append_message(
-                    msg, chunk="start" if is_start else True, stream_id=id
-                )
-                is_start = False
+                await self._append_message(msg, chunk=True, stream_id=id)
         finally:
-            if not is_start:
-                # If we successfully sent a start chunk, send an end.
-                await self._append_message(
-                    ChatMessage(content="", role="assistant"), chunk="end", stream_id=id
-                )
-                await self._flush_pending_messages()
+            await self._append_message(empty, chunk="end", stream_id=id)
+            await self._flush_pending_messages()
 
     async def _flush_pending_messages(self):
         still_pending: list[PendingMessage] = []
