@@ -48,7 +48,7 @@ def subprocess_create(
 
 
 @pytest.mark.flaky(reruns=reruns, reruns_delay=reruns_delay)
-@pytest.mark.parametrize("ex_app_path", get_apps("shiny/templates/app-templates"))
+@pytest.mark.parametrize("ex_app_path", get_apps("shiny/templates/app"))
 def test_template_examples(page: Page, ex_app_path: str) -> None:
     validate_example(page, ex_app_path)
 
@@ -88,40 +88,40 @@ def test_parse_github_arg():
         repo_owner="posit-dev",
         repo_name="py-shiny",
         ref="main",
-        path="shiny/templates/app-templates/basic-app",
+        path="shiny/templates/app/basic-app",
     )
 
     # * {repo_owner}/{repo_name}@{ref}:{path}
     actual_ref_path = parse_github_arg(
-        "posit-dev/py-shiny@main:shiny/templates/app-templates/basic-app"
+        "posit-dev/py-shiny@main:shiny/templates/app/basic-app"
     )
     assert actual_ref_path == expected
 
     # * {repo_owner}/{repo_name}:{path}@{ref}
     actual_path_ref = parse_github_arg(
-        "posit-dev/py-shiny:shiny/templates/app-templates/basic-app@main"
+        "posit-dev/py-shiny:shiny/templates/app/basic-app@main"
     )
     assert actual_path_ref == expected
 
     # * {repo_owner}/{repo_name}/{path}@{ref}
     actual_path_slash_ref = parse_github_arg(
-        "posit-dev/py-shiny/shiny/templates/app-templates/basic-app@main"
+        "posit-dev/py-shiny/shiny/templates/app/basic-app@main"
     )
     assert actual_path_slash_ref == expected
 
     # * {repo_owner}/{repo_name}/{path}?ref={ref}
     actual_path_slash_query = parse_github_arg(
-        "posit-dev/py-shiny/shiny/templates/app-templates/basic-app?ref=main"
+        "posit-dev/py-shiny/shiny/templates/app/basic-app?ref=main"
     )
     assert actual_path_slash_query == expected
 
     actual_path_full = parse_github_arg(
-        "https://github.com/posit-dev/py-shiny/tree/main/shiny/templates/app-templates/basic-app"
+        "https://github.com/posit-dev/py-shiny/tree/main/shiny/templates/app/basic-app"
     )
     assert actual_path_full == expected
 
     actual_path_part = parse_github_arg(
-        "github.com/posit-dev/py-shiny/tree/main/shiny/templates/app-templates/basic-app"
+        "github.com/posit-dev/py-shiny/tree/main/shiny/templates/app/basic-app"
     )
     assert actual_path_part == expected
 
@@ -130,25 +130,25 @@ def test_parse_github_arg():
 
     # * {repo_owner}/{repo_name}:{path}
     actual_path_colon = parse_github_arg(
-        "posit-dev/py-shiny:shiny/templates/app-templates/basic-app"
+        "posit-dev/py-shiny:shiny/templates/app/basic-app"
     )
     assert actual_path_colon == expected
 
     # * {repo_owner}/{repo_name}/{path}
     actual_path_slash = parse_github_arg(
-        "posit-dev/py-shiny/shiny/templates/app-templates/basic-app"
+        "posit-dev/py-shiny/shiny/templates/app/basic-app"
     )
     assert actual_path_slash == expected
 
     # complicated ref
     actual_ref_tag = parse_github_arg(
-        "posit-dev/py-shiny@v0.1.0:shiny/templates/app-templates/basic-app"
+        "posit-dev/py-shiny@v0.1.0:shiny/templates/app/basic-app"
     )
     expected.ref = "v0.1.0"
     assert actual_ref_tag == expected
 
     actual_ref_branch = parse_github_arg(
-        "posit-dev/py-shiny@feat/new-template:shiny/templates/app-templates/basic-app"
+        "posit-dev/py-shiny@feat/new-template:shiny/templates/app/basic-app"
     )
     expected.ref = "feat/new-template"
     assert actual_ref_branch == expected
