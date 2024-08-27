@@ -1,5 +1,5 @@
 {
   "type": "app",
-  "name": "chat-ai-anthropic",
+  "id": "chat-ai-anthropic",
   "title": "Chat AI using Anthropic"
 }

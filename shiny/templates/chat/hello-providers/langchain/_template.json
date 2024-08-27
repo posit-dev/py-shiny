@@ -1,5 +1,5 @@
 {
   "type": "app",
-  "name": "chat-ai-langchain",
+  "id": "chat-ai-langchain",
   "title": "Chat AI using LangChain"
 }

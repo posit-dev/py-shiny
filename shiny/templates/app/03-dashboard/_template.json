@@ -1,6 +1,6 @@
 {
   "type": "app",
-  "name": "dashboard",
+  "id": "dashboard",
   "title": "Basic dashboard",
   "description": "A basic, single page dashboard with value boxes, two plots in cards and a sidebar.",
   "next_steps": [

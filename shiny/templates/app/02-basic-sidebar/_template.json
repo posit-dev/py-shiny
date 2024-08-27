@@ -1,6 +1,6 @@
 {
   "type": "app",
-  "name": "basic-sidebar",
+  "id": "basic-app",
   "title": "Sidebar layout",
   "description": "An app with inputs in a sidebar and a plot in the main area.",
   "next_steps": [

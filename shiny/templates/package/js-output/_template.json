@@ -1,6 +1,6 @@
 {
   "type": "package",
-  "name": "js-output",
+  "id": "js-output",
   "title": "Output component",
   "description": "A Python package template providing a custom Shiny output component.",
   "follow_up": [

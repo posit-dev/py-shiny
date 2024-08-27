@@ -35,6 +35,7 @@ from ._main_utils import (
     cli_url,
     cli_verbatim,
     cli_wait,
+    cli_warning,
     directory_prompt,
 )
 
@@ -45,7 +46,7 @@ back_choice: Choice = Choice(title=[("class:secondary", "← Back")], value="bac
 
 
 def choice_from_templates(templates: list[ShinyTemplate]) -> list[Choice]:
-    return [Choice(title=t.title, value=t.name) for t in templates]
+    return [Choice(title=t.title, value=t.id) for t in templates]
 
 
 @dataclass
@@ -59,8 +60,9 @@ class ShinyTemplate:
 
     Attributes
     ----------
-    name
-        The name of the Shiny template.
+    id
+        The identifier of the Shiny template. This `id` should be unique within a
+        repository of templates.
     path
         The path to the `_template.json` file or the root directory of the template.
     type
@@ -80,7 +82,7 @@ class ShinyTemplate:
         can be "action", "info", "warning", "danger", or "text".
     """
 
-    name: str
+    id: str
     path: Path
     type: str = "app"
     title: str | None = None
@@ -116,6 +118,7 @@ class ShinyTemplateFollowUp:
 def find_templates(path: Path | str = ".") -> list[ShinyTemplate]:
     path = Path(path)
     templates: list[ShinyTemplate] = []
+    duplicated_ids: set[str] = set()
 
     template_files = sorted(path.glob("**/_template.json"))
     for tf in template_files:
@@ -137,12 +140,16 @@ def find_templates(path: Path | str = ".") -> list[ShinyTemplate]:
             if isinstance(next_steps, str):
                 next_steps = [next_steps]
 
-            if "name" not in template:
-                raise ValueError(f"Template in {tf} is missing a 'name' field.")
+            if "id" not in template:
+                raise ValueError(f"Template in {tf} is missing a 'id' field.")
+
+            id = template["id"]
+            if id in [t.id for t in templates]:
+                duplicated_ids.add(id)
 
             templates.append(
                 ShinyTemplate(
-                    name=template["name"],
+                    id=id,
                     path=tf.parent.absolute(),
                     title=template.get("title"),
                     type=template.get("type", "app"),
@@ -152,12 +159,29 @@ def find_templates(path: Path | str = ".") -> list[ShinyTemplate]:
                 )
             )
 
+    if duplicated_ids:
+        click.echo(
+            cli_danger(
+                "Warning: The following templates contain duplicate IDs. "
+                + "Only the first occurrence will be used."
+            )
+        )
+        for id in duplicated_ids:
+            paths = [t.path.relative_to(path) for t in templates if t.id == id]
+            click.echo(
+                cli_warning(
+                    cli_code(f'"id": "{id}"')
+                    + " used by: "
+                    + ", ".join([cli_field(str(p)) for p in paths])
+                )
+            )
+
     return templates
 
 
 def template_by_name(templates: list[ShinyTemplate], name: str) -> ShinyTemplate | None:
     for template in templates:
-        if template.name == name:
+        if template.id == name:
             return template
     return None
 
@@ -273,7 +297,7 @@ def use_internal_template(
     elif question_state == "_chat-ai":
         use_internal_chat_ai_template(dest_dir=dest_dir, package_name=package_name)
     else:
-        valid_choices = [t.name for t in app_templates + pkg_templates]
+        valid_choices = [t.id for t in app_templates + pkg_templates]
         if question_state not in valid_choices:
             raise click.BadOptionUsage(
                 "--template",
@@ -485,7 +509,7 @@ def use_github_template(
                 template_dir = template_dir / template_name
 
             template = ShinyTemplate(
-                name=template_name,
+                id=template_name,
                 title=f"Template from {spec_cli}",
                 path=template_dir,
             )
@@ -623,7 +647,7 @@ def app_template_questions(
     dest_dir: Optional[Path] = None,
 ):
     template_dir = template.path
-    template_cli_name = cli_bold(cli_field(template.title or template.name))
+    template_cli_name = cli_bold(cli_field(template.title or template.id))
 
     if mode == "express" and not template.express_available:
         raise click.BadParameter(

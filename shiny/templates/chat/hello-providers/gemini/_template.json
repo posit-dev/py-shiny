@@ -1,5 +1,5 @@
 {
   "type": "app",
-  "name": "chat-ai-gemini",
+  "id": "chat-ai-gemini",
   "title": "Chat AI using Google Gemini"
 }

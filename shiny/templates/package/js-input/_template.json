@@ -1,6 +1,6 @@
 {
   "type": "package",
-  "name": "js-input",
+  "id": "js-input",
   "title": "Input component",
   "description": "A Python package template providing a custom Shiny input component.",
   "follow_up": [

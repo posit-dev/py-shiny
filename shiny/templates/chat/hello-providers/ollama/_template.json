@@ -1,5 +1,5 @@
 {
   "type": "app",
-  "name": "chat-ai-ollama",
+  "id": "chat-ai-ollama",
   "title": "Chat AI using Ollama"
 }

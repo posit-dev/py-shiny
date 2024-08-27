@@ -53,8 +53,8 @@ def test_template_examples(page: Page, ex_app_path: str) -> None:
     validate_example(page, ex_app_path)
 
 
-app_templates = [t.name for t in shiny_internal_templates.apps]
-pkg_templates = [t.name for t in shiny_internal_templates.packages]
+app_templates = [t.id for t in shiny_internal_templates.apps]
+pkg_templates = [t.id for t in shiny_internal_templates.packages]
 assert len(app_templates) > 0
 assert len(pkg_templates) > 0
 
