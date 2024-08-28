@@ -23,7 +23,7 @@ def skip_on_windows_with_timezonefinder(ex_app_path: str) -> None:
         return
 
     try:
-        import timezonefinder as _  # noqa: F401
+        import timezonefinder  # noqa: F401 # pyright: ignore
 
         # Future proofing: if timezonefinder is actually available on windows, raise an error
         raise RuntimeError(
