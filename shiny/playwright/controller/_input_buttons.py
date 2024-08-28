@@ -13,12 +13,12 @@ from ..expect._internal import (
     expect_attribute_to_have_value as _expect_attribute_to_have_value,
 )
 from ..expect._internal import expect_style_to_have_value as _expect_style_to_have_value
-from ._base import _expect_multiple, _InputActionBase, _UiBase, _UiWithLabel, _WidthLocM
+from ._base import InputActionBase, UiBase, UiWithLabel, WidthLocM, _expect_multiple
 
 
 class InputActionButton(
-    _WidthLocM,
-    _InputActionBase,
+    WidthLocM,
+    InputActionBase,
 ):
     """Controller for :func:`shiny.ui.input_action_button`."""
 
@@ -44,7 +44,7 @@ class InputActionButton(
         )
 
 
-class InputDarkMode(_UiBase):
+class InputDarkMode(UiBase):
     """Controller for :func:`shiny.ui.input_dark_mode`."""
 
     def __init__(
@@ -131,8 +131,8 @@ class InputDarkMode(_UiBase):
 
 
 class InputTaskButton(
-    _WidthLocM,
-    _InputActionBase,
+    WidthLocM,
+    InputActionBase,
 ):
     """Controller for :func:`shiny.ui.input_task_button`."""
 
@@ -262,7 +262,7 @@ class InputTaskButton(
         )
 
 
-class InputActionLink(_InputActionBase):
+class InputActionLink(InputActionBase):
     """Controller for :func:`shiny.ui.input_action_link`."""
 
     def __init__(
@@ -289,7 +289,7 @@ class InputActionLink(_InputActionBase):
 
 class InputFile(
     # _ExpectPlaceholderAttrM,
-    _UiWithLabel,
+    UiWithLabel,
 ):
     """Controller for :func:`shiny.ui.input_file`."""
 

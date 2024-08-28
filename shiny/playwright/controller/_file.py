@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from playwright.sync_api import Page
 
-from ._base import _InputActionBase, _WidthLocM
+from ._base import InputActionBase, WidthLocM
 
 
 # TODO: Use mixin for dowloadlink and download button
-class DownloadLink(_InputActionBase):
+class DownloadLink(InputActionBase):
     """
     Controller for :func:`shiny.ui.download_link`.
     """
@@ -30,8 +30,8 @@ class DownloadLink(_InputActionBase):
 
 
 class DownloadButton(
-    _WidthLocM,
-    _InputActionBase,
+    WidthLocM,
+    InputActionBase,
 ):
     """
     Controller for :func:`shiny.ui.download_button`

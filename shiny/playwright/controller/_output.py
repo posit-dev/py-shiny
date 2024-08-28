@@ -15,7 +15,7 @@ from ..expect._internal import (
 )
 from ..expect._internal import expect_class_to_have_value as _expect_class_to_have_value
 from ..expect._internal import expect_style_to_have_value as _expect_style_to_have_value
-from ._base import InitLocator, _OutputBaseP, _UiWithContainer
+from ._base import InitLocator, OutputBaseP, UiWithContainer
 
 
 class _OutputBase:
@@ -80,9 +80,9 @@ class _OutputTextValue(_OutputBase):
         self.expect.to_have_text(value, timeout=timeout)
 
 
-class _OutputContainerP(_OutputBaseP, Protocol):
+class _OutputContainerP(OutputBaseP, Protocol):
     def expect_container_tag(
-        self: _OutputBaseP,
+        self: OutputBaseP,
         value: Literal["span", "div"] | str,
         *,
         timeout: Timeout = None,
@@ -91,7 +91,7 @@ class _OutputContainerP(_OutputBaseP, Protocol):
 
 class _OutputContainerM:
     def expect_container_tag(
-        self: _OutputBaseP,
+        self: OutputBaseP,
         value: Literal["span", "div"] | str,
         *,
         timeout: Timeout = None,
@@ -634,7 +634,7 @@ class OutputTable(_OutputBase):
         )
 
 
-class OutputDataFrame(_UiWithContainer):
+class OutputDataFrame(UiWithContainer):
     """
     Controller for :func:`shiny.ui.output_data_frame`.
     """

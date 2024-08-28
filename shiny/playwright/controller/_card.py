@@ -7,10 +7,10 @@ from playwright.sync_api import expect as playwright_expect
 
 from .._types import PatternOrStr, StyleValue, Timeout
 from ..expect._internal import expect_style_to_have_value as _expect_style_to_have_value
-from ._base import _OutputBaseP, _UiBaseP, _UiWithContainer, _WidthLocM
+from ._base import OutputBaseP, UiBaseP, UiWithContainer, WidthLocM
 
 
-class _CardBodyP(_UiBaseP, Protocol):
+class _CardBodyP(UiBaseP, Protocol):
     """
     Represents the body of a card control.
     """
@@ -45,7 +45,7 @@ class _CardBodyM:
         )
 
 
-class _CardFooterLayoutP(_UiBaseP, Protocol):
+class _CardFooterLayoutP(UiBaseP, Protocol):
     """
     Represents the layout of the footer in a card.
     """
@@ -83,7 +83,7 @@ class _CardFooterM:
         )
 
 
-class _CardValueBoxFullScreenLayoutP(_OutputBaseP, Protocol):
+class _CardValueBoxFullScreenLayoutP(OutputBaseP, Protocol):
     """
     Represents a card / Value Box full-screen layout for the Playwright controls.
     """
@@ -166,9 +166,9 @@ class _CardValueBoxFullScreenM:
 
 
 class ValueBox(
-    _WidthLocM,
+    WidthLocM,
     _CardValueBoxFullScreenM,
-    _UiWithContainer,
+    UiWithContainer,
 ):
     """
     Controller for :func:`shiny.ui.value_box`.
@@ -311,11 +311,11 @@ class ValueBox(
 
 
 class Card(
-    _WidthLocM,
+    WidthLocM,
     _CardFooterM,
     _CardBodyM,
     _CardValueBoxFullScreenM,
-    _UiWithContainer,
+    UiWithContainer,
 ):
     """
     Controller for :func:`shiny.ui.card`.

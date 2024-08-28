@@ -6,10 +6,10 @@ from playwright.sync_api import Locator, Page
 from playwright.sync_api import expect as playwright_expect
 
 from .._types import PatternOrStr, Timeout
-from ._base import _UiBase
+from ._base import UiBase
 
 
-class Chat(_UiBase):
+class Chat(UiBase):
     """Controller for :func:`shiny.ui.chat`."""
 
     loc: Locator

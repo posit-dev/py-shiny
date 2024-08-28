@@ -11,17 +11,17 @@ from ..expect._internal import expect_class_to_have_value as _expect_class_to_ha
 from ..expect._internal import expect_style_to_have_value as _expect_style_to_have_value
 from ._base import (
     InitLocator,
-    _UiWithContainer,
-    _UiWithContainerP,
-    _UiWithSidebarP,
-    _UiWithTitleP,
+    UiWithContainer,
+    UiWithContainerP,
+    UiWithSidebarP,
+    UiWithTitleP,
 )
 from ._expect import expect_locator_values_in_list
 
 
 class _ExpectNavsetSidebarM:
     def expect_sidebar(
-        self: _UiWithSidebarP,
+        self: UiWithSidebarP,
         exists: bool,
         *,
         timeout: Timeout = None,
@@ -43,7 +43,7 @@ class _ExpectNavsetTitleM:
     """A mixin class for Navset title controls"""
 
     def expect_title(
-        self: _UiWithTitleP,
+        self: UiWithTitleP,
         value: PatternOrStr,
         *,
         timeout: Timeout = None,
@@ -63,7 +63,7 @@ class _ExpectNavsetTitleM:
 
 class _ExpectNavsetPlacementM:
     def expect_placement(
-        self: _UiWithContainerP,
+        self: UiWithContainerP,
         location: Literal["above", "below"] = "above",
         *,
         timeout: Timeout = None,
@@ -84,7 +84,7 @@ class _ExpectNavsetPlacementM:
         )
 
 
-class NavPanel(_UiWithContainer):
+class NavPanel(UiWithContainer):
     """Controller for :func:`shiny.ui.nav_panel`."""
 
     """
@@ -184,7 +184,7 @@ class NavPanel(_UiWithContainer):
         playwright_expect(self.loc_content).to_have_text(value, timeout=timeout)
 
 
-class _NavsetBase(_UiWithContainer):
+class _NavsetBase(UiWithContainer):
     """A Base mixin class for Nav controls"""
 
     def nav_panel(

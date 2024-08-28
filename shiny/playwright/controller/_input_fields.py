@@ -16,10 +16,10 @@ from ..expect._internal import expect_class_to_have_value as _expect_class_to_ha
 from ..expect._internal import expect_style_to_have_value as _expect_style_to_have_value
 from ._base import (
     Resize,
-    _UiBaseP,
-    _UiWithLabel,
-    _WidthContainerM,
-    _WidthLocM,
+    UiBaseP,
+    UiWithLabel,
+    WidthContainerM,
+    WidthLocM,
     all_missing,
     not_is_missing,
     set_text,
@@ -27,7 +27,7 @@ from ._base import (
 
 
 class _SetTextM:
-    def set(self: _UiBaseP, value: str, *, timeout: Timeout = None) -> None:
+    def set(self: UiBaseP, value: str, *, timeout: Timeout = None) -> None:
         """
         Sets the text value
 
@@ -45,7 +45,7 @@ class _ExpectTextInputValueM:
     """A mixin class for text input values."""
 
     def expect_value(
-        self: _UiBaseP,
+        self: UiBaseP,
         value: PatternOrStr,
         *,
         timeout: Timeout = None,
@@ -66,8 +66,8 @@ class _ExpectTextInputValueM:
 class InputNumeric(
     _SetTextM,
     _ExpectTextInputValueM,
-    _WidthLocM,
-    _UiWithLabel,
+    WidthLocM,
+    UiWithLabel,
 ):
     """Controller for :func:`shiny.ui.input_numeric`."""
 
@@ -149,7 +149,7 @@ class _ExpectSpellcheckAttrM:
     """
 
     def expect_spellcheck(
-        self: _UiBaseP,
+        self: UiBaseP,
         value: Literal["true", "false"] | None,
         *,
         timeout: Timeout = None,
@@ -172,7 +172,7 @@ class _ExpectSpellcheckAttrM:
 
 class _ExpectPlaceholderAttrM:
     def expect_placeholder(
-        self: _UiBaseP,
+        self: UiBaseP,
         value: AttrValue,
         *,
         timeout: Timeout = None,
@@ -194,7 +194,7 @@ class _ExpectPlaceholderAttrM:
 
 class _ExpectAutocompleteAttrM:
     def expect_autocomplete(
-        self: _UiBaseP,
+        self: UiBaseP,
         value: AttrValue,
         *,
         timeout: Timeout = None,
@@ -217,11 +217,11 @@ class _ExpectAutocompleteAttrM:
 class InputText(
     _SetTextM,
     _ExpectTextInputValueM,
-    _WidthLocM,
+    WidthLocM,
     _ExpectPlaceholderAttrM,
     _ExpectAutocompleteAttrM,
     _ExpectSpellcheckAttrM,
-    _UiWithLabel,
+    UiWithLabel,
 ):
     """Controller for :func:`shiny.ui.input_text`."""
 
@@ -247,7 +247,7 @@ class InputPassword(
     _SetTextM,
     _ExpectTextInputValueM,
     _ExpectPlaceholderAttrM,
-    _UiWithLabel,
+    UiWithLabel,
 ):
     """Controller for :func:`shiny.ui.input_password`."""
 
@@ -295,7 +295,7 @@ class InputTextArea(
     _ExpectPlaceholderAttrM,
     _ExpectAutocompleteAttrM,
     _ExpectSpellcheckAttrM,
-    _UiWithLabel,
+    UiWithLabel,
 ):
     """Controller for :func:`shiny.ui.input_text_area`."""
 
@@ -426,8 +426,8 @@ class InputTextArea(
 
 class _DateBase(
     _SetTextM,
-    _WidthContainerM,
-    _UiWithLabel,
+    WidthContainerM,
+    UiWithLabel,
 ):
 
     # Due to the `language` parameter, we can't use `datetime.date` as a value type
@@ -669,7 +669,7 @@ class InputDate(_DateBase):
         )
 
 
-class InputDateRange(_WidthContainerM, _UiWithLabel):
+class InputDateRange(WidthContainerM, UiWithLabel):
     """Controller for :func:`shiny.ui.input_date_range`."""
 
     loc_separator: Locator

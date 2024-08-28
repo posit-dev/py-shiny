@@ -7,12 +7,12 @@ from playwright.sync_api import expect as playwright_expect
 
 from .._types import PatternOrStr, Timeout
 from ..expect._internal import expect_class_to_have_value as _expect_class_to_have_value
-from ._base import _UiWithContainer, _WidthLocM
+from ._base import UiWithContainer, WidthLocM
 
 
 class Sidebar(
-    _WidthLocM,
-    _UiWithContainer,
+    WidthLocM,
+    UiWithContainer,
 ):
     """Controller for :func:`shiny.ui.sidebar`."""
 

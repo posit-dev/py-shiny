@@ -9,10 +9,10 @@ from .._types import PatternOrStr, Timeout
 from ..expect._internal import (
     expect_attribute_to_have_value as _expect_attribute_to_have_value,
 )
-from ._base import InitLocator, _UiBase
+from ._base import InitLocator, UiBase
 
 
-class _OverlayBase(_UiBase):
+class _OverlayBase(UiBase):
     """Base class for overlay controls"""
 
     loc_trigger: Locator

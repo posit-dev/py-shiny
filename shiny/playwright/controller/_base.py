@@ -132,13 +132,13 @@ def _expect_multiple(loc: Locator, multiple: bool, timeout: Timeout = None) -> N
 ######################################################
 
 
-class _UiBaseP(Protocol):
+class UiBaseP(Protocol):
     id: str
     loc: Locator
     page: Page
 
 
-class _UiWithContainerP(_UiBaseP, Protocol):
+class UiWithContainerP(UiBaseP, Protocol):
     """A protocol class representing UI with a container."""
 
     loc_container: Locator
@@ -147,7 +147,7 @@ class _UiWithContainerP(_UiBaseP, Protocol):
     """
 
 
-class _UiWithSidebarP(_UiWithContainerP, Protocol):
+class UiWithSidebarP(UiWithContainerP, Protocol):
     """A protocol class representing UI with an associated sidebar."""
 
     loc_sidebar: Locator
@@ -156,7 +156,7 @@ class _UiWithSidebarP(_UiWithContainerP, Protocol):
     """
 
 
-class _UiWithTitleP(_UiWithContainerP, Protocol):
+class UiWithTitleP(UiWithContainerP, Protocol):
     """A protocol class representing UI with an associated title."""
 
     loc_title: Locator
@@ -165,7 +165,7 @@ class _UiWithTitleP(_UiWithContainerP, Protocol):
     """
 
 
-class _UiBase:
+class UiBase:
     """A base class representing shiny UI components."""
 
     # timeout: Timeout
@@ -204,7 +204,7 @@ class _UiBase:
         return playwright_expect(self.loc)
 
 
-class _UiWithContainer(_UiBase):
+class UiWithContainer(UiBase):
     """
     A mixin class representing UI with a container.
     """
@@ -268,7 +268,7 @@ class _UiWithContainer(_UiBase):
         self.loc_container = loc_container
 
 
-class _UiWithLabel(_UiWithContainer):
+class UiWithLabel(UiWithContainer):
     """A mixin class representing UI components with a label."""
 
     loc_label: Locator
@@ -333,7 +333,7 @@ class _UiWithLabel(_UiWithContainer):
         playwright_expect(self.loc_label).to_have_text(value, timeout=timeout)
 
 
-class _WidthLocM:
+class WidthLocM:
     """
     A mixin class representing the `.loc`'s width.
 
@@ -341,7 +341,7 @@ class _WidthLocM:
     """
 
     def expect_width(
-        self: _UiBaseP,
+        self: UiBaseP,
         value: AttrValue,
         *,
         timeout: Timeout = None,
@@ -359,7 +359,7 @@ class _WidthLocM:
         _expect_attribute_to_have_value(self.loc, "width", value=value, timeout=timeout)
 
 
-class _WidthContainerM:
+class WidthContainerM:
     """
     A mixin class representing the container's width.
 
@@ -367,7 +367,7 @@ class _WidthContainerM:
     """
 
     def expect_width(
-        self: _UiWithContainerP,
+        self: UiWithContainerP,
         value: AttrValue,
         *,
         timeout: Timeout = None,
@@ -387,7 +387,7 @@ class _WidthContainerM:
         )
 
 
-class _InputActionBase(_UiBase):
+class InputActionBase(UiBase):
     def expect_label(
         self,
         value: PatternOrStr,
@@ -434,10 +434,7 @@ Resize = Literal["none", "both", "horizontal", "vertical"]
 ######################################################
 
 
-class _OutputBaseP(Protocol):
+class OutputBaseP(Protocol):
     id: str
     loc: Locator
     page: Page
-
-
-# When making selectors, use `xpath` so that direct decendents can be checked

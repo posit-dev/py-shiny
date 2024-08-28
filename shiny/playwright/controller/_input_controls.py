@@ -17,10 +17,10 @@ from ..expect._internal import expect_class_to_have_value as _expect_class_to_ha
 from ..expect._internal import expect_style_to_have_value as _expect_style_to_have_value
 from ._base import (
     InitLocator,
+    UiWithLabel,
+    WidthContainerM,
+    WidthLocM,
     _expect_multiple,
-    _UiWithLabel,
-    _WidthContainerM,
-    _WidthLocM,
     all_missing,
     not_is_missing,
 )
@@ -30,7 +30,7 @@ from ._expect import (
 )
 
 
-class _InputSliderBase(_WidthLocM, _UiWithLabel):
+class _InputSliderBase(WidthLocM, UiWithLabel):
 
     loc_irs: Locator
     """
@@ -451,7 +451,7 @@ class _InputSliderBase(_WidthLocM, _UiWithLabel):
         return handle_center
 
 
-class _RadioButtonCheckboxGroupBase(_UiWithLabel):
+class _RadioButtonCheckboxGroupBase(UiWithLabel):
     loc_choice_labels: Locator
 
     def expect_choice_labels(
@@ -499,7 +499,7 @@ class _RadioButtonCheckboxGroupBase(_UiWithLabel):
 
 
 class InputRadioButtons(
-    _WidthContainerM,
+    WidthContainerM,
     _RadioButtonCheckboxGroupBase,
 ):
     """Controller for :func:`shiny.ui.input_radio_buttons`."""
@@ -634,8 +634,8 @@ class InputRadioButtons(
 
 
 class _InputCheckboxBase(
-    _WidthContainerM,
-    _UiWithLabel,
+    WidthContainerM,
+    UiWithLabel,
 ):
     def __init__(
         self, page: Page, id: str, loc: InitLocator, loc_label: str | None
@@ -709,7 +709,7 @@ class _InputCheckboxBase(
 
 
 class InputCheckboxGroup(
-    _WidthContainerM,
+    WidthContainerM,
     _RadioButtonCheckboxGroupBase,
 ):
     """Controller for :func:`shiny.ui.input_checkbox_group`."""
@@ -924,8 +924,8 @@ class InputSwitch(_InputCheckboxBase):
 
 
 class _InputSelectBase(
-    _WidthLocM,
-    _UiWithLabel,
+    WidthLocM,
+    UiWithLabel,
 ):
     loc_selected: Locator
     """
@@ -1186,7 +1186,7 @@ class InputSelect(_InputSelectBase):
 
 
 class InputSelectize(
-    _UiWithLabel,
+    UiWithLabel,
 ):
     """Controller for :func:`shiny.ui.input_selectize`."""
 
