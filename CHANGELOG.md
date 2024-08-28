@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * A handful of fixes for `ui.Chat()`, including:
   * A fix for use inside Shiny modules. (#1582)
   * `.messages(format="google")` now returns the correct role. (#1622)
+  * `ui.Chat(messages)` are no longer dropped when dynamically rendered. (#1593)
   * `transform_assistant_response` can now return `None` and correctly handles change of content on the last chunk. (#1641)
 
 * An empty `ui.input_date()` value no longer crashes Shiny. (#1528)
