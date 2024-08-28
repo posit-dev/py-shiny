@@ -52,11 +52,11 @@ __all__ = (
 # user input content types
 TransformUserInput = Callable[[str], Union[str, None]]
 TransformUserInputAsync = Callable[[str], Awaitable[Union[str, None]]]
-TransformAssistantResponse = Callable[[str], Union[str, HTML]]
-TransformAssistantResponseAsync = Callable[[str], Awaitable[Union[str, HTML]]]
-TransformAssistantResponseChunk = Callable[[str, str, bool], Union[str, HTML]]
+TransformAssistantResponse = Callable[[str], Union[str, HTML, None]]
+TransformAssistantResponseAsync = Callable[[str], Awaitable[Union[str, HTML, None]]]
+TransformAssistantResponseChunk = Callable[[str, str, bool], Union[str, HTML, None]]
 TransformAssistantResponseChunkAsync = Callable[
-    [str, str, bool], Awaitable[Union[str, HTML]]
+    [str, str, bool], Awaitable[Union[str, HTML, None]]
 ]
 TransformAssistantResponseFunction = Union[
     TransformAssistantResponse,
@@ -711,11 +711,11 @@ class Chat:
         Parameters
         ----------
         fn
-            A function that takes a string and returns a string or
-            :class:`shiny.ui.HTML`. If `fn` returns a string, it gets interpreted and
-            parsed as a markdown on the client (and the resulting HTML is then
-            sanitized). If `fn` returns :class:`shiny.ui.HTML`, it will be displayed
-            as-is.
+            A function that takes a string and returns either a string,
+            :class:`shiny.ui.HTML`, or `None`. If `fn` returns a string, it gets
+            interpreted and parsed as a markdown on the client (and the resulting HTML
+            is then sanitized). If `fn` returns :class:`shiny.ui.HTML`, it will be
+            displayed as-is. If `fn` returns `None`, the response is effectively ignored.
 
         Note
         ----
@@ -774,16 +774,20 @@ class Chat:
 
         if message["role"] == "user" and self._transform_user is not None:
             content = await self._transform_user(message["content"])
-            if content is None:
-                return None
-            res[key] = content
 
         elif message["role"] == "assistant" and self._transform_assistant is not None:
-            res[key] = await self._transform_assistant(
+            content = await self._transform_assistant(
                 message["content"],
                 chunk_content or "",
                 chunk == "end" or chunk is False,
             )
+        else:
+            return res
+
+        if content is None:
+            return None
+
+        res[key] = content
 
         return res
 
