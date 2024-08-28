@@ -54,7 +54,9 @@ def get_default_tokenizer() -> TokenizersTokenizer | None:
     except ImportError:
         warnings.warn(
             "`Chat` is unable obtain a default tokenizer without the `tokenizers` "
-            "package installed. Please `pip install tokenizers` or set "
+            "package installed. The tokenizer to use for calculating token counts, "
+            "which is required to impose `token_limits` in `.messages()`.\n"
+            "Please run `pip install tokenizers` or set "
             "`Chat(tokenizer=None)` to disable tokenization.",
             stacklevel=2,
         )

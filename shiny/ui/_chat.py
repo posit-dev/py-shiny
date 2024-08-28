@@ -134,10 +134,10 @@ class Chat:
         * `"unhandled"`: Do not display any error message to the user.
     tokenizer
         The tokenizer to use for calculating token counts, which is required to impose
-        `token_limits` in `.messages()`. By default, a pre-trained tokenizer is
-        attempted to be loaded the tokenizers library (if available). A custom tokenizer
-        can be provided by following the `TokenEncoding` (tiktoken or tozenizer)
-        protocol. If token limits are of no concern, provide `None`.
+        `token_limits` in `.messages()`. By default, it attempts to load a tokenizer
+        from the `tokenizers` library (if available). A custom tokenizer can be provided
+        by following the `TokenEncoding` protocol (from the tiktoken or tokenizers
+        libraries). If token limits are of no concern, use `None`.
     """
 
     def __init__(
