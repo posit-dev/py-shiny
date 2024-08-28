@@ -9,9 +9,17 @@ from pathlib import Path
 from typing import Literal, Optional, TypedDict, Union
 
 import quartodoc.ast as qast
-from griffe import dataclasses as dc
-from griffe import expressions as exp
-from griffe.docstrings import dataclasses as ds
+from griffe import (
+    Alias,
+    DocstringAttribute,
+    DocstringParameter,
+    DocstringSectionParameters,
+    DocstringSectionText,
+    Expr,
+    ExprName,
+    Function,
+    Object,
+)
 from plum import dispatch
 from quartodoc import MdRenderer
 from quartodoc.pandoc.blocks import DefinitionList
@@ -42,7 +50,7 @@ class Renderer(MdRenderer):
         return prefix_bare_functions_with_func(el.value)
 
     @dispatch
-    def render(self, el: Union[dc.Object, dc.Alias]):
+    def render(self, el: Union[Object, Alias]):
         # If `el` is a protocol class that only has a `__call__` method,
         # then we want to display information about the method, not the class.
         if len(el.members) == 1 and "__call__" in el.members.keys():
@@ -78,7 +86,7 @@ class Renderer(MdRenderer):
         return converted
 
     @dispatch
-    def render(self, el: ds.DocstringSectionText):
+    def render(self, el: DocstringSectionText):
         # functions like shiny.ui.tags.b have html in their docstrings, so
         # we escape them. Note that we are only escaping text sections, but
         # since these cover the top text of the docstring, it should solve
@@ -93,7 +101,7 @@ class Renderer(MdRenderer):
     # TODO-future; Can be removed once we use quartodoc 0.3.5
     # Related: https://github.com/machow/quartodoc/pull/205
     @dispatch
-    def render(self, el: ds.DocstringAttribute):
+    def render(self, el: DocstringAttribute):
         row = [
             sanitize(el.name),
             self.render_annotation(el.annotation),
@@ -106,15 +114,15 @@ class Renderer(MdRenderer):
         return ""
 
     @dispatch
-    def render_annotation(self, el: exp.Expr):
-        # an expression is essentially a list[exp.ExprName | str]
+    def render_annotation(self, el: Expr):
+        # an expression is essentially a list[ExprName | str]
         # e.g. Optional[TagList]
         #   -> [Name(source="Optional", ...), "[", Name(...), "]"]
 
         return "".join(map(self.render_annotation, el))
 
     @dispatch
-    def render_annotation(self, el: exp.ExprName):
+    def render_annotation(self, el: ExprName):
         # e.g. Name(source="Optional", full="typing.Optional")
         return f"[{el.name}](`{el.canonical_path}`)"
 
@@ -122,7 +130,7 @@ class Renderer(MdRenderer):
     # Overload of `quartodoc.renderers.md_renderer` to fix bug where the descriptions
     # are cut off and never display other places. Fixing by always displaying the
     # documentation.
-    def summarize(self, obj: Union[dc.Object, dc.Alias]) -> str:
+    def summarize(self, obj: Union[Object, Alias]) -> str:
         # get high-level description
         doc = obj.docstring
         if doc is None:
@@ -131,7 +139,7 @@ class Renderer(MdRenderer):
             docstring_parts = doc.parsed
 
         if len(docstring_parts) and isinstance(
-            docstring_parts[0], ds.DocstringSectionText
+            docstring_parts[0], DocstringSectionText
         ):
             description = docstring_parts[0].value
 
@@ -164,7 +172,7 @@ class Renderer(MdRenderer):
 
     # Consolidate the parameter type info into a single column
     @dispatch
-    def render(self, el: ds.DocstringParameter):
+    def render(self, el: DocstringParameter):
         param = f'<span class="parameter-name">{el.name}</span>'
         annotation = self.render_annotation(el.annotation)
         if annotation:
@@ -178,14 +186,14 @@ class Renderer(MdRenderer):
         return (param, el.description)
 
     @dispatch
-    def render(self, el: ds.DocstringSectionParameters):
+    def render(self, el: DocstringSectionParameters):
         rows = list(map(self.render, el.value))
         # rows is a list of tuples of (<parameter>, <description>)
 
         return str(DefinitionList(rows))
 
     @dispatch
-    def signature(self, el: dc.Function, source: Optional[dc.Alias] = None):
+    def signature(self, el: Function, source: Optional[Alias] = None):
         if el.name == "__call__":
             # Ex: experimental.ui._card.ImgContainer.__call__(self, *args: Tag) -> Tagifiable
             sig = super().signature(el, source)
@@ -302,7 +310,7 @@ def check_if_missing_expected_example(el, converted):
         # Don't throw for things that can't be decorated
         return
 
-    if not el.is_explicitely_exported:
+    if not el.is_exported:
         # Don't require examples on "implicitly exported" functions
         # In practice, this covers methods of exported classes (class still needs ex)
         return

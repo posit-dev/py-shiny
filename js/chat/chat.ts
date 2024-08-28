@@ -402,10 +402,13 @@ class ChatContainer extends LightElement {
     if (message.chunk_type === "message_start") {
       lastMessage.setAttribute("streaming", "");
       lastMessage.setAttribute("busy", "");
-    } else if (message.chunk_type === "message_end") {
+      return;
+    }
+
+    lastMessage.setAttribute("content", message.content);
+
+    if (message.chunk_type === "message_end") {
       this.#finalizeMessage();
-    } else {
-      lastMessage.setAttribute("content", message.content);
     }
   }
 

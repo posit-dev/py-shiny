@@ -120,8 +120,8 @@ doc = [
     "tabulate",
     "shinylive",
     "pydantic>=2.7.4",
-    "quartodoc==0.7.5",
-    "griffe<1.0.0",
+    "quartodoc>=0.7.6",
+    "griffe>=1.1.1",
 ]
 
 [project.urls]
