@@ -74,6 +74,7 @@ def test_accordion(page: Page, local_app: ShinyAppProc) -> None:
     # add timeout to wait for css animation
     page.wait_for_timeout(100)
     acc_panel_updated_A._toggle()
+
     output_txt_verbatim.expect_value(
         "input.acc(): ('updated_section_a', 'Section C', 'Section D')"
     )
