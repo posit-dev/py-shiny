@@ -6208,7 +6208,10 @@ class Chat(_UiBase):
         timeout
             The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
-        playwright_expect(self.loc_latest_message).to_have_text(value, timeout=timeout)
+        # playwright_expect(self.loc_latest_message).to_have_text(value, timeout=timeout)
+        playwright_expect(self.loc_latest_message).to_have_text(
+            value, use_inner_text=True, timeout=timeout
+        )
 
     def expect_messages(
         self,
@@ -6226,7 +6229,9 @@ class Chat(_UiBase):
         timeout
             The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
-        playwright_expect(self.loc_messages).to_have_text(value, timeout=timeout)
+        playwright_expect(self.loc_messages).to_have_text(
+            value, use_inner_text=True, timeout=timeout
+        )
 
     def set_user_input(
         self,
