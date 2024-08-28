@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import re
 
 from playwright.sync_api import Locator, Page
