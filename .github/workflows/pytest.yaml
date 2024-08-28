@@ -58,8 +58,8 @@ jobs:
         run: |
           make check-format
 
-      - name: Verify code can run with mypy
-        if: steps.install.outcome == 'success' && (success() || failure())
+      - name: Verify code can run with mypy (not Windows)
+        if: steps.install.outcome == 'success' && (success() || failure()) && matrix.os != 'windows-latest'
         run: |
           make ci-check-mypy-can-run
 
