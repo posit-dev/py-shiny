@@ -1,0 +1,19 @@
+{
+  "type": "app",
+  "id": "basic-sidebar",
+  "title": "Sidebar layout",
+  "description": "An app with inputs in a sidebar and a plot in the main area.",
+  "next_steps": [
+    "Run the app with `shiny run app.py`."
+  ],
+  "follow_up": [
+    {
+      "type": "info",
+      "text": "Just getting started with Shiny?"
+    },
+    {
+      "type": "action",
+      "text": "Learn more at https://shiny.posit.co/py/docs/overview.html"
+    }
+  ]
+}

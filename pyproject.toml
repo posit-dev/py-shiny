@@ -1,0 +1,153 @@
+[build-system]
+requires = ["setuptools>=60", "wheel", "setuptools_scm>=8.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = { find = { include = ["shiny", "shiny.*"] } }
+
+[tool.setuptools_scm]
+write_to = "shiny/_version.py"
+local_scheme = "no-local-version"
+
+[project]
+name = "shiny"
+dynamic = ["version"]
+authors = [{ name = "Winston Chang", email = "winston@posit.co" }]
+description = "A web development framework for Python."
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "typing-extensions>=4.10.0",
+    "uvicorn>=0.16.0;platform_system!='Emscripten'",
+    "starlette",
+    "websockets>=10.0",
+    "python-multipart",
+    "htmltools>=0.5.2",
+    "click>=8.1.4;platform_system!='Emscripten'",
+    "markdown-it-py>=1.1.0",
+    "mdit-py-plugins>=0.3.0",
+    "linkify-it-py>=1.0",
+    "appdirs>=1.4.4",
+    "asgiref>=3.5.2",
+    "packaging>=20.9",
+    "watchfiles>=0.18.0;platform_system!='Emscripten'",
+    "questionary>=2.0.0;platform_system!='Emscripten'",
+    "prompt-toolkit;platform_system!='Emscripten'",
+    "python-multipart>=0.0.7;platform_system!='Emscripten'",
+    "setuptools;python_version>='3.12'",
+]
+
+[project.optional-dependencies]
+theme = ["libsass>=0.23.0"]
+test = [
+    "pytest>=6.2.4",
+    "pytest-asyncio>=0.17.2",
+    "pytest-playwright>=0.3.0",
+    "playwright>=1.43.0",
+    "pytest-xdist",
+    "pytest-timeout",
+    "pytest-rerunfailures",
+    "pytest-cov",
+    "coverage",
+    "syrupy>=4.7.1",
+    "psutil",
+    "astropy",
+    "suntime",
+    "timezonefinder ; platform_system != 'Windows'",
+    "ipyleaflet",
+    "shinywidgets",
+    "seaborn",
+    "plotnine",
+    "plotly",
+    "duckdb",
+    "holoviews",
+    "bokeh",
+    "xarray",
+    "geopandas",
+    "geodatasets",
+    "missingno",
+    "rsconnect-python",
+    "scikit-learn",
+    "folium",
+    "palmerpenguins",
+    "faicons",
+    "ridgeplot",
+    "great_tables",
+]
+dev = [
+    "black>=24.0",
+    "flake8>=6.0.0",
+    "flake8-bugbear>=23.2.13",
+    "Flake8-pyproject>=1.2.3",
+    "isort>=5.10.1",
+    "libsass>=0.23.0",
+    "pyright==1.1.369",
+    "pre-commit>=2.15.0",
+    "wheel",
+    "matplotlib",
+    "pandas",
+    "pandas-stubs",
+    "polars",
+    "numpy",
+    "shinyswatch>=0.7.0",
+    "python-dotenv",
+    "anthropic",
+    "google-generativeai;python_version>='3.9'",
+    "langchain_core",
+    "openai",
+    "ollama",
+    "tokenizers",
+    "aiohttp",
+    "beautifulsoup4",
+]
+doc = [
+    "jupyter",
+    "jupyter_client < 8.0.0",
+    "tabulate",
+    "shinylive",
+    "pydantic>=2.7.4",
+    "quartodoc>=0.7.6",
+    "griffe>=1.1.1",
+]
+
+[project.urls]
+Homepage = "https://github.com/posit-dev/py-shiny"
+Documentation = "https://shiny.posit.co/py/"
+Repository = "https://github.com/posit-dev/py-shiny"
+"Bug Tracker" = "https://github.com/posit-dev/py-shiny/issues"
+
+[project.scripts]
+shiny = "shiny._main:main"
+
+[project.entry-points.pytest11]
+shiny-test = "shiny.pytest._pytest"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.flake8]
+extend-exclude = ["docs", ".venv", "venv", "typings", "build", "_dev"]
+ignore = ["E302", "E501", "F403", "F405", "W503", "E203", "E701", "E704"]
+
+[tool.isort]
+profile = "black"
+skip = ["__init__.py", "typings/", "_dev/", ".venv", "venv", ".tox", "build"]
+
+[tool.mypy]
+# The goal of our usage of mypy is to make to sure mypy can run, not that it catches any errors (we use pyright to find our errors).
+# Therefore, ignore_errors but do not ignore runtime errors while checking
+# Note: This setting can not be done via CLI and must be set within a config
+ignore_errors = true
+exclude = ["shiny/api-examples", "shiny/templates"]

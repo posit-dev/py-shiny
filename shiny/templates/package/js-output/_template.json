@@ -1,0 +1,12 @@
+{
+  "type": "package",
+  "id": "js-output",
+  "title": "Output component",
+  "description": "A Python package template providing a custom Shiny output component.",
+  "follow_up": [
+    {
+      "type": "action",
+      "text": "Learn more about custom components for Shiny at https://shiny.posit.co/py/docs/custom-components-pkg.html"
+    }
+  ]
+}

@@ -12,6 +12,9 @@ not true when running in native Python, we want to be as safe as possible.
 from __future__ import annotations
 
 import re
+from typing import Any
+
+from . import _utils
 
 __all__ = (
     "StaticFiles",
@@ -24,12 +27,31 @@ from starlette.background import BackgroundTask
 
 if "pyodide" not in sys.modules:
     # Running in native mode; use starlette StaticFiles
+    import os
 
     import starlette.responses
     import starlette.staticfiles
 
-    StaticFiles = starlette.staticfiles.StaticFiles  # type: ignore
     FileResponse = starlette.responses.FileResponse  # type: ignore
+
+    # Wrapper for StaticFiles to fix .js content-type issues on Windows 10 (see #1601)
+    class StaticFiles(starlette.staticfiles.StaticFiles):  # type: ignore
+        def file_response(
+            self,
+            full_path: str | os.PathLike[str],
+            *args: Any,
+            **kwargs: Any,
+        ) -> starlette.responses.Response:
+            resp = super().file_response(full_path, *args, **kwargs)
+            if resp.headers.get("content-type", "").startswith("text/plain"):
+                correct_type = _utils.guess_mime_type(full_path)
+                resp.headers["content-type"] = (
+                    f"{correct_type}; charset={resp.charset}"
+                    if correct_type.startswith("text/")
+                    else correct_type
+                )
+                resp.media_type = correct_type
+            return resp
 
 else:
     # Running in wasm mode; must use our own simple StaticFiles
@@ -42,8 +64,6 @@ else:
 
     from starlette.responses import PlainTextResponse
     from starlette.types import Receive, Scope, Send
-
-    from . import _utils
 
     class StaticFiles:
         dir: pathlib.Path

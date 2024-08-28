@@ -30,6 +30,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Setup py-shiny
         id: install
         uses: ./.github/py-shiny/setup
@@ -56,6 +58,11 @@ jobs:
         run: |
           make check-format
 
+      - name: Verify code can run with mypy (not Windows)
+        if: steps.install.outcome == 'success' && (success() || failure()) && matrix.os != 'windows-latest'
+        run: |
+          make ci-check-mypy-can-run
+
   pypi:
     name: "Deploy to PyPI"
     runs-on: ubuntu-latest
@@ -63,6 +70,8 @@ jobs:
     needs: [check]
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: "Set up Python 3.10"
         uses: actions/setup-python@v4
         with:
@@ -117,6 +126,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Setup py-shiny
         uses: ./.github/py-shiny/setup
         with:
@@ -159,6 +170,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Setup py-shiny
         uses: ./.github/py-shiny/setup
         with:
@@ -205,6 +218,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Setup py-shiny
         uses: ./.github/py-shiny/setup
         with:

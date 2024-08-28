@@ -9,13 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
+* `ui.Chat()` gains a new `.update_user_input()` method, which adds the ability to update the input placeholder message. As a result, `.set_user_message()` is now deprecated (since the new method can also be used to update the message). (#1594)
+
+* `shiny create` now supports a succinct format for specifying the GitHub repository via the `--github` flag, e.g. `--github posit-dev/py-shiny-templates`. You can now also use `--github` and `--template` together, in which case `--github` should point to a repository containing a directory matching the name provided in `--template`. (#1623)
+
+* `shiny create` now identifies templates in external repositories using a `_template.json` metadata file. This file should contain at an `"id"` and optionally a `"title"` and `"description"`. When `shiny create` is called with the `--github` flag but without a `--template` flag, it will offer a menu listing all available templates in the repository. (#1631)
+
 ### Other changes
 
 ### Bug fixes
 
-* An empty `ui.input_date()` value no longer crashes Shiny. (#1528)
+* A handful of fixes for `ui.Chat()`, including:
+  * A fix for use inside Shiny modules. (#1582)
+  * `.messages(format="google")` now returns the correct role. (#1622)
+  * `transform_assistant_response` can now return `None` and correctly handles change of content on the last chunk. (#1641)
 
-* `ui.Chat()` now works as expected inside Shiny modules. (#1582)
+* An empty `ui.input_date()` value no longer crashes Shiny. (#1528)
 
 * `ui.Chat()` now works as expected when the UI is dynamically rendered and starting `messages` are supplied. (#1593)
 
@@ -27,7 +36,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `ui.notification_show(duration=None)` now persists the notification until the app user closes it. (#1577)
 
-### Bug fixes
+* Some copies of Windows 10 have registry entries mapping .js files to content type "text/plain", which was causing all sorts of problems for browsers. (#1624)
+
+* Added missing support for `express.ui.navset_card_pill(placement:)`. (#1602)
+
+* Added `.expect_sidebar()` and `.expect_title()` methods for `NavsetCardTab`, `NavsetCardPill`, `NavsetCardUnderline`, and `NavsetBar`. (#1602)
+
+* Added `.expect_placement()` method for `NavsetCardPill` and `NavsetCardUnderline`. (#1602)
 
 ### Deprecations
 

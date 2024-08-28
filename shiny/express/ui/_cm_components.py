@@ -927,6 +927,7 @@ def navset_card_pill(
     sidebar: Optional[ui.Sidebar] = None,
     header: TagChild = None,
     footer: TagChild = None,
+    placement: Literal["above", "below"] = "above",
 ) -> RecallContextManager[NavSetCard]:
     """
     Context manager for a set of nav items as a tabset inside a card container.
@@ -947,6 +948,8 @@ def navset_card_pill(
         UI to display above the selected content.
     footer
         UI to display below the selected content.
+    placement
+        Placement of the nav items relative to the content.
     """
     return RecallContextManager(
         ui.navset_card_pill,
@@ -957,6 +960,7 @@ def navset_card_pill(
             sidebar=sidebar,
             header=header,
             footer=footer,
+            placement=placement,
         ),
     )
 

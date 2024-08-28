@@ -1,4 +1,4 @@
-from shiny import App, ui
+from shiny import App, render, ui
 
 app_ui = ui.page_fluid(
     ui.navset_bar(
@@ -14,14 +14,18 @@ app_ui = ui.page_fluid(
                 ui.a("Shiny", href="https://shiny.posit.co", target="_blank")
             ),
         ),
-        id="tab",
+        id="selected_navset_bar",
         title="Navset Bar",
-    )
+    ),
+    ui.h5("Selected:"),
+    ui.output_code("selected"),
 )
 
 
 def server(input, output, session):
-    pass
+    @render.code
+    def selected():
+        return input.selected_navset_bar()
 
 
 app = App(app_ui, server)

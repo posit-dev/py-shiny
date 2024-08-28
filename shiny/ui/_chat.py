@@ -19,6 +19,7 @@ from weakref import WeakValueDictionary
 from htmltools import HTML, Tag, TagAttrValue, css
 
 from .. import _utils, reactive
+from .._deprecated import warn_deprecated
 from .._docstring import add_example
 from .._namespaces import ResolvedId, resolve_id
 from ..session import require_active_session, session_context
@@ -51,11 +52,11 @@ __all__ = (
 # user input content types
 TransformUserInput = Callable[[str], Union[str, None]]
 TransformUserInputAsync = Callable[[str], Awaitable[Union[str, None]]]
-TransformAssistantResponse = Callable[[str], Union[str, HTML]]
-TransformAssistantResponseAsync = Callable[[str], Awaitable[Union[str, HTML]]]
-TransformAssistantResponseChunk = Callable[[str, str, bool], Union[str, HTML]]
+TransformAssistantResponse = Callable[[str], Union[str, HTML, None]]
+TransformAssistantResponseAsync = Callable[[str], Awaitable[Union[str, HTML, None]]]
+TransformAssistantResponseChunk = Callable[[str, str, bool], Union[str, HTML, None]]
 TransformAssistantResponseChunkAsync = Callable[
-    [str, str, bool], Awaitable[Union[str, HTML]]
+    [str, str, bool], Awaitable[Union[str, HTML, None]]
 ]
 TransformAssistantResponseFunction = Union[
     TransformAssistantResponse,
@@ -712,11 +713,11 @@ class Chat:
         Parameters
         ----------
         fn
-            A function that takes a string and returns a string or
-            :class:`shiny.ui.HTML`. If `fn` returns a string, it gets interpreted and
-            parsed as a markdown on the client (and the resulting HTML is then
-            sanitized). If `fn` returns :class:`shiny.ui.HTML`, it will be displayed
-            as-is.
+            A function that takes a string and returns either a string,
+            :class:`shiny.ui.HTML`, or `None`. If `fn` returns a string, it gets
+            interpreted and parsed as a markdown on the client (and the resulting HTML
+            is then sanitized). If `fn` returns :class:`shiny.ui.HTML`, it will be
+            displayed as-is. If `fn` returns `None`, the response is effectively ignored.
 
         Note
         ----
@@ -775,16 +776,20 @@ class Chat:
 
         if message["role"] == "user" and self._transform_user is not None:
             content = await self._transform_user(message["content"])
-            if content is None:
-                return None
-            res[key] = content
 
         elif message["role"] == "assistant" and self._transform_assistant is not None:
-            res[key] = await self._transform_assistant(
+            content = await self._transform_assistant(
                 message["content"],
                 chunk_content or "",
                 chunk == "end" or chunk is False,
             )
+        else:
+            return res
+
+        if content is None:
+            return None
+
+        res[key] = content
 
         return res
 
@@ -935,26 +940,43 @@ class Chat:
         id = self.user_input_id
         return cast(str, self._session.input[id]())
 
-    def set_user_message(self, value: str):
+    def update_user_input(
+        self, *, value: str | None = None, placeholder: str | None = None
+    ):
         """
-        Set the user's message.
+        Update the user input.
 
         Parameters
         ----------
         value
             The value to set the user input to.
+        placeholder
+            The placeholder text for the user input.
         """
+
+        obj = _utils.drop_none({"value": value, "placeholder": placeholder})
 
         _utils.run_coro_sync(
             self._session.send_custom_message(
                 "shinyChatMessage",
                 {
                     "id": self.id,
-                    "handler": "shiny-chat-set-user-input",
-                    "obj": value,
+                    "handler": "shiny-chat-update-user-input",
+                    "obj": obj,
                 },
             )
         )
+
+    def set_user_message(self, value: str):
+        """
+        Deprecated. Use `update_user_input(value=value)` instead.
+        """
+
+        warn_deprecated(
+            "set_user_message() is deprecated. Use update_user_input(value=value) instead."
+        )
+
+        self.update_user_input(value=value)
 
     async def clear_messages(self):
         """
