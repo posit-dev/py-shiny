@@ -211,7 +211,7 @@ install-deps: FORCE ## install dependencies
 ci-install-deps: FORCE
 	uv pip install setuptools
 	uv pip install "htmltools @ git+https://github.com/posit-dev/py-htmltools.git"
-	uv pip install -e ".[dev,test]"
+	pip install -e ".[dev,test]"
 
 install-docs: FORCE
 	pip install -e ".[dev,test,doc]"
