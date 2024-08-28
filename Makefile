@@ -209,8 +209,9 @@ ci-install-wheel: dist FORCE
 install-deps: FORCE ## install dependencies
 	pip install -e ".[dev,test]" --upgrade
 ci-install-deps: FORCE
-	uv pip install setuptools
 	uv pip install "htmltools @ git+https://github.com/posit-dev/py-htmltools.git"
+	uv pip install setuptools poetry cffi
+	pip install -v --no-build-isolation timezonefinder
 	pip install -e ".[dev,test]"
 
 install-docs: FORCE
