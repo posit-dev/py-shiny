@@ -36,12 +36,18 @@ shiny-chat-container {
           width: 20px;
         }
       }
-      &[busy] .message-icon {
-        animation: glowing-icon 1.5s infinite;
-      }
       /* Vertically center the 2nd column (message content) */
       .message-content {
         align-self: center;
+      }
+      .message-streaming-icon {
+        opacity: 0;
+      }
+      &[streaming] .message-streaming-icon {
+        animation-delay: 2s;
+        animation-name: fade-in;
+        animation-duration: 30ms;
+        animation-fill-mode: forwards;
       }
     }
 
@@ -92,7 +98,7 @@ shiny-chat-container {
   Disable the page-level pulse when the chat input is disabled
   (i.e., when a response is being generated and brought into the chat)
 */
-.shiny-busy:has(shiny-chat-message[busy])::after {
+.shiny-busy:has(shiny-chat-input[disabled])::after {
   display: none;
 }
 
@@ -146,14 +152,12 @@ pre:has(.code-copy-button) {
   }
 }
 
-@keyframes glowing-icon {
+/* Keyframes for the fading spinner */
+@keyframes fade-in {
   0% {
-    box-shadow: 0 0 0px var(--bs-primary, #007bc2);
-  }
-  50% {
-    box-shadow: 0 0 0.35rem var(--bs-primary, #007bc2);
+    opacity: 0;
   }
   100% {
-    box-shadow: 0 0 0px var(--bs-primary, #007bc2);
+    opacity: 1;
   }
 }
