@@ -58,6 +58,11 @@ jobs:
         run: |
           make check-format
 
+      - name: Verify code can run with mypy (not Windows)
+        if: steps.install.outcome == 'success' && (success() || failure()) && matrix.os != 'windows-latest'
+        run: |
+          make ci-check-mypy-can-run
+
   pypi:
     name: "Deploy to PyPI"
     runs-on: ubuntu-latest
