@@ -1,7 +1,7 @@
 from playwright.sync_api import Page
 
 from shiny.playwright import controller
-from shiny.playwright.controller._controls import expect_to_have_class
+from shiny.playwright.expect import expect_to_have_class
 from shiny.run import ShinyAppProc
 
 
