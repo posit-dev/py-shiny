@@ -17,11 +17,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Other changes
 
-* User input messages to `ui.Chat()` are now interpreted as "semi-markdown" instead of "plain-text". This means markdown syntax renders as expected, but HTML tags aren't treated as HTML. (#1607)
+* A few changes for `ui.Chat()`, including:
+  * User input that contains markdown now renders the expected HTML. (#1607)
+  * Busy indication is now visible/apparent during the entire lifecycle of response generation. (#1607)
 
 ### Bug fixes
 
-* A handful of fixes for `ui.Chat()`, including:
+* A few fixes for `ui.Chat()`, including:
   * A fix for use inside Shiny modules. (#1582)
   * `.messages(format="google")` now returns the correct role. (#1622)
   * `transform_assistant_response` can now return `None` and correctly handles change of content on the last chunk. (#1641)
