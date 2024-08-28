@@ -642,7 +642,7 @@ class Chat:
 
         # print(msg)
 
-        # When streaming (i.e., chunk is thruthy), we can send messages immediately
+        # When streaming (i.e., chunk is truthy), we can send messages immediately
         # since we already waited for the flush in order to start the stream
         await self._send_custom_message(msg_type, msg, on_flushed=chunk is False)
         # TODO: Joe said it's a good idea to yield here, but I'm not sure why?
