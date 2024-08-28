@@ -22,11 +22,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * A handful of fixes for `ui.Chat()`, including:
   * A fix for use inside Shiny modules. (#1582)
   * `.messages(format="google")` now returns the correct role. (#1622)
+  * `ui.Chat(messages)` are no longer dropped when dynamically rendered. (#1593)
   * `transform_assistant_response` can now return `None` and correctly handles change of content on the last chunk. (#1641)
 
 * An empty `ui.input_date()` value no longer crashes Shiny. (#1528)
-
-* `ui.Chat()` now works as expected when the UI is dynamically rendered and starting `messages` are supplied. (#1593)
 
 * Fixed bug where calling `.update_filter(None)` on a data frame renderer did not visually reset non-numeric column filters. (It did reset the column's filtering, just not the label). Now it resets filter's label. (#1557)
 
