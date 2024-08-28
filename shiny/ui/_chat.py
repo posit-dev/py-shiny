@@ -134,10 +134,10 @@ class Chat:
         * `"unhandled"`: Do not display any error message to the user.
     tokenizer
         The tokenizer to use for calculating token counts, which is required to impose
-        `token_limits` in `.messages()`. By default, a pre-trained tokenizer is
-        attempted to be loaded the tokenizers library (if available). A custom tokenizer
-        can be provided by following the `TokenEncoding` (tiktoken or tozenizer)
-        protocol. If token limits are of no concern, provide `None`.
+        `token_limits` in `.messages()`. If not provided, a default generic tokenizer
+        is attempted to be loaded from the tokenizers library. A specific tokenizer
+        may also be provided by following the `TokenEncoding` (tiktoken or tozenizer)
+        protocol (e.g., `tiktoken.encoding_for_model("gpt-4o")`).
     """
 
     def __init__(
@@ -146,7 +146,7 @@ class Chat:
         *,
         messages: Sequence[Any] = (),
         on_error: Literal["auto", "actual", "sanitize", "unhandled"] = "auto",
-        tokenizer: TokenEncoding | MISSING_TYPE | None = MISSING,
+        tokenizer: TokenEncoding | None = None,
     ):
         if not isinstance(id, str):
             raise TypeError("`id` must be a string.")
@@ -155,10 +155,10 @@ class Chat:
         self.user_input_id = ResolvedId(f"{self.id}_user_input")
         self._transform_user: TransformUserInputAsync | None = None
         self._transform_assistant: TransformAssistantResponseChunkAsync | None = None
-        if isinstance(tokenizer, MISSING_TYPE):
-            self._tokenizer = get_default_tokenizer()
-        else:
-            self._tokenizer = tokenizer
+        if tokenizer is None:
+            tokenizer = get_default_tokenizer()
+        self._tokenizer = tokenizer
+
         # TODO: remove the `None` when this PR lands:
         # https://github.com/posit-dev/py-shiny/pull/793/files
         self._session = require_active_session(None)
@@ -351,7 +351,7 @@ class Chat:
         self,
         *,
         format: Literal["anthropic"] = "anthropic",
-        token_limits: tuple[int, int] | None = (4096, 1000),
+        token_limits: tuple[int, int] | None = None,
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
     ) -> tuple[AnthropicMessage, ...]: ...
@@ -361,7 +361,7 @@ class Chat:
         self,
         *,
         format: Literal["google"] = "google",
-        token_limits: tuple[int, int] | None = (4096, 1000),
+        token_limits: tuple[int, int] | None = None,
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
     ) -> tuple[GoogleMessage, ...]: ...
@@ -371,7 +371,7 @@ class Chat:
         self,
         *,
         format: Literal["langchain"] = "langchain",
-        token_limits: tuple[int, int] | None = (4096, 1000),
+        token_limits: tuple[int, int] | None = None,
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
     ) -> tuple[LangChainMessage, ...]: ...
@@ -381,7 +381,7 @@ class Chat:
         self,
         *,
         format: Literal["openai"] = "openai",
-        token_limits: tuple[int, int] | None = (4096, 1000),
+        token_limits: tuple[int, int] | None = None,
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
     ) -> tuple[OpenAIMessage, ...]: ...
@@ -391,7 +391,7 @@ class Chat:
         self,
         *,
         format: Literal["ollama"] = "ollama",
-        token_limits: tuple[int, int] | None = (4096, 1000),
+        token_limits: tuple[int, int] | None = None,
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
     ) -> tuple[OllamaMessage, ...]: ...
@@ -401,7 +401,7 @@ class Chat:
         self,
         *,
         format: MISSING_TYPE = MISSING,
-        token_limits: tuple[int, int] | None = (4096, 1000),
+        token_limits: tuple[int, int] | None = None,
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
     ) -> tuple[ChatMessage, ...]: ...
@@ -410,7 +410,7 @@ class Chat:
         self,
         *,
         format: MISSING_TYPE | ProviderMessageFormat = MISSING,
-        token_limits: tuple[int, int] | None = (4096, 1000),
+        token_limits: tuple[int, int] | None = None,
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
     ) -> tuple[ChatMessage | ProviderMessage, ...]:
@@ -440,10 +440,15 @@ class Chat:
             * `"openai"`: OpenAI message format.
             * `"ollama"`: Ollama message format.
         token_limits
-            A tuple of two integers. The first integer is the maximum number of tokens
-            that can be sent to the model in a single request. The second integer is the
-            amount of tokens to reserve for the model's response.
-            Can also be `None` to disable message trimming based on token counts.
+            Limit the conversation history based on token limits. If specified, only
+            the most recent messages that fit within the token limits are returned. This
+            is useful for avoiding "exceeded token limit" errors when sending messages
+            to the relevant model, while still providing the most recent context available.
+            A specified value must be a tuple of two integers. The first integer is the
+            maximum number of tokens that can be sent to the model in a single request.
+            The second integer is the amount of tokens to reserve for the model's response.
+            Note that token counts based on the `tokenizer` provided to the `Chat`
+            constructor.
         transform_user
             Whether to return user input messages with transformation applied. This only
             matters if a `transform_user_input` was provided to the chat constructor.
@@ -469,6 +474,15 @@ class Chat:
 
         messages = self._messages()
         if token_limits is not None:
+            if self._tokenizer is None:
+                raise ValueError(
+                    "A tokenizer is required to impose `token_limits` on messages. "
+                    "To get a generic default tokenizer, install the `tokenizers` "
+                    "package (`pip install tokenizers`). "
+                    "To get a more precise token count, provide a specific tokenizer "
+                    "to the `Chat` constructor."
+                )
+
             messages = self._trim_messages(messages, token_limits, format)
 
         res: list[ChatMessage | ProviderMessage] = []
