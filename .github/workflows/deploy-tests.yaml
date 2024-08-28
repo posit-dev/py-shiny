@@ -36,7 +36,7 @@ jobs:
         env:
           DEPLOY_APPS: "false"
         run: |
-          make playwright-deploys SUB_FILE=". -vv"
+          make playwright-deploys TEST_FILE="${{ matrix.config.base_test_dir }} -vv"
 
       - name: Deploy apps and run tests (on `push` or `deploy**` branches)
         env:
@@ -50,7 +50,7 @@ jobs:
         # Given we are waiting for external servers to finish,
         # we can have many local processes waiting for deployment to finish
         run: |
-          make playwright-deploys SUB_FILE=". -vv --numprocesses 12"
+          make playwright-deploys TEST_FILE="${{ matrix.config.base_test_dir }} -vv --numprocesses 12"
 
       # - uses: actions/upload-artifact@v4
       #   if: failure()
