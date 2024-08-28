@@ -1,3 +1,5 @@
+import os
+
 import pytest
 from playwright.sync_api import Page
 from utils.deploy_utils import (
@@ -9,7 +11,10 @@ from utils.deploy_utils import (
 
 from shiny.playwright import controller
 
-app_url = create_deploys_app_url_fixture("express_page_sidebar")
+app_url = create_deploys_app_url_fixture(
+    # Possibly use a different app name given by an GHA env var
+    os.getenv("EXPRESS_PAGE_SIDEBAR_NAME", "express_page_sidebar")
+)
 
 
 @skip_if_not_chrome

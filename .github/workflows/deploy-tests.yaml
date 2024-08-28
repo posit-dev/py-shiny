@@ -16,6 +16,40 @@ jobs:
         # Matches deploy server python version
         python-version: ["3.10"]
         os: [ubuntu-latest]
+        config:
+          # Released server, shiny, and rsconnect
+          - released_connect_server: true
+            pypi_shiny: true
+            pypi_rsconnect: true
+            base_test_dir: "./tests/playwright/deploys/express-page_sidebar"
+            test_shinyappsio: false
+            app_name: "pypi-shiny-rsconnect"
+
+          # Released shiny and rsconnect
+          # Dev server
+          - released_connect_server: false
+            pypi_shiny: true
+            pypi_rsconnect: true
+            base_test_dir: "./tests/playwright/deploys/express-page_sidebar"
+            test_shinyappsio: false
+            app_name: "pypi-shiny-rsconnect"
+
+          # Released shiny
+          # Dogfood server and rsconnect
+          - released_connect_server: false
+            pypi_shiny: true
+            pypi_rsconnect: false
+            base_test_dir: "./tests/playwright/deploys/express-page_sidebar"
+            test_shinyappsio: false
+            app_name: "pypi-shiny-dev-rsconnect"
+
+          # Dev server, shiny, and rsconnect
+          - released_connect_server: false
+            pypi_shiny: false
+            pypi_rsconnect: false
+            base_test_dir: "./tests/playwright/deploys"
+            test_shinyappsio: true
+
       fail-fast: false
 
     steps:
@@ -27,7 +61,18 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install rsconnect
+      - name: Install pypi shiny and htmltools (uninstall GitHub versions)
+        if: ${{ matrix.config.pypi_shiny }}
+        run: |
+          uv pip uninstall -y shiny htmltools
+          uv pip install shiny htmltools
+
+      - name: Install rsconnect (PyPI)
+        if: ${{ matrix.config.pypi_rsconnect }}
+        run: |
+          uv pip install rsconnect
+      - name: Install rsconnect (GitHub)
+        if: ${{ ! matrix.config.pypi_rsconnect }}
         run: |
           make ci-install-rsconnect
 
@@ -41,11 +86,12 @@ jobs:
       - name: Deploy apps and run tests (on `push` or `deploy**` branches)
         env:
           DEPLOY_APPS: "true"
-          DEPLOY_CONNECT_SERVER_URL: "https://rsc.radixu.com/"
-          DEPLOY_CONNECT_SERVER_API_KEY: "${{ secrets.DEPLOY_CONNECT_SERVER_API_KEY }}"
-          DEPLOY_SHINYAPPS_NAME: "${{ secrets.DEPLOY_SHINYAPPS_NAME }}"
-          DEPLOY_SHINYAPPS_TOKEN: "${{ secrets.DEPLOY_SHINYAPPS_TOKEN }}"
-          DEPLOY_SHINYAPPS_SECRET: "${{ secrets.DEPLOY_SHINYAPPS_SECRET }}"
+          DEPLOY_CONNECT_SERVER_URL: "${{ (matrix.config.released_connect_server && 'https://connect.posit.it/') || 'https://rsc.radixu.com/' }}"
+          DEPLOY_CONNECT_SERVER_API_KEY: "${{ (matrix.config.released_connect_server && secrets.DEPLOY_CONNECT_POSIT_SERVER_API_KEY) || secrets.DEPLOY_CONNECT_SERVER_API_KEY }}"
+          DEPLOY_SHINYAPPS_NAME: "${{ matrix.config.test_shinyappsio && matrix.config.shinyapps_name }}"
+          DEPLOY_SHINYAPPS_TOKEN: "${{ matrix.config.test_shinyappsio && matrix.config.shinyapps_token }}"
+          DEPLOY_SHINYAPPS_SECRET: "${{ matrix.config.test_shinyappsio && matrix.config.shinyapps_secret }}"
+          EXPRESS_PAGE_SIDEBAR_NAME: "${{ matrix.config.app_name }}"
         timeout-minutes: 30
         # Given we are waiting for external servers to finish,
         # we can have many local processes waiting for deployment to finish
