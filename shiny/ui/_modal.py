@@ -158,7 +158,7 @@ def modal(
     )
 
 
-@add_example(ex_dir="../api-examples/modal_remove")
+@add_example(ex_dir="../api-examples/modal")
 def modal_show(modal: Tag, session: Optional[Session] = None) -> None:
     """
     Show a modal dialog.
