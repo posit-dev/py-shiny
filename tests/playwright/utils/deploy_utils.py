@@ -7,7 +7,7 @@ import subprocess
 import sys
 import tempfile
 import time
-from typing import Any, Callable, TypeVar
+from typing import Any, Callable, List, TypeVar
 
 import pytest
 import requests
@@ -30,12 +30,12 @@ __all__ = (
 server_url = os.environ.get("DEPLOY_CONNECT_SERVER_URL")
 api_key = os.environ.get("DEPLOY_CONNECT_SERVER_API_KEY")
 # shinyapps.io
-name = os.environ.get("DEPLOY_SHINYAPPS_NAME")
-token = os.environ.get("DEPLOY_SHINYAPPS_TOKEN")
-secret = os.environ.get("DEPLOY_SHINYAPPS_SECRET")
+shinyappsio_name = os.environ.get("DEPLOY_SHINYAPPS_NAME")
+shinyappsio_token = os.environ.get("DEPLOY_SHINYAPPS_TOKEN")
+shinyappsio_secret = os.environ.get("DEPLOY_SHINYAPPS_SECRET")
 
+deploy_locations: List[str] = ["connect", "shinyapps"]
 
-deploy_locations = ["connect", "shinyapps"]
 
 CallableT = TypeVar("CallableT", bound=Callable[..., Any])
 
@@ -105,9 +105,9 @@ def deploy_to_connect(app_name: str, app_dir: str) -> str:
 # TODO-future: Supress web browser from opening after deploying - https://github.com/rstudio/rsconnect-python/issues/462
 def deploy_to_shinyapps(app_name: str, app_dir: str) -> str:
     # Deploy to shinyapps.io
-    shinyapps_deploy = f"rsconnect deploy shiny {app_dir} --account {name} --token {token} --secret {secret} --title {app_name} --verbose"
+    shinyapps_deploy = f"rsconnect deploy shiny {app_dir} --account {shinyappsio_name} --token {shinyappsio_token} --secret {shinyappsio_secret} --title {app_name} --verbose"
     run_command(shinyapps_deploy)
-    return f"https://{name}.shinyapps.io/{app_name}/"
+    return f"https://{shinyappsio_name}.shinyapps.io/{app_name}/"
 
 
 # Since connect parses python packages, we need to get latest version of shiny on HEAD
@@ -185,6 +185,7 @@ def create_deploys_app_url_fixture(
 ):
     @pytest.fixture(scope=scope, params=[*deploy_locations, LOCAL_LOCATION])
     def fix_fn(request: pytest.FixtureRequest):
+
         app_file = os.path.join(os.path.dirname(request.path), "app.py")
         deploy_location = request.param
 
