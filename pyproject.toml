@@ -85,7 +85,6 @@ test = [
     "faicons",
     "ridgeplot",
     "great_tables",
-    "mypy",
 ]
 dev = [
     "black>=24.0",
@@ -149,5 +148,6 @@ skip = ["__init__.py", "typings/", "_dev/", ".venv", "venv", ".tox", "build"]
 [tool.mypy]
 # The goal of our usage of mypy is to make to sure mypy can run, not that it catches any errors (we use pyright to find our errors).
 # Therefore, ignore_errors but do not ignore runtime errors while checking
+# Note: This setting can not be done via CLI and must be set within a config
 ignore_errors = true
 exclude = ["shiny/api-examples", "shiny/templates"]

@@ -229,6 +229,7 @@ ci-install-rsconnect: FORCE
 # Not added to `make check` or `make check-fix` as all lint errors are supporessed (as we use pyright).
 ci-check-mypy-can-run: FORCE
 	@echo "-------- Checking types with mypy -----------"
+	uv pip install mypy
 	mypy shiny
 
 
