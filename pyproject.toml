@@ -65,7 +65,7 @@ test = [
     "psutil",
     "astropy",
     "suntime",
-    "timezonefinder",
+    "timezonefinder ; platform_system != 'Windows'",
     "ipyleaflet",
     "shinywidgets",
     "seaborn",
