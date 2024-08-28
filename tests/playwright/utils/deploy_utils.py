@@ -194,6 +194,16 @@ def create_deploys_app_url_fixture(
             # Return the `url`
             yield next(shinyapp_proc_gen).url
         elif deploy_location in deploy_locations:
+
+            if deploy_location == "connect" and not (server_url and api_key):
+                pytest.skip("Connect server url or api key not found. Cannot deploy.")
+            if deploy_location == "shinyapps" and not (
+                shinyappsio_name and shinyappsio_token and shinyappsio_secret
+            ):
+                pytest.skip(
+                    "Shinyapps.io name, token or secret not found. Cannot deploy."
+                )
+
             app_url = deploy_app(
                 app_file,
                 deploy_location,
