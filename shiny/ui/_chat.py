@@ -562,9 +562,12 @@ class Chat:
         # Run the stream in the background to get non-blocking behavior
         @reactive.extended_task
         async def _stream_task():
-            await self._append_message_stream(message)
+            async def _do_stream():
+                await self._append_message_stream(message)
 
-        self._session.on_flushed(_stream_task, once=True)
+            self._session.on_flushed(_do_stream, once=True)
+
+        _stream_task()
 
         # Since the task runs in the background (outside/beyond the current context,
         # if any), we need to manually raise any exceptions that occur
