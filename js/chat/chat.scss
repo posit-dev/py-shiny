@@ -41,12 +41,14 @@ shiny-chat-container {
         align-self: center;
       }
       .message-streaming-icon {
+        display: none;
         opacity: 0;
       }
       &[streaming] .message-streaming-icon {
+        display: block;
         animation-delay: 2s;
         animation-name: fade-in;
-        animation-duration: 30ms;
+        animation-duration: 10ms;
         animation-fill-mode: forwards;
       }
     }
