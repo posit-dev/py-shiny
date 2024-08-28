@@ -13,6 +13,7 @@ from ..expect._internal import (
 from ..expect._internal import expect_class_to_have_value as _expect_class_to_have_value
 from ..expect._internal import expect_style_to_have_value as _expect_style_to_have_value
 from ._base import (
+    Resize,
     _UiBaseP,
     _UiWithLabel,
     _WidthContainerM,
