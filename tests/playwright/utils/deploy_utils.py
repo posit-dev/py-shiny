@@ -22,7 +22,7 @@ reruns_delay = 1
 LOCAL_LOCATION = "local"
 
 __all__ = (
-    "create_deploys_app_url_fixture",
+    "local_deploys_app_url_fixture",
     "skip_if_not_chrome",
 )
 
@@ -179,7 +179,7 @@ def deploy_app(
         return url
 
 
-def create_deploys_app_url_fixture(
+def local_deploys_app_url_fixture(
     app_name: str,
     scope: ScopeName = "module",
 ):
