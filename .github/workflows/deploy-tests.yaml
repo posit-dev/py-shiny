@@ -9,8 +9,9 @@ jobs:
   playwright-deploys:
     # Only allow one `playwright-deploys` job to run at a time. (Independent of branch / PR)
     # Only one is allowed to run at a time because it is deploying to the same server location.
-    concurrency: playwright-deploys
+    concurrency: playwright-deploys-${{ matrix.config.name }}
     runs-on: ${{ matrix.os }}
+    name: ${{ matrix.config.name }}
     strategy:
       matrix:
         # Matches deploy server python version
@@ -18,33 +19,37 @@ jobs:
         os: [ubuntu-latest]
         config:
           # Released server, shiny, and rsconnect
-          - released_connect_server: true
+          - name: "pypi-shiny-rsconnect-connect"
+            released_connect_server: true
             pypi_shiny: true
             pypi_rsconnect: true
             base_test_dir: "./tests/playwright/deploys/express-page_sidebar"
-            test_shinyappsio: false
             app_name: "pypi-shiny-rsconnect"
+            test_shinyappsio: false
 
           # Released shiny and rsconnect
           # Dev server
-          - released_connect_server: false
+          - name: "pypi-shiny-rsconnect-dogfood"
+            released_connect_server: false
             pypi_shiny: true
             pypi_rsconnect: true
             base_test_dir: "./tests/playwright/deploys/express-page_sidebar"
-            test_shinyappsio: false
             app_name: "pypi-shiny-rsconnect"
+            test_shinyappsio: false
 
           # Released shiny
           # Dogfood server and rsconnect
-          - released_connect_server: false
+          - name: "pypi-shiny-dev-rsconnect-dogfood"
+            released_connect_server: false
             pypi_shiny: true
             pypi_rsconnect: false
             base_test_dir: "./tests/playwright/deploys/express-page_sidebar"
-            test_shinyappsio: false
             app_name: "pypi-shiny-dev-rsconnect"
+            test_shinyappsio: false
 
           # Dev server, shiny, and rsconnect
-          - released_connect_server: false
+          - name: "dev-shiny-rsconnect-dogfood"
+            released_connect_server: false
             pypi_shiny: false
             pypi_rsconnect: false
             base_test_dir: "./tests/playwright/deploys"
