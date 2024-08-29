@@ -39,7 +39,7 @@ clean-build: FORCE
 	rm -fr dist/
 	rm -fr .eggs/
 	find . -name '*.egg-info' -exec rm -fr {} +
-	find . -name '*.egg' -exec rm -f {} +
+	find . -name '*.egg' -exec rm -rf {} +
 
 # Remove Python file artifacts
 clean-pyc: FORCE
@@ -223,6 +223,14 @@ ci-install-docs: FORCE
 
 ci-install-rsconnect: FORCE
 	uv pip install "rsconnect-python @ git+https://github.com/rstudio/rsconnect-python.git"
+
+
+# This is just to check if mypy can run for other users.
+# Not added to `make check` or `make check-fix` as all lint errors are supporessed (as we use pyright).
+ci-check-mypy-can-run: FORCE
+	@echo "-------- Checking types with mypy -----------"
+	uv pip install mypy
+	mypy shiny
 
 
 # ## If caching is ever used, we could run:

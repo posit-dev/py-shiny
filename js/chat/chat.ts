@@ -275,7 +275,10 @@ class ChatContainer extends LightElement {
       this.#onAppendChunk
     );
     this.addEventListener("shiny-chat-clear-messages", this.#onClear);
-    this.addEventListener("shiny-chat-update-user-input", this.#onUpdateUserInput);
+    this.addEventListener(
+      "shiny-chat-update-user-input",
+      this.#onUpdateUserInput
+    );
     this.addEventListener(
       "shiny-chat-remove-loading-message",
       this.#onRemoveLoadingMessage
@@ -369,6 +372,7 @@ class ChatContainer extends LightElement {
 
     if (message.chunk_type === "message_end") {
       lastMessage.removeAttribute("is_streaming");
+      lastMessage.setAttribute("content", message.content);
       this.#finalizeMessage();
       return;
     }

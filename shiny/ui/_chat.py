@@ -52,11 +52,11 @@ __all__ = (
 # user input content types
 TransformUserInput = Callable[[str], Union[str, None]]
 TransformUserInputAsync = Callable[[str], Awaitable[Union[str, None]]]
-TransformAssistantResponse = Callable[[str], Union[str, HTML]]
-TransformAssistantResponseAsync = Callable[[str], Awaitable[Union[str, HTML]]]
-TransformAssistantResponseChunk = Callable[[str, str, bool], Union[str, HTML]]
+TransformAssistantResponse = Callable[[str], Union[str, HTML, None]]
+TransformAssistantResponseAsync = Callable[[str], Awaitable[Union[str, HTML, None]]]
+TransformAssistantResponseChunk = Callable[[str, str, bool], Union[str, HTML, None]]
 TransformAssistantResponseChunkAsync = Callable[
-    [str, str, bool], Awaitable[Union[str, HTML]]
+    [str, str, bool], Awaitable[Union[str, HTML, None]]
 ]
 TransformAssistantResponseFunction = Union[
     TransformAssistantResponse,
@@ -564,7 +564,7 @@ class Chat:
         async def _stream_task():
             await self._append_message_stream(message)
 
-        _stream_task()
+        self._session.on_flushed(_stream_task, once=True)
 
         # Since the task runs in the background (outside/beyond the current context,
         # if any), we need to manually raise any exceptions that occur
@@ -642,7 +642,9 @@ class Chat:
 
         # print(msg)
 
-        await self._send_custom_message(msg_type, msg)
+        # When streaming (i.e., chunk is truthy), we can send messages immediately
+        # since we already waited for the flush in order to start the stream
+        await self._send_custom_message(msg_type, msg, on_flushed=chunk is False)
         # TODO: Joe said it's a good idea to yield here, but I'm not sure why?
         # await asyncio.sleep(0)
 
@@ -711,11 +713,11 @@ class Chat:
         Parameters
         ----------
         fn
-            A function that takes a string and returns a string or
-            :class:`shiny.ui.HTML`. If `fn` returns a string, it gets interpreted and
-            parsed as a markdown on the client (and the resulting HTML is then
-            sanitized). If `fn` returns :class:`shiny.ui.HTML`, it will be displayed
-            as-is.
+            A function that takes a string and returns either a string,
+            :class:`shiny.ui.HTML`, or `None`. If `fn` returns a string, it gets
+            interpreted and parsed as a markdown on the client (and the resulting HTML
+            is then sanitized). If `fn` returns :class:`shiny.ui.HTML`, it will be
+            displayed as-is. If `fn` returns `None`, the response is effectively ignored.
 
         Note
         ----
@@ -774,16 +776,20 @@ class Chat:
 
         if message["role"] == "user" and self._transform_user is not None:
             content = await self._transform_user(message["content"])
-            if content is None:
-                return None
-            res[key] = content
 
         elif message["role"] == "assistant" and self._transform_assistant is not None:
-            res[key] = await self._transform_assistant(
+            content = await self._transform_assistant(
                 message["content"],
                 chunk_content or "",
                 chunk == "end" or chunk is False,
             )
+        else:
+            return res
+
+        if content is None:
+            return None
+
+        res[key] = content
 
         return res
 
@@ -990,15 +996,23 @@ class Chat:
     async def _remove_loading_message(self):
         await self._send_custom_message("shiny-chat-remove-loading-message", None)
 
-    async def _send_custom_message(self, handler: str, obj: ClientMessage | None):
-        await self._session.send_custom_message(
-            "shinyChatMessage",
-            {
-                "id": self.id,
-                "handler": handler,
-                "obj": obj,
-            },
-        )
+    async def _send_custom_message(
+        self, handler: str, obj: ClientMessage | None, on_flushed: bool = True
+    ):
+        async def _do_send():
+            await self._session.send_custom_message(
+                "shinyChatMessage",
+                {
+                    "id": self.id,
+                    "handler": handler,
+                    "obj": obj,
+                },
+            )
+
+        if on_flushed:
+            self._session.on_flushed(_do_send, once=True)
+        else:
+            await _do_send()
 
 
 @add_example(ex_dir="../api-examples/chat")
