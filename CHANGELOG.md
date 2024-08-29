@@ -17,12 +17,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Other changes
 
-* `ui.Chat()`'s `.messages()` method no longer trims messages by default (i.e., the default value of `token_limits` is now `None` instead of the overly generic and conservative value of `(4096, 1000)`). See the new generative AI in production templates (via `shiny create`) for examples of setting `token_limits` based on the model being used.
-
+* A few changes for `ui.Chat()`, including:
+  * The `.messages()` method no longer trims messages by default (i.e., the default value of `token_limits` is now `None` instead of the overly generic and conservative value of `(4096, 1000)`). See the new generative AI in production templates (via `shiny create`) for examples of setting `token_limits` based on the model being used. (#1657)
+  * User input that contains markdown now renders the expected HTML. (#1607)
+  * Busy indication is now visible/apparent during the entire lifecycle of response generation. (#1607)
 
 ### Bug fixes
 
-* A handful of fixes for `ui.Chat()`, including:
+* A few fixes for `ui.Chat()`, including:
   * A fix for use inside Shiny modules. (#1582)
   * `.messages(format="google")` now returns the correct role. (#1622)
   * `ui.Chat(messages)` are no longer dropped when dynamically rendered. (#1593)
