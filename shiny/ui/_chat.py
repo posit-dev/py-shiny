@@ -842,10 +842,10 @@ class Chat:
         n_system_tokens: int = 0
         n_system_messages: int = 0
         n_other_messages: int = 0
-        counts: list[int] = []
+        token_counts: list[int] = []
         for m in messages:
             count = self._get_token_count(m["content_server"])
-            counts.append(count)
+            token_counts.append(count)
             if m["role"] == "system":
                 n_system_tokens += count
                 n_system_messages += 1
@@ -861,13 +861,16 @@ class Chat:
                 "`token_limit=None` to disable token limits."
             )
 
+        # Now, iterate through the messages in reverse order and appending
+        # until we run out of tokens
         messages2: list[TransformedMessage] = []
         n_other_messages2: int = 0
+        token_counts.reverse()
         for i, m in enumerate(reversed(messages)):
             if m["role"] == "system":
                 messages2.append(m)
                 continue
-            remaining_non_system_tokens -= counts[i]
+            remaining_non_system_tokens -= token_counts[i]
             if remaining_non_system_tokens >= 0:
                 messages2.append(m)
                 n_other_messages2 += 1
