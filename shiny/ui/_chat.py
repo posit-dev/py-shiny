@@ -136,7 +136,7 @@ class Chat:
         The tokenizer to use for calculating token counts, which is required to impose
         `token_limits` in `.messages()`. If not provided, a default generic tokenizer
         is attempted to be loaded from the tokenizers library. A specific tokenizer
-        may also be provided by following the `TokenEncoding` (tiktoken or tozenizer)
+        may also be provided by following the `TokenEncoding` (tiktoken or tozenizers)
         protocol (e.g., `tiktoken.encoding_for_model("gpt-4o")`).
     """
 
