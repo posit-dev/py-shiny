@@ -1,7 +1,7 @@
 import pytest
 from playwright.sync_api import Page
 from utils.deploy_utils import (
-    create_deploys_app_url_fixture,
+    local_deploys_app_url_fixture,
     reruns,
     reruns_delay,
     skip_if_not_chrome,
@@ -9,7 +9,7 @@ from utils.deploy_utils import (
 
 from shiny.playwright import controller
 
-app_url = create_deploys_app_url_fixture("shiny-express-dataframe")
+app_url = local_deploys_app_url_fixture("shiny-express-dataframe")
 
 
 @skip_if_not_chrome
