@@ -16,6 +16,7 @@ type Message = {
   role: "user" | "assistant";
   chunk_type: "message_start" | "message_end" | null;
   content_type: ContentType;
+  operation: "append" | null;
 };
 type ShinyChatMessage = {
   id: string;
@@ -378,7 +379,14 @@ class ChatContainer extends LightElement {
     }
 
     lastMessage.setAttribute("is_streaming", "");
-    lastMessage.setAttribute("content", message.content);
+    if (message.operation === "append") {
+      lastMessage.setAttribute(
+        "content",
+        lastMessage.getAttribute("content") + message.content
+      );
+    } else {
+      lastMessage.setAttribute("content", message.content);
+    }
   }
 
   #onClear(): void {
