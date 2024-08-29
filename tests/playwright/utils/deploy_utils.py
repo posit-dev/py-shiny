@@ -7,6 +7,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import warnings
 from typing import Any, Callable, List, TypeVar
 
 import pytest
@@ -33,6 +34,14 @@ api_key = os.environ.get("DEPLOY_CONNECT_SERVER_API_KEY")
 shinyappsio_name = os.environ.get("DEPLOY_SHINYAPPS_NAME")
 shinyappsio_token = os.environ.get("DEPLOY_SHINYAPPS_TOKEN")
 shinyappsio_secret = os.environ.get("DEPLOY_SHINYAPPS_SECRET")
+
+run_on_ci = os.environ.get("CI", "False") == "true"
+repo = os.environ.get("GITHUB_REPOSITORY", "unknown")
+
+should_use_github_requirements_txt = (
+    os.environ.get("DEPLOY_GITHUB_REQUIREMENTS_TXT", "true").lower() == "true"
+)
+
 
 deploy_locations: List[str] = ["connect", "shinyapps"]
 
@@ -89,6 +98,7 @@ def deploy_to_connect(app_name: str, app_dir: str) -> str:
     output = run_command(connect_server_lookup_command)
     url = json.loads(output)[0]["content_url"]
     app_id = json.loads(output)[0]["guid"]
+
     # change visibility of app to public
     connect_app_url = f"{server_url}/__api__/v1/content/{app_id}"
     payload = '{"access_type":"all"}'
@@ -98,7 +108,16 @@ def deploy_to_connect(app_name: str, app_dir: str) -> str:
     }
     response = requests.request("PATCH", connect_app_url, headers=headers, data=payload)
     if response.status_code != 200:
-        raise RuntimeError("Failed to change visibility of app.")
+        warnings.warn(
+            f"Failed to change visibility of app. {response.text}",
+            RuntimeWarning,
+            stacklevel=1,
+        )
+        pytest.skip(
+            "Skipping test as deployed app is not visible to public. Test is kept as it does confirm the app deployment has succeeded."
+        )
+        return
+
     return url
 
 
@@ -111,7 +130,8 @@ def deploy_to_shinyapps(app_name: str, app_dir: str) -> str:
 
 
 # Since connect parses python packages, we need to get latest version of shiny on HEAD
-def write_requirements_txt(app_dir: str) -> None:
+def write_github_requirements_txt(app_dir: str) -> None:
+    print("Writing github requirements.txt")
     app_requirements_file_path = os.path.join(app_dir, "app_requirements.txt")
     requirements_file_path = os.path.join(app_dir, "requirements.txt")
     git_cmd = subprocess.run(["git", "rev-parse", "HEAD"], stdout=subprocess.PIPE)
@@ -121,6 +141,18 @@ def write_requirements_txt(app_dir: str) -> None:
     with open(requirements_file_path, "w") as f:
         f.write(f"{requirements}\n")
         f.write(f"git+https://github.com/posit-dev/py-shiny.git@{git_hash}\n")
+
+
+def write_pypi_requirements_txt(app_dir: str) -> None:
+    print("Writing pypi requirements.txt")
+    app_requirements_file_path = os.path.join(app_dir, "app_requirements.txt")
+    requirements_file_path = os.path.join(app_dir, "requirements.txt")
+
+    with open(app_requirements_file_path) as f:
+        requirements = f.read()
+    with open(requirements_file_path, "w") as f:
+        f.write(f"{requirements}\n")
+        f.write("shiny\n")
 
 
 def assert_rsconnect_file_updated(file_path: str, min_mtime: float) -> None:
@@ -143,9 +175,6 @@ def deploy_app(
     if not should_deploy_apps:
         pytest.skip("`DEPLOY_APPS` does not equal `true`")
 
-    run_on_ci = os.environ.get("CI", "False") == "true"
-    repo = os.environ.get("GITHUB_REPOSITORY", "unknown")
-
     if not (run_on_ci and repo == "posit-dev/py-shiny"):
         pytest.skip("Not on CI and within posit-dev/py-shiny repo")
 
@@ -162,7 +191,10 @@ def deploy_app(
         tmp_app_dir = os.path.join(tmpdir, app_dir_name)
         os.mkdir(tmp_app_dir)
         shutil.copytree(app_dir, tmp_app_dir, dirs_exist_ok=True)
-        write_requirements_txt(tmp_app_dir)
+        if should_use_github_requirements_txt:
+            write_github_requirements_txt(tmp_app_dir)
+        else:
+            write_pypi_requirements_txt(tmp_app_dir)
 
         deployment_function = {
             "connect": deploy_to_connect,

@@ -97,6 +97,7 @@ jobs:
           DEPLOY_SHINYAPPS_TOKEN: "${{ matrix.config.test_shinyappsio && matrix.config.shinyapps_token }}"
           DEPLOY_SHINYAPPS_SECRET: "${{ matrix.config.test_shinyappsio && matrix.config.shinyapps_secret }}"
           EXPRESS_PAGE_SIDEBAR_NAME: "${{ matrix.config.app_name }}"
+          DEPLOY_GITHUB_REQUIREMENTS_TXT: "${{ !matrix.config.pypi_shiny }}"
         timeout-minutes: 30
         # Given we are waiting for external servers to finish,
         # we can have many local processes waiting for deployment to finish
