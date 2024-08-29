@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import warnings
 from typing import (
     AbstractSet,
     Any,
@@ -51,19 +50,7 @@ def get_default_tokenizer() -> TokenizersTokenizer | None:
         from tokenizers import Tokenizer
 
         return Tokenizer.from_pretrained("bert-base-cased")  # type: ignore
-    except ImportError:
-        warnings.warn(
-            "`Chat` is unable obtain a default tokenizer without the `tokenizers` "
-            "package installed. Please `pip install tokenizers` or set "
-            "`Chat(tokenizer=None)` to disable tokenization.",
-            stacklevel=2,
-        )
-        return None
     except Exception:
-        warnings.warn(
-            "Unable to obtain a default tokenizer. "
-            "Consider providing one to `Chat()`'s `tokenizer` parameter "
-            "(or set it to `None` to disable tokenization).",
-            stacklevel=2,
-        )
-        return None
+        pass
+
+    return None

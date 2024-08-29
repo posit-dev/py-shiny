@@ -231,6 +231,10 @@ class ShinyInternalTemplates:
     def chat_enterprise(self) -> list[ShinyTemplate]:
         return self._templates("templates/chat/enterprise")
 
+    @property
+    def chat_production(self) -> list[ShinyTemplate]:
+        return self._templates("templates/chat/production")
+
 
 shiny_internal_templates = ShinyInternalTemplates()
 
@@ -260,6 +264,7 @@ def use_internal_template(
     chat_templates = [
         *shiny_internal_templates.chat_hello_providers,
         *shiny_internal_templates.chat_enterprise,
+        *shiny_internal_templates.chat_production,
     ]
 
     menu_choices = [
@@ -351,6 +356,7 @@ def use_internal_chat_ai_template(
             choices=[
                 Choice(title="By provider...", value="_chat-ai_hello-providers"),
                 Choice(title="Enterprise providers...", value="_chat-ai_enterprise"),
+                Choice(title="Production-ready chat AI", value="_chat-ai_production"),
                 back_choice,
                 cancel_choice,
             ],
@@ -369,11 +375,12 @@ def use_internal_chat_ai_template(
         )
         return
 
-    template_choices = (
-        shiny_internal_templates.chat_enterprise
-        if input == "_chat-ai_enterprise"
-        else shiny_internal_templates.chat_hello_providers
-    )
+    if input == "_chat-ai_production":
+        template_choices = shiny_internal_templates.chat_production
+    elif input == "_chat-ai_enterprise":
+        template_choices = shiny_internal_templates.chat_enterprise
+    else:
+        template_choices = shiny_internal_templates.chat_hello_providers
 
     choice = question_choose_template(template_choices, back_choice)
 
@@ -385,6 +392,7 @@ def use_internal_chat_ai_template(
         [
             *shiny_internal_templates.chat_hello_providers,
             *shiny_internal_templates.chat_enterprise,
+            *shiny_internal_templates.chat_production,
         ],
         choice,
     )
