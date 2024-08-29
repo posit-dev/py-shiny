@@ -173,7 +173,7 @@ playwright-shiny: FORCE
 
 # end-to-end tests on deployed apps with playwright; (SUB_FILE="" within tests/playwright/deploys/)
 playwright-deploys: FORCE
-	$(MAKE) playwright PYTEST_BROWSERS="$(PYTEST_DEPLOYS_BROWSERS)" $(TEST_FILE)
+	$(MAKE) playwright PYTEST_BROWSERS="$(PYTEST_DEPLOYS_BROWSERS)" TEST_FILE="$(TEST_FILE)"
 playwright-deploys-legacy: FORCE
 	$(MAKE) playwright TEST_FILE="tests/playwright/deploys/$(SUB_FILE)" PYTEST_BROWSERS="$(PYTEST_DEPLOYS_BROWSERS)"
 
