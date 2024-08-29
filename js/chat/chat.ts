@@ -5,7 +5,7 @@ import { property } from "lit/decorators.js";
 import ClipboardJS from "clipboard";
 import { sanitize } from "dompurify";
 import hljs from "highlight.js/lib/common";
-import { parse } from "marked";
+import { Renderer, parse } from "marked";
 
 import { createElement } from "./_utils";
 
@@ -51,6 +51,17 @@ const CHAT_MESSAGES_TAG = "shiny-chat-messages";
 const CHAT_INPUT_TAG = "shiny-chat-input";
 const CHAT_CONTAINER_TAG = "shiny-chat-container";
 
+const ICONS = {
+  robot:
+    '<svg fill="currentColor" class="bi bi-robot" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M6 12.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5M3 8.062C3 6.76 4.235 5.765 5.53 5.886a26.6 26.6 0 0 0 4.94 0C11.765 5.765 13 6.76 13 8.062v1.157a.93.93 0 0 1-.765.935c-.845.147-2.34.346-4.235.346s-3.39-.2-4.235-.346A.93.93 0 0 1 3 9.219zm4.542-.827a.25.25 0 0 0-.217.068l-.92.9a25 25 0 0 1-1.871-.183.25.25 0 0 0-.068.495c.55.076 1.232.149 2.02.193a.25.25 0 0 0 .189-.071l.754-.736.847 1.71a.25.25 0 0 0 .404.062l.932-.97a25 25 0 0 0 1.922-.188.25.25 0 0 0-.068-.495c-.538.074-1.207.145-1.98.189a.25.25 0 0 0-.166.076l-.754.785-.842-1.7a.25.25 0 0 0-.182-.135"/><path d="M8.5 1.866a1 1 0 1 0-1 0V3h-2A4.5 4.5 0 0 0 1 7.5V8a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1v1a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1v-.5A4.5 4.5 0 0 0 10.5 3h-2zM14 7.5V13a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7.5A3.5 3.5 0 0 1 5.5 4h5A3.5 3.5 0 0 1 14 7.5"/></svg>',
+  // https://github.com/n3r4zzurr0/svg-spinners/blob/main/svg-css/3-dots-fade.svg
+  dots_fade:
+    '<svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><style>.spinner_S1WN{animation:spinner_MGfb .8s linear infinite;animation-delay:-.8s}.spinner_Km9P{animation-delay:-.65s}.spinner_JApP{animation-delay:-.5s}@keyframes spinner_MGfb{93.75%,100%{opacity:.2}}</style><circle class="spinner_S1WN" cx="4" cy="12" r="3"/><circle class="spinner_S1WN spinner_Km9P" cx="12" cy="12" r="3"/><circle class="spinner_S1WN spinner_JApP" cx="20" cy="12" r="3"/></svg>',
+  // https://github.com/n3r4zzurr0/svg-spinners/blob/main/svg-css/bouncing-ball.svg
+  ball_bounce:
+    '<svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><style>.spinner_rXNP{animation:spinner_YeBj .8s infinite; opacity:.8}@keyframes spinner_YeBj{0%{animation-timing-function:cubic-bezier(0.33,0,.66,.33);cy:5px}46.875%{cy:20px;rx:4px;ry:4px}50%{animation-timing-function:cubic-bezier(0.33,.66,.66,1);cy:20.5px;rx:4.8px;ry:3px}53.125%{rx:4px;ry:4px}100%{cy:5px}}</style><ellipse class="spinner_rXNP" cx="12" cy="5" rx="4" ry="4"/></svg>',
+};
+
 const requestScroll = (el: HTMLElement, cancelIfScrolledUp = false) => {
   el.dispatchEvent(
     new CustomEvent("shiny-chat-request-scroll", {
@@ -61,6 +72,40 @@ const requestScroll = (el: HTMLElement, cancelIfScrolledUp = false) => {
   );
 };
 
+// For rendering chat output, we use typical Markdown behavior of passing through raw
+// HTML (albeit sanitizing afterwards).
+//
+// For echoing chat input, we escape HTML. This is not for security reasons but just
+// because it's confusing if the user is using tag-like syntax to demarcate parts of
+// their prompt for other reasons (like <User>/<Assistant> for providing examples to the
+// chat model), and those tags simply vanish.
+const rendererEscapeHTML = new Renderer();
+rendererEscapeHTML.html = (html: string) =>
+  html
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+const markedEscapeOpts = { renderer: rendererEscapeHTML };
+
+function contentToHTML(
+  content: string,
+  content_type: ContentType | "semi-markdown"
+) {
+  if (content_type === "markdown") {
+    return unsafeHTML(sanitize(parse(content) as string));
+  } else if (content_type === "semi-markdown") {
+    return unsafeHTML(sanitize(parse(content, markedEscapeOpts) as string));
+  } else if (content_type === "html") {
+    return unsafeHTML(sanitize(content));
+  } else if (content_type === "text") {
+    return content;
+  } else {
+    throw new Error(`Unknown content type: ${content_type}`);
+  }
+}
+
 // https://lit.dev/docs/components/shadow-dom/#implementing-createrenderroot
 class LightElement extends LitElement {
   createRenderRoot() {
@@ -69,29 +114,20 @@ class LightElement extends LitElement {
 }
 
 class ChatMessage extends LightElement {
-  @property() content = "...";
+  @property() content = "";
   @property() content_type: ContentType = "markdown";
-  @property({ type: Boolean, reflect: true }) is_streaming = false;
+  @property({ type: Boolean, reflect: true }) streaming = false;
 
   render(): ReturnType<LitElement["render"]> {
-    let content;
-    if (this.content_type === "markdown") {
-      content = unsafeHTML(sanitize(parse(this.content) as string));
-    } else if (this.content_type === "html") {
-      content = unsafeHTML(sanitize(this.content));
-    } else if (this.content_type === "text") {
-      content = this.content;
-    } else {
-      throw new Error(`Unknown content type: ${this.content_type}`);
-    }
+    const content = contentToHTML(this.content, this.content_type);
 
-    // TODO: support custom icons
-    const icon =
-      '<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="bi bi-robot" viewBox="0 0 16 16"><path d="M6 12.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5M3 8.062C3 6.76 4.235 5.765 5.53 5.886a26.6 26.6 0 0 0 4.94 0C11.765 5.765 13 6.76 13 8.062v1.157a.93.93 0 0 1-.765.935c-.845.147-2.34.346-4.235.346s-3.39-.2-4.235-.346A.93.93 0 0 1 3 9.219zm4.542-.827a.25.25 0 0 0-.217.068l-.92.9a25 25 0 0 1-1.871-.183.25.25 0 0 0-.068.495c.55.076 1.232.149 2.02.193a.25.25 0 0 0 .189-.071l.754-.736.847 1.71a.25.25 0 0 0 .404.062l.932-.97a25 25 0 0 0 1.922-.188.25.25 0 0 0-.068-.495c-.538.074-1.207.145-1.98.189a.25.25 0 0 0-.166.076l-.754.785-.842-1.7a.25.25 0 0 0-.182-.135"/><path d="M8.5 1.866a1 1 0 1 0-1 0V3h-2A4.5 4.5 0 0 0 1 7.5V8a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1v1a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1v-.5A4.5 4.5 0 0 0 10.5 3h-2zM14 7.5V13a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7.5A3.5 3.5 0 0 1 5.5 4h5A3.5 3.5 0 0 1 14 7.5"/></svg>';
+    const noContent = this.content.trim().length === 0;
+    const icon = noContent ? ICONS.dots_fade : ICONS.robot;
 
     return html`
       <div class="message-icon">${unsafeHTML(icon)}</div>
       <div class="message-content">${content}</div>
+      <div class="message-streaming-icon">${unsafeHTML(ICONS.ball_bounce)}</div>
     `;
   }
 
@@ -100,7 +136,7 @@ class ChatMessage extends LightElement {
       this.#highlightAndCodeCopy();
       // It's important that the scroll request happens at this point in time, since
       // otherwise, the content may not be fully rendered yet
-      requestScroll(this, this.is_streaming);
+      requestScroll(this, this.streaming);
     }
   }
 
@@ -136,7 +172,7 @@ class ChatUserMessage extends LightElement {
   @property() content = "...";
 
   render(): ReturnType<LitElement["render"]> {
-    return html`${this.content}`;
+    return contentToHTML(this.content, "semi-markdown");
   }
 }
 
@@ -251,6 +287,11 @@ class ChatContainer extends LightElement {
     return this.querySelector(CHAT_MESSAGES_TAG) as ChatMessages;
   }
 
+  private get lastMessage(): ChatMessage | null {
+    const last = this.messages.lastElementChild;
+    return last ? (last as ChatMessage) : null;
+  }
+
   private resizeObserver!: ResizeObserver;
 
   render(): ReturnType<LitElement["render"]> {
@@ -341,9 +382,7 @@ class ChatContainer extends LightElement {
 
   #addLoadingMessage(): void {
     const loading_message = {
-      // https://github.com/n3r4zzurr0/svg-spinners/blob/main/svg-css/3-dots-fade.svg
-      content:
-        '<svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><style>.spinner_S1WN{animation:spinner_MGfb .8s linear infinite;animation-delay:-.8s}.spinner_Km9P{animation-delay:-.65s}.spinner_JApP{animation-delay:-.5s}@keyframes spinner_MGfb{93.75%,100%{opacity:.2}}</style><circle class="spinner_S1WN" cx="4" cy="12" r="3"/><circle class="spinner_S1WN spinner_Km9P" cx="12" cy="12" r="3"/><circle class="spinner_S1WN spinner_JApP" cx="20" cy="12" r="3"/></svg>',
+      content: "",
       role: "assistant",
       id: `${this.id}-loading-message`,
     };
@@ -364,21 +403,21 @@ class ChatContainer extends LightElement {
   #appendMessageChunk(message: Message): void {
     if (message.chunk_type === "message_start") {
       this.#appendMessage(message, false);
-      return;
     }
 
-    const lastMessage = this.messages.lastElementChild as HTMLElement;
+    const lastMessage = this.lastMessage;
     if (!lastMessage) throw new Error("No messages found in the chat output");
 
-    if (message.chunk_type === "message_end") {
-      lastMessage.removeAttribute("is_streaming");
-      lastMessage.setAttribute("content", message.content);
-      this.#finalizeMessage();
+    if (message.chunk_type === "message_start") {
+      lastMessage.setAttribute("streaming", "");
       return;
     }
 
-    lastMessage.setAttribute("is_streaming", "");
     lastMessage.setAttribute("content", message.content);
+
+    if (message.chunk_type === "message_end") {
+      this.#finalizeMessage();
+    }
   }
 
   #onClear(): void {
@@ -402,6 +441,7 @@ class ChatContainer extends LightElement {
 
   #finalizeMessage(): void {
     this.input.disabled = false;
+    this.lastMessage?.removeAttribute("streaming");
   }
 
   #onRequestScroll(event: CustomEvent<requestScrollEvent>): void {
