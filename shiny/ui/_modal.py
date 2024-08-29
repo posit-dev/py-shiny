@@ -184,7 +184,7 @@ def modal_show(modal: Tag, session: Optional[Session] = None) -> None:
     session._send_message_sync({"modal": {"type": "show", "message": msg}})
 
 
-@add_example(ex_dir="../api-examples/modal")
+@add_example()
 def modal_remove(session: Optional[Session] = None) -> None:
     """
     Remove a modal dialog box.
