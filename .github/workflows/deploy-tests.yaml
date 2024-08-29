@@ -37,22 +37,22 @@ jobs:
             app_name: "pypi-shiny-rsconnect"
             test_shinyappsio: false
 
+          # Released shiny
+          # Dogfood server and rsconnect
+          - name: "pypi-shiny-dev-rsconnect-dogfood"
+            released_connect_server: false
+            pypi_shiny: true
+            pypi_rsconnect: false
+            base_test_dir: "./tests/playwright/deploys/express-page_sidebar"
+            app_name: "pypi-shiny-dev-rsconnect"
+            test_shinyappsio: false
+
           # GitHub shiny v1.0.0 - test if github packages can be installed
           # Dogfood server and rsconnect
           - name: "github-shiny-dev-rsconnect-dogfood"
             released_connect_server: false
             github_shiny: true
             pypi_shiny: false
-            pypi_rsconnect: false
-            base_test_dir: "./tests/playwright/deploys/express-page_sidebar"
-            app_name: "pypi-shiny-dev-rsconnect"
-            test_shinyappsio: false
-
-          # Released shiny
-          # Dogfood server and rsconnect
-          - name: "pypi-shiny-dev-rsconnect-dogfood"
-            released_connect_server: false
-            pypi_shiny: true
             pypi_rsconnect: false
             base_test_dir: "./tests/playwright/deploys/express-page_sidebar"
             app_name: "pypi-shiny-dev-rsconnect"
