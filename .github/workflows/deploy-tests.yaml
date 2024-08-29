@@ -64,7 +64,7 @@ jobs:
       - name: Install pypi shiny and htmltools (uninstall GitHub versions)
         if: ${{ matrix.config.pypi_shiny }}
         run: |
-          uv pip uninstall -y shiny htmltools
+          uv pip uninstall shiny htmltools
           uv pip install shiny htmltools
 
       - name: Install rsconnect (PyPI)
