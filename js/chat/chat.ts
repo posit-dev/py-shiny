@@ -327,12 +327,15 @@ class ChatContainer extends LightElement {
     this.#appendMessage(event.detail);
   }
 
-  #appendMessage(message: Message, finalize = true): void {
+  #appendMessage(message: Message, finalize = true, streaming = false): void {
     this.#removeLoadingMessage();
 
     const TAG_NAME =
       message.role === "user" ? CHAT_USER_MESSAGE_TAG : CHAT_MESSAGE_TAG;
     const msg = createElement(TAG_NAME, message);
+    if (streaming) {
+      msg.setAttribute("is_streaming", "");
+    }
     this.messages.appendChild(msg);
 
     if (finalize) {
@@ -371,21 +374,15 @@ class ChatContainer extends LightElement {
     const lastMessage = this.messages.lastElementChild as HTMLElement;
     if (!lastMessage) throw new Error("No messages found in the chat output");
 
+    const content =
+      message.operation === "append"
+        ? lastMessage.getAttribute("content") + message.content
+        : message.content;
+
+    lastMessage.setAttribute("content", content);
     if (message.chunk_type === "message_end") {
       lastMessage.removeAttribute("is_streaming");
-      lastMessage.setAttribute("content", message.content);
       this.#finalizeMessage();
-      return;
-    }
-
-    lastMessage.setAttribute("is_streaming", "");
-    if (message.operation === "append") {
-      lastMessage.setAttribute(
-        "content",
-        lastMessage.getAttribute("content") + message.content
-      );
-    } else {
-      lastMessage.setAttribute("content", message.content);
     }
   }
 
