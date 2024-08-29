@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import sys
 from datetime import datetime
-from typing import Optional, Sequence, Union, cast, get_args, get_origin
+from typing import Sequence, Union, cast, get_args, get_origin
 
 import pytest
 
@@ -13,7 +13,7 @@ from shiny.types import MISSING
 from shiny.ui import Chat
 from shiny.ui._chat import as_transformed_message
 from shiny.ui._chat_normalize import normalize_message, normalize_message_chunk
-from shiny.ui._chat_types import ChatMessage, Role, TransformedMessage
+from shiny.ui._chat_types import ChatMessage
 
 # ----------------------------------------------------------------------
 # Helpers
