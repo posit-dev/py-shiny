@@ -1,14 +1,14 @@
 import pytest
 from playwright.sync_api import Page, expect
 from utils.deploy_utils import (
-    create_deploys_app_url_fixture,
+    local_deploys_app_url_fixture,
     reruns,
     reruns_delay,
     skip_if_not_chrome,
 )
 
 TIMEOUT = 2 * 60 * 1000
-app_url = create_deploys_app_url_fixture("example_deploy_app_a1")
+app_url = local_deploys_app_url_fixture("example_deploy_app_a1")
 
 
 @skip_if_not_chrome
