@@ -57,7 +57,16 @@ const ICONS = {
   // https://github.com/n3r4zzurr0/svg-spinners/blob/main/svg-css/3-dots-fade.svg
   dots_fade:
     '<svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><style>.spinner_S1WN{animation:spinner_MGfb .8s linear infinite;animation-delay:-.8s}.spinner_Km9P{animation-delay:-.65s}.spinner_JApP{animation-delay:-.5s}@keyframes spinner_MGfb{93.75%,100%{opacity:.2}}</style><circle class="spinner_S1WN" cx="4" cy="12" r="3"/><circle class="spinner_S1WN spinner_Km9P" cx="12" cy="12" r="3"/><circle class="spinner_S1WN spinner_JApP" cx="20" cy="12" r="3"/></svg>',
+  dot: '<svg width="12" height="12" xmlns="http://www.w3.org/2000/svg" class="chat-streaming-dot" style="margin-left:.25em;margin-top:-.25em"><circle cx="6" cy="6" r="6"/></svg>',
 };
+
+function createSVGIcon(icon: string): HTMLElement {
+  const parser = new DOMParser();
+  const svgDoc = parser.parseFromString(icon, "image/svg+xml");
+  return svgDoc.documentElement;
+}
+
+const SVG_DOT = createSVGIcon(ICONS.dot);
 
 const requestScroll = (el: HTMLElement, cancelIfScrolledUp = false) => {
   el.dispatchEvent(
@@ -130,10 +139,23 @@ class ChatMessage extends LightElement {
   updated(changedProperties: Map<string, unknown>): void {
     if (changedProperties.has("content")) {
       this.#highlightAndCodeCopy();
+      if (this.streaming) this.#appendStreamingDot();
       // It's important that the scroll request happens at this point in time, since
       // otherwise, the content may not be fully rendered yet
       requestScroll(this, this.streaming);
     }
+    if (changedProperties.has("streaming")) {
+      this.streaming ? this.#appendStreamingDot() : this.#removeStreamingDot();
+    }
+  }
+
+  #appendStreamingDot(): void {
+    const content = this.querySelector(".message-content") as HTMLElement;
+    content.lastElementChild?.appendChild(SVG_DOT);
+  }
+
+  #removeStreamingDot(): void {
+    this.querySelector(".message-content svg.chat-streaming-dot")?.remove();
   }
 
   // Highlight code blocks after the element is rendered
@@ -409,16 +431,10 @@ class ChatContainer extends LightElement {
       return;
     }
 
-    // Add a dot to the end of the message to indicate that it's still streaming
-    const content =
-      message.chunk_type === "message_end"
-        ? message.content
-        : message.content +
-          '<svg width="12" height="12" xmlns="http://www.w3.org/2000/svg" style="margin-left:.25em;margin-top:-.25em"><circle cx="6" cy="6" r="6"/></svg>';
-
-    lastMessage.setAttribute("content", content);
+    lastMessage.setAttribute("content", message.content);
 
     if (message.chunk_type === "message_end") {
+      this.lastMessage?.removeAttribute("streaming");
       this.#finalizeMessage();
     }
   }
@@ -444,7 +460,6 @@ class ChatContainer extends LightElement {
 
   #finalizeMessage(): void {
     this.input.disabled = false;
-    this.lastMessage?.removeAttribute("streaming");
   }
 
   #onRequestScroll(event: CustomEvent<requestScrollEvent>): void {
