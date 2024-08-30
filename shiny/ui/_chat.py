@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import inspect
+import json
 from typing import (
     Any,
     AsyncIterable,
@@ -8,6 +9,7 @@ from typing import (
     Callable,
     Iterable,
     Literal,
+    Optional,
     Sequence,
     Tuple,
     Union,
@@ -22,9 +24,11 @@ from .. import _utils, reactive
 from .._deprecated import warn_deprecated
 from .._docstring import add_example
 from .._namespaces import ResolvedId, resolve_id
+from ..reactive._reactives import EffectFunction, EffectFunctionAsync
 from ..session import require_active_session, session_context
 from ..types import MISSING, MISSING_TYPE, NotifyException
 from ..ui.css import CssUnit, as_css_unit
+from ._chat_merge import merge_dicts
 from ._chat_normalize import normalize_message, normalize_message_chunk
 from ._chat_provider_types import (
     AnthropicMessage,
@@ -37,7 +41,13 @@ from ._chat_provider_types import (
     as_provider_message,
 )
 from ._chat_tokenizer import TokenEncoding, TokenizersEncoding, get_default_tokenizer
-from ._chat_types import ChatMessage, ClientMessage, TransformedMessage
+from ._chat_types import (
+    ChatMessage,
+    ClientMessage,
+    ToolCall,
+    ToolMessage,
+    TransformedMessage,
+)
 from ._html_deps_py_shiny import chat_deps
 from .fill import as_fill_item, as_fillable_container
 
@@ -64,8 +74,10 @@ TransformAssistantResponseFunction = Union[
     TransformAssistantResponseChunk,
     TransformAssistantResponseChunkAsync,
 ]
-SubmitFunction = Callable[[], None]
-SubmitFunctionAsync = Callable[[], Awaitable[None]]
+Function = Callable[..., Any]
+AsyncFunction = Callable[..., Awaitable[Any]]
+ToolFunctions = list[Function | AsyncFunction]
+
 
 ChunkOption = Literal["start", "end", True, False]
 
@@ -146,7 +158,9 @@ class Chat:
         *,
         messages: Sequence[Any] = (),
         on_error: Literal["auto", "actual", "sanitize", "unhandled"] = "auto",
-        tokenizer: TokenEncoding | None = None,
+        tokenizer: (
+            TokenEncoding | None
+        ) = None,  # TODO: change args like these to use Optional[]
     ):
         if not isinstance(id, str):
             raise TypeError("`id` must be a string.")
@@ -171,7 +185,8 @@ class Chat:
         self.on_error = on_error
 
         # Chunked messages get accumulated (using this property) before changing state
-        self._current_stream_message = ""
+        self._current_stream_message: str = ""
+        self._current_stream_tool_call: ToolCall | None = None
         self._current_stream_id: str | None = None
         self._pending_messages: list[PendingMessage] = []
 
@@ -190,6 +205,10 @@ class Chat:
             )
 
             self._latest_user_input: reactive.Value[TransformedMessage | None] = (
+                reactive.Value(None)
+            )
+
+            self._latest_tool_message: reactive.Value[ToolMessage | None] = (
                 reactive.Value(None)
             )
 
@@ -269,20 +288,75 @@ class Chat:
         )
 
     @overload
+    def on_tool_call(
+        self, fn: EffectFunction | EffectFunctionAsync
+    ) -> reactive.Effect_: ...
+
+    @overload
+    def on_tool_call(
+        self,
+    ) -> Callable[[EffectFunction | EffectFunctionAsync], reactive.Effect_]: ...
+
+    def on_tool_call(
+        self, fn: EffectFunction | EffectFunctionAsync | None = None
+    ) -> (
+        reactive.Effect_
+        | Callable[[EffectFunction | EffectFunctionAsync], reactive.Effect_]
+    ):
+        """
+        Define a function to invoke when a tool result is available.
+
+        Apply this method as a decorator to a function (`fn`) that should be invoked when
+        a tool result is available. The function should take no arguments.
+
+        In many cases, the implementation of `fn` should do at least the following:
+
+        1. Call `.messages()` to obtain the current chat history.
+        2. Generate a response based on those messages.
+        3. Append the response to the chat history using `.append_message()` (
+              or `.append_message_stream()` if the response is streamed).
+
+        Parameters
+        ----------
+        fn
+            A function to invoke when a tool result is available.
+        """
+
+        def create_effect(fn: EffectFunction | EffectFunctionAsync):
+            afunc = _utils.wrap_async(fn)
+
+            @reactive.effect
+            @reactive.event(self._latest_tool_message)
+            async def _():
+                try:
+                    await afunc()
+                except Exception as e:
+                    await self._raise_exception(e)
+
+            self._effects.append(_)
+
+            return _
+
+        if fn is None:
+            return create_effect
+        else:
+            return create_effect(fn)
+
+    @overload
     def on_user_submit(
-        self, fn: SubmitFunction | SubmitFunctionAsync
+        self, fn: EffectFunction | EffectFunctionAsync
     ) -> reactive.Effect_: ...
 
     @overload
     def on_user_submit(
         self,
-    ) -> Callable[[SubmitFunction | SubmitFunctionAsync], reactive.Effect_]: ...
+    ) -> Callable[[EffectFunction | EffectFunctionAsync], reactive.Effect_]: ...
 
     def on_user_submit(
-        self, fn: SubmitFunction | SubmitFunctionAsync | None = None
+        self, fn: EffectFunction | EffectFunctionAsync | None = None
     ) -> (
         reactive.Effect_
-        | Callable[[SubmitFunction | SubmitFunctionAsync], reactive.Effect_]
+        | Callable[[EffectFunction | EffectFunctionAsync], reactive.Effect_]
     ):
         """
         Define a function to invoke when user input is submitted.
@@ -309,7 +383,7 @@ class Chat:
         but it will only be re-invoked when the user submits a message.
         """
 
-        def create_effect(fn: SubmitFunction | SubmitFunctionAsync):
+        def create_effect(fn: EffectFunction | EffectFunctionAsync):
             afunc = _utils.wrap_async(fn)
 
             @reactive.effect
@@ -510,7 +584,12 @@ class Chat:
         await self._append_message(message)
 
     async def _append_message(
-        self, message: Any, *, chunk: ChunkOption = False, stream_id: str | None = None
+        self,
+        message: Any,
+        *,
+        chunk: ChunkOption = False,
+        stream_id: str | None = None,
+        tools: Optional[ToolFunctions] = None,
     ) -> None:
         # If currently we're in a stream, handle other messages (outside the stream) later
         if not self._can_append_message(stream_id):
@@ -533,6 +612,17 @@ class Chat:
             msg["content"] = self._current_stream_message
             if chunk == "end":
                 self._current_stream_message = ""
+            if "tool_call" in msg:
+                if self._current_stream_tool_call is None:
+                    self._current_stream_tool_call = msg["tool_call"]
+                else:
+                    # TODO: will this work properly with finished?
+                    self._current_stream_tool_call = merge_dicts(  # type: ignore
+                        self._current_stream_tool_call,  # type: ignore
+                        msg["tool_call"],  # type: ignore
+                    )
+                if msg["tool_call"]["finished"]:
+                    self._current_stream_tool_call = None
 
         msg = await self._transform_message(
             msg, chunk=chunk, chunk_content=chunk_content
@@ -542,7 +632,12 @@ class Chat:
         self._store_message(msg, chunk=chunk)
         await self._send_append_message(msg, chunk=chunk)
 
-    async def append_message_stream(self, message: Iterable[Any] | AsyncIterable[Any]):
+    async def append_message_stream(
+        self,
+        message: Iterable[Any] | AsyncIterable[Any],
+        *,
+        tools: Optional[ToolFunctions] = None,
+    ):
         """
         Append a message as a stream of message chunks.
 
@@ -553,6 +648,8 @@ class Chat:
             message chunk formats are supported, including a string, a dictionary with
             `content` and `role` keys, or a relevant chat completion object from
             platforms like OpenAI, Anthropic, Ollama, and others.
+        tools
+            A list of functions to run when a tool result is available.
 
         Note
         ----
@@ -618,8 +715,8 @@ class Chat:
         message: TransformedMessage,
         chunk: ChunkOption = False,
     ):
-        if message["role"] == "system":
-            # System messages are not displayed in the UI
+        if message["role"] in ("system", "tool"):
+            # System/tool messages are not displayed in the UI
             return
 
         if chunk:
@@ -643,7 +740,7 @@ class Chat:
             chunk_type=chunk_type,
         )
 
-        # print(msg)
+        print("[SEND]:", msg)
 
         # When streaming (i.e., chunk is truthy), we can send messages immediately
         # since we already waited for the flush in order to start the stream
@@ -804,6 +901,10 @@ class Chat:
         index: int | None = None,
     ) -> None:
 
+        if "tool_calls" in message:
+            for tool in message["tool_calls"]:
+                self._call_tool(tool)
+
         # Don't actually store chunks until the end
         if chunk is True or chunk == "start":
             return None
@@ -822,6 +923,11 @@ class Chat:
             self._latest_user_input.set(message)
 
         return None
+
+    def _call_tool(self, tool: ToolCall) -> Any:
+        func = tool["function"]
+        args = json.loads(func["arguments"])
+        return eval(func["name"])(*args)
 
     def _trim_messages(
         self,

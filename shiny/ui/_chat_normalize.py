@@ -1,8 +1,9 @@
 import sys
+import warnings
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Optional, cast
 
-from ._chat_types import ChatMessage
+from ._chat_types import ChatMessage, Function, ToolCall
 
 if TYPE_CHECKING:
     from anthropic.types import Message as AnthropicMessage
@@ -114,15 +115,50 @@ class LangChainNormalizer(BaseMessageNormalizer):
 class OpenAINormalizer(StringNormalizer):
     def normalize(self, message: Any) -> ChatMessage:
         x = cast("ChatCompletion", message)
-        return super().normalize(x.choices[0].message.content)
+        msg = x.choices[0].message
+        if msg.tool_calls is not None:
+            raise ValueError(
+                "`Chat()` currently only supports tool calls when streaming completions. "
+                "Try using `stream=True` in your completion request and `.append_message_stream()` instead."
+            )
+        return super().normalize(msg.content)
 
     def normalize_chunk(self, chunk: Any) -> ChatMessage:
         x = cast("ChatCompletionChunk", chunk)
-        return super().normalize_chunk(x.choices[0].delta.content)
+        d = x.choices[0].delta
+        res = super().normalize_chunk(d.content)
+        if d.tool_calls is None:
+            return res
+
+        if len(d.tool_calls) > 1:
+            warnings.warn(
+                "`Chat()` currently only supports one tool call per message. "
+                "Only the first tool call will be used.",
+                stacklevel=2,
+            )
+
+        tool = d.tool_calls[0]
+        # I'm not sure why this can be None...for the future possibility of non-function tool calls?
+        if tool.function is None:
+            return res
+
+        res["tool_call"] = ToolCall(
+            id=tool.id,
+            function=Function(
+                name=tool.function.name,
+                arguments=tool.function.arguments,
+            ),
+            finished=x.choices[0].finish_reason == "tool_calls",
+        )
+
+        return res
 
     def can_normalize(self, message: Any) -> bool:
         try:
             from openai.types.chat import ChatCompletion
+
+            # TODO: maybe we can support this, too?
+            # from openai.types.chat.parsed_chat_completion import ParsedChatCompletion
 
             return isinstance(message, ChatCompletion)
         except Exception:
