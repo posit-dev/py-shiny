@@ -57,9 +57,6 @@ const ICONS = {
   // https://github.com/n3r4zzurr0/svg-spinners/blob/main/svg-css/3-dots-fade.svg
   dots_fade:
     '<svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><style>.spinner_S1WN{animation:spinner_MGfb .8s linear infinite;animation-delay:-.8s}.spinner_Km9P{animation-delay:-.65s}.spinner_JApP{animation-delay:-.5s}@keyframes spinner_MGfb{93.75%,100%{opacity:.2}}</style><circle class="spinner_S1WN" cx="4" cy="12" r="3"/><circle class="spinner_S1WN spinner_Km9P" cx="12" cy="12" r="3"/><circle class="spinner_S1WN spinner_JApP" cx="20" cy="12" r="3"/></svg>',
-  // https://github.com/n3r4zzurr0/svg-spinners/blob/main/svg-css/bouncing-ball.svg
-  ball_bounce:
-    '<svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><style>.spinner_rXNP{animation:spinner_YeBj .8s infinite; opacity:.8}@keyframes spinner_YeBj{0%{animation-timing-function:cubic-bezier(0.33,0,.66,.33);cy:5px}46.875%{cy:20px;rx:4px;ry:4px}50%{animation-timing-function:cubic-bezier(0.33,.66,.66,1);cy:20.5px;rx:4.8px;ry:3px}53.125%{rx:4px;ry:4px}100%{cy:5px}}</style><ellipse class="spinner_rXNP" cx="12" cy="5" rx="4" ry="4"/></svg>',
 };
 
 const requestScroll = (el: HTMLElement, cancelIfScrolledUp = false) => {
@@ -127,7 +124,6 @@ class ChatMessage extends LightElement {
     return html`
       <div class="message-icon">${unsafeHTML(icon)}</div>
       <div class="message-content">${content}</div>
-      <div class="message-streaming-icon">${unsafeHTML(ICONS.ball_bounce)}</div>
     `;
   }
 
@@ -413,7 +409,14 @@ class ChatContainer extends LightElement {
       return;
     }
 
-    lastMessage.setAttribute("content", message.content);
+    // Add a dot to the end of the message to indicate that it's still streaming
+    const content =
+      message.chunk_type === "message_end"
+        ? message.content
+        : message.content +
+          '<svg width="12" height="12" xmlns="http://www.w3.org/2000/svg" style="margin-left:.25em;margin-top:-.25em"><circle cx="6" cy="6" r="6"/></svg>';
+
+    lastMessage.setAttribute("content", content);
 
     if (message.chunk_type === "message_end") {
       this.#finalizeMessage();
