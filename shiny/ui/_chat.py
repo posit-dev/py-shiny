@@ -37,7 +37,7 @@ from ._chat_provider_types import (
     as_provider_message,
 )
 from ._chat_tokenizer import TokenEncoding, TokenizersEncoding, get_default_tokenizer
-from ._chat_types import ChatMessage, ClientMessage, StoredMessage, TransformedMessage
+from ._chat_types import ChatMessage, ClientMessage, TransformedMessage
 from ._html_deps_py_shiny import chat_deps
 from .fill import as_fill_item, as_fillable_container
 
@@ -52,11 +52,11 @@ __all__ = (
 # user input content types
 TransformUserInput = Callable[[str], Union[str, None]]
 TransformUserInputAsync = Callable[[str], Awaitable[Union[str, None]]]
-TransformAssistantResponse = Callable[[str], Union[str, HTML]]
-TransformAssistantResponseAsync = Callable[[str], Awaitable[Union[str, HTML]]]
-TransformAssistantResponseChunk = Callable[[str, str, bool], Union[str, HTML]]
+TransformAssistantResponse = Callable[[str], Union[str, HTML, None]]
+TransformAssistantResponseAsync = Callable[[str], Awaitable[Union[str, HTML, None]]]
+TransformAssistantResponseChunk = Callable[[str, str, bool], Union[str, HTML, None]]
 TransformAssistantResponseChunkAsync = Callable[
-    [str, str, bool], Awaitable[Union[str, HTML]]
+    [str, str, bool], Awaitable[Union[str, HTML, None]]
 ]
 TransformAssistantResponseFunction = Union[
     TransformAssistantResponse,
@@ -134,10 +134,10 @@ class Chat:
         * `"unhandled"`: Do not display any error message to the user.
     tokenizer
         The tokenizer to use for calculating token counts, which is required to impose
-        `token_limits` in `.messages()`. By default, a pre-trained tokenizer is
-        attempted to be loaded the tokenizers library (if available). A custom tokenizer
-        can be provided by following the `TokenEncoding` (tiktoken or tozenizer)
-        protocol. If token limits are of no concern, provide `None`.
+        `token_limits` in `.messages()`. If not provided, a default generic tokenizer
+        is attempted to be loaded from the tokenizers library. A specific tokenizer
+        may also be provided by following the `TokenEncoding` (tiktoken or tozenizers)
+        protocol (e.g., `tiktoken.encoding_for_model("gpt-4o")`).
     """
 
     def __init__(
@@ -146,7 +146,7 @@ class Chat:
         *,
         messages: Sequence[Any] = (),
         on_error: Literal["auto", "actual", "sanitize", "unhandled"] = "auto",
-        tokenizer: TokenEncoding | MISSING_TYPE | None = MISSING,
+        tokenizer: TokenEncoding | None = None,
     ):
         if not isinstance(id, str):
             raise TypeError("`id` must be a string.")
@@ -155,10 +155,8 @@ class Chat:
         self.user_input_id = ResolvedId(f"{self.id}_user_input")
         self._transform_user: TransformUserInputAsync | None = None
         self._transform_assistant: TransformAssistantResponseChunkAsync | None = None
-        if isinstance(tokenizer, MISSING_TYPE):
-            self._tokenizer = get_default_tokenizer()
-        else:
-            self._tokenizer = tokenizer
+        self._tokenizer = tokenizer
+
         # TODO: remove the `None` when this PR lands:
         # https://github.com/posit-dev/py-shiny/pull/793/files
         self._session = require_active_session(None)
@@ -187,11 +185,11 @@ class Chat:
         # Initialize chat state and user input effect
         with session_context(self._session):
             # Initialize message state
-            self._messages: reactive.Value[tuple[StoredMessage, ...]] = reactive.Value(
-                ()
+            self._messages: reactive.Value[tuple[TransformedMessage, ...]] = (
+                reactive.Value(())
             )
 
-            self._latest_user_input: reactive.Value[StoredMessage | None] = (
+            self._latest_user_input: reactive.Value[TransformedMessage | None] = (
                 reactive.Value(None)
             )
 
@@ -344,14 +342,14 @@ class Chat:
         else:
             await self._remove_loading_message()
             sanitize = self.on_error == "sanitize"
-            raise NotifyException(str(e), sanitize=sanitize)
+            raise NotifyException(str(e), sanitize=sanitize) from e
 
     @overload
     def messages(
         self,
         *,
         format: Literal["anthropic"] = "anthropic",
-        token_limits: tuple[int, int] | None = (4096, 1000),
+        token_limits: tuple[int, int] | None = None,
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
     ) -> tuple[AnthropicMessage, ...]: ...
@@ -361,7 +359,7 @@ class Chat:
         self,
         *,
         format: Literal["google"] = "google",
-        token_limits: tuple[int, int] | None = (4096, 1000),
+        token_limits: tuple[int, int] | None = None,
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
     ) -> tuple[GoogleMessage, ...]: ...
@@ -371,7 +369,7 @@ class Chat:
         self,
         *,
         format: Literal["langchain"] = "langchain",
-        token_limits: tuple[int, int] | None = (4096, 1000),
+        token_limits: tuple[int, int] | None = None,
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
     ) -> tuple[LangChainMessage, ...]: ...
@@ -381,7 +379,7 @@ class Chat:
         self,
         *,
         format: Literal["openai"] = "openai",
-        token_limits: tuple[int, int] | None = (4096, 1000),
+        token_limits: tuple[int, int] | None = None,
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
     ) -> tuple[OpenAIMessage, ...]: ...
@@ -391,7 +389,7 @@ class Chat:
         self,
         *,
         format: Literal["ollama"] = "ollama",
-        token_limits: tuple[int, int] | None = (4096, 1000),
+        token_limits: tuple[int, int] | None = None,
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
     ) -> tuple[OllamaMessage, ...]: ...
@@ -401,7 +399,7 @@ class Chat:
         self,
         *,
         format: MISSING_TYPE = MISSING,
-        token_limits: tuple[int, int] | None = (4096, 1000),
+        token_limits: tuple[int, int] | None = None,
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
     ) -> tuple[ChatMessage, ...]: ...
@@ -410,7 +408,7 @@ class Chat:
         self,
         *,
         format: MISSING_TYPE | ProviderMessageFormat = MISSING,
-        token_limits: tuple[int, int] | None = (4096, 1000),
+        token_limits: tuple[int, int] | None = None,
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
     ) -> tuple[ChatMessage | ProviderMessage, ...]:
@@ -440,10 +438,15 @@ class Chat:
             * `"openai"`: OpenAI message format.
             * `"ollama"`: Ollama message format.
         token_limits
-            A tuple of two integers. The first integer is the maximum number of tokens
-            that can be sent to the model in a single request. The second integer is the
-            amount of tokens to reserve for the model's response.
-            Can also be `None` to disable message trimming based on token counts.
+            Limit the conversation history based on token limits. If specified, only
+            the most recent messages that fit within the token limits are returned. This
+            is useful for avoiding "exceeded token limit" errors when sending messages
+            to the relevant model, while still providing the most recent context available.
+            A specified value must be a tuple of two integers. The first integer is the
+            maximum number of tokens that can be sent to the model in a single request.
+            The second integer is the amount of tokens to reserve for the model's response.
+            Note that token counts based on the `tokenizer` provided to the `Chat`
+            constructor.
         transform_user
             Whether to return user input messages with transformation applied. This only
             matters if a `transform_user_input` was provided to the chat constructor.
@@ -536,7 +539,7 @@ class Chat:
         )
         if msg is None:
             return
-        msg = self._store_message(msg, chunk=chunk)
+        self._store_message(msg, chunk=chunk)
         await self._send_append_message(msg, chunk=chunk)
 
     async def append_message_stream(self, message: Iterable[Any] | AsyncIterable[Any]):
@@ -564,7 +567,7 @@ class Chat:
         async def _stream_task():
             await self._append_message_stream(message)
 
-        _stream_task()
+        self._session.on_flushed(_stream_task, once=True)
 
         # Since the task runs in the background (outside/beyond the current context,
         # if any), we need to manually raise any exceptions that occur
@@ -612,7 +615,7 @@ class Chat:
     # Send a message to the UI
     async def _send_append_message(
         self,
-        message: StoredMessage,
+        message: TransformedMessage,
         chunk: ChunkOption = False,
     ):
         if message["role"] == "system":
@@ -642,7 +645,9 @@ class Chat:
 
         # print(msg)
 
-        await self._send_custom_message(msg_type, msg)
+        # When streaming (i.e., chunk is truthy), we can send messages immediately
+        # since we already waited for the flush in order to start the stream
+        await self._send_custom_message(msg_type, msg, on_flushed=chunk is False)
         # TODO: Joe said it's a good idea to yield here, but I'm not sure why?
         # await asyncio.sleep(0)
 
@@ -711,11 +716,11 @@ class Chat:
         Parameters
         ----------
         fn
-            A function that takes a string and returns a string or
-            :class:`shiny.ui.HTML`. If `fn` returns a string, it gets interpreted and
-            parsed as a markdown on the client (and the resulting HTML is then
-            sanitized). If `fn` returns :class:`shiny.ui.HTML`, it will be displayed
-            as-is.
+            A function that takes a string and returns either a string,
+            :class:`shiny.ui.HTML`, or `None`. If `fn` returns a string, it gets
+            interpreted and parsed as a markdown on the client (and the resulting HTML
+            is then sanitized). If `fn` returns :class:`shiny.ui.HTML`, it will be
+            displayed as-is. If `fn` returns `None`, the response is effectively ignored.
 
         Note
         ----
@@ -774,16 +779,20 @@ class Chat:
 
         if message["role"] == "user" and self._transform_user is not None:
             content = await self._transform_user(message["content"])
-            if content is None:
-                return None
-            res[key] = content
 
         elif message["role"] == "assistant" and self._transform_assistant is not None:
-            res[key] = await self._transform_assistant(
+            content = await self._transform_assistant(
                 message["content"],
                 chunk_content or "",
                 chunk == "end" or chunk is False,
             )
+        else:
+            return res
+
+        if content is None:
+            return None
+
+        res[key] = content
 
         return res
 
@@ -793,24 +802,11 @@ class Chat:
         message: TransformedMessage,
         chunk: ChunkOption = False,
         index: int | None = None,
-    ) -> StoredMessage:
-
-        msg: StoredMessage = {
-            **message,
-            "token_count": None,
-        }
+    ) -> None:
 
         # Don't actually store chunks until the end
         if chunk is True or chunk == "start":
-            return msg
-
-        if self._tokenizer is not None:
-            encoded = self._tokenizer.encode(msg["content_server"])
-            if isinstance(encoded, TokenizersEncoding):
-                token_count = len(encoded.ids)
-            else:
-                token_count = len(encoded)
-            msg["token_count"] = token_count
+            return None
 
         with reactive.isolate():
             messages = self._messages()
@@ -819,20 +815,20 @@ class Chat:
             index = len(messages)
 
         messages = list(messages)
-        messages.insert(index, msg)
+        messages.insert(index, message)
 
         self._messages.set(tuple(messages))
-        if msg["role"] == "user":
-            self._latest_user_input.set(msg)
+        if message["role"] == "user":
+            self._latest_user_input.set(message)
 
-        return msg
+        return None
 
-    @staticmethod
     def _trim_messages(
-        messages: tuple[StoredMessage, ...],
+        self,
+        messages: tuple[TransformedMessage, ...],
         token_limits: tuple[int, int],
         format: MISSING_TYPE | ProviderMessageFormat,
-    ) -> tuple[StoredMessage, ...]:
+    ) -> tuple[TransformedMessage, ...]:
 
         n_total, n_reserve = token_limits
         if n_total <= n_reserve:
@@ -846,11 +842,10 @@ class Chat:
         n_system_tokens: int = 0
         n_system_messages: int = 0
         n_other_messages: int = 0
+        token_counts: list[int] = []
         for m in messages:
-            count = m["token_count"]
-            # Count can be None if the tokenizer is None
-            if count is None:
-                return messages
+            count = self._get_token_count(m["content_server"])
+            token_counts.append(count)
             if m["role"] == "system":
                 n_system_tokens += count
                 n_system_messages += 1
@@ -866,14 +861,16 @@ class Chat:
                 "`token_limit=None` to disable token limits."
             )
 
-        messages2: list[StoredMessage] = []
+        # Now, iterate through the messages in reverse order and appending
+        # until we run out of tokens
+        messages2: list[TransformedMessage] = []
         n_other_messages2: int = 0
-        for m in reversed(messages):
+        token_counts.reverse()
+        for i, m in enumerate(reversed(messages)):
             if m["role"] == "system":
                 messages2.append(m)
                 continue
-            count = cast(int, m["token_count"])  # Already checked this
-            remaining_non_system_tokens -= count
+            remaining_non_system_tokens -= token_counts[i]
             if remaining_non_system_tokens >= 0:
                 messages2.append(m)
                 n_other_messages2 += 1
@@ -899,6 +896,28 @@ class Chat:
             )
 
         return tuple(messages2)
+
+    def _get_token_count(
+        self,
+        content: str,
+    ) -> int:
+        if self._tokenizer is None:
+            self._tokenizer = get_default_tokenizer()
+
+        if self._tokenizer is None:
+            raise ValueError(
+                "A tokenizer is required to impose `token_limits` on messages. "
+                "To get a generic default tokenizer, install the `tokenizers` "
+                "package (`pip install tokenizers`). "
+                "To get a more precise token count, provide a specific tokenizer "
+                "to the `Chat` constructor."
+            )
+
+        encoded = self._tokenizer.encode(content)
+        if isinstance(encoded, TokenizersEncoding):
+            return len(encoded.ids)
+        else:
+            return len(encoded)
 
     def user_input(self, transform: bool = False) -> str | None:
         """
@@ -990,15 +1009,23 @@ class Chat:
     async def _remove_loading_message(self):
         await self._send_custom_message("shiny-chat-remove-loading-message", None)
 
-    async def _send_custom_message(self, handler: str, obj: ClientMessage | None):
-        await self._session.send_custom_message(
-            "shinyChatMessage",
-            {
-                "id": self.id,
-                "handler": handler,
-                "obj": obj,
-            },
-        )
+    async def _send_custom_message(
+        self, handler: str, obj: ClientMessage | None, on_flushed: bool = True
+    ):
+        async def _do_send():
+            await self._session.send_custom_message(
+                "shinyChatMessage",
+                {
+                    "id": self.id,
+                    "handler": handler,
+                    "obj": obj,
+                },
+            )
+
+        if on_flushed:
+            self._session.on_flushed(_do_send, once=True)
+        else:
+            await _do_send()
 
 
 @add_example(ex_dir="../api-examples/chat")

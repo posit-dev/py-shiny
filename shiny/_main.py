@@ -582,17 +582,21 @@ def create(
     dir: Optional[Path | str] = None,
     package_name: Optional[str] = None,
 ) -> None:
-    from ._main_create import use_template_github, use_template_internal
-
-    print(f"dir is {dir}")
+    from ._main_create import use_github_template, use_internal_template
 
     if dir is not None:
         dir = Path(dir)
 
     if github is not None:
-        use_template_github(github, template=template, mode=mode, dest_dir=dir)
+        use_github_template(
+            github,
+            template_name=template,
+            mode=mode,
+            dest_dir=dir,
+            package_name=package_name,
+        )
     else:
-        use_template_internal(template, mode, dir, package_name)
+        use_internal_template(template, mode, dir, package_name)
 
 
 @main.command(

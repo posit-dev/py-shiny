@@ -39,7 +39,7 @@ clean-build: FORCE
 	rm -fr dist/
 	rm -fr .eggs/
 	find . -name '*.egg-info' -exec rm -fr {} +
-	find . -name '*.egg' -exec rm -f {} +
+	find . -name '*.egg' -exec rm -rf {} +
 
 # Remove Python file artifacts
 clean-pyc: FORCE
@@ -173,6 +173,8 @@ playwright-shiny: FORCE
 
 # end-to-end tests on deployed apps with playwright; (SUB_FILE="" within tests/playwright/deploys/)
 playwright-deploys: FORCE
+	$(MAKE) playwright PYTEST_BROWSERS="$(PYTEST_DEPLOYS_BROWSERS)" TEST_FILE="$(TEST_FILE)"
+playwright-deploys-legacy: FORCE
 	$(MAKE) playwright TEST_FILE="tests/playwright/deploys/$(SUB_FILE)" PYTEST_BROWSERS="$(PYTEST_DEPLOYS_BROWSERS)"
 
 # end-to-end tests on all py-shiny examples with playwright; (SUB_FILE="" within tests/playwright/examples/)
@@ -223,6 +225,14 @@ ci-install-docs: FORCE
 
 ci-install-rsconnect: FORCE
 	uv pip install "rsconnect-python @ git+https://github.com/rstudio/rsconnect-python.git"
+
+
+# This is just to check if mypy can run for other users.
+# Not added to `make check` or `make check-fix` as all lint errors are supporessed (as we use pyright).
+ci-check-mypy-can-run: FORCE
+	@echo "-------- Checking types with mypy -----------"
+	uv pip install mypy
+	mypy shiny
 
 
 # ## If caching is ever used, we could run:

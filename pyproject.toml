@@ -3,7 +3,7 @@ requires = ["setuptools>=60", "wheel", "setuptools_scm>=8.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = {find = {include = ["shiny", "shiny.*"]}}
+packages = { find = { include = ["shiny", "shiny.*"] } }
 
 [tool.setuptools_scm]
 write_to = "shiny/_version.py"
@@ -12,13 +12,11 @@ local_scheme = "no-local-version"
 [project]
 name = "shiny"
 dynamic = ["version"]
-authors = [
-    {name = "Winston Chang", email = "winston@posit.co"},
-]
+authors = [{ name = "Winston Chang", email = "winston@posit.co" }]
 description = "A web development framework for Python."
 readme = "README.md"
 requires-python = ">=3.8"
-license = {text = "MIT"}
+license = { text = "MIT" }
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
@@ -68,7 +66,7 @@ test = [
     "psutil",
     "astropy",
     "suntime",
-    "timezonefinder",
+    "timezonefinder ; platform_system != 'Windows'",
     "ipyleaflet",
     "shinywidgets",
     "seaborn",
@@ -121,8 +119,8 @@ doc = [
     "tabulate",
     "shinylive",
     "pydantic>=2.7.4",
-    "quartodoc==0.7.5",
-    "griffe<1.0.0",
+    "quartodoc>=0.7.6",
+    "griffe>=1.1.1",
 ]
 
 [project.urls]
@@ -147,3 +145,10 @@ ignore = ["E302", "E501", "F403", "F405", "W503", "E203", "E701", "E704"]
 [tool.isort]
 profile = "black"
 skip = ["__init__.py", "typings/", "_dev/", ".venv", "venv", ".tox", "build"]
+
+[tool.mypy]
+# The goal of our usage of mypy is to make to sure mypy can run, not that it catches any errors (we use pyright to find our errors).
+# Therefore, ignore_errors but do not ignore runtime errors while checking
+# Note: This setting can not be done via CLI and must be set within a config
+ignore_errors = true
+exclude = ["shiny/api-examples", "shiny/templates"]

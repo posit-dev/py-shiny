@@ -21,12 +21,6 @@ class TransformedMessage(TypedDict):
     pre_transform_key: Literal["content_client", "content_server"]
 
 
-# A message that has been stored in the server-side chat history
-class StoredMessage(TransformedMessage):
-    # Number of tokens in the content
-    token_count: int | None
-
-
 # A message that can be sent to the client
 class ClientMessage(ChatMessage):
     content_type: Literal["markdown", "html"]

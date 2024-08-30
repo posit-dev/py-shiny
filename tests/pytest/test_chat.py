@@ -13,7 +13,7 @@ from shiny.types import MISSING
 from shiny.ui import Chat
 from shiny.ui._chat import as_transformed_message
 from shiny.ui._chat_normalize import normalize_message, normalize_message_chunk
-from shiny.ui._chat_types import ChatMessage, StoredMessage
+from shiny.ui._chat_types import ChatMessage
 
 # ----------------------------------------------------------------------
 # Helpers
@@ -35,14 +35,6 @@ class _MockSession:
 test_session = cast(Session, _MockSession())
 
 
-def as_stored_message(message: ChatMessage, token_count: int) -> StoredMessage:
-    msg = as_transformed_message(message)
-    return StoredMessage(
-        **msg,
-        token_count=token_count,
-    )
-
-
 # Check if a type is part of a Union
 def is_type_in_union(type: object, union: object) -> bool:
     if get_origin(union) is Union:
@@ -50,18 +42,21 @@ def is_type_in_union(type: object, union: object) -> bool:
     return False
 
 
-# ----------------------------------------------------------------------
-# Unit tests for Chat._get_trimmed_messages()
-# ----------------------------------------------------------------------
-
-
 def test_chat_message_trimming():
     with session_context(test_session):
         chat = Chat(id="chat")
 
+        # Default tokenizer gives a token count
+        def generate_content(token_count: int) -> str:
+            n = int(token_count / 2)
+            return " ".join(["foo" for _ in range(1, n)])
+
         msgs = (
-            as_stored_message(
-                {"content": "System message", "role": "system"}, token_count=101
+            as_transformed_message(
+                {
+                    "content": generate_content(102),
+                    "role": "system",
+                }
             ),
         )
 
@@ -70,11 +65,17 @@ def test_chat_message_trimming():
             chat._trim_messages(msgs, token_limits=(100, 0), format=MISSING)
 
         msgs = (
-            as_stored_message(
-                {"content": "System message", "role": "system"}, token_count=100
+            as_transformed_message(
+                {
+                    "content": generate_content(100),
+                    "role": "system",
+                }
             ),
-            as_stored_message(
-                {"content": "User message", "role": "user"}, token_count=1
+            as_transformed_message(
+                {
+                    "content": generate_content(2),
+                    "role": "user",
+                }
             ),
         )
 
@@ -83,64 +84,79 @@ def test_chat_message_trimming():
             chat._trim_messages(msgs, token_limits=(100, 0), format=MISSING)
 
         # Raising the limit should allow both messages to fit
-        trimmed = chat._trim_messages(msgs, token_limits=(102, 0), format=MISSING)
+        trimmed = chat._trim_messages(msgs, token_limits=(103, 0), format=MISSING)
         assert len(trimmed) == 2
-        contents = [msg["content_server"] for msg in trimmed]
-        assert contents == ["System message", "User message"]
+
+        content1 = generate_content(100)
+        content2 = generate_content(10)
+        content3 = generate_content(2)
 
         msgs = (
-            as_stored_message(
-                {"content": "System message", "role": "system"}, token_count=100
+            as_transformed_message(
+                {
+                    "content": content1,
+                    "role": "system",
+                }
             ),
-            as_stored_message(
-                {"content": "User message", "role": "user"}, token_count=10
+            as_transformed_message(
+                {
+                    "content": content2,
+                    "role": "user",
+                }
             ),
-            as_stored_message(
-                {"content": "User message 2", "role": "user"}, token_count=1
+            as_transformed_message(
+                {
+                    "content": content3,
+                    "role": "user",
+                }
             ),
         )
 
         # Should discard the 1st user message
-        trimmed = chat._trim_messages(msgs, token_limits=(102, 0), format=MISSING)
+        trimmed = chat._trim_messages(msgs, token_limits=(103, 0), format=MISSING)
         assert len(trimmed) == 2
         contents = [msg["content_server"] for msg in trimmed]
-        assert contents == ["System message", "User message 2"]
+        assert contents == [content1, content3]
+
+        content1 = generate_content(50)
+        content2 = generate_content(10)
+        content3 = generate_content(50)
+        content4 = generate_content(2)
 
         msgs = (
-            as_stored_message(
-                {"content": "System message", "role": "system"}, token_count=50
+            as_transformed_message(
+                {"content": content1, "role": "system"},
             ),
-            as_stored_message(
-                {"content": "User message", "role": "user"}, token_count=10
+            as_transformed_message(
+                {"content": content2, "role": "user"},
             ),
-            as_stored_message(
-                {"content": "System message 2", "role": "system"}, token_count=50
+            as_transformed_message(
+                {"content": content3, "role": "system"},
             ),
-            as_stored_message(
-                {"content": "User message 2", "role": "user"}, token_count=1
+            as_transformed_message(
+                {"content": content4, "role": "user"},
             ),
         )
 
         # Should discard the 1st user message
-        trimmed = chat._trim_messages(msgs, token_limits=(102, 0), format=MISSING)
+        trimmed = chat._trim_messages(msgs, token_limits=(103, 0), format=MISSING)
         assert len(trimmed) == 3
         contents = [msg["content_server"] for msg in trimmed]
-        assert contents == ["System message", "System message 2", "User message 2"]
+        assert contents == [content1, content3, content4]
+
+        content1 = generate_content(50)
+        content2 = generate_content(10)
 
         msgs = (
-            as_stored_message(
-                {"content": "Assistant message", "role": "assistant"}, token_count=50
-            ),
-            as_stored_message(
-                {"content": "User message", "role": "user"}, token_count=10
-            ),
+            as_transformed_message({"content": content1, "role": "assistant"}),
+            as_transformed_message({"content": content2, "role": "user"}),
         )
 
         # Anthropic requires 1st message to be a user message
         trimmed = chat._trim_messages(msgs, token_limits=(30, 0), format="anthropic")
         assert len(trimmed) == 1
         contents = [msg["content_server"] for msg in trimmed]
-        assert contents == ["User message"]
+        assert contents == [content2]
 
 
 # ------------------------------------------------------------------------------------

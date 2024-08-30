@@ -3,7 +3,7 @@ from __future__ import annotations
 from playwright.sync_api import Page, expect
 
 from shiny.playwright import controller
-from shiny.playwright.controller._controls import PatternOrStr
+from shiny.playwright.controller._base import PatternOrStr
 from shiny.run import ShinyAppProc
 
 

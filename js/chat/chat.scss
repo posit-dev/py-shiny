@@ -9,6 +9,7 @@ shiny-chat-container {
   margin: 0 auto;
   gap: 1rem;
   overflow: auto;
+  padding: 0.25rem;
 
   p:last-child {
     margin-bottom: 0;
@@ -39,6 +40,17 @@ shiny-chat-container {
       .message-content {
         align-self: center;
       }
+      .message-streaming-icon {
+        display: none;
+        opacity: 0;
+      }
+      &[streaming] .message-streaming-icon {
+        display: block;
+        animation-delay: 2s;
+        animation-name: fade-in;
+        animation-duration: 10ms;
+        animation-fill-mode: forwards;
+      }
     }
 
     /* Align the user message to the right */
@@ -47,6 +59,7 @@ shiny-chat-container {
       padding: 0.75rem 1rem;
       border-radius: 10px;
       background-color: var(--shiny-chat-user-message-bg);
+      max-width: 100%;
     }
   }
 
@@ -55,7 +68,6 @@ shiny-chat-container {
     position: sticky;
     background-color: var(--bs-body-bg, white);
     bottom: 0;
-    padding: 0.25rem;
     textarea {
       --bs-border-radius: 26px;
       resize: none;
@@ -67,8 +79,8 @@ shiny-chat-container {
     }
     button {
       position: absolute;
-      bottom: 10px;
-      right: 11px;
+      bottom: 7px;
+      right: 8px;
       background-color: transparent;
       color: var(--bs-primary, #007bc2);
       transition: color 0.25s ease-in-out;
@@ -140,5 +152,15 @@ pre:has(.code-copy-button) {
   > .bi::after {
     mask-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/></svg>');
     background-color: var(--bs-success, #198754);
+  }
+}
+
+/* Keyframes for the fading spinner */
+@keyframes fade-in {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
   }
 }
