@@ -64,6 +64,7 @@ jobs:
             pypi_shiny: false
             pypi_rsconnect: false
             base_test_dir: "./tests/playwright/deploys"
+            app_name: "express_page_sidebar"
             test_shinyappsio: true
 
       fail-fast: false
