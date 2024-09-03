@@ -13,7 +13,7 @@ from shiny.playwright import controller
 
 app_url = local_deploys_app_url_fixture(
     # Possibly use a different app name given by an GHA env var
-    os.getenv("EXPRESS_PAGE_SIDEBAR_NAME", "express_page_sidebar")
+    os.getenv("EXPRESS_PAGE_SIDEBAR_NAME") or "express_page_sidebar"
 )
 
 
