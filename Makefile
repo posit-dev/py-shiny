@@ -149,14 +149,21 @@ clean-js: FORCE
 SUB_FILE:=
 PYTEST_BROWSERS:= --browser webkit --browser firefox --browser chromium
 PYTEST_DEPLOYS_BROWSERS:= --browser chromium
+
+# Full test path to playwright tests
+TEST_FILE:=tests/playwright/$(SUB_FILE)
+# Default `make` values that shouldn't be directly used; (Use `TEST_FILE` instead!)
+DEPLOYS_TEST_FILE:=tests/playwright/deploys$(SUB_FILE)
+SHINY_TEST_FILE:=tests/playwright/shiny/$(SUB_FILE)
+EXAMPLES_TEST_FILE:=tests/playwright/examples/$(SUB_FILE)
+
 install-playwright: FORCE
 	playwright install --with-deps
 
 install-rsconnect: FORCE
 	pip install git+https://github.com/rstudio/rsconnect-python.git#egg=rsconnect-python
 
-# Full test path to playwright tests
-TEST_FILE:="tests/playwright/$(SUB_FILE)"
+
 # All end-to-end tests with playwright
 playwright: install-playwright ## All end-to-end tests with playwright; (TEST_FILE="" from root of repo)
 	pytest $(TEST_FILE) $(PYTEST_BROWSERS)
@@ -169,20 +176,18 @@ playwright-show-trace: ## Show trace of failed tests
 
 # end-to-end tests with playwright; (SUB_FILE="" within tests/playwright/shiny/)
 playwright-shiny: FORCE
-	$(MAKE) playwright TEST_FILE="tests/playwright/shiny/$(SUB_FILE)"
+	$(MAKE) playwright TEST_FILE="$(SHINY_TEST_FILE)"
 
 # end-to-end tests on deployed apps with playwright; (SUB_FILE="" within tests/playwright/deploys/)
 playwright-deploys: FORCE
-	$(MAKE) playwright PYTEST_BROWSERS="$(PYTEST_DEPLOYS_BROWSERS)" TEST_FILE="$(TEST_FILE)"
-playwright-deploys-legacy: FORCE
-	$(MAKE) playwright TEST_FILE="tests/playwright/deploys/$(SUB_FILE)" PYTEST_BROWSERS="$(PYTEST_DEPLOYS_BROWSERS)"
+	$(MAKE) playwright PYTEST_BROWSERS="$(PYTEST_DEPLOYS_BROWSERS)" TEST_FILE="$(DEPLOYS_TEST_FILE)"
 
 # end-to-end tests on all py-shiny examples with playwright; (SUB_FILE="" within tests/playwright/examples/)
 playwright-examples: FORCE
-	$(MAKE) playwright TEST_FILE="tests/playwright/examples/$(SUB_FILE)"
+	$(MAKE) playwright TEST_FILE="$(EXAMPLES_TEST_FILE)"
 
 coverage: FORCE ## check combined code coverage (must run e2e last)
-	pytest --cov-report term-missing --cov=shiny tests/pytest/ tests/playwright/shiny/$(SUB_FILE) $(PYTEST_BROWSERS)
+	pytest --cov-report term-missing --cov=shiny tests/pytest/ $(SHINY_TEST_FILE) $(PYTEST_BROWSERS)
 	coverage html
 	$(BROWSER) htmlcov/index.html
 

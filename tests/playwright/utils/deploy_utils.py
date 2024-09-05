@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -70,12 +71,31 @@ def skip_on_webkit(fn: CallableT) -> CallableT:
 def run_command(cmd: str) -> str:
     output = subprocess.run(
         cmd,
-        check=True,
+        check=False,
         capture_output=True,
         text=True,
         shell=True,
     )
+    if output.returncode != 0:
+        print(
+            "Failed to run command!",
+            "\nstdout:",
+            output.stdout,
+            "\nstderr:",
+            output.stderr,
+            file=sys.stderr,
+            sep="\n",
+        )
+        raise RuntimeError(f"Failed to run command: {redact_api_key(cmd)}")
     return output.stdout
+
+
+def redact_api_key(cmd: str) -> str:
+    # Redact the value of the `--api-key` CLI argument, replace it with `***`
+    # Create a regex that replaces the argument following `--api-key`
+    # with `***` (e.g. `--api-key my-api-key` -> `--api-key ***`)
+
+    return re.sub(r"(--api-key\s+)(\S+)", r"\1***", cmd)
 
 
 def deploy_to_connect(app_name: str, app_dir: str) -> str:

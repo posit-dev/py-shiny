@@ -657,7 +657,6 @@ def app_template_questions(
     mode: Optional[str] = None,
     dest_dir: Optional[Path] = None,
 ):
-    template_dir = template.path
     template_cli_name = cli_bold(cli_field(template.title or template.id))
 
     if mode == "express" and not template.express_available:
@@ -666,7 +665,7 @@ def app_template_questions(
         )
 
     click.echo(cli_wait(f"Creating {template_cli_name} Shiny app..."))
-    dest_dir = directory_prompt(dest_dir, template_dir.name)
+    dest_dir = directory_prompt(dest_dir, template.id)
 
     if mode is None and template.express_available:
         mode = questionary.select(
