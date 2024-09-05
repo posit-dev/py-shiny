@@ -87,10 +87,10 @@ def poll(
     -------
     :
         A decorator that should be applied to a no-argument function that (expensively)
-    reads whatever data is desired. (This function may be a regular function or a
-    co-routine function.) The result of the decorator is a reactive
-    :func:`~shiny.reactive.calc` that always returns up-to-date data, and invalidates
-    callers when changes are detected via polling.
+        reads whatever data is desired. (This function may be a regular function or a
+        co-routine function.) The result of the decorator is a reactive
+        :func:`~shiny.reactive.calc` that always returns up-to-date data, and
+        invalidates callers when changes are detected via polling.
 
     See Also
     --------
@@ -103,6 +103,7 @@ def poll(
 
     @reactive.effect(priority=priority, session=session)
     async def _():
+        print("\ncheck")
         try:
             if _utils.is_async_callable(poll_func):
                 new = await poll_func()
@@ -114,6 +115,7 @@ def poll(
 
             try:
                 is_equal = equals(old, new)
+                print("equals", old, new, is_equal)
             except Exception as e:
                 # For example, pandas DataFrame throws if you try to compare it to a
                 # non-comparable object
@@ -144,11 +146,16 @@ def poll(
             # cleared, but don't unnecessarily call last_error.set(); at the time of
             # this writing, we haven't made a final decision on whether reactive.Value
             # will ignore sets if the new value is identical to the existing one.
+            print("successful comparison")
             with reactive.isolate():
+                print("last_error.get()", last_error.get())
                 if last_error.get() is not None:
+                    print("Setting last_error to `None`")
                     last_error.set(None)
 
+            print("is_equal", is_equal)
             if not is_equal:
+                print("Setting last_value to `new`", new)
                 last_value.set(new)
         except Exception as e:
             # Either the polling function threw an error, or we failed to compare its
@@ -184,9 +191,13 @@ def poll(
 
         else:
 
+            print("sync fn!!")
+            print("Session", session)
+
             @reactive.calc(session=session)
             @functools.wraps(fn)
             def result_sync() -> T:
+                print("result_sync")
                 # If an error occurred, raise it
                 err = last_error.get()
                 if err is not None:
