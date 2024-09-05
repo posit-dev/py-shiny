@@ -70,6 +70,7 @@ else:
     DataFrameLike.register(PlDataFrame)
 
 DataFrameLikeT = TypeVar("DataFrameLikeT", PdDataFrame, PlDataFrame)
+SeriesLikeT = TypeVar("SeriesLikeT", PdSeries, PlSeries)
 
 # ---------------------------------------------------------------------
 
