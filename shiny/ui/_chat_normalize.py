@@ -18,6 +18,9 @@ if TYPE_CHECKING:
             text: str
 
     from langchain_core.messages import BaseMessage, BaseMessageChunk
+    from litellm.types.utils import (  # pyright: ignore[reportMissingTypeStubs]
+        ModelResponse,
+    )
     from openai.types.chat import ChatCompletion, ChatCompletionChunk
 
 
@@ -137,6 +140,36 @@ class OpenAINormalizer(StringNormalizer):
             return False
 
 
+class LiteLlmNormalizer(OpenAINormalizer):
+    def normalize(self, message: Any) -> ChatMessage:
+        x = cast("ModelResponse", message)
+        return super().normalize(x)
+
+    def normalize_chunk(self, chunk: Any) -> ChatMessage:
+        x = cast("ModelResponse", chunk)
+        return super().normalize_chunk(x)
+
+    def can_normalize(self, message: Any) -> bool:
+        try:
+            from litellm.types.utils import (  # pyright: ignore[reportMissingTypeStubs]
+                ModelResponse,
+            )
+
+            return isinstance(message, ModelResponse)
+        except Exception:
+            return False
+
+    def can_normalize_chunk(self, chunk: Any) -> bool:
+        try:
+            from litellm.types.utils import (  # pyright: ignore[reportMissingTypeStubs]
+                ModelResponse,
+            )
+
+            return isinstance(chunk, ModelResponse)
+        except Exception:
+            return False
+
+
 class AnthropicNormalizer(BaseMessageNormalizer):
     def normalize(self, message: Any) -> ChatMessage:
         x = cast("AnthropicMessage", message)
@@ -248,6 +281,7 @@ class NormalizerRegistry:
             "anthropic": AnthropicNormalizer(),
             "google": GoogleNormalizer(),
             "langchain": LangChainNormalizer(),
+            "litellm": LiteLlmNormalizer(),
             "ollama": OllamaNormalizer(),
             "dict": DictNormalizer(),
             "string": StringNormalizer(),
