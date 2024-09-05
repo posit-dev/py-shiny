@@ -48,6 +48,7 @@ dependencies = [
     "python-multipart>=0.0.7;platform_system!='Emscripten'",
     "setuptools;python_version>='3.12'",
     "narwhals>=1.1.7",
+    "orjson>=3.10.7",
 ]
 
 [project.optional-dependencies]

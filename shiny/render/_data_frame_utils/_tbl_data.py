@@ -303,7 +303,6 @@ def _(data: PlDataFrame) -> FrameJson:
 
 @serialize_frame.register(nw.DataFrame)
 def _(data: nw.DataFrame[Any]) -> FrameJson:
-    import json
 
     type_hints = [serialize_dtype(data[col_name]) for col_name in data.columns]
     type_hints_type = {type_hint["type"] for type_hint in type_hints}
@@ -337,7 +336,18 @@ def _(data: nw.DataFrame[Any]) -> FrameJson:
 
         data_rows = new_rows
 
-    data_val = json.loads(json.dumps(data_rows, default=str))
+    import orjson
+
+    data_val = orjson.loads(
+        orjson.dumps(
+            data_rows,
+            default=str,
+            option=orjson.OPT_UTC_Z,
+        )
+    )
+
+    # import json
+    # data_val = json.loads(json.dumps(data_rows, default=str))
 
     return {
         "columns": data.columns,
