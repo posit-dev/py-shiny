@@ -8,11 +8,6 @@ from shiny import App, ui
 from shiny.types import NavSetArg
 from shiny.ui import Sidebar
 
-# TODO-karan; Make test that uses sidebar / no sidebar (where possible)
-# TODO-karan; Make test that has/does not have a header & footer (where possible)
-# TODO-karan; Test for title value (where possible)
-# TODO-karan; Make test that has placement = "above" / "below" (where possible); Test in combination of with/without sidebar
-
 
 def nav_controls(prefix: str) -> List[NavSetArg]:
     return [

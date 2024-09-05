@@ -563,12 +563,12 @@ class NavsetHidden(_NavsetBase):
         )
 
 
-class NavsetBar(
+class _ExpectNavsetCommonM(
     _ExpectNavsetSidebarM,
     _ExpectNavsetTitleM,
     _NavsetBase,
 ):
-    """Controller for :func:`shiny.ui.navset_bar`."""
+    """Mixin class for common expectations of nav bars."""
 
     def __init__(self, page: Page, id: str) -> None:
         """
@@ -695,3 +695,26 @@ class NavsetBar(
             playwright_expect(self.loc_container.locator("..")).to_have_class(
                 re.compile("container"), timeout=timeout
             )
+
+
+class NavsetBar(
+    _ExpectNavsetCommonM,
+):
+    """Controller for :func:`shiny.ui.navset_bar`."""
+
+
+class PageNavbar(_ExpectNavsetCommonM):
+    """Controller for :func:`shiny.ui.page_navbar`."""
+
+    def expect_fillable(self, *, timeout: Timeout = None) -> None:
+        """
+        Expects the main content area to be considered a fillable (i.e., flexbox) container
+
+        Parameters
+        ----------
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
+        playwright_expect(self.get_loc_active_content()).to_have_class(
+            re.compile("html-fill-container"), timeout=timeout
+        )
