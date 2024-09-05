@@ -5,6 +5,7 @@ ui.page_opts(
     header=ui.tags.div("Header", id="page_navbar_header"),
     footer=ui.tags.div("Footer", id="page_navbar_footer"),
     position="fixed-top",
+    fluid=True,
 )
 
 with ui.nav_panel("Data"):

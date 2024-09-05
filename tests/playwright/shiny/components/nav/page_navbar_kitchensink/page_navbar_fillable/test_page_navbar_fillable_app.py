@@ -12,3 +12,4 @@ def test_page_navbar_fillable(page: Page, local_app: ShinyAppProc) -> None:
         "This page could be used to pick a dataset."
     )
     page_navbar_fillable.expect_fillable()
+    page_navbar_fillable.expect_gap("300px")

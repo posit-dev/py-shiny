@@ -5,7 +5,6 @@ ui.page_opts(
     position="fixed-bottom",
     bg="dodgerBlue",
     inverse=True,
-    gap="50px",
 )
 
 with ui.nav_panel("Data"):
