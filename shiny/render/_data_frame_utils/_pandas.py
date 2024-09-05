@@ -122,8 +122,10 @@ def serialize_pd_dtype(
         }
     elif t in {"datetime64", "datetime"}:
         t = "datetime"
-    elif t in {"timedelta", "timedelta64"}:
-        t = "timedelta"
+
+    # # Disable timedelta as narwhals does not support it
+    # elif t in {"timedelta", "timedelta64"}:
+    #     t = "timedelta"
     else:
         if col_contains_shiny_html(col):
             t = "html"
