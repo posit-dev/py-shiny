@@ -11,8 +11,6 @@ from htmltools import TagNode
 from ..._typing_extensions import TypeIs
 from ...session import require_active_session
 from ._html import maybe_as_cell_html
-
-# from ...types import Jsonifiable
 from ._types import (
     CellPatch,
     ColsList,
@@ -204,12 +202,21 @@ def _(col: PlSeries) -> FrameDtype:
     return {"type": type_}
 
 
+nw_boolean = nw.Boolean()
+nw_categorical = nw.Categorical()
+nw_enum = nw.Enum()
+nw_string = nw.String()
+nw_datetime = nw.Datetime()
+nw_duration = nw.Duration()
+nw_object = nw.Object()
+
+
 @serialize_dtype.register
 def _(col: nw.Series) -> FrameDtype:
 
     from ._html import col_contains_shiny_html
 
-    if col.dtype == nw.String():
+    if col.dtype == nw_string:
         if col_contains_shiny_html(col):
             type_ = "html"
         else:
@@ -217,9 +224,28 @@ def _(col: nw.Series) -> FrameDtype:
     elif col.dtype.is_numeric():
         type_ = "numeric"
 
-    elif col.dtype == nw.Categorical():
+    elif col.dtype == nw_categorical:
         categories = col.cat.get_categories().to_list()
         return {"type": "categorical", "categories": categories}
+    elif col.dtype == nw_enum:
+        raise NotImplementedError("boolean type not tested")
+        cat_col = col.cast(nw.Categorical)
+        categories = cat_col.cat.get_categories().to_list()
+        return {"type": "categorical", "categories": categories}
+
+    elif col.dtype == nw_boolean:
+        raise NotImplementedError("boolean type not tested")
+        type_ = "boolean"
+    elif col.dtype == nw_duration:
+        raise NotImplementedError("duration type not tested")
+        type_ = "duration"
+    elif col.dtype == nw_datetime:
+        type_ = "datetime"
+    elif col.dtype == nw_object:
+        type_ = "object"
+        if col_contains_shiny_html(col):
+            type_ = "html"
+
     else:
         type_ = "unknown"
         if col_contains_shiny_html(col):
@@ -284,8 +310,8 @@ def _(data: nw.DataFrame[Any]) -> FrameJson:
 
     data_rows = data.rows(named=False)
 
-    print(data_rows)
-    print(data.rows(named=False))
+    # print(data_rows)
+    # print(data.rows(named=False))
 
     # Shiny tag support
     if "html" in type_hints_type:

@@ -176,11 +176,14 @@ ColsList = Optional[ListOrTuple[Union[str, int]]]
 
 class FrameDtypeSubset(TypedDict):
     type: Literal[
+        "boolean",
         "numeric",
         "string",
         "html",
         "datetime",
         # "timedelta",
+        "duration",
+        "object",
         "unknown",
     ]
 
