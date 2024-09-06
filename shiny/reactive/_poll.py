@@ -87,10 +87,10 @@ def poll(
     -------
     :
         A decorator that should be applied to a no-argument function that (expensively)
-    reads whatever data is desired. (This function may be a regular function or a
-    co-routine function.) The result of the decorator is a reactive
-    :func:`~shiny.reactive.calc` that always returns up-to-date data, and invalidates
-    callers when changes are detected via polling.
+        reads whatever data is desired. (This function may be a regular function or a
+        co-routine function.) The result of the decorator is a reactive
+        :func:`~shiny.reactive.calc` that always returns up-to-date data, and
+        invalidates callers when changes are detected via polling.
 
     See Also
     --------
