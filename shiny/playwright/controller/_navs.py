@@ -570,7 +570,6 @@ class _NavsetBarBase(
 ):
     """Mixin class for common expectations of nav bars."""
 
-    # TODO-karan, move this init method to where it is used, or remove the "mixin" from the name/docs
     def __init__(self, page: Page, id: str) -> None:
         """
         Initializes a new instance of the `NavsetBar` class.
@@ -739,6 +738,6 @@ class PageNavbar(_NavsetBarBase):
         timeout
             The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
-        playwright_expect(self.get_loc_active_content()).to_have_class(
-            re.compile("html-fill-container"), timeout=timeout
+        expect_to_have_class(
+            self.get_loc_active_content(), "html-fill-container", timeout=timeout
         )
