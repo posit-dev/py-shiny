@@ -1,8 +1,15 @@
 import sys
+import warnings
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Optional, cast
 
-from ._chat_types import ChatMessage
+from ..types import TypedDict
+from ._chat_types import (
+    AssistantMessage,
+    ChatMessage,
+    ToolFunctionCall,
+    ToolFunctionCallDelta,
+)
 
 if TYPE_CHECKING:
     from anthropic.types import Message as AnthropicMessage
@@ -23,6 +30,13 @@ if TYPE_CHECKING:
     )
     from openai.types.chat import ChatCompletion, ChatCompletionChunk
 
+    # https://python.langchain.com/v0.1/docs/modules/model_io/chat/function_calling/#response-streaming
+    class LangChainToolCallChunk(TypedDict):
+        name: str | None
+        args: str
+        id: str | None
+        index: int
+
 
 class BaseMessageNormalizer(ABC):
     @abstractmethod
@@ -30,7 +44,9 @@ class BaseMessageNormalizer(ABC):
         pass
 
     @abstractmethod
-    def normalize_chunk(self, chunk: Any) -> ChatMessage:
+    def normalize_chunk(
+        self, chunk: Any
+    ) -> tuple[AssistantMessage, Optional[ToolFunctionCall | ToolFunctionCallDelta]]:
         pass
 
     @abstractmethod
@@ -43,61 +59,88 @@ class BaseMessageNormalizer(ABC):
 
 
 class StringNormalizer(BaseMessageNormalizer):
-    def normalize(self, message: Any) -> ChatMessage:
+    def normalize(self, message: Any):
         x = cast(Optional[str], message)
-        return ChatMessage(content=x or "", role="assistant")
+        return AssistantMessage(content=x or "")
 
-    def normalize_chunk(self, chunk: Any) -> ChatMessage:
+    def normalize_chunk(
+        self, chunk: Any
+    ) -> tuple[AssistantMessage, Optional[ToolFunctionCall | ToolFunctionCallDelta]]:
         x = cast(Optional[str], chunk)
-        return ChatMessage(content=x or "", role="assistant")
+        return AssistantMessage(content=x or ""), None
 
-    def can_normalize(self, message: Any) -> bool:
+    def can_normalize(self, message: Any):
         return isinstance(message, str) or message is None
 
-    def can_normalize_chunk(self, chunk: Any) -> bool:
+    def can_normalize_chunk(self, chunk: Any):
         return isinstance(chunk, str) or chunk is None
 
 
 class DictNormalizer(BaseMessageNormalizer):
-    def normalize(self, message: Any) -> ChatMessage:
+    def normalize(self, message: Any):
         x = cast("dict[str, Any]", message)
         if "content" not in x:
             raise ValueError("Message must have 'content' key")
-        return ChatMessage(content=x["content"], role=x.get("role", "assistant"))
+        return AssistantMessage(content=x["content"], role=x.get("role", "assistant"))
 
-    def normalize_chunk(self, chunk: Any) -> ChatMessage:
+    def normalize_chunk(self, chunk: Any):
         x = cast("dict[str, Any]", chunk)
         if "content" not in x:
             raise ValueError("Message must have 'content' key")
-        return ChatMessage(content=x["content"], role=x.get("role", "assistant"))
+        return (
+            AssistantMessage(content=x["content"], role=x.get("role", "assistant")),
+            None,
+        )
 
-    def can_normalize(self, message: Any) -> bool:
+    def can_normalize(self, message: Any):
         return isinstance(message, dict)
 
-    def can_normalize_chunk(self, chunk: Any) -> bool:
+    def can_normalize_chunk(self, chunk: Any):
         return isinstance(chunk, dict)
 
 
 class LangChainNormalizer(BaseMessageNormalizer):
-    def normalize(self, message: Any) -> ChatMessage:
+    def normalize(self, message: Any):
         x = cast("BaseMessage", message)
         if isinstance(x.content, list):  # type: ignore
             raise ValueError(
                 "The `message.content` provided seems to represent numerous messages. "
                 "Consider iterating over `message.content` and calling .append_message() on each iteration."
             )
-        return ChatMessage(content=x.content, role="assistant")
+        if len(getattr(x, "tool_calls", [])) > 0:
+            raise non_streaming_tool_error
+        return AssistantMessage(content=x.content)
 
-    def normalize_chunk(self, chunk: Any) -> ChatMessage:
+    def normalize_chunk(self, chunk: Any):
         x = cast("BaseMessageChunk", chunk)
         if isinstance(x.content, list):  # type: ignore
             raise ValueError(
                 "The `message.content` provided seems to represent numerous messages. "
                 "Consider iterating over `message.content` and calling .append_message() on each iteration."
             )
-        return ChatMessage(content=x.content, role="assistant")
 
-    def can_normalize(self, message: Any) -> bool:
+        msg = AssistantMessage(content=x.content)
+
+        # It's on the ChatModel's subclass to implement tool calls, but from the
+        # docs it appears to follow the same pattern as OpenAI
+        # https://python.langchain.com/v0.1/docs/modules/model_io/chat/function_calling/#response-streaming
+        tool_calls: list[LangChainToolCallChunk] = getattr(x, "tool_call_chunks", [])
+        if len(tool_calls) == 0:
+            return msg, None
+        if len(tool_calls) > 1:
+            warnings.warn(concurrent_tool_warning, stacklevel=2)
+        tool_call = tool_calls[0]
+        if tool_call["name"] is not None:
+            tool_call = ToolFunctionCall(
+                name=tool_call["name"],
+                id=tool_call["id"],  # type: ignore
+            )
+        else:
+            tool_call = ToolFunctionCallDelta(arguments=tool_call["args"])
+
+        return msg, tool_call
+
+    def can_normalize(self, message: Any):
         try:
             from langchain_core.messages import BaseMessage
 
@@ -105,7 +148,7 @@ class LangChainNormalizer(BaseMessageNormalizer):
         except Exception:
             return False
 
-    def can_normalize_chunk(self, chunk: Any) -> bool:
+    def can_normalize_chunk(self, chunk: Any):
         try:
             from langchain_core.messages import BaseMessageChunk
 
@@ -115,13 +158,46 @@ class LangChainNormalizer(BaseMessageNormalizer):
 
 
 class OpenAINormalizer(StringNormalizer):
-    def normalize(self, message: Any) -> ChatMessage:
+    def normalize(self, message: Any):
         x = cast("ChatCompletion", message)
-        return super().normalize(x.choices[0].message.content)
+        msg = x.choices[0].message
+        if msg.tool_calls is not None:
+            raise non_streaming_tool_error
+        return super().normalize(msg.content)
 
-    def normalize_chunk(self, chunk: Any) -> ChatMessage:
+    def normalize_chunk(self, chunk: Any):
         x = cast("ChatCompletionChunk", chunk)
-        return super().normalize_chunk(x.choices[0].delta.content)
+        d = x.choices[0].delta
+        msg, _ = super().normalize_chunk(d.content)
+        if d.tool_calls is None:
+            return msg, None
+
+        if len(d.tool_calls) > 1:
+            warnings.warn(concurrent_tool_warning, stacklevel=2)
+
+        tool_call = d.tool_calls[0]
+        if tool_call.function is None:
+            # CPS 2024-09-04: I don't think non-function tool calls are currently a thing,
+            # but they might be in the future?
+            raise ValueError(
+                "`Chat()` currently only supports tool calls that are functions. "
+                "Please report this issue to https://github.com/posit-dev/py-shiny"
+            )
+
+        # I'm pretty sure when the id is present, the name should also be.
+        # And, when the id is not present, then arguments should be present.
+        if tool_call.id is not None:
+            func_call = ToolFunctionCall(
+                id=tool_call.id,
+                name=tool_call.function.name,  # type: ignore
+            )
+        else:
+            func_call = ToolFunctionCallDelta(
+                arguments=tool_call.function.arguments,  # type: ignore
+                finished=x.choices[0].finish_reason == "tool_calls",
+            )
+
+        return msg, func_call
 
     def can_normalize(self, message: Any) -> bool:
         try:
@@ -141,15 +217,15 @@ class OpenAINormalizer(StringNormalizer):
 
 
 class LiteLlmNormalizer(OpenAINormalizer):
-    def normalize(self, message: Any) -> ChatMessage:
+    def normalize(self, message: Any):
         x = cast("ModelResponse", message)
         return super().normalize(x)
 
-    def normalize_chunk(self, chunk: Any) -> ChatMessage:
+    def normalize_chunk(self, chunk: Any):
         x = cast("ModelResponse", chunk)
         return super().normalize_chunk(x)
 
-    def can_normalize(self, message: Any) -> bool:
+    def can_normalize(self, message: Any):
         try:
             from litellm.types.utils import (  # pyright: ignore[reportMissingTypeStubs]
                 ModelResponse,
@@ -159,7 +235,7 @@ class LiteLlmNormalizer(OpenAINormalizer):
         except Exception:
             return False
 
-    def can_normalize_chunk(self, chunk: Any) -> bool:
+    def can_normalize_chunk(self, chunk: Any):
         try:
             from litellm.types.utils import (  # pyright: ignore[reportMissingTypeStubs]
                 ModelResponse,
@@ -171,30 +247,43 @@ class LiteLlmNormalizer(OpenAINormalizer):
 
 
 class AnthropicNormalizer(BaseMessageNormalizer):
-    def normalize(self, message: Any) -> ChatMessage:
+    def normalize(self, message: Any):
         x = cast("AnthropicMessage", message)
         content = x.content[0]
+        if content.type == "tool_use":
+            raise non_streaming_tool_error
         if content.type != "text":
             raise ValueError(
-                f"Anthropic message type {content.type} not supported. "
-                "Only 'text' type is currently supported"
+                f"Anthropic message type {content.type} is currently not supported "
+                "by `Chat()`"
             )
-        return ChatMessage(content=content.text, role="assistant")
+        return AssistantMessage(content=content.text)
 
-    def normalize_chunk(self, chunk: Any) -> ChatMessage:
+    def normalize_chunk(self, chunk: Any):
         x = cast("MessageStreamEvent", chunk)
-        content = ""
-        if x.type == "content_block_delta":
-            if x.delta.type != "text_delta":
-                raise ValueError(
-                    f"Anthropic message delta type {x.delta.type} not supported. "
-                    "Only 'text_delta' type is supported"
-                )
+        if x.type == "content_block_delta" and x.delta.type == "text_delta":
             content = x.delta.text
+        else:
+            content = ""
 
-        return ChatMessage(content=content, role="assistant")
+        msg = AssistantMessage(content=content)
 
-    def can_normalize(self, message: Any) -> bool:
+        tool_call = None
+        if x.type == "content_block_start" and x.content_block.type == "tool_use":
+            tool_call = ToolFunctionCall(
+                id=x.content_block.id,
+                name=x.content_block.name,
+            )
+
+        if x.type == "content_block_delta" and x.delta.type == "input_json_delta":
+            tool_call = ToolFunctionCallDelta(arguments=x.delta.partial_json)
+
+        if x.type == "message_delta" and x.delta.stop_reason == "tool_use":
+            tool_call = ToolFunctionCallDelta(arguments="", finished=True)
+
+        return msg, tool_call
+
+    def can_normalize(self, message: Any):
         try:
             from anthropic.types import Message as AnthropicMessage
 
@@ -202,7 +291,7 @@ class AnthropicNormalizer(BaseMessageNormalizer):
         except Exception:
             return False
 
-    def can_normalize_chunk(self, chunk: Any) -> bool:
+    def can_normalize_chunk(self, chunk: Any):
         try:
             from anthropic.types import (
                 RawContentBlockDeltaEvent,
@@ -229,15 +318,16 @@ class AnthropicNormalizer(BaseMessageNormalizer):
 
 
 class GoogleNormalizer(BaseMessageNormalizer):
-    def normalize(self, message: Any) -> ChatMessage:
+    def normalize(self, message: Any):
         x = cast("GenerateContentResponse", message)
-        return ChatMessage(content=x.text, role="assistant")
+        return AssistantMessage(content=x.text)
 
-    def normalize_chunk(self, chunk: Any) -> ChatMessage:
+    def normalize_chunk(self, chunk: Any):
         x = cast("GenerateContentResponse", chunk)
-        return ChatMessage(content=x.text, role="assistant")
+        # TODO: implement tool call normalization
+        return AssistantMessage(content=x.text), None
 
-    def can_normalize(self, message: Any) -> bool:
+    def can_normalize(self, message: Any):
         try:
             import google.generativeai.types.generation_types as gtypes  # pyright: ignore[reportMissingTypeStubs, reportMissingImports]
 
@@ -248,27 +338,28 @@ class GoogleNormalizer(BaseMessageNormalizer):
         except Exception:
             return False
 
-    def can_normalize_chunk(self, chunk: Any) -> bool:
+    def can_normalize_chunk(self, chunk: Any):
         return self.can_normalize(chunk)
 
 
 class OllamaNormalizer(DictNormalizer):
-    def normalize(self, message: Any) -> ChatMessage:
+    def normalize(self, message: Any):
         x = cast("dict[str, Any]", message["message"])
         return super().normalize(x)
 
-    def normalize_chunk(self, chunk: "dict[str, Any]") -> ChatMessage:
+    def normalize_chunk(self, chunk: "dict[str, Any]"):
         msg = cast("dict[str, Any]", chunk["message"])
+        # TODO: implement tool call normalization
         return super().normalize_chunk(msg)
 
-    def can_normalize(self, message: Any) -> bool:
+    def can_normalize(self, message: Any):
         if not isinstance(message, dict):
             return False
         if "message" not in message:
             return False
         return super().can_normalize(message["message"])
 
-    def can_normalize_chunk(self, chunk: Any) -> bool:
+    def can_normalize_chunk(self, chunk: Any):
         return self.can_normalize(chunk)
 
 
@@ -313,7 +404,9 @@ def normalize_message(message: Any) -> ChatMessage:
     )
 
 
-def normalize_message_chunk(chunk: Any) -> ChatMessage:
+def normalize_message_chunk(
+    chunk: Any,
+) -> tuple[AssistantMessage, Optional[ToolFunctionCall | ToolFunctionCallDelta]]:
     strategies = message_normalizer_registry._strategies
     for strategy in strategies.values():
         if strategy.can_normalize_chunk(chunk):
@@ -322,3 +415,16 @@ def normalize_message_chunk(chunk: Any) -> ChatMessage:
         f"Could not find a normalizer for message chunk of type {type(chunk)}: {chunk}. "
         "Consider registering a custom normalizer via shiny.ui._chat_types.registry.register()"
     )
+
+
+non_streaming_tool_error = ValueError(
+    "`Chat()` currently only supports tool calls when streaming completions. "
+    "Try setting `stream=True` when creating responses and "
+    "`.append_message_stream()` to append the response to the chat."
+)
+
+concurrent_tool_warning = (
+    "`Chat()` currently doesn't support multiple concurrent tool calls. "
+    "Only the first tool call will be processed. "
+    "Please report this issue to https://github.com/posit-dev/py-shiny"
+)

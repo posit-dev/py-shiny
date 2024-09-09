@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import inspect
+import json
+import warnings
 from typing import (
     Any,
     AsyncIterable,
@@ -22,9 +24,11 @@ from .. import _utils, reactive
 from .._deprecated import warn_deprecated
 from .._docstring import add_example
 from .._namespaces import ResolvedId, resolve_id
+from ..reactive._reactives import EffectFunction, EffectFunctionAsync
 from ..session import require_active_session, session_context
 from ..types import MISSING, MISSING_TYPE, NotifyException
 from ..ui.css import CssUnit, as_css_unit
+from . import _chat_types as ct
 from ._chat_normalize import normalize_message, normalize_message_chunk
 from ._chat_provider_types import (
     AnthropicMessage,
@@ -37,7 +41,7 @@ from ._chat_provider_types import (
     as_provider_message,
 )
 from ._chat_tokenizer import TokenEncoding, TokenizersEncoding, get_default_tokenizer
-from ._chat_types import ChatMessage, ClientMessage, TransformedMessage
+from ._chat_typed_dicts import ChatMessage
 from ._html_deps_py_shiny import chat_deps
 from .fill import as_fill_item, as_fillable_container
 
@@ -64,8 +68,9 @@ TransformAssistantResponseFunction = Union[
     TransformAssistantResponseChunk,
     TransformAssistantResponseChunkAsync,
 ]
-SubmitFunction = Callable[[], None]
-SubmitFunctionAsync = Callable[[], Awaitable[None]]
+ToolFunction = Callable[..., Any]
+AsyncToolFunction = Callable[..., Awaitable[Any]]
+
 
 ChunkOption = Literal["start", "end", True, False]
 
@@ -156,6 +161,7 @@ class Chat:
         self._transform_user: TransformUserInputAsync | None = None
         self._transform_assistant: TransformAssistantResponseChunkAsync | None = None
         self._tokenizer = tokenizer
+        self._tool_functions: dict[str, ToolFunction] = {}
 
         # TODO: remove the `None` when this PR lands:
         # https://github.com/posit-dev/py-shiny/pull/793/files
@@ -171,7 +177,8 @@ class Chat:
         self.on_error = on_error
 
         # Chunked messages get accumulated (using this property) before changing state
-        self._current_stream_message = ""
+        self._current_stream_message: str = ""
+        self._current_stream_tools: list[ct.ToolFunctionCall] = []
         self._current_stream_id: str | None = None
         self._pending_messages: list[PendingMessage] = []
 
@@ -185,12 +192,16 @@ class Chat:
         # Initialize chat state and user input effect
         with session_context(self._session):
             # Initialize message state
-            self._messages: reactive.Value[tuple[TransformedMessage, ...]] = (
+            self._messages: reactive.Value[tuple[ct.TransformedMessage, ...]] = (
                 reactive.Value(())
             )
 
-            self._latest_user_input: reactive.Value[TransformedMessage | None] = (
+            self._latest_user_input: reactive.Value[ct.TransformedMessage | None] = (
                 reactive.Value(None)
+            )
+
+            self._latest_tool_messages: reactive.Value[tuple[ct.ToolMessage, ...]] = (
+                reactive.Value(())
             )
 
             # Initialize the chat with the provided messages
@@ -205,7 +216,7 @@ class Chat:
             @reactive.effect(priority=9999)
             @reactive.event(self._user_input)
             async def _on_user_input():
-                msg = ChatMessage(content=self._user_input(), role="user")
+                msg = ct.UserMessage(content=self._user_input(), role="user")
                 # It's possible that during the transform, a message is appended, so get
                 # the length now, so we can insert the new message at the right index
                 n_pre = len(self._messages())
@@ -216,7 +227,7 @@ class Chat:
                 else:
                     # A transformed value of None is a special signal to suspend input
                     # handling (i.e., don't generate a response)
-                    self._store_message(as_transformed_message(msg), index=n_pre)
+                    self._store_message(ct.TransformedMessage(msg), index=n_pre)
                     await self._remove_loading_message()
                     self._suspend_input_handler = True
 
@@ -268,21 +279,109 @@ class Chat:
             **kwargs,
         )
 
+    def bind_tools(self, *args: ToolFunction, force: bool = False) -> None:
+        """
+        Register tool functions to be invoked when tool results are available.
+
+        Parameters
+        ----------
+        *args
+            One or more functions to register as tools.
+        """
+
+        if len(args) == 0:
+            raise TypeError(
+                "`on_tool_result` requires at least one argument, as in `@chat.on_tool_result(func)`.\n"
+            )
+
+        for arg in args:
+            if not callable(arg):
+                raise TypeError(
+                    "Positional arguments to `on_tool_result()` must be callable objects "
+                    "(i.e., functions)."
+                )
+            name = arg.__name__
+            if name == "<lambda>":
+                raise ValueError(
+                    "Positional arguments to `on_tool_result()` must be named "
+                    "(i.e., not a lambda)."
+                )
+            if name in self._tool_functions and not force:
+                raise ValueError(
+                    f"Function `{name}` is already registered as a tool. "
+                    "Use `force=True` to override."
+                )
+            self._tool_functions[name] = arg
+
+    @overload
+    def on_tool_result(
+        self, fn: EffectFunction | EffectFunctionAsync
+    ) -> reactive.Effect_: ...
+
+    @overload
+    def on_tool_result(
+        self,
+    ) -> Callable[[EffectFunction | EffectFunctionAsync], reactive.Effect_]: ...
+
+    def on_tool_result(
+        self, fn: EffectFunction | EffectFunctionAsync | None = None
+    ) -> (
+        reactive.Effect_
+        | Callable[[EffectFunction | EffectFunctionAsync], reactive.Effect_]
+    ):
+        """
+        Define a callback to run when tool result(s) are available.
+
+        Apply this method as a decorator to a function (`fn`) that should be invoked when
+        a tool result is available. The function should take no arguments.
+
+        In many cases, the implementation of `fn` should do at least the following:
+
+        1. Call `.messages()` to obtain the current chat history.
+        2. Generate a response based on those messages.
+        3. Append the response to the chat history using `.append_message()` (
+              or `.append_message_stream()` if the response is streamed).
+        """
+
+        def create_effect(fn: EffectFunction | EffectFunctionAsync):
+            afunc = _utils.wrap_async(fn)
+
+            # Call user provided function when a relevant tool result is added
+            # to the message history
+            @reactive.effect
+            async def _():
+                from .. import req
+
+                req(len(self._latest_tool_messages() or ()) > 0)
+                try:
+                    await afunc()
+                except Exception as e:
+                    await self._raise_exception(e)
+
+            self._effects.append(_)
+
+            return _
+
+        if fn is None:
+            return create_effect
+        else:
+            return create_effect(fn)
+
     @overload
     def on_user_submit(
-        self, fn: SubmitFunction | SubmitFunctionAsync
+        self, fn: EffectFunction | EffectFunctionAsync
     ) -> reactive.Effect_: ...
 
     @overload
     def on_user_submit(
         self,
-    ) -> Callable[[SubmitFunction | SubmitFunctionAsync], reactive.Effect_]: ...
+    ) -> Callable[[EffectFunction | EffectFunctionAsync], reactive.Effect_]: ...
 
     def on_user_submit(
-        self, fn: SubmitFunction | SubmitFunctionAsync | None = None
+        self, fn: EffectFunction | EffectFunctionAsync | None = None
     ) -> (
         reactive.Effect_
-        | Callable[[SubmitFunction | SubmitFunctionAsync], reactive.Effect_]
+        | Callable[[EffectFunction | EffectFunctionAsync], reactive.Effect_]
     ):
         """
         Define a function to invoke when user input is submitted.
@@ -309,7 +408,7 @@ class Chat:
         but it will only be re-invoked when the user submits a message.
         """
 
-        def create_effect(fn: SubmitFunction | SubmitFunctionAsync):
+        def create_effect(fn: EffectFunction | EffectFunctionAsync):
             afunc = _utils.wrap_async(fn)
 
             @reactive.effect
@@ -481,18 +580,20 @@ class Chat:
 
         res: list[ChatMessage | ProviderMessage] = []
         for i, m in enumerate(messages):
-            transform = False
-            if m["role"] == "assistant":
+            if isinstance(m, ct.TransformedMessage):
                 transform = transform_assistant
-            elif m["role"] == "user":
-                transform = transform_user == "all" or (
-                    transform_user == "last" and i == len(messages) - 1
-                )
-            content_key = m["transform_key" if transform else "pre_transform_key"]
-            chat_msg = ChatMessage(content=m[content_key], role=m["role"])
+                if m.role == "user":
+                    transform = transform_user == "all" or (
+                        transform_user == "last" and i == len(messages) - 1
+                    )
+                m2 = m.get_message(transformed=transform)
+            else:
+                m2 = m
+
             if not isinstance(format, MISSING_TYPE):
-                chat_msg = as_provider_message(chat_msg, format)
-            res.append(chat_msg)
+                res.append(as_provider_message(m2, format))
+            else:
+                res.append(m2.to_dict())
 
         return tuple(res)
 
@@ -527,25 +628,56 @@ class Chat:
         if chunk == "end":
             self._current_stream_id = None
 
+        tool_messages = ()
         if chunk is False:
             msg = normalize_message(message)
             chunk_content = None
         else:
-            msg = normalize_message_chunk(message)
+            msg, tool_call = normalize_message_chunk(message)
             # Update the current stream message
-            chunk_content = msg["content"]
+            chunk_content = msg.content
             self._current_stream_message += chunk_content
-            msg["content"] = self._current_stream_message
+            # At least currently, we send the accumulated message on every chunk
+            # but we should optimize this...
+            msg.content = self._current_stream_message
+
+            if tool_call:
+                if isinstance(tool_call, ct.ToolFunctionCall):
+                    # The start of a new tool call
+                    self._current_stream_tools.append(tool_call)
+                elif isinstance(tool_call, ct.ToolFunctionCallDelta):
+                    # Add the delta to the most recent tool call
+                    self._current_stream_tools[-1].__add__(tool_call)
+                else:
+                    raise ValueError(f"Unexpected tool call: {tool_call}")
+
             if chunk == "end":
+                tool_messages = await self._call_tool_functions(
+                    self._current_stream_tools
+                )
+                msg.tool_calls = [x.to_dict() for x in self._current_stream_tools]
+                self._current_stream_tools = []
+                if len(self._current_stream_message) == 0:
+                    if len(tool_messages) == 0:
+                        warnings.warn(
+                            "Failed to detect content or tool messages in the stream. "
+                            "Please report this issue to https://github.com/posit-dev/py-shiny",
+                            stacklevel=2,
+                        )
+                    else:
+                        # If there's no content, but there are tool messages, make
+                        # take away the loading message (for this message)
+                        await self._remove_loading_message()
                 self._current_stream_message = ""
 
         msg = await self._transform_message(
             msg, chunk=chunk, chunk_content=chunk_content
         )
-        if msg is None:
-            return
-        self._store_message(msg, chunk=chunk)
-        await self._send_append_message(msg, chunk=chunk)
+
+        self._store_message(msg, chunk=chunk, tool_messages=tool_messages)
+
+        if msg is not None:
+            await self._send_append_message(msg, chunk=chunk)
 
     async def append_message_stream(self, message: Iterable[Any] | AsyncIterable[Any]):
         """
@@ -586,14 +718,13 @@ class Chat:
     async def _append_message_stream(self, message: AsyncIterable[Any]):
         id = _utils.private_random_id()
 
-        empty = ChatMessage(content="", role="assistant")
-        await self._append_message(empty, chunk="start", stream_id=id)
+        await self._append_message("", chunk="start", stream_id=id)
 
         try:
             async for msg in message:
                 await self._append_message(msg, chunk=True, stream_id=id)
         finally:
-            await self._append_message(empty, chunk="end", stream_id=id)
+            await self._append_message("", chunk="end", stream_id=id)
             await self._flush_pending_messages()
 
     async def _flush_pending_messages(self):
@@ -613,12 +744,11 @@ class Chat:
     # Send a message to the UI
     async def _send_append_message(
         self,
-        message: TransformedMessage,
+        message: ct.TransformedMessage,
         chunk: ChunkOption = False,
     ):
-        if message["role"] == "system":
-            # System messages are not displayed in the UI
-            return
+        if message.role not in ("user", "assistant"):
+            return None
 
         if chunk:
             msg_type = "shiny-chat-append-message-chunk"
@@ -631,12 +761,12 @@ class Chat:
         elif chunk == "end":
             chunk_type = "message_end"
 
-        content = message["content_client"]
+        content = message.content_client
         content_type = "html" if isinstance(content, HTML) else "markdown"
 
-        msg = ClientMessage(
+        msg = ct.ClientMessage(
             content=content,
-            role=message["role"],
+            role=message.role,
             content_type=content_type,
             chunk_type=chunk_type,
         )
@@ -767,66 +897,123 @@ class Chat:
 
     async def _transform_message(
         self,
-        message: ChatMessage,
+        message: ct.ChatMessage,
         chunk: ChunkOption = False,
         chunk_content: str | None = None,
-    ) -> TransformedMessage | None:
+    ) -> ct.TransformedMessage | None:
 
-        res = as_transformed_message(message)
-        key = res["transform_key"]
+        if message.role == "user" and self._transform_user is not None:
+            content = await self._transform_user(message.content)
 
-        if message["role"] == "user" and self._transform_user is not None:
-            content = await self._transform_user(message["content"])
-
-        elif message["role"] == "assistant" and self._transform_assistant is not None:
+        elif message.role == "assistant" and self._transform_assistant is not None:
             content = await self._transform_assistant(
-                message["content"],
+                message.content,
                 chunk_content or "",
                 chunk == "end" or chunk is False,
             )
         else:
-            return res
+            return ct.TransformedMessage(message)
 
         if content is None:
             return None
 
-        res[key] = content
-
-        return res
+        return ct.TransformedMessage(message, transformed_content=content)
 
     # Just before storing, handle chunk msg type and calculate tokens
     def _store_message(
         self,
-        message: TransformedMessage,
+        message: ct.TransformedMessage | None,
         chunk: ChunkOption = False,
         index: int | None = None,
+        tool_messages: tuple[ct.ToolMessage, ...] = (),
     ) -> None:
 
-        # Don't actually store chunks until the end
+        # When streaming, don't actually store chunks until the end
         if chunk is True or chunk == "start":
             return None
 
         with reactive.isolate():
-            messages = self._messages()
+            current_messages = self._messages()
+
+        new_messages: list[ct.TransformedMessage] = [] if message is None else [message]
+        new_messages.extend([ct.TransformedMessage(x) for x in tool_messages])
+
+        if len(new_messages) == 0:
+            return None
 
         if index is None:
-            index = len(messages)
+            index = len(current_messages)
 
-        messages = list(messages)
-        messages.insert(index, message)
+        current_messages = list(current_messages)
 
-        self._messages.set(tuple(messages))
-        if message["role"] == "user":
-            self._latest_user_input.set(message)
+        for i, msg in enumerate(new_messages):
+            current_messages.insert(index + i, msg)
+
+        self._messages.set(tuple(current_messages))
+
+        # If any new messages are user, store the latest user input
+        for msg in reversed(new_messages):
+            if msg.role == "user":
+                self._latest_user_input.set(msg)
+                break
+
+        self._latest_tool_messages.set(tool_messages)
 
         return None
 
+    async def _call_tool_functions(
+        self, tool_calls: list[ct.ToolFunctionCall]
+    ) -> tuple[ct.ToolMessage, ...]:
+        messages: list[ct.ToolMessage] = []
+        for x in tool_calls:
+            message = await self._call_tool_function(x)
+            if message is not None:
+                messages.append(message)
+        return tuple(messages)
+
+    async def _call_tool_function(
+        self, func_call: ct.ToolFunctionCall
+    ) -> ct.ToolMessage | None:
+        name = func_call.name
+        if name not in self._tool_functions:
+            warnings.warn(
+                f"A tool function call ({name}) was included in the message passed to "
+                "`.append_message_stream()`, but no corresponding tool function was "
+                "registered with `.on_tool_result()`. The function call will be ignored.",
+                stacklevel=3,
+            )
+            return None
+
+        # At least with OpenAI's structured output, arguments are a JSON object
+        args_ = func_call.arguments or "{}"
+        try:
+            args = json.loads(args_)
+            if not isinstance(args, dict):
+                raise ValueError("Arguments must be a JSON object.")
+            func = self._tool_functions[name]
+            res = func(**args)
+            return ct.ToolMessage(
+                role="tool",
+                content=json.dumps({name: res, **args}),
+                tool_call_id=func_call.id,
+                name=name,
+            )
+        except json.JSONDecodeError:
+            raise ValueError(
+                f"Unable to call tool function ({name}) since it received invalid JSON "
+                f"arguments: {args_}"
+            )
+        except Exception as e:
+            raise ValueError(
+                f"Calling tool function `{name}` resulted in an exception: {str(e)}"
+            )
+
     def _trim_messages(
         self,
-        messages: tuple[TransformedMessage, ...],
+        messages: tuple[ct.TransformedMessage, ...],
         token_limits: tuple[int, int],
         format: MISSING_TYPE | ProviderMessageFormat,
-    ) -> tuple[TransformedMessage, ...]:
+    ) -> tuple[ct.TransformedMessage, ...]:
 
         n_total, n_reserve = token_limits
         if n_total <= n_reserve:
@@ -842,9 +1029,12 @@ class Chat:
         n_other_messages: int = 0
         token_counts: list[int] = []
         for m in messages:
-            count = self._get_token_count(m["content_server"])
+            content = (
+                m.content_server if isinstance(m, ct.TransformedMessage) else m.content
+            )
+            count = self._get_token_count(content)
             token_counts.append(count)
-            if m["role"] == "system":
+            if m.role == "system":
                 n_system_tokens += count
                 n_system_messages += 1
             else:
@@ -861,11 +1051,11 @@ class Chat:
 
         # Now, iterate through the messages in reverse order and appending
         # until we run out of tokens
-        messages2: list[TransformedMessage] = []
+        messages2: list[ct.TransformedMessage] = []
         n_other_messages2: int = 0
         token_counts.reverse()
         for i, m in enumerate(reversed(messages)):
-            if m["role"] == "system":
+            if m.role == "system":
                 messages2.append(m)
                 continue
             remaining_non_system_tokens -= token_counts[i]
@@ -886,16 +1076,16 @@ class Chat:
 
     def _trim_anthropic_messages(
         self,
-        messages: tuple[TransformedMessage, ...],
-    ) -> tuple[TransformedMessage, ...]:
+        messages: tuple[ct.TransformedMessage, ...],
+    ) -> tuple[ct.TransformedMessage, ...]:
 
-        if any(m["role"] == "system" for m in messages):
+        if any(m.role == "system" for m in messages):
             raise ValueError(
                 "Anthropic requires a system prompt to be specified in it's `.create()` method "
                 "(not in the chat messages with `role: system`)."
             )
         for i, m in enumerate(messages):
-            if m["role"] == "user":
+            if m.role == "user":
                 return messages[i:]
 
         return ()
@@ -949,8 +1139,7 @@ class Chat:
         msg = self._latest_user_input()
         if msg is None:
             return None
-        key = "content_server" if transform else "content_client"
-        return msg[key]
+        return msg.get_message(transformed=transform).content
 
     def _user_input(self) -> str:
         id = self.user_input_id
@@ -1013,7 +1202,7 @@ class Chat:
         await self._send_custom_message("shiny-chat-remove-loading-message", None)
 
     async def _send_custom_message(
-        self, handler: str, obj: ClientMessage | None, on_flushed: bool = True
+        self, handler: str, obj: ct.ClientMessage | None, on_flushed: bool = True
     ):
         async def _do_send():
             await self._session.send_custom_message(
@@ -1021,7 +1210,7 @@ class Chat:
                 {
                     "id": self.id,
                     "handler": handler,
-                    "obj": obj,
+                    "obj": obj.to_dict() if obj is not None else None,
                 },
             )
 
@@ -1085,23 +1274,6 @@ def chat_ui(
         res = as_fillable_container(as_fill_item(res))
 
     return res
-
-
-def as_transformed_message(message: ChatMessage) -> TransformedMessage:
-    if message["role"] == "user":
-        transform_key = "content_server"
-        pre_transform_key = "content_client"
-    else:
-        transform_key = "content_client"
-        pre_transform_key = "content_server"
-
-    return TransformedMessage(
-        content_client=message["content"],
-        content_server=message["content"],
-        role=message["role"],
-        transform_key=transform_key,
-        pre_transform_key=pre_transform_key,
-    )
 
 
 CHAT_INSTANCES: WeakValueDictionary[str, Chat] = WeakValueDictionary()
