@@ -45,7 +45,7 @@ def test_navset_bar_kitchensink(page: Page, local_app: ShinyAppProc) -> None:
         "Panel A content"
     )
     navset_bar_with_sidebar_collapsible_bg_inverse.expect_position("sticky-top")
-    navset_bar_with_sidebar_collapsible_bg_inverse.expect_inverse(is_inverse=True)
+    navset_bar_with_sidebar_collapsible_bg_inverse.expect_inverse(value=True)
     navset_bar_with_sidebar_collapsible_bg_inverse.expect_bg("DodgerBlue")
     navset_bar_with_sidebar_collapsible_bg_inverse.expect_sidebar(True)
     navset_bar_with_sidebar_collapsible_bg_inverse.expect_fluid(True)

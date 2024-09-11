@@ -429,18 +429,19 @@ class NavsetPillList(_NavsetBase):
             loc="> li.nav-item",
         )
 
-    def expect_well(self, has_well: bool, *, timeout: Timeout = None) -> None:
+    def expect_well(self, value: bool, *, timeout: Timeout = None) -> None:
         """
         Expects the navset pill list to have a well.
 
         Parameters
         ----------
-        has_well
-            `True` if the navset pill list is expected to have a well, `False` otherwise.
+        value
+            `True` if the navset pill list is expected to be constructed with a well,
+            `False` otherwise.
         timeout
             The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
-        if has_well:
+        if value:
             playwright_expect(self.loc_container.locator("..")).to_have_class("well")
         else:
             playwright_expect(self.loc_container.locator("..")).not_to_have_class(
@@ -638,7 +639,7 @@ class _NavsetBarBase(
 
     def expect_inverse(
         self,
-        is_inverse: bool = False,
+        value: bool = False,
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -647,13 +648,15 @@ class _NavsetBarBase(
 
         Parameters
         ----------
+        value
+            `True` if the navset bar is expected to have inverse text color, `False` otherwise.
         timeout
             The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         _expect_class_to_have_value(
             self._loc_navbar,
             "navbar-inverse",
-            has_class=is_inverse,
+            has_class=value,
             timeout=timeout,
         )
 

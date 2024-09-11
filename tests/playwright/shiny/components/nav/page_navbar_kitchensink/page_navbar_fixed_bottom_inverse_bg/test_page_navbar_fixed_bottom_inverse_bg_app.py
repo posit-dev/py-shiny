@@ -13,5 +13,5 @@ def test_page_navbar_fixed_bottom_inverse_bg(
         page, "page_fixed_bottom_inverse_bg"
     )
     page_navbar_fixed_bottom_inverse_bg.expect_position("fixed-bottom")
-    page_navbar_fixed_bottom_inverse_bg.expect_inverse(is_inverse=True)
+    page_navbar_fixed_bottom_inverse_bg.expect_inverse(value=True)
     page_navbar_fixed_bottom_inverse_bg.expect_bg("dodgerBlue")

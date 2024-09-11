@@ -9,7 +9,7 @@ def test_default_page_navbar(page: Page, local_app: ShinyAppProc) -> None:
 
     default_page_navbar = controller.PageNavbar(page, "default_page_navbar")
     default_page_navbar.expect_title("Default Page Navbar")
-    default_page_navbar.expect_inverse(is_inverse=False)
+    default_page_navbar.expect_inverse(value=False)
     default_page_navbar.expect_lang("en")
     default_page_navbar.expect_window_title("Page NavBar title")
     default_page_navbar.expect_fillable_mobile(True)
