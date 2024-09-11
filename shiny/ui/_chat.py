@@ -571,19 +571,12 @@ class Chat:
 
         # Since the task runs in the background (outside/beyond the current context,
         # if any), we need to manually raise any exceptions that occur
-        try:
-            ctx = reactive.get_current_context()
-        except Exception:
-            return
-
         @reactive.effect
         async def _handle_error():
             e = _stream_task.error()
             if e:
                 await self._raise_exception(e)
-
-        ctx.on_invalidate(_handle_error.destroy)
-        self._effects.append(_handle_error)
+            _handle_error.destroy()  # type: ignore
 
     async def _append_message_stream(self, message: AsyncIterable[Any]):
         id = _utils.private_random_id()
