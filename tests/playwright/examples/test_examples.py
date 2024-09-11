@@ -12,6 +12,7 @@ is_windows = sys.platform.startswith("win")
 def test_examples(page: Page, ex_app_path: str) -> None:
 
     skip_on_windows_with_timezonefinder(ex_app_path)
+    skip_airmass_on_3_9(ex_app_path)
 
     validate_example(page, ex_app_path)
 
@@ -36,6 +37,7 @@ def skip_on_windows_with_timezonefinder(ex_app_path: str) -> None:
 
 
 def skip_airmass_on_3_9(ex_app_path: str) -> None:
+    print(ex_app_path)
     if ex_app_path != "examples/airmass/app.py":
         return
 
