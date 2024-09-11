@@ -54,5 +54,5 @@ def skip_airmass_on_3_9(ex_app_path: str) -> None:
         )
     except ImportError:
         pytest.skip(
-            "astropy and numpy has difficulty loading on python 3.9. Skipping example app: airmass. posit-dev/py-shiny#1651"
+            "astropy and numpy has difficulty loading on python 3.9. Skipping example app: airmass. posit-dev/py-shiny#1678"
         )
