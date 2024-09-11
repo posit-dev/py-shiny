@@ -48,7 +48,8 @@ def skip_airmass_on_3_9(ex_app_path: str) -> None:
 
     try:
         # Astropy loads `numpy` at run time
-        import astropy  # pyright: ignore # noqa: F401
+        import astropy.coordinates as _  # pyright: ignore # noqa: F401
+        import astropy.units as __  # pyright: ignore # noqa: F401
 
         # Future proofing: if astropy is _actually_ loading, raise an error
         raise RuntimeError(
