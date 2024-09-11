@@ -33,3 +33,26 @@ def skip_on_windows_with_timezonefinder(ex_app_path: str) -> None:
         pytest.skip(
             "timezonefinder has difficulty compiling on windows. Skipping example app. posit-dev/py-shiny#1651"
         )
+
+
+def skip_airmass_on_3_9(ex_app_path: str) -> None:
+    if ex_app_path != "examples/airmass/app.py":
+        return
+
+    import sys
+
+    if sys.version_info[:2] != (3, 9):
+        return
+
+    try:
+        # Astropy loads `numpy` at run time
+        import astropy  # type: ignore
+
+        # Future proofing: if astropy is _actually_ loading, raise an error
+        raise RuntimeError(
+            "This code believes astropy and numpy have difficulty loading on python 3.9. Please remove this check if it is no longer true."
+        )
+    except ImportError:
+        pytest.skip(
+            "astropy and numpy has difficulty loading on python 3.9. Skipping example app: airmass. posit-dev/py-shiny#1651"
+        )
