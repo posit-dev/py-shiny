@@ -32,6 +32,11 @@ def test_navset_kitchensink(page: Page, local_app: ShinyAppProc) -> None:
     # Update the page size to be wider
     page.set_viewport_size({"width": 1500, "height": 800})
 
+    page_navbar = controller.PageNavbar(page, "navsets_collection")
+
+    # assert window title is same as page title if window title is not explicity set
+    page_navbar.expect_window_title("Navsets kitchensink App")
+
     # for cases across all navsets
     for navset_name, default_content, selected_content in navsets:
         navset = controller.NavPanel(page, "navsets_collection", navset_name)

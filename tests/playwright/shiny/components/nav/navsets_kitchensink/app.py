@@ -3,7 +3,7 @@ from typing import Any, Dict
 from shiny import ui as core_ui
 from shiny.express import expressify, ui
 
-ui.page_opts(title="Navsets kitchensink App")
+ui.page_opts(title="Navsets kitchensink App", id="navsets_collection")
 
 
 def navset_sidebar():
