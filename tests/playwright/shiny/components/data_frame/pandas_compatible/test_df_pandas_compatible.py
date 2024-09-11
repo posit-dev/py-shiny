@@ -1,7 +1,7 @@
 import re
 
 from playwright.sync_api import Page
-from pytest._utils import skip_on_python_version
+from utils.deploy_utils import skip_on_python_version
 
 from shiny.playwright import controller
 from shiny.run import ShinyAppProc
