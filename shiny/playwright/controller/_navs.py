@@ -640,7 +640,7 @@ class _NavsetBarBase(
 
     def expect_inverse(
         self,
-        value: bool = False,
+        value: bool,
         *,
         timeout: Timeout = None,
     ) -> None:
