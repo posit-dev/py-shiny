@@ -121,10 +121,10 @@ def _expect_nav_to_have_header_footer(
     if class_attr and "card" in class_attr:
         complicated_parent_loc = parent_loc.locator(
             "xpath=.",
-            has=parent_loc.locator(
-                f" > .card-body:has(#{header_id}) ~ .card-body:has(.tab-content) ~ .card-body #{footer_id}"
+            has=parent_loc.locator("..").locator(
+                f".card-body:has(#{header_id}) + .card-body:has(.tab-content) + .card-body #{footer_id}"
             ),
-        ).locator("..")
+        )
     else:
         complicated_parent_loc = parent_loc.locator(
             "xpath=.",
