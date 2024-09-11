@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from playwright.sync_api import Locator, Page
+from playwright.sync_api import Locator
 from playwright.sync_api import expect as playwright_expect
 
 from ..._docstring import no_example
