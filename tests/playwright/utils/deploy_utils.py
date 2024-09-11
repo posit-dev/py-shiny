@@ -98,14 +98,6 @@ def skip_on_python_version(
 
         return fn
 
-    def _(fn: CallableT) -> CallableT:
-        fn = pytest.mark.skipif(
-            sys.platform.startswith("win"),
-            reason="Does not run on windows",
-        )(fn)
-
-        return fn
-
     return _
 
 
