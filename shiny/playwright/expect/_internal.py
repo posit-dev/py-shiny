@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from playwright.sync_api import Locator
+from playwright.sync_api import Locator, Page
 from playwright.sync_api import expect as playwright_expect
 
 from ..._docstring import no_example
@@ -93,3 +93,41 @@ def expect_class_to_have_value(
         expect_to_have_class(loc, class_, timeout=timeout)
     else:
         expect_not_to_have_class(loc, class_, timeout=timeout)
+
+
+def _expect_nav_to_have_header_footer(
+    parent_loc: Locator,
+    header_id: str,
+    footer_id: str,
+    *,
+    timeout: Timeout = None,
+) -> None:
+    """
+    Expect the DOM structure for a header and footer to be preserved.
+
+    Parameters
+    ----------
+    parent_loc
+        The parent locator to check.
+    header_id
+        The ID of the header element.
+    footer_id
+        The ID of the footer element.
+    timeout
+        The maximum time to wait for the header and footer to appear.
+    """
+    # assert the DOM structure for page_navbar with header and footer is preserved
+    class_attr = parent_loc.get_attribute("class")
+    if class_attr and "card" in class_attr:
+        complicated_parent_loc = parent_loc.locator(
+            "xpath=.",
+            has=parent_loc.locator(
+                f" > .card-body:has(#{header_id}) ~ .card-body:has(.tab-content) ~ .card-body #{footer_id}"
+            ),
+        ).locator("..")
+    else:
+        complicated_parent_loc = parent_loc.locator(
+            "xpath=.",
+            has=parent_loc.locator(f"#{header_id} + .tab-content + #{footer_id}"),
+        ).locator("..")
+    playwright_expect(complicated_parent_loc).to_have_count(1, timeout=timeout)

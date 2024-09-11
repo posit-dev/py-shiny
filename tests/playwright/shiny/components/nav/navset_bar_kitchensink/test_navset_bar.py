@@ -48,10 +48,10 @@ def test_navset_bar_kitchensink(page: Page, local_app: ShinyAppProc) -> None:
     navset_bar_with_sidebar_collapsible_bg_inverse.expect_inverse(is_inverse=True)
     navset_bar_with_sidebar_collapsible_bg_inverse.expect_bg("DodgerBlue")
     navset_bar_with_sidebar_collapsible_bg_inverse.expect_sidebar(True)
-    navset_bar_with_sidebar_collapsible_bg_inverse.expect_layout("fluid")
+    navset_bar_with_sidebar_collapsible_bg_inverse.expect_fluid(True)
 
     navset_tab.set("fixed")
     navset_bar_collapsible_underline_fixed_gap._expect_content_text("Panel A content")
     navset_bar_collapsible_underline_fixed_gap.expect_value("A")
     navset_bar_collapsible_underline_fixed_gap.expect_gap("50px")
-    navset_bar_collapsible_underline_fixed_gap.expect_layout("fixed")
+    navset_bar_collapsible_underline_fixed_gap.expect_fluid(False)

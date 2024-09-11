@@ -7,7 +7,12 @@ from playwright.sync_api import expect as playwright_expect
 from typing_extensions import Literal
 
 from .._types import PatternOrStr, Timeout
-from ..expect import expect_to_have_class, expect_to_have_style
+from ..expect import (
+    expect_not_to_have_class,
+    expect_to_have_class,
+    expect_to_have_style,
+)
+from ..expect._internal import expect_attribute_to_have_value
 from ..expect._internal import expect_class_to_have_value as _expect_class_to_have_value
 from ._base import (
     InitLocator,
@@ -688,37 +693,33 @@ class _NavsetBarBase(
             timeout=timeout,
         )
 
-    def expect_layout(
+    def expect_fluid(
         self,
-        layout: Literal["fluid", "fixed"] = "fluid",
+        value: bool,
         *,
         timeout: Timeout = None,
     ) -> None:
         """
-        Expects the navset bar to have the specified layout.
+        Expects the navset bar to have a fluid or fixed layout.
 
         Parameters
         ----------
-        layout
-            The expected layout.
+        value
+            `True` if the layout is `fluid` or `False` if it is `fixed`.
         timeout
             The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
-        if layout == "fluid":
+        if value:
             expect_to_have_class(
-                self.loc_container.locator("..").locator(".."),
+                self._loc_navbar.locator("> div"),
                 "container-fluid",
                 timeout=timeout,
             )
-        elif layout == "fixed":
+        else:
             expect_to_have_class(
-                self.loc_container.locator(".."),
+                self._loc_navbar.locator("> div"),
                 "container",
                 timeout=timeout,
-            )
-        else:
-            raise ValueError(
-                "Invalid layout value: '{layout}'. Expected 'fluid' or 'fixed'."
             )
 
 
@@ -740,4 +741,62 @@ class PageNavbar(_NavsetBarBase):
         """
         expect_to_have_class(
             self.get_loc_active_content(), "html-fill-container", timeout=timeout
+        )
+
+    def expect_fillable_mobile(self, value: bool, *, timeout: Timeout = None) -> None:
+        """
+        Expects the main content area to be considered a fillable (i.e., flexbox) container on mobile
+
+        Parameters
+        ----------
+        value
+            `True` if the main content area is expected to be fillable on mobile, `False` otherwise.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
+        # This is important since fillable_mobile needs fillable property to be True
+        expect_to_have_class(
+            self.page.locator("body"), "bslib-page-fill", timeout=timeout
+        )
+
+        if value:
+            expect_not_to_have_class(
+                self.page.locator("body"), "bslib-flow-mobile", timeout=timeout
+            )
+        else:
+            expect_to_have_class(
+                self.page.locator("body"), "bslib-flow-mobile", timeout=timeout
+            )
+
+    def expect_window_title(
+        self, title: PatternOrStr, *, timeout: Timeout = None
+    ) -> None:
+        """
+        Expects the window title to have the specified text.
+
+        Parameters
+        ----------
+        title
+            The expected window title.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
+        playwright_expect(self.page).to_have_title(title, timeout=timeout)
+
+    def expect_lang(self, lang: PatternOrStr, *, timeout: Timeout = None) -> None:
+        """
+        Expects the HTML tag to have the specified language.
+
+        Parameters
+        ----------
+        lang
+            The expected language.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
+        expect_attribute_to_have_value(
+            self.page.locator("html"),
+            "lang",
+            lang,
+            timeout=timeout,
         )

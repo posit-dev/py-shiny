@@ -1,6 +1,7 @@
-from playwright.sync_api import Page
+from playwright.sync_api import Page, expect
 
 from shiny.playwright import controller
+from shiny.playwright.expect._internal import _expect_nav_to_have_header_footer
 from shiny.run import ShinyAppProc
 
 navsets = [
@@ -18,6 +19,13 @@ navsets = [
 ]
 
 
+def format_navset_name(navset_name: str) -> str:
+    navset_name = navset_name.replace("_", " ")
+    navset_name = navset_name.title()
+    navset_name = navset_name.replace(" ", "")
+    return navset_name
+
+
 def test_navset_kitchensink(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 
@@ -29,25 +37,37 @@ def test_navset_kitchensink(page: Page, local_app: ShinyAppProc) -> None:
         navset = controller.NavPanel(page, "navsets_collection", navset_name)
         navset.click()
 
-        navset_default = getattr(
-            controller, f"{navset_name.replace('_', ' ').title().replace(' ', '')}"
-        )(page, f"{navset_name}_default")
+        navset_default = getattr(controller, format_navset_name(navset_name))(
+            page, f"{navset_name}_default"
+        )
         navset_default._expect_content_text(default_content)
         navset_default.expect_value(f"{navset_name}_a")
 
-        navset_selected = getattr(
-            controller, f"{navset_name.replace('_', ' ').title().replace(' ', '')}"
-        )(page, f"{navset_name}_selected")
+        navset_selected = getattr(controller, format_navset_name(navset_name))(
+            page, f"{navset_name}_selected"
+        )
         navset_selected._expect_content_text(selected_content)
         navset_selected.expect_value(f"{navset_name}_b")
 
-        # TODO-future: uncomment test to check for header & footer content once class is added
-        # navset_with_header_footer.expect_header(f"{navset_name}_with_header_footer header")
-        # navset_with_header_footer.expect_footer(f"{navset_name}_with_header_footer footer")
+        navset_with_header_footer = getattr(
+            controller, format_navset_name(navset_name)
+        )(page, f"{navset_name}_with_header_footer")
+        _expect_nav_to_have_header_footer(
+            navset_with_header_footer.get_loc_active_content()
+            .locator("..")
+            .locator(".."),
+            f"{navset_name}_header",
+            f"{navset_name}_footer",
+        )
+
+        # assert header and footer contents
+        expect(page.locator(f"#{navset_name}_header")).to_have_text(
+            f"{navset_name}_with_header_footer header"
+        )
+        expect(page.locator(f"#{navset_name}_footer")).to_have_text(
+            f"{navset_name}_with_header_footer footer"
+        )
         if navset_name.startswith("navset_card"):
-            navset_with_header_footer = getattr(
-                controller, f"{navset_name.replace('_', ' ').title().replace(' ', '')}"
-            )(page, f"{navset_name}_with_header_footer")
             navset_with_header_footer.expect_title(f"{navset_name}_with_header_footer")
 
             navset_card_underline_with_sidebar = getattr(

@@ -1,4 +1,3 @@
-import pytest
 from playwright.sync_api import Page
 
 from shiny.playwright import controller
@@ -11,7 +10,6 @@ def test_default_page_navbar(page: Page, local_app: ShinyAppProc) -> None:
     default_page_navbar = controller.PageNavbar(page, "default_page_navbar")
     default_page_navbar.expect_title("Default Page Navbar")
     default_page_navbar.expect_inverse(is_inverse=False)
-    with pytest.raises(ValueError):
-        default_page_navbar.expect_layout(
-            "fixed-top"  # pyright: ignore[reportArgumentType]
-        )
+    default_page_navbar.expect_lang("en")
+    default_page_navbar.expect_window_title("Page NavBar title")
+    default_page_navbar.expect_fillable_mobile(True)
