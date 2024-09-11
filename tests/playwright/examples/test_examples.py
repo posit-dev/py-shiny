@@ -52,7 +52,12 @@ def skip_airmass_on_3_9(ex_app_path: str) -> None:
         raise RuntimeError(
             "This code believes astropy and numpy have difficulty loading on python 3.9. Please remove this check if it is no longer true."
         )
-    except ImportError:
-        pytest.skip(
-            "astropy and numpy has difficulty loading on python 3.9. Skipping example app: airmass. posit-dev/py-shiny#1678"
-        )
+    except AttributeError as e:
+        if "numpy" in str(e) and "product" in str(e):
+            pytest.skip(
+                "astropy and numpy has difficulty loading on python 3.9. Skipping example app: airmass. posit-dev/py-shiny#1678"
+            )
+            return
+
+        # Future proofing: if the error is not what we expect, raise it
+        raise e
