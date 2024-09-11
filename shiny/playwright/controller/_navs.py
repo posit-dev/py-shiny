@@ -429,6 +429,7 @@ class NavsetPillList(_NavsetBase):
             loc="> li.nav-item",
         )
 
+    # TODO-karan test this method
     def expect_well(self, value: bool, *, timeout: Timeout = None) -> None:
         """
         Expects the navset pill list to have a well.
