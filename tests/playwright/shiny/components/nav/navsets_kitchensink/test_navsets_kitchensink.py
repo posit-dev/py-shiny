@@ -85,3 +85,16 @@ def test_navset_kitchensink(page: Page, local_app: ShinyAppProc) -> None:
                 controller, f"{navset_name.replace('_', ' ').title().replace(' ', '')}"
             )(page, f"{navset_name}_placement")
             navset_card_underline_placement.expect_placement("below")
+
+        if navset_name in {"navset_pill_list"}:
+            navset_pill_list_default = controller.NavsetPillList(
+                page, f"{navset_name}_default"
+            )
+            navset_pill_list_default.expect_well(True)
+            navset_pill_list_default.expect_widths([4, 8])
+
+            navset_pill_list_with_well = controller.NavsetPillList(
+                page, f"{navset_name}_widths_no_well"
+            )
+            navset_pill_list_with_well.expect_well(False)
+            navset_pill_list_with_well.expect_widths([10, 2])

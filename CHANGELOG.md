@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added `PageNavbar` class to the list of `shiny.playwright.controllers` for testing `ui.page_navbar()`. (#1668)
 
+* Added `.expect_widths()` to `NavsetPillList` in `shiny.playwright.controllers` for testing `ui.navset_pill_list(widths=)`. (#1668)
+
 ### Bug fixes
 
 * Fixed a bug with `Chat()` sometimes silently dropping errors. (#1672)
