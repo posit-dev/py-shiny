@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### Breaking changes
+
+* `.expect_inverse()` for Navset controllers in `shiny.playwright.controllers` now requires a `bool` value. To keep behavior the same, use `.expect_inverse(False)`. (#1668)
+
+* `.expect_layout()` for Navset controllers in `shiny.playwright.controllers` is now renamed to `.expect_fluid()` and requires a `bool` value. To keep behavior the same, use `.expect_fluid(True)` (#1668)
+
+### New features
+
+### Other changes
+
+* Added `PageNavbar` class to the list of `shiny.playwright.controllers` for testing `ui.page_navbar()`. (#1668)
+
 ### Bug fixes
 
 * Fixed a bug with `Chat()` sometimes silently dropping errors. (#1672)
@@ -29,9 +41,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   * The `.messages()` method no longer trims messages by default (i.e., the default value of `token_limits` is now `None` instead of the overly generic and conservative value of `(4096, 1000)`). See the new generative AI in production templates (via `shiny create`) for examples of setting `token_limits` based on the model being used. (#1657)
   * User input that contains markdown now renders the expected HTML. (#1607)
   * Busy indication is now visible/apparent during the entire lifecycle of response generation. (#1607)
-  * `expect_inverse()` for `Navsets` controllers now accepts a `bool` value. (#1668)
-  * `expect_layout()` for `Navsets` controllers is now renamed to `expect_fluid` and accepts a `bool` value. (#1668)
-  * Added `PageNavbar` class to the list of controllers for testing `ui.page_navbar()`. (#1668)
 
 ### Bug fixes
 
