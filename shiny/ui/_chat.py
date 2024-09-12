@@ -471,6 +471,11 @@ class Chat:
         """
 
         messages = self._messages()
+
+        # Anthropic requires a user message first and no system messages
+        if format == "anthropic":
+            messages = self._trim_anthropic_messages(messages)
+
         if token_limits is not None:
             messages = self._trim_messages(messages, token_limits, format)
 
@@ -868,17 +873,6 @@ class Chat:
                 messages2.append(m)
                 n_other_messages2 += 1
 
-        # Anthropic doesn't support `role: system` and requires a user message to come 1st
-        if format == "anthropic":
-            if n_system_messages > 0:
-                raise ValueError(
-                    "Anthropic requires a system prompt to be specified in it's `.create()` method "
-                    "(not in the chat messages with `role: system`)."
-                )
-            while n_other_messages2 > 0 and messages2[-1]["role"] != "user":
-                messages2.pop()
-                n_other_messages2 -= 1
-
         messages2.reverse()
 
         if len(messages2) == n_system_messages and n_other_messages2 > 0:
@@ -889,6 +883,22 @@ class Chat:
             )
 
         return tuple(messages2)
+
+    def _trim_anthropic_messages(
+        self,
+        messages: tuple[TransformedMessage, ...],
+    ) -> tuple[TransformedMessage, ...]:
+
+        if any(m["role"] == "system" for m in messages):
+            raise ValueError(
+                "Anthropic requires a system prompt to be specified in it's `.create()` method "
+                "(not in the chat messages with `role: system`)."
+            )
+        for i, m in enumerate(messages):
+            if m["role"] == "user":
+                return messages[i:]
+
+        return ()
 
     def _get_token_count(
         self,
