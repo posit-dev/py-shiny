@@ -824,14 +824,12 @@ class PageNavbar(_NavsetBarBase):
 
         # This is important since fillable_mobile needs fillable property to be True
         self.expect_fillable(True, timeout=timeout)
-        if value:
-            expect_not_to_have_class(
-                self.page.locator("body"), "bslib-flow-mobile", timeout=timeout
-            )
-        else:
-            expect_to_have_class(
-                self.page.locator("body"), "bslib-flow-mobile", timeout=timeout
-            )
+        _expect_class_to_have_value(
+            self.page.locator("body"),
+            "bslib-flow-mobile",
+            has_class=not value,
+            timeout=timeout,
+        )
 
     def expect_window_title(
         self, title: PatternOrStr, *, timeout: Timeout = None
