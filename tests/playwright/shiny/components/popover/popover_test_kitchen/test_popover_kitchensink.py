@@ -12,7 +12,7 @@ def test_popover_kitchensink(page: Page, local_app: ShinyAppProc) -> None:
     popover_auto.set(True)
     popover_auto.expect_active(True)
     popover_auto.expect_body("Placement should be auto along with a title")
-    # popover_auto.expect_title("Popover title")  # TODO-need to fix this
+    popover_auto.expect_title("Popover title")
     popover_auto.expect_placement(
         "right"
     )  # since there is no space on the top, it defaults to right
