@@ -398,20 +398,19 @@ class ChatContainer extends LightElement {
     }
   }
 
+  // Loading message is just an empty message
   #addLoadingMessage(): void {
     const loading_message = {
       content: "",
       role: "assistant",
-      id: `${this.id}-loading-message`,
     };
     const message = createElement(CHAT_MESSAGE_TAG, loading_message);
     this.messages.appendChild(message);
   }
 
   #removeLoadingMessage(): void {
-    const id = `${this.id}-loading-message`;
-    const message = this.messages.querySelector(`#${id}`);
-    if (message) message.remove();
+    const content = this.lastMessage?.content;
+    if (!content) this.lastMessage?.remove();
   }
 
   #onAppendChunk(event: CustomEvent<Message>): void {
