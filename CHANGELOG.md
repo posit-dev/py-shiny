@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `shiny create` now uses the template `id` rather than the directory name as the default directory. (#1666)
 
+### Other changes
+
+* Added `.expect_title()` for `Popover` controller (#1683)
+
 ## [1.1.0] - 2024-09-03
 
 ### New features
