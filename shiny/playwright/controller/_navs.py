@@ -9,10 +9,7 @@ from typing_extensions import Literal
 from shiny.types import ListOrTuple
 
 from .._types import PatternOrStr, Timeout
-from ..expect import (
-    expect_to_have_class,
-    expect_to_have_style,
-)
+from ..expect import expect_to_have_class, expect_to_have_style
 from ..expect._internal import expect_attribute_to_have_value
 from ..expect._internal import expect_class_to_have_value as _expect_class_to_have_value
 from ._base import (
