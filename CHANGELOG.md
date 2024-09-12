@@ -9,7 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
-* Fixed a bug with `Chat()` sometimes silently dropping errors. (#1672)
+* A few fixes for `ui.Chat()`, including: 
+  * Fixed a bug with `Chat()` sometimes silently dropping errors. (#1672)
+  * Fixed a bug with `Chat()` sometimes not removing it's loading icon (on error or a `None` transform). (#1679)
+  * `.messages(format="anthropic")` correctly removes non-user starting messages (once again). (#1685)
 
 * `shiny create` now uses the template `id` rather than the directory name as the default directory. (#1666)
 
