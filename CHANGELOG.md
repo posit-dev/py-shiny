@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Fixed a bug with `Chat()` sometimes silently dropping errors. (#1672)
 
+* `Chat.messages(format="anthropic")` correctly removes non-user starting messages (once again). (#1685)
+
 * `shiny create` now uses the template `id` rather than the directory name as the default directory. (#1666)
 
 ## [1.1.0] - 2024-09-03

@@ -52,8 +52,14 @@ chat.ui()
 
 @chat.on_user_submit
 async def _():
-    messages = chat.messages(format="openai", token_limits=MODEL_INFO["token_limits"])
-    response = await llm.chat.completions.create(
-        model=MODEL_INFO["name"], messages=messages, stream=True
+    messages = chat.messages(
+        format="anthropic",
+        token_limits=MODEL_INFO["token_limits"],
+    )
+    response = await llm.messages.create(
+        model=MODEL_INFO["name"],
+        messages=messages,
+        stream=True,
+        max_tokens=MODEL_INFO["token_limits"][1],
     )
     await chat.append_message_stream(response)
