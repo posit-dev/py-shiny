@@ -10,7 +10,6 @@ from shiny.types import ListOrTuple
 
 from .._types import PatternOrStr, Timeout
 from ..expect import (
-    expect_not_to_have_class,
     expect_to_have_class,
     expect_to_have_style,
 )
