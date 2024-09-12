@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import pathlib
+import platform
 import re
 import tempfile
 import textwrap
@@ -426,7 +427,10 @@ class Theme:
             **args,
         }
 
-        self._css = sass.compile(string=self.to_sass(), **args)
+        sass_str = self.to_sass()
+        if platform.system() == "Windows":
+            sass_str = sass_str.replace("\\", "\\\\")
+        self._css = sass.compile(string=sass_str, **args)
 
         return self._css
 
