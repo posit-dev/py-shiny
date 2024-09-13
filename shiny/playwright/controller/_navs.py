@@ -6,9 +6,12 @@ from playwright.sync_api import Locator, Page
 from playwright.sync_api import expect as playwright_expect
 from typing_extensions import Literal
 
+from shiny.types import ListOrTuple
+
 from .._types import PatternOrStr, Timeout
+from ..expect import expect_to_have_class, expect_to_have_style
+from ..expect._internal import expect_attribute_to_have_value
 from ..expect._internal import expect_class_to_have_value as _expect_class_to_have_value
-from ..expect._internal import expect_style_to_have_value as _expect_style_to_have_value
 from ._base import (
     InitLocator,
     UiWithContainer,
@@ -79,8 +82,8 @@ class _ExpectNavsetPlacementM:
             The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         ex_class = "card-header" if location == "above" else "card-footer"
-        playwright_expect(self.loc_container.locator("..")).to_have_class(
-            ex_class, timeout=timeout
+        expect_to_have_class(
+            self.loc_container.locator(".."), ex_class, timeout=timeout
         )
 
 
@@ -424,23 +427,73 @@ class NavsetPillList(_NavsetBase):
             loc="> li.nav-item",
         )
 
-    def expect_well(self, has_well: bool, *, timeout: Timeout = None) -> None:
+    def expect_well(self, value: bool, *, timeout: Timeout = None) -> None:
         """
         Expects the navset pill list to have a well.
 
         Parameters
         ----------
-        has_well
-            `True` if the navset pill list is expected to have a well, `False` otherwise.
+        value
+            `True` if the navset pill list is expected to be constructed with a well,
+            `False` otherwise.
         timeout
             The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
-        if has_well:
-            playwright_expect(self.loc_container.locator("..")).to_have_class("well")
-        else:
-            playwright_expect(self.loc_container.locator("..")).not_to_have_class(
-                "well"
+        _expect_class_to_have_value(
+            self.loc_container.locator(".."), "well", has_class=value, timeout=timeout
+        )
+
+    def expect_widths(
+        self, value: ListOrTuple[int], *, timeout: Timeout = None
+    ) -> None:
+        """
+        Expects the navset pill list to have the specified widths.
+
+        Parameters
+        ----------
+        value
+            The expected widths of the navset pill list.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
+        widths = tuple(value)
+        assert len(widths) == 2, "`value=` must be a tuple of two integers"
+        assert all(
+            isinstance(width, int) for width in widths
+        ), "`value=` must be integers"
+
+        loc_row_container = self.loc_container.locator("..").locator("..")
+
+        # Make sure the two children are present
+        loc_complicated = loc_row_container.locator(
+            "xpath=.",
+            has=self.page.locator(f"> div.col-sm-{widths[0]} + div.col-sm-{widths[1]}"),
+        )
+
+        # Make sure there are only two children present
+        try:
+            playwright_expect(loc_complicated.locator("> div")).to_have_count(
+                2, timeout=timeout
             )
+        except AssertionError as e:
+            # Make sure there are only two children
+            playwright_expect(loc_row_container.locator("> div")).to_have_count(
+                2, timeout=1
+            )
+
+            expect_to_have_class(
+                loc_row_container.locator("> div").first,
+                f"col-sm-{widths[0]}",
+                timeout=1,
+            )
+            expect_to_have_class(
+                loc_row_container.locator("> div").last,
+                f"col-sm-{widths[1]}",
+                timeout=1,
+            )
+
+            # Re-raise the original exception if nothing could be debugged
+            raise e
 
 
 class _NavsetCardBase(
@@ -563,12 +616,12 @@ class NavsetHidden(_NavsetBase):
         )
 
 
-class NavsetBar(
+class _NavsetBarBase(
     _ExpectNavsetSidebarM,
     _ExpectNavsetTitleM,
     _NavsetBase,
 ):
-    """Controller for :func:`shiny.ui.navset_bar`."""
+    """Mixin class for common expectations of nav bars."""
 
     def __init__(self, page: Page, id: str) -> None:
         """
@@ -627,24 +680,32 @@ class NavsetBar(
                 timeout=timeout,
             )
         else:
-            playwright_expect(self._loc_navbar).to_have_class(
-                re.compile(rf"{position}"), timeout=timeout
-            )
+            expect_to_have_class(self._loc_navbar, position, timeout=timeout)
 
-    def expect_inverse(self, *, timeout: Timeout = None) -> None:
+    def expect_inverse(
+        self,
+        value: bool,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
         """
         Expects the navset bar to be light text color if inverse is True
 
         Parameters
         ----------
+        value
+            `True` if the navset bar is expected to have inverse text color, `False` otherwise.
         timeout
             The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
-        playwright_expect(self._loc_navbar).to_have_class(
-            re.compile("navbar-inverse"), timeout=timeout
+        _expect_class_to_have_value(
+            self._loc_navbar,
+            "navbar-inverse",
+            has_class=value,
+            timeout=timeout,
         )
 
-    def expect_bg(self, bg: str, *, timeout: Timeout = None) -> None:
+    def expect_bg(self, bg: PatternOrStr, *, timeout: Timeout = None) -> None:
         """
         Expects the navset bar to have the specified background color.
 
@@ -655,11 +716,14 @@ class NavsetBar(
         timeout
             The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
-        _expect_style_to_have_value(
-            self._loc_navbar, "background-color", f"{bg} !important", timeout=timeout
+        expect_to_have_style(
+            self._loc_navbar,
+            "background-color",
+            f"{bg} !important",
+            timeout=timeout,
         )
 
-    def expect_gap(self, gap: str, *, timeout: Timeout = None) -> None:
+    def expect_gap(self, gap: PatternOrStr, *, timeout: Timeout = None) -> None:
         """
         Expects the navset bar to have the specified gap.
 
@@ -670,28 +734,128 @@ class NavsetBar(
         timeout
             The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
-        _expect_style_to_have_value(
-            self.get_loc_active_content(), "gap", gap, timeout=timeout
+        expect_to_have_style(
+            self.get_loc_active_content(),
+            "gap",
+            gap,
+            timeout=timeout,
         )
 
-    def expect_layout(
-        self, layout: Literal["fluid", "fixed"] = "fluid", *, timeout: Timeout = None
+    def expect_fluid(
+        self,
+        value: bool,
+        *,
+        timeout: Timeout = None,
     ) -> None:
         """
-        Expects the navset bar to have the specified layout.
+        Expects the navset bar to have a fluid or fixed layout.
 
         Parameters
         ----------
-        layout
-            The expected layout.
+        value
+            `True` if the layout is `fluid` or `False` if it is `fixed`.
         timeout
             The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
-        if layout == "fluid":
-            playwright_expect(
-                self.loc_container.locator("..").locator("..")
-            ).to_have_class(re.compile("container-fluid"), timeout=timeout)
-        else:
-            playwright_expect(self.loc_container.locator("..")).to_have_class(
-                re.compile("container"), timeout=timeout
+        if value:
+            expect_to_have_class(
+                self._loc_navbar.locator("> div"),
+                "container-fluid",
+                timeout=timeout,
             )
+        else:
+            expect_to_have_class(
+                self._loc_navbar.locator("> div"),
+                "container",
+                timeout=timeout,
+            )
+
+
+class NavsetBar(_NavsetBarBase):
+    """Controller for :func:`shiny.ui.navset_bar`."""
+
+
+class PageNavbar(_NavsetBarBase):
+    """Controller for :func:`shiny.ui.page_navbar`."""
+
+    def expect_fillable(self, value: bool, *, timeout: Timeout = None) -> None:
+        """
+        Expects the main content area to be considered a fillable (i.e., flexbox) container
+
+        Parameters
+        ----------
+        value
+            `True` if the main content area is expected to be fillable, `False` otherwise.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
+        # confirm page is fillable
+        _expect_class_to_have_value(
+            self.page.locator("body"),
+            "bslib-page-fill",
+            has_class=value,
+            timeout=timeout,
+        )
+
+        # confirm content is fillable
+        _expect_class_to_have_value(
+            self.get_loc_active_content(),
+            "html-fill-container",
+            has_class=value,
+            timeout=timeout,
+        )
+
+    def expect_fillable_mobile(self, value: bool, *, timeout: Timeout = None) -> None:
+        """
+        Expects the main content area to be considered a fillable (i.e., flexbox) container on mobile
+        This method will always call `.expect_fillable(True)` first to ensure the fillable property is set
+
+        Parameters
+        ----------
+        value
+            `True` if the main content area is expected to be fillable on mobile, `False` otherwise.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
+
+        # This is important since fillable_mobile needs fillable property to be True
+        self.expect_fillable(True, timeout=timeout)
+        _expect_class_to_have_value(
+            self.page.locator("body"),
+            "bslib-flow-mobile",
+            has_class=not value,
+            timeout=timeout,
+        )
+
+    def expect_window_title(
+        self, title: PatternOrStr, *, timeout: Timeout = None
+    ) -> None:
+        """
+        Expects the window title to have the specified text.
+
+        Parameters
+        ----------
+        title
+            The expected window title.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
+        playwright_expect(self.page).to_have_title(title, timeout=timeout)
+
+    def expect_lang(self, lang: PatternOrStr, *, timeout: Timeout = None) -> None:
+        """
+        Expects the HTML tag to have the specified language.
+
+        Parameters
+        ----------
+        lang
+            The expected language.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
+        expect_attribute_to_have_value(
+            self.page.locator("html"),
+            "lang",
+            lang,
+            timeout=timeout,
+        )

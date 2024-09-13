@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### Breaking changes
+
+* `.expect_inverse()` for Navset controllers in `shiny.playwright.controllers` now requires a `bool` value. To keep behavior the same, use `.expect_inverse(False)`. (#1668)
+
+* `.expect_layout()` for Navset controllers in `shiny.playwright.controllers` is now renamed to `.expect_fluid()` and requires a `bool` value. To keep behavior the same, use `.expect_fluid(True)` (#1668)
+
+### New features
+
+### Other changes
+
+* Added `PageNavbar` class to the list of `shiny.playwright.controllers` for testing `ui.page_navbar()`. (#1668)
+
+* Added `.expect_widths()` to `NavsetPillList` in `shiny.playwright.controllers` for testing `ui.navset_pill_list(widths=)`. (#1668)
+
 ### Bug fixes
 
 * A few fixes for `ui.Chat()`, including: 
