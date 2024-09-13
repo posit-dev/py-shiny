@@ -510,7 +510,10 @@ def path_pkg_preset(preset: ShinyThemePreset, *args: str) -> str:
     #> "{shiny}/www/shared/sass/preset/shiny/bootstrap.min.css"
     ```
     """
-    return os.path.realpath(path_pkg_www("sass", "preset", str(preset), *args))
+    path = os.path.realpath(path_pkg_www("sass", "preset", str(preset), *args))
+    # these paths end up in strings passed to sass.compile(). Converting to POSIX means
+    # we use forward slashes to avoid needing to double-escape the Windows backslash
+    return pathlib.Path(path).as_posix()
 
 
 def check_is_valid_preset(preset: ShinyThemePreset) -> None:
