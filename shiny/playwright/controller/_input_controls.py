@@ -1389,6 +1389,34 @@ class InputSelectize(
         else:
             _expect_attribute_to_have_value(self.loc, "multiple", None, timeout=timeout)
 
+    def expect_width(self, value: AttrValue, *, timeout: Timeout = None) -> None:
+        """
+        Expect the input select to have a specific width.
+
+        Parameters
+        ----------
+        value
+            The expected width.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        _expect_style_to_have_value(
+            self.loc_label.locator(".."), "width", value, timeout=timeout
+        )
+
+    def clear_selection(self, *, timeout: Timeout = None) -> None:
+        """
+        Clear the current selection of the input selectize.
+
+        Parameters
+        ----------
+        timeout
+            The maximum time to wait for the selection to be cleared. Defaults to `None`.
+        """
+        self.loc.locator("..").locator("> div.plugin-clear_button > a.clear").click(
+            timeout=timeout
+        )
+
 
 class InputSlider(_InputSliderBase):
     """Controller for :func:`shiny.ui.input_slider`."""

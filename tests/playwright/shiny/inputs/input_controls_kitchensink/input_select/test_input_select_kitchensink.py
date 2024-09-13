@@ -19,7 +19,7 @@ def test_input_select_kitchensink(page: Page, local_app: ShinyAppProc) -> None:
     multiple_select_txt.expect_value("Multi select: Banana, Cherry")
 
     select_with_selected = controller.InputSelect(page, "select_with_selected")
-    select_with_selected_txt = controller.OutputText(page, "default_result_txt")
+    select_with_selected_txt = controller.OutputText(page, "select_with_selected_txt")
     select_with_selected.expect_selected("Cherry")
     select_with_selected_txt.expect_value("Select with selected: Cherry")
 

@@ -1,6 +1,6 @@
 from shiny.express import input, render, ui
 
-ui.page_opts(title="Multiple Select Inputs Demo")
+ui.page_opts(title="Select Inputs Kitchensink")
 
 fruits = ["Apple", "Banana", "Cherry", "Date", "Elderberry"]
 fruits_dict = {
@@ -51,7 +51,7 @@ def multi_result_txt():
 
 
 @render.text
-def default_result_txt():
+def select_with_selected_txt():
     return f"Select with selected: {input.select_with_selected()}"
 
 
@@ -61,5 +61,5 @@ def width_result_txt():
 
 
 @render.text
-def placeholder_result_txt():
+def select_with_custom_size_and_dict_txt():
     return f"Dict and custom select: {input.select_with_custom_size_and_dict()}"
