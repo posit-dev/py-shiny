@@ -924,7 +924,6 @@ class InputSwitch(_InputCheckboxBase):
 
 
 class _InputSelectBase(
-    WidthLocM,
     UiWithLabel,
 ):
     loc_selected: Locator
@@ -1182,6 +1181,21 @@ class InputSelect(_InputSelectBase):
             "form-select",
             has_class=not value,
             timeout=timeout,
+        )
+
+    def expect_width(self, value: AttrValue, *, timeout: Timeout = None) -> None:
+        """
+        Expect the input select to have a specific width.
+
+        Parameters
+        ----------
+        value
+            The expected width.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        _expect_style_to_have_value(
+            self.loc_label.locator(".."), "width", value, timeout=timeout
         )
 
 
