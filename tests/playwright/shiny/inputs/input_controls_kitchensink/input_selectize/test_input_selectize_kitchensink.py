@@ -30,6 +30,7 @@ def test_input_selectize_kitchensink(page: Page, local_app: ShinyAppProc) -> Non
     )
     selectize_width_close_button_txt.expect_value("Selectize with close button: Orange")
     selectize_width_close_button.expect_width("400px")
+    selectize_width_close_button.expect_choice_groups(["Citrus", "Berries"])
     selectize_width_close_button.clear_selection()
     selectize_width_close_button_txt.expect_value(
         "Selectize with close button: "

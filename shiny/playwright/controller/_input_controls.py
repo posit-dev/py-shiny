@@ -1219,6 +1219,9 @@ class InputSelectize(
         # We are only guaranteed to have `data-value` attribute for each _option_
         self.loc_choices = self._loc_selectize.locator("[data-value]")
         self.loc_selected = self.loc_container.locator(f"select#{id} > option")
+        self.clear = self.loc.locator("..").locator(
+            "> div.plugin-clear_button > a.clear"
+        )
 
     def set(
         self,
@@ -1413,9 +1416,7 @@ class InputSelectize(
         timeout
             The maximum time to wait for the selection to be cleared. Defaults to `None`.
         """
-        self.loc.locator("..").locator("> div.plugin-clear_button > a.clear").click(
-            timeout=timeout
-        )
+        self.clear.click(timeout=timeout)
 
 
 class InputSlider(_InputSliderBase):
