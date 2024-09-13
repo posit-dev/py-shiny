@@ -923,6 +923,34 @@ class InputSwitch(_InputCheckboxBase):
         )
 
 
+class InputSelectionWidthM:
+    """
+    A mixin class representing the input `select` and `selectize` widths.
+
+    This class provides methods to expect the width attribute of a DOM element.
+    """
+
+    loc_label: Locator
+    """
+    Playwright `Locator` for the label of the UI element.
+    """
+
+    def expect_width(self, value: AttrValue, *, timeout: Timeout = None) -> None:
+        """
+        Expect the input select to have a specific width.
+
+        Parameters
+        ----------
+        value
+            The expected width.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        _expect_style_to_have_value(
+            self.loc_label.locator(".."), "width", value, timeout=timeout
+        )
+
+
 class _InputSelectBase(
     UiWithLabel,
 ):
@@ -1143,7 +1171,7 @@ class _InputSelectBase(
         )
 
 
-class InputSelect(_InputSelectBase):
+class InputSelect(_InputSelectBase, InputSelectionWidthM):
     """Controller for :func:`shiny.ui.input_select`."""
 
     def __init__(self, page: Page, id: str) -> None:
@@ -1183,25 +1211,8 @@ class InputSelect(_InputSelectBase):
             timeout=timeout,
         )
 
-    def expect_width(self, value: AttrValue, *, timeout: Timeout = None) -> None:
-        """
-        Expect the input select to have a specific width.
 
-        Parameters
-        ----------
-        value
-            The expected width.
-        timeout
-            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
-        """
-        _expect_style_to_have_value(
-            self.loc_label.locator(".."), "width", value, timeout=timeout
-        )
-
-
-class InputSelectize(
-    UiWithLabel,
-):
+class InputSelectize(UiWithLabel, InputSelectionWidthM):
     """Controller for :func:`shiny.ui.input_selectize`."""
 
     def __init__(self, page: Page, id: str) -> None:
@@ -1391,21 +1402,6 @@ class InputSelectize(
             )
         else:
             _expect_attribute_to_have_value(self.loc, "multiple", None, timeout=timeout)
-
-    def expect_width(self, value: AttrValue, *, timeout: Timeout = None) -> None:
-        """
-        Expect the input select to have a specific width.
-
-        Parameters
-        ----------
-        value
-            The expected width.
-        timeout
-            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
-        """
-        _expect_style_to_have_value(
-            self.loc_label.locator(".."), "width", value, timeout=timeout
-        )
 
     def clear_selection(self, *, timeout: Timeout = None) -> None:
         """

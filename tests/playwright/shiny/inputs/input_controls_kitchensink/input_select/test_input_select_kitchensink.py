@@ -15,7 +15,7 @@ def test_input_select_kitchensink(page: Page, local_app: ShinyAppProc) -> None:
     multiple_select = controller.InputSelect(page, "multi_select")
     multiple_select_txt = controller.OutputText(page, "multi_result_txt")
     multiple_select.set(["Banana", "Cherry"])
-    # multiple_select.expect_multiple(True)
+    # multiple_select.expect_multiple(True) # TODO-karan: Investigate why this is failing
     multiple_select_txt.expect_value("Multi select: Banana, Cherry")
 
     select_with_selected = controller.InputSelect(page, "select_with_selected")
