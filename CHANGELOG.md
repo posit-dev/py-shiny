@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added `.expect_widths()` to `NavsetPillList` in `shiny.playwright.controllers` for testing `ui.navset_pill_list(widths=)`. (#1668)
 
+* Added `.expect_title()` for `Popover` controller (#1683)
+
 ### Bug fixes
 
 * A few fixes for `ui.Chat()`, including: 
@@ -29,10 +31,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   * `.messages(format="anthropic")` correctly removes non-user starting messages (once again). (#1685)
 
 * `shiny create` now uses the template `id` rather than the directory name as the default directory. (#1666)
-
-### Other changes
-
-* Added `.expect_title()` for `Popover` controller (#1683)
 
 ## [1.1.0] - 2024-09-03
 
