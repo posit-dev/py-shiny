@@ -47,7 +47,7 @@ dependencies = [
     "prompt-toolkit;platform_system!='Emscripten'",
     "python-multipart>=0.0.7;platform_system!='Emscripten'",
     "setuptools;python_version>='3.12'",
-    "narwhals>=1.1.7",
+    "narwhals>=1.8.0",
     "orjson>=3.10.7",
 ]
 
