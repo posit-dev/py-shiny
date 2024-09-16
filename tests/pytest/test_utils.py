@@ -141,7 +141,6 @@ async def test_async_callbacks():
 @pytest.mark.timeout(2)
 @pytest.mark.flaky(reruns=3)
 def test_random_port():
-    assert random_port(9000, 9000) == 9000
 
     # Starting port
     port = 9001
@@ -149,6 +148,19 @@ def test_random_port():
     num_ports = 10
     # Number of times to try to find a port range
     n = 100
+
+    # Make sure a single port can be found
+    attempts = 0
+    for _ in range(n):
+        port_i = port - 1000 + attempts
+        attempts += 1
+        try:
+            assert random_port(port_i, port_i) == port_i
+            break
+        except RuntimeError as e:
+            print(e)
+    if attempts == n:
+        raise RuntimeError(f"Could not find a usable port in {n} tries")
 
     # Find a range of `num_ports` ports that are all available
     attempts = 0
