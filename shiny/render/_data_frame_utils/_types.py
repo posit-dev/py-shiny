@@ -1,3 +1,5 @@
+# TODO-barret; Replace all usage of (PdDataFrame, PlDataFrame, etc) with narwhals
+
 from __future__ import annotations
 
 from abc import ABC
@@ -10,17 +12,66 @@ from typing import (
     Optional,
     Protocol,
     Tuple,
-    TypeVar,
     Union,
     cast,
     runtime_checkable,
 )
 
+import narwhals.stable.v1 as nw
 from htmltools import TagNode
+from narwhals.dtypes import DType as DType
+from narwhals.typing import DataFrameT as DataFrameT
+from narwhals.typing import IntoDataFrame as IntoDataFrame
+from narwhals.typing import IntoDataFrameT as IntoDataFrameT
+from narwhals.typing import IntoExpr as IntoExpr
 
 from ..._typing_extensions import Annotated, NotRequired, Required, TypedDict
 from ...types import Jsonifiable, JsonifiableDict, ListOrTuple
 from ._databackend import AbstractBackend
+
+# from narwhals.typing import FrameT as NwFrameT
+
+__all__ = (
+    "PdDataFrame",
+    "PlDataFrame",
+    "PdSeries",
+    "PlSeries",
+    # "ListSeriesLike",
+    "SeriesLike",
+    "IntoExpr",
+    "DataFrame",
+    "DataFrameT",
+    "DType",
+    "IntoDataFrame",
+    "IntoDataFrameT",
+    "PandasCompatible",
+    "CellHtml",
+    "ColumnSort",
+    "ColumnFilterStr",
+    "ColumnFilterNumber",
+    "ColumnFilter",
+    "DataViewInfo",
+    "FrameRenderPatchInfo",
+    "FrameRenderSelectionModes",
+    "FrameRender",
+    "frame_render_to_jsonifiable",
+    "FrameJsonOptions",
+    "FrameJson",
+    "RowsList",
+    "ColsList",
+    "FrameDtypeSubset",
+    "FrameDtypeCategories",
+    "FrameDtype",
+    "StyleInfoBody",
+    "StyleInfo",
+    "BrowserStyleInfoBody",
+    "BrowserStyleInfo",
+    "ReprHtml",
+    "CellValue",
+    "CellPatch",
+    "CellPatchProcessed",
+)
+
 
 # ---------------------------------------------------------------------
 
@@ -35,9 +86,8 @@ if TYPE_CHECKING:
     PdSeries = pd.Series[Any]
     PlSeries = pl.Series
 
-    ListSeriesLike = Union[List[PdSeries], List[PlSeries]]
+    # ListSeriesLike = Union[List[PdSeries], List[PlSeries]]
     SeriesLike = Union[PdSeries, PlSeries]
-    DataFrameLike = Union[PdDataFrame, PlDataFrame]
 
 
 else:
@@ -54,23 +104,17 @@ else:
     class PlSeries(AbstractBackend):
         _backends = [("polars", "Series")]
 
-    class ListSeriesLike(ABC): ...
+    # class ListSeriesLike(ABC): ...
 
     class SeriesLike(ABC): ...
 
-    class DataFrameLike(ABC): ...
-
-    ListSeriesLike.register(PdSeries)
-    ListSeriesLike.register(PlSeries)
+    # ListSeriesLike.register(PdSeries)
+    # ListSeriesLike.register(PlSeries)
 
     SeriesLike.register(PdSeries)
     SeriesLike.register(PlSeries)
 
-    DataFrameLike.register(PdDataFrame)
-    DataFrameLike.register(PlDataFrame)
-
-DataFrameLikeT = TypeVar("DataFrameLikeT", PdDataFrame, PlDataFrame)
-SeriesLikeT = TypeVar("SeriesLikeT", PdSeries, PlSeries)
+DataFrame = nw.DataFrame
 
 # ---------------------------------------------------------------------
 

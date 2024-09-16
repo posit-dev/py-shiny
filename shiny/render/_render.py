@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, Callable, Literal, Optional, Union, cast
 
 from htmltools import Tag, TagAttrValue, TagChild
 
+# TODO-barret; Replace usage of (PdDataFrame, PandasCompatible, etc) with narwhals
 from ._data_frame_utils._types import PandasCompatible, PdDataFrame
 
 if TYPE_CHECKING:
