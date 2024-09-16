@@ -62,7 +62,7 @@ def as_data_frame(
     except TypeError as e:
         try:
             return nw.from_native(compatible_to_pandas(data), eager_only=True)
-        except BaseException:
+        except TypeError:
             # Couldn't convert to pandas, so raise the original error
             raise e
 

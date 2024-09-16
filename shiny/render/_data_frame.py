@@ -4,7 +4,7 @@ import warnings
 
 # TODO-barret-render.data_frame; Docs
 # TODO-barret-render.data_frame; Add examples!
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, Literal, Union, cast
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Literal, cast
 
 from htmltools import Tag
 
@@ -32,19 +32,20 @@ from ._data_frame_utils._selection import (
 )
 from ._data_frame_utils._styles import as_browser_style_infos
 from ._data_frame_utils._tbl_data import (
-    apply_frame_patches__typed,
-    frame_columns,
+    apply_frame_patches,
+    as_data_frame,
+    data_frame_to_native,
     frame_shape,
-    serialize_dtype,
-    subset_frame__typed,
+    subset_frame,
 )
 from ._data_frame_utils._types import (
     CellPatchProcessed,
     ColumnFilter,
     ColumnSort,
-    DataFrameLikeT,
+    DataFrame,
     FrameDtype,
     FrameRender,
+    IntoDataFrameT,
     cell_patch_processed_to_jsonifiable,
     frame_render_to_jsonifiable,
 )
@@ -55,17 +56,13 @@ from .renderer import Jsonifiable, Renderer, ValueFn
 if TYPE_CHECKING:
     from ..session import Session
 
-DataFrameResult = Union[
-    None,
-    DataFrameLikeT,
-    "DataGrid[DataFrameLikeT]",
-    "DataTable[DataFrameLikeT]",
-]
-DataFrameValue = Union[None, DataGrid[DataFrameLikeT], DataTable[DataFrameLikeT]]
-
 
 @add_example()
-class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
+class data_frame(
+    Renderer[
+        None | IntoDataFrameT | DataGrid[IntoDataFrameT] | DataTable[IntoDataFrameT]
+    ]
+):
     """
     Decorator for a function that returns a [pandas](https://pandas.pydata.org/) or
     [polars](https://pola.rs/) `DataFrame` object to render as an interactive table or
@@ -138,7 +135,11 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
       objects you can return from the rendering function to specify options.
     """
 
-    _value: reactive.Value[DataFrameValue[DataFrameLikeT] | None]
+    _value: reactive.Value[None | DataGrid[IntoDataFrameT] | DataTable[IntoDataFrameT]]
+    """
+    Reactive value of the data frame's rendered object.
+    """
+    _value_data: reactive.Calc_[IntoDataFrameT]
     """
     Reactive value of the data frame's rendered object.
     """
@@ -181,7 +182,7 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
     Reactive value of the data frame's edits provided by the user.
     """
 
-    data: reactive.Calc_[DataFrameLikeT]
+    data: reactive.Calc_[IntoDataFrameT]
     """
     Reactive value of the data frame's output data.
 
@@ -192,17 +193,17 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
     Even if the rendered data value was not of type `pd.DataFrame` or `pl.DataFrame`, this method currently
     converts it to a `pd.DataFrame`.
     """
-    _data_view_all: reactive.Calc_[DataFrameLikeT]
+    _data_view_all: reactive.Calc_[IntoDataFrameT]
     """
     Reactive value of the full (sorted and filtered) data.
     """
-    _data_view_selected: reactive.Calc_[DataFrameLikeT]
+    _data_view_selected: reactive.Calc_[IntoDataFrameT]
     """
     Reactive value of the selected rows of the (sorted and filtered) data.
     """
 
     @add_example(ex_dir="../api-examples/data_frame_data_view")
-    def data_view(self, *, selected: bool = False) -> DataFrameLikeT:
+    def data_view(self, *, selected: bool = False) -> IntoDataFrameT:
         """
         Reactive function that retrieves the data how it is viewed within the browser.
 
@@ -274,7 +275,7 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
         after sorting and filtering has been applied.
     """
 
-    _data_patched: reactive.Calc_[DataFrameLikeT]
+    _data_patched: reactive.Calc_[DataFrame[IntoDataFrameT]]
     """
     Reactive value of the data frame's patched data.
 
@@ -314,9 +315,9 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
         from .. import req
 
         # Init
-        self._value: reactive.Value[DataFrameValue[DataFrameLikeT] | None] = (
-            reactive.Value(None)
-        )
+        self._value: reactive.Value[
+            None | DataGrid[IntoDataFrameT] | DataTable[IntoDataFrameT]
+        ] = reactive.Value(None)
         self._type_hints: reactive.Value[list[FrameDtype] | None] = reactive.Value(None)
         self._cell_patch_map = reactive.Value({})
 
@@ -327,16 +328,46 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
         self.cell_patches = self_cell_patches
 
         @reactive.calc
-        def self_data() -> DataFrameLikeT:
+        def self__value_data() -> IntoDataFrameT:
             value = self._value()
-            req(value)
-
-            if not isinstance(value, (DataGrid, DataTable)):
-                raise TypeError(
-                    f"Unsupported type returned from render function: {type(value)}. Expected `DataGrid` or `DataTable`"
-                )
+            if not value:
+                req(False)
+                raise RuntimeError("req() failed to raise a silent error.")
 
             return value.data
+
+        self._value_data = self__value_data
+
+        @reactive.calc
+        def self__nw_data() -> DataFrame[IntoDataFrameT]:
+            return as_data_frame(self._value_data())
+
+        self._nw_data = self__nw_data
+
+        @reactive.calc
+        def self__data_is_nw() -> bool:
+            return isinstance(self._value_data(), DataFrame)
+
+        self._data_is_nw = self__data_is_nw
+
+        # @overload
+        # def
+        @reactive.calc
+        def self__nw_data_to_original_type_fn():
+
+            def _(nw_data: DataFrame[IntoDataFrameT]) -> IntoDataFrameT:
+                if self._data_is_nw():
+                    # At this point, `IntoDataFrameT` represents `DataFrame[IntoDataFrameT]`
+                    return cast(IntoDataFrameT, nw_data)
+                return data_frame_to_native(nw_data)
+
+            return _
+
+        self._nw_data_to_original_type_fn = self__nw_data_to_original_type_fn
+
+        @reactive.calc
+        def self_data() -> IntoDataFrameT:
+            return data_frame_to_native(self._nw_data())
 
         self.data = self_data
 
@@ -363,11 +394,11 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
             cell_selection = as_cell_selection(
                 browser_cell_selection,
                 selection_modes=self.selection_modes(),
-                data=self.data(),
+                nw_data=self._nw_data(),
                 data_view_rows=self.data_view_rows(),
                 # TODO-barret: replace methods like .shape, .loc. .iat with those from
                 # _tbl_data.py, test in the playright app.
-                data_view_cols=tuple(range(frame_shape(self.data())[1])),
+                data_view_cols=tuple(range(frame_shape(self._nw_data())[1])),
             )
 
             return cell_selection
@@ -400,14 +431,14 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
         self.data_view_rows = self_data_view_rows
 
         @reactive.calc
-        def self__data_patched() -> DataFrameLikeT:
-            return apply_frame_patches__typed(self.data(), self.cell_patches())
+        def self__data_patched() -> DataFrame[IntoDataFrameT]:
+            return apply_frame_patches(self._nw_data(), self.cell_patches())
 
         self._data_patched = self__data_patched
 
         # Apply filtering and sorting
         # https://github.com/posit-dev/py-shiny/issues/1240
-        def _subset_data_view(selected: bool) -> DataFrameLikeT:
+        def _subset_data_view(selected: bool) -> IntoDataFrameT:
             """
             Helper method to subset data according to what is viewed in the browser;
 
@@ -431,15 +462,20 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
             else:
                 rows = self.data_view_rows()
 
-            return subset_frame__typed(self._data_patched(), rows=rows)
+            nw_data = subset_frame(self._data_patched(), rows=rows)
+
+            to_original_type = self._nw_data_to_original_type_fn()
+            patched_subsetted_into_data = to_original_type(nw_data)
+
+            return patched_subsetted_into_data
 
         # Helper reactives so that internal calculations can be cached for use in other calculations
         @reactive.calc
-        def self__data_view() -> DataFrameLikeT:
+        def self__data_view() -> IntoDataFrameT:
             return _subset_data_view(selected=False)
 
         @reactive.calc
-        def self__data_view_selected() -> DataFrameLikeT:
+        def self__data_view_selected() -> IntoDataFrameT:
             return _subset_data_view(selected=True)
 
         self._data_view_all = self__data_view
@@ -677,7 +713,10 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
             if not callable(styles_fn):
                 return
 
-            new_styles = as_browser_style_infos(styles_fn, data=self._data_patched())
+            # TODO-barret; Use the returned data type from the rener function!
+            to_original_type = self._nw_data_to_original_type_fn()
+            patched_into_data = to_original_type(self._data_patched())
+            new_styles = as_browser_style_infos(styles_fn, into_data=patched_into_data)
 
             await self._send_message_to_browser(
                 "updateStyles",
@@ -709,7 +748,12 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
     def auto_output_ui(self) -> Tag:
         return ui.output_data_frame(id=self.output_id)
 
-    def __init__(self, fn: ValueFn[DataFrameResult[DataFrameLikeT]]):
+    def __init__(
+        self,
+        fn: ValueFn[
+            None | IntoDataFrameT | DataGrid[IntoDataFrameT] | DataTable[IntoDataFrameT]
+        ],
+    ):
         super().__init__(fn)
 
         # Set reactives from calculated properties
@@ -756,6 +800,11 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
 
         # Set patches url handler for client
         patch_key = self._set_patches_handler()
+
+        if not isinstance(value, (DataGrid, DataTable)):
+            raise TypeError(
+                f"Unsupported type returned from render function: {type(value)}. Expected `DataGrid` or `DataTable`"
+            )
         self._value.set(value)  # pyright: ignore[reportArgumentType]
 
         # Use session context so `to_payload()` gets the correct session
@@ -810,9 +859,9 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
         """
         with reactive.isolate():
             selection_modes = self.selection_modes()
-            data = self.data()
+            nw_data = self._nw_data()
             data_view_rows = self.data_view_rows()
-            data_view_cols = tuple(range(data.shape[1]))
+            data_view_cols = tuple(range(nw_data.shape[1]))
 
         if selection_modes._is_none():
             warnings.warn(
@@ -828,7 +877,7 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
         cell_selection = as_cell_selection(
             selection,
             selection_modes=selection_modes,
-            data=data,
+            nw_data=nw_data,
             data_view_rows=data_view_rows,
             data_view_cols=data_view_cols,
         )
@@ -886,14 +935,15 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
         vals: list[ColumnSort] = []
         if len(sort) > 0:
             with reactive.isolate():
-                data = self.data()
-            ncol = frame_shape(data)[1]
+                nw_data = self._nw_data()
+            ncol = frame_shape(nw_data)[1]
 
             for val in sort:
                 val_dict: ColumnSort
                 if isinstance(val, int):
-                    col = frame_columns(data)[val]
-                    desc = serialize_dtype(col)["type"] == "numeric"
+                    # col = frame_columns(data)[val]
+                    # desc = serialize_dtype(col)["type"] == "numeric"
+                    desc = nw_data[:, val].dtype.is_numeric()
                     val_dict = {"col": val, "desc": desc}
                 val_dict: ColumnSort = (
                     val if isinstance(val, dict) else {"col": val, "desc": True}
@@ -929,8 +979,8 @@ class data_frame(Renderer[DataFrameResult[DataFrameLikeT]]):
             filter = []
         else:
             with reactive.isolate():
-                data = self.data()
-            ncol = len(data.columns)
+                shape = frame_shape(self._nw_data())
+            ncol = shape[1]
 
             for column_filter, i in zip(filter, range(len(filter))):
                 assert isinstance(column_filter, dict)
