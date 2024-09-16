@@ -196,6 +196,18 @@ def page_navbar(
         (i.e., flexbox) container.
     fillable_mobile
         Whether or not ``fillable`` should apply on mobile devices.
+    gap
+        A CSS length unit defining the gap (i.e., spacing) between elements provided to
+        `*args`. This value is only used when the navbar is _fillable_.
+    padding
+        Padding to use for the body. This can be a numeric vector (which will be
+        interpreted as pixels) or a character vector with valid CSS lengths. The length
+        can be between one and four. If one, then that value will be used for all four
+        sides. If two, then the first value will be used for the top and bottom, while
+        the second value will be used for left and right. If three, then the first will
+        be used for top, the second will be left and right, and the third will be
+        bottom. If four, then the values will be interpreted as top, right, bottom, and
+        left respectively. This value is only used when the navbar is _fillable_.
     position
         Determines whether the navbar should be displayed at the top of the page with
         normal scrolling behavior ("static-top"), pinned at the top ("fixed-top"), or

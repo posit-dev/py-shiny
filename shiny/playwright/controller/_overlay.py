@@ -212,6 +212,21 @@ class Popover(_OverlayBase):
         self.loc_trigger.scroll_into_view_if_needed(timeout=timeout)
         self.loc_trigger.click(timeout=timeout)
 
+    def expect_title(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+        """
+        Expects the popover title to have the specified text.
+
+        Parameters
+        ----------
+        value
+            The expected text pattern or string.
+        timeout
+            The maximum time to wait for the popover header to appear. Defaults to `None`.
+        """
+        playwright_expect(
+            self.get_loc_overlay_container().locator("> .popover-header")
+        ).to_have_text(value, timeout=timeout)
+
 
 class Tooltip(_OverlayBase):
     """Controller for :func:`shiny.ui.tooltip`."""

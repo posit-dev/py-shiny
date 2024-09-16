@@ -61,6 +61,7 @@ from ._navs import (
     NavsetPillList,
     NavsetTab,
     NavsetUnderline,
+    PageNavbar,
 )
 from ._output import (
     OutputCode,
@@ -121,4 +122,5 @@ __all__ = [
     "NavsetUnderline",
     "DownloadButton",
     "DownloadLink",
+    "PageNavbar",
 ]
