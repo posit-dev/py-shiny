@@ -11,8 +11,8 @@ from ._selection import (
     as_selection_modes,
 )
 from ._styles import StyleFn, StyleInfo, as_browser_style_infos, as_style_infos
-from ._tbl_data import as_data_frame_like, serialize_frame
-from ._types import DataFrameLikeT, FrameJson
+from ._tbl_data import compatible_to_pandas, serialize_frame
+from ._types import FrameJson, IntoDataFrameT
 
 
 class AbstractTabularData(abc.ABC):
@@ -22,7 +22,7 @@ class AbstractTabularData(abc.ABC):
 
 @add_example(ex_dir="../../api-examples/data_frame_grid_table")
 @add_example(ex_dir="../../api-examples/data_frame_styles")
-class DataGrid(AbstractTabularData, Generic[DataFrameLikeT]):
+class DataGrid(AbstractTabularData, Generic[IntoDataFrameT]):
     """
     Holds the data and options for a :class:`~shiny.render.data_frame` output, for a
     spreadsheet-like view.
@@ -114,18 +114,18 @@ class DataGrid(AbstractTabularData, Generic[DataFrameLikeT]):
     * :class:`~shiny.render.DataTable` - A more _tabular_ view of the data.
     """
 
-    data: DataFrameLikeT
+    data: IntoDataFrameT
     width: str | float | None
     height: str | float | None
     summary: bool | str
     filters: bool
     editable: bool
     selection_modes: SelectionModes
-    styles: list[StyleInfo] | StyleFn[DataFrameLikeT]
+    styles: list[StyleInfo] | StyleFn[IntoDataFrameT]
 
     def __init__(
         self,
-        data: DataFrameLikeT,
+        data: IntoDataFrameT,
         *,
         width: str | float | None = "fit-content",
         height: str | float | None = None,
@@ -133,11 +133,14 @@ class DataGrid(AbstractTabularData, Generic[DataFrameLikeT]):
         filters: bool = False,
         editable: bool = False,
         selection_mode: SelectionModeInput = "none",
-        styles: StyleInfo | list[StyleInfo] | StyleFn[DataFrameLikeT] | None = None,
+        styles: StyleInfo | list[StyleInfo] | StyleFn[IntoDataFrameT] | None = None,
         row_selection_mode: RowSelectionModeDeprecated = "deprecated",
     ):
 
-        self.data = as_data_frame_like(data)
+        # self._data_is_nw = isinstance(data, NwDataFrameRaw)
+        # self.data = as_narwhals(data)
+        # self.data = as_nw_friendly_data_frame(data)
+        self.data = data
 
         self.width = width
         self.height = height
@@ -172,7 +175,7 @@ class DataGrid(AbstractTabularData, Generic[DataFrameLikeT]):
                 "fill": self.height is None,
                 "styles": as_browser_style_infos(
                     self.styles,
-                    data=self.data,
+                    into_data=self.data,
                 ),
             },
         }
@@ -181,7 +184,7 @@ class DataGrid(AbstractTabularData, Generic[DataFrameLikeT]):
 
 @add_example(ex_dir="../../api-examples/data_frame_grid_table")
 @add_example(ex_dir="../../api-examples/data_frame_styles")
-class DataTable(AbstractTabularData, Generic[DataFrameLikeT]):
+class DataTable(AbstractTabularData, Generic[IntoDataFrameT]):
     """
     Holds the data and options for a :class:`~shiny.render.data_frame` output, for a
     spreadsheet-like view.
@@ -273,18 +276,18 @@ class DataTable(AbstractTabularData, Generic[DataFrameLikeT]):
     * :class:`~shiny.render.DataTable` - A more _grid_ view of the data.
     """
 
-    data: DataFrameLikeT
+    data: IntoDataFrameT
     width: str | float | None
     height: str | float | None
     summary: bool | str
     filters: bool
     editable: bool
     selection_modes: SelectionModes
-    styles: list[StyleInfo] | StyleFn[DataFrameLikeT]
+    styles: list[StyleInfo] | StyleFn[IntoDataFrameT]
 
     def __init__(
         self,
-        data: DataFrameLikeT,
+        data: IntoDataFrameT,
         *,
         width: str | float | None = "fit-content",
         height: str | float | None = "500px",
@@ -292,10 +295,10 @@ class DataTable(AbstractTabularData, Generic[DataFrameLikeT]):
         filters: bool = False,
         editable: bool = False,
         selection_mode: SelectionModeInput = "none",
-        styles: StyleInfo | list[StyleInfo] | StyleFn[DataFrameLikeT] | None = None,
+        styles: StyleInfo | list[StyleInfo] | StyleFn[IntoDataFrameT] | None = None,
         row_selection_mode: Literal["deprecated"] = "deprecated",
     ):
-        self.data = as_data_frame_like(data)
+        self.data = compatible_to_pandas(data)
 
         self.width = width
         self.height = height
@@ -329,7 +332,7 @@ class DataTable(AbstractTabularData, Generic[DataFrameLikeT]):
                 "style": "table",
                 "styles": as_browser_style_infos(
                     self.styles,
-                    data=self.data,
+                    into_data=self.data,
                 ),
             },
         }

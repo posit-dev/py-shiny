@@ -57,16 +57,24 @@ def as_data_frame(
 ) -> DataFrame[IntoDataFrameT]:
     if isinstance(data, DataFrame):
         return data  # pyright: ignore[reportUnknownVariableType]
+    try:
+        return nw.from_native(data, eager_only=True)
+    except TypeError as e:
+        try:
+            return nw.from_native(compatible_to_pandas(data), eager_only=True)
+        except BaseException:
+            # Couldn't convert to pandas, so raise the original error
+            raise e
 
-    return nw.from_native(as_native_data_frame(data), eager_only=True)
 
-
-def as_native_data_frame(
+def compatible_to_pandas(
     data: IntoDataFrameT,
 ) -> IntoDataFrameT:
-    if is_into_data_frame(data):
-        return data
+    """
+    Convert data to pandas, if possible.
 
+    Should only call this method if Narwhals can not handle the data directly.
+    """
     # Legacy support for non-Pandas/Polars data frames that were previously supported
     # and converted to pandas
     if isinstance(data, PandasCompatible):
@@ -101,7 +109,7 @@ def as_native_data_frame(
 #     return True
 
 
-# TODO-barret; Replace with `nw.is_into_data_frame(x)`
+# TODO-barret; Replace with `nw.is_into_data_frame(x)`?
 def is_into_data_frame(
     data: IntoDataFrameT | object,
 ) -> TypeIs[IntoDataFrameT]:
