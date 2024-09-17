@@ -930,11 +930,6 @@ class InputSelectWidthM:
     This class provides methods to expect the width attribute of a DOM element.
     """
 
-    loc_container: Locator
-    """
-    Playwright `Locator` for the label of the UI element.
-    """
-
     def expect_width(
         self: UiWithContainerP,
         value: AttrValue,
@@ -955,7 +950,11 @@ class InputSelectWidthM:
 
 
 class InputSelect(InputSelectWidthM, UiWithLabel):
-    """Controller for :func:`shiny.ui.input_select`."""
+    """
+    Controller for :func:`shiny.ui.input_select`.
+
+    If you have defined your app's select input (`ui.input_select()`) with `selectize=TRUE`, use `InputSelectize` to test your app's UI.
+    """
 
     def __init__(self, page: Page, id: str) -> None:
         """
@@ -973,30 +972,9 @@ class InputSelect(InputSelectWidthM, UiWithLabel):
             id=id,
             loc=f"select#{id}.shiny-bound-input.form-select",
         )
-        # self.loc = self.page.locator("select#{id}.shiny-bound-input.form-select")
         self.loc_selected = self.loc.locator("option:checked")
         self.loc_choices = self.loc.locator("option")
         self.loc_choice_groups = self.loc.locator("optgroup")
-
-    # selectize: bool = False,
-    def expect_selectize(self, value: bool, *, timeout: Timeout = None) -> None:
-        """
-        Expect the input select to be selectize.
-
-        Parameters
-        ----------
-        value
-            Whether the input select is selectize.
-        timeout
-            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
-        """
-        # class_=None if selectize else "form-select",
-        _expect_class_to_have_value(
-            self.loc,
-            "form-select",
-            has_class=not value,
-            timeout=timeout,
-        )
 
     def set(
         self,
@@ -1018,9 +996,29 @@ class InputSelect(InputSelectWidthM, UiWithLabel):
             selected = [selected]
         self.loc.select_option(value=selected, timeout=timeout)
 
+    # If `selectize=` parameter does not become deprecated, uncomment this
+    # # selectize: bool = False,
+    # def expect_selectize(self, value: bool, *, timeout: Timeout = None) -> None:
+    #     """
+    #     Expect the input select to be selectize.
+
+    #     Parameters
+    #     ----------
+    #     value
+    #         Whether the input select is selectize.
+    #     timeout
+    #         The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+    #     """
+    #     # class_=None if selectize else "form-select",
+    #     _expect_class_to_have_value(
+    #         self.loc,
+    #         "form-select",
+    #         has_class=not value,
+    #         timeout=timeout,
+    #     )
+
     def expect_choices(
         self,
-        # TODO-future; support patterns?
         choices: ListPatternOrStr,
         *,
         timeout: Timeout = None,
@@ -1152,12 +1150,12 @@ class InputSelect(InputSelectWidthM, UiWithLabel):
         timeout
             The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
-        if value:
-            _expect_attribute_to_have_value(self.loc, "multiple", "", timeout=timeout)
-        else:
-            playwright_expect(self.loc).not_to_have_attribute(
-                "multiple", "", timeout=timeout
-            )
+        _expect_attribute_to_have_value(
+            self.loc,
+            "multiple",
+            value="" if value else None,
+            timeout=timeout,
+        )
 
     def expect_size(self, value: AttrValue, *, timeout: Timeout = None) -> None:
         """
