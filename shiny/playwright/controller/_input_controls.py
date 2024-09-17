@@ -1147,12 +1147,10 @@ class InputSelect(UiWithLabel, _InputSelectBase):
             The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
         if value:
-            playwright_expect(self.loc).to_have_attribute(
-                "multiple", "", timeout=timeout
-            )
+            _expect_attribute_to_have_value(self.loc, "multiple", "", timeout=timeout)
         else:
             playwright_expect(self.loc).not_to_have_attribute(
-                "multiple", "multiple", timeout=timeout
+                "multiple", "", timeout=timeout
             )
 
     def expect_size(self, value: AttrValue, *, timeout: Timeout = None) -> None:
