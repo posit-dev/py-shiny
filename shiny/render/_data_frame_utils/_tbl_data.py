@@ -519,14 +519,26 @@ def subset_frame(
             return data
         else:
             # This feels like it should be `data[rows, :]` but that doesn't work for polars
-            return data[rows]
+            # https://github.com/narwhals-dev/narwhals/issues/989
+            # Must use `list(rows)` as tuples are not supported
+            # https://github.com/narwhals-dev/narwhals/issues/990
+            return data[list(rows), data.columns]
     else:
         # `cols` is not None
         col_names = [data.columns[col] if isinstance(col, int) else col for col in cols]
+        # If len(cols) == 0, then we should return an empty DataFrame
+        # Currently this is broken when backed by pandas.
+        # https://github.com/narwhals-dev/narwhals/issues/989
+        if len(col_names) == 0:
+            # Return a DataFrame with no rows or columns
+            # If there are no columns, there are no Series objects to support any rows
+            return data[[], []]
+
         if rows is None:
             return data[:, col_names]
         else:
-            return data[rows, col_names]
+            # Be sure rows is a list, not a tuple. Tuple
+            return data[list(rows), col_names]
 
 
 # @subset_frame.register
@@ -684,9 +696,6 @@ def copy_frame(nw_data: DataFrameT) -> DataFrameT:
 
 def frame_column_names(into_data: IntoDataFrame) -> List[str]:
     return as_data_frame(into_data).columns
-
-
-nw.narwhalify
 
 
 class ScatterValues(TypedDict):
