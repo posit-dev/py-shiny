@@ -17,6 +17,7 @@ from ..expect._internal import expect_class_to_have_value as _expect_class_to_ha
 from ..expect._internal import expect_style_to_have_value as _expect_style_to_have_value
 from ._base import (
     InitLocator,
+    UiWithContainerP,
     UiWithLabel,
     WidthContainerM,
     WidthLocM,
@@ -922,7 +923,7 @@ class InputSwitch(_InputCheckboxBase):
         )
 
 
-class _InputSelectBase:
+class InputSelectWidthM:
     """
     A base class representing the input `select` and `selectize` widths.
 
@@ -934,7 +935,12 @@ class _InputSelectBase:
     Playwright `Locator` for the label of the UI element.
     """
 
-    def expect_width(self, value: AttrValue, *, timeout: Timeout = None) -> None:
+    def expect_width(
+        self: UiWithContainerP,
+        value: AttrValue,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
         """
         Expect the input select to have a specific width.
 
@@ -948,7 +954,7 @@ class _InputSelectBase:
         _expect_style_to_have_value(self.loc_container, "width", value, timeout=timeout)
 
 
-class InputSelect(UiWithLabel, _InputSelectBase):
+class InputSelect(InputSelectWidthM, UiWithLabel):
     """Controller for :func:`shiny.ui.input_select`."""
 
     def __init__(self, page: Page, id: str) -> None:
@@ -1172,7 +1178,7 @@ class InputSelect(UiWithLabel, _InputSelectBase):
         )
 
 
-class InputSelectize(UiWithLabel, _InputSelectBase):
+class InputSelectize(InputSelectWidthM, UiWithLabel):
     """Controller for :func:`shiny.ui.input_selectize`."""
 
     def __init__(self, page: Page, id: str) -> None:
