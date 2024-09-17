@@ -20,6 +20,7 @@ def test_input_selectize_kitchensink(page: Page, local_app: ShinyAppProc) -> Non
     multiple_selectize.expect_selected(["Banana", "Cherry"])
     multiple_selectize_txt.expect_value("Multi select: Banana, Cherry")
     for option in multiple_options:
+        # click on the remove button for each selected option
         multiple_selectize.loc.locator(
             f"+ div.plugin-remove_button > .has-options > .item[data-value={option}] > .remove"
         ).click()
