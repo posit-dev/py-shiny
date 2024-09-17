@@ -20,7 +20,6 @@ from ._base import (
     UiWithLabel,
     WidthContainerM,
     WidthLocM,
-    _expect_multiple,
     all_missing,
     not_is_missing,
 )
@@ -923,14 +922,14 @@ class InputSwitch(_InputCheckboxBase):
         )
 
 
-class InputSelectionWidthM:
+class _InputSelectBase:
     """
-    A mixin class representing the input `select` and `selectize` widths.
+    A base class representing the input `select` and `selectize` widths.
 
     This class provides methods to expect the width attribute of a DOM element.
     """
 
-    loc_label: Locator
+    loc_container: Locator
     """
     Playwright `Locator` for the label of the UI element.
     """
@@ -946,34 +945,13 @@ class InputSelectionWidthM:
         timeout
             The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
-        _expect_style_to_have_value(
-            self.loc_label.locator(".."), "width", value, timeout=timeout
-        )
+        _expect_style_to_have_value(self.loc_container, "width", value, timeout=timeout)
 
 
-class _InputSelectBase(
-    UiWithLabel,
-):
-    loc_selected: Locator
-    """
-    Playwright `Locator` for the selected option of the input select.
-    """
-    loc_choices: Locator
-    """
-    Playwright `Locator` for the choices of the input select.
-    """
-    loc_choice_groups: Locator
-    """
-    Playwright `Locator` for the choice groups of the input select.
-    """
+class InputSelect(UiWithLabel, _InputSelectBase):
+    """Controller for :func:`shiny.ui.input_select`."""
 
-    def __init__(
-        self,
-        page: Page,
-        id: str,
-        *,
-        select_class: str = "",
-    ) -> None:
+    def __init__(self, page: Page, id: str) -> None:
         """
         Initializes the input select.
 
@@ -983,17 +961,36 @@ class _InputSelectBase(
             The page where the input select is located.
         id
             The id of the input select.
-        select_class
-            The class of the select element. Defaults to "".
         """
         super().__init__(
             page,
             id=id,
-            loc=f"select#{id}.shiny-bound-input{select_class}",
+            loc=f"select#{id}.shiny-bound-input.form-select",
         )
+        # self.loc = self.page.locator("select#{id}.shiny-bound-input.form-select")
         self.loc_selected = self.loc.locator("option:checked")
         self.loc_choices = self.loc.locator("option")
         self.loc_choice_groups = self.loc.locator("optgroup")
+
+    # selectize: bool = False,
+    def expect_selectize(self, value: bool, *, timeout: Timeout = None) -> None:
+        """
+        Expect the input select to be selectize.
+
+        Parameters
+        ----------
+        value
+            Whether the input select is selectize.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        # class_=None if selectize else "form-select",
+        _expect_class_to_have_value(
+            self.loc,
+            "form-select",
+            has_class=not value,
+            timeout=timeout,
+        )
 
     def set(
         self,
@@ -1138,10 +1135,9 @@ class _InputSelectBase(
             return
         playwright_expect(self.loc_choices).to_have_text(value, timeout=timeout)
 
-    # multiple: bool = False,
     def expect_multiple(self, value: bool, *, timeout: Timeout = None) -> None:
         """
-        Expect the input select to allow multiple selections.
+        Expect the input selectize to allow multiple selections.
 
         Parameters
         ----------
@@ -1150,7 +1146,14 @@ class _InputSelectBase(
         timeout
             The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
-        _expect_multiple(self.loc, value, timeout=timeout)
+        if value:
+            playwright_expect(self.loc).to_have_attribute(
+                "multiple", "", timeout=timeout
+            )
+        else:
+            playwright_expect(self.loc).not_to_have_attribute(
+                "multiple", "multiple", timeout=timeout
+            )
 
     def expect_size(self, value: AttrValue, *, timeout: Timeout = None) -> None:
         """
@@ -1171,48 +1174,7 @@ class _InputSelectBase(
         )
 
 
-class InputSelect(_InputSelectBase, InputSelectionWidthM):
-    """Controller for :func:`shiny.ui.input_select`."""
-
-    def __init__(self, page: Page, id: str) -> None:
-        """
-        Initializes the input select.
-
-        Parameters
-        ----------
-        page
-            The page where the input select is located.
-        id
-            The id of the input select.
-        """
-        super().__init__(
-            page,
-            id=id,
-            select_class=".form-select",
-        )
-
-    # selectize: bool = False,
-    def expect_selectize(self, value: bool, *, timeout: Timeout = None) -> None:
-        """
-        Expect the input select to be selectize.
-
-        Parameters
-        ----------
-        value
-            Whether the input select is selectize.
-        timeout
-            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
-        """
-        # class_=None if selectize else "form-select",
-        _expect_class_to_have_value(
-            self.loc,
-            "form-select",
-            has_class=not value,
-            timeout=timeout,
-        )
-
-
-class InputSelectize(UiWithLabel, InputSelectionWidthM):
+class InputSelectize(UiWithLabel, _InputSelectBase):
     """Controller for :func:`shiny.ui.input_selectize`."""
 
     def __init__(self, page: Page, id: str) -> None:
@@ -1230,9 +1192,6 @@ class InputSelectize(UiWithLabel, InputSelectionWidthM):
         # We are only guaranteed to have `data-value` attribute for each _option_
         self.loc_choices = self._loc_selectize.locator("[data-value]")
         self.loc_selected = self.loc_container.locator(f"select#{id} > option")
-        self.clear = self.loc.locator("..").locator(
-            "> div.plugin-clear_button > a.clear"
-        )
 
     def set(
         self,
