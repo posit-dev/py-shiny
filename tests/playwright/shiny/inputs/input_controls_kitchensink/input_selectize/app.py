@@ -4,6 +4,14 @@ ui.page_opts(title="Selectize Inputs kitchensink")
 
 fruits = ["Apple", "Banana", "Cherry", "Date", "Elderberry"]
 fruits_dict = {
+    "apple": "Apple",
+    "banana": "Banana",
+    "cherry": "Cherry",
+    "date": "Date",
+    "elderberry": "Elderberry",
+}
+
+fruits_grouped_dict = {
     "Citrus": {
         "Orange": "Sweet and tangy",
         "Lemon": "Zesty and refreshing",
@@ -17,41 +25,53 @@ fruits_dict = {
 }
 
 
+# Currently not wrapping in cards, as opening the selectize within a short card hides the selectize dropdown
 ui.input_selectize("basic_selectize", "Default selectize", fruits)
+
+
+@render.code
+def basic_result_txt():
+    return str(input.basic_selectize())
+
+
+ui.input_selectize("selectize_with_label", "Selectize with label", fruits_dict)
+
+
+@render.code
+def selectize_with_label_txt():
+    return str(input.selectize_with_label())
 
 
 ui.input_selectize("multi_selectize", "Multiple Selectize", fruits, multiple=True)
 
 
+@render.code
+def multi_result_txt():
+    return ", ".join(input.multi_selectize())
+
+
 ui.input_selectize(
-    "selectize_with_selected", "Selectize with selected", fruits, selected="Cherry"
+    "selectize_with_selected",
+    "Selectize with selected",
+    fruits,
+    selected="Cherry",
 )
+
+
+@render.code
+def selected_result_txt():
+    return str(input.selectize_with_selected())
 
 
 ui.input_selectize(
     "selectize_width_close_button",
     "Selectize with Custom Width and remove btn",
-    fruits_dict,
+    fruits_grouped_dict,
     width="400px",
     remove_button=True,
 )
 
 
-@render.text
-def basic_result_txt():
-    return f"Basic select: {input.basic_selectize()}"
-
-
-@render.text
-def multi_result_txt():
-    return f"Multi select: {', '.join(input.multi_selectize())}"
-
-
-@render.text
-def selected_result_txt():
-    return f"Select with selected: {input.selectize_with_selected()}"
-
-
-@render.text
+@render.code
 def selectize_width_close_button_txt():
-    return f"Selectize with close button: {input.selectize_width_close_button()}"
+    return str(input.selectize_width_close_button())
