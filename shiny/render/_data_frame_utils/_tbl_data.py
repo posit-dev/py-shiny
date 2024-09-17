@@ -431,7 +431,7 @@ def serialize_frame(into_data: IntoDataFrame) -> FrameJson:
     data = as_data_frame(into_data)
 
     type_hints = [serialize_dtype(data[col_name]) for col_name in data.columns]
-    type_hints_type = (type_hint["type"] for type_hint in type_hints)
+    type_hints_type = [type_hint["type"] for type_hint in type_hints]
 
     data_rows = data.rows(named=False)
 
@@ -511,6 +511,7 @@ def subset_frame(
 
     Note that when None is passed, all rows or columns get included.
     """
+
     # Note that this type signature assumes column names are strings things.
     # This is always true in Polars, but not in Pandas (e.g. a column name could be an
     # int, or even a tuple of ints)
