@@ -342,16 +342,18 @@ def _(col: nw.Series) -> FrameDtype:
         categories = col.cat.get_categories().to_list()
         return {"type": "categorical", "categories": categories}
     elif dtype == nw_enum:
-        raise NotImplementedError("enum type not tested")
+        raise NotImplementedError("TODO-barret; enum type not tested")
         cat_col = col.cast(nw.Categorical)
         categories = cat_col.cat.get_categories().to_list()
         return {"type": "categorical", "categories": categories}
 
     elif dtype == nw_boolean:
-        raise NotImplementedError("boolean type not tested")
+        raise NotImplementedError("TODO-barret; boolean type not tested")
         type_ = "boolean"
     elif dtype == nw_duration:
-        raise NotImplementedError("duration type not tested")
+        raise NotImplementedError(
+            "TODO-barret; duration type not tested. Look at pandas timedelta"
+        )
         type_ = "duration"
     elif dtype == nw_datetime:
         type_ = "datetime"
