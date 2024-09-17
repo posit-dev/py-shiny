@@ -189,6 +189,9 @@ def apply_frame_patches(
 ) -> DataFrame[IntoDataFrameT]:
     # data = data.clone()
 
+    if len(patches) == 0:
+        return nw_data
+
     # Us an index to know which row we are updating
     data_with_index = nw_data.with_row_index()
 
