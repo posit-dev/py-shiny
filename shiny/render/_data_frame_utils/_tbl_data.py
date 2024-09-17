@@ -431,7 +431,7 @@ def serialize_frame(into_data: IntoDataFrame) -> FrameJson:
     data = as_data_frame(into_data)
 
     type_hints = [serialize_dtype(data[col_name]) for col_name in data.columns]
-    type_hints_type = {type_hint["type"] for type_hint in type_hints}
+    type_hints_type = (type_hint["type"] for type_hint in type_hints)
 
     data_rows = data.rows(named=False)
 
