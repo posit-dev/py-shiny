@@ -464,8 +464,8 @@ class data_frame(
 
             nw_data = subset_frame(self._data_patched(), rows=rows)
 
-            to_original_type = self._nw_data_to_original_type_fn()
-            patched_subsetted_into_data = to_original_type(nw_data)
+            to_original_type_fn = self._nw_data_to_original_type_fn()
+            patched_subsetted_into_data = to_original_type_fn(nw_data)
 
             return patched_subsetted_into_data
 
@@ -714,8 +714,8 @@ class data_frame(
                 return
 
             # TODO-barret; Use the returned data type from the rener function!
-            to_original_type = self._nw_data_to_original_type_fn()
-            patched_into_data = to_original_type(self._data_patched())
+            to_original_type_fn = self._nw_data_to_original_type_fn()
+            patched_into_data = to_original_type_fn(self._data_patched())
             new_styles = as_browser_style_infos(styles_fn, into_data=patched_into_data)
 
             await self._send_message_to_browser(
