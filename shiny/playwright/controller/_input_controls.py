@@ -1362,17 +1362,6 @@ class InputSelectize(UiWithLabel, _InputSelectBase):
         else:
             _expect_attribute_to_have_value(self.loc, "multiple", None, timeout=timeout)
 
-    def clear_selection(self, *, timeout: Timeout = None) -> None:
-        """
-        Clear the current selection of the input selectize.
-
-        Parameters
-        ----------
-        timeout
-            The maximum time to wait for the selection to be cleared. Defaults to `None`.
-        """
-        self.clear.click(timeout=timeout)
-
 
 class InputSlider(_InputSliderBase):
     """Controller for :func:`shiny.ui.input_slider`."""
