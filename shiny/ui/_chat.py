@@ -489,7 +489,7 @@ class Chat:
                     transform_user == "last" and i == len(messages) - 1
                 )
             content_key = m["transform_key" if transform else "pre_transform_key"]
-            chat_msg = ChatMessage(content=m[content_key], role=m["role"])
+            chat_msg = ChatMessage(content=str(m[content_key]), role=m["role"])
             if not isinstance(format, MISSING_TYPE):
                 chat_msg = as_provider_message(chat_msg, format)
             res.append(chat_msg)
@@ -635,7 +635,7 @@ class Chat:
         content_type = "html" if isinstance(content, HTML) else "markdown"
 
         msg = ClientMessage(
-            content=content,
+            content=str(content),
             role=message["role"],
             content_type=content_type,
             chunk_type=chunk_type,
@@ -790,7 +790,7 @@ class Chat:
         if content is None:
             return None
 
-        res[key] = content
+        res[key] = content  # type: ignore
 
         return res
 
@@ -950,7 +950,7 @@ class Chat:
         if msg is None:
             return None
         key = "content_server" if transform else "content_client"
-        return msg[key]
+        return str(msg[key])
 
     def _user_input(self) -> str:
         id = self.user_input_id
