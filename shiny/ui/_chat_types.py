@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Literal, TypedDict
 
+from htmltools import HTML
+
 Role = Literal["assistant", "user", "system"]
 
 
@@ -14,7 +16,7 @@ class ChatMessage(TypedDict):
 
 # A message once transformed have been applied
 class TransformedMessage(TypedDict):
-    content_client: str
+    content_client: str | HTML
     content_server: str
     role: Role
     transform_key: Literal["content_client", "content_server"]

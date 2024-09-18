@@ -2,6 +2,8 @@ import sys
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Optional, cast
 
+from htmltools import HTML
+
 from ._chat_types import ChatMessage
 
 if TYPE_CHECKING:
@@ -49,10 +51,10 @@ class StringNormalizer(BaseMessageNormalizer):
         return ChatMessage(content=x or "", role="assistant")
 
     def can_normalize(self, message: Any) -> bool:
-        return isinstance(message, str) or message is None
+        return isinstance(message, (str, HTML)) or message is None
 
     def can_normalize_chunk(self, chunk: Any) -> bool:
-        return isinstance(chunk, str) or chunk is None
+        return isinstance(chunk, (str, HTML)) or chunk is None
 
 
 class DictNormalizer(BaseMessageNormalizer):
