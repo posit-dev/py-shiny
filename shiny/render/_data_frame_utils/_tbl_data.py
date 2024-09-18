@@ -272,9 +272,9 @@ def apply_frame_patches(
 # serialize_dtype ----------------------------------------------------------------------
 
 
-@singledispatch
-def serialize_dtype(col: SeriesLike) -> FrameDtype:
-    raise TypeError(f"Unsupported type: {type(col)}")
+# @singledispatch
+# def serialize_dtype(col: SeriesLike) -> FrameDtype:
+#     raise TypeError(f"Unsupported type: {type(col)}")
 
 
 # TODO: we can't import DataFrameDtype at runtime, due to circular dependency. So
@@ -323,8 +323,9 @@ nw_duration = nw.Duration()
 nw_object = nw.Object()
 
 
-@serialize_dtype.register
-def _(col: nw.Series) -> FrameDtype:
+# @serialize_dtype.register
+# def _(col: nw.Series) -> FrameDtype:
+def serialize_dtype(col: nw.Series) -> FrameDtype:
 
     from ._html import col_contains_shiny_html
 
@@ -435,9 +436,6 @@ def serialize_frame(into_data: IntoDataFrame) -> FrameJson:
 
     data_rows = data.rows(named=False)
 
-    # print(data_rows)
-    # print(data.rows(named=False))
-
     # Shiny tag support
     if "html" in type_hints_type:
         session = require_active_session(None)
@@ -467,10 +465,11 @@ def serialize_frame(into_data: IntoDataFrame) -> FrameJson:
     # TODO-barret; Remove debug! Maybe?
     native_data = nw.to_native(data)
     if isinstance(native_data, PdDataFrame):
+        # print("types:", type_hints_type, type_hints)
         from pandas import Timestamp
 
         def my_str(x: Any) -> str:
-            print("x", x)
+            # print("barret-pandas value!", x)
             if isinstance(x, Timestamp):
                 return x.isoformat()
 

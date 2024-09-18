@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Union
+from typing import Any, Union, cast
 
 import narwhals.stable.v1 as nw
 import pandas as pd
@@ -19,7 +19,27 @@ from shiny.render._data_frame_utils._tbl_data import (
     subset_frame,
 )
 from shiny.render._data_frame_utils._types import IntoDataFrame, SeriesLike
-from shiny.ui import HTML, h1
+from shiny.session import Session, session_context
+from shiny.session._session import RenderedDeps, ResolvedId, Root
+from shiny.ui import HTML, TagChild, TagList, h1, span
+
+
+class _MockSession:
+    ns: ResolvedId = Root
+
+    # Simplified version of `AppSession._process_ui()`
+    def _process_ui(self, ui: TagChild) -> RenderedDeps:
+        res = TagList(ui).render()
+        deps: list[dict[str, Any]] = []
+        # for dep in res["dependencies"]:
+        #     self.app._register_web_dependency(dep)
+        #     dep_dict = dep.as_dict(lib_prefix=self.app.lib_prefix)
+        #     deps.append(dep_dict)
+
+        return {"deps": deps, "html": res["html"]}
+
+
+test_session = cast(Session, _MockSession())
 
 
 class C:
@@ -42,14 +62,17 @@ DATA = {
     "chr": ["a", "b"],
     "cat": ["a", "a"],
     "dt": [datetime(2000, 1, 2)] * 2,
-    # TODO: mock session in tests (needed for registering dependencies)
-    # "html": [htmltools.span("span content")] * 2,
-    # "html_str": [htmltools.HTML("<strong>bolded</strong>")] * 2,
-    # TODO: ts code to stringify objects
+    "html": [span("span content")] * 2,
+    "html_str": [HTML("<strong>bolded</strong>")] * 2,
+    # TODO-barret: ts code to stringify objects?
     "struct": [{"x": 1}, {"x": 2}],
     "arr": [[1, 2], [3, 4]],
     "object": [C(1), D(2)],
 }
+
+
+def pandas_dict_to_narwhals(d: dict[str, Any]) -> nw.DataFrame[pd.DataFrame]:
+    return nw.from_native(pd.DataFrame(d), eager_only=True)
 
 
 def polars_dict_to_narwhals(d: dict[str, Any]) -> nw.DataFrame[pl.DataFrame]:
@@ -63,7 +86,8 @@ def series_to_narwhals(ser: SeriesLike) -> nw.Series:
 params_frames = [
     pytest.param(pd.DataFrame, id="pandas"),
     pytest.param(pl.DataFrame, id="polars"),
-    pytest.param(polars_dict_to_narwhals, id="narwhals"),
+    pytest.param(pandas_dict_to_narwhals, id="narwhals-pandas"),
+    pytest.param(polars_dict_to_narwhals, id="narwhals-polars"),
 ]
 
 
@@ -121,7 +145,8 @@ def assert_frame_equal2(
         (pl.Series(["a"], dtype=pl.Categorical), "categorical"),
         (pl.Series([{"x": 1}]), "unknown"),
         (pl.Series([h1("yo")]), "html"),
-        pytest.param(pl.Series([HTML("yo")]), "html", marks=pytest.mark.xfail),
+        # TODO-barret; Need https://github.com/posit-dev/py-htmltools/pull/86 to be merged to remove custom dtype
+        (pl.Series([HTML("yo")], dtype=pl.Object), "html"),
         # pandas ----
         (pd.Series([1]), "numeric"),
         (pd.Series([1.1]), "numeric"),
@@ -147,6 +172,7 @@ def test_serialize_dtype(
 
 
 def test_serialize_frame(df_f: IntoDataFrame):
+
     # if not isinstance(df_f, pl.DataFrame):
     #     pytest.skip()
 
@@ -157,21 +183,71 @@ def test_serialize_frame(df_f: IntoDataFrame):
     # if isinstance(df_f, pl.DataFrame):
     #     pytest.xfail()
 
-    res = serialize_frame(df_nw)
+    is_polars_backed = isinstance(
+        nw.to_native(nw.from_native(df_f, eager_only=True)), pl.DataFrame
+    )
+
+    with session_context(test_session):
+        res = serialize_frame(df_nw)
     assert res == {
-        "columns": ["num", "chr", "cat", "dt", "struct", "arr", "object"],
-        # "index": [0, 1],
+        "columns": [
+            "num",
+            "chr",
+            "cat",
+            "dt",
+            "html",
+            "html_str",
+            "struct",
+            "arr",
+            "object",
+        ],
         "data": [
-            [1, "a", "a", "2000-01-02T00:00:00", {"x": 1}, [1, 2], "<C object>"],
-            [2, "b", "a", "2000-01-02T00:00:00", {"x": 2}, [3, 4], {"y": 2}],
+            [
+                1,
+                "a",
+                "a",
+                "2000-01-02T00:00:00",
+                {
+                    "isShinyHtml": True,
+                    "obj": {"deps": [], "html": "<span>span content</span>"},
+                },
+                {
+                    "isShinyHtml": True,
+                    "obj": {"deps": [], "html": "<strong>bolded</strong>"},
+                },
+                {"x": 1},
+                [1, 2],
+                "<C object>",
+            ],
+            [
+                2,
+                "b",
+                "a",
+                "2000-01-02T00:00:00",
+                {
+                    "isShinyHtml": True,
+                    "obj": {"deps": [], "html": "<span>span content</span>"},
+                },
+                {
+                    "isShinyHtml": True,
+                    "obj": {"deps": [], "html": "<strong>bolded</strong>"},
+                },
+                {"x": 2},
+                [3, 4],
+                {"y": 2},
+            ],
         ],
         "typeHints": [
             {"type": "numeric"},
             {"type": "string"},
             {"type": "string"},
             {"type": "datetime"},
-            {"type": "object" if (isinstance(df_f, pd.DataFrame)) else "unknown"},
-            {"type": "object" if (isinstance(df_f, pd.DataFrame)) else "unknown"},
+            {"type": "html"},
+            {"type": "html"},
+            # Polars doesn't have a way to represent a struct,
+            # so Narwhals marks it as unknown
+            {"type": "unknown" if is_polars_backed else "object"},
+            {"type": "unknown" if is_polars_backed else "object"},
             {"type": "object"},
         ],
     }
@@ -185,8 +261,8 @@ def test_subset_frame(df_f: IntoDataFrame):
     assert_frame_equal2(res, dst)
 
 
-# def test_get_frame_cell(df_f: IntoDataFrameT):
-#     assert get_frame_cell(df_f, 1, 1) == "b"
+def test_get_frame_cell(df_f: IntoDataFrame):
+    assert as_data_frame(df_f).item(1, 1) == "b"
 
 
 def test_copy_frame(df_f: IntoDataFrame):
