@@ -4,7 +4,7 @@ import warnings
 
 # TODO-barret-render.data_frame; Docs
 # TODO-barret-render.data_frame; Add examples!
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, Literal, cast
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Literal, Union, cast
 
 from htmltools import Tag
 
@@ -60,7 +60,7 @@ if TYPE_CHECKING:
 @add_example()
 class data_frame(
     Renderer[
-        None | IntoDataFrameT | DataGrid[IntoDataFrameT] | DataTable[IntoDataFrameT]
+        Union[None, IntoDataFrameT, DataGrid[IntoDataFrameT], DataTable[IntoDataFrameT]]
     ]
 ):
     """
