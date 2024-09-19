@@ -1,0 +1,34 @@
+name: 'check py-shiny'
+description: 'Action that checks py-shiny in multiple steps so that any of them may fail but not prevent the others from running'
+runs:
+  using: "composite"
+  steps:
+    - name: Run unit tests
+      if: steps.install.outcome == 'success' && (success() || failure())
+      shell: bash
+      run: |
+        make check-tests
+
+    - name: Type check
+      if: steps.install.outcome == 'success' && (success() || failure())
+      shell: bash
+      run: |
+        make check-types
+
+    - name: Lint code
+      if: steps.install.outcome == 'success' && (success() || failure())
+      shell: bash
+      run: |
+        make check-lint
+
+    - name: Verify code formatting
+      if: steps.install.outcome == 'success' && (success() || failure())
+      shell: bash
+      run: |
+        make check-format
+
+    - name: Verify code can run with mypy (not Windows)
+      if: ${{ runner.os != 'Windows' }}
+      shell: bash
+      run: |
+        make ci-check-mypy-can-run
