@@ -82,10 +82,11 @@ app_ui = ui.page_fluid(
     ),
     slider_row(
         "Time format",
-        min=(datetime.datetime(2024, 1, 1, 0, 0)),
-        max=(datetime.datetime(2024, 1, 10, 23, 59)),
-        value=(datetime.datetime(2024, 1, 5, 12, 00)),
+        min=(datetime.datetime(2024, 1, 1, 0, 0, tzinfo=datetime.timezone.utc)),
+        max=(datetime.datetime(2024, 1, 10, 23, 59, tzinfo=datetime.timezone.utc)),
+        value=(datetime.datetime(2024, 1, 5, 12, 00, tzinfo=datetime.timezone.utc)),
         width="600px",
+        timezone="0000",
     ),
     slider_row(
         "Drag Range (Disabled)",

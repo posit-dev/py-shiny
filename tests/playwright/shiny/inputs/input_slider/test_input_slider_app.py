@@ -17,10 +17,11 @@ def convert_to_utc_date(date_str: str) -> str:
 
 
 def convert_to_utc_date_time(date_time_str: str) -> str:
-    date_time = datetime.datetime.strptime(date_time_str, "%Y-%m-%d %H:%M:%S")
-    utc_time = date_time.astimezone(datetime.timezone.utc)
-    utc_timestamp = str(utc_time.timestamp() * 1000)
-    return utc_timestamp
+    date_time_obj = datetime.datetime.strptime(date_time_str, "%Y-%m-%d %H:%M:%S")
+    utc_timestamp = (
+        date_time_obj.replace(tzinfo=datetime.timezone.utc).timestamp() * 1000
+    )
+    return str(utc_timestamp)
 
 
 def test_slider_regular(page: Page, local_app: ShinyAppProc) -> None:
@@ -188,18 +189,19 @@ def test_slider_time_format(page: Page, local_app: ShinyAppProc) -> None:
 
     s6 = controller.InputSlider(page, "s6")
     s6.expect_label("Time format")
+    s6.expect_timezone("0000")
     s6.expect_value("2024-01-05 12:00:00")
     s6.expect_min(convert_to_utc_date_time("2024-01-01 00:00:00"))
     s6.expect_max(convert_to_utc_date_time("2024-01-10 23:59:00"))
     s6.expect_time_format("%F %T")
     s6.expect_width("600px")
     s6.expect_drag_range(None)
-    controller.OutputTextVerbatim(page, "txt6").expect_value("2024-01-05 20:00:00")
+    controller.OutputTextVerbatim(page, "txt6").expect_value("2024-01-05 12:00:00")
 
     new_val = "2024-01-01 00:00:00"
     s6.set(new_val)
     s6.expect_value(new_val)
-    controller.OutputTextVerbatim(page, "txt6").expect_value("2024-01-01 08:00:00")
+    controller.OutputTextVerbatim(page, "txt6").expect_value("2024-01-01 00:00:00")
 
 
 def test_slider_drag_range_disabled(page: Page, local_app: ShinyAppProc) -> None:
