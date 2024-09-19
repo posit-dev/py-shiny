@@ -173,7 +173,7 @@ def test_slider_date_format(page: Page, local_app: ShinyAppProc) -> None:
     s5.expect_min(convert_to_utc_date("01/01/24"))
     s5.expect_max(convert_to_utc_date("01/10/24"))
     s5.expect_time_format("%m/%d/%y")
-    s5.expect_timezone("-0500")
+    s5.expect_timezone("0000")
     s5.expect_drag_range(None)
     controller.OutputTextVerbatim(page, "txt5").expect_value("2024-01-05")
 
