@@ -6,7 +6,7 @@ import asyncio
 from typing import cast
 
 import pytest
-from htmltools import Tag, TagList
+from htmltools import HTML, Tag, TagList
 
 from shiny import App, Inputs, Outputs, Session, module, reactive, ui
 from shiny._connection import MockConnection
@@ -28,7 +28,7 @@ def mod_outer_ui() -> TagList:
     return TagList(mod_inner_ui("inner"), ui.output_text("out2"))
 
 
-def get_id(x: TagList, child_idx: int = 0) -> str:
+def get_id(x: TagList, child_idx: int = 0) -> str | HTML:
     return cast(Tag, x[child_idx]).attrs["id"]
 
 
@@ -44,7 +44,7 @@ def test_module_ui():
 
 @pytest.mark.asyncio
 async def test_session_scoping():
-    sessions: dict[str, Session | str | None] = {}
+    sessions: dict[str, Session | str | HTML | None] = {}
 
     @module.server
     def inner_server(input: Inputs, output: Outputs, session: Session):

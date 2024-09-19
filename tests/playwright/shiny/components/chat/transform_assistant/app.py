@@ -1,3 +1,5 @@
+from typing import Union
+
 from shiny.express import render, ui
 
 # Set some Shiny page options
@@ -12,7 +14,7 @@ chat.ui()
 
 # TODO: test with append_message_stream() as well
 @chat.transform_assistant_response
-def transform(content: str) -> str:
+def transform(content: str) -> Union[str, ui.HTML]:
     if content == "return HTML":
         return ui.HTML(f"<b>Transformed response</b>: {content}")
     else:

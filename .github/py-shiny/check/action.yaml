@@ -1,0 +1,35 @@
+name: 'check py-shiny'
+description: 'Action that checks py-shiny in multiple steps so that any of them may fail but not prevent the others from running. Note, this action is used by py-htmltools as a way to consistently check py-shiny. If more checks are needed for py-htmltools to believe py-shiny is working, it should be added here.'
+runs:
+  using: "composite"
+  steps:
+    - name: Run unit tests
+      shell: bash
+      run: |
+        # Run unit tests
+        make check-tests
+
+    - name: Type check
+      shell: bash
+      run: |
+        # Type check
+        make check-types
+
+    - name: Lint code
+      shell: bash
+      run: |
+        # Lint code
+        make check-lint
+
+    - name: Verify code formatting
+      shell: bash
+      run: |
+        # Verify code formatting
+        make check-format
+
+    - name: Verify code can run with mypy (not Windows)
+      if: ${{ runner.os != 'Windows' }}
+      shell: bash
+      run: |
+        # Verify code can run with mypy (not Windows)
+        make ci-check-mypy-can-run

@@ -1,7 +1,6 @@
 from playwright.sync_api import Page, expect
 from utils.deploy_utils import skip_on_webkit
 
-from shiny import ui
 from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
@@ -48,7 +47,7 @@ def test_validate_chat_transform_assistant(page: Page, local_app: ShinyAppProc) 
             {"content": "Transformed response: `hello`", "role": "assistant"},
             {"content": "return HTML", "role": "user"},
             {
-                "content": ui.HTML("<b>Transformed response</b>: return HTML"),
+                "content": "<b>Transformed response</b>: return HTML",
                 "role": "assistant",
             },
         ]
