@@ -4,31 +4,32 @@ runs:
   using: "composite"
   steps:
     - name: Run unit tests
-      if: steps.install.outcome == 'success' && (success() || failure())
       shell: bash
       run: |
+        # Run unit tests
         make check-tests
 
     - name: Type check
-      if: steps.install.outcome == 'success' && (success() || failure())
       shell: bash
       run: |
+        # Type check
         make check-types
 
     - name: Lint code
-      if: steps.install.outcome == 'success' && (success() || failure())
       shell: bash
       run: |
+        # Lint code
         make check-lint
 
     - name: Verify code formatting
-      if: steps.install.outcome == 'success' && (success() || failure())
       shell: bash
       run: |
+        # Verify code formatting
         make check-format
 
     - name: Verify code can run with mypy (not Windows)
       if: ${{ runner.os != 'Windows' }}
       shell: bash
       run: |
+        # Verify code can run with mypy (not Windows)
         make ci-check-mypy-can-run
