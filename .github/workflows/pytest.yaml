@@ -3,7 +3,7 @@ name: Run tests
 on:
   workflow_dispatch:
   push:
-    branches: ["main", "rc-*", "htmltools_type_changes"]
+    branches: ["main", "rc-*"]
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
   release:
@@ -38,34 +38,30 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Check
+      - name: Run unit tests
         if: steps.install.outcome == 'success' && (success() || failure())
-        uses: ./.github/py-shiny/check
+        run: |
+          make check-tests
 
-      # - name: Run unit tests
-      #   if: steps.install.outcome == 'success' && (success() || failure())
-      #   run: |
-      #     make check-tests
+      - name: Type check
+        if: steps.install.outcome == 'success' && (success() || failure())
+        run: |
+          make check-types
 
-      # - name: Type check
-      #   if: steps.install.outcome == 'success' && (success() || failure())
-      #   run: |
-      #     make check-types
+      - name: Lint code
+        if: steps.install.outcome == 'success' && (success() || failure())
+        run: |
+          make check-lint
 
-      # - name: Lint code
-      #   if: steps.install.outcome == 'success' && (success() || failure())
-      #   run: |
-      #     make check-lint
+      - name: Verify code formatting
+        if: steps.install.outcome == 'success' && (success() || failure())
+        run: |
+          make check-format
 
-      # - name: Verify code formatting
-      #   if: steps.install.outcome == 'success' && (success() || failure())
-      #   run: |
-      #     make check-format
-
-      # - name: Verify code can run with mypy (not Windows)
-      #   if: steps.install.outcome == 'success' && (success() || failure()) && matrix.os != 'windows-latest'
-      #   run: |
-      #     make ci-check-mypy-can-run
+      - name: Verify code can run with mypy (not Windows)
+        if: steps.install.outcome == 'success' && (success() || failure()) && matrix.os != 'windows-latest'
+        run: |
+          make ci-check-mypy-can-run
 
   pypi:
     name: "Deploy to PyPI"
