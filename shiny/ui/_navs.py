@@ -91,11 +91,14 @@ class NavPanel:
 
         return nav, content
 
-    def get_value(self) -> str | HTML | None:
+    def get_value(self) -> str | None:
         if self.content is None:
             return None
         a_tag = cast(Tag, self.nav.children[0])
-        return a_tag.attrs.get("data-value", None)
+        data_value_attr = a_tag.attrs.get("data-value", None)
+        if isinstance(data_value_attr, HTML):
+            data_value_attr = str(data_value_attr)
+        return data_value_attr
 
     def tagify(self) -> None:
         raise NotImplementedError(
@@ -279,7 +282,7 @@ class NavMenu:
             content.children,
         )
 
-    def get_value(self) -> Optional[str]:
+    def get_value(self) -> str | None:
         for x in self.nav_controls:
             val = x.get_value()
             if val:
