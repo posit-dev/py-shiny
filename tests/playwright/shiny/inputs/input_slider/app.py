@@ -74,9 +74,9 @@ app_ui = ui.page_fluid(
     ),
     slider_row(
         "Date format",
-        min=(datetime.date(2024, 1, 1, tzinfo=datetime.timezone.utc)),
-        max=(datetime.date(2024, 1, 10, tzinfo=datetime.timezone.utc)),
-        value=(datetime.date(2024, 1, 5, tzinfo=datetime.timezone.utc)),
+        min=(datetime.date(2024, 1, 1)),
+        max=(datetime.date(2024, 1, 10)),
+        value=(datetime.date(2024, 1, 5)),
         time_format="%m/%d/%y",
         timezone="0000",
     ),
