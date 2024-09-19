@@ -1,5 +1,33 @@
 from __future__ import annotations
 
+import collections.abc
+import copy
+import re
+from typing import Any, Literal, Optional, Sequence, cast
+
+from htmltools import (
+    HTML,
+    MetadataNode,
+    Tag,
+    TagAttrs,
+    TagChild,
+    TagList,
+    css,
+    div,
+    tags,
+)
+
+from .._docstring import add_example
+from .._namespaces import resolve_id_or_none
+from .._utils import private_random_int
+from ..types import NavSetArg
+from ._bootstrap import column, row
+from ._card import CardItem, WrapperCallable, card, card_body, card_footer, card_header
+from ._html_deps_shinyverse import components_dependencies
+from ._sidebar import Sidebar, layout_sidebar
+from .css import CssUnit, as_css_padding, as_css_unit
+from .fill import as_fill_item, as_fillable_container
+
 __all__ = (
     "nav_panel",
     "nav_menu",
@@ -15,24 +43,6 @@ __all__ = (
     "navset_hidden",
     "navset_bar",
 )
-
-import collections.abc
-import copy
-import re
-from typing import Any, Literal, Optional, Sequence, cast
-
-from htmltools import MetadataNode, Tag, TagAttrs, TagChild, TagList, css, div, tags
-
-from .._docstring import add_example
-from .._namespaces import resolve_id_or_none
-from .._utils import private_random_int
-from ..types import NavSetArg
-from ._bootstrap import column, row
-from ._card import CardItem, WrapperCallable, card, card_body, card_footer, card_header
-from ._html_deps_shinyverse import components_dependencies
-from ._sidebar import Sidebar, layout_sidebar
-from .css import CssUnit, as_css_padding, as_css_unit
-from .fill import as_fill_item, as_fillable_container
 
 
 # -----------------------------------------------------------------------------
@@ -81,7 +91,7 @@ class NavPanel:
 
         return nav, content
 
-    def get_value(self) -> Optional[str]:
+    def get_value(self) -> str | HTML | None:
         if self.content is None:
             return None
         a_tag = cast(Tag, self.nav.children[0])
