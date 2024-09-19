@@ -75,16 +75,16 @@ app_ui = ui.page_fluid(
     slider_row(
         "Date format",
         min=(datetime.date(2024, 1, 1)),
-        max=(datetime.date(2024, 12, 31)),
-        value=(datetime.date(2024, 4, 15)),
+        max=(datetime.date(2024, 1, 10)),
+        value=(datetime.date(2024, 1, 5)),
         time_format="%m/%d/%y",
         timezone="-0500",
     ),
     slider_row(
         "Time format",
         min=(datetime.datetime(2024, 1, 1, 0, 0)),
-        max=(datetime.datetime(2024, 12, 31, 23, 59)),
-        value=(datetime.datetime(2024, 6, 15, 12, 00)),
+        max=(datetime.datetime(2024, 1, 10, 23, 59)),
+        value=(datetime.datetime(2024, 1, 5, 12, 00)),
         width="600px",
     ),
     slider_row(

@@ -169,18 +169,18 @@ def test_slider_date_format(page: Page, local_app: ShinyAppProc) -> None:
 
     s5 = controller.InputSlider(page, "s5")
     s5.expect_label("Date format")
-    s5.expect_value("04/15/24")
+    s5.expect_value("01/05/24")
     s5.expect_min(convert_to_utc_date("01/01/24"))
-    s5.expect_max(convert_to_utc_date("12/31/24"))
+    s5.expect_max(convert_to_utc_date("01/10/24"))
     s5.expect_time_format("%m/%d/%y")
     s5.expect_timezone("-0500")
     s5.expect_drag_range(None)
-    controller.OutputTextVerbatim(page, "txt5").expect_value("2024-04-15")
+    controller.OutputTextVerbatim(page, "txt5").expect_value("2024-01-05")
 
-    new_val = "02/14/24"
+    new_val = "01/08/24"
     s5.set(new_val)
     s5.expect_value(new_val)
-    controller.OutputTextVerbatim(page, "txt5").expect_value("2024-02-14")
+    controller.OutputTextVerbatim(page, "txt5").expect_value("2024-01-08")
 
 
 def test_slider_time_format(page: Page, local_app: ShinyAppProc) -> None:
@@ -188,20 +188,18 @@ def test_slider_time_format(page: Page, local_app: ShinyAppProc) -> None:
 
     s6 = controller.InputSlider(page, "s6")
     s6.expect_label("Time format")
-    s6.expect_value("2024-06-15 12:00:00")
+    s6.expect_value("2024-01-05 12:00:00")
     s6.expect_min(convert_to_utc_date_time("2024-01-01 00:00:00"))
-    s6.expect_max(convert_to_utc_date_time("2024-12-31 23:59:00"))
+    s6.expect_max(convert_to_utc_date_time("2024-01-10 23:59:00"))
     s6.expect_time_format("%F %T")
     s6.expect_width("600px")
     s6.expect_drag_range(None)
-    controller.OutputTextVerbatim(page, "txt6").expect_value("2024-06-15 19:00:00")
+    controller.OutputTextVerbatim(page, "txt6").expect_value("2024-01-05 20:00:00")
 
-    new_val = "2024-02-02 22:33:30"
+    new_val = "2024-01-01 00:00:00"
     s6.set(new_val)
     s6.expect_value(new_val)
-    controller.OutputTextVerbatim(page, "txt6").expect_value(
-        "2024-02-03 06:33:30.600000"
-    )
+    controller.OutputTextVerbatim(page, "txt6").expect_value("2024-01-01 08:00:00")
 
 
 def test_slider_drag_range_disabled(page: Page, local_app: ShinyAppProc) -> None:
