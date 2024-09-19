@@ -20,7 +20,6 @@ from ._base import (
     UiWithContainerP,
     UiWithLabel,
     WidthContainerM,
-    WidthLocM,
     all_missing,
     not_is_missing,
 )
@@ -30,7 +29,7 @@ from ._expect import (
 )
 
 
-class _InputSliderBase(WidthLocM, UiWithLabel):
+class _InputSliderBase(UiWithLabel):
 
     loc_irs: Locator
     """
@@ -202,6 +201,19 @@ class _InputSliderBase(WidthLocM, UiWithLabel):
         _expect_attribute_to_have_value(
             self.loc, "data-max", value=value, timeout=timeout
         )
+
+    def expect_width(self, value: str, *, timeout: Timeout = None) -> None:
+        """
+        Expects the slider to have the specified width.
+
+        Parameters
+        ----------
+        value
+            The expected width.
+        timeout
+            The maximum time to wait for the width to be visible and interactable. Defaults to `None`.
+        """
+        _expect_style_to_have_value(self.loc_container, "width", value, timeout=timeout)
 
     def expect_step(self, value: AttrValue, *, timeout: Timeout = None) -> None:
         """
