@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import sys
 from datetime import datetime
-from typing import Sequence, Union, cast, get_args, get_origin
+from typing import Union, cast, get_args, get_origin
 
 import pytest
 
@@ -390,6 +390,9 @@ def test_as_google_message():
 
 def test_as_langchain_message():
     from langchain_core.language_models.base import LanguageModelInput
+    from langchain_core.language_models.base import (
+        Sequence as LangchainSequence,  # pyright: ignore[reportPrivateImportUsage]
+    )
     from langchain_core.language_models.chat_models import BaseChatModel
     from langchain_core.messages import (
         AIMessage,
@@ -404,7 +407,12 @@ def test_as_langchain_message():
     assert BaseChatModel.invoke.__annotations__["input"] == "LanguageModelInput"
     assert BaseChatModel.stream.__annotations__["input"] == "LanguageModelInput"
 
-    assert is_type_in_union(Sequence[MessageLikeRepresentation], LanguageModelInput)
+    assert is_type_in_union(
+        # Use `LangchainSequence` instead of `Sequence` to avoid incorrect comparison
+        # between `typing.Sequence` and `collections.abc.Sequence`
+        LangchainSequence[MessageLikeRepresentation],
+        LanguageModelInput,
+    )
     assert is_type_in_union(BaseMessage, MessageLikeRepresentation)
 
     assert issubclass(AIMessage, BaseMessage)
