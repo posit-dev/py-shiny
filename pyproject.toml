@@ -134,6 +134,7 @@ shiny = "shiny._main:main"
 [project.entry-points.pytest11]
 shiny-test = "shiny.pytest._pytest"
 
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
