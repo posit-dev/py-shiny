@@ -11,15 +11,6 @@ ui.page_opts(
     fillable_mobile=True,
 )
 
-chat = ui.Chat(id="chat")
-chat.ui()
-chat.update_user_input(
-    value="What's the weather like in Boston, New York, and London today?"
-)
-
-
-llm = ChatOpenAI()
-
 
 def get_current_weather(
     location: str, unit: Literal["celsius", "fahrenheit"] = "fahrenheit"
@@ -35,26 +26,22 @@ def get_current_weather(
         return 72 if unit == "fahrenheit" else 22
 
 
+llm = ChatOpenAI()
 llm_with_tools = llm.bind_tools(
     [
         tool(get_current_weather),
     ]
 )
 
+chat = ui.Chat(id="chat")
+chat.ui()
+chat.update_user_input(
+    value="What's the weather like in Boston, New York, and London today?"
+)
+
 
 @chat.on_user_submit
 async def _():
     messages = chat.messages(format="langchain")
-    response = llm_with_tools.astream(messages)
-    await chat.append_message_stream(response)
-
-
-# TODO: support the tool() result type from langchain?
-chat.bind_tools(get_current_weather)
-
-
-@chat.on_tool_result
-async def _():
-    messages = chat.messages(format="langchain")  # last message is role:"tool"
     response = llm_with_tools.astream(messages)
     await chat.append_message_stream(response)

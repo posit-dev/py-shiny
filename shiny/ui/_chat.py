@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import inspect
-import json
-import warnings
 from typing import (
     Any,
     AsyncIterable,
@@ -24,24 +22,12 @@ from .. import _utils, reactive
 from .._deprecated import warn_deprecated
 from .._docstring import add_example
 from .._namespaces import ResolvedId, resolve_id
-from ..reactive._reactives import EffectFunction, EffectFunctionAsync
 from ..session import require_active_session, session_context
-from ..types import MISSING, MISSING_TYPE, NotifyException
+from ..types import NotifyException
 from ..ui.css import CssUnit, as_css_unit
-from . import _chat_types as ct
 from ._chat_normalize import normalize_message, normalize_message_chunk
-from ._chat_provider_types import (
-    AnthropicMessage,
-    GoogleMessage,
-    LangChainMessage,
-    OllamaMessage,
-    OpenAIMessage,
-    ProviderMessage,
-    ProviderMessageFormat,
-    as_provider_message,
-)
 from ._chat_tokenizer import TokenEncoding, TokenizersEncoding, get_default_tokenizer
-from ._chat_typed_dicts import ChatMessage
+from ._chat_types import ChatMessage, ClientMessage, TransformedMessage
 from ._html_deps_py_shiny import chat_deps
 from .fill import as_fill_item, as_fillable_container
 
@@ -68,8 +54,18 @@ TransformAssistantResponseFunction = Union[
     TransformAssistantResponseChunk,
     TransformAssistantResponseChunkAsync,
 ]
-ToolFunction = Callable[..., Any]
-AsyncToolFunction = Callable[..., Awaitable[Any]]
+UserSubmitFunction0 = Union[
+    Callable[[], None],
+    Callable[[], Awaitable[None]],
+]
+UserSubmitFunction1 = Union[
+    Callable[[str], None],
+    Callable[[str], Awaitable[None]],
+]
+UserSubmitFunction = Union[
+    UserSubmitFunction0,
+    UserSubmitFunction1,
+]
 
 
 ChunkOption = Literal["start", "end", True, False]
@@ -121,8 +117,10 @@ class Chat:
     id
         A unique identifier for the chat session. In Shiny Core, make sure this id
         matches a corresponding :func:`~shiny.ui.chat_ui` call in the UI.
+    client
+        The language model client to use for response generation.
     messages
-        A sequence of messages to display in the chat. Each message can be a
+        A sequence of starting messages to display in the chat. Each message can be a
         dictionary with a `content` and `role` key. The `content` key should contain
         the message text, and the `role` key can be "assistant", "user", or "system".
         Note that system messages are not actually displayed in the chat, but will
@@ -161,7 +159,6 @@ class Chat:
         self._transform_user: TransformUserInputAsync | None = None
         self._transform_assistant: TransformAssistantResponseChunkAsync | None = None
         self._tokenizer = tokenizer
-        self._tool_functions: dict[str, ToolFunction] = {}
 
         # TODO: remove the `None` when this PR lands:
         # https://github.com/posit-dev/py-shiny/pull/793/files
@@ -178,7 +175,6 @@ class Chat:
 
         # Chunked messages get accumulated (using this property) before changing state
         self._current_stream_message: str = ""
-        self._current_stream_tools: list[ct.ToolFunctionCall] = []
         self._current_stream_id: str | None = None
         self._pending_messages: list[PendingMessage] = []
 
@@ -192,16 +188,12 @@ class Chat:
         # Initialize chat state and user input effect
         with session_context(self._session):
             # Initialize message state
-            self._messages: reactive.Value[tuple[ct.TransformedMessage, ...]] = (
+            self._messages: reactive.Value[tuple[TransformedMessage, ...]] = (
                 reactive.Value(())
             )
 
-            self._latest_user_input: reactive.Value[ct.TransformedMessage | None] = (
+            self._latest_user_input: reactive.Value[TransformedMessage | None] = (
                 reactive.Value(None)
-            )
-
-            self._latest_tool_messages: reactive.Value[tuple[ct.ToolMessage, ...]] = (
-                reactive.Value(())
             )
 
             # Initialize the chat with the provided messages
@@ -216,7 +208,7 @@ class Chat:
             @reactive.effect(priority=9999)
             @reactive.event(self._user_input)
             async def _on_user_input():
-                msg = ct.UserMessage(content=self._user_input(), role="user")
+                msg: ChatMessage = {"content": self._user_input(), "role": "user"}
                 # It's possible that during the transform, a message is appended, so get
                 # the length now, so we can insert the new message at the right index
                 n_pre = len(self._messages())
@@ -227,7 +219,7 @@ class Chat:
                 else:
                     # A transformed value of None is a special signal to suspend input
                     # handling (i.e., don't generate a response)
-                    self._store_message(ct.TransformedMessage(msg), index=n_pre)
+                    self._store_message(TransformedMessage(msg), index=n_pre)
                     await self._remove_loading_message()
                     self._suspend_input_handler = True
 
@@ -279,110 +271,17 @@ class Chat:
             **kwargs,
         )
 
-    def bind_tools(self, *args: ToolFunction, force: bool = False) -> None:
-        """
-        Register tool functions to be invoked when tool results are available.
-
-        Parameters
-        ----------
-        *args
-            One or more functions to register as tools.
-        """
-
-        if len(args) == 0:
-            raise TypeError(
-                "`on_tool_result` requires at least one argument, as in `@chat.on_tool_result(func)`.\n"
-            )
-
-        for arg in args:
-            if not callable(arg):
-                raise TypeError(
-                    "Positional arguments to `on_tool_result()` must be callable objects "
-                    "(i.e., functions)."
-                )
-            name = arg.__name__
-            if name == "<lambda>":
-                raise ValueError(
-                    "Positional arguments to `on_tool_result()` must be named "
-                    "(i.e., not a lambda)."
-                )
-            if name in self._tool_functions and not force:
-                raise ValueError(
-                    f"Function `{name}` is already registered as a tool. "
-                    "Use `force=True` to override."
-                )
-            self._tool_functions[name] = arg
-
     @overload
-    def on_tool_result(
-        self, fn: EffectFunction | EffectFunctionAsync
-    ) -> reactive.Effect_: ...
-
-    @overload
-    def on_tool_result(
-        self,
-    ) -> Callable[[EffectFunction | EffectFunctionAsync], reactive.Effect_]: ...
-
-    def on_tool_result(
-        self, fn: EffectFunction | EffectFunctionAsync | None = None
-    ) -> (
-        reactive.Effect_
-        | Callable[[EffectFunction | EffectFunctionAsync], reactive.Effect_]
-    ):
-        """
-        Define a callback to run when tool result(s) are available.
-
-        Apply this method as a decorator to a function (`fn`) that should be invoked when
-        a tool result is available. The function should take no arguments.
-
-        In many cases, the implementation of `fn` should do at least the following:
-
-        1. Call `.messages()` to obtain the current chat history.
-        2. Generate a response based on those messages.
-        3. Append the response to the chat history using `.append_message()` (
-              or `.append_message_stream()` if the response is streamed).
-        """
-
-        def create_effect(fn: EffectFunction | EffectFunctionAsync):
-            afunc = _utils.wrap_async(fn)
-
-            # Call user provided function when a relevant tool result is added
-            # to the message history
-            @reactive.effect
-            async def _():
-                from .. import req
-
-                req(len(self._latest_tool_messages() or ()) > 0)
-                try:
-                    await afunc()
-                except Exception as e:
-                    await self._raise_exception(e)
-
-            self._effects.append(_)
-
-            return _
-
-        if fn is None:
-            return create_effect
-        else:
-            return create_effect(fn)
-
-    @overload
-    def on_user_submit(
-        self, fn: EffectFunction | EffectFunctionAsync
-    ) -> reactive.Effect_: ...
+    def on_user_submit(self, fn: UserSubmitFunction) -> reactive.Effect_: ...
 
     @overload
     def on_user_submit(
         self,
-    ) -> Callable[[EffectFunction | EffectFunctionAsync], reactive.Effect_]: ...
+    ) -> Callable[[UserSubmitFunction], reactive.Effect_]: ...
 
     def on_user_submit(
-        self, fn: EffectFunction | EffectFunctionAsync | None = None
-    ) -> (
-        reactive.Effect_
-        | Callable[[EffectFunction | EffectFunctionAsync], reactive.Effect_]
-    ):
+        self, fn: UserSubmitFunction | None = None
+    ) -> reactive.Effect_ | Callable[[UserSubmitFunction], reactive.Effect_]:
         """
         Define a function to invoke when user input is submitted.
 
@@ -408,8 +307,8 @@ class Chat:
         but it will only be re-invoked when the user submits a message.
         """
 
-        def create_effect(fn: EffectFunction | EffectFunctionAsync):
-            afunc = _utils.wrap_async(fn)
+        def create_effect(fn: UserSubmitFunction):
+            has_input_param = inspect.signature(fn).parameters
 
             @reactive.effect
             @reactive.event(self._user_input)
@@ -419,7 +318,14 @@ class Chat:
 
                     req(False)
                 try:
-                    await afunc()
+                    # Supply user input if the function takes an argument
+                    if has_input_param:
+                        input = cast(str, self.user_input(transform=True))
+                        afunc = _utils.wrap_async(cast(UserSubmitFunction1, fn))
+                        await afunc(input)
+                    else:
+                        afunc = _utils.wrap_async(cast(UserSubmitFunction0, fn))
+                        await afunc()
                 except Exception as e:
                     await self._raise_exception(e)
 
@@ -443,109 +349,22 @@ class Chat:
             sanitize = self.on_error == "sanitize"
             raise NotifyException(str(e), sanitize=sanitize) from e
 
-    @overload
     def messages(
         self,
         *,
-        format: Literal["anthropic"] = "anthropic",
-        token_limits: tuple[int, int] | None = None,
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
-    ) -> tuple[AnthropicMessage, ...]: ...
-
-    @overload
-    def messages(
-        self,
-        *,
-        format: Literal["google"] = "google",
-        token_limits: tuple[int, int] | None = None,
-        transform_user: Literal["all", "last", "none"] = "all",
-        transform_assistant: bool = False,
-    ) -> tuple[GoogleMessage, ...]: ...
-
-    @overload
-    def messages(
-        self,
-        *,
-        format: Literal["langchain"] = "langchain",
-        token_limits: tuple[int, int] | None = None,
-        transform_user: Literal["all", "last", "none"] = "all",
-        transform_assistant: bool = False,
-    ) -> tuple[LangChainMessage, ...]: ...
-
-    @overload
-    def messages(
-        self,
-        *,
-        format: Literal["openai"] = "openai",
-        token_limits: tuple[int, int] | None = None,
-        transform_user: Literal["all", "last", "none"] = "all",
-        transform_assistant: bool = False,
-    ) -> tuple[OpenAIMessage, ...]: ...
-
-    @overload
-    def messages(
-        self,
-        *,
-        format: Literal["ollama"] = "ollama",
-        token_limits: tuple[int, int] | None = None,
-        transform_user: Literal["all", "last", "none"] = "all",
-        transform_assistant: bool = False,
-    ) -> tuple[OllamaMessage, ...]: ...
-
-    @overload
-    def messages(
-        self,
-        *,
-        format: MISSING_TYPE = MISSING,
-        token_limits: tuple[int, int] | None = None,
-        transform_user: Literal["all", "last", "none"] = "all",
-        transform_assistant: bool = False,
-    ) -> tuple[ChatMessage, ...]: ...
-
-    def messages(
-        self,
-        *,
-        format: MISSING_TYPE | ProviderMessageFormat = MISSING,
-        token_limits: tuple[int, int] | None = None,
-        transform_user: Literal["all", "last", "none"] = "all",
-        transform_assistant: bool = False,
-    ) -> tuple[ChatMessage | ProviderMessage, ...]:
+        **kwargs: Any,
+    ) -> tuple[ChatMessage, ...]:
         """
         Reactively read chat messages
 
-        Obtain chat messages within a reactive context. The default behavior is
-        intended for passing messages along to a model for response generation where
-        you typically want to:
+        Obtain a simplified view of the chat messages, optionally transformed.
 
-        1. Cap the number of tokens sent in a single request (i.e., `token_limits`).
-        2. Apply user input transformations (i.e., `transform_user`), if any.
-        3. Not apply assistant response transformations (i.e., `transform_assistant`)
-           since these are predominantly for display purposes (i.e., the model shouldn't
-           concern itself with how the responses are displayed).
+        For a richer form of the chat messages, use `.client.messages()` instead.
 
         Parameters
         ----------
-        format
-            The message format to return. The default value of `MISSING` means
-            chat messages are returned as :class:`ChatMessage` objects (a dictionary
-            with `content` and `role` keys). Other supported formats include:
-
-            * `"anthropic"`: Anthropic message format.
-            * `"google"`: Google message (aka content) format.
-            * `"langchain"`: LangChain message format.
-            * `"openai"`: OpenAI message format.
-            * `"ollama"`: Ollama message format.
-        token_limits
-            Limit the conversation history based on token limits. If specified, only
-            the most recent messages that fit within the token limits are returned. This
-            is useful for avoiding "exceeded token limit" errors when sending messages
-            to the relevant model, while still providing the most recent context available.
-            A specified value must be a tuple of two integers. The first integer is the
-            maximum number of tokens that can be sent to the model in a single request.
-            The second integer is the amount of tokens to reserve for the model's response.
-            Note that token counts based on the `tokenizer` provided to the `Chat`
-            constructor.
         transform_user
             Whether to return user input messages with transformation applied. This only
             matters if a `transform_user_input` was provided to the chat constructor.
@@ -556,6 +375,8 @@ class Chat:
             Whether to return assistant messages with transformation applied. This only
             matters if an `transform_assistant_response` was provided to the chat
             constructor.
+        **kwargs
+            Currently unused (other than to throw deprecation messages).
 
         Note
         ----
@@ -569,33 +390,48 @@ class Chat:
             A tuple of chat messages.
         """
 
+        self._throw_deprecation_warnings(**kwargs)
+
         messages = self._messages()
 
         # Anthropic requires a user message first and no system messages
-        if format == "anthropic":
-            messages = self._trim_anthropic_messages(messages)
+        # TODO: this should get handled by LLMClient
+        # if format == "anthropic":
+        #     messages = self._trim_anthropic_messages(messages)
 
-        if token_limits is not None:
-            messages = self._trim_messages(messages, token_limits, format)
+        # TODO: this should get handled by LLMClient
+        # if token_limits is not None:
+        #    messages = self._trim_messages(messages, token_limits, format)
 
-        res: list[ChatMessage | ProviderMessage] = []
+        res: list[ChatMessage] = []
         for i, m in enumerate(messages):
-            if isinstance(m, ct.TransformedMessage):
-                transform = transform_assistant
-                if m.role == "user":
-                    transform = transform_user == "all" or (
-                        transform_user == "last" and i == len(messages) - 1
-                    )
-                m2 = m.get_message(transformed=transform)
-            else:
-                m2 = m
-
-            if not isinstance(format, MISSING_TYPE):
-                res.append(as_provider_message(m2, format))
-            else:
-                res.append(m2.to_dict())
+            transform = transform_assistant
+            if m.role == "user":
+                transform = transform_user == "all" or (
+                    transform_user == "last" and i == len(messages) - 1
+                )
+            msg = m.get_message(transformed=transform)
+            res.append(msg)
 
         return tuple(res)
+
+    @staticmethod
+    def _throw_deprecation_warnings(**kwargs: Any) -> None:
+        # TODO: improve messages
+        if "format" in kwargs:
+            warn_deprecated(
+                "The `format` argument of `Chat.messages()` is deprecated and "
+                "will be removed in a future version. "
+                "Instead, provide a suitable `client` argument to the chat constructor, "
+                "then use `Chat.client.messages()` to get messages in the desired format."
+            )
+        if "token_limits" in kwargs:
+            warn_deprecated(
+                "The `token_limits` argument to `Chat.messages()` is deprecated and "
+                "will be removed in a future version. "
+                "Use the `client` argument to specify the desired provider format "
+                "instead."
+            )
 
     async def append_message(self, message: Any) -> None:
         """
@@ -613,7 +449,10 @@ class Chat:
         Use `.append_message_stream()` instead of this method when `stream=True` (or
         similar) is specified in model's completion method.
         """
-        await self._append_message(message)
+        if inspect.isasyncgen(message):
+            await self.append_message_stream(message)
+        else:
+            await self._append_message(message)
 
     async def _append_message(
         self, message: Any, *, chunk: ChunkOption = False, stream_id: str | None = None
@@ -628,56 +467,26 @@ class Chat:
         if chunk == "end":
             self._current_stream_id = None
 
-        tool_messages = ()
         if chunk is False:
             msg = normalize_message(message)
             chunk_content = None
         else:
-            msg, tool_call = normalize_message_chunk(message)
+            msg = normalize_message_chunk(message)
             # Update the current stream message
-            chunk_content = msg.content
+            chunk_content = msg["content"]
             self._current_stream_message += chunk_content
-            # At least currently, we send the accumulated message on every chunk
-            # but we should optimize this...
-            msg.content = self._current_stream_message
-
-            if tool_call:
-                if isinstance(tool_call, ct.ToolFunctionCall):
-                    # The start of a new tool call
-                    self._current_stream_tools.append(tool_call)
-                elif isinstance(tool_call, ct.ToolFunctionCallDelta):
-                    # Add the delta to the most recent tool call
-                    self._current_stream_tools[-1].__add__(tool_call)
-                else:
-                    raise ValueError(f"Unexpected tool call: {tool_call}")
-
+            msg["content"] = self._current_stream_message
             if chunk == "end":
-                tool_messages = await self._call_tool_functions(
-                    self._current_stream_tools
-                )
-                msg.tool_calls = [x.to_dict() for x in self._current_stream_tools]
-                self._current_stream_tools = []
-                if len(self._current_stream_message) == 0:
-                    if len(tool_messages) == 0:
-                        warnings.warn(
-                            "Failed to detect content or tool messages in the stream. "
-                            "Please report this issue to https://github.com/posit-dev/py-shiny",
-                            stacklevel=2,
-                        )
-                    else:
-                        # If there's no content, but there are tool messages, make
-                        # take away the loading message (for this message)
-                        await self._remove_loading_message()
                 self._current_stream_message = ""
 
         msg = await self._transform_message(
             msg, chunk=chunk, chunk_content=chunk_content
         )
+        if msg is None:
+            return
 
-        self._store_message(msg, chunk=chunk, tool_messages=tool_messages)
-
-        if msg is not None:
-            await self._send_append_message(msg, chunk=chunk)
+        self._store_message(msg, chunk=chunk)
+        await self._send_append_message(msg, chunk=chunk)
 
     async def append_message_stream(self, message: Iterable[Any] | AsyncIterable[Any]):
         """
@@ -744,7 +553,7 @@ class Chat:
     # Send a message to the UI
     async def _send_append_message(
         self,
-        message: ct.TransformedMessage,
+        message: TransformedMessage,
         chunk: ChunkOption = False,
     ):
         if message.role not in ("user", "assistant"):
@@ -764,7 +573,7 @@ class Chat:
         content = message.content_client
         content_type = "html" if isinstance(content, HTML) else "markdown"
 
-        msg = ct.ClientMessage(
+        msg = ClientMessage(
             content=content,
             role=message.role,
             content_type=content_type,
@@ -897,35 +706,34 @@ class Chat:
 
     async def _transform_message(
         self,
-        message: ct.ChatMessage,
+        message: ChatMessage,
         chunk: ChunkOption = False,
         chunk_content: str | None = None,
-    ) -> ct.TransformedMessage | None:
+    ) -> TransformedMessage | None:
 
-        if message.role == "user" and self._transform_user is not None:
-            content = await self._transform_user(message.content)
+        if message["role"] == "user" and self._transform_user is not None:
+            content = await self._transform_user(message["content"])
 
-        elif message.role == "assistant" and self._transform_assistant is not None:
+        elif message["role"] == "assistant" and self._transform_assistant is not None:
             content = await self._transform_assistant(
-                message.content,
+                message["content"],
                 chunk_content or "",
                 chunk == "end" or chunk is False,
             )
         else:
-            return ct.TransformedMessage(message)
+            return TransformedMessage(message)
 
         if content is None:
             return None
 
-        return ct.TransformedMessage(message, transformed_content=content)
+        return TransformedMessage(message, transformed_content=content)
 
     # Just before storing, handle chunk msg type and calculate tokens
     def _store_message(
         self,
-        message: ct.TransformedMessage | None,
+        message: TransformedMessage,
         chunk: ChunkOption = False,
         index: int | None = None,
-        tool_messages: tuple[ct.ToolMessage, ...] = (),
     ) -> None:
 
         # When streaming, don't actually store chunks until the end
@@ -933,87 +741,25 @@ class Chat:
             return None
 
         with reactive.isolate():
-            current_messages = self._messages()
-
-        new_messages: list[ct.TransformedMessage] = [] if message is None else [message]
-        new_messages.extend([ct.TransformedMessage(x) for x in tool_messages])
-
-        if len(new_messages) == 0:
-            return None
+            messages = self._messages()
 
         if index is None:
-            index = len(current_messages)
+            index = len(messages)
 
-        current_messages = list(current_messages)
+        messages = list(messages)
+        messages.insert(index, message)
 
-        for i, msg in enumerate(new_messages):
-            current_messages.insert(index + i, msg)
-
-        self._messages.set(tuple(current_messages))
-
-        # If any new messages are user, store the latest user input
-        for msg in reversed(new_messages):
-            if msg.role == "user":
-                self._latest_user_input.set(msg)
-                break
-
-        self._latest_tool_messages.set(tool_messages)
+        self._messages.set(tuple(messages))
+        if message.role == "user":
+            self._latest_user_input.set(message)
 
         return None
 
-    async def _call_tool_functions(
-        self, tool_calls: list[ct.ToolFunctionCall]
-    ) -> tuple[ct.ToolMessage, ...]:
-        messages: list[ct.ToolMessage] = []
-        for x in tool_calls:
-            message = await self._call_tool_function(x)
-            if message is not None:
-                messages.append(message)
-        return tuple(messages)
-
-    async def _call_tool_function(
-        self, func_call: ct.ToolFunctionCall
-    ) -> ct.ToolMessage | None:
-        name = func_call.name
-        if name not in self._tool_functions:
-            warnings.warn(
-                f"A tool function call ({name}) was included in the message passed to "
-                "`.append_message_stream()`, but no corresponding tool function was "
-                "registered with `.on_tool_result()`. The function call will be ignored.",
-                stacklevel=3,
-            )
-            return None
-
-        # At least with OpenAI's structured output, arguments are a JSON object
-        args_ = func_call.arguments or "{}"
-        try:
-            args = json.loads(args_)
-            if not isinstance(args, dict):
-                raise ValueError("Arguments must be a JSON object.")
-            func = self._tool_functions[name]
-            res = func(**args)
-            return ct.ToolMessage(
-                role="tool",
-                content=json.dumps({name: res, **args}),
-                tool_call_id=func_call.id,
-                name=name,
-            )
-        except json.JSONDecodeError:
-            raise ValueError(
-                f"Unable to call tool function ({name}) since it received invalid JSON "
-                f"arguments: {args_}"
-            )
-        except Exception as e:
-            raise ValueError(
-                f"Calling tool function `{name}` resulted in an exception: {str(e)}"
-            )
-
     def _trim_messages(
         self,
-        messages: tuple[ct.TransformedMessage, ...],
+        messages: tuple[TransformedMessage, ...],
         token_limits: tuple[int, int],
-        format: MISSING_TYPE | ProviderMessageFormat,
-    ) -> tuple[ct.TransformedMessage, ...]:
+    ) -> tuple[TransformedMessage, ...]:
 
         n_total, n_reserve = token_limits
         if n_total <= n_reserve:
@@ -1030,7 +776,7 @@ class Chat:
         token_counts: list[int] = []
         for m in messages:
             content = (
-                m.content_server if isinstance(m, ct.TransformedMessage) else m.content
+                m.content_server if isinstance(m, TransformedMessage) else m.content
             )
             count = self._get_token_count(content)
             token_counts.append(count)
@@ -1051,7 +797,7 @@ class Chat:
 
         # Now, iterate through the messages in reverse order and appending
         # until we run out of tokens
-        messages2: list[ct.TransformedMessage] = []
+        messages2: list[TransformedMessage] = []
         n_other_messages2: int = 0
         token_counts.reverse()
         for i, m in enumerate(reversed(messages)):
@@ -1076,8 +822,8 @@ class Chat:
 
     def _trim_anthropic_messages(
         self,
-        messages: tuple[ct.TransformedMessage, ...],
-    ) -> tuple[ct.TransformedMessage, ...]:
+        messages: tuple[TransformedMessage, ...],
+    ) -> tuple[TransformedMessage, ...]:
 
         if any(m.role == "system" for m in messages):
             raise ValueError(
@@ -1139,7 +885,7 @@ class Chat:
         msg = self._latest_user_input()
         if msg is None:
             return None
-        return msg.get_message(transformed=transform).content
+        return msg.get_message(transformed=transform)["content"]
 
     def _user_input(self) -> str:
         id = self.user_input_id
@@ -1187,6 +933,7 @@ class Chat:
         """
         Clear all chat messages.
         """
+        # TODO: do this properly
         self._messages.set(())
         await self._send_custom_message("shiny-chat-clear-messages", None)
 
@@ -1202,7 +949,7 @@ class Chat:
         await self._send_custom_message("shiny-chat-remove-loading-message", None)
 
     async def _send_custom_message(
-        self, handler: str, obj: ct.ClientMessage | None, on_flushed: bool = True
+        self, handler: str, obj: ClientMessage | None, on_flushed: bool = True
     ):
         async def _do_send():
             await self._session.send_custom_message(
@@ -1210,7 +957,7 @@ class Chat:
                 {
                     "id": self.id,
                     "handler": handler,
-                    "obj": obj.to_dict() if obj is not None else None,
+                    "obj": obj,
                 },
             )
 

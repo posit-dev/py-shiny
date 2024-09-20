@@ -1,8 +1,8 @@
 from shiny.express import ui
-from shiny.ui._chat_client_anthropic import AnthropicClient
+from shiny.ui._chat_client_ollama import OllamaClient
 
 ui.page_opts(
-    title="Tool calling with Anthropic",
+    title="Tool calling with Ollama",
     fillable=True,
     fillable_mobile=True,
 )
@@ -17,7 +17,9 @@ def get_current_weather(location: str, unit: str = "fahrenheit") -> int:
         return 72 if unit == "fahrenheit" else 22
 
 
-llm = AnthropicClient(
+# Assumes you're running an Ollama server (with llama3 available) locally
+llm = OllamaClient(
+    model="llama3.1",
     tools=[get_current_weather],
 )
 
@@ -25,7 +27,6 @@ chat = ui.Chat(
     id="chat",
     messages=["Hello! How can I help you today?"],
 )
-
 
 chat.ui()
 chat.update_user_input(
@@ -35,5 +36,7 @@ chat.update_user_input(
 
 @chat.on_user_submit
 async def _(input):
-    response = llm.generate_response(input)
+    # Unfortunately, Ollama currently doesn't work with tools+streaming
+    # https://github.com/ollama/ollama-python/issues/279
+    response = llm.generate_response(input, stream=False)
     await chat.append_message_stream(response)

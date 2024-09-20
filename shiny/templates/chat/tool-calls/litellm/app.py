@@ -16,7 +16,6 @@ chat.update_user_input(
 )
 
 
-# function with docstring
 def get_current_weather(location: str, unit: str):
     """Get the current weather in a given location
 
