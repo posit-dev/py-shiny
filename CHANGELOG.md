@@ -37,6 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Fixed the `InputSlider` controller's `.expect_width()` to check the `width` property within the `style` attribute. (#1691)
 
+* Fixed the `InputDate` and `InputDateRange` controllers to check the `width` property within the `style` attribute. (#1696)
+
 ## [1.1.0] - 2024-09-03
 
 ### New features
