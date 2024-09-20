@@ -19,7 +19,6 @@ from ._base import (
     UiBaseP,
     UiWithContainerP,
     UiWithLabel,
-    WidthContainerM,
     WidthLocM,
     all_missing,
     not_is_missing,
