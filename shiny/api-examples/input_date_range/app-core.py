@@ -28,6 +28,10 @@ app_ui = ui.page_fluid(
     ui.input_date_range("daterange5", "Date range:", language="de", weekstart=1),
     # Start with decade view instead of default month view
     ui.input_date_range("daterange6", "Date range:", startview="decade"),
+    # Set width of the daterange field
+    ui.input_date_range("daterange7", "Date range:", width="600px"),
+    # Set autoclose to false
+    ui.input_date_range("daterange8", "Date range:", autoclose=False),
 )
 
 

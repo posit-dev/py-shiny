@@ -23,6 +23,14 @@ app_ui = ui.page_fluid(
         value="2016-02-29",
         datesdisabled=["2016-03-01", "2016-03-02"],
     ),
+    # Set min and max dates.
+    ui.input_date(
+        "date9", "Date:", value="2016-02-03", min="2016-02-01", max="2016-02-29"
+    ),
+    # Set width of the date field
+    ui.input_date("date10", "Date:", width="600px"),
+    # Set autoclose to false
+    ui.input_date("date11", "Date:", autoclose=False),
 )
 
 

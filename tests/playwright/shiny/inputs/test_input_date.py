@@ -31,6 +31,7 @@ def expect_date(
 ) -> None:
     date.expect_value(str(datetime.date.today()) if value == "today" else value)
     autoclose_str = "true" if autoclose else "false"
+    date.expect_label(label)
     date.expect_autoclose(autoclose_str)
     date.expect_datesdisabled(datesdisabled)
     date.expect_daysofweekdisabled(daysofweekdisabled)
@@ -48,7 +49,6 @@ def test_input_date_kitchen(page: Page, app: ShinyAppProc) -> None:
 
     date1 = controller.InputDate(page, "date1")
 
-    date1.expect_label("Date:")
     expect(date1.loc_label).to_have_text("Date:")
 
     expect_date(date1, "2016-02-29")
@@ -75,3 +75,14 @@ def test_input_date_kitchen(page: Page, app: ShinyAppProc) -> None:
         "2016-02-29",
         datesdisabled=["2016-03-01", "2016-03-02"],
     )
+
+    expect_date(
+        controller.InputDate(page, "date9"),
+        "2016-02-03",
+        min_date="2016-02-01",
+        max_date="2016-02-29",
+    )
+
+    expect_date(controller.InputDate(page, "date10"), width="600px")
+
+    expect_date(controller.InputDate(page, "date11"), autoclose=False)

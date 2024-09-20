@@ -18,10 +18,8 @@ def expect_date_range(
     start_value: str | Literal["today"] = "today",
     end_value: str | Literal["today"] = "today",
     *,
-    label: str = "Date:",
+    label: str = "Date range:",
     autoclose: bool = True,
-    datesdisabled: typing.Optional[list[str]] = None,
-    daysofweekdisabled: typing.Optional[list[int]] = None,
     format: str = "yyyy-mm-dd",
     language: str = "en",
     max_date: typing.Optional[str] = None,
@@ -34,11 +32,9 @@ def expect_date_range(
     start_value = str(datetime.date.today()) if start_value == "today" else start_value
     end_value = str(datetime.date.today()) if end_value == "today" else end_value
     date.expect_value((start_value, end_value))
+    date.expect_label(label)
     autoclose_str = "true" if autoclose else "false"
     date.expect_autoclose(autoclose_str)
-    # # Not supported in `input_date_range()`
-    # date.expect_datesdisabled(datesdisabled)
-    # date.expect_daysofweekdisabled(daysofweekdisabled)
     date.expect_format(format)
     date.expect_language(language)
     date.expect_max_date(max_date)
@@ -87,4 +83,14 @@ def test_input_date_kitchen(page: Page, app: ShinyAppProc) -> None:
     expect_date_range(
         controller.InputDateRange(page, "daterange6"),
         startview="decade",
+    )
+
+    expect_date_range(
+        controller.InputDateRange(page, "daterange7"),
+        width="600px",
+    )
+
+    expect_date_range(
+        controller.InputDateRange(page, "daterange8"),
+        autoclose=False,
     )

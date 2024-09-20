@@ -17,6 +17,7 @@ from ..expect._internal import expect_style_to_have_value as _expect_style_to_ha
 from ._base import (
     Resize,
     UiBaseP,
+    UiWithContainerP,
     UiWithLabel,
     WidthContainerM,
     WidthLocM,
@@ -24,6 +25,30 @@ from ._base import (
     not_is_missing,
     set_text,
 )
+
+
+class InputDateWidthM:
+    """
+    A mixin class for input date width.
+    This mixin class provides methods to expect the width of input date elements.
+    """
+
+    def expect_width(
+        self: UiWithContainerP,
+        value: AttrValue,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expect the input select to have a specific width.
+        Parameters
+        ----------
+        value
+            The expected width.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        _expect_style_to_have_value(self.loc_container, "width", value, timeout=timeout)
 
 
 class _SetTextM:
@@ -425,8 +450,8 @@ class InputTextArea(
 
 
 class _DateBase(
+    InputDateWidthM,
     _SetTextM,
-    WidthContainerM,
     UiWithLabel,
 ):
 
@@ -669,7 +694,7 @@ class InputDate(_DateBase):
         )
 
 
-class InputDateRange(WidthContainerM, UiWithLabel):
+class InputDateRange(InputDateWidthM, UiWithLabel):
     """Controller for :func:`shiny.ui.input_date_range`."""
 
     loc_separator: Locator
@@ -932,8 +957,6 @@ class InputDateRange(WidthContainerM, UiWithLabel):
             The maximum time to wait for the separator to appear. Defaults to `None`.
         """
         playwright_expect(self.loc_separator).to_have_text(value, timeout=timeout)
-
-    # width: Optional[str] = None,
 
     # autoclose: bool = True,
     def expect_autoclose(
