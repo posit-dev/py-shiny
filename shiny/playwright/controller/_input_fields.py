@@ -40,6 +40,7 @@ class InputDateWidthM:
     ) -> None:
         """
         Expect the input select to have a specific width.
+
         Parameters
         ----------
         value

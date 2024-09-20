@@ -2,6 +2,8 @@ from datetime import date
 
 from shiny.express import ui
 
+# TODO-karan. Duplicate changes from app-core.py
+
 ui.input_date_range("daterange1", "Date range:", start="2001-01-01", end="2010-12-31")
 # Default start and end is the current date in the client's time zone
 ui.input_date_range("daterange2", "Date range:")
