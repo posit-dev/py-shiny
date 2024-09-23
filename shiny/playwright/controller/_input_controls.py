@@ -17,10 +17,9 @@ from ..expect._internal import expect_class_to_have_value as _expect_class_to_ha
 from ..expect._internal import expect_style_to_have_value as _expect_style_to_have_value
 from ._base import (
     InitLocator,
+    UiWithContainerP,
     UiWithLabel,
     WidthContainerM,
-    WidthLocM,
-    _expect_multiple,
     all_missing,
     not_is_missing,
 )
@@ -30,7 +29,7 @@ from ._expect import (
 )
 
 
-class _InputSliderBase(WidthLocM, UiWithLabel):
+class _InputSliderBase(UiWithLabel):
 
     loc_irs: Locator
     """
@@ -202,6 +201,19 @@ class _InputSliderBase(WidthLocM, UiWithLabel):
         _expect_attribute_to_have_value(
             self.loc, "data-max", value=value, timeout=timeout
         )
+
+    def expect_width(self, value: str, *, timeout: Timeout = None) -> None:
+        """
+        Expects the slider to have the specified width.
+
+        Parameters
+        ----------
+        value
+            The expected width.
+        timeout
+            The maximum time to wait for the width to be visible and interactable. Defaults to `None`.
+        """
+        _expect_style_to_have_value(self.loc_container, "width", value, timeout=timeout)
 
     def expect_step(self, value: AttrValue, *, timeout: Timeout = None) -> None:
         """
@@ -923,30 +935,40 @@ class InputSwitch(_InputCheckboxBase):
         )
 
 
-class _InputSelectBase(
-    WidthLocM,
-    UiWithLabel,
-):
-    loc_selected: Locator
+class InputSelectWidthM:
     """
-    Playwright `Locator` for the selected option of the input select.
-    """
-    loc_choices: Locator
-    """
-    Playwright `Locator` for the choices of the input select.
-    """
-    loc_choice_groups: Locator
-    """
-    Playwright `Locator` for the choice groups of the input select.
+    A base class representing the input `select` and `selectize` widths.
+
+    This class provides methods to expect the width attribute of a DOM element.
     """
 
-    def __init__(
-        self,
-        page: Page,
-        id: str,
+    def expect_width(
+        self: UiWithContainerP,
+        value: AttrValue,
         *,
-        select_class: str = "",
+        timeout: Timeout = None,
     ) -> None:
+        """
+        Expect the input select to have a specific width.
+
+        Parameters
+        ----------
+        value
+            The expected width.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        _expect_style_to_have_value(self.loc_container, "width", value, timeout=timeout)
+
+
+class InputSelect(InputSelectWidthM, UiWithLabel):
+    """
+    Controller for :func:`shiny.ui.input_select`.
+
+    If you have defined your app's select input (`ui.input_select()`) with `selectize=TRUE`, use `InputSelectize` to test your app's UI.
+    """
+
+    def __init__(self, page: Page, id: str) -> None:
         """
         Initializes the input select.
 
@@ -956,13 +978,11 @@ class _InputSelectBase(
             The page where the input select is located.
         id
             The id of the input select.
-        select_class
-            The class of the select element. Defaults to "".
         """
         super().__init__(
             page,
             id=id,
-            loc=f"select#{id}.shiny-bound-input{select_class}",
+            loc=f"select#{id}.shiny-bound-input.form-select",
         )
         self.loc_selected = self.loc.locator("option:checked")
         self.loc_choices = self.loc.locator("option")
@@ -988,9 +1008,29 @@ class _InputSelectBase(
             selected = [selected]
         self.loc.select_option(value=selected, timeout=timeout)
 
+    # If `selectize=` parameter does not become deprecated, uncomment this
+    # # selectize: bool = False,
+    # def expect_selectize(self, value: bool, *, timeout: Timeout = None) -> None:
+    #     """
+    #     Expect the input select to be selectize.
+
+    #     Parameters
+    #     ----------
+    #     value
+    #         Whether the input select is selectize.
+    #     timeout
+    #         The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+    #     """
+    #     # class_=None if selectize else "form-select",
+    #     _expect_class_to_have_value(
+    #         self.loc,
+    #         "form-select",
+    #         has_class=not value,
+    #         timeout=timeout,
+    #     )
+
     def expect_choices(
         self,
-        # TODO-future; support patterns?
         choices: ListPatternOrStr,
         *,
         timeout: Timeout = None,
@@ -1111,10 +1151,9 @@ class _InputSelectBase(
             return
         playwright_expect(self.loc_choices).to_have_text(value, timeout=timeout)
 
-    # multiple: bool = False,
     def expect_multiple(self, value: bool, *, timeout: Timeout = None) -> None:
         """
-        Expect the input select to allow multiple selections.
+        Expect the input selectize to allow multiple selections.
 
         Parameters
         ----------
@@ -1123,7 +1162,12 @@ class _InputSelectBase(
         timeout
             The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
-        _expect_multiple(self.loc, value, timeout=timeout)
+        _expect_attribute_to_have_value(
+            self.loc,
+            "multiple",
+            value="" if value else None,
+            timeout=timeout,
+        )
 
     def expect_size(self, value: AttrValue, *, timeout: Timeout = None) -> None:
         """
@@ -1144,50 +1188,7 @@ class _InputSelectBase(
         )
 
 
-class InputSelect(_InputSelectBase):
-    """Controller for :func:`shiny.ui.input_select`."""
-
-    def __init__(self, page: Page, id: str) -> None:
-        """
-        Initializes the input select.
-
-        Parameters
-        ----------
-        page
-            The page where the input select is located.
-        id
-            The id of the input select.
-        """
-        super().__init__(
-            page,
-            id=id,
-            select_class=".form-select",
-        )
-
-    # selectize: bool = False,
-    def expect_selectize(self, value: bool, *, timeout: Timeout = None) -> None:
-        """
-        Expect the input select to be selectize.
-
-        Parameters
-        ----------
-        value
-            Whether the input select is selectize.
-        timeout
-            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
-        """
-        # class_=None if selectize else "form-select",
-        _expect_class_to_have_value(
-            self.loc,
-            "form-select",
-            has_class=not value,
-            timeout=timeout,
-        )
-
-
-class InputSelectize(
-    UiWithLabel,
-):
+class InputSelectize(InputSelectWidthM, UiWithLabel):
     """Controller for :func:`shiny.ui.input_selectize`."""
 
     def __init__(self, page: Page, id: str) -> None:

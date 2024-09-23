@@ -25,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
-* A few fixes for `ui.Chat()`, including: 
+* A few fixes for `ui.Chat()`, including:
   * Fixed a bug with `Chat()` sometimes silently dropping errors. (#1672)
   * Fixed a bug with `Chat()` sometimes not removing it's loading icon (on error or a `None` transform). (#1679)
   * `.messages(format="anthropic")` correctly removes non-user starting messages (once again). (#1685)
@@ -34,6 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 (#1666)
 
 * `ui.Theme()` now works correctly on Windows when the theme requires Sass compilation. (thanks @yuuuxt, #1684)
+
+* Fixed the `InputSlider` controller's `.expect_width()` to check the `width` property within the `style` attribute. (#1691)
 
 ## [1.1.0] - 2024-09-03
 
