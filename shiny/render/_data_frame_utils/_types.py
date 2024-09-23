@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from abc import ABC
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -28,14 +27,11 @@ from ..._typing_extensions import Annotated, NotRequired, Required, TypedDict
 from ...types import Jsonifiable, JsonifiableDict, ListOrTuple
 from ._databackend import AbstractBackend
 
-# from narwhals.typing import FrameT as NwFrameT
-
 __all__ = (
     "PdDataFrame",
     "PlDataFrame",
     "PdSeries",
     "PlSeries",
-    # "ListSeriesLike",
     "IntoExpr",
     "DataFrame",
     "DataFrameT",
@@ -84,9 +80,6 @@ if TYPE_CHECKING:
     PdSeries = pd.Series[Any]
     PlSeries = pl.Series
 
-    # ListSeriesLike = Union[List[PdSeries], List[PlSeries]]
-    # SeriesLike = Union[PdSeries, PlSeries]
-
 
 else:
 
@@ -102,17 +95,9 @@ else:
     class PlSeries(AbstractBackend):
         _backends = [("polars", "Series")]
 
-    # class ListSeriesLike(ABC): ...
-
-    # class SeriesLike(ABC): ...
-
-    # ListSeriesLike.register(PdSeries)
-    # ListSeriesLike.register(PlSeries)
-
-    # SeriesLike.register(PdSeries)
-    # SeriesLike.register(PlSeries)
 
 DataFrame = nw.DataFrame
+Series = nw.Series
 
 # ---------------------------------------------------------------------
 

@@ -1,5 +1,3 @@
-# Note - barret 2024-07-08; When we adopt `narwhals` support, we should remove the singledispatch and instead always use `narwhals`. In addition, we should return the native type of a native type was originally provided. (Or maintain the narwhals object, if a narwhals object was provided.)
-
 from __future__ import annotations
 
 from typing import Any, List, Tuple, TypedDict
@@ -28,15 +26,13 @@ from ._types import (
 
 __all__ = (
     "is_into_data_frame",
-    # "as_data_frame_like",
     "as_data_frame",
     "data_frame_to_native",
-    # "frame_columns",
     "apply_frame_patches",
     "serialize_dtype",
     "serialize_frame",
     "subset_frame",
-    # "get_frame_cell",
+    "get_frame_cell",
     "frame_shape",
     "copy_frame",
     "frame_column_names",
@@ -90,24 +86,7 @@ def compatible_to_pandas(
     raise TypeError(f"Unsupported type: {type(data)}")
 
 
-# @singledispatch
-# def is_data_frame_like(
-#     data: object,
-# ) -> bool:
-#     return False
-
-
-# @is_data_frame_like.register
-# def _(data: PdDataFrame) -> bool:
-#     return True
-
-
-# @is_data_frame_like.register
-# def _(data: PlDataFrame) -> bool:
-#     return True
-
-
-# TODO-barret; Replace with `nw.is_into_data_frame(x)`?
+# TODO-future; Replace with `nw.is_into_data_frame(x)`?
 def is_into_data_frame(
     data: IntoDataFrameT | object,
 ) -> TypeIs[IntoDataFrameT]:
@@ -117,70 +96,7 @@ def is_into_data_frame(
     return False
 
 
-# # frame_columns ------------------------------------------------------------------------
-
-
-# @singledispatch
-# def frame_columns(data: IntoDataFrame) -> ListSeriesLike:
-#     raise TypeError(f"Unsupported type: {type(data)}")
-
-
-# @frame_columns.register
-# def _(data: PdDataFrame) -> ListSeriesLike:
-#     ret = [cast(PlSeries, data[col]) for col in data.columns]
-#     return ret
-
-
-# @frame_columns.register
-# def _(data: PlDataFrame) -> ListSeriesLike:
-#     return data.get_columns()
-
-
 # apply_frame_patches --------------------------------------------------------------------
-
-
-# def apply_frame_patches__typed(
-#     data: IntoDataFrameT, patches: List[CellPatch]
-# ) -> IntoDataFrameT:
-#     return cast(IntoDataFrameT, apply_frame_patches(data, patches))
-
-
-# @singledispatch
-# def apply_frame_patches(
-#     data: IntoDataFrame,
-#     patches: List[CellPatch],
-# ) -> IntoDataFrame:
-#     raise TypeError(f"Unsupported type: {type(data)}")
-
-
-# @apply_frame_patches.register
-# def _(data: PdDataFrame, patches: List[CellPatch]) -> PdDataFrame:
-#     import pandas as pd
-
-#     # Enable copy-on-write mode for the data;
-#     # Use `deep=False` to avoid copying the full data; CoW will copy the necessary data when modified
-#     with pd.option_context("mode.copy_on_write", True):
-#         # Apply patches!
-#         data = data.copy(deep=False)
-#         for cell_patch in patches:
-#             data.iat[  # pyright: ignore[reportUnknownMemberType]
-#                 cell_patch["row_index"],
-#                 cell_patch["column_index"],
-#             ] = cell_patch["value"]
-
-#         return data
-
-
-# @apply_frame_patches.register
-# def _(data: PlDataFrame, patches: List[CellPatch]) -> PlDataFrame:
-#     data = data.clone()
-#     for cell_patch in patches:
-#         data[cell_patch["row_index"], cell_patch["column_index"]] = cell_patch["value"]
-
-#     return data
-
-
-# @apply_frame_patches.register(DataFrame)
 def apply_frame_patches(
     nw_data: DataFrame[IntoDataFrameT],
     patches: List[CellPatch],
@@ -268,50 +184,6 @@ def apply_frame_patches(
 
 
 # serialize_dtype ----------------------------------------------------------------------
-
-
-# @singledispatch
-# def serialize_dtype(col: SeriesLike) -> FrameDtype:
-#     raise TypeError(f"Unsupported type: {type(col)}")
-
-
-# TODO: we can't import DataFrameDtype at runtime, due to circular dependency. So
-# we import it during type checking. But this means we have to explicitly register
-# the dispatch type below.
-
-
-# @serialize_dtype.register
-# def _(col: PdSeries) -> FrameDtype:
-#     from ._pandas import serialize_pd_dtype
-
-#     return serialize_pd_dtype(col)
-
-
-# @serialize_dtype.register
-# def _(col: PlSeries) -> FrameDtype:
-#     import polars as pl
-
-#     from ._html import col_contains_shiny_html
-
-#     if col.dtype == pl.String():
-#         if col_contains_shiny_html(col):
-#             type_ = "html"
-#         else:
-#             type_ = "string"
-#     elif col.dtype.is_numeric():
-#         type_ = "numeric"
-
-#     elif col.dtype.is_(pl.Categorical()):
-#         categories = col.cat.get_categories().to_list()
-#         return {"type": "categorical", "categories": categories}
-#     else:
-#         type_ = "unknown"
-#         if col_contains_shiny_html(col):
-#             type_ = "html"
-
-#     return {"type": type_}
-
-
 nw_boolean = nw.Boolean()
 nw_categorical = nw.Categorical()
 nw_enum = nw.Enum()
@@ -321,8 +193,6 @@ nw_duration = nw.Duration()
 nw_object = nw.Object()
 
 
-# @serialize_dtype.register
-# def _(col: nw.Series) -> FrameDtype:
 def serialize_dtype(col: nw.Series) -> FrameDtype:
 
     from ._html import col_contains_shiny_html
@@ -370,62 +240,7 @@ def serialize_dtype(col: nw.Series) -> FrameDtype:
 
 
 # serialize_frame ----------------------------------------------------------------------
-
-
-# @singledispatch
-# def serialize_frame(data: IntoDataFrame) -> FrameJson:
-#     raise TypeError(f"Unsupported type: {type(data)}")
-
-
-# @serialize_frame.register
-# def _(data: PdDataFrame) -> FrameJson:
-#     from ._pandas import serialize_frame_pd
-
-#     return serialize_frame_pd(data)
-
-
-# # TODO: test this
-# @serialize_frame.register
-# def _(data: PlDataFrame) -> FrameJson:
-#     import json
-
-#     type_hints = list(map(serialize_dtype, data))
-#     data_by_row = list(map(list, data.rows()))
-
-#     # Shiny tag support
-#     type_hints_type = [type_hint["type"] for type_hint in type_hints]
-#     if "html" in type_hints_type:
-#         session = require_active_session(None)
-
-#         def wrap_shiny_html_with_session(x: TagNode):
-#             return maybe_as_cell_html(x, session=session)
-
-#         html_columns = [i for i, x in enumerate(type_hints_type) if x == "html"]
-
-#         for html_column in html_columns:
-#             for row in data_by_row:
-#                 row[html_column] = wrap_shiny_html_with_session(row[html_column])
-
-#     data_val = json.loads(json.dumps(data_by_row, default=str))
-
-#     return {
-#         # "index": list(range(len(data))),
-#         "columns": data.columns,
-#         "data": data_val,
-#         "typeHints": type_hints,
-#     }
-
-# try:
-#     import pandas as pd  # type: ignore # noqa: F401
-
-#     has_pandas = True
-# except ImportError:
-#     has_pandas = False
-
-
-# @serialize_frame.register(DataFrame)
 def serialize_frame(into_data: IntoDataFrame) -> FrameJson:
-    # def _(data: DataFrame[Any]) -> FrameJson:
 
     data = as_data_frame(into_data)
 
@@ -497,7 +312,6 @@ def serialize_frame(into_data: IntoDataFrame) -> FrameJson:
 
 
 # subset_frame -------------------------------------------------------------------------
-# @singledispatch
 def subset_frame(
     data: DataFrameT,
     *,
@@ -539,106 +353,12 @@ def subset_frame(
             return data[list(rows), col_names]
 
 
-# @subset_frame.register
-# def _(
-#     data: PdDataFrame,
-#     *,
-#     rows: RowsList = None,
-#     cols: ColsList = None,
-# ) -> PdDataFrame:
-#     # Enable copy-on-write mode for the data;
-#     # Use `deep=False` to avoid copying the full data; CoW will copy the necessary data when modified
-#     import pandas as pd
-
-#     with pd.option_context("mode.copy_on_write", True):
-#         # iloc requires integer positions, so we convert column name strings to ints, or
-#         # the slice default.
-#         indx_cols = (  # pyright: ignore[reportUnknownVariableType]
-#             slice(None)
-#             if cols is None
-#             else [
-#                 (
-#                     # Send in an array of size 1 and retrieve the first element
-#                     data.columns.get_indexer_for(  # pyright: ignore[reportUnknownMemberType]
-#                         [col]
-#                     )[
-#                         0
-#                     ]
-#                     if isinstance(col, str)
-#                     else col
-#                 )
-#                 for col in cols
-#             ]
-#         )
-
-#         # Force list when using a non-None value for pandas compatibility
-#         indx_rows = list(rows) if rows is not None else slice(None)
-
-#         return data.iloc[indx_rows, indx_cols]
-
-
-# @subset_frame.register
-# def _(
-#     data: PlDataFrame,
-#     *,
-#     rows: RowsList = None,
-#     cols: ColsList = None,
-# ) -> PlDataFrame:
-#     indx_cols = (
-#         [col if isinstance(col, str) else data.columns[col] for col in cols]
-#         if cols is not None
-#         else slice(None)
-#     )
-#     indx_rows = rows if rows is not None else slice(None)
-#     return data[indx_cols][indx_rows]
-
-
 # # get_frame_cell -----------------------------------------------------------------------
-
-
-# @singledispatch
-# def get_frame_cell(data: IntoDataFrame, row: int, col: int) -> Any:
-#     raise TypeError(f"Unsupported type: {type(data)}")
-
-
-# @get_frame_cell.register
-# def _(data: PdDataFrame, row: int, col: int) -> Any:
-#     return (
-#         data.iat[  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
-#             row, col
-#         ]
-#     )
-
-
-# @get_frame_cell.register(DataFrame)
-# @get_frame_cell.register
-# def _(data: PlDataFrame, row: int, col: int) -> Any:
-#     return data.item(row, col)
+def get_frame_cell(data: DataFrame[Any], row: int, col: int) -> Any:
+    return data.item(row, col)
 
 
 # shape --------------------------------------------------------------------------------
-
-
-# @singledispatch
-# def frame_shape(data: IntoDataFrame) -> Tuple[int, int]:
-#     raise TypeError(f"Unsupported type: {type(data)}")
-
-
-# # @frame_shape.register
-# # def _(data: PdDataFrame) -> Tuple[int, int]:
-# #     return data.shape
-
-
-# # @frame_shape.register
-# # def _(data: PlDataFrame) -> Tuple[int, int]:
-# #     return data.shape
-
-
-# @frame_shape.register(DataFrame)
-# def _(data: DataFrame[Any]) -> Tuple[int, int]:
-#     return data.shape
-
-
 def frame_shape(data: IntoDataFrame) -> Tuple[int, int]:
     nw_data = as_data_frame(data)
     return nw_data.shape
@@ -650,48 +370,11 @@ def column_is_numeric(nw_data: DataFrame[Any], column_index: int) -> bool:
 
 
 # copy_frame ---------------------------------------------------------------------------
-
-
 def copy_frame(nw_data: DataFrameT) -> DataFrameT:
     return nw_data.clone()
 
 
-# @singledispatch
-# def copy_frame(data: IntoDataFrame) -> IntoDataFrame:
-#     raise TypeError(f"Unsupported type: {type(data)}")
-
-
-# @copy_frame.register
-# def _(data: PdDataFrame) -> PdDataFrame:
-#     return data.copy()
-
-
-# @copy_frame.register(DataFrame)
-# @copy_frame.register
-# def _(data: PlDataFrame) -> PlDataFrame:
-#     return data.clone()
-
-
 # column_names -------------------------------------------------------------------------
-# @singledispatch
-# def frame_column_names(data: IntoDataFrame) -> List[str]:
-#     raise TypeError(f"Unsupported type: {type(data)}")
-
-
-# # @frame_column_names.register
-# # def _(data: PdDataFrame) -> List[str]:
-# #     return data.columns.to_list()
-
-# # @frame_column_names.register
-# # def _(data: PlDataFrame) -> List[str]:
-# #     return data.columns
-
-
-# @frame_column_names.register(DataFrame)
-# def _(data: DataFrame[Any]) -> List[str]:
-#     return data.columns
-
-
 def frame_column_names(into_data: IntoDataFrame) -> List[str]:
     return as_data_frame(into_data).columns
 
