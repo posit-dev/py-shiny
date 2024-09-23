@@ -6,7 +6,7 @@ from htmltools import HTML, MetadataNode, Tagifiable, TagNode
 
 from ..._typing_extensions import TypeGuard
 from ...types import Jsonifiable
-from ._types import CellHtml, ReprHtml, SeriesLike
+from ._types import CellHtml, ReprHtml
 
 if TYPE_CHECKING:
     import narwhals.stable.v1 as nw
@@ -43,7 +43,7 @@ def maybe_as_cell_html(
     return cast(Jsonifiable, x)
 
 
-def col_contains_shiny_html(col: SeriesLike | nw.Series) -> bool:
+def col_contains_shiny_html(col: nw.Series) -> bool:
     for val in col:
         if is_shiny_html(val):
             return True

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from functools import singledispatch
 from typing import Any, List, Tuple, TypedDict
 
 import narwhals.stable.v1 as nw
@@ -25,7 +24,6 @@ from ._types import (
     PandasCompatible,
     PdDataFrame,
     RowsList,
-    SeriesLike,
 )
 
 __all__ = (

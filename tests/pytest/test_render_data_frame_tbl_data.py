@@ -18,7 +18,7 @@ from shiny.render._data_frame_utils._tbl_data import (
     serialize_frame,
     subset_frame,
 )
-from shiny.render._data_frame_utils._types import IntoDataFrame, SeriesLike
+from shiny.render._data_frame_utils._types import IntoDataFrame
 from shiny.session import Session, session_context
 from shiny.session._session import RenderedDeps, ResolvedId, Root
 from shiny.ui import HTML, TagChild, TagList, h1, span
@@ -79,7 +79,7 @@ def polars_dict_to_narwhals(d: dict[str, Any]) -> nw.DataFrame[pl.DataFrame]:
     return nw.from_native(pl.DataFrame(d), eager_only=True)
 
 
-def series_to_narwhals(ser: SeriesLike) -> nw.Series:
+def series_to_narwhals(ser: pd.Series[Any] | pl.Series) -> nw.Series:
     return nw.from_native(ser, series_only=True, strict=True)
 
 

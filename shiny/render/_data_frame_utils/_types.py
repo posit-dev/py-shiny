@@ -36,7 +36,6 @@ __all__ = (
     "PdSeries",
     "PlSeries",
     # "ListSeriesLike",
-    "SeriesLike",
     "IntoExpr",
     "DataFrame",
     "DataFrameT",
@@ -86,7 +85,7 @@ if TYPE_CHECKING:
     PlSeries = pl.Series
 
     # ListSeriesLike = Union[List[PdSeries], List[PlSeries]]
-    SeriesLike = Union[PdSeries, PlSeries]
+    # SeriesLike = Union[PdSeries, PlSeries]
 
 
 else:
@@ -105,13 +104,13 @@ else:
 
     # class ListSeriesLike(ABC): ...
 
-    class SeriesLike(ABC): ...
+    # class SeriesLike(ABC): ...
 
     # ListSeriesLike.register(PdSeries)
     # ListSeriesLike.register(PlSeries)
 
-    SeriesLike.register(PdSeries)
-    SeriesLike.register(PlSeries)
+    # SeriesLike.register(PdSeries)
+    # SeriesLike.register(PlSeries)
 
 DataFrame = nw.DataFrame
 
