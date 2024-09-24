@@ -5,7 +5,7 @@ import typing
 from typing import Literal
 
 from conftest import create_doc_example_core_fixture
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Page
 
 from shiny.playwright import controller
 from shiny.run import ShinyAppProc
@@ -18,10 +18,7 @@ def expect_date_range(
     start_value: str | Literal["today"] = "today",
     end_value: str | Literal["today"] = "today",
     *,
-    label: str = "Date:",
     autoclose: bool = True,
-    datesdisabled: typing.Optional[list[str]] = None,
-    daysofweekdisabled: typing.Optional[list[int]] = None,
     format: str = "yyyy-mm-dd",
     language: str = "en",
     max_date: typing.Optional[str] = None,
@@ -36,9 +33,6 @@ def expect_date_range(
     date.expect_value((start_value, end_value))
     autoclose_str = "true" if autoclose else "false"
     date.expect_autoclose(autoclose_str)
-    # # Not supported in `input_date_range()`
-    # date.expect_datesdisabled(datesdisabled)
-    # date.expect_daysofweekdisabled(daysofweekdisabled)
     date.expect_format(format)
     date.expect_language(language)
     date.expect_max_date(max_date)
@@ -55,14 +49,17 @@ def test_input_date_kitchen(page: Page, app: ShinyAppProc) -> None:
     daterange1 = controller.InputDateRange(page, "daterange1")
 
     daterange1.expect_label("Date range:")
-    expect(daterange1.loc_label).to_have_text("Date range:")
+    today = str(datetime.date.today().strftime("%Y-%m-%d"))
+    tommorow = str(
+        (datetime.date.today() + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+    )
+    daterange1.set((today, today))
+    expect_date_range(daterange1, today, today)
+    daterange1.set((today, tommorow))
 
-    expect_date_range(daterange1, "2001-01-01", "2010-12-31")
-
-    daterange1.set(("2012-02-02", "2012-11-15"))
-    expect_date_range(daterange1, "2012-02-02", "2012-11-15")
-
-    expect_date_range(controller.InputDateRange(page, "daterange2"))
+    expect_date_range(
+        controller.InputDateRange(page, "daterange2"), "2001-01-01", "2010-12-31"
+    )
 
     expect_date_range(
         controller.InputDateRange(page, "daterange3"),
@@ -87,4 +84,14 @@ def test_input_date_kitchen(page: Page, app: ShinyAppProc) -> None:
     expect_date_range(
         controller.InputDateRange(page, "daterange6"),
         startview="decade",
+    )
+
+    expect_date_range(
+        controller.InputDateRange(page, "daterange7"),
+        width="600px",
+    )
+
+    expect_date_range(
+        controller.InputDateRange(page, "daterange8"),
+        autoclose=False,
     )

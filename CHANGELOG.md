@@ -35,7 +35,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `ui.Theme()` now works correctly on Windows when the theme requires Sass compilation. (thanks @yuuuxt, #1684)
 
-* Fixed the `InputSlider` controller's `.expect_width()` to check the `width` property within the `style` attribute. (#1691)
+* Fixed the `InputSlider` playwright controller's `.expect_width()` to check the `width` property within the `style` attribute. (#1691)
+
+* Fixed the `InputDate` and `InputDateRange` playwright controllers to check the `width` property within the `style` attribute. (#1696)
 
 ## [1.1.0] - 2024-09-03
 

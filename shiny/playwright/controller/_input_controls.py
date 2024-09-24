@@ -211,7 +211,7 @@ class _InputSliderBase(UiWithLabel):
         value
             The expected width.
         timeout
-            The maximum time to wait for the width to be visible and interactable. Defaults to `None`.
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
         _expect_style_to_have_value(self.loc_container, "width", value, timeout=timeout)
 
