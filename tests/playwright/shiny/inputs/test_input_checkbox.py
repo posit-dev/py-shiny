@@ -17,6 +17,8 @@ def test_input_checkbox_kitchen(page: Page, app: ShinyAppProc) -> None:
     somevalue.expect_label("Some value")
 
     somevalue.expect_checked(False)
+    somevalue.expect_width(None)
+
     output_txt.expect.to_have_text("False")
 
     somevalue.set(True)
