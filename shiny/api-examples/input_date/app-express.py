@@ -4,7 +4,7 @@ from shiny.express import ui
 
 ui.input_date("date1", "Has default date:", value="2016-02-29")
 # Default value is the date in client's time zone
-ui.input_date("date2", "Client's timezone:")
+ui.input_date("date2", "Client's current date:")
 # value is always yyyy-mm-dd, even if the display format is different
 ui.input_date("date3", "Format mm/dd/yy:", value="2016-02-29", format="mm/dd/yy")
 # Pass in a Date object
