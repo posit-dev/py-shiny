@@ -420,7 +420,7 @@ class InputFile(
         value
             The expected value of the width.
         timeout
-            The timeout for the expectation. Defaults to `None`.
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
         _expect_style_to_have_value(self.loc_container, "width", value, timeout=timeout)
 

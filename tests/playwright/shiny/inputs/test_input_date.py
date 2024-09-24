@@ -5,7 +5,7 @@ import typing
 from typing import Literal
 
 from conftest import create_doc_example_core_fixture
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Page
 
 from shiny.playwright import controller
 from shiny.run import ShinyAppProc
@@ -17,7 +17,6 @@ def expect_date(
     date: controller.InputDate,
     value: str | Literal["today"] = "today",
     *,
-    label: str = "Date:",
     autoclose: bool = True,
     datesdisabled: typing.Optional[list[str]] = None,
     daysofweekdisabled: typing.Optional[list[int]] = None,
@@ -47,9 +46,7 @@ def test_input_date_kitchen(page: Page, app: ShinyAppProc) -> None:
     page.goto(app.url)
 
     date1 = controller.InputDate(page, "date1")
-
-    date1.expect_label("Date:")
-    expect(date1.loc_label).to_have_text("Date:")
+    date1.expect_label("Has default date:")
 
     expect_date(date1, "2016-02-29")
 
@@ -75,3 +72,14 @@ def test_input_date_kitchen(page: Page, app: ShinyAppProc) -> None:
         "2016-02-29",
         datesdisabled=["2016-03-01", "2016-03-02"],
     )
+
+    expect_date(
+        controller.InputDate(page, "date9"),
+        "2016-02-03",
+        min_date="2016-02-01",
+        max_date="2016-02-29",
+    )
+
+    expect_date(controller.InputDate(page, "date10"), width="600px")
+
+    expect_date(controller.InputDate(page, "date11"), autoclose=False)
