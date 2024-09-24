@@ -40,7 +40,8 @@ class InputWidthControlMixin:
         timeout: Timeout = None,
     ) -> None:
         """
-        Expect the input select to have a specific width.
+        Expect the input element to have a specific width.
+
         Parameters
         ----------
         value
@@ -472,7 +473,10 @@ class _InputSliderBase(InputWidthControlMixin, UiWithLabel):
         return handle_center
 
 
-class _RadioButtonCheckboxGroupBase(InputWidthControlMixin, UiWithLabel):
+class _RadioButtonCheckboxGroupBase(
+    InputWidthControlMixin, 
+    UiWithLabel
+):
     loc_choice_labels: Locator
 
     def expect_choice_labels(

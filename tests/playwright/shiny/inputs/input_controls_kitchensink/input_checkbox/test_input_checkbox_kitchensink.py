@@ -9,6 +9,7 @@ def test_checkbox_kitchen(page: Page, local_app: ShinyAppProc) -> None:
 
     default = controller.InputCheckbox(page, "default")
     default.expect_label("Basic Checkbox")
+    default.expect_checked(False)
 
     value = controller.InputCheckbox(page, "value")
     value.expect_checked(True)
