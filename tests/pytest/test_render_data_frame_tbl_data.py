@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Union, cast
 
+import htmltools
 import narwhals.stable.v1 as nw
 import pandas as pd
 import polars as pl
@@ -69,6 +70,12 @@ DATA = {
     "arr": [[1, 2], [3, 4]],
     "object": [C(1), D(2)],
 }
+
+# Polars.Series is not always a TagNode (as it has a `__repr_html__` method)
+# So we need to check if it is a TagNode to determine if it is an `"html"` or `"unknown"` type
+polars_series_col_type = (
+    "html" if htmltools.is_tag_node(pl.Series([[1, 2], [3, 4]])) else "unknown"
+)
 
 
 def pandas_dict_to_narwhals(d: dict[str, Any]) -> nw.DataFrame[pd.DataFrame]:
@@ -247,7 +254,7 @@ def test_serialize_frame(df_f: IntoDataFrame):
             # Polars doesn't have a way to represent a struct,
             # so Narwhals marks it as unknown
             {"type": "unknown" if is_polars_backed else "object"},
-            {"type": "unknown" if is_polars_backed else "object"},
+            {"type": polars_series_col_type if is_polars_backed else "object"},
             {"type": "object"},
         ],
     }

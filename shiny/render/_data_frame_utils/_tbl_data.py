@@ -106,81 +106,52 @@ def apply_frame_patches(
     if len(patches) == 0:
         return nw_data
 
-    # Us an index to know which row we are updating
-    data_with_index = nw_data.with_row_index()
-
     # Apply the patches
 
-    # If multiple `when` statements are possible, then use this code
-    if True:
-        # # https://discord.com/channels/1235257048170762310/1235257049626181656/1283415086722977895
-        # # Using narwhals >= v1.7.0
-        # @nw.narwhalify
-        # def func(df):
-        #     return df.with_columns(
-        #         df['a'].scatter([0, 1], [999, 888]),
-        #         df['b'].scatter([0, 1], [777, 555]),
-        #     )
+    # TODO-future-barret; Might be faster to _always_ store the patches as a
+    #     `cell_patches_by_column` object. Then iff they need the patches would we
+    #     deconstruct them into a flattened list. Where as this conversion is being
+    #     performed on every serialization of the data frame payload
 
-        # Group patches by column
-        # This allows for a single column to be updated in a single operation (rather than multiple updates to the same column)
+    # # https://discord.com/channels/1235257048170762310/1235257049626181656/1283415086722977895
+    # # Using narwhals >= v1.7.0
+    # @nw.narwhalify
+    # def func(df):
+    #     return df.with_columns(
+    #         df['a'].scatter([0, 1], [999, 888]),
+    #         df['b'].scatter([0, 1], [777, 555]),
+    #     )
 
-        cell_patches_by_column: dict[str, ScatterValues] = {}
-        for cell_patch in patches:
-            column_name = nw_data.columns[cell_patch["column_index"]]
-            if column_name not in cell_patches_by_column:
-                cell_patches_by_column[column_name] = {
-                    "row_indexes": [],
-                    "values": [],
-                }
+    # Group patches by column
+    # This allows for a single column to be updated in a single operation (rather than multiple updates to the same column)
+    #
+    # In; patches: List[Dict[row_index: int, column_index: int, value: Any]]
+    # Out; cell_patches_by_column: Dict[column_name: str, List[Dict[row_index: int, value: Any]]]
+    #
+    cell_patches_by_column: dict[str, ScatterValues] = {}
+    for cell_patch in patches:
+        column_name = nw_data.columns[cell_patch["column_index"]]
+        if column_name not in cell_patches_by_column:
+            cell_patches_by_column[column_name] = {
+                "row_indexes": [],
+                "values": [],
+            }
 
-            # Append the row index and value to the column information
-            cell_patches_by_column[column_name]["row_indexes"].append(
-                cell_patch["row_index"]
-            )
-            cell_patches_by_column[column_name]["values"].append(cell_patch["value"])
+        # Append the row index and value to the column information
+        cell_patches_by_column[column_name]["row_indexes"].append(
+            cell_patch["row_index"]
+        )
+        cell_patches_by_column[column_name]["values"].append(cell_patch["value"])
 
-        # Upgrade the Scatter info to new column Series objects
-        scatter_columns = [
-            nw_data[column_name].scatter(
-                scatter_values["row_indexes"], scatter_values["values"]
-            )
-            for column_name, scatter_values in cell_patches_by_column.items()
-        ]
-        # Apply patches to the nw data
-        return nw_data.with_columns(*scatter_columns)
-
-        # Documentation for nw.when: https://narwhals-dev.github.io/narwhals/api-reference/narwhals/#narwhals.when
-        # when_then_otherwise_arr: List[IntoExpr] = []
-
-        for column_name, cell_patches in cell_patches_by_column.items():
-            col_expr = nw.when(
-                nw.col("index") == cell_patches[0]["row_index"],
-            ).then(cell_patches[0]["value"])
-
-            for i, cell_patch in enumerate(cell_patches):
-                if i == 0:
-                    # Performed above to get typing value
-                    continue
-                col_expr = col_expr.when(
-                    nw.col("index") == cell_patch["row_index"],
-                ).then(cell_patch["value"])
-
-            col_expr = col_expr.alias(column_name)
-            # when_then_otherwise_arr.append(col_expr)
-    else:
-        # https://discord.com/channels/1235257048170762310/1235257049626181656/1283078606775517184
-        # Very inefficient code that works to update a cell by making a new column for every patch value
-        for cell_patch in patches:
-            data_with_index = data_with_index.with_columns(
-                nw.when(nw.col("index") == cell_patch["row_index"])
-                .then(cell_patch["value"])
-                .otherwise(nw.col(nw_data.columns[cell_patch["column_index"]]))
-            )
-
-    patched_data = data_with_index.drop("index")
-
-    return patched_data
+    # Upgrade the Scatter info to new column Series objects
+    scatter_columns = [
+        nw_data[column_name].scatter(
+            scatter_values["row_indexes"], scatter_values["values"]
+        )
+        for column_name, scatter_values in cell_patches_by_column.items()
+    ]
+    # Apply patches to the nw data
+    return nw_data.with_columns(*scatter_columns)
 
 
 # serialize_dtype ----------------------------------------------------------------------
@@ -195,12 +166,12 @@ nw_object = nw.Object()
 
 def serialize_dtype(col: nw.Series) -> FrameDtype:
 
-    from ._html import col_contains_shiny_html
+    from ._html import series_contains_htmltoolslike
 
     dtype: DType = col.dtype
 
     if dtype == nw_string:
-        if col_contains_shiny_html(col):
+        if series_contains_htmltoolslike(col):
             type_ = "html"
         else:
             type_ = "string"
@@ -228,12 +199,12 @@ def serialize_dtype(col: nw.Series) -> FrameDtype:
         type_ = "datetime"
     elif dtype == nw_object:
         type_ = "object"
-        if col_contains_shiny_html(col):
+        if series_contains_htmltoolslike(col):
             type_ = "html"
 
     else:
         type_ = "unknown"
-        if col_contains_shiny_html(col):
+        if series_contains_htmltoolslike(col):
             type_ = "html"
 
     return {"type": type_}
@@ -246,6 +217,8 @@ def serialize_frame(into_data: IntoDataFrame) -> FrameJson:
 
     type_hints = [serialize_dtype(data[col_name]) for col_name in data.columns]
     type_hints_type = [type_hint["type"] for type_hint in type_hints]
+
+    # print("type_hints:", type_hints)
 
     data_rows = data.rows(named=False)
 

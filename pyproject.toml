@@ -34,7 +34,8 @@ dependencies = [
     "starlette",
     "websockets>=10.0",
     "python-multipart",
-    "htmltools>=0.5.2",
+    # "htmltools>=0.5.3.9001",
+    "htmltools@git+https://github.com/posit-dev/py-htmltools",
     "click>=8.1.4;platform_system!='Emscripten'",
     "markdown-it-py>=1.1.0",
     "mdit-py-plugins>=0.3.0",
@@ -47,7 +48,7 @@ dependencies = [
     "prompt-toolkit;platform_system!='Emscripten'",
     "python-multipart>=0.0.7;platform_system!='Emscripten'",
     "setuptools;python_version>='3.12'",
-    "narwhals>=1.8.0",
+    "narwhals>=1.8.3",
     "orjson>=3.10.7",
 ]
 

@@ -60,7 +60,6 @@ __all__ = (
     "StyleInfo",
     "BrowserStyleInfoBody",
     "BrowserStyleInfo",
-    "ReprHtml",
     "CellValue",
     "CellPatch",
     "CellPatchProcessed",
@@ -269,18 +268,6 @@ BrowserStyleInfoBody = TypedDict(
     },
 )
 BrowserStyleInfo = BrowserStyleInfoBody
-
-# ---------------------------------------------------------------------
-
-
-# TODO-future; Replace this class with `htmltools.ReprHtml` when it is publically available. Even better... there should be a "is tag-like" method in htmltools that determines if the object could be enhanced by rendering
-@runtime_checkable
-class ReprHtml(Protocol):
-    """
-    Objects with a `_repr_html_()` method.
-    """
-
-    def _repr_html_(self) -> str: ...
 
 
 # Cell patches ----------------------------------------------------------
