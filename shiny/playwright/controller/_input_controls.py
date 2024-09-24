@@ -463,7 +463,31 @@ class _InputSliderBase(UiWithLabel):
         return handle_center
 
 
-class _RadioButtonCheckboxGroupBase(UiWithLabel):
+class InputCheckboxWidthM:
+    """
+    A mixin class for input checkboc width.
+    This mixin class provides methods to expect the width of input checkbox.
+    """
+
+    def expect_width(
+        self: UiWithContainerP,
+        value: AttrValue,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expect the input select to have a specific width.
+        Parameters
+        ----------
+        value
+            The expected width.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        _expect_style_to_have_value(self.loc_container, "width", value, timeout=timeout)
+
+
+class _RadioButtonCheckboxGroupBase(InputCheckboxWidthM, UiWithLabel):
     loc_choice_labels: Locator
 
     def expect_choice_labels(
@@ -646,7 +670,7 @@ class InputRadioButtons(
 
 
 class _InputCheckboxBase(
-    WidthContainerM,
+    InputCheckboxWidthM,
     UiWithLabel,
 ):
     def __init__(
@@ -721,7 +745,6 @@ class _InputCheckboxBase(
 
 
 class InputCheckboxGroup(
-    WidthContainerM,
     _RadioButtonCheckboxGroupBase,
 ):
     """Controller for :func:`shiny.ui.input_checkbox_group`."""
