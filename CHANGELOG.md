@@ -39,6 +39,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Fixed the `InputDate` and `InputDateRange` playwright controllers to check the `width` property within the `style` attribute. (#1696)
 
+* Fixed the `InputCheckbox` and `InputCheckboxGroup` playwright controllers' `.expect_width()` to check the `width` property within the `style` attribute. (#1702)
+
 ## [1.1.0] - 2024-09-03
 
 ### New features

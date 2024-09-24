@@ -387,6 +387,30 @@ class WidthContainerM:
         )
 
 
+class WidthContainerStyleM:
+    """
+    A mixin class that provides methods to control the width of input elements, such as checkboxes, sliders and radio buttons.
+    """
+
+    def expect_width(
+        self: UiWithContainerP,
+        value: AttrValue,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expect the input element to have a specific width.
+
+        Parameters
+        ----------
+        value
+            The expected width.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        _expect_style_to_have_value(self.loc_container, "width", value, timeout=timeout)
+
+
 class InputActionBase(UiBase):
     def expect_label(
         self,
