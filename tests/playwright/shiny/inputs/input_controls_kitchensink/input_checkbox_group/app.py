@@ -16,6 +16,10 @@ with ui.layout_columns():
         ui.card_header("Default Checkbox Group with label")
         ui.input_checkbox_group("default", "Basic Checkbox Group", choices=choices)
 
+        @render.code
+        def default_txt():
+            return str(input.default())
+
     with ui.card():
         ui.card_header("With Selected Values")
         ui.input_checkbox_group(
@@ -25,9 +29,17 @@ with ui.layout_columns():
             selected=["Option B", "Option C"],
         )
 
+        @render.code
+        def selected_txt():
+            return str(input.selected())
+
     with ui.card():
         ui.card_header("With Width")
         ui.input_checkbox_group("width", "Custom Width", choices=choices, width="30px")
+
+        @render.code
+        def width_txt():
+            return str(input.width())
 
     with ui.card():
         ui.card_header("Inline")
@@ -36,8 +48,8 @@ with ui.layout_columns():
         )
 
         @render.code
-        def inline_val_txt():
-            return "You chose " + ", ".join(input.inline())
+        def inline_txt():
+            return str(input.inline())
 
     with ui.card():
         ui.card_header("With dict of values")
@@ -48,5 +60,5 @@ with ui.layout_columns():
         )
 
         @render.code
-        def dict_value_txt():
-            return "You chose " + ", ".join(input.dict_values())
+        def dict_values_txt():
+            return str(input.dict_values())
