@@ -19,7 +19,6 @@ from ._base import (
     InitLocator,
     UiWithContainerP,
     UiWithLabel,
-    WidthContainerM,
     all_missing,
     not_is_missing,
 )
@@ -29,7 +28,30 @@ from ._expect import (
 )
 
 
-class _InputSliderBase(UiWithLabel):
+class InputWidthControlMixin:
+    """
+    A mixin class that provides methods to control the width of input elements, such as checkboxes, sliders and radio buttons.
+    """
+
+    def expect_width(
+        self: UiWithContainerP,
+        value: AttrValue,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expect the input select to have a specific width.
+        Parameters
+        ----------
+        value
+            The expected width.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        _expect_style_to_have_value(self.loc_container, "width", value, timeout=timeout)
+
+
+class _InputSliderBase(InputWidthControlMixin, UiWithLabel):
 
     loc_irs: Locator
     """
@@ -201,19 +223,6 @@ class _InputSliderBase(UiWithLabel):
         _expect_attribute_to_have_value(
             self.loc, "data-max", value=value, timeout=timeout
         )
-
-    def expect_width(self, value: str, *, timeout: Timeout = None) -> None:
-        """
-        Expects the slider to have the specified width.
-
-        Parameters
-        ----------
-        value
-            The expected width.
-        timeout
-            The maximum time to wait for the width to be visible and interactable. Defaults to `None`.
-        """
-        _expect_style_to_have_value(self.loc_container, "width", value, timeout=timeout)
 
     def expect_step(self, value: AttrValue, *, timeout: Timeout = None) -> None:
         """
@@ -463,31 +472,7 @@ class _InputSliderBase(UiWithLabel):
         return handle_center
 
 
-class InputCheckboxWidthM:
-    """
-    A mixin class for input checkboc width.
-    This mixin class provides methods to expect the width of input checkbox.
-    """
-
-    def expect_width(
-        self: UiWithContainerP,
-        value: AttrValue,
-        *,
-        timeout: Timeout = None,
-    ) -> None:
-        """
-        Expect the input select to have a specific width.
-        Parameters
-        ----------
-        value
-            The expected width.
-        timeout
-            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
-        """
-        _expect_style_to_have_value(self.loc_container, "width", value, timeout=timeout)
-
-
-class _RadioButtonCheckboxGroupBase(InputCheckboxWidthM, UiWithLabel):
+class _RadioButtonCheckboxGroupBase(InputWidthControlMixin, UiWithLabel):
     loc_choice_labels: Locator
 
     def expect_choice_labels(
@@ -535,7 +520,6 @@ class _RadioButtonCheckboxGroupBase(InputCheckboxWidthM, UiWithLabel):
 
 
 class InputRadioButtons(
-    WidthContainerM,
     _RadioButtonCheckboxGroupBase,
 ):
     """Controller for :func:`shiny.ui.input_radio_buttons`."""
@@ -670,7 +654,7 @@ class InputRadioButtons(
 
 
 class _InputCheckboxBase(
-    InputCheckboxWidthM,
+    InputWidthControlMixin,
     UiWithLabel,
 ):
     def __init__(
@@ -958,33 +942,7 @@ class InputSwitch(_InputCheckboxBase):
         )
 
 
-class InputSelectWidthM:
-    """
-    A base class representing the input `select` and `selectize` widths.
-
-    This class provides methods to expect the width attribute of a DOM element.
-    """
-
-    def expect_width(
-        self: UiWithContainerP,
-        value: AttrValue,
-        *,
-        timeout: Timeout = None,
-    ) -> None:
-        """
-        Expect the input select to have a specific width.
-
-        Parameters
-        ----------
-        value
-            The expected width.
-        timeout
-            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
-        """
-        _expect_style_to_have_value(self.loc_container, "width", value, timeout=timeout)
-
-
-class InputSelect(InputSelectWidthM, UiWithLabel):
+class InputSelect(InputWidthControlMixin, UiWithLabel):
     """
     Controller for :func:`shiny.ui.input_select`.
 
@@ -1211,7 +1169,7 @@ class InputSelect(InputSelectWidthM, UiWithLabel):
         )
 
 
-class InputSelectize(InputSelectWidthM, UiWithLabel):
+class InputSelectize(InputWidthControlMixin, UiWithLabel):
     """Controller for :func:`shiny.ui.input_selectize`."""
 
     def __init__(self, page: Page, id: str) -> None:
