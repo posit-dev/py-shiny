@@ -1,4 +1,3 @@
-from shiny import req
 from shiny.express import input, render, ui
 
 ui.page_opts(title="Checkbox Group Kitchen Sink", fillable=True)
