@@ -58,10 +58,6 @@ def series_contains_htmltoolslike(ser: Series) -> bool:
     return False
 
 
-# TODO-barret-test; Add test to assert the union type of `TagNode` contains `str` and (HTML | Tagifiable | MetadataNode | ReprHtml). Until a `is tag renderable` method is available in htmltools, we need to check for these types manually and must stay in sync with the `TagNode` union type.
-# TODO-barret-future; Use `TypeIs[HTML | Tagifiable | MetadataNode | ReprHtml]` when it is available from typing_extensions
-
-
 @overload
 def cell_contains_htmltoolslike(  # pyright: ignore[reportOverlappingOverload]
     val: str,

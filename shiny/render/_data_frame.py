@@ -396,8 +396,6 @@ class data_frame(
                 selection_modes=self.selection_modes(),
                 nw_data=self._nw_data(),
                 data_view_rows=self.data_view_rows(),
-                # TODO-barret: replace methods like .shape, .loc. .iat with those from
-                # _tbl_data.py, test in the playright app.
                 data_view_cols=tuple(range(frame_shape(self._nw_data())[1])),
             )
 
@@ -1048,8 +1046,6 @@ class data_frame(
 #   StyleInfo = {loc: "body", rows: int | List[int], columns: int | str | List[int | str], style: str? | dict[str, Jsonifiable]? | None, class_: str | None, }
 # * Call styles fn after each edit (and on init); Send full styles for each cell
 # Support `rows: List[bool]`?
-
-# r-shinylive: bundle ALL packages, R... it should work out of the box with no internet
 
 # mydf.iloc[row_nums, col_nums]
 # mydf["mpg"] > 20
