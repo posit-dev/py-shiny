@@ -17,8 +17,8 @@ from ..expect._internal import expect_class_to_have_value as _expect_class_to_ha
 from ..expect._internal import expect_style_to_have_value as _expect_style_to_have_value
 from ._base import (
     InitLocator,
-    UiWithContainerP,
     UiWithLabel,
+    WidthContainerStyleM,
     all_missing,
     not_is_missing,
 )
@@ -28,31 +28,10 @@ from ._expect import (
 )
 
 
-class InputWidthControlMixin:
-    """
-    A mixin class that provides methods to control the width of input elements, such as checkboxes, sliders and radio buttons.
-    """
-
-    def expect_width(
-        self: UiWithContainerP,
-        value: AttrValue,
-        *,
-        timeout: Timeout = None,
-    ) -> None:
-        """
-        Expect the input element to have a specific width.
-
-        Parameters
-        ----------
-        value
-            The expected width.
-        timeout
-            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
-        """
-        _expect_style_to_have_value(self.loc_container, "width", value, timeout=timeout)
-
-
-class _InputSliderBase(InputWidthControlMixin, UiWithLabel):
+class _InputSliderBase(
+    WidthContainerStyleM,
+    UiWithLabel,
+):
 
     loc_irs: Locator
     """
@@ -474,8 +453,8 @@ class _InputSliderBase(InputWidthControlMixin, UiWithLabel):
 
 
 class _RadioButtonCheckboxGroupBase(
-    InputWidthControlMixin, 
-    UiWithLabel
+    WidthContainerStyleM,
+    UiWithLabel,
 ):
     loc_choice_labels: Locator
 
@@ -658,7 +637,7 @@ class InputRadioButtons(
 
 
 class _InputCheckboxBase(
-    InputWidthControlMixin,
+    WidthContainerStyleM,
     UiWithLabel,
 ):
     def __init__(
@@ -946,7 +925,10 @@ class InputSwitch(_InputCheckboxBase):
         )
 
 
-class InputSelect(InputWidthControlMixin, UiWithLabel):
+class InputSelect(
+    WidthContainerStyleM,
+    UiWithLabel,
+):
     """
     Controller for :func:`shiny.ui.input_select`.
 
@@ -1173,7 +1155,10 @@ class InputSelect(InputWidthControlMixin, UiWithLabel):
         )
 
 
-class InputSelectize(InputWidthControlMixin, UiWithLabel):
+class InputSelectize(
+    WidthContainerStyleM,
+    UiWithLabel,
+):
     """Controller for :func:`shiny.ui.input_selectize`."""
 
     def __init__(self, page: Page, id: str) -> None:
