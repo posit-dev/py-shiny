@@ -55,7 +55,8 @@ def as_data_frame(
         return nw.from_native(data, eager_only=True)
     except TypeError as e:
         try:
-            return nw.from_native(compatible_to_pandas(data), eager_only=True)
+            compatible_data = compatible_to_pandas(data)
+            return nw.from_native(compatible_data, eager_only=True)
         except TypeError:
             # Couldn't convert to pandas, so raise the original error
             raise e
@@ -79,7 +80,8 @@ def compatible_to_pandas(
             "A `.to_pandas()` was found on your object and will be called. "
             "To remove this warning, please call `.to_pandas()` on your data "
             "and use the pandas result in your returned value. "
-            "In the future, this will raise an error."
+            "In the future, this will raise an error.",
+            stacklevel=3,
         )
         return data.to_pandas()
 

@@ -64,10 +64,11 @@ class data_frame(
     ]
 ):
     """
-    Decorator for a function that returns a [pandas](https://pandas.pydata.org/) or
-    [polars](https://pola.rs/) `DataFrame` object to render as an interactive table or
-    grid. Features fast virtualized scrolling, sorting, filtering, and row selection
-    (single or multiple).
+    Decorator for a function that returns a [pandas](https://pandas.pydata.org/),
+    [polars](https://pola.rs/), or eager
+    [`narwhals`](https://narwhals-dev.github.io/narwhals/) compatible `DataFrame` object
+    to render as an interactive table or grid. Features fast virtualized scrolling,
+    sorting, filtering, and row selection (single or multiple).
 
     Returns
     -------
@@ -77,8 +78,10 @@ class data_frame(
         1. A :class:`~shiny.render.DataGrid` or :class:`~shiny.render.DataTable` object,
            which can be used to customize the appearance and behavior of the data frame
            output.
-        2. A pandas `DataFrame` object or a polars `DataFrame` object. This object will
-           be internally upgraded to `shiny.render.DataGrid(df)`.
+        2. A [pandas](https://pandas.pydata.org/), [polars](https://pola.rs/), or eager
+           [`narwhals`](https://narwhals-dev.github.io/narwhals/) compatible `DataFrame`
+           object. This object will be internally upgraded to a default
+           `shiny.render.DataGrid(df)`.
 
     Row selection
     -------------
@@ -228,7 +231,9 @@ class data_frame(
 
         See Also
         --------
-        * [`pandas.DataFrame.copy` API documentation]h(ttps://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.copy.html)
+        * [`pandas.DataFrame.copy` API documentation](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.copy.html)
+        * [`polars.DataFrame.clone` API documentation](https://docs.pola.rs/api/python/stable/reference/dataframe/api/polars.DataFrame.clone.html)
+        * [`narwhals.DataFrame.clone` API documentation](https://narwhals-dev.github.io/narwhals/api-reference/dataframe/#narwhals.dataframe.DataFrame.clone)
         """
         # Return reactive calculations so that they can be cached for other calculations
         if selected:

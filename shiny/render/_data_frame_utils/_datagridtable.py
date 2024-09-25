@@ -1,3 +1,6 @@
+# TODO-future-barret; Maybe use a `._options()` method to return a `JsonifiableDict` within the DataGrid/DataTable classes?
+# TODO-future-barret; Really feals as if we should have a base class that does most of this for us
+
 from __future__ import annotations
 
 import abc
@@ -39,8 +42,9 @@ class DataGrid(AbstractTabularData, Generic[IntoDataFrameT]):
     Parameters
     ----------
     data
-        A pandas or polars `DataFrame` object. If the object has a `.to_pandas()`
-        method, use the pandas form of your data.
+        A [pandas](https://pandas.pydata.org/), [polars](https://pola.rs/), or
+        eager [`narwhals`](https://narwhals-dev.github.io/narwhals/) compatible `DataFrame`
+        object.
     width
         A _maximum_ amount of horizontal space for the data grid to occupy, in CSS units
         (e.g. `"400px"`) or as a number, which will be interpreted as pixels. The
@@ -136,10 +140,6 @@ class DataGrid(AbstractTabularData, Generic[IntoDataFrameT]):
         styles: StyleInfo | list[StyleInfo] | StyleFn[IntoDataFrameT] | None = None,
         row_selection_mode: RowSelectionModeDeprecated = "deprecated",
     ):
-
-        # self._data_is_nw = isinstance(data, NwDataFrameRaw)
-        # self.data = as_narwhals(data)
-        # self.data = as_nw_friendly_data_frame(data)
         self.data = data
 
         self.width = width
@@ -201,8 +201,9 @@ class DataTable(AbstractTabularData, Generic[IntoDataFrameT]):
     Parameters
     ----------
     data
-        A pandas or polars `DataFrame` object. If the object has a `.to_pandas()`
-        method, use the pandas form of your data.
+        A [pandas](https://pandas.pydata.org/), [polars](https://pola.rs/), or
+        eager [`narwhals`](https://narwhals-dev.github.io/narwhals/) compatible `DataFrame`
+        object.
     width
         A _maximum_ amount of vertical space for the data table to occupy, in CSS units
         (e.g. `"400px"`) or as a number, which will be interpreted as pixels. The
