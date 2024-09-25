@@ -1,7 +1,9 @@
+# TODO-barret: ts code to stringify objects?
+
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Union, cast
 
 import htmltools
@@ -62,10 +64,11 @@ DATA = {
     "num": [1, 2],
     "chr": ["a", "b"],
     "cat": ["a", "a"],
+    "bool": [True, False],
     "dt": [datetime(2000, 1, 2)] * 2,
+    "duration": [timedelta(weeks=1), timedelta(days=7)],
     "html": [span("span content")] * 2,
     "html_str": [HTML("<strong>bolded</strong>")] * 2,
-    # TODO-barret: ts code to stringify objects?
     "struct": [{"x": 1}, {"x": 2}],
     "arr": [[1, 2], [3, 4]],
     "object": [C(1), D(2)],
@@ -140,7 +143,6 @@ def assert_frame_equal2(
     assert_frame_equal(src_native, target_native, use_index)
 
 
-# TODO: explicitly pass dtype= when doing Series construction
 @pytest.mark.parametrize(
     "ser, res_type",
     [  # pyright: ignore[reportUnknownArgumentType] # We are explicitly setting some values to `unkown`
@@ -148,20 +150,60 @@ def assert_frame_equal2(
         (pl.Series([1]), "numeric"),
         (pl.Series([1.1]), "numeric"),
         (pl.Series(["a"]), "string"),
+        (pl.Series([True, False]), "boolean"),
         (pl.Series([datetime.now()]), "datetime"),
-        (pl.Series(["a"], dtype=pl.Categorical), "categorical"),
+        (pl.Series([timedelta(weeks=1)]), "duration"),
+        (
+            pl.Series(["a", "b", "b", "c"], dtype=pl.Categorical),
+            ("categorical", ["a", "b", "c"]),
+        ),
+        (
+            pl.Series(
+                ["Panda", "Polar", "Brown", "Brown", "Polar"],
+                dtype=pl.Enum(["Polar", "Panda", "Brown"]),
+            ),
+            ("categorical", ["Polar", "Panda", "Brown"]),
+        ),
         (pl.Series([{"x": 1}]), "unknown"),
         (pl.Series([h1("yo")]), "html"),
-        # TODO-barret; Need https://github.com/posit-dev/py-htmltools/pull/86 to be merged to remove custom dtype
-        (pl.Series([HTML("yo")], dtype=pl.Object), "html"),
+        (pl.Series([HTML("yo")]), "html"),
         # pandas ----
         (pd.Series([1]), "numeric"),
         (pd.Series([1.1]), "numeric"),
-        (pd.Series(["a"], dtype="object"), "string"),
-        (pd.Series(["a"], dtype="string"), "string"),
-        (pd.Series([datetime.now()], dtype="datetime64[ns]"), "datetime"),
-        # (pd.Series([pd.Timedelta(days=1)]), "timedelta"),
-        (pd.Series(["a"], dtype="category"), "categorical"),
+        (pd.Series(["a"]), "string"),
+        (pd.Series([True, False]), "boolean"),
+        (pd.Series([datetime.now()]), "datetime"),
+        (pd.Series([timedelta(weeks=1)]), "duration"),
+        (
+            pd.Series(["a", "b", "b", "c"], dtype="category"),
+            ("categorical", ["a", "b", "c"]),
+        ),
+        (
+            pd.Series(
+                pd.Categorical(
+                    ["Panda", "Polar", "Brown", "Brown", "Polar"],
+                    categories=["Polar", "Panda", "Brown"],
+                )
+            ),
+            ("categorical", ["Polar", "Panda", "Brown"]),
+        ),
+        (
+            pd.Series(
+                pd.CategoricalIndex(
+                    ["Panda", "Polar", "Brown", "Brown", "Polar"],
+                )
+            ),
+            ("categorical", ["Brown", "Panda", "Polar"]),
+        ),
+        (
+            pd.Series(
+                pd.CategoricalIndex(
+                    ["Panda", "Polar", "Brown", "Brown", "Polar"],
+                    categories=["Polar", "Panda", "Brown"],
+                )
+            ),
+            ("categorical", ["Polar", "Panda", "Brown"]),
+        ),
         (pd.Series([{"x": 1}]), "object"),
         (pd.Series([h1("yo")]), "html"),
         (pd.Series([HTML("yo")]), "html"),
@@ -172,10 +214,15 @@ def test_serialize_dtype(
         "pd.Series[Any]",
         pl.Series,
     ],
-    res_type: str,
+    res_type: str | tuple[str, list[str]],
 ):
     nw_ser = series_to_narwhals(ser)
-    assert serialize_dtype(nw_ser)["type"] == res_type
+    dtype_info = serialize_dtype(nw_ser)
+    ex_type = res_type if isinstance(res_type, str) else res_type[0]
+    assert dtype_info["type"] == ex_type
+    if dtype_info["type"] == "categorical":
+        assert isinstance(res_type, tuple)
+        assert dtype_info["categories"] == res_type[1]
 
 
 def test_serialize_frame(df_f: IntoDataFrame):
@@ -184,11 +231,6 @@ def test_serialize_frame(df_f: IntoDataFrame):
     #     pytest.skip()
 
     df_nw = as_data_frame(df_f)
-
-    # # TODO: pandas converts datetime entries to int, but Polars
-    # # preserves the datetime object.
-    # if isinstance(df_f, pl.DataFrame):
-    #     pytest.xfail()
 
     is_polars_backed = isinstance(
         nw.to_native(nw.from_native(df_f, eager_only=True)), pl.DataFrame
@@ -201,7 +243,9 @@ def test_serialize_frame(df_f: IntoDataFrame):
             "num",
             "chr",
             "cat",
+            "bool",
             "dt",
+            "duration",
             "html",
             "html_str",
             "struct",
@@ -213,7 +257,9 @@ def test_serialize_frame(df_f: IntoDataFrame):
                 1,
                 "a",
                 "a",
-                "2000-01-02T00:00:00",
+                True,
+                "2000-01-02T00:00:00" if is_polars_backed else "2000-01-02 00:00:00",
+                "7 days, 0:00:00" if is_polars_backed else "7 days 00:00:00",
                 {
                     "isShinyHtml": True,
                     "obj": {"deps": [], "html": "<span>span content</span>"},
@@ -230,7 +276,9 @@ def test_serialize_frame(df_f: IntoDataFrame):
                 2,
                 "b",
                 "a",
-                "2000-01-02T00:00:00",
+                False,
+                "2000-01-02T00:00:00" if is_polars_backed else "2000-01-02 00:00:00",
+                "7 days, 0:00:00" if is_polars_backed else "7 days 00:00:00",
                 {
                     "isShinyHtml": True,
                     "obj": {"deps": [], "html": "<span>span content</span>"},
@@ -248,7 +296,9 @@ def test_serialize_frame(df_f: IntoDataFrame):
             {"type": "numeric"},
             {"type": "string"},
             {"type": "string"},
+            {"type": "boolean"},
             {"type": "datetime"},
+            {"type": "duration"},
             {"type": "html"},
             {"type": "html"},
             # Polars doesn't have a way to represent a struct,
@@ -299,3 +349,48 @@ def test_subset_frame_cols_single(small_df_f: IntoDataFrame):
 
 def test_shape(small_df_f: IntoDataFrame):
     assert frame_shape(small_df_f) == (2, 2)
+
+
+def test_dtype_coverage():
+    from pathlib import Path
+
+    from narwhals import dtypes as nw_dtypes
+
+    # Copy from https://github.com/narwhals-dev/narwhals/blob/2c9e2e7a308ebb30c6f672e27c1da2086ebbecbc/utils/check_api_reference.py#L144-L146
+    dtype_names = [
+        i
+        for i in cast(str, nw_dtypes.__dir__())  # pyright: ignore
+        if i[0].isupper() and not i.isupper() and i[0] != "_"
+    ]
+
+    with open(
+        Path(__file__).parent.parent.parent  # Repo root
+        / "shiny"
+        / "render"
+        / "_data_frame_utils"
+        / "_tbl_data.py"
+    ) as f:
+        tbl_data_lines = f.readlines()
+
+    tbl_data_lines = [line for line in tbl_data_lines if "nw." in line]
+
+    errs: list[str] = []
+
+    for dtype_name in dtype_names:
+
+        if dtype_name in ("DType", "NumericType", "TemporalType", "Unknown"):
+            continue
+
+        dtype_cls = getattr(nw_dtypes, dtype_name)
+        if not issubclass(dtype_cls, nw_dtypes.DType):
+            continue
+
+        if dtype_cls.is_numeric():
+            continue
+
+        if f"nw.{dtype_name}()" in "".join(tbl_data_lines):
+            continue
+
+        errs.append(f"Missing: {dtype_name}")
+
+    assert not errs, "Missing narwhals dtype implementations:\n" + "\n".join(errs)

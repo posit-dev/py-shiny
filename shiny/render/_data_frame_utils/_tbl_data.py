@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, List, Tuple, TypedDict
 
 import narwhals.stable.v1 as nw
+import orjson
 from htmltools import TagNode
 
 from ..._typing_extensions import TypeIs
@@ -20,7 +21,6 @@ from ._types import (
     IntoDataFrame,
     IntoDataFrameT,
     PandasCompatible,
-    PdDataFrame,
     RowsList,
 )
 
@@ -37,6 +37,29 @@ __all__ = (
     "copy_frame",
     "frame_column_names",
 )
+
+########################################################################################
+# Narwhals
+#
+# This module contains functions for working with data frames. It is a wrapper
+# around the Narwhals library, which provides a unified interface for working with
+# data frames (e.g. Pandas and Polars).
+#
+# The functions in this module are used to:
+# * convert data frames to and from the Narwhals format,
+# * apply patches to data frames,
+# * serialize data frames to JSON,
+# * subset data frames,
+# * and get information about data frames (e.g. shape, column names).
+#
+# The functions in this module are used by the Shiny framework to work with data frames.
+#
+# For more information on the Narwhals library, see:
+# * Intro https://narwhals-dev.github.io/narwhals/basics/dataframe/
+# * `nw.DataFrame`: https://narwhals-dev.github.io/narwhals/api-reference/dataframe/
+# * `nw.typing.IntoDataFrameT`: https://narwhals-dev.github.io/narwhals/api-reference/typing/#intodataframet
+#
+########################################################################################
 
 
 # as_frame -----------------------------------------------------------------------------
@@ -159,10 +182,11 @@ def apply_frame_patches(
 # serialize_dtype ----------------------------------------------------------------------
 nw_boolean = nw.Boolean()
 nw_categorical = nw.Categorical()
+nw_duration = nw.Duration()
 nw_enum = nw.Enum()
 nw_string = nw.String()
+nw_date = nw.Date()
 nw_datetime = nw.Datetime()
-nw_duration = nw.Duration()
 nw_object = nw.Object()
 
 
@@ -173,10 +197,8 @@ def serialize_dtype(col: nw.Series) -> FrameDtype:
     dtype: DType = col.dtype
 
     if dtype == nw_string:
-        if series_contains_htmltoolslike(col):
-            type_ = "html"
-        else:
-            type_ = "string"
+        type_ = "string"
+
     elif dtype.is_numeric():
         type_ = "numeric"
 
@@ -184,21 +206,16 @@ def serialize_dtype(col: nw.Series) -> FrameDtype:
         categories = col.cat.get_categories().to_list()
         return {"type": "categorical", "categories": categories}
     elif dtype == nw_enum:
-        raise NotImplementedError("TODO-barret; enum type not tested")
-        cat_col = col.cast(nw.Categorical)
-        categories = cat_col.cat.get_categories().to_list()
+        categories = col.cat.get_categories().to_list()
         return {"type": "categorical", "categories": categories}
-
     elif dtype == nw_boolean:
-        raise NotImplementedError("TODO-barret; boolean type not tested")
         type_ = "boolean"
-    elif dtype == nw_duration:
-        raise NotImplementedError(
-            "TODO-barret; duration type not tested. Look at pandas timedelta"
-        )
-        type_ = "duration"
+    elif dtype == nw_date:
+        type_ = "date"
     elif dtype == nw_datetime:
         type_ = "datetime"
+    elif dtype == nw_duration:
+        type_ = "duration"
     elif dtype == nw_object:
         type_ = "object"
         if series_contains_htmltoolslike(col):
@@ -219,8 +236,6 @@ def serialize_frame(into_data: IntoDataFrame) -> FrameJson:
 
     type_hints = [serialize_dtype(data[col_name]) for col_name in data.columns]
     type_hints_type = [type_hint["type"] for type_hint in type_hints]
-
-    # print("type_hints:", type_hints)
 
     data_rows = data.rows(named=False)
 
@@ -248,30 +263,12 @@ def serialize_frame(into_data: IntoDataFrame) -> FrameJson:
 
         data_rows = new_rows
 
-    import orjson
-
-    # TODO-barret; Remove debug! Maybe?
-    native_data = nw.to_native(data)
-    if isinstance(native_data, PdDataFrame):
-        # print("types:", type_hints_type, type_hints)
-        from pandas import Timestamp
-
-        def my_str(x: Any) -> str:
-            # print("barret-pandas value!", x)
-            if isinstance(x, Timestamp):
-                return x.isoformat()
-
-            return str(x)
-
-    else:
-
-        def my_str(x: Any) -> str:
-            return str(x)
+    # _ = datetime(5)
 
     data_val = orjson.loads(
         orjson.dumps(
             data_rows,
-            default=my_str,
+            default=str,
             # option=(orjson.OPT_NAIVE_UTC),
         )
     )

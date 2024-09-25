@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import (
     TYPE_CHECKING,
-    Any,
     Dict,
     Literal,
     Optional,
@@ -29,9 +28,9 @@ from ._databackend import AbstractBackend
 
 __all__ = (
     "PdDataFrame",
-    "PlDataFrame",
-    "PdSeries",
-    "PlSeries",
+    # "PlDataFrame",
+    # "PdSeries",
+    # "PlSeries",
     "IntoExpr",
     "DataFrame",
     "DataFrameT",
@@ -70,14 +69,15 @@ __all__ = (
 
 if TYPE_CHECKING:
     import pandas as pd
-    import polars as pl
 
+    # import polars as pl
     from ...session._utils import RenderedDeps
 
     PdDataFrame = pd.DataFrame
-    PlDataFrame = pl.DataFrame
-    PdSeries = pd.Series[Any]
-    PlSeries = pl.Series
+
+    # PlDataFrame = pl.DataFrame
+    # PdSeries = pd.Series[Any]
+    # PlSeries = pl.Series
 
 
 else:
@@ -85,14 +85,14 @@ else:
     class PdDataFrame(AbstractBackend):
         _backends = [("pandas", "DataFrame")]
 
-    class PlDataFrame(AbstractBackend):
-        _backends = [("polars", "DataFrame")]
+    # class PlDataFrame(AbstractBackend):
+    #     _backends = [("polars", "DataFrame")]
 
-    class PdSeries(AbstractBackend):
-        _backends = [("pandas", "Series")]
+    # class PdSeries(AbstractBackend):
+    #     _backends = [("pandas", "Series")]
 
-    class PlSeries(AbstractBackend):
-        _backends = [("polars", "Series")]
+    # class PlSeries(AbstractBackend):
+    #     _backends = [("polars", "Series")]
 
 
 DataFrame = nw.DataFrame
@@ -203,15 +203,15 @@ ColsList = Optional[ListOrTuple[Union[str, int]]]
 
 class FrameDtypeSubset(TypedDict):
     type: Literal[
-        "boolean",
-        "numeric",
         "string",
-        "html",
+        "numeric",
+        "boolean",
+        "date",
         "datetime",
-        # "timedelta",
         "duration",
         "object",
         "unknown",
+        "html",
     ]
 
 
