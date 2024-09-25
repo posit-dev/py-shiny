@@ -66,7 +66,9 @@ def cell_contains_htmltoolslike(  # pyright: ignore[reportOverlappingOverload]
 def cell_contains_htmltoolslike(
     val: TagNode | object,
 ) -> TypeIs[TagNode]: ...
-def cell_contains_htmltoolslike(val: object):
+def cell_contains_htmltoolslike(  # pyright: ignore[reportInconsistentOverload]
+    val: object,
+):
     if isinstance(val, str):
         return False
 
