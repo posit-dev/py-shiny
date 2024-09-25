@@ -64,7 +64,7 @@ type CellValue = string | CellHtmlValue | null;
 const getCellValueText = (cellValue: CellValue) => {
   if (isShinyHtml(cellValue)) return cellValue.obj.html;
   if (cellValue === null) return "";
-  return cellValue as string;
+  return cellValue;
 };
 
 interface TableBodyCellProps {

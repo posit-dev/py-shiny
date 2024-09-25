@@ -9,7 +9,17 @@ export const EditModeEnum = {
 export type EditMode = ValueOf<typeof EditModeEnum>;
 
 export interface TypeHint {
-  type: "string" | "numeric" | "categorical" | "unknown" | "html";
+  type:
+    | "string"
+    | "numeric"
+    | "boolean"
+    | "date"
+    | "datetime"
+    | "duration"
+    | "object"
+    | "unknown"
+    | "html"
+    | "categorical";
 }
 
 export interface CategoricalTypeHint extends TypeHint {

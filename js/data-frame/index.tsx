@@ -197,7 +197,30 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
             typeHint,
           },
           cell: ({ getValue }) => {
-            return getValue() as string;
+            const ret = getValue();
+            switch (typeHint?.type) {
+              // Return the value as is
+              case "numeric":
+              case "date":
+              case "datetime":
+              case "duration":
+              case "categorical":
+              case "html":
+                return ret;
+              // Convert the value to a string
+              case "string":
+              case "boolean":
+                return String(ret);
+              // Convert the value to a JSON string if it isn't a string already
+              case "unknown":
+              case "object":
+                if (typeof ret === "string") {
+                  return ret;
+                }
+                return JSON.stringify(ret);
+              default:
+                return ret;
+            }
           },
           enableSorting,
         };
