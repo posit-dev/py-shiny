@@ -335,7 +335,8 @@ class UiWithLabel(UiWithContainer):
 
 class WidthLocStlyeM:
     """
-    A mixin class representing the `.loc`'s width.
+    A mixin class that provides methods to control the width of input action buttons and action links.
+
     """
 
     def expect_width(
