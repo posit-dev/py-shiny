@@ -333,6 +333,30 @@ class UiWithLabel(UiWithContainer):
         playwright_expect(self.loc_label).to_have_text(value, timeout=timeout)
 
 
+class WidthLocStlyeM:
+    """
+    A mixin class representing the `.loc`'s width.
+    """
+
+    def expect_width(
+        self: UiBaseP,
+        value: AttrValue,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expect the `width` attribute of a DOM element to have a specific value.
+
+        Parameters
+        ----------
+        value
+            The expected value of the `width` attribute.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        _expect_style_to_have_value(self.loc, "width", value, timeout=timeout)
+
+
 class WidthLocM:
     """
     A mixin class representing the `.loc`'s width.
