@@ -17,10 +17,8 @@ from ..expect._internal import expect_style_to_have_value as _expect_style_to_ha
 from ._base import (
     Resize,
     UiBaseP,
-    UiWithContainerP,
     UiWithLabel,
     WidthContainerStyleM,
-    WidthLocM,
     all_missing,
     not_is_missing,
     set_text,
