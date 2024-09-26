@@ -383,6 +383,7 @@ class WidthLocM:
         """
         _expect_attribute_to_have_value(self.loc, "width", value=value, timeout=timeout)
 
+
 # # Currently not being used, hence commenting
 # class WidthContainerM:
 #     """

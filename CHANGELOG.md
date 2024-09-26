@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added `.expect_title()` for `Popover` controller (#1683)
 
+* Added `.expect_disabled()` for `InputActionButton` controllers (#1705)
+
 ### Bug fixes
 
 * A few fixes for `ui.Chat()`, including:
@@ -40,6 +42,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Fixed the `InputDate` and `InputDateRange` playwright controllers to check the `width` property within the `style` attribute. (#1696)
 
 * Fixed the `InputCheckbox` and `InputCheckboxGroup` playwright controllers' `.expect_width()` to check the `width` property within the `style` attribute. (#1702)
+
+* Fixed the `InputSwitch`, `InputRadioButtons`, `InputNumeric`, `InputText`, `InputTextArea`, `InputPassword`, `InputActionButton` and `InputActionLink` playwright controllers' `.expect_width()` to check the `width` property within the `style` attribute. (#1705)
+
 
 ## [1.1.0] - 2024-09-03
 

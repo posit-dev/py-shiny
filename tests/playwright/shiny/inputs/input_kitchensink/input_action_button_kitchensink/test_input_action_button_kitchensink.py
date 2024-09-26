@@ -9,6 +9,7 @@ def test_input_action_button_kitchen(page: Page, local_app: ShinyAppProc) -> Non
 
     default = controller.InputActionButton(page, "default")
     default.expect_label("Default button")
+    default.expect_disabled(False)
     controller.OutputCode(page, "default_txt").expect_value("Button clicked 0 times")
     default.click()
     controller.OutputCode(page, "default_txt").expect_value("Button clicked 1 times")
@@ -17,6 +18,6 @@ def test_input_action_button_kitchen(page: Page, local_app: ShinyAppProc) -> Non
     width.expect_width("200px")
 
     disabled = controller.InputActionButton(page, "disabled")
-    disabled.expect_disabled()
+    disabled.expect_disabled(True)
 
     # TODO-karan: test for icon

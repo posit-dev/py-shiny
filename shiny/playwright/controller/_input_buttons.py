@@ -49,16 +49,20 @@ class InputActionButton(
             loc=f"button#{id}.action-button.shiny-bound-input",
         )
 
-    def expect_disabled(self, *, timeout: Timeout = None):
+    def expect_disabled(self, value: bool, *, timeout: Timeout = None):
         """
         Expect the input action button to be disabled.
 
         Parameters
         ----------
+        value
+            The expected value of the `disabled` attribute.
         timeout
             The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
-        playwright_expect(self.loc).to_have_attribute("disabled", "", timeout=timeout)
+        _expect_attribute_to_have_value(
+            self.loc, "disabled", "" if value else None, timeout=timeout
+        )
 
 
 class InputDarkMode(UiBase):
