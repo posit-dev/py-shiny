@@ -1,4 +1,5 @@
 from playwright.sync_api import Page
+from playwright.sync_api import expect as playwright_expect
 
 from shiny.playwright import controller
 from shiny.run import ShinyAppProc
@@ -19,5 +20,8 @@ def test_input_action_button_kitchen(page: Page, local_app: ShinyAppProc) -> Non
 
     disabled = controller.InputActionButton(page, "disabled")
     disabled.expect_disabled(True)
+    # Disabled button should not have an icon
+    playwright_expect(disabled.loc.locator("svg.fa")).to_have_count(0)
 
-    # TODO-karan: test for icon
+    icon = controller.InputActionButton(page, "icon")
+    playwright_expect(icon.loc.locator("svg.fa")).to_have_count(1)
