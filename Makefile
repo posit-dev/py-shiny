@@ -216,16 +216,17 @@ ci-install-wheel: dist FORCE
 install-deps: FORCE ## install dependencies
 	pip install -e ".[dev,test]" --upgrade
 ci-install-deps: FORCE
-	uv pip install "htmltools @ git+https://github.com/posit-dev/py-htmltools.git"
+	# uv pip install "htmltools @ git+https://github.com/posit-dev/py-htmltools.git"
 	uv pip install -e ".[dev,test]"
 
 install-docs: FORCE
 	pip install -e ".[dev,test,doc]"
-	pip install https://github.com/posit-dev/py-htmltools/tarball/main
+	# pip install https://github.com/posit-dev/py-htmltools/tarball/main
 	pip install https://github.com/posit-dev/py-shinylive/tarball/main
 ci-install-docs: FORCE
 	uv pip install -e ".[dev,test,doc]"
-	uv pip install "htmltools @ git+https://github.com/posit-dev/py-htmltools.git" \
+	#		"htmltools @ git+https://github.com/posit-dev/py-htmltools.git" \
+	uv pip install
 			"shinylive @ git+https://github.com/posit-dev/py-shinylive.git"
 
 ci-install-rsconnect: FORCE
