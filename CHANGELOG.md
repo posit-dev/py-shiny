@@ -21,9 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added `.expect_widths()` to `NavsetPillList` in `shiny.playwright.controllers` for testing `ui.navset_pill_list(widths=)`. (#1668)
 
-* Added `.expect_title()` for `Popover` controller (#1683)
+* Added `.expect_title()` for `Popover` in `shiny.playwright.controllers` (#1683)
 
-* Added `.expect_disabled()` for `InputActionButton` controllers (#1705)
+* Added `.expect_disabled()` for `InputActionButton` in `shiny.playwright.controllers` (#1705)
 
 ### Bug fixes
 
@@ -37,13 +37,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `ui.Theme()` now works correctly on Windows when the theme requires Sass compilation. (thanks @yuuuxt, #1684)
 
-* Fixed the `InputSlider` playwright controller's `.expect_width()` to check the `width` property within the `style` attribute. (#1691)
+* Fixed the `InputSlider` in `shiny.playwright.controller` to check the `width` property within the `style` attribute. (#1691)
 
-* Fixed the `InputDate` and `InputDateRange` playwright controllers to check the `width` property within the `style` attribute. (#1696)
+* Fixed the `InputDate` and `InputDateRange` in `shiny.playwright.controller` to check the `width` property within the `style` attribute. (#1696)
 
-* Fixed the `InputCheckbox` and `InputCheckboxGroup` playwright controllers' `.expect_width()` to check the `width` property within the `style` attribute. (#1702)
+* Updated `InputCheckbox` and `InputCheckboxGroup` in `shiny.playwright.controller` to correctly validate the `width` style property in `.expect_width()`. (#1702)
 
-* Fixed the `InputSwitch`, `InputRadioButtons`, `InputNumeric`, `InputText`, `InputTextArea`, `InputPassword`, `InputActionButton` and `InputActionLink` playwright controllers' `.expect_width()` to check the `width` property within the `style` attribute. (#1705)
+* Fixed multiple input controllers (`InputSwitch`, `InputRadioButtons`, `InputNumeric`, `InputText`, `InputTextArea`, `InputPassword`, `InputActionButton`, and `InputActionLink`) in shiny.playwright.controller` to correctly validate the `width` style property in `.expect_width().
 
 
 ## [1.1.0] - 2024-09-03
