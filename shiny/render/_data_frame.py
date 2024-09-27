@@ -355,8 +355,6 @@ class data_frame(
 
         self._data_is_nw = self__data_is_nw
 
-        # @overload
-        # def
         @reactive.calc
         def self__nw_data_to_original_type_fn():
 
@@ -372,7 +370,8 @@ class data_frame(
 
         @reactive.calc
         def self_data() -> IntoDataFrameT:
-            return data_frame_to_native(self._nw_data())
+            to_original_type_fn = self._nw_data_to_original_type_fn()
+            return to_original_type_fn(self._nw_data())
 
         self.data = self_data
 
