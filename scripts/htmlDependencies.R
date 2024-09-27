@@ -10,6 +10,9 @@ find_root <- function(dir = getwd()) {
   if (file.exists(file.path(dir, "setup.cfg"))) {
     return(dir)
   }
+  if (file.exists(file.path(dir, "pyproject.toml"))) {
+    return(dir)
+  }
 
   new_dir <- dirname(dir)
   if (new_dir == dir) {
