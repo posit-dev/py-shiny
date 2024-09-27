@@ -644,7 +644,12 @@ class data_frame(
         # Add (or overwrite) new cell patches by setting each patch into the cell patch map
         self._set_cell_patch_map_patches(patches)
 
+        # With the patches applied, any data retrieved while processing cell style
+        # will use the new patch values.
+        await self._attempt_update_cell_style()
+
         # Upgrade any HTML-like content to `CellHtml` json objects
+        # for sending to the client
         processed_patches: list[CellPatchProcessed] = [
             {
                 "row_index": patch["row_index"],
@@ -658,13 +663,11 @@ class data_frame(
             for patch in patches
         ]
 
-        # Prep the processed patches for sending to the client
+        # Prep the processed patches as dictionaries for sending to the client
         jsonifiable_patches: list[Jsonifiable] = [
             cell_patch_processed_to_jsonifiable(ret_processed_patch)
             for ret_processed_patch in processed_patches
         ]
-
-        await self._attempt_update_cell_style()
 
         # Return the processed patches to the client
         return jsonifiable_patches
@@ -715,7 +718,7 @@ class data_frame(
             if not callable(styles_fn):
                 return
 
-            # TODO-barret; Use the returned data type from the rener function!
+            # TODO-barret; Use the returned data type from the render function!
             to_original_type_fn = self._nw_data_to_original_type_fn()
             patched_into_data = to_original_type_fn(self._data_patched())
             new_styles = as_browser_style_infos(styles_fn, into_data=patched_into_data)

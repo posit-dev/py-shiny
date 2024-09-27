@@ -1,14 +1,15 @@
 from __future__ import annotations
 
-from typing import Any, List, Tuple, TypedDict
+from typing import Any, List, Tuple, TypedDict, cast
 
 import narwhals.stable.v1 as nw
 import orjson
 from htmltools import TagNode
 
 from ..._typing_extensions import TypeIs
-from ...session import require_active_session
-from ._html import maybe_as_cell_html
+from ...session import Session, require_active_session
+from ...types import Jsonifiable, JsonifiableDict
+from ._html import as_cell_html, cell_contains_htmltoolslike
 from ._types import (
     CellPatch,
     CellValue,
@@ -184,6 +185,9 @@ nw_boolean = nw.Boolean()
 nw_categorical = nw.Categorical()
 nw_duration = nw.Duration()
 nw_enum = nw.Enum()
+nw_struct = nw.Struct()
+nw_list = nw.List()
+nw_array = nw.Array()
 nw_string = nw.String()
 nw_date = nw.Date()
 nw_datetime = nw.Datetime()
@@ -220,7 +224,8 @@ def serialize_dtype(col: nw.Series) -> FrameDtype:
         type_ = "object"
         if series_contains_htmltoolslike(col):
             type_ = "html"
-
+    elif dtype in {nw_struct, nw_list, nw_array}:
+        type_ = "object"
     else:
         type_ = "unknown"
         if series_contains_htmltoolslike(col):
