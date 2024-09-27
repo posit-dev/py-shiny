@@ -35,7 +35,7 @@ dependencies = [
     "websockets>=10.0",
     "python-multipart",
     # "htmltools>=0.5.3.9001",
-    "htmltools@git+https://github.com/posit-dev/py-htmltools",
+    "htmltools@git+https://github.com/posit-dev/py-htmltools@taglist_not_list",
     "click>=8.1.4;platform_system!='Emscripten'",
     "markdown-it-py>=1.1.0",
     "mdit-py-plugins>=0.3.0",
