@@ -198,6 +198,12 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
           },
           cell: ({ getValue }) => {
             const ret = getValue();
+
+            // Regardless of type, if the value is null or undefined,
+            // return an empty string
+            if (ret === null || ret === undefined) {
+              return "";
+            }
             switch (typeHint?.type) {
               // Return the value as is
               case "numeric":
