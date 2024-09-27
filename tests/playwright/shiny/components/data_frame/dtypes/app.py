@@ -22,10 +22,10 @@ class D:
     y: int
 
 
-DATA = {
+DATA = {  # pyright: ignore[reportUnknownVariableType]
     "num": [1, 2],
     "chr": ["a", "b"],
-    "cat": pd.Series(["c", "d"], dtype="category"),
+    "cat": pd.Series[str](["c", "d"], dtype="category"),
     "bool": [True, False],
     "date": [date(2000, 1, 2)] * 2,
     "datetime": [datetime(2000, 1, 2)] * 2,
