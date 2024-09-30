@@ -1,5 +1,6 @@
+from chatlas import Anthropic
+
 from shiny.express import ui
-from shiny.ui._chat_client_anthropic import AnthropicClient
 
 ui.page_opts(
     title="Tool calling with Anthropic",
@@ -17,7 +18,7 @@ def get_current_weather(location: str, unit: str = "fahrenheit") -> int:
         return 72 if unit == "fahrenheit" else 22
 
 
-llm = AnthropicClient(
+llm = Anthropic(
     tools=[get_current_weather],
 )
 
@@ -35,5 +36,5 @@ chat.update_user_input(
 
 @chat.on_user_submit
 async def _(input):
-    response = llm.generate_response(input)
+    response = llm.response_generator(input)
     await chat.append_message_stream(response)

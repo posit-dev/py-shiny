@@ -1,5 +1,6 @@
+from chatlas import Ollama
+
 from shiny.express import ui
-from shiny.ui._chat_client_ollama import OllamaClient
 
 ui.page_opts(
     title="Tool calling with Ollama",
@@ -18,7 +19,7 @@ def get_current_weather(location: str, unit: str = "fahrenheit") -> int:
 
 
 # Assumes you're running an Ollama server (with llama3 available) locally
-llm = OllamaClient(
+llm = Ollama(
     model="llama3.1",
     tools=[get_current_weather],
 )
@@ -38,5 +39,5 @@ chat.update_user_input(
 async def _(input):
     # Unfortunately, Ollama currently doesn't work with tools+streaming
     # https://github.com/ollama/ollama-python/issues/279
-    response = llm.generate_response(input, stream=False)
+    response = llm.response_generator(input, stream=False)
     await chat.append_message_stream(response)

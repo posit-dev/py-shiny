@@ -6,9 +6,9 @@
 import os
 
 from app_utils import load_dotenv
+from chatlas import Anthropic
 
 from shiny.express import ui
-from shiny.ui._chat_client_anthropic import AnthropicClient
 
 # Set some Shiny page options
 ui.page_opts(
@@ -21,7 +21,7 @@ ui.page_opts(
 # app, or set them in a file named `.env`. The `python-dotenv` package will load `.env`
 # as environment variables which can later be read by `os.getenv()`.
 load_dotenv()
-llm = AnthropicClient(
+llm = Anthropic(
     api_key=os.environ.get("ANTHROPIC_API_KEY"),
 )
 
@@ -37,5 +37,5 @@ chat.ui()
 
 @chat.on_user_submit
 async def _(input):
-    response = llm.generate_response(input)
+    response = llm.response_generator(input)
     await chat.append_message_stream(response)

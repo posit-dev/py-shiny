@@ -26,7 +26,6 @@ from ..session import require_active_session, session_context
 from ..types import NotifyException
 from ..ui.css import CssUnit, as_css_unit
 from ._chat_normalize import normalize_message, normalize_message_chunk
-from ._chat_tokenizer import TokenEncoding, TokenizersEncoding, get_default_tokenizer
 from ._chat_types import ChatMessage, ClientMessage, TransformedMessage
 from ._html_deps_py_shiny import chat_deps
 from .fill import as_fill_item, as_fillable_container
@@ -98,12 +97,12 @@ class Chat:
         # Get messages currently in the chat
         messages = chat.messages()
         # Create a response message stream
-        response = await my_model.generate_response(messages, stream=True)
+        response = await my_model.response_generator(messages, stream=True)
         # Append the response into the chat
         await chat.append_message_stream(response)
     ```
 
-    In the outline above, `my_model.generate_response()` is a placeholder for
+    In the outline above, `my_model.response_generator()` is a placeholder for
     the function that generates a response based on the chat's messages. This function
     will look different depending on the model you're using, but it will generally
     involve passing the messages to the model and getting a response back. Also, you'll
@@ -149,7 +148,6 @@ class Chat:
         *,
         messages: Sequence[Any] = (),
         on_error: Literal["auto", "actual", "sanitize", "unhandled"] = "auto",
-        tokenizer: TokenEncoding | None = None,
     ):
         if not isinstance(id, str):
             raise TypeError("`id` must be a string.")
@@ -158,7 +156,6 @@ class Chat:
         self.user_input_id = ResolvedId(f"{self.id}_user_input")
         self._transform_user: TransformUserInputAsync | None = None
         self._transform_assistant: TransformAssistantResponseChunkAsync | None = None
-        self._tokenizer = tokenizer
 
         # TODO: remove the `None` when this PR lands:
         # https://github.com/posit-dev/py-shiny/pull/793/files
@@ -394,15 +391,6 @@ class Chat:
 
         messages = self._messages()
 
-        # Anthropic requires a user message first and no system messages
-        # TODO: this should get handled by LLMClient
-        # if format == "anthropic":
-        #     messages = self._trim_anthropic_messages(messages)
-
-        # TODO: this should get handled by LLMClient
-        # if token_limits is not None:
-        #    messages = self._trim_messages(messages, token_limits, format)
-
         res: list[ChatMessage] = []
         for i, m in enumerate(messages):
             transform = transform_assistant
@@ -417,20 +405,19 @@ class Chat:
 
     @staticmethod
     def _throw_deprecation_warnings(**kwargs: Any) -> None:
-        # TODO: improve messages
         if "format" in kwargs:
             warn_deprecated(
                 "The `format` argument of `Chat.messages()` is deprecated and "
                 "will be removed in a future version. "
-                "Instead, provide a suitable `client` argument to the chat constructor, "
-                "then use `Chat.client.messages()` to get messages in the desired format."
+                "Consider using the new `chatlas` package for response generation "
+                "if you need to access to provider-specific message formats."
             )
         if "token_limits" in kwargs:
             warn_deprecated(
-                "The `token_limits` argument to `Chat.messages()` is deprecated and "
-                "will be removed in a future version. "
-                "Use the `client` argument to specify the desired provider format "
-                "instead."
+                "The `token_limits` argument to `Chat.messages()` no longer "
+                "does anything. "
+                "Consider using the new `chatlas` package for response generation "
+                "if you need to impose token limits."
             )
 
     async def append_message(self, message: Any) -> None:
@@ -754,109 +741,6 @@ class Chat:
             self._latest_user_input.set(message)
 
         return None
-
-    def _trim_messages(
-        self,
-        messages: tuple[TransformedMessage, ...],
-        token_limits: tuple[int, int],
-    ) -> tuple[TransformedMessage, ...]:
-
-        n_total, n_reserve = token_limits
-        if n_total <= n_reserve:
-            raise ValueError(
-                f"Invalid token limits: {token_limits}. The 1st value must be greater "
-                "than the 2nd value."
-            )
-
-        # Since don't trim system messages, 1st obtain their total token count
-        # (so we can determine how many non-system messages can fit)
-        n_system_tokens: int = 0
-        n_system_messages: int = 0
-        n_other_messages: int = 0
-        token_counts: list[int] = []
-        for m in messages:
-            content = (
-                m.content_server if isinstance(m, TransformedMessage) else m.content
-            )
-            count = self._get_token_count(content)
-            token_counts.append(count)
-            if m.role == "system":
-                n_system_tokens += count
-                n_system_messages += 1
-            else:
-                n_other_messages += 1
-
-        remaining_non_system_tokens = n_total - n_reserve - n_system_tokens
-
-        if remaining_non_system_tokens <= 0:
-            raise ValueError(
-                f"System messages exceed `.messages(token_limits={token_limits})`. "
-                "Consider increasing the 1st value of `token_limit` or setting it to "
-                "`token_limit=None` to disable token limits."
-            )
-
-        # Now, iterate through the messages in reverse order and appending
-        # until we run out of tokens
-        messages2: list[TransformedMessage] = []
-        n_other_messages2: int = 0
-        token_counts.reverse()
-        for i, m in enumerate(reversed(messages)):
-            if m.role == "system":
-                messages2.append(m)
-                continue
-            remaining_non_system_tokens -= token_counts[i]
-            if remaining_non_system_tokens >= 0:
-                messages2.append(m)
-                n_other_messages2 += 1
-
-        messages2.reverse()
-
-        if len(messages2) == n_system_messages and n_other_messages2 > 0:
-            raise ValueError(
-                f"Only system messages fit within `.messages(token_limits={token_limits})`. "
-                "Consider increasing the 1st value of `token_limit` or setting it to "
-                "`token_limit=None` to disable token limits."
-            )
-
-        return tuple(messages2)
-
-    def _trim_anthropic_messages(
-        self,
-        messages: tuple[TransformedMessage, ...],
-    ) -> tuple[TransformedMessage, ...]:
-
-        if any(m.role == "system" for m in messages):
-            raise ValueError(
-                "Anthropic requires a system prompt to be specified in it's `.create()` method "
-                "(not in the chat messages with `role: system`)."
-            )
-        for i, m in enumerate(messages):
-            if m.role == "user":
-                return messages[i:]
-
-        return ()
-
-    def _get_token_count(
-        self,
-        content: str,
-    ) -> int:
-        if self._tokenizer is None:
-            self._tokenizer = get_default_tokenizer()
-
-        if self._tokenizer is None:
-            raise ValueError(
-                "A tokenizer is required to impose `token_limits` on messages. "
-                "To get a generic default tokenizer, install the `tokenizers` "
-                "package (`pip install tokenizers`). "
-                "To get a more precise token count, provide a specific tokenizer "
-                "to the `Chat` constructor."
-            )
-
-        encoded = self._tokenizer.encode(content)
-        if isinstance(encoded, TokenizersEncoding):
-            return len(encoded.ids)
-        else:
-            return len(encoded)
 
     def user_input(self, transform: bool = False) -> str | None:
         """

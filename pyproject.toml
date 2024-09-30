@@ -102,6 +102,7 @@ dev = [
     "polars",
     "numpy",
     "shinyswatch>=0.7.0",
+    "chatlas",
     "python-dotenv",
     "anthropic",
     "google-generativeai;python_version>='3.9'",

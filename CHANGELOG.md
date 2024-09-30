@@ -7,9 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### New features
+
+* The `ui.Chat` gains integration for the new `{chatlas}` package, which streamlines the response generation process for packages such as `{openai}`, `{anthropic}`, etc.
+
+### Deprecations
+
+* The `format` argument of `Chat.messages()` is now deprecated and will stop working in a future version. Consider using the new `{chatlas}` package instead to access message state in a provider specific format (and also for response generation).
+
+### Breaking changes
+
+* The `token_limits` argument of `Chat.messages()` was removed. If you need to impose `token_limits`, consider using the new `{chatlas}` for response generation.
+
+
 ### Bug fixes
 
-* A few fixes for `ui.Chat()`, including: 
+* A few fixes for `ui.Chat()`, including:
   * Fixed a bug with `Chat()` sometimes silently dropping errors. (#1672)
   * Fixed a bug with `Chat()` sometimes not removing it's loading icon (on error or a `None` transform). (#1679)
   * `.messages(format="anthropic")` correctly removes non-user starting messages (once again). (#1685)
