@@ -4,7 +4,6 @@ from typing import Any, List, Tuple, TypedDict, cast
 
 import narwhals.stable.v1 as nw
 import orjson
-from htmltools import TagNode
 
 from ..._typing_extensions import TypeIs
 from ...session import Session, require_active_session
@@ -240,46 +239,39 @@ def serialize_frame(into_data: IntoDataFrame) -> FrameJson:
     data = as_data_frame(into_data)
 
     type_hints = [serialize_dtype(data[col_name]) for col_name in data.columns]
-    type_hints_type = [type_hint["type"] for type_hint in type_hints]
 
+    # TODO-future-barret; Swich serialization to "by column", rather than "by row"
+    # * This would allow for a single column to be serialized in a single operation
+    #   * This would allow for each column to capture the `"html"` type hint properly
+    #     for object and unknown columns. Currently, there is no way to determine which
+    #     cells are HTML-like during orjson serialization.
+    # * Even better, would be to move `orjson` serialization to the websocket
+    #   serialization.
+    #   * No need to serialize to JSON, then unserialize, then serialize again when
+    #     sending it to the client!
+    #   * The only serialization would occur during "send to browser"
+    #   * This approach would lose the ability to upgrade the column type hints to "html"
     data_rows = data.rows(named=False)
 
-    # Shiny tag support
-    if "html" in type_hints_type:
-        session = require_active_session(None)
+    session: Session | None = None
 
-        def wrap_shiny_html_with_session(x: TagNode):
-            return maybe_as_cell_html(x, session=session)
+    def default_orjson_serializer(val: Any) -> Jsonifiable:
+        nonlocal session
+        if ui_must_be_processed(val):
+            if session is None:
+                session = require_active_session(None)
+            return cast(JsonifiableDict, dict(as_cell_html(val, session=session)))
 
-        html_column_positions = [
-            i for i, x in enumerate(type_hints_type) if x == "html"
-        ]
-
-        new_rows: list[tuple[Any, ...]] = []
-
-        # Wrap the corresponding columns with the cell html object
-        for row in data_rows:
-            new_row = list(row)
-            for html_column_position in html_column_positions:
-                new_row[html_column_position] = wrap_shiny_html_with_session(
-                    new_row[html_column_position]
-                )
-            new_rows.append(tuple(new_row))
-
-        data_rows = new_rows
-
-    # _ = datetime(5)
+        # All other values are serialized as strings
+        return str(val)
 
     data_val = orjson.loads(
         orjson.dumps(
             data_rows,
-            default=str,
+            default=default_orjson_serializer,
             # option=(orjson.OPT_NAIVE_UTC),
         )
     )
-
-    # import json
-    # data_val = json.loads(json.dumps(data_rows, default=str))
 
     return {
         "columns": data.columns,
