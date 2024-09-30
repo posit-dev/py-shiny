@@ -29,7 +29,7 @@ def maybe_as_cell_html(x: Jsonifiable, *, session: Session) -> Jsonifiable: ...
 def maybe_as_cell_html(
     x: Jsonifiable | TagNode, *, session: Session
 ) -> Jsonifiable | CellHtml:
-    if cell_contains_htmltoolslike(x):
+    if ui_must_be_processed(x):
         return as_cell_html(x, session=session)
     return cast(Jsonifiable, x)
 
@@ -53,20 +53,20 @@ def series_contains_htmltoolslike(ser: Series) -> bool:
         # Reprex:
         # pl.Series([{"y": 2}, {"x": 1}, None, HTML("<p>Hello</p>")]).dtype
         # #> Struct({'y': Int64})
-        if cell_contains_htmltoolslike(val):
+        if ui_must_be_processed(val):
             return True
     return False
 
 
 @overload
-def cell_contains_htmltoolslike(  # pyright: ignore[reportOverlappingOverload]
+def ui_must_be_processed(  # pyright: ignore[reportOverlappingOverload]
     val: str,
 ) -> Literal[False]: ...
 @overload
-def cell_contains_htmltoolslike(
+def ui_must_be_processed(
     val: TagNode | object,
 ) -> TypeIs[TagNode]: ...
-def cell_contains_htmltoolslike(  # pyright: ignore[reportInconsistentOverload]
+def ui_must_be_processed(  # pyright: ignore[reportInconsistentOverload]
     val: object,
 ):
     if isinstance(val, str):

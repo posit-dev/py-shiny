@@ -9,7 +9,7 @@ from htmltools import TagNode
 from ..._typing_extensions import TypeIs
 from ...session import Session, require_active_session
 from ...types import Jsonifiable, JsonifiableDict
-from ._html import as_cell_html, cell_contains_htmltoolslike
+from ._html import as_cell_html, ui_must_be_processed
 from ._types import (
     CellPatch,
     CellValue,
