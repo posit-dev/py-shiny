@@ -124,6 +124,30 @@ class data_frame(
     the user's edits, sorting, and filtering will be lost. We hope to improve upon this
     in the future.
 
+    Narwhals
+    -------------------
+
+    Shiny uses [`narwhals`](https://narwhals-dev.github.io/narwhals/) to manage data
+    frame interactions. From their website: "Extremely lightweight and extensible
+    compatibility layer between dataframe libraries!". This allows for seamless
+    integration between pandas, polars, and any other eagerly defined data frame type.
+
+    There are some reasonable limitations to the narwhals compatibility layer. As they
+    are found, they will be added to this list:
+    * When converting the column type who does not have a 1:1 mapping between libraries
+      (such as pandas' columns containing `str` and `dict` items both share the same
+      `object` data type), narwhals will only inspect the first row to disambiguate the
+      cell type. This could lead to false negatives in the data type conversion. Shiny
+      could inspect each column in an attempt to disambiguate the cell type, but this
+      would be a costly operation. The best way to avoid this is to use consistent
+      typing. For example, if your first row of the pandas column contains a string and
+      the second row of the same column contains a `ui.TagList`, the column will
+      incorrectly be interpreted as a string. To get around this, you can wrap all cells
+      (or at the very lest the first cell) in the same column within a `ui.TagList` as
+      it will not insert any tags, but it will cause the column to be interpreted as
+      `html` where possible.   (tl/dr: Use consistent typing in your columns!)
+
+
     Tip
     ---
     This decorator should be applied **before** the ``@output`` decorator (if that
