@@ -308,7 +308,7 @@ $bslib-sidebar-column-sidebar: Min(calc(100% - var(--_padding-icon)), var(--_sid
   .bslib-sidebar-layout {
     &, &.sidebar-right {
       // Remove sidebar borders in mobile view (except always-open, added below)
-      > .sidebar { border: none }
+      > .sidebar { border: none; }
 
       // Main area takes up entire layout area to avoid layout shift when
       // sidebar is expanded as an overlay.

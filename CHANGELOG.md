@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added `.expect_title()` for `Popover` controller (#1683)
 
+* Small improvements to the default pulse busy indicator to better blend with any background. It's also now slightly smaller by default.(#1707)
+
 ### Bug fixes
 
 * A few fixes for `ui.Chat()`, including:
@@ -40,6 +42,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Fixed the `InputDate` and `InputDateRange` playwright controllers to check the `width` property within the `style` attribute. (#1696)
 
 * Fixed the `InputCheckbox` and `InputCheckboxGroup` playwright controllers' `.expect_width()` to check the `width` property within the `style` attribute. (#1702)
+
+* Fixed a bug in `ui.conditional_panel()` that would cause the panel to repeatedly show/hide itself when the provided condition did not evaluate to a boolean value. (#1707)
+
+* Fixed a bug with `ui.input_slider()` when used as a range slider that made it impossible to change the slider value when both handles were at the maximum value. (#1707)
+
 
 ## [1.1.0] - 2024-09-03
 
