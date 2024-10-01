@@ -34,7 +34,7 @@ MODEL_INFO = {
 
 
 ui.page_opts(
-    title="Hello OpenAI Chat",
+    title="Hello Anthropic Chat",
     fillable=True,
     fillable_mobile=True,
 )
