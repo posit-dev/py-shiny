@@ -1,6 +1,6 @@
 from faicons import icon_svg
 
-from shiny import App, ui
+from shiny import App, Inputs, ui
 
 app_ui = ui.page_fluid(
     ui.h1("Accordion Kitchensink"),
@@ -39,12 +39,8 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(
-    input,  # pyright: ignore[reportUnknownParameterType, reportMissingParameterType]
-    output,  # pyright: ignore[reportUnknownParameterType, reportMissingParameterType]
-    session,  # pyright: ignore[reportUnknownParameterType, reportMissingParameterType]
-):
+def server(input: Inputs):
     pass
 
 
-app = App(app_ui, server)  # pyright: ignore[reportUnknownArgumentType]
+app = App(app_ui, server)
