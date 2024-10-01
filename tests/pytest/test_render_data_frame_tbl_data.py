@@ -301,10 +301,8 @@ def test_serialize_frame(df_f: IntoDataFrame):
             {"type": "duration"},
             {"type": "html"},
             {"type": "html"},
-            # Polars doesn't have a way to represent a struct,
-            # so Narwhals marks it as unknown
-            {"type": "unknown" if is_polars_backed else "object"},
-            {"type": polars_series_col_type if is_polars_backed else "object"},
+            {"type": "object"},
+            {"type": "object"},
             {"type": "object"},
         ],
     }
@@ -378,7 +376,16 @@ def test_dtype_coverage():
 
     for dtype_name in dtype_names:
 
-        if dtype_name in ("DType", "NumericType", "TemporalType", "Unknown"):
+        # Skip known types or imports that are not dtypes
+        if dtype_name in (
+            # narwhals
+            "DType",
+            "NumericType",
+            "TemporalType",
+            "Unknown",
+            # typing import
+            "Literal",
+        ):
             continue
 
         dtype_cls = getattr(nw_dtypes, dtype_name)
