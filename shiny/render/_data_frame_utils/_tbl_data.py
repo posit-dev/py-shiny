@@ -179,50 +179,34 @@ def apply_frame_patches(
 
 
 # serialize_dtype ----------------------------------------------------------------------
-nw_boolean = nw.Boolean()
-nw_categorical = nw.Categorical()
-nw_duration = nw.Duration()
-nw_enum = nw.Enum()
-nw_struct = nw.Struct()
-nw_list = nw.List(nw.Unknown())
-nw_array = nw.Array()
-nw_string = nw.String()
-nw_date = nw.Date()
-nw_datetime = nw.Datetime()
-nw_object = nw.Object()
-
-
 def serialize_dtype(col: nw.Series) -> FrameDtype:
 
     from ._html import series_contains_htmltoolslike
 
     dtype: DType = col.dtype
 
-    if dtype == nw_string:
+    if isinstance(dtype, nw.String):
         type_ = "string"
 
     elif dtype.is_numeric():
         type_ = "numeric"
 
-    elif dtype == nw_categorical:
+    elif isinstance(dtype, (nw.Categorical, nw.Enum)):
         categories = col.cat.get_categories().to_list()
         return {"type": "categorical", "categories": categories}
-    elif dtype == nw_enum:
-        categories = col.cat.get_categories().to_list()
-        return {"type": "categorical", "categories": categories}
-    elif dtype == nw_boolean:
+    elif isinstance(dtype, nw.Boolean):
         type_ = "boolean"
-    elif dtype == nw_date:
+    elif isinstance(dtype, nw.Date):
         type_ = "date"
-    elif dtype == nw_datetime:
+    elif isinstance(dtype, nw.Datetime):
         type_ = "datetime"
-    elif dtype == nw_duration:
+    elif isinstance(dtype, nw.Duration):
         type_ = "duration"
-    elif dtype == nw_object:
+    elif isinstance(dtype, nw.Object):
         type_ = "object"
         if series_contains_htmltoolslike(col):
             type_ = "html"
-    elif dtype in {nw_struct, nw_list, nw_array}:
+    elif isinstance(dtype, (nw.Struct, nw.List, nw.Array)):
         type_ = "object"
     else:
         type_ = "unknown"
