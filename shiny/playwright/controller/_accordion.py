@@ -98,18 +98,22 @@ class AccordionPanel(
         """
         playwright_expect(self.loc_body).to_have_text(value, timeout=timeout)
 
-    def expect_icon(self, value: bool, *, timeout: Timeout = None) -> None:
+    def expect_icon(self, exists: bool, *, timeout: Timeout = None) -> None:
         """
         Expects the accordion panel icon to exist or not.
 
         Parameters
         ----------
-        value
+        exists
             `True` if the icon is expected to exist, `False` otherwise.
         timeout
             The maximum time to wait for the icon to appear. Defaults to `None`.
         """
-        playwright_expect(self.loc_icon).to_have_count(int(value), timeout=timeout)
+        icon_child_loc = self.loc_icon.locator("> *")
+        if exists:
+            playwright_expect(icon_child_loc).not_to_have_count(0, timeout=timeout)
+        else:
+            playwright_expect(icon_child_loc).to_have_count(0, timeout=timeout)
 
     def expect_open(self, value: bool, *, timeout: Timeout = None) -> None:
         """
