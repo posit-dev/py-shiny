@@ -40,8 +40,8 @@ app_ui = ui.page_fluid(
 
 
 def server(
-    input,
-    output,
+    input,  # pyright: ignore[reportUnknownParameterType, reportMissingParameterType]
+    output,  # pyright: ignore[reportUnknownParameterType, reportMissingParameterType]
     session,  # pyright: ignore[reportUnknownParameterType, reportMissingParameterType]
 ):
     pass
