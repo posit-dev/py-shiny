@@ -279,60 +279,6 @@ def wrap_async(
     return fn_async
 
 
-# # TODO-barret-future; Q: Keep code?
-# class WrapAsync(Generic[P, R]):
-#     """
-#     Make a function asynchronous.
-
-#     Parameters
-#     ----------
-#     fn
-#         Function to make asynchronous.
-
-#     Returns
-#     -------
-#     :
-#         Asynchronous function (within the `WrapAsync` instance)
-#     """
-
-#     def __init__(self, fn: Callable[P, R] | Callable[P, Awaitable[R]]):
-#         if isinstance(fn, WrapAsync):
-#             fn = cast(WrapAsync[P, R], fn)
-#             return fn
-#         self._is_async = is_async_callable(fn)
-#         self._fn = wrap_async(fn)
-
-#     async def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R:
-#         """
-#         Call the asynchronous function.
-#         """
-#         return await self._fn(*args, **kwargs)
-
-#     @property
-#     def is_async(self) -> bool:
-#         """
-#         Was the original function asynchronous?
-
-#         Returns
-#         -------
-#         :
-#             Whether the original function is asynchronous.
-#         """
-#         return self._is_async
-
-#     @property
-#     def fn(self) -> Callable[P, R] | Callable[P, Awaitable[R]]:
-#         """
-#         Retrieve the original function
-
-#         Returns
-#         -------
-#         :
-#             Original function supplied to the `WrapAsync` constructor.
-#         """
-#         return self._fn
-
-
 # This function should generally be used in this code base instead of
 # `iscoroutinefunction()`.
 def is_async_callable(
