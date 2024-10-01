@@ -184,6 +184,25 @@ class data_frame(
             raise RuntimeError("req() failed to raise a silent error.")
         return value
 
+    # @reactive_calc_method
+    def data(self) -> IntoDataFrameT:
+        """
+        Reactive calculation of the data frame's render method.
+
+        This is a quick reference to the original data frame that was returned from the
+        app's render function. If it is mutated in place, it **will** modify the original
+        data.
+
+        Even if the rendered data value was not of type `pd.DataFrame` or `pl.DataFrame`, this method currently
+        converts it to a `pd.DataFrame`.
+
+        Returns
+        -------
+        :
+            The original data frame returned from the render method.
+        """
+        return self._req_value().data
+
     @reactive_calc_method
     def _nw_data(self) -> DataFrame[IntoDataFrameT]:
         """
@@ -274,25 +293,6 @@ class data_frame(
             A list of cell patches to apply to the data frame.
         """
         return list(self._cell_patch_map().values())
-
-    # @reactive_calc_method
-    def data(self) -> IntoDataFrameT:
-        """
-        Reactive calculation of the data frame's render method.
-
-        This is a quick reference to the original data frame that was returned from the
-        app's render function. If it is mutated in place, it **will** modify the original
-        data.
-
-        Even if the rendered data value was not of type `pd.DataFrame` or `pl.DataFrame`, this method currently
-        converts it to a `pd.DataFrame`.
-
-        Returns
-        -------
-        :
-            The original data frame returned from the render method.
-        """
-        return self._req_value().data
 
     @reactive_calc_method
     def _data_patched(self) -> DataFrame[IntoDataFrameT]:
