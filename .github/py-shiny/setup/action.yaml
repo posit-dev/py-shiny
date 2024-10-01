@@ -39,12 +39,6 @@ runs:
         run: |
           make ci-install-wheel
 
-      - name: Install backports.tarfile
-        if: ${{ startsWith(inputs.python-version, '3.8') }}
-        shell: bash
-        run: |
-          uv pip install backports.tarfile
-
       - name: Pip list
         shell: bash
         run: |

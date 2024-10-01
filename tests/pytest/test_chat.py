@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import sys
 from datetime import datetime
 from typing import Union, cast, get_args, get_origin
 
@@ -202,10 +201,6 @@ def test_langchain_normalization():
 
 
 def test_google_normalization():
-    # Not available for Python 3.8
-    if sys.version_info < (3, 9):
-        return
-
     from google.generativeai import (  # pyright: ignore[reportMissingTypeStubs]
         GenerativeModel,
     )
@@ -362,15 +357,11 @@ def test_as_anthropic_message():
 
 
 def test_as_google_message():
-    from shiny.ui._chat_provider_types import as_google_message
-
-    # Not available for Python 3.8
-    if sys.version_info < (3, 9):
-        return
-
     from google.generativeai import (  # pyright: ignore[reportMissingTypeStubs]
         GenerativeModel,
     )
+
+    from shiny.ui._chat_provider_types import as_google_message
 
     generate_content = GenerativeModel.generate_content  # type: ignore
 
