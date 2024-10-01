@@ -99,8 +99,7 @@ def compatible_to_pandas(
         from ..._deprecated import warn_deprecated
 
         warn_deprecated(
-            "Returned data frame data values that are not Pandas or Polars `DataFrame`s are currently not supported. "
-            "A `.to_pandas()` was found on your object and will be called. "
+            "A `.to_pandas()` was found on your data object and will be called. "
             "To remove this warning, please call `.to_pandas()` on your data "
             "and use the pandas result in your returned value. "
             "In the future, this will raise an error.",
@@ -108,7 +107,7 @@ def compatible_to_pandas(
         )
         return data.to_pandas()
 
-    raise TypeError(f"Unsupported type: {type(data)}")
+    raise TypeError(f"Unsupported data type: {type(data)}")
 
 
 # TODO-future; Replace with `nw.is_into_data_frame(x)`?
