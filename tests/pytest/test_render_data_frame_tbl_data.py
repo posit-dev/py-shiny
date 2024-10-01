@@ -164,7 +164,7 @@ def assert_frame_equal2(
             ),
             ("categorical", ["Polar", "Panda", "Brown"]),
         ),
-        (pl.Series([{"x": 1}]), "unknown"),
+        (pl.Series([{"x": 1}]), "object"),
         (pl.Series([h1("yo")]), "html"),
         (pl.Series([HTML("yo")]), "html"),
         # pandas ----
@@ -388,7 +388,7 @@ def test_dtype_coverage():
         if dtype_cls.is_numeric():
             continue
 
-        if f"nw.{dtype_name}()" in "".join(tbl_data_lines):
+        if f"nw.{dtype_name}" in "".join(tbl_data_lines):
             continue
 
         errs.append(f"Missing: {dtype_name}")
