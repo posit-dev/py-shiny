@@ -98,18 +98,18 @@ class AccordionPanel(
         """
         playwright_expect(self.loc_body).to_have_text(value, timeout=timeout)
 
-    def expect_icon(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+    def expect_icon(self, value: bool, *, timeout: Timeout = None) -> None:
         """
-        Expects the accordion panel icon to have the specified text.
+        Expects the accordion panel icon to exist or not.
 
         Parameters
         ----------
         value
-            The expected text pattern or string.
+            `True` if the icon is expected to exist, `False` otherwise.
         timeout
             The maximum time to wait for the icon to appear. Defaults to `None`.
         """
-        playwright_expect(self.loc_icon).to_have_text(value, timeout=timeout)
+        playwright_expect(self.loc_icon).to_have_count(int(value), timeout=timeout)
 
     def expect_open(self, value: bool, *, timeout: Timeout = None) -> None:
         """
@@ -306,6 +306,55 @@ class Accordion(
                     "Accordion panel does not have a `data-value` attribute"
                 )
             self.accordion_panel(elem_value).set(elem_value in open, timeout=timeout)
+
+    def expect_class(
+        self,
+        class_name: str,
+        has_class: bool,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expects the accordion to have the specified class.
+
+        Parameters
+        ----------
+        class_name
+            The class name to expect.
+        has_class
+            `True` if the class is expected
+        timeout
+            The maximum time to wait for the class to appear. Defaults to `None`.
+        """
+        _expect_class_to_have_value(
+            self.loc_container,
+            class_name,
+            has_class=has_class,
+            timeout=timeout,
+        )
+
+    def expect_multiple(
+        self,
+        value: bool,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expects the accordion to be multiple or not.
+
+        Parameters
+        ----------
+        value
+            `True` if the accordion is expected to be multiple, `False` otherwise.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
+        _expect_class_to_have_value(
+            self.loc_container,
+            "autoclose",
+            has_class=not value,
+            timeout=timeout,
+        )
 
     def accordion_panel(
         self,
