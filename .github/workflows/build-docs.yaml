@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.13.0-rc.2"]
+        python-version: ["3.13.0-rc.3"]
       fail-fast: false
 
     steps:
