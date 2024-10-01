@@ -14,9 +14,14 @@ R = TypeVar("R")
 S = TypeVar("S")
 
 # TODO-future: Can we do this for effect?
+# reactive_value_method
+#     @reactive.value
+#     def __some_effect(self):
+#         # Should be possible as it doesn't need to run on init, only on demand!
+#         ...
 # reactive_effect_method
 #     @reactive.effect
-#     def __some_effect():
+#     def __some_effect(self):
 #         # Thinking it is impossible to do!
 #         # There is no way to get the `session` within the init method
 #         # We should throw an error if we find this situation
