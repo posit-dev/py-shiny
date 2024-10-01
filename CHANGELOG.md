@@ -39,13 +39,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `ui.Theme()` now works correctly on Windows when the theme requires Sass compilation. (thanks @yuuuxt, #1684)
 
-* Fixed the `InputSlider` in `shiny.playwright.controller` to check the `width` property within the `style` attribute. (#1691)
+* Fixed multiple input controllers (`InputSlider`, `InputDate`, `InputDateRange`, `InputCheckbox`, and `InputCheckboxGroup`) in `shiny.playwright.controller` to check the `width` property within the `style` attribute. (#1691, #1696, #1702)
 
-* Fixed the `InputDate` and `InputDateRange` in `shiny.playwright.controller` to check the `width` property within the `style` attribute. (#1696)
+* Fixed multiple input controllers (`InputSwitch`, `InputRadioButtons`, `InputNumeric`, `InputText`, `InputTextArea`, `InputPassword`, `InputActionButton`, and `InputActionLink`) in `shiny.playwright.controller` to correctly validate the `width` style property in `.expect_width(). (#1705)
 
-* Updated `InputCheckbox` and `InputCheckboxGroup` in `shiny.playwright.controller` to correctly validate the `width` style property in `.expect_width()`. (#1702)
-
-* Fixed multiple input controllers (`InputSwitch`, `InputRadioButtons`, `InputNumeric`, `InputText`, `InputTextArea`, `InputPassword`, `InputActionButton`, and `InputActionLink`) in shiny.playwright.controller` to correctly validate the `width` style property in `.expect_width().
+* Fixed input controller `InputTextArea` in `shiny.playwright.controller` to correctly validate the `resize` style property in `.expect_resize()`. (#1705)
 
 
 * Fixed a bug in `ui.conditional_panel()` that would cause the panel to repeatedly show/hide itself when the provided condition did not evaluate to a boolean value. (#1707)
