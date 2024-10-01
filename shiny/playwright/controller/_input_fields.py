@@ -17,38 +17,12 @@ from ..expect._internal import expect_style_to_have_value as _expect_style_to_ha
 from ._base import (
     Resize,
     UiBaseP,
-    UiWithContainerP,
     UiWithLabel,
-    WidthLocM,
+    WidthContainerStyleM,
     all_missing,
     not_is_missing,
     set_text,
 )
-
-
-class InputDateWidthM:
-    """
-    A mixin class for input date width.
-    This mixin class provides methods to expect the width of input date elements.
-    """
-
-    def expect_width(
-        self: UiWithContainerP,
-        value: AttrValue,
-        *,
-        timeout: Timeout = None,
-    ) -> None:
-        """
-        Expect the input select to have a specific width.
-
-        Parameters
-        ----------
-        value
-            The expected width.
-        timeout
-            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
-        """
-        _expect_style_to_have_value(self.loc_container, "width", value, timeout=timeout)
 
 
 class _SetTextM:
@@ -91,7 +65,7 @@ class _ExpectTextInputValueM:
 class InputNumeric(
     _SetTextM,
     _ExpectTextInputValueM,
-    WidthLocM,
+    WidthContainerStyleM,
     UiWithLabel,
 ):
     """Controller for :func:`shiny.ui.input_numeric`."""
@@ -242,7 +216,7 @@ class _ExpectAutocompleteAttrM:
 class InputText(
     _SetTextM,
     _ExpectTextInputValueM,
-    WidthLocM,
+    WidthContainerStyleM,
     _ExpectPlaceholderAttrM,
     _ExpectAutocompleteAttrM,
     _ExpectSpellcheckAttrM,
@@ -271,6 +245,7 @@ class InputText(
 class InputPassword(
     _SetTextM,
     _ExpectTextInputValueM,
+    WidthContainerStyleM,
     _ExpectPlaceholderAttrM,
     UiWithLabel,
 ):
@@ -316,6 +291,7 @@ class InputPassword(
 
 class InputTextArea(
     _SetTextM,
+    WidthContainerStyleM,
     _ExpectTextInputValueM,
     _ExpectPlaceholderAttrM,
     _ExpectAutocompleteAttrM,
@@ -421,9 +397,7 @@ class InputTextArea(
         timeout
             The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
-        _expect_attribute_to_have_value(
-            self.loc, "resize", value=value, timeout=timeout
-        )
+        _expect_style_to_have_value(self.loc, "resize", value=value, timeout=timeout)
 
     def expect_autoresize(
         self,
@@ -450,7 +424,7 @@ class InputTextArea(
 
 
 class _DateBase(
-    InputDateWidthM,
+    WidthContainerStyleM,
     _SetTextM,
     UiWithLabel,
 ):
@@ -694,7 +668,7 @@ class InputDate(_DateBase):
         )
 
 
-class InputDateRange(InputDateWidthM, UiWithLabel):
+class InputDateRange(WidthContainerStyleM, UiWithLabel):
     """Controller for :func:`shiny.ui.input_date_range`."""
 
     loc_separator: Locator
