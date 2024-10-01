@@ -1,4 +1,4 @@
-from chatlas import OpenAI
+from chatlas import OpenAIChat
 
 from shiny.express import ui
 
@@ -18,8 +18,7 @@ def get_current_weather(location: str, unit: str = "fahrenheit") -> int:
         return 72 if unit == "fahrenheit" else 22
 
 
-llm = OpenAI(
-    model="gpt-4o",
+llm = OpenAIChat(
     tools=[get_current_weather],
 )
 

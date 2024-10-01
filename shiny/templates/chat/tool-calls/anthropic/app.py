@@ -1,4 +1,4 @@
-from chatlas import Anthropic
+from chatlas import AnthropicChat
 
 from shiny.express import ui
 
@@ -18,7 +18,7 @@ def get_current_weather(location: str, unit: str = "fahrenheit") -> int:
         return 72 if unit == "fahrenheit" else 22
 
 
-llm = Anthropic(
+llm = AnthropicChat(
     tools=[get_current_weather],
 )
 

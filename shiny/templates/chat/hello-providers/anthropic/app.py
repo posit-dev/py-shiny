@@ -6,7 +6,7 @@
 import os
 
 from app_utils import load_dotenv
-from chatlas import Anthropic
+from chatlas import AnthropicChat
 
 from shiny.express import ui
 
@@ -21,7 +21,7 @@ ui.page_opts(
 # app, or set them in a file named `.env`. The `python-dotenv` package will load `.env`
 # as environment variables which can later be read by `os.getenv()`.
 load_dotenv()
-llm = Anthropic(
+llm = AnthropicChat(
     api_key=os.environ.get("ANTHROPIC_API_KEY"),
 )
 

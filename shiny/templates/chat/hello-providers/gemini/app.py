@@ -4,7 +4,7 @@
 # To get one, follow the instructions at https://ai.google.dev/gemini-api/docs/get-started/tutorial?lang=python
 # ------------------------------------------------------------------------------------
 from app_utils import load_dotenv
-from google.generativeai import GenerativeModel
+from chatlas import GoogleChat
 
 from shiny.express import ui
 
@@ -12,7 +12,7 @@ from shiny.express import ui
 # app, or set them in a file named `.env`. The `python-dotenv` package will load `.env`
 # as environment variables which can later be read by `os.getenv()`.
 load_dotenv()
-llm = GenerativeModel()
+llm = GoogleChat()
 
 # Set some Shiny page options
 ui.page_opts(
@@ -26,17 +26,7 @@ chat = ui.Chat(id="chat")
 chat.ui()
 
 
-# Define a callback to run when the user submits a message
 @chat.on_user_submit
-async def _():
-    # Get messages currently in the chat
-    contents = chat.messages(format="google")
-
-    # Generate a response message stream
-    response = llm.generate_content(
-        contents=contents,
-        stream=True,
-    )
-
-    # Append the response stream into the chat
+async def _(input):
+    response = llm.response_generator(input)
     await chat.append_message_stream(response)

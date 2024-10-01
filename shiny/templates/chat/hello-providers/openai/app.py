@@ -1,7 +1,7 @@
 import os
 
 from app_utils import load_dotenv
-from chatlas import OpenAI
+from chatlas import OpenAIChat
 
 from shiny.express import ui
 
@@ -12,9 +12,8 @@ ui.page_opts(
 )
 
 load_dotenv()
-llm = OpenAI(
+llm = OpenAIChat(
     api_key=os.environ.get("OPENAI_API_KEY"),
-    model="gpt-4o",
 )
 
 chat = ui.Chat(

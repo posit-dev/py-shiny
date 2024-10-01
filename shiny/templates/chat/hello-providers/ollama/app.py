@@ -5,7 +5,7 @@
 # To install the Ollama Python client, see https://github.com/ollama/ollama-python
 # ------------------------------------------------------------------------------------
 
-from chatlas import Ollama
+from chatlas import OllamaChat
 
 from shiny.express import ui
 
@@ -17,7 +17,7 @@ ui.page_opts(
 )
 
 # Assumes you're running an Ollama server (with llama3 available) locally
-llm = Ollama(model="llama3.1")
+llm = OllamaChat(model="llama3.1")
 
 # Create and display empty chat
 chat = ui.Chat(

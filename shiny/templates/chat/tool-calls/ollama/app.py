@@ -1,4 +1,4 @@
-from chatlas import Ollama
+from chatlas import OllamaChat
 
 from shiny.express import ui
 
@@ -19,7 +19,7 @@ def get_current_weather(location: str, unit: str = "fahrenheit") -> int:
 
 
 # Assumes you're running an Ollama server (with llama3 available) locally
-llm = Ollama(
+llm = OllamaChat(
     model="llama3.1",
     tools=[get_current_weather],
 )
