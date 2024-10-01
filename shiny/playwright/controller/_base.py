@@ -333,6 +333,31 @@ class UiWithLabel(UiWithContainer):
         playwright_expect(self.loc_label).to_have_text(value, timeout=timeout)
 
 
+class WidthLocStlyeM:
+    """
+    A mixin class that provides methods to control the width of input action buttons and action links.
+
+    """
+
+    def expect_width(
+        self: UiBaseP,
+        value: AttrValue,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expect the `width` attribute of a DOM element to have a specific value.
+
+        Parameters
+        ----------
+        value
+            The expected value of the `width` attribute.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        _expect_style_to_have_value(self.loc, "width", value, timeout=timeout)
+
+
 class WidthLocM:
     """
     A mixin class representing the `.loc`'s width.
@@ -359,32 +384,33 @@ class WidthLocM:
         _expect_attribute_to_have_value(self.loc, "width", value=value, timeout=timeout)
 
 
-class WidthContainerM:
-    """
-    A mixin class representing the container's width.
+# # Currently not being used, hence commenting
+# class WidthContainerM:
+#     """
+#     A mixin class representing the container's width.
 
-    This class provides methods to expect the width attribute of a DOM element's container.
-    """
+#     This class provides methods to expect the width attribute of a DOM element's container.
+#     """
 
-    def expect_width(
-        self: UiWithContainerP,
-        value: AttrValue,
-        *,
-        timeout: Timeout = None,
-    ) -> None:
-        """
-        Expect the `width` attribute of a input's container to have a specific value.
+#     def expect_width(
+#         self: UiWithContainerP,
+#         value: AttrValue,
+#         *,
+#         timeout: Timeout = None,
+#     ) -> None:
+#         """
+#         Expect the `width` attribute of a input's container to have a specific value.
 
-        Parameters
-        ----------
-        value
-            The expected value of the `width` attribute.
-        timeout
-            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
-        """
-        _expect_attribute_to_have_value(
-            self.loc_container, "width", value=value, timeout=timeout
-        )
+#         Parameters
+#         ----------
+#         value
+#             The expected value of the `width` attribute.
+#         timeout
+#             The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+#         """
+#         _expect_attribute_to_have_value(
+#             self.loc_container, "width", value=value, timeout=timeout
+#         )
 
 
 class WidthContainerStyleM:
