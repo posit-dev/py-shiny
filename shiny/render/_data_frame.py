@@ -11,6 +11,7 @@ from htmltools import Tag
 from .. import reactive, ui
 from .._docstring import add_example
 from .._utils import wrap_async
+from .._validation import req
 from ..session._utils import require_active_session, session_context
 from ..types import JsonifiableDict, ListOrTuple
 from ._data_frame_utils._datagridtable import AbstractTabularData, DataGrid, DataTable
@@ -24,6 +25,7 @@ from ._data_frame_utils._patch import (
     PatchFnSync,
     assert_patches_shape,
 )
+from ._data_frame_utils._reactive_method import reactive_calc_method
 from ._data_frame_utils._selection import (
     BrowserCellSelection,
     CellSelection,
@@ -59,9 +61,7 @@ if TYPE_CHECKING:
 
 @add_example()
 class data_frame(
-    Renderer[
-        Union[None, IntoDataFrameT, DataGrid[IntoDataFrameT], DataTable[IntoDataFrameT]]
-    ]
+    Renderer[Union[IntoDataFrameT, DataGrid[IntoDataFrameT], DataTable[IntoDataFrameT]]]
 ):
     """
     Decorator for a function that returns a [pandas](https://pandas.pydata.org/),
@@ -166,10 +166,68 @@ class data_frame(
     """
     Reactive value of the data frame's rendered object.
     """
-    _value_data: reactive.Calc_[IntoDataFrameT]
-    """
-    Reactive value of the data frame's rendered object.
-    """
+
+    def _req_value(self):
+        """
+        Ensure that the value is not `None`.
+
+        Raises a silent error if the value is `None`.
+
+        Returns
+        -------
+        :
+            The non-`None` value of the data frame's rendered object.
+        """
+        value = self._value()
+        if not value:
+            req(False)
+            raise RuntimeError("req() failed to raise a silent error.")
+        return value
+
+    @reactive_calc_method
+    def _nw_data(self) -> DataFrame[IntoDataFrameT]:
+        """
+        Reactive calculation of the data frame's data wrapped by narwhals.
+
+        This is a quick reference to the original data frame that was returned from the
+        app's render function. If it is mutated in place, it **will** modify the original
+        data.
+
+        Returns
+        -------
+        :
+            Narwhals data frame object wrapping the original data.
+        """
+        return as_data_frame(self.data())
+
+    def _nw_data_to_original_type(
+        self,
+        nw_data: DataFrame[IntoDataFrameT],
+    ) -> IntoDataFrameT:
+        """
+        Convert the narwhals data frame back to the original data type.
+
+        If the original data type was a `pandas` or `polars` data frame, this method
+        will convert the narwhals data frame back to the original data type. However, if
+        the original data type was a `narwhals` data frame, this method will maintain and return the narwhals data frame.
+
+        Parameters
+        ----------
+        nw_data
+            The narwhals data frame to convert.
+
+        Returns
+        -------
+        :
+            The original data frame type. Ex: pandas, polars, or narwhals
+        """
+
+        if isinstance(self.data(), DataFrame):
+            # At this point, `IntoDataFrameT` represents `DataFrame[IntoDataFrameT]`
+            return cast(IntoDataFrameT, nw_data)
+
+        return data_frame_to_native(nw_data)
+
     _type_hints: reactive.Value[list[FrameDtype] | None]
     """
     Reactive value of the data frame's type hints for each column.
@@ -204,30 +262,117 @@ class data_frame(
 
     The key is defined as `(row_index, column_index)`.
     """
-    cell_patches: reactive.Calc_[list[CellPatch]]
-    """
-    Reactive value of the data frame's edits provided by the user.
-    """
 
-    data: reactive.Calc_[IntoDataFrameT]
-    """
-    Reactive value of the data frame's output data.
+    @reactive_calc_method
+    def cell_patches(self) -> list[CellPatch]:
+        """
+        Reactive calculation of the data frame's edits provided by the user.
 
-    This is a quick reference to the original data frame that was returned from the
-    app's render function. If it is mutated in place, it **will** modify the original
-    data.
+        Returns
+        -------
+        :
+            A list of cell patches to apply to the data frame.
+        """
+        return list(self._cell_patch_map().values())
 
-    Even if the rendered data value was not of type `pd.DataFrame` or `pl.DataFrame`, this method currently
-    converts it to a `pd.DataFrame`.
-    """
-    _data_view_all: reactive.Calc_[IntoDataFrameT]
-    """
-    Reactive value of the full (sorted and filtered) data.
-    """
-    _data_view_selected: reactive.Calc_[IntoDataFrameT]
-    """
-    Reactive value of the selected rows of the (sorted and filtered) data.
-    """
+    # @reactive_calc_method
+    def data(self) -> IntoDataFrameT:
+        """
+        Reactive calculation of the data frame's render method.
+
+        This is a quick reference to the original data frame that was returned from the
+        app's render function. If it is mutated in place, it **will** modify the original
+        data.
+
+        Even if the rendered data value was not of type `pd.DataFrame` or `pl.DataFrame`, this method currently
+        converts it to a `pd.DataFrame`.
+
+        Returns
+        -------
+        :
+            The original data frame returned from the render method.
+        """
+        return self._req_value().data
+
+    @reactive_calc_method
+    def _data_patched(self) -> DataFrame[IntoDataFrameT]:
+        """
+        Reactive calculation of the data frame's patched data.
+
+        Returns
+        -------
+        :
+            The data frame with all the user's edit patches applied to it.
+        """
+        return apply_frame_patches(self._nw_data(), self.cell_patches())
+
+    # Apply filtering and sorting
+    # https://github.com/posit-dev/py-shiny/issues/1240
+    def _subset_data_view(self, selected: bool) -> IntoDataFrameT:
+        """
+        Helper method to subset data according to what is viewed in the browser;
+
+        Applies filtering and sorting to the patched data. If `selected=True`, only
+        the user selected rows are returned.
+
+
+        Note Future rect selection changes
+        ----------------------------------
+        In the future, the selected rows may need to be **after** filtering
+        and sorting are applied. This would allow for rectangular selections to be
+        applied to the filtered and sorted data given min/max row info.
+
+        Where as, currently, the selected rows are applied to the original data
+        before filtering and sorting are applied. Serializing the rect selection
+        would require tuple info of all cells selected.
+
+        Parameters
+        ----------
+        selected
+            If `True`, subset the viewed data to the selected area. Defaults to `False` (all rows).
+
+        Returns
+        -------
+        :
+            The (possibly selected-only) subsetted data frame with any sorting or
+            filtering applied. The data frame is of the same type as the render method's
+            data.
+        """
+
+        if selected:
+            rows = self.cell_selection()["rows"]
+        else:
+            rows = self.data_view_rows()
+
+        nw_data = subset_frame(self._data_patched(), rows=rows)
+
+        patched_subsetted_into_data = self._nw_data_to_original_type(nw_data)
+
+        return patched_subsetted_into_data
+
+    @reactive_calc_method
+    def _data_view_all(self) -> IntoDataFrameT:
+        """
+        Reactive calculation of the full (sorted and filtered) data.
+
+        Returns
+        -------
+        :
+            The full data frame as seen in the browser.
+        """
+        return self._subset_data_view(selected=False)
+
+    @reactive_calc_method
+    def _data_view_selected(self) -> IntoDataFrameT:
+        """
+        Reactive calcuation of the selected rows of the (sorted and filtered) data.
+
+        Returns
+        -------
+        :
+            The selected rows of the data frame as seen in the browser.
+        """
+        return self._subset_data_view(selected=True)
 
     @add_example(ex_dir="../api-examples/data_frame_data_view")
     def data_view(self, *, selected: bool = False) -> IntoDataFrameT:
@@ -244,14 +389,12 @@ class data_frame(
         Parameters
         ----------
         selected
-            If `True`, subset the viewed data to the selected area. Defaults to `False`.
+            If `True`, subset the viewed data to the selected area. Defaults to `False` (all rows).
 
         Returns
         -------
         :
-            A view of the data frame as seen in the browser. Even if the rendered data
-            value was not of type `pd.DataFrame` or `pl.DataFrame`, this method currently returns the converted
-            `pd.DataFrame`.
+            A view of the data frame as seen in the browser.
 
         See Also
         --------
@@ -265,74 +408,96 @@ class data_frame(
         else:
             return self._data_view_all()
 
-    selection_modes: reactive.Calc_[SelectionModes]
-    """
-    Reactive value of the data frame's possible selection modes.
-    """
+    # @reactive_calc_method
+    def selection_modes(self) -> SelectionModes:
+        """
+        Reactive calculation of the data frame's possible selection modes.
 
-    cell_selection: reactive.Calc_[CellSelection]
-    """
-    Reactive value of selected cell information.
+        Returns
+        -------
+        :
+            The possible selection modes for the data frame.
+        """
+        return self._req_value().selection_modes
 
-    This method is a wrapper around `input.<id>_cell_selection()`, where `<id>` is
-    the `id` of the data frame output. This method returns the selected rows and
-    will cause reactive updates as the selected rows change.
+    @reactive_calc_method
+    def cell_selection(self) -> CellSelection:
+        """
+        Reactive calculation of selected cell information.
 
-    The value has been enhanced from it's vanilla form to include the missing `cols` key
-    (or `rows` key) as a tuple of integers representing all column (or row) numbers.
-    This allows for consistent usage within code when subsetting your data. These
-    missing keys are not sent over the wire as they are independent of the selection.
+        This method is a wrapper around `input.<id>_cell_selection()`, where `<id>` is
+        the `id` of the data frame output. This method returns the selected rows and
+        will cause reactive updates as the selected rows change.
 
-    Returns
-    -------
-    :
-        :class:`~shiny.render.CellSelection` representing the indices of the selected
-        cells. If no cells are currently selected, `None` is returned.
-    """
+        The value has been enhanced from it's vanilla form to include the missing `cols` key
+        (or `rows` key) as a tuple of integers representing all column (or row) numbers.
+        This allows for consistent usage within code when subsetting your data. These
+        missing keys are not sent over the wire as they are independent of the selection.
 
-    data_view_rows: reactive.Calc_[tuple[int, ...]]
-    """
-    Reactive value of the data frame's user view row numbers.
+        Returns
+        -------
+        :
+            :class:`~shiny.render.CellSelection` representing the indices of the selected
+            cells. If no cells are currently selected, `None` is returned.
+        """
+        browser_cell_selection = cast(
+            BrowserCellSelection,
+            self._get_session().input[f"{self.output_id}_cell_selection"](),
+        )
 
-    This value is a wrapper around `input.<id>_data_view_rows()`, where `<id>` is the
-    `id` of the data frame output.
+        cell_selection = as_cell_selection(
+            browser_cell_selection,
+            selection_modes=self.selection_modes(),
+            nw_data=self._nw_data(),
+            data_view_rows=self.data_view_rows(),
+            data_view_cols=tuple(range(frame_shape(self._nw_data())[1])),
+        )
 
-    Returns
-    -------
-    :
-        The row numbers of the data frame that are currently being viewed in the browser
-        after sorting and filtering has been applied.
-    """
+        return cell_selection
 
-    _data_patched: reactive.Calc_[DataFrame[IntoDataFrameT]]
-    """
-    Reactive value of the data frame's patched data.
+    @reactive_calc_method
+    def data_view_rows(self) -> tuple[int, ...]:
+        """
+        Reactive calculation of the data frame's user view row numbers.
 
-    Returns
-    -------
-    :
-        The data frame with all the user's edit patches applied to it.
-    """
+        This value is a wrapper around `input.<id>_data_view_rows()`, where `<id>` is the
+        `id` of the data frame output.
 
-    sort: reactive.Calc_[tuple[ColumnSort, ...]]
-    """
-    Reactive value of the data frame's column sorting information.
+        Returns
+        -------
+        :
+            The row numbers of the data frame that are currently being viewed in the browser
+            after sorting and filtering has been applied.
+        """
+        id_data_view_rows = f"{self.output_id}_data_view_rows"
+        input_data_view_rows = self._get_session().input[id_data_view_rows]()
+        return tuple(input_data_view_rows)
 
-    Returns
-    -------
-    :
-        An array of `col`umn number and _is `desc`ending_ information.
-    """
+    # @reactive_calc_method
+    def sort(self) -> tuple[ColumnSort, ...]:
+        """
+        Reactive calculation of the data frame's column sorting information.
 
-    filter: reactive.Calc_[tuple[ColumnFilter, ...]]
-    """
-    Reactive value of the data frame's column filters.
+        Returns
+        -------
+        :
+            An array of `col`umn number and _is `desc`ending_ information.
+        """
+        column_sort = self._get_session().input[f"{self.output_id}_column_sort"]()
+        return tuple(column_sort)
 
-    Returns
-    -------
-    :
-        An array of `col`umn number and `value` information. If the column type is a number, a tuple of `(min, max)` is used for `value`. If no min (or max) value is set, `None` is used in its place. If the column type is a string, the string value is used for `value`.
-    """
+    # @reactive_calc_method
+    def filter(self) -> tuple[ColumnFilter, ...]:
+        """
+        Reactive calculation of the data frame's column filters.
+
+        Returns
+        -------
+        :
+            An array of `col`umn number and `value` information. If the column type is a number, a tuple of `(min, max)` is used for `value`. If no min (or max) value is set, `None` is used in its place. If the column type is a string, the string value is used for `value`.
+        """
+        column_filter = self._get_session().input[f"{self.output_id}_column_filter"]()
+        return tuple(column_filter)
 
     def _reset_reactives(self) -> None:
         self._value.set(None)
@@ -341,171 +506,12 @@ class data_frame(
 
     def _init_reactives(self) -> None:
 
-        from .. import req
-
         # Init
         self._value: reactive.Value[
             None | DataGrid[IntoDataFrameT] | DataTable[IntoDataFrameT]
         ] = reactive.Value(None)
         self._type_hints: reactive.Value[list[FrameDtype] | None] = reactive.Value(None)
         self._cell_patch_map = reactive.Value({})
-
-        @reactive.calc
-        def self_cell_patches() -> list[CellPatch]:
-            return list(self._cell_patch_map().values())
-
-        self.cell_patches = self_cell_patches
-
-        @reactive.calc
-        def self__value_data() -> IntoDataFrameT:
-            value = self._value()
-            if not value:
-                req(False)
-                raise RuntimeError("req() failed to raise a silent error.")
-
-            return value.data
-
-        self._value_data = self__value_data
-
-        @reactive.calc
-        def self__nw_data() -> DataFrame[IntoDataFrameT]:
-            return as_data_frame(self._value_data())
-
-        self._nw_data = self__nw_data
-
-        @reactive.calc
-        def self__data_is_nw() -> bool:
-            return isinstance(self._value_data(), DataFrame)
-
-        self._data_is_nw = self__data_is_nw
-
-        @reactive.calc
-        def self__nw_data_to_original_type_fn():
-
-            def _(nw_data: DataFrame[IntoDataFrameT]) -> IntoDataFrameT:
-                if self._data_is_nw():
-                    # At this point, `IntoDataFrameT` represents `DataFrame[IntoDataFrameT]`
-                    return cast(IntoDataFrameT, nw_data)
-                return data_frame_to_native(nw_data)
-
-            return _
-
-        self._nw_data_to_original_type_fn = self__nw_data_to_original_type_fn
-
-        @reactive.calc
-        def self_data() -> IntoDataFrameT:
-            to_original_type_fn = self._nw_data_to_original_type_fn()
-            return to_original_type_fn(self._nw_data())
-
-        self.data = self_data
-
-        @reactive.calc
-        def self_selection_modes() -> SelectionModes:
-            value = self._value()
-            req(value)
-            if not isinstance(value, (DataGrid, DataTable)):
-                raise TypeError(
-                    f"Unsupported type returned from render function: {type(value)}. Expected `DataGrid` or `DataTable`"
-                )
-
-            return value.selection_modes
-
-        self.selection_modes = self_selection_modes
-
-        @reactive.calc
-        def self_cell_selection() -> CellSelection:
-            browser_cell_selection = cast(
-                BrowserCellSelection,
-                self._get_session().input[f"{self.output_id}_cell_selection"](),
-            )
-
-            cell_selection = as_cell_selection(
-                browser_cell_selection,
-                selection_modes=self.selection_modes(),
-                nw_data=self._nw_data(),
-                data_view_rows=self.data_view_rows(),
-                data_view_cols=tuple(range(frame_shape(self._nw_data())[1])),
-            )
-
-            return cell_selection
-
-        self.cell_selection = self_cell_selection
-
-        @reactive.calc
-        def self_sort() -> tuple[ColumnSort, ...]:
-            column_sort = self._get_session().input[f"{self.output_id}_column_sort"]()
-            return tuple(column_sort)
-
-        self.sort = self_sort
-
-        @reactive.calc
-        def self_filter() -> tuple[ColumnFilter, ...]:
-            column_filter = self._get_session().input[
-                f"{self.output_id}_column_filter"
-            ]()
-            return tuple(column_filter)
-
-        self.filter = self_filter
-
-        @reactive.calc
-        def self_data_view_rows() -> tuple[int, ...]:
-            data_view_rows = self._get_session().input[
-                f"{self.output_id}_data_view_rows"
-            ]()
-            return tuple(data_view_rows)
-
-        self.data_view_rows = self_data_view_rows
-
-        @reactive.calc
-        def self__data_patched() -> DataFrame[IntoDataFrameT]:
-            return apply_frame_patches(self._nw_data(), self.cell_patches())
-
-        self._data_patched = self__data_patched
-
-        # Apply filtering and sorting
-        # https://github.com/posit-dev/py-shiny/issues/1240
-        def _subset_data_view(selected: bool) -> IntoDataFrameT:
-            """
-            Helper method to subset data according to what is viewed in the browser;
-
-            Applies filtering and sorting to the patched data. If `selected=True`, only
-            the user selected rows are returned.
-
-
-            Note Future rect selection changes
-            ----------------------------------
-            In the future, the selected rows may need to be **after** filtering
-            and sorting are applied. This would allow for rectangular selections to be
-            applied to the filtered and sorted data given min/max row info.
-
-            Where as, currently, the selected rows are applied to the original data
-            before filtering and sorting are applied. Serializing the rect selection
-            would require tuple info of all cells selected.
-            """
-
-            if selected:
-                rows = self.cell_selection()["rows"]
-            else:
-                rows = self.data_view_rows()
-
-            nw_data = subset_frame(self._data_patched(), rows=rows)
-
-            to_original_type_fn = self._nw_data_to_original_type_fn()
-            patched_subsetted_into_data = to_original_type_fn(nw_data)
-
-            return patched_subsetted_into_data
-
-        # Helper reactives so that internal calculations can be cached for use in other calculations
-        @reactive.calc
-        def self__data_view() -> IntoDataFrameT:
-            return _subset_data_view(selected=False)
-
-        @reactive.calc
-        def self__data_view_selected() -> IntoDataFrameT:
-            return _subset_data_view(selected=True)
-
-        self._data_view_all = self__data_view
-        self._data_view_selected = self__data_view_selected
 
     def _get_session(self) -> Session:
         if self._session is None:
@@ -743,8 +749,7 @@ class data_frame(
                 return
 
             # TODO-barret; Use the returned data type from the render function!
-            to_original_type_fn = self._nw_data_to_original_type_fn()
-            patched_into_data = to_original_type_fn(self._data_patched())
+            patched_into_data = self._nw_data_to_original_type(self._data_patched())
             new_styles = as_browser_style_infos(styles_fn, into_data=patched_into_data)
 
             await self._send_message_to_browser(
@@ -1044,7 +1049,7 @@ class data_frame(
 
     def input_cell_selection(self) -> CellSelection | None:
         """
-        [Deprecated] Reactive value of selected cell information.
+        [Deprecated] Reactive calculation of selected cell information.
 
         Please use `~shiny.render.data_frame`'s `.cell_selection()` method instead.
         """
