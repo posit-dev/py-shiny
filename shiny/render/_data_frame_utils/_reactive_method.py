@@ -45,7 +45,6 @@ def is_class_method(fn: Callable[..., Any]) -> bool:
         return False
 
     # Check if the function's __qualname__ contains a class name
-    print("scope_name", fn.__name__, fn.__qualname__)
     if "." not in fn.__qualname__:
         # If no `.` in the qualname, it is not a class method
         return False
