@@ -15,7 +15,7 @@ def test_accordion_kitchensink(page: Page, local_app: ShinyAppProc) -> None:
     accordion1_panel1 = accordion1.accordion_panel("panel1")
     accordion1_panel1.expect_open(True)
     accordion1_panel1.expect_label("Panel 1")
-    accordion1_panel1.expect_icon(False)  # not sure why this is not working
+    accordion1_panel1.expect_icon(False)
 
     accordion1_panel2 = accordion1.accordion_panel("panel2")
     accordion1_panel2.expect_open(False)
