@@ -1,5 +1,7 @@
 from typing import Literal
 
+from langchain.chains.conversation.base import ConversationChain
+from langchain.memory import ConversationBufferMemory
 from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
 
@@ -12,6 +14,7 @@ ui.page_opts(
 )
 
 
+@tool
 def get_current_weather(
     location: str, unit: Literal["celsius", "fahrenheit"] = "fahrenheit"
 ) -> int:
@@ -27,11 +30,9 @@ def get_current_weather(
 
 
 llm = ChatOpenAI()
-llm_with_tools = llm.bind_tools(
-    [
-        tool(get_current_weather),
-    ]
-)
+llm_with_tools = llm.bind_tools([get_current_weather])
+memory = ConversationBufferMemory(return_messages=True)
+conversation = ConversationChain(llm=llm_with_tools, memory=memory)
 
 chat = ui.Chat(id="chat")
 chat.ui()
@@ -41,7 +42,6 @@ chat.update_user_input(
 
 
 @chat.on_user_submit
-async def _():
-    messages = chat.messages(format="langchain")
-    response = llm_with_tools.astream(messages)
+async def _(message):
+    response = conversation.predict(input=message)
     await chat.append_message_stream(response)

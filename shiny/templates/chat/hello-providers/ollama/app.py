@@ -16,10 +16,7 @@ ui.page_opts(
     fillable_mobile=True,
 )
 
-# Assumes you're running an Ollama server (with llama3 available) locally
-llm = OllamaChat(model="llama3.1")
-
-# Create and display empty chat
+# Create and display a Shiny chat component
 chat = ui.Chat(
     id="chat",
     messages=["Hello! How can I help you today?"],
@@ -27,8 +24,12 @@ chat = ui.Chat(
 chat.ui()
 
 
-# Define a callback to run when the user submits a message
+# Generate a response when the user submits a message
 @chat.on_user_submit
-async def _(input):
-    response = llm.response_generator(input)
+async def _(message):
+    response = llm.response_generator(message)
     await chat.append_message_stream(response)
+
+
+# Assumes Ollama is running with llama3.1 available locally
+llm = OllamaChat(model="llama3.1")

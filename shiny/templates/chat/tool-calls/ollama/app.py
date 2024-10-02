@@ -36,7 +36,7 @@ chat.update_user_input(
 
 
 @chat.on_user_submit
-async def _(input):
+async def _(message):
     # Unfortunately, Ollama currently doesn't work with tools+streaming
     # https://github.com/ollama/ollama-python/issues/279
     response = llm.response_generator(input, stream=False)

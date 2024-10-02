@@ -34,6 +34,6 @@ chat.update_user_input(
 
 
 @chat.on_user_submit
-async def _(input):
-    response = llm.response_generator(input)
+async def _(message):
+    response = llm.response_generator(message)
     await chat.append_message_stream(response)
