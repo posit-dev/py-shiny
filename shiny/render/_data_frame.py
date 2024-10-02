@@ -247,13 +247,6 @@ class data_frame(
 
         return data_frame_to_native(nw_data)
 
-    _type_hints: reactive.Value[list[FrameDtype] | None]
-    """
-    Reactive value of the data frame's type hints for each column.
-
-    This is enhanced with `"html"` type for rendering HTML content in the data frame.
-    """
-
     _patch_fn: PatchFn
     """
     User-defined function to update a single cell in the data frame.
@@ -502,7 +495,6 @@ class data_frame(
     def _reset_reactives(self) -> None:
         self._value.set(None)
         self._cell_patch_map.set({})
-        self._type_hints.set(None)
 
     def _init_reactives(self) -> None:
 
@@ -510,7 +502,6 @@ class data_frame(
         self._value: reactive.Value[
             None | DataGrid[IntoDataFrameT] | DataTable[IntoDataFrameT]
         ] = reactive.Value(None)
-        self._type_hints: reactive.Value[list[FrameDtype] | None] = reactive.Value(None)
         self._cell_patch_map = reactive.Value({})
 
     def _get_session(self) -> Session:
@@ -728,7 +719,7 @@ class data_frame(
                 column_index, int
             ), f"Expected `column_index` to be an `int`, got {type(column_index)}"
 
-            # TODO-render.data_frame; Possibly check for cell type and compare against self._type_hints
+            # TODO-render.data_frame; Possibly check for cell type and compare against type hints
             # TODO-render.data_frame; The `value` should be coerced by pandas to the correct type
             # TODO-render.data_frame; See https://pandas.pydata.org/pandas-docs/stable/user_guide/basics.html#object-conversion
 
@@ -839,7 +830,6 @@ class data_frame(
         # Use session context so `to_payload()` gets the correct session
         with session_context(self._get_session()):
             payload = value.to_payload()
-            self._type_hints.set(payload["typeHints"])
 
             ret: FrameRender = {
                 "payload": payload,
