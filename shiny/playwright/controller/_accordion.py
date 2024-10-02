@@ -314,8 +314,8 @@ class Accordion(
     def expect_class(
         self,
         class_name: str,
-        has_class: bool,
         *,
+        has_class: bool = True,
         timeout: Timeout = None,
     ) -> None:
         """

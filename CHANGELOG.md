@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `.expect_layout()` for Navset controllers in `shiny.playwright.controllers` is now renamed to `.expect_fluid()` and requires a `bool` value. To keep behavior the same, use `.expect_fluid(True)` (#1668)
 
+* `.expect_icon()` for Accordion controllers in `shiny.playwright.controllers` now requires a `bool` value instead of a `str`. (#1710)
+
 ### New features
 
 ### Other changes
@@ -26,6 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Added `.expect_disabled()` for `InputActionButton` in `shiny.playwright.controllers` (#1705)
 
 * Small improvements to the default pulse busy indicator to better blend with any background. It's also now slightly smaller by default.(#1707)
+
+* Added `.expect_class()` and `.expect_multiple()` for `Accordion` in `shiny.playwright.controllers` (#1710)
 
 ### Bug fixes
 
