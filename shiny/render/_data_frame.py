@@ -748,7 +748,6 @@ class data_frame(
             if not callable(styles_fn):
                 return
 
-            # TODO-barret; Use the returned data type from the render function!
             patched_into_data = self._nw_data_to_original_type(self._data_patched())
             new_styles = as_browser_style_infos(styles_fn, into_data=patched_into_data)
 
@@ -823,7 +822,7 @@ class data_frame(
         if value is None:
             return None
 
-        if not isinstance(value, AbstractTabularData):
+        if not isinstance(value, (DataGrid, DataTable)):
             try:
                 value = DataGrid(value)
             except TypeError as e:
@@ -835,10 +834,6 @@ class data_frame(
         # Set patches url handler for client
         patch_key = self._set_patches_handler()
 
-        if not isinstance(value, (DataGrid, DataTable)):
-            raise TypeError(
-                f"Unsupported type returned from render function: {type(value)}. Expected `DataGrid` or `DataTable`"
-            )
         self._value.set(value)  # pyright: ignore[reportArgumentType]
 
         # Use session context so `to_payload()` gets the correct session
@@ -975,8 +970,6 @@ class data_frame(
             for val in sort:
                 val_dict: ColumnSort
                 if isinstance(val, int):
-                    # col = frame_columns(data)[val]
-                    # desc = serialize_dtype(col)["type"] == "numeric"
                     desc = nw_data[:, val].dtype.is_numeric()
                     val_dict = {"col": val, "desc": desc}
                 val_dict: ColumnSort = (
