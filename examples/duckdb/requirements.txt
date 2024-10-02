@@ -1,4 +1,4 @@
 duckdb
+pandas
 shiny
 shinyswatch
-pandas
