@@ -25,7 +25,6 @@ from ._types import (
 )
 
 __all__ = (
-    "is_into_data_frame",
     "as_data_frame",
     "data_frame_to_native",
     "apply_frame_patches",
@@ -108,16 +107,6 @@ def compatible_to_pandas(
         return data.to_pandas()
 
     raise TypeError(f"Unsupported data type: {type(data)}")
-
-
-# TODO-future; Replace with `nw.is_into_data_frame(x)`?
-def is_into_data_frame(
-    data: IntoDataFrameT | object,
-) -> TypeIs[IntoDataFrameT]:
-    nw_df = nw.from_native(data, strict=False, eager_only=True)
-    if isinstance(nw_df, nw.DataFrame):
-        return True
-    return False
 
 
 # apply_frame_patches --------------------------------------------------------------------
