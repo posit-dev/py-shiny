@@ -6,6 +6,9 @@ from playwright.sync_api import Locator, Page
 from playwright.sync_api import expect as playwright_expect
 
 from .._types import PatternOrStr, Timeout
+from ..expect._internal import (
+    expect_attribute_to_have_value as _expect_attribute_to_have_value,
+)
 from ..expect._internal import expect_class_to_have_value as _expect_class_to_have_value
 from ..expect._internal import expect_style_to_have_value as _expect_style_to_have_value
 from ._base import UiWithContainer, WidthLocM
@@ -129,6 +132,64 @@ class Sidebar(
         """
         _expect_style_to_have_value(
             self.loc_container, "--_sidebar-bg", value, timeout=timeout
+        )
+
+    def expect_desktop_state(
+        self, value: Literal["open", "closed", "always"], *, timeout: Timeout = None
+    ) -> None:
+        """
+        Asserts that the sidebar has the expected state on desktop.
+
+        Parameters
+        ----------
+        value
+            The expected state of the sidebar on desktop.
+        timeout
+            The maximum time to wait for the state to appear. Defaults to `None`.
+        """
+        _expect_attribute_to_have_value(
+            self.loc_container,
+            name="data-open-desktop",
+            value=value,
+            timeout=timeout,
+        )
+
+    def expect_mobile_state(
+        self, value: Literal["open", "closed", "always"], *, timeout: Timeout = None
+    ) -> None:
+        """
+        Asserts that the sidebar has the expected state on mobile.
+
+        Parameters
+        ----------
+        value
+            The expected state of the sidebar on mobile.
+        timeout
+            The maximum time to wait for the state to appear. Defaults to `None`.
+        """
+        _expect_attribute_to_have_value(
+            self.loc_container,
+            name="data-open-mobile",
+            value=value,
+            timeout=timeout,
+        )
+
+    def expect_mobile_max_height(
+        self, value: PatternOrStr, *, timeout: Timeout = None
+    ) -> None:
+        """
+        Asserts that the sidebar has the expected maximum height on mobile.
+
+        Parameters
+        ----------
+        value
+            The expected maximum height of the sidebar on mobile.
+        timeout
+            The maximum time to wait for the maximum height to appear. Defaults to `None`.
+        """
+        self.expect_mobile_state("always", timeout=timeout)
+        _expect_style_to_have_value(
+            self.loc_container, "--_mobile-max-height", value, timeout=timeout
         )
 
     def expect_title(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:

@@ -10,7 +10,6 @@ with ui.card():
             title="Left sidebar",
             bg="dodgerBlue",
             class_="text-white",
-            max_height_mobile="175px",
             gap="20px",
             padding="10px",
         ):
@@ -26,7 +25,7 @@ with ui.card():
         with ui.sidebar(
             id="sidebar_right",
             position="right",
-            open="desktop",
+            open={"desktop": "closed", "mobile": "open"},
             padding=["10px", "20px"],
             bg="SlateBlue",
         ):
@@ -59,6 +58,7 @@ with ui.card():
             open="always",
             bg="PeachPuff",
             padding=["10px", "20px", "30px", "40px"],
+            max_height_mobile="175px",
         ):
             "Always sidebar content"
 
