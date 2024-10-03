@@ -36,6 +36,8 @@ def test_sidebar_position_and_open(page: Page, local_app: ShinyAppProc) -> None:
     closed_sidebar = controller.Sidebar(page, "sidebar_closed")
     closed_sidebar.expect_padding(["10px", "20px", "30px"])
     closed_sidebar.expect_bg_color("LightCoral")
+    closed_sidebar.expect_mobile_state("closed")
+    closed_sidebar.expect_desktop_state("closed")
 
     always_sidebar = controller.Sidebar(page, "sidebar_always")
     always_sidebar.expect_padding(["10px", "20px", "30px", "40px"])
