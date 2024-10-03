@@ -1,6 +1,7 @@
 import pandas as pd
 import polars as pl
 import seaborn as sns
+from narwhals.typing import IntoDataFrame
 
 from shiny import App, Inputs, Outputs, Session, module, reactive, render, ui
 
@@ -45,7 +46,7 @@ def mod_server(
     input: Inputs,
     output: Outputs,
     session: Session,
-    data: render._DataFrameLikeT,
+    data: IntoDataFrame,
 ):
     @render.text
     def df_type():

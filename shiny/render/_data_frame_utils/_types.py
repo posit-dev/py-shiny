@@ -1,75 +1,72 @@
 from __future__ import annotations
 
-from abc import ABC
 from typing import (
     TYPE_CHECKING,
-    Any,
     Dict,
-    List,
     Literal,
     Optional,
     Protocol,
     Tuple,
-    TypeVar,
     Union,
     cast,
     runtime_checkable,
 )
 
+import narwhals.stable.v1 as nw
 from htmltools import TagNode
+from narwhals.dtypes import DType as DType
+from narwhals.typing import DataFrameT as DataFrameT
+from narwhals.typing import IntoDataFrame as IntoDataFrame
+from narwhals.typing import IntoDataFrameT as IntoDataFrameT
+from narwhals.typing import IntoExpr as IntoExpr
 
 from ..._typing_extensions import Annotated, NotRequired, Required, TypedDict
 from ...types import Jsonifiable, JsonifiableDict, ListOrTuple
-from ._databackend import AbstractBackend
-
-# ---------------------------------------------------------------------
 
 if TYPE_CHECKING:
     import pandas as pd
-    import polars as pl
 
     from ...session._utils import RenderedDeps
 
-    PdDataFrame = pd.DataFrame
-    PlDataFrame = pl.DataFrame
-    PdSeries = pd.Series[Any]
-    PlSeries = pl.Series
+__all__ = (
+    "IntoExpr",
+    "DataFrame",
+    "DataFrameT",
+    "DType",
+    "IntoDataFrame",
+    "IntoDataFrameT",
+    "PandasCompatible",
+    "CellHtml",
+    "ColumnSort",
+    "ColumnFilterStr",
+    "ColumnFilterNumber",
+    "ColumnFilter",
+    "DataViewInfo",
+    "FrameRenderPatchInfo",
+    "FrameRenderSelectionModes",
+    "FrameRender",
+    "frame_render_to_jsonifiable",
+    "FrameJsonOptions",
+    "FrameJson",
+    "RowsList",
+    "ColsList",
+    "FrameDtypeSubset",
+    "FrameDtypeCategories",
+    "FrameDtype",
+    "StyleInfoBody",
+    "StyleInfo",
+    "BrowserStyleInfoBody",
+    "BrowserStyleInfo",
+    "CellValue",
+    "CellPatch",
+    "CellPatchProcessed",
+)
 
-    ListSeriesLike = Union[List[PdSeries], List[PlSeries]]
-    SeriesLike = Union[PdSeries, PlSeries]
-    DataFrameLike = Union[PdDataFrame, PlDataFrame]
 
+# ---------------------------------------------------------------------
 
-else:
-
-    class PdDataFrame(AbstractBackend):
-        _backends = [("pandas", "DataFrame")]
-
-    class PlDataFrame(AbstractBackend):
-        _backends = [("polars", "DataFrame")]
-
-    class PdSeries(AbstractBackend):
-        _backends = [("pandas", "Series")]
-
-    class PlSeries(AbstractBackend):
-        _backends = [("polars", "Series")]
-
-    class ListSeriesLike(ABC): ...
-
-    class SeriesLike(ABC): ...
-
-    class DataFrameLike(ABC): ...
-
-    ListSeriesLike.register(PdSeries)
-    ListSeriesLike.register(PlSeries)
-
-    SeriesLike.register(PdSeries)
-    SeriesLike.register(PlSeries)
-
-    DataFrameLike.register(PdDataFrame)
-    DataFrameLike.register(PlDataFrame)
-
-DataFrameLikeT = TypeVar("DataFrameLikeT", PdDataFrame, PlDataFrame)
+DataFrame = nw.DataFrame
+Series = nw.Series
 
 # ---------------------------------------------------------------------
 
@@ -165,6 +162,7 @@ class FrameJson(TypedDict):
         list[FrameDtype]
     ]  # each entry is a hint for the type of the column
     options: NotRequired[FrameJsonOptions]
+    htmlDeps: NotRequired[list[JsonifiableDict]]
 
 
 RowsList = Optional[ListOrTuple[int]]
@@ -175,7 +173,17 @@ ColsList = Optional[ListOrTuple[Union[str, int]]]
 
 
 class FrameDtypeSubset(TypedDict):
-    type: Literal["numeric", "string", "html", "datetime", "timedelta", "unknown"]
+    type: Literal[
+        "string",
+        "numeric",
+        "boolean",
+        "date",
+        "datetime",
+        "duration",
+        "object",
+        "unknown",
+        "html",
+    ]
 
 
 class FrameDtypeCategories(TypedDict):
@@ -231,18 +239,6 @@ BrowserStyleInfoBody = TypedDict(
     },
 )
 BrowserStyleInfo = BrowserStyleInfoBody
-
-# ---------------------------------------------------------------------
-
-
-# TODO-future; Replace this class with `htmltools.ReprHtml` when it is publically available. Even better... there should be a "is tag-like" method in htmltools that determines if the object could be enhanced by rendering
-@runtime_checkable
-class ReprHtml(Protocol):
-    """
-    Objects with a `_repr_html_()` method.
-    """
-
-    def _repr_html_(self) -> str: ...
 
 
 # Cell patches ----------------------------------------------------------

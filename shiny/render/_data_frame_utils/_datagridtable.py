@@ -1,3 +1,6 @@
+# TODO-future-barret; Maybe use a `._options()` method to return a `JsonifiableDict` within the DataGrid/DataTable classes?
+# TODO-future-barret; Really feals as if we should have a base class that does most of this for us
+
 from __future__ import annotations
 
 import abc
@@ -11,8 +14,8 @@ from ._selection import (
     as_selection_modes,
 )
 from ._styles import StyleFn, StyleInfo, as_browser_style_infos, as_style_infos
-from ._tbl_data import as_data_frame_like, serialize_frame
-from ._types import DataFrameLikeT, FrameJson
+from ._tbl_data import serialize_frame
+from ._types import FrameJson, IntoDataFrameT
 
 
 class AbstractTabularData(abc.ABC):
@@ -22,7 +25,7 @@ class AbstractTabularData(abc.ABC):
 
 @add_example(ex_dir="../../api-examples/data_frame_grid_table")
 @add_example(ex_dir="../../api-examples/data_frame_styles")
-class DataGrid(AbstractTabularData, Generic[DataFrameLikeT]):
+class DataGrid(AbstractTabularData, Generic[IntoDataFrameT]):
     """
     Holds the data and options for a :class:`~shiny.render.data_frame` output, for a
     spreadsheet-like view.
@@ -39,8 +42,9 @@ class DataGrid(AbstractTabularData, Generic[DataFrameLikeT]):
     Parameters
     ----------
     data
-        A pandas or polars `DataFrame` object. If the object has a `.to_pandas()`
-        method, use the pandas form of your data.
+        A [pandas](https://pandas.pydata.org/), [polars](https://pola.rs/), or
+        eager [`narwhals`](https://narwhals-dev.github.io/narwhals/) compatible `DataFrame`
+        object.
     width
         A _maximum_ amount of horizontal space for the data grid to occupy, in CSS units
         (e.g. `"400px"`) or as a number, which will be interpreted as pixels. The
@@ -114,18 +118,18 @@ class DataGrid(AbstractTabularData, Generic[DataFrameLikeT]):
     * :class:`~shiny.render.DataTable` - A more _tabular_ view of the data.
     """
 
-    data: DataFrameLikeT
+    data: IntoDataFrameT
     width: str | float | None
     height: str | float | None
     summary: bool | str
     filters: bool
     editable: bool
     selection_modes: SelectionModes
-    styles: list[StyleInfo] | StyleFn[DataFrameLikeT]
+    styles: list[StyleInfo] | StyleFn[IntoDataFrameT]
 
     def __init__(
         self,
-        data: DataFrameLikeT,
+        data: IntoDataFrameT,
         *,
         width: str | float | None = "fit-content",
         height: str | float | None = None,
@@ -133,11 +137,10 @@ class DataGrid(AbstractTabularData, Generic[DataFrameLikeT]):
         filters: bool = False,
         editable: bool = False,
         selection_mode: SelectionModeInput = "none",
-        styles: StyleInfo | list[StyleInfo] | StyleFn[DataFrameLikeT] | None = None,
+        styles: StyleInfo | list[StyleInfo] | StyleFn[IntoDataFrameT] | None = None,
         row_selection_mode: RowSelectionModeDeprecated = "deprecated",
     ):
-
-        self.data = as_data_frame_like(data)
+        self.data = data
 
         self.width = width
         self.height = height
@@ -172,7 +175,7 @@ class DataGrid(AbstractTabularData, Generic[DataFrameLikeT]):
                 "fill": self.height is None,
                 "styles": as_browser_style_infos(
                     self.styles,
-                    data=self.data,
+                    into_data=self.data,
                 ),
             },
         }
@@ -181,7 +184,7 @@ class DataGrid(AbstractTabularData, Generic[DataFrameLikeT]):
 
 @add_example(ex_dir="../../api-examples/data_frame_grid_table")
 @add_example(ex_dir="../../api-examples/data_frame_styles")
-class DataTable(AbstractTabularData, Generic[DataFrameLikeT]):
+class DataTable(AbstractTabularData, Generic[IntoDataFrameT]):
     """
     Holds the data and options for a :class:`~shiny.render.data_frame` output, for a
     spreadsheet-like view.
@@ -198,8 +201,9 @@ class DataTable(AbstractTabularData, Generic[DataFrameLikeT]):
     Parameters
     ----------
     data
-        A pandas or polars `DataFrame` object. If the object has a `.to_pandas()`
-        method, use the pandas form of your data.
+        A [pandas](https://pandas.pydata.org/), [polars](https://pola.rs/), or
+        eager [`narwhals`](https://narwhals-dev.github.io/narwhals/) compatible `DataFrame`
+        object.
     width
         A _maximum_ amount of vertical space for the data table to occupy, in CSS units
         (e.g. `"400px"`) or as a number, which will be interpreted as pixels. The
@@ -273,18 +277,18 @@ class DataTable(AbstractTabularData, Generic[DataFrameLikeT]):
     * :class:`~shiny.render.DataTable` - A more _grid_ view of the data.
     """
 
-    data: DataFrameLikeT
+    data: IntoDataFrameT
     width: str | float | None
     height: str | float | None
     summary: bool | str
     filters: bool
     editable: bool
     selection_modes: SelectionModes
-    styles: list[StyleInfo] | StyleFn[DataFrameLikeT]
+    styles: list[StyleInfo] | StyleFn[IntoDataFrameT]
 
     def __init__(
         self,
-        data: DataFrameLikeT,
+        data: IntoDataFrameT,
         *,
         width: str | float | None = "fit-content",
         height: str | float | None = "500px",
@@ -292,10 +296,10 @@ class DataTable(AbstractTabularData, Generic[DataFrameLikeT]):
         filters: bool = False,
         editable: bool = False,
         selection_mode: SelectionModeInput = "none",
-        styles: StyleInfo | list[StyleInfo] | StyleFn[DataFrameLikeT] | None = None,
+        styles: StyleInfo | list[StyleInfo] | StyleFn[IntoDataFrameT] | None = None,
         row_selection_mode: Literal["deprecated"] = "deprecated",
     ):
-        self.data = as_data_frame_like(data)
+        self.data = data
 
         self.width = width
         self.height = height
@@ -329,7 +333,7 @@ class DataTable(AbstractTabularData, Generic[DataFrameLikeT]):
                 "style": "table",
                 "styles": as_browser_style_infos(
                     self.styles,
-                    data=self.data,
+                    into_data=self.data,
                 ),
             },
         }

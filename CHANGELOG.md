@@ -15,7 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
+* Added [narwhals](https://posit-dev.github.io/py-narwhals) support for `@render.data_frame`. This allows for any eager data frame supported by narwhals to be returned from a `@render.data_frame` output method. All internal methods and helper methods leverage the `narwhals` API to be data frame agnostic. (#1570)
+
 ### Other changes
+
+* Incorporated `orjson` for faster data serialization in `@render.data_frame` outputs. (#1570)
 
 * Added `PageNavbar` class to the list of `shiny.playwright.controllers` for testing `ui.page_navbar()`. (#1668)
 
@@ -27,6 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Small improvements to the default pulse busy indicator to better blend with any background. It's also now slightly smaller by default.(#1707)
 
+* Added [narwhals](https://posit-dev.github.io/py-narwhals) support for `@render.table`. This allows for any eager data frame supported by narwhals to be returned from a `@render.table` output method. (#1570)
+
 ### Bug fixes
 
 * A few fixes for `ui.Chat()`, including:
@@ -34,8 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   * Fixed a bug with `Chat()` sometimes not removing it's loading icon (on error or a `None` transform). (#1679)
   * `.messages(format="anthropic")` correctly removes non-user starting messages (once again). (#1685)
 
-* `shiny create` now uses the template `id` rather than the directory name as the default directory.
-(#1666)
+* `shiny create` now uses the template `id` rather than the directory name as the default directory. (#1666)
 
 * `ui.Theme()` now works correctly on Windows when the theme requires Sass compilation. (thanks @yuuuxt, #1684)
 
@@ -45,10 +50,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Fixed input controller `InputTextArea` in `shiny.playwright.controller` to correctly validate the `resize` style property in `.expect_resize()`. (#1705)
 
-
 * Fixed a bug in `ui.conditional_panel()` that would cause the panel to repeatedly show/hide itself when the provided condition did not evaluate to a boolean value. (#1707)
 
 * Fixed a bug with `ui.input_slider()` when used as a range slider that made it impossible to change the slider value when both handles were at the maximum value. (#1707)
+
+* Fixed bug in `@render.data_frame` where `bool` or `object` columns were not being rendered. (#1570)
 
 
 ## [1.1.0] - 2024-09-03
