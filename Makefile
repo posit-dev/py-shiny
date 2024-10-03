@@ -222,8 +222,8 @@ install-docs: FORCE
 	pip install -e ".[dev,test,doc]"
 	pip install https://github.com/posit-dev/py-shinylive/tarball/main
 ci-install-docs: FORCE
-	uv pip install "shinylive @ git+https://github.com/posit-dev/py-shinylive.git"
 	uv pip install -e ".[dev,test,doc]"
+	uv pip install "shinylive @ git+https://github.com/posit-dev/py-shinylive.git"
 
 ci-install-rsconnect: FORCE
 	uv pip install "rsconnect-python @ git+https://github.com/rstudio/rsconnect-python.git"
