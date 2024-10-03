@@ -87,6 +87,11 @@ def reactive_calc_method(fn: Callable[[S], R]) -> Callable[[S], R]:
 
         if self not in calc_cache:
 
+            # # While the code below is more concise, functools.partial does not create
+            # # `.__docs__` and `.__name__` attributes
+            # # https://docs.python.org/3/library/functools.html#partial-objects
+            # calc_cache[self] = reactive.calc(functools.partial(fn, self))
+
             @reactive.calc
             @wraps(fn)
             def calc_fn():
@@ -95,10 +100,20 @@ def reactive_calc_method(fn: Callable[[S], R]) -> Callable[[S], R]:
             # Set calc method
             calc_cache[self] = calc_fn
 
-            # # While the code below is more concise, functools.partial does not create
-            # # `.__docs__` and `.__name__` attributes
-            # # https://docs.python.org/3/library/functools.html#partial-objects
-            # calc_cache[self] = reactive.calc(functools.partial(fn, self))
+            # Store the reactive calc function on self's fn, so that `calc_fn` does not
+            # get garbage collected. Before these lines, it is isolated under a weak
+            # key. After these lines, it is stored on self's `__dict__` and should not
+            # be garbage collected until `self` is garbage collected.
+            if not hasattr(self.__dict__, "_reactive_calc_method"):
+                self.__dict__["_reactive_calc_method"] = {}
+            self_reactive_calc_cache: dict[str, reactive.Calc_[R]] = self.__dict__[
+                "_reactive_calc_method"
+            ]
+            if hasattr(self_reactive_calc_cache, fn.__name__):
+                raise AttributeError(
+                    f"Reactive calc method `{fn.__name__}` has already be cached on self: {self}"
+                )
+            self_reactive_calc_cache[fn.__name__] = calc_fn
 
         return calc_cache[self]()
 
