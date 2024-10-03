@@ -20,5 +20,5 @@ with ui.card():
     "Data type:"
 
     @render.code
-    def pd_type():
+    def nw_df_type():
         return str(type(nw_df))
