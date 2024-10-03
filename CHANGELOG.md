@@ -9,16 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
-* The `ui.Chat` gains integration for the new `{chatlas}` package, which streamlines the response generation process for packages such as `{openai}`, `{anthropic}`, etc.
-
-### Deprecations
-
-* The `format` argument of `Chat.messages()` is now deprecated and will stop working in a future version. Consider using the new `{chatlas}` package instead to access message state in a provider specific format (and also for response generation).
+* A couple new features for `ui.Chat()`:
+    * The `on_user_submit` decorator (of a `ui.Chat()` instance) now passes user input to the decorated function. This reduces the need to call `.messages()` to get the message history for response generation. (#1690)
+    * `ui.Chat()` now integrates with the `chatlas` package, simplifying the response generation process for packages such as `openai`, `anthropic`, etc. (#1690)
+    * New templates demonstrating tool calling and response generation with `chatlas` are available via `shiny create`. (#1690)
 
 ### Breaking changes
 
-* The `token_limits` argument of `Chat.messages()` was removed. If you need to impose `token_limits`, consider using the new `{chatlas}` for response generation.
-
+* A few breaking changes for `ui.Chat()`:
+    * The `token_limits` argument of `.messages()` was removed. If you need to impose limitation on the size of the message history, consider using the new `chatlas` package (or something more involved, like `LangChain`) to manage the message history. (#1690)
+    * The `format` argument of `.messages()` was removed. If you need to format the message history in a specific way, consider using the new `chatlas` package to access message history. (#1690)
 
 ### Bug fixes
 

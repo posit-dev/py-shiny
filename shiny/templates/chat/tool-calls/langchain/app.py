@@ -37,6 +37,6 @@ def get_current_weather(location: str, unit: str = "fahrenheit") -> int:
 
 llm = LangChainChat(
     ChatOpenAI(model="gpt-4o"),
-    system_prompt="Give answers in the style of Chuck Norris.",
+    system_prompt="You are a helpful assistant.",
     tools=[get_current_weather],
 )

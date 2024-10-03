@@ -3,10 +3,12 @@ from __future__ import annotations
 import copy
 from typing import Literal, TypedDict
 
+Role = Literal["assistant", "user"]
+
 
 class ChatMessage(TypedDict):
     content: str
-    role: str
+    role: Role
 
 
 # A message once transformed have been applied
@@ -47,8 +49,6 @@ class TransformedMessage:
 
 
 # A message that can be sent to the client
-class ClientMessage(TypedDict):
-    role: Literal["user", "assistant"]
-    content: str
+class ClientMessage(ChatMessage):
     content_type: Literal["markdown", "html"]
-    chunk_type: Literal["message_start", "message_end", None]
+    chunk_type: Literal["message_start", "message_end"] | None

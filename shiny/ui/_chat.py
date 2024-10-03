@@ -407,8 +407,7 @@ class Chat:
     def _throw_deprecation_warnings(**kwargs: Any) -> None:
         if "format" in kwargs:
             warn_deprecated(
-                "The `format` argument of `Chat.messages()` is deprecated and "
-                "will be removed in a future version. "
+                "The `format` argument of `Chat.messages()` was removed. "
                 "Consider using the new `chatlas` package for response generation "
                 "if you need to access to provider-specific message formats."
             )

@@ -45,5 +45,5 @@ llm = LangChainChat(
         api_key=os.environ.get("OPENAI_API_KEY"),
         model="gpt-4o",
     ),
-    system_prompt="Give answers in the style of Chuck Norris.",
+    system_prompt="You are a helpful assistant.",
 )
