@@ -7,6 +7,7 @@ from playwright.sync_api import expect as playwright_expect
 
 from .._types import PatternOrStr, Timeout
 from ..expect._internal import expect_class_to_have_value as _expect_class_to_have_value
+from ..expect._internal import expect_style_to_have_value as _expect_style_to_have_value
 from ._base import UiWithContainer, WidthLocM
 
 
@@ -32,6 +33,14 @@ class Sidebar(
     """
     Playwright `Locator` for the position of the sidebar.
     """
+    loc_content: Locator
+    """
+    Playwright `Locator` for the content of the sidebar.
+    """
+    loc_title: Locator
+    """
+    Playwright `Locator` for the title of the sidebar.
+    """
 
     def __init__(self, page: Page, id: str) -> None:
         """
@@ -52,6 +61,8 @@ class Sidebar(
         )
         self.loc_handle = self.loc_container.locator("button.collapse-toggle")
         self.loc_position = self.loc.locator("..")
+        self.loc_content = self.loc.locator("> div.sidebar-content")
+        self.loc_title = self.loc_content.locator("> header.sidebar-title")
 
     def expect_text(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
         """
@@ -64,7 +75,92 @@ class Sidebar(
         timeout
             The maximum time to wait for the text to appear. Defaults to `None`.
         """
-        playwright_expect(self.loc).to_have_text(value, timeout=timeout)
+        playwright_expect(self.loc_content).to_have_text(value, timeout=timeout)
+
+    def expect_class(
+        self,
+        class_name: str,
+        *,
+        has_class: bool = True,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Asserts that the sidebar has or does not have a CSS class.
+
+        Parameters
+        ----------
+        class_name
+            The CSS class to check for.
+        has_class
+            `True` if the sidebar should have the CSS class, `False` otherwise.
+        timeout
+            The maximum time to wait for the sidebar to appear. Defaults to `None`.
+        """
+        _expect_class_to_have_value(
+            self.loc,
+            class_name,
+            has_class=has_class,
+            timeout=timeout,
+        )
+
+    def expect_gap(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+        """
+        Asserts that the sidebar has the expected gap.
+
+        Parameters
+        ----------
+        value
+            The expected gap of the sidebar.
+        timeout
+            The maximum time to wait for the gap to appear. Defaults to `None`.
+        """
+        _expect_style_to_have_value(self.loc_content, "gap", value, timeout=timeout)
+
+    def expect_bg_color(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+        """
+        Asserts that the sidebar has the expected background color.
+
+        Parameters
+        ----------
+        value
+            The expected background color of the sidebar.
+        timeout
+            The maximum time to wait for the background color to appear. Defaults to `None`.
+        """
+        _expect_style_to_have_value(
+            self.loc_container, "--_sidebar-bg", value, timeout=timeout
+        )
+
+    def expect_title(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+        """
+        Asserts that the sidebar has the expected title.
+
+        Parameters
+        ----------
+        value
+            The expected title of the sidebar.
+        timeout
+            The maximum time to wait for the title to appear. Defaults to `None`.
+        """
+        playwright_expect(self.loc_title).to_have_text(value, timeout=timeout)
+
+    def expect_padding(
+        self, value: list[PatternOrStr], *, timeout: Timeout = None
+    ) -> None:
+        """
+        Asserts that the sidebar has the expected padding.
+
+        Parameters
+        ----------
+        value
+            The expected padding of the sidebar.
+        timeout
+            The maximum time to wait for the padding to appear. Defaults to `None`.
+        """
+        padding_val = " ".join(map(str, value))
+        _expect_style_to_have_value(
+            self.loc_content, "padding", padding_val, timeout=timeout
+        )
 
     def expect_position(
         self,
