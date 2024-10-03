@@ -14,7 +14,7 @@ from .._utils import wrap_async
 from .._validation import req
 from ..session._utils import require_active_session, session_context
 from ..types import JsonifiableDict, ListOrTuple
-from ._data_frame_utils._datagridtable import AbstractTabularData, DataGrid, DataTable
+from ._data_frame_utils._datagridtable import DataGrid, DataTable
 from ._data_frame_utils._html import maybe_as_cell_html
 from ._data_frame_utils._patch import (
     CellPatch,
@@ -45,7 +45,6 @@ from ._data_frame_utils._types import (
     ColumnFilter,
     ColumnSort,
     DataFrame,
-    FrameDtype,
     FrameRender,
     IntoDataFrameT,
     cell_patch_processed_to_jsonifiable,
