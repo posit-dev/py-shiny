@@ -8,7 +8,6 @@ from typing import Any, Literal, Set, Union, cast
 from ..._deprecated import warn_deprecated
 from ..._typing_extensions import TypedDict
 from ...types import ListOrTuple
-from ._tbl_data import frame_shape
 from ._types import DataFrame, FrameRenderSelectionModes
 
 NoneSelectionMode = Literal["none"]
@@ -240,7 +239,7 @@ def as_browser_cell_selection(
         return {"type": "none"}
 
     if x == "all":
-        row_len, col_len = frame_shape(nw_data)
+        row_len, col_len = nw_data.shape
         # Look at the selection modes to determine what to do
         if selection_modes._has_rect():
             if selection_modes.rect == "cell":
@@ -379,7 +378,7 @@ def as_cell_selection(
         )
 
     # Make sure the rows are within the data
-    nrow, ncol = frame_shape(nw_data)
+    nrow, ncol = nw_data.shape
     ret["rows"] = tuple(row for row in ret["rows"] if row < nrow)
     ret["cols"] = tuple(col for col in ret["cols"] if col < ncol)
 

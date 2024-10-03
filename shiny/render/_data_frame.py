@@ -37,7 +37,6 @@ from ._data_frame_utils._tbl_data import (
     apply_frame_patches,
     as_data_frame,
     data_frame_to_native,
-    frame_shape,
     subset_frame,
 )
 from ._data_frame_utils._types import (
@@ -442,7 +441,7 @@ class data_frame(
             selection_modes=self.selection_modes(),
             nw_data=self._nw_data(),
             data_view_rows=self.data_view_rows(),
-            data_view_cols=tuple(range(frame_shape(self._nw_data())[1])),
+            data_view_cols=tuple(range(self._nw_data().shape[1])),
         )
 
         return cell_selection
@@ -954,7 +953,7 @@ class data_frame(
         if len(sort) > 0:
             with reactive.isolate():
                 nw_data = self._nw_data()
-            ncol = frame_shape(nw_data)[1]
+            ncol = nw_data.shape[1]
 
             for val in sort:
                 val_dict: ColumnSort
@@ -995,8 +994,7 @@ class data_frame(
             filter = []
         else:
             with reactive.isolate():
-                shape = frame_shape(self._nw_data())
-            ncol = shape[1]
+                ncol = self._nw_data().shape[1]
 
             for column_filter, i in zip(filter, range(len(filter))):
                 assert isinstance(column_filter, dict)

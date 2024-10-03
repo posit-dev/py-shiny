@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Callable, List
 
 from ...types import ListOrTuple
-from ._tbl_data import frame_column_names, frame_shape
+from ._tbl_data import as_data_frame
 from ._types import BrowserStyleInfo, IntoDataFrameT, StyleInfo
 
 StyleFn = Callable[[IntoDataFrameT], List["StyleInfo"]]
@@ -183,7 +183,6 @@ def as_browser_style_infos(
     *,
     into_data: IntoDataFrameT,
 ) -> list[BrowserStyleInfo]:
-    browser_column_names = frame_column_names(into_data)
 
     if callable(infos):
         style_infos = infos(into_data)
@@ -195,7 +194,10 @@ def as_browser_style_infos(
 
     if not isinstance(style_infos, list):
         style_infos = [style_infos]
-    nrow = frame_shape(into_data)[0]
+
+    nw_data = as_data_frame(into_data)
+    browser_column_names = nw_data.columns
+    nrow = nw_data.shape[0]
 
     browser_infos = [
         style_info_to_browser_style_info(

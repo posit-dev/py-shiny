@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, List, Tuple, TypedDict, cast
+from typing import Any, List, TypedDict, cast
 
 import narwhals.stable.v1 as nw
 import orjson
@@ -30,10 +30,6 @@ __all__ = (
     "serialize_dtype",
     "serialize_frame",
     "subset_frame",
-    "get_frame_cell",
-    "frame_shape",
-    "copy_frame",
-    "frame_column_names",
 )
 
 ########################################################################################
@@ -289,6 +285,7 @@ def subset_frame(
     # int, or even a tuple of ints)
 
     # The nested if-else structure is used to navigate around narwhals' typing system and lack of `:` operator outside of `[`, `]`.
+
     if cols is None:
         if rows is None:
             return data
@@ -308,32 +305,6 @@ def subset_frame(
             return data[:, col_names]
         else:
             return data[rows, col_names]
-
-
-# # get_frame_cell -----------------------------------------------------------------------
-def get_frame_cell(data: DataFrame[Any], row: int, col: int) -> Any:
-    return data.item(row, col)
-
-
-# shape --------------------------------------------------------------------------------
-def frame_shape(data: IntoDataFrame) -> Tuple[int, int]:
-    nw_data = as_data_frame(data)
-    return nw_data.shape
-
-
-def column_is_numeric(nw_data: DataFrame[Any], column_index: int) -> bool:
-    series_dtype: DType = nw_data[:, column_index].dtype
-    return series_dtype.is_numeric()
-
-
-# copy_frame ---------------------------------------------------------------------------
-def copy_frame(nw_data: DataFrameT) -> DataFrameT:
-    return nw_data.clone()
-
-
-# column_names -------------------------------------------------------------------------
-def frame_column_names(into_data: IntoDataFrame) -> List[str]:
-    return as_data_frame(into_data).columns
 
 
 class ScatterValues(TypedDict):

@@ -15,8 +15,6 @@ import pytest
 
 from shiny.render._data_frame_utils._tbl_data import (
     as_data_frame,
-    copy_frame,
-    frame_shape,
     serialize_dtype,
     serialize_frame,
     subset_frame,
@@ -321,16 +319,6 @@ def test_subset_frame(df_f: IntoDataFrame):
     assert_frame_equal2(res, dst)
 
 
-def test_get_frame_cell(df_f: IntoDataFrame):
-    assert as_data_frame(df_f).item(1, 1) == "b"
-
-
-def test_copy_frame(df_f: IntoDataFrame):
-    new_df = copy_frame(as_data_frame(df_f))
-
-    assert new_df is not df_f
-
-
 def test_subset_frame_rows_single(small_df_f: IntoDataFrame):
     res = subset_frame(as_data_frame(small_df_f), rows=[1])
 
@@ -348,10 +336,6 @@ def test_subset_frame_cols_single(small_df_f: IntoDataFrame):
         res,
         {"y": [3, 4]},
     )
-
-
-def test_shape(small_df_f: IntoDataFrame):
-    assert frame_shape(small_df_f) == (2, 2)
 
 
 def test_dtype_coverage():

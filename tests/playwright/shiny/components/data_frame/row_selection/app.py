@@ -74,23 +74,13 @@ def make_server(input: Inputs, data: render.IntoDataFrame):
     # Test for selected rows data
     @render.code
     def grid_row_count():
-        grid_data = grid.data()
-        nrow, _ = (  # pyright: ignore[reportUnknownVariableType]
-            render._data_frame_utils._tbl_data.frame_shape(  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue]
-                grid_data
-            )
-        )
-        return str(nrow)  # pyright: ignore[reportUnknownArgumentType]
+        nrow = grid._nw_data().shape[0]
+        return str(nrow)
 
     @render.code
     def selected_row_count():
-        grid_selected_data = grid_selected.data()
-        nrow, _ = (  # pyright: ignore[reportUnknownVariableType]
-            render._data_frame_utils._tbl_data.frame_shape(  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue]
-                grid_selected_data
-            )
-        )
-        return str(nrow)  # pyright: ignore[reportUnknownArgumentType]
+        nrow = grid_selected._nw_data().shape[0]
+        return str(nrow)
 
 
 @module.ui
