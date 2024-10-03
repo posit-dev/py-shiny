@@ -15,10 +15,6 @@ from ._data_frame import (
 from ._data_frame_utils._selection import CellSelection
 from ._data_frame_utils._types import (  # noqa: F401
     StyleInfo,
-    DataFrame,  # pyright: ignore[reportUnusedImport]
-    DataFrameT,  # pyright: ignore[reportUnusedImport]
-    IntoDataFrame,  # pyright: ignore[reportUnusedImport]
-    IntoDataFrameT,  # pyright: ignore[reportUnusedImport]
 )
 from ._deprecated import (  # noqa: F401
     RenderFunction,  # pyright: ignore[reportUnusedImport]

@@ -2,6 +2,7 @@ import pkgutil
 
 import palmerpenguins  # pyright: ignore[reportMissingTypeStubs]
 import polars as pl
+from narwhals.typing import IntoDataFrame
 
 from shiny import App, Inputs, Outputs, Session, module, reactive, render, ui
 
@@ -41,7 +42,7 @@ def make_ui(title: str):
     )
 
 
-def make_server(input: Inputs, data: render.IntoDataFrame):
+def make_server(input: Inputs, data: IntoDataFrame):
     @render.data_frame
     def grid():
         return render.DataGrid(
@@ -93,7 +94,7 @@ def mod_server(
     input: Inputs,
     output: Outputs,
     session: Session,
-    data: render.IntoDataFrame,
+    data: IntoDataFrame,
 ):
     make_server(input, data)
 

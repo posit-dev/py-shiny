@@ -5,6 +5,7 @@ import pkgutil
 # pyright: reportMissingTypeStubs = false
 import palmerpenguins
 import polars as pl
+from narwhals.typing import IntoDataFrame
 
 from shiny import App, Inputs, Outputs, Session, module, render, ui
 
@@ -110,7 +111,7 @@ def mod_server(
     input: Inputs,
     output: Outputs,
     session: Session,
-    data: render.IntoDataFrame,
+    data: IntoDataFrame,
 ):
     @render.data_frame
     def fn_styles():
@@ -118,7 +119,7 @@ def mod_server(
         counter = 0
 
         def df_styles_fn(
-            data: render.IntoDataFrame,
+            data: IntoDataFrame,
         ) -> list[render.StyleInfo]:
             nonlocal counter
 
