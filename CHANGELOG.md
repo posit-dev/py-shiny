@@ -27,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Small improvements to the default pulse busy indicator to better blend with any background. It's also now slightly smaller by default.(#1707)
 
-* Added `.expect_class()`, `.expect_gap()`, `.expect_bg_color()`, `.expect_desktop_state()`, `.expect_mobile_state()`, `.expect_mobile_max_height()`, `.expect_title()` and `.expect_padding()` for `Sidebar` in `shiny.playwright.controllers` (#1715)
+* Added `.expect_class()`, `.expect_gap()`, `.expect_bg_color()`, `.expect_desktop_state()`, `.expect_mobile_state()`, `.expect_mobile_max_height()`, `.expect_title()`, `.expect_width()` and `.expect_padding()` for `Sidebar` in `shiny.playwright.controllers` (#1715)
 
 * Modified `.expect_text()` for `Sidebar` in `shiny.playwright.controllers` to use `loc_content` instead of `loc` for text. (#1715)
 

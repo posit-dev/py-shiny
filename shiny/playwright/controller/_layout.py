@@ -11,11 +11,10 @@ from ..expect._internal import (
 )
 from ..expect._internal import expect_class_to_have_value as _expect_class_to_have_value
 from ..expect._internal import expect_style_to_have_value as _expect_style_to_have_value
-from ._base import UiWithContainer, WidthLocM
+from ._base import UiWithContainer
 
 
 class Sidebar(
-    WidthLocM,
     UiWithContainer,
 ):
     """Controller for :func:`shiny.ui.sidebar`."""
@@ -104,6 +103,21 @@ class Sidebar(
             class_name,
             has_class=has_class,
             timeout=timeout,
+        )
+
+    def expect_width(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+        """
+        Asserts that the sidebar has the expected width.
+
+        Parameters
+        ----------
+        value
+            The expected width of the sidebar.
+        timeout
+            The maximum time to wait for the width to appear. Defaults to `None`.
+        """
+        _expect_style_to_have_value(
+            self.loc_container, "--_sidebar-width", value, timeout=timeout
         )
 
     def expect_gap(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
@@ -206,7 +220,7 @@ class Sidebar(
         playwright_expect(self.loc_title).to_have_text(value, timeout=timeout)
 
     def expect_padding(
-        self, value: list[PatternOrStr], *, timeout: Timeout = None
+        self, value: str | list[str], *, timeout: Timeout = None
     ) -> None:
         """
         Asserts that the sidebar has the expected padding.
@@ -218,7 +232,9 @@ class Sidebar(
         timeout
             The maximum time to wait for the padding to appear. Defaults to `None`.
         """
-        padding_val = " ".join(map(str, value))
+        if not isinstance(value, list):
+            value = [value]
+        padding_val = " ".join(value)
         _expect_style_to_have_value(
             self.loc_content, "padding", padding_val, timeout=timeout
         )

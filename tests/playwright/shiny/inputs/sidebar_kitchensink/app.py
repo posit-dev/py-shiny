@@ -12,6 +12,7 @@ with ui.card():
             class_="text-white",
             gap="20px",
             padding="10px",
+            width="200px",
         ):
             "Left sidebar content"
 
