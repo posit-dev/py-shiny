@@ -17,8 +17,8 @@ def test_filters_are_reset(page: Page, local_app: ShinyAppProc) -> None:
     expect(filter_inputs).to_have_count(8 + 5)  # 8 columns including 5 numeric columns
 
     penguin_code.expect_value("()")
-    for element in filter_inputs.element_handles():
-        assert element.input_value() == ""
+    for i in range(filter_inputs.count()):
+        expect(filter_inputs.nth(i)).to_have_value("")
 
     update_filters.click()
 
@@ -30,14 +30,13 @@ def test_filters_are_reset(page: Page, local_app: ShinyAppProc) -> None:
         "{'col': 4, 'value': (220, 225)}"
         ")"
     )
-    for value, element in zip(
-        ["Gentoo", "", "50", "", "", "17", "220", "225", "", "", "", "", ""],
-        filter_inputs.element_handles(),
+    for i, value in enumerate(
+        ["Gentoo", "", "50", "", "", "17", "220", "225", "", "", "", "", ""]
     ):
-        assert element.input_value() == value
+        expect(filter_inputs.nth(i)).to_have_value(value)
 
     reset_filters.click()
 
     penguin_code.expect_value("()")
-    for element in filter_inputs.element_handles():
-        assert element.input_value() == ""
+    for i in range(filter_inputs.count()):
+        expect(filter_inputs.nth(i)).to_have_value("")
