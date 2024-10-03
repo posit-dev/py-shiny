@@ -115,6 +115,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
       fill: false,
       styles: [],
     },
+    htmlDeps,
   } = payload;
   const {
     width,
@@ -455,6 +456,12 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
       );
     };
   }, [id, selection, tableData]);
+
+  useEffect(() => {
+    if (!htmlDeps) return;
+    // Register the Shiny HtmlDependencies
+    Shiny.renderDependenciesAsync([...htmlDeps]);
+  }, [htmlDeps]);
 
   useEffect(() => {
     const handleColumnSort = (

@@ -5,7 +5,6 @@ from typing import Any, List, Tuple, TypedDict, cast
 import narwhals.stable.v1 as nw
 import orjson
 
-from ..._typing_extensions import TypeIs
 from ...session import Session, require_active_session
 from ...types import Jsonifiable, JsonifiableDict
 from ._html import as_cell_html, ui_must_be_processed
@@ -206,6 +205,10 @@ def serialize_dtype(col: nw.Series) -> FrameDtype:
 
 
 # serialize_frame ----------------------------------------------------------------------
+
+RenderedDependency = dict[str, Jsonifiable]
+
+
 def serialize_frame(into_data: IntoDataFrame) -> FrameJson:
 
     data = as_data_frame(into_data)
@@ -226,13 +229,26 @@ def serialize_frame(into_data: IntoDataFrame) -> FrameJson:
     data_rows = data.rows(named=False)
 
     session: Session | None = None
+    html_deps: list[RenderedDependency] = []
 
+    # Collect all html deps and dedupe them. Send the html separately from its deps
+    # Otherwise, serialize as `str()`
     def default_orjson_serializer(val: Any) -> Jsonifiable:
         nonlocal session
         if ui_must_be_processed(val):
             if session is None:
                 session = require_active_session(None)
-            return cast(JsonifiableDict, dict(as_cell_html(val, session=session)))
+
+            processed_ui = session._process_ui(val)
+            deps = processed_ui["deps"]
+            if len(deps) > 0:
+                html_deps.extend(deps)
+            # Remove the deps from the rendered html as we'll send them separately
+            # Maintain expected structure so that the JS will attempt to add all
+            #   dependencies for patched cells in the same manner
+            processed_ui["deps"] = []
+            cell_html_obj = as_cell_html(processed_ui)
+            return cast(JsonifiableDict, cell_html_obj)
 
         # All other values are serialized as strings
         return str(val)
@@ -245,10 +261,15 @@ def serialize_frame(into_data: IntoDataFrame) -> FrameJson:
         )
     )
 
+    deduped_html_deps = (
+        _resolve_processed_dependencies(html_deps) if len(html_deps) > 1 else html_deps
+    )
+
     return {
         "columns": data.columns,
         "data": data_val,
         "typeHints": type_hints,
+        "htmlDeps": deduped_html_deps,
     }
 
 
@@ -263,35 +284,30 @@ def subset_frame(
 
     Note that when None is passed, all rows or columns get included.
     """
-
-    # Note that this type signature assumes column names are strings things.
+    # Note that this type signature assumes column names are string objects.
     # This is always true in Polars, but not in Pandas (e.g. a column name could be an
     # int, or even a tuple of ints)
+
+    # The nested if-else structure is used to navigate around narwhals' typing system and lack of `:` operator outside of `[`, `]`.
     if cols is None:
         if rows is None:
             return data
         else:
-            # This feels like it should be `data[rows, :]` but that doesn't work for polars
-            # https://github.com/narwhals-dev/narwhals/issues/989
-            # Must use `list(rows)` as tuples are not supported
-            # https://github.com/narwhals-dev/narwhals/issues/990
-            return data[list(rows), data.columns]
+            # List still required https://github.com/narwhals-dev/narwhals/issues/1122
+            return data[list(rows), :]
     else:
         # `cols` is not None
         col_names = [data.columns[col] if isinstance(col, int) else col for col in cols]
-        # If len(cols) == 0, then we should return an empty DataFrame
-        # Currently this is broken when backed by pandas.
-        # https://github.com/narwhals-dev/narwhals/issues/989
+
+        # Return a DataFrame with no rows or columns
+        # If there are no columns, there are no Series objects to support any rows
         if len(col_names) == 0:
-            # Return a DataFrame with no rows or columns
-            # If there are no columns, there are no Series objects to support any rows
             return data[[], []]
 
         if rows is None:
             return data[:, col_names]
         else:
-            # Be sure rows is a list, not a tuple. Tuple
-            return data[list(rows), col_names]
+            return data[rows, col_names]
 
 
 # # get_frame_cell -----------------------------------------------------------------------
@@ -323,3 +339,22 @@ def frame_column_names(into_data: IntoDataFrame) -> List[str]:
 class ScatterValues(TypedDict):
     row_indexes: list[int]
     values: list[CellValue]
+
+
+# Direct copy of htmltools._core._resolve_dependencies
+# Need new method as we need to access dep values via `dep[NAME]` rather than `dep.NAME`
+def _resolve_processed_dependencies(
+    deps: list[RenderedDependency],
+) -> list[RenderedDependency]:
+    map: dict[str, RenderedDependency] = {}
+    for dep in deps:
+        dep_name = str(dep["name"])
+        if dep_name not in map:
+            map[dep_name] = dep
+        else:
+            dep_version = str(dep["version"])
+            cur_dep_version = str(map[dep_name]["version"])
+            if dep_version > cur_dep_version:
+                map[dep_name] = dep
+
+    return list(map.values())

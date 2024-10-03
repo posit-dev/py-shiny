@@ -1,5 +1,7 @@
 import { StyleInfo } from "./style-info";
 
+import type { HtmlDep } from "rstudio-shiny/srcts/types/src/shiny/render";
+
 export type ValueOf<T> = T[keyof T];
 
 export const EditModeEnum = {
@@ -44,6 +46,7 @@ export interface PandasData<TIndex> {
   data: unknown[][];
   options: DataGridOptions;
   typeHints?: ReadonlyArray<TypeHint>;
+  htmlDeps?: ReadonlyArray<HtmlDep>;
 }
 
 export interface PatchInfo {

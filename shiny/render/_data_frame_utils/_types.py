@@ -192,6 +192,7 @@ class FrameJson(TypedDict):
         list[FrameDtype]
     ]  # each entry is a hint for the type of the column
     options: NotRequired[FrameJsonOptions]
+    htmlDeps: NotRequired[list[JsonifiableDict]]
 
 
 RowsList = Optional[ListOrTuple[int]]

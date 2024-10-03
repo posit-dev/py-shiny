@@ -10,10 +10,11 @@ from ._types import CellHtml, Series
 
 if TYPE_CHECKING:
     from ...session import Session
+    from ...session._utils import RenderedDeps
 
 
-def as_cell_html(x: TagNode, *, session: Session) -> CellHtml:
-    return {"isShinyHtml": True, "obj": session._process_ui(x)}
+def as_cell_html(processed_ui: RenderedDeps) -> CellHtml:
+    return {"isShinyHtml": True, "obj": processed_ui}
 
 
 @overload
@@ -30,7 +31,7 @@ def maybe_as_cell_html(
     x: Jsonifiable | TagNode, *, session: Session
 ) -> Jsonifiable | CellHtml:
     if ui_must_be_processed(x):
-        return as_cell_html(x, session=session)
+        return as_cell_html(session._process_ui(x))
     return cast(Jsonifiable, x)
 
 
