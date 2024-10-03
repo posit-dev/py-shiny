@@ -4,7 +4,7 @@ from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
 
-def test_sidebar_position_and_open(page: Page, local_app: ShinyAppProc) -> None:
+def test_sidebar_kitchensink(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 
     left_sidebar = controller.Sidebar(page, "sidebar_left")
