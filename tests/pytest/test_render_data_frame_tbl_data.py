@@ -34,10 +34,10 @@ class _MockSession:
     def _process_ui(self, ui: TagChild) -> RenderedDeps:
         res = TagList(ui).render()
         deps: list[dict[str, Any]] = []
-        # for dep in res["dependencies"]:
-        #     self.app._register_web_dependency(dep)
-        #     dep_dict = dep.as_dict(lib_prefix=self.app.lib_prefix)
-        #     deps.append(dep_dict)
+        for dep in res["dependencies"]:
+            # self.app._register_web_dependency(dep)
+            dep_dict = dep.as_dict()
+            deps.append(dep_dict)
 
         return {"deps": deps, "html": res["html"]}
 
@@ -60,6 +60,10 @@ class D:
     y: int
 
 
+html_dep = htmltools.HTMLDependency("test-dep", version="1", head="head-content")
+ex_html_dep_dict = html_dep.as_dict()
+
+
 DATA = {
     "num": [1, 2],
     "chr": ["a", "b"],
@@ -67,7 +71,7 @@ DATA = {
     "bool": [True, False],
     "dt": [datetime(2000, 1, 2)] * 2,
     "duration": [timedelta(weeks=1), timedelta(days=7)],
-    "html": [span("span content")] * 2,
+    "html": [span("span content", html_dep)] * 2,
     "html_str": [HTML("<strong>bolded</strong>")] * 2,
     "struct": [{"x": 1}, {"x": 2}],
     "arr": [[1, 2], [3, 4]],
@@ -305,6 +309,7 @@ def test_serialize_frame(df_f: IntoDataFrame):
             {"type": "object"},
             {"type": "object"},
         ],
+        "htmlDeps": [ex_html_dep_dict],
     }
 
 
