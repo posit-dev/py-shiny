@@ -118,7 +118,7 @@ doc = [
     "jupyter",
     "jupyter_client < 8.0.0",
     "tabulate",
-    "shinylive",
+    "shinylive@git+https://github.com/posit-dev/py-shinylive.git",
     "pydantic>=2.7.4",
     "quartodoc>=0.7.6",
     "griffe>=1.1.1",
