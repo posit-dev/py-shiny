@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
-* Added [narwhals](https://posit-dev.github.io/py-narwhals) support for `@render.data_frame`. This allows for any eager data frame supported by narwhals to be returned from a `@render.data_frame` output method. (#1570)
+* Added [narwhals](https://posit-dev.github.io/py-narwhals) support for `@render.data_frame`. This allows for any eager data frame supported by narwhals to be returned from a `@render.data_frame` output method. All internal methods and helper methods leverage the `narwhals` API to be data frame agnostic. (#1570)
 
 ### Other changes
 
@@ -30,6 +30,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Added `.expect_disabled()` for `InputActionButton` in `shiny.playwright.controllers` (#1705)
 
 * Small improvements to the default pulse busy indicator to better blend with any background. It's also now slightly smaller by default.(#1707)
+
+* Added [narwhals](https://posit-dev.github.io/py-narwhals) support for `@render.table`. This allows for any eager data frame supported by narwhals to be returned from a `@render.table` output method. (#1570)
 
 ### Bug fixes
 
@@ -47,7 +49,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Fixed multiple input controllers (`InputSwitch`, `InputRadioButtons`, `InputNumeric`, `InputText`, `InputTextArea`, `InputPassword`, `InputActionButton`, and `InputActionLink`) in `shiny.playwright.controller` to correctly validate the `width` style property in `.expect_width(). (#1705)
 
 * Fixed input controller `InputTextArea` in `shiny.playwright.controller` to correctly validate the `resize` style property in `.expect_resize()`. (#1705)
-
 
 * Fixed a bug in `ui.conditional_panel()` that would cause the panel to repeatedly show/hide itself when the provided condition did not evaluate to a boolean value. (#1707)
 
