@@ -1,5 +1,3 @@
-# TODO-future-barret; Replace all usage of (PdDataFrame, PlDataFrame, etc) with narwhals
-
 from __future__ import annotations
 
 from typing import (
@@ -24,13 +22,13 @@ from narwhals.typing import IntoExpr as IntoExpr
 
 from ..._typing_extensions import Annotated, NotRequired, Required, TypedDict
 from ...types import Jsonifiable, JsonifiableDict, ListOrTuple
-from ._databackend import AbstractBackend
+
+if TYPE_CHECKING:
+    import pandas as pd
+
+    from ...session._utils import RenderedDeps
 
 __all__ = (
-    "PdDataFrame",
-    # "PlDataFrame",
-    # "PdSeries",
-    # "PlSeries",
     "IntoExpr",
     "DataFrame",
     "DataFrameT",
@@ -66,34 +64,6 @@ __all__ = (
 
 
 # ---------------------------------------------------------------------
-
-if TYPE_CHECKING:
-    import pandas as pd
-
-    # import polars as pl
-    from ...session._utils import RenderedDeps
-
-    PdDataFrame = pd.DataFrame
-
-    # PlDataFrame = pl.DataFrame
-    # PdSeries = pd.Series[Any]
-    # PlSeries = pl.Series
-
-
-else:
-
-    class PdDataFrame(AbstractBackend):
-        _backends = [("pandas", "DataFrame")]
-
-    # class PlDataFrame(AbstractBackend):
-    #     _backends = [("polars", "DataFrame")]
-
-    # class PdSeries(AbstractBackend):
-    #     _backends = [("pandas", "Series")]
-
-    # class PlSeries(AbstractBackend):
-    #     _backends = [("polars", "Series")]
-
 
 DataFrame = nw.DataFrame
 Series = nw.Series
