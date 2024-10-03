@@ -1,8 +1,4 @@
-from typing import Literal
-
-from langchain.chains.conversation.base import ConversationChain
-from langchain.memory import ConversationBufferMemory
-from langchain_core.tools import tool
+from chatlas import LangChainChat
 from langchain_openai import ChatOpenAI
 
 from shiny.express import ui
@@ -14,10 +10,20 @@ ui.page_opts(
 )
 
 
-@tool
-def get_current_weather(
-    location: str, unit: Literal["celsius", "fahrenheit"] = "fahrenheit"
-) -> int:
+chat = ui.Chat(id="chat")
+chat.ui()
+chat.update_user_input(
+    value="What's the weather like in Boston, New York, and London today?"
+)
+
+
+@chat.on_user_submit
+async def _(message):
+    response = llm.response_generator(message)
+    await chat.append_message_stream(response)
+
+
+def get_current_weather(location: str, unit: str = "fahrenheit") -> int:
     """
     Get the current weather in a given location
     """
@@ -29,19 +35,8 @@ def get_current_weather(
         return 72 if unit == "fahrenheit" else 22
 
 
-llm = ChatOpenAI()
-llm_with_tools = llm.bind_tools([get_current_weather])
-memory = ConversationBufferMemory(return_messages=True)
-conversation = ConversationChain(llm=llm_with_tools, memory=memory)
-
-chat = ui.Chat(id="chat")
-chat.ui()
-chat.update_user_input(
-    value="What's the weather like in Boston, New York, and London today?"
+llm = LangChainChat(
+    ChatOpenAI(model="gpt-4o"),
+    system_prompt="Give answers in the style of Chuck Norris.",
+    tools=[get_current_weather],
 )
-
-
-@chat.on_user_submit
-async def _(message):
-    response = conversation.predict(input=message)
-    await chat.append_message_stream(response)

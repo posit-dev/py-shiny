@@ -7,10 +7,7 @@
 import os
 
 from app_utils import load_dotenv
-from langchain_core.chat_history import InMemoryChatMessageHistory
-from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.runnables.history import RunnableWithMessageHistory
+from chatlas import LangChainChat
 from langchain_openai import ChatOpenAI
 
 from shiny.express import ui
@@ -33,24 +30,20 @@ chat.ui()
 # Define a callback to run when the user submits a message
 @chat.on_user_submit
 async def _(message):
-    response = llm.astream(HumanMessage(message))
+    response = llm.response_generator(message)
     await chat.append_message_stream(response)
 
 
-# Create a LangChain chat model with OpenAI that remembers chat history
+# Create a LangChain-based chat model with OpenAI that remembers chat history
 #
 # Either explicitly set the OPENAI_API_KEY environment variable before launching the
 # app, or set them in a file named `.env`. The `python-dotenv` package will load `.env`
 # as environment variables which can later be read by `os.getenv()`.
 load_dotenv()
-model = ChatOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))  # type: ignore
-
-prompt = ChatPromptTemplate.from_messages(
-    [
-        SystemMessage("You are a helpful assistant."),
-        MessagesPlaceholder(variable_name="messages"),
-    ]
+llm = LangChainChat(
+    ChatOpenAI(
+        api_key=os.environ.get("OPENAI_API_KEY"),
+        model="gpt-4o",
+    ),
+    system_prompt="Give answers in the style of Chuck Norris.",
 )
-
-history = InMemoryChatMessageHistory()
-llm = RunnableWithMessageHistory(prompt | model, lambda: history)
