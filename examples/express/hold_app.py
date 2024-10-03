@@ -25,4 +25,4 @@ with ui.hold():
 
 ui.input_slider("n", "N", 1, 100, 50)
 
-shiny.ui.output_code("txt", inline=True)
+shiny.ui.output_code("txt")

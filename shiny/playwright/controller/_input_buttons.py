@@ -13,11 +13,17 @@ from ..expect._internal import (
     expect_attribute_to_have_value as _expect_attribute_to_have_value,
 )
 from ..expect._internal import expect_style_to_have_value as _expect_style_to_have_value
-from ._base import InputActionBase, UiBase, UiWithLabel, WidthLocM, _expect_multiple
+from ._base import (
+    InputActionBase,
+    UiBase,
+    UiWithLabel,
+    WidthLocStlyeM,
+    _expect_multiple,
+)
 
 
 class InputActionButton(
-    WidthLocM,
+    WidthLocStlyeM,
     InputActionBase,
 ):
     """Controller for :func:`shiny.ui.input_action_button`."""
@@ -41,6 +47,21 @@ class InputActionButton(
             page,
             id=id,
             loc=f"button#{id}.action-button.shiny-bound-input",
+        )
+
+    def expect_disabled(self, value: bool, *, timeout: Timeout = None):
+        """
+        Expect the input action button to be disabled.
+
+        Parameters
+        ----------
+        value
+            The expected value of the `disabled` attribute.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        _expect_attribute_to_have_value(
+            self.loc, "disabled", "" if value else None, timeout=timeout
         )
 
 
@@ -131,7 +152,7 @@ class InputDarkMode(UiBase):
 
 
 class InputTaskButton(
-    WidthLocM,
+    WidthLocStlyeM,
     InputActionBase,
 ):
     """Controller for :func:`shiny.ui.input_task_button`."""

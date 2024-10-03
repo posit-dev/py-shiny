@@ -1,0 +1,4 @@
+langchain_anthropic
+langchain_google_vertexai
+langchain_openai
+shiny
