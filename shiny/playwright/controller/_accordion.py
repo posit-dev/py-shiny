@@ -321,7 +321,6 @@ class Accordion(
         self,
         class_name: str,
         *,
-        has_class: bool = True,
         timeout: Timeout = None,
     ) -> None:
         """
@@ -331,15 +330,13 @@ class Accordion(
         ----------
         class_name
             The class name to expect.
-        has_class
-            `True` if the class is expected
         timeout
             The maximum time to wait for the class to appear. Defaults to `None`.
         """
         _expect_class_to_have_value(
             self.loc_container,
             class_name,
-            has_class=has_class,
+            has_class=True,
             timeout=timeout,
         )
 

@@ -10,7 +10,7 @@ def test_accordion_kitchensink(page: Page, local_app: ShinyAppProc) -> None:
     accordion1 = controller.Accordion(page, "accordion_1")
     accordion1.expect_width("600px")
     accordion1.expect_height("300px")
-    accordion1.expect_class("bg-light", has_class=True)
+    accordion1.expect_class("bg-light")
     accordion1.expect_multiple(False)
     accordion1_panel1 = accordion1.accordion_panel("panel1")
     accordion1_panel1.expect_open(True)
@@ -28,7 +28,6 @@ def test_accordion_kitchensink(page: Page, local_app: ShinyAppProc) -> None:
     accordion2 = controller.Accordion(page, "accordion_2")
     accordion2.expect_width(None)
     accordion2.expect_height(None)
-    accordion2.expect_class("bg-light", has_class=False)
     accordion2.expect_multiple(True)
 
     accordion2_panel3 = accordion2.accordion_panel("panel3")
