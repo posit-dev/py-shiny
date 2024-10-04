@@ -495,20 +495,19 @@ class data_frame(
         self._cell_patch_map.set({})
 
     def _init_reactives(self) -> None:
-        with session_context(self._get_session()):
 
-            # Init
-            self._value: reactive.Value[
-                None | DataGrid[IntoDataFrameT] | DataTable[IntoDataFrameT]
-            ] = reactive.Value(None)
-            self._cell_patch_map = reactive.Value({})
+        # Init
+        self._value: reactive.Value[
+            None | DataGrid[IntoDataFrameT] | DataTable[IntoDataFrameT]
+        ] = reactive.Value(None)
+        self._cell_patch_map = reactive.Value({})
 
-            # Update the styles within the reactive event so that
-            # `self._set_cell_patch_map_patches()` does not need to become async
-            @reactive.effect
-            @reactive.event(self._cell_patch_map)
-            async def _update_styles():
-                await self._attempt_update_cell_style()
+        # Update the styles within the reactive event so that
+        # `self._set_cell_patch_map_patches()` does not need to become async
+        @reactive.effect
+        @reactive.event(self._cell_patch_map)
+        async def _update_styles():
+            await self._attempt_update_cell_style()
 
     def _get_session(self) -> Session:
         if self._session is None:
