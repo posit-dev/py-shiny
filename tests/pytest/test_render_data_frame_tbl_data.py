@@ -341,7 +341,7 @@ def test_subset_frame_cols_single(small_df_f: IntoDataFrame):
 def test_dtype_coverage():
     from pathlib import Path
 
-    from narwhals import dtypes as nw_dtypes
+    from narwhals.stable.v1 import dtypes as nw_dtypes
 
     # Copy from https://github.com/narwhals-dev/narwhals/blob/2c9e2e7a308ebb30c6f672e27c1da2086ebbecbc/utils/check_api_reference.py#L144-L146
     dtype_names = [
