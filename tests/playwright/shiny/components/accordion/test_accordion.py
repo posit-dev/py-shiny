@@ -66,7 +66,7 @@ def test_accordion(page: Page, local_app: ShinyAppProc) -> None:
     toggle_updates_button.click()
     acc_panel_updated_A.expect_label("Updated title")
     acc_panel_updated_A.expect_body("Updated body")
-    acc_panel_updated_A.expect_icon("Look! An icon! -->")
+    acc_panel_updated_A.expect_icon(True)
 
     acc.expect_panels(["updated_section_a", "Section B", "Section C", "Section D"])
     # workaround - toggle it twice Section A
