@@ -761,7 +761,7 @@ class data_frame(
         value: CellValue,
         *,
         row_index: int,
-        column_index: int,
+        column: int | str,
     ) -> None:
         """
         Update the value of a cell in the data frame.
@@ -775,6 +775,31 @@ class data_frame(
         column_index
             The column index of the cell to update.
         """
+        # TODO-barret; Test these assertions
+        # Convert column name to index if necessary
+        if isinstance(column, str):
+            with reactive.isolate():
+                column_names = self._nw_data().columns
+                assert (
+                    column in column_names
+                ), f"Column '{column}' not found in data frame."
+                column_index = self._nw_data().columns.index(column)
+        else:
+            column_index = column
+            assert isinstance(
+                column_index, int
+            ), f"Expected `column_index` to be an `int`, got {type(column_index)}"
+            assert (
+                column_index >= 0
+            ), f"Expected `column_index` to be greater than or equal to 0, got {column_index}"
+
+        assert isinstance(
+            row_index, int
+        ), f"Expected `row_index` to be an `int`, got {type(row_index)}"
+        assert (
+            row_index >= 0
+        ), f"Expected `row_index` to be greater than or equal to 0, got {row_index}"
+
         patch: CellPatch = {
             "value": value,
             "row_index": row_index,
