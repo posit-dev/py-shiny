@@ -5,6 +5,7 @@ from __future__ import annotations
 # pyright: reportArgumentType = false
 # pyright: reportUnknownMemberType = false
 import polars as pl
+from narwhals.stable.v1.typing import IntoDataFrame
 from palmerpenguins import load_penguins_raw
 
 from shiny import App, Inputs, Outputs, Session, module, render, ui
@@ -52,7 +53,10 @@ app_ui = ui.page_fillable(
 
 @module.server
 def mod_server(
-    input: Inputs, output: Outputs, session: Session, dt: render._DataFrameLikeT
+    input: Inputs,
+    output: Outputs,
+    session: Session,
+    dt: IntoDataFrame,
 ):
     @render.data_frame
     def penguins_df():

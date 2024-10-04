@@ -62,9 +62,9 @@ const isShinyHtml = (x: any): x is CellHtmlValue => {
 };
 type CellValue = string | CellHtmlValue | null;
 const getCellValueText = (cellValue: CellValue) => {
-  if (isShinyHtml(cellValue)) return cellValue.obj.html;
   if (cellValue === null) return "";
-  return cellValue as string;
+  if (isShinyHtml(cellValue)) return cellValue.obj.html;
+  return cellValue;
 };
 
 interface TableBodyCellProps {
@@ -472,6 +472,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
 
     // TODO-future; Use faster way to make a deep copy
     const cellValueObjDeepCopy = JSON.parse(JSON.stringify(cellValue.obj));
+    // Render the Shiny content asynchronously to the table's cell
     window.Shiny.renderContentAsync(tdRef.current, cellValueObjDeepCopy);
 
     const curTdRef = tdRef.current;

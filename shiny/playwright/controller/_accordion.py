@@ -301,10 +301,16 @@ class Accordion(
         """
         if isinstance(open, str):
             open = [open]
-        for element in self.loc.element_handles():
-            element.wait_for_element_state(state="visible", timeout=timeout)
-            element.scroll_into_view_if_needed(timeout=timeout)
-            elem_value = element.get_attribute("data-value")
+
+        # TODO-future: XOR on the next open state and the current open state
+        for i in range(self.loc.count()):
+            el_loc = self.loc.nth(i)
+            el_loc.element_handle().wait_for_element_state(
+                state="visible", timeout=timeout
+            )
+            el_loc.scroll_into_view_if_needed(timeout=timeout)
+
+            elem_value = el_loc.get_attribute("data-value")
             if elem_value is None:
                 raise ValueError(
                     "Accordion panel does not have a `data-value` attribute"

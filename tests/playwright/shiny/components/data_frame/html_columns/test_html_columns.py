@@ -1,3 +1,5 @@
+import re
+
 import pytest
 from playwright.sync_api import Page
 from utils.deploy_utils import skip_if_not_chrome
@@ -29,6 +31,10 @@ def test_validate_html_columns(
     # Test Shiny reactive output in cell
     test_button.click()
     output_txt.expect_value(f"{df_type}_test_cell_value 1")
+
+    # Assert cell content is not "null", but `""`
+    data_frame.expect_cell(re.compile(r"^$"), row=3, col=13)
+    data_frame.expect_cell(re.compile(r"^$"), row=1, col=16)
 
     # assert patching works
     data_frame.expect_cell("N1A1", row=0, col=6)
