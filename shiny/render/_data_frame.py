@@ -760,8 +760,8 @@ class data_frame(
         self,
         value: CellValue,
         *,
-        row_index: int,
-        column: int | str,
+        row: int,
+        col: int | str,
     ) -> None:
         """
         Update the value of a cell in the data frame.
@@ -777,15 +777,13 @@ class data_frame(
         """
         # TODO-barret; Test these assertions
         # Convert column name to index if necessary
-        if isinstance(column, str):
+        if isinstance(col, str):
             with reactive.isolate():
                 column_names = self._nw_data().columns
-                assert (
-                    column in column_names
-                ), f"Column '{column}' not found in data frame."
-                column_index = self._nw_data().columns.index(column)
+                assert col in column_names, f"Column '{col}' not found in data frame."
+                column_index = self._nw_data().columns.index(col)
         else:
-            column_index = column
+            column_index = col
             assert isinstance(
                 column_index, int
             ), f"Expected `column_index` to be an `int`, got {type(column_index)}"
@@ -793,16 +791,12 @@ class data_frame(
                 column_index >= 0
             ), f"Expected `column_index` to be greater than or equal to 0, got {column_index}"
 
-        assert isinstance(
-            row_index, int
-        ), f"Expected `row_index` to be an `int`, got {type(row_index)}"
-        assert (
-            row_index >= 0
-        ), f"Expected `row_index` to be greater than or equal to 0, got {row_index}"
+        assert isinstance(row, int), f"Expected `row` to be an `int`, got {type(row)}"
+        assert row >= 0, f"Expected `row` to be greater than or equal to 0, got {row}"
 
         patch: CellPatch = {
             "value": value,
-            "row_index": row_index,
+            "row_index": row,
             "column_index": column_index,
         }
         processed_patches = self._set_cell_patch_map_patches([patch])

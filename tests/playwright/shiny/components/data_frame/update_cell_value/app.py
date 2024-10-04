@@ -25,6 +25,6 @@ async def update_cell():
 
     await dt.update_cell_value(
         "new_value - " + str(input.update_btn()),
-        row_index=0,
-        column_index=0,
+        row=0,
+        col=0,
     )
