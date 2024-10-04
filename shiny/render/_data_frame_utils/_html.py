@@ -71,6 +71,7 @@ def ui_must_be_processed(  # pyright: ignore[reportInconsistentOverload]
     val: object,
 ):
     from htmltools import is_tag_node
+
     if isinstance(val, str):
         return False
 
