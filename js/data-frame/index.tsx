@@ -115,6 +115,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
       fill: false,
       styles: [],
     },
+    htmlDeps,
   } = payload;
   const {
     width,
@@ -197,7 +198,36 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
             typeHint,
           },
           cell: ({ getValue }) => {
-            return getValue() as string;
+            const ret = getValue();
+
+            // Regardless of type, if the value is null or undefined,
+            // return an empty string
+            if (ret === null || ret === undefined) {
+              return "";
+            }
+            switch (typeHint?.type) {
+              // Return the value as is
+              case "numeric":
+              case "date":
+              case "datetime":
+              case "duration":
+              case "categorical":
+              case "html":
+                return ret;
+              // Convert the value to a string
+              case "string":
+              case "boolean":
+                return String(ret);
+              // Convert the value to a JSON string if it isn't a string already
+              case "unknown":
+              case "object":
+                if (typeof ret === "string") {
+                  return ret;
+                }
+                return JSON.stringify(ret);
+              default:
+                return ret;
+            }
           },
           enableSorting,
         };
@@ -426,6 +456,12 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
       );
     };
   }, [id, selection, tableData]);
+
+  useEffect(() => {
+    if (!htmlDeps) return;
+    // Register the Shiny HtmlDependencies
+    Shiny.renderDependenciesAsync([...htmlDeps]);
+  }, [htmlDeps]);
 
   useEffect(() => {
     const handleColumnSort = (

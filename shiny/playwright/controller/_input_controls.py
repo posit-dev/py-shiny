@@ -805,16 +805,17 @@ class InputCheckboxGroup(
                         return True
             return False
 
-        # Could do with multiple locator calls,
-        # but unchecking the elements that are not in `selected` is not possible
-        # as `set_checked()` likes a single element.
-        for checkbox in self.loc_choices.element_handles():
+        for i in range(self.loc_choices.count()):
+            checkbox = self.loc_choices.nth(i)
             is_selected = in_selected(checkbox.input_value(timeout=timeout))
-            checkbox.set_checked(
-                is_selected,
-                timeout=timeout,
-                **kwargs,  # pyright: ignore[reportArgumentType]
-            )
+            currently_selected = checkbox.is_checked()
+            # Only update if needed
+            if is_selected != currently_selected:
+                checkbox.set_checked(
+                    is_selected,
+                    timeout=timeout,
+                    **kwargs,  # pyright: ignore[reportArgumentType]
+                )
 
     def expect_choices(
         self,

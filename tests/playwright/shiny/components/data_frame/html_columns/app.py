@@ -25,14 +25,22 @@ def random_generator():
     )
 
 
-htmlDep = HTMLDependency(  # pyright: ignore[reportUnknownLambdaType, reportArgumentType]
-    "studyname".join(random_generator()),
-    version="1",
-    head="""
-                <script>window.shinytestvalue = "testing"</script>
-                """,
+htmlDep = (
+    HTMLDependency(  # pyright: ignore[reportUnknownLambdaType, reportArgumentType]
+        f"studyname-0-{random_generator()}",
+        version="1",
+        head='<script>window.shinytestvalue = "testing"</script>',
+    )
 )
-pd_penguins.iloc[1, 0] = htmlDep  # pyright: ignore[reportArgumentType]
+
+studyName = (
+    pd_penguins["studyName"]  # pyright: ignore[reportUnknownVariableType]
+    .copy()
+    .astype("object")
+)
+# Set the first value of the column to an html object so the column is treated as object by narwhals (not str)
+studyName[0] = htmlDep
+pd_penguins["studyName"] = studyName
 pd_penguins["Species"] = pd_penguins["Species"].apply(lambda x: ui.HTML(f"<u>{x}</u>"))  # type: ignore
 pd_penguins["Region"] = pd_penguins["Region"].apply(  # type: ignore
     lambda y: ui.tags.h1(  # pyright: ignore[reportUnknownLambdaType, reportArgumentType]
@@ -43,13 +51,19 @@ pd_penguins["Island"] = pd_penguins[
     "Island"
 ].apply(  # pyright: ignore[reportUnknownMemberType]
     lambda z: ui.TagList(  # pyright: ignore[reportUnknownLambdaType]
-        ui.input_checkbox(f"checkbox_{z}".join(random_generator()), f"{z}"),
+        ui.input_checkbox(f"checkbox_{z}_{random_generator()}", f"{z}"),
         ui.tags.img(
             src="https://dka575ofm4ao0.cloudfront.net/pages-transactional_logos/retina/276517/posit-logo-fullcolor-TM.png",
             height="20%",
             width="20%",
         ),
     )
+)
+# Set the first value of the column to an html object.
+# Narwhals does not inspect the types beyond the first row.
+# Theforefore, we should not either and need to set the type to object.
+pd_penguins.iloc[0, 5] = ui.div(  # pyright: ignore[reportArgumentType]
+    pd_penguins.iloc[0, 5]  # pyright: ignore[reportArgumentType]
 )
 pd_penguins.iloc[1, 5] = ui.p(  # pyright: ignore[reportArgumentType]
     ui.input_action_button("pandas_test_cell_button", "Test button"),
@@ -62,7 +76,7 @@ pl_penguins = (
         0,
         pl.Series(
             [
-                ui.div(htmlDep) if i == 1 else ui.div(val)
+                ui.div(htmlDep) if i == 0 else val
                 for i, val in enumerate(pl_penguins["studyName"])
             ]
         ).alias("studyName"),
@@ -82,7 +96,7 @@ pl_penguins = (
         pl.Series(
             [
                 ui.div(
-                    ui.input_checkbox(f"checkbox_{x}".join(random_generator()), f"{x}"),
+                    ui.input_checkbox(f"checkbox_{x}_{random_generator()}", f"{x}"),
                     ui.tags.img(
                         src="https://dka575ofm4ao0.cloudfront.net/pages-transactional_logos/retina/276517/posit-logo-fullcolor-TM.png",
                         height="20%",
@@ -132,6 +146,7 @@ app_ui = ui.page_fluid(
             ui.output_data_frame("polars_df"),
         ),
         id="tab",
+        selected="pandas",
     )
 )
 
