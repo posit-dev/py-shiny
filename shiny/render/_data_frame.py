@@ -495,12 +495,20 @@ class data_frame(
         self._cell_patch_map.set({})
 
     def _init_reactives(self) -> None:
+        with session_context(self._get_session()):
 
-        # Init
-        self._value: reactive.Value[
-            None | DataGrid[IntoDataFrameT] | DataTable[IntoDataFrameT]
-        ] = reactive.Value(None)
-        self._cell_patch_map = reactive.Value({})
+            # Init
+            self._value: reactive.Value[
+                None | DataGrid[IntoDataFrameT] | DataTable[IntoDataFrameT]
+            ] = reactive.Value(None)
+            self._cell_patch_map = reactive.Value({})
+
+            # Update the styles within the reactive event so that
+            # `self._set_cell_patch_map_patches()` does not need to become async
+            @reactive.effect
+            @reactive.event(self._cell_patch_map)
+            async def _update_styles():
+                await self._attempt_update_cell_style()
 
     def _get_session(self) -> Session:
         if self._session is None:
@@ -661,40 +669,15 @@ class data_frame(
                     )
 
         # Add (or overwrite) new cell patches by setting each patch into the cell patch map
-        self._set_cell_patch_map_patches(patches)
-
-        # With the patches applied, any data retrieved while processing cell style
-        # will use the new patch values.
-        await self._attempt_update_cell_style()
-
-        # Upgrade any HTML-like content to `CellHtml` json objects
-        # for sending to the client
-        processed_patches: list[CellPatchProcessed] = [
-            {
-                "row_index": patch["row_index"],
-                "column_index": patch["column_index"],
-                # Only upgrade the value if it is necessary
-                "value": maybe_as_cell_html(
-                    patch["value"],
-                    session=self._get_session(),
-                ),
-            }
-            for patch in patches
-        ]
-
-        # Prep the processed patches as dictionaries for sending to the client
-        jsonifiable_patches: list[Jsonifiable] = [
-            cell_patch_processed_to_jsonifiable(ret_processed_patch)
-            for ret_processed_patch in processed_patches
-        ]
+        jsonifiable_processed_patches = self._set_cell_patch_map_patches(patches)
 
         # Return the processed patches to the client
-        return jsonifiable_patches
+        return jsonifiable_processed_patches
 
     def _set_cell_patch_map_patches(
         self,
         patches: ListOrTuple[CellPatch],
-    ):
+    ) -> list[Jsonifiable]:
         """
         Set the patches within the cell patch map.
 
@@ -702,6 +685,11 @@ class data_frame(
         ----------
         patches
             Set of patches to apply to store in the cell patch map.
+
+        Returns
+        -------
+        :
+            A list of processed (by the session) patches to apply to the data frame.
         """
         # Use copy to set the new value
         cell_patch_map = self._cell_patch_map().copy()
@@ -726,46 +714,81 @@ class data_frame(
         # Once all patches are set, update the cell patch map with new version
         self._cell_patch_map.set(cell_patch_map)
 
+        # Upgrade any HTML-like content to `CellHtml` json objects
+        # for sending to the client
+        session = self._get_session()
+        processed_patches: list[CellPatchProcessed] = [
+            {
+                "row_index": patch["row_index"],
+                "column_index": patch["column_index"],
+                # Only upgrade the value if it is necessary
+                "value": maybe_as_cell_html(
+                    patch["value"],
+                    session=session,
+                ),
+            }
+            for patch in patches
+        ]
+
+        # Prep the processed patches as dictionaries for sending to the client
+        jsonifiable_patches: list[Jsonifiable] = [
+            cell_patch_processed_to_jsonifiable(ret_processed_patch)
+            for ret_processed_patch in processed_patches
+        ]
+
+        return jsonifiable_patches
+
     async def _attempt_update_cell_style(self) -> None:
-        with session_context(self._get_session()):
 
-            rendered_value = self._value()
-            if not isinstance(rendered_value, (DataGrid, DataTable)):
-                return
+        rendered_value = self._value()
+        if not isinstance(rendered_value, (DataGrid, DataTable)):
+            return
 
-            styles_fn = rendered_value.styles
-            if not callable(styles_fn):
-                return
+        styles_fn = rendered_value.styles
+        if not callable(styles_fn):
+            return
 
-            patched_into_data = self._nw_data_to_original_type(self._data_patched())
-            new_styles = as_browser_style_infos(styles_fn, into_data=patched_into_data)
+        patched_into_data = self._nw_data_to_original_type(self._data_patched())
+        new_styles = as_browser_style_infos(styles_fn, into_data=patched_into_data)
 
-            await self._send_message_to_browser(
-                "updateStyles",
-                {"styles": new_styles},
-            )
+        await self._send_message_to_browser(
+            "updateStyles",
+            {"styles": new_styles},
+        )
 
-    # TODO-barret-render.data_frame; Add `update_cell_value()` method
-    # def _update_cell_value(
-    #     self, value: CellValue, *, row_index: int, column_index: int
-    # ) -> CellPatch:
-    #     """
-    #     Update the value of a cell in the data frame.
-    #
-    #     Parameters
-    #     ----------
-    #     value
-    #         The new value to set the cell to.
-    #     row_index
-    #         The row index of the cell to update.
-    #     column_index
-    #         The column index of the cell to update.
-    #     """
-    #     cell_patch_processed = self._set_cell_patch_map_patches(
-    #         {value: value, row_index: row_index, column_index: column_index}
-    #     )
-    #     # TODO-barret-render.data_frame; Send message to client to update cell value
-    #     return cell_patch_processed
+    async def update_cell_value(
+        self,
+        value: CellValue,
+        *,
+        row_index: int,
+        column_index: int,
+    ) -> None:
+        """
+        Update the value of a cell in the data frame.
+
+        Parameters
+        ----------
+        value
+            The new value to set the cell to.
+        row_index
+            The row index of the cell to update.
+        column_index
+            The column index of the cell to update.
+        """
+        patch: CellPatch = {
+            "value": value,
+            "row_index": row_index,
+            "column_index": column_index,
+        }
+        processed_patches = self._set_cell_patch_map_patches([patch])
+
+        # TODO-barret-render.data_frame; Send message to client to update cell value
+        await self._send_message_to_browser(
+            "addPatches",
+            {"patches": processed_patches},
+        )
+
+        return
 
     def auto_output_ui(self) -> Tag:
         return ui.output_data_frame(id=self.output_id)

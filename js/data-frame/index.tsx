@@ -28,6 +28,11 @@ import { ErrorsMessageValue } from "rstudio-shiny/srcts/types/src/shiny/shinyapp
 import { useImmer } from "use-immer";
 import { TableBodyCell } from "./cell";
 import { getCellEditMapObj, useCellEditMap } from "./cell-edit-map";
+import {
+  addPatchToData,
+  cellPatchPyArrToCellPatchArr,
+  type CellPatchPy,
+} from "./data-update";
 import { findFirstItemInView, getStyle } from "./dom-utils";
 import { ColumnFiltersState, Filter, FilterValue, useFilters } from "./filter";
 import type { CellSelection, SelectionModesProp } from "./selection";
@@ -462,6 +467,38 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
     // Register the Shiny HtmlDependencies
     Shiny.renderDependenciesAsync([...htmlDeps]);
   }, [htmlDeps]);
+
+  useEffect(() => {
+    const handleAddPatches = (
+      event: CustomEvent<{
+        patches: CellPatchPy[];
+      }>
+    ) => {
+      const evtPatches = event.detail.patches;
+      const newPatches = cellPatchPyArrToCellPatchArr(evtPatches);
+
+      // Update data with extra patches
+      addPatchToData({
+        setData: setTableData,
+        newPatches,
+        setCellEditMapAtLoc,
+      });
+    };
+
+    if (!id) return;
+
+    const element = document.getElementById(id);
+    if (!element) return;
+
+    element.addEventListener("addPatches", handleAddPatches as EventListener);
+
+    return () => {
+      element.removeEventListener(
+        "addPatches",
+        handleAddPatches as EventListener
+      );
+    };
+  }, [columns, id, setCellEditMapAtLoc, setSorting, setTableData]);
 
   useEffect(() => {
     const handleColumnSort = (
