@@ -1,7 +1,7 @@
 import pandas as pd
 import polars as pl
 import seaborn as sns
-from narwhals.typing import IntoDataFrame
+from narwhals.stable.v1.typing import IntoDataFrame
 
 from shiny import App, Inputs, Outputs, Session, module, reactive, render, ui
 

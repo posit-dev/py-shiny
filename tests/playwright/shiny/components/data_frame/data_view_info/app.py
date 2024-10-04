@@ -5,7 +5,7 @@ from __future__ import annotations
 # pyright: reportArgumentType = false
 # pyright: reportUnknownMemberType = false
 import polars as pl
-from narwhals.typing import IntoDataFrame
+from narwhals.stable.v1.typing import IntoDataFrame
 from palmerpenguins import load_penguins_raw
 
 from shiny import App, Inputs, Outputs, Session, module, render, ui

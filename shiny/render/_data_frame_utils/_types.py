@@ -14,11 +14,11 @@ from typing import (
 
 import narwhals.stable.v1 as nw
 from htmltools import TagNode
-from narwhals.dtypes import DType as DType
-from narwhals.typing import DataFrameT as DataFrameT
-from narwhals.typing import IntoDataFrame as IntoDataFrame
-from narwhals.typing import IntoDataFrameT as IntoDataFrameT
-from narwhals.typing import IntoExpr as IntoExpr
+from narwhals.stable.v1.dtypes import DType as DType
+from narwhals.stable.v1.typing import DataFrameT as DataFrameT
+from narwhals.stable.v1.typing import IntoDataFrame as IntoDataFrame
+from narwhals.stable.v1.typing import IntoDataFrameT as IntoDataFrameT
+from narwhals.stable.v1.typing import IntoExpr as IntoExpr
 
 from ..._typing_extensions import Annotated, NotRequired, Required, TypedDict
 from ...types import Jsonifiable, JsonifiableDict, ListOrTuple

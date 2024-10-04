@@ -5,7 +5,7 @@ import pkgutil
 # pyright: reportMissingTypeStubs = false
 import palmerpenguins
 import polars as pl
-from narwhals.typing import IntoDataFrame
+from narwhals.stable.v1.typing import IntoDataFrame
 
 from shiny import App, Inputs, Outputs, Session, module, render, ui
 
