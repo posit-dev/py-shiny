@@ -77,17 +77,16 @@ jobs:
         uses: ./.github/py-shiny/setup
         with:
           python-version: ${{ matrix.python-version }}
+          install: ${{ !(matrix.config.pypi_shiny || matrix.config.github_shiny) }}
 
       - name: Install pypi shiny and htmltools (uninstall GitHub versions)
         if: ${{ matrix.config.pypi_shiny }}
         run: |
-          uv pip uninstall shiny htmltools
           uv pip install shiny htmltools
 
       - name: Install GitHub shiny@v1.0.0 and htmltools@v0.5.3 (uninstall PyPI versions)
         if: ${{ matrix.config.github_shiny }}
         run: |
-          uv pip uninstall shiny htmltools
           uv pip install "htmltools @ git+https://github.com/posit-dev/py-htmltools.git@v0.5.3" "shiny @ git+https://github.com/posit-dev/py-shiny.git@v1.0.0"
 
       - name: Install rsconnect (PyPI)
