@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal, cast, overload
 
-from htmltools import TagNode, is_tag_node
+from htmltools import TagNode
 
 from ..._typing_extensions import TypeIs
 from ...types import Jsonifiable
@@ -70,6 +70,7 @@ def ui_must_be_processed(
 def ui_must_be_processed(  # pyright: ignore[reportInconsistentOverload]
     val: object,
 ):
+    from htmltools import is_tag_node
     if isinstance(val, str):
         return False
 
