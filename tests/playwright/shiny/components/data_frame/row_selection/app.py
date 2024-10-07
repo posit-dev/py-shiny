@@ -2,6 +2,7 @@ import pkgutil
 
 import palmerpenguins  # pyright: ignore[reportMissingTypeStubs]
 import polars as pl
+from narwhals.stable.v1.typing import IntoDataFrame
 
 from shiny import App, Inputs, Outputs, Session, module, reactive, render, ui
 
@@ -41,7 +42,7 @@ def make_ui(title: str):
     )
 
 
-def make_server(input: Inputs, data: render._DataFrameLikeT):
+def make_server(input: Inputs, data: IntoDataFrame):
     @render.data_frame
     def grid():
         return render.DataGrid(
@@ -74,23 +75,13 @@ def make_server(input: Inputs, data: render._DataFrameLikeT):
     # Test for selected rows data
     @render.code
     def grid_row_count():
-        grid_data = grid.data()
-        nrow, _ = (  # pyright: ignore[reportUnknownVariableType]
-            render._data_frame_utils._tbl_data.frame_shape(  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue]
-                grid_data
-            )
-        )
-        return str(nrow)  # pyright: ignore[reportUnknownArgumentType]
+        nrow = grid._nw_data().shape[0]
+        return str(nrow)
 
     @render.code
     def selected_row_count():
-        grid_selected_data = grid_selected.data()
-        nrow, _ = (  # pyright: ignore[reportUnknownVariableType]
-            render._data_frame_utils._tbl_data.frame_shape(  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue]
-                grid_selected_data
-            )
-        )
-        return str(nrow)  # pyright: ignore[reportUnknownArgumentType]
+        nrow = grid_selected._nw_data().shape[0]
+        return str(nrow)
 
 
 @module.ui
@@ -100,7 +91,10 @@ def mod_ui(title: str = "Module"):
 
 @module.server
 def mod_server(
-    input: Inputs, output: Outputs, session: Session, data: render._DataFrameLikeT
+    input: Inputs,
+    output: Outputs,
+    session: Session,
+    data: IntoDataFrame,
 ):
     make_server(input, data)
 

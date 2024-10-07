@@ -4,6 +4,7 @@ import pkgutil
 
 import palmerpenguins  # pyright: ignore[reportMissingTypeStubs]
 import polars as pl
+from narwhals.stable.v1.typing import IntoDataFrame
 
 from shiny import Inputs, Outputs, Session
 from shiny.express import module, render, ui
@@ -22,7 +23,7 @@ def df_mod(
     output: Outputs,
     session: Session,
     name: str,
-    data: render._DataFrameLikeT,
+    data: IntoDataFrame,
 ):
 
     ui.hr()

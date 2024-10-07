@@ -1,5 +1,7 @@
 import { StyleInfo } from "./style-info";
 
+import type { HtmlDep } from "rstudio-shiny/srcts/types/src/shiny/render";
+
 export type ValueOf<T> = T[keyof T];
 
 export const EditModeEnum = {
@@ -9,7 +11,17 @@ export const EditModeEnum = {
 export type EditMode = ValueOf<typeof EditModeEnum>;
 
 export interface TypeHint {
-  type: "string" | "numeric" | "categorical" | "unknown" | "html";
+  type:
+    | "string"
+    | "numeric"
+    | "boolean"
+    | "date"
+    | "datetime"
+    | "duration"
+    | "object"
+    | "unknown"
+    | "html"
+    | "categorical";
 }
 
 export interface CategoricalTypeHint extends TypeHint {
@@ -34,6 +46,7 @@ export interface PandasData<TIndex> {
   data: unknown[][];
   options: DataGridOptions;
   typeHints?: ReadonlyArray<TypeHint>;
+  htmlDeps?: ReadonlyArray<HtmlDep>;
 }
 
 export interface PatchInfo {

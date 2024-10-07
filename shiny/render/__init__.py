@@ -15,7 +15,6 @@ from ._data_frame import (
 from ._data_frame_utils._selection import CellSelection
 from ._data_frame_utils._types import (  # noqa: F401
     StyleInfo,
-    DataFrameLikeT as _DataFrameLikeT,  # pyright: ignore[reportUnusedImport]
 )
 from ._deprecated import (  # noqa: F401
     RenderFunction,  # pyright: ignore[reportUnusedImport]
