@@ -1,5 +1,6 @@
 # TODO-barret; Remove debug print statements!
 # TODO-barret; Remove dead code in `.update_data()` if approach is correct
+# TODO-barret; Update styles on cell update
 
 from __future__ import annotations
 
@@ -524,36 +525,14 @@ class data_frame(
         self._cell_patch_map = reactive.Value({})
         self._updated_data = reactive.Value(None)
 
-        # Update the styles within the reactive event so that
-        # `self._set_cell_patch_map_patches()` does not need to become async
+        # Update the styles any time the cell patch map updates
         @reactive.effect
-        @reactive.event(self._cell_patch_map)
+        # TODO-barret; This is too often! Find a better balance
+        @reactive.event(self._cell_patch_map, self._updated_data)
         async def _send_style_update():
             # Be sure this is called within `isolate()` to isolate any reactivity
             # It currently is, as `@reactive.event()` is being used
             await self._attempt_update_cell_style()
-
-        # # Update the styles within the reactive event so that
-        # # `self._set_cell_patch_map_patches()` does not need to become async
-        # @reactive.effect
-        # @reactive.event(self._updated_data)
-        # async def _send_data_update():
-        #     # Be sure this is called within `isolate()` to isolate any reactivity
-        #     # It currently is, as `@reactive.event()` is being used
-        #     await self._send_data_update()
-
-    # async def _send_data_update(self) -> None:
-    #     updated_data = self._updated_data()
-
-    #     if not updated_data:
-    #         return
-
-    #     await self._send_message_to_browser(
-    #         "updateData",
-    #         {
-    #             "data": serialize_frame(updated_data),
-    #         },
-    #     )
 
     def _get_session(self) -> Session:
         if self._session is None:
@@ -863,17 +842,7 @@ class data_frame(
         # # Init reactive values
         # if not self._has_set_updated_data:
         #     with session_context(self._get_session()):
-        #         with reactive.isolate():
-        #             self._updated_data = reactive.Value(None)
-
-        #             # # Update the styles within the reactive event so that
-        #             # # `self._set_cell_patch_map_patches()` does not need to become async
-        #             # @reactive.effect
-        #             # @reactive.event(self._updated_data)
-        #             # async def _send_data_update():
-        #             #     # Be sure this is called within `isolate()` to isolate any reactivity
-        #             #     # It currently is, as `@reactive.event()` is being used
-        #             #     await self._send_data_update()
+        #         self._updated_data = reactive.Value(None)
 
         # if cur_nw_data.shape[0] != new_nw_data.shape[0]:
         #     raise ValueError(
