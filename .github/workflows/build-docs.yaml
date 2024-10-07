@@ -38,7 +38,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          make install-docs
+          make ci-install-docs
 
       - name: Run quartodoc
         run: |
