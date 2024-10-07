@@ -1,3 +1,8 @@
+# pyright: reportUntypedFunctionDecorator=false
+# pyright: reportUnknownMemberType=false
+# pyright: reportInvalidTypeForm=false
+# pyright: reportUnknownParameterType=false
+# pyright: reportUnknownArgumentType=false
 from __future__ import annotations
 
 from typing import Optional, overload
