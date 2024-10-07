@@ -1,6 +1,7 @@
+# TODO-barret; Test this app!
+
 from __future__ import annotations
 
-import narwhals.stable.v1 as nw
 import palmerpenguins  # pyright: ignore[reportMissingTypeStubs]
 
 from shiny import reactive
