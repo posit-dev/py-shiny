@@ -96,7 +96,7 @@ dev = [
     "Flake8-pyproject>=1.2.3",
     "isort>=5.10.1",
     "libsass>=0.23.0",
-    "pyright==1.1.369",
+    "pyright>=1.1.383",
     "pre-commit>=2.15.0",
     "wheel",
     "matplotlib",
