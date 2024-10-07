@@ -910,7 +910,10 @@ class data_frame(
         self._cell_patch_map.set({})
         self._updated_data.set(data)
 
-        info = serialize_frame(data)
+        # Serialize the data within the session context,
+        # similar to `.to_payload()` on the `._value()`
+        with session_context(self._get_session()):
+            info = serialize_frame(data)
 
         await self._send_message_to_browser(
             "updateData",
@@ -920,13 +923,6 @@ class data_frame(
                 "typeHints": info["typeHints"],
             },
         )
-
-        # action_type = warning if reset is None else error # error when reset = False
-        # for each quality, display any error messages with the action_type
-        #     verify new data and old data have same column types
-        #     verify all existing edits and selections are within the bounds of the new data
-
-        # Send message to browser with `data` and `reset`
         return
 
     def auto_output_ui(self) -> Tag:
