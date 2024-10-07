@@ -89,7 +89,11 @@ def gt_styles(df_gt: gt.GT) -> list[StyleInfo]:
     ret: list[StyleInfo] = []
     for style in styles:
         location = style.locname
-        location = "body" if location == "data" else location
+        location = (
+            "body"
+            if location == "data"  # pyright: ignore[reportUnnecessaryComparison]
+            else location
+        )
         assert location == "body", f"`style.locname` is {location}, expected 'body'"
         rows = style.rownum
         assert rows is not None
