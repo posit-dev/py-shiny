@@ -14,26 +14,28 @@ with ui.card():
     ui.input_action_button("shift_btn", "Shift data")
     ui.input_action_button("different_btn", "Change data set")
 
-    with ui.layout_column_wrap(width=1 / 2):
+    ui.h4("Data")
 
-        @render.data_frame
-        def dt():
-            return render.DataGrid(
-                pd_df.iloc[:, 0:2],
-                selection_mode="rows",
-                filters=True,
-                editable=True,
-            )
+    @render.data_frame
+    def dt():
+        return render.DataGrid(
+            pd_df.iloc[:, 0:2],
+            selection_mode="rows",
+            filters=True,
+            editable=True,
+        )
 
-        # @render.data_frame
-        # def dt_selected():
-        #     return dt.data_view(selected=True)
+    ui.h4("Selected data")
 
-        @reactive.effect
-        @reactive.event(dt.cell_selection)
-        def _on_cell_selection():
-            print("Cell selected", dt.cell_selection())
-            return
+    @render.data_frame
+    def dt_selected():
+        return dt.data_view(selected=True)
+
+    @reactive.effect
+    @reactive.event(dt.cell_selection)
+    def _on_cell_selection():
+        print("Cell selected", dt.cell_selection())
+        return
 
 
 data_val = reactive.value(pd_df)

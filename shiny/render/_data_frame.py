@@ -1,3 +1,6 @@
+# TODO-barret; Remove debug print statements!
+# TODO-barret; Remove dead code in `.update_data()` if approach is correct
+
 from __future__ import annotations
 
 import warnings
@@ -872,17 +875,6 @@ class data_frame(
         #             #     # It currently is, as `@reactive.event()` is being used
         #             #     await self._send_data_update()
 
-        # if reset is True:
-
-        #     # everything naturally resets
-        #     ...
-        # else:
-
-        print("updating data")
-
-        cur_nw_data = self._nw_data()
-        new_nw_data = as_data_frame(data)
-
         # if cur_nw_data.shape[0] != new_nw_data.shape[0]:
         #     raise ValueError(
         #         "The number of rows in the new data does not match the number of rows in the old data."
@@ -918,10 +910,14 @@ class data_frame(
         self._cell_patch_map.set({})
         self._updated_data.set(data)
 
+        info = serialize_frame(data)
+
         await self._send_message_to_browser(
             "updateData",
             {
-                "data": serialize_frame(data)["data"],
+                "data": info["data"],
+                "columns": info["columns"],
+                "typeHints": info["typeHints"],
             },
         )
 

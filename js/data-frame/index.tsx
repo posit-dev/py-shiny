@@ -111,8 +111,8 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
   bgcolor,
 }) => {
   const {
-    columns,
-    typeHints,
+    columns: columnsProp,
+    typeHints: typeHintsProp,
     data: tableDataProp,
     options: payloadOptions = {
       width: undefined,
@@ -133,6 +133,9 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const theadRef = useRef<HTMLTableSectionElement>(null);
   const tbodyRef = useRef<HTMLTableSectionElement>(null);
+
+  const [columns, setColumns] = useImmer(columnsProp);
+  const [typeHints, setTypeHints] = useImmer(typeHintsProp);
 
   const _useStyleInfo = useStyleInfoMap({
     initStyleInfos: initStyleInfos ?? [],
@@ -293,6 +296,59 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
     filtersTableOptions,
     setColumnFilters,
   } = useFilters<unknown[]>(withFilters);
+
+  const updateData = useCallback(
+    ({
+      data,
+      columns,
+      typeHints,
+    }: {
+      data: PandasData<unknown>["data"];
+      columns: readonly string[];
+      typeHints: readonly TypeHint[] | undefined;
+    }) => {
+      setColumns(columns);
+      setTableData(data);
+      setTypeHints(typeHints);
+      resetCellEditMap();
+
+      // Make map for quick lookup of type hints
+      const newTypeHintMap = new Map<string, TypeHint>();
+      typeHints?.forEach((hint, i) => {
+        newTypeHintMap.set(columns[i]!, hint);
+      });
+      // Filter out sorting and column filters that are no longer valid
+      const newSort = sorting.filter((sort) => newTypeHintMap.has(sort.id));
+      const newColumnFilter = columnFilters.filter((filter) => {
+        const typeHint = newTypeHintMap.get(filter.id);
+        if (!typeHint) return false;
+        // Maintain the filter if it's a numeric filter
+        // Drop if it's a string filter
+        if (typeHint.type === "numeric") {
+          return (
+            filter.value === null ||
+            (Array.isArray(filter.value) &&
+              filter.value.every((v) => v !== null))
+          );
+        }
+        // Maintain string filters
+        return typeof filter.value === "string";
+      });
+
+      setColumnFilters(newColumnFilter);
+      setSorting(newSort);
+    },
+    [
+      columnFilters,
+      resetCellEditMap,
+      setColumnFilters,
+      setColumns,
+      setSorting,
+      setTableData,
+      setTypeHints,
+      sorting,
+    ]
+  );
 
   const options: TableOptions<unknown[]> = {
     data: tableData,
@@ -508,14 +564,13 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
     const handleUpdateData = (
       event: CustomEvent<{
         data: PandasData<unknown>["data"];
+        columns: PandasData<unknown>["columns"];
+        typeHints: PandasData<unknown>["typeHints"];
       }>
     ) => {
-      const evtData = event.detail.data;
+      const evtData = event.detail;
 
-      console.log("new data", evtData);
-
-      resetCellEditMap();
-      setTableData(evtData);
+      updateData(evtData);
     };
 
     if (!id) return;
@@ -531,7 +586,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
         handleUpdateData as EventListener
       );
     };
-  }, [columns, id, resetCellEditMap, setTableData]);
+  }, [columns, id, resetCellEditMap, setTableData, updateData]);
 
   useEffect(() => {
     const handleColumnSort = (
