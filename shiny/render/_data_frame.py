@@ -37,6 +37,7 @@ from ._data_frame_utils._tbl_data import (
     apply_frame_patches,
     as_data_frame,
     data_frame_to_native,
+    serialize_frame,
     subset_frame,
 )
 from ._data_frame_utils._types import (
@@ -164,6 +165,14 @@ class data_frame(
     """
     Reactive value of the data frame's rendered object.
     """
+    _updated_data: reactive.Value[None | IntoDataFrameT]
+    """
+    Reactive value of the data frame's updated data value object.
+    """
+
+    @property
+    def _has_set_updated_data(self) -> bool:
+        return hasattr(self, "_updated_data")
 
     def _req_value(self):
         """
@@ -199,6 +208,14 @@ class data_frame(
         :
             The original data frame returned from the render method.
         """
+        print("getting value data")
+        if self._has_set_updated_data:
+            updated_data = self._updated_data()
+            print("updated_data\n", updated_data)
+            # iff updated data exists, return it
+            # Can be reset on a followup render call
+            if updated_data is not None:
+                return updated_data
         return self._req_value().data
 
     @reactive_calc_method
@@ -491,25 +508,49 @@ class data_frame(
         return tuple(column_filter)
 
     def _reset_reactives(self) -> None:
+        print("resetting reactives")
         self._value.set(None)
+        if self._has_set_updated_data:
+            self._updated_data.set(None)
         self._cell_patch_map.set({})
 
     def _init_reactives(self) -> None:
 
         # Init
-        self._value: reactive.Value[
-            None | DataGrid[IntoDataFrameT] | DataTable[IntoDataFrameT]
-        ] = reactive.Value(None)
+        self._value = reactive.Value(None)
         self._cell_patch_map = reactive.Value({})
+        self._updated_data = reactive.Value(None)
 
         # Update the styles within the reactive event so that
         # `self._set_cell_patch_map_patches()` does not need to become async
         @reactive.effect
         @reactive.event(self._cell_patch_map)
-        async def _update_styles():
+        async def _send_style_update():
             # Be sure this is called within `isolate()` to isolate any reactivity
             # It currently is, as `@reactive.event()` is being used
             await self._attempt_update_cell_style()
+
+        # # Update the styles within the reactive event so that
+        # # `self._set_cell_patch_map_patches()` does not need to become async
+        # @reactive.effect
+        # @reactive.event(self._updated_data)
+        # async def _send_data_update():
+        #     # Be sure this is called within `isolate()` to isolate any reactivity
+        #     # It currently is, as `@reactive.event()` is being used
+        #     await self._send_data_update()
+
+    # async def _send_data_update(self) -> None:
+    #     updated_data = self._updated_data()
+
+    #     if not updated_data:
+    #         return
+
+    #     await self._send_message_to_browser(
+    #         "updateData",
+    #         {
+    #             "data": serialize_frame(updated_data),
+    #         },
+    #     )
 
     def _get_session(self) -> Session:
         if self._session is None:
@@ -741,6 +782,7 @@ class data_frame(
 
     async def _attempt_update_cell_style(self) -> None:
 
+        print("updateStyles!")
         rendered_value = self._value()
         if not isinstance(rendered_value, (DataGrid, DataTable)):
             return
@@ -810,6 +852,87 @@ class data_frame(
 
         return
 
+    async def update_data(
+        self,
+        data: IntoDataFrameT,
+        # , *, reset: bool | None = None
+    ) -> None:
+        # # Init reactive values
+        # if not self._has_set_updated_data:
+        #     with session_context(self._get_session()):
+        #         with reactive.isolate():
+        #             self._updated_data = reactive.Value(None)
+
+        #             # # Update the styles within the reactive event so that
+        #             # # `self._set_cell_patch_map_patches()` does not need to become async
+        #             # @reactive.effect
+        #             # @reactive.event(self._updated_data)
+        #             # async def _send_data_update():
+        #             #     # Be sure this is called within `isolate()` to isolate any reactivity
+        #             #     # It currently is, as `@reactive.event()` is being used
+        #             #     await self._send_data_update()
+
+        # if reset is True:
+
+        #     # everything naturally resets
+        #     ...
+        # else:
+
+        print("updating data")
+
+        cur_nw_data = self._nw_data()
+        new_nw_data = as_data_frame(data)
+
+        # if cur_nw_data.shape[0] != new_nw_data.shape[0]:
+        #     raise ValueError(
+        #         "The number of rows in the new data does not match the number of rows in the old data."
+        #     )
+        # if cur_nw_data.shape[1] != new_nw_data.shape[1]:
+        #     raise ValueError(
+        #         "The number of columns in the new data does not match the number of columns in the old data."
+        #     )
+
+        # for cur_column, new_column in zip(cur_nw_data.columns, new_nw_data.columns):
+        #     if cur_column != new_column:
+        #         missing_cols = set(cur_nw_data.columns) - set(new_nw_data.columns)
+        #         if missing_cols:
+        #             raise ValueError(f"The new data is missing columns: {missing_cols}")
+
+        #         raise ValueError(
+        #             "The columns in the new data do not match the columns in the old data."
+        #         )
+
+        # for i, cur_col_dtype, new_col_dtype in zip(
+        #     range(len(cur_nw_data.columns)),
+        #     cur_nw_data.schema.dtypes(),
+        #     new_nw_data.schema.dtypes(),
+        # ):
+        #     if cur_col_dtype != new_col_dtype:
+        #         raise ValueError(
+        #             f"The column `{cur_nw_data.columns[i]}` type does not match existing type. New: `{new_col_dtype}`. Current: {cur_col_dtype}`."
+        #         )
+
+        # Reset patches
+        # Set the new data
+        print("setting patch map and updated_data")
+        self._cell_patch_map.set({})
+        self._updated_data.set(data)
+
+        await self._send_message_to_browser(
+            "updateData",
+            {
+                "data": serialize_frame(data)["data"],
+            },
+        )
+
+        # action_type = warning if reset is None else error # error when reset = False
+        # for each quality, display any error messages with the action_type
+        #     verify new data and old data have same column types
+        #     verify all existing edits and selections are within the bounds of the new data
+
+        # Send message to browser with `data` and `reset`
+        return
+
     def auto_output_ui(self) -> Tag:
         return ui.output_data_frame(id=self.output_id)
 
@@ -846,6 +969,7 @@ class data_frame(
             )
 
     async def render(self) -> JsonifiableDict | None:
+        print("rendering data frame")
         # Reset value
         self._reset_reactives()
         self._reset_patches_handler()
@@ -879,6 +1003,7 @@ class data_frame(
                 },
                 "selectionModes": self.selection_modes().as_dict(),
             }
+            print("done render")
             return frame_render_to_jsonifiable(ret)
 
     async def _send_message_to_browser(self, handler: str, obj: dict[str, Any]):

@@ -8,8 +8,6 @@ from shiny.express import input, render, ui
 
 pd_df = palmerpenguins.load_penguins_raw().iloc[0:2, 0:2]
 
-nw_df = nw.from_native(pd_df, eager_only=True)
-
 with ui.card():
 
     ui.input_action_button("update_btn", "Update cell")

@@ -158,6 +158,10 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
    * Set a cell's state or edit value in the `cellEditMap`
    */
   const setCellEditMapAtLoc = _cellEditMap.setCellEditMapAtLoc;
+  /**
+   * Reset the `cellEditMap` to an empty state
+   */
+  const resetCellEditMap = _cellEditMap.resetCellEditMap;
 
   /**
    * Determines if the user is allowed to edit cells in the table.
@@ -499,6 +503,35 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
       );
     };
   }, [columns, id, setCellEditMapAtLoc, setSorting, setTableData]);
+
+  useEffect(() => {
+    const handleUpdateData = (
+      event: CustomEvent<{
+        data: PandasData<unknown>["data"];
+      }>
+    ) => {
+      const evtData = event.detail.data;
+
+      console.log("new data", evtData);
+
+      resetCellEditMap();
+      setTableData(evtData);
+    };
+
+    if (!id) return;
+
+    const element = document.getElementById(id);
+    if (!element) return;
+
+    element.addEventListener("updateData", handleUpdateData as EventListener);
+
+    return () => {
+      element.removeEventListener(
+        "updateData",
+        handleUpdateData as EventListener
+      );
+    };
+  }, [columns, id, resetCellEditMap, setTableData]);
 
   useEffect(() => {
     const handleColumnSort = (
