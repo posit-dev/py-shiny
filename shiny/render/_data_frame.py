@@ -507,6 +507,8 @@ class data_frame(
         @reactive.effect
         @reactive.event(self._cell_patch_map)
         async def _update_styles():
+            # Be sure this is called within `isolate()` to isolate any reactivity
+            # It currently is, as `@reactive.event()` is being used
             await self._attempt_update_cell_style()
 
     def _get_session(self) -> Session:

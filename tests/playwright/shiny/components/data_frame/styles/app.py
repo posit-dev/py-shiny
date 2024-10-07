@@ -116,12 +116,9 @@ def mod_server(
     @render.data_frame
     def fn_styles():
 
-        counter = 0
-
         def df_styles_fn(
             data: IntoDataFrame,
         ) -> list[render.StyleInfo]:
-            nonlocal counter
 
             def style_is_everywhere(style_info: render.StyleInfo):
                 return (style_info.get("rows", None) is None) and (
@@ -130,9 +127,9 @@ def mod_server(
 
             everywhere_styles = [s for s in df_styles if style_is_everywhere(s)]
 
-            counter = counter + 1
-            if counter > len(df_styles) - len(everywhere_styles):
-                counter = 1
+            patch_size = len(fn_styles._cell_patch_map().keys()) + 1
+            if patch_size > len(df_styles) - len(everywhere_styles):
+                patch_size = 1
 
             ret: list[render.StyleInfo] = []
             for style_info in df_styles:
@@ -142,7 +139,7 @@ def mod_server(
                 if style_is_everywhere(style_info):
                     continue
                 ret.append(style_info)
-                if len(ret) >= counter:
+                if len(ret) >= patch_size:
                     break
             return ret
 
