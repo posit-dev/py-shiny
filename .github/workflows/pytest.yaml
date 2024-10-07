@@ -17,7 +17,7 @@ jobs:
     strategy:
       matrix:
         # "3.10" must be a string; otherwise it is interpreted as 3.1.
-        python-version: ["3.13.0-rc.3", "3.12", "3.11", "3.10", "3.9"]
+        python-version: ["3.13", "3.12", "3.11", "3.10", "3.9"]
         os: [ubuntu-latest, windows-latest, macOS-latest]
         exclude:
           - python-version: ${{ github.event.pull_request.draft && '3.11' }}
@@ -107,7 +107,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.13.0-rc.3", "3.12", "3.11", "3.10", "3.9"]
+        python-version: ["3.13", "3.12", "3.11", "3.10", "3.9"]
         browser: ["chromium", "firefox", "webkit"]
         exclude:
           - python-version: ${{ github.event.pull_request.draft && '3.11' }}
@@ -155,7 +155,7 @@ jobs:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        python-version: ["3.13.0-rc.3", "3.12", "3.11", "3.10", "3.9"]
+        python-version: ["3.13", "3.12", "3.11", "3.10", "3.9"]
         browser: ["chromium", "firefox", "webkit"]
         exclude:
           - python-version: ${{ github.event.pull_request.draft && '3.11' }}
