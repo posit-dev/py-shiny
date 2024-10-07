@@ -1212,12 +1212,10 @@ class OutputDataFrame(UiWithContainer):
             The maximum time to wait for the action to complete. Defaults to `None`.
         """
         # reset all filters
-        all_input_handles = self.loc_column_filter.locator(
-            "> input, > div > input"
-        ).element_handles()
-        for input_handle in all_input_handles:
-            input_handle.scroll_into_view_if_needed()
-            input_handle.fill("", timeout=timeout)
+        all_input_locs = self.loc_column_filter.locator("> input, > div > input")
+        for i in range(all_input_locs.count()):
+            input_el = all_input_locs.nth(i)
+            input_el.fill("", timeout=timeout)
 
         if filter is None:
             return

@@ -1,203 +1,200 @@
-# Note - barret 2024-07-08; When we adopt `narwhals` support, we should remove the singledispatch and instead always use `narwhals`. In addition, we should return the native type of a native type was originally provided. (Or maintain the narwhals object, if a narwhals object was provided.)
-
 from __future__ import annotations
 
-from functools import singledispatch
-from typing import Any, List, Tuple, cast
+from typing import Any, List, TypedDict, cast
 
-from htmltools import TagNode
+import narwhals.stable.v1 as nw
+import orjson
 
-from ..._typing_extensions import TypeIs
-from ...session import require_active_session
-from ._html import maybe_as_cell_html
-
-# from ...types import Jsonifiable
+from ...session import Session, require_active_session
+from ...types import Jsonifiable, JsonifiableDict
+from ._html import as_cell_html, ui_must_be_processed
 from ._types import (
     CellPatch,
+    CellValue,
     ColsList,
-    DataFrameLike,
-    DataFrameLikeT,
+    DataFrame,
+    DataFrameT,
+    DType,
     FrameDtype,
     FrameJson,
-    ListSeriesLike,
+    IntoDataFrame,
+    IntoDataFrameT,
     PandasCompatible,
-    PdDataFrame,
-    PdSeries,
-    PlDataFrame,
-    PlSeries,
     RowsList,
-    SeriesLike,
 )
 
 __all__ = (
-    "is_data_frame_like",
-    # "as_data_frame_like",
-    "frame_columns",
+    "as_data_frame",
+    "data_frame_to_native",
     "apply_frame_patches",
     "serialize_dtype",
     "serialize_frame",
     "subset_frame",
-    "get_frame_cell",
-    "frame_shape",
-    "copy_frame",
-    "frame_column_names",
 )
+
+########################################################################################
+# Narwhals
+#
+# This module contains functions for working with data frames. It is a wrapper
+# around the Narwhals library, which provides a unified interface for working with
+# data frames (e.g. Pandas and Polars).
+#
+# The functions in this module are used to:
+# * convert data frames to and from the Narwhals format,
+# * apply patches to data frames,
+# * serialize data frames to JSON,
+# * subset data frames,
+# * and get information about data frames (e.g. shape, column names).
+#
+# The functions in this module are used by the Shiny framework to work with data frames.
+#
+# For more information on the Narwhals library, see:
+# * Intro https://narwhals-dev.github.io/narwhals/basics/dataframe/
+# * `nw.DataFrame`: https://narwhals-dev.github.io/narwhals/api-reference/dataframe/
+# * `nw.typing.IntoDataFrameT`: https://narwhals-dev.github.io/narwhals/api-reference/typing/#intodataframet
+#
+########################################################################################
+
 
 # as_frame -----------------------------------------------------------------------------
 
 
-def as_data_frame_like(
-    data: DataFrameLikeT,
-) -> DataFrameLikeT:
-    if is_data_frame_like(data):
-        return data
+def data_frame_to_native(data: DataFrame[IntoDataFrameT]) -> IntoDataFrameT:
+    return nw.to_native(data)
 
+
+def as_data_frame(
+    data: IntoDataFrameT | DataFrame[IntoDataFrameT],
+) -> DataFrame[IntoDataFrameT]:
+    if isinstance(data, DataFrame):
+        return data  # pyright: ignore[reportUnknownVariableType]
+    try:
+        return nw.from_native(data, eager_only=True)
+    except TypeError as e:
+        try:
+            compatible_data = compatible_to_pandas(data)
+            return nw.from_native(compatible_data, eager_only=True)
+        except TypeError:
+            # Couldn't convert to pandas, so raise the original error
+            raise e
+
+
+def compatible_to_pandas(
+    data: IntoDataFrameT,
+) -> IntoDataFrameT:
+    """
+    Convert data to pandas, if possible.
+
+    Should only call this method if Narwhals can not handle the data directly.
+    """
     # Legacy support for non-Pandas/Polars data frames that were previously supported
     # and converted to pandas
     if isinstance(data, PandasCompatible):
         from ..._deprecated import warn_deprecated
 
         warn_deprecated(
-            "Returned data frame data values that are not Pandas or Polars `DataFrame`s are currently not supported. "
-            "A `.to_pandas()` was found on your object and will be called. "
+            "A `.to_pandas()` was found on your data object and will be called. "
             "To remove this warning, please call `.to_pandas()` on your data "
             "and use the pandas result in your returned value. "
-            "In the future, this will raise an error."
+            "In the future, this will raise an error.",
+            stacklevel=3,
         )
         return data.to_pandas()
 
-    raise TypeError(f"Unsupported type: {type(data)}")
-
-
-# @singledispatch
-# def is_data_frame_like(
-#     data: object,
-# ) -> bool:
-#     return False
-
-
-# @is_data_frame_like.register
-# def _(data: PdDataFrame) -> bool:
-#     return True
-
-
-# @is_data_frame_like.register
-# def _(data: PlDataFrame) -> bool:
-#     return True
-
-
-def is_data_frame_like(
-    data: DataFrameLikeT | object,
-) -> TypeIs[DataFrameLikeT]:
-    if isinstance(data, (PdDataFrame, PlDataFrame)):
-        return True
-
-    return False
-
-
-# frame_columns ------------------------------------------------------------------------
-
-
-@singledispatch
-def frame_columns(data: DataFrameLike) -> ListSeriesLike:
-    raise TypeError(f"Unsupported type: {type(data)}")
-
-
-@frame_columns.register
-def _(data: PdDataFrame) -> ListSeriesLike:
-    ret = [cast(PlSeries, data[col]) for col in data.columns]
-    return ret
-
-
-@frame_columns.register
-def _(data: PlDataFrame) -> ListSeriesLike:
-    return data.get_columns()
+    raise TypeError(f"Unsupported data type: {type(data)}")
 
 
 # apply_frame_patches --------------------------------------------------------------------
-
-
-def apply_frame_patches__typed(
-    data: DataFrameLikeT, patches: List[CellPatch]
-) -> DataFrameLikeT:
-    return cast(DataFrameLikeT, apply_frame_patches(data, patches))
-
-
-@singledispatch
 def apply_frame_patches(
-    data: DataFrameLike,
+    nw_data: DataFrame[IntoDataFrameT],
     patches: List[CellPatch],
-) -> DataFrameLike:
-    raise TypeError(f"Unsupported type: {type(data)}")
+) -> DataFrame[IntoDataFrameT]:
+    # data = data.clone()
 
+    if len(patches) == 0:
+        return nw_data
 
-@apply_frame_patches.register
-def _(data: PdDataFrame, patches: List[CellPatch]) -> PdDataFrame:
-    import pandas as pd
+    # Apply the patches
 
-    # Enable copy-on-write mode for the data;
-    # Use `deep=False` to avoid copying the full data; CoW will copy the necessary data when modified
-    with pd.option_context("mode.copy_on_write", True):
-        # Apply patches!
-        data = data.copy(deep=False)
-        for cell_patch in patches:
-            data.iat[  # pyright: ignore[reportUnknownMemberType]
-                cell_patch["row_index"],
-                cell_patch["column_index"],
-            ] = cell_patch["value"]
+    # TODO-future-barret; Might be faster to _always_ store the patches as a
+    #     `cell_patches_by_column` object. Then iff they need the patches would we
+    #     deconstruct them into a flattened list. Where as this conversion is being
+    #     performed on every serialization of the data frame payload
 
-        return data
+    # # https://discord.com/channels/1235257048170762310/1235257049626181656/1283415086722977895
+    # # Using narwhals >= v1.7.0
+    # @nw.narwhalify
+    # def func(df):
+    #     return df.with_columns(
+    #         df['a'].scatter([0, 1], [999, 888]),
+    #         df['b'].scatter([0, 1], [777, 555]),
+    #     )
 
-
-@apply_frame_patches.register
-def _(data: PlDataFrame, patches: List[CellPatch]) -> PlDataFrame:
-    data = data.clone()
+    # Group patches by column
+    # This allows for a single column to be updated in a single operation (rather than multiple updates to the same column)
+    #
+    # In; patches: List[Dict[row_index: int, column_index: int, value: Any]]
+    # Out; cell_patches_by_column: Dict[column_name: str, List[Dict[row_index: int, value: Any]]]
+    #
+    cell_patches_by_column: dict[str, ScatterValues] = {}
     for cell_patch in patches:
-        data[cell_patch["row_index"], cell_patch["column_index"]] = cell_patch["value"]
+        column_name = nw_data.columns[cell_patch["column_index"]]
+        if column_name not in cell_patches_by_column:
+            cell_patches_by_column[column_name] = {
+                "row_indexes": [],
+                "values": [],
+            }
 
-    return data
+        # Append the row index and value to the column information
+        cell_patches_by_column[column_name]["row_indexes"].append(
+            cell_patch["row_index"]
+        )
+        cell_patches_by_column[column_name]["values"].append(cell_patch["value"])
+
+    # Upgrade the Scatter info to new column Series objects
+    scatter_columns = [
+        nw_data[column_name].scatter(
+            scatter_values["row_indexes"], scatter_values["values"]
+        )
+        for column_name, scatter_values in cell_patches_by_column.items()
+    ]
+    # Apply patches to the nw data
+    return nw_data.with_columns(*scatter_columns)
 
 
 # serialize_dtype ----------------------------------------------------------------------
+def serialize_dtype(col: nw.Series) -> FrameDtype:
 
+    from ._html import series_contains_htmltoolslike
 
-@singledispatch
-def serialize_dtype(col: SeriesLike) -> FrameDtype:
-    raise TypeError(f"Unsupported type: {type(col)}")
+    dtype: DType = col.dtype
 
+    if isinstance(dtype, nw.String):
+        type_ = "string"
 
-# TODO: we can't import DataFrameDtype at runtime, due to circular dependency. So
-# we import it during type checking. But this means we have to explicitly register
-# the dispatch type below.
-
-
-@serialize_dtype.register
-def _(col: PdSeries) -> FrameDtype:
-    from ._pandas import serialize_pd_dtype
-
-    return serialize_pd_dtype(col)
-
-
-@serialize_dtype.register
-def _(col: PlSeries) -> FrameDtype:
-    import polars as pl
-
-    from ._html import col_contains_shiny_html
-
-    if col.dtype.is_(pl.String):
-        if col_contains_shiny_html(col):
-            type_ = "html"
-        else:
-            type_ = "string"
-    elif col.dtype.is_numeric():
+    elif dtype.is_numeric():
         type_ = "numeric"
 
-    elif col.dtype.is_(pl.Categorical()):
+    elif isinstance(dtype, (nw.Categorical, nw.Enum)):
         categories = col.cat.get_categories().to_list()
         return {"type": "categorical", "categories": categories}
+    elif isinstance(dtype, nw.Boolean):
+        type_ = "boolean"
+    elif isinstance(dtype, nw.Date):
+        type_ = "date"
+    elif isinstance(dtype, nw.Datetime):
+        type_ = "datetime"
+    elif isinstance(dtype, nw.Duration):
+        type_ = "duration"
+    elif isinstance(dtype, nw.Object):
+        type_ = "object"
+        if series_contains_htmltoolslike(col):
+            type_ = "html"
+    elif isinstance(dtype, (nw.Struct, nw.List, nw.Array)):
+        type_ = "object"
     else:
         type_ = "unknown"
-        if col_contains_shiny_html(col):
+        if series_contains_htmltoolslike(col):
             type_ = "html"
 
     return {"type": type_}
@@ -205,194 +202,130 @@ def _(col: PlSeries) -> FrameDtype:
 
 # serialize_frame ----------------------------------------------------------------------
 
-
-@singledispatch
-def serialize_frame(data: DataFrameLike) -> FrameJson:
-    raise TypeError(f"Unsupported type: {type(data)}")
+RenderedDependency = dict[str, Jsonifiable]
 
 
-@serialize_frame.register
-def _(data: PdDataFrame) -> FrameJson:
-    from ._pandas import serialize_frame_pd
+def serialize_frame(into_data: IntoDataFrame) -> FrameJson:
 
-    return serialize_frame_pd(data)
+    data = as_data_frame(into_data)
 
+    type_hints = [serialize_dtype(data[col_name]) for col_name in data.columns]
 
-@serialize_frame.register
-def _(data: PlDataFrame) -> FrameJson:
-    import json
+    # TODO-future-barret; Swich serialization to "by column", rather than "by row"
+    # * This would allow for a single column to be serialized in a single operation
+    #   * This would allow for each column to capture the `"html"` type hint properly
+    #     for object and unknown columns. Currently, there is no way to determine which
+    #     cells are HTML-like during orjson serialization.
+    # * Even better, would be to move `orjson` serialization to the websocket
+    #   serialization.
+    #   * No need to serialize to JSON, then unserialize, then serialize again when
+    #     sending it to the client!
+    #   * The only serialization would occur during "send to browser"
+    #   * This approach would lose the ability to upgrade the column type hints to "html"
+    data_rows = data.rows(named=False)
 
-    type_hints = list(map(serialize_dtype, data))
-    data_by_row = list(map(list, data.rows()))
+    session: Session | None = None
+    html_deps: list[RenderedDependency] = []
 
-    # Shiny tag support
-    type_hints_type = [type_hint["type"] for type_hint in type_hints]
-    if "html" in type_hints_type:
-        session = require_active_session(None)
+    # Collect all html deps and dedupe them. Send the html separately from its deps
+    # Otherwise, serialize as `str()`
+    def default_orjson_serializer(val: Any) -> Jsonifiable:
+        nonlocal session
+        if ui_must_be_processed(val):
+            if session is None:
+                session = require_active_session(None)
 
-        def wrap_shiny_html_with_session(x: TagNode):
-            return maybe_as_cell_html(x, session=session)
+            processed_ui = session._process_ui(val)
+            deps = processed_ui["deps"]
+            if len(deps) > 0:
+                html_deps.extend(deps)
+            # Remove the deps from the rendered html as we'll send them separately
+            # Maintain expected structure so that the JS will attempt to add all
+            #   dependencies for patched cells in the same manner
+            processed_ui["deps"] = []
+            cell_html_obj = as_cell_html(processed_ui)
+            return cast(JsonifiableDict, cell_html_obj)
 
-        html_columns = [i for i, x in enumerate(type_hints_type) if x == "html"]
+        # All other values are serialized as strings
+        return str(val)
 
-        for html_column in html_columns:
-            for row in data_by_row:
-                row[html_column] = wrap_shiny_html_with_session(row[html_column])
+    data_val = orjson.loads(
+        orjson.dumps(
+            data_rows,
+            default=default_orjson_serializer,
+            # option=(orjson.OPT_NAIVE_UTC),
+        )
+    )
 
-    data_val = json.loads(json.dumps(data_by_row, default=str))
+    deduped_html_deps = (
+        _resolve_processed_dependencies(html_deps) if len(html_deps) > 1 else html_deps
+    )
 
     return {
-        # "index": list(range(len(data))),
         "columns": data.columns,
         "data": data_val,
         "typeHints": type_hints,
+        "htmlDeps": deduped_html_deps,
     }
 
 
 # subset_frame -------------------------------------------------------------------------
-def subset_frame__typed(
-    data: DataFrameLikeT, *, rows: RowsList = None, cols: ColsList = None
-) -> DataFrameLikeT:
-    return cast(DataFrameLikeT, subset_frame(data, rows=rows, cols=cols))
-
-
-@singledispatch
 def subset_frame(
-    data: DataFrameLike, *, rows: RowsList = None, cols: ColsList = None
-) -> DataFrameLike:
+    data: DataFrameT,
+    *,
+    rows: RowsList = None,
+    cols: ColsList = None,
+) -> DataFrameT:
     """Return a subsetted DataFrame, based on row positions and column names.
 
     Note that when None is passed, all rows or columns get included.
     """
-    # Note that this type signature assumes column names are strings things.
+    # Note that this type signature assumes column names are string objects.
     # This is always true in Polars, but not in Pandas (e.g. a column name could be an
     # int, or even a tuple of ints)
-    raise TypeError(f"Unsupported type: {type(data)}")
+
+    # The nested if-else structure is used to navigate around narwhals' typing system and lack of `:` operator outside of `[`, `]`.
+
+    if cols is None:
+        if rows is None:
+            return data
+        else:
+            # List still required https://github.com/narwhals-dev/narwhals/issues/1122
+            return data[list(rows), :]
+    else:
+        # `cols` is not None
+        col_names = [data.columns[col] if isinstance(col, int) else col for col in cols]
+
+        # Return a DataFrame with no rows or columns
+        # If there are no columns, there are no Series objects to support any rows
+        if len(col_names) == 0:
+            return data[[], []]
+
+        if rows is None:
+            return data[:, col_names]
+        else:
+            return data[rows, col_names]
 
 
-@subset_frame.register
-def _(
-    data: PdDataFrame,
-    *,
-    rows: RowsList = None,
-    cols: ColsList = None,
-) -> PdDataFrame:
-    # Enable copy-on-write mode for the data;
-    # Use `deep=False` to avoid copying the full data; CoW will copy the necessary data when modified
-    import pandas as pd
-
-    with pd.option_context("mode.copy_on_write", True):
-        # iloc requires integer positions, so we convert column name strings to ints, or
-        # the slice default.
-        indx_cols = (  # pyright: ignore[reportUnknownVariableType]
-            slice(None)
-            if cols is None
-            else [
-                (
-                    # Send in an array of size 1 and retrieve the first element
-                    data.columns.get_indexer_for(  # pyright: ignore[reportUnknownMemberType]
-                        [col]
-                    )[
-                        0
-                    ]
-                    if isinstance(col, str)
-                    else col
-                )
-                for col in cols
-            ]
-        )
-
-        # Force list when using a non-None value for pandas compatibility
-        indx_rows = list(rows) if rows is not None else slice(None)
-
-        return data.iloc[indx_rows, indx_cols]
+class ScatterValues(TypedDict):
+    row_indexes: list[int]
+    values: list[CellValue]
 
 
-@subset_frame.register
-def _(
-    data: PlDataFrame,
-    *,
-    rows: RowsList = None,
-    cols: ColsList = None,
-) -> PlDataFrame:
-    indx_cols = (
-        [col if isinstance(col, str) else data.columns[col] for col in cols]
-        if cols is not None
-        else slice(None)
-    )
-    indx_rows = rows if rows is not None else slice(None)
-    return data[indx_rows, indx_cols]
+# Direct copy of htmltools._core._resolve_dependencies
+# Need new method as we need to access dep values via `dep[NAME]` rather than `dep.NAME`
+def _resolve_processed_dependencies(
+    deps: list[RenderedDependency],
+) -> list[RenderedDependency]:
+    map: dict[str, RenderedDependency] = {}
+    for dep in deps:
+        dep_name = str(dep["name"])
+        if dep_name not in map:
+            map[dep_name] = dep
+        else:
+            dep_version = str(dep["version"])
+            cur_dep_version = str(map[dep_name]["version"])
+            if dep_version > cur_dep_version:
+                map[dep_name] = dep
 
-
-# get_frame_cell -----------------------------------------------------------------------
-
-
-@singledispatch
-def get_frame_cell(data: DataFrameLike, row: int, col: int) -> Any:
-    raise TypeError(f"Unsupported type: {type(data)}")
-
-
-@get_frame_cell.register
-def _(data: PdDataFrame, row: int, col: int) -> Any:
-    return (
-        data.iat[  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
-            row, col
-        ]
-    )
-
-
-@get_frame_cell.register
-def _(data: PlDataFrame, row: int, col: int) -> Any:
-    return data[row, col]
-
-
-# shape --------------------------------------------------------------------------------
-
-
-@singledispatch
-def frame_shape(data: DataFrameLike) -> Tuple[int, ...]:
-    raise TypeError(f"Unsupported type: {type(data)}")
-
-
-@frame_shape.register
-def _(data: PdDataFrame) -> Tuple[int, ...]:
-    return data.shape
-
-
-@frame_shape.register
-def _(data: PlDataFrame) -> Tuple[int, ...]:
-    return data.shape
-
-
-# copy_frame ---------------------------------------------------------------------------
-
-
-@singledispatch
-def copy_frame(data: DataFrameLike) -> DataFrameLike:
-    raise TypeError(f"Unsupported type: {type(data)}")
-
-
-@copy_frame.register
-def _(data: PdDataFrame) -> PdDataFrame:
-    return data.copy()
-
-
-@copy_frame.register
-def _(data: PlDataFrame) -> PlDataFrame:
-    return data.clone()
-
-
-# column_names -------------------------------------------------------------------------
-@singledispatch
-def frame_column_names(data: DataFrameLike) -> List[str]:
-    raise TypeError(f"Unsupported type: {type(data)}")
-
-
-@frame_column_names.register
-def _(data: PdDataFrame) -> List[str]:
-    return data.columns.to_list()
-
-
-@frame_column_names.register
-def _(data: PlDataFrame) -> List[str]:
-    return data.columns
+    return list(map.values())

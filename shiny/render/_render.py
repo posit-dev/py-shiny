@@ -8,7 +8,8 @@ from typing import TYPE_CHECKING, Any, Callable, Literal, Optional, Union, cast
 
 from htmltools import Tag, TagAttrValue, TagChild
 
-from ._data_frame_utils._types import PandasCompatible, PdDataFrame
+from ._data_frame_utils._tbl_data import as_data_frame
+from ._data_frame_utils._types import IntoDataFrame
 
 if TYPE_CHECKING:
 
@@ -443,11 +444,8 @@ class image(Renderer[ImgData]):
 # ======================================================================================
 
 
-TableResult = Union[PdDataFrame, PandasCompatible, None]
-
-
 @add_example(ex_dir="../api-examples/output_table")
-class table(Renderer[TableResult]):
+class table(Renderer[IntoDataFrame]):
     """
     Reactively render a pandas ``DataFrame`` object (or similar) as a basic HTML
     table.
@@ -500,7 +498,7 @@ class table(Renderer[TableResult]):
 
     def __init__(
         self,
-        _fn: Optional[ValueFn[TableResult]] = None,
+        _fn: Optional[ValueFn[IntoDataFrame]] = None,
         *,
         index: bool = False,
         classes: str = "table shiny-table w-auto",
@@ -515,7 +513,7 @@ class table(Renderer[TableResult]):
 
         # TODO: deal with kwargs collision with output_table
 
-    async def transform(self, value: TableResult) -> dict[str, Jsonifiable]:
+    async def transform(self, value: IntoDataFrame) -> dict[str, Jsonifiable]:
         import pandas
         import pandas.io.formats.style
 
@@ -527,13 +525,15 @@ class table(Renderer[TableResult]):
             )
         else:
             if not isinstance(value, pandas.DataFrame):
-                if not isinstance(value, PandasCompatible):
+                try:
+                    nw_data = as_data_frame(value)
+                except Exception as e:
                     raise TypeError(
                         "@render.table doesn't know how to render objects of type "
-                        f"'{str(type(value))}'. Return either a pandas.DataFrame, or an object "
-                        "that has a .to_pandas() method."
-                    )
-                value = value.to_pandas()
+                        f"'{str(type(value))}'. Return eagar data frames that can "
+                        "be handled by `narwhals`."
+                    ) from e
+                value = nw_data.to_pandas()
 
             html = cast(  # pyright: ignore[reportUnnecessaryCast]
                 str,

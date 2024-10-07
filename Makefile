@@ -216,17 +216,14 @@ ci-install-wheel: dist FORCE
 install-deps: FORCE ## install dependencies
 	pip install -e ".[dev,test]" --upgrade
 ci-install-deps: FORCE
-	uv pip install "htmltools @ git+https://github.com/posit-dev/py-htmltools.git"
 	uv pip install -e ".[dev,test]"
 
 install-docs: FORCE
 	pip install -e ".[dev,test,doc]"
-	pip install https://github.com/posit-dev/py-htmltools/tarball/main
 	pip install https://github.com/posit-dev/py-shinylive/tarball/main
 ci-install-docs: FORCE
-	uv pip install -e ".[dev,test,doc]"
-	uv pip install "htmltools @ git+https://github.com/posit-dev/py-htmltools.git" \
-			"shinylive @ git+https://github.com/posit-dev/py-shinylive.git"
+	uv pip install -e ".[dev,test,doc]" \
+		"shinylive @ git+https://github.com/posit-dev/py-shinylive.git"
 
 ci-install-rsconnect: FORCE
 	uv pip install "rsconnect-python @ git+https://github.com/rstudio/rsconnect-python.git"

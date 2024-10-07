@@ -98,18 +98,22 @@ class AccordionPanel(
         """
         playwright_expect(self.loc_body).to_have_text(value, timeout=timeout)
 
-    def expect_icon(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+    def expect_icon(self, exists: bool, *, timeout: Timeout = None) -> None:
         """
-        Expects the accordion panel icon to have the specified text.
+        Expects the accordion panel icon to exist or not.
 
         Parameters
         ----------
-        value
-            The expected text pattern or string.
+        exists
+            `True` if the icon is expected to exist, `False` otherwise.
         timeout
             The maximum time to wait for the icon to appear. Defaults to `None`.
         """
-        playwright_expect(self.loc_icon).to_have_text(value, timeout=timeout)
+        icon_child_loc = self.loc_icon.locator("> *")
+        if exists:
+            playwright_expect(icon_child_loc).not_to_have_count(0, timeout=timeout)
+        else:
+            playwright_expect(icon_child_loc).to_have_count(0, timeout=timeout)
 
     def expect_open(self, value: bool, *, timeout: Timeout = None) -> None:
         """
@@ -297,15 +301,67 @@ class Accordion(
         """
         if isinstance(open, str):
             open = [open]
-        for element in self.loc.element_handles():
-            element.wait_for_element_state(state="visible", timeout=timeout)
-            element.scroll_into_view_if_needed(timeout=timeout)
-            elem_value = element.get_attribute("data-value")
+
+        # TODO-future: XOR on the next open state and the current open state
+        for i in range(self.loc.count()):
+            el_loc = self.loc.nth(i)
+            el_loc.element_handle().wait_for_element_state(
+                state="visible", timeout=timeout
+            )
+            el_loc.scroll_into_view_if_needed(timeout=timeout)
+
+            elem_value = el_loc.get_attribute("data-value")
             if elem_value is None:
                 raise ValueError(
                     "Accordion panel does not have a `data-value` attribute"
                 )
             self.accordion_panel(elem_value).set(elem_value in open, timeout=timeout)
+
+    def expect_class(
+        self,
+        class_name: str,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expects the accordion to have the specified class.
+
+        Parameters
+        ----------
+        class_name
+            The class name to expect.
+        timeout
+            The maximum time to wait for the class to appear. Defaults to `None`.
+        """
+        _expect_class_to_have_value(
+            self.loc_container,
+            class_name,
+            has_class=True,
+            timeout=timeout,
+        )
+
+    def expect_multiple(
+        self,
+        value: bool,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expects the accordion to be multiple or not.
+
+        Parameters
+        ----------
+        value
+            `True` if the accordion is expected to be multiple, `False` otherwise.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
+        _expect_class_to_have_value(
+            self.loc_container,
+            "autoclose",
+            has_class=not value,
+            timeout=timeout,
+        )
 
     def accordion_panel(
         self,
