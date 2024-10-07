@@ -33,12 +33,12 @@ runs:
       - name: Install dependencies
         shell: bash
         run: |
-          make install-deps
+          make ci-install-deps
 
       - name: Install
         shell: bash
         run: |
-          make install-wheel
+          make ci-install-wheel
 
       - name: Pip list
         shell: bash
