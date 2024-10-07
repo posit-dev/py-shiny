@@ -1,3 +1,9 @@
+# pyright: reportUntypedFunctionDecorator=false
+# pyright: reportUnknownParameterType=false
+# pyright: reportUnknownMemberType=false
+# pyright: reportInvalidTypeForm=false
+# pyright: reportUnknownArgumentType=false
+# pyright: reportArgumentType=false
 from __future__ import annotations
 
 import warnings

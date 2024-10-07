@@ -1,3 +1,9 @@
+# pyright: reportUnknownParameterType=false
+# pyright: reportUnknownMemberType=false
+# pyright: reportInvalidTypeForm=false
+# pyright: reportUntypedFunctionDecorator=false
+# pyright: reportUnknownArgumentType=false
+# pyright: reportFunctionMemberAccess=false
 from __future__ import annotations
 
 import asyncio
