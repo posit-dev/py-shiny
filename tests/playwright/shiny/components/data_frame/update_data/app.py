@@ -8,7 +8,7 @@ import pandas as pd
 from shiny import reactive
 from shiny.express import input, render, ui
 
-pd_df = palmerpenguins.load_penguins_raw()
+pd_data = palmerpenguins.load_penguins_raw()
 
 
 with ui.card():
@@ -19,9 +19,9 @@ with ui.card():
     ui.h4("Data")
 
     @render.data_frame
-    def dt():
+    def df():
         return render.DataGrid(
-            pd_df.iloc[:, 0:2],
+            pd_data.iloc[:, 0:2],
             selection_mode="rows",
             filters=True,
             editable=True,
@@ -30,18 +30,18 @@ with ui.card():
     ui.h4("Selected data")
 
     @render.data_frame
-    def dt_selected():
-        return dt.data_view(selected=True)
+    def df_selected():
+        return df.data_view(selected=True)
 
     @reactive.effect
-    @reactive.event(dt.cell_selection)
+    @reactive.event(df.cell_selection)
     def _on_cell_selection():
-        print("Cell selected", dt.cell_selection())
+        print("Cell selected", df.cell_selection())
         return
 
 
 # Reactive value to store the un-subsetted data
-full_data = reactive.value(pd_df)
+full_data = reactive.value(pd_data)
 
 
 @reactive.effect
@@ -54,7 +54,7 @@ async def shift_data():
     k = 2
     shift = (k * input.shift_btn()) % full_data().shape[0]
     subsetted_data = full_data().iloc[(0 + shift) : (k + shift), 0:2]
-    await dt.update_data(subsetted_data)
+    await df.update_data(subsetted_data)
     return
 
 
@@ -69,14 +69,13 @@ async def different_data():
         "input.different_btn()", input.different_btn(), input.different_btn() % 2 == 0
     )
     if input.different_btn() % 2 == 0:
-        # await dt.update_data(pd_df.iloc[:, 0:2])
-        await dt.update_data(pd_df)
-        full_data.set(pd_df)
+        await df.update_data(pd_data)
+        full_data.set(pd_data)
         return
 
     new_df = pd.DataFrame(
         {
-            "studyName": [
+            "Letter": [
                 "a",
                 "b",
                 "c",
@@ -104,9 +103,9 @@ async def different_data():
                 "y",
                 "z",
             ],
-            "Sample Number": [-1 * i for i in range(1, 27)],
+            "Negative index": [-1 * i for i in range(1, 27)],
         },
     )
-    await dt.update_data(new_df)
+    await df.update_data(new_df)
     full_data.set(new_df)
     return
