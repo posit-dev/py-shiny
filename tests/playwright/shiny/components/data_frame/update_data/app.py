@@ -40,7 +40,8 @@ with ui.card():
         return
 
 
-data_val = reactive.value(pd_df)
+# Reactive value to store the un-subsetted data
+full_data = reactive.value(pd_df)
 
 
 @reactive.effect
@@ -51,8 +52,9 @@ async def shift_data():
         raise ValueError("update_btn must exist")
 
     k = 2
-    shift = (k * input.shift_btn()) % data_val().shape[0]
-    await dt.update_data(data_val().iloc[(0 + shift) : (k + shift), 0:2])
+    shift = (k * input.shift_btn()) % full_data().shape[0]
+    subsetted_data = full_data().iloc[(0 + shift) : (k + shift), 0:2]
+    await dt.update_data(subsetted_data)
     return
 
 
@@ -69,7 +71,7 @@ async def different_data():
     if input.different_btn() % 2 == 0:
         # await dt.update_data(pd_df.iloc[:, 0:2])
         await dt.update_data(pd_df)
-        data_val.set(pd_df)
+        full_data.set(pd_df)
         return
 
     new_df = pd.DataFrame(
@@ -106,5 +108,5 @@ async def different_data():
         },
     )
     await dt.update_data(new_df)
-    data_val.set(new_df)
+    full_data.set(new_df)
     return
