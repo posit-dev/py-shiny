@@ -25,3 +25,18 @@ def test_data_frame_data_type(
     controller.OutputCode(page, "nw_data_view_selected").expect_value(
         re.compile(r"narwhals")
     )
+
+    controller.OutputCode(page, "pd_type").expect_value(re.compile(r"pandas"))
+    controller.OutputCode(page, "pd_data").expect_value(re.compile(r"pandas"))
+    controller.OutputCode(page, "pd_data_view").expect_value(re.compile(r"pandas"))
+    controller.OutputCode(page, "pd_data_view_selected").expect_value(
+        re.compile(r"pandas")
+    )
+
+    # modin tests
+    controller.OutputCode(page, "mpd_type").expect_value(re.compile(r"modin"))
+    controller.OutputCode(page, "mpd_data").expect_value(re.compile(r"modin"))
+    controller.OutputCode(page, "mpd_data_view").expect_value(re.compile(r"modin"))
+    controller.OutputCode(page, "mpd_data_view_selected").expect_value(
+        re.compile(r"modin")
+    )
