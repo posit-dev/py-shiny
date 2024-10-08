@@ -298,7 +298,7 @@ class data_frame(
         return list(self._cell_patch_map().values())
 
     @reactive_calc_method
-    def _data_patched(self) -> DataFrame[IntoDataFrameT]:
+    def _nw_data_patched(self) -> DataFrame[IntoDataFrameT]:
         """
         Reactive calculation of the data frame's patched data.
 
@@ -308,6 +308,18 @@ class data_frame(
             The data frame with all the user's edit patches applied to it.
         """
         return apply_frame_patches(self._nw_data(), self.cell_patches())
+
+    @reactive_calc_method
+    def data_patched(self) -> IntoDataFrameT:
+        """
+        Get the patched data frame.
+
+        Returns
+        -------
+        :
+            The patched data frame.
+        """
+        return self._nw_data_to_original_type(self._nw_data_patched())
 
     # Apply filtering and sorting
     # https://github.com/posit-dev/py-shiny/issues/1240
@@ -347,7 +359,7 @@ class data_frame(
         else:
             rows = self.data_view_rows()
 
-        nw_data = subset_frame(self._data_patched(), rows=rows)
+        nw_data = subset_frame(self._nw_data_patched(), rows=rows)
 
         patched_subsetted_into_data = self._nw_data_to_original_type(nw_data)
 
@@ -766,7 +778,7 @@ class data_frame(
         if not callable(styles_fn):
             return
 
-        patched_into_data = self._nw_data_to_original_type(self._data_patched())
+        patched_into_data = self._nw_data_to_original_type(self._nw_data_patched())
         new_styles = as_browser_style_infos(styles_fn, into_data=patched_into_data)
 
         await self._send_message_to_browser(
