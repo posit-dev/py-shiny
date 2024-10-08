@@ -7,7 +7,7 @@ import palmerpenguins
 import polars as pl
 from narwhals.stable.v1.typing import IntoDataFrame
 
-from shiny import App, Inputs, Outputs, Session, module, render, ui
+from shiny import App, Inputs, Outputs, Session, module, reactive, render, ui
 
 # Load the dataset
 
@@ -127,7 +127,8 @@ def mod_server(
 
             everywhere_styles = [s for s in df_styles if style_is_everywhere(s)]
 
-            patch_size = len(fn_styles._cell_patch_map().keys()) + 1
+            with reactive.isolate():
+                patch_size = len(fn_styles._cell_patch_map().keys()) + 1
             if patch_size > len(df_styles) - len(everywhere_styles):
                 patch_size = 1
 
