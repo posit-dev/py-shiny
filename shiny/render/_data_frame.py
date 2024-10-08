@@ -1,6 +1,5 @@
 # TODO-barret; Remove debug print statements!
 # TODO-barret; Remove dead code in `.update_data()` if approach is correct
-# TODO-barret; Update styles on cell update
 
 from __future__ import annotations
 
@@ -174,10 +173,6 @@ class data_frame(
     Reactive value of the data frame's updated data value object.
     """
 
-    @property
-    def _has_set_updated_data(self) -> bool:
-        return hasattr(self, "_updated_data")
-
     def _req_value(self):
         """
         Ensure that the value is not `None`.
@@ -195,7 +190,7 @@ class data_frame(
             raise RuntimeError("req() failed to raise a silent error.")
         return value
 
-    # @reactive_calc_method
+    @reactive_calc_method
     def data(self) -> IntoDataFrameT:
         """
         Reactive calculation of the data frame's render method.
@@ -213,13 +208,11 @@ class data_frame(
             The original data frame returned from the render method.
         """
         print("getting value data")
-        if self._has_set_updated_data:
-            updated_data = self._updated_data()
-            print("updated_data\n", updated_data)
-            # iff updated data exists, return it
-            # Can be reset on a followup render call
-            if updated_data is not None:
-                return updated_data
+        updated_data = self._updated_data()
+        # iff updated data exists, return it
+        # Can be reset on a followup render call
+        if updated_data is not None:
+            return updated_data
         return self._req_value().data
 
     @reactive_calc_method
@@ -514,8 +507,7 @@ class data_frame(
     def _reset_reactives(self) -> None:
         print("resetting reactives")
         self._value.set(None)
-        if self._has_set_updated_data:
-            self._updated_data.set(None)
+        self._updated_data.set(None)
         self._cell_patch_map.set({})
 
     def _init_reactives(self) -> None:
@@ -525,11 +517,16 @@ class data_frame(
         self._cell_patch_map = reactive.Value({})
         self._updated_data = reactive.Value(None)
 
-        # Update the styles any time the cell patch map updates
+        # Update the styles any time the cell patch map or new data updates
         @reactive.effect
-        # TODO-barret; This is too often! Find a better balance
-        @reactive.event(self._cell_patch_map, self._updated_data)
-        async def _send_style_update():
+        @reactive.event(
+            self._cell_patch_map,
+            self._updated_data,
+            # Do not run the first time through!
+            # The styles are being sent with the initial blob.
+            ignore_init=True,
+        )
+        async def _():
             # Be sure this is called within `isolate()` to isolate any reactivity
             # It currently is, as `@reactive.event()` is being used
             await self._attempt_update_cell_style()
@@ -736,6 +733,7 @@ class data_frame(
             cell_patch_map[(row_index, column_index)] = patch
 
         # Once all patches are set, update the cell patch map with new version
+        print("setting patch map")
         self._cell_patch_map.set(cell_patch_map)
 
         # Upgrade any HTML-like content to `CellHtml` json objects
@@ -839,10 +837,6 @@ class data_frame(
         data: IntoDataFrameT,
         # , *, reset: bool | None = None
     ) -> None:
-        # # Init reactive values
-        # if not self._has_set_updated_data:
-        #     with session_context(self._get_session()):
-        #         self._updated_data = reactive.Value(None)
 
         # if cur_nw_data.shape[0] != new_nw_data.shape[0]:
         #     raise ValueError(
