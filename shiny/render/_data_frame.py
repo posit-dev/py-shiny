@@ -1,4 +1,3 @@
-# TODO-barret; Remove debug print statements!
 # TODO-barret; Remove dead code in `.update_data()` if approach is correct
 
 from __future__ import annotations
@@ -207,7 +206,6 @@ class data_frame(
         :
             The original data frame returned from the render method.
         """
-        print("getting value data")
         updated_data = self._updated_data()
         # iff updated data exists, return it
         # Can be reset on a followup render call
@@ -505,7 +503,6 @@ class data_frame(
         return tuple(column_filter)
 
     def _reset_reactives(self) -> None:
-        print("resetting reactives")
         self._value.set(None)
         self._updated_data.set(None)
         self._cell_patch_map.set({})
@@ -733,7 +730,6 @@ class data_frame(
             cell_patch_map[(row_index, column_index)] = patch
 
         # Once all patches are set, update the cell patch map with new version
-        print("setting patch map")
         self._cell_patch_map.set(cell_patch_map)
 
         # Upgrade any HTML-like content to `CellHtml` json objects
@@ -762,7 +758,6 @@ class data_frame(
 
     async def _attempt_update_cell_style(self) -> None:
 
-        print("updateStyles!")
         rendered_value = self._value()
         if not isinstance(rendered_value, (DataGrid, DataTable)):
             return
@@ -869,7 +864,6 @@ class data_frame(
 
         # Reset patches
         # Set the new data
-        print("setting patch map and updated_data")
         self._cell_patch_map.set({})
         self._updated_data.set(data)
 
@@ -924,7 +918,6 @@ class data_frame(
             )
 
     async def render(self) -> JsonifiableDict | None:
-        print("rendering data frame")
         # Reset value
         self._reset_reactives()
         self._reset_patches_handler()
@@ -958,7 +951,6 @@ class data_frame(
                 },
                 "selectionModes": self.selection_modes().as_dict(),
             }
-            print("done render")
             return frame_render_to_jsonifiable(ret)
 
     async def _send_message_to_browser(self, handler: str, obj: dict[str, Any]):
