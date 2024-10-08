@@ -109,21 +109,45 @@ class data_frame(
     be able to edit the cells in the table. After a cell has been edited, the edited
     value will be sent to the server for processing. The handling methods are set via
     `@<data_frame_renderer>.set_patch_fn` or `@<data_frame_renderer>.set_patches_fn`
-    decorators. By default, both decorators will return a string value.
+    decorators. By default, both decorators will return the corresponding value as a
+    string.
 
-    To access the data viewed by the user, use `<data_frame_renderer>.data_view()`. This
-    method will sort, filter, and apply any patches to the data frame as viewed by the
-    user within the browser. This is a shallow copy of the original data frame. It is
-    possible that alterations to `data_view` could alter the original `data` data frame.
+    Data methods
+    ------------
 
-    To access the original data, use `<data_frame_renderer>.data()`. This is a quick
-    reference to the original pandas or polars data frame that was returned from the
-    app's render function. If it is mutated in place, it **will** modify the original
-    data.
+    There are several methods available to inspect and update data frame renderer. It is
+    important to know the side effects of each method to know how they interact with
+    each other.
 
-    Note... if the data frame renderer is re-rendered due to reactivity, then
-    the user's edits, sorting, and filtering will be lost. We hope to improve upon this
-    in the future.
+    * Data frame render method:
+        * When called, returns the original data frame (possibly wrapped in a `DataGrid`
+          or `DataTable`) that was returned from the app's render function.
+        * When this method is reactively executed, **all user state is reset**. This
+          includes the user's edits, sorting, and filtering.
+    * `.data()`:
+        * Returns the render method's underlying data frame or the data frame supplied to
+          `.update_data(data)`, which ever has been most recently set.
+    * `.cell_patches()`:
+        * Returns a list of user edits (or updated cell values) that will be applied to
+          the `.data_patched()` data frame.
+    * `.data_patched()`:
+        * Returns the `.data()` data frame with any user edits or `.update_cell_value()`
+          patches applied.
+    * `.data_view(*, selected: bool)`:
+        * Returns the `.data_patched()` data frame with the user's sorting and filtering
+          applied. It represents the data frame as seen in the browser.
+        * If `selected=True`, only the selected rows are returned.
+    * `.update_cell_value(value, row, col)`:
+        * Sets a new entry in `.cell_patches()`.
+        * Calling this method will **not** reset the user's sorting or filtering.
+    * `.update_data(data)`:
+        * Updates the `.data()` data frame with new data.
+        * Calling this method will remove all `.cell_patches()`.
+        * Calling this method will **not** reset the user's sorting or filtering.
+
+    Note: All data methods are shallow copies of each other. If they are mutated in
+    place, it **will modify** the underlying data object and possibly alter other data
+    objects.
 
     Narwhals
     -------------------
@@ -147,7 +171,6 @@ class data_frame(
       (or at the very lest the first cell) in the same column within a `ui.TagList` as
       it will not insert any tags, but it will cause the column to be interpreted as
       `html` where possible.   (tl/dr: Use consistent typing in your columns!)
-
 
     Tip
     ---
