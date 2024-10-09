@@ -1,5 +1,3 @@
-# TODO-barret; Remove dead code in `.update_data()` if approach is correct
-
 from __future__ import annotations
 
 import warnings
@@ -879,35 +877,6 @@ class data_frame(
         data: IntoDataFrameT,
         # , *, reset: bool | None = None
     ) -> None:
-
-        # if cur_nw_data.shape[0] != new_nw_data.shape[0]:
-        #     raise ValueError(
-        #         "The number of rows in the new data does not match the number of rows in the old data."
-        #     )
-        # if cur_nw_data.shape[1] != new_nw_data.shape[1]:
-        #     raise ValueError(
-        #         "The number of columns in the new data does not match the number of columns in the old data."
-        #     )
-
-        # for cur_column, new_column in zip(cur_nw_data.columns, new_nw_data.columns):
-        #     if cur_column != new_column:
-        #         missing_cols = set(cur_nw_data.columns) - set(new_nw_data.columns)
-        #         if missing_cols:
-        #             raise ValueError(f"The new data is missing columns: {missing_cols}")
-
-        #         raise ValueError(
-        #             "The columns in the new data do not match the columns in the old data."
-        #         )
-
-        # for i, cur_col_dtype, new_col_dtype in zip(
-        #     range(len(cur_nw_data.columns)),
-        #     cur_nw_data.schema.dtypes(),
-        #     new_nw_data.schema.dtypes(),
-        # ):
-        #     if cur_col_dtype != new_col_dtype:
-        #         raise ValueError(
-        #             f"The column `{cur_nw_data.columns[i]}` type does not match existing type. New: `{new_col_dtype}`. Current: {cur_col_dtype}`."
-        #         )
 
         # Reset patches
         # Set the new data
