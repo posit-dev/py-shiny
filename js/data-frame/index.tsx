@@ -2,6 +2,8 @@
 
 // TODO-barret-future; Try to group all related code into a file and make index.tsx as small as possible. Try to move all logic into files and keep the main full of `useFOO` functions.
 
+// TODO-barret-future; Instead of deconstructinng all of the use state objects, keep it as a dictionary and shorten the method names. The docs can live on the _useFoo` function return type. Ex: CellEditMapReturnObject 's setCellEditMapAtLoc should contain JSDoc on it's objects. Then we'd have a `cellEditMap.setAtLoc` method.
+
 import {
   Column,
   ColumnDef,
