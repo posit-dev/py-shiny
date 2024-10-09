@@ -39,6 +39,7 @@ jobs:
       - name: Install dependencies
         run: |
           make ci-install-docs
+          pip install git+https://github.com/machow/quartodoc.git@main
 
       - name: Run quartodoc
         run: |
