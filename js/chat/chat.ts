@@ -386,15 +386,12 @@ class ChatContainer extends LightElement {
     this.#appendMessage(event.detail);
   }
 
-  #appendMessage(message: Message, finalize = true, streaming = false): void {
+  #appendMessage(message: Message, finalize = true): void {
     this.#removeLoadingMessage();
 
     const TAG_NAME =
       message.role === "user" ? CHAT_USER_MESSAGE_TAG : CHAT_MESSAGE_TAG;
     const msg = createElement(TAG_NAME, message);
-    if (streaming) {
-      msg.setAttribute("is_streaming", "");
-    }
     this.messages.appendChild(msg);
 
     if (finalize) {
