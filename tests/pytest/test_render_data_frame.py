@@ -1,10 +1,38 @@
+from typing import Any, cast
+
 import pandas as pd
 import pytest
+from htmltools import TagChild, TagList
 
-from shiny import render
+from shiny import reactive, render
 from shiny._deprecated import ShinyDeprecationWarning
 from shiny.render._data_frame_utils._selection import SelectionModes
 from shiny.render._data_frame_utils._tbl_data import as_data_frame
+from shiny.session._session import (
+    RenderedDeps,
+    ResolvedId,
+    Root,
+    Session,
+    session_context,
+)
+
+
+class _MockSession:
+    ns: ResolvedId = Root
+
+    # Simplified version of `AppSession._process_ui()`
+    def _process_ui(self, ui: TagChild) -> RenderedDeps:
+        res = TagList(ui).render()
+        deps: list[dict[str, Any]] = []
+        for dep in res["dependencies"]:
+            # self.app._register_web_dependency(dep)
+            dep_dict = dep.as_dict()
+            deps.append(dep_dict)
+
+        return {"deps": deps, "html": res["html"]}
+
+
+test_session = cast(Session, _MockSession())
 
 
 def test_data_frame_needs_unique_col_names():
@@ -66,3 +94,39 @@ def test_as_selection_modes():
     for sm in ("col", "cols", "cell", "region"):
         with pytest.raises(RuntimeError, match="based cell selections"):
             SelectionModes(selection_mode_set={sm})
+
+
+@pytest.mark.asyncio
+async def test_update_cell_value_assertions():
+
+    pd_data = pd.DataFrame(data={"a": [1, 2]})
+
+    @render.data_frame
+    def df():
+        return pd_data
+
+    with session_context(test_session):
+        with reactive.isolate():
+            df._value.set(render.DataGrid(pd_data))
+
+            with pytest.raises(ValueError) as e:
+                await df.update_cell_value("a", row=0, col="b")
+            assert "Column 'b'" in str(e.value)
+
+            with pytest.raises(TypeError) as e:
+                await df.update_cell_value("a", row=0, col=True)
+            assert "`col` to be an `int`" in str(e.value)
+
+            with pytest.raises(ValueError) as e:
+                await df.update_cell_value("a", row=0, col=-1)
+            assert "`col` to be greater than" in str(e.value)
+            with pytest.raises(ValueError) as e:
+                await df.update_cell_value("a", row=0, col=10)
+            assert "`col` to be less than" in str(e.value)
+
+            with pytest.raises(TypeError) as e:
+                await df.update_cell_value("a", row=True, col=0)
+            assert "`row` to be an `int`" in str(e)
+            with pytest.raises(ValueError) as e:
+                await df.update_cell_value("a", row=-1, col=0)
+            assert "`row` to be greater than" in str(e.value)

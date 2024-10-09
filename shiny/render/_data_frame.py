@@ -753,10 +753,10 @@ class data_frame(
 
             assert isinstance(
                 row_index, int
-            ), f"Expected `row_index` to be an `int`, got {type(row_index)}"
+            ), f"Expected `row_index` to be an `int`, received {type(row_index)}"
             assert isinstance(
                 column_index, int
-            ), f"Expected `column_index` to be an `int`, got {type(column_index)}"
+            ), f"Expected `column_index` to be an `int`, received {type(column_index)}"
 
             # TODO-render.data_frame; Possibly check for cell type and compare against type hints
             # TODO-render.data_frame; The `value` should be coerced by pandas to the correct type
@@ -833,19 +833,31 @@ class data_frame(
         if isinstance(col, str):
             with reactive.isolate():
                 column_names = self._nw_data().columns
-                assert col in column_names, f"Column '{col}' not found in data frame."
+                if col not in column_names:
+                    raise ValueError(f"Column '{col}' not found in data frame.")
                 column_index = self._nw_data().columns.index(col)
         else:
             column_index = col
-            assert isinstance(
-                column_index, int
-            ), f"Expected `column_index` to be an `int`, got {type(column_index)}"
-            assert (
-                column_index >= 0
-            ), f"Expected `column_index` to be greater than or equal to 0, got {column_index}"
+            if (not isinstance(col, int)) or isinstance(col, bool):
+                raise TypeError(
+                    f"Expected `col` to be an `int` or `str, received {type(column_index)}"
+                )
+            if column_index < 0:
+                raise ValueError(
+                    f"Expected `col` to be greater than or equal to 0, received {column_index}"
+                )
+            column_length = self._nw_data().shape[1]
+            if column_index >= column_length:
+                raise ValueError(
+                    f"Expected `col` to be less than {column_length}, received {column_index}"
+                )
 
-        assert isinstance(row, int), f"Expected `row` to be an `int`, got {type(row)}"
-        assert row >= 0, f"Expected `row` to be greater than or equal to 0, got {row}"
+        if (not isinstance(row, int)) or isinstance(row, bool):
+            raise TypeError(f"Expected `row` to be an `int`, received {type(row)}")
+        if row < 0:
+            raise ValueError(
+                f"Expected `row` to be greater than or equal to 0, received {row}"
+            )
 
         patch: CellPatch = {
             "value": value,
