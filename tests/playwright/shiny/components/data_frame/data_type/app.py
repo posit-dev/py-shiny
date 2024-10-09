@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import dask.dataframe as dd
 import modin.pandas as mpd  # pyright: ignore[reportMissingTypeStubs]
 import narwhals.stable.v1 as nw
 import palmerpenguins  # pyright: ignore[reportMissingTypeStubs]
@@ -9,19 +8,12 @@ import pyarrow as pa
 
 from shiny.express import render, ui
 
-# import databricks.koalas as ks  # pyright: ignore[reportMissingTypeStubs]
-
-
 pd_df = palmerpenguins.load_penguins_raw().iloc[0:2, 0:2]
 
 nw_df = nw.from_native(pd_df, eager_only=True)
-pa_df = pa.Table.from_pandas(pd_df)
+pa_df = pa.table(pd_df)  # pyright: ignore[reportUnknownMemberType]
 mpd_df = mpd.DataFrame(pd_df)
 pl_df = pl.DataFrame(pd_df)
-dd_df = dd.from_pandas(
-    pd_df
-)  # pyright: ignore[reportUnknownMemberType, reportPrivateImportUsage, reportUnknownVariableType]
-# ks_df = ks.from_pandas(pd_df)  # pyright: ignore[reportMissingTypeStubs, reportUnknownMemberType, reportUnknownVariableType]
 
 
 with ui.layout_columns():
@@ -31,7 +23,18 @@ with ui.layout_columns():
 
         @render.data_frame
         def pd_df_original():
-            return pd_df
+            return render.DataGrid(
+                data=pd_df,  # pyright: ignore[reportUnknownArgumentType]
+                selection_mode="row",
+            )
+
+        "Selected row:"
+
+        @render.code
+        def selected_pandas_row():
+            return str(
+                pd_df_original.data_view(selected=True)
+            )  # pyright: ignore[reportUnknownMemberType]
 
         "Data type:"
 
@@ -62,7 +65,16 @@ with ui.layout_columns():
 
         @render.data_frame
         def nw_df_original():
-            return nw_df
+            return render.DataGrid(
+                data=nw_df,
+                selection_mode="row",
+            )
+
+        "Selected row:"
+
+        @render.code
+        def selected_nw_row():
+            return str(nw_df_original.data_view(selected=True).to_native())
 
         "Data type:"
 
@@ -93,7 +105,16 @@ with ui.layout_columns():
 
         @render.data_frame
         def pa_df_original():
-            return pa_df
+            return render.DataGrid(
+                data=pa_df,
+                selection_mode="row",
+            )
+
+        "Selected row:"
+
+        @render.code
+        def selected_pa_row():
+            return str(pa_df_original.data_view(selected=True))
 
         "Data type:"
 
@@ -124,7 +145,16 @@ with ui.layout_columns():
 
         @render.data_frame
         def mpd_df_original():
-            return mpd_df
+            return render.DataGrid(
+                data=mpd_df,
+                selection_mode="row",
+            )
+
+        "Selected row:"
+
+        @render.code
+        def selected_mpd_row():
+            return str(mpd_df_original.data_view(selected=True))
 
         "Data type:"
 
@@ -155,7 +185,16 @@ with ui.layout_columns():
 
         @render.data_frame
         def pl_df_original():
-            return pl_df
+            return render.DataGrid(
+                data=pl_df,
+                selection_mode="row",
+            )
+
+        "Selected row:"
+
+        @render.code
+        def selected_pl_row():
+            return str(pl_df_original.data_view(selected=True))
 
         "Data type:"
 
@@ -180,65 +219,3 @@ with ui.layout_columns():
         @render.code
         def pl_data_view_selected():
             return str(type(pl_df_original.data_view(selected=True)))
-
-    with ui.card():
-        ui.h2("Dask Data")
-
-        @render.data_frame
-        def dd_df_original():
-            return dd_df
-
-        "Data type:"
-
-        @render.code
-        def dd_type():
-            return str(type(dd_df))
-
-        ui.markdown("`.data()` type:")
-
-        @render.code
-        def dd_data():
-            return str(type(dd_df_original.data()))
-
-        ui.markdown("`.data_view()` type:")
-
-        @render.code
-        def dd_data_view():
-            return str(type(dd_df_original.data_view()))
-
-        ui.markdown("`.data_view(selected=True)` type:")
-
-        @render.code
-        def dd_data_view_selected():
-            return str(type(dd_df_original.data_view(selected=True)))
-
-    # with ui.card():
-    #     ui.h2("Koalas Data")
-
-    #     @render.data_frame
-    #     def ks_df_original():
-    #         return ks_df
-
-    #     "Data type:"
-
-    #     @render.code
-    #     def ks_type():
-    #         return str(type(ks_df))
-
-    #     ui.markdown("`.data()` type:")
-
-    #     @render.code
-    #     def ks_data():
-    #         return str(type(ks_df_original.data()))
-
-    #     ui.markdown("`.data_view()` type:")
-
-    #     @render.code
-    #     def ks_data_view():
-    #         return str(type(ks_df_original.data_view()))
-
-    #     ui.markdown("`.data_view(selected=True)` type:")
-
-    #     @render.code
-    #     def ks_data_view_selected():
-    #         return str(type(ks_df_original.data_view(selected=True)))
