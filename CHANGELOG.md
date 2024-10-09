@@ -7,6 +7,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### Breaking changes
+
+* `.expect_inverse()` for Navset controllers in `shiny.playwright.controllers` now requires a `bool` value. To keep behavior the same, use `.expect_inverse(False)`. (#1668)
+
+* `.expect_layout()` for Navset controllers in `shiny.playwright.controllers` is now renamed to `.expect_fluid()` and requires a `bool` value. To keep behavior the same, use `.expect_fluid(True)` (#1668)
+
+* `.expect_icon()` for Accordion controllers in `shiny.playwright.controllers` now requires a `bool` value instead of a `str`. (#1710)
+
+### New features
+
+* Added [narwhals](https://posit-dev.github.io/py-narwhals) support for `@render.data_frame`. This allows for any eager data frame supported by narwhals to be returned from a `@render.data_frame` output method. All internal methods and helper methods leverage the `narwhals` API to be data frame agnostic. (#1570)
+
+### Other changes
+
+* Incorporated `orjson` for faster data serialization in `@render.data_frame` outputs. (#1570)
+
+* Added `PageNavbar` class to the list of `shiny.playwright.controllers` for testing `ui.page_navbar()`. (#1668)
+
+* Added `.expect_widths()` to `NavsetPillList` in `shiny.playwright.controllers` for testing `ui.navset_pill_list(widths=)`. (#1668)
+
+* Added `.expect_title()` for `Popover` in `shiny.playwright.controllers` (#1683)
+
+* Added `.expect_disabled()` for `InputActionButton` in `shiny.playwright.controllers` (#1705)
+
+* Small improvements to the default pulse busy indicator to better blend with any background. It's also now slightly smaller by default.(#1707)
+
+* Added `.expect_class()`, `.expect_gap()`, `.expect_bg_color()`, `.expect_desktop_state()`, `.expect_mobile_state()`, `.expect_mobile_max_height()`, `.expect_title()`, and `.expect_padding()` for `Sidebar` in `shiny.playwright.controllers` (#1715)
+
+* Modified `.expect_text()` for `Sidebar` in `shiny.playwright.controllers` to use `.loc_content` instead of `loc` for text. Also modified `.expect_width()` to check the `.loc_container`'s style instead of the `.loc` element. (#1715)
+
+* Modified `.expect_text()` and `.expect_width()` for `Sidebar` in `shiny.playwright.controllers` to use `loc_content` instead of `loc` for text. (#1715)
+
+* Added `.expect_class()` and `.expect_multiple()` for `Accordion` in `shiny.playwright.controllers` (#1710)
+
+* Added [narwhals](https://posit-dev.github.io/py-narwhals) support for `@render.table`. This allows for any eager data frame supported by narwhals to be returned from a `@render.table` output method. (#1570)
+
+### Bug fixes
+
+* A few fixes for `ui.Chat()`, including:
+  * Fixed a bug with `Chat()` sometimes silently dropping errors. (#1672)
+  * Fixed a bug with `Chat()` sometimes not removing it's loading icon (on error or a `None` transform). (#1679)
+  * `.messages(format="anthropic")` correctly removes non-user starting messages (once again). (#1685)
+
+* `shiny create` now uses the template `id` rather than the directory name as the default directory. (#1666)
+
+* `ui.Theme()` now works correctly on Windows when the theme requires Sass compilation. (thanks @yuuuxt, #1684)
+
+* Fixed multiple input controllers (`InputSlider`, `InputDate`, `InputDateRange`, `InputCheckbox`, and `InputCheckboxGroup`) in `shiny.playwright.controller` to check the `width` property within the `style` attribute. (#1691, #1696, #1702)
+
+* Fixed multiple input controllers (`InputSwitch`, `InputRadioButtons`, `InputNumeric`, `InputText`, `InputTextArea`, `InputPassword`, `InputActionButton`, and `InputActionLink`) in `shiny.playwright.controller` to correctly validate the `width` style property in `.expect_width(). (#1705)
+
+* Fixed input controller `InputTextArea` in `shiny.playwright.controller` to correctly validate the `resize` style property in `.expect_resize()`. (#1705)
+
+* Fixed a bug in `ui.conditional_panel()` that would cause the panel to repeatedly show/hide itself when the provided condition did not evaluate to a boolean value. (#1707)
+
+* Fixed a bug with `ui.input_slider()` when used as a range slider that made it impossible to change the slider value when both handles were at the maximum value. (#1707)
+
+* Fixed bug in `@render.data_frame` where `bool` or `object` columns were not being rendered. (#1570)
+
+
+## [1.1.0] - 2024-09-03
+
 ### New features
 
 * `ui.Chat()` gains a new `.update_user_input()` method, which adds the ability to update the input placeholder message. As a result, `.set_user_message()` is now deprecated (since the new method can also be used to update the message). (#1594)
@@ -17,9 +79,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Other changes
 
+* A few changes for `ui.Chat()`, including:
+  * The `.messages()` method no longer trims messages by default (i.e., the default value of `token_limits` is now `None` instead of the overly generic and conservative value of `(4096, 1000)`). See the new generative AI in production templates (via `shiny create`) for examples of setting `token_limits` based on the model being used. (#1657)
+  * User input that contains markdown now renders the expected HTML. (#1607)
+  * Busy indication is now visible/apparent during the entire lifecycle of response generation. (#1607)
+
 ### Bug fixes
 
-* A handful of fixes for `ui.Chat()`, including:
+* A few fixes for `ui.Chat()`, including:
   * A fix for use inside Shiny modules. (#1582)
   * `.messages(format="google")` now returns the correct role. (#1622)
   * `ui.Chat(messages)` are no longer dropped when dynamically rendered. (#1593)

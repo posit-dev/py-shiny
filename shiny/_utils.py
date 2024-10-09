@@ -85,7 +85,7 @@ def guess_mime_type(
     if url:
         # Work around issue #1601, some installations of Windows 10 return text/plain
         # as the mime type for .js files
-        _, ext = os.path.splitext(os.fspath(url))
+        _, ext = os.path.splitext(os.fspath(str(url)))
         if ext.lower() in [".js", ".mjs", ".cjs"]:
             return "text/javascript"
     return mimetypes.guess_type(url, strict)[0] or default

@@ -34,8 +34,8 @@ To install the latest development version:
 
 ```sh
 # First install htmltools, then shiny
-pip install https://github.com/posit-dev/py-htmltools/tarball/main
-pip install https://github.com/posit-dev/py-shiny/tarball/main
+pip install git+https://github.com/posit-dev/py-htmltools.git#egg=htmltools
+pip install git+https://github.com/posit-dev/py-shiny.git#egg=shiny
 ```
 
 You can create and run your first application with `shiny create`, the CLI will ask you which template you would like to use. You can either run the app with the Shiny extension, or call `shiny run app.py --reload --launch-browser`.

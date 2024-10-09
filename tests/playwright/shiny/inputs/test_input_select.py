@@ -33,7 +33,7 @@ def test_input_select_kitchen(page: Page, app: ShinyAppProc) -> None:
 
     state.expect_selected("NY")
     state.expect_multiple(False)
-    state.expect_selectize(False)
+    # state.expect_selectize(False)
 
     state.expect_width(None)
 

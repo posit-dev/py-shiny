@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
 import tempfile
 import time
-from typing import Any, Callable, TypeVar
+import warnings
+from typing import Any, Callable, List, Optional, TypeVar
 
 import pytest
 import requests
@@ -22,7 +24,7 @@ reruns_delay = 1
 LOCAL_LOCATION = "local"
 
 __all__ = (
-    "create_deploys_app_url_fixture",
+    "local_deploys_app_url_fixture",
     "skip_if_not_chrome",
 )
 
@@ -30,12 +32,20 @@ __all__ = (
 server_url = os.environ.get("DEPLOY_CONNECT_SERVER_URL")
 api_key = os.environ.get("DEPLOY_CONNECT_SERVER_API_KEY")
 # shinyapps.io
-name = os.environ.get("DEPLOY_SHINYAPPS_NAME")
-token = os.environ.get("DEPLOY_SHINYAPPS_TOKEN")
-secret = os.environ.get("DEPLOY_SHINYAPPS_SECRET")
+shinyappsio_name = os.environ.get("DEPLOY_SHINYAPPS_NAME")
+shinyappsio_token = os.environ.get("DEPLOY_SHINYAPPS_TOKEN")
+shinyappsio_secret = os.environ.get("DEPLOY_SHINYAPPS_SECRET")
+
+run_on_ci = os.environ.get("CI", "False") == "true"
+repo = os.environ.get("GITHUB_REPOSITORY", "unknown")
+
+should_use_github_requirements_txt = (
+    os.environ.get("DEPLOY_GITHUB_REQUIREMENTS_TXT", "true").lower() == "true"
+)
 
 
-deploy_locations = ["connect", "shinyapps"]
+deploy_locations: List[str] = ["connect", "shinyapps"]
+
 
 CallableT = TypeVar("CallableT", bound=Callable[..., Any])
 
@@ -58,15 +68,67 @@ def skip_on_webkit(fn: CallableT) -> CallableT:
     return fn
 
 
+def skip_on_python_version(
+    version: str,
+    reason: Optional[str] = None,
+) -> Callable[[CallableT], CallableT]:
+
+    reason_str = reason or f"Do not run on python {version}"
+
+    is_valid_version = (
+        re.match(r"\d+", version)
+        or re.match(r"\d+\.\d+", version)
+        or re.match(r"\d+\.\d+\.\d+", version)
+    ) is not None
+
+    assert is_valid_version
+
+    def _(fn: CallableT) -> CallableT:
+
+        versions_match = True
+        for i, v in enumerate(version.split(".")):
+            if sys.version_info[i] != int(v):
+                versions_match = False
+                break
+
+        fn = pytest.mark.skipif(
+            versions_match,
+            reason=reason_str,
+        )(fn)
+
+        return fn
+
+    return _
+
+
 def run_command(cmd: str) -> str:
     output = subprocess.run(
         cmd,
-        check=True,
+        check=False,
         capture_output=True,
         text=True,
         shell=True,
     )
+    if output.returncode != 0:
+        print(
+            "Failed to run command!",
+            "\nstdout:",
+            output.stdout,
+            "\nstderr:",
+            output.stderr,
+            file=sys.stderr,
+            sep="\n",
+        )
+        raise RuntimeError(f"Failed to run command: {redact_api_key(cmd)}")
     return output.stdout
+
+
+def redact_api_key(cmd: str) -> str:
+    # Redact the value of the `--api-key` CLI argument, replace it with `***`
+    # Create a regex that replaces the argument following `--api-key`
+    # with `***` (e.g. `--api-key my-api-key` -> `--api-key ***`)
+
+    return re.sub(r"(--api-key\s+)(\S+)", r"\1***", cmd)
 
 
 def deploy_to_connect(app_name: str, app_dir: str) -> str:
@@ -89,6 +151,7 @@ def deploy_to_connect(app_name: str, app_dir: str) -> str:
     output = run_command(connect_server_lookup_command)
     url = json.loads(output)[0]["content_url"]
     app_id = json.loads(output)[0]["guid"]
+
     # change visibility of app to public
     connect_app_url = f"{server_url}/__api__/v1/content/{app_id}"
     payload = '{"access_type":"all"}'
@@ -98,20 +161,30 @@ def deploy_to_connect(app_name: str, app_dir: str) -> str:
     }
     response = requests.request("PATCH", connect_app_url, headers=headers, data=payload)
     if response.status_code != 200:
-        raise RuntimeError("Failed to change visibility of app.")
+        warnings.warn(
+            f"Failed to change visibility of app. {response.text}",
+            RuntimeWarning,
+            stacklevel=1,
+        )
+        pytest.skip(
+            "Skipping test as deployed app is not visible to public. Test is kept as it does confirm the app deployment has succeeded."
+        )
+        return
+
     return url
 
 
 # TODO-future: Supress web browser from opening after deploying - https://github.com/rstudio/rsconnect-python/issues/462
 def deploy_to_shinyapps(app_name: str, app_dir: str) -> str:
     # Deploy to shinyapps.io
-    shinyapps_deploy = f"rsconnect deploy shiny {app_dir} --account {name} --token {token} --secret {secret} --title {app_name} --verbose"
+    shinyapps_deploy = f"rsconnect deploy shiny {app_dir} --account {shinyappsio_name} --token {shinyappsio_token} --secret {shinyappsio_secret} --title {app_name} --verbose"
     run_command(shinyapps_deploy)
-    return f"https://{name}.shinyapps.io/{app_name}/"
+    return f"https://{shinyappsio_name}.shinyapps.io/{app_name}/"
 
 
 # Since connect parses python packages, we need to get latest version of shiny on HEAD
-def write_requirements_txt(app_dir: str) -> None:
+def write_github_requirements_txt(app_dir: str) -> None:
+    print("Writing github requirements.txt")
     app_requirements_file_path = os.path.join(app_dir, "app_requirements.txt")
     requirements_file_path = os.path.join(app_dir, "requirements.txt")
     git_cmd = subprocess.run(["git", "rev-parse", "HEAD"], stdout=subprocess.PIPE)
@@ -121,6 +194,18 @@ def write_requirements_txt(app_dir: str) -> None:
     with open(requirements_file_path, "w") as f:
         f.write(f"{requirements}\n")
         f.write(f"git+https://github.com/posit-dev/py-shiny.git@{git_hash}\n")
+
+
+def write_pypi_requirements_txt(app_dir: str) -> None:
+    print("Writing pypi requirements.txt")
+    app_requirements_file_path = os.path.join(app_dir, "app_requirements.txt")
+    requirements_file_path = os.path.join(app_dir, "requirements.txt")
+
+    with open(app_requirements_file_path) as f:
+        requirements = f.read()
+    with open(requirements_file_path, "w") as f:
+        f.write(f"{requirements}\n")
+        f.write("shiny\n")
 
 
 def assert_rsconnect_file_updated(file_path: str, min_mtime: float) -> None:
@@ -143,9 +228,6 @@ def deploy_app(
     if not should_deploy_apps:
         pytest.skip("`DEPLOY_APPS` does not equal `true`")
 
-    run_on_ci = os.environ.get("CI", "False") == "true"
-    repo = os.environ.get("GITHUB_REPOSITORY", "unknown")
-
     if not (run_on_ci and repo == "posit-dev/py-shiny"):
         pytest.skip("Not on CI and within posit-dev/py-shiny repo")
 
@@ -162,7 +244,10 @@ def deploy_app(
         tmp_app_dir = os.path.join(tmpdir, app_dir_name)
         os.mkdir(tmp_app_dir)
         shutil.copytree(app_dir, tmp_app_dir, dirs_exist_ok=True)
-        write_requirements_txt(tmp_app_dir)
+        if should_use_github_requirements_txt:
+            write_github_requirements_txt(tmp_app_dir)
+        else:
+            write_pypi_requirements_txt(tmp_app_dir)
 
         deployment_function = {
             "connect": deploy_to_connect,
@@ -179,12 +264,13 @@ def deploy_app(
         return url
 
 
-def create_deploys_app_url_fixture(
+def local_deploys_app_url_fixture(
     app_name: str,
     scope: ScopeName = "module",
 ):
     @pytest.fixture(scope=scope, params=[*deploy_locations, LOCAL_LOCATION])
     def fix_fn(request: pytest.FixtureRequest):
+
         app_file = os.path.join(os.path.dirname(request.path), "app.py")
         deploy_location = request.param
 
@@ -193,6 +279,19 @@ def create_deploys_app_url_fixture(
             # Return the `url`
             yield next(shinyapp_proc_gen).url
         elif deploy_location in deploy_locations:
+
+            if deploy_location == "connect" and not (server_url and api_key):
+                pytest.skip("Connect server url or api key not found. Cannot deploy.")
+            if (
+                deploy_location == "shinyapps"
+                and shinyappsio_name
+                and shinyappsio_token
+                and shinyappsio_secret
+            ):
+                pytest.skip(
+                    "Shinyapps.io name, token or secret not found. Cannot deploy."
+                )
+
             app_url = deploy_app(
                 app_file,
                 deploy_location,

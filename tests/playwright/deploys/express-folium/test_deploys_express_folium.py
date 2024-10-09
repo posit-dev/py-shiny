@@ -1,13 +1,13 @@
 import pytest
 from playwright.sync_api import Page, expect
 from utils.deploy_utils import (
-    create_deploys_app_url_fixture,
+    local_deploys_app_url_fixture,
     reruns,
     reruns_delay,
     skip_if_not_chrome,
 )
 
-app_url = create_deploys_app_url_fixture("shiny-express-folium")
+app_url = local_deploys_app_url_fixture("shiny-express-folium")
 
 
 @skip_if_not_chrome

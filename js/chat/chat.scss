@@ -9,6 +9,7 @@ shiny-chat-container {
   margin: 0 auto;
   gap: 1rem;
   overflow: auto;
+  padding: 0.25rem;
 
   p:last-child {
     margin-bottom: 0;
@@ -47,6 +48,7 @@ shiny-chat-container {
       padding: 0.75rem 1rem;
       border-radius: 10px;
       background-color: var(--shiny-chat-user-message-bg);
+      max-width: 100%;
     }
   }
 
@@ -55,7 +57,6 @@ shiny-chat-container {
     position: sticky;
     background-color: var(--bs-body-bg, white);
     bottom: 0;
-    padding: 0.25rem;
     textarea {
       --bs-border-radius: 26px;
       resize: none;
@@ -67,8 +68,8 @@ shiny-chat-container {
     }
     button {
       position: absolute;
-      bottom: 10px;
-      right: 11px;
+      bottom: 7px;
+      right: 8px;
       background-color: transparent;
       color: var(--bs-primary, #007bc2);
       transition: color 0.25s ease-in-out;

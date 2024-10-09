@@ -209,7 +209,7 @@ class NavSetArg(Protocol):
         """
         ...
 
-    def get_value(self) -> Optional[str]:
+    def get_value(self) -> str | None:
         """
         Get the value of this navigation item (if any).
 

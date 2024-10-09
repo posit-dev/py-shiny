@@ -4,6 +4,7 @@ import pytest
 from shiny import render
 from shiny._deprecated import ShinyDeprecationWarning
 from shiny.render._data_frame_utils._selection import SelectionModes
+from shiny.render._data_frame_utils._tbl_data import as_data_frame
 
 
 def test_data_frame_needs_unique_col_names():
@@ -11,20 +12,9 @@ def test_data_frame_needs_unique_col_names():
     df = pd.DataFrame(data={"a": [1, 2]})
     df.insert(1, "a", [3, 4], True)  # pyright: ignore
 
-    data_grid = render.DataGrid(df)
-    data_table = render.DataTable(df)
-
-    with pytest.raises(
-        ValueError,
-        match="column names of the pandas DataFrame are not unique",
-    ):
-        data_grid.to_payload()
-
-    with pytest.raises(
-        ValueError,
-        match="column names of the pandas DataFrame are not unique",
-    ):
-        data_table.to_payload()
+    with pytest.raises(ValueError) as e:
+        as_data_frame(df)
+    assert "Expected unique column names" in str(e.value)
 
 
 def test_as_selection_modes_legacy():
