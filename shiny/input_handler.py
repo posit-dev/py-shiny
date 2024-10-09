@@ -52,18 +52,6 @@ input binding. See `this article <https://shiny.posit.co/articles/js-custom-inpu
 for more information on how to create custom input bindings. (The article is about
 Shiny for R, but the JavaScript and general principles are the same.)
 
-Methods
---------
-add(type: str, force: bool = False) -> Callable[[InputHandlerType], None]
-    Register an input handler. This method returns a decorator that registers the
-    decorated function as the handler for the given ``type``. This handler should
-    accept three arguments:
-    - the input ``value``
-    - the input ``name``
-    - the :class:`~shiny.Session` object
-remove(type: str)
-    Unregister an input handler.
-
 Note
 ----
 ``add()`` ing an input handler will make it persist for the duration of the Python
