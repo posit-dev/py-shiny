@@ -119,22 +119,25 @@ class data_frame(
     each other.
 
     * Data frame render method:
-        * When called, returns the original data frame (possibly wrapped in a `DataGrid`
-          or `DataTable`) that was returned from the app's render function.
+        * When this method is reactively executed, the `.data()` data frame is set to
+          the underlying data frame and all `.cell_patches()` are removed.
         * When this method is reactively executed, **all user state is reset**. This
-          includes the user's edits, sorting, and filtering.
+          includes the user's edits, sorting, filtering.
     * `.data()`:
-        * Returns the render method's underlying data frame or the data frame supplied to
-          `.update_data(data)`, which ever has been most recently set.
+        * Reactive calculation that returns the render method's underlying data frame or
+          the data frame supplied to `.update_data(data)`, whichever has been most
+          recently set.
     * `.cell_patches()`:
-        * Returns a list of user edits (or updated cell values) that will be applied to
-          the `.data_patched()` data frame.
+        * Reactive calculation that returns a list of user edits (or updated cell
+          values) that will be applied to `.data()` to create the `.data_patched()` data
+          frame.
     * `.data_patched()`:
-        * Returns the `.data()` data frame with any user edits or `.update_cell_value()`
-          patches applied.
+        * Reactive calculation that returns the `.data()` data frame with all
+          `.cell_patches()` patches applied.
     * `.data_view(*, selected: bool)`:
-        * Returns the `.data_patched()` data frame with the user's sorting and filtering
-          applied. It represents the data frame as seen in the browser.
+        * Reactive function that returns the `.data_patched()` data frame with the
+          user's sorting and filtering applied. It represents the data frame as viewed
+          by the user within the browser.
         * If `selected=True`, only the selected rows are returned.
     * `.update_cell_value(value, row, col)`:
         * Sets a new entry in `.cell_patches()`.
@@ -214,19 +217,22 @@ class data_frame(
     @reactive_calc_method
     def data(self) -> IntoDataFrameT:
         """
-        Reactive calculation of the data frame's render method.
+        Reactive calculation of the data frame's data.
 
-        This is a quick reference to the original data frame that was returned from the
-        app's render function. If it is mutated in place, it **will** modify the original
-        data.
+        This reactive calculation returns the render method's underlying data frame or
+        the data frame supplied to `.update_data(data)`, whichever has been most
+        recently set.
 
-        Even if the rendered data value was not of type `pd.DataFrame` or `pl.DataFrame`, this method currently
-        converts it to a `pd.DataFrame`.
+        The returned value is a shallow copy of the original data frame. It is possible
+        that alterations to the `.data()` data frame could alter other associated data
+        frame values. Please be cautious when using this value directly.
 
         Returns
         -------
         :
-            The original data frame returned from the render method.
+            This reactive calculation returns the render method's underlying data frame
+            or the data frame supplied to `.update_data(data)`, whichever has been most
+            recently set.
         """
         # iff updated data exists, return it
         # Can be unset on a followup render call
@@ -310,7 +316,11 @@ class data_frame(
     @reactive_calc_method
     def cell_patches(self) -> list[CellPatch]:
         """
-        Reactive calculation of the data frame's edits provided by the user.
+        Reactive calculation of the data frame's edits.
+
+        This reactive calculation that returns a list of user edits (or updated cell
+        values) that will be applied to `.data()` to create the `.data_patched()` data
+        frame.
 
         Returns
         -------
@@ -334,7 +344,14 @@ class data_frame(
     @reactive_calc_method
     def data_patched(self) -> IntoDataFrameT:
         """
-        Get the patched data frame.
+        Reactive calculation of the data frame's patched data.
+
+        This method returns the `.data()` data frame with all `.cell_patches()` patches
+        applied.
+
+        The returned value is a shallow copy of the original data frame. It is possible
+        that alterations to the `.data_patched()` data frame could alter other
+        associated data frame values. Please be cautious when using this value directly.
 
         Returns
         -------
@@ -416,22 +433,24 @@ class data_frame(
         """
         Reactive function that retrieves the data how it is viewed within the browser.
 
-        This function will sort, filter, and apply any patches to the data frame as
-        viewed by the user within the browser.
+        This function will return the `.data_patched()` data frame with the user's
+        sorting and filtering applied. It represents the data frame as viewed by the
+        user within the browser.
 
-        This is a shallow copy of the original data frame. It is possible that
-        alterations to `data_view` could alter the original `data` data frame. Please be
-        cautious when using this value directly.
+        The returned value is a shallow copy of the original data frame. It is possible
+        that alterations to the `.data_view()` data frame could alter other associated
+        date frame values. Please be cautious when using this value directly.
 
         Parameters
         ----------
         selected
-            If `True`, subset the viewed data to the selected area. Defaults to `False` (all rows).
+            If `True`, subset the viewed data to the selected area. Defaults to `False`
+            (all rows).
 
         Returns
         -------
         :
-            A view of the data frame as seen in the browser.
+            A view of the (possibly selected) data frame as seen in the browser.
 
         See Also
         --------
@@ -824,6 +843,9 @@ class data_frame(
         """
         Update the value of a cell in the data frame.
 
+        Calling this method will set a new entry in `.cell_patches()`. It will not reset
+        the user's sorting or filtering of their rendered data frame.
+
         Parameters
         ----------
         value
@@ -882,8 +904,20 @@ class data_frame(
     async def update_data(
         self,
         data: IntoDataFrameT,
-        # , *, reset: bool | None = None
     ) -> None:
+        """
+        Update the data frame with new data.
+
+        Calling this method will update the `.data()` data frame with new data and will
+        remove all `.cell_patches()`. It will not reset the user's sorting or filtering
+        of their rendered data frame. Any incompatible sorting or filtering settings
+        will be silently dropped.
+
+        Parameters
+        ----------
+        data
+            The new data to render.
+        """
         assert_data_is_not_none(data)
 
         # Serialize the data within the session context,
