@@ -33,12 +33,6 @@ with ui.card():
     def df_selected():
         return df.data_view(selected=True)
 
-    @reactive.effect
-    @reactive.event(df.cell_selection)
-    def _on_cell_selection():
-        print("Cell selected", df.cell_selection())
-        return
-
 
 # Reactive value to store the un-subsetted data
 full_data = reactive.value(pd_data)

@@ -14,7 +14,7 @@ def test_update_data(page: Page, local_app: ShinyAppProc) -> None:
     shift_btn = controller.InputActionButton(page, "shift_btn")
     different_btn = controller.InputActionButton(page, "different_btn")
 
-    # df.expect_nrow(344) # TODO-barret; broken
+    df.expect_nrow(344)
     df.expect_ncol(2)
     df_selected.expect_column_labels(["studyName", "Sample Number"])
 
@@ -52,7 +52,7 @@ def test_update_data(page: Page, local_app: ShinyAppProc) -> None:
 
     # Change data set again
     different_btn.click()
-    # df.expect_nrow(344) # TODO-barret; broken
+    df.expect_nrow(344)
     df.expect_ncol(17)
     df.expect_column_labels(
         [

@@ -66,6 +66,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Fixed bug in `@render.data_frame` where `bool` or `object` columns were not being rendered. (#1570)
 
+* Fixed output controller `OutputDataFrame` in `shiny.playwright.controller` to correctly assert the number of rows in `.expect_nrow()` as the total number of virtual rows, not the number of currently displaying rows. (#1719)
+
 
 ## [1.1.0] - 2024-09-03
 
