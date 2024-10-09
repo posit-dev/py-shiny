@@ -9,6 +9,7 @@ quartodoc:
   renderer:
     style: _renderer.py
     show_signature_annotations: false
+    table_style: description-list
   sections:
     - title: Page containers
       desc: Create a user interface page container.
@@ -357,3 +358,4 @@ quartodoc:
           contents:
             - name: experimental.ui.card_image
               dynamic: false
+
