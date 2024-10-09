@@ -861,7 +861,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
       >
         <table
           className={tableClass + (withFilters ? " filtering" : "")}
-          aria-rowcount={tableData.length}
+          aria-rowcount={table.getRowCount()}
           aria-multiselectable={canMultiRowSelect}
           style={{
             width: width === null || width === "auto" ? undefined : "100%",
