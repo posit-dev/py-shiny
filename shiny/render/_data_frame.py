@@ -36,6 +36,7 @@ from ._data_frame_utils._styles import as_browser_style_infos
 from ._data_frame_utils._tbl_data import (
     apply_frame_patches,
     as_data_frame,
+    assert_data_is_not_none,
     data_frame_to_native,
     serialize_frame,
     subset_frame,
@@ -188,7 +189,7 @@ class data_frame(
     """
     Reactive value of the data frame's rendered object.
     """
-    _updated_data: reactive.Value[None | IntoDataFrameT]
+    _updated_data: reactive.Value[IntoDataFrameT]
     """
     Reactive value of the data frame's updated data value object.
     """
@@ -227,11 +228,11 @@ class data_frame(
         :
             The original data frame returned from the render method.
         """
-        updated_data = self._updated_data()
         # iff updated data exists, return it
-        # Can be reset on a followup render call
-        if updated_data is not None:
-            return updated_data
+        # Can be unset on a followup render call
+        if self._updated_data.is_set():
+            return self._updated_data()
+
         return self._req_value().data
 
     @reactive_calc_method
@@ -537,21 +538,27 @@ class data_frame(
 
     def _reset_reactives(self) -> None:
         self._value.set(None)
-        self._updated_data.set(None)
         self._cell_patch_map.set({})
+        self._updated_data.unset()
 
     def _init_reactives(self) -> None:
 
         # Init
         self._value = reactive.Value(None)
         self._cell_patch_map = reactive.Value({})
-        self._updated_data = reactive.Value(None)
+        self._updated_data = reactive.Value()  # Create with no value
 
         # Update the styles any time the cell patch map or new data updates
+        def should_update_styles():
+            return (
+                self._cell_patch_map(),
+                # If the udpated data is unset, use a `None` value which is not allowed.
+                self._updated_data() if self._updated_data.is_set() else None,
+            )
+
         @reactive.effect
         @reactive.event(
-            self._cell_patch_map,
-            self._updated_data,
+            should_update_styles,
             # Do not run the first time through!
             # The styles are being sent with the initial blob.
             ignore_init=True,
@@ -877,16 +884,18 @@ class data_frame(
         data: IntoDataFrameT,
         # , *, reset: bool | None = None
     ) -> None:
-
-        # Reset patches
-        # Set the new data
-        self._cell_patch_map.set({})
-        self._updated_data.set(data)
+        assert_data_is_not_none(data)
 
         # Serialize the data within the session context,
         # similar to `.to_payload()` on the `._value()`
         with session_context(self._get_session()):
             info = serialize_frame(data)
+
+        # Reset patches & set new data
+        # Perform only after serializing the frame
+        # (which performs sanity checks. E.g. `data is not None`
+        self._cell_patch_map.set({})
+        self._updated_data.set(data)
 
         await self._send_message_to_browser(
             "updateData",

@@ -60,6 +60,11 @@ __all__ = (
 # as_frame -----------------------------------------------------------------------------
 
 
+def assert_data_is_not_none(data: IntoDataFrame) -> None:
+    if data is None:  # pyright: ignore[reportUnnecessaryComparison]
+        raise TypeError("`data` cannot be `None`")
+
+
 def data_frame_to_native(data: DataFrame[IntoDataFrameT]) -> IntoDataFrameT:
     return nw.to_native(data)
 
@@ -67,6 +72,8 @@ def data_frame_to_native(data: DataFrame[IntoDataFrameT]) -> IntoDataFrameT:
 def as_data_frame(
     data: IntoDataFrameT | DataFrame[IntoDataFrameT],
 ) -> DataFrame[IntoDataFrameT]:
+    assert_data_is_not_none(data)
+
     if isinstance(data, DataFrame):
         return data  # pyright: ignore[reportUnknownVariableType]
     try:

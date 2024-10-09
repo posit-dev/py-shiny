@@ -6,6 +6,7 @@ from htmltools import TagChild, TagList
 
 from shiny import reactive, render
 from shiny._deprecated import ShinyDeprecationWarning
+from shiny._utils import wrap_async
 from shiny.render._data_frame_utils._selection import SelectionModes
 from shiny.render._data_frame_utils._tbl_data import as_data_frame
 from shiny.session._session import (
@@ -94,6 +95,38 @@ def test_as_selection_modes():
     for sm in ("col", "cols", "cell", "region"):
         with pytest.raises(RuntimeError, match="based cell selections"):
             SelectionModes(selection_mode_set={sm})
+
+
+@pytest.mark.asyncio
+async def test_as_data_frame_none():
+
+    from typing import Any, Callable
+
+    async def expect_data_is_not_none_error(fn: Callable[[], Any]):
+        fn_async = wrap_async(fn)
+        with pytest.raises(TypeError) as e:
+            await fn_async()
+        assert "`data` cannot be `None`" in str(e.value)
+
+    @render.data_frame
+    def pd_df():
+        return pd.DataFrame(data={"a": [1, 2]})
+
+    async def call_update_data():
+        await pd_df.update_data(None)  # pyright: ignore[reportArgumentType]
+
+    await expect_data_is_not_none_error(call_update_data)
+
+    await expect_data_is_not_none_error(
+        lambda: render.DataGrid(
+            None  # pyright: ignore[reportArgumentType,reportUnknownLambdaType]
+        )
+    )
+    await expect_data_is_not_none_error(
+        lambda: render.DataTable(
+            None  # pyright: ignore[reportArgumentType,reportUnknownLambdaType]
+        )
+    )
 
 
 @pytest.mark.asyncio
