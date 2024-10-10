@@ -96,11 +96,11 @@ def test_validate_column_labels(
     fn_styles.set_cell("new value", row=0, col=0)
     expect_styles(fn_styles, [styles[0], styles[1]])
 
-    fn_styles.set_cell("new value2", row=0, col=0)
+    fn_styles.set_cell("new value2", row=1, col=0)
     expect_styles(fn_styles, [styles[0], styles[1], styles[2]])
 
-    fn_styles.set_cell("new value3", row=0, col=0)
+    fn_styles.set_cell("new value3", row=2, col=0)
     expect_styles(fn_styles, [styles[0], styles[1], styles[2], styles[3]])
 
-    fn_styles.set_cell("new value4", row=0, col=0)
+    fn_styles.set_cell("new value4", row=3, col=0)
     expect_styles(fn_styles, [styles[0]])

@@ -9,6 +9,7 @@ quartodoc:
   renderer:
     style: _renderer.py
     show_signature_annotations: false
+    table_style: description-list
   sections:
     - title: Input components
       desc: Gather user input.
