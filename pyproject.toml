@@ -87,6 +87,11 @@ test = [
     "faicons",
     "ridgeplot",
     "great_tables",
+    "modin",
+    "polars",
+    "dask[dataframe]",
+    "pyarrow",
+    "pyarrow-stubs",
 ]
 dev = [
     "black>=24.0",
