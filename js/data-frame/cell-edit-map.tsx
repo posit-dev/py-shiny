@@ -48,6 +48,9 @@ export const useCellEditMap = () => {
     cellEditMap,
     // setCellEditMap,
     setCellEditMapAtLoc,
+    resetCellEditMap: () => {
+      setCellEditMap(new Map<string, CellEdit>());
+    },
   } as const;
 };
 
