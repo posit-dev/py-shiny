@@ -242,3 +242,17 @@ jobs:
           name: "playright-examples-${{ runner.os }}-${{ matrix.python-version }}-results"
           path: test-results/
           retention-days: 5
+
+  test-narwhals-integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup py-shiny
+        id: install
+        uses: ./.github/py-shiny/setup
+      - name: Run test
+        run: |
+          make test-narwhals-integration
+        
