@@ -253,6 +253,7 @@ jobs:
         id: install
         uses: ./.github/py-shiny/setup
       - name: Run test
+        env:
+          UV_SYSTEM_PYTHON: 1
         run: |
           make test-narwhals-integration
-        

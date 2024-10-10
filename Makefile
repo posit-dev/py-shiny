@@ -251,7 +251,6 @@ upgrade-html-deps: FORCE ## Upgrade Shiny's HTMLDependencies
 
 test-narwhals-integration: FORCE
 	@echo "-------- Install py-shiny ----------"
-	uv pip install -e ".[dev,test]" --system
+	$(MAKE) ci-install-deps
 	@echo "-------- Running py-shiny tests ----------"
 	$(MAKE) test playwright TEST_FILE="tests/playwright/shiny/components/data_frame" PYTEST_BROWSERS="--browser chromium"
-	pytest tests/playwright/shiny/components/data_frame tests/pytest
