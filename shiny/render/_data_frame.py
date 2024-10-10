@@ -850,9 +850,9 @@ class data_frame(
         ----------
         value
             The new value to set the cell to.
-        row_index
+        row
             The row index of the cell to update.
-        column_index
+        column
             The column index of the cell to update.
         """
         # TODO-barret; Test these assertions
