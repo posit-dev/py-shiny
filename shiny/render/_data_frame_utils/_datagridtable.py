@@ -14,7 +14,7 @@ from ._selection import (
     as_selection_modes,
 )
 from ._styles import StyleFn, StyleInfo, as_browser_style_infos, as_style_infos
-from ._tbl_data import serialize_frame
+from ._tbl_data import assert_data_is_not_none, serialize_frame
 from ._types import FrameJson, IntoDataFrameT
 
 
@@ -140,6 +140,7 @@ class DataGrid(AbstractTabularData, Generic[IntoDataFrameT]):
         styles: StyleInfo | list[StyleInfo] | StyleFn[IntoDataFrameT] | None = None,
         row_selection_mode: RowSelectionModeDeprecated = "deprecated",
     ):
+        assert_data_is_not_none(data)
         self.data = data
 
         self.width = width
@@ -299,6 +300,8 @@ class DataTable(AbstractTabularData, Generic[IntoDataFrameT]):
         styles: StyleInfo | list[StyleInfo] | StyleFn[IntoDataFrameT] | None = None,
         row_selection_mode: Literal["deprecated"] = "deprecated",
     ):
+        assert_data_is_not_none(data)
+
         self.data = data
 
         self.width = width

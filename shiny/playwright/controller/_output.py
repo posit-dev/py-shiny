@@ -673,8 +673,9 @@ class OutputDataFrame(UiWithContainer):
             loc_container=f"#{id}.html-fill-item",
             loc="> div > div.shiny-data-grid",
         )
-        self.loc_head = self.loc.locator("> table > thead")
-        self.loc_body = self.loc.locator("> table > tbody")
+        self.loc_table = self.loc.locator("> table")
+        self.loc_head = self.loc_table.locator("> thead")
+        self.loc_body = self.loc_table.locator("> tbody")
         self.loc_column_filter = self.loc_head.locator(
             "> tr.filters > th:not(.table-corner)"
         )
@@ -723,8 +724,10 @@ class OutputDataFrame(UiWithContainer):
         timeout
             The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
-        playwright_expect(self.loc_body.locator("> tr")).to_have_count(
-            value, timeout=timeout
+        playwright_expect(self.loc_table).to_have_attribute(
+            "aria-rowcount",
+            str(value),
+            timeout=timeout,
         )
 
     def expect_selected_num_rows(self, value: int, *, timeout: Timeout = None):
