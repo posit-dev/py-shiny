@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import modin.pandas as md
 import narwhals.stable.v1 as nw
 import palmerpenguins  # pyright: ignore[reportMissingTypeStubs]
-import modin.pandas as md
 
 from shiny.express import render, ui
 
@@ -25,6 +25,7 @@ with ui.card():
     @render.code
     def nw_df_type():
         return str(type(nw_df))
+
 
 with ui.card():
 
