@@ -150,6 +150,7 @@ SUB_FILE:=
 PYTEST_BROWSERS:= --browser webkit --browser firefox --browser chromium
 PYTEST_DEPLOYS_BROWSERS:= --browser chromium
 
+
 # Full test path to playwright tests
 TEST_FILE:=tests/playwright/$(SUB_FILE)
 # Default `make` values that shouldn't be directly used; (Use `TEST_FILE` instead!)
@@ -247,3 +248,9 @@ upgrade-html-deps: FORCE ## Upgrade Shiny's HTMLDependencies
 	  exit 1; \
 	fi
 	@scripts/htmlDependencies.R
+
+test-narwhals-integration: FORCE
+	@echo "-------- Install py-shiny ----------"
+	$(MAKE) ci-install-deps
+	@echo "-------- Running py-shiny tests ----------"
+	$(MAKE) test playwright TEST_FILE="tests/playwright/shiny/components/data_frame" PYTEST_BROWSERS="--browser chromium"
