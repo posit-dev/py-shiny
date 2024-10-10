@@ -4,7 +4,7 @@ inputs:
   python-version:
     description: 'Python version to use'
     required: false
-    default: "3.12"
+    default: "3.13"
 runs:
   using: "composite"
   steps:
@@ -38,12 +38,6 @@ runs:
         shell: bash
         run: |
           make ci-install-wheel
-
-      - name: Install backports.tarfile
-        if: ${{ startsWith(inputs.python-version, '3.8') }}
-        shell: bash
-        run: |
-          uv pip install backports.tarfile
 
       - name: Pip list
         shell: bash
