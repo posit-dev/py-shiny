@@ -12,6 +12,7 @@ def test_data_frame_data_type(
 ) -> None:
     page.goto(local_app.url)
 
+    #TODO-karan: Use for loop for iterating over the data types
     # pandas tests
     controller.OutputCode(page, "pd_type").expect_value(re.compile(r"pandas"))
     controller.OutputCode(page, "pd_data").expect_value(re.compile(r"pandas"))
@@ -19,9 +20,10 @@ def test_data_frame_data_type(
     controller.OutputCode(page, "pd_data_view_selected").expect_value(
         re.compile(r"pandas")
     )
-    controller.OutputCode(page, "selected_pandas_row").expect_value(
-        re.compile(r"Empty DataFrame")
-    )
+    # controller.OutputCode(page, "selected_pandas_row").expect_value(
+    #     re.compile(r"Empty DataFrame")
+    # )
+    controller.OutputDataFrame(page, "selected_pandas_row").expect_column_labels("")
     controller.OutputDataFrame(page, "pd_df_original").cell_locator(0, 0).click()
     controller.OutputCode(page, "selected_pandas_row").expect_value(
         re.compile(r"PAL0708")

@@ -30,11 +30,9 @@ with ui.layout_columns():
 
         "Selected row:"
 
-        @render.code
+        @render.data_frame
         def selected_pandas_row():
-            return str(
-                pd_df_original.data_view(selected=True)
-            )  # pyright: ignore[reportUnknownMemberType]
+            return pd_df_original.data_view(selected=True)
 
         "Data type:"
 
@@ -72,9 +70,9 @@ with ui.layout_columns():
 
         "Selected row:"
 
-        @render.code
+        @render.data_frame
         def selected_nw_row():
-            return str(nw_df_original.data_view(selected=True).to_native())
+            return nw_df_original.data_view(selected=True)
 
         "Data type:"
 
@@ -112,9 +110,9 @@ with ui.layout_columns():
 
         "Selected row:"
 
-        @render.code
+        @render.data_frame
         def selected_pa_row():
-            return str(pa_df_original.data_view(selected=True))
+            return pa_df_original.data_view(selected=True)
 
         "Data type:"
 
@@ -152,9 +150,9 @@ with ui.layout_columns():
 
         "Selected row:"
 
-        @render.code
+        @render.data_frame
         def selected_mpd_row():
-            return str(mpd_df_original.data_view(selected=True))
+            return mpd_df_original.data_view(selected=True)
 
         "Data type:"
 
@@ -192,9 +190,9 @@ with ui.layout_columns():
 
         "Selected row:"
 
-        @render.code
+        @render.data_frame
         def selected_pl_row():
-            return str(pl_df_original.data_view(selected=True))
+            return pl_df_original.data_view(selected=True)
 
         "Data type:"
 
