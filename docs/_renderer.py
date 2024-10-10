@@ -12,8 +12,6 @@ import quartodoc.ast as qast
 from griffe import (
     Alias,
     DocstringAttribute,
-    DocstringParameter,
-    DocstringSectionParameters,
     DocstringSectionText,
     Expr,
     ExprName,
@@ -22,7 +20,6 @@ from griffe import (
 )
 from plum import dispatch
 from quartodoc import MdRenderer
-from quartodoc.pandoc.blocks import DefinitionList
 from quartodoc.renderers.base import convert_rst_link_to_md, sanitize
 from quartodoc.renderers.md_renderer import ParamRow
 
