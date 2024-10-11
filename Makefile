@@ -253,5 +253,7 @@ narwhals-install-shiny: FORCE
 	@echo "-------- Install py-shiny ----------"
 	$(MAKE) ci-install-deps
 narwhals-test-integration: FORCE
-	@echo "-------- Running py-shiny tests ----------"
-	$(MAKE) test playwright TEST_FILE="tests/playwright/shiny/components/data_frame" PYTEST_BROWSERS="--browser chromium"
+	@echo "-------- Running py-shiny format, lint, typing, and unit tests ----------"
+	$(MAKE) check
+	@echo "-------- Running py-shiny playwright tests ----------"
+	$(MAKE) playwright TEST_FILE="tests/playwright/shiny/components/data_frame" PYTEST_BROWSERS="--browser chromium"
