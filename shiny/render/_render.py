@@ -271,10 +271,9 @@ class plot(Renderer[object]):
 
     async def render(self) -> dict[str, Jsonifiable] | Jsonifiable | None:
         is_userfn_async = self.fn.is_async()
-        name = self.output_id
         session = require_active_session(None)
         # Module support
-        name = session.ns(name)
+        output_name = session.ns(self.output_id)
         width = self.width
         height = self.height
         alt = self.alt
@@ -296,7 +295,9 @@ class plot(Renderer[object]):
         # you're asking for. It takes a reactive dependency. If the client hasn't reported
         # the requested dimension, you'll get a SilentException.
         def container_size(dimension: Literal["width", "height"]) -> float:
-            result = inputs[ResolvedId(f".clientdata_output_{name}_{dimension}")]()
+            result = inputs[
+                ResolvedId(f".clientdata_output_{output_name}_{dimension}")
+            ]()
             return typing.cast(float, result)
 
         non_missing_size = (

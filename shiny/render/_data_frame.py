@@ -525,8 +525,9 @@ class data_frame(
             The row numbers of the data frame that are currently being viewed in the browser
             after sorting and filtering has been applied.
         """
-        id_data_view_rows = f"{self.output_id}_data_view_rows"
-        input_data_view_rows = self._get_session().input[id_data_view_rows]()
+        input_data_view_rows = self._get_session().input[
+            f"{self.output_id}_data_view_rows"
+        ]()
         return tuple(input_data_view_rows)
 
     # @reactive_calc_method
@@ -1015,11 +1016,12 @@ class data_frame(
     async def _send_message_to_browser(self, handler: str, obj: dict[str, Any]):
 
         session = self._get_session()
-        id = session.ns(self.output_id)
         await session.send_custom_message(
             "shinyDataFrameMessage",
             {
-                "id": id,
+                # Custom message handlers are never namespaced for modules.
+                # Must provide a unique name to avoid conflicts between modules.
+                "id": session.ns(self.output_id),
                 "handler": handler,
                 "obj": obj,
             },
