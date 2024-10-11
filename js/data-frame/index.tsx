@@ -2,6 +2,8 @@
 
 // TODO-barret-future; Try to group all related code into a file and make index.tsx as small as possible. Try to move all logic into files and keep the main full of `useFOO` functions.
 
+// TODO-barret-future; Instead of deconstructinng all of the use state objects, keep it as a dictionary and shorten the method names. The docs can live on the _useFoo` function return type. Ex: CellEditMapReturnObject 's setCellEditMapAtLoc should contain JSDoc on it's objects. Then we'd have a `cellEditMap.setAtLoc` method.
+
 import {
   Column,
   ColumnDef,
@@ -28,6 +30,11 @@ import { ErrorsMessageValue } from "rstudio-shiny/srcts/types/src/shiny/shinyapp
 import { useImmer } from "use-immer";
 import { TableBodyCell } from "./cell";
 import { getCellEditMapObj, useCellEditMap } from "./cell-edit-map";
+import {
+  addPatchToData,
+  cellPatchPyArrToCellPatchArr,
+  type CellPatchPy,
+} from "./data-update";
 import { findFirstItemInView, getStyle } from "./dom-utils";
 import { ColumnFiltersState, Filter, FilterValue, useFilters } from "./filter";
 import type { CellSelection, SelectionModesProp } from "./selection";
@@ -106,8 +113,8 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
   bgcolor,
 }) => {
   const {
-    columns,
-    typeHints,
+    columns: columnsProp,
+    typeHints: typeHintsProp,
     data: tableDataProp,
     options: payloadOptions = {
       width: undefined,
@@ -128,6 +135,9 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const theadRef = useRef<HTMLTableSectionElement>(null);
   const tbodyRef = useRef<HTMLTableSectionElement>(null);
+
+  const [columns, setColumns] = useImmer(columnsProp);
+  const [typeHints, setTypeHints] = useImmer(typeHintsProp);
 
   const _useStyleInfo = useStyleInfoMap({
     initStyleInfos: initStyleInfos ?? [],
@@ -153,6 +163,10 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
    * Set a cell's state or edit value in the `cellEditMap`
    */
   const setCellEditMapAtLoc = _cellEditMap.setCellEditMapAtLoc;
+  /**
+   * Reset the `cellEditMap` to an empty state
+   */
+  const resetCellEditMap = _cellEditMap.resetCellEditMap;
 
   /**
    * Determines if the user is allowed to edit cells in the table.
@@ -284,6 +298,59 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
     filtersTableOptions,
     setColumnFilters,
   } = useFilters<unknown[]>(withFilters);
+
+  const updateData = useCallback(
+    ({
+      data,
+      columns,
+      typeHints,
+    }: {
+      data: PandasData<unknown>["data"];
+      columns: readonly string[];
+      typeHints: readonly TypeHint[] | undefined;
+    }) => {
+      setColumns(columns);
+      setTableData(data);
+      setTypeHints(typeHints);
+      resetCellEditMap();
+
+      // Make map for quick lookup of type hints
+      const newTypeHintMap = new Map<string, TypeHint>();
+      typeHints?.forEach((hint, i) => {
+        newTypeHintMap.set(columns[i]!, hint);
+      });
+      // Filter out sorting and column filters that are no longer valid
+      const newSort = sorting.filter((sort) => newTypeHintMap.has(sort.id));
+      const newColumnFilter = columnFilters.filter((filter) => {
+        const typeHint = newTypeHintMap.get(filter.id);
+        if (!typeHint) return false;
+        // Maintain the filter if it's a numeric filter
+        // Drop if it's a string filter
+        if (typeHint.type === "numeric") {
+          return (
+            filter.value === null ||
+            (Array.isArray(filter.value) &&
+              filter.value.every((v) => v !== null))
+          );
+        }
+        // Maintain string filters
+        return typeof filter.value === "string";
+      });
+
+      setColumnFilters(newColumnFilter);
+      setSorting(newSort);
+    },
+    [
+      columnFilters,
+      resetCellEditMap,
+      setColumnFilters,
+      setColumns,
+      setSorting,
+      setTableData,
+      setTypeHints,
+      sorting,
+    ]
+  );
 
   const options: TableOptions<unknown[]> = {
     data: tableData,
@@ -462,6 +529,66 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
     // Register the Shiny HtmlDependencies
     Shiny.renderDependenciesAsync([...htmlDeps]);
   }, [htmlDeps]);
+
+  useEffect(() => {
+    const handleAddPatches = (
+      event: CustomEvent<{
+        patches: CellPatchPy[];
+      }>
+    ) => {
+      const evtPatches = event.detail.patches;
+      const newPatches = cellPatchPyArrToCellPatchArr(evtPatches);
+
+      // Update data with extra patches
+      addPatchToData({
+        setData: setTableData,
+        newPatches,
+        setCellEditMapAtLoc,
+      });
+    };
+
+    if (!id) return;
+
+    const element = document.getElementById(id);
+    if (!element) return;
+
+    element.addEventListener("addPatches", handleAddPatches as EventListener);
+
+    return () => {
+      element.removeEventListener(
+        "addPatches",
+        handleAddPatches as EventListener
+      );
+    };
+  }, [columns, id, setCellEditMapAtLoc, setSorting, setTableData]);
+
+  useEffect(() => {
+    const handleUpdateData = (
+      event: CustomEvent<{
+        data: PandasData<unknown>["data"];
+        columns: PandasData<unknown>["columns"];
+        typeHints: PandasData<unknown>["typeHints"];
+      }>
+    ) => {
+      const evtData = event.detail;
+
+      updateData(evtData);
+    };
+
+    if (!id) return;
+
+    const element = document.getElementById(id);
+    if (!element) return;
+
+    element.addEventListener("updateData", handleUpdateData as EventListener);
+
+    return () => {
+      element.removeEventListener(
+        "updateData",
+        handleUpdateData as EventListener
+      );
+    };
+  }, [columns, id, resetCellEditMap, setTableData, updateData]);
 
   useEffect(() => {
     const handleColumnSort = (
@@ -734,7 +861,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
       >
         <table
           className={tableClass + (withFilters ? " filtering" : "")}
-          aria-rowcount={tableData.length}
+          aria-rowcount={table.getRowCount()}
           aria-multiselectable={canMultiRowSelect}
           style={{
             width: width === null || width === "auto" ? undefined : "100%",

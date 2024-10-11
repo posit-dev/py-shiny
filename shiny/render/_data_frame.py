@@ -36,7 +36,9 @@ from ._data_frame_utils._styles import as_browser_style_infos
 from ._data_frame_utils._tbl_data import (
     apply_frame_patches,
     as_data_frame,
+    assert_data_is_not_none,
     data_frame_to_native,
+    serialize_frame,
     subset_frame,
 )
 from ._data_frame_utils._types import (
@@ -106,21 +108,48 @@ class data_frame(
     be able to edit the cells in the table. After a cell has been edited, the edited
     value will be sent to the server for processing. The handling methods are set via
     `@<data_frame_renderer>.set_patch_fn` or `@<data_frame_renderer>.set_patches_fn`
-    decorators. By default, both decorators will return a string value.
+    decorators. By default, both decorators will return the corresponding value as a
+    string.
 
-    To access the data viewed by the user, use `<data_frame_renderer>.data_view()`. This
-    method will sort, filter, and apply any patches to the data frame as viewed by the
-    user within the browser. This is a shallow copy of the original data frame. It is
-    possible that alterations to `data_view` could alter the original `data` data frame.
+    Data methods
+    ------------
 
-    To access the original data, use `<data_frame_renderer>.data()`. This is a quick
-    reference to the original pandas or polars data frame that was returned from the
-    app's render function. If it is mutated in place, it **will** modify the original
-    data.
+    There are several methods available to inspect and update data frame renderer. It is
+    important to know the side effects of each method to know how they interact with
+    each other.
 
-    Note... if the data frame renderer is re-rendered due to reactivity, then
-    the user's edits, sorting, and filtering will be lost. We hope to improve upon this
-    in the future.
+    * Data frame render method:
+        * When this method is reactively executed, the `.data()` data frame is set to
+          the underlying data frame and all `.cell_patches()` are removed.
+        * When this method is reactively executed, **all user state is reset**. This
+          includes the user's edits, sorting, filtering.
+    * `.data()`:
+        * Reactive calculation that returns the render method's underlying data frame or
+          the data frame supplied to `.update_data(data)`, whichever has been most
+          recently set.
+    * `.cell_patches()`:
+        * Reactive calculation that returns a list of user edits (or updated cell
+          values) that will be applied to `.data()` to create the `.data_patched()` data
+          frame.
+    * `.data_patched()`:
+        * Reactive calculation that returns the `.data()` data frame with all
+          `.cell_patches()` patches applied.
+    * `.data_view(*, selected: bool)`:
+        * Reactive function that returns the `.data_patched()` data frame with the
+          user's sorting and filtering applied. It represents the data frame as viewed
+          by the user within the browser.
+        * If `selected=True`, only the selected rows are returned.
+    * `.update_cell_value(value, row, col)`:
+        * Sets a new entry in `.cell_patches()`.
+        * Calling this method will **not** reset the user's sorting or filtering.
+    * `.update_data(data)`:
+        * Updates the `.data()` data frame with new data.
+        * Calling this method will remove all `.cell_patches()`.
+        * Calling this method will **not** reset the user's sorting or filtering.
+
+    Note: All data methods are shallow copies of each other. If they are mutated in
+    place, it **will modify** the underlying data object and possibly alter other data
+    objects.
 
     Narwhals
     -------------------
@@ -145,7 +174,6 @@ class data_frame(
       it will not insert any tags, but it will cause the column to be interpreted as
       `html` where possible.   (tl/dr: Use consistent typing in your columns!)
 
-
     Tip
     ---
     This decorator should be applied **before** the ``@output`` decorator (if that
@@ -163,6 +191,10 @@ class data_frame(
     _value: reactive.Value[None | DataGrid[IntoDataFrameT] | DataTable[IntoDataFrameT]]
     """
     Reactive value of the data frame's rendered object.
+    """
+    _updated_data: reactive.Value[IntoDataFrameT]
+    """
+    Reactive value of the data frame's updated data value object.
     """
 
     def _req_value(self):
@@ -182,23 +214,31 @@ class data_frame(
             raise RuntimeError("req() failed to raise a silent error.")
         return value
 
-    # @reactive_calc_method
+    @reactive_calc_method
     def data(self) -> IntoDataFrameT:
         """
-        Reactive calculation of the data frame's render method.
+        Reactive calculation of the data frame's data.
 
-        This is a quick reference to the original data frame that was returned from the
-        app's render function. If it is mutated in place, it **will** modify the original
-        data.
+        This reactive calculation returns the render method's underlying data frame or
+        the data frame supplied to `.update_data(data)`, whichever has been most
+        recently set.
 
-        Even if the rendered data value was not of type `pd.DataFrame` or `pl.DataFrame`, this method currently
-        converts it to a `pd.DataFrame`.
+        The returned value is a shallow copy of the original data frame. It is possible
+        that alterations to the `.data()` data frame could alter other associated data
+        frame values. Please be cautious when using this value directly.
 
         Returns
         -------
         :
-            The original data frame returned from the render method.
+            This reactive calculation returns the render method's underlying data frame
+            or the data frame supplied to `.update_data(data)`, whichever has been most
+            recently set.
         """
+        # iff updated data exists, return it
+        # Can be unset on a followup render call
+        if self._updated_data.is_set():
+            return self._updated_data()
+
         return self._req_value().data
 
     @reactive_calc_method
@@ -276,7 +316,11 @@ class data_frame(
     @reactive_calc_method
     def cell_patches(self) -> list[CellPatch]:
         """
-        Reactive calculation of the data frame's edits provided by the user.
+        Reactive calculation of the data frame's edits.
+
+        This reactive calculation that returns a list of user edits (or updated cell
+        values) that will be applied to `.data()` to create the `.data_patched()` data
+        frame.
 
         Returns
         -------
@@ -286,7 +330,7 @@ class data_frame(
         return list(self._cell_patch_map().values())
 
     @reactive_calc_method
-    def _data_patched(self) -> DataFrame[IntoDataFrameT]:
+    def _nw_data_patched(self) -> DataFrame[IntoDataFrameT]:
         """
         Reactive calculation of the data frame's patched data.
 
@@ -296,6 +340,25 @@ class data_frame(
             The data frame with all the user's edit patches applied to it.
         """
         return apply_frame_patches(self._nw_data(), self.cell_patches())
+
+    @reactive_calc_method
+    def data_patched(self) -> IntoDataFrameT:
+        """
+        Reactive calculation of the data frame's patched data.
+
+        This method returns the `.data()` data frame with all `.cell_patches()` patches
+        applied.
+
+        The returned value is a shallow copy of the original data frame. It is possible
+        that alterations to the `.data_patched()` data frame could alter other
+        associated data frame values. Please be cautious when using this value directly.
+
+        Returns
+        -------
+        :
+            The patched data frame.
+        """
+        return self._nw_data_to_original_type(self._nw_data_patched())
 
     # Apply filtering and sorting
     # https://github.com/posit-dev/py-shiny/issues/1240
@@ -335,7 +398,7 @@ class data_frame(
         else:
             rows = self.data_view_rows()
 
-        nw_data = subset_frame(self._data_patched(), rows=rows)
+        nw_data = subset_frame(self._nw_data_patched(), rows=rows)
 
         patched_subsetted_into_data = self._nw_data_to_original_type(nw_data)
 
@@ -370,22 +433,24 @@ class data_frame(
         """
         Reactive function that retrieves the data how it is viewed within the browser.
 
-        This function will sort, filter, and apply any patches to the data frame as
-        viewed by the user within the browser.
+        This function will return the `.data_patched()` data frame with the user's
+        sorting and filtering applied. It represents the data frame as viewed by the
+        user within the browser.
 
-        This is a shallow copy of the original data frame. It is possible that
-        alterations to `data_view` could alter the original `data` data frame. Please be
-        cautious when using this value directly.
+        The returned value is a shallow copy of the original data frame. It is possible
+        that alterations to the `.data_view()` data frame could alter other associated
+        date frame values. Please be cautious when using this value directly.
 
         Parameters
         ----------
         selected
-            If `True`, subset the viewed data to the selected area. Defaults to `False` (all rows).
+            If `True`, subset the viewed data to the selected area. Defaults to `False`
+            (all rows).
 
         Returns
         -------
         :
-            A view of the data frame as seen in the browser.
+            A view of the (possibly selected) data frame as seen in the browser.
 
         See Also
         --------
@@ -493,14 +558,34 @@ class data_frame(
     def _reset_reactives(self) -> None:
         self._value.set(None)
         self._cell_patch_map.set({})
+        self._updated_data.unset()
 
     def _init_reactives(self) -> None:
 
         # Init
-        self._value: reactive.Value[
-            None | DataGrid[IntoDataFrameT] | DataTable[IntoDataFrameT]
-        ] = reactive.Value(None)
+        self._value = reactive.Value(None)
         self._cell_patch_map = reactive.Value({})
+        self._updated_data = reactive.Value()  # Create with no value
+
+        # Update the styles any time the cell patch map or new data updates
+        def should_update_styles():
+            return (
+                self._cell_patch_map(),
+                # If the udpated data is unset, use a `None` value which is not allowed.
+                self._updated_data() if self._updated_data.is_set() else None,
+            )
+
+        @reactive.effect
+        @reactive.event(
+            should_update_styles,
+            # Do not run the first time through!
+            # The styles are being sent with the initial blob.
+            ignore_init=True,
+        )
+        async def _():
+            # Be sure this is called within `isolate()` to isolate any reactivity
+            # It currently is, as `@reactive.event()` is being used
+            await self._attempt_update_cell_style()
 
     def _get_session(self) -> Session:
         if self._session is None:
@@ -661,14 +746,54 @@ class data_frame(
                     )
 
         # Add (or overwrite) new cell patches by setting each patch into the cell patch map
-        self._set_cell_patch_map_patches(patches)
+        jsonifiable_processed_patches = self._set_cell_patch_map_patches(patches)
 
-        # With the patches applied, any data retrieved while processing cell style
-        # will use the new patch values.
-        await self._attempt_update_cell_style()
+        # Return the processed patches to the client
+        return jsonifiable_processed_patches
+
+    def _set_cell_patch_map_patches(
+        self,
+        patches: ListOrTuple[CellPatch],
+    ) -> list[Jsonifiable]:
+        """
+        Set the patches within the cell patch map.
+
+        Parameters
+        ----------
+        patches
+            Set of patches to apply to store in the cell patch map.
+
+        Returns
+        -------
+        :
+            A list of processed (by the session) patches to apply to the data frame.
+        """
+        # Use copy to set the new value
+        cell_patch_map = self._cell_patch_map().copy()
+
+        for patch in patches:
+            row_index = patch["row_index"]
+            column_index = patch["column_index"]
+
+            assert isinstance(
+                row_index, int
+            ), f"Expected `row_index` to be an `int`, received {type(row_index)}"
+            assert isinstance(
+                column_index, int
+            ), f"Expected `column_index` to be an `int`, received {type(column_index)}"
+
+            # TODO-render.data_frame; Possibly check for cell type and compare against type hints
+            # TODO-render.data_frame; The `value` should be coerced by pandas to the correct type
+            # TODO-render.data_frame; See https://pandas.pydata.org/pandas-docs/stable/user_guide/basics.html#object-conversion
+
+            cell_patch_map[(row_index, column_index)] = patch
+
+        # Once all patches are set, update the cell patch map with new version
+        self._cell_patch_map.set(cell_patch_map)
 
         # Upgrade any HTML-like content to `CellHtml` json objects
         # for sending to the client
+        session = self._get_session()
         processed_patches: list[CellPatchProcessed] = [
             {
                 "row_index": patch["row_index"],
@@ -676,7 +801,7 @@ class data_frame(
                 # Only upgrade the value if it is necessary
                 "value": maybe_as_cell_html(
                     patch["value"],
-                    session=self._get_session(),
+                    session=session,
                 ),
             }
             for patch in patches
@@ -688,84 +813,133 @@ class data_frame(
             for ret_processed_patch in processed_patches
         ]
 
-        # Return the processed patches to the client
         return jsonifiable_patches
 
-    def _set_cell_patch_map_patches(
+    async def _attempt_update_cell_style(self) -> None:
+
+        rendered_value = self._value()
+        if not isinstance(rendered_value, (DataGrid, DataTable)):
+            return
+
+        styles_fn = rendered_value.styles
+        if not callable(styles_fn):
+            return
+
+        patched_into_data = self._nw_data_to_original_type(self._nw_data_patched())
+        new_styles = as_browser_style_infos(styles_fn, into_data=patched_into_data)
+
+        await self._send_message_to_browser(
+            "updateStyles",
+            {"styles": new_styles},
+        )
+
+    async def update_cell_value(
         self,
-        patches: ListOrTuple[CellPatch],
-    ):
+        value: CellValue,
+        *,
+        row: int,
+        col: int | str,
+    ) -> None:
         """
-        Set the patches within the cell patch map.
+        Update the value of a cell in the data frame.
+
+        Calling this method will set a new entry in `.cell_patches()`. It will not reset
+        the user's sorting or filtering of their rendered data frame.
 
         Parameters
         ----------
-        patches
-            Set of patches to apply to store in the cell patch map.
+        value
+            The new value to set the cell to.
+        row
+            The row index of the cell to update.
+        column
+            The column index of the cell to update.
         """
-        # Use copy to set the new value
-        cell_patch_map = self._cell_patch_map().copy()
+        # TODO-barret; Test these assertions
+        # Convert column name to index if necessary
+        if isinstance(col, str):
+            with reactive.isolate():
+                column_names = self._nw_data().columns
+                if col not in column_names:
+                    raise ValueError(f"Column '{col}' not found in data frame.")
+                column_index = self._nw_data().columns.index(col)
+        else:
+            column_index = col
+            if (not isinstance(col, int)) or isinstance(col, bool):
+                raise TypeError(
+                    f"Expected `col` to be an `int` or `str, received {type(column_index)}"
+                )
+            if column_index < 0:
+                raise ValueError(
+                    f"Expected `col` to be greater than or equal to 0, received {column_index}"
+                )
+            column_length = self._nw_data().shape[1]
+            if column_index >= column_length:
+                raise ValueError(
+                    f"Expected `col` to be less than {column_length}, received {column_index}"
+                )
 
-        for patch in patches:
-            row_index = patch["row_index"]
-            column_index = patch["column_index"]
-
-            assert isinstance(
-                row_index, int
-            ), f"Expected `row_index` to be an `int`, got {type(row_index)}"
-            assert isinstance(
-                column_index, int
-            ), f"Expected `column_index` to be an `int`, got {type(column_index)}"
-
-            # TODO-render.data_frame; Possibly check for cell type and compare against type hints
-            # TODO-render.data_frame; The `value` should be coerced by pandas to the correct type
-            # TODO-render.data_frame; See https://pandas.pydata.org/pandas-docs/stable/user_guide/basics.html#object-conversion
-
-            cell_patch_map[(row_index, column_index)] = patch
-
-        # Once all patches are set, update the cell patch map with new version
-        self._cell_patch_map.set(cell_patch_map)
-
-    async def _attempt_update_cell_style(self) -> None:
-        with session_context(self._get_session()):
-
-            rendered_value = self._value()
-            if not isinstance(rendered_value, (DataGrid, DataTable)):
-                return
-
-            styles_fn = rendered_value.styles
-            if not callable(styles_fn):
-                return
-
-            patched_into_data = self._nw_data_to_original_type(self._data_patched())
-            new_styles = as_browser_style_infos(styles_fn, into_data=patched_into_data)
-
-            await self._send_message_to_browser(
-                "updateStyles",
-                {"styles": new_styles},
+        if (not isinstance(row, int)) or isinstance(row, bool):
+            raise TypeError(f"Expected `row` to be an `int`, received {type(row)}")
+        if row < 0:
+            raise ValueError(
+                f"Expected `row` to be greater than or equal to 0, received {row}"
             )
 
-    # TODO-barret-render.data_frame; Add `update_cell_value()` method
-    # def _update_cell_value(
-    #     self, value: CellValue, *, row_index: int, column_index: int
-    # ) -> CellPatch:
-    #     """
-    #     Update the value of a cell in the data frame.
-    #
-    #     Parameters
-    #     ----------
-    #     value
-    #         The new value to set the cell to.
-    #     row_index
-    #         The row index of the cell to update.
-    #     column_index
-    #         The column index of the cell to update.
-    #     """
-    #     cell_patch_processed = self._set_cell_patch_map_patches(
-    #         {value: value, row_index: row_index, column_index: column_index}
-    #     )
-    #     # TODO-barret-render.data_frame; Send message to client to update cell value
-    #     return cell_patch_processed
+        patch: CellPatch = {
+            "value": value,
+            "row_index": row,
+            "column_index": column_index,
+        }
+        processed_patches = self._set_cell_patch_map_patches([patch])
+
+        # TODO-barret-render.data_frame; Send message to client to update cell value
+        await self._send_message_to_browser(
+            "addPatches",
+            {"patches": processed_patches},
+        )
+
+        return
+
+    async def update_data(
+        self,
+        data: IntoDataFrameT,
+    ) -> None:
+        """
+        Update the data frame with new data.
+
+        Calling this method will update the `.data()` data frame with new data and will
+        remove all `.cell_patches()`. It will not reset the user's sorting or filtering
+        of their rendered data frame. Any incompatible sorting or filtering settings
+        will be silently dropped.
+
+        Parameters
+        ----------
+        data
+            The new data to render.
+        """
+        assert_data_is_not_none(data)
+
+        # Serialize the data within the session context,
+        # similar to `.to_payload()` on the `._value()`
+        with session_context(self._get_session()):
+            info = serialize_frame(data)
+
+        # Reset patches & set new data
+        # Perform only after serializing the frame
+        # (which performs sanity checks. E.g. `data is not None`
+        self._cell_patch_map.set({})
+        self._updated_data.set(data)
+
+        await self._send_message_to_browser(
+            "updateData",
+            {
+                "data": info["data"],
+                "columns": info["columns"],
+                "typeHints": info["typeHints"],
+            },
+        )
+        return
 
     def auto_output_ui(self) -> Tag:
         return ui.output_data_frame(id=self.output_id)

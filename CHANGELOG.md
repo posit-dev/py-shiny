@@ -17,7 +17,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
-* Added [narwhals](https://posit-dev.github.io/py-narwhals) support for `@render.data_frame`. This allows for any eager data frame supported by narwhals to be returned from a `@render.data_frame` output method. All internal methods and helper methods leverage the `narwhals` API to be data frame agnostic. (#1570)
+* New features for `@render.data_frame`:
+
+  * Added [narwhals](https://posit-dev.github.io/py-narwhals) support for `@render.data_frame`. This allows for any eager data frame supported by narwhals to be returned from a `@render.data_frame` output method. All internal methods and helper methods now leverage the `narwhals` API to be data frame agnostic. (#1570)
+
+  * Added `.data_patched()` reactive calculation that applies all `.cell_patches()` to `.data()`. (#1719)
+
+  * Added `.update_cell_value()` method to programmatically update the contents of a data frame cell. (#1719)
+
+  * Added `.update_data()` method to update the rendered data without resetting any user sort or filter. Note, all user edits will be forgotten. (#1719)
+
+* Added [narwhals](https://posit-dev.github.io/py-narwhals) support for `@render.table`. This allows for any eager data frame supported by narwhals to be returned from a `@render.table` output method. (#1570)
 
 ### Other changes
 
@@ -41,8 +51,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added `.expect_class()` and `.expect_multiple()` for `Accordion` in `shiny.playwright.controllers` (#1710)
 
-* Added [narwhals](https://posit-dev.github.io/py-narwhals) support for `@render.table`. This allows for any eager data frame supported by narwhals to be returned from a `@render.table` output method. (#1570)
-
 ### Bug fixes
 
 * A few fixes for `ui.Chat()`, including:
@@ -65,6 +73,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Fixed a bug with `ui.input_slider()` when used as a range slider that made it impossible to change the slider value when both handles were at the maximum value. (#1707)
 
 * Fixed bug in `@render.data_frame` where `bool` or `object` columns were not being rendered. (#1570)
+
+* Fixed output controller `OutputDataFrame` in `shiny.playwright.controller` to correctly assert the number of rows in `.expect_nrow()` as the total number of virtual rows, not the number of currently displaying rows. (#1719)
 
 
 ## [1.1.0] - 2024-09-03
