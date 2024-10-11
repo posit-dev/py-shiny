@@ -47,7 +47,7 @@ dependencies = [
     "prompt-toolkit;platform_system!='Emscripten'",
     "python-multipart>=0.0.7;platform_system!='Emscripten'",
     "setuptools;python_version>='3.12'",
-    "narwhals>=1.9.1",
+    "narwhals>=1.9.3",
     "orjson>=3.10.7",
 ]
 
@@ -87,6 +87,11 @@ test = [
     "faicons",
     "ridgeplot",
     "great_tables",
+    "modin[all]",
+    "polars",
+    "dask[dataframe]",
+    "pyarrow",
+    "pyarrow-stubs",
 ]
 dev = [
     "black>=24.0",
