@@ -60,7 +60,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `shiny create` now uses the template `id` rather than the directory name as the default directory. (#1666)
 
-* `ui.Theme()` now works correctly on Windows when the theme requires Sass compilation. (thanks @yuuuxt, #1684)
+* `ui.Theme()` now works correctly on Windows when the theme requires Sass compilation. (Thanks, @yuuuxt!) (#1684)
 
 * Fixed multiple input controllers (`InputSlider`, `InputDate`, `InputDateRange`, `InputCheckbox`, and `InputCheckboxGroup`) in `shiny.playwright.controller` to check the `width` property within the `style` attribute. (#1691, #1696, #1702)
 
@@ -76,6 +76,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Fixed output controller `OutputDataFrame` in `shiny.playwright.controller` to correctly assert the number of rows in `.expect_nrow()` as the total number of virtual rows, not the number of currently displaying rows. (#1719)
 
+* Fixed issue where `@render.download` did not respect the module namespacing. (Thanks, @nsiicm0) (#1732)
 
 ## [1.1.0] - 2024-09-03
 
