@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import modin.pandas as md
+import modin.pandas as md  # pyright: ignore[reportMissingTypeStubs]
 import narwhals.stable.v1 as nw
 import palmerpenguins  # pyright: ignore[reportMissingTypeStubs]
 
