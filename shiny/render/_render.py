@@ -688,7 +688,8 @@ class download(Renderer[str]):
             from urllib.parse import quote
 
             session = require_active_session(None)
-            return f"session/{quote(session.id)}/download/{quote(self.output_id)}?w="
+            # All download urls must be fully namespaced
+            return f"session/{quote(session.id)}/download/{quote(session.ns(self.output_id))}?w="
 
         # Unlike most value functions, this one's name is `url`. But we want to get the
         # name from the user-supplied function.
@@ -705,7 +706,9 @@ class download(Renderer[str]):
         # have been started.
         session = get_current_session()
         if session is not None and not session.is_stub_session():
-            session._downloads[self.output_id] = DownloadInfo(
+            # All download objects are stored in the root session.
+            # They must be fully namespaced
+            session._downloads[session.ns(self.output_id)] = DownloadInfo(
                 filename=self.filename,
                 content_type=self.media_type,
                 handler=fn,
