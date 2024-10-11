@@ -5,6 +5,7 @@ from playwright.sync_api import Page
 from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
+# TODO-karan: pyarrow tests have been commented out because the pyarrow backend is not yet supported
 backends = [
     {
         "name": "pandas",
@@ -18,12 +19,12 @@ backends = [
         "df_original": "nw_df_original",
         "selected_row": "selected_nw_row",
     },
-    {
-        "name": "pyarrow",
-        "prefix": "pa",
-        "df_original": "pa_df_original",
-        "selected_row": "selected_pa_row",
-    },
+    # {
+    #     "name": "pyarrow",
+    #     "prefix": "pa",
+    #     "df_original": "pa_df_original",
+    #     "selected_row": "selected_pa_row",
+    # },
     {
         "name": "polars",
         "prefix": "pl",

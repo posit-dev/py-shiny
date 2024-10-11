@@ -87,7 +87,7 @@ test = [
     "faicons",
     "ridgeplot",
     "great_tables",
-    "modin",
+    "modin[all]",
     "polars",
     "dask[dataframe]",
     "pyarrow",
