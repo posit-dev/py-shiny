@@ -1,12 +1,13 @@
-from conftest import ShinyAppProc
-from controls import Card
 from playwright.sync_api import Page
+
+from shiny.playwright import controller
+from shiny.run import ShinyAppProc
 
 
 def test_card(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 
-    card = Card(page, "card1")
+    card = controller.Card(page, "card1")
     card.expect_max_height(None)
     card.expect_min_height(None)
     card.expect_height(None)
@@ -20,7 +21,7 @@ def test_card(page: Page, local_app: ShinyAppProc) -> None:
         ]
     )
     card.expect_full_screen(False)
-    card.open_full_screen()
+    card.set_full_screen(True)
     card.expect_full_screen(True)
-    card.close_full_screen()
+    card.set_full_screen(False)
     card.expect_full_screen(False)

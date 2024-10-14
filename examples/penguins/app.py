@@ -55,7 +55,7 @@ app_ui = ui.page_sidebar(
 def server(input: Inputs, output: Outputs, session: Session):
     @reactive.calc
     def filtered_df() -> pd.DataFrame:
-        """Returns a Pandas data frame that includes only the desired rows"""
+        """Returns a pandas data frame that includes only the desired rows"""
 
         # This calculation "req"uires that at least one species is selected
         req(len(input.species()) > 0)

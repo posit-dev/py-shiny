@@ -23,8 +23,8 @@ class ShinyDeprecationWarning(RuntimeWarning):
 warnings.simplefilter("always", ShinyDeprecationWarning)
 
 
-def warn_deprecated(message: str):
-    warnings.warn(message, ShinyDeprecationWarning, stacklevel=3)
+def warn_deprecated(message: str, stacklevel: int = 3):
+    warnings.warn(message, ShinyDeprecationWarning, stacklevel=stacklevel)
 
 
 def render_text():

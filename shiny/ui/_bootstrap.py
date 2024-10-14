@@ -128,11 +128,6 @@ def panel_well(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
     -------
     :
         A UI element.
-
-    See Also
-    --------
-    * :func:`~shiny.ui.panel_sidebar`
-    * :func:`~shiny.ui.panel_main`
     """
     return div({"class": "well"}, *args, **kwargs)
 
@@ -197,7 +192,13 @@ def panel_conditional(
     if ns_prefix != "":
         ns_prefix += "-"
 
-    return div(*args, data_display_if=condition, data_ns_prefix=ns_prefix, **kwargs)
+    return div(
+        *args,
+        {"class": "shiny-panel-conditional"},
+        data_display_if=condition,
+        data_ns_prefix=ns_prefix,
+        **kwargs,
+    )
 
 
 @add_example()

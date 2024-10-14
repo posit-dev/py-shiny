@@ -40,10 +40,11 @@ def write_objects_file(objects: QuartodocObject, path: str) -> None:
 print("\nCombining objects json files...")
 objects_core = read_objects_file("_objects_core.json")
 objects_express = read_objects_file("_objects_express.json")
+objects_test = read_objects_file("_objects_test.json")
 
 items_map: dict[str, QuartodocObjectItem] = {}
 
-for item in [*objects_core.items, *objects_express.items]:
+for item in [*objects_core.items, *objects_express.items, *objects_test.items]:
     if item.name in items_map:
         continue
     items_map[item.name] = item
@@ -58,6 +59,7 @@ objects_ret = QuartodocObject(
 
 print("Core:", objects_core.count)
 print("Express:", objects_express.count)
+print("Testing:", objects_test.count)
 print("Combined:", objects_ret.count)
 
 # Save combined objects file info

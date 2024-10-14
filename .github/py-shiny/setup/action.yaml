@@ -4,7 +4,7 @@ inputs:
   python-version:
     description: 'Python version to use'
     required: false
-    default: "3.11"
+    default: "3.12"
 runs:
   using: "composite"
   steps:
@@ -12,23 +12,40 @@ runs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ inputs.python-version }}
-          # # Caching with pip only saves ~15 seconds. Not work risks of confusion.
-          # cache: 'pip'
-          # cache-dependency-path: |
-          #   setup.cfg
 
-      - name: Upgrade pip
+      - name: Upgrade `pip`
         shell: bash
-        run: python -m pip install --upgrade pip
+        run: |
+          python -m pip install --upgrade pip
+
+      - name: Install `uv`
+        shell: bash
+        run: |
+          pip install uv
+
+      # https://github.com/astral-sh/uv/blob/main/docs/guides/integration/github.md#using-uv-pip
+      - name: Allow uv to use the system Python by default
+        shell: bash
+        run: |
+          echo "UV_SYSTEM_PYTHON=1" >> $GITHUB_ENV
 
       - name: Install dependencies
         shell: bash
         run: |
-          pip install https://github.com/rstudio/py-htmltools/tarball/main
-          pip install https://github.com/posit-dev/py-shinylive/tarball/main
-          make install-deps
+          make ci-install-deps
 
       - name: Install
         shell: bash
         run: |
-          make install
+          make ci-install-wheel
+
+      - name: Install backports.tarfile
+        if: ${{ startsWith(inputs.python-version, '3.8') }}
+        shell: bash
+        run: |
+          uv pip install backports.tarfile
+
+      - name: Pip list
+        shell: bash
+        run: |
+          uv pip list

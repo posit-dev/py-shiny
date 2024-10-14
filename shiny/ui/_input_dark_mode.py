@@ -55,17 +55,19 @@ def input_dark_mode(
 
     return web_component(
         "bslib-input-dark-mode",
+        {
+            "style": css(
+                **{
+                    "--text-1": "var(--bs-emphasis-color)",
+                    "--text-2": "var(--bs-tertiary-color)",
+                    # TODO: Fix the vertical correction to work better with Bootstrap
+                    "--vertical-correction": " ",
+                },
+            )
+        },
         id=id,
         attribute="data-bs-theme",
         mode=mode,
-        style=css(
-            **{
-                "--text-1": "var(--bs-emphasis-color)",
-                "--text-2": "var(--bs-tertiary-color)",
-                # TODO: Fix the vertical correction to work better with Bootstrap
-                "--vertical-correction": " ",
-            }
-        ),
         **kwargs,
     )
 

@@ -11,11 +11,12 @@ from ..session import (
 from .. import render
 from . import ui
 from ._is_express import is_express_app
+from ._module import module
 from ._output import (  # noqa: F401
     output_args,  # pyright: ignore[reportUnusedImport]
     suspend_display,  # pyright: ignore[reportUnusedImport] - Deprecated
 )
-from ._run import wrap_express_app
+from ._run import app_opts, wrap_express_app
 from .expressify_decorator import expressify
 
 
@@ -25,9 +26,11 @@ __all__ = (
     "output",
     "session",
     "is_express_app",
+    "app_opts",
     "wrap_express_app",
     "ui",
     "expressify",
+    "module",
 )
 
 # Add types to help type checkers

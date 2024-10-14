@@ -4,18 +4,19 @@ import datetime
 import typing
 from typing import Literal
 
-from conftest import ShinyAppProc, create_doc_example_core_fixture
-from controls import InputDate
-from playwright.sync_api import Page, expect
+from conftest import create_doc_example_core_fixture
+from playwright.sync_api import Page
+
+from shiny.playwright import controller
+from shiny.run import ShinyAppProc
 
 app = create_doc_example_core_fixture("input_date")
 
 
 def expect_date(
-    date: InputDate,
+    date: controller.InputDate,
     value: str | Literal["today"] = "today",
     *,
-    label: str = "Date:",
     autoclose: bool = True,
     datesdisabled: typing.Optional[list[str]] = None,
     daysofweekdisabled: typing.Optional[list[int]] = None,
@@ -44,32 +45,41 @@ def expect_date(
 def test_input_date_kitchen(page: Page, app: ShinyAppProc) -> None:
     page.goto(app.url)
 
-    date1 = InputDate(page, "date1")
-
-    date1.expect_label("Date:")
-    expect(date1.loc_label).to_have_text("Date:")
+    date1 = controller.InputDate(page, "date1")
+    date1.expect_label("Has default date:")
 
     expect_date(date1, "2016-02-29")
 
     date1.set("2016-02-15")
     expect_date(date1, "2016-02-15")
 
-    expect_date(InputDate(page, "date2"))
+    expect_date(controller.InputDate(page, "date2"))
 
-    expect_date(InputDate(page, "date3"), "02/29/16", format="mm/dd/yy")
+    expect_date(controller.InputDate(page, "date3"), "02/29/16", format="mm/dd/yy")
 
-    expect_date(InputDate(page, "date3"), "02/29/16", format="mm/dd/yy")
+    expect_date(controller.InputDate(page, "date3"), "02/29/16", format="mm/dd/yy")
 
-    expect_date(InputDate(page, "date4"), "2016-02-29")
+    expect_date(controller.InputDate(page, "date4"), "2016-02-29")
 
-    expect_date(InputDate(page, "date5"), language="ru", weekstart=1)
+    expect_date(controller.InputDate(page, "date5"), language="ru", weekstart=1)
 
-    expect_date(InputDate(page, "date6"), startview="decade")
+    expect_date(controller.InputDate(page, "date6"), startview="decade")
 
-    expect_date(InputDate(page, "date7"), daysofweekdisabled=[1, 2])
+    expect_date(controller.InputDate(page, "date7"), daysofweekdisabled=[1, 2])
 
     expect_date(
-        InputDate(page, "date8"),
+        controller.InputDate(page, "date8"),
         "2016-02-29",
         datesdisabled=["2016-03-01", "2016-03-02"],
     )
+
+    expect_date(
+        controller.InputDate(page, "date9"),
+        "2016-02-03",
+        min_date="2016-02-01",
+        max_date="2016-02-29",
+    )
+
+    expect_date(controller.InputDate(page, "date10"), width="600px")
+
+    expect_date(controller.InputDate(page, "date11"), autoclose=False)

@@ -1,0 +1,4 @@
+faicons
+shiny
+seaborn
+pandas

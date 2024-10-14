@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from ..types import Jsonifiable
+
 __all__ = (
     "input_select",
     "input_selectize",
@@ -57,7 +59,7 @@ def input_selectize(
     multiple: bool = False,
     width: Optional[str] = None,
     remove_button: Optional[bool] = None,
-    options: Optional[dict[str, str | float | JSEval]] = None,
+    options: Optional[dict[str, Jsonifiable | JSEval]] = None,
 ) -> Tag:
     """
     Create a select list that can be used to choose a single or multiple items from a
@@ -137,7 +139,7 @@ def input_select(
     width: Optional[str] = None,
     size: Optional[str] = None,
     remove_button: Optional[bool] = None,
-    options: Optional[dict[str, str | float | JSEval]] = None,
+    options: Optional[dict[str, Jsonifiable | JSEval]] = None,
 ) -> Tag:
     """
     Create a select list that can be used to choose a single or multiple items from a

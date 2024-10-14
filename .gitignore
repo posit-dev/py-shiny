@@ -8,19 +8,19 @@
 
 # Distribution / packaging
 .Python
-env/
-build/
-develop-eggs/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-dist/
+/env/
+/build/
+/develop-eggs/
+/downloads/
+/eggs/
+/.eggs/
+/lib/
+/lib64/
+/parts/
+/sdist/
+/var/
+/wheels/
+/dist/
 *.egg-info/
 .installed.cfg
 *.egg
@@ -114,3 +114,7 @@ docs/source/reference/
 # Developer scratch area
 _dev/
 tests/playwright/deploys/**/requirements.txt
+test-results/
+
+# setuptools_scm
+shiny/_version.py

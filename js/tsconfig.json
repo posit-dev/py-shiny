@@ -1,16 +1,25 @@
 {
   "compilerOptions": {
-    "module": "ES2020",
-    "lib": ["ES2021", "DOM"],
+    "module": "ES2022",
+    "lib": ["ES2022", "dom", "dom.iterable"],
     "jsx": "react",
     "noImplicitAny": true,
     "removeComments": true,
     "preserveConstEnums": true,
     "sourceMap": true,
-    "target": "ES2020",
-    "isolatedModules": true,
     "moduleResolution": "node",
-    "esModuleInterop": true
+    "noEmit": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "target": "ES2022",
+    "allowJs": true,
+    "resolveJsonModule": true,
+    "moduleDetection": "force",
+    "isolatedModules": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "experimentalDecorators": true,
+    "useDefineForClassFields": false,
   },
-  "include": ["**/*.tsx", "**/*.ts"]
+  "include": ["**/*.tsx", "**/*.ts"],
 }

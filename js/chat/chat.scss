@@ -1,0 +1,145 @@
+@use "highlight_styles" as highlight_styles;
+
+shiny-chat-container {
+  --shiny-chat-border: var(--bs-border-width, 1px) solid var(--bs-border-color, #e9ecef);
+  --shiny-chat-user-message-bg: RGBA(var(--bs-primary-rgb, 0, 123, 194), 0.06);
+
+  display: flex;
+  flex-direction: column;
+  margin: 0 auto;
+  gap: 1rem;
+  overflow: auto;
+  padding: 0.25rem;
+
+  p:last-child {
+    margin-bottom: 0;
+  }
+
+  shiny-chat-messages {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+
+    shiny-chat-message {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 1rem;
+      > * {
+        height: fit-content;
+      }
+      .message-icon {
+        border-radius: 50%;
+        border: var(--shiny-chat-border);
+        > * {
+          margin: 0.5rem;
+          height: 20px;
+          width: 20px;
+        }
+      }
+      /* Vertically center the 2nd column (message content) */
+      .message-content {
+        align-self: center;
+      }
+    }
+
+    /* Align the user message to the right */
+    shiny-user-message {
+      align-self: flex-end;
+      padding: 0.75rem 1rem;
+      border-radius: 10px;
+      background-color: var(--shiny-chat-user-message-bg);
+      max-width: 100%;
+    }
+  }
+
+  shiny-chat-input {
+    margin-top: auto;
+    position: sticky;
+    background-color: var(--bs-body-bg, white);
+    bottom: 0;
+    textarea {
+      --bs-border-radius: 26px;
+      resize: none;
+      padding-right: 36px !important;
+      max-height: 175px;
+      &::placeholder {
+        color: var(--bs-gray-600, #707782) !important;
+      }
+    }
+    button {
+      position: absolute;
+      bottom: 7px;
+      right: 8px;
+      background-color: transparent;
+      color: var(--bs-primary, #007bc2);
+      transition: color 0.25s ease-in-out;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+      line-height: 16px;
+      border-radius: 50%;
+      &:disabled {
+        cursor: not-allowed;
+        color: var(--bs-gray-500, #8d959e);
+      }
+    }
+  }
+}
+
+/*
+  Disable the page-level pulse when the chat input is disabled
+  (i.e., when a response is being generated and brought into the chat)
+*/
+.shiny-busy:has(shiny-chat-input[disabled])::after {
+  display: none;
+}
+
+/* Code highlighting (for both light and dark mode) */
+@include highlight_styles.atom_one_light;
+[data-bs-theme="dark"] {
+  @include highlight_styles.atom_one_dark;
+}
+
+/*
+  Styling for the code-copy button (inspired by Quarto's code-copy feature)
+*/
+pre:has(.code-copy-button) {
+  position: relative;
+}
+
+.code-copy-button {
+  position: absolute;
+  top: 0;
+  right: 0;
+  border: 0;
+  margin-top: 5px;
+  margin-right: 5px;
+  background-color: transparent;
+
+  > .bi {
+    display: flex;
+    gap: 0.25em;
+
+    &::after {
+      content: "";
+      display: block;
+      height: 1rem;
+      width: 1rem;
+      mask-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/></svg>');
+      background-color: var(--bs-body-color, #222);
+    }
+  }
+}
+
+.code-copy-button-checked {
+  > .bi::before {
+    content: "Copied!";
+    font-size: 0.75em;
+    vertical-align: 0.25em;
+  }
+
+  > .bi::after {
+    mask-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/></svg>');
+    background-color: var(--bs-success, #198754);
+  }
+}

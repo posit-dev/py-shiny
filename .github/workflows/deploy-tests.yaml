@@ -1,0 +1,130 @@
+name: Run deploy tests
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main", "rc-*", "deploy-**"]
+
+jobs:
+  playwright-deploys:
+    # Only allow one `playwright-deploys` job to run at a time. (Independent of branch / PR)
+    # Only one is allowed to run at a time because it is deploying to the same server location.
+    concurrency: playwright-deploys-${{ matrix.config.name }}
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.config.name }}
+    strategy:
+      matrix:
+        # Matches deploy server python version
+        python-version: ["3.10"]
+        os: [ubuntu-latest]
+        config:
+          # Released server, shiny, and rsconnect
+          - name: "pypi-shiny-rsconnect-connect"
+            released_connect_server: true
+            pypi_shiny: true
+            pypi_rsconnect: true
+            base_test_dir: "./tests/playwright/deploys/express-page_sidebar"
+            app_name: "pypi-shiny-rsconnect"
+            test_shinyappsio: false
+
+          # Released shiny and rsconnect
+          # Dev server
+          - name: "pypi-shiny-rsconnect-dogfood"
+            released_connect_server: false
+            pypi_shiny: true
+            pypi_rsconnect: true
+            base_test_dir: "./tests/playwright/deploys/express-page_sidebar"
+            app_name: "pypi-shiny-rsconnect"
+            test_shinyappsio: false
+
+          # Released shiny
+          # Dogfood server and rsconnect
+          - name: "pypi-shiny-dev-rsconnect-dogfood"
+            released_connect_server: false
+            pypi_shiny: true
+            pypi_rsconnect: false
+            base_test_dir: "./tests/playwright/deploys/express-page_sidebar"
+            app_name: "pypi-shiny-dev-rsconnect"
+            test_shinyappsio: false
+
+          # GitHub shiny v1.0.0 - test if github packages can be installed
+          # Dogfood server and rsconnect
+          - name: "github-shiny-dev-rsconnect-dogfood"
+            released_connect_server: false
+            github_shiny: true
+            pypi_shiny: false
+            pypi_rsconnect: false
+            base_test_dir: "./tests/playwright/deploys/express-page_sidebar"
+            app_name: "pypi-shiny-dev-rsconnect"
+            test_shinyappsio: false
+
+          # Dev server, shiny, and rsconnect
+          - name: "dev-shiny-rsconnect-dogfood"
+            released_connect_server: false
+            pypi_shiny: false
+            pypi_rsconnect: false
+            base_test_dir: "./tests/playwright/deploys"
+            app_name: "express_page_sidebar"
+            test_shinyappsio: true
+
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup py-shiny
+        uses: ./.github/py-shiny/setup
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install pypi shiny and htmltools (uninstall GitHub versions)
+        if: ${{ matrix.config.pypi_shiny }}
+        run: |
+          uv pip uninstall shiny htmltools
+          uv pip install shiny htmltools
+
+      - name: Install GitHub shiny@v1.0.0 and htmltools@v0.5.3 (uninstall PyPI versions)
+        if: ${{ matrix.config.github_shiny }}
+        run: |
+          uv pip uninstall shiny htmltools
+          uv pip install "htmltools @ git+https://github.com/posit-dev/py-htmltools.git@v0.5.3" "shiny @ git+https://github.com/posit-dev/py-shiny.git@v1.0.0"
+
+      - name: Install rsconnect (PyPI)
+        if: ${{ matrix.config.pypi_rsconnect }}
+        run: |
+          uv pip install rsconnect
+      - name: Install rsconnect (GitHub)
+        if: ${{ ! matrix.config.pypi_rsconnect }}
+        run: |
+          make ci-install-rsconnect
+
+      - name: Test that deployable example apps work
+        timeout-minutes: 5 # ~10s locally
+        env:
+          DEPLOY_APPS: "false"
+        run: |
+          make playwright-deploys TEST_FILE="${{ matrix.config.base_test_dir }} -vv"
+
+      - name: Deploy apps and run tests (on `push` or `deploy**` branches)
+        env:
+          DEPLOY_APPS: "true"
+          DEPLOY_CONNECT_SERVER_URL: "${{ (matrix.config.released_connect_server && 'https://connect.posit.it/') || 'https://rsc.radixu.com/' }}"
+          DEPLOY_CONNECT_SERVER_API_KEY: "${{ (matrix.config.released_connect_server && secrets.DEPLOY_CONNECT_POSIT_SERVER_API_KEY) || secrets.DEPLOY_CONNECT_SERVER_API_KEY }}"
+          DEPLOY_SHINYAPPS_NAME: "${{ matrix.config.test_shinyappsio && secrets.DEPLOY_SHINYAPPS_NAME }}"
+          DEPLOY_SHINYAPPS_TOKEN: "${{ matrix.config.test_shinyappsio && secrets.DEPLOY_SHINYAPPS_TOKEN }}"
+          DEPLOY_SHINYAPPS_SECRET: "${{ matrix.config.test_shinyappsio && secrets.DEPLOY_SHINYAPPS_SECRET }}"
+          EXPRESS_PAGE_SIDEBAR_NAME: "${{ matrix.config.app_name }}"
+          DEPLOY_GITHUB_REQUIREMENTS_TXT: "${{ !matrix.config.pypi_shiny }}"
+        timeout-minutes: 30
+        # Given we are waiting for external servers to finish,
+        # we can have many local processes waiting for deployment to finish
+        run: |
+          make playwright-deploys TEST_FILE="${{ matrix.config.base_test_dir }} -vv --numprocesses 12"
+
+      # - uses: actions/upload-artifact@v4
+      #   if: failure()
+      #   with:
+      #     name: "playright-deploys-${{ matrix.os }}-${{ matrix.python-version }}-results"
+      #     path: test-results/
+      #     retention-days: 5

@@ -11,7 +11,7 @@ from .._utils import rand_hex
 from ..session import require_active_session
 
 if TYPE_CHECKING:
-    from .. import Session
+    from ..session import Session
 
 
 @add_example()
@@ -85,7 +85,9 @@ def notification_show(
         "type": type,
     }
 
-    if duration:
+    if duration is None:
+        payload.update({"duration": None})
+    elif duration:
         payload.update({"duration": duration * 1000})
 
     session._send_message_sync({"notification": {"type": "show", "message": payload}})
@@ -98,7 +100,7 @@ def notification_remove(id: str, *, session: Optional[Session] = None) -> str:
     """
     Remove a notification.
 
-    :func:`~shiny.ui.notification_remove` provides a way to remove a notification programatically.
+    :func:`~shiny.ui.notification_remove` provides a way to remove a notification programmatically.
     Notifications can also be removed manually by the user, or automatically after a
     specififed amont of time passes.
 

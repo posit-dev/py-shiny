@@ -6,12 +6,21 @@ import pytest
 
 from shiny import reactive, render
 from shiny.render.renderer import Renderer, ValueFn
+from shiny.session import Session, get_current_session
+
+
+class RendererWithSession(Renderer[str]):
+    _session: Session | None
+
+    def __init__(self, _fn: Optional[ValueFn[str]] = None):
+        super().__init__(_fn)
+        self._session = get_current_session()
 
 
 @pytest.mark.asyncio
 async def test_renderer_works():
     # No args works
-    class test_renderer(Renderer[str]):
+    class test_renderer(RendererWithSession):
         async def transform(self, value: str) -> str:
             return value + " " + value
 
@@ -33,7 +42,7 @@ async def test_renderer_works():
 @pytest.mark.asyncio
 async def test_renderer_works_with_args():
     # No args works
-    class test_renderer_with_args(Renderer[str]):
+    class test_renderer_with_args(RendererWithSession):
         def __init__(self, _fn: Optional[ValueFn[str]] = None, *, times: int = 2):
             super().__init__(_fn)
             self.times: int = times

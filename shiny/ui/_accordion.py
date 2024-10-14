@@ -9,12 +9,12 @@ from .._namespaces import resolve_id_or_none
 from .._utils import drop_none, private_random_id
 from ..session import require_active_session
 from ..types import MISSING, MISSING_TYPE
-from ._html_deps_shinyverse import components_dependency
+from ._html_deps_shinyverse import components_dependencies
 from ._tag import consolidate_attrs
 from .css._css_unit import CssUnit, as_css_unit
 
 if TYPE_CHECKING:
-    from .. import Session
+    from ..session import Session
 
 __all__ = (
     "accordion",
@@ -287,7 +287,7 @@ def accordion(
         # just for ease of identifying autoclosing client-side
         {"class": "autoclose"} if not multiple else None,
         binding_class_value,
-        components_dependency(),
+        components_dependencies(),
         attrs,
         *panel_tags,
     )

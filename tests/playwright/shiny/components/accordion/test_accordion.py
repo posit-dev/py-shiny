@@ -1,23 +1,24 @@
 import pytest
-from conftest import ShinyAppProc
-from controls import Accordion, InputActionButton, OutputTextVerbatim
 from examples.example_apps import reruns, reruns_delay
 from playwright.sync_api import Page
+
+from shiny.playwright import controller
+from shiny.run import ShinyAppProc
 
 
 @pytest.mark.flaky(reruns=reruns, reruns_delay=reruns_delay)
 def test_accordion(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 
-    acc = Accordion(page, "acc")
+    acc = controller.Accordion(page, "acc")
     acc_panel_A = acc.accordion_panel("Section A")
-    output_txt_verbatim = OutputTextVerbatim(page, "acc_txt")
-    alternate_button = InputActionButton(page, "alternate")
-    open_all_button = InputActionButton(page, "open_all")
-    close_all_button = InputActionButton(page, "close_all")
-    toggle_b_button = InputActionButton(page, "toggle_b")
-    toggle_updates_button = InputActionButton(page, "toggle_updates")
-    toggle_efg_button = InputActionButton(page, "toggle_efg")
+    output_txt_verbatim = controller.OutputTextVerbatim(page, "acc_txt")
+    alternate_button = controller.InputActionButton(page, "alternate")
+    open_all_button = controller.InputActionButton(page, "open_all")
+    close_all_button = controller.InputActionButton(page, "close_all")
+    toggle_b_button = controller.InputActionButton(page, "toggle_b")
+    toggle_updates_button = controller.InputActionButton(page, "toggle_updates")
+    toggle_efg_button = controller.InputActionButton(page, "toggle_efg")
 
     output_txt_verbatim.expect_value("input.acc(): ('Section A',)")
 
@@ -65,14 +66,15 @@ def test_accordion(page: Page, local_app: ShinyAppProc) -> None:
     toggle_updates_button.click()
     acc_panel_updated_A.expect_label("Updated title")
     acc_panel_updated_A.expect_body("Updated body")
-    acc_panel_updated_A.expect_icon("Look! An icon! -->")
+    acc_panel_updated_A.expect_icon(True)
 
     acc.expect_panels(["updated_section_a", "Section B", "Section C", "Section D"])
     # workaround - toggle it twice Section A
-    acc_panel_updated_A.toggle()
+    acc_panel_updated_A._toggle()
     # add timeout to wait for css animation
     page.wait_for_timeout(100)
-    acc_panel_updated_A.toggle()
+    acc_panel_updated_A._toggle()
+
     output_txt_verbatim.expect_value(
         "input.acc(): ('updated_section_a', 'Section C', 'Section D')"
     )

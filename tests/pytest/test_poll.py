@@ -39,6 +39,12 @@ class OnEndedSessionCallbacks:
     def _send_message_sync(self, message: Dict[str, object]) -> None:
         pass
 
+    def _increment_busy_count(self) -> None:
+        pass
+
+    def _decrement_busy_count(self) -> None:
+        pass
+
     async def __aenter__(self):
         self._session_context.__enter__()
 

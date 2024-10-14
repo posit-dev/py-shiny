@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import sys
 import tempfile
 from pathlib import Path
@@ -122,9 +124,9 @@ with ui.card():
         )
     )
 
-    with tempfile.NamedTemporaryFile(mode="w+t") as temp_file:
-        temp_file.write(card_app_express_text)
-        temp_file.flush()
-        res = run_express(Path(temp_file.name)).tagify()
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_file = Path(temp_dir, "temp.file")
+        temp_file.write_text(card_app_express_text)
+        res = run_express(temp_file).tagify()
 
     assert str(res) == str(card_app_core)

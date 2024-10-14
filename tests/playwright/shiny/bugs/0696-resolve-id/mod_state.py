@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import datetime
 
-from controls import OutputTextVerbatim
 from playwright.sync_api import Page
+
+from shiny.playwright import controller
 
 
 def expect_state(
@@ -13,7 +14,7 @@ def expect_state(
     value: object,
 ):
     new_module_id = f"{module_id}-" if module_id else ""
-    OutputTextVerbatim(
+    controller.OutputTextVerbatim(
         page,
         f"{new_module_id}status_{key}",
     ).expect_value(f"ui.{key}: `{value}`")
@@ -27,7 +28,7 @@ def expect_x_state(
 ):
     new_module_id = f"{module_id}-" if module_id else ""
     new_key = key.replace("x_", "")
-    OutputTextVerbatim(
+    controller.OutputTextVerbatim(
         page,
         f"{new_module_id}status_x_{new_key}",
     ).expect_value(f"x.ui.{new_key}: `{value}`")

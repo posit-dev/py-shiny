@@ -1,6 +1,6 @@
 import pandas as pd
 import seaborn as sns
-from shinyswatch.theme import darkly
+import shinyswatch
 
 from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
 
@@ -12,24 +12,29 @@ def app_ui(req):
         ui.head_content(
             ui.tags.meta(name="viewport", content="width=device-width, initial-scale=1")
         ),
-        darkly() if dark else None,
         light_dark_switcher(dark),
         ui.input_select("dataset", "Dataset", sns.get_dataset_names()),
         ui.input_select(
             "selection_mode",
             "Selection mode",
-            {"none": "(None)", "single": "Single", "multiple": "Multiple"},
-            selected="multiple",
+            {
+                "none": "(None)",
+                "row": "Single row",
+                "rows": "Multiple rows",
+            },
+            selected="rows",
         ),
+        ui.input_switch("editable", "Edit", False),
         ui.input_switch("filters", "Filters", True),
         ui.input_switch("gridstyle", "Grid", True),
         ui.input_switch("fullwidth", "Take full width", True),
         ui.output_data_frame("grid"),
         ui.panel_fixed(
-            ui.output_text_verbatim("detail"),
+            ui.output_code("detail"),
             right="10px",
             bottom="10px",
         ),
+        theme=shinyswatch.theme.darkly if dark else None,
         class_="p-3",
     )
 
@@ -71,7 +76,8 @@ def server(input: Inputs, output: Outputs, session: Session):
                 width=width,
                 height=height,
                 filters=input.filters(),
-                row_selection_mode=input.selection_mode(),
+                editable=input.editable(),
+                selection_mode=input.selection_mode(),
             )
         else:
             return render.DataTable(
@@ -79,7 +85,8 @@ def server(input: Inputs, output: Outputs, session: Session):
                 width=width,
                 height=height,
                 filters=input.filters(),
-                row_selection_mode=input.selection_mode(),
+                editable=input.editable(),
+                selection_mode=input.selection_mode(),
             )
 
     @reactive.effect
@@ -90,12 +97,11 @@ def server(input: Inputs, output: Outputs, session: Session):
         df_copy.iat[edit["row"], edit["col"]] = edit["new_value"]
         df.set(df_copy)
 
-    @render.text
+    @render.code
     def detail():
-        selected_rows = grid.input_selected_rows() or ()
+        selected_rows = grid.cell_selection()["rows"]
         if len(selected_rows) > 0:
-            # "split", "records", "index", "columns", "values", "table"
-            return df().iloc[list(grid.input_selected_rows())]
+            return df().iloc[list(selected_rows)]
 
 
 app = App(app_ui, server)

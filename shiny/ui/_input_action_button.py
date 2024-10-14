@@ -9,12 +9,14 @@ from .._namespaces import resolve_id
 
 
 @add_example()
+@add_example("app-disabled-core.py")
 def input_action_button(
     id: str,
     label: TagChild,
     *,
     icon: TagChild = None,
     width: Optional[str] = None,
+    disabled: bool = False,
     **kwargs: TagAttrValue,
 ) -> Tag:
     """
@@ -31,6 +33,9 @@ def input_action_button(
         An icon to appear inline with the button/link.
     width
         The CSS width, e.g. '400px', or '100%'
+    disabled
+        If `True`, the button will not be clickable. Use
+        :func:`~shiny.ui.update_action_button` to dynamically enable/disable the button.
     **kwargs
         Attributes to be applied to the button.
 
@@ -47,6 +52,7 @@ def input_action_button(
 
     See Also
     --------
+    * :func:`~shiny.ui.update_action_button`
     * :func:`~shiny.ui.input_action_link`
     * :func:`~shiny.reactive.event`
     """
@@ -61,6 +67,7 @@ def input_action_button(
         label,
         id=resolve_id(id),
         type="button",
+        disabled="" if disabled else None,
         **kwargs,
     )
 
@@ -101,6 +108,7 @@ def input_action_link(
 
     See Also
     --------
+    * :func:`~shiny.ui.update_action_link`
     * :func:`~shiny.ui.input_action_button`
     * :func:`~shiny.reactive.event`
     """

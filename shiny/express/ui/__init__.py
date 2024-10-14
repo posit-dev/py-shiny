@@ -34,9 +34,14 @@ from ...ui import (
 )
 
 from ...ui import (
+    busy_indicators,
+)
+
+from ...ui import (
     AccordionPanel,
     AnimationOptions,
     CardItem,
+    Chat,
     ShowcaseLayout,
     Sidebar,
     SliderStepArg,
@@ -104,6 +109,7 @@ from ...ui import (
     notification_remove,
     nav_spacer,
     Progress,
+    Theme,
     value_box_theme,
     js_eval,
 )
@@ -114,6 +120,7 @@ from ._cm_components import (
     layout_column_wrap,
     layout_columns,
     card,
+    card_body,
     card_header,
     card_footer,
     accordion,
@@ -176,11 +183,13 @@ __all__ = (
     "strong",
     "tags",
     # Submodules
+    "busy_indicators",
     "fill",
     # Imports from ...ui
     "AccordionPanel",
     "AnimationOptions",
     "CardItem",
+    "Chat",
     "ShowcaseLayout",
     "Sidebar",
     "SliderStepArg",
@@ -248,6 +257,7 @@ __all__ = (
     "notification_remove",
     "nav_spacer",
     "Progress",
+    "Theme",
     "value_box_theme",
     # Imports from ._cm_components
     "sidebar",
@@ -255,6 +265,7 @@ __all__ = (
     "layout_column_wrap",
     "layout_columns",
     "card",
+    "card_body",
     "card_header",
     "card_footer",
     "accordion",
@@ -292,9 +303,6 @@ _known_missing = {
     "shiny.ui": (
         "column",  # Deprecated in favor of layout_columns
         "row",  # Deprecated in favor of layout_columns
-        "nav",  # Deprecated in favor of nav_panel
-        "navset_pill_card",  # Deprecated
-        "navset_tab_card",  # Deprecated
         "page_bootstrap",
         "page_fixed",
         "page_sidebar",
@@ -303,8 +311,6 @@ _known_missing = {
         "page_fluid",
         "page_auto",
         "page_output",
-        "panel_main",  # Deprecated
-        "panel_sidebar",  # Deprecated
         "showcase_bottom",
         "showcase_left_center",
         "showcase_top_right",
@@ -319,6 +325,8 @@ _known_missing = {
         "output_table",
         "output_ui",
         "output_data_frame",
+        # Chat knows how to render itself in express
+        "chat_ui",
     ),
     # Items from shiny.express.ui that don't have a counterpart in shiny.ui
     "shiny.express.ui": (

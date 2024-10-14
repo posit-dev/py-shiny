@@ -40,16 +40,13 @@ app_ui = ui.page_fillable(
 def server(input, output, session):
     @render.data_frame
     def summary_data():
-        return render.DataGrid(summary_df.round(2), row_selection_mode="multiple")
+        return render.DataGrid(summary_df.round(2), selection_mode="rows")
 
     @reactive.calc
     def filtered_df():
-        req(summary_data.input_selected_rows())
-
-        # summary_data.selected_rows() is a tuple, so we must convert it to list,
-        # as that's what Pandas requires for indexing.
-        selected_idx = list(summary_data.input_selected_rows())
-        countries = summary_df.iloc[selected_idx]["country"]
+        data_selected = summary_data.data_view(selected=True)
+        req(not data_selected.empty)
+        countries = data_selected["country"]
         # Filter data for selected countries
         return df[df["country"].isin(countries)]
 

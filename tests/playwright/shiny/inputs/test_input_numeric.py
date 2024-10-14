@@ -1,6 +1,8 @@
-from conftest import ShinyAppProc, create_doc_example_core_fixture
-from controls import InputNumeric, OutputTextVerbatim
+from conftest import create_doc_example_core_fixture
 from playwright.sync_api import Page, expect
+
+from shiny.playwright import controller
+from shiny.run import ShinyAppProc
 
 app = create_doc_example_core_fixture("input_numeric")
 
@@ -24,7 +26,7 @@ def test_input_numeric_kitchen(page: Page, app: ShinyAppProc) -> None:
 
     # page.set_default_timeout(1000)
 
-    obs = InputNumeric(page, "obs")
+    obs = controller.InputNumeric(page, "obs")
     obs.expect.to_have_value("10")
     expect(obs.loc).to_have_value("10")
 
@@ -43,7 +45,7 @@ def test_input_numeric_typical(page: Page, app: ShinyAppProc) -> None:
 
     # page.set_default_timeout(1000)
 
-    obs = InputNumeric(page, "obs")
+    obs = controller.InputNumeric(page, "obs")
     obs.expect.to_have_value("10")
     obs.loc.fill("42")
     obs.expect.not_to_have_value("10")
@@ -56,11 +58,11 @@ def test_input_numeric_app(page: Page, app: ShinyAppProc) -> None:
     # with page and app:
     page.goto(app.url)
 
-    obs = InputNumeric(page, "obs")
+    obs = controller.InputNumeric(page, "obs")
     # obs.label.expect.to_have_text("Observed")
     obs.expect.to_have_value("10")
 
-    value = OutputTextVerbatim(page, "value")
+    value = controller.OutputTextVerbatim(page, "value")
     value.expect_value("10")
 
     output = page.locator("#value")

@@ -8,11 +8,6 @@ from shiny import App, ui
 from shiny.types import NavSetArg
 from shiny.ui import Sidebar
 
-# TODO-karan; Make test that uses sidebar / no sidebar (where possible)
-# TODO-karan; Make test that has/does not have a header & footer (where possible)
-# TODO-karan; Test for title value (where possible)
-# TODO-karan; Make test that has placement = "above" / "below" (where possible); Test in combination of with/without sidebar
-
 
 def nav_controls(prefix: str) -> List[NavSetArg]:
     return [
@@ -91,7 +86,7 @@ def make_navset(
 
 
 app_ui = ui.page_navbar(
-    *nav_controls("page_navbar"),
+    *nav_controls("page_navbar()"),
     # bg="#0062cc",
     # inverse=True,
     id="page_navbar",
@@ -107,9 +102,6 @@ app_ui = ui.page_navbar(
             """
         ),
         "page_navbar(): Footer (w/ custom styling)",
-        make_navset(
-            "navset_bar", ui.navset_bar, title=True, sidebar=True, headerfooter=True
-        ),
         make_navset(
             "navset_bar", ui.navset_bar, title=True, sidebar=True, headerfooter=True
         ),

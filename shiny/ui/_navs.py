@@ -1,5 +1,33 @@
 from __future__ import annotations
 
+import collections.abc
+import copy
+import re
+from typing import Any, Literal, Optional, Sequence, cast
+
+from htmltools import (
+    HTML,
+    MetadataNode,
+    Tag,
+    TagAttrs,
+    TagChild,
+    TagList,
+    css,
+    div,
+    tags,
+)
+
+from .._docstring import add_example
+from .._namespaces import resolve_id_or_none
+from .._utils import private_random_int
+from ..types import NavSetArg
+from ._bootstrap import column, row
+from ._card import CardItem, WrapperCallable, card, card_body, card_footer, card_header
+from ._html_deps_shinyverse import components_dependencies
+from ._sidebar import Sidebar, layout_sidebar
+from .css import CssUnit, as_css_padding, as_css_unit
+from .fill import as_fill_item, as_fillable_container
+
 __all__ = (
     "nav_panel",
     "nav_menu",
@@ -14,30 +42,7 @@ __all__ = (
     "navset_pill_list",
     "navset_hidden",
     "navset_bar",
-    # Deprecated - 2023-08-15
-    "navset_pill_card",
-    "navset_tab_card",
-    "nav",
 )
-
-import collections.abc
-import copy
-import re
-from typing import Any, Literal, Optional, Sequence, cast
-
-from htmltools import MetadataNode, Tag, TagAttrs, TagChild, TagList, css, div, tags
-
-from .._deprecated import warn_deprecated
-from .._docstring import add_example, no_example
-from .._namespaces import resolve_id_or_none
-from .._utils import private_random_int
-from ..types import NavSetArg
-from ._bootstrap import column, row
-from ._card import CardItem, WrapperCallable, card, card_body, card_footer, card_header
-from ._html_deps_shinyverse import components_dependency
-from ._sidebar import Sidebar, layout_sidebar
-from .css import CssUnit, as_css_padding, as_css_unit
-from .fill import as_fill_item, as_fillable_container
 
 
 # -----------------------------------------------------------------------------
@@ -86,11 +91,14 @@ class NavPanel:
 
         return nav, content
 
-    def get_value(self) -> Optional[str]:
+    def get_value(self) -> str | None:
         if self.content is None:
             return None
         a_tag = cast(Tag, self.nav.children[0])
-        return a_tag.attrs.get("data-value", None)
+        data_value_attr = a_tag.attrs.get("data-value", None)
+        if isinstance(data_value_attr, HTML):
+            data_value_attr = str(data_value_attr)
+        return data_value_attr
 
     def tagify(self) -> None:
         raise NotImplementedError(
@@ -158,7 +166,7 @@ def nav_panel(
     )
 
 
-@no_example()
+@add_example()
 def nav_control(*args: TagChild) -> NavPanel:
     """
     Place a control in the navigation container.
@@ -190,32 +198,32 @@ def nav_control(*args: TagChild) -> NavPanel:
     return NavPanel(tags.li(*args))
 
 
-@no_example()
+@add_example()
 def nav_spacer() -> NavPanel:
     """
     Create space between nav items.
 
     See Also
     --------
-    * :func:~shiny.ui.nav_panel
-    * :func:~shiny.ui.nav_menu
-    * :func:~shiny.ui.nav_control
-    * :func:~shiny.ui.navset_bar
-    * :func:~shiny.ui.navset_tab
-    * :func:~shiny.ui.navset_pill
-    * :func:~shiny.ui.navset_underline
-    * :func:~shiny.ui.navset_card_tab
-    * :func:~shiny.ui.navset_card_pill
-    * :func:~shiny.ui.navset_card_underline
-    * :func:~shiny.ui.navset_pill_list
-    * :func:~shiny.ui.navset_hidden
+    * :func:`~shiny.ui.nav_panel`
+    * :func:`~shiny.ui.nav_menu`
+    * :func:`~shiny.ui.nav_control`
+    * :func:`~shiny.ui.navset_bar`
+    * :func:`~shiny.ui.navset_tab`
+    * :func:`~shiny.ui.navset_pill`
+    * :func:`~shiny.ui.navset_underline`
+    * :func:`~shiny.ui.navset_card_tab`
+    * :func:`~shiny.ui.navset_card_pill`
+    * :func:`~shiny.ui.navset_card_underline`
+    * :func:`~shiny.ui.navset_pill_list`
+    * :func:`~shiny.ui.navset_hidden`
 
     Example
     -------
     See :func:`~shiny.ui.nav_panel`
     """
 
-    return NavPanel(tags.li(components_dependency(), class_="bslib-nav-spacer"))
+    return NavPanel(tags.li(components_dependencies(), class_="bslib-nav-spacer"))
 
 
 class NavMenu:
@@ -274,7 +282,7 @@ class NavMenu:
             content.children,
         )
 
-    def get_value(self) -> Optional[str]:
+    def get_value(self) -> str | None:
         for x in self.nav_controls:
             val = x.get_value()
             if val:
@@ -297,7 +305,7 @@ def menu_string_as_nav(x: str | NavSetArg) -> NavSetArg:
     return NavPanel(nav)
 
 
-@no_example()
+@add_example()
 def nav_menu(
     title: TagChild,
     *args: NavPanel | str,
@@ -335,18 +343,18 @@ def nav_menu(
 
     See Also
     --------
-    * :func:~shiny.ui.nav_panel
-    * :func:~shiny.ui.nav_control
-    * :func:~shiny.ui.nav_spacer
-    * :func:~shiny.ui.navset_bar
-    * :func:~shiny.ui.navset_tab
-    * :func:~shiny.ui.navset_pill
-    * :func:~shiny.ui.navset_underline
-    * :func:~shiny.ui.navset_card_tab
-    * :func:~shiny.ui.navset_card_pill
-    * :func:~shiny.ui.navset_card_underline
-    * :func:~shiny.ui.navset_pill_list
-    * :func:~shiny.ui.navset_hidden
+    * :func:`~shiny.ui.nav_panel`
+    * :func:`~shiny.ui.nav_control`
+    * :func:`~shiny.ui.nav_spacer`
+    * :func:`~shiny.ui.navset_bar`
+    * :func:`~shiny.ui.navset_tab`
+    * :func:`~shiny.ui.navset_pill`
+    * :func:`~shiny.ui.navset_underline`
+    * :func:`~shiny.ui.navset_card_tab`
+    * :func:`~shiny.ui.navset_card_pill`
+    * :func:`~shiny.ui.navset_card_underline`
+    * :func:`~shiny.ui.navset_pill_list`
+    * :func:`~shiny.ui.navset_hidden`
 
     Example
     -------
@@ -405,7 +413,7 @@ class NavSet:
 # -----------------------------------------------------------------------------
 # Navigation containers
 # -----------------------------------------------------------------------------
-@no_example()
+@add_example()
 def navset_tab(
     *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
     id: Optional[str] = None,
@@ -462,7 +470,7 @@ def navset_tab(
     )
 
 
-@no_example()
+@add_example()
 def navset_pill(
     *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
     id: Optional[str] = None,
@@ -518,7 +526,7 @@ def navset_pill(
     )
 
 
-@no_example()
+@add_example()
 def navset_underline(
     *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
     id: Optional[str] = None,
@@ -685,7 +693,7 @@ class NavSetCard(NavSet):
         )
 
 
-@no_example()
+@add_example()
 def navset_card_tab(
     *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
     id: Optional[str] = None,
@@ -748,7 +756,7 @@ def navset_card_tab(
     )
 
 
-@no_example()
+@add_example()
 def navset_card_pill(
     *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
     id: Optional[str] = None,
@@ -814,7 +822,7 @@ def navset_card_pill(
     )
 
 
-@no_example()
+@add_example()
 def navset_card_underline(
     *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
     id: Optional[str] = None,
@@ -913,7 +921,7 @@ class NavSetPillList(NavSet):
         )
 
 
-@no_example()
+@add_example()
 def navset_pill_list(
     *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
     id: Optional[str] = None,
@@ -989,6 +997,7 @@ class NavSetBar(NavSet):
     underline: bool
     collapsible: bool
     fluid: bool
+    _is_page_level: bool
 
     def __init__(
         self,
@@ -1032,6 +1041,7 @@ class NavSetBar(NavSet):
         self.underline = underline
         self.collapsible = collapsible
         self.fluid = fluid
+        self._is_page_level = False
 
     def layout(self, nav: Tag, content: Tag) -> TagList:
         nav_container = div(
@@ -1039,7 +1049,7 @@ class NavSetBar(NavSet):
             tags.span({"class": "navbar-brand"}, self.title),
         )
         if self.collapsible:
-            collapse_id = "navbar-collapse-" + private_random_int(1000, 10000)
+            collapse_id = "navbar-collapse-" + nav_random_int()
             nav_container.append(
                 tags.button(
                     tags.span(class_="navbar-toggler-icon"),
@@ -1089,13 +1099,20 @@ class NavSetBar(NavSet):
             if self.fillable:
                 content_div = as_fillable_container(as_fill_item(content_div))
         else:
+            tab_content = contents
+            if self._is_page_level:
+                # TODO-future: This could also be applied to the non-sidebar page layout above
+                from ._page import page_main_container
+
+                tab_content = page_main_container(*contents)
+
             content_div = div(
                 # In the fluid case, the sidebar layout should be flush (i.e.,
                 # the .container-fluid class adds padding that we don't want)
                 {"class": "container"} if not self.fluid else None,
                 layout_sidebar(
                     self.sidebar,
-                    contents,
+                    tab_content,
                     fillable=self.fillable is not False,
                     border_radius=False,
                     border=not self.fluid,
@@ -1150,7 +1167,7 @@ def _make_tabs_fillable(
 
 
 # TODO-future; Content should not be indented unless when called from `page_navbar()`
-@no_example()
+@add_example()
 def navset_bar(
     *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
     title: TagChild,
@@ -1196,7 +1213,7 @@ def navset_bar(
         provided, `fillable` makes the main content portion fillable.
     gap
         A CSS length unit defining the gap (i.e., spacing) between elements provided to
-        `*args`.
+        `*args`. This value is only used when the navbar is `fillable`.
     padding
         Padding to use for the body. This can be a numeric vector (which will be
         interpreted as pixels) or a character vector with valid CSS lengths. The length
@@ -1205,7 +1222,7 @@ def navset_bar(
         the second value will be used for left and right. If three, then the first will
         be used for top, the second will be left and right, and the third will be
         bottom. If four, then the values will be interpreted as top, right, bottom, and
-        left respectively.
+        left respectively. This value is only used when the navbar is `fillable`.
     position
         Determines whether the navbar should be displayed at the top of the page with
         normal scrolling behavior ("static-top"), pinned at the top ("fixed-top"), or
@@ -1289,7 +1306,7 @@ def render_navset(
     selected: Optional[str],
     context: dict[str, Any],
 ) -> tuple[Tag, Tag]:
-    tabsetid = private_random_int(1000, 10000)
+    tabsetid = nav_random_int()
 
     # Separate MetadataNodes from NavSetArgs.
     metadata_args: list[MetadataNode] = []
@@ -1356,74 +1373,5 @@ def navset_title(
     return [title_attrs, tags.span(title)]
 
 
-##############################################
-# Deprecated
-##############################################
-# Deprecated 2023-08-15
-def navset_pill_card(
-    *args: NavSetArg,
-    id: Optional[str] = None,
-    selected: Optional[str] = None,
-    header: TagChild = None,
-    footer: TagChild = None,
-    placement: Literal["above", "below"] = "above",
-) -> NavSetCard:
-    """Deprecated. Please use `navset_card_pill()` instead of `navset_pill_card()`."""
-    warn_deprecated(
-        "`navset_pill_card()` is deprecated. "
-        "This method will be removed in a future version, "
-        "please use :func:`~shiny.ui.navset_card_pill` instead."
-    )
-    return navset_card_pill(
-        *args,
-        id=id,
-        selected=selected,
-        header=header,
-        footer=footer,
-        placement=placement,
-    )
-
-
-# Deprecated 2023-08-15
-def navset_tab_card(
-    *args: NavSetArg,
-    id: Optional[str] = None,
-    selected: Optional[str] = None,
-    header: TagChild = None,
-    footer: TagChild = None,
-) -> NavSetCard:
-    """Deprecated. Please use `navset_card_tab()` instead of `navset_tab_card()`."""
-    warn_deprecated(
-        "`navset_tab_card()` is deprecated. "
-        "This method will be removed in a future version, "
-        "please use :func:`~shiny.ui.navset_card_tab` instead."
-    )
-    return navset_card_tab(
-        *args,
-        id=id,
-        selected=selected,
-        header=header,
-        footer=footer,
-    )
-
-
-# Deprecated 2023-12-07
-@no_example()
-def nav(
-    title: TagChild,
-    *args: TagChild,
-    value: Optional[str] = None,
-    icon: TagChild = None,
-) -> NavPanel:
-    """Deprecated. Please use `nav_panel()` instead of `nav()`."""
-    warn_deprecated(
-        "`nav()` is deprecated. "
-        "This method will be removed in a future version, "
-        "please use :func:`~shiny.ui.nav_panel` instead."
-    )
-    return nav_panel(
-        title,
-        *args,
-        value=value,
-        icon=icon,
-    )
+def nav_random_int() -> str:
+    return private_random_int(1000, 1000000)

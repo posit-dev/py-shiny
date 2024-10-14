@@ -16,15 +16,16 @@ from htmltools import (
 )
 
 from .._docstring import add_example
+from .._namespaces import resolve_id_or_none
 from .._utils import private_random_id
 from ..types import MISSING, MISSING_TYPE
-from ._html_deps_shinyverse import components_dependency
+from ._html_deps_shinyverse import components_dependencies
 from ._tag import consolidate_attrs
 from ._tooltip import tooltip
 from .css._css_unit import CssUnit, as_css_padding, as_css_unit
 from .fill import as_fill_item, as_fillable_container
 
-# TODO-barret-future; Update header to return CardHeader class. Same for footer. Then we
+# TODO-future; Update header to return CardHeader class. Same for footer. Then we
 # can check `*args` for a CardHeader class and move it to the top. And footer to the
 # bottom. Can throw error if multiple headers/footers are provided or could concatenate.
 
@@ -54,6 +55,7 @@ def card(
     min_height: Optional[CssUnit] = None,
     fill: bool = True,
     class_: Optional[str] = None,
+    id: Optional[str] = None,
     # wrapper: WrapperCallable | None | MISSING_TYPE = MISSING,
     **kwargs: TagAttrValue,
 ) -> Tag:
@@ -79,6 +81,10 @@ def card(
         an opinionated height (e.g., :func:`~shiny.ui.page_fillable`).
     class_
         Additional CSS classes for the returned Tag.
+    id
+        Provide a unique identifier for the :func:`~shiny.ui.card` or to report its
+        full screen state to Shiny. For example, using `id="my_card"`, you can observe
+        the card's full screen state with `input.my_card_full_screen()`.
     **kwargs
         HTML attributes on the returned Tag.
 
@@ -102,6 +108,7 @@ def card(
         min_height=min_height,
         fill=fill,
         class_=class_,
+        id=id,
         wrapper=MISSING,
         **kwargs,
     )
@@ -115,6 +122,7 @@ def _card_impl(
     min_height: Optional[CssUnit] = None,
     fill: bool = True,
     class_: Optional[str] = None,
+    id: Optional[str] = None,
     wrapper: WrapperCallable | None | MISSING_TYPE = MISSING,
     **kwargs: TagAttrValue,
 ) -> Tag:
@@ -131,11 +139,15 @@ def _card_impl(
     attrs, children = consolidate_attrs(*args, class_=class_, **kwargs)
     children = _wrap_children_in_card(*children, wrapper=wrapper)
 
-    if full_screen and "id" not in attrs:
-        attrs["id"] = private_random_id("bslib_card")
+    id = resolve_id_or_none(id)
+    is_shiny_input = id is not None
+
+    if full_screen and id is None:
+        id = private_random_id("bslib_card")
 
     tag = div(
         {
+            "id": id,
             "class": "card bslib-card bslib-mb-spacing",
             "style": css(
                 height=as_css_unit(height),
@@ -145,10 +157,11 @@ def _card_impl(
             "data-bslib-card-init": True,
             "data-full-screen": "false" if full_screen else None,
         },
+        {"class": "bslib-card-input"} if is_shiny_input else None,
         *children,
         attrs,
-        _full_screen_toggle(attrs["id"]) if full_screen else None,
-        components_dependency(),
+        _full_screen_toggle(id) if full_screen else None,
+        components_dependencies(),
         _card_js_init(),
     )
     if fill:
@@ -288,8 +301,8 @@ def card_body(
     """
     Card body container
 
-    A general container for the "main content" of a :func:`~shiny.ui.card`. This component is designed
-    to be provided as direct children to :func:`~shiny.ui.card`.
+    A general container for the "main content" of a :func:`~shiny.ui.card`. This
+    component is designed to be provided as direct children to :func:`~shiny.ui.card`.
 
     Parameters
     ----------
@@ -335,7 +348,6 @@ def card_body(
         (or multiple columns inside a card).
     * :func:`~shiny.ui.card` for creating a card component.
     * :func:`~shiny.ui.card_header` for creating a header within the card.
-    * :func:`~shiny.experimental.ui.card_title` for creating a title within the card body.
     * :func:`~shiny.ui.card_footer` for creating a footer within the card.
     """
     if isinstance(max_height_full_screen, MISSING_TYPE):
@@ -355,9 +367,10 @@ def card_body(
     }
     tag = tags.div(
         {
-            "class": "card-body bslib-gap-spacing",
+            "class": "card-body",
             "style": css(**div_style_args),
         },
+        {"class": "bslib-gap-spacing"} if fillable else None,
         *args,
         class_=class_,
         **kwargs,

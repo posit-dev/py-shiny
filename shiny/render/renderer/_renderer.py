@@ -1,14 +1,12 @@
 from __future__ import annotations
 
 from typing import (
+    TYPE_CHECKING,
     Any,
     Awaitable,
     Callable,
-    Dict,
     Generic,
-    List,
     Optional,
-    Tuple,
     TypeVar,
     Union,
     cast,
@@ -19,8 +17,12 @@ from htmltools import MetadataNode, Tag, TagList
 from ..._docstring import add_example
 from ..._typing_extensions import Self
 from ..._utils import is_async_callable, wrap_async
+from ...types import Jsonifiable
 
-# TODO-barret-future: Double check docs are rendererd
+if TYPE_CHECKING:
+    from ...session import Session
+
+# TODO-barret-docs: Double check docs are rendererd
 # Missing first paragraph from some classes: Example: TransformerMetadata.
 # No init method for TransformerParams. This is because the `DocClass` object does not
 # display methods that start with `_`. Therefore no `__init__` or `__call__` methods are
@@ -50,36 +52,6 @@ IT = TypeVar("IT")
 """
 Return type from the user-supplied value function passed into the renderer.
 """
-
-
-# https://github.com/python/cpython/blob/df1eec3dae3b1eddff819fd70f58b03b3fbd0eda/Lib/json/encoder.py#L77-L95
-# +-------------------+---------------+
-# | Python            | JSON          |
-# +===================+===============+
-# | dict              | object        |
-# +-------------------+---------------+
-# | list, tuple       | array         |
-# +-------------------+---------------+
-# | str               | string        |
-# +-------------------+---------------+
-# | int, float        | number        |
-# +-------------------+---------------+
-# | True              | true          |
-# +-------------------+---------------+
-# | False             | false         |
-# +-------------------+---------------+
-# | None              | null          |
-# +-------------------+---------------+
-Jsonifiable = Union[
-    str,
-    int,
-    float,
-    bool,
-    None,
-    List["Jsonifiable"],
-    Tuple["Jsonifiable"],
-    Dict[str, "Jsonifiable"],
-]
 
 
 DefaultUIFnResult = Union[TagList, Tag, MetadataNode, str]
@@ -116,16 +88,15 @@ class Renderer(Generic[IT]):
     used!)
 
     There are two methods that must be implemented by the subclasses:
-    `.auto_output_ui(self, id: str)` and either `.transform(self, value: IT)` or
-    `.render(self)`.
+    `.auto_output_ui(self)` and either `.transform(self, value: IT)` or `.render(self)`.
 
     * In Express mode, the output renderer will automatically render its UI via
-      `.auto_output_ui(self, id: str)`. This helper method allows App authors to skip
-      adding a `ui.output_*` function to their UI, making Express mode even more
-      concise. If more control is needed over the UI, `@ui.hold` can be used to suppress
-      the auto rendering of the UI. When using `@ui.hold` on a renderer, the renderer's
-      UI will need to be added to the app to connect the rendered output to Shiny's
-      reactive graph.
+      `.auto_output_ui(self)`. This helper method allows App authors to skip adding a
+      `ui.output_*` function to their UI, making Express mode even more concise. If more
+      control is needed over the UI, `@ui.hold` can be used to suppress the auto
+      rendering of the UI. When using `@ui.hold` on a renderer, the renderer's UI will
+      need to be added to the app to connect the rendered output to Shiny's reactive
+      graph.
     * The `render` method is responsible for executing the value function and performing
       any transformations for the output value to be JSON-serializable (`None` is a
       valid value!). To avoid the boilerplate of resolving the value function and
@@ -185,6 +156,7 @@ class Renderer(Generic[IT]):
         :
             Original renderer instance.
         """
+        from ...session import get_current_session
 
         if not callable(_fn):
             raise TypeError("Value function must be callable")
@@ -200,6 +172,8 @@ class Renderer(Generic[IT]):
         # This helps with testing and other situations where no session is present
         # for auto-registration to occur.
         self.output_id = self.__name__
+
+        self._session = get_current_session()
 
         # Allow for App authors to not require `@output`
         self._auto_register()
@@ -242,6 +216,7 @@ class Renderer(Generic[IT]):
         # """
         # Renderer - init docs here
         # """
+        self._session: Session | None = None
         super().__init__()
 
         self._auto_registered: bool = False
@@ -319,10 +294,13 @@ class Renderer(Generic[IT]):
         return rendered_ui
 
     def _render_auto_output_ui(self) -> DefaultUIFnResultOrNone:
-        return self.auto_output_ui(
-            # Pass the `@output_args(foo="bar")` kwargs through to the auto_output_ui function.
-            **self._auto_output_ui_kwargs,
-        )
+        from ...session import session_context
+
+        with session_context(self._session):
+            return self.auto_output_ui(
+                # Pass the `@output_args(foo="bar")` kwargs through to the auto_output_ui function.
+                **self._auto_output_ui_kwargs,
+            )
 
     # ######
     # Auto registering output
@@ -338,6 +316,7 @@ class Renderer(Generic[IT]):
             ns_name = session.output._ns(self.__name__)
             session.output.remove(ns_name)
             self._auto_registered = False
+            self._session = session
 
     def _auto_register(self) -> None:
         """
@@ -349,12 +328,9 @@ class Renderer(Generic[IT]):
         """
         # If in Express mode, register the output
         if not self._auto_registered:
-            from ...session import get_current_session
-
-            s = get_current_session()
-            if s is not None:
+            if self._session is not None:
                 # Register output on reactive graph
-                s.output(self)
+                self._session.output(self)
                 # We mark the fact that we're auto-registered so that, if an explicit
                 # registration now occurs, we can undo this auto-registration.
                 self._auto_registered = True

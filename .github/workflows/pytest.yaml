@@ -5,23 +5,33 @@ on:
   push:
     branches: ["main", "rc-*"]
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   release:
     types: [published]
   schedule:
     - cron: "0 8 * * *"
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  check:
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         # "3.10" must be a string; otherwise it is interpreted as 3.1.
-        python-version: ["3.11", "3.10", "3.9", "3.8"]
+        python-version: ["3.12", "3.11", "3.10", "3.9"]
         os: [ubuntu-latest, windows-latest, macOS-latest]
+        exclude:
+          - python-version: ${{ github.event.pull_request.draft && '3.11' }}
+          - python-version: ${{ github.event.pull_request.draft && '3.10' }}
+          - python-version: ${{ github.event.pull_request.draft && '3.9' }}
+          - os: ${{ github.event.pull_request.draft && 'windows-latest' }}
+          - os: ${{ github.event.pull_request.draft && 'macOS-latest' }}
+
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Setup py-shiny
         id: install
         uses: ./.github/py-shiny/setup
@@ -31,123 +41,37 @@ jobs:
       - name: Run unit tests
         if: steps.install.outcome == 'success' && (success() || failure())
         run: |
-          make test
+          make check-tests
 
-      - name: Type check with pyright
+      - name: Type check
         if: steps.install.outcome == 'success' && (success() || failure())
         run: |
-          make pyright
+          make check-types
 
-      - name: Lint with flake8
+      - name: Lint code
         if: steps.install.outcome == 'success' && (success() || failure())
         run: |
-          make lint
+          make check-lint
 
-      - name: black and isort
+      - name: Verify code formatting
         if: steps.install.outcome == 'success' && (success() || failure())
         run: |
-          make check
+          make check-format
 
-  playwright-shiny:
-    runs-on: ${{ matrix.os }}
-    if: github.event_name != 'release'
-    strategy:
-      matrix:
-        python-version: ["3.11", "3.10", "3.9", "3.8"]
-        os: [ubuntu-latest]
-      fail-fast: false
-
-    steps:
-      - uses: actions/checkout@v3
-      - name: Setup py-shiny
-        uses: ./.github/py-shiny/setup
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Run End-to-End tests
-        timeout-minutes: 20
+      - name: Verify code can run with mypy (not Windows)
+        if: steps.install.outcome == 'success' && (success() || failure()) && matrix.os != 'windows-latest'
         run: |
-          make playwright-shiny SUB_FILE=". -vv"
-
-  playwright-examples:
-    runs-on: ${{ matrix.os }}
-    if: github.event_name != 'release'
-    strategy:
-      matrix:
-        python-version: ["3.11", "3.10", "3.9", "3.8"]
-        os: [ubuntu-latest]
-      fail-fast: false
-
-    steps:
-      - uses: actions/checkout@v3
-      - name: Setup py-shiny
-        uses: ./.github/py-shiny/setup
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Install node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: "18"
-          cache: npm
-          cache-dependency-path: examples/brownian/shinymediapipe/package-lock.json
-      - name: Install node.js package
-        working-directory: examples/brownian/shinymediapipe
-        run: |
-          npm ci
-
-      - name: Run example app tests
-        timeout-minutes: 20
-        run: |
-          make playwright-examples SUB_FILE=". -vv"
-
-  playwright-deploys:
-    # Only allow one `playwright-deploys` job to run at a time. (Independent of branch / PR)
-    concurrency: playwright-deploys
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        # Matches deploy server python version
-        python-version: ["3.10"]
-        os: [ubuntu-latest]
-      fail-fast: false
-
-    steps:
-      - uses: actions/checkout@v3
-      - name: Setup py-shiny
-        uses: ./.github/py-shiny/setup
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Test deploys example apps locally
-        timeout-minutes: 5
-        env:
-          DEPLOY_APPS: "false"
-        run: |
-          make playwright-deploys SUB_FILE=". -vv"
-
-      - name: Deploy apps and run tests (on `push` or on `pull_request` w/ `deploy**` branch)
-        if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && startsWith(github.head_ref, 'deploy')) }}
-        env:
-          DEPLOY_APPS: "true"
-          DEPLOY_CONNECT_SERVER_URL: "https://rsc.radixu.com/"
-          DEPLOY_CONNECT_SERVER_API_KEY: "${{ secrets.DEPLOY_CONNECT_SERVER_API_KEY }}"
-          DEPLOY_SHINYAPPS_NAME: "${{ secrets.DEPLOY_SHINYAPPS_NAME }}"
-          DEPLOY_SHINYAPPS_TOKEN: "${{ secrets.DEPLOY_SHINYAPPS_TOKEN }}"
-          DEPLOY_SHINYAPPS_SECRET: "${{ secrets.DEPLOY_SHINYAPPS_SECRET }}"
-        timeout-minutes: 30
-        # Given we are waiting for external servers to finish,
-        # we can have many local processes waiting for deployment to finish
-        run: |
-          make playwright-deploys SUB_FILE=". -vv --numprocesses 12"
+          make ci-check-mypy-can-run
 
   pypi:
     name: "Deploy to PyPI"
     runs-on: ubuntu-latest
     if: github.event_name == 'release'
-    needs: [build]
+    needs: [check]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: "Set up Python 3.10"
         uses: actions/setup-python@v4
         with:
@@ -155,7 +79,6 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install https://github.com/rstudio/py-htmltools/tarball/main
           make install-deps
           make install
       - name: "Build Package"
@@ -169,7 +92,7 @@ jobs:
         with:
           user: __token__
           password: ${{ secrets.PYPI_TEST_API_TOKEN }}
-          repository_url: https://test.pypi.org/legacy/
+          repository-url: https://test.pypi.org/legacy/
 
       ## prod deploy ----
       - name: "Deploy to PyPI"
@@ -179,28 +102,90 @@ jobs:
           user: __token__
           password: ${{ secrets.PYPI_API_TOKEN }}
 
-  testrail-reporting-nightly:
-    runs-on: ${{ matrix.os }}
-    if: ${{ github.event_name == 'schedule' || (github.event_name == 'pull_request' && startsWith(github.head_ref, 'testrail')) }}
+  playwright-shiny:
+    if: github.event_name != 'release'
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version:
-          - "3.11"
-          - "3.10"
-          - "3.9"
-          # - "3.8" # Testrail has errors when running on python 3.8; Skipping
-        os: [ubuntu-latest]
+        python-version: ["3.12", "3.11", "3.10", "3.9"]
+        browser: ["chromium", "firefox", "webkit"]
+        exclude:
+          - python-version: ${{ github.event.pull_request.draft && '3.11' }}
+          - python-version: ${{ github.event.pull_request.draft && '3.10' }}
+          - python-version: ${{ github.event.pull_request.draft && '3.9' }}
+          - browser: ${{ github.event.pull_request.draft && 'firefox' }}
+          - browser: ${{ github.event.pull_request.draft && 'webkit' }}
+          # There are many unexplained tests that fail on webkit w/ python 3.8, 3.9
+          # Given the more recent versions of python work, we will exclude this combination
+          - browser: "webkit"
+            python-version: "3.8"
+          - browser: "webkit"
+            python-version: "3.9"
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Setup py-shiny
         uses: ./.github/py-shiny/setup
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Determine browsers for testing
+        uses: ./.github/py-shiny/pytest-browsers
+        id: browsers
+        with:
+          browser: ${{ matrix.browser }}
+          # If anything other than `true`, it will heavily reduce webkit performance
+          # Related: https://github.com/microsoft/playwright/issues/18119
+          disable-playwright-diagnostics: ${{ matrix.browser == 'webkit' || matrix.browser == 'firefox' }}
+
+      - name: Run End-to-End tests
+        timeout-minutes: 60
+        run: |
+          make playwright-shiny SUB_FILE=". --numprocesses 3 ${{ steps.browsers.outputs.playwright-diagnostic-args }}" ${{ steps.browsers.outputs.browsers }}
+      - uses: actions/upload-artifact@v4
+        if: failure() && steps.browsers.outputs.has-playwright-diagnostics
+        with:
+          name: "playright-shiny-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.browser }}-results"
+          path: test-results/
+          retention-days: 5
+
+  playwright-examples:
+    if: github.event_name != 'release'
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        python-version: ["3.12", "3.11", "3.10", "3.9"]
+        browser: ["chromium", "firefox", "webkit"]
+        exclude:
+          - python-version: ${{ github.event.pull_request.draft && '3.11' }}
+          - python-version: ${{ github.event.pull_request.draft && '3.10' }}
+          - python-version: ${{ github.event.pull_request.draft && '3.9' }}
+          - browser: ${{ github.event.pull_request.draft && 'firefox' }}
+          - browser: ${{ github.event.pull_request.draft && 'webkit' }}
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup py-shiny
+        uses: ./.github/py-shiny/setup
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Determine browsers for testing
+        uses: ./.github/py-shiny/pytest-browsers
+        id: browsers
+        with:
+          browser: ${{ matrix.browser }}
+          # If anything other than `true`, it will heavily reduce webkit performance
+          # Related: https://github.com/microsoft/playwright/issues/18119
+          disable-playwright-diagnostics: ${{ matrix.browser == 'webkit' || matrix.browser == 'firefox' }}
+
       - name: Install node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: "18"
           cache: npm
@@ -210,25 +195,66 @@ jobs:
         run: |
           npm ci
 
-      - name: Run End-to-End tests
-        timeout-minutes: 20
+      - name: Run example app tests
+        timeout-minutes: 60
         run: |
-          make testrail-junit
-      - name: Report results to Testrail
+          make playwright-examples SUB_FILE=". --numprocesses 3 ${{ steps.browsers.outputs.playwright-diagnostic-args }}" ${{ steps.browsers.outputs.browsers }}
+      - uses: actions/upload-artifact@v4
+        if: failure() && steps.browsers.outputs.has-playwright-diagnostics
+        with:
+          name: "playright-examples-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.browser }}-results"
+          path: test-results/
+          retention-days: 5
+
+  playwright-deploys-precheck:
+    if: github.event_name != 'release'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # Matches deploy server python version
+        python-version: ["3.10"]
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup py-shiny
+        uses: ./.github/py-shiny/setup
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Determine browsers for testing
+        uses: ./.github/py-shiny/pytest-browsers
+        id: browsers
+        with:
+          all-browsers: ${{ ! github.event.pull_request.draft }}
+
+      - name: Test that deployable example apps work
+        timeout-minutes: 5 # ~10s locally
         env:
-          TESTRAIL_URL: "https://posit.testrail.io"
-          TESTRAIL_PROJECT: "Shiny-Python"
-          TESTRAIL_USER: "${{ secrets.TESTRAIL_USER }}"
-          TESTRAIL_PASSWORD: "${{ secrets.TESTRAIL_PASSWORD }}"
+          DEPLOY_APPS: "false"
         run: |
-          CURRENT_DATE="$(date +'%Y-%m-%d %H:%M:%S') Nightly tests"
-          trcli \
-            --yes \
-            --host "$TESTRAIL_URL" \
-            --project "$TESTRAIL_PROJECT" \
-            --username "$TESTRAIL_USER" \
-            --password "$TESTRAIL_PASSWORD" \
-            parse_junit \
-            --file "report.xml" \
-            --title "$CURRENT_DATE"  \
-            --close-run
+          make playwright-deploys
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: "playright-examples-${{ runner.os }}-${{ matrix.python-version }}-results"
+          path: test-results/
+          retention-days: 5
+
+  test-narwhals-integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup py-shiny
+        id: install
+        uses: ./.github/py-shiny/setup
+      - name: Run test commands
+        env:
+          UV_SYSTEM_PYTHON: 1
+        run: |
+          make narwhals-install-shiny
+          make narwhals-test-integration

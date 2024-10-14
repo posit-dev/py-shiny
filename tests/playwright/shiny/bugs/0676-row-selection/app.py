@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pandas as pd
 
 from shiny import App, Inputs, Outputs, Session, render, ui
@@ -16,8 +18,14 @@ df = pd.DataFrame(
 app_ui = ui.page_fluid(
     ui.p("Select rows in the grid, make sure the selected rows appear below."),
     ui.output_data_frame("grid"),
-    ui.output_table("detail"),
-    ui.output_text_verbatim("debug"),
+    ui.p(
+        "Selected data: ",
+        ui.output_data_frame("detail"),
+    ),
+    ui.p(
+        "Selected rows: ",
+        ui.output_code("selected_rows"),
+    ),
     class_="p-3",
 )
 
@@ -27,19 +35,17 @@ def server(input: Inputs, output: Outputs, session: Session):
     def grid():
         return render.DataGrid(
             df,
-            row_selection_mode="multiple",
+            selection_mode="rows",
             height=350,
         )
 
-    @render.table
+    @render.data_frame
     def detail():
-        selected_rows = grid.input_selected_rows() or ()
-        if len(selected_rows) > 0:
-            return df.iloc[list(selected_rows)]
+        return grid.data_view(selected=True)
 
-    @render.text
-    def debug():
-        return input.grid_selected_rows()
+    @render.code
+    def selected_rows():
+        return str(grid.cell_selection()["rows"])
 
 
-app = App(app_ui, server, debug=True)
+app = App(app_ui, server, debug=False)

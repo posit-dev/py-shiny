@@ -1,18 +1,21 @@
-import datetime
+from shiny import App, render, ui
 
-from shiny.express import input, render, ui
+app_ui = ui.page_fluid(
+    ui.input_text("name", "Name", "Socrates"),
+    ui.input_text("years", "Years", "470-399 BC"),
+    ui.output_ui("person"),
+)
 
-with ui.card(id="card"):
-    ui.input_slider("val", "slider", 0, 100, 50)
-    "Text outside of render express call"
-    ui.tags.br()
-    f"Rendered time: {str(datetime.datetime.now())}"
+
+def server(input, output, session):
 
     @render.express
-    def render_express():
-        "Text inside of render express call"
-        ui.tags.br()
-        "Dynamic slider value: "
-        input.val()
-        ui.tags.br()
-        f"Rendered time: {str(datetime.datetime.now())}"
+    def person():
+        from shiny.express import ui
+
+        with ui.card(class_="mt-3"):
+            ui.h3(input.name())
+            input.years()
+
+
+app = App(app_ui, server)

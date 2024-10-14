@@ -1,0 +1,5 @@
+{
+  "type": "app",
+  "id": "chat-ai-anthropic-aws",
+  "title": "Chat AI using Anthropic via AWS Bedrock"
+}

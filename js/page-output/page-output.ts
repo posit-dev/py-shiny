@@ -8,14 +8,15 @@ class PageOutputBinding extends Shiny.OutputBinding {
   }
 
   onValueError(el: HTMLElement, err: ErrorsMessageValue): void {
-    Shiny.unbindAll(el);
+    if (Shiny.unbindAll) Shiny.unbindAll(el);
     this.renderError(el, err);
   }
 
   async renderValue(
     el: HTMLElement,
-    data: Parameters<typeof Shiny.renderContent>[1]
+    data: Parameters<typeof Shiny.renderContentAsync>[1]
   ): Promise<void> {
+    if (data === null) return;
     if (el !== document.body) {
       throw new Error(
         'Output with class "shiny-page-output" must be a <body> tag.'
@@ -66,7 +67,7 @@ class PageOutputBinding extends Shiny.OutputBinding {
       data.html = content;
     }
 
-    await Shiny.renderContent(el, data);
+    await Shiny.renderContentAsync(el, data);
   }
 }
 

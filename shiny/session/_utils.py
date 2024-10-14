@@ -1,5 +1,3 @@
-# Needed for types imported only during TYPE_CHECKING with Python 3.7 - 3.9
-# See https://www.python.org/dev/peps/pep-0655/#usage-in-python-3-11
 from __future__ import annotations
 
 __all__ = (
@@ -54,7 +52,8 @@ def get_current_session() -> Optional[Session]:
     --------
     * :func:`~shiny.session.require_active_session`
     """
-    return _current_session.get() or _default_session
+    session = _current_session.get()
+    return session if session is not None else _default_session
 
 
 @contextmanager
@@ -70,7 +69,7 @@ def session_context(session: Optional[Session]):
     """
     token: Token[Session | None] = _current_session.set(session)
     try:
-        with namespace_context(session.ns if session else None):
+        with namespace_context(session.ns if session is not None else None):
             yield
     finally:
         _current_session.reset(token)

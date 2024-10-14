@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import typing
 
 from shiny import App, Inputs, Outputs, Session, render, ui
@@ -50,6 +51,7 @@ app_ui = ui.page_fluid(
         value=0,
         step=2500,
         pre="$",
+        post=".00",
         sep=",",
         animate=True,
         ticks=True,
@@ -70,7 +72,29 @@ app_ui = ui.page_fluid(
         step=1,
         animate=ui.AnimationOptions(interval=100, loop=False),
     ),
-    # TODO-future; Test dates
+    slider_row(
+        "Date format",
+        min=(datetime.date(2024, 1, 1)),
+        max=(datetime.date(2024, 1, 10)),
+        value=(datetime.date(2024, 1, 5)),
+        time_format="%m/%d/%y",
+        timezone="0000",
+    ),
+    slider_row(
+        "Time format",
+        min=(datetime.datetime(2024, 1, 1, 0, 0, tzinfo=datetime.timezone.utc)),
+        max=(datetime.datetime(2024, 1, 10, 23, 59, tzinfo=datetime.timezone.utc)),
+        value=(datetime.datetime(2024, 1, 5, 12, 00, tzinfo=datetime.timezone.utc)),
+        width="600px",
+        timezone="0000",
+    ),
+    slider_row(
+        "Drag Range (Disabled)",
+        min=0,
+        max=1000,
+        value=(200, 500),
+        drag_range=False,
+    ),
 )
 
 

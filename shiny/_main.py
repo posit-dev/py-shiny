@@ -18,7 +18,7 @@ import uvicorn.config
 
 import shiny
 
-from . import _autoreload, _hostenv, _static, _utils
+from . import __version__, _autoreload, _hostenv, _static, _utils
 from ._docstring import no_example
 from ._typing_extensions import NotRequired, TypedDict
 from .express import is_express_app
@@ -26,13 +26,22 @@ from .express._utils import escape_to_var_name
 
 
 @click.group("main")
+@click.version_option(__version__)
 def main() -> None:
     pass
 
 
 stop_shortcut = "Ctrl+C"
 
-RELOAD_INCLUDES_DEFAULT = ("*.py", "*.css", "*.js", "*.htm", "*.html", "*.png")
+RELOAD_INCLUDES_DEFAULT = (
+    "*.py",
+    "*.css",
+    "*.scss",
+    "*.js",
+    "*.htm",
+    "*.html",
+    "*.png",
+)
 RELOAD_EXCLUDES_DEFAULT = (".*", "*.py[cod]", "__pycache__", "env", "venv")
 
 
@@ -143,6 +152,13 @@ any of the following will work:
     help="Launch app browser after app starts, using the Python webbrowser module.",
     show_default=True,
 )
+@click.option(
+    "--dev-mode/--no-dev-mode",
+    is_flag=True,
+    default=True,
+    help="Dev mode",
+    show_default=True,
+)
 @no_example()
 def run(
     app: str | shiny.App,
@@ -159,6 +175,7 @@ def run(
     app_dir: str,
     factory: bool,
     launch_browser: bool,
+    dev_mode: bool,
     **kwargs: object,
 ) -> None:
     reload_includes_list = reload_includes.split(",")
@@ -177,6 +194,7 @@ def run(
         app_dir=app_dir,
         factory=factory,
         launch_browser=launch_browser,
+        dev_mode=dev_mode,
         **kwargs,
     )
 
@@ -196,6 +214,7 @@ def run_app(
     app_dir: Optional[str] = ".",
     factory: bool = False,
     launch_browser: bool = False,
+    dev_mode: bool = True,
     **kwargs: object,
 ) -> None:
     """
@@ -276,6 +295,8 @@ def run_app(
 
     os.environ["SHINY_HOST"] = host
     os.environ["SHINY_PORT"] = str(port)
+    if dev_mode:
+        os.environ["SHINY_DEV_MODE"] = "1"
 
     if isinstance(app, str):
         # Remove ":app" suffix if present. Normally users would just pass in the
@@ -288,6 +309,9 @@ def run_app(
             # is "shiny.express.app:_2f_path_2f_to_2f_app_2e_py".
             app = "shiny.express.app:" + escape_to_var_name(str(app_path))
             app_dir = str(app_path.parent)
+
+            # Express apps need min version of rsconnect-python to deploy correctly.
+            _verify_rsconnect_version()
         else:
             app, app_dir = resolve_app(app, app_dir)
 
@@ -348,6 +372,9 @@ def run_app(
         app_dir=app_dir,
         factory=factory,
         lifespan="on",
+        # Don't allow shiny to use uvloop!
+        # https://github.com/posit-dev/py-shiny/issues/1373
+        loop="asyncio",
         **reload_args,  # pyright: ignore[reportArgumentType]
         **kwargs,
     )
@@ -457,28 +484,43 @@ def try_import_module(module: str) -> Optional[types.ModuleType]:
     return importlib.import_module(module)
 
 
-# The template choices are defined here instead of in `_template_utiles.py` in
-# order to delay loading the questionary package until shiny create is called.
+@main.group(help="""Add files to enhance your Shiny app.""")
+def add() -> None:
+    pass
 
-# These templates are copied over fromt the `shiny/templates/app_templates`
-# directory. The process for adding new ones is to add your app folder to
-# that directory, and then add another entry to this dictionary.
-app_template_choices = {
-    "Basic App": "basic-app",
-    "Dashboard": "dashboard",
-    "Multi-page app with modules": "multi-page",
-    "Custom JavaScript Component": "js-component",
-}
 
-# These are templates which produce a Python package and have content filled in at
-# various places based on the user input. You can add new ones by following the
-# examples in `shiny/templates/package-templates` and then adding entries to this
-# dictionary.
-package_template_choices = {
-    "Input component": "js-input",
-    "Output component": "js-output",
-    "React component": "js-react",
-}
+@add.command(
+    help="""Add a test file for a specified Shiny app.
+
+Add an empty test file for a specified app. You will be prompted with a destination
+folder. If you don't provide a destination folder, it will be added in the current
+working directory based on the app name.
+
+After creating the shiny app file, you can use `pytest` to run the tests:
+
+        pytest TEST_FILE
+"""
+)
+@click.option(
+    "--app",
+    "-a",
+    type=str,
+    help="Please provide the path to the app file for which you want to create a test file.",
+)
+@click.option(
+    "--test-file",
+    "-t",
+    type=str,
+    help="Please provide the name of the test file you want to create. The basename of the test file should start with `test_` and be unique across all test files.",
+)
+# Param for app.py, param for test_name
+def test(
+    app: Path | None,
+    test_file: Path | None,
+) -> None:
+    from ._main_add_test import add_test_file
+
+    add_test_file(app_file=app, test_file=test_file)
 
 
 @main.command(
@@ -497,10 +539,7 @@ After creating the application, you use `shiny run`:
 @click.option(
     "--template",
     "-t",
-    type=click.Choice(
-        list({**app_template_choices, **package_template_choices}.values()),
-        case_sensitive=False,
-    ),
+    type=click.STRING,
     help="Choose a template for your new application.",
 )
 @click.option(
@@ -515,11 +554,18 @@ After creating the application, you use `shiny run`:
 @click.option(
     "--github",
     "-g",
-    help="The GitHub URL of the template sub-directory. For example https://github.com/posit-dev/py-shiny-templates/tree/main/dashboard",
+    help="""
+    The GitHub repo containing the template, e.g. 'posit-dev/py-shiny-templates'.
+    Can be in the format '{repo_owner}/{repo_name}', '{repo_owner}/{repo_name}@{ref}',
+    or '{repo_owner}/{repo_name}:{path}@{ref}'.
+    Alternatively, a GitHub URL of the template sub-directory, e.g
+    'https://github.com/posit-dev/py-shiny-templates/tree/main/dashboard'.
+    """,
 )
 @click.option(
     "--dir",
     "-d",
+    type=str,
     help="The destination directory, you will be prompted if this is not provided.",
 )
 @click.option(
@@ -533,22 +579,24 @@ def create(
     template: Optional[str] = None,
     mode: Optional[str] = None,
     github: Optional[str] = None,
-    dir: Optional[str | Path] = None,
+    dir: Optional[Path | str] = None,
     package_name: Optional[str] = None,
 ) -> None:
-    from ._template_utils import template_query, use_git_template
+    from ._main_create import use_github_template, use_internal_template
 
-    if github is not None and template is not None:
-        raise click.UsageError("You cannot provide both --github and --template")
-
-    if isinstance(dir, str):
+    if dir is not None:
         dir = Path(dir)
 
     if github is not None:
-        use_git_template(github, mode, dir)
-        return
-
-    template_query(template, mode, dir, package_name)
+        use_github_template(
+            github,
+            template_name=template,
+            mode=mode,
+            dest_dir=dir,
+            package_name=package_name,
+        )
+    else:
+        use_internal_template(template, mode, dir, package_name)
 
 
 @main.command(
@@ -626,3 +674,28 @@ class ReloadArgs(TypedDict):
     reload_includes: NotRequired[list[str]]
     reload_excludes: NotRequired[list[str]]
     reload_dirs: NotRequired[list[str]]
+
+
+# Check that the version of rsconnect supports Shiny Express; can be removed in the
+# future once this version of rsconnect is widely used. The dependency on "packaging"
+# can also be removed then, because it is only used here. (Added 2024-03)
+def _verify_rsconnect_version() -> None:
+    PACKAGE_NAME = "rsconnect-python"
+    MIN_VERSION = "1.22.0"
+
+    from importlib.metadata import PackageNotFoundError, version
+
+    from packaging.version import parse
+
+    try:
+        installed_version = parse(version(PACKAGE_NAME))
+        required_version = parse(MIN_VERSION)
+        if installed_version < required_version:
+            print(
+                f"Warning: rsconnect-python {installed_version} is installed, but it does not support deploying Shiny Express applications. "
+                f"Please upgrade to at least version {MIN_VERSION}. "
+                "If you are using pip, you can run `pip install --upgrade rsconnect-python`",
+                file=sys.stderr,
+            )
+    except PackageNotFoundError:
+        pass

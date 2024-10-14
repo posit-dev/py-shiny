@@ -1,15 +1,18 @@
 """Tests for `Module`."""
 
+from __future__ import annotations
+
 import asyncio
-from typing import Dict, Union, cast
+from typing import cast
 
 import pytest
-from htmltools import Tag, TagList
+from htmltools import HTML, Tag, TagList
 
 from shiny import App, Inputs, Outputs, Session, module, reactive, ui
 from shiny._connection import MockConnection
 from shiny._namespaces import resolve_id
 from shiny.session import get_current_session
+from shiny.session._session import AppSession, SessionProxy
 
 
 @module.ui
@@ -25,7 +28,7 @@ def mod_outer_ui() -> TagList:
     return TagList(mod_inner_ui("inner"), ui.output_text("out2"))
 
 
-def get_id(x: TagList, child_idx: int = 0) -> str:
+def get_id(x: TagList, child_idx: int = 0) -> str | HTML:
     return cast(Tag, x[child_idx]).attrs["id"]
 
 
@@ -41,7 +44,7 @@ def test_module_ui():
 
 @pytest.mark.asyncio
 async def test_session_scoping():
-    sessions: Dict[str, Union[Session, None, str]] = {}
+    sessions: dict[str, Session | str | HTML | None] = {}
 
     @module.server
     def inner_server(input: Inputs, output: Outputs, session: Session):
@@ -98,18 +101,20 @@ async def test_session_scoping():
 
     assert sessions["inner"] is sessions["inner_current"]
     assert sessions["inner_current"] is sessions["inner_calc_current"]
-    assert isinstance(sessions["inner_current"], Session)
+    assert isinstance(sessions["inner_current"], SessionProxy)
+    assert sessions["inner_current"].root_scope() is sessions["top"]
     assert sessions["inner_id"] == "mod_outer-mod_inner-foo"
     assert sessions["inner_ui_id"] == "mod_outer-mod_inner-outer-inner-button"
 
     assert sessions["outer"] is sessions["outer_current"]
     assert sessions["outer_current"] is sessions["outer_calc_current"]
-    assert isinstance(sessions["outer_current"], Session)
+    assert isinstance(sessions["outer_current"], SessionProxy)
+    assert sessions["outer_current"].root_scope() is sessions["top"]
     assert sessions["outer_id"] == "mod_outer-foo"
     assert sessions["outer_ui_id"] == "mod_outer-outer-inner-button"
 
     assert sessions["top"] is sessions["top_current"]
     assert sessions["top_current"] is sessions["top_calc_current"]
-    assert isinstance(sessions["top_current"], Session)
+    assert isinstance(sessions["top_current"], AppSession)
     assert sessions["top_id"] == "foo"
     assert sessions["top_ui_id"] == "outer-inner-button"

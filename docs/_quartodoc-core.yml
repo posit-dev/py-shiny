@@ -9,6 +9,7 @@ quartodoc:
   renderer:
     style: _renderer.py
     show_signature_annotations: false
+    table_style: description-list
   sections:
     - title: Page containers
       desc: Create a user interface page container.
@@ -96,9 +97,15 @@ quartodoc:
         - ui.input_file
         - ui.download_button
         - ui.download_link
+    - title: Chat interface
+      desc: Build a chatbot interface
+      contents:
+        - ui.Chat
+        - ui.chat_ui
     - title: Custom UI
       desc: Lower-level UI functions for creating custom HTML/CSS/JS
       contents:
+        - ui.Theme
         - ui.HTML       # uses justattributes.rst template
         - ui.TagList    # uses class.rst template
         - name: ui.tags       # uses tags.rst template
@@ -108,6 +115,8 @@ quartodoc:
         - ui.include_js
         - ui.insert_ui
         - ui.remove_ui
+        - ui.busy_indicators.use
+        - ui.busy_indicators.options
         - ui.fill.as_fillable_container
         - ui.fill.as_fill_item
         - ui.fill.remove_all_fill
@@ -118,31 +127,21 @@ quartodoc:
     - title: Update inputs
       desc: Programmatically update input values.
       contents:
-        - name: ui.update_select
-          dynamic: true
-        - name: ui.update_selectize
-          dynamic: true
-        - name: ui.update_slider
-          dynamic: true
+        - ui.update_select
+        - ui.update_selectize
+        - ui.update_slider
         - ui.update_dark_mode
         - ui.update_date
-        - name: ui.update_date_range
-          dynamic: true
-        - name: ui.update_checkbox
-          dynamic: true
-        - name: ui.update_checkbox_group
-          dynamic: true
-        - name: ui.update_switch
-          dynamic: true
-        - name: ui.update_radio_buttons
-          dynamic: true
-        - name: ui.update_numeric
-          dynamic: true
+        - ui.update_date_range
+        - ui.update_checkbox
+        - ui.update_checkbox_group
+        - ui.update_switch
+        - ui.update_radio_buttons
+        - ui.update_numeric
         - ui.update_text
         - name: ui.update_text_area
           dynamic: "shiny.ui.update_text"
-        - name: ui.update_navs
-          dynamic: true
+        - ui.update_navs
         - ui.update_action_button
         - ui.update_action_link
         - ui.update_task_button
@@ -236,8 +235,13 @@ quartodoc:
             - session.require_active_session
             - session.session_context
             - reactive.get_current_context
-            - name: input_handler.input_handlers
-              dynamic: true
+            - session.Session.send_custom_message
+            - session.Session.send_input_message
+            - session.Session.on_flush
+            - session.Session.on_flushed
+            - session.Session.on_ended
+            - session.Session.dynamic_route
+            - input_handler.input_handlers
         - kind: page
           path: Renderer
           flatten: true
@@ -337,28 +341,21 @@ quartodoc:
     - title: Deprecated
       desc: ""
       contents:
-        - ui.panel_main
-        - ui.panel_sidebar
-        - ui.nav
         - render.transformer.output_transformer
         - render.transformer.resolve_value_fn
     - title: Experimental
-      desc: "These methods are under consideration and are considered unstable. However, if there is a method you are excited about, please let us know!"
+      desc: >
+        These methods are under consideration and are considered unstable.
+        However, if there is a method you are excited about, please let us know!
       contents:
         - kind: page
           path: ExCard
           summary:
             name: "Card"
-            desc: "Cards are a common organizing unit for modern user interfaces (UI). At their core, they're just rectangular containers with borders and padding. However, when utilized properly to group related information, they help users better digest, engage, and navigate through content."
+            desc: >
+              Additional card components that compliment [ui.card](ui.card.qmd).
           flatten: true
           contents:
-            - name: experimental.ui.card_body
-              dynamic: false
-            - name: experimental.ui.card_title
-              dynamic: false
             - name: experimental.ui.card_image
               dynamic: false
-            - name: experimental.ui.ImgContainer
-              dynamic: false
-            - name: experimental.ui.WrapperCallable
-              dynamic: false
+

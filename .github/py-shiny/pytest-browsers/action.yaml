@@ -1,0 +1,68 @@
+name: 'Trim down pytest browsers'
+description: 'Trim down pytest browsers so the browser tabs are not shut down between tests, speeding up testing.'
+inputs:
+  browser:
+    description: 'Browser to use for testing. Currently supports `chromium`, `firefox`, and `webkit`.'
+    required: false
+    default: ''
+  all-browsers:
+    description: 'Force all pytest browsers to used when testing'
+    required: false
+    default: 'false'
+  disable-playwright-diagnostics:
+    description: 'Disable playwright diagnostics: tracing, video, screenshot'
+    required: false
+    default: 'true'
+outputs:
+  browsers:
+    description: 'pytest browsers to use'
+    value: ${{ steps.browsers.outputs.browsers }}
+  has-playwright-diagnostics:
+    description: 'Whether playwright diagnostics have been enabled'
+    value: ${{ steps.browsers.outputs.has-playwright-diagnostics }}
+  playwright-diagnostic-args:
+    description: 'Args to supply to `make playwright` like commands.'
+    value: ${{ steps.browsers.outputs.playwright-diagnostic-args }}
+runs:
+  using: "composite"
+  steps:
+      - name: Determine browsers to use
+        shell: bash
+        id: browsers
+        run: |
+          # Determine which browsers to use
+
+          if [ "${{ inputs.disable-playwright-diagnostics }}" == "true" ]; then
+            echo "Disabling playwright diagnostics!"
+            echo 'has-playwright-diagnostics=false' >> "$GITHUB_OUTPUT"
+            echo 'playwright-diagnostic-args=--tracing off --video off --screenshot off' >> "$GITHUB_OUTPUT"
+          else
+            echo "Using playwright diagnostics!"
+            echo 'has-playwright-diagnostics=true' >> "$GITHUB_OUTPUT"
+            echo 'playwright-diagnostic-args=--tracing=retain-on-failure --screenshot=only-on-failure --full-page-screenshot --video off --output=test-results' >> "$GITHUB_OUTPUT"
+          fi
+
+          if [ "${{ inputs.browser }}" != "" ]; then
+            BROWSER="${{ inputs.browser }}"
+
+            if [ "$BROWSER" == "chromium" ] || [ "$BROWSER" == "firefox" ] || [ "$BROWSER" == "webkit" ]; then
+              echo "Using custom browser $BROWSER !"
+              echo "browsers=PYTEST_BROWSERS=\"--browser $BROWSER\"" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "Unknown browser: $BROWSER"
+            exit 1
+          fi
+
+          if [ "${{ inputs.all-browsers }}" == "true" ]; then
+            echo "Using all browsers!"
+            exit 0
+          fi
+
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            echo "Using chrome browser only!"
+            echo 'browsers=PYTEST_BROWSERS="--browser chromium"' >> "$GITHUB_OUTPUT"
+          fi
+
+          echo "No custom pytest browsers!"
+          exit 0

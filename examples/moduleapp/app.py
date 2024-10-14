@@ -6,11 +6,10 @@ from shiny import App, Inputs, Outputs, Session, module, reactive, render, ui
 # ============================================================
 @module.ui
 def counter_ui(label: str = "Increment counter") -> ui.TagChild:
-    return ui.div(
-        {"style": "border: 1px solid #ccc; border-radius: 5px; margin: 5px 0;"},
+    return ui.card(
         ui.h2("This is " + label),
         ui.input_action_button(id="button", label=label),
-        ui.output_text_verbatim(id="out"),
+        ui.output_code(id="out"),
     )
 
 
@@ -25,7 +24,7 @@ def counter_server(
     def _():
         count.set(count() + 1)
 
-    @render.text
+    @render.code
     def out() -> str:
         return f"Click count is {count()}"
 

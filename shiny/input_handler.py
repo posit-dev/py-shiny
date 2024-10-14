@@ -1,5 +1,3 @@
-# Needed for types imported only during TYPE_CHECKING with Python 3.7 - 3.9
-# See https://www.python.org/dev/peps/pep-0655/#usage-in-python-3-11
 from __future__ import annotations
 
 __all__ = ("input_handlers",)
@@ -98,10 +96,10 @@ getType: function(el) {
 
 @input_handlers.add("shiny.date")
 def _(
-    value: str | list[str], name: ResolvedId, session: Session
+    value: str | list[str] | None, name: ResolvedId, session: Session
 ) -> date | None | tuple[date | None, date | None]:
 
-    if isinstance(value, str):
+    if isinstance(value, str) or value is None:
         return _safe_strptime_date(value)
     else:
         return (

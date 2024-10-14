@@ -7,14 +7,16 @@ __all__ = (
     "modal_remove",
 )
 
-from typing import Literal, Optional
+from typing import TYPE_CHECKING, Literal, Optional
 
 from htmltools import HTML, Tag, TagAttrs, TagAttrValue, TagChild, div, tags
 
 from .._docstring import add_example
 from ..session import require_active_session
-from ..session._session import Session
 from ..types import MISSING, MISSING_TYPE
+
+if TYPE_CHECKING:
+    from ..session import Session
 
 
 @add_example(ex_dir="../api-examples/modal")
@@ -182,12 +184,12 @@ def modal_show(modal: Tag, session: Optional[Session] = None) -> None:
     session._send_message_sync({"modal": {"type": "show", "message": msg}})
 
 
-@add_example(ex_dir="../api-examples/modal")
+@add_example()
 def modal_remove(session: Optional[Session] = None) -> None:
     """
     Remove a modal dialog box.
 
-    :func:`~shiny.ui.modal_remove` provides a way to remove a modal programatically.
+    :func:`~shiny.ui.modal_remove` provides a way to remove a modal programmatically.
     Modals can also be removed manually by the user if a :func:`~shiny.ui.modal_button`
     is provided, or if the modal is created with `easy_close=True`.
 

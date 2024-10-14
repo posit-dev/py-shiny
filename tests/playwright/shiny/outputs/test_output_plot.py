@@ -1,8 +1,10 @@
 import re
 
-from conftest import ShinyAppProc, create_doc_example_core_fixture
-from controls import OutputPlot
+from conftest import create_doc_example_core_fixture
 from playwright.sync_api import Page
+
+from shiny.playwright import controller
+from shiny.run import ShinyAppProc
 
 app = create_doc_example_core_fixture("output_plot")
 
@@ -10,9 +12,9 @@ app = create_doc_example_core_fixture("output_plot")
 def test_output_plot_kitchen(page: Page, app: ShinyAppProc) -> None:
     page.goto(app.url)
 
-    plot = OutputPlot(page, "p")
+    plot = controller.OutputPlot(page, "p")
 
-    plot.expect_inline(inline=False)
+    plot.expect_inline(False)
     plot.expect_height("400px")
     plot.expect_width("100%")
 

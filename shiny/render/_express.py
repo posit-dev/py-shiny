@@ -6,17 +6,15 @@ from typing import Optional
 from htmltools import Tag, TagAttrValue, TagFunction, TagList, wrap_displayhook_handler
 
 from .. import ui as _ui
+from .._docstring import add_example
 from .._typing_extensions import Self
 from ..session._utils import require_active_session
-from ..types import MISSING, MISSING_TYPE
+from ..types import MISSING, MISSING_TYPE, JsonifiableDict
 from .renderer import AsyncValueFn, Renderer, ValueFn
-from .renderer._utils import (
-    JsonifiableDict,
-    rendered_deps_to_jsonifiable,
-    set_kwargs_value,
-)
+from .renderer._utils import rendered_deps_to_jsonifiable, set_kwargs_value
 
 
+@add_example(ex_dir="../api-examples/render_express")
 class express(Renderer[None]):
     """
     Reactively render HTML content with output captured as in Shiny Express
@@ -24,8 +22,12 @@ class express(Renderer[None]):
     This is similar to :class:`~shiny.render.ui`, except that :class:`~shiny.render.ui`
     uses the return value from the the decorated function, whereas this function works
     like Shiny Express: as it executes each line of the decorated function, it calls
-    :func:`~sys.displayhook()` on the result. This has the effet of "capturing" the
+    :func:`~sys.displayhook()` on the result. This has the effect of "capturing" the
     output of each line.
+
+    This decorator can be thought of as a combination of :class:`~shiny.render.ui` (for
+    rendering and sending the dynamic UI to the client), and `~shiny.express.expressify`
+    (for capturing the output of each line).
 
     Returns
     -------

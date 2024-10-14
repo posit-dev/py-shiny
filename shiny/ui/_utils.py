@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from typing import Any, Dict, List, Optional, cast, overload
 
 from htmltools import (
@@ -130,3 +131,8 @@ def extract_js_keys(options: Dict[str, Any], parent_key: str = "") -> List[str]:
             value = cast(Dict[str, Any], value)
             js_html_keys.extend(extract_js_keys(value, full_key))
     return js_html_keys
+
+
+def path_pkg_www(*args: str) -> str:
+    base = os.path.join(os.path.dirname(__file__), "..", "www", "shared")
+    return os.path.join(base, *args)

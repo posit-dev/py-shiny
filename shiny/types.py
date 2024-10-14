@@ -5,6 +5,7 @@ from __future__ import annotations
 __all__ = (
     "MISSING",
     "MISSING_TYPE",
+    "Jsonifiable",
     "FileInfo",
     "ImgData",
     "SafeException",
@@ -12,7 +13,20 @@ __all__ = (
     "SilentCancelOutputException",
 )
 
-from typing import TYPE_CHECKING, Any, BinaryIO, Literal, NamedTuple, Optional, Protocol
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    BinaryIO,
+    Dict,
+    List,
+    Literal,
+    NamedTuple,
+    Optional,
+    Protocol,
+    Tuple,
+    TypeVar,
+    Union,
+)
 
 from htmltools import TagChild
 
@@ -29,6 +43,10 @@ class MISSING_TYPE:
 
 
 MISSING: MISSING_TYPE = MISSING_TYPE()
+
+
+T = TypeVar("T")
+ListOrTuple = Union[List[T], Tuple[T, ...]]
 
 
 # Information about a single file, with a structure like:
@@ -142,6 +160,30 @@ class SilentOperationInProgressException(SilentException):
     pass
 
 
+class NotifyException(Exception):
+    """
+    This exception can be raised in a (non-output) reactive effect
+    to display a message to the user.
+
+    Parameters
+    ----------
+    message
+        The message to display to the user.
+    sanitize
+        If ``True``, the message is sanitized to prevent leaking sensitive information.
+    close
+        If ``True``, the session is closed after the message is displayed.
+    """
+
+    sanitize: bool
+    close: bool
+
+    def __init__(self, message: str, sanitize: bool = True, close: bool = False):
+        super().__init__(message)
+        self.sanitize = sanitize
+        self.close = close
+
+
 class ActionButtonValue(int):
     pass
 
@@ -167,7 +209,7 @@ class NavSetArg(Protocol):
         """
         ...
 
-    def get_value(self) -> Optional[str]:
+    def get_value(self) -> str | None:
         """
         Get the value of this navigation item (if any).
 
@@ -310,3 +352,35 @@ class BrushInfo(TypedDict):
     log: CoordmapPanelLog
     direction: Literal["x", "y", "xy"]
     # .nonce: float
+
+
+# https://github.com/python/cpython/blob/df1eec3dae3b1eddff819fd70f58b03b3fbd0eda/Lib/json/encoder.py#L77-L95
+# +-------------------+---------------+
+# | Python            | JSON          |
+# +===================+===============+
+# | dict              | object        |
+# +-------------------+---------------+
+# | list, tuple       | array         |
+# +-------------------+---------------+
+# | str               | string        |
+# +-------------------+---------------+
+# | int, float        | number        |
+# +-------------------+---------------+
+# | True              | true          |
+# +-------------------+---------------+
+# | False             | false         |
+# +-------------------+---------------+
+# | None              | null          |
+# +-------------------+---------------+
+Jsonifiable = Union[
+    str,
+    int,
+    float,
+    bool,
+    None,
+    List["Jsonifiable"],
+    Tuple["Jsonifiable"],
+    "JsonifiableDict",
+]
+
+JsonifiableDict = Dict[str, Jsonifiable]

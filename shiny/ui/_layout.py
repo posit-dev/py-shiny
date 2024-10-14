@@ -7,7 +7,7 @@ from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, div
 from .._deprecated import warn_deprecated
 from .._docstring import add_example
 from ..types import MISSING, MISSING_TYPE
-from ._html_deps_shinyverse import components_dependency
+from ._html_deps_shinyverse import components_dependencies
 from ._tag import consolidate_attrs
 from ._utils import is_01_scalar
 from .css import CssUnit, as_css_unit
@@ -24,6 +24,8 @@ def layout_column_wrap(
     fill: bool = True,
     fillable: bool = True,
     height: Optional[CssUnit] = None,
+    min_height: Optional[CssUnit] = None,
+    max_height: Optional[CssUnit] = None,
     height_mobile: Optional[CssUnit] = None,
     gap: Optional[CssUnit] = None,
     class_: Optional[str] = None,
@@ -74,8 +76,10 @@ def layout_column_wrap(
         with an opinionated height (e.g., :func:`~shiny.ui.page_fillable`).
     fillable
         Whether or not each element is wrapped in a fillable container.
-    height
-        Any valid CSS unit to use for the height.
+    height,max_height,min_height
+        A valid CSS unit (e.g., `height="200px"`). Use `min_height` and `max_height` in
+        a filling layout to ensure that the layout container does not shrink below a
+        `min_height` or grow beyond a `max_height`.
     height_mobile
         Any valid CSS unit to use for the height when on mobile devices (or narrow
         windows).
@@ -146,6 +150,8 @@ def layout_column_wrap(
             "auto" if height_mobile is None else height_mobile
         ),
         "gap": as_css_unit(gap),
+        "min-height": as_css_unit(min_height),
+        "max-height": as_css_unit(max_height),
     }
 
     tag = div(
@@ -155,7 +161,7 @@ def layout_column_wrap(
         },
         attrs,
         *wrap_all_in_gap_spaced_container(children, fillable),
-        components_dependency(),
+        components_dependencies(),
     )
     if fill:
         tag = as_fill_item(tag)
