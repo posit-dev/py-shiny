@@ -572,7 +572,7 @@ class Chat:
         async def _stream_task():
             await self._append_message_stream(message)
 
-        self._session.on_flushed(_stream_task, once=True)
+        _stream_task()
 
         # Since the task runs in the background (outside/beyond the current context,
         # if any), we need to manually raise any exceptions that occur
@@ -643,9 +643,7 @@ class Chat:
 
         # print(msg)
 
-        # When streaming (i.e., chunk is truthy), we can send messages immediately
-        # since we already waited for the flush in order to start the stream
-        await self._send_custom_message(msg_type, msg, on_flushed=chunk is False)
+        await self._send_custom_message(msg_type, msg)
         # TODO: Joe said it's a good idea to yield here, but I'm not sure why?
         # await asyncio.sleep(0)
 
@@ -1012,23 +1010,15 @@ class Chat:
     async def _remove_loading_message(self):
         await self._send_custom_message("shiny-chat-remove-loading-message", None)
 
-    async def _send_custom_message(
-        self, handler: str, obj: ClientMessage | None, on_flushed: bool = True
-    ):
-        async def _do_send():
-            await self._session.send_custom_message(
-                "shinyChatMessage",
-                {
-                    "id": self.id,
-                    "handler": handler,
-                    "obj": obj,
-                },
-            )
-
-        if on_flushed:
-            self._session.on_flushed(_do_send, once=True)
-        else:
-            await _do_send()
+    async def _send_custom_message(self, handler: str, obj: ClientMessage | None):
+        await self._session.send_custom_message(
+            "shinyChatMessage",
+            {
+                "id": self.id,
+                "handler": handler,
+                "obj": obj,
+            },
+        )
 
 
 @add_example(ex_dir="../api-examples/chat")
