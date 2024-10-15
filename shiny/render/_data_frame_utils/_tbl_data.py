@@ -9,6 +9,7 @@ from ...session import Session, require_active_session
 from ...types import Jsonifiable, JsonifiableDict
 from ._html import as_cell_html, ui_must_be_processed
 from ._types import (
+    CellHtml,
     CellPatch,
     CellValue,
     ColsList,
@@ -59,6 +60,11 @@ __all__ = (
 # as_frame -----------------------------------------------------------------------------
 
 
+def assert_data_is_not_none(data: IntoDataFrame) -> None:
+    if data is None:  # pyright: ignore[reportUnnecessaryComparison]
+        raise TypeError("`data` cannot be `None`")
+
+
 def data_frame_to_native(data: DataFrame[IntoDataFrameT]) -> IntoDataFrameT:
     return nw.to_native(data)
 
@@ -66,6 +72,8 @@ def data_frame_to_native(data: DataFrame[IntoDataFrameT]) -> IntoDataFrameT:
 def as_data_frame(
     data: IntoDataFrameT | DataFrame[IntoDataFrameT],
 ) -> DataFrame[IntoDataFrameT]:
+    assert_data_is_not_none(data)
+
     if isinstance(data, DataFrame):
         return data  # pyright: ignore[reportUnknownVariableType]
     try:
@@ -109,17 +117,16 @@ def apply_frame_patches(
     nw_data: DataFrame[IntoDataFrameT],
     patches: List[CellPatch],
 ) -> DataFrame[IntoDataFrameT]:
-    # data = data.clone()
 
     if len(patches) == 0:
         return nw_data
 
     # Apply the patches
 
-    # TODO-future-barret; Might be faster to _always_ store the patches as a
-    #     `cell_patches_by_column` object. Then iff they need the patches would we
-    #     deconstruct them into a flattened list. Where as this conversion is being
-    #     performed on every serialization of the data frame payload
+    # Copy the data to make sure the original data is not modified in place.
+    # If https://github.com/narwhals-dev/narwhals/issues/1154 is resolved, this
+    # should be able to be removed.
+    nw_data = nw_data.clone()
 
     # # https://discord.com/channels/1235257048170762310/1235257049626181656/1283415086722977895
     # # Using narwhals >= v1.7.0
@@ -243,7 +250,7 @@ def serialize_frame(into_data: IntoDataFrame) -> FrameJson:
             # Maintain expected structure so that the JS will attempt to add all
             #   dependencies for patched cells in the same manner
             processed_ui["deps"] = []
-            cell_html_obj = as_cell_html(processed_ui)
+            cell_html_obj: CellHtml = as_cell_html(processed_ui)
             return cast(JsonifiableDict, cell_html_obj)
 
         # All other values are serialized as strings
@@ -290,8 +297,7 @@ def subset_frame(
         if rows is None:
             return data
         else:
-            # List still required https://github.com/narwhals-dev/narwhals/issues/1122
-            return data[list(rows), :]
+            return data[rows, :]
     else:
         # `cols` is not None
         col_names = [data.columns[col] if isinstance(col, int) else col for col in cols]

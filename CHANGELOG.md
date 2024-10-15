@@ -17,7 +17,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
-* Added [narwhals](https://posit-dev.github.io/py-narwhals) support for `@render.data_frame`. This allows for any eager data frame supported by narwhals to be returned from a `@render.data_frame` output method. All internal methods and helper methods leverage the `narwhals` API to be data frame agnostic. (#1570)
+* New features for `@render.data_frame`:
+
+  * Added [narwhals](https://posit-dev.github.io/py-narwhals) support for `@render.data_frame`. This allows for any eager data frame supported by narwhals to be returned from a `@render.data_frame` output method. All internal methods and helper methods now leverage the `narwhals` API to be data frame agnostic. (#1570)
+
+  * Added `.data_patched()` reactive calculation that applies all `.cell_patches()` to `.data()`. (#1719)
+
+  * Added `.update_cell_value()` method to programmatically update the contents of a data frame cell. (#1719)
+
+  * Added `.update_data()` method to update the rendered data without resetting any user sort or filter. Note, all user edits will be forgotten. (#1719)
+
+* Added [narwhals](https://posit-dev.github.io/py-narwhals) support for `@render.table`. This allows for any eager data frame supported by narwhals to be returned from a `@render.table` output method. (#1570)
+
+* `chat_ui()` and `Chat.ui()` gain a `messages` parameter for providing starting messages. (#1736)
 
 ### Other changes
 
@@ -41,8 +53,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added `.expect_class()` and `.expect_multiple()` for `Accordion` in `shiny.playwright.controllers` (#1710)
 
-* Added [narwhals](https://posit-dev.github.io/py-narwhals) support for `@render.table`. This allows for any eager data frame supported by narwhals to be returned from a `@render.table` output method. (#1570)
-
 ### Bug fixes
 
 * A few fixes for `ui.Chat()`, including:
@@ -52,7 +62,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `shiny create` now uses the template `id` rather than the directory name as the default directory. (#1666)
 
-* `ui.Theme()` now works correctly on Windows when the theme requires Sass compilation. (thanks @yuuuxt, #1684)
+* `ui.Theme()` now works correctly on Windows when the theme requires Sass compilation. (Thanks, @yuuuxt!) (#1684)
 
 * Fixed multiple input controllers (`InputSlider`, `InputDate`, `InputDateRange`, `InputCheckbox`, and `InputCheckboxGroup`) in `shiny.playwright.controller` to check the `width` property within the `style` attribute. (#1691, #1696, #1702)
 
@@ -66,6 +76,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Fixed bug in `@render.data_frame` where `bool` or `object` columns were not being rendered. (#1570)
 
+* Fixed output controller `OutputDataFrame` in `shiny.playwright.controller` to correctly assert the number of rows in `.expect_nrow()` as the total number of virtual rows, not the number of currently displaying rows. (#1719)
+
+* Fixed issue where `@render.download` did not respect the module namespacing. (Thanks, @nsiicm0) (#1732)
 
 ## [1.1.0] - 2024-09-03
 
@@ -89,7 +102,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * A few fixes for `ui.Chat()`, including:
   * A fix for use inside Shiny modules. (#1582)
   * `.messages(format="google")` now returns the correct role. (#1622)
-  * `ui.Chat(messages)` are no longer dropped when dynamically rendered. (#1593)
   * `transform_assistant_response` can now return `None` and correctly handles change of content on the last chunk. (#1641)
 
 * An empty `ui.input_date()` value no longer crashes Shiny. (#1528)

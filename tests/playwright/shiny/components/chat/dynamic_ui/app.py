@@ -1,8 +1,8 @@
 from shiny.express import render, ui
 
-chat = ui.Chat(id="chat", messages=["A starting message"])
+chat = ui.Chat(id="chat")
 
 
 @render.ui
 def chat_output():
-    return chat.ui()
+    return chat.ui(messages=["A starting message"])

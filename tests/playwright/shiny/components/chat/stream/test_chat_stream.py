@@ -21,10 +21,10 @@ def test_validate_chat(page: Page, local_app: ShinyAppProc) -> None:
     expect(chat.loc_input_button).to_be_disabled()
 
     messages = [
-        "SECOND SECOND SECOND",
-        "FOURTH FOURTH FOURTH",
         "FIRST FIRST FIRST",
+        "SECOND SECOND SECOND",
         "THIRD THIRD THIRD",
+        "FOURTH FOURTH FOURTH",
         "FIFTH FIFTH FIFTH",
     ]
     # Allow for any whitespace between messages

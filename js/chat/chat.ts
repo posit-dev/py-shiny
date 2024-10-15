@@ -314,14 +314,7 @@ class ChatContainer extends LightElement {
   private resizeObserver!: ResizeObserver;
 
   render(): ReturnType<LitElement["render"]> {
-    const input_id = this.id + "_user_input";
-    return html`
-      <shiny-chat-messages></shiny-chat-messages>
-      <shiny-chat-input
-        id=${input_id}
-        placeholder=${this.placeholder}
-      ></shiny-chat-input>
-    `;
+    return html``;
   }
 
   firstUpdated(): void {
