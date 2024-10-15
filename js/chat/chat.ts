@@ -485,14 +485,15 @@ customElements.define(CHAT_MESSAGES_TAG, ChatMessages);
 customElements.define(CHAT_INPUT_TAG, ChatInput);
 customElements.define(CHAT_CONTAINER_TAG, ChatContainer);
 
-
-Shiny.addCustomMessageHandler(
-  "shinyChatMessage",
-  function (message: ShinyChatMessage) {
-    const evt = new CustomEvent(message.handler, {
-      detail: message.obj,
-    });
-    const el = document.getElementById(message.id);
-    el?.dispatchEvent(evt);
-  }
-);
+$(function () {
+  Shiny.addCustomMessageHandler(
+    "shinyChatMessage",
+    function (message: ShinyChatMessage) {
+      const evt = new CustomEvent(message.handler, {
+        detail: message.obj,
+      });
+      const el = document.getElementById(message.id);
+      el?.dispatchEvent(evt);
+    }
+  );
+});
