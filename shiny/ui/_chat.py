@@ -1084,9 +1084,12 @@ def chat_ui(
         else:
             raise ValueError("Each message must be a string or a dictionary.")
 
-        message_tags.append(
-            Tag("shiny-chat-message", content=msg["content"], role=msg["role"])
-        )
+        if msg["role"] == "user":
+            tag_name = "shiny-user-message"
+        else:
+            tag_name = "shiny-chat-message"
+
+        message_tags.append(Tag(tag_name, content=msg["content"]))
 
     res = Tag(
         "shiny-chat-container",
