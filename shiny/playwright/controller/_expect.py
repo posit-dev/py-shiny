@@ -220,8 +220,11 @@ def expect_locator_values_in_list(
     loc_inputs = loc_container.locator(loc_item)
     try:
         if kwargs.get("alt_verify"):
-            sleep(1)  # to make up for not using to_have_count
-            assert loc_inputs.count() == len(arr)
+            import re
+            
+            anything = re.compile(r".*")
+            any_text_values = [anything for _ in range(len(arr))]
+            playwright_expect(loc_inputs).to_have_text(any_text_values, timeout = timeout)
         else:
             playwright_expect(loc_inputs).to_have_count(len(arr), timeout=timeout)
     except AssertionError as e:
