@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from time import sleep
-
 from playwright.sync_api import Locator, Page
 from playwright.sync_api import expect as playwright_expect
 
@@ -148,7 +146,7 @@ def expect_locator_values_in_list(
     is_checked: bool | MISSING_TYPE = MISSING,
     timeout: Timeout = None,
     key: str = "value",
-    **kwargs,
+    alt_verify: bool = False,
 ) -> None:
     """
     Expect the locator to contain the values in the list.

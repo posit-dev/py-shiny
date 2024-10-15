@@ -90,7 +90,6 @@ def test_accordion(page: Page, local_app: ShinyAppProc) -> None:
             "Section F",
             "Section G",
         ],
-        alt_verify=True,
     )
     acc.expect_open(
         [
@@ -101,7 +100,6 @@ def test_accordion(page: Page, local_app: ShinyAppProc) -> None:
             "Section F",
             "Section G",
         ],
-        alt_verify=True,
     )
     # Should be uncommented once https://github.com/rstudio/bslib/issues/565 is fixed
     # output_txt_verbatim.expect_value(
