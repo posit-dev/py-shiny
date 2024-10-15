@@ -219,12 +219,12 @@ def expect_locator_values_in_list(
     # and all elements all unique, then it should have a count of `len(arr)`
     loc_inputs = loc_container.locator(loc_item)
     try:
-        if kwargs.get("alt_verify"):
+        if alt_verify:
             import re
-            
+
             anything = re.compile(r".*")
             any_text_values = [anything for _ in range(len(arr))]
-            playwright_expect(loc_inputs).to_have_text(any_text_values, timeout = timeout)
+            playwright_expect(loc_inputs).to_have_text(any_text_values, timeout=timeout)
         else:
             playwright_expect(loc_inputs).to_have_count(len(arr), timeout=timeout)
     except AssertionError as e:
