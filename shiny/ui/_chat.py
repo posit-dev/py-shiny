@@ -8,6 +8,7 @@ from typing import (
     Callable,
     Iterable,
     Literal,
+    Optional,
     Sequence,
     Tuple,
     Union,
@@ -193,7 +194,8 @@ class Chat:
                 reactive.Value(None)
             )
 
-            # Initialize the chat with the provided messages
+            # TODO: deprecate messages once we start promoting managing LLM message
+            # state through other means
             @reactive.effect
             async def _init_chat():
                 for msg in messages:
@@ -233,6 +235,7 @@ class Chat:
     def ui(
         self,
         *,
+        messages: Optional[Sequence[str | ChatMessage]] = None,
         placeholder: str = "Enter a message...",
         width: CssUnit = "min(680px, 100%)",
         height: CssUnit = "auto",
@@ -247,6 +250,11 @@ class Chat:
 
         Parameters
         ----------
+        messages
+            A sequence of messages to display in the chat. Each message can be either a
+            string or a dictionary with `content` and `role` keys. The `content` key
+            should contain the message text, and the `role` key can be "assistant" or
+            "user".
         placeholder
             Placeholder text for the chat input.
         width
@@ -261,6 +269,7 @@ class Chat:
         """
         return chat_ui(
             id=self.id,
+            messages=messages,
             placeholder=placeholder,
             width=width,
             height=height,
@@ -572,7 +581,7 @@ class Chat:
         async def _stream_task():
             await self._append_message_stream(message)
 
-        self._session.on_flushed(_stream_task, once=True)
+        _stream_task()
 
         # Since the task runs in the background (outside/beyond the current context,
         # if any), we need to manually raise any exceptions that occur
@@ -643,9 +652,7 @@ class Chat:
 
         # print(msg)
 
-        # When streaming (i.e., chunk is truthy), we can send messages immediately
-        # since we already waited for the flush in order to start the stream
-        await self._send_custom_message(msg_type, msg, on_flushed=chunk is False)
+        await self._send_custom_message(msg_type, msg)
         # TODO: Joe said it's a good idea to yield here, but I'm not sure why?
         # await asyncio.sleep(0)
 
@@ -1012,29 +1019,22 @@ class Chat:
     async def _remove_loading_message(self):
         await self._send_custom_message("shiny-chat-remove-loading-message", None)
 
-    async def _send_custom_message(
-        self, handler: str, obj: ClientMessage | None, on_flushed: bool = True
-    ):
-        async def _do_send():
-            await self._session.send_custom_message(
-                "shinyChatMessage",
-                {
-                    "id": self.id,
-                    "handler": handler,
-                    "obj": obj,
-                },
-            )
-
-        if on_flushed:
-            self._session.on_flushed(_do_send, once=True)
-        else:
-            await _do_send()
+    async def _send_custom_message(self, handler: str, obj: ClientMessage | None):
+        await self._session.send_custom_message(
+            "shinyChatMessage",
+            {
+                "id": self.id,
+                "handler": handler,
+                "obj": obj,
+            },
+        )
 
 
 @add_example(ex_dir="../api-examples/chat")
 def chat_ui(
     id: str,
     *,
+    messages: Optional[Sequence[str | ChatMessage]] = None,
     placeholder: str = "Enter a message...",
     width: CssUnit = "min(680px, 100%)",
     height: CssUnit = "auto",
@@ -1052,6 +1052,10 @@ def chat_ui(
     ----------
     id
         A unique identifier for the chat UI.
+    messages
+        A sequence of messages to display in the chat. Each message can be either a string
+        or a dictionary with a `content` and `role` key. The `content` key should contain
+        the message text, and the `role` key can be "assistant" or "user".
     placeholder
         Placeholder text for the chat input.
     width
@@ -1066,8 +1070,32 @@ def chat_ui(
 
     id = resolve_id(id)
 
+    message_tags: list[Tag] = []
+    if messages is None:
+        messages = []
+    for msg in messages:
+        if isinstance(msg, str):
+            msg = {"content": msg, "role": "assistant"}
+        elif isinstance(msg, dict):
+            if "content" not in msg:
+                raise ValueError("Each message must have a 'content' key.")
+            if "role" not in msg:
+                raise ValueError("Each message must have a 'role' key.")
+        else:
+            raise ValueError("Each message must be a string or a dictionary.")
+
+        message_tags.append(
+            Tag("shiny-chat-message", content=msg["content"], role=msg["role"])
+        )
+
     res = Tag(
         "shiny-chat-container",
+        Tag("shiny-chat-messages", *message_tags),
+        Tag(
+            "shiny-chat-input",
+            id=f"{id}_user_input",
+            placeholder=placeholder,
+        ),
         chat_deps(),
         {
             "style": css(

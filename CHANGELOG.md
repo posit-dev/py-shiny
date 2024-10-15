@@ -29,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added [narwhals](https://posit-dev.github.io/py-narwhals) support for `@render.table`. This allows for any eager data frame supported by narwhals to be returned from a `@render.table` output method. (#1570)
 
+* `chat_ui()` and `Chat.ui()` gain a `messages` parameter for providing starting messages. (#1736)
+
 ### Other changes
 
 * Incorporated `orjson` for faster data serialization in `@render.data_frame` outputs. (#1570)
@@ -100,7 +102,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * A few fixes for `ui.Chat()`, including:
   * A fix for use inside Shiny modules. (#1582)
   * `.messages(format="google")` now returns the correct role. (#1622)
-  * `ui.Chat(messages)` are no longer dropped when dynamically rendered. (#1593)
   * `transform_assistant_response` can now return `None` and correctly handles change of content on the last chunk. (#1641)
 
 * An empty `ui.input_date()` value no longer crashes Shiny. (#1528)
