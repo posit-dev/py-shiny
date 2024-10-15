@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from time import sleep
+
 from playwright.sync_api import Locator, Page
 from playwright.sync_api import expect as playwright_expect
 
@@ -146,6 +148,7 @@ def expect_locator_values_in_list(
     is_checked: bool | MISSING_TYPE = MISSING,
     timeout: Timeout = None,
     key: str = "value",
+    **kwargs,
 ) -> None:
     """
     Expect the locator to contain the values in the list.
@@ -218,9 +221,13 @@ def expect_locator_values_in_list(
     # and all elements all unique, then it should have a count of `len(arr)`
     loc_inputs = loc_container.locator(loc_item)
     try:
-        playwright_expect(loc_inputs).to_have_count(len(arr), timeout=timeout)
+        if kwargs.get("alt_verify"):
+            sleep(1)  # to make up for not using to_have_count
+            assert loc_inputs.count() == len(arr)
+        else:
+            playwright_expect(loc_inputs).to_have_count(len(arr), timeout=timeout)
     except AssertionError as e:
-        # Debug expections
+        # Debug expectations
 
         # Expecting container to exist (count = 1)
         playwright_expect(loc_container_orig).to_have_count(1, timeout=timeout)

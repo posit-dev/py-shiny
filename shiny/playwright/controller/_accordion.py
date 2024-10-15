@@ -238,10 +238,7 @@ class Accordion(
         _expect_style_to_have_value(self.loc_container, "width", value, timeout=timeout)
 
     def expect_open(
-        self,
-        value: list[PatternOrStr],
-        *,
-        timeout: Timeout = None,
+        self, value: list[PatternOrStr], *, timeout: Timeout = None, **kwargs
     ) -> None:
         expect_locator_values_in_list(
             page=self.page,
@@ -255,13 +252,11 @@ class Accordion(
             arr=value,
             key="data-value",
             timeout=timeout,
+            **kwargs,
         )
 
     def expect_panels(
-        self,
-        value: list[PatternOrStr],
-        *,
-        timeout: Timeout = None,
+        self, value: list[PatternOrStr], *, timeout: Timeout = None, **kwargs
     ) -> None:
         """
         Expects the accordion to have the specified panels.
@@ -281,6 +276,7 @@ class Accordion(
             arr=value,
             key="data-value",
             timeout=timeout,
+            **kwargs,
         )
 
     def set(
