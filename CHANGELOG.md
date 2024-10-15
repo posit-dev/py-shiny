@@ -29,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added [narwhals](https://posit-dev.github.io/py-narwhals) support for `@render.table`. This allows for any eager data frame supported by narwhals to be returned from a `@render.table` output method. (#1570)
 
+* `chat_ui()` and `Chat.ui()` gain a `messages` parameter for providing starting messages. (#1736)
+
 ### Other changes
 
 * Incorporated `orjson` for faster data serialization in `@render.data_frame` outputs. (#1570)
