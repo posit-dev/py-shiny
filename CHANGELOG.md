@@ -76,7 +76,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Fixed output controller `OutputDataFrame` in `shiny.playwright.controller` to correctly assert the number of rows in `.expect_nrow()` as the total number of virtual rows, not the number of currently displaying rows. (#1719)
 
-* Fixed issue where `@render.download` did not respect the module namespacing. (Thanks, @nsiicm0) (#1732)
+* Fixed issue where `@render.download` did not respect the module namespacing. (Thanks, @nsiicm0!) (#1732)
+
+* Added workaround in `Accordion` in `shiny.playwright.controller` where `.expect_open()` and `.expect_panels()` would hang while resolving a playwright locator. (Thanks, @joesho112358!) (#1165)
 
 ## [1.1.0] - 2024-09-03
 
