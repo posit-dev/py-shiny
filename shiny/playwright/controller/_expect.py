@@ -172,6 +172,11 @@ def expect_locator_values_in_list(
         The timeout for the expectation. Defaults to `None`.
     key
         The key. Defaults to `"value"`.
+    alt_verify
+        Determines if multiple expectations should be performed.
+        Defaults to `False`, a single (and very complicated) locator is asserting.
+        `True` will perform multiple assersions, which have the possibility of being invalid.
+        Use in playwright bug situations only.
     """
     # Make sure the locator has exactly `arr` values
 
@@ -196,6 +201,28 @@ def expect_locator_values_in_list(
         return
     loc_container_orig = loc_container
 
+    def perform_multiple_assertions():
+        # Expecting container to exist (count = 1)
+        playwright_expect(loc_container_orig).to_have_count(1, timeout=timeout)
+
+        # Expecting the container to contain {len(arr)} items
+        playwright_expect(loc_container_orig.locator(loc_item)).to_have_count(
+            len(arr), timeout=timeout
+        )
+
+        for item, i in zip(arr, range(len(arr))):
+            # Expecting item `{i}` to be `{item}`
+            playwright_expect(
+                loc_container_orig.locator(loc_item).nth(i)
+            ).to_have_attribute(key, item, timeout=timeout)
+        return
+
+    if alt_verify:
+        # Accordion has issues where the single locator assertion waits forever within playwright.
+        # Perform multiple assertions until playwright fixes bug. 
+        perform_multiple_assertions()
+        return
+
     # Find all items in set
     for item, i in zip(arr, range(len(arr))):
         # Get all elements of type
@@ -219,30 +246,10 @@ def expect_locator_values_in_list(
     # and all elements all unique, then it should have a count of `len(arr)`
     loc_inputs = loc_container.locator(loc_item)
     try:
-        if alt_verify:
-            import re
-
-            anything = re.compile(r".*")
-            any_text_values = [anything for _ in range(len(arr))]
-            playwright_expect(loc_inputs).to_have_text(any_text_values, timeout=timeout)
-        else:
-            playwright_expect(loc_inputs).to_have_count(len(arr), timeout=timeout)
+        playwright_expect(loc_inputs).to_have_count(len(arr), timeout=timeout)
     except AssertionError as e:
         # Debug expectations
-
-        # Expecting container to exist (count = 1)
-        playwright_expect(loc_container_orig).to_have_count(1, timeout=timeout)
-
-        # Expecting the container to contain {len(arr)} items
-        playwright_expect(loc_container_orig.locator(loc_item)).to_have_count(
-            len(arr), timeout=timeout
-        )
-
-        for item, i in zip(arr, range(len(arr))):
-            # Expecting item `{i}` to be `{item}`
-            playwright_expect(
-                loc_container_orig.locator(loc_item).nth(i)
-            ).to_have_attribute(key, item, timeout=timeout)
-
+        perform_multiple_assertions()
+        
         # Could not find the reason why. Raising the original error.
         raise e
