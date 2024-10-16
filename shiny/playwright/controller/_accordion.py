@@ -259,7 +259,10 @@ class Accordion(
         )
 
     def expect_panels(
-        self, value: list[PatternOrStr], *, timeout: Timeout = None, **kwargs
+        self,
+        value: list[PatternOrStr],
+        *,
+        timeout: Timeout = None,
     ) -> None:
         """
         Expects the accordion to have the specified panels.

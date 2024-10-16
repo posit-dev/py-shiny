@@ -250,5 +250,6 @@ def expect_locator_values_in_list(
     except AssertionError as e:
         # Debug expectations
         perform_multiple_assertions()
+
         # Could not find the reason why. Raising the original error.
         raise e
