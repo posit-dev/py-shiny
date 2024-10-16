@@ -174,8 +174,8 @@ def expect_locator_values_in_list(
         The key. Defaults to `"value"`.
     alt_verify
         Determines if multiple expectations should be performed.
-        Defaults to `False`, a single (and very complicated) locator is asserting.
-        `True` will perform multiple assersions, which have the possibility of being invalid.
+        Defaults to `False`, a single (and very complicated) locator is asserted.
+        `True` will perform multiple assertions, which have the possibility of being invalid.
         Use in playwright bug situations only.
     """
     # Make sure the locator has exactly `arr` values
@@ -219,7 +219,7 @@ def expect_locator_values_in_list(
 
     if alt_verify:
         # Accordion has issues where the single locator assertion waits forever within playwright.
-        # Perform multiple assertions until playwright fixes bug. 
+        # Perform multiple assertions until playwright fixes bug.
         perform_multiple_assertions()
         return
 
@@ -250,6 +250,5 @@ def expect_locator_values_in_list(
     except AssertionError as e:
         # Debug expectations
         perform_multiple_assertions()
-        
         # Could not find the reason why. Raising the original error.
         raise e
