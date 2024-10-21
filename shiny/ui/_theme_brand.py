@@ -54,7 +54,7 @@ color_extras_map = {
 }
 
 
-class BrandTheme(Brand):
+class ThemeBrand(Brand):
     def __init__(self, brand_yml: str | Path | None = None, *args: Any, **kwargs: Any):
         if brand_yml is not None and len(args) == 0:
             if len(kwargs) > 0:
@@ -133,17 +133,19 @@ class BrandTheme(Brand):
             .add_rules(":root {", *brand_colors_css_vars, "}")
             .add_rules(
                 """
-            // https://github.com/twbs/bootstrap/blob/5c2f2e7e0ec41daae3819106efce20e2568b19d2/scss/_root.scss#L82
-            :root {
-              --#{$prefix}link-bg: #{$link-bg};
-              --#{$prefix}link-weight: #{$link-weight};
-            }
-            // https://github.com/twbs/bootstrap/blob/5c2f2e7e0ec41daae3819106efce20e2568b19d2/scss/_reboot.scss#L244
-            a {
-              background-color: var(--#{$prefix}link-bg);
-              font-weight: var(--#{$prefix}link-weight);
-            }
-            """
+                // https://github.com/twbs/bootstrap/blob/5c2f2e7e0ec41daae3819106efce20e2568b19d2/scss/_root.scss#L82
+                :root {
+                  --#{$prefix}link-bg: #{$link-bg};
+                  --#{$prefix}link-weight: #{$link-weight};
+                }
+                // https://github.com/twbs/bootstrap/blob/5c2f2e7e0ec41daae3819106efce20e2568b19d2/scss/_reboot.scss#L244
+                a {
+                  background-color: var(--#{$prefix}link-bg);
+                  font-weight: var(--#{$prefix}link-weight);
+                }
+                code {
+                  font-weight: $code-font-weight;
+                }
+                """
             )
-            .add_rules("code { font-weight: $code-font-weight; }")
         )
