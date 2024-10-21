@@ -52,7 +52,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-theme = ["libsass>=0.23.0"]
+theme = [
+    "libsass>=0.23.0",
+    "brand_yml"
+]
 test = [
     "pytest>=6.2.4",
     "pytest-asyncio>=0.17.2",
