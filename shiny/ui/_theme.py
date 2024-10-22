@@ -7,6 +7,7 @@ import tempfile
 import textwrap
 from typing import Any, Literal, Optional, Sequence, TypeVar
 
+from brand_yml import Brand
 from htmltools import HTMLDependency
 
 from .._docstring import add_example
@@ -460,25 +461,29 @@ class Theme:
                 "href": css_path.name,
                 "data-shiny-theme": self.name or self._preset,  # type: ignore
             },
+            # Branded themes re-use this tempdir
+            all_files=False,
         )
 
     def _html_dependency_precompiled(self) -> HTMLDependency:
         return self._dep_create(css_path=self._dep_css_precompiled_path())
 
-    def _html_dependency(self) -> HTMLDependency:
+    def _html_dependency(self) -> list[HTMLDependency]:
         """
         Create an `HTMLDependency` object from the theme.
 
         Returns
         -------
         :
-            An :class:`~htmltools.HTMLDependency` object representing the theme. In
-            most cases, you should not need to call this method directly. Instead, pass
-            the `Theme` object directly to the `theme` argument of any Shiny page
-            function.
+            An list of :class:`~htmltools.HTMLDependency` objects representing the
+            theme. In most cases, you should not need to call this method directly.
+            Instead, pass the `Theme` object directly to the `theme` argument of any
+            Shiny page function.
         """
+        # Note: return a list so that this method can be overridden in subclasses of
+        # Theme that want to attach additional dependencies to the theme dependency.
         if self._can_use_precompiled():
-            return self._html_dependency_precompiled()
+            return [self._html_dependency_precompiled()]
 
         css_name = self._dep_css_name()
         css_path = os.path.join(self._get_css_tempdir(), css_name)
@@ -487,7 +492,7 @@ class Theme:
             with open(css_path, "w") as css_file:
                 css_file.write(self.to_css())
 
-        return self._dep_create(css_path)
+        return [self._dep_create(css_path)]
 
     def tagify(self) -> None:
         raise SyntaxError(
@@ -496,6 +501,12 @@ class Theme:
             "`shiny.express.ui.page_opts()` (Shiny Express) "
             "or any `shiny.ui.page_*()` function (Shiny Core)."
         )
+
+    @classmethod
+    def from_brand(cls, brand: str | pathlib.Path | Brand):
+        from ._theme_brand import theme_from_brand  # avoid circular import
+
+        return theme_from_brand(brand)
 
 
 def path_pkg_preset(preset: ShinyThemePreset, *args: str) -> str:
