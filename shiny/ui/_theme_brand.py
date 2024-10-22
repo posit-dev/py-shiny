@@ -141,8 +141,8 @@ class ThemeBrand(Theme):
         super().__init__(preset=preset, name=name, include_paths=include_paths)
         self.brand = brand
 
-    def _html_dependency(self) -> list[HTMLDependency]:
-        theme_dep = super()._html_dependency()
+    def _html_dependencies(self) -> list[HTMLDependency]:
+        theme_dep = super()._html_dependencies()
 
         if not self.brand.typography:
             return theme_dep
@@ -173,7 +173,9 @@ class ThemeBrand(Theme):
             all_files=True,
         )
 
-        return [*theme_dep, font_dep]
+        return [font_dep, *theme_dep]
+
+
 
 
 def theme_from_brand(brand: str | Path | Brand) -> Theme:

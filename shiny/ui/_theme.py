@@ -468,7 +468,7 @@ class Theme:
     def _html_dependency_precompiled(self) -> HTMLDependency:
         return self._dep_create(css_path=self._dep_css_precompiled_path())
 
-    def _html_dependency(self) -> list[HTMLDependency]:
+    def _html_dependencies(self) -> list[HTMLDependency]:
         """
         Create an `HTMLDependency` object from the theme.
 

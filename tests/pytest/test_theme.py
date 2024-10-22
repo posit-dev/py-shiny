@@ -214,7 +214,7 @@ def test_theme_dep_name_is_valid_path_part():
 
 def test_theme_dependency_has_data_attribute():
     theme = Theme("shiny")
-    assert theme._html_dependency()[0].stylesheet[0]["data-shiny-theme"] == "shiny"  # type: ignore
+    assert theme._html_dependencies()[0].stylesheet[0]["data-shiny-theme"] == "shiny"  # type: ignore
 
     theme = Theme("shiny", name="My Fancy Theme")
-    assert theme._html_dependency()[0].stylesheet[0]["data-shiny-theme"] == "My Fancy Theme"  # type: ignore
+    assert theme._html_dependencies()[0].stylesheet[0]["data-shiny-theme"] == "My Fancy Theme"  # type: ignore
