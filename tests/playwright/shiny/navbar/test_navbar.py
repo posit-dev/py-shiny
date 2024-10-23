@@ -1,3 +1,5 @@
+from typing import Union
+
 import pytest
 from examples.example_apps import reruns, reruns_delay
 from playwright.sync_api import Page
@@ -10,7 +12,14 @@ from shiny.run import ShinyAppProc
 def test_navbar(page: Page, local_app: ShinyAppProc) -> None:
     values = ["a", "b", "c"]
 
-    def verify_panel_updates(elem):
+    def verify_panel_updates(
+        elem: Union[
+            controller.PageNavbar,
+            controller.NavsetCardTab,
+            controller.NavsetCardPill,
+            controller.NavsetBar,
+        ]
+    ) -> None:
         a_panel = elem.nav_panel("a")
         b_panel = elem.nav_panel("b")
         c_panel = elem.nav_panel("c")
