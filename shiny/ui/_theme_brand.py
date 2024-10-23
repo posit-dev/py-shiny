@@ -12,11 +12,18 @@ from .._versions import bootstrap
 from ._theme import Theme
 from ._theme_presets import ShinyThemePreset, shiny_theme_presets
 
-color_extras_map = {
-    "foreground": ["body-color", "pre-color", "black"],
-    "background": ["body-bg", "white"],
-    "secondary": ["body-secondary-color", "body-secondary"],
+color_map = {
+    "foreground": ["brand--foreground", "body-color", "pre-color"],
+    "background": ["brand--background", "body-bg"],
+    "primary": ["primary"],
+    "secondary": ["secondary", "body-secondary-color", "body-secondary"],
     "tertiary": ["body-tertiary-color", "body-tertiary"],
+    "success": ["success"],
+    "info": ["info"],
+    "warning": ["warning"],
+    "danger": ["danger"],
+    "light": ["light"],
+    "dark": ["dark"],
 }
 """Maps brand.color fields to Bootstrap Sass variables"""
 
@@ -164,30 +171,20 @@ class ThemeBrand(Theme):
         # brand.color -----------------------------------------------------------------
         sass_vars_colors: dict[str, str] = {}
         if brand.color:
-            # Map values in colors directly to their Sass variable counterparts
-            sass_vars_colors: dict[str, str] = {
-                k: v
-                for k, v in brand.color.model_dump(exclude_none=True).items()
-                if k not in ("palette", "foreground", "background")
-            }
+            # Map values in colors to their Sass variable counterparts
+            for field, theme_color in brand.color.to_dict(include="theme").items():
+                if field not in color_map:
+                    print(f"skipping color.{field} not mapped")
+                    continue
 
-            # Map values in colors to any additional Sass variables
-            for extra, sass_var_list in color_extras_map.items():
-                if extra in sass_vars_colors:
-                    sass_vars_colors_extras = {
-                        var: sass_vars_colors[extra] for var in sass_var_list
-                    }
-                    sass_vars_colors = {**sass_vars_colors, **sass_vars_colors_extras}
+                for sass_var in color_map[field]:
+                    sass_vars_colors[sass_var] = theme_color
 
-            if brand.color.palette:
-                # Map the brand color palette to Bootstrap's named colors, e.g. $red, $blue.
-                # Note that we use ._color_defs() to ensure the palette is fully resolved.
-                brand_color_palette = brand.color._color_defs(resolved=True)
-                for bs_color_var in bootstrap_colors[brand_bootstrap.version]:
-                    if bs_color_var in brand_color_palette:
-                        sass_vars_colors[bs_color_var] = brand_color_palette[
-                            bs_color_var
-                        ]
+            # Map the brand color palette to Bootstrap's named colors, e.g. $red, $blue.
+            bs_color_vars = bootstrap_colors[brand_bootstrap.version]
+            for field, palette_color in brand.color.to_dict(include="palette").items():
+                if field in bs_color_vars:
+                    sass_vars_colors[field] = palette_color
 
         # brand.typography ------------------------------------------------------------
         sass_vars_typography: dict[str, str] = {}
