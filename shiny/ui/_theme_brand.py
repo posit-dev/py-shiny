@@ -12,15 +12,18 @@ from ._theme import Theme
 from ._theme_presets import ShinyThemePreset, shiny_theme_presets
 
 color_extras_map = {
-    "foreground": ["body-color", "pre-color"],
-    "background": ["body-bg"],
+    "foreground": ["body-color", "pre-color", "black"],
+    "background": ["body-bg", "white"],
     "secondary": ["body-secondary-color", "body-secondary"],
     "tertiary": ["body-tertiary-color", "body-tertiary"],
 }
 """Maps brand.color fields to Bootstrap Sass variables"""
 
 bootstrap_colors = {
+    # https://github.com/twbs/bootstrap/blob/6e1f75/scss/_variables.scss#L38-L49
     "5": [
+        "white",
+        "black",
         "blue",
         "indigo",
         "purple",
@@ -31,14 +34,13 @@ bootstrap_colors = {
         "green",
         "teal",
         "cyan",
-        "black",
-        "white",
-        "gray",
-        "gray-dark",
     ]
 }
 """
 Colors known to Bootstrap
+
+When these colors are named in `colors.palette`, we'll map the brand's colors to the
+corresponding Bootstrap color Sass variable.
 
 * [Bootstrap 5 - Colors](https://getbootstrap.com/docs/5.3/customize/color/#color-sass-maps)
 """
@@ -196,16 +198,26 @@ def theme_from_brand(brand: str | Path | Brand) -> Theme:
 
     colors: dict[str, str] = {}
     if brand.color:
+        # Map values in colors directly to their Sass variable counterparts
         colors: dict[str, str] = {
             k: v
             for k, v in brand.color.model_dump(exclude_none=True).items()
-            if k != "palette"
+            if k not in ("palette", "foreground", "background")
         }
 
+        # Map values in colors to any additional Sass variables
         for extra, sass_var_list in color_extras_map.items():
             if extra in colors:
                 brand_sass_vars = {var: colors[extra] for var in sass_var_list}
                 colors = {**colors, **brand_sass_vars}
+
+        if brand.color.palette:
+            # Map the brand color palette to Bootstrap's named colors, e.g. $red, $blue.
+            # Note that we use ._color_defs() to ensure the palette is fully resolved.
+            brand_color_palette = brand.color._color_defs(resolved=True)
+            for bs_color_var in bootstrap_colors[brand_bootstrap.version]:
+                if bs_color_var in brand_color_palette:
+                    colors[bs_color_var] = brand_color_palette[bs_color_var]
 
     typography: dict[str, str] = {}
     if brand.typography:
@@ -260,6 +272,15 @@ def theme_from_brand(brand: str | Path | Brand) -> Theme:
                 "code-font-weight": "normal",
                 "link-bg": None,
                 "link-weight": None,
+                "gray-100": "mix($white, $black, 90%)",
+                "gray-200": "mix($white, $black, 80%)",
+                "gray-300": "mix($white, $black, 70%)",
+                "gray-400": "mix($white, $black, 60%)",
+                "gray-500": "mix($white, $black, 50%)",
+                "gray-600": "mix($white, $black, 40%)",
+                "gray-700": "mix($white, $black, 30%)",
+                "gray-800": "mix($white, $black, 20%)",
+                "gray-900": "mix($white, $black, 10%)",
             }
         )
         .add_defaults(**brand_bootstrap.defaults)
