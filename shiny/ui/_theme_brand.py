@@ -100,13 +100,16 @@ class BrandBootstrap:
                 f"Bootstrap version must be a string or integer, not {version!r}."
             )
 
-        if version != bootstrap:
+        v_major = str(version).split(".")[0]
+        bs_major = str(bootstrap).split(".")[0]
+
+        if v_major != bs_major:
             warnings.warn(
-                f"Shiny does not current support Bootstrap version {version}. "
-                f"Using Bootstrap v{bootstrap} instead.",
+                f"Shiny does not current support Bootstrap version {v_major}. "
+                f"Using Bootstrap v{bs_major} instead.",
                 stacklevel=4,
             )
-            version = bootstrap
+            v_major = bs_major
 
         if not isinstance(preset, str) or preset not in shiny_theme_presets:
             raise ValueError(
@@ -114,7 +117,7 @@ class BrandBootstrap:
                 f"Valid presets are {shiny_theme_presets}."
             )
 
-        self.version: str = str(version)
+        self.version = v_major
         self.preset: ShinyThemePreset = preset
         self.defaults = kwargs
 
