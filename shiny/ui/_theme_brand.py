@@ -45,6 +45,7 @@ corresponding Bootstrap color Sass variable.
 * [Bootstrap 5 - Colors](https://getbootstrap.com/docs/5.3/customize/color/#color-sass-maps)
 """
 
+# TODO: test that these Sass variables exist in Bootstrap
 typography_map = {
     "base": {
         "family": "font-family-base",
@@ -104,6 +105,7 @@ class BrandBootstrap:
         bs_major = str(bootstrap).split(".")[0]
 
         if v_major != bs_major:
+            # TODO (bootstrap-update): Assumes Shiny ships one version of Bootstrap
             warnings.warn(
                 f"Shiny does not current support Bootstrap version {v_major}. "
                 f"Using Bootstrap v{bs_major} instead.",
