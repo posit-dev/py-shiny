@@ -166,21 +166,36 @@ class ThemeBrand(Theme):
 
         # brand.color -----------------------------------------------------------------
         sass_vars_colors: dict[str, str] = {}
+        sass_vars_brand_colors: dict[str, str] = {}
+        css_vars_brand_colors: list[str] = []
+
         if brand.color:
             # Map values in colors to their Sass variable counterparts
-            for field, theme_color in brand.color.to_dict(include="theme").items():
-                if field not in color_map:
+            for palette_name, theme_color in brand.color.to_dict(
+                include="theme"
+            ).items():
+                if palette_name not in color_map:
                     # TODO: Catch and ensure mapping exists
-                    print(f"skipping color.{field} not mapped")
+                    print(f"skipping color.{palette_name} not mapped")
                     continue
 
-                for sass_var in color_map[field]:
+                for sass_var in color_map[palette_name]:
                     sass_vars_colors[sass_var] = theme_color
 
+            brand_color_palette = brand.color.to_dict(include="palette")
+
             # Map the brand color palette to Bootstrap's named colors, e.g. $red, $blue.
-            for field, palette_color in brand.color.to_dict(include="palette").items():
-                if field in bootstrap_colors:
-                    sass_vars_colors[field] = palette_color
+            for palette_name, palette_color in brand_color_palette.items():
+                if palette_name in bootstrap_colors:
+                    sass_vars_colors[palette_name] = palette_color
+
+                # Create Sass and CSS variables for the brand color palette
+                color_var = sanitize_sass_var_name(palette_name)
+
+                # => Sass var: `$brand-{name}: {value}`
+                sass_vars_brand_colors.update({f"brand-{color_var}": palette_color})
+                # => CSS var: `--brand-{name}: {value}`
+                css_vars_brand_colors.append(f"--brand-{color_var}: {palette_color};")
 
         # brand.typography ------------------------------------------------------------
         sass_vars_typography: dict[str, str] = {}
@@ -197,18 +212,6 @@ class ThemeBrand(Theme):
                     else:
                         # TODO: Need to catch these and map to appropriate Bootstrap vars
                         print(f"skipping {field}.{k} not mapped")
-
-        sass_vars_brand_colors: dict[str, str] = {}
-        css_vars_brand_colors: list[str] = []
-
-        if brand.color and brand.color.palette is not None:
-            for p_var, p_value in brand.color.palette.items():
-                p_var = sanitize_sass_var_name(p_var)
-
-                # Create color variables from palette, `$brand-{name}: {value}`
-                sass_vars_brand_colors.update({f"brand-{p_var}": p_value})
-                # Create CSS variables from palette, `--brand-{name}: {value}`
-                css_vars_brand_colors.append(f"--brand-{p_var}: {p_value};")
 
         sass_vars_brand: dict[str, str] = {
             **sass_vars_brand_colors,
