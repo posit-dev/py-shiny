@@ -2,10 +2,9 @@ from __future__ import annotations
 
 import warnings
 from pathlib import Path
-from shutil import copyfile
 from typing import Any, Optional
 
-from brand_yml import Brand, FileLocationLocal
+from brand_yml import Brand
 from htmltools import HTMLDependency
 
 from .._versions import bootstrap
@@ -142,10 +141,10 @@ class ThemeBrand(Theme):
         self.brand = brand
 
     def _html_dependencies(self) -> list[HTMLDependency]:
-        theme_dep = super()._html_dependencies()
+        theme_deps = super()._html_dependencies()
 
         if not self.brand.typography:
-            return theme_dep
+            return theme_deps
 
         # We're going to put the fonts dependency _inside_ the theme's tempdir, which
         # relies on the theme's dependency having `all_files=True`.
@@ -153,27 +152,16 @@ class ThemeBrand(Theme):
         temp_path = Path(temp_dir) / "fonts"
         temp_path.mkdir(parents=True, exist_ok=True)
 
-        # Write fonts.css from typography.css_include_fonts()
-        fonts_css_path = temp_path / "fonts.css"
-        fonts_css_path.write_text(self.brand.typography.css_include_fonts())
-
-        # Copy local files from typography.fonts into the temp dir
-        for font in self.brand.typography.fonts:
-            if isinstance(font, FileLocationLocal):
-                dest_path = temp_path / font.relative()
-                dest_path.parent.mkdir(parents=True, exist_ok=True)
-                copyfile(font.absolute(), dest_path)
-
-        # Create an HTMLDependency for font.css
-        font_dep = HTMLDependency(
-            name=f"{self._dep_name()}-typography",
+        fonts_dep = self.brand.typography.fonts_html_dependency(
+            path_dir=temp_path,
+            name=f"{self._dep_name()}-fonts",
             version=self._version,
-            source={"subdir": str(temp_path)},
-            stylesheet={"href": "fonts.css"},
-            all_files=True,
         )
 
-        return [font_dep, *theme_dep]
+        if fonts_dep is None:
+            return theme_deps
+
+        return [fonts_dep, *theme_deps]
 
 
 
