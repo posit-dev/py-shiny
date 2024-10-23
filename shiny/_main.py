@@ -41,7 +41,8 @@ RELOAD_INCLUDES_DEFAULT = (
     "*.htm",
     "*.html",
     "*.png",
-    "_brand*.yml",
+    "*brand*.yml",
+    "*brand*.yaml",
 )
 RELOAD_EXCLUDES_DEFAULT = (".*", "*.py[cod]", "__pycache__", "env", "venv")
 
