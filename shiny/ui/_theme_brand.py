@@ -164,8 +164,6 @@ class ThemeBrand(Theme):
         return [fonts_dep, *theme_deps]
 
 
-
-
 def theme_from_brand(brand: str | Path | Brand) -> Theme:
     """
     Create a custom Shiny theme from a `_brand.yml`
@@ -228,10 +226,13 @@ def theme_from_brand(brand: str | Path | Brand) -> Theme:
     brand_colors_css_vars: list[str] = []
 
     if brand.color and brand.color.palette is not None:
+        # TODO: sanitize color name into valid sass/css variable names
+        # Create color variables from palette, `$brand-{name}: {value}`
         brand_colors_sass_vars.update(
             {f"brand-{k}": v for k, v in brand.color.palette.items()}
         )
 
+        # Create CSS variables from palette, `--brand-{name}: {value}`
         for k, v in brand.color.palette.items():
             brand_colors_css_vars.append(f"--brand-{k}: {v};")
 
@@ -263,18 +264,17 @@ def theme_from_brand(brand: str | Path | Brand) -> Theme:
         )
         .add_defaults(**brand_bootstrap.defaults)
         .add_defaults(**brand_sass_vars)
-        .add_defaults(brand.typography.css_include_fonts() if brand.typography else "")
         # Brand Rules ----
         .add_rules(":root {", *brand_colors_css_vars, "}")
         # Additional rules to fill in Bootstrap styles for Brand parameters
         .add_rules(
             """
-            // https://github.com/twbs/bootstrap/blob/5c2f2e7e0ec41daae3819106efce20e2568b19d2/scss/_root.scss#L82
+            // https://github.com/twbs/bootstrap/blob/5c2f2e7e/scss/_root.scss#L82
             :root {
                 --#{$prefix}link-bg: #{$link-bg};
                 --#{$prefix}link-weight: #{$link-weight};
             }
-            // https://github.com/twbs/bootstrap/blob/5c2f2e7e0ec41daae3819106efce20e2568b19d2/scss/_reboot.scss#L244
+            // https://github.com/twbs/bootstrap/blob/5c2f2e7e/scss/_reboot.scss#L244
             a {
                 background-color: var(--#{$prefix}link-bg);
                 font-weight: var(--#{$prefix}link-weight);
