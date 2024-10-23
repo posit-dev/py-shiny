@@ -140,138 +140,97 @@ class ThemeBrand(Theme):
     def __init__(
         self,
         brand: Brand,
-        preset: ShinyThemePreset = "shiny",
-        name: Optional[str] = None,
+        *,
         include_paths: Optional[str | Path | list[str | Path]] = None,
     ):
-        super().__init__(preset=preset, name=name, include_paths=include_paths)
-        self.brand = brand
+        if not isinstance(brand, Brand):
+            raise ValueError("Invalid `brand`, must be a path or a Brand instance.")
 
-    def _html_dependencies(self) -> list[HTMLDependency]:
-        theme_deps = super()._html_dependencies()
+        name: str = "brand"
+        if brand.meta and brand.meta.name:
+            name = brand.meta.name.full or brand.meta.name.short or "brand"
 
-        if not self.brand.typography:
-            return theme_deps
+        brand_bootstrap = BrandBootstrap.from_brand(brand)
 
-        # We're going to put the fonts dependency _inside_ the theme's tempdir, which
-        # relies on the theme's dependency having `all_files=True`.
-        temp_dir = self._get_css_tempdir()
-        temp_path = Path(temp_dir) / "fonts"
-        temp_path.mkdir(parents=True, exist_ok=True)
-
-        fonts_dep = self.brand.typography.fonts_html_dependency(
-            path_dir=temp_path,
-            name=f"{self._dep_name()}-fonts",
-            version=self._version,
-        )
-
-        if fonts_dep is None:
-            return theme_deps
-
-        return [fonts_dep, *theme_deps]
-
-
-def theme_from_brand(brand: str | Path | Brand) -> Theme:
-    """
-    Create a custom Shiny theme from a `_brand.yml`
-
-    Creates a custom Shiny theme for your brand using
-    [brand.yml](https://posit-dev.github.io/brand-yml), which may be either an instance
-    of :class:`brand_yml.Brand` or a :class:`Path` used by
-    :meth:`brand_yml.Brand.from_yaml` to locate the `_brand.yml` file.
-
-    Parameters
-    ----------
-    brand
-        A :class:`brand_yml.Brand` instance, or a path to help locate `_brand.yml`.
-        For a path, you can pass `__file__` or a directory containing the `_brand.yml`
-        or a path directly to the `_brand.yml` file.
-
-    Returns
-    -------
-    :
-        A :class:`shiny.ui.Theme` instance with a custom Shiny theme created from the
-        brand guidelines (see :class:`brand_yml.Brand`).
-    """
-    if not isinstance(brand, Brand):
-        brand = Brand.from_yaml(brand)
-
-    if not isinstance(brand, Brand):
-        raise ValueError("Invalid `brand`, must be a path or a Brand instance.")
-
-    brand_bootstrap = BrandBootstrap.from_brand(brand)
-
-    colors: dict[str, str] = {}
-    if brand.color:
-        # Map values in colors directly to their Sass variable counterparts
-        colors: dict[str, str] = {
-            k: v
-            for k, v in brand.color.model_dump(exclude_none=True).items()
-            if k not in ("palette", "foreground", "background")
-        }
-
-        # Map values in colors to any additional Sass variables
-        for extra, sass_var_list in color_extras_map.items():
-            if extra in colors:
-                brand_sass_vars = {var: colors[extra] for var in sass_var_list}
-                colors = {**colors, **brand_sass_vars}
-
-        if brand.color.palette:
-            # Map the brand color palette to Bootstrap's named colors, e.g. $red, $blue.
-            # Note that we use ._color_defs() to ensure the palette is fully resolved.
-            brand_color_palette = brand.color._color_defs(resolved=True)
-            for bs_color_var in bootstrap_colors[brand_bootstrap.version]:
-                if bs_color_var in brand_color_palette:
-                    colors[bs_color_var] = brand_color_palette[bs_color_var]
-
-    typography: dict[str, str] = {}
-    if brand.typography:
-        for field in brand.typography.model_fields.keys():
-            if field == "fonts":
-                continue
-            type_prop = getattr(brand.typography, field)
-            if type_prop is None:
-                continue
-            for k, v in type_prop.model_dump(exclude_none=True).items():
-                if k in typography_map[field]:
-                    typography[typography_map[field][k]] = v
-                else:
-                    # TODO: Need to catch these and map to appropriate Bootstrap vars
-                    print(f"skipping {field}.{k} not mapped")
-
-    brand_colors_sass_vars: dict[str, str] = {}
-    brand_colors_css_vars: list[str] = []
-
-    if brand.color and brand.color.palette is not None:
-        # TODO: sanitize color name into valid sass/css variable names
-        # Create color variables from palette, `$brand-{name}: {value}`
-        brand_colors_sass_vars.update(
-            {f"brand-{k}": v for k, v in brand.color.palette.items()}
-        )
-
-        # Create CSS variables from palette, `--brand-{name}: {value}`
-        for k, v in brand.color.palette.items():
-            brand_colors_css_vars.append(f"--brand-{k}: {v};")
-
-    brand_sass_vars: dict[str, str] = {**brand_colors_sass_vars, **colors, **typography}
-    brand_sass_vars = {k: v for k, v in brand_sass_vars.items()}
-
-    name: str = "brand"
-    if brand.meta and brand.meta.name:
-        name = brand.meta.name.full or brand.meta.name.short or "brand"
-
-    return (
-        ThemeBrand(
-            brand,
+        # Initialize theme ------------------------------------------------------------
+        super().__init__(
             name=name,
             preset=brand_bootstrap.preset,
+            include_paths=include_paths,
         )
+        self.brand = brand
+
+        # brand.color -----------------------------------------------------------------
+        sass_vars_colors: dict[str, str] = {}
+        if brand.color:
+            # Map values in colors directly to their Sass variable counterparts
+            sass_vars_colors: dict[str, str] = {
+                k: v
+                for k, v in brand.color.model_dump(exclude_none=True).items()
+                if k not in ("palette", "foreground", "background")
+            }
+
+            # Map values in colors to any additional Sass variables
+            for extra, sass_var_list in color_extras_map.items():
+                if extra in sass_vars_colors:
+                    sass_vars_colors_extras = {
+                        var: sass_vars_colors[extra] for var in sass_var_list
+                    }
+                    sass_vars_colors = {**sass_vars_colors, **sass_vars_colors_extras}
+
+            if brand.color.palette:
+                # Map the brand color palette to Bootstrap's named colors, e.g. $red, $blue.
+                # Note that we use ._color_defs() to ensure the palette is fully resolved.
+                brand_color_palette = brand.color._color_defs(resolved=True)
+                for bs_color_var in bootstrap_colors[brand_bootstrap.version]:
+                    if bs_color_var in brand_color_palette:
+                        sass_vars_colors[bs_color_var] = brand_color_palette[
+                            bs_color_var
+                        ]
+
+        # brand.typography ------------------------------------------------------------
+        sass_vars_typography: dict[str, str] = {}
+        if brand.typography:
+            for field in brand.typography.model_fields.keys():
+                if field == "fonts":
+                    continue
+                type_prop = getattr(brand.typography, field)
+                if type_prop is None:
+                    continue
+                for k, v in type_prop.model_dump(exclude_none=True).items():
+                    if k in typography_map[field]:
+                        sass_vars_typography[typography_map[field][k]] = v
+                    else:
+                        # TODO: Need to catch these and map to appropriate Bootstrap vars
+                        print(f"skipping {field}.{k} not mapped")
+
+        sass_vars_brand_colors: dict[str, str] = {}
+        css_vars_brand_colors: list[str] = []
+
+        if brand.color and brand.color.palette is not None:
+            # TODO: sanitize color name into valid sass/css variable names
+            # Create color variables from palette, `$brand-{name}: {value}`
+            sass_vars_brand_colors.update(
+                {f"brand-{k}": v for k, v in brand.color.palette.items()}
+            )
+
+            # Create CSS variables from palette, `--brand-{name}: {value}`
+            for k, v in brand.color.palette.items():
+                css_vars_brand_colors.append(f"--brand-{k}: {v};")
+
+        sass_vars_brand: dict[str, str] = {
+            **sass_vars_brand_colors,
+            **sass_vars_colors,
+            **sass_vars_typography,
+        }
+        sass_vars_brand = {k: v for k, v in sass_vars_brand.items()}
+
         # Defaults are added in reverse order, so each chunk appears above the next
         # layer of defaults. The intended order in the final output is:
         # 1. Brand Sass vars (colors, typography)
         # 2. Brand Bootstrap Sass vars
         # 3. Fallback vars needed by additional Brand rules
-        .add_defaults(
+        self.add_defaults(
             # Variables we create to augment Bootstrap's variables
             **{
                 "code-font-weight": "normal",
@@ -288,12 +247,12 @@ def theme_from_brand(brand: str | Path | Brand) -> Theme:
                 "gray-900": "mix($white, $black, 10%)",
             }
         )
-        .add_defaults(**brand_bootstrap.defaults)
-        .add_defaults(**brand_sass_vars)
+        self.add_defaults(**brand_bootstrap.defaults)
+        self.add_defaults(**sass_vars_brand)
         # Brand Rules ----
-        .add_rules(":root {", *brand_colors_css_vars, "}")
+        self.add_rules(":root {", *css_vars_brand_colors, "}")
         # Additional rules to fill in Bootstrap styles for Brand parameters
-        .add_rules(
+        self.add_rules(
             """
             // https://github.com/twbs/bootstrap/blob/5c2f2e7e/scss/_root.scss#L82
             :root {
@@ -310,4 +269,28 @@ def theme_from_brand(brand: str | Path | Brand) -> Theme:
             }
             """
         )
-    )
+
+    def _html_dependencies(self) -> list[HTMLDependency]:
+        theme_deps = super()._html_dependencies()
+
+        if not self.brand.typography:
+            return theme_deps
+
+        # We're going to put the fonts dependency _inside_ the theme's tempdir, which
+        # relies on the theme's dependency having `all_files=True`. We do this because
+        # Theme handles the tempdir lifecycle and we want the fonts dependency to be
+        # handled in the same way.
+        temp_dir = self._get_css_tempdir()
+        temp_path = Path(temp_dir) / "fonts"
+        temp_path.mkdir(parents=True, exist_ok=True)
+
+        fonts_dep = self.brand.typography.fonts_html_dependency(
+            path_dir=temp_path,
+            name=f"{self._dep_name()}-fonts",
+            version=self._version,
+        )
+
+        if fonts_dep is None:
+            return theme_deps
+
+        return [fonts_dep, *theme_deps]

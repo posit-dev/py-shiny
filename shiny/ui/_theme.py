@@ -504,9 +504,33 @@ class Theme:
 
     @classmethod
     def from_brand(cls, brand: str | pathlib.Path | Brand):
-        from ._theme_brand import theme_from_brand  # avoid circular import
+        """
+        Create a custom Shiny theme from a `_brand.yml`
 
-        return theme_from_brand(brand)
+        Creates a custom Shiny theme for your brand using
+        [brand.yml](https://posit-dev.github.io/brand-yml), which may be either an
+        instance of :class:`brand_yml.Brand` or a :class:`Path` used by
+        :meth:`brand_yml.Brand.from_yaml` to locate the `_brand.yml` file.
+
+        Parameters
+        ----------
+        brand
+            A :class:`brand_yml.Brand` instance, or a path to help locate `_brand.yml`.
+            For a path, you can pass `__file__` or a directory containing the
+            `_brand.yml` or a path directly to the `_brand.yml` file.
+
+        Returns
+        -------
+        :
+            A :class:`shiny.ui.Theme` instance with a custom Shiny theme created from
+            the brand guidelines (see :class:`brand_yml.Brand`).
+        """
+        from ._theme_brand import ThemeBrand  # avoid circular import
+
+        if not isinstance(brand, Brand):
+            brand = Brand.from_yaml(brand)
+
+        return ThemeBrand(brand)
 
 
 def path_pkg_preset(preset: ShinyThemePreset, *args: str) -> str:
