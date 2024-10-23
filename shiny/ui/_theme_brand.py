@@ -12,6 +12,7 @@ from htmltools import HTMLDependency
 from .._versions import bootstrap
 from ._theme import Theme
 from ._theme_presets import ShinyThemePreset, shiny_theme_presets
+from .css import CssUnit, as_css_unit
 
 
 class ThemeBrandUnmappedFieldError(ValueError):
@@ -229,6 +230,11 @@ class ThemeBrand(Theme):
                     if typ_field_key in typography_map[typ_field]:
                         typo_sass_var = typography_map[typ_field][typ_field_key]
 
+                        if typ_field == "base" and typ_field_key == "size":
+                            typ_field_value = str(
+                                maybe_convert_font_size_to_rem(typ_field_value)
+                            )
+
                         sass_vars_typography[typo_sass_var] = typ_field_value
                     elif raise_for_unmapped_vars:
                         raise ThemeBrandUnmappedFieldError(
@@ -317,3 +323,65 @@ class ThemeBrand(Theme):
 def sanitize_sass_var_name(x: str) -> str:
     x = re.sub(r"""['"]""", "", x)
     return re.sub(r"[^a-zA-Z0-9_-]+", "-", x)
+
+
+def maybe_convert_font_size_to_rem(x: str) -> CssUnit:
+    """
+    Convert a font size to rem
+
+    Bootstrap expects base font size to be in `rem`. This function converts `em`, `%`,
+    `px`, `pt` to `rem`:
+
+    1. `em` is directly replace with `rem`.
+    2. `1%` is `0.01rem`, e.g. `90%` becomes `0.9rem`.
+    3. `16px` is `1rem`, e.g. `18px` becomes `1.125rem`.
+    4. `12pt` is `1rem`.
+    5. `0.1666in` is `1rem`.
+    6. `4.234cm` is `1rem`.
+    7. `42.3mm` is `1rem`.
+    """
+    x_og = f"{x}"
+    x = as_css_unit(x)
+
+    value, unit = split_css_value_and_unit(x)
+
+    if unit == "rem":
+        return x
+
+    if unit == "em":
+        return as_css_unit(f"{value}rem")
+
+    scale = {
+        "%": 100,
+        "px": 16,
+        "pt": 12,
+        "in": 96 / 16,  # 96 px/inch
+        "cm": 96 / 16 * 2.54,  # inch -> cm
+        "mm": 16 / 96 * 25.4,  # cm -> mm
+    }
+
+    if unit in scale:
+        return as_css_unit(f"{float(value) / scale[unit]}rem")
+
+    raise ValueError(
+        f"Shiny does not support brand.yml font sizes in {unit} units ({x_og!r})"
+    )
+
+
+def split_css_value_and_unit(x: str) -> tuple[str, str]:
+    digit_chars = [".", *[str(s) for s in range(10)]]
+
+    value = ""
+    unit = ""
+    in_unit = False
+    for chr in x:
+        if chr in digit_chars:
+            if not in_unit:
+                value += chr
+        else:
+            in_unit = True
+
+        if in_unit:
+            unit += chr
+
+    return value.strip(), unit.strip()
