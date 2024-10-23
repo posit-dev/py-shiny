@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import warnings
 from pathlib import Path
 from typing import Any, Optional
@@ -208,15 +209,13 @@ class ThemeBrand(Theme):
         css_vars_brand_colors: list[str] = []
 
         if brand.color and brand.color.palette is not None:
-            # TODO: sanitize color name into valid sass/css variable names
-            # Create color variables from palette, `$brand-{name}: {value}`
-            sass_vars_brand_colors.update(
-                {f"brand-{k}": v for k, v in brand.color.palette.items()}
-            )
+            for p_var, p_value in brand.color.palette.items():
+                p_var = sanitize_sass_var_name(p_var)
 
-            # Create CSS variables from palette, `--brand-{name}: {value}`
-            for k, v in brand.color.palette.items():
-                css_vars_brand_colors.append(f"--brand-{k}: {v};")
+                # Create color variables from palette, `$brand-{name}: {value}`
+                sass_vars_brand_colors.update({f"brand-{p_var}": p_value})
+                # Create CSS variables from palette, `--brand-{name}: {value}`
+                css_vars_brand_colors.append(f"--brand-{p_var}: {p_value};")
 
         sass_vars_brand: dict[str, str] = {
             **sass_vars_brand_colors,
@@ -294,3 +293,8 @@ class ThemeBrand(Theme):
             return theme_deps
 
         return [fonts_dep, *theme_deps]
+
+
+def sanitize_sass_var_name(x: str) -> str:
+    x = re.sub(r"""['"]""", "", x)
+    return re.sub(r"[^a-zA-Z0-9_-]+", "-", x)
