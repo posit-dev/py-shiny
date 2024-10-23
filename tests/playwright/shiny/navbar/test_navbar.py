@@ -14,6 +14,7 @@ def test_navbar(page: Page, local_app: ShinyAppProc) -> None:
         a_panel = elem.nav_panel("a")
         b_panel = elem.nav_panel("b")
         c_panel = elem.nav_panel("c")
+
         a_panel.click()
         a_panel.expect_active(True)
         b_panel.expect_active(False)
@@ -22,6 +23,7 @@ def test_navbar(page: Page, local_app: ShinyAppProc) -> None:
             f"{elem.id}(): tab a content\n"
             in elem.get_loc_active_content().all_text_contents()
         )
+
         b_panel.click()
         a_panel.expect_active(False)
         b_panel.expect_active(True)
@@ -30,6 +32,7 @@ def test_navbar(page: Page, local_app: ShinyAppProc) -> None:
             f"{elem.id}(): tab b content\n"
             in elem.get_loc_active_content().all_text_contents()
         )
+
         c_panel.click()
         a_panel.expect_active(False)
         b_panel.expect_active(False)
