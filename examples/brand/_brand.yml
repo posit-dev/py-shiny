@@ -59,13 +59,14 @@ typography:
       weight: [700]
       style: [normal]
       display: swap
+    # TODO: Bring in Monda as a local font file
     - family: "Monda"
       source: google
       weight: 400..700
       style: [normal, italic]
       display: swap
     - family: "Courier Prime"
-      source: google
+      source: bunny
       weight: [400, 700]
       style: [normal, italic]
       display: swap
@@ -105,4 +106,5 @@ typography:
 defaults:
   shiny:
     theme:
-      navbar-bg: $brand-purple
+      # TODO: Find an appropriate theme variable to set
+      # navbar-bg: $brand-purple
