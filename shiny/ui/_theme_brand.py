@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import re
 import warnings
 from pathlib import Path
@@ -11,6 +12,17 @@ from htmltools import HTMLDependency
 from .._versions import bootstrap
 from ._theme import Theme
 from ._theme_presets import ShinyThemePreset, shiny_theme_presets
+
+
+class ThemeBrandUnmappedFieldError(ValueError):
+    def __init__(self, field: str):
+        self.field = field
+        self.message = f"Unmapped brand.yml field: {field}"
+        super().__init__(self.message)
+
+    def __str__(self):
+        return self.message
+
 
 color_map: dict[str, list[str]] = {
     "foreground": ["brand--foreground", "body-color", "pre-color"],
@@ -169,50 +181,61 @@ class ThemeBrand(Theme):
         sass_vars_brand_colors: dict[str, str] = {}
         css_vars_brand_colors: list[str] = []
 
+        raise_for_unmapped_vars = (
+            os.environ.get("SHINY_BRAND_YML_RAISE_UNMAPPED") == "true"
+        )
+
         if brand.color:
             # Map values in colors to their Sass variable counterparts
-            for palette_name, theme_color in brand.color.to_dict(
-                include="theme"
-            ).items():
-                if palette_name not in color_map:
-                    # TODO: Catch and ensure mapping exists
-                    print(f"skipping color.{palette_name} not mapped")
+            for thm_name, thm_color in brand.color.to_dict(include="theme").items():
+                if thm_name not in color_map:
+                    if raise_for_unmapped_vars:
+                        raise ThemeBrandUnmappedFieldError(f"color.{thm_name}")
                     continue
 
-                for sass_var in color_map[palette_name]:
-                    sass_vars_colors[sass_var] = theme_color
+                for sass_var in color_map[thm_name]:
+                    sass_vars_colors[sass_var] = thm_color
 
             brand_color_palette = brand.color.to_dict(include="palette")
 
             # Map the brand color palette to Bootstrap's named colors, e.g. $red, $blue.
-            for palette_name, palette_color in brand_color_palette.items():
-                if palette_name in bootstrap_colors:
-                    sass_vars_colors[palette_name] = palette_color
+            for pal_name, pal_color in brand_color_palette.items():
+                if pal_name in bootstrap_colors:
+                    sass_vars_colors[pal_name] = pal_color
 
                 # Create Sass and CSS variables for the brand color palette
-                color_var = sanitize_sass_var_name(palette_name)
+                color_var = sanitize_sass_var_name(pal_name)
 
                 # => Sass var: `$brand-{name}: {value}`
-                sass_vars_brand_colors.update({f"brand-{color_var}": palette_color})
+                sass_vars_brand_colors.update({f"brand-{color_var}": pal_color})
                 # => CSS var: `--brand-{name}: {value}`
-                css_vars_brand_colors.append(f"--brand-{color_var}: {palette_color};")
+                css_vars_brand_colors.append(f"--brand-{color_var}: {pal_color};")
 
         # brand.typography ------------------------------------------------------------
         sass_vars_typography: dict[str, str] = {}
         if brand.typography:
-            for field in brand.typography.model_fields.keys():
-                if field == "fonts":
-                    continue
-                type_prop = getattr(brand.typography, field)
-                if type_prop is None:
-                    continue
-                for k, v in type_prop.model_dump(exclude_none=True).items():
-                    if k in typography_map[field]:
-                        sass_vars_typography[typography_map[field][k]] = v
-                    else:
-                        # TODO: Need to catch these and map to appropriate Bootstrap vars
-                        print(f"skipping {field}.{k} not mapped")
+            brand_typography = brand.typography.model_dump(
+                exclude={"fonts"},
+                exclude_none=True,
+            )
 
+            for typ_field, typ_value in brand_typography.items():
+                if typ_field not in typography_map:
+                    if raise_for_unmapped_vars:
+                        raise ThemeBrandUnmappedFieldError(f"typography.{typ_field}")
+                    continue
+
+                for typ_field_key, typ_field_value in typ_value.items():
+                    if typ_field_key in typography_map[typ_field]:
+                        typo_sass_var = typography_map[typ_field][typ_field_key]
+
+                        sass_vars_typography[typo_sass_var] = typ_field_value
+                    elif raise_for_unmapped_vars:
+                        raise ThemeBrandUnmappedFieldError(
+                            f"typography.{typ_field}.{typ_field_key}"
+                        )
+
+        # Theme -----------------------------------------------------------------------
         sass_vars_brand: dict[str, str] = {
             **sass_vars_brand_colors,
             **sass_vars_colors,
