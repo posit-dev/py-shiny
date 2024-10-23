@@ -27,23 +27,21 @@ color_map: dict[str, list[str]] = {
 }
 """Maps brand.color fields to Bootstrap Sass variables"""
 
-bootstrap_colors = {
-    # https://github.com/twbs/bootstrap/blob/6e1f75/scss/_variables.scss#L38-L49
-    "5": [
-        "white",
-        "black",
-        "blue",
-        "indigo",
-        "purple",
-        "pink",
-        "red",
-        "orange",
-        "yellow",
-        "green",
-        "teal",
-        "cyan",
-    ]
-}
+# https://github.com/twbs/bootstrap/blob/6e1f75/scss/_variables.scss#L38-L49
+bootstrap_colors: list[str] = [
+    "white",
+    "black",
+    "blue",
+    "indigo",
+    "purple",
+    "pink",
+    "red",
+    "orange",
+    "yellow",
+    "green",
+    "teal",
+    "cyan",
+]
 """
 Colors known to Bootstrap
 
@@ -172,6 +170,7 @@ class ThemeBrand(Theme):
             # Map values in colors to their Sass variable counterparts
             for field, theme_color in brand.color.to_dict(include="theme").items():
                 if field not in color_map:
+                    # TODO: Catch and ensure mapping exists
                     print(f"skipping color.{field} not mapped")
                     continue
 
@@ -179,9 +178,8 @@ class ThemeBrand(Theme):
                     sass_vars_colors[sass_var] = theme_color
 
             # Map the brand color palette to Bootstrap's named colors, e.g. $red, $blue.
-            bs_color_vars = bootstrap_colors[brand_bootstrap.version]
             for field, palette_color in brand.color.to_dict(include="palette").items():
-                if field in bs_color_vars:
+                if field in bootstrap_colors:
                     sass_vars_colors[field] = palette_color
 
         # brand.typography ------------------------------------------------------------
