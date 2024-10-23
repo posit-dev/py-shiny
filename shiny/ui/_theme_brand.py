@@ -151,9 +151,17 @@ class BrandBootstrap:
 
         if brand.defaults:
             if brand.defaults and "bootstrap" in brand.defaults:
-                defaults.update(brand.defaults["bootstrap"])
+                if isinstance(brand.defaults["bootstrap"], dict):
+                    brand_defaults_bs: dict[str, str] = brand.defaults["bootstrap"]
+                    defaults.update(brand_defaults_bs)
             if "shiny" in brand.defaults and "theme" in brand.defaults["shiny"]:
-                defaults.update(brand.defaults["shiny"]["theme"])
+                if isinstance(brand.defaults["shiny"]["theme"], dict):
+                    # TODO: Use brand.defaults.shiny.theme.defaults instead
+                    # TODO: Validate that it's really a dict[str, scalar]
+                    brand_shiny_theme: dict[str, str] = brand.defaults["shiny"]["theme"]
+                    defaults.update(brand_shiny_theme)
+
+                # TODO: Get functions, mixins, rules as well
 
         return cls(**defaults)
 
