@@ -151,12 +151,10 @@ class ThemeBrand(Theme):
         *,
         include_paths: Optional[str | Path | list[str | Path]] = None,
     ):
-        if not isinstance(brand, Brand):
-            raise ValueError("Invalid `brand`, must be a path or a Brand instance.")
 
         name: str = "brand"
         if brand.meta and brand.meta.name:
-            name = brand.meta.name.full or brand.meta.name.short or "brand"
+            name = brand.meta.name.full or brand.meta.name.short or name
 
         brand_bootstrap = BrandBootstrap.from_brand(brand)
 
