@@ -82,19 +82,22 @@ typography_map: dict[str, dict[str, str]] = {
     "monospace": {
         "family": "font-family-monospace",
         "size": "code-font-size",
+        "weight": "code-font-weight",
     },
     "monospace_inline": {
         "family": "font-family-monospace-inline",
         "color": "code-color",
         "background_color": "code-bg",
         "size": "code-inline-font-size",
-        "weight": "code-font-weight",
+        "weight": "code-inline-font-weight",
     },
     "monospace_block": {
         "family": "font-family-monospace-block",
         "line_height": "pre-line-height",
         "color": "pre-color",
         "background_color": "pre-bg",
+        "weight": "code-block-font-weight",
+        "size": "code-block-font-size",
     },
     "link": {
         "background_color": "link-bg",
@@ -257,7 +260,11 @@ class ThemeBrand(Theme):
         self.add_defaults(
             # Variables we create to augment Bootstrap's variables
             **{
-                "code-font-weight": "normal",
+                "code-font-weight": None,
+                "code-inline-font-weight": None,
+                "code-inline-font-size": None,
+                "code-block-font-weight": None,
+                "code-block-font-size": None,
                 "link-bg": None,
                 "link-weight": None,
                 "gray-100": "mix($white, $black, 90%)",
@@ -290,6 +297,14 @@ class ThemeBrand(Theme):
             }
             code {
                 font-weight: $code-font-weight;
+            }
+            code {
+              font-weight: $code-inline-font-weight;
+              font-size: $code-inline-font-size;
+            }
+            pre {
+              font-weight: $code-block-font-weight;
+              font-size: $code-block-font-size;
             }
             """
         )
