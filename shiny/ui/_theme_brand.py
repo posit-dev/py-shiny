@@ -12,7 +12,7 @@ from .._versions import bootstrap
 from ._theme import Theme
 from ._theme_presets import ShinyThemePreset, shiny_theme_presets
 
-color_map = {
+color_map: dict[str, list[str]] = {
     "foreground": ["brand--foreground", "body-color", "pre-color"],
     "background": ["brand--background", "body-bg"],
     "primary": ["primary"],
@@ -54,7 +54,7 @@ corresponding Bootstrap color Sass variable.
 """
 
 # TODO: test that these Sass variables exist in Bootstrap
-typography_map = {
+typography_map: dict[str, dict[str, str]] = {
     "base": {
         "family": "font-family-base",
         "size": "font-size-base",
