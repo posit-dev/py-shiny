@@ -1026,6 +1026,7 @@ class InputSelect(
             arr_name="choices",
             arr=choices,
             timeout=timeout,
+            alt_verify=True,
         )
 
     def expect_selected(
@@ -1234,6 +1235,7 @@ class InputSelectize(
             arr=choices,
             key="data-value",
             timeout=timeout,
+            alt_verify=True,
         )
 
     def expect_selected(
