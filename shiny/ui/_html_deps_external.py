@@ -32,7 +32,7 @@ def shiny_page_theme_deps(theme: str | Path | Theme | ThemeProvider | None) -> T
     if theme is None:
         deps_theme = None
     elif isinstance(theme, Theme):
-        deps_theme = theme._html_dependency()
+        deps_theme = theme._html_dependencies()
     elif isinstance(theme, str) and theme.startswith(("http", "//")):
         deps_theme = head_content(link(rel="stylesheet", href=theme, type="text/css"))
     elif isinstance(theme, (str, Path)):
