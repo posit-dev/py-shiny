@@ -196,16 +196,11 @@ class ThemeBrand(Theme):
         sass_vars_brand_colors: dict[str, str] = {}
         css_vars_brand_colors: list[str] = []
 
-        raise_for_unmapped_vars = (
-            os.environ.get("SHINY_BRAND_YML_RAISE_UNMAPPED") == "true"
-        )
-
         if brand.color:
             # Map values in colors to their Sass variable counterparts
             for thm_name, thm_color in brand.color.to_dict(include="theme").items():
                 if thm_name not in color_map:
-                    if raise_for_unmapped_vars:
-                        raise ThemeBrandUnmappedFieldError(f"color.{thm_name}")
+                    self._handle_unmapped_variable(f"color.{thm_name}")
                     continue
 
                 for sass_var in color_map[thm_name]:
@@ -236,8 +231,7 @@ class ThemeBrand(Theme):
 
             for typ_field, typ_value in brand_typography.items():
                 if typ_field not in typography_map:
-                    if raise_for_unmapped_vars:
-                        raise ThemeBrandUnmappedFieldError(f"typography.{typ_field}")
+                    self._handle_unmapped_variable(f"typography.{typ_field}")
                     continue
 
                 for typ_field_key, typ_field_value in typ_value.items():
@@ -250,8 +244,8 @@ class ThemeBrand(Theme):
                         typo_sass_vars = typography_map[typ_field][typ_field_key]
                         for typo_sass_var in typo_sass_vars:
                             sass_vars_typography[typo_sass_var] = typ_field_value
-                    elif raise_for_unmapped_vars:
-                        raise ThemeBrandUnmappedFieldError(
+                    else:
+                        self._handle_unmapped_variable(
                             f"typography.{typ_field}.{typ_field_key}"
                         )
 
@@ -394,6 +388,15 @@ class ThemeBrand(Theme):
             }
             """
         )
+
+    def _handle_unmapped_variable(self, unmapped: str):
+        if os.environ.get("SHINY_BRAND_YML_RAISE_UNMAPPED") == "true":
+            raise ThemeBrandUnmappedFieldError(unmapped)
+        else:
+            warnings.warn(
+                f"Shiny's brand.yml theme does not yet support {unmapped}.",
+                stacklevel=4,
+            )
 
     def _html_dependencies(self) -> list[HTMLDependency]:
         theme_deps = super()._html_dependencies()
