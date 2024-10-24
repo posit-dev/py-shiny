@@ -207,18 +207,12 @@ class ThemeBrand(Theme):
         self.add_defaults("", "// *---- brand: end of defaults ----* //", "")
         self._add_sass_ensure_variables()
         self._add_sass_brand_grays()
-        self.add_defaults(**brand_bootstrap.defaults)
-        self.add_defaults(
-            "// *---- brand.defaults.bootstrap + brand.defaults.shiny.theme ----* //"
-        )
-        self.add_defaults(**sass_vars_typography)
-        self.add_defaults("\n// *---- brand.typography ----* //")
-        self.add_defaults(**sass_vars_colors)
-        self.add_defaults("\n// *---- brand.color ----* //")
+        self._add_defaults_brand_bootstrap(brand_bootstrap)
+        self._add_defaults_typography(sass_vars_typography)
+        self._add_defaults_color(sass_vars_colors)
 
         # Brand rules (now in forwards order)
-        self.add_rules("\n// *---- brand.color.palette ----*/ /")
-        self.add_rules(":root {", *css_vars_colors, "}")
+        self._add_rules_brand_colors(css_vars_colors)
         self._add_sass_brand_rules()
 
     def _prepare_color_vars(self) -> tuple[dict[str, str], list[str]]:
@@ -382,6 +376,16 @@ class ThemeBrand(Theme):
         )
         self.add_defaults("// *---- brand: automatic gray gradient ----* //")
 
+    def _add_defaults_brand_bootstrap(self, brand_bootstrap: BrandBootstrap):
+        self.add_defaults(**brand_bootstrap.defaults)
+        self.add_defaults(
+            "// *---- brand.defaults.bootstrap + brand.defaults.shiny.theme ----* //"
+        )
+
+    def _add_defaults_typography(self, sass_vars_typography: dict[str, str]):
+        self.add_defaults(**sass_vars_typography)
+        self.add_defaults("\n// *---- brand.typography ----* //")
+
     def _add_sass_brand_rules(self):
         """Additional rules to fill in Bootstrap styles for Brand parameters"""
         self.add_rules(
@@ -421,6 +425,14 @@ class ThemeBrand(Theme):
             }
             """
         )
+
+    def _add_defaults_color(self, sass_vars_colors: dict[str, str]):
+        self.add_defaults(**sass_vars_colors)
+        self.add_defaults("\n// *---- brand.color ----* //")
+
+    def _add_rules_brand_colors(self, css_vars_colors: list[str]):
+        self.add_rules("\n// *---- brand.color.palette ----* //")
+        self.add_rules(":root {", *css_vars_colors, "}")
 
     def _handle_unmapped_variable(self, unmapped: str):
         if os.environ.get("SHINY_BRAND_YML_RAISE_UNMAPPED") == "true":
