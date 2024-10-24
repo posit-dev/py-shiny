@@ -289,7 +289,7 @@ class ThemeBrand(Theme):
         self.brand = brand
 
         # Prep Sass and CSS Variables -------------------------------------------------
-        sass_vars_colors, sass_vars_brand, css_vars_brand = (
+        sass_vars_theme_colors, sass_vars_brand_colors, css_vars_brand = (
             ThemeBrand._prepare_color_vars(brand)
         )
         sass_vars_typography = ThemeBrand._prepare_typography_vars(brand)
@@ -297,17 +297,21 @@ class ThemeBrand(Theme):
         # Theme -----------------------------------------------------------------------
         # Defaults are added in reverse order, so each chunk appears above the next
         # layer of defaults. The intended order in the final output is:
-        # 1. Brand Sass color and typography vars
-        # 2. Brand's Bootstrap Sass vars
-        # 3. Gray scale variables from Brand fg/bg or black/white
-        # 4. Fallback vars needed by additional Brand rules
+        # 1. Brand Color palette
+        # 2. Brand Bootstrap Sass vars
+        # 3. Brand theme colors
+        # 4. Brand typography
+        # 5. Gray scale variables from Brand fg/bg or black/white
+        # 6. Fallback vars needed by additional Brand rules
 
         self.add_defaults("", "// *---- brand: end of defaults ----* //", "")
         self._add_sass_ensure_variables()
         self._add_sass_brand_grays()
-        self._add_defaults_brand_bootstrap(brand_bootstrap)
-        self._add_defaults_typography(sass_vars_typography)
-        self._add_defaults_color(sass_vars_colors, sass_vars_brand)
+        self._add_defaults_hdr("typography", **sass_vars_typography)
+        self._add_defaults_hdr("theme colors", **sass_vars_theme_colors)
+        if brand_bootstrap.defaults:
+            self._add_defaults_hdr("bootstrap defaults", **brand_bootstrap.defaults)
+        self._add_defaults_hdr("brand colors", **sass_vars_brand_colors)
 
         # Brand rules (now in forwards order)
         self._add_rules_brand_colors(css_vars_brand)
@@ -391,6 +395,10 @@ class ThemeBrand(Theme):
 
         return mapped
 
+    def _add_defaults_hdr(self, header: str, **kwargs: YamlScalarType):
+        self.add_defaults(**kwargs)
+        self.add_defaults(f"\n// *---- brand: {header} ----* //")
+
     def _add_sass_ensure_variables(self):
         """Ensure the variables we create to augment Bootstrap's variables exist"""
         self.add_defaults(
@@ -438,6 +446,7 @@ class ThemeBrand(Theme):
         )
         self.add_defaults(
             """
+            // *---- brand: automatic gray gradient ----* //
             $enable-brand-grays: true !default;
             // Ensure these variables exist so that we can set them inside of @if context
             // They can still be overwritten by the user, even with !default;
@@ -477,20 +486,6 @@ class ThemeBrand(Theme):
             }
             """
         )
-        self.add_defaults("// *---- brand: automatic gray gradient ----* //")
-
-    def _add_defaults_brand_bootstrap(self, brand_bootstrap: BrandBootstrapConfig):
-        if not brand_bootstrap.defaults:
-            return
-
-        self.add_defaults(**brand_bootstrap.defaults)
-        self.add_defaults(
-            "// *---- brand.defaults.bootstrap + brand.defaults.shiny.theme ----* //"
-        )
-
-    def _add_defaults_typography(self, sass_vars_typography: dict[str, str]):
-        self.add_defaults(**sass_vars_typography)
-        self.add_defaults("\n// *---- brand.typography ----* //")
 
     def _add_sass_brand_rules(self):
         """Additional rules to fill in Bootstrap styles for Brand parameters"""
@@ -531,15 +526,6 @@ class ThemeBrand(Theme):
             }
             """
         )
-
-    def _add_defaults_color(
-        self,
-        sass_vars_colors: dict[str, str],
-        sass_vars_brand: dict[str, str],
-    ):
-        self.add_defaults(**sass_vars_colors)
-        self.add_defaults(**sass_vars_brand)
-        self.add_defaults("\n// *---- brand.color ----* //")
 
     def _add_rules_brand_colors(self, css_vars_colors: list[str]):
         self.add_rules("\n// *---- brand.color.palette ----* //")
