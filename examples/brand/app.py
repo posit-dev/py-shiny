@@ -1,14 +1,17 @@
 import os
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
 
 from shiny import App, render, ui
+from shiny.ui._theme_brand import bootstrap_colors
 
 # TODO: Move this into the test that runs this app
 os.environ["SHINY_BRAND_YML_RAISE_UNMAPPED"] = "true"
-
 theme = ui.Theme.from_brand(__file__)
+# theme = ui.Theme()
+theme.add_rules((Path(__file__).parent / "_colors.scss").read_text())
 
 app_ui = ui.page_navbar(
     ui.nav_panel(
@@ -122,6 +125,7 @@ app_ui = ui.page_navbar(
             heights_equal=False,
         ),
     ),
+    ui.nav_panel("Colors", ui.output_ui("ui_colors")),
     ui.nav_panel(
         "Documentation",
         ui.div(
@@ -264,6 +268,40 @@ def server(input, output, session):
     def out_text1():
         return "\n".join(
             ["def example_function():", '    return "Function output text"']
+        )
+
+    @render.ui
+    def ui_colors():
+        colors = []
+        # Replicates: https://getbootstrap.com/docs/5.3/customize/color/#all-colors
+        # Source: https://github.com/twbs/bootstrap/blob/6e1f75f4/site/content/docs/5.3/customize/color.md?plain=1#L395-L409
+        for color in ["gray", *bootstrap_colors]:
+            if color in ["white", "black"]:
+                continue
+
+            colors += [
+                ui.div(
+                    ui.div(color, class_=f"p-3 mb-2 position-relative bd-{color}-500"),
+                    *[
+                        ui.div(f"{color}-{r}", class_=f"p-3 bd-{color}-{r}")
+                        for r in range(100, 1000, 100)
+                    ],
+                    class_="col-md-4 mb-3",
+                )
+            ]
+
+        return ui.TagList(
+            ui.div(
+                *[
+                    ui.div(
+                        ui.div(color, class_=f"p-3 mb-2 position-relative bd-{color}"),
+                        class_="col-md-4 mb-3",
+                    )
+                    for color in ["black", "white"]
+                ],
+                class_="row font-monospace",
+            ),
+            ui.div(*colors, class_="row font-monospace"),
         )
 
 
