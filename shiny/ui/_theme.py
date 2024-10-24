@@ -5,9 +5,10 @@ import pathlib
 import re
 import tempfile
 import textwrap
-from typing import Any, Literal, Optional, Sequence, TypeVar
+from typing import TYPE_CHECKING, Any, Literal, Optional, Sequence, TypeVar
 
-from brand_yml import Brand
+if TYPE_CHECKING:
+    from brand_yml import Brand
 from htmltools import HTMLDependency
 
 from .._docstring import add_example
@@ -410,7 +411,7 @@ class Theme:
             self._css = self._read_precompiled_css()
             return self._css
 
-        check_libsass_installed()
+        check_theme_pkg_installed("libsass", "sass")
         import sass
 
         args: SassCompileArgs = {} if compile_args is None else compile_args
@@ -525,6 +526,10 @@ class Theme:
             A :class:`shiny.ui.Theme` instance with a custom Shiny theme created from
             the brand guidelines (see :class:`brand_yml.Brand`).
         """
+        check_theme_pkg_installed("brand_yml")
+
+        from brand_yml import Brand
+
         from ._theme_brand import ThemeBrand  # avoid circular import
 
         if not isinstance(brand, Brand):
@@ -559,13 +564,16 @@ def check_is_valid_preset(preset: ShinyThemePreset) -> None:
         )
 
 
-def check_libsass_installed() -> None:
+def check_theme_pkg_installed(pkg: str, spec: str | None = None) -> None:
     import importlib.util
 
-    if importlib.util.find_spec("sass") is None:
+    if spec is None:
+        spec = pkg
+
+    if importlib.util.find_spec(spec) is None:
         raise ImportError(
-            "The 'libsass' package is required to compile custom themes. "
-            'Please install it with `pip install libsass` or `pip install "shiny[theme]"`.',
+            f"The '{pkg}' package is required to compile custom themes. "
+            'Please install it with `pip install {pkg}` or `pip install "shiny[theme]"`.',
         )
 
 
