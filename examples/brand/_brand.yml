@@ -103,10 +103,12 @@ typography:
     decoration: "underline"
 
 defaults:
+  bootstrap:
+    my-pink: "$brand-pink"
   shiny:
     theme:
       preset: shiny
       rules: |
-        .navbar-brand { color: $brand-pink }
+        .navbar-brand { color: $my-pink }
       # TODO: Find an appropriate theme variable to set
       # navbar-bg: $brand-purple

@@ -257,14 +257,14 @@ class BrandBootstrapConfig:
 
         bootstrap: dict[str, Any] = brand.defaults["bootstrap"]
         defaults: dict[str, Any] = {
-            k: v for k, v in bootstrap if k not in ("version", "preset")
+            k: v for k, v in bootstrap.items() if k not in ("version", "preset")
         }
 
         return BrandBootstrapConfigFromYaml(
             path="defaults.bootstrap",
             version=bootstrap.get("version"),
             preset=bootstrap.get("preset"),
-            **defaults,
+            defaults=defaults,
         )
 
 
