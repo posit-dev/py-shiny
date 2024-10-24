@@ -125,12 +125,22 @@ app_ui = ui.page_navbar(
             heights_equal=False,
         ),
     ),
-    ui.nav_panel("Colors", ui.div(ui.output_ui("ui_colors"), class_="container-sm")),
+    ui.nav_panel(
+        "Colors",
+        ui.fill.as_fill_item(
+            ui.div(
+                ui.div(ui.output_ui("ui_colors"), class_="container-sm"),
+                class_="overflow-y-auto",
+            )
+        ),
+    ),
     ui.nav_panel(
         "Documentation",
-        ui.div(
-            ui.markdown(
-                """
+        ui.fill.as_fill_item(
+            ui.div(
+                ui.div(
+                    ui.markdown(
+                        """
                 _Just in case it isn't obvious, this text was written by an LLM._
 
                 # Component Documentation
@@ -223,14 +233,17 @@ app_ui = ui.page_navbar(
                 remaining flexible enough to accommodate future updates and modifications to the
                 application interface.
                 """
-            ),
-            class_="container-sm",
+                    ),
+                    class_="container-sm ",
+                ),
+                class_="overflow-y-auto",
+            )
         ),
     ),
     ui.nav_spacer(),
     ui.nav_control(ui.input_dark_mode(id="color_mode")),
     title="brand.yml Demo",
-    fillable=["Input Output Demo", "Widget Gallery"],
+    fillable=True,
     theme=theme,
 )
 
