@@ -112,7 +112,7 @@ typography_map: dict[str, dict[str, list[str]]] = {
 """Maps brand.typography fields to corresponding Bootstrap Sass variables"""
 
 
-class BrandBootstrap:
+class BrandBootstrapConfig:
     """Convenience class for storing Bootstrap defaults from a brand instance"""
 
     def __init__(
@@ -178,7 +178,7 @@ class ThemeBrand(Theme):
     ):
 
         name = self._get_theme_name(brand)
-        brand_bootstrap = BrandBootstrap.from_brand(brand)
+        brand_bootstrap = BrandBootstrapConfig.from_brand(brand)
 
         # Initialize theme ------------------------------------------------------------
         super().__init__(
@@ -379,7 +379,7 @@ class ThemeBrand(Theme):
         )
         self.add_defaults("// *---- brand: automatic gray gradient ----* //")
 
-    def _add_defaults_brand_bootstrap(self, brand_bootstrap: BrandBootstrap):
+    def _add_defaults_brand_bootstrap(self, brand_bootstrap: BrandBootstrapConfig):
         self.add_defaults(**brand_bootstrap.defaults)
         self.add_defaults(
             "// *---- brand.defaults.bootstrap + brand.defaults.shiny.theme ----* //"
