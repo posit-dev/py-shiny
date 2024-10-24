@@ -26,8 +26,11 @@ class ThemeBrandUnmappedFieldError(ValueError):
 
 
 color_map: dict[str, list[str]] = {
-    "foreground": ["brand--foreground", "body-color", "pre-color"],
-    "background": ["brand--background", "body-bg"],
+    # Bootstrap uses $gray-900 and $white for the body bg-color by default, and then
+    # swaps them for $gray-100 and $gray-900 in dark mode. brand.yml may end up with
+    # light/dark variants for foreground/background, see posit-dev/brand-yml#38.
+    "foreground": ["brand--foreground", "body-color", "pre-color", "body-bg-dark"],
+    "background": ["brand--background", "body-bg", "body-color-dark"],
     "primary": ["primary"],
     "secondary": ["secondary", "body-secondary-color", "body-secondary"],
     "tertiary": ["body-tertiary-color", "body-tertiary"],
