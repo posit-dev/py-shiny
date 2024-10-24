@@ -96,7 +96,7 @@ typography_map: dict[str, dict[str, list[str]]] = {
     },
     "monospace_block": {
         "family": ["font-family-monospace-block"],
-        "line_height": ["pre-line-height"],
+        "line_height": ["code-block-line-height"],
         "color": ["pre-color"],
         "background_color": ["pre-bg"],
         "weight": ["code-block-font-weight"],
@@ -276,6 +276,7 @@ class ThemeBrand(Theme):
                 "code-inline-font-size": None,
                 "code-block-font-weight": None,
                 "code-block-font-size": None,
+                "code-block-line-height": None,
                 "link-bg": None,
                 "link-weight": None,
             }
@@ -381,6 +382,7 @@ class ThemeBrand(Theme):
             pre {
               font-weight: $code-block-font-weight;
               font-size: $code-block-font-size;
+              line-height: $code-block-line-height;
             }
 
             @if variable-exists(brand--background) {
