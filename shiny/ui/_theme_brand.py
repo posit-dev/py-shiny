@@ -450,26 +450,26 @@ class ThemeBrand(Theme):
                 @if $white == null {
                   $brand-white: map-get($brand-white-black, "white");
                   @if $brand-white != null {
-                    $white: $brand-white;
+                    $white: $brand-white !default;
                   }
                 }
                 @if $black == null {
                   $brand-black: map-get($brand-white-black, "black");
                   @if $brand-black != null {
-                    $black: $brand-black;
+                    $black: $brand-black !default;
                   }
                 }
               }
               @if $white != null and $black != null {
-                $gray-100: mix($white, $black, 90%);
-                $gray-200: mix($white, $black, 80%);
-                $gray-300: mix($white, $black, 70%);
-                $gray-400: mix($white, $black, 60%);
-                $gray-500: mix($white, $black, 50%);
-                $gray-600: mix($white, $black, 40%);
-                $gray-700: mix($white, $black, 30%);
-                $gray-800: mix($white, $black, 20%);
-                $gray-900: mix($white, $black, 10%);
+                $gray-100: mix($white, $black, 90%) !default;
+                $gray-200: mix($white, $black, 80%) !default;
+                $gray-300: mix($white, $black, 70%) !default;
+                $gray-400: mix($white, $black, 60%) !default;
+                $gray-500: mix($white, $black, 50%) !default;
+                $gray-600: mix($white, $black, 40%) !default;
+                $gray-700: mix($white, $black, 30%) !default;
+                $gray-800: mix($white, $black, 20%) !default;
+                $gray-900: mix($white, $black, 10%) !default;
               }
             }
             """
