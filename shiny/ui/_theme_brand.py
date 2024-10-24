@@ -65,45 +65,45 @@ corresponding Bootstrap color Sass variable.
 """
 
 # TODO: test that these Sass variables exist in Bootstrap
-typography_map: dict[str, dict[str, str]] = {
+typography_map: dict[str, dict[str, list[str]]] = {
     "base": {
-        "family": "font-family-base",
-        "size": "font-size-base",
-        "line_height": "line-height-base",
-        "weight": "font-weight-base",
+        "family": ["font-family-base"],
+        "size": ["font-size-base"],
+        "line_height": ["line-height-base"],
+        "weight": ["font-weight-base"],
     },
     "headings": {
-        "family": "headings-font-family",
-        "line_height": "headings-line-height",
-        "weight": "headings-font-weight",
-        "color": "headings-color",
-        "style": "headings-style",
+        "family": ["headings-font-family"],
+        "line_height": ["headings-line-height"],
+        "weight": ["headings-font-weight"],
+        "color": ["headings-color"],
+        "style": ["headings-style"],
     },
     "monospace": {
-        "family": "font-family-monospace",
-        "size": "code-font-size",
-        "weight": "code-font-weight",
+        "family": ["font-family-monospace"],
+        "size": ["code-font-size"],
+        "weight": ["code-font-weight"],
     },
     "monospace_inline": {
-        "family": "font-family-monospace-inline",
-        "color": "code-color",
-        "background_color": "code-bg",
-        "size": "code-inline-font-size",
-        "weight": "code-inline-font-weight",
+        "family": ["font-family-monospace-inline"],
+        "color": ["code-color"],
+        "background_color": ["code-bg"],
+        "size": ["code-inline-font-size"],
+        "weight": ["code-inline-font-weight"],
     },
     "monospace_block": {
-        "family": "font-family-monospace-block",
-        "line_height": "pre-line-height",
-        "color": "pre-color",
-        "background_color": "pre-bg",
-        "weight": "code-block-font-weight",
-        "size": "code-block-font-size",
+        "family": ["font-family-monospace-block"],
+        "line_height": ["pre-line-height"],
+        "color": ["pre-color"],
+        "background_color": ["pre-bg"],
+        "weight": ["code-block-font-weight"],
+        "size": ["code-block-font-size"],
     },
     "link": {
-        "background_color": "link-bg",
-        "color": "link-color",
-        "weight": "link-weight",
-        "decoration": "link-decoration",
+        "background_color": ["link-bg"],
+        "color": ["link-color", "link-color-dark"],
+        "weight": ["link-weight"],
+        "decoration": ["link-decoration"],
     },
 }
 """Maps brand.typography fields to corresponding Bootstrap Sass variables"""
@@ -239,14 +239,14 @@ class ThemeBrand(Theme):
 
                 for typ_field_key, typ_field_value in typ_value.items():
                     if typ_field_key in typography_map[typ_field]:
-                        typo_sass_var = typography_map[typ_field][typ_field_key]
-
                         if typ_field == "base" and typ_field_key == "size":
                             typ_field_value = str(
                                 maybe_convert_font_size_to_rem(typ_field_value)
                             )
 
-                        sass_vars_typography[typo_sass_var] = typ_field_value
+                        typo_sass_vars = typography_map[typ_field][typ_field_key]
+                        for typo_sass_var in typo_sass_vars:
+                            sass_vars_typography[typo_sass_var] = typ_field_value
                     elif raise_for_unmapped_vars:
                         raise ThemeBrandUnmappedFieldError(
                             f"typography.{typ_field}.{typ_field_key}"
