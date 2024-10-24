@@ -131,12 +131,11 @@ class Theme:
 
     def __init__(
         self,
-        preset: ShinyThemePreset = "shiny",
+        preset: str | None = None,
         name: Optional[str] = None,
         include_paths: Optional[str | pathlib.Path | list[str | pathlib.Path]] = None,
     ):
-        check_is_valid_preset(preset)
-        self._preset: ShinyThemePreset = preset
+        self._preset: ShinyThemePreset = check_is_valid_preset(preset or "shiny")
         self.name = name
         # 2024-06-21: `version` is not exposed because we currently support only BS 5.
         # In the future, the Bootstrap version could be chosen by the user on init.
@@ -556,12 +555,14 @@ def path_pkg_preset(preset: ShinyThemePreset, *args: str) -> str:
     return pathlib.Path(path).as_posix()
 
 
-def check_is_valid_preset(preset: ShinyThemePreset) -> None:
+def check_is_valid_preset(preset: str | None) -> ShinyThemePreset:
     if preset not in shiny_theme_presets:
         raise ValueError(
             f"Invalid preset '{preset}'.\n"
             + f"""Expected one of: "{'", "'.join(shiny_theme_presets)}".""",
         )
+
+    return preset
 
 
 def check_theme_pkg_installed(pkg: str, spec: str | None = None) -> None:

@@ -11,7 +11,6 @@ from htmltools import HTMLDependency
 
 from .._versions import bootstrap as v_bootstrap
 from ._theme import Theme
-from ._theme_presets import ShinyThemePreset, shiny_theme_presets
 from .css import CssUnit, as_css_unit
 
 YamlScalarType = Union[str, int, bool, float, None]
@@ -185,7 +184,7 @@ class BrandBootstrapConfig:
     def __init__(
         self,
         version: Any = v_bootstrap,
-        preset: Any = "shiny",
+        preset: str | None = None,
         functions: str | None = None,
         defaults: dict[str, YamlScalarType] | None = None,
         mixins: str | None = None,
@@ -208,14 +207,8 @@ class BrandBootstrapConfig:
             )
             v_major = bs_major
 
-        if not isinstance(preset, str) or preset not in shiny_theme_presets:
-            raise ValueError(
-                f"{preset!r} is not a valid Bootstrap preset provided by Shiny. "
-                f"Valid presets are {shiny_theme_presets}."
-            )
-
         self.version = v_major
-        self.preset: ShinyThemePreset = preset
+        self.preset = preset
         self.functions = functions
         self.defaults = defaults
         self.mixins = mixins
@@ -236,7 +229,7 @@ class BrandBootstrapConfig:
 
         return cls(
             version=d_shiny.version or d_bootstrap.version or v_bootstrap,
-            preset=d_shiny.preset or d_bootstrap.preset or "shiny",
+            preset=d_shiny.preset or d_bootstrap.preset,
             functions=d_shiny.functions,
             defaults=defaults,
             mixins=d_shiny.mixins,
