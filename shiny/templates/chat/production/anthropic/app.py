@@ -24,7 +24,7 @@ llm = AsyncAnthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
 
 
 MODEL_INFO = {
-    "name": "claude-3-5-sonnet-20241022",
+    "name": "claude-3-5-sonnet-latest",
     # DISCLAIMER: Anthropic has not yet released a public tokenizer for Claude models,
     # so this uses the generic default provided by Chat() (for now). That is probably
     # ok though since the default tokenizer likely overestimates the token count.

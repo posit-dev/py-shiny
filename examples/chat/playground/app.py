@@ -15,8 +15,8 @@ from shiny.express import input, render, ui
 models = {
     "openai": ["gpt-4o", "gpt-3.5-turbo"],
     "claude": [
-        "claude-3-opus-20240229",
-        "claude-3-5-sonnet-20240620",
+        "claude-3-opus-latest",
+        "claude-3-5-sonnet-latest",
         "claude-3-haiku-20240307",
     ],
     "google": ["gemini-1.5-pro-latest"],

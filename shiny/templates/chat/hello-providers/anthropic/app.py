@@ -35,7 +35,7 @@ async def _():
     messages = chat.messages(format="anthropic")
     # Create a response message stream
     response = await llm.messages.create(
-        model="claude-3-5-sonnet-20241022",
+        model="claude-3-5-sonnet-latest",
         messages=messages,
         stream=True,
         max_tokens=1000,
