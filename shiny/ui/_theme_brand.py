@@ -296,7 +296,9 @@ class ThemeBrand(Theme):
         self.brand = brand
 
         # Prep Sass and CSS Variables -------------------------------------------------
-        sass_vars_colors, css_vars_colors = ThemeBrand._prepare_color_vars(brand)
+        sass_vars_colors, sass_vars_brand, css_vars_brand = (
+            ThemeBrand._prepare_color_vars(brand)
+        )
         sass_vars_typography = ThemeBrand._prepare_typography_vars(brand)
 
         # Theme -----------------------------------------------------------------------
@@ -312,10 +314,10 @@ class ThemeBrand(Theme):
         self._add_sass_brand_grays()
         self._add_defaults_brand_bootstrap(brand_bootstrap)
         self._add_defaults_typography(sass_vars_typography)
-        self._add_defaults_color(sass_vars_colors)
+        self._add_defaults_color(sass_vars_colors, sass_vars_brand)
 
         # Brand rules (now in forwards order)
-        self._add_rules_brand_colors(css_vars_colors)
+        self._add_rules_brand_colors(css_vars_brand)
         self._add_sass_brand_rules()
         self._add_brand_bootstrap_other(brand_bootstrap)
 
@@ -326,7 +328,9 @@ class ThemeBrand(Theme):
         return brand.meta.name.short or brand.meta.name.full or "brand"
 
     @staticmethod
-    def _prepare_color_vars(brand: Brand) -> tuple[dict[str, str], list[str]]:
+    def _prepare_color_vars(
+        brand: Brand,
+    ) -> tuple[dict[str, str], dict[str, str], list[str]]:
         """Colors: create a dictionary of Sass variables and a list of brand CSS variables"""
         if not brand.color:
             return {}, []
@@ -359,7 +363,9 @@ class ThemeBrand(Theme):
             # => CSS var: `--brand-{name}: {value}`
             brand_css_vars.append(f"--brand-{color_var}: {pal_color};")
 
-        return {**brand_sass_vars, **mapped}, brand_css_vars
+        # We keep Sass and Brand vars separate so we can ensure Brand Sass vars come
+        # first in the compiled Sass definitions.
+        return mapped, brand_sass_vars, brand_css_vars
 
     @staticmethod
     def _prepare_typography_vars(brand: Brand) -> dict[str, str]:
@@ -541,8 +547,13 @@ class ThemeBrand(Theme):
             """
         )
 
-    def _add_defaults_color(self, sass_vars_colors: dict[str, str]):
+    def _add_defaults_color(
+        self,
+        sass_vars_colors: dict[str, str],
+        sass_vars_brand: dict[str, str],
+    ):
         self.add_defaults(**sass_vars_colors)
+        self.add_defaults(**sass_vars_brand)
         self.add_defaults("\n// *---- brand.color ----* //")
 
     def _add_rules_brand_colors(self, css_vars_colors: list[str]):
