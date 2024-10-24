@@ -477,6 +477,9 @@ class ThemeBrand(Theme):
         self.add_defaults("// *---- brand: automatic gray gradient ----* //")
 
     def _add_defaults_brand_bootstrap(self, brand_bootstrap: BrandBootstrapConfig):
+        if not brand_bootstrap.defaults:
+            return
+
         self.add_defaults(**brand_bootstrap.defaults)
         self.add_defaults(
             "// *---- brand.defaults.bootstrap + brand.defaults.shiny.theme ----* //"
