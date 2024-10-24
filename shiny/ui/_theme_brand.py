@@ -29,7 +29,7 @@ color_map: dict[str, list[str]] = {
     # Bootstrap uses $gray-900 and $white for the body bg-color by default, and then
     # swaps them for $gray-100 and $gray-900 in dark mode. brand.yml may end up with
     # light/dark variants for foreground/background, see posit-dev/brand-yml#38.
-    "foreground": ["brand--foreground", "body-color", "pre-color", "body-bg-dark"],
+    "foreground": ["brand--foreground", "body-color", "body-bg-dark"],
     "background": ["brand--background", "body-bg", "body-color-dark"],
     "primary": ["primary"],
     "secondary": ["secondary", "body-secondary-color", "body-secondary"],
@@ -204,21 +204,31 @@ class ThemeBrand(Theme):
         # 3. Gray scale variables from Brand fg/bg or black/white
         # 4. Fallback vars needed by additional Brand rules
 
+        self.add_defaults("", "// *---- brand: end of defaults ----* //", "")
         self._add_sass_ensure_variables()
         self._add_sass_brand_grays()
         self.add_defaults(**brand_bootstrap.defaults)
-        self.add_defaults(**sass_vars_colors, **sass_vars_typography)
-        # Brand Rules ----
+        self.add_defaults(
+            "// *---- brand.defaults.bootstrap + brand.defaults.shiny.theme ----* //"
+        )
+        self.add_defaults(**sass_vars_typography)
+        self.add_defaults("\n// *---- brand.typography ----* //")
+        self.add_defaults(**sass_vars_colors)
+        self.add_defaults("\n// *---- brand.color ----* //")
+
+        # Brand rules (now in forwards order)
+        self.add_rules("\n// *---- brand.color.palette ----*/ /")
         self.add_rules(":root {", *css_vars_colors, "}")
         self._add_sass_brand_rules()
 
     def _prepare_color_vars(self) -> tuple[dict[str, str], list[str]]:
+        """Colors: create a dictionary of Sass variables and a list of brand CSS variables"""
         if not self.brand.color:
             return {}, []
 
-        sass_vars_colors: dict[str, str] = {}
-        sass_vars_brand_colors: dict[str, str] = {}
-        css_vars_brand_colors: list[str] = []
+        mapped: dict[str, str] = {}
+        brand_sass_vars: dict[str, str] = {}
+        brand_css_vars: list[str] = []
 
         # Map values in colors to their Sass variable counterparts
         for thm_name, thm_color in self.brand.color.to_dict(include="theme").items():
@@ -227,57 +237,54 @@ class ThemeBrand(Theme):
                 continue
 
             for sass_var in color_map[thm_name]:
-                sass_vars_colors[sass_var] = thm_color
+                mapped[sass_var] = thm_color
 
         brand_color_palette = self.brand.color.to_dict(include="palette")
 
         # Map the brand color palette to Bootstrap's named colors, e.g. $red, $blue.
         for pal_name, pal_color in brand_color_palette.items():
             if pal_name in bootstrap_colors:
-                sass_vars_colors[pal_name] = pal_color
+                mapped[pal_name] = pal_color
 
             # Create Sass and CSS variables for the brand color palette
             color_var = sanitize_sass_var_name(pal_name)
 
             # => Sass var: `$brand-{name}: {value}`
-            sass_vars_brand_colors.update({f"brand-{color_var}": pal_color})
+            brand_sass_vars.update({f"brand-{color_var}": pal_color})
             # => CSS var: `--brand-{name}: {value}`
-            css_vars_brand_colors.append(f"--brand-{color_var}: {pal_color};")
+            brand_css_vars.append(f"--brand-{color_var}: {pal_color};")
 
-        return {**sass_vars_brand_colors, **sass_vars_colors}, css_vars_brand_colors
+        return {**brand_sass_vars, **mapped}, brand_css_vars
 
     def _prepare_typography_vars(self) -> dict[str, str]:
-        sass_vars_typography: dict[str, str] = {}
+        """Typography: Create a list of Bootstrap Sass variables"""
+        mapped: dict[str, str] = {}
 
         if not self.brand.typography:
-            return sass_vars_typography
+            return mapped
 
         brand_typography = self.brand.typography.model_dump(
             exclude={"fonts"},
             exclude_none=True,
         )
 
-        for typ_field, typ_value in brand_typography.items():
-            if typ_field not in typography_map:
-                self._handle_unmapped_variable(f"typography.{typ_field}")
+        for field, prop in brand_typography.items():
+            if field not in typography_map:
+                self._handle_unmapped_variable(f"typography.{field}")
                 continue
 
-            for typ_field_key, typ_field_value in typ_value.items():
-                if typ_field_key in typography_map[typ_field]:
-                    if typ_field == "base" and typ_field_key == "size":
-                        typ_field_value = str(
-                            maybe_convert_font_size_to_rem(typ_field_value)
-                        )
+            for prop_key, prop_value in prop.items():
+                if prop_key in typography_map[field]:
+                    if field == "base" and prop_key == "size":
+                        prop_value = str(maybe_convert_font_size_to_rem(prop_value))
 
-                    typo_sass_vars = typography_map[typ_field][typ_field_key]
+                    typo_sass_vars = typography_map[field][prop_key]
                     for typo_sass_var in typo_sass_vars:
-                        sass_vars_typography[typo_sass_var] = typ_field_value
+                        mapped[typo_sass_var] = prop_value
                 else:
-                    self._handle_unmapped_variable(
-                        f"typography.{typ_field}.{typ_field_key}"
-                    )
+                    self._handle_unmapped_variable(f"typography.{field}.{prop_key}")
 
-        return sass_vars_typography
+        return mapped
 
     def _add_sass_ensure_variables(self):
         """Ensure the variables we create to augment Bootstrap's variables exist"""
@@ -293,6 +300,7 @@ class ThemeBrand(Theme):
                 "link-weight": None,
             }
         )
+        self.add_defaults("// *---- brand: added variables ---* //")
 
     def _add_sass_brand_grays(self):
         """
@@ -372,11 +380,13 @@ class ThemeBrand(Theme):
             }
             """
         )
+        self.add_defaults("// *---- brand: automatic gray gradient ----* //")
 
     def _add_sass_brand_rules(self):
         """Additional rules to fill in Bootstrap styles for Brand parameters"""
         self.add_rules(
             """
+            // *---- brand: brand rules to augment Bootstrap rules ----* //
             // https://github.com/twbs/bootstrap/blob/5c2f2e7e/scss/_root.scss#L82
             :root {
                 --#{$prefix}link-bg: #{$link-bg};
@@ -401,7 +411,8 @@ class ThemeBrand(Theme):
               line-height: $code-block-line-height;
             }
 
-            @if variable-exists(brand--background) {
+            $bslib-dashboard-design: false !default;
+            @if $bslib-dashboard-design and variable-exists(brand--background) {
               // When brand makes dark mode, it usually hides card definition, so we add
               // back card borders in dark mode.
               [data-bs-theme="dark"] {
