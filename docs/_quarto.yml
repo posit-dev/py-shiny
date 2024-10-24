@@ -46,3 +46,4 @@ interlinks:
       url: https://docs.python.org/3/
     brand-yml:
       url: https://posit-dev.github.io/brand-yml/
+      inv: objects.txt
