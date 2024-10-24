@@ -278,16 +278,82 @@ class ThemeBrand(Theme):
                 "code-block-font-size": None,
                 "link-bg": None,
                 "link-weight": None,
-                "gray-100": "mix($white, $black, 90%)",
-                "gray-200": "mix($white, $black, 80%)",
-                "gray-300": "mix($white, $black, 70%)",
-                "gray-400": "mix($white, $black, 60%)",
-                "gray-500": "mix($white, $black, 50%)",
-                "gray-600": "mix($white, $black, 40%)",
-                "gray-700": "mix($white, $black, 30%)",
-                "gray-800": "mix($white, $black, 20%)",
-                "gray-900": "mix($white, $black, 10%)",
             }
+        )
+        self.add_functions(
+            """
+            @function brand-choose-white-black($foreground, $background) {
+              $lum_fg: luminance($foreground);
+              $lum_bg: luminance($background);
+              $contrast: contrast-ratio($foreground, $background);
+
+              @if $contrast  < 4.5 {
+                @warn "The contrast ratio of #{$contrast} between the brand's foreground color (#{inspect($foreground)}) and background color (#{inspect($background)}) is very low. Consider picking colors with higher contrast for better readability.";
+              }
+
+              $white: if($lum_fg > $lum_bg, $foreground, $background);
+              $black: if($lum_fg <= $lum_bg, $foreground, $background);
+
+              // If the brand foreground/background are close enough to black/white, we
+              // use those values. Otherwise, we'll mix the white/black from the brand
+              // fg/bg with actual white and black to get something much closer.
+              $result: (
+                "white": if(contrast-ratio($white, white) <= 1.15, $white, mix($white, white, 20%)),
+                "black": if(contrast-ratio($black, black) <= 1.15, $black, mix($black, black, 20%)),
+              );
+
+              @return $result;
+            }
+            """
+        )
+        self.add_defaults(
+            """
+            $enable-brand-grays: true !default;
+            // Ensure these variables exist so that we can set them inside of @if context
+            // They can still be overwritten by the user, even with !default;
+            $white: null !default;
+            $black: null !default;
+            $gray-100: null !default;
+            $gray-200: null !default;
+            $gray-300: null !default;
+            $gray-400: null !default;
+            $gray-500: null !default;
+            $gray-600: null !default;
+            $gray-700: null !default;
+            $gray-800: null !default;
+            $gray-900: null !default;
+
+            @if $enable-brand-grays {
+              @if variable-exists(brand--foreground) and variable-exists(brand--background) {
+                $brand-white-black: brand-choose-white-black($brand--foreground, $brand--background);
+                @if $white == null {
+                  $brand-white: map-get($brand-white-black, "white");
+                  @if $brand-white != null {
+                    $white: $brand-white;
+                  }
+                }
+                @if $black == null {
+                  $brand-black: map-get($brand-white-black, "black");
+                  @if $brand-black != null {
+                    $black: $brand-black;
+                  }
+                }
+              }
+              @if $white != null and $black != null {
+                @debug "$white is #{inspect($white)}";
+                @debug "$black is #{inspect($black)}";
+                $gray-100: mix($white, $black, 90%);
+                $gray-200: mix($white, $black, 80%);
+                $gray-300: mix($white, $black, 70%);
+                $gray-400: mix($white, $black, 60%);
+                $gray-500: mix($white, $black, 50%);
+                $gray-600: mix($white, $black, 40%);
+                $gray-700: mix($white, $black, 30%);
+                $gray-800: mix($white, $black, 20%);
+                $gray-900: mix($white, $black, 10%);
+              }
+            }
+            """
         )
         self.add_defaults(**brand_bootstrap.defaults)
         self.add_defaults(**sass_vars_brand)
