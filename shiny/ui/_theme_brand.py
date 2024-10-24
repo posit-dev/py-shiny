@@ -466,16 +466,10 @@ class ThemeBrand(Theme):
               @if variable-exists(brand--foreground) and variable-exists(brand--background) {
                 $brand-white-black: brand-choose-white-black($brand--foreground, $brand--background);
                 @if $white == null {
-                  $brand-white: map-get($brand-white-black, "white");
-                  @if $brand-white != null {
-                    $white: $brand-white !default;
-                  }
+                  $white: map-get($brand-white-black, "white") !default;
                 }
                 @if $black == null {
-                  $brand-black: map-get($brand-white-black, "black");
-                  @if $brand-black != null {
-                    $black: $brand-black !default;
-                  }
+                  $black: map-get($brand-white-black, "black") !default;
                 }
               }
               @if $white != null and $black != null {
