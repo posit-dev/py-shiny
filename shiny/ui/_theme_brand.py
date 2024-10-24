@@ -393,7 +393,8 @@ def maybe_convert_font_size_to_rem(x: str) -> CssUnit:
 
 
 def split_css_value_and_unit(x: str) -> tuple[str, str]:
-    match = re.match(r'^(-?\d*\.?\d+)([a-zA-Z%]*)$', x)
+    match = re.match(r"^(-?\d*\.?\d+)([a-zA-Z%]*)$", x)
     if not match:
         raise ValueError(f"Invalid CSS value format: {x}")
-    return match.groups()
+    value, unit = match.groups()
+    return value, unit
