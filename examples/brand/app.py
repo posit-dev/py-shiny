@@ -29,7 +29,7 @@ app_ui = ui.page_navbar(
                 ),
                 ui.input_action_button("action1", "Action Button"),
             ),
-            ui.layout_column_wrap(
+            ui.layout_columns(
                 ui.value_box(
                     "Metric 1",
                     "100",
@@ -121,11 +121,11 @@ app_ui = ui.page_navbar(
                 ),
                 ui.input_password("password1", "Password Input"),
             ),
-            width=400,
+            width=300,
             heights_equal=False,
         ),
     ),
-    ui.nav_panel("Colors", ui.output_ui("ui_colors")),
+    ui.nav_panel("Colors", ui.div(ui.output_ui("ui_colors"), class_="container-sm")),
     ui.nav_panel(
         "Documentation",
         ui.div(
@@ -286,7 +286,7 @@ def server(input, output, session):
                         ui.div(f"{color}-{r}", class_=f"p-3 bd-{color}-{r}")
                         for r in range(100, 1000, 100)
                     ],
-                    class_="col-md-4 mb-3",
+                    class_="mb-3",
                 )
             ]
 
@@ -294,14 +294,35 @@ def server(input, output, session):
             ui.div(
                 *[
                     ui.div(
-                        ui.div(color, class_=f"p-3 mb-2 position-relative bd-{color}"),
-                        class_="col-md-4 mb-3",
+                        ui.div(
+                            color, class_=f"p-3 mb-2 position-relative text-bg-{color}"
+                        ),
+                        class_="col-md-3 mb-3",
                     )
-                    for color in ["black", "white"]
+                    for color in [
+                        "primary",
+                        "secondary",
+                        "dark",
+                        "light",
+                        "info",
+                        "success",
+                        "warning",
+                        "danger",
+                    ]
                 ],
                 class_="row font-monospace",
             ),
-            ui.div(*colors, class_="row font-monospace"),
+            ui.div(
+                *[
+                    ui.div(
+                        ui.div(color, class_=f"p-3 mb-2 position-relative bd-{color}"),
+                        class_="col-md-3 mb-3",
+                    )
+                    for color in ["black", "white", "foreground", "background"]
+                ],
+                class_="row font-monospace",
+            ),
+            ui.layout_column_wrap(*colors, class_="font-monospace"),
         )
 
 

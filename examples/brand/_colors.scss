@@ -110,5 +110,7 @@
 .bd-gray-800 { color: color-contrast($gray-800); background-color: $gray-800; }
 .bd-gray-900 { color: color-contrast($gray-900); background-color: $gray-900; }
 
-.bd-white { color: color-contrast($white); background-color: $white; }
+.bd-white { color: color-contrast($white); background-color: $white; border: 2px solid $body-color;}
 .bd-black { color: color-contrast($black); background-color: $black; }
+.bd-foreground { color: $body-bg; background-color: $body-color; }
+.bd-background { color: $body-color; background-color: $body-bg; border: 2px solid $body-color;}
