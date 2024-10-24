@@ -228,8 +228,8 @@ class BrandBootstrapConfig:
 
         defaults: dict[str, YamlScalarType] = {}
 
-        d_bootstrap = cls._brand_defaults_bootstrap(brand)
-        d_shiny = cls._brand_defaults_shiny(brand)
+        d_bootstrap = BrandBootstrapConfig._brand_defaults_bootstrap(brand)
+        d_shiny = BrandBootstrapConfig._brand_defaults_shiny(brand)
 
         defaults.update(d_bootstrap.defaults or {})
         defaults.update(d_shiny.defaults or {})
@@ -243,8 +243,8 @@ class BrandBootstrapConfig:
             rules=d_shiny.rules,
         )
 
-    @classmethod
-    def _brand_defaults_shiny(cls, brand: Brand) -> BrandBootstrapConfigFromYaml:
+    @staticmethod
+    def _brand_defaults_shiny(brand: Brand) -> BrandBootstrapConfigFromYaml:
         if (
             not brand.defaults
             or not isinstance(brand.defaults.get("shiny"), dict)
@@ -257,8 +257,8 @@ class BrandBootstrapConfig:
             **brand.defaults["shiny"]["theme"],
         )
 
-    @classmethod
-    def _brand_defaults_bootstrap(cls, brand: Brand) -> BrandBootstrapConfigFromYaml:
+    @staticmethod
+    def _brand_defaults_bootstrap(brand: Brand) -> BrandBootstrapConfigFromYaml:
         if not brand.defaults or not isinstance(brand.defaults.get("bootstrap"), dict):
             return BrandBootstrapConfigFromYaml(path="defaults.bootstrap")
 
