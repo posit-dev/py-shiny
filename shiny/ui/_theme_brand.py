@@ -340,8 +340,6 @@ class ThemeBrand(Theme):
                 }
               }
               @if $white != null and $black != null {
-                @debug "$white is #{inspect($white)}";
-                @debug "$black is #{inspect($black)}";
                 $gray-100: mix($white, $black, 90%);
                 $gray-200: mix($white, $black, 80%);
                 $gray-300: mix($white, $black, 70%);
