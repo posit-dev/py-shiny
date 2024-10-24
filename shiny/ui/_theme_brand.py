@@ -310,6 +310,7 @@ class ThemeBrand(Theme):
               font-weight: $code-inline-font-weight;
               font-size: $code-inline-font-size;
             }
+            // https://github.com/twbs/bootstrap/blob/30e01525/scss/_reboot.scss#L287
             pre {
               font-weight: $code-block-font-weight;
               font-size: $code-block-font-size;
