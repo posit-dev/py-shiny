@@ -54,45 +54,44 @@ color:
 
 typography:
   fonts:
-    - family: "Quantico"
+    - family: Quantico
       source: google
       weight: [700]
-      style: [normal]
-      display: swap
-    # TODO: Bring in Monda as a local font file
-    - family: "Monda"
-      source: google
-      weight: 400..700
       style: [normal, italic]
       display: swap
-    - family: "Courier Prime"
+    - family: Monda
+      source: file
+      files:
+        - path: Monda.ttf
+          weight: 400..700
+    - family: Share Tech Mono
       source: bunny
-      weight: [400, 700]
-      style: [normal, italic]
+      weight: 400
+      style: normal
       display: swap
   base:
-    family: "Monda"
-    size: "1em"
+    family: Monda
+    size: 1em
     weight: 400
     line-height: 1.5
   headings:
-    family: "Quantico"
+    family: Quantico
     weight: 400
     line-height: 1.2
     style: normal
   monospace:
-    family: "Courier Prime"
-    size: "0.9em"
+    family: Share Tech Mono
+    size: 0.9em
     weight: 400
   monospace-inline:
-    family: "Courier Prime"
-    size: "0.9em"
+    family: Share Tech Mono
+    # size: 0.9em
     weight: 400
     color: yellow
     background-color: "#1a1a1add"
   monospace-block:
-    family: "Courier Prime"
-    size: "0.9em"
+    family: Share Tech Mono
+    size: 1.1em
     weight: 400
     color: green
     background-color: black
@@ -106,5 +105,6 @@ typography:
 defaults:
   shiny:
     theme:
+      preset: shiny
       # TODO: Find an appropriate theme variable to set
       # navbar-bg: $brand-purple

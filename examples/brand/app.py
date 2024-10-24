@@ -131,7 +131,7 @@ app_ui = ui.page_navbar(
         ui.div(
             ui.markdown(
                 """
-                _Just in case it isn't obvious, this text (and most of this app) was written by an LLM._
+                _Just in case it isn't obvious, this text was written by an LLM._
 
                 # Component Documentation
 
