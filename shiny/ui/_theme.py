@@ -503,7 +503,7 @@ class Theme:
         )
 
     @classmethod
-    def from_brand(cls, brand: str | pathlib.Path | Brand):
+    def from_brand(cls, brand: "str | pathlib.Path | Brand"):
         """
         Create a custom Shiny theme from a `_brand.yml`
 
