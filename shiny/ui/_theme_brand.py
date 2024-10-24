@@ -177,10 +177,7 @@ class ThemeBrand(Theme):
         include_paths: Optional[str | Path | list[str | Path]] = None,
     ):
 
-        name: str = "brand"
-        if brand.meta and brand.meta.name:
-            name = brand.meta.name.full or brand.meta.name.short or name
-
+        name = self._get_theme_name(brand)
         brand_bootstrap = BrandBootstrap.from_brand(brand)
 
         # Initialize theme ------------------------------------------------------------
@@ -214,6 +211,12 @@ class ThemeBrand(Theme):
         # Brand rules (now in forwards order)
         self._add_rules_brand_colors(css_vars_colors)
         self._add_sass_brand_rules()
+
+    def _get_theme_name(self, brand: Brand) -> str:
+        if not brand.meta or not brand.meta.name:
+            return "brand"
+
+        return brand.meta.name.short or brand.meta.name.full or "brand"
 
     def _prepare_color_vars(self) -> tuple[dict[str, str], list[str]]:
         """Colors: create a dictionary of Sass variables and a list of brand CSS variables"""
