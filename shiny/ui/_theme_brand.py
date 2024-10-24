@@ -27,6 +27,16 @@ class ThemeBrandUnmappedFieldError(ValueError):
         return self.message
 
 
+def warn_or_raise_unmapped_variable(unmapped: str):
+    if os.environ.get("SHINY_BRAND_YML_RAISE_UNMAPPED") == "true":
+        raise ThemeBrandUnmappedFieldError(unmapped)
+    else:
+        warnings.warn(
+            f"Shiny's brand.yml theme does not yet support {unmapped}.",
+            stacklevel=4,
+        )
+
+
 color_map: dict[str, list[str]] = {
     # Bootstrap uses $gray-900 and $white for the body bg-color by default, and then
     # swaps them for $gray-100 and $gray-900 in dark mode. brand.yml may end up with
@@ -286,8 +296,8 @@ class ThemeBrand(Theme):
         self.brand = brand
 
         # Prep Sass and CSS Variables -------------------------------------------------
-        sass_vars_colors, css_vars_colors = self._prepare_color_vars()
-        sass_vars_typography = self._prepare_typography_vars()
+        sass_vars_colors, css_vars_colors = ThemeBrand._prepare_color_vars(brand)
+        sass_vars_typography = ThemeBrand._prepare_typography_vars(brand)
 
         # Theme -----------------------------------------------------------------------
         # Defaults are added in reverse order, so each chunk appears above the next
@@ -315,9 +325,10 @@ class ThemeBrand(Theme):
 
         return brand.meta.name.short or brand.meta.name.full or "brand"
 
-    def _prepare_color_vars(self) -> tuple[dict[str, str], list[str]]:
+    @staticmethod
+    def _prepare_color_vars(brand: Brand) -> tuple[dict[str, str], list[str]]:
         """Colors: create a dictionary of Sass variables and a list of brand CSS variables"""
-        if not self.brand.color:
+        if not brand.color:
             return {}, []
 
         mapped: dict[str, str] = {}
@@ -325,15 +336,15 @@ class ThemeBrand(Theme):
         brand_css_vars: list[str] = []
 
         # Map values in colors to their Sass variable counterparts
-        for thm_name, thm_color in self.brand.color.to_dict(include="theme").items():
+        for thm_name, thm_color in brand.color.to_dict(include="theme").items():
             if thm_name not in color_map:
-                self._handle_unmapped_variable(f"color.{thm_name}")
+                warn_or_raise_unmapped_variable(f"color.{thm_name}")
                 continue
 
             for sass_var in color_map[thm_name]:
                 mapped[sass_var] = thm_color
 
-        brand_color_palette = self.brand.color.to_dict(include="palette")
+        brand_color_palette = brand.color.to_dict(include="palette")
 
         # Map the brand color palette to Bootstrap's named colors, e.g. $red, $blue.
         for pal_name, pal_color in brand_color_palette.items():
@@ -350,21 +361,22 @@ class ThemeBrand(Theme):
 
         return {**brand_sass_vars, **mapped}, brand_css_vars
 
-    def _prepare_typography_vars(self) -> dict[str, str]:
+    @staticmethod
+    def _prepare_typography_vars(brand: Brand) -> dict[str, str]:
         """Typography: Create a list of Bootstrap Sass variables"""
         mapped: dict[str, str] = {}
 
-        if not self.brand.typography:
+        if not brand.typography:
             return mapped
 
-        brand_typography = self.brand.typography.model_dump(
+        brand_typography = brand.typography.model_dump(
             exclude={"fonts"},
             exclude_none=True,
         )
 
         for field, prop in brand_typography.items():
             if field not in typography_map:
-                self._handle_unmapped_variable(f"typography.{field}")
+                warn_or_raise_unmapped_variable(f"typography.{field}")
                 continue
 
             for prop_key, prop_value in prop.items():
@@ -376,7 +388,7 @@ class ThemeBrand(Theme):
                     for typo_sass_var in typo_sass_vars:
                         mapped[typo_sass_var] = prop_value
                 else:
-                    self._handle_unmapped_variable(f"typography.{field}.{prop_key}")
+                    warn_or_raise_unmapped_variable(f"typography.{field}.{prop_key}")
 
         return mapped
 
@@ -544,15 +556,6 @@ class ThemeBrand(Theme):
             self.add_mixins(bootstrap.mixins)
         if bootstrap.rules:
             self.add_rules(bootstrap.rules)
-
-    def _handle_unmapped_variable(self, unmapped: str):
-        if os.environ.get("SHINY_BRAND_YML_RAISE_UNMAPPED") == "true":
-            raise ThemeBrandUnmappedFieldError(unmapped)
-        else:
-            warnings.warn(
-                f"Shiny's brand.yml theme does not yet support {unmapped}.",
-                stacklevel=4,
-            )
 
     def _html_dependencies(self) -> list[HTMLDependency]:
         theme_deps = super()._html_dependencies()
