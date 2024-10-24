@@ -382,6 +382,14 @@ class ThemeBrand(Theme):
               font-weight: $code-block-font-weight;
               font-size: $code-block-font-size;
             }
+
+            @if variable-exists(brand--background) {
+              // When brand makes dark mode, it usually hides card definition, so we add
+              // back card borders in dark mode.
+              [data-bs-theme="dark"] {
+                --bslib-card-border-color: RGBA(255, 255, 255, 0.15);
+              }
+            }
             """
         )
 
