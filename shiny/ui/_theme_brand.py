@@ -333,7 +333,7 @@ class ThemeBrand(Theme):
     ) -> tuple[dict[str, str], dict[str, str], list[str]]:
         """Colors: create a dictionary of Sass variables and a list of brand CSS variables"""
         if not brand.color:
-            return {}, []
+            return {}, {}, []
 
         mapped: dict[str, str] = {}
         brand_sass_vars: dict[str, str] = {}
