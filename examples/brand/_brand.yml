@@ -106,5 +106,7 @@ defaults:
   shiny:
     theme:
       preset: shiny
+      rules: |
+        .navbar-brand { color: $brand-pink }
       # TODO: Find an appropriate theme variable to set
       # navbar-bg: $brand-purple

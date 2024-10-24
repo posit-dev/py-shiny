@@ -4,15 +4,17 @@ import os
 import re
 import warnings
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 from brand_yml import Brand
 from htmltools import HTMLDependency
 
-from .._versions import bootstrap
+from .._versions import bootstrap as v_bootstrap
 from ._theme import Theme
 from ._theme_presets import ShinyThemePreset, shiny_theme_presets
 from .css import CssUnit, as_css_unit
+
+YamlScalarType = Union[str, int, bool, float, None]
 
 
 class ThemeBrandUnmappedFieldError(ValueError):
@@ -112,14 +114,72 @@ typography_map: dict[str, dict[str, list[str]]] = {
 """Maps brand.typography fields to corresponding Bootstrap Sass variables"""
 
 
+class BrandBootstrapConfigFromYaml:
+    def __init__(
+        self,
+        path: str,
+        version: Any = None,
+        preset: Any = None,
+        functions: Any = None,
+        defaults: Any = None,
+        mixins: Any = None,
+        rules: Any = None,
+    ):
+
+        self.path = path
+        self.version = version
+        self.preset: str | None = self._validate_str(preset, "preset")
+        self.functions: str | None = self._validate_str(functions, "functions")
+        self.defaults: dict[str, YamlScalarType] | None = self._validate_defaults(
+            defaults
+        )
+        self.mixins: str | None = self._validate_str(mixins, "mixins")
+        self.rules: str | None = self._validate_str(rules, "rules")
+
+    def _validate_str(self, x: Any, param: str) -> str | None:
+        if x is None or isinstance(x, str):
+            return x
+
+        raise ValueError(
+            f"Invalid brand `{self.path}.{param}`. Must be a string or empty."
+        )
+
+    def _validate_defaults(self, x: Any) -> dict[str, YamlScalarType] | None:
+        if x is None:
+            return None
+
+        path = self.path
+        if path == "defaults.shiny.theme":
+            path += ".defaults"
+
+        if not isinstance(x, dict):
+            raise ValueError(f"Invalid brand `{path}`, must be a dictionary.")
+
+        y: dict[Any, Any] = x
+
+        if not all([isinstance(k, str) for k in y.keys()]):
+            raise ValueError(f"Invalid brand `{path}`, all keys must be strings.")
+
+        if not all(
+            [v is None or isinstance(v, (str, int, float, bool)) for v in y.values()]
+        ):
+            raise ValueError(f"Invalid brand `{path}`, all values must be scalar.")
+
+        res: dict[str, YamlScalarType] = y
+        return res
+
+
 class BrandBootstrapConfig:
     """Convenience class for storing Bootstrap defaults from a brand instance"""
 
     def __init__(
         self,
-        version: Any = bootstrap,
+        version: Any = v_bootstrap,
         preset: Any = "shiny",
-        **kwargs: str | int | bool | float | None,
+        functions: str | None = None,
+        defaults: dict[str, YamlScalarType] | None = None,
+        mixins: str | None = None,
+        rules: str | None = None,
     ):
         if not isinstance(version, (str, int)):
             raise ValueError(
@@ -127,7 +187,7 @@ class BrandBootstrapConfig:
             )
 
         v_major = str(version).split(".")[0]
-        bs_major = str(bootstrap).split(".")[0]
+        bs_major = str(v_bootstrap).split(".")[0]
 
         if v_major != bs_major:
             # TODO (bootstrap-update): Assumes Shiny ships one version of Bootstrap
@@ -146,27 +206,63 @@ class BrandBootstrapConfig:
 
         self.version = v_major
         self.preset: ShinyThemePreset = preset
-        self.defaults = kwargs
+        self.functions = functions
+        self.defaults = defaults
+        self.mixins = mixins
+        self.rules = rules
 
     @classmethod
     def from_brand(cls, brand: Brand):
-        defaults: dict[str, str | int | bool | float | None] = {}
+        if not brand.defaults:
+            return cls(version=v_bootstrap, preset="shiny")
 
-        if brand.defaults:
-            if brand.defaults and "bootstrap" in brand.defaults:
-                if isinstance(brand.defaults["bootstrap"], dict):
-                    brand_defaults_bs: dict[str, str] = brand.defaults["bootstrap"]
-                    defaults.update(brand_defaults_bs)
-            if "shiny" in brand.defaults and "theme" in brand.defaults["shiny"]:
-                if isinstance(brand.defaults["shiny"]["theme"], dict):
-                    # TODO: Use brand.defaults.shiny.theme.defaults instead
-                    # TODO: Validate that it's really a dict[str, scalar]
-                    brand_shiny_theme: dict[str, str] = brand.defaults["shiny"]["theme"]
-                    defaults.update(brand_shiny_theme)
+        defaults: dict[str, YamlScalarType] = {}
 
-                # TODO: Get functions, mixins, rules as well
+        d_bootstrap = cls._brand_defaults_bootstrap(brand)
+        d_shiny = cls._brand_defaults_shiny(brand)
 
-        return cls(**defaults)
+        defaults.update(d_bootstrap.defaults or {})
+        defaults.update(d_shiny.defaults or {})
+
+        return cls(
+            version=d_shiny.version or d_bootstrap.version or v_bootstrap,
+            preset=d_shiny.preset or d_bootstrap.preset or "shiny",
+            functions=d_shiny.functions,
+            defaults=defaults,
+            mixins=d_shiny.mixins,
+            rules=d_shiny.rules,
+        )
+
+    @classmethod
+    def _brand_defaults_shiny(cls, brand: Brand) -> BrandBootstrapConfigFromYaml:
+        if (
+            not brand.defaults
+            or not isinstance(brand.defaults.get("shiny"), dict)
+            or not isinstance(brand.defaults["shiny"].get("theme"), dict)
+        ):
+            return BrandBootstrapConfigFromYaml(path="defaults.shiny.theme")
+
+        return BrandBootstrapConfigFromYaml(
+            path="defaults.shiny.theme",
+            **brand.defaults["shiny"]["theme"],
+        )
+
+    @classmethod
+    def _brand_defaults_bootstrap(cls, brand: Brand) -> BrandBootstrapConfigFromYaml:
+        if not brand.defaults or not isinstance(brand.defaults.get("bootstrap"), dict):
+            return BrandBootstrapConfigFromYaml(path="defaults.bootstrap")
+
+        bootstrap: dict[str, Any] = brand.defaults["bootstrap"]
+        defaults: dict[str, Any] = {
+            k: v for k, v in bootstrap if k not in ("version", "preset")
+        }
+
+        return BrandBootstrapConfigFromYaml(
+            path="defaults.bootstrap",
+            version=bootstrap.get("version"),
+            preset=bootstrap.get("preset"),
+            **defaults,
+        )
 
 
 class ThemeBrand(Theme):
@@ -211,6 +307,7 @@ class ThemeBrand(Theme):
         # Brand rules (now in forwards order)
         self._add_rules_brand_colors(css_vars_colors)
         self._add_sass_brand_rules()
+        self._add_brand_bootstrap_other(brand_bootstrap)
 
     def _get_theme_name(self, brand: Brand) -> str:
         if not brand.meta or not brand.meta.name:
@@ -436,6 +533,14 @@ class ThemeBrand(Theme):
     def _add_rules_brand_colors(self, css_vars_colors: list[str]):
         self.add_rules("\n// *---- brand.color.palette ----* //")
         self.add_rules(":root {", *css_vars_colors, "}")
+
+    def _add_brand_bootstrap_other(self, bootstrap: BrandBootstrapConfig):
+        if bootstrap.functions:
+            self.add_functions(bootstrap.functions)
+        if bootstrap.mixins:
+            self.add_mixins(bootstrap.mixins)
+        if bootstrap.rules:
+            self.add_rules(bootstrap.rules)
 
     def _handle_unmapped_variable(self, unmapped: str):
         if os.environ.get("SHINY_BRAND_YML_RAISE_UNMAPPED") == "true":
