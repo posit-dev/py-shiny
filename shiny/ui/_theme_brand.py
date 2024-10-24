@@ -101,7 +101,7 @@ typography_map: dict[str, dict[str, list[str]]] = {
     },
     "monospace_inline": {
         "family": ["font-family-monospace-inline"],
-        "color": ["code-color"],
+        "color": ["code-color", "code-color-dark"],
         "background_color": ["code-bg"],
         "size": ["code-inline-font-size"],
         "weight": ["code-inline-font-weight"],
