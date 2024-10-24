@@ -436,12 +436,10 @@ class ThemeBrand(Theme):
               // If the brand foreground/background are close enough to black/white, we
               // use those values. Otherwise, we'll mix the white/black from the brand
               // fg/bg with actual white and black to get something much closer.
-              $result: (
+              @return (
                 "white": if(contrast-ratio($white, white) <= 1.15, $white, mix($white, white, 20%)),
                 "black": if(contrast-ratio($black, black) <= 1.15, $black, mix($black, black, 20%)),
               );
-
-              @return $result;
             }
             """
         )
