@@ -11,7 +11,6 @@ from htmltools import HTMLDependency
 
 from .._versions import bootstrap as v_bootstrap
 from ._theme import Theme
-from .css import CssUnit, as_css_unit
 
 YamlScalarType = Union[str, int, bool, float, None]
 
@@ -383,7 +382,7 @@ class ThemeBrand(Theme):
             for prop_key, prop_value in prop.items():
                 if prop_key in typography_map[field]:
                     if field == "base" and prop_key == "size":
-                        prop_value = str(maybe_convert_font_size_to_rem(prop_value))
+                        prop_value = maybe_convert_font_size_to_rem(prop_value)
 
                     typo_sass_vars = typography_map[field][prop_key]
                     for typo_sass_var in typo_sass_vars:
@@ -563,7 +562,7 @@ class ThemeBrand(Theme):
         return [fonts_dep, *theme_deps]
 
 
-def maybe_convert_font_size_to_rem(x: str) -> CssUnit:
+def maybe_convert_font_size_to_rem(x: str) -> str:
     """
     Convert a font size to rem
 
@@ -579,7 +578,6 @@ def maybe_convert_font_size_to_rem(x: str) -> CssUnit:
     7. `42.3mm` is `1rem`.
     """
     x_og = f"{x}"
-    x = as_css_unit(x)
 
     value, unit = split_css_value_and_unit(x)
 
@@ -587,7 +585,7 @@ def maybe_convert_font_size_to_rem(x: str) -> CssUnit:
         return x
 
     if unit == "em":
-        return as_css_unit(f"{value}rem")
+        return f"{value}rem"
 
     scale = {
         "%": 100,
@@ -599,7 +597,7 @@ def maybe_convert_font_size_to_rem(x: str) -> CssUnit:
     }
 
     if unit in scale:
-        return as_css_unit(f"{float(value) / scale[unit]}rem")
+        return f"{float(value) / scale[unit]}rem"
 
     raise ValueError(
         f"Shiny does not support brand.yml font sizes in {unit} units ({x_og!r})"
