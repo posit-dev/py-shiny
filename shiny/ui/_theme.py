@@ -568,10 +568,7 @@ def check_is_valid_preset(preset: str | None) -> ShinyThemePreset:
 def check_theme_pkg_installed(pkg: str, spec: str | None = None) -> None:
     import importlib.util
 
-    if spec is None:
-        spec = pkg
-
-    if importlib.util.find_spec(spec) is None:
+    if importlib.util.find_spec(spec or pkg) is None:
         raise ImportError(
             f"The '{pkg}' package is required to compile custom themes. "
             'Please install it with `pip install {pkg}` or `pip install "shiny[theme]"`.',
