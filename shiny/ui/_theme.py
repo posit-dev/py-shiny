@@ -605,7 +605,7 @@ def path_pkg_preset(preset: ShinyThemePreset, *args: str) -> str:
     return pathlib.Path(path).as_posix()
 
 
-def check_is_valid_preset(preset: str | None) -> ShinyThemePreset:
+def check_is_valid_preset(preset: str) -> ShinyThemePreset:
     if preset not in shiny_theme_presets:
         raise ValueError(
             f"Invalid preset '{preset}'.\n"
