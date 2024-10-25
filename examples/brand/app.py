@@ -16,7 +16,7 @@ theme.add_rules((Path(__file__).parent / "_colors.scss").read_text())
 app_ui = ui.page_navbar(
     ui.nav_panel(
         "Input Output Demo",
-        ui.page_sidebar(
+        ui.layout_sidebar(
             ui.sidebar(
                 ui.input_slider("slider1", "Numeric Slider Input", 0, 11, 11),
                 ui.input_numeric("numeric1", "Numeric Input Widget", 30),
