@@ -508,9 +508,59 @@ class Theme:
         Create a custom Shiny theme from a `_brand.yml`
 
         Creates a custom Shiny theme for your brand using
-        [brand.yml](https://posit-dev.github.io/brand-yml), which may be either an
-        instance of :class:`brand_yml.Brand` or a :class:`Path` used by
-        :meth:`brand_yml.Brand.from_yaml` to locate the `_brand.yml` file.
+        [brand.yml](https://posit-dev.github.io/brand-yml), a single YAML file that
+        describes the brand's color and typography. Learn more about writing a
+        `_brand.yml` file for your Brand at the
+        [brand.yml homepage](https://posit-dev.github.io/brand-yml).
+
+        As a simple example, suppose your brand guidelines include a color palette with
+        custom orange and black colors. The orange is used as the primary accent color
+        and the black for all text. For typography, the brand also uses
+        [Roboto](https://fonts.google.com/specimen/Roboto?query=roboto) and
+        [Roboto Mono](https://fonts.google.com/specimen/Roboto+Mono?query=roboto) from
+        Google Fonts for text and monospace-styled text, respectively. Here's a
+        `_brand.yml` file for this brand:
+
+        ```{.yaml filename="_brand.yml"}
+        meta:
+          name: brand.yml Example
+
+        color:
+          palette:
+            orange: "#F96302"
+            black: "#000000"
+          foreground: black
+          primary: orange
+
+        typography:
+          fonts:
+            - family: Roboto
+              source: google
+            - family: Roboto Mono
+              source: google
+          base: Roboto
+          monospace: Roboto Mono
+        ```
+
+        You can store the `_brand.yml` file next to your Shiny `app.py` or, for larger
+        projects, in a parent folder. To use a theme generated from the `_brand.yml`
+        file, call :meth:`~shiny.ui.Theme.from_brand` on `__file__` and pass the result
+        to the `theme` argument of :func:`~shiny.express.ui.page_opts` (Shiny Express)
+        or the `theme` argument of `shiny.ui.page_*` functions, like
+        :func:`~shiny.ui.page_sidebar`.
+
+        ```{.python filename="app.py"}
+        from shiny.express import input, render, ui
+
+        ui.page_opts(theme=ui.Theme.from_brand(__file__))
+
+        ui.input_slider("n", "N", 0, 100, 20)
+
+
+        @render.code
+        def txt():
+            return f"n*2 is {input.n() * 2}"
+        ```
 
         Parameters
         ----------
