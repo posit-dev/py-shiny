@@ -220,8 +220,8 @@ class BrandBootstrapConfig:
 
         defaults: dict[str, YamlScalarType] = {}
 
-        d_bootstrap = BrandBootstrapConfig._brand_defaults_bootstrap(brand)
-        d_shiny = BrandBootstrapConfig._brand_defaults_shiny(brand)
+        d_bootstrap = cls._brand_defaults_bootstrap(brand)
+        d_shiny = cls._brand_defaults_shiny(brand)
 
         defaults.update(d_bootstrap.defaults or {})
         defaults.update(d_shiny.defaults or {})
