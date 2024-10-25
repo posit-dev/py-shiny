@@ -221,7 +221,7 @@ class BrandBootstrapConfig:
     @classmethod
     def from_brand(cls, brand: "Brand"):
         if not brand.defaults:
-            return cls(version=v_bootstrap, preset="shiny")
+            return cls()
 
         shiny_args = {}
         if "shiny" in brand.defaults and "theme" in brand.defaults["shiny"]:
