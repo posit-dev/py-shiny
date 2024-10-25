@@ -104,7 +104,8 @@ typography:
 
 defaults:
   bootstrap:
-    my-pink: "$brand-pink"
+    defaults:
+      my-pink: "$brand-pink"
   shiny:
     theme:
       preset: shiny

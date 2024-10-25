@@ -122,6 +122,8 @@ typography_map: dict[str, dict[str, list[str]]] = {
 
 
 class BrandBootstrapConfigFromYaml:
+    """Validate a Bootstrap config from a YAML source"""
+
     def __init__(
         self,
         path: str,
@@ -133,7 +135,8 @@ class BrandBootstrapConfigFromYaml:
         rules: Any = None,
     ):
 
-        self.path = path
+        # TODO: Remove `path` and handle in try/except block in caller
+        self._path = path
         self.version = version
         self.preset: str | None = self._validate_str(preset, "preset")
         self.functions: str | None = self._validate_str(functions, "functions")
@@ -148,29 +151,31 @@ class BrandBootstrapConfigFromYaml:
             return x
 
         raise ValueError(
-            f"Invalid brand `{self.path}.{param}`. Must be a string or empty."
+            f"Invalid brand `{self._path}.{param}`. Must be a string or empty."
         )
 
     def _validate_defaults(self, x: Any) -> dict[str, YamlScalarType] | None:
         if x is None:
             return None
 
-        path = self.path
-        if path == "defaults.shiny.theme":
-            path += ".defaults"
-
         if not isinstance(x, dict):
-            raise ValueError(f"Invalid brand `{path}`, must be a dictionary.")
+            raise ValueError(
+                f"Invalid brand `{self._path}.defaults`, must be a dictionary."
+            )
 
         y: dict[Any, Any] = x
 
         if not all([isinstance(k, str) for k in y.keys()]):
-            raise ValueError(f"Invalid brand `{path}`, all keys must be strings.")
+            raise ValueError(
+                f"Invalid brand `{self._path}.defaults`, all keys must be strings."
+            )
 
         if not all(
             [v is None or isinstance(v, (str, int, float, bool)) for v in y.values()]
         ):
-            raise ValueError(f"Invalid brand `{path}`, all values must be scalar.")
+            raise ValueError(
+                f"Invalid brand `{self._path}.defaults`, all values must be scalar."
+            )
 
         res: dict[str, YamlScalarType] = y
         return res
@@ -217,52 +222,38 @@ class BrandBootstrapConfig:
         if not brand.defaults:
             return cls(version=v_bootstrap, preset="shiny")
 
-        defaults: dict[str, YamlScalarType] = {}
+        shiny_args = {}
+        if "shiny" in brand.defaults and "theme" in brand.defaults["shiny"]:
+            shiny_args = brand.defaults["shiny"]["theme"]
 
-        d_bootstrap = cls._brand_defaults_bootstrap(brand)
-        d_shiny = cls._brand_defaults_shiny(brand)
+        shiny = BrandBootstrapConfigFromYaml(
+            path="defaults.shiny.theme",
+            **shiny_args,
+        )
 
-        defaults.update(d_bootstrap.defaults or {})
-        defaults.update(d_shiny.defaults or {})
+        bs_args = {}
+        if "bootstrap" in brand.defaults:
+            bs_args = brand.defaults["bootstrap"]
+
+        bootstrap = BrandBootstrapConfigFromYaml(
+            path="defaults.bootstrap",
+            **bs_args,
+        )
+
+        # now combine bootstrap and shiny config options in a way that makes sense
+        def join_str(x: str | None, y: str | None):
+            return "\n".join([z for z in [x, y] if z is not None])
+
+        defaults = bootstrap.defaults or {}
+        defaults.update(shiny.defaults or {})
 
         return cls(
-            version=d_shiny.version or d_bootstrap.version or v_bootstrap,
-            preset=d_shiny.preset or d_bootstrap.preset,
-            functions=d_shiny.functions,
+            version=shiny.version or bootstrap.version or v_bootstrap,
+            preset=shiny.preset or bootstrap.preset,
+            functions=join_str(bootstrap.functions, shiny.functions),
             defaults=defaults,
-            mixins=d_shiny.mixins,
-            rules=d_shiny.rules,
-        )
-
-    @staticmethod
-    def _brand_defaults_shiny(brand: Brand) -> BrandBootstrapConfigFromYaml:
-        if (
-            not brand.defaults
-            or not isinstance(brand.defaults.get("shiny"), dict)
-            or not isinstance(brand.defaults["shiny"].get("theme"), dict)
-        ):
-            return BrandBootstrapConfigFromYaml(path="defaults.shiny.theme")
-
-        return BrandBootstrapConfigFromYaml(
-            path="defaults.shiny.theme",
-            **brand.defaults["shiny"]["theme"],
-        )
-
-    @staticmethod
-    def _brand_defaults_bootstrap(brand: Brand) -> BrandBootstrapConfigFromYaml:
-        if not brand.defaults or not isinstance(brand.defaults.get("bootstrap"), dict):
-            return BrandBootstrapConfigFromYaml(path="defaults.bootstrap")
-
-        bootstrap: dict[str, Any] = brand.defaults["bootstrap"]
-        defaults: dict[str, Any] = {
-            k: v for k, v in bootstrap.items() if k not in ("version", "preset")
-        }
-
-        return BrandBootstrapConfigFromYaml(
-            path="defaults.bootstrap",
-            version=bootstrap.get("version"),
-            preset=bootstrap.get("preset"),
-            defaults=defaults,
+            mixins=join_str(bootstrap.mixins, shiny.mixins),
+            rules=join_str(bootstrap.rules, shiny.rules),
         )
 
 
