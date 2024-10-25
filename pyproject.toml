@@ -54,7 +54,7 @@ dependencies = [
 [project.optional-dependencies]
 theme = [
     "libsass>=0.23.0",
-    "brand_yml>=0.1.0rc6"
+    "brand_yml@git+https://github.com/posit-dev/brand-yml"
 ]
 test = [
     "pytest>=6.2.4",
