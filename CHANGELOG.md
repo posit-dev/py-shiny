@@ -31,6 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `chat_ui()` and `Chat.ui()` gain a `messages` parameter for providing starting messages. (#1736)
 
+* Shiny now supports theming via [brand.yml](https://posit-dev.github.io/brand-yml) with a single `_brand.yml` file. Call `ui.Theme.from_brand()` with `__file__` or the path to a `_brand.yml` file and pass the resulting theme to the `theme` argument of `express.ui.page_opts()` (Shiny Express) or `ui.page_*()` functions (Shiny Core) to apply the brand theme to the entire app. (#1743)
+
 ### Other changes
 
 * Incorporated `orjson` for faster data serialization in `@render.data_frame` outputs. (#1570)
