@@ -252,9 +252,9 @@ def server(input, output, session):
     @render.plot
     def plot1():
         colors = {
-            "foreground": "#000000",
-            "background": "#FFFFFF",
-            "primary": "#4463ff",
+            "foreground": theme.brand.color.foreground,
+            "background": theme.brand.color.background,
+            "primary": theme.brand.color.primary,
         }
 
         if theme.brand.color:
