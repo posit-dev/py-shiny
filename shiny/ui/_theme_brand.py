@@ -3,9 +3,10 @@ from __future__ import annotations
 import os
 import warnings
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 
-from brand_yml import Brand
+if TYPE_CHECKING:
+    from brand_yml import Brand
 from htmltools import HTMLDependency
 
 from .._versions import bootstrap as v_bootstrap
@@ -218,7 +219,7 @@ class BrandBootstrapConfig:
         self.rules = rules
 
     @classmethod
-    def from_brand(cls, brand: Brand):
+    def from_brand(cls, brand: "Brand"):
         if not brand.defaults:
             return cls(version=v_bootstrap, preset="shiny")
 
@@ -261,7 +262,7 @@ class BrandBootstrapConfig:
 class ThemeBrand(Theme):
     def __init__(
         self,
-        brand: Brand,
+        brand: "Brand",
         *,
         include_paths: Optional[str | Path | list[str | Path]] = None,
     ):
@@ -287,12 +288,12 @@ class ThemeBrand(Theme):
         # Theme -----------------------------------------------------------------------
         # Defaults are added in reverse order, so each chunk appears above the next
         # layer of defaults. The intended order in the final output is:
-        # 1. Brand Color palette
-        # 2. Brand Bootstrap Sass vars
-        # 3. Brand theme colors
-        # 4. Brand typography
-        # 5. Gray scale variables from Brand fg/bg or black/white
-        # 6. Fallback vars needed by additional Brand rules
+        # 1. "Brand" Color palette
+        # 2. "Brand" Bootstrap Sass vars
+        # 3. "Brand" theme colors
+        # 4. "Brand" typography
+        # 5. Gray scale variables from "Brand" fg/bg or black/white
+        # 6. Fallback vars needed by additional "Brand" rules
 
         self.add_defaults("", "// *---- brand: end of defaults ----* //", "")
         self._add_sass_ensure_variables()
@@ -303,12 +304,12 @@ class ThemeBrand(Theme):
             self._add_defaults_hdr("bootstrap defaults", **brand_bootstrap.defaults)
         self._add_defaults_hdr("brand colors", **sass_vars_brand_colors)
 
-        # Brand rules (now in forwards order)
+        # "Brand" rules (now in forwards order)
         self._add_rules_brand_colors(css_vars_brand)
         self._add_sass_brand_rules()
         self._add_brand_bootstrap_other(brand_bootstrap)
 
-    def _get_theme_name(self, brand: Brand) -> str:
+    def _get_theme_name(self, brand: "Brand") -> str:
         if not brand.meta or not brand.meta.name:
             return "brand"
 
@@ -316,7 +317,7 @@ class ThemeBrand(Theme):
 
     @staticmethod
     def _prepare_color_vars(
-        brand: Brand,
+        brand: "Brand",
     ) -> tuple[dict[str, str], dict[str, str], list[str]]:
         """Colors: create a dictionary of Sass variables and a list of brand CSS variables"""
         if not brand.color:
@@ -348,12 +349,12 @@ class ThemeBrand(Theme):
             # => CSS var: `--brand-{name}: {value}`
             brand_css_vars.append(f"--brand-{pal_name}: {pal_color};")
 
-        # We keep Sass and Brand vars separate so we can ensure Brand Sass vars come
+        # We keep Sass and "Brand" vars separate so we can ensure "Brand" Sass vars come
         # first in the compiled Sass definitions.
         return mapped, brand_sass_vars, brand_css_vars
 
     @staticmethod
-    def _prepare_typography_vars(brand: Brand) -> dict[str, str]:
+    def _prepare_typography_vars(brand: "Brand") -> dict[str, str]:
         """Typography: Create a list of Bootstrap Sass variables"""
         mapped: dict[str, str] = {}
 
@@ -474,7 +475,7 @@ class ThemeBrand(Theme):
         )
 
     def _add_sass_brand_rules(self):
-        """Additional rules to fill in Bootstrap styles for Brand parameters"""
+        """Additional rules to fill in Bootstrap styles for "Brand" parameters"""
         self.add_rules(
             """
             // *---- brand: brand rules to augment Bootstrap rules ----* //
