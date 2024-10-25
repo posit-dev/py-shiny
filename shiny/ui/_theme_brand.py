@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-import re
 import warnings
 from pathlib import Path
 from typing import Any, Optional, Union
@@ -81,7 +80,7 @@ corresponding Bootstrap color Sass variable.
 typography_map: dict[str, dict[str, list[str]]] = {
     "base": {
         "family": ["font-family-base"],
-        "size": ["font-size-base"],
+        "size": ["font-size-base"],  # TODO: consider using $font-size-root instead
         "line_height": ["line-height-base"],
         "weight": ["font-weight-base"],
     },
@@ -372,6 +371,7 @@ class ThemeBrand(Theme):
         brand_typography = brand.typography.model_dump(
             exclude={"fonts"},
             exclude_none=True,
+            context={"typography_base_size_unit": "rem"},
         )
 
         for field, prop in brand_typography.items():
@@ -381,9 +381,6 @@ class ThemeBrand(Theme):
 
             for prop_key, prop_value in prop.items():
                 if prop_key in typography_map[field]:
-                    if field == "base" and prop_key == "size":
-                        prop_value = maybe_convert_font_size_to_rem(prop_value)
-
                     typo_sass_vars = typography_map[field][prop_key]
                     for typo_sass_var in typo_sass_vars:
                         mapped[typo_sass_var] = prop_value
@@ -560,53 +557,3 @@ class ThemeBrand(Theme):
             return theme_deps
 
         return [fonts_dep, *theme_deps]
-
-
-def maybe_convert_font_size_to_rem(x: str) -> str:
-    """
-    Convert a font size to rem
-
-    Bootstrap expects base font size to be in `rem`. This function converts `em`, `%`,
-    `px`, `pt` to `rem`:
-
-    1. `em` is directly replace with `rem`.
-    2. `1%` is `0.01rem`, e.g. `90%` becomes `0.9rem`.
-    3. `16px` is `1rem`, e.g. `18px` becomes `1.125rem`.
-    4. `12pt` is `1rem`.
-    5. `0.1666in` is `1rem`.
-    6. `4.234cm` is `1rem`.
-    7. `42.3mm` is `1rem`.
-    """
-    x_og = f"{x}"
-
-    value, unit = split_css_value_and_unit(x)
-
-    if unit == "rem":
-        return x
-
-    if unit == "em":
-        return f"{value}rem"
-
-    scale = {
-        "%": 100,
-        "px": 16,
-        "pt": 12,
-        "in": 96 / 16,  # 96 px/inch
-        "cm": 96 / 16 * 2.54,  # inch -> cm
-        "mm": 16 / 96 * 25.4,  # cm -> mm
-    }
-
-    if unit in scale:
-        return f"{float(value) / scale[unit]}rem"
-
-    raise ValueError(
-        f"Shiny does not support brand.yml font sizes in {unit} units ({x_og!r})"
-    )
-
-
-def split_css_value_and_unit(x: str) -> tuple[str, str]:
-    match = re.match(r"^(-?\d*\.?\d+)([a-zA-Z%]*)$", x)
-    if not match:
-        raise ValueError(f"Invalid CSS value format: {x}")
-    value, unit = match.groups()
-    return value, unit

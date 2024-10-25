@@ -71,7 +71,7 @@ typography:
       display: swap
   base:
     family: Monda
-    size: 1em
+    size: 17px
     weight: 400
     line-height: 1.5
   headings:
