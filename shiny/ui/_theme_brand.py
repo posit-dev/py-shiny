@@ -399,7 +399,8 @@ class ThemeBrand(Theme):
 
     def _add_sass_ensure_variables(self):
         """Ensure the variables we create to augment Bootstrap's variables exist"""
-        self.add_defaults(
+        self._add_defaults_hdr(
+            "added variables",
             **{
                 "code-font-weight": None,
                 "code-inline-font-weight": None,
@@ -409,9 +410,8 @@ class ThemeBrand(Theme):
                 "code-block-line-height": None,
                 "link-bg": None,
                 "link-weight": None,
-            }
+            },
         )
-        self.add_defaults("// *---- brand: added variables ---* //")
 
     def _add_sass_brand_grays(self):
         """
