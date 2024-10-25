@@ -244,7 +244,8 @@ class BrandBootstrapConfig:
         def join_str(x: str | None, y: str | None):
             return "\n".join([z for z in [x, y] if z is not None])
 
-        defaults = bootstrap.defaults or {}
+        defaults: dict[str, YamlScalarType] = {}
+        defaults.update(bootstrap.defaults or {})
         defaults.update(shiny.defaults or {})
 
         return cls(
