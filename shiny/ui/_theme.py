@@ -5,8 +5,10 @@ import pathlib
 import re
 import tempfile
 import textwrap
-from typing import Any, Literal, Optional, Sequence, TypeVar
+from typing import TYPE_CHECKING, Any, Literal, Optional, Sequence, TypeVar
 
+if TYPE_CHECKING:
+    from brand_yml import Brand
 from htmltools import HTMLDependency
 
 from .._docstring import add_example
@@ -129,12 +131,11 @@ class Theme:
 
     def __init__(
         self,
-        preset: ShinyThemePreset = "shiny",
+        preset: str | None = None,
         name: Optional[str] = None,
         include_paths: Optional[str | pathlib.Path | list[str | pathlib.Path]] = None,
     ):
-        check_is_valid_preset(preset)
-        self._preset: ShinyThemePreset = preset
+        self._preset: ShinyThemePreset = check_is_valid_preset(preset or "shiny")
         self.name = name
         # 2024-06-21: `version` is not exposed because we currently support only BS 5.
         # In the future, the Bootstrap version could be chosen by the user on init.
@@ -409,7 +410,7 @@ class Theme:
             self._css = self._read_precompiled_css()
             return self._css
 
-        check_libsass_installed()
+        check_theme_pkg_installed("libsass", "sass")
         import sass
 
         args: SassCompileArgs = {} if compile_args is None else compile_args
@@ -460,25 +461,29 @@ class Theme:
                 "href": css_path.name,
                 "data-shiny-theme": self.name or self._preset,  # type: ignore
             },
+            # Branded themes re-use this tempdir
+            all_files=False,
         )
 
     def _html_dependency_precompiled(self) -> HTMLDependency:
         return self._dep_create(css_path=self._dep_css_precompiled_path())
 
-    def _html_dependency(self) -> HTMLDependency:
+    def _html_dependencies(self) -> list[HTMLDependency]:
         """
         Create an `HTMLDependency` object from the theme.
 
         Returns
         -------
         :
-            An :class:`~htmltools.HTMLDependency` object representing the theme. In
-            most cases, you should not need to call this method directly. Instead, pass
-            the `Theme` object directly to the `theme` argument of any Shiny page
-            function.
+            An list of :class:`~htmltools.HTMLDependency` objects representing the
+            theme. In most cases, you should not need to call this method directly.
+            Instead, pass the `Theme` object directly to the `theme` argument of any
+            Shiny page function.
         """
+        # Note: return a list so that this method can be overridden in subclasses of
+        # Theme that want to attach additional dependencies to the theme dependency.
         if self._can_use_precompiled():
-            return self._html_dependency_precompiled()
+            return [self._html_dependency_precompiled()]
 
         css_name = self._dep_css_name()
         css_path = os.path.join(self._get_css_tempdir(), css_name)
@@ -487,7 +492,7 @@ class Theme:
             with open(css_path, "w") as css_file:
                 css_file.write(self.to_css())
 
-        return self._dep_create(css_path)
+        return [self._dep_create(css_path)]
 
     def tagify(self) -> None:
         raise SyntaxError(
@@ -496,6 +501,90 @@ class Theme:
             "`shiny.express.ui.page_opts()` (Shiny Express) "
             "or any `shiny.ui.page_*()` function (Shiny Core)."
         )
+
+    @classmethod
+    def from_brand(cls, brand: "str | pathlib.Path | Brand"):
+        """
+        Create a custom Shiny theme from a `_brand.yml`
+
+        Creates a custom Shiny theme for your brand using
+        [brand.yml](https://posit-dev.github.io/brand-yml), a single YAML file that
+        describes the brand's color and typography. Learn more about writing a
+        `_brand.yml` file for your brand at the
+        [brand.yml homepage](https://posit-dev.github.io/brand-yml).
+
+        As a simple example, suppose your brand guidelines include a color palette with
+        custom orange and black colors. The orange is used as the primary accent color
+        and the black for all text. For typography, the brand also uses
+        [Roboto](https://fonts.google.com/specimen/Roboto?query=roboto) and
+        [Roboto Mono](https://fonts.google.com/specimen/Roboto+Mono?query=roboto) from
+        Google Fonts for text and monospace-styled text, respectively. Here's a
+        `_brand.yml` file for this brand:
+
+        ```{.yaml filename="_brand.yml"}
+        meta:
+          name: brand.yml Example
+
+        color:
+          palette:
+            orange: "#F96302"
+            black: "#000000"
+          foreground: black
+          primary: orange
+
+        typography:
+          fonts:
+            - family: Roboto
+              source: google
+            - family: Roboto Mono
+              source: google
+          base: Roboto
+          monospace: Roboto Mono
+        ```
+
+        You can store the `_brand.yml` file next to your Shiny `app.py` or, for larger
+        projects, in a parent folder. To use a theme generated from the `_brand.yml`
+        file, call :meth:`~shiny.ui.Theme.from_brand` on `__file__` and pass the result
+        to the `theme` argument of :func:`~shiny.express.ui.page_opts` (Shiny Express)
+        or the `theme` argument of `shiny.ui.page_*` functions, like
+        :func:`~shiny.ui.page_sidebar`.
+
+        ```{.python filename="app.py"}
+        from shiny.express import input, render, ui
+
+        ui.page_opts(theme=ui.Theme.from_brand(__file__))
+
+        ui.input_slider("n", "N", 0, 100, 20)
+
+
+        @render.code
+        def txt():
+            return f"n*2 is {input.n() * 2}"
+        ```
+
+        Parameters
+        ----------
+        brand
+            A :class:`brand_yml.Brand` instance, or a path to help locate `_brand.yml`.
+            For a path, you can pass `__file__` or a directory containing the
+            `_brand.yml` or a path directly to the `_brand.yml` file.
+
+        Returns
+        -------
+        :
+            A :class:`shiny.ui.Theme` instance with a custom Shiny theme created from
+            the brand guidelines (see :class:`brand_yml.Brand`).
+        """
+        check_theme_pkg_installed("brand_yml")
+
+        from brand_yml import Brand
+
+        from ._theme_brand import ThemeBrand  # avoid circular import
+
+        if not isinstance(brand, Brand):
+            brand = Brand.from_yaml(brand)
+
+        return ThemeBrand(brand)
 
 
 def path_pkg_preset(preset: ShinyThemePreset, *args: str) -> str:
@@ -516,21 +605,23 @@ def path_pkg_preset(preset: ShinyThemePreset, *args: str) -> str:
     return pathlib.Path(path).as_posix()
 
 
-def check_is_valid_preset(preset: ShinyThemePreset) -> None:
+def check_is_valid_preset(preset: str) -> ShinyThemePreset:
     if preset not in shiny_theme_presets:
         raise ValueError(
             f"Invalid preset '{preset}'.\n"
             + f"""Expected one of: "{'", "'.join(shiny_theme_presets)}".""",
         )
 
+    return preset
 
-def check_libsass_installed() -> None:
+
+def check_theme_pkg_installed(pkg: str, spec: str | None = None) -> None:
     import importlib.util
 
-    if importlib.util.find_spec("sass") is None:
+    if importlib.util.find_spec(spec or pkg) is None:
         raise ImportError(
-            "The 'libsass' package is required to compile custom themes. "
-            'Please install it with `pip install libsass` or `pip install "shiny[theme]"`.',
+            f"The '{pkg}' package is required to compile custom themes. "
+            'Please install it with `pip install {pkg}` or `pip install "shiny[theme]"`.',
         )
 
 
