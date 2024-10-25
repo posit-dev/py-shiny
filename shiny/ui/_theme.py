@@ -510,7 +510,7 @@ class Theme:
         Creates a custom Shiny theme for your brand using
         [brand.yml](https://posit-dev.github.io/brand-yml), a single YAML file that
         describes the brand's color and typography. Learn more about writing a
-        `_brand.yml` file for your Brand at the
+        `_brand.yml` file for your brand at the
         [brand.yml homepage](https://posit-dev.github.io/brand-yml).
 
         As a simple example, suppose your brand guidelines include a color palette with
