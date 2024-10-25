@@ -353,12 +353,10 @@ class ThemeBrand(Theme):
                 mapped[pal_name] = pal_color
 
             # Create Sass and CSS variables for the brand color palette
-            color_var = sanitize_sass_var_name(pal_name)
-
             # => Sass var: `$brand-{name}: {value}`
-            brand_sass_vars.update({f"brand-{color_var}": pal_color})
+            brand_sass_vars.update({f"brand-{pal_name}": pal_color})
             # => CSS var: `--brand-{name}: {value}`
-            brand_css_vars.append(f"--brand-{color_var}: {pal_color};")
+            brand_css_vars.append(f"--brand-{pal_name}: {pal_color};")
 
         # We keep Sass and Brand vars separate so we can ensure Brand Sass vars come
         # first in the compiled Sass definitions.
@@ -563,11 +561,6 @@ class ThemeBrand(Theme):
             return theme_deps
 
         return [fonts_dep, *theme_deps]
-
-
-def sanitize_sass_var_name(x: str) -> str:
-    x = re.sub(r"""['"]""", "", x)
-    return re.sub(r"[^a-zA-Z0-9_-]+", "-", x)
 
 
 def maybe_convert_font_size_to_rem(x: str) -> CssUnit:
