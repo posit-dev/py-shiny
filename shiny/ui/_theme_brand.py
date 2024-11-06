@@ -392,8 +392,10 @@ class ThemeBrand(Theme):
             "added variables",
             **{
                 "code-font-weight": None,
+                "font-family-monospace-inline": None,
                 "code-inline-font-weight": None,
                 "code-inline-font-size": None,
+                "font-family-monospace-block": None,
                 "code-block-font-weight": None,
                 "code-block-font-size": None,
                 "code-block-line-height": None,
@@ -481,23 +483,25 @@ class ThemeBrand(Theme):
             // *---- brand: brand rules to augment Bootstrap rules ----* //
             // https://github.com/twbs/bootstrap/blob/5c2f2e7e/scss/_root.scss#L82
             :root {
-                --#{$prefix}link-bg: #{$link-bg};
-                --#{$prefix}link-weight: #{$link-weight};
+              --#{$prefix}link-bg: #{$link-bg};
+              --#{$prefix}link-weight: #{$link-weight};
             }
             // https://github.com/twbs/bootstrap/blob/5c2f2e7e/scss/_reboot.scss#L244
             a {
-                background-color: var(--#{$prefix}link-bg);
-                font-weight: var(--#{$prefix}link-weight);
+              background-color: var(--#{$prefix}link-bg);
+              font-weight: var(--#{$prefix}link-weight);
             }
             code {
-                font-weight: $code-font-weight;
+              font-weight: $code-font-weight;
             }
-            code {
+            code:not(pre > code) {
+              font-family: $font-family-monospace-inline;
               font-weight: $code-inline-font-weight;
               font-size: $code-inline-font-size;
             }
             // https://github.com/twbs/bootstrap/blob/30e01525/scss/_reboot.scss#L287
             pre {
+              font-family: $font-family-monospace-block;
               font-weight: $code-block-font-weight;
               font-size: $code-block-font-size;
               line-height: $code-block-line-height;
