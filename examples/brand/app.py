@@ -252,12 +252,12 @@ def server(input, output, session):
     @render.plot
     def plot1():
         colors = {
-            "foreground": theme.brand.color.foreground,
-            "background": theme.brand.color.background,
-            "primary": theme.brand.color.primary,
+            "foreground": "#000000",
+            "background": "#FFFFFF",
+            "primary": "#007BC2",
         }
 
-        if theme.brand.color:
+        if hasattr(theme, "brand") and theme.brand.color:
             colors.update(theme.brand.color.to_dict("theme"))
 
         if input.color_mode() == "dark":
