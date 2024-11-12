@@ -70,7 +70,7 @@ def reload_end():
 
     async def _() -> None:
         options = {
-            "extra_headers": {
+            "additional_headers": {
                 "Shiny-Autoreload-Secret": os.getenv("SHINY_AUTORELOAD_SECRET", ""),
             }
         }
@@ -186,6 +186,8 @@ async def _coro_main(
     port: int, app_url: str, secret: str, launch_browser: bool
 ) -> None:
     import websockets
+    import websockets.asyncio.server
+    import websockets.http11
 
     reload_now: asyncio.Event = asyncio.Event()
 
@@ -198,18 +200,22 @@ async def _coro_main(
         reload_now.set()
         reload_now.clear()
 
-    async def reload_server(conn: websockets.server.WebSocketServerProtocol):
+    async def reload_server(conn: websockets.asyncio.server.ServerConnection):
         try:
-            if conn.path == "/autoreload":
+            if conn.request is None:
+                raise RuntimeError(
+                    "Autoreload server received a connection with no request"
+                )
+            elif conn.request.path == "/autoreload":
                 # The client wants to be notified when the app has reloaded. The client
                 # in this case is the web browser, specifically shiny-autoreload.js.
                 while True:
                     await reload_now.wait()
                     await conn.send("autoreload")
-            elif conn.path == "/notify":
+            elif conn.request.path == "/notify":
                 # The client is notifying us that the app has reloaded. The client in
                 # this case is the uvicorn worker process (see reload_end(), above).
-                req_secret = conn.request_headers.get("Shiny-Autoreload-Secret", "")
+                req_secret = conn.request.headers.get("Shiny-Autoreload-Secret", "")
                 if req_secret != secret:
                     # The client couldn't prove that they were from a child process
                     return
@@ -224,7 +230,7 @@ async def _coro_main(
     # about only WebSockets being supported. This is not an academic problem as the
     # VSCode extension used in RSW sniffs out ports that are being listened on, which
     # leads to confusion if all you get is an error.
-    async def process_request(
+    async def process_request_legacy(
         path: str, request_headers: websockets.datastructures.Headers
     ) -> Optional[tuple[http.HTTPStatus, websockets.datastructures.HeadersLike, bytes]]:
         # If there's no Upgrade header, it's not a WebSocket request.
@@ -236,8 +242,22 @@ async def _coro_main(
             await asyncio.sleep(1)
             return (http.HTTPStatus.MOVED_PERMANENTLY, [("Location", app_url)], b"")
 
+    async def process_request_new(
+        connection: websockets.asyncio.server.ServerConnection,
+        request: websockets.http11.Request,
+    ) -> websockets.http11.Response | None:
+        if request.headers.get("Upgrade") is None:
+            return websockets.http11.Response(
+                status_code=http.HTTPStatus.MOVED_PERMANENTLY,
+                reason_phrase="Moved Permanently",
+                headers=websockets.Headers(Location=app_url),
+                body=None,
+            )
+        else:
+            return None
+
     async with websockets.serve(
-        reload_server, "127.0.0.1", port, process_request=process_request
+        reload_server, "127.0.0.1", port, process_request=process_request_new
     ):
         await asyncio.Future()  # wait forever
 
