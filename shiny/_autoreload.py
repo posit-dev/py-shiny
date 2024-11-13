@@ -179,6 +179,7 @@ def start_server(port: int, app_port: int, launch_browser: bool):
     # we think we have a problem. You can unsuppress by setting the environment variable
     # to DEBUG.
     loglevel = os.getenv("SHINY_AUTORELOAD_LOG_LEVEL", "CRITICAL")
+    logging.getLogger("websockets").setLevel(loglevel)
 
     app_url = get_proxy_url(f"http://127.0.0.1:{app_port}/")
 
@@ -187,19 +188,17 @@ def start_server(port: int, app_port: int, launch_browser: bool):
     threading.Thread(
         None,
         _thread_main,
-        args=[port, app_url, secret, launch_browser, loglevel],
+        args=[port, app_url, secret, launch_browser],
         daemon=True,
     ).start()
 
 
-def _thread_main(
-    port: int, app_url: str, secret: str, launch_browser: bool, loglevel: str
-):
-    asyncio.run(_coro_main(port, app_url, secret, launch_browser, loglevel))
+def _thread_main(port: int, app_url: str, secret: str, launch_browser: bool):
+    asyncio.run(_coro_main(port, app_url, secret, launch_browser))
 
 
 async def _coro_main(
-    port: int, app_url: str, secret: str, launch_browser: bool, loglevel: str
+    port: int, app_url: str, secret: str, launch_browser: bool
 ) -> None:
     import websockets
     import websockets.asyncio.server
@@ -259,9 +258,6 @@ async def _coro_main(
             )
         else:
             return None
-
-    # logging.getLogger("websockets").addHandler(logging.NullHandler())
-    logging.getLogger("websockets").setLevel(loglevel)
 
     async with websockets.asyncio.server.serve(
         reload_server, "127.0.0.1", port, process_request=process_request
