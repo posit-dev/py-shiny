@@ -169,21 +169,36 @@ def start_server(port: int, app_port: int, launch_browser: bool):
     os.environ["SHINY_AUTORELOAD_PORT"] = str(port)
     os.environ["SHINY_AUTORELOAD_SECRET"] = secret
 
+    # websockets 14.0 (and presumably later) log an error if a connection is opened and
+    # closed before any data is sent. Our VS Code extension does exactly this--opens a
+    # connection to check if the server is running, then closes it. It's better that it
+    # does this and doesn't actually perform an HTTP request because we can't guarantee
+    # that the HTTP request will be cheap (we do the same ping on both the autoreload
+    # socket and the main uvicorn socket). So better to just suppress all errors until
+    # we think we have a problem. You can unsuppress by setting the environment variable
+    # to DEBUG.
+    loglevel = os.getenv("SHINY_AUTORELOAD_LOG_LEVEL", "CRITICAL")
+
     app_url = get_proxy_url(f"http://127.0.0.1:{app_port}/")
 
     # Run on a background thread so our event loop doesn't interfere with uvicorn.
     # Set daemon=True because we don't want to keep the process alive with this thread.
     threading.Thread(
-        None, _thread_main, args=[port, app_url, secret, launch_browser], daemon=True
+        None,
+        _thread_main,
+        args=[port, app_url, secret, launch_browser, loglevel],
+        daemon=True,
     ).start()
 
 
-def _thread_main(port: int, app_url: str, secret: str, launch_browser: bool):
-    asyncio.run(_coro_main(port, app_url, secret, launch_browser))
+def _thread_main(
+    port: int, app_url: str, secret: str, launch_browser: bool, loglevel: str
+):
+    asyncio.run(_coro_main(port, app_url, secret, launch_browser, loglevel))
 
 
 async def _coro_main(
-    port: int, app_url: str, secret: str, launch_browser: bool
+    port: int, app_url: str, secret: str, launch_browser: bool, loglevel: str
 ) -> None:
     import websockets
     import websockets.asyncio.server
@@ -256,8 +271,14 @@ async def _coro_main(
         else:
             return None
 
+    # logging.getLogger("websockets").addHandler(logging.NullHandler())
+    logging.getLogger("websockets").setLevel(loglevel)
+
     async with websockets.serve(
-        reload_server, "127.0.0.1", port, process_request=process_request_new
+        reload_server,
+        "127.0.0.1",
+        port,
+        process_request=process_request_new,
     ):
         await asyncio.Future()  # wait forever
 
