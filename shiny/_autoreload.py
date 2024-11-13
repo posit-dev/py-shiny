@@ -59,6 +59,7 @@ def reload_begin():
 # Called from child process when new application instance starts up
 def reload_end():
     import websockets
+    import websockets.asyncio.client
 
     # os.kill(os.getppid(), signal.SIGUSR1)
 
@@ -75,7 +76,7 @@ def reload_end():
             }
         }
         try:
-            async with websockets.connect(
+            async with websockets.asyncio.client.connect(
                 url, **options  # pyright: ignore[reportArgumentType]
             ) as websocket:
                 await websocket.send("reload_end")
@@ -202,7 +203,7 @@ async def _coro_main(
 ) -> None:
     import websockets
     import websockets.asyncio.server
-    import websockets.http11
+    from websockets.http11 import Request, Response
 
     reload_now: asyncio.Event = asyncio.Event()
 
@@ -245,24 +246,12 @@ async def _coro_main(
     # about only WebSockets being supported. This is not an academic problem as the
     # VSCode extension used in RSW sniffs out ports that are being listened on, which
     # leads to confusion if all you get is an error.
-    async def process_request_legacy(
-        path: str, request_headers: websockets.datastructures.Headers
-    ) -> Optional[tuple[http.HTTPStatus, websockets.datastructures.HeadersLike, bytes]]:
-        # If there's no Upgrade header, it's not a WebSocket request.
-        if request_headers.get("Upgrade") is None:
-            # For some unknown reason, this fixes a tendency on GitHub Codespaces to
-            # correctly proxy through this request, but give a 404 when the redirect is
-            # followed and app_url is requested. With the sleep, both requests tend to
-            # succeed reliably.
-            await asyncio.sleep(1)
-            return (http.HTTPStatus.MOVED_PERMANENTLY, [("Location", app_url)], b"")
-
-    async def process_request_new(
+    async def process_request(
         connection: websockets.asyncio.server.ServerConnection,
-        request: websockets.http11.Request,
-    ) -> websockets.http11.Response | None:
+        request: Request,
+    ) -> Response | None:
         if request.headers.get("Upgrade") is None:
-            return websockets.http11.Response(
+            return Response(
                 status_code=http.HTTPStatus.MOVED_PERMANENTLY,
                 reason_phrase="Moved Permanently",
                 headers=websockets.Headers(Location=app_url),
@@ -274,11 +263,8 @@ async def _coro_main(
     # logging.getLogger("websockets").addHandler(logging.NullHandler())
     logging.getLogger("websockets").setLevel(loglevel)
 
-    async with websockets.serve(
-        reload_server,
-        "127.0.0.1",
-        port,
-        process_request=process_request_new,
+    async with websockets.asyncio.server.serve(
+        reload_server, "127.0.0.1", port, process_request=process_request
     ):
         await asyncio.Future()  # wait forever
 
