@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Branded theming via `ui.Theme.from_brand()` now correctly applies monospace inline and block font family choices. (#1762)
 
-* Compatibility with `websockets>=14.0`, which has changed its public APIs (#1769).
+* Compatibility with `websockets>=14.0`, which has changed its public APIs. Shiny now requires websockets 13 or later (#1769).
 
 
 ## [1.2.0] - 2024-10-29
