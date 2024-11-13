@@ -186,10 +186,7 @@ def start_server(port: int, app_port: int, launch_browser: bool):
     # Run on a background thread so our event loop doesn't interfere with uvicorn.
     # Set daemon=True because we don't want to keep the process alive with this thread.
     threading.Thread(
-        None,
-        _thread_main,
-        args=[port, app_url, secret, launch_browser],
-        daemon=True,
+        None, _thread_main, args=[port, app_url, secret, launch_browser], daemon=True
     ).start()
 
 
