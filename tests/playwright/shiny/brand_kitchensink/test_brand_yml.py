@@ -1,14 +1,17 @@
 import re
 from typing import Any, Callable, Dict
 
+from conftest import create_example_fixture
 from playwright.sync_api import Locator, Page, expect
 
 from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
+app = create_example_fixture("brand")
 
-def test_brand_yml_kitchensink(page: Page, local_app: ShinyAppProc) -> None:
-    page.goto(local_app.url)
+
+def test_brand_yml_kitchensink(page: Page, app: ShinyAppProc) -> None:
+    page.goto(app.url)
 
     expected_styles = {
         "primary_value_box": {
