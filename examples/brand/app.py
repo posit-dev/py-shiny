@@ -34,16 +34,19 @@ app_ui = ui.page_navbar(
                     "Metric 1",
                     "100",
                     theme="primary",
+                    id="value_box_primary",
                 ),
                 ui.value_box(
                     "Metric 2",
                     "200",
                     theme="secondary",
+                    id="value_box_secondary",
                 ),
                 ui.value_box(
                     "Metric 3",
                     "300",
                     theme="info",
+                    id="value_box_info",
                 ),
             ),
             ui.card(
@@ -61,13 +64,15 @@ app_ui = ui.page_navbar(
         ui.layout_column_wrap(
             ui.card(
                 ui.card_header("Button Variants"),
-                ui.input_action_button("btn1", "Default"),
-                ui.input_action_button("btn2", "Primary", class_="btn-primary"),
-                ui.input_action_button("btn3", "Secondary", class_="btn-secondary"),
-                ui.input_action_button("btn4", "Info", class_="btn-info"),
-                ui.input_action_button("btn5", "Success", class_="btn-success"),
-                ui.input_action_button("btn6", "Warning", class_="btn-warning"),
-                ui.input_action_button("btn7", "Danger", class_="btn-danger"),
+                ui.input_action_button("btn_default", "Default"),
+                ui.input_action_button("btn_primary", "Primary", class_="btn-primary"),
+                ui.input_action_button(
+                    "btn_secondary", "Secondary", class_="btn-secondary"
+                ),
+                ui.input_action_button("btn_success", "Success", class_="btn-success"),
+                ui.input_action_button("btn_danger", "Danger", class_="btn-danger"),
+                ui.input_action_button("btn_warning", "Warning", class_="btn-warning"),
+                ui.input_action_button("btn_info", "Info", class_="btn-info"),
             ),
             ui.card(
                 ui.card_header("Radio Button Examples"),
