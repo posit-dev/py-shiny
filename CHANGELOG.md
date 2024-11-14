@@ -5,13 +5,13 @@ All notable changes to Shiny for Python will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [UNRELEASED]
+## [1.2.1] - 2024-11-14
 
 ### Bug fixes
 
 * Branded theming via `ui.Theme.from_brand()` now correctly applies monospace inline and block font family choices. (#1762)
 
-* Compatibility with `websockets>=14.0`, which has changed its public APIs. Shiny now requires websockets 13 or later (#1769).
+* Compatibility with `websockets>=14.0`, which has changed its public APIs. Shiny now requires websockets 13 or later. (#1769)
 
 
 ## [1.2.0] - 2024-10-29
@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `.expect_inverse()` for Navset controllers in `shiny.playwright.controllers` now requires a `bool` value. To keep behavior the same, use `.expect_inverse(False)`. (#1668)
 
-* `.expect_layout()` for Navset controllers in `shiny.playwright.controllers` is now renamed to `.expect_fluid()` and requires a `bool` value. To keep behavior the same, use `.expect_fluid(True)` (#1668)
+* `.expect_layout()` for Navset controllers in `shiny.playwright.controllers` is now renamed to `.expect_fluid()` and requires a `bool` value. To keep behavior the same, use `.expect_fluid(True)`. (#1668)
 
 * `.expect_icon()` for Accordion controllers in `shiny.playwright.controllers` now requires a `bool` value instead of a `str`. (#1710)
 
