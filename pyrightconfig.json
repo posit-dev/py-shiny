@@ -10,7 +10,6 @@
     "docs",
     "tests/playwright/deploys/*/app.py",
     "shiny/templates",
-    "tests/playwright/shiny/brand_kitchensink"
   ],
   "typeCheckingMode": "strict",
   "reportImportCycles": "none",

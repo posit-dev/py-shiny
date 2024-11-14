@@ -14,17 +14,17 @@ def test_brand_yml_kitchensink(page: Page, app: ShinyAppProc) -> None:
     page.goto(app.url)
 
     expected_styles = {
-        "primary_value_box": {
+        "value_box_primary": {
             "background-color": "rgb(111, 66, 193)",
             "color": "rgb(248, 248, 248)",
             "font-family": re.compile(r"Monda.*"),
         },
-        "secondary_value_box": {
+        "value_box_secondary": {
             "background-color": "rgb(64, 64, 64)",
             "color": "rgb(248, 248, 248)",
             "font-family": re.compile(r"Monda.*"),
         },
-        "info_value_box": {
+        "value_box_info": {
             "background-color": "rgb(23, 162, 184)",
             "color": "rgb(26, 26, 26)",
             "font-family": re.compile(r"Monda.*"),
@@ -39,37 +39,37 @@ def test_brand_yml_kitchensink(page: Page, app: ShinyAppProc) -> None:
             "color": "rgb(40, 167, 69)",
             "font-family": re.compile(r"Share Tech Mono.*"),
         },
-        "default_btn": {
+        "btn_default": {
             "background-color": "rgba(0, 0, 0, 0)",
             "color": "rgb(64, 64, 64)",
             "font-family": re.compile(r"Monda.*"),
         },
-        "primary_btn": {
+        "btn_primary": {
             "background-color": "rgb(111, 66, 193)",
             "color": "rgb(248, 248, 248)",
             "font-family": re.compile(r"Monda.*"),
         },
-        "secondary_btn": {
+        "btn_secondary": {
             "background-color": "rgb(64, 64, 64)",
             "color": "rgb(248, 248, 248)",
             "font-family": re.compile(r"Monda.*"),
         },
-        "success_btn": {
+        "btn_success": {
             "background-color": "rgb(40, 167, 69)",
             "color": "rgb(26, 26, 26)",
             "font-family": re.compile(r"Monda.*"),
         },
-        "danger_btn": {
+        "btn_danger": {
             "background-color": "rgb(255, 127, 80)",
             "color": "rgb(26, 26, 26)",
             "font-family": re.compile(r"Monda.*"),
         },
-        "warning_btn": {
+        "btn_warning": {
             "background-color": "rgb(255, 215, 0)",
             "color": "rgb(26, 26, 26)",
             "font-family": re.compile(r"Monda.*"),
         },
-        "info_btn": {
+        "btn_info": {
             "background-color": "rgb(23, 162, 184)",
             "color": "rgb(26, 26, 26)",
             "font-family": re.compile(r"Monda.*"),
@@ -77,18 +77,18 @@ def test_brand_yml_kitchensink(page: Page, app: ShinyAppProc) -> None:
     }
 
     component_mapping = {
-        "primary_value_box": controller.ValueBox,
-        "secondary_value_box": controller.ValueBox,
-        "info_value_box": controller.ValueBox,
+        "value_box_primary": controller.ValueBox,
+        "value_box_secondary": controller.ValueBox,
+        "value_box_info": controller.ValueBox,
         "switch1": controller.InputSwitch,
         "out_text1": controller.OutputText,
-        "default_btn": controller.InputActionButton,
-        "primary_btn": controller.InputActionButton,
-        "secondary_btn": controller.InputActionButton,
-        "success_btn": controller.InputActionButton,
-        "danger_btn": controller.InputActionButton,
-        "warning_btn": controller.InputActionButton,
-        "info_btn": controller.InputActionButton,
+        "btn_default": controller.InputActionButton,
+        "btn_primary": controller.InputActionButton,
+        "btn_secondary": controller.InputActionButton,
+        "btn_success": controller.InputActionButton,
+        "btn_danger": controller.InputActionButton,
+        "btn_warning": controller.InputActionButton,
+        "btn_info": controller.InputActionButton,
     }
 
     locator_mapping: Dict[type[Any], Callable[[Any], Locator]] = {

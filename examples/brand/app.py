@@ -34,19 +34,19 @@ app_ui = ui.page_navbar(
                     "Metric 1",
                     "100",
                     theme="primary",
-                    id="primary_value_box",
+                    id="value_box_primary",
                 ),
                 ui.value_box(
                     "Metric 2",
                     "200",
                     theme="secondary",
-                    id="secondary_value_box",
+                    id="value_box_secondary",
                 ),
                 ui.value_box(
                     "Metric 3",
                     "300",
                     theme="info",
-                    id="info_value_box",
+                    id="value_box_info",
                 ),
             ),
             ui.card(
@@ -64,15 +64,15 @@ app_ui = ui.page_navbar(
         ui.layout_column_wrap(
             ui.card(
                 ui.card_header("Button Variants"),
-                ui.input_action_button("default_btn", "Default"),
-                ui.input_action_button("primary_btn", "Primary", class_="btn-primary"),
+                ui.input_action_button("btn_default", "Default"),
+                ui.input_action_button("btn_primary", "Primary", class_="btn-primary"),
                 ui.input_action_button(
-                    "secondary_btn", "Secondary", class_="btn-secondary"
+                    "btn_secondary", "Secondary", class_="btn-secondary"
                 ),
-                ui.input_action_button("success_btn", "Success", class_="btn-success"),
-                ui.input_action_button("danger_btn", "Danger", class_="btn-danger"),
-                ui.input_action_button("warning_btn", "Warning", class_="btn-warning"),
-                ui.input_action_button("info_btn", "Info", class_="btn-info"),
+                ui.input_action_button("btn_success", "Success", class_="btn-success"),
+                ui.input_action_button("btn_danger", "Danger", class_="btn-danger"),
+                ui.input_action_button("btn_warning", "Warning", class_="btn-warning"),
+                ui.input_action_button("btn_info", "Info", class_="btn-info"),
             ),
             ui.card(
                 ui.card_header("Radio Button Examples"),
