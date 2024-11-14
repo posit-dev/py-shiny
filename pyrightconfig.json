@@ -9,7 +9,7 @@
     "_dev",
     "docs",
     "tests/playwright/deploys/*/app.py",
-    "shiny/templates",
+    "shiny/templates"
   ],
   "typeCheckingMode": "strict",
   "reportImportCycles": "none",
