@@ -188,9 +188,10 @@ class ChatMessage extends LightElement {
 
 class ChatUserMessage extends LightElement {
   @property() content = "...";
+  @property() content_type: ContentType | "semi-markdown" = "semi-markdown";
 
   render(): ReturnType<LitElement["render"]> {
-    return contentToHTML(this.content, "semi-markdown");
+    return contentToHTML(this.content, this.content_type);
   }
 }
 
