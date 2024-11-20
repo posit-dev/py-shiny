@@ -147,8 +147,13 @@ const escapeUnknownTags = (html: string): string =>
         : `&lt;${slash + tag + extra}&gt;`
   );
 
-function contentToHTML(content: string, content_type: ContentType) {
+function contentToHTML(
+  content: string,
+  content_type: ContentType | "semi-markdown"
+) {
   if (content_type == "markdown") {
+    return unsafeHTML(markdownDOMPurify.sanitize(parse(content) as string));
+  } else if (content_type == "semi-markdown") {
     return unsafeHTML(
       markdownDOMPurify.sanitize(escapeUnknownTags(parse(content) as string))
     );
@@ -237,7 +242,7 @@ class ChatMessage extends LightElement {
 
 class ChatUserMessage extends LightElement {
   @property() content = "...";
-  @property() content_type: ContentType = "markdown";
+  @property() content_type: ContentType | "semi-markdown" = "semi-markdown";
 
   render(): ReturnType<LitElement["render"]> {
     return contentToHTML(this.content, this.content_type);
