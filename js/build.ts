@@ -1,4 +1,4 @@
-import { BuildOptions, build } from "esbuild";
+import { BuildOptions,build } from "esbuild";
 import { sassPlugin } from "esbuild-sass-plugin";
 import * as fs from "node:fs/promises";
 
@@ -71,6 +71,20 @@ const opts: Array<BuildOptions> = [
   },
   {
     entryPoints: { "spin/spin": "spin/spin.scss" },
+    plugins: [sassPlugin({ type: "css", sourceMap: false })],
+    metafile: true,
+  },
+  {
+    entryPoints: {
+      "markdown-stream/markdown-stream": "markdown-stream/markdown-stream.ts",
+    },
+    minify: true,
+    sourcemap: true,
+  },
+  {
+    entryPoints: {
+      "markdown-stream/markdown-stream": "markdown-stream/markdown-stream.scss",
+    },
     plugins: [sassPlugin({ type: "css", sourceMap: false })],
     metafile: true,
   },
