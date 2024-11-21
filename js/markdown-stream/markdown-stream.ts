@@ -1,22 +1,35 @@
-import { LitElement,html } from "lit";
+import { LitElement, html } from "lit";
 import { unsafeHTML } from "lit-html/directives/unsafe-html.js";
 import { property } from "lit/decorators.js";
 
 import ClipboardJS from "clipboard";
 import { sanitize } from "dompurify";
 import hljs from "highlight.js/lib/common";
-import { Renderer,parse } from "marked";
+import { Renderer, parse } from "marked";
 
-import { LightElement,createElement,createSVGIcon } from "../utils/_utils";
+import { LightElement, createElement, createSVGIcon } from "../utils/_utils";
 
 type ContentType = "markdown" | "semi-markdown" | "html" | "text";
 
-type Message = {
+type ContentMessage = {
   id: string;
   content: string;
   operation: "append" | "replace";
 };
 
+type IsStreamingMessage = {
+  id: string;
+  isStreaming: boolean;
+};
+
+// Type guard
+function isStreamingMessage(
+  message: ContentMessage | IsStreamingMessage
+): message is IsStreamingMessage {
+  return "isStreaming" in message;
+}
+
+// SVG dot to indicate content is currently streaming
 const SVG_DOT = createSVGIcon(
   '<svg width="12" height="12" xmlns="http://www.w3.org/2000/svg" class="chat-streaming-dot" style="margin-left:.25em;margin-top:-.25em"><circle cx="6" cy="6" r="6"/></svg>'
 );
@@ -66,7 +79,7 @@ class MarkdownElement extends LightElement {
     if (changedProperties.has("content")) {
       this.#highlightAndCodeCopy();
       if (this.streaming) this.#appendStreamingDot();
-      // TODO: throw an event here that we're done and catch it in SHINY_CHAT_MESSAGE
+      // TODO: throw an event here that content has rendered and catch it in SHINY_CHAT_MESSAGE
       // requestScroll(this, this.streaming);
     }
     if (changedProperties.has("streaming")) {
@@ -110,28 +123,37 @@ class MarkdownElement extends LightElement {
   }
 }
 
-// TODO: is it a problem if this gets imported multiple times?
-customElements.define("shiny-markdown-stream", MarkdownElement);
+// TODO: it is a problem if this runs twice in the browser?
+if (!customElements.get("shiny-markdown-stream")) {
+  customElements.define("shiny-markdown-stream", MarkdownElement);
+}
 
+function handleMessage(message: ContentMessage | IsStreamingMessage): void {
+  const el = document.getElementById(message.id) as MarkdownElement;
+
+  if (!el) {
+    console.error(`Element with id ${message.id} not found`);
+    return;
+  }
+
+  if (isStreamingMessage(message)) {
+    el.streaming = message.isStreaming;
+    return;
+  }
+
+  if (message.operation === "replace") {
+    el.setAttribute("content", message.content);
+  } else if (message.operation === "append") {
+    const content = el.getAttribute("content");
+    el.setAttribute("content", content + message.content);
+  } else {
+    console.error(`Unknown operation: ${message.operation}`);
+  }
+}
+
+// TODO: it is a problem if this runs twice in the browser?
 $(function () {
-  Shiny.addCustomMessageHandler(
-    "shinyMarkdownStreamMessage",
-    function (message: Message) {
-      const el = document.getElementById(message.id);
-      if (!el) {
-        console.error(`Element with id ${message.id} not found`);
-        return;
-      }
-      if (message.operation === "replace") {
-        el.setAttribute("content", message.content);
-      } else if (message.operation === "append") {
-        const content = el.getAttribute("content");
-        el.setAttribute("content", content + message.content);
-      } else {
-        console.error(`Unknown operation: ${message.operation}`);
-      }
-    }
-  );
+  Shiny.addCustomMessageHandler("shinyMarkdownStreamMessage", handleMessage);
 });
 
-export { MarkdownElement,contentToHTML };
+export { MarkdownElement, contentToHTML };

@@ -77,11 +77,11 @@ class ChatMessage extends LightElement {
 
     return html`
       <div class="message-icon">${unsafeHTML(icon)}</div>
-      <shiny-markdown
+      <shiny-markdown-stream
         content=${this.content}
         content_type=${this.content_type}
         streaming=${this.streaming}
-      ></shiny-markdown>
+      ></shiny-markdown-stream>
     `;
   }
 }

@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 from typing import Iterable, Literal
 
 from .. import reactive
@@ -15,10 +16,15 @@ __all__ = (
 StreamingContentType = Literal["markdown", "semi-markdown", "html", "text"]
 
 
-class Message(TypedDict):
+class ContentMessage(TypedDict):
     id: str
     content: str
     operation: Literal["append", "replace"]
+
+
+class isStreamingMessage(TypedDict):
+    id: str
+    isStreaming: bool
 
 
 @add_example()
@@ -85,8 +91,9 @@ class MarkdownStream:
         async def _task():
             if clear:
                 self._replace("")
-            for c in content:
-                self._append(c)
+            with self._streaming_dot():
+                for c in content:
+                    self._append(c)
 
         _task()
 
@@ -94,7 +101,7 @@ class MarkdownStream:
         self._replace(content)
 
     def _append(self, content: str):
-        msg: Message = {
+        msg: ContentMessage = {
             "id": self.id,
             "content": content,
             "operation": "append",
@@ -103,7 +110,7 @@ class MarkdownStream:
         self._send_custom_message(msg)
 
     def _replace(self, content: str):
-        msg: Message = {
+        msg: ContentMessage = {
             "id": self.id,
             "content": content,
             "operation": "replace",
@@ -111,7 +118,24 @@ class MarkdownStream:
 
         self._send_custom_message(msg)
 
-    def _send_custom_message(self, msg: Message):
+    @contextmanager
+    def _streaming_dot(self):
+        start: isStreamingMessage = {
+            "id": self.id,
+            "isStreaming": True,
+        }
+        self._send_custom_message(start)
+
+        try:
+            yield
+        finally:
+            end: isStreamingMessage = {
+                "id": self.id,
+                "isStreaming": False,
+            }
+            self._send_custom_message(end)
+
+    def _send_custom_message(self, msg: ContentMessage | isStreamingMessage):
         if self._session.is_stub_session():
             return
         self._session._send_message_sync(
