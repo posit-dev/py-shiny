@@ -9,7 +9,7 @@ from . import Tag
 from ._html_deps_py_shiny import markdown_stream_dependency
 
 __all__ = (
-    "markdown_stream_ui",
+    "output_markdown_stream",
     "MarkdownStream",
 )
 
@@ -67,7 +67,7 @@ class MarkdownStream:
         Get the UI element for this markdown stream.
 
         This method is only relevant fpr Shiny Express. In Shiny Core, use
-        :func:`~shiny.ui.markdown_stream_ui` for placing the markdown stream
+        :func:`~shiny.ui.output_markdown_stream` for placing the markdown stream
         in the UI.
 
         Returns
@@ -75,7 +75,7 @@ class MarkdownStream:
         Tag
             The UI element for this markdown stream.
         """
-        return markdown_stream_ui(self.id, self._content, self._content_type)
+        return output_markdown_stream(self.id, self._content, self._content_type)
 
     def stream(self, content: Iterable[str], clear: bool = True):
         """
@@ -143,7 +143,7 @@ class MarkdownStream:
         )
 
 
-def markdown_stream_ui(
+def output_markdown_stream(
     id: str,
     content: str = "",
     content_type: StreamingContentType = "markdown",

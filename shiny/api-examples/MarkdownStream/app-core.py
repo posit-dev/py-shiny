@@ -5,7 +5,7 @@ import requests
 from shiny import App, ui
 
 app_ui = ui.page_fluid(
-    ui.markdown_stream_ui("shiny-readme"),
+    ui.output_markdown_stream("shiny-readme"),
 )
 
 
@@ -23,7 +23,6 @@ def server(input, output, session):
             yield chunk + " "
 
     md = ui.MarkdownStream("shiny-readme")
-    md.ui()
     md.stream(chunk_generator())
 
 
