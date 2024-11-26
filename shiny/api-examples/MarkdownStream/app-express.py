@@ -5,20 +5,20 @@ import requests
 from shiny.express import session, ui
 
 # Read in the README.md file from the py-shiny repository
-response = requests.get(
+readme = requests.get(
     "https://raw.githubusercontent.com/posit-dev/py-shiny/refs/heads/main/README.md"
 )
-content = response.text.replace("\n", " \n ")
+readme_chunks = readme.text.replace("\n", " \n ").split(" ")
 
 
 # Generate words from the README.md file (with a small delay)
-def generate_words():
-    for word in content.split(" "):
+def chunk_generator():
+    for chunk in readme_chunks:
         if not session.is_stub_session():
             time.sleep(0.05)
-        yield word + " "
+        yield chunk + " "
 
 
 md = ui.MarkdownStream("shiny-readme")
 md.ui()
-md.stream(generate_words())
+md.stream(chunk_generator())
