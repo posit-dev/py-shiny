@@ -1,6 +1,6 @@
 import sys
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Optional, cast, is_typeddict
+from typing import TYPE_CHECKING, Any, Optional, cast
 
 from htmltools import HTML
 
@@ -236,7 +236,7 @@ class OllamaNormalizer(DictNormalizer):
 
             # Ollama<0.4 used TypedDict (now it uses pydantic)
             # https://github.com/ollama/ollama-python/pull/276
-            if is_typeddict(ChatResponse):
+            if isinstance(ChatResponse, dict):
                 return "message" in message and super().can_normalize(
                     message["message"]
                 )
