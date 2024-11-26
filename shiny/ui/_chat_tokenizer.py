@@ -61,7 +61,7 @@ def get_default_tokenizer() -> TokenizersTokenizer:
         raise RuntimeError(
             "Failed to download a default tokenizer. "
             "A tokenizer is required to impose `token_limits` on `chat.messages()`. "
-            "Try downloading a different tokenizer using "
-            "`tokenizers.Tokenizer.from_pretrained()`. "
+            "Try manually downloading a tokenizer using "
+            "`tokenizers.Tokenizer.from_pretrained()` and passing it to `ui.Chat()`."
             f"Error: {e}"
         ) from e
