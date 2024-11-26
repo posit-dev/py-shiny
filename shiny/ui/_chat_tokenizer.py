@@ -52,16 +52,16 @@ def get_default_tokenizer() -> TokenizersTokenizer:
         return Tokenizer.from_pretrained("bert-base-cased")  # type: ignore
     except ImportError:
         raise ValueError(
-            "A tokenizer is required to impose `token_limits` on messages. "
+            "Failed to download a default tokenizer. "
+            "A tokenizer is required to impose `token_limits` on `chat.messages()`. "
             "To get a generic default tokenizer, install the `tokenizers` "
             "package (`pip install tokenizers`). "
-            "To get a more precise token count, provide a specific tokenizer "
-            "to the `Chat` constructor."
         )
     except Exception as e:
         raise ValueError(
-            "Failed to load the default tokenizer. "
-            "Ensure that the `tokenizers` package is installed and "
-            "that the `bert-base-cased` model is available. "
+            "Failed to download a default tokenizer. "
+            "A tokenizer is required to impose `token_limits` on `chat.messages()`. "
+            "Try downloading a different tokenizer using "
+            "`tokenizers.Tokenizer.from_pretrained()`. "
             f"Error: {e}"
         ) from e
