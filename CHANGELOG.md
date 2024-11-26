@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
-* `ui.Chat()` now correctly handles new `ollama.chat()` return value introduced in `ollama` v0.4.
+* `ui.Chat()` now correctly handles new `ollama.chat()` return value introduced in `ollama` v0.4. (#1787)
 
 ## [1.2.1] - 2024-11-14
 
