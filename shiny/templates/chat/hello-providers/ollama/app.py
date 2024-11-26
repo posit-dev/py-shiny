@@ -29,7 +29,7 @@ async def _():
     # Create a response message stream
     # Assumes you've run `ollama run llama3` to start the server
     response = ollama.chat(
-        model="llama3",
+        model="llama3.2",
         messages=messages,
         stream=True,
     )

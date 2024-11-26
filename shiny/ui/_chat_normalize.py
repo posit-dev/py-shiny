@@ -231,11 +231,19 @@ class OllamaNormalizer(DictNormalizer):
         return super().normalize_chunk(msg)
 
     def can_normalize(self, message: Any) -> bool:
-        if not isinstance(message, dict):
+        try:
+            from ollama import ChatResponse
+
+            # Ollama<0.4 used TypedDict (now it uses pydantic)
+            # https://github.com/ollama/ollama-python/pull/276
+            if isinstance(ChatResponse, dict):
+                return "message" in message and super().can_normalize(
+                    message["message"]
+                )
+            else:
+                return isinstance(message, ChatResponse)
+        except Exception:
             return False
-        if "message" not in message:
-            return False
-        return super().can_normalize(message["message"])
 
     def can_normalize_chunk(self, chunk: Any) -> bool:
         return self.can_normalize(chunk)
