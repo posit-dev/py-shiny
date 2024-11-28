@@ -3,7 +3,7 @@ import { unsafeHTML } from "lit-html/directives/unsafe-html.js";
 import { property } from "lit/decorators.js";
 
 import ClipboardJS from "clipboard";
-import { sanitize } from "dompurify";
+import DOMPurify from "dompurify";
 import hljs from "highlight.js/lib/common";
 import { Renderer, parse } from "marked";
 
@@ -85,26 +85,80 @@ const requestScroll = (el: HTMLElement, cancelIfScrolledUp = false) => {
 // because it's confusing if the user is using tag-like syntax to demarcate parts of
 // their prompt for other reasons (like <User>/<Assistant> for providing examples to the
 // chat model), and those tags simply vanish.
-const rendererEscapeHTML = new Renderer();
-rendererEscapeHTML.html = (html: string) =>
-  html
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-const markedEscapeOpts = { renderer: rendererEscapeHTML };
+const markdownDOMPurify = DOMPurify();
+markdownDOMPurify.addHook("beforeSanitizeAttributes", (node) => {
+  // Escape & in text content
+  if (node.nodeName && node.nodeName === "#text" && node.textContent) {
+    node.textContent = node.textContent.replaceAll("&", "&amp;");
+  }
+});
+
+// From https://github.com/bevacqua/insane#defaults
+const allowedTags = [
+  "a",
+  "article",
+  "b",
+  "blockquote",
+  "br",
+  "caption",
+  "code",
+  "del",
+  "details",
+  "div",
+  "em",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "hr",
+  "i",
+  "img",
+  "ins",
+  "kbd",
+  "li",
+  "main",
+  "ol",
+  "p",
+  "pre",
+  "section",
+  "span",
+  "strike",
+  "strong",
+  "sub",
+  "summary",
+  "sup",
+  "table",
+  "tbody",
+  "td",
+  "th",
+  "thead",
+  "tr",
+  "u",
+  "ul",
+];
+const escapeUnknownTags = (html: string): string =>
+  html.replace(
+    /<(\/?)([^ >]+)([^>]*)>/g,
+    (_, slash = "", tag = "", extra = "") =>
+      allowedTags.includes(tag.toLowerCase())
+        ? `<${slash + tag + extra}>`
+        : `&lt;${slash + tag + extra}&gt;`
+  );
 
 function contentToHTML(
   content: string,
   content_type: ContentType | "semi-markdown"
 ) {
-  if (content_type === "markdown") {
-    return unsafeHTML(sanitize(parse(content) as string));
-  } else if (content_type === "semi-markdown") {
-    return unsafeHTML(sanitize(parse(content, markedEscapeOpts) as string));
+  if (content_type == "markdown") {
+    return unsafeHTML(markdownDOMPurify.sanitize(parse(content) as string));
+  } else if (content_type == "semi-markdown") {
+    return unsafeHTML(
+      markdownDOMPurify.sanitize(escapeUnknownTags(parse(content) as string))
+    );
   } else if (content_type === "html") {
-    return unsafeHTML(sanitize(content));
+    return unsafeHTML(DOMPurify.sanitize(content));
   } else if (content_type === "text") {
     return content;
   } else {
@@ -188,9 +242,10 @@ class ChatMessage extends LightElement {
 
 class ChatUserMessage extends LightElement {
   @property() content = "...";
+  @property() content_type: ContentType | "semi-markdown" = "semi-markdown";
 
   render(): ReturnType<LitElement["render"]> {
-    return contentToHTML(this.content, "semi-markdown");
+    return contentToHTML(this.content, this.content_type);
   }
 }
 
