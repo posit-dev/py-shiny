@@ -52,7 +52,6 @@ class BrandBootstrapConfigFromYaml:
         mixins: Any = None,
         rules: Any = None,
     ):
-
         # TODO: Remove `path` and handle in try/except block in caller
         self._path = path
         self.version = version
@@ -183,7 +182,6 @@ class ThemeBrand(Theme):
         *,
         include_paths: Optional[str | Path | list[str | Path]] = None,
     ):
-
         name = self._get_theme_name(brand)
         brand_bootstrap = BrandBootstrapConfig.from_brand(brand)
 
@@ -208,17 +206,25 @@ class ThemeBrand(Theme):
 
         brand_typography_defaults = ThemeBrand._prepare_typography_vars(brand)
 
-        brand_bootstrap_defaults = (
-            "\n".join(Theme._combine_args_kwargs(kwargs=brand_bootstrap.defaults))
-            if brand_bootstrap.defaults
-            else ""
-        )
+        # Defaults ----
+        # Final order is reverse-insertion:
+        # * brand.color.palette
+        # * brand.defaults (Brand-defined Bootstrap defaults)
+        # * brand.color
+        # * brand.typography
 
-        self._insert_sass("brand.color.palette:defaults", brand_color_palette_defaults)
-        self._insert_sass("brand.defaults:defaults", brand_bootstrap_defaults)
-        self._insert_sass("brand.color:defaults", brand_color_defaults)
-        self._insert_sass("brand.typography:defaults", brand_typography_defaults)
-        self._insert_sass("brand.color.palette:rules", brand_color_palette_rules)
+        self._add_defaults_hdr("typography", **brand_typography_defaults)
+        self._add_defaults_hdr("color", **brand_color_defaults)
+
+        if brand_bootstrap.defaults:
+            self._add_defaults_hdr("defaults (bootstrap)", **(brand_bootstrap.defaults))
+
+        self._add_defaults_hdr("color.palette", **brand_color_palette_defaults)
+
+        # Rules ----
+        self.add_rules(*brand_color_palette_rules)
+
+        # Bootstrap extras: functions, mixins, rules (defaults handled above)
         self._add_brand_bootstrap_other(brand_bootstrap)
 
     def _get_theme_name(self, brand: "Brand") -> str:
@@ -227,39 +233,18 @@ class ThemeBrand(Theme):
 
         return brand.meta.name.short or brand.meta.name.full or "brand"
 
-    def _insert_sass(self, name: str, code: str):
-        name_parts = name.split(":")
-        if len(name_parts) != 2:
-            raise ValueError(
-                f"Invalid name format. Expected 'name:layer', got '{name}'"
-            )
-
-        layer = name_parts[1]
-        layer_attr = f"_{layer}"
-        if not hasattr(self, layer_attr):
-            raise ValueError(f"Invalid layer: {layer}")
-
-        layer_content = getattr(self, layer_attr)
-        insert_marker = f"/*-- insert({name}) --*/"
-
-        new_layer_content = [
-            chunk.replace(insert_marker, code) for chunk in layer_content
-        ]
-
-        setattr(self, layer_attr, new_layer_content)
-
     @staticmethod
     def _prepare_color_vars(
         brand: "Brand",
-    ) -> tuple[str, str, str]:
+    ) -> tuple[dict[str, YamlScalarType], dict[str, YamlScalarType], list[str]]:
         """
         Colors: Create a dictionaries of Sass and CSS variables
         """
         if not brand.color:
-            return "", "", ""
+            return {}, {}, []
 
-        defaults_dict: dict[str, str | float | int | bool | None] = {}
-        palette_defaults_dict: dict[str, str | float | int | bool | None] = {}
+        defaults_dict: dict[str, YamlScalarType] = {}
+        palette_defaults_dict: dict[str, YamlScalarType] = {}
         palette_css_vars: list[str] = []
 
         for thm_name, thm_color in brand.color.to_dict(include="theme").items():
@@ -289,20 +274,7 @@ class ThemeBrand(Theme):
             # => CSS var: `--brand-{name}: {value}`
             palette_css_vars.append(f"  --brand-{pal_name}: {pal_color};")
 
-        palette_defaults = [
-            "",
-            "// *---- brand.color.palette ----* //",
-            *Theme._combine_args_kwargs(kwargs=palette_defaults_dict, is_default=True),
-        ]
-
-        defaults = [
-            "",
-            "// *---- brand.color ----* //",
-            *Theme._combine_args_kwargs(kwargs=defaults_dict, is_default=True),
-        ]
-
         palette_rules = [
-            "",
             "// *---- brand.color.palette ----* //",
             ":root {",
             *palette_css_vars,
@@ -310,13 +282,13 @@ class ThemeBrand(Theme):
         ]
 
         return (
-            "\n".join(palette_defaults),  # brand.color.palette:defaults
-            "\n".join(defaults),  # brand.color:defaults
-            "\n".join(palette_rules),  # brand.color.palette:rules
+            palette_defaults_dict,  # brand.color.palette:defaults
+            defaults_dict,  # brand.color:defaults
+            palette_rules,  # brand.color.palette:rules
         )
 
     @staticmethod
-    def _prepare_typography_vars(brand: "Brand") -> str:
+    def _prepare_typography_vars(brand: "Brand") -> dict[str, YamlScalarType]:
         """
         Typography: Create a list of brand Sass variables
 
@@ -329,10 +301,10 @@ class ThemeBrand(Theme):
         $brand_typography_base_line-height: 1.25;
         ```
         """
-        mapped: dict[str, str | float | int | bool | None] = {}
+        mapped: dict[str, YamlScalarType] = {}
 
         if not brand.typography:
-            return ""
+            return {}
 
         brand_typography = brand.typography.model_dump(
             exclude={"fonts"},
@@ -347,21 +319,31 @@ class ThemeBrand(Theme):
                 typo_sass_var = f"brand_typography_{field}_{prop_key}"
                 mapped[typo_sass_var] = prop_value
 
-        ret = [
-            "",
-            "// *---- brand.typography ----* //",
-            *Theme._combine_args_kwargs(kwargs=mapped, is_default=True),
-        ]
+        return mapped
 
-        return "\n".join(ret)
+    def _add_defaults_hdr(self, header: str, **kwargs: YamlScalarType):
+        self.add_defaults(**kwargs)
+        self.add_defaults(f"\n// *---- brand: {header} ----* //")
 
     def _add_brand_bootstrap_other(self, bootstrap: BrandBootstrapConfig):
         if bootstrap.functions:
-            self.add_functions(bootstrap.functions)
+            self.add_functions(
+                *[
+                    "// *---- brand.defaults: bootstrap.functions ----* //",
+                    bootstrap.functions,
+                ]
+            )
         if bootstrap.mixins:
-            self.add_mixins(bootstrap.mixins)
+            self.add_mixins(
+                *[
+                    "// *---- brand.defaults: bootstrap.mixins ----* //",
+                    bootstrap.mixins,
+                ]
+            )
         if bootstrap.rules:
-            self.add_rules(bootstrap.rules)
+            self.add_rules(
+                *["// *---- brand.defaults: bootstrap.rules ----* //", bootstrap.rules]
+            )
 
     def _html_dependencies(self) -> list[HTMLDependency]:
         theme_deps = super()._html_dependencies()

@@ -22,10 +22,11 @@
 
 /*-- scss:defaults --*/
 
-/*-- insert(brand.color.palette:defaults) --*/
-/*-- insert(brand.defaults:defaults) --*/
-/*-- insert(brand.color:defaults) --*/
-/*-- insert(brand.typography:defaults) --*/
+// Sass variables from `brand` will be inserted (above) here in this order:
+// * brand.color.palette
+// * brand.defaults
+// * brand.color
+// * brand.typography
 
 //*-- brand: initial defaults --*//
 $brand_color_foreground: null !default;
@@ -166,7 +167,6 @@ $link-bg: null !default;
 $link-weight: null !default;
 
 /*-- scss:rules --*/
-/*-- insert(brand.color.palette:rules) --*/
 
 // *---- brand: brand rules to augment Bootstrap rules ----* //
 // https://github.com/twbs/bootstrap/blob/5c2f2e7e/scss/_root.scss#L82
