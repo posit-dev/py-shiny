@@ -476,7 +476,11 @@ def test_as_ollama_message():
     import ollama
     from ollama import Message as OllamaMessage
 
-    assert "ollama._types.Message" in str(ollama.chat.__annotations__["messages"])
+    # ollama 0.4.2 added Callable to the type hints, but pyright complains about
+    # missing arguments to the Callable type. We'll ignore this for now.
+    chat = ollama.chat  # type: ignore
+
+    assert "ollama._types.Message" in str(chat.__annotations__["messages"])
 
     from shiny.ui._chat_provider_types import as_ollama_message
 
