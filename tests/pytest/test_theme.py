@@ -258,6 +258,7 @@ def test_theme_add_sass_layer_file():
     assert theme._mixins == ["// mixins\n"]
     assert theme._rules == ["// rules 1\n// rules 2\n"]
 
+
 @skip_on_windows
 @pytest.mark.parametrize("preset", shiny_theme_presets)
 def test_theme_from_brand_base_case_compiles(preset: str):
