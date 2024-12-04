@@ -304,7 +304,7 @@ class ThemeBrand(Theme):
         mapped: dict[str, YamlScalarType] = {}
 
         if not brand.typography:
-            return {}
+            return mapped
 
         brand_typography = brand.typography.model_dump(
             exclude={"fonts"},
