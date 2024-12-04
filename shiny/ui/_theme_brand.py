@@ -262,9 +262,19 @@ class ThemeBrand(Theme):
         palette_defaults_dict: dict[str, str | float | int | bool | None] = {}
         palette_css_vars: list[str] = []
 
-        # Map values in colors to their Sass variable counterparts
         for thm_name, thm_color in brand.color.to_dict(include="theme").items():
-            defaults_dict[f"brand_color_{thm_name}"] = thm_color
+            # Create brand Sass variables and set related Bootstrap Sass vars
+            # brand.color.primary = "#007bff"
+            # ==> $brand_color_primary: #007bff !default;
+            # ==> $primary: $brand_color_primary !default;
+
+            brand_color_var = f"brand_color_{thm_name}"
+            defaults_dict[brand_color_var] = thm_color
+            # Currently, brand.color fields are directly named after Bootstrap vars. If
+            # that changes, we'd need to use a map here. These values can't be set to
+            # `null !default` because they're used by maps in the Bootstrap mixins layer
+            # and cause errors if a color is `null` rather than non-existent.
+            defaults_dict[thm_name] = f"${brand_color_var}"
 
         brand_color_palette = brand.color.to_dict(include="palette")
 
