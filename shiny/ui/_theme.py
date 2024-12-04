@@ -447,6 +447,13 @@ class Theme:
             add_method = getattr(self, f"add_{key}", None)
             if add_method:
                 add_method("".join(value))
+            else:
+                # We'd get here if we add a new layer boundary name but forget to
+                # include it in the supported `.add_{layer}()` methods.
+                raise ValueError(
+                    f"Unsupported Sass layer: {key}. Please report this issue to the "
+                    "Shiny maintainers at https://github.com/posit-dev/py-shiny."
+                )
 
         return self
 
