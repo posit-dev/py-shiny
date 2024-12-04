@@ -417,7 +417,9 @@ class Theme:
         layer_keys = ["uses", "functions", "defaults", "mixins", "rules"]
         rx_pattern = re.compile(rf"^/\*--\s*scss:({'|'.join(layer_keys)})\s*--\*/$")
 
-        if not any([rx_pattern.match(s) for s in src]):
+        layer_boundaries = [rx_pattern.match(line.strip()) for line in src]
+
+        if not any(layer_boundaries):
             raise ValueError(
                 f"The file {path} doesn't contain at least one layer boundary "
                 f"(/*-- scss:{{{','.join(layer_keys)}}} --*/)",
@@ -425,8 +427,8 @@ class Theme:
 
         layers: dict[str, list[str]] = {}
         layer_name: str = ""
-        for line in src:
-            layer_boundary = rx_pattern.match(line.strip())
+        for i, line in enumerate(src):
+            layer_boundary = layer_boundaries[i]
             if layer_boundary:
                 layer_name = layer_boundary.group(1)
                 continue
