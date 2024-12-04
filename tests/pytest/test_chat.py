@@ -478,6 +478,7 @@ def test_as_ollama_message():
 
     # ollama 0.4.2 added Callable to the type hints, but pyright complains about
     # missing arguments to the Callable type. We'll ignore this for now.
+    # https://github.com/ollama/ollama-python/commit/b50a65b
     chat = ollama.chat  # type: ignore
 
     assert "ollama._types.Message" in str(chat.__annotations__["messages"])
