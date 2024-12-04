@@ -1,3 +1,4 @@
+import tempfile
 from typing import Callable, Optional
 
 import pytest
@@ -218,3 +219,41 @@ def test_theme_dependency_has_data_attribute():
 
     theme = Theme("shiny", name="My Fancy Theme")
     assert theme._html_dependencies()[0].stylesheet[0]["data-shiny-theme"] == "My Fancy Theme"  # type: ignore
+
+
+def test_theme_add_sass_layer_file():
+    with tempfile.TemporaryDirectory() as temp_dir:
+        with open(f"{temp_dir}/no-layers.scss", "w") as f:
+            f.write("// no layers")
+
+        # Throws if no special layer boundary comments are found
+        with pytest.raises(ValueError, match="one layer boundary"):
+            Theme().add_sass_layer_file(f"{temp_dir}/no-layers.scss")
+
+        with open(f"{temp_dir}/layers.scss", "w") as temp_scss:
+            temp_scss.write(
+                """
+/*-- scss:uses --*/
+// uses
+/*-- scss:functions --*/
+// functions
+/*-- scss:defaults --*/
+// defaults 1
+/*-- scss:mixins --*/
+// mixins
+/*-- scss:rules --*/
+// rules 1
+/*-- scss:defaults --*/
+// defaults 2
+/*-- scss:rules --*/
+// rules 2
+            """
+            )
+
+        theme = Theme().add_sass_layer_file(temp_scss.name)
+
+    assert theme._uses == ["// uses\n"]
+    assert theme._functions == ["// functions\n"]
+    assert theme._defaults == ["// defaults 1\n// defaults 2\n"]
+    assert theme._mixins == ["// mixins\n"]
+    assert theme._rules == ["// rules 1\n// rules 2\n"]
