@@ -314,8 +314,6 @@ class ThemeBrand(Theme):
 
         for field, prop in brand_typography.items():
             for prop_key, prop_value in prop.items():
-                field = field.replace("-", "_")
-                prop_key = prop_key.replace("-", "_")
                 typo_sass_var = f"brand_typography_{field}_{prop_key}"
                 mapped[typo_sass_var] = prop_value
 
