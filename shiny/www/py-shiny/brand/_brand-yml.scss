@@ -69,6 +69,16 @@ $brand_typography_link_weight: null !default;
 $brand_typography_link_decoration: null !default;
 
 //*-- brand.color --*//
+$primary: $brand_color_primary !default;
+$secondary: $brand_color_secondary !default;
+$tertiary: $brand_color_tertiary !default;
+$success: $brand_color_success !default;
+$info: $brand_color_info !default;
+$warning: $brand_color_warning !default;
+$danger: $brand_color_danger !default;
+$light: $brand_color_light !default;
+$dark: $brand_color_dark !default;
+
 $body-color: $brand_color_foreground !default;
 $body-bg-dark: $brand_color_foreground !default;
 $body-bg: $brand_color_background !default;
