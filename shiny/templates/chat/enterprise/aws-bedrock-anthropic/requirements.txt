@@ -1,4 +1,5 @@
 shiny
 python-dotenv
 tokenizers
-anthropic
+chatlas
+anthropic[bedrock]

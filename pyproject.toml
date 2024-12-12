@@ -109,7 +109,6 @@ dev = [
     "langchain_core",
     "openai",
     "ollama",
-    "litellm>=1.43.9",
     "tokenizers",
     "aiohttp",
     "beautifulsoup4",

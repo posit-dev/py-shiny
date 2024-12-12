@@ -1,14 +1,22 @@
 # ------------------------------------------------------------------------------------
 # A basic Shiny Chat example powered by Google's Gemini model.
-# To run it, you'll need a Google API key.
-# To get one, follow the instructions at https://ai.google.dev/gemini-api/docs/get-started/tutorial?lang=python
 # ------------------------------------------------------------------------------------
 import os
 
 from app_utils import load_dotenv
-from chatlas import GoogleChat
+from chatlas import ChatGoogle
 
 from shiny.express import ui
+
+# ChatGoogle() requires an API key from Google.
+# See the docs for more information on how to obtain one.
+# https://posit-dev.github.io/chatlas/reference/ChatGoogle.html
+load_dotenv()
+chat_model = ChatGoogle(
+    api_key=os.environ.get("GOOGLE_API_KEY"),
+    system_prompt="You are a helpful assistant.",
+    model="gemini-1.5-flash",
+)
 
 # Set some Shiny page options
 ui.page_opts(
@@ -25,18 +33,5 @@ chat.ui()
 # Generate a response when the user submits a message
 @chat.on_user_submit
 async def _(message):
-    response = llm.response_generator(message)
+    response = chat_model.stream(message)
     await chat.append_message_stream(response)
-
-
-# Create a Google Gemini chat model
-#
-# Either explicitly set the GOOGLE_API_KEY environment variable before launching the
-# app, or set them in a file named `.env`. The `python-dotenv` package will load `.env`
-# as environment variables which can later be read by `os.getenv()`.
-load_dotenv()
-llm = GoogleChat(
-    api_key=os.environ.get("GOOGLE_API_KEY"),
-    system_prompt="You are a helpful assistant.",
-    model="gemini-1.5-flash",
-)

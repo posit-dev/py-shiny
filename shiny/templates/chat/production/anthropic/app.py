@@ -8,29 +8,30 @@
 #  - Reproducibility: Consider pinning a snapshot of the LLM model to ensure that the
 #    same model is used each time the app is run.
 #
-# See the MODEL_INFO dictionary below for an example of how to set these values for
-# Anthropic's Claude model.
+# See the MODEL_CONFIG dictionary below for an example of how to set these values for
+# Anthropic's Claude 3.5 Sonnet model.
 # https://docs.anthropic.com/en/docs/about-claude/models#model-comparison-table
 # ------------------------------------------------------------------------------------
 import os
 
-from anthropic import AsyncAnthropic
 from app_utils import load_dotenv
+from chatlas import Chat, ChatAnthropic
 
 from shiny.express import ui
 
-load_dotenv()
-llm = AsyncAnthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
-
-
-MODEL_INFO = {
+MODEL_CONFIG = {
     "name": "claude-3-5-sonnet-20240620",
-    # DISCLAIMER: Anthropic has not yet released a public tokenizer for Claude models,
-    # so this uses the generic default provided by Chat() (for now). That is probably
-    # ok though since the default tokenizer likely overestimates the token count.
-    "tokenizer": None,
-    "token_limits": (200000, 8192),
+    "context_window": 200000,
+    "max_tokens": 8192,
 }
+
+load_dotenv()
+chat_model = ChatAnthropic(
+    api_key=os.environ.get("ANTHROPIC_API_KEY"),
+    model=MODEL_CONFIG["name"],
+    max_tokens=MODEL_CONFIG["max_tokens"],
+    system_prompt="You are a helpful assistant.",
+)
 
 
 ui.page_opts(
@@ -41,25 +42,21 @@ ui.page_opts(
 
 chat = ui.Chat(
     id="chat",
-    messages=[
-        {"content": "Hello! How can I help you today?", "role": "assistant"},
-    ],
-    tokenizer=MODEL_INFO["tokenizer"],
+    messages=["Hello! How can I help you today?"],
 )
 
 chat.ui()
 
 
 @chat.on_user_submit
-async def _():
-    messages = chat.messages(
-        format="anthropic",
-        token_limits=MODEL_INFO["token_limits"],
-    )
-    response = await llm.messages.create(
-        model=MODEL_INFO["name"],
-        messages=messages,
-        stream=True,
-        max_tokens=MODEL_INFO["token_limits"][1],
-    )
+async def _(message):
+    trim_chat_turns(chat_model, message)
+    response = await chat_model.stream_async(message)
     await chat.append_message_stream(response)
+
+
+def trim_chat_turns(chat_model: Chat, message: str):
+    # chat.tokens() + input can't exceed the context window minus max_tokens
+    # so we trim the oldest messages until it fits
+    # TODO: chatlas should gain a method to make this easier?
+    pass

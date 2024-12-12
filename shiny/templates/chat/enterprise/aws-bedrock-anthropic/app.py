@@ -4,7 +4,7 @@
 # To get started, follow the instructions at https://aws.amazon.com/bedrock/claude/
 # as well as https://github.com/anthropics/anthropic-sdk-python#aws-bedrock
 # ------------------------------------------------------------------------------------
-from anthropic import AnthropicBedrock
+from chatlas import ChatBedrockAnthropic
 from app_utils import load_dotenv
 
 from shiny.express import ui
@@ -13,7 +13,8 @@ from shiny.express import ui
 # them in a file named `.env`. The `python-dotenv` package will load `.env` as
 # environment variables which can be read by `os.getenv()`.
 load_dotenv()
-llm = AnthropicBedrock(
+chat_model = ChatBedrockAnthropic(
+    model="anthropic.claude-3-sonnet-20240229-v1:0",
     # aws_secret_key=os.getenv("AWS_SECRET_KEY"),
     # aws_access_key=os.getenv("AWS_ACCESS_KEY"),
     # aws_region=os.getenv("AWS_REGION"),
@@ -34,15 +35,6 @@ chat.ui()
 
 # Define a callback to run when the user submits a message
 @chat.on_user_submit
-async def _():
-    # Get messages currently in the chat
-    messages = chat.messages(format="anthropic")
-    # Create a response message stream
-    response = llm.messages.create(
-        model="anthropic.claude-3-sonnet-20240229-v1:0",
-        messages=messages,
-        stream=True,
-        max_tokens=1000,
-    )
-    # Append the response stream into the chat
+async def _(message):
+    response = chat_model.stream(message)
     await chat.append_message_stream(response)
