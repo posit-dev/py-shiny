@@ -97,12 +97,12 @@ class Chat:
         # Get messages currently in the chat
         messages = chat.messages()
         # Create a response message stream
-        response = await my_model.response_generator(messages, stream=True)
+        response = await my_model.stream(messages)
         # Append the response into the chat
         await chat.append_message_stream(response)
     ```
 
-    In the outline above, `my_model.response_generator()` is a placeholder for
+    In the outline above, `my_model.stream()` is a placeholder for
     the function that generates a response based on the chat's messages. This function
     will look different depending on the model you're using, but it will generally
     involve passing the messages to the model and getting a response back. Also, you'll

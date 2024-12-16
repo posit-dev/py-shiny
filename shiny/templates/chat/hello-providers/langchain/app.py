@@ -11,8 +11,6 @@ from langchain_openai import ChatOpenAI
 
 from shiny.express import ui
 
-# Create a LangChain-based chat model with OpenAI that remembers chat history
-#
 # Either explicitly set the OPENAI_API_KEY environment variable before launching the
 # app, or set them in a file named `.env`. The `python-dotenv` package will load `.env`
 # as environment variables which can later be read by `os.getenv()`.
