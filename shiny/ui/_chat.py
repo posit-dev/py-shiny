@@ -914,15 +914,6 @@ class Chat:
         if self._tokenizer is None:
             self._tokenizer = get_default_tokenizer()
 
-        if self._tokenizer is None:
-            raise ValueError(
-                "A tokenizer is required to impose `token_limits` on messages. "
-                "To get a generic default tokenizer, install the `tokenizers` "
-                "package (`pip install tokenizers`). "
-                "To get a more precise token count, provide a specific tokenizer "
-                "to the `Chat` constructor."
-            )
-
         encoded = self._tokenizer.encode(content)
         if isinstance(encoded, TokenizersEncoding):
             return len(encoded.ids)

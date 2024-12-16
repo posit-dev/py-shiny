@@ -45,12 +45,23 @@ class TokenizersTokenizer(Protocol):
 TokenEncoding = Union[TiktokenEncoding, TokenizersTokenizer]
 
 
-def get_default_tokenizer() -> TokenizersTokenizer | None:
+def get_default_tokenizer() -> TokenizersTokenizer:
     try:
         from tokenizers import Tokenizer
 
         return Tokenizer.from_pretrained("bert-base-cased")  # type: ignore
-    except Exception:
-        pass
-
-    return None
+    except ImportError:
+        raise ImportError(
+            "Failed to download a default tokenizer. "
+            "A tokenizer is required to impose `token_limits` on `chat.messages()`. "
+            "To get a generic default tokenizer, install the `tokenizers` "
+            "package (`pip install tokenizers`). "
+        )
+    except Exception as e:
+        raise RuntimeError(
+            "Failed to download a default tokenizer. "
+            "A tokenizer is required to impose `token_limits` on `chat.messages()`. "
+            "Try manually downloading a tokenizer using "
+            "`tokenizers.Tokenizer.from_pretrained()` and passing it to `ui.Chat()`."
+            f"Error: {e}"
+        ) from e

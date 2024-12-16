@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, List, TypedDict, cast
+from typing import TYPE_CHECKING, Any, List, TypedDict, cast
 
 import narwhals.stable.v1 as nw
 import orjson
@@ -32,6 +32,9 @@ __all__ = (
     "serialize_frame",
     "subset_frame",
 )
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 ########################################################################################
 # Narwhals
@@ -81,15 +84,20 @@ def as_data_frame(
     except TypeError as e:
         try:
             compatible_data = compatible_to_pandas(data)
-            return nw.from_native(compatible_data, eager_only=True)
+            ret: DataFrame[pd.DataFrame] = nw.from_native(
+                compatible_data, eager_only=True
+            )
+            # Cast internal data as `IntoDataFrameT` type.
+            # A warning has already been given to the user, so this is tolerable.
+            return cast(DataFrame[IntoDataFrameT], ret)
         except TypeError:
             # Couldn't convert to pandas, so raise the original error
             raise e
 
 
 def compatible_to_pandas(
-    data: IntoDataFrameT,
-) -> IntoDataFrameT:
+    data: IntoDataFrame,
+) -> pd.DataFrame:
     """
     Convert data to pandas, if possible.
 
@@ -108,6 +116,7 @@ def compatible_to_pandas(
             stacklevel=3,
         )
         return data.to_pandas()
+        # pyright: ignore[reportReturnType]
 
     raise TypeError(f"Unsupported data type: {type(data)}")
 
