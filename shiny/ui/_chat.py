@@ -515,13 +515,21 @@ class Chat:
             The message to append. A variety of message formats are supported including
             a string, a dictionary with `content` and `role` keys, or a relevant chat
             completion object from platforms like OpenAI, Anthropic, Ollama, and others.
+            When the message is a generator or async generator, it is automatically
+            treated as a stream of message chunks (i.e., uses
+            `.append_message_stream()`)
 
         Note
         ----
-        Use `.append_message_stream()` instead of this method when `stream=True` (or
-        similar) is specified in model's completion method.
+        Although this method tries its best to handle various message formats, it's
+        not always possible to handle every message format. If you encounter an error
+        or no response when appending a message, try extracting the message content
+        as a string and passing it to this method.
         """
-        await self._append_message(message)
+        if inspect.isasyncgen(message) or inspect.isgenerator(message):
+            await self.append_message_stream(message)
+        else:
+            await self._append_message(message)
 
     async def _append_message(
         self, message: Any, *, chunk: ChunkOption = False, stream_id: str | None = None
