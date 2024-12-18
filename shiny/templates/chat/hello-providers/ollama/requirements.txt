@@ -1,3 +1,4 @@
 shiny
 tokenizers
+chatlas
 ollama

@@ -1,36 +1,32 @@
 # ------------------------------------------------------------------------------------
-# A basic Shiny Chat example powered by Anthropic's Claude model.
+# A basic Shiny Chat example powered by Google's Gemini model.
 # ------------------------------------------------------------------------------------
 import os
 
 from app_utils import load_dotenv
-from chatlas import ChatAnthropic
+from chatlas import ChatGoogle
 
 from shiny.express import ui
 
-# ChatAnthropic() requires an API key from Anthropic.
+# ChatGoogle() requires an API key from Google.
 # See the docs for more information on how to obtain one.
-# https://posit-dev.github.io/chatlas/reference/ChatAnthropic.html
+# https://posit-dev.github.io/chatlas/reference/ChatGoogle.html
 load_dotenv()
-chat_model = ChatAnthropic(
-    api_key=os.environ.get("ANTHROPIC_API_KEY"),
-    model="claude-3-5-sonnet-latest",
+chat_model = ChatGoogle(
+    api_key=os.environ.get("GOOGLE_API_KEY"),
     system_prompt="You are a helpful assistant.",
+    model="gemini-1.5-flash",
 )
-
 
 # Set some Shiny page options
 ui.page_opts(
-    title="Hello Anthropic Claude Chat",
+    title="Hello Google Gemini Chat",
     fillable=True,
     fillable_mobile=True,
 )
 
-# Create and display a Shiny chat component
-chat = ui.Chat(
-    id="chat",
-    messages=["Hello! How can I help you today?"],
-)
+# Create and display empty chat
+chat = ui.Chat(id="chat")
 chat.ui()
 
 

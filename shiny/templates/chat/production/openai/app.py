@@ -8,26 +8,28 @@
 #  - Reproducibility: Consider pinning a snapshot of the LLM model to ensure that the
 #    same model is used each time the app is run.
 #
-# See the MODEL_INFO dictionary below for an example of how to set these values for
+# See the MODEL_CONFIG dictionary below for an example of how to set these values for
 # OpenAI's GPT-4o model.
 # ------------------------------------------------------------------------------------
 import os
 
 import tiktoken
 from app_utils import load_dotenv
-from openai import AsyncOpenAI
+from chatlas import Chat, ChatOpenAI
 
 from shiny.express import ui
 
-load_dotenv()
-llm = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
-
-
-MODEL_INFO = {
+MODEL_CONFIG = {
     "name": "gpt-4o-2024-08-06",
-    "tokenizer": tiktoken.encoding_for_model("gpt-4o-2024-08-06"),
-    "token_limits": (128000, 16000),
+    "context_window": 128000,
+    "max_tokens": 16000,
 }
+
+load_dotenv()
+chat_model = ChatOpenAI(
+    api_key=os.environ.get("OPENAI_API_KEY"),
+    model=MODEL_CONFIG["name"],
+)
 
 
 ui.page_opts(
@@ -38,19 +40,16 @@ ui.page_opts(
 
 chat = ui.Chat(
     id="chat",
-    messages=[
-        {"content": "Hello! How can I help you today?", "role": "assistant"},
-    ],
-    tokenizer=MODEL_INFO["tokenizer"],
+    messages=["Hello! How can I help you today?"],
 )
 
 chat.ui()
 
 
 @chat.on_user_submit
-async def _():
-    messages = chat.messages(format="openai", token_limits=MODEL_INFO["token_limits"])
-    response = await llm.chat.completions.create(
-        model=MODEL_INFO["name"], messages=messages, stream=True
-    )
+async def handle_user_input(user_input):
+    response = await chat_model.stream_async(user_input)
     await chat.append_message_stream(response)
+
+
+tokenizer = tiktoken.encoding_for_model(MODEL_CONFIG["name"])
