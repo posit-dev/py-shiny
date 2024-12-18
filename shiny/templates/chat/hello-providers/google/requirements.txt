@@ -2,4 +2,4 @@ shiny
 python-dotenv
 tokenizers
 chatlas
-anthropic[bedrock]
+google-generativeai
