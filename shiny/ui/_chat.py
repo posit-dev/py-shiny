@@ -105,7 +105,7 @@ class Chat:
 
     # Define a callback to run when the user submits a message
     @chat.on_user_submit
-    async def handle_user_input(user_input):
+    async def handle_user_input(user_input: str):
         # Create a response message stream
         response = await my_model.generate_response(user_input, stream=True)
         # Append the response into the chat
