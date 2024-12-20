@@ -1,0 +1,5 @@
+shiny
+python-dotenv
+tokenizers
+chatlas
+anthropic

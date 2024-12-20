@@ -1,4 +1,0 @@
-aiohttp
-bs4
-openai
-shiny

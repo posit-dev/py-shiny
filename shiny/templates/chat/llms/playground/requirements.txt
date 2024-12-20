@@ -1,0 +1,6 @@
+chatlas
+openai
+anthropic
+google-generativeai
+python-dotenv
+shiny
