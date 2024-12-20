@@ -18,7 +18,7 @@ ui.page_opts(
 # An empty, closed, sidebar
 with ui.sidebar(width=300, style="height:100%", position="right"):
     chat = ui.Chat(id="chat", messages=["Welcome to the dark side!"])
-    chat.ui()
+    chat.ui(height="100%")
 
 
 # Define a callback to run when the user submits a message
