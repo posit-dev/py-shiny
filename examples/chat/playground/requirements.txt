@@ -1,4 +1,6 @@
-langchain_anthropic
-langchain_google_vertexai
-langchain_openai
+chatlas
+openai
+anthropic
+google-generativeai
+python-dotenv
 shiny

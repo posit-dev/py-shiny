@@ -5,13 +5,16 @@
 # ------------------------------------------------------------------------------------
 import os
 
-from openai import AsyncOpenAI
+from chatlas import ChatOpenAI
 from utils import recipe_prompt, scrape_page_with_url
 
 from shiny.express import ui
 
 # Provide your API key here (or set the environment variable)
-llm = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+chat_model = ChatOpenAI(
+    system_prompt=recipe_prompt,
+    api_key=os.environ.get("OPENAI_API_KEY"),
+)
 
 # Set some Shiny page options
 ui.page_opts(
@@ -24,11 +27,7 @@ ui.page_opts(
 chat = ui.Chat(
     id="chat",
     messages=[
-        {"role": "system", "content": recipe_prompt},
-        {
-            "role": "assistant",
-            "content": "Hello! I'm a recipe extractor. Please enter a URL to a recipe page. For example, <https://www.thechunkychef.com/epic-dry-rubbed-baked-chicken-wings/>",
-        },
+        "Hello! I'm a recipe extractor. Please enter a URL to a recipe page. For example, <https://www.thechunkychef.com/epic-dry-rubbed-baked-chicken-wings/>"
     ],
 )
 
@@ -50,11 +49,9 @@ async def try_scrape_page(input: str) -> str | None:
 
 
 @chat.on_user_submit
-async def _():
-    response = await llm.chat.completions.create(
-        model="gpt-4o",
-        messages=chat.messages(format="openai"),
-        temperature=0,
-        stream=True,
+async def handle_user_input(user_input: str):
+    response = chat_model.stream(
+        user_input,
+        kwargs={"temperature": 0},
     )
     await chat.append_message_stream(response)

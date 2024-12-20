@@ -1,19 +1,18 @@
 # ------------------------------------------------------------------------------------
-# A Shiny Chat example showing how to use different language models via LangChain.
+# A Shiny Chat example showing how to use different language models via chatlas.
 # To run it with all the different providers/models, you'll need API keys for each.
 # Namely, OPENAI_API_KEY, ANTHROPIC_API_KEY, and GOOGLE_API_KEY.
-# To see how to get these keys, see the relevant basic examples.
-# (i.e., ../basic/openai/app.py, ../basic/anthropic/app.py, ../basic/gemini/app.py)
+# To see how to get these keys, see chatlas' reference:
+# https://posit-dev.github.io/chatlas/reference/
 # ------------------------------------------------------------------------------------
 
-from langchain_anthropic import ChatAnthropic
-from langchain_google_vertexai import VertexAI
-from langchain_openai import ChatOpenAI
+import chatlas as ctl
 
+from shiny import reactive
 from shiny.express import input, render, ui
 
 models = {
-    "openai": ["gpt-4o", "gpt-3.5-turbo"],
+    "openai": ["gpt-4o-mini", "gpt-4o"],
     "claude": [
         "claude-3-opus-latest",
         "claude-3-5-sonnet-latest",
@@ -32,6 +31,7 @@ ui.page_opts(
     fillable_mobile=True,
 )
 
+# Sidebar with input controls
 with ui.sidebar(position="right"):
     ui.input_select("model", "Model", choices=model_choices)
     ui.input_select(
@@ -39,44 +39,65 @@ with ui.sidebar(position="right"):
         "Response style",
         choices=["Chuck Norris", "Darth Vader", "Yoda", "Gandalf", "Sherlock Holmes"],
     )
-    ui.input_switch("stream", "Stream", value=False)
+    ui.input_switch("stream", "Stream", value=True)
     ui.input_slider("temperature", "Temperature", min=0, max=2, step=0.1, value=1)
     ui.input_slider("max_tokens", "Max Tokens", min=1, max=4096, step=1, value=100)
+    ui.input_action_button("clear", "Clear chat")
+
+# The chat component
+chat = ui.Chat(id="chat")
+chat.ui(width="100%")
 
 
-@render.express(fill=True, fillable=True)
-def chat_ui():
-    system_message = {
-        "content": f"""
-        You are a helpful AI assistant. Provide answers in the style of {input.system_actor()}.
-        """,
-        "role": "system",
-    }
-    chat = ui.Chat(id="chat", messages=[system_message])
-
+@reactive.calc
+def get_model():
     model_params = {
+        "system_prompt": (
+            "You are a helpful AI assistant. "
+            f" Provide answers in the style of {input.system_actor()}."
+        ),
         "model": input.model(),
-        "temperature": input.temperature(),
-        "max_tokens": input.max_tokens(),
     }
 
     if input.model() in models["openai"]:
-        llm = ChatOpenAI(**model_params)
+        chat_model = ctl.ChatOpenAI(**model_params)
     elif input.model() in models["claude"]:
-        llm = ChatAnthropic(**model_params)
+        chat_model = ctl.ChatAnthropic(**model_params)
     elif input.model() in models["google"]:
-        llm = VertexAI(**model_params)
+        chat_model = ctl.ChatGoogle(**model_params)
     else:
         raise ValueError(f"Invalid model: {input.model()}")
 
-    @chat.on_user_submit
-    async def _():
-        messages = chat.messages(format="langchain")
-        if input.stream():
-            response = llm.astream(messages)
-            await chat.append_message_stream(response)
-        else:
-            response = await llm.ainvoke(messages)
-            await chat.append_message(response)
+    return chat_model
 
-    chat.ui()
+
+@reactive.calc
+def chat_params():
+    if input.model() in models["google"]:
+        return {
+            "generation_config": {
+                "temperature": input.temperature(),
+                "max_output_tokens": input.max_tokens(),
+            }
+        }
+    else:
+        return {
+            "temperature": input.temperature(),
+            "max_tokens": input.max_tokens(),
+        }
+
+
+@chat.on_user_submit
+async def handle_user_input(user_input: str):
+    if input.stream():
+        response = get_model().stream(user_input, kwargs=chat_params())
+        await chat.append_message_stream(response)
+    else:
+        response = get_model().chat(user_input, echo="none", kwargs=chat_params())
+        await chat.append_message(response)
+
+
+@reactive.effect
+@reactive.event(input.clear)
+def _():
+    chat.clear_messages()

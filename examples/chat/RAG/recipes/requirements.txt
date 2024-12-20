@@ -1,4 +1,5 @@
 aiohttp
-bs4
+beautifulsoup4
+chatlas
 openai
 shiny
