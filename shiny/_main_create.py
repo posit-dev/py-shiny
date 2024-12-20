@@ -375,10 +375,12 @@ def use_internal_chat_ai_template(
         )
         return
 
-    if input == "_chat-llm_enterprise":
-        template_choices = shiny_internal_templates.chat_enterprise
-    else:
+    if input == "_chat-starters":
+        template_choices = shiny_internal_templates.chat_starters
+    elif input == "_chat-llms":
         template_choices = shiny_internal_templates.chat_llms
+    else:
+        template_choices = shiny_internal_templates.chat_enterprise
 
     choice = question_choose_template(template_choices, back_choice)
 
