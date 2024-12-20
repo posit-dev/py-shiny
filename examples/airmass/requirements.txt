@@ -1,5 +1,5 @@
 astropy
-ipyleaflet
+ipyleaflet==0.19.1
 matplotlib
 numpy
 pandas
