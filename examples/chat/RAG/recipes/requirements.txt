@@ -1,5 +1,0 @@
-aiohttp
-beautifulsoup4
-chatlas
-openai
-shiny

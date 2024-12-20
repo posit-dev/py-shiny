@@ -7,9 +7,12 @@
 # ------------------------------------------------------------------------------------
 
 import chatlas as ctl
+from app_utils import load_dotenv
 
 from shiny import reactive
-from shiny.express import input, render, ui
+from shiny.express import input, ui
+
+load_dotenv()
 
 models = {
     "openai": ["gpt-4o-mini", "gpt-4o"],

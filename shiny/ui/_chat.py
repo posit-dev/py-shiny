@@ -83,7 +83,7 @@ ChunkOption = Literal["start", "end", True, False]
 PendingMessage = Tuple[Any, ChunkOption, Union[str, None]]
 
 
-@add_example(ex_dir="../api-examples/chat")
+@add_example(ex_dir="../templates/chat/starters/hello")
 class Chat:
     """
     Create a chat interface.
@@ -1047,7 +1047,7 @@ class Chat:
         )
 
 
-@add_example(ex_dir="../api-examples/chat")
+@add_example(ex_dir="../templates/chat/starters/hello")
 def chat_ui(
     id: str,
     *,
