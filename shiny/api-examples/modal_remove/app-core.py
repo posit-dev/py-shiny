@@ -1,5 +1,6 @@
 from shiny import App, Inputs, Outputs, Session, reactive, ui
 
+MODEL_DELAY = 4
 
 def run_model(delay=10.0):
     import time
@@ -17,6 +18,7 @@ def the_modal():
         title="Running model",
         easy_close=False,
         footer=None,
+        fade=MODEL_DELAY > 1
     )
 
 
@@ -34,7 +36,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         # Show the modal, blocking interaction with the UI
         ui.modal_show(the_modal())
 
-        result = run_model(delay=4)
+        result = run_model(delay=MODEL_DELAY)
 
         # Now that we have model results, remove the modal
         # and update the model result reactive value

@@ -94,7 +94,9 @@ def modal(
         ``modal_button()``, or from a call to ``modal_remove()`` on the server.
     fade
         If ``False``, the modal dialog will have no fade-in animation (it will simply
-        appear rather than fade in to view).
+        appear rather than fade in to view). When `fade=True`, be careful to avoid
+        showing and hiding the modal too quickly. Only show and hide the modal when the
+        intervening code takes at least 300 to 500ms to execute.
     **kwargs
         Attributes to be applied to the modal's body tag.
 
@@ -192,6 +194,10 @@ def modal_remove(session: Optional[Session] = None) -> None:
     :func:`~shiny.ui.modal_remove` provides a way to remove a modal programmatically.
     Modals can also be removed manually by the user if a :func:`~shiny.ui.modal_button`
     is provided, or if the modal is created with `easy_close=True`.
+
+    Be careful to avoid showing and hiding the modal too quickly when using
+    `ui.modal(fade=True)`. The intervening code should take at least 300 to 500ms to
+    execute (i.e. longer than it takes for the fade animation to reveal the modal).
 
     Parameters
     ----------
