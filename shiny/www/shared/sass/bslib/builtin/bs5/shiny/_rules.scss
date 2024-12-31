@@ -130,12 +130,9 @@ $bslib-checkbox-radio-margin-right: 0.35em !default;
 @if $bslib-dashboard-design {
 
   :root {
-    --bslib-dashboard-sidebar-bg: var(--#{$prefix}body-bg);
-    --bslib-dashboard-sidebar-main-bg: var(--#{$prefix}body-bg);
     --bslib-dashboard-main-bg: rgb(247, 247, 247);
     --#{$prefix}card-border-color: var(--bslib-dashboard-border-color-translucent, var(--#{$prefix}border-color-translucent));
     --bslib-dashboard-card-header-font-weight: #{$font-weight-semibold};
-    --bslib-sidebar-bg: RGBA(var(--#{$prefix}body-bg-rgb), 0.05);
   }
 
   @include color-mode(dark) {
@@ -178,8 +175,12 @@ $bslib-checkbox-radio-margin-right: 0.35em !default;
 
   .bslib-page-navbar, .bslib-page-dashboard {
     > .navbar {
-      --bslib-navbar-default-bg: var(--#{$prefix}body-bg);
-      --bslib-navbar-inverse-bg: var(--#{$prefix}body-color);
+      @if not $navbar-light-bg and not $navbar-bg {
+        --bslib-navbar-default-bg: var(--#{$prefix}body-bg);
+      }
+      @if not $navbar-dark-bg and not $navbar-bg {
+        --bslib-navbar-inverse-bg: var(--#{$prefix}body-color);
+      }
     }
 
     > .navbar + div {
@@ -196,8 +197,10 @@ $bslib-checkbox-radio-margin-right: 0.35em !default;
   }
 
   .bslib-page-sidebar {
-    --bslib-page-sidebar-title-bg: var(--#{$prefix}body-bg);
-    --bslib-page-sidebar-title-color: var(--#{$prefix}body-color);
+    @if not $navbar-bg {
+      --bslib-page-sidebar-title-bg: var(--#{$prefix}body-bg);
+      --bslib-page-sidebar-title-color: var(--#{$prefix}body-color);
+    }
 
     .bslib-page-title {
       border-color: var(--#{$prefix}border-color-translucent);

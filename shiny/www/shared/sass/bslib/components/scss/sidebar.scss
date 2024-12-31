@@ -1,6 +1,19 @@
 // User-facing variables, use for theming
-$bslib-sidebar-bg: rgba(var(--bs-emphasis-color-rgb, 0,0,0), 0.05) !default;
-$bslib-sidebar-fg: var(--_main-fg) !default;
+$bslib-sidebar-bg: null !default;
+$bslib-sidebar-fg: null !default;
+
+@if $bslib-sidebar-bg == null {
+  // sidebar bg not set by the user
+  $bslib-sidebar-bg: rgba(var(--bs-emphasis-color-rgb, 0,0,0), 0.05);
+} @else if $bslib-sidebar-fg == null and type-of($bslib-sidebar-bg) == "color" {
+  // sidebar bg set, fg unset
+  $bslib-sidebar-fg: color-contrast($bslib-sidebar-bg);
+}
+@if $bslib-sidebar-fg == null {
+  // sidebar bg and fg were unset
+  $bslib-sidebar-fg: var(--_main-fg);
+}
+
 $bslib-sidebar-toggle-bg: rgba(var(--bs-emphasis-color-rgb, 0,0,0), 0.1) !default;
 $bslib-sidebar-border: var(--bs-card-border-width, #{$card-border-width}) solid var(--bs-card-border-color, #{$card-border-color}) !default;
 
