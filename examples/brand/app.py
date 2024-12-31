@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -8,7 +7,7 @@ from shiny import App, render, ui
 from shiny.ui._theme_brand import bootstrap_colors
 
 theme = ui.Theme.from_brand(__file__)
-# theme = ui.Theme()
+# theme = ui.Theme()  ## default theme
 theme.add_rules((Path(__file__).parent / "_colors.scss").read_text())
 
 app_ui = ui.page_navbar(
