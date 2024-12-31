@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `ui.Chat()` now correctly handles new `ollama.chat()` return value introduced in `ollama` v0.4. (#1787)
 
+* Updated documentation of `ui.modal()` and `ui.modal_remove()` now warn against using `ui.modal(fade=True)` when there's a chance of showing and hiding the modal within 500ms or less. (#1808)
+
 ## [1.2.1] - 2024-11-14
 
 ### Bug fixes
