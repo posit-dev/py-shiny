@@ -7,8 +7,6 @@ import numpy as np
 from shiny import App, render, ui
 from shiny.ui._theme_brand import bootstrap_colors
 
-# TODO: Move this into the test that runs this app
-os.environ["SHINY_BRAND_YML_RAISE_UNMAPPED"] = "true"
 theme = ui.Theme.from_brand(__file__)
 # theme = ui.Theme()
 theme.add_rules((Path(__file__).parent / "_colors.scss").read_text())
