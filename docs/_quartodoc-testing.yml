@@ -24,6 +24,7 @@ quartodoc:
     - title: UI Inputs
       desc: Methods for interacting with Shiny app input value controller.
       contents:
+        - playwright.controller.InputActionButton
         - playwright.controller.InputActionLink
         - playwright.controller.InputCheckbox
         - playwright.controller.InputCheckboxGroup
