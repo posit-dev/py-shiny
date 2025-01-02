@@ -154,12 +154,20 @@ class AnthropicNormalizer(BaseMessageNormalizer):
         x = cast("MessageStreamEvent", chunk)
         content = ""
         if x.type == "content_block_delta":
-            if x.delta.type != "text_delta":
+
+            if x.delta.type == "text_delta":
+                content = x.delta.text
+            elif x.delta.type == "input_json_delta":
+                content = x.delta.partial_json
+            else:
                 raise ValueError(
                     f"Anthropic message delta type {x.delta.type} not supported. "
-                    "Only 'text_delta' type is supported"
+                    "Only 'text_delta' and 'input_json_delta' types are supported"
                 )
-            content = x.delta.text
+
+        elif x.type in ("content_block_start"):
+            if x.content_block.type == "tool_use":
+                content = "\n```\n"
 
         return ChatMessage(content=content, role="assistant")
 
