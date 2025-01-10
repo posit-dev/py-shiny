@@ -99,7 +99,7 @@ def test_valuebox(page: Page, local_app: ShinyAppProc) -> None:
     assert get_value_box_bg_color(value_box4) == "rgb(255, 255, 255)"
 
     value_box5 = controller.ValueBox(page, "valuebox5")
-    value_box5.expect_height("500px")
+    value_box5.expect_max_height("500px")
     assert get_title_tag_name(value_box5) == "p"
     value_box5.expect_title("No showcase w/ showcase layout")
     value_box5.expect_value("Red text - fill is False")
