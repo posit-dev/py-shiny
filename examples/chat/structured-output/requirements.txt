@@ -1,0 +1,5 @@
+shiny
+shinyswatch
+python-dotenv
+openai
+pydantic
