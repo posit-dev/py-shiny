@@ -115,6 +115,7 @@ from ._navs import (
     nav_menu,
     nav_panel,
     nav_spacer,
+    navbar_options,
     navset_bar,
     navset_card_pill,
     navset_card_tab,
@@ -291,6 +292,7 @@ __all__ = (
     "navset_pill_list",
     "navset_hidden",
     "navset_bar",
+    "navbar_options",
     # _notification
     "notification_show",
     "notification_remove",
