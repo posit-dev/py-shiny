@@ -77,6 +77,7 @@ quartodoc:
         - express.ui.navset_underline
         - express.ui.navset_pill_list
         - express.ui.navset_hidden
+        - express.ui.navbar_options
     - title: Chat interface
       desc: Build a chatbot interface
       contents:
