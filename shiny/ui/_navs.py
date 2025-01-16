@@ -1130,7 +1130,9 @@ def navbar_options_resolve_deprecated(
     underline: MaybeMissing[bool] = DEPRECATED,
     collapsible: MaybeMissing[bool] = DEPRECATED,
     fn_caller: str = "navset_bar",
-) -> Any:
+) -> NavbarOptions:
+    options_user = options_user if options_user is not None else navbar_options()
+
     options_old = {
         "position": position,
         "bg": bg,
@@ -1142,13 +1144,15 @@ def navbar_options_resolve_deprecated(
 
     args_deprecated = list(options_old.keys())
 
-    if args_deprecated:
-        args_deprecated = ", ".join([f"`{arg}`" for arg in args_deprecated])
-        warn_deprecated(
-            "In shiny v1.3.0, the arguments of "
-            f"`{fn_caller}()` for navbar options (including {args_deprecated}) "
-            f"have been consolidated into a single `navbar_options` argument."
-        )
+    if not args_deprecated:
+        return options_user
+
+    args_deprecated = ", ".join([f"`{arg}`" for arg in args_deprecated])
+    warn_deprecated(
+        "In shiny v1.3.0, the arguments of "
+        f"`{fn_caller}()` for navbar options (including {args_deprecated}) "
+        f"have been consolidated into a single `navbar_options` argument."
+    )
 
     if "inverse" in options_old:
         inverse_old = options_old["inverse"]
@@ -1159,7 +1163,6 @@ def navbar_options_resolve_deprecated(
 
         options_old["theme"] = "dark" if inverse_old else "light"
 
-    options_user = options_user if options_user is not None else navbar_options()
 
     options_resolved = {
         k: v
@@ -1212,12 +1215,6 @@ class NavSetBar(NavSet):
         header: TagChild = None,
         footer: TagChild = None,
         navbar_options: Optional[NavbarOptions] = None,
-        # Deprecated ----
-        position: MaybeMissing[NavbarOptionsPositionT] = DEPRECATED,
-        bg: MaybeMissing[str | None] = DEPRECATED,
-        inverse: MaybeMissing[bool] = DEPRECATED,
-        underline: MaybeMissing[bool] = DEPRECATED,
-        collapsible: MaybeMissing[bool] = DEPRECATED,
     ) -> None:
         super().__init__(
             *args,
@@ -1232,14 +1229,7 @@ class NavSetBar(NavSet):
         self.fillable = fillable
         self.gap = gap
         self.padding = padding
-        self.navbar_options = navbar_options_resolve_deprecated(
-            options_user=navbar_options or NavbarOptions(),
-            position=position,
-            bg=bg,
-            inverse=inverse,
-            underline=underline,
-            collapsible=collapsible,
-        )
+        self.navbar_options = navbar_options if navbar_options is not None else NavbarOptions()
         self.fluid = fluid
         self._is_page_level = False
 
@@ -1493,8 +1483,18 @@ def navset_bar(
         else:
             new_args.append(cast(NavSetArg, arg))
 
+    navbar_opts = navbar_options_resolve_deprecated(
+        fn_caller="navset_bar",
+        options_user=navbar_options or NavbarOptions(),
+        position=position,
+        bg=bg,
+        inverse=inverse,
+        underline=underline,
+        collapsible=collapsible,
+    )
+
     ul_class = "nav navbar-nav"
-    if underline:
+    if navbar_opts.underline:
         ul_class += " nav-underline"
 
     return NavSetBar(
@@ -1510,12 +1510,7 @@ def navset_bar(
         header=header,
         footer=footer,
         fluid=fluid,
-        navbar_options=navbar_options,
-        position=position,
-        bg=bg,
-        inverse=inverse,
-        underline=underline,
-        collapsible=collapsible,
+        navbar_options=navbar_opts,
     )
 
 
