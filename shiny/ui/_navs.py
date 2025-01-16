@@ -1159,7 +1159,6 @@ def navbar_options_resolve_deprecated(
 
         options_old["theme"] = "dark" if inverse_old else "light"
 
-
     options_resolved = {
         k: v
         for k, v in vars(options_user).items()
@@ -1225,7 +1224,9 @@ class NavSetBar(NavSet):
         self.fillable = fillable
         self.gap = gap
         self.padding = padding
-        self.navbar_options = navbar_options if navbar_options is not None else NavbarOptions()
+        self.navbar_options = (
+            navbar_options if navbar_options is not None else NavbarOptions()
+        )
         self.fluid = fluid
         self._is_page_level = False
 
@@ -1259,7 +1260,9 @@ class NavSetBar(NavSet):
         # bslib supports navbar-default/navbar-inverse (which is no longer
         # a thing in Bootstrap 5) in a way that's still useful, especially Bootswatch.
         nav_final.add_class(
-            "navbar-inverse" if self.navbar_options.theme == "dark" else "navbar-default"
+            "navbar-inverse"
+            if self.navbar_options.theme == "dark"
+            else "navbar-default"
         )
 
         if self.navbar_options.bg:
