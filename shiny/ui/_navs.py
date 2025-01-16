@@ -1068,6 +1068,7 @@ class NavbarOptions:
         return f"navbar_options({', '.join(fields)})"
 
 
+@add_example()
 def navbar_options(
     position: MaybeMissing[NavbarOptionsPositionT] = MISSING,
     bg: MaybeMissing[str | None] = MISSING,
