@@ -174,7 +174,7 @@ def page_navbar(
     window_title: str | MISSING_TYPE = MISSING,
     lang: Optional[str] = None,
     theme: Optional[str | Path | Theme | ThemeProvider] = None,
-    # Deprecated ----
+    # Deprecated -- v1.3.0 2025-01 ----
     position: MaybeMissing[
         Literal["static-top", "fixed-top", "fixed-bottom"]
     ] = DEPRECATED,

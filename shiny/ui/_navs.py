@@ -1375,7 +1375,7 @@ def navset_bar(
     footer: TagChild = None,
     navbar_options: Optional[NavbarOptions] = None,
     fluid: bool = True,
-    # Deprecated ----
+    # Deprecated -- v1.3.0 2025-01 ----
     position: MaybeMissing[NavbarOptionsPositionT] = DEPRECATED,
     bg: MaybeMissing[str | None] = DEPRECATED,
     inverse: MaybeMissing[bool] = DEPRECATED,
@@ -1452,7 +1452,8 @@ def navset_bar(
         Deprecated in v1.3.0. Please use `navbar_options` instead; see
         :func:`~shiny.ui.navbar_options` for details.
 
-        ``True`` to automatically collapse the elements into an expandable menu on mobile devices or narrow window widths.
+        ``True`` to automatically collapse the elements into an expandable menu on
+        mobile devices or narrow window widths.
 
     See Also
     --------
