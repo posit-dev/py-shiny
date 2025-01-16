@@ -1080,7 +1080,7 @@ def navbar_options(
     """
     Configure the appearance and behavior of the navbar.
 
-    Parameters:
+    Parameters
     -----------
     position
         Determines whether the navbar should be displayed at the top of the page with
@@ -1088,23 +1088,18 @@ def navbar_options(
         or pinned at the bottom (`"fixed-bottom"`). Note that using `"fixed-top"` or
         `"fixed-bottom"` will cause the navbar to overlay your body content, unless you
         add padding (e.g., `tags.style("body {padding-top: 70px;}")`)
-
     bg
         Background color of the navbar (a CSS color).
-
     theme
         The navbar theme: either `"dark"` for a light text color (on a **dark**
         background) or `"light"` for a dark text color (on a **light** background). If
         `"auto"` (the default) and `bg` is provided, the best contrast to `bg` is
         chosen.
-
     underline
         If `True`, adds an underline effect to the navbar.
-
     collapsible
         If `True`, automatically collapses the elements into an expandable menu on
         mobile devices or narrow window widths.
-
     **attrs : dict
         Additional HTML attributes to apply to the navbar container element.
 
