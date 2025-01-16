@@ -3,13 +3,14 @@ from __future__ import annotations
 import collections.abc
 import copy
 import re
-from typing import Any, Literal, Optional, Sequence, cast
+from typing import Any, Generic, Literal, Optional, Sequence, TypeVar, cast
 
 from htmltools import (
     HTML,
     MetadataNode,
     Tag,
     TagAttrs,
+    TagAttrValue,
     TagChild,
     TagList,
     css,
@@ -17,10 +18,11 @@ from htmltools import (
     tags,
 )
 
+from .._deprecated import warn_deprecated
 from .._docstring import add_example
 from .._namespaces import resolve_id_or_none
 from .._utils import private_random_int
-from ..types import NavSetArg
+from ..types import DEPRECATED, MISSING, MaybeMissing, NavSetArg, is_missing
 from ._bootstrap import column, row
 from ._card import CardItem, WrapperCallable, card, card_body, card_footer, card_header
 from ._html_deps_shinyverse import components_dependencies
@@ -42,7 +44,10 @@ __all__ = (
     "navset_pill_list",
     "navset_hidden",
     "navset_bar",
+    "navbar_options",
 )
+
+T = TypeVar("T")
 
 
 # -----------------------------------------------------------------------------
@@ -985,18 +990,170 @@ def navset_pill_list(
     )
 
 
+class Default(Generic[T]):
+    def __init__(self, value: T):
+        self._default = value
+
+
+NavbarOptionsPositionT = Literal[
+    "static-top", "fixed-top", "fixed-bottom", "sticky-top"
+]
+NavbarOptionsTypeT = Literal["auto", "light", "dark"]
+
+
+class NavbarOptions:
+    position: NavbarOptionsPositionT
+    bg: Optional[str]
+    type: NavbarOptionsTypeT
+    underline: bool
+    collapsible: bool
+    attrs: dict[str, Any]
+    _is_default: dict[str, bool]
+
+    def __init__(
+        self,
+        *,
+        position: MaybeMissing[NavbarOptionsPositionT] = MISSING,
+        bg: MaybeMissing[str | None] = MISSING,
+        type: MaybeMissing[NavbarOptionsTypeT] = MISSING,
+        underline: MaybeMissing[bool] = MISSING,
+        collapsible: MaybeMissing[bool] = MISSING,
+        **attrs: TagAttrValue,
+    ):
+        self._is_default = {}
+
+        self.position = self._maybe_default("position", position, default="static-top")
+        self.bg = self._maybe_default("bg", bg, default=None)
+        self.type = self._maybe_default("type", type, default="auto")
+        self.underline = self._maybe_default("underline", underline, default=True)
+        self.collapsible = self._maybe_default("collapsible", collapsible, default=True)
+
+        if "inverse" in attrs:
+            warn_deprecated("`inverse` is deprecated, please use `type_` instead.")
+            del attrs["inverse"]
+
+        self.attrs = attrs
+
+    def _maybe_default(self, name: str, value: Any, default: Any):
+        if is_missing(value):
+            self._is_default[name] = True
+            return default
+        return value
+
+    def __eq__(self, other: Any):
+        if not isinstance(other, NavbarOptions):
+            return False
+
+        return (
+            self.position == other.position
+            and self.bg == other.bg
+            and self.type == other.type
+            and self.underline == other.underline
+            and self.collapsible == other.collapsible
+            and self.attrs == other.attrs
+        )
+
+    def __repr__(self):
+        fields: list[str] = []
+        for key, value in self.__dict__.items():
+            if key == "_is_default":
+                continue
+            if not self._is_default.get(key, False):
+                if key == "attrs" and len(value) == 0:
+                    continue
+                fields.append(f"{key}={value!r}")
+
+        return f"navbar_options({', '.join(fields)})"
+
+
+def navbar_options(
+    position: MaybeMissing[NavbarOptionsPositionT] = MISSING,
+    bg: MaybeMissing[str | None] = MISSING,
+    type: MaybeMissing[NavbarOptionsTypeT] = MISSING,
+    underline: MaybeMissing[bool] = MISSING,
+    collapsible: MaybeMissing[bool] = MISSING,
+    **attrs: TagAttrValue,
+) -> NavbarOptions:
+    return NavbarOptions(
+        position=position,
+        bg=bg,
+        type=type,
+        underline=underline,
+        collapsible=collapsible,
+        **attrs,
+    )
+
+
+def navbar_options_resolve_deprecated(
+    options_user: Optional[NavbarOptions] = None,
+    position: MaybeMissing[NavbarOptionsPositionT] = DEPRECATED,
+    bg: MaybeMissing[str | None] = DEPRECATED,
+    inverse: MaybeMissing[bool] = DEPRECATED,
+    underline: MaybeMissing[bool] = DEPRECATED,
+    collapsible: MaybeMissing[bool] = DEPRECATED,
+    fn_caller: str = "navset_bar",
+) -> Any:
+    options_old = {
+        "position": position,
+        "bg": bg,
+        "inverse": inverse,
+        "collapsible": collapsible,
+        "underline": underline,
+    }
+    options_old = {k: v for k, v in options_old.items() if not is_missing(v)}
+
+    args_deprecated = list(options_old.keys())
+
+    if args_deprecated:
+        args_deprecated = ", ".join([f"`{arg}`" for arg in args_deprecated])
+        warn_deprecated(
+            f"The arguments of `{fn_caller}()` for navbar options (including {args_deprecated}) "
+            f"have been consolidated into a single `navbar_options` argument."
+        )
+
+    if "inverse" in options_old:
+        inverse_old = options_old["inverse"]
+        del options_old["inverse"]
+
+        if not isinstance(inverse_old, bool):
+            raise ValueError(f"Invalid `inverse` value: {inverse}")
+
+        options_old["type"] = "dark" if inverse_old else "light"
+
+    options_user = options_user if options_user is not None else navbar_options()
+
+    options_resolved = {
+        k: v
+        for k, v in vars(options_user).items()
+        if k != "_is_default" and not options_user._is_default.get(k, False)
+    }
+
+    ignored: list[str] = []
+    for opt in options_old:
+        if opt not in options_resolved:
+            options_resolved[opt] = options_old[opt]
+        elif options_old[opt] != options_resolved[opt]:
+            ignored.append("inverse" if opt == "type" else opt)
+
+    if ignored:
+        warn_deprecated(
+            f"`{', '.join(ignored)}` {'was' if len(ignored) == 1 else 'were'} provided twice: once directly and once in `navbar_options`.\nThe deprecated direct option(s) will be ignored and the values from `navbar_options` will be used."
+        )
+
+    attrs = options_resolved.pop("attrs", {})
+
+    return navbar_options(**options_resolved, **attrs)
+
+
 class NavSetBar(NavSet):
     title: TagChild
     sidebar: Optional[Sidebar]
     fillable: bool | list[str]
     gap: Optional[CssUnit]
     padding: Optional[CssUnit | list[CssUnit]]
-    position: Literal["static-top", "fixed-top", "fixed-bottom", "sticky-top"]
-    bg: Optional[str]
-    inverse: bool
-    underline: bool
-    collapsible: bool
     fluid: bool
+    navbar_options: NavbarOptions
+    # Internal ----
     _is_page_level: bool
 
     def __init__(
@@ -1010,17 +1167,16 @@ class NavSetBar(NavSet):
         fillable: bool | list[str] = False,
         gap: Optional[CssUnit],
         padding: Optional[CssUnit | list[CssUnit]],
-        position: Literal[
-            "static-top", "fixed-top", "fixed-bottom", "sticky-top"
-        ] = "static-top",
+        fluid: bool = True,
         header: TagChild = None,
         footer: TagChild = None,
-        bg: Optional[str] = None,
-        # TODO: default to 'auto', like we have in R (parse color via webcolors?)
-        inverse: bool = False,
-        underline: bool = True,
-        collapsible: bool = True,
-        fluid: bool = True,
+        navbar_options: Optional[NavbarOptions] = None,
+        # Deprecated ----
+        position: MaybeMissing[NavbarOptionsPositionT] = DEPRECATED,
+        bg: MaybeMissing[str | None] = DEPRECATED,
+        inverse: MaybeMissing[bool] = DEPRECATED,
+        underline: MaybeMissing[bool] = DEPRECATED,
+        collapsible: MaybeMissing[bool] = DEPRECATED,
     ) -> None:
         super().__init__(
             *args,
@@ -1035,11 +1191,14 @@ class NavSetBar(NavSet):
         self.fillable = fillable
         self.gap = gap
         self.padding = padding
-        self.position = position
-        self.bg = bg
-        self.inverse = inverse
-        self.underline = underline
-        self.collapsible = collapsible
+        self.navbar_options = navbar_options_resolve_deprecated(
+            options_user=navbar_options or NavbarOptions(),
+            position=position,
+            bg=bg,
+            inverse=inverse,
+            underline=underline,
+            collapsible=collapsible,
+        )
         self.fluid = fluid
         self._is_page_level = False
 
@@ -1048,7 +1207,7 @@ class NavSetBar(NavSet):
             {"class": "container-fluid" if self.fluid else "container"},
             tags.span({"class": "navbar-brand"}, self.title),
         )
-        if self.collapsible:
+        if self.navbar_options.collapsible:
             collapse_id = "navbar-collapse-" + nav_random_int()
             nav_container.append(
                 tags.button(
@@ -1067,15 +1226,19 @@ class NavSetBar(NavSet):
         nav_container.append(nav)
         nav_final = tags.nav({"class": "navbar navbar-expand-md"}, nav_container)
 
-        if self.position != "static-top":
-            nav_final.add_class(self.position)
+        if self.navbar_options.position != "static-top":
+            nav_final.add_class(self.navbar_options.position)
 
         # bslib supports navbar-default/navbar-inverse (which is no longer
         # a thing in Bootstrap 5) in a way that's still useful, especially Bootswatch.
-        nav_final.add_class(f"navbar-{'inverse' if self.inverse else 'default'}")
+        nav_final.add_class(
+            "navbar-inverse" if self.navbar_options.type == "dark" else "navbar-default"
+        )
 
-        if self.bg:
-            nav_final.add_style(f"background-color: {self.bg} !important;")
+        if self.navbar_options.bg:
+            nav_final.add_style(
+                f"background-color: {self.navbar_options.bg} !important;"
+            )
 
         content = _make_tabs_fillable(
             content,
@@ -1177,17 +1340,16 @@ def navset_bar(
     fillable: bool | list[str] = True,
     gap: Optional[CssUnit] = None,
     padding: Optional[CssUnit | list[CssUnit]] = None,
-    position: Literal[
-        "static-top", "fixed-top", "fixed-bottom", "sticky-top"
-    ] = "static-top",
     header: TagChild = None,
     footer: TagChild = None,
-    bg: Optional[str] = None,
-    # TODO: default to 'auto', like we have in R (parse color via webcolors?)
-    inverse: bool = False,
-    underline: bool = True,
-    collapsible: bool = True,
     fluid: bool = True,
+    navbar_options: Optional[NavbarOptions] = None,
+    # Deprecated ----
+    position: MaybeMissing[NavbarOptionsPositionT] = DEPRECATED,
+    bg: MaybeMissing[str | None] = DEPRECATED,
+    inverse: MaybeMissing[bool] = DEPRECATED,
+    underline: MaybeMissing[bool] = DEPRECATED,
+    collapsible: MaybeMissing[bool] = DEPRECATED,
 ) -> NavSetBar:
     """
     Render nav items as a navbar.
@@ -1285,14 +1447,15 @@ def navset_bar(
         gap=gap,
         padding=padding,
         title=title,
-        position=position,
         header=header,
         footer=footer,
+        fluid=fluid,
+        navbar_options=navbar_options,
+        position=position,
         bg=bg,
         inverse=inverse,
         underline=underline,
         collapsible=collapsible,
-        fluid=fluid,
     )
 
 
