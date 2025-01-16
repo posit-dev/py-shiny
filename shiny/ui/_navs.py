@@ -1029,7 +1029,9 @@ class NavbarOptions:
         self.collapsible = self._maybe_default("collapsible", collapsible, default=True)
 
         if "inverse" in attrs:
-            warn_deprecated("`inverse` is deprecated, please use `type_` instead.")
+            warn_deprecated(
+                "`navbar_options()` does not support `inverse`, please use `type_` instead."
+            )
             del attrs["inverse"]
 
         self.attrs = attrs
@@ -1107,7 +1109,8 @@ def navbar_options_resolve_deprecated(
     if args_deprecated:
         args_deprecated = ", ".join([f"`{arg}`" for arg in args_deprecated])
         warn_deprecated(
-            f"The arguments of `{fn_caller}()` for navbar options (including {args_deprecated}) "
+            "In shiny v1.3.0, the arguments of "
+            f"`{fn_caller}()` for navbar options (including {args_deprecated}) "
             f"have been consolidated into a single `navbar_options` argument."
         )
 
@@ -1137,7 +1140,9 @@ def navbar_options_resolve_deprecated(
 
     if ignored:
         warn_deprecated(
-            f"`{', '.join(ignored)}` {'was' if len(ignored) == 1 else 'were'} provided twice: once directly and once in `navbar_options`.\nThe deprecated direct option(s) will be ignored and the values from `navbar_options` will be used."
+            f"`{', '.join(ignored)}` {'was' if len(ignored) == 1 else 'were'} provided twice: "
+            "once directly and once in `navbar_options`.\n"
+            "The deprecated direct option(s) will be ignored and the values from `navbar_options` will be used."
         )
 
     attrs = options_resolved.pop("attrs", {})
