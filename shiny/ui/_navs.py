@@ -998,13 +998,13 @@ class Default(Generic[T]):
 NavbarOptionsPositionT = Literal[
     "static-top", "fixed-top", "fixed-bottom", "sticky-top"
 ]
-NavbarOptionsTypeT = Literal["auto", "light", "dark"]
+NavbarOptionsThemeT = Literal["auto", "light", "dark"]
 
 
 class NavbarOptions:
     position: NavbarOptionsPositionT
     bg: Optional[str]
-    type: NavbarOptionsTypeT
+    theme: NavbarOptionsThemeT
     underline: bool
     collapsible: bool
     attrs: dict[str, Any]
@@ -1015,7 +1015,7 @@ class NavbarOptions:
         *,
         position: MaybeMissing[NavbarOptionsPositionT] = MISSING,
         bg: MaybeMissing[str | None] = MISSING,
-        type: MaybeMissing[NavbarOptionsTypeT] = MISSING,
+        theme: MaybeMissing[NavbarOptionsThemeT] = MISSING,
         underline: MaybeMissing[bool] = MISSING,
         collapsible: MaybeMissing[bool] = MISSING,
         **attrs: TagAttrValue,
@@ -1024,13 +1024,13 @@ class NavbarOptions:
 
         self.position = self._maybe_default("position", position, default="static-top")
         self.bg = self._maybe_default("bg", bg, default=None)
-        self.type = self._maybe_default("type", type, default="auto")
+        self.theme = self._maybe_default("theme", theme, default="auto")
         self.underline = self._maybe_default("underline", underline, default=True)
         self.collapsible = self._maybe_default("collapsible", collapsible, default=True)
 
         if "inverse" in attrs:
             warn_deprecated(
-                "`navbar_options()` does not support `inverse`, please use `type_` instead."
+                "`navbar_options()` does not support `inverse`, please use `theme` instead."
             )
             del attrs["inverse"]
 
@@ -1049,7 +1049,7 @@ class NavbarOptions:
         return (
             self.position == other.position
             and self.bg == other.bg
-            and self.type == other.type
+            and self.theme == other.theme
             and self.underline == other.underline
             and self.collapsible == other.collapsible
             and self.attrs == other.attrs
@@ -1071,15 +1071,51 @@ class NavbarOptions:
 def navbar_options(
     position: MaybeMissing[NavbarOptionsPositionT] = MISSING,
     bg: MaybeMissing[str | None] = MISSING,
-    type: MaybeMissing[NavbarOptionsTypeT] = MISSING,
+    theme: MaybeMissing[NavbarOptionsThemeT] = MISSING,
     underline: MaybeMissing[bool] = MISSING,
     collapsible: MaybeMissing[bool] = MISSING,
     **attrs: TagAttrValue,
 ) -> NavbarOptions:
+    """
+    Configure the appearance and behavior of the navbar.
+
+    Parameters:
+    -----------
+    position
+        Determines whether the navbar should be displayed at the top of the page with
+        normal scrolling behavior (`"static-top"`), pinned at the top (`"fixed-top"`),
+        or pinned at the bottom (`"fixed-bottom"`). Note that using `"fixed-top"` or
+        `"fixed-bottom"` will cause the navbar to overlay your body content, unless you
+        add padding (e.g., `tags.style("body {padding-top: 70px;}")`)
+
+    bg
+        Background color of the navbar (a CSS color).
+
+    theme
+        The navbar theme: either `"dark"` for a light text color (on a **dark**
+        background) or `"light"` for a dark text color (on a **light** background). If
+        `"auto"` (the default) and `bg` is provided, the best contrast to `bg` is
+        chosen.
+
+    underline
+        If `True`, adds an underline effect to the navbar.
+
+    collapsible
+        If `True`, automatically collapses the elements into an expandable menu on
+        mobile devices or narrow window widths.
+
+    **attrs : dict
+        Additional HTML attributes to apply to the navbar container element.
+
+    Returns:
+    --------
+    NavbarOptions
+        A NavbarOptions object configured with the specified options.
+    """
     return NavbarOptions(
         position=position,
         bg=bg,
-        type=type,
+        theme=theme,
         underline=underline,
         collapsible=collapsible,
         **attrs,
@@ -1121,7 +1157,7 @@ def navbar_options_resolve_deprecated(
         if not isinstance(inverse_old, bool):
             raise ValueError(f"Invalid `inverse` value: {inverse}")
 
-        options_old["type"] = "dark" if inverse_old else "light"
+        options_old["theme"] = "dark" if inverse_old else "light"
 
     options_user = options_user if options_user is not None else navbar_options()
 
@@ -1136,7 +1172,7 @@ def navbar_options_resolve_deprecated(
         if opt not in options_resolved:
             options_resolved[opt] = options_old[opt]
         elif options_old[opt] != options_resolved[opt]:
-            ignored.append("inverse" if opt == "type" else opt)
+            ignored.append("inverse" if opt == "theme" else opt)
 
     if ignored:
         warn_deprecated(
@@ -1237,7 +1273,7 @@ class NavSetBar(NavSet):
         # bslib supports navbar-default/navbar-inverse (which is no longer
         # a thing in Bootstrap 5) in a way that's still useful, especially Bootswatch.
         nav_final.add_class(
-            "navbar-inverse" if self.navbar_options.type == "dark" else "navbar-default"
+            "navbar-inverse" if self.navbar_options.theme == "dark" else "navbar-default"
         )
 
         if self.navbar_options.bg:
@@ -1347,8 +1383,8 @@ def navset_bar(
     padding: Optional[CssUnit | list[CssUnit]] = None,
     header: TagChild = None,
     footer: TagChild = None,
-    fluid: bool = True,
     navbar_options: Optional[NavbarOptions] = None,
+    fluid: bool = True,
     # Deprecated ----
     position: MaybeMissing[NavbarOptionsPositionT] = DEPRECATED,
     bg: MaybeMissing[str | None] = DEPRECATED,
@@ -1390,24 +1426,43 @@ def navset_bar(
         be used for top, the second will be left and right, and the third will be
         bottom. If four, then the values will be interpreted as top, right, bottom, and
         left respectively. This value is only used when the navbar is `fillable`.
+    header
+        UI to display above the selected content.
+    footer
+        UI to display below the selected content.
+    fluid
+        ``True`` to use fluid layout; ``False`` to use fixed layout.
+    navbar_options
+        Configure the appearance and behavior of the navbar using
+        :func:`~shiny.ui.navbar_options` to set properties like position, background
+        color, and more.
+
+        `navbar_options` was added in v1.3.0 and replaces deprecated arguments
+        `position`, `bg`, `inverse`, `collapsible`, and `underline`.
     position
+        Deprecated in v1.3.0. Please use `navbar_options` instead; see
+        :func:`~shiny.ui.navbar_options` for details.
+
         Determines whether the navbar should be displayed at the top of the page with
         normal scrolling behavior ("static-top"), pinned at the top ("fixed-top"), or
         pinned at the bottom ("fixed-bottom"). Note that using "fixed-top" or
         "fixed-bottom" will cause the navbar to overlay your body content, unless you
         add padding (e.g., ``tags.style("body {padding-top: 70px;}")``).
-    header
-        UI to display above the selected content.
-    footer
-        UI to display below the selected content.
     bg
+        Deprecated in v1.3.0. Please use `navbar_options` instead; see
+        :func:`~shiny.ui.navbar_options` for details.
+
         Background color of the navbar (a CSS color).
     inverse
+        Deprecated in v1.3.0. Please use `navbar_options` instead; see
+        :func:`~shiny.ui.navbar_options` for details.
+
         Either ``True`` for a light text color or ``False`` for a dark text color.
     collapsible
-        ``True`` to automatically collapse the navigation elements into an expandable menu on mobile devices or narrow window widths.
-    fluid
-        ``True`` to use fluid layout; ``False`` to use fixed layout.
+        Deprecated in v1.3.0. Please use `navbar_options` instead; see
+        :func:`~shiny.ui.navbar_options` for details.
+
+        ``True`` to automatically collapse the elements into an expandable menu on mobile devices or narrow window widths.
 
     See Also
     --------

@@ -216,7 +216,7 @@ def test_navbar_options_inverse_true():
     with pytest.warns(ShinyDeprecationWarning, match="`inverse`"):
         result = navbar_options_resolve_deprecated(options_user, inverse=True)
     assert isinstance(result, NavbarOptions)
-    assert result.type == "dark"
+    assert result.theme == "dark"
 
 
 def test_navbar_options_inverse_false():
@@ -224,7 +224,7 @@ def test_navbar_options_inverse_false():
     with pytest.warns(ShinyDeprecationWarning, match="`inverse`"):
         result = navbar_options_resolve_deprecated(options_user, inverse=False)
     assert isinstance(result, NavbarOptions)
-    assert result.type == "light"
+    assert result.theme == "light"
 
 
 def test_navbar_options_inverse_invalid():
@@ -272,7 +272,7 @@ def test_navbar_options_all_deprecated_arguments():
     options_user = navbar_options()
     with pytest.warns(
         ShinyDeprecationWarning,
-        match="The arguments of `navset_bar\\(\\)` for navbar options",
+        match="arguments of `navset_bar\\(\\)` for navbar options",
     ):
         result = navbar_options_resolve_deprecated(
             options_user,
@@ -283,14 +283,14 @@ def test_navbar_options_all_deprecated_arguments():
             underline=True,
         )
     assert isinstance(result, NavbarOptions)
-    assert result.type == "dark"
+    assert result.theme == "dark"
 
 
 def test_navbar_options_fn_caller_custom():
     options_user = navbar_options()
     with pytest.warns(
         ShinyDeprecationWarning,
-        match="The arguments of `custom_caller\\(\\)` for navbar options",
+        match="arguments of `custom_caller\\(\\)` for navbar options",
     ):
         result = navbar_options_resolve_deprecated(
             options_user,

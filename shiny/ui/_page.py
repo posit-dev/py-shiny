@@ -218,24 +218,10 @@ def page_navbar(
         be used for top, the second will be left and right, and the third will be
         bottom. If four, then the values will be interpreted as top, right, bottom, and
         left respectively. This value is only used when the navbar is _fillable_.
-    position
-        Determines whether the navbar should be displayed at the top of the page with
-        normal scrolling behavior ("static-top"), pinned at the top ("fixed-top"), or
-        pinned at the bottom ("fixed-bottom"). Note that using "fixed-top" or
-        "fixed-bottom" will cause the navbar to overlay your body content, unless you
-        add padding (e.g., ``tags.style("body {padding-top: 70px;}")``).
     header
         UI to display above the selected content.
     footer
         UI to display below the selected content.
-    bg
-        Background color of the navbar (a CSS color).
-    inverse
-        Either ``True`` for a light text color or ``False`` for a dark text color.
-    collapsible
-        ``True`` to automatically collapse the elements into an expandable menu on mobile devices or narrow window widths.
-    fluid
-        ``True`` to use fluid layout; ``False`` to use fixed layout.
     window_title
         The browser's window title (defaults to the host URL of the page). Can also be
         set as a side effect via :func:`~shiny.ui.panel_title`.
@@ -254,6 +240,39 @@ def page_navbar(
 
         To modify the theme of an app without replacing the Bootstrap CSS entirely, use
         :func:`~shiny.ui.include_css` to add custom CSS.
+    fluid
+        ``True`` to use fluid layout; ``False`` to use fixed layout.
+    navbar_options
+        Configure the appearance and behavior of the navbar using
+        :func:`~shiny.ui.navbar_options` to set properties like position, background
+        color, and more.
+
+        `navbar_options` was added in v1.3.0 and replaces deprecated arguments
+        `position`, `bg`, `inverse`, `collapsible`, and `underline`.
+    position
+        Deprecated in v1.3.0. Please use `navbar_options` instead; see
+        :func:`~shiny.ui.navbar_options` for details.
+
+        Determines whether the navbar should be displayed at the top of the page with
+        normal scrolling behavior ("static-top"), pinned at the top ("fixed-top"), or
+        pinned at the bottom ("fixed-bottom"). Note that using "fixed-top" or
+        "fixed-bottom" will cause the navbar to overlay your body content, unless you
+        add padding (e.g., ``tags.style("body {padding-top: 70px;}")``).
+    bg
+        Deprecated in v1.3.0. Please use `navbar_options` instead; see
+        :func:`~shiny.ui.navbar_options` for details.
+
+        Background color of the navbar (a CSS color).
+    inverse
+        Deprecated in v1.3.0. Please use `navbar_options` instead; see
+        :func:`~shiny.ui.navbar_options` for details.
+
+        Either ``True`` for a light text color or ``False`` for a dark text color.
+    collapsible
+        Deprecated in v1.3.0. Please use `navbar_options` instead; see
+        :func:`~shiny.ui.navbar_options` for details.
+
+        ``True`` to automatically collapse the elements into an expandable menu on mobile devices or narrow window widths.
 
     Returns
     -------
