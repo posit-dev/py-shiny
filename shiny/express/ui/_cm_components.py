@@ -8,7 +8,7 @@ from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, TagFunction, TagLis
 
 from ... import ui
 from ..._docstring import add_example, no_example
-from ...types import DEPRECATED, MISSING, MISSING_TYPE, MaybeMissing
+from ...types import DEPRECATED, MISSING, MISSING_TYPE, Maybe
 from ...ui._accordion import AccordionPanel
 from ...ui._card import CardItem
 from ...ui._layout_columns import BreakpointsUser
@@ -1080,11 +1080,11 @@ def navset_bar(
     navbar_options: Optional[NavbarOptions] = None,
     fluid: bool = True,
     # Deprecated ----
-    position: MaybeMissing[NavbarOptionsPositionT] = DEPRECATED,
-    bg: MaybeMissing[str | None] = DEPRECATED,
-    inverse: MaybeMissing[bool] = DEPRECATED,
-    underline: MaybeMissing[bool] = DEPRECATED,
-    collapsible: MaybeMissing[bool] = DEPRECATED,
+    position: Maybe[NavbarOptionsPositionT] = DEPRECATED,
+    bg: Maybe[str | None] = DEPRECATED,
+    inverse: Maybe[bool] = DEPRECATED,
+    underline: Maybe[bool] = DEPRECATED,
+    collapsible: Maybe[bool] = DEPRECATED,
 ) -> RecallContextManager[NavSetBar]:
     """
     Context manager for a set of nav items as a tabset inside a card container.

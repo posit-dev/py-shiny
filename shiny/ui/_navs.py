@@ -22,7 +22,7 @@ from .._deprecated import warn_deprecated
 from .._docstring import add_example
 from .._namespaces import resolve_id_or_none
 from .._utils import private_random_int
-from ..types import DEPRECATED, MISSING, MaybeMissing, NavSetArg, is_missing
+from ..types import DEPRECATED, MISSING, Maybe, NavSetArg, is_missing
 from ._bootstrap import column, row
 from ._card import CardItem, WrapperCallable, card, card_body, card_footer, card_header
 from ._html_deps_shinyverse import components_dependencies
@@ -1013,11 +1013,11 @@ class NavbarOptions:
     def __init__(
         self,
         *,
-        position: MaybeMissing[NavbarOptionsPositionT] = MISSING,
-        bg: MaybeMissing[str | None] = MISSING,
-        theme: MaybeMissing[NavbarOptionsThemeT] = MISSING,
-        underline: MaybeMissing[bool] = MISSING,
-        collapsible: MaybeMissing[bool] = MISSING,
+        position: Maybe[NavbarOptionsPositionT] = MISSING,
+        bg: Maybe[str | None] = MISSING,
+        theme: Maybe[NavbarOptionsThemeT] = MISSING,
+        underline: Maybe[bool] = MISSING,
+        collapsible: Maybe[bool] = MISSING,
         **attrs: TagAttrValue,
     ):
         self._is_default = {}
@@ -1070,11 +1070,11 @@ class NavbarOptions:
 
 @add_example()
 def navbar_options(
-    position: MaybeMissing[NavbarOptionsPositionT] = MISSING,
-    bg: MaybeMissing[str | None] = MISSING,
-    theme: MaybeMissing[NavbarOptionsThemeT] = MISSING,
-    underline: MaybeMissing[bool] = MISSING,
-    collapsible: MaybeMissing[bool] = MISSING,
+    position: Maybe[NavbarOptionsPositionT] = MISSING,
+    bg: Maybe[str | None] = MISSING,
+    theme: Maybe[NavbarOptionsThemeT] = MISSING,
+    underline: Maybe[bool] = MISSING,
+    collapsible: Maybe[bool] = MISSING,
     **attrs: TagAttrValue,
 ) -> NavbarOptions:
     """
@@ -1120,11 +1120,11 @@ def navbar_options(
 
 def navbar_options_resolve_deprecated(
     options_user: Optional[NavbarOptions] = None,
-    position: MaybeMissing[NavbarOptionsPositionT] = DEPRECATED,
-    bg: MaybeMissing[str | None] = DEPRECATED,
-    inverse: MaybeMissing[bool] = DEPRECATED,
-    underline: MaybeMissing[bool] = DEPRECATED,
-    collapsible: MaybeMissing[bool] = DEPRECATED,
+    position: Maybe[NavbarOptionsPositionT] = DEPRECATED,
+    bg: Maybe[str | None] = DEPRECATED,
+    inverse: Maybe[bool] = DEPRECATED,
+    underline: Maybe[bool] = DEPRECATED,
+    collapsible: Maybe[bool] = DEPRECATED,
     fn_caller: str = "navset_bar",
 ) -> NavbarOptions:
     options_user = options_user if options_user is not None else navbar_options()
@@ -1375,11 +1375,11 @@ def navset_bar(
     navbar_options: Optional[NavbarOptions] = None,
     fluid: bool = True,
     # Deprecated -- v1.3.0 2025-01 ----
-    position: MaybeMissing[NavbarOptionsPositionT] = DEPRECATED,
-    bg: MaybeMissing[str | None] = DEPRECATED,
-    inverse: MaybeMissing[bool] = DEPRECATED,
-    underline: MaybeMissing[bool] = DEPRECATED,
-    collapsible: MaybeMissing[bool] = DEPRECATED,
+    position: Maybe[NavbarOptionsPositionT] = DEPRECATED,
+    bg: Maybe[str | None] = DEPRECATED,
+    inverse: Maybe[bool] = DEPRECATED,
+    underline: Maybe[bool] = DEPRECATED,
+    collapsible: Maybe[bool] = DEPRECATED,
 ) -> NavSetBar:
     """
     Render nav items as a navbar.

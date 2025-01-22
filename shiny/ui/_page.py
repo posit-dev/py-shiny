@@ -31,7 +31,7 @@ from htmltools import (
 
 from .._docstring import add_example, no_example
 from .._namespaces import resolve_id_or_none
-from ..types import DEPRECATED, MISSING, MISSING_TYPE, MaybeMissing, NavSetArg
+from ..types import DEPRECATED, MISSING, MISSING_TYPE, Maybe, NavSetArg
 from ._bootstrap import panel_title
 from ._html_deps_external import Theme, ThemeProvider, shiny_page_theme_deps
 from ._html_deps_py_shiny import page_output_dependency
@@ -175,13 +175,13 @@ def page_navbar(
     lang: Optional[str] = None,
     theme: Optional[str | Path | Theme | ThemeProvider] = None,
     # Deprecated -- v1.3.0 2025-01 ----
-    position: MaybeMissing[
+    position: Maybe[
         Literal["static-top", "fixed-top", "fixed-bottom"]
     ] = DEPRECATED,
-    bg: MaybeMissing[str | None] = DEPRECATED,
-    inverse: MaybeMissing[bool] = DEPRECATED,
-    underline: MaybeMissing[bool] = DEPRECATED,
-    collapsible: MaybeMissing[bool] = DEPRECATED,
+    bg: Maybe[str | None] = DEPRECATED,
+    inverse: Maybe[bool] = DEPRECATED,
+    underline: Maybe[bool] = DEPRECATED,
+    collapsible: Maybe[bool] = DEPRECATED,
 ) -> Tag:
     """
     Create a page with a navbar and a title.

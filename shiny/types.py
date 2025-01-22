@@ -46,7 +46,7 @@ class MISSING_TYPE:
 
 MISSING: MISSING_TYPE = MISSING_TYPE()
 DEPRECATED: MISSING_TYPE = MISSING_TYPE()  # A MISSING that communicates deprecation
-MaybeMissing = Union[T, MISSING_TYPE]
+Maybe = Union[T, MISSING_TYPE]
 
 ListOrTuple = Union[List[T], Tuple[T, ...]]
 
