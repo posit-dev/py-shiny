@@ -52,7 +52,7 @@ ListOrTuple = Union[List[T], Tuple[T, ...]]
 
 
 def is_missing(x: Any) -> TypeIs[MISSING_TYPE]:
-    return x is MISSING or isinstance(x, MISSING_TYPE)
+    return isinstance(x, MISSING_TYPE)
 
 
 # Information about a single file, with a structure like:
