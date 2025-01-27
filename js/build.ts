@@ -1,4 +1,4 @@
-import { BuildOptions,build } from "esbuild";
+import { BuildOptions, build } from "esbuild";
 import { sassPlugin } from "esbuild-sass-plugin";
 import * as fs from "node:fs/promises";
 

@@ -51,6 +51,14 @@ shiny-user-message {
   max-width: 100%;
 }
 
+shiny-user-message,
+shiny-chat-message {
+  &[content_type="text"] {
+    white-space: pre;
+    overflow-x: auto;
+  }
+}
+
 shiny-chat-input {
   margin-top: auto;
   position: sticky;

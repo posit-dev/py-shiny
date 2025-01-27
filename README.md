@@ -24,7 +24,7 @@ If you have questions about Shiny for Python, or want to help us decide what to 
 
 ## Getting started
 
-To get started with shiny follow the [installation instructions](https://shiny.posit.co/py/docs/install.html) or just install it from pip.
+To get started with shiny follow the [installation instructions](https://shiny.posit.co/py/docs/install-create-run.html) or just install it from pip.
 
 ```sh
 pip install shiny

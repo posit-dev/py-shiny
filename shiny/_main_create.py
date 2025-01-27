@@ -224,16 +224,16 @@ class ShinyInternalTemplates:
         return self._templates("templates/package")
 
     @property
-    def chat_hello_providers(self) -> list[ShinyTemplate]:
-        return self._templates("templates/chat/hello-providers")
+    def chat_starters(self) -> list[ShinyTemplate]:
+        return self._templates("templates/chat/starters")
+
+    @property
+    def chat_llms(self) -> list[ShinyTemplate]:
+        return self._templates("templates/chat/llms")
 
     @property
     def chat_enterprise(self) -> list[ShinyTemplate]:
-        return self._templates("templates/chat/enterprise")
-
-    @property
-    def chat_production(self) -> list[ShinyTemplate]:
-        return self._templates("templates/chat/production")
+        return self._templates("templates/chat/llm-enterprise")
 
 
 shiny_internal_templates = ShinyInternalTemplates()
@@ -262,14 +262,14 @@ def use_internal_template(
     app_templates = shiny_internal_templates.apps
     pkg_templates = shiny_internal_templates.packages
     chat_templates = [
-        *shiny_internal_templates.chat_hello_providers,
+        *shiny_internal_templates.chat_starters,
+        *shiny_internal_templates.chat_llms,
         *shiny_internal_templates.chat_enterprise,
-        *shiny_internal_templates.chat_production,
     ]
 
     menu_choices = [
         Choice(title="Custom JavaScript component...", value="_js-component"),
-        Choice(title="Generative AI templates...", value="_chat-ai"),
+        Choice(title="Chat component templates...", value="_chat"),
         Choice(
             title="Choose from the Shiny Templates website", value="_external-gallery"
         ),
@@ -302,7 +302,7 @@ def use_internal_template(
         sys.exit(0)
     elif question_state == "_js-component":
         use_internal_package_template(dest_dir=dest_dir, package_name=package_name)
-    elif question_state == "_chat-ai":
+    elif question_state == "_chat":
         use_internal_chat_ai_template(dest_dir=dest_dir, package_name=package_name)
     else:
         valid_choices = [t.id for t in app_templates + pkg_templates]
@@ -352,11 +352,11 @@ def use_internal_chat_ai_template(
 ):
     if input is None:
         input = questionary.select(
-            "Which kind of generative AI template would you like to use?",
+            "Which kind of chat template would you like?",
             choices=[
-                Choice(title="By provider...", value="_chat-ai_hello-providers"),
-                Choice(title="Enterprise providers...", value="_chat-ai_enterprise"),
-                Choice(title="Production-ready chat AI", value="_chat-ai_production"),
+                Choice(title="Chat starters...", value="_chat-starters"),
+                Choice(title="LLM powered chat...", value="_chat-llms"),
+                Choice(title="Enterprise LLM...", value="_chat-llm_enterprise"),
                 back_choice,
                 cancel_choice,
             ],
@@ -375,12 +375,12 @@ def use_internal_chat_ai_template(
         )
         return
 
-    if input == "_chat-ai_production":
-        template_choices = shiny_internal_templates.chat_production
-    elif input == "_chat-ai_enterprise":
-        template_choices = shiny_internal_templates.chat_enterprise
+    if input == "_chat-starters":
+        template_choices = shiny_internal_templates.chat_starters
+    elif input == "_chat-llms":
+        template_choices = shiny_internal_templates.chat_llms
     else:
-        template_choices = shiny_internal_templates.chat_hello_providers
+        template_choices = shiny_internal_templates.chat_enterprise
 
     choice = question_choose_template(template_choices, back_choice)
 
@@ -390,9 +390,9 @@ def use_internal_chat_ai_template(
 
     template = template_by_name(
         [
-            *shiny_internal_templates.chat_hello_providers,
+            *shiny_internal_templates.chat_starters,
+            *shiny_internal_templates.chat_llms,
             *shiny_internal_templates.chat_enterprise,
-            *shiny_internal_templates.chat_production,
         ],
         choice,
     )

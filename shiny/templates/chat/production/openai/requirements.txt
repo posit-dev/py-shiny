@@ -1,4 +1,0 @@
-shiny
-python-dotenv
-tiktoken
-openai

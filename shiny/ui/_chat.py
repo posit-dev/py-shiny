@@ -65,23 +65,34 @@ TransformAssistantResponseFunction = Union[
     TransformAssistantResponseChunk,
     TransformAssistantResponseChunkAsync,
 ]
-SubmitFunction = Callable[[], None]
-SubmitFunctionAsync = Callable[[], Awaitable[None]]
+UserSubmitFunction0 = Union[
+    Callable[[], None],
+    Callable[[], Awaitable[None]],
+]
+UserSubmitFunction1 = Union[
+    Callable[[str], None],
+    Callable[[str], Awaitable[None]],
+]
+UserSubmitFunction = Union[
+    UserSubmitFunction0,
+    UserSubmitFunction1,
+]
 
 ChunkOption = Literal["start", "end", True, False]
 
 PendingMessage = Tuple[Any, ChunkOption, Union[str, None]]
 
 
-@add_example(ex_dir="../api-examples/chat")
+@add_example(ex_dir="../templates/chat/starters/hello")
 class Chat:
     """
     Create a chat interface.
 
     A UI component for building conversational interfaces. With it, end users can submit
-    messages, which will cause a `.on_user_submit()` callback to run. In that callback,
-    a response can be generated based on the chat's `.messages()`, and appended to the
-    chat using `.append_message()` or `.append_message_stream()`.
+    messages, which will cause a `.on_user_submit()` callback to run. That callback gets
+    passed the user input message, which can be used to generate a response. The
+    response can then be appended to the chat using `.append_message()` or
+    `.append_message_stream()`.
 
     Here's a rough outline for how to implement a `Chat`:
 
@@ -94,11 +105,9 @@ class Chat:
 
     # Define a callback to run when the user submits a message
     @chat.on_user_submit
-    async def _():
-        # Get messages currently in the chat
-        messages = chat.messages()
+    async def handle_user_input(user_input: str):
         # Create a response message stream
-        response = await my_model.generate_response(messages, stream=True)
+        response = await my_model.generate_response(user_input, stream=True)
         # Append the response into the chat
         await chat.append_message_stream(response)
     ```
@@ -111,6 +120,11 @@ class Chat:
     you'll use `.append_message_stream()` instead of `.append_message()` to append the
     response to the chat. Streaming is preferrable when available since it allows for
     more responsive and scalable chat interfaces.
+
+    It is also highly recommended to use a package like
+    [chatlas](https://posit-dev.github.io/chatlas/) to generate responses, especially
+    when responses should be aware of the chat history, support tool calls, etc.
+    See this [article](https://posit-dev.github.io/chatlas/web-apps.html) to learn more.
 
     Parameters
     ----------
@@ -278,33 +292,31 @@ class Chat:
         )
 
     @overload
-    def on_user_submit(
-        self, fn: SubmitFunction | SubmitFunctionAsync
-    ) -> reactive.Effect_: ...
+    def on_user_submit(self, fn: UserSubmitFunction) -> reactive.Effect_: ...
 
     @overload
     def on_user_submit(
         self,
-    ) -> Callable[[SubmitFunction | SubmitFunctionAsync], reactive.Effect_]: ...
+    ) -> Callable[[UserSubmitFunction], reactive.Effect_]: ...
 
     def on_user_submit(
-        self, fn: SubmitFunction | SubmitFunctionAsync | None = None
-    ) -> (
-        reactive.Effect_
-        | Callable[[SubmitFunction | SubmitFunctionAsync], reactive.Effect_]
-    ):
+        self, fn: UserSubmitFunction | None = None
+    ) -> reactive.Effect_ | Callable[[UserSubmitFunction], reactive.Effect_]:
         """
         Define a function to invoke when user input is submitted.
 
-        Apply this method as a decorator to a function (`fn`) that should be invoked when the
-        user submits a message. The function should take no arguments.
+        Apply this method as a decorator to a function (`fn`) that should be invoked
+        when the user submits a message. This function can take an optional argument,
+        which will be the user input message.
 
-        In many cases, the implementation of `fn` should do at least the following:
+        In many cases, the implementation of `fn` should also do the following:
 
-        1. Call `.messages()` to obtain the current chat history.
-        2. Generate a response based on those messages.
-        3. Append the response to the chat history using `.append_message()` (
-           or `.append_message_stream()` if the response is streamed).
+        1. Generate a response based on the user input.
+          * If the response should be aware of chat history, use a package
+             like [chatlas](https://posit-dev.github.io/chatlas/) to manage the chat
+             state, or use the `.messages()` method to get the chat history.
+        2. Append that response to the chat component using `.append_message()` ( or
+           `.append_message_stream()` if the response is streamed).
 
         Parameters
         ----------
@@ -318,8 +330,8 @@ class Chat:
         but it will only be re-invoked when the user submits a message.
         """
 
-        def create_effect(fn: SubmitFunction | SubmitFunctionAsync):
-            afunc = _utils.wrap_async(fn)
+        def create_effect(fn: UserSubmitFunction):
+            fn_params = inspect.signature(fn).parameters
 
             @reactive.effect
             @reactive.event(self._user_input)
@@ -329,7 +341,21 @@ class Chat:
 
                     req(False)
                 try:
-                    await afunc()
+                    if len(fn_params) > 1:
+                        raise ValueError(
+                            "A on_user_submit function should not take more than 1 argument"
+                        )
+                    elif len(fn_params) == 1:
+                        input = self.user_input(transform=True)
+                        # The line immediately below handles the possibility of input
+                        # being transformed to None. Technically, input should never be
+                        # None at this point (since the handler should be suspended).
+                        input = "" if input is None else input
+                        afunc = _utils.wrap_async(cast(UserSubmitFunction1, fn))
+                        await afunc(input)
+                    else:
+                        afunc = _utils.wrap_async(cast(UserSubmitFunction0, fn))
+                        await afunc()
                 except Exception as e:
                     await self._raise_exception(e)
 
@@ -914,15 +940,6 @@ class Chat:
         if self._tokenizer is None:
             self._tokenizer = get_default_tokenizer()
 
-        if self._tokenizer is None:
-            raise ValueError(
-                "A tokenizer is required to impose `token_limits` on messages. "
-                "To get a generic default tokenizer, install the `tokenizers` "
-                "package (`pip install tokenizers`). "
-                "To get a more precise token count, provide a specific tokenizer "
-                "to the `Chat` constructor."
-            )
-
         encoded = self._tokenizer.encode(content)
         if isinstance(encoded, TokenizersEncoding):
             return len(encoded.ids)
@@ -1030,7 +1047,7 @@ class Chat:
         )
 
 
-@add_example(ex_dir="../api-examples/chat")
+@add_example(ex_dir="../templates/chat/starters/hello")
 def chat_ui(
     id: str,
     *,
