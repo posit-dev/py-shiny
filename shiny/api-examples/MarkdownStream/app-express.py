@@ -15,7 +15,7 @@ readme_chunks = readme.text.replace("\n", " \n ").split(" ")
 def chunk_generator():
     for chunk in readme_chunks:
         if not session.is_stub_session():
-            time.sleep(0.05)
+            time.sleep(0.02)
         yield chunk + " "
 
 

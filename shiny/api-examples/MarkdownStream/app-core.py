@@ -19,7 +19,7 @@ def server(input, output, session):
     # Generate words from the README.md file (with a small delay)
     def chunk_generator():
         for chunk in readme_chunks:
-            time.sleep(0.05)
+            time.sleep(0.02)
             yield chunk + " "
 
     md = ui.MarkdownStream("shiny-readme")

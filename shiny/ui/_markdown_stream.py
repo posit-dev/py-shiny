@@ -13,7 +13,12 @@ __all__ = (
     "MarkdownStream",
 )
 
-StreamingContentType = Literal["markdown", "semi-markdown", "html", "text"]
+StreamingContentType = Literal[
+    "markdown",
+    "semi-markdown",
+    "html",
+    "text",
+]
 
 
 class ContentMessage(TypedDict):
@@ -66,7 +71,7 @@ class MarkdownStream:
         """
         Get the UI element for this markdown stream.
 
-        This method is only relevant fpr Shiny Express. In Shiny Core, use
+        This method is only relevant for Shiny Express. In Shiny Core, use
         :func:`~shiny.ui.output_markdown_stream` for placing the markdown stream
         in the UI.
 
@@ -96,9 +101,6 @@ class MarkdownStream:
                     self._append(c)
 
         _task()
-
-    def update(self, content: str):
-        self._replace(content)
 
     def _append(self, content: str):
         msg: ContentMessage = {
