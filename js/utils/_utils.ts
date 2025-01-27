@@ -1,5 +1,9 @@
 import { LitElement } from "lit";
 
+////////////////////////////////////////////////
+// Lit helpers
+////////////////////////////////////////////////
+
 function createElement(
   tag_name: string,
   attrs: { [key: string]: string | null }
@@ -23,5 +27,26 @@ class LightElement extends LitElement {
     return this;
   }
 }
+////////////////////////////////////////////////
+// Shiny helpers
+////////////////////////////////////////////////
 
-export { LightElement, createElement, createSVGIcon };
+export type ShinyClientMessage = {
+  message: string;
+  headline?: string;
+  status?: "error" | "info" | "warning";
+};
+
+function showShinyClientMessage({
+  headline = "",
+  message,
+  status = "warning",
+}: ShinyClientMessage): void {
+  document.dispatchEvent(
+    new CustomEvent("shiny:client-message", {
+      detail: { headline: headline, message: message, status: status },
+    })
+  );
+}
+
+export { LightElement, createElement, createSVGIcon, showShinyClientMessage };

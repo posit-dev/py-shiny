@@ -7,7 +7,12 @@ import { sanitize } from "dompurify";
 import hljs from "highlight.js/lib/common";
 import { Renderer, parse } from "marked";
 
-import { LightElement, createElement, createSVGIcon } from "../utils/_utils";
+import {
+  LightElement,
+  createElement,
+  createSVGIcon,
+  showShinyClientMessage,
+} from "../utils/_utils";
 
 type ContentType = "markdown" | "semi-markdown" | "html" | "text";
 
@@ -30,8 +35,9 @@ function isStreamingMessage(
 }
 
 // SVG dot to indicate content is currently streaming
+const SVG_DOT_CLASS = "chat-streaming-dot";
 const SVG_DOT = createSVGIcon(
-  '<svg width="12" height="12" xmlns="http://www.w3.org/2000/svg" class="chat-streaming-dot" style="margin-left:.25em;margin-top:-.25em"><circle cx="6" cy="6" r="6"/></svg>'
+  `<svg width="12" height="12" xmlns="http://www.w3.org/2000/svg" class="${SVG_DOT_CLASS}" style="margin-left:.25em;margin-top:-.25em"><circle cx="6" cy="6" r="6"/></svg>`
 );
 
 // For rendering chat output, we use typical Markdown behavior of passing through raw
@@ -92,7 +98,7 @@ class MarkdownElement extends LightElement {
   }
 
   #removeStreamingDot(): void {
-    this.querySelector("svg.chat-streaming-dot")?.remove();
+    this.querySelector(`svg.${SVG_DOT_CLASS}`)?.remove();
   }
 
   // Highlight code blocks after the element is rendered
@@ -123,7 +129,8 @@ class MarkdownElement extends LightElement {
   }
 }
 
-// TODO: it is a problem if this runs twice in the browser?
+// ------- Register custom elements and shiny bindings ---------
+
 if (!customElements.get("shiny-markdown-stream")) {
   customElements.define("shiny-markdown-stream", MarkdownElement);
 }
@@ -132,7 +139,12 @@ function handleMessage(message: ContentMessage | IsStreamingMessage): void {
   const el = document.getElementById(message.id) as MarkdownElement;
 
   if (!el) {
-    console.error(`Element with id ${message.id} not found`);
+    const errMsg = `
+      Cannot handle MarkdownStream message: element with id ${message.id} not found.
+      Do you need to call .ui() (Express) or fix the id (Core)?
+    `;
+    console.error(errMsg);
+    showShinyClientMessage({ message: errMsg, status: "error" });
     return;
   }
 
@@ -151,7 +163,6 @@ function handleMessage(message: ContentMessage | IsStreamingMessage): void {
   }
 }
 
-// TODO: it is a problem if this runs twice in the browser?
 $(function () {
   Shiny.addCustomMessageHandler("shinyMarkdownStreamMessage", handleMessage);
 });
