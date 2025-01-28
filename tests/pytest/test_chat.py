@@ -206,7 +206,7 @@ def test_google_normalization():
     if sys.version_info < (3, 9):
         return
 
-    from google.generativeai import (  # pyright: ignore[reportMissingTypeStubs]
+    from google.generativeai.generative_models import (  # pyright: ignore[reportMissingTypeStubs]
         GenerativeModel,
     )
 
@@ -382,7 +382,7 @@ def test_as_google_message():
     if sys.version_info < (3, 9):
         return
 
-    from google.generativeai import (  # pyright: ignore[reportMissingTypeStubs]
+    from google.generativeai.generative_models import (  # pyright: ignore[reportMissingTypeStubs]
         GenerativeModel,
     )
 
