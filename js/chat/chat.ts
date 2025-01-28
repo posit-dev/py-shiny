@@ -2,8 +2,6 @@ import { LitElement, html } from "lit";
 import { unsafeHTML } from "lit-html/directives/unsafe-html.js";
 import { property } from "lit/decorators.js";
 
-import { contentToHTML } from "../markdown-stream/markdown-stream";
-
 import { LightElement, createElement } from "../utils/_utils";
 
 type ContentType = "markdown" | "html" | "text";
@@ -76,7 +74,12 @@ class ChatUserMessage extends LightElement {
   @property() content = "...";
 
   render(): ReturnType<LitElement["render"]> {
-    return contentToHTML(this.content, "semi-markdown");
+    return html`
+      <shiny-markdown-stream
+        content=${this.content}
+        content_type="semi-markdown"
+      ></shiny-markdown-stream>
+    `;
   }
 }
 
