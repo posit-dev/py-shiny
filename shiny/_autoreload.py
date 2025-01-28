@@ -251,7 +251,7 @@ async def _coro_main(
                 status_code=http.HTTPStatus.MOVED_PERMANENTLY,
                 reason_phrase="Moved Permanently",
                 headers=websockets.Headers(Location=app_url),
-                body=None,
+                body=b"",
             )
         else:
             return None
