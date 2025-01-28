@@ -49,4 +49,4 @@ function showShinyClientMessage({
   );
 }
 
-export { LightElement, createElement, createSVGIcon, showShinyClientMessage };
+export { LightElement, createElement, createSVGIcon, showShinyClientMessage, };

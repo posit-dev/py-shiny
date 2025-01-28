@@ -1,4 +1,4 @@
-import { LitElement, html } from "lit";
+import { PropertyValues, html } from "lit";
 import { unsafeHTML } from "lit-html/directives/unsafe-html.js";
 import { property } from "lit/decorators.js";
 
@@ -35,7 +35,7 @@ function isStreamingMessage(
 }
 
 // SVG dot to indicate content is currently streaming
-const SVG_DOT_CLASS = "chat-streaming-dot";
+const SVG_DOT_CLASS = "markdown-stream-dot";
 const SVG_DOT = createSVGIcon(
   `<svg width="12" height="12" xmlns="http://www.w3.org/2000/svg" class="${SVG_DOT_CLASS}" style="margin-left:.25em;margin-top:-.25em"><circle cx="6" cy="6" r="6"/></svg>`
 );
@@ -76,18 +76,35 @@ class MarkdownElement extends LightElement {
   @property() content_type: ContentType = "markdown";
   @property({ type: Boolean, reflect: true }) streaming = false;
 
-  render(): ReturnType<LitElement["render"]> {
-    const content = contentToHTML(this.content, this.content_type);
-    return html`${content}`;
+  render() {
+    return html`${contentToHTML(this.content, this.content_type)}`;
   }
 
-  updated(changedProperties: Map<string, unknown>): void {
+  disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.#cleanup();
+  }
+
+  protected willUpdate(changedProperties: PropertyValues): void {
     if (changedProperties.has("content")) {
-      this.#highlightAndCodeCopy();
-      if (this.streaming) this.#appendStreamingDot();
-      // TODO: throw an event here that content has rendered and catch it in SHINY_CHAT_MESSAGE
-      // requestScroll(this, this.streaming);
+      this.#updateScrollableElement();
+      this.#isContentBeingAdded = true;
     }
+  }
+
+  protected updated(changedProperties: Map<string, unknown>): void {
+    if (changedProperties.has("content")) {
+      try {
+        this.#highlightAndCodeCopy();
+      } catch (error) {
+        console.warn("Failed to highlight code:", error);
+      }
+
+      if (this.streaming) this.#appendStreamingDot();
+      this.#isContentBeingAdded = false;
+      this.#maybeScrollToBottom();
+    }
+
     if (changedProperties.has("streaming")) {
       this.streaming ? this.#appendStreamingDot() : this.#removeStreamingDot();
     }
@@ -101,23 +118,25 @@ class MarkdownElement extends LightElement {
     this.querySelector(`svg.${SVG_DOT_CLASS}`)?.remove();
   }
 
-  // Highlight code blocks after the element is rendered
   #highlightAndCodeCopy(): void {
     const el = this.querySelector("pre code");
     if (!el) return;
     this.querySelectorAll<HTMLElement>("pre code").forEach((el) => {
-      // Highlight the code
+      if (el.dataset.highlighted === "yes") return;
+
       hljs.highlightElement(el);
-      // Add a button to the code block to copy to clipboard
+
+      // Add copy button
       const btn = createElement("button", {
         class: "code-copy-button",
         title: "Copy to clipboard",
       });
       btn.innerHTML = '<i class="bi"></i>';
       el.prepend(btn);
-      // Add the clipboard functionality
+
+      // Setup clipboard
       const clipboard = new ClipboardJS(btn, { target: () => el });
-      clipboard.on("success", function (e: ClipboardJS.Event) {
+      clipboard.on("success", (e) => {
         btn.classList.add("code-copy-button-checked");
         setTimeout(
           () => btn.classList.remove("code-copy-button-checked"),
@@ -127,13 +146,68 @@ class MarkdownElement extends LightElement {
       });
     });
   }
+
+  // ------- Scrolling logic -------
+
+  // Nearest scrollable parent element (if any)
+  #scrollableElement: HTMLElement | null = null;
+  // Whether content is currently being added to the element
+  #isContentBeingAdded = false;
+  // Whether the user has scrolled away from the bottom
+  #isUserScrolled = false;
+
+  #onScroll = (): void => {
+    if (!this.#isContentBeingAdded) {
+      this.#isUserScrolled = !this.#isNearBottom();
+    }
+  };
+
+  #isNearBottom(): boolean {
+    const el = this.#scrollableElement;
+    if (!el) return false;
+
+    return el.scrollHeight - (el.scrollTop + el.clientHeight) < 50;
+  }
+
+  #updateScrollableElement(): void {
+    const el = this.#findScrollableParent();
+
+    if (el !== this.#scrollableElement) {
+      this.#scrollableElement?.removeEventListener("scroll", this.#onScroll);
+      this.#scrollableElement = el;
+      this.#scrollableElement?.addEventListener("scroll", this.#onScroll);
+    }
+  }
+
+  #findScrollableParent(): HTMLElement | null {
+    // eslint-disable-next-line
+    let el: HTMLElement | null = this;
+    while (el) {
+      if (el.scrollHeight > el.clientHeight) return el;
+      el = el.parentElement;
+    }
+    return null;
+  }
+
+  #maybeScrollToBottom(): void {
+    const el = this.#scrollableElement;
+    if (!el || this.#isUserScrolled) return;
+
+    el.scroll({
+      top: el.scrollHeight - el.clientHeight,
+      behavior: this.streaming ? "instant" : "smooth",
+    });
+  }
+
+  #cleanup(): void {
+    this.#scrollableElement?.removeEventListener("scroll", this.#onScroll);
+  }
 }
 
 // ------- Register custom elements and shiny bindings ---------
 
-if (!customElements.get("shiny-markdown-stream")) {
+customElements.get("shiny-markdown-stream") ||
   customElements.define("shiny-markdown-stream", MarkdownElement);
-}
 
 function handleMessage(message: ContentMessage | IsStreamingMessage): void {
   const el = document.getElementById(message.id) as MarkdownElement;

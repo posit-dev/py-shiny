@@ -20,5 +20,9 @@ def chunk_generator():
 
 
 md = ui.MarkdownStream("shiny-readme")
-md.ui()
+
+with ui.card(height="400px"):
+    ui.card_header("Shiny README.md")
+    md.ui()
+
 md.stream(chunk_generator())

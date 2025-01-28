@@ -21,10 +21,6 @@ type ShinyChatMessage = {
   obj: Message;
 };
 
-type requestScrollEvent = {
-  cancelIfScrolledUp: boolean;
-};
-
 type UpdateUserInput = {
   value?: string;
   placeholder?: string;
@@ -39,7 +35,6 @@ declare global {
     "shiny-chat-clear-messages": CustomEvent;
     "shiny-chat-update-user-input": CustomEvent<UpdateUserInput>;
     "shiny-chat-remove-loading-message": CustomEvent;
-    "shiny-chat-request-scroll": CustomEvent<requestScrollEvent>;
   }
 }
 
@@ -57,16 +52,6 @@ const ICONS = {
     '<svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><style>.spinner_S1WN{animation:spinner_MGfb .8s linear infinite;animation-delay:-.8s}.spinner_Km9P{animation-delay:-.65s}.spinner_JApP{animation-delay:-.5s}@keyframes spinner_MGfb{93.75%,100%{opacity:.2}}</style><circle class="spinner_S1WN" cx="4" cy="12" r="3"/><circle class="spinner_S1WN spinner_Km9P" cx="12" cy="12" r="3"/><circle class="spinner_S1WN spinner_JApP" cx="20" cy="12" r="3"/></svg>',
 };
 
-const requestScroll = (el: HTMLElement, cancelIfScrolledUp = false) => {
-  el.dispatchEvent(
-    new CustomEvent("shiny-chat-request-scroll", {
-      detail: { cancelIfScrolledUp },
-      bubbles: true,
-      composed: true,
-    })
-  );
-};
-
 class ChatMessage extends LightElement {
   @property() content = "...";
   @property() content_type: ContentType = "markdown";
@@ -81,7 +66,7 @@ class ChatMessage extends LightElement {
       <shiny-markdown-stream
         content=${this.content}
         content_type=${this.content_type}
-        streaming=${this.streaming}
+        ?streaming=${this.streaming}
       ></shiny-markdown-stream>
     `;
   }
@@ -211,8 +196,6 @@ class ChatContainer extends LightElement {
     return last ? (last as ChatMessage) : null;
   }
 
-  private resizeObserver!: ResizeObserver;
-
   render(): ReturnType<LitElement["render"]> {
     return html``;
   }
@@ -236,10 +219,6 @@ class ChatContainer extends LightElement {
       "shiny-chat-remove-loading-message",
       this.#onRemoveLoadingMessage
     );
-    this.addEventListener("shiny-chat-request-scroll", this.#onRequestScroll);
-
-    this.resizeObserver = new ResizeObserver(() => requestScroll(this, true));
-    this.resizeObserver.observe(this);
   }
 
   disconnectedCallback(): void {
@@ -260,12 +239,6 @@ class ChatContainer extends LightElement {
       "shiny-chat-remove-loading-message",
       this.#onRemoveLoadingMessage
     );
-    this.removeEventListener(
-      "shiny-chat-request-scroll",
-      this.#onRequestScroll
-    );
-
-    this.resizeObserver.disconnect();
   }
 
   // When user submits input, append it to the chat, and add a loading message
@@ -359,22 +332,6 @@ class ChatContainer extends LightElement {
   #finalizeMessage(): void {
     this.input.disabled = false;
   }
-
-  #onRequestScroll(event: CustomEvent<requestScrollEvent>): void {
-    // When streaming or resizing, only scroll if the user near the bottom
-    const { cancelIfScrolledUp } = event.detail;
-    if (cancelIfScrolledUp) {
-      if (this.scrollTop + this.clientHeight < this.scrollHeight - 100) {
-        return;
-      }
-    }
-
-    // Smooth scroll to the bottom if we're not streaming or resizing
-    this.scroll({
-      top: this.scrollHeight,
-      behavior: cancelIfScrolledUp ? "auto" : "smooth",
-    });
-  }
 }
 
 // ------- Register custom elements and shiny bindings ---------
@@ -393,6 +350,7 @@ $(function () {
         detail: message.obj,
       });
       const el = document.getElementById(message.id);
+      // TODO: throw an error if the element is not found?
       el?.dispatchEvent(evt);
     }
   );
