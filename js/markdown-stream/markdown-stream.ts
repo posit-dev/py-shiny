@@ -87,8 +87,13 @@ class MarkdownElement extends LightElement {
 
   protected willUpdate(changedProperties: PropertyValues): void {
     if (changedProperties.has("content")) {
-      this.#updateScrollableElement();
       this.#isContentBeingAdded = true;
+      // A scrollable element might not be available until the content
+      // grows to a certain size. So, keep looking for it until it's found.
+      if (!this.#scrollableElement) this.#updateScrollableElement();
+    }
+    if (changedProperties.has("streaming")) {
+      this.#updateScrollableElement();
     }
   }
 
@@ -201,6 +206,8 @@ class MarkdownElement extends LightElement {
 
   #cleanup(): void {
     this.#scrollableElement?.removeEventListener("scroll", this.#onScroll);
+    this.#scrollableElement = null;
+    this.#isUserScrolled = false;
   }
 }
 
@@ -213,13 +220,12 @@ function handleMessage(message: ContentMessage | IsStreamingMessage): void {
   const el = document.getElementById(message.id) as MarkdownElement;
 
   if (!el) {
-    const errMsg = `
-      Unable to handle MarkdownStream() message since element with id ${message.id}
-      wasn't found. Do you need to call .ui() (Express) or need a
-      output_markdown_stream('${message.id}') in the UI (Core)?
-    `;
-    console.error(errMsg);
-    showShinyClientMessage({ message: errMsg, status: "error" });
+    showShinyClientMessage({
+      status: "error",
+      message: `Unable to handle MarkdownStream() message since element with id
+      ${message.id} wasn't found. Do you need to call .ui() (Express) or need a
+      output_markdown_stream('${message.id}') in the UI (Core)?`,
+    });
     return;
   }
 

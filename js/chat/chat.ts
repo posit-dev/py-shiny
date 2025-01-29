@@ -360,13 +360,13 @@ $(function () {
       const el = document.getElementById(message.id);
 
       if (!el) {
-        const errMsg = `
-          Unable to handle Chat() message since element with id ${message.id} wasn't
-          found. Do you need to call .ui() (Express) or need a
+        showShinyClientMessage({
+          status: "error",
+          message: `Unable to handle Chat() message since element with id
+          ${message.id} wasn't found. Do you need to call .ui() (Express) or need a
           chat_ui('${message.id}') in the UI (Core)?
-        `;
-        console.error(errMsg);
-        showShinyClientMessage({ message: errMsg, status: "error" });
+        `,
+        });
         return;
       }
 
