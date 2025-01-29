@@ -520,7 +520,7 @@ def noop_server_fn(input: Inputs, output: Outputs, session: Session) -> None:
 
 
 def wrap_server_fn_with_output_session(
-    server: Callable[[Inputs], None]
+    server: Callable[[Inputs], None],
 ) -> Callable[[Inputs, Outputs, Session], None]:
     def _server(input: Inputs, output: Outputs, session: Session):
         # Only has 1 parameter, ignore output, session
