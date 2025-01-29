@@ -214,8 +214,9 @@ function handleMessage(message: ContentMessage | IsStreamingMessage): void {
 
   if (!el) {
     const errMsg = `
-      Cannot handle MarkdownStream message: element with id ${message.id} not found.
-      Do you need to call .ui() (Express) or fix the id (Core)?
+      Unable to handle MarkdownStream() message since element with id ${message.id}
+      wasn't found. Do you need to call .ui() (Express) or need a
+      output_markdown_stream('${message.id}') in the UI (Core)?
     `;
     console.error(errMsg);
     showShinyClientMessage({ message: errMsg, status: "error" });

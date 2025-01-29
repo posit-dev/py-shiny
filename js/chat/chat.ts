@@ -2,7 +2,11 @@ import { LitElement, html } from "lit";
 import { unsafeHTML } from "lit-html/directives/unsafe-html.js";
 import { property } from "lit/decorators.js";
 
-import { LightElement, createElement } from "../utils/_utils";
+import {
+  LightElement,
+  createElement,
+  showShinyClientMessage,
+} from "../utils/_utils";
 
 type ContentType = "markdown" | "html" | "text";
 
@@ -55,7 +59,7 @@ class ChatMessage extends LightElement {
   @property() content_type: ContentType = "markdown";
   @property({ type: Boolean, reflect: true }) streaming = false;
 
-  render(): ReturnType<LitElement["render"]> {
+  render() {
     const noContent = this.content.trim().length === 0;
     const icon = noContent ? ICONS.dots_fade : ICONS.robot;
 
@@ -73,7 +77,7 @@ class ChatMessage extends LightElement {
 class ChatUserMessage extends LightElement {
   @property() content = "...";
 
-  render(): ReturnType<LitElement["render"]> {
+  render() {
     return html`
       <shiny-markdown-stream
         content=${this.content}
@@ -84,7 +88,7 @@ class ChatUserMessage extends LightElement {
 }
 
 class ChatMessages extends LightElement {
-  render(): ReturnType<LitElement["render"]> {
+  render() {
     return html``;
   }
 }
@@ -109,7 +113,7 @@ class ChatInput extends LightElement {
     return this.querySelector("button") as HTMLButtonElement;
   }
 
-  render(): ReturnType<LitElement["render"]> {
+  render() {
     const icon =
       '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-arrow-up-circle-fill" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 0 0 8a8 8 0 0 0 16 0m-7.5 3.5a.5.5 0 0 1-1 0V5.707L5.354 7.854a.5.5 0 1 1-.708-.708l3-3a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 5.707z"/></svg>';
 
@@ -199,7 +203,7 @@ class ChatContainer extends LightElement {
     return last ? (last as ChatMessage) : null;
   }
 
-  render(): ReturnType<LitElement["render"]> {
+  render() {
     return html``;
   }
 
@@ -352,9 +356,21 @@ $(function () {
       const evt = new CustomEvent(message.handler, {
         detail: message.obj,
       });
+
       const el = document.getElementById(message.id);
-      // TODO: throw an error if the element is not found?
-      el?.dispatchEvent(evt);
+
+      if (!el) {
+        const errMsg = `
+          Unable to handle Chat() message since element with id ${message.id} wasn't
+          found. Do you need to call .ui() (Express) or need a
+          chat_ui('${message.id}') in the UI (Core)?
+        `;
+        console.error(errMsg);
+        showShinyClientMessage({ message: errMsg, status: "error" });
+        return;
+      }
+
+      el.dispatchEvent(evt);
     }
   );
 });
