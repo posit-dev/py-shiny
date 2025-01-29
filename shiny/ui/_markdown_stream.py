@@ -1,5 +1,5 @@
 from contextlib import contextmanager
-from typing import Iterable, Literal
+from typing import Iterable, Literal, Union
 
 from .. import reactive
 from .._docstring import add_example
@@ -144,7 +144,7 @@ class MarkdownStream:
             }
             self._send_custom_message(end)
 
-    def _send_custom_message(self, msg: ContentMessage | isStreamingMessage):
+    def _send_custom_message(self, msg: Union[ContentMessage, isStreamingMessage]):
         if self._session.is_stub_session():
             return
         self._session._send_message_sync(
