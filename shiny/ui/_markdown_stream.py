@@ -15,8 +15,8 @@ __all__ = (
 
 StreamingContentType = Literal[
     "markdown",
-    "semi-markdown",
     "html",
+    "semi-markdown",
     "text",
 ]
 
@@ -42,9 +42,13 @@ class MarkdownStream:
     id
         A unique identifier for this markdown stream.
     content
-        Initial (starting) content.
+        Some content to display before any streaming occurs.
     content_type
-        The content type of the markdown content. Default is "markdown".
+        The content type. Default is "markdown" (specifically, CommonMark).
+        Other supported options are:
+        - `"html"`: for rendering HTML content.
+        - `"text"`: for plain text.
+        - `"semi-markdown"`: for rendering markdown, but with HTML tags escaped.
 
     Note
     ----
@@ -88,6 +92,9 @@ class MarkdownStream:
 
         Parameters
         ----------
+        content
+            The content to stream. This can be any iterable of strings, such as a list,
+            generator, or file-like object.
         clear
             Whether to clear the existing content before streaming the new content.
         """
@@ -145,6 +152,7 @@ class MarkdownStream:
         )
 
 
+@add_example()
 def output_markdown_stream(
     id: str,
     content: str = "",
@@ -161,9 +169,13 @@ def output_markdown_stream(
     id
         A unique identifier for this markdown stream.
     content
-        Initial (starting) content.
+        Some content to display before any streaming occurs.
     content_type
-        The content type of the markdown content. Default is "markdown".
+        The content type. Default is "markdown" (specifically, CommonMark).
+        Other supported options are:
+        - `"html"`: for rendering HTML content.
+        - `"text"`: for plain text.
+        - `"semi-markdown"`: for rendering markdown, but with HTML tags escaped.
     """
     return Tag(
         "shiny-markdown-stream",
