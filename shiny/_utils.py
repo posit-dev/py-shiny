@@ -262,7 +262,7 @@ P = ParamSpec("P")
 
 
 def wrap_async(
-    fn: Callable[P, R] | Callable[P, Awaitable[R]]
+    fn: Callable[P, R] | Callable[P, Awaitable[R]],
 ) -> Callable[P, Awaitable[R]]:
     """
     Given a synchronous function that returns R, return an async function that wraps the
@@ -338,7 +338,7 @@ def wrap_async(
 # This function should generally be used in this code base instead of
 # `iscoroutinefunction()`.
 def is_async_callable(
-    obj: Callable[P, R] | Callable[P, Awaitable[R]]
+    obj: Callable[P, R] | Callable[P, Awaitable[R]],
 ) -> TypeGuard[Callable[P, Awaitable[R]]]:
     """
     Determine if an object is an async function.
