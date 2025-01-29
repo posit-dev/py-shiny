@@ -17,7 +17,7 @@ __all__ = ("module",)
 
 @add_example(ex_dir="../api-examples/express_module")
 def module(
-    fn: Callable[Concatenate[Inputs, Outputs, Session, P], R]
+    fn: Callable[Concatenate[Inputs, Outputs, Session, P], R],
 ) -> Callable[Concatenate[Id, P], R]:
     """
     Create a Shiny module using Shiny Express syntax
