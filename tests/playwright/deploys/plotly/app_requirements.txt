@@ -1,5 +1,6 @@
 pandas
 plotly
+anywidget
 htmltools
 git+https://github.com/posit-dev/py-shinywidgets.git#egg=shinywidgets
 
