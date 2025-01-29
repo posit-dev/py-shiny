@@ -5,7 +5,13 @@ import requests
 from shiny import App, ui
 
 app_ui = ui.page_fluid(
-    ui.output_markdown_stream("shiny-readme"),
+    ui.card(
+        ui.card_header("Shiny's README.md"),
+        ui.output_markdown_stream("shiny-readme"),
+        height="400px",
+        class_="mt-3",
+        full_screen=True,
+    ),
 )
 
 

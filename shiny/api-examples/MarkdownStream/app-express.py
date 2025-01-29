@@ -4,6 +4,8 @@ import requests
 
 from shiny.express import session, ui
 
+ui.page_opts(full_width=True)
+
 # Read in the README.md file from the py-shiny repository
 readme = requests.get(
     "https://raw.githubusercontent.com/posit-dev/py-shiny/refs/heads/main/README.md"
@@ -21,7 +23,7 @@ def chunk_generator():
 
 md = ui.MarkdownStream("shiny-readme")
 
-with ui.card(height="400px"):
+with ui.card(height="400px", class_="mt-3", full_screen=True):
     ui.card_header("Shiny README.md")
     md.ui()
 
