@@ -377,7 +377,8 @@ class Chat:
         else:
             await self._remove_loading_message()
             sanitize = self.on_error == "sanitize"
-            raise NotifyException(str(e), sanitize=sanitize) from e
+            msg = f"Error in Chat('{self.id}'): {str(e)}"
+            raise NotifyException(msg, sanitize=sanitize) from e
 
     @overload
     def messages(

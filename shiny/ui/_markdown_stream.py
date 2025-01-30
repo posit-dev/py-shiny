@@ -179,7 +179,8 @@ class MarkdownStream:
             raise e
         else:
             sanitize = self.on_error == "sanitize"
-            raise NotifyException(str(e), sanitize=sanitize) from e
+            msg = f"Error in MarkdownStream('{self.id}'): {str(e)}"
+            raise NotifyException(msg, sanitize=sanitize) from e
 
     def _send_custom_message(self, msg: Union[ContentMessage, isStreamingMessage]):
         if self._session.is_stub_session():
