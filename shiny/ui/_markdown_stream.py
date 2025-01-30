@@ -5,6 +5,7 @@ from .. import reactive
 from .._docstring import add_example
 from .._typing_extensions import TypedDict
 from ..session import require_active_session
+from ..types import NotifyException
 from . import Tag
 from ._html_deps_py_shiny import markdown_stream_dependency
 
@@ -49,6 +50,16 @@ class MarkdownStream:
         - `"html"`: for rendering HTML content.
         - `"text"`: for plain text.
         - `"semi-markdown"`: for rendering markdown, but with HTML tags escaped.
+    on_error
+        How to handle errors that occur while streaming. When `"unhandled"`,
+        the app will stop running when an error occurs. Otherwise, a notification
+        is displayed to the user and the app continues to run.
+
+        * `"auto"`: Sanitize the error message if the app is set to sanitize errors,
+          otherwise display the actual error message.
+        * `"actual"`: Display the actual error message to the user.
+        * `"sanitize"`: Sanitize the error message before displaying it to the user.
+        * `"unhandled"`: Do not display any error message to the user.
 
     Note
     ----
@@ -62,6 +73,7 @@ class MarkdownStream:
         *,
         content: str = "",
         content_type: StreamingContentType = "markdown",
+        on_error: Literal["auto", "actual", "sanitize", "unhandled"] = "auto",
     ):
         self.id = id
         self._content = content
@@ -70,6 +82,15 @@ class MarkdownStream:
         # TODO: remove the `None` when this PR lands:
         # https://github.com/posit-dev/py-shiny/pull/793/files
         self._session = require_active_session(None)
+
+        # Default to sanitizing until we know the app isn't sanitizing errors
+        if on_error == "auto":
+            on_error = "sanitize"
+            app = self._session.app
+            if app is not None and not app.sanitize_errors:  # type: ignore
+                on_error = "actual"
+
+        self.on_error = on_error
 
     def ui(self) -> Tag:
         """
@@ -109,6 +130,15 @@ class MarkdownStream:
 
         _task()
 
+        # Since the task runs in the background (outside/beyond the current context,
+        # if any), we need to manually raise any exceptions that occur
+        @reactive.effect
+        async def _handle_error():
+            e = _task.error()
+            if e:
+                await self._raise_exception(e)
+            _handle_error.destroy()  # type: ignore
+
     def _append(self, content: str):
         msg: ContentMessage = {
             "id": self.id,
@@ -143,6 +173,13 @@ class MarkdownStream:
                 "isStreaming": False,
             }
             self._send_custom_message(end)
+
+    async def _raise_exception(self, e: BaseException):
+        if self.on_error == "unhandled":
+            raise e
+        else:
+            sanitize = self.on_error == "sanitize"
+            raise NotifyException(str(e), sanitize=sanitize) from e
 
     def _send_custom_message(self, msg: Union[ContentMessage, isStreamingMessage]):
         if self._session.is_stub_session():
