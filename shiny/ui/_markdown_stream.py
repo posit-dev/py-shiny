@@ -1,16 +1,19 @@
 from contextlib import contextmanager
 from typing import Iterable, Literal, Union
 
+from htmltools import css
+
 from .. import reactive
 from .._docstring import add_example
 from .._typing_extensions import TypedDict
 from ..session import require_active_session
 from ..types import NotifyException
+from ..ui.css import CssUnit, as_css_unit
 from . import Tag
 from ._html_deps_py_shiny import markdown_stream_dependency
 
 __all__ = (
-    "output_markdown_stream",
+    "markdown_stream_ui",
     "MarkdownStream",
 )
 
@@ -42,14 +45,6 @@ class MarkdownStream:
     ----------
     id
         A unique identifier for this markdown stream.
-    content
-        Some content to display before any streaming occurs.
-    content_type
-        The content type. Default is "markdown" (specifically, CommonMark).
-        Other supported options are:
-        - `"html"`: for rendering HTML content.
-        - `"text"`: for plain text.
-        - `"semi-markdown"`: for rendering markdown, but with HTML tags escaped.
     on_error
         How to handle errors that occur while streaming. When `"unhandled"`,
         the app will stop running when an error occurs. Otherwise, a notification
@@ -71,14 +66,9 @@ class MarkdownStream:
         self,
         id: str,
         *,
-        content: str = "",
-        content_type: StreamingContentType = "markdown",
         on_error: Literal["auto", "actual", "sanitize", "unhandled"] = "auto",
     ):
         self.id = id
-        self._content = content
-        self._content_type: StreamingContentType = content_type
-
         # TODO: remove the `None` when this PR lands:
         # https://github.com/posit-dev/py-shiny/pull/793/files
         self._session = require_active_session(None)
@@ -92,7 +82,14 @@ class MarkdownStream:
 
         self.on_error = on_error
 
-    def ui(self) -> Tag:
+    def ui(
+        self,
+        *,
+        content: str = "",
+        content_type: StreamingContentType = "markdown",
+        width: CssUnit = "100%",
+        height: CssUnit = "auto",
+    ) -> Tag:
         """
         Get the UI element for this markdown stream.
 
@@ -100,12 +97,33 @@ class MarkdownStream:
         :func:`~shiny.ui.output_markdown_stream` for placing the markdown stream
         in the UI.
 
+        Parameters
+        ----------
+        content
+            Some content to display before any streaming occurs.
+        content_type
+            The content type. Default is "markdown" (specifically, CommonMark).
+            Other supported options are:
+            - `"html"`: for rendering HTML content.
+            - `"text"`: for plain text.
+            - `"semi-markdown"`: for rendering markdown, but with HTML tags escaped.
+        width
+            The width of the markdown stream container.
+        height
+            The height of the markdown stream container.
+
         Returns
         -------
         Tag
             The UI element for this markdown stream.
         """
-        return output_markdown_stream(self.id, self._content, self._content_type)
+        return markdown_stream_ui(
+            self.id,
+            content=content,
+            content_type=content_type,
+            width=width,
+            height=height,
+        )
 
     def stream(self, content: Iterable[str], clear: bool = True):
         """
@@ -191,10 +209,13 @@ class MarkdownStream:
 
 
 @add_example()
-def output_markdown_stream(
+def markdown_stream_ui(
     id: str,
+    *,
     content: str = "",
     content_type: StreamingContentType = "markdown",
+    width: CssUnit = "100%",
+    height: CssUnit = "auto",
 ) -> Tag:
     """
     Create a UI element for a markdown stream.
@@ -214,10 +235,20 @@ def output_markdown_stream(
         - `"html"`: for rendering HTML content.
         - `"text"`: for plain text.
         - `"semi-markdown"`: for rendering markdown, but with HTML tags escaped.
+    width
+        The width of the markdown stream container.
+    height
+        The height of the markdown stream container.
     """
     return Tag(
         "shiny-markdown-stream",
         markdown_stream_dependency(),
+        {
+            "style": css(
+                width=as_css_unit(width),
+                height=as_css_unit(height),
+            )
+        },
         id=id,
         content=content,
         content_type=content_type,

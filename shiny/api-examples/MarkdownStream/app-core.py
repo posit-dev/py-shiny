@@ -7,7 +7,7 @@ from shiny import App, ui
 app_ui = ui.page_fluid(
     ui.card(
         ui.card_header("Shiny's README.md"),
-        ui.output_markdown_stream("shiny-readme"),
+        ui.markdown_stream_ui("shiny-readme"),
         height="400px",
         class_="mt-3",
         full_screen=True,
