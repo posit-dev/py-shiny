@@ -170,6 +170,7 @@ class Session(ABC):
     id: str
     input: Inputs
     output: Outputs
+    clientdata: Inputs
     user: str | None
     groups: list[str] | None
 
@@ -1357,6 +1358,9 @@ class Inputs:
         # it populates the key if it doesn't exist yet. It then calls `is_set()`, which
         # creates a reactive dependency, and returns whether the value is set.
         return self[key].is_set()
+
+    def __dir__(self):
+        return list(self._map.keys())
 
 
 # ======================================================================================
