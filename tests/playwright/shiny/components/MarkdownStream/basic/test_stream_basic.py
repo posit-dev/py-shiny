@@ -35,3 +35,11 @@ def test_validate_stream_basic(page: Page, local_app: ShinyAppProc) -> None:
     # all the way to the bottom
     is_scrolled = is_element_scrolled_to_bottom(page, ".card-body")
     assert is_scrolled, "The card body container should be scrolled to the bottom"
+
+    stream2 = page.locator("#shiny-readme-err")
+    expect(stream2).to_be_visible(timeout=30 * 1000)
+    expect(stream2).to_contain_text("Shiny")
+
+    notification = page.locator(".shiny-notification-error")
+    expect(notification).to_be_visible(timeout=30 * 1000)
+    expect(notification).to_contain_text("boom!")
