@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from shiny import reactive
 from shiny.express import ui
 
 # Read in the py-shiny README.md file
@@ -24,8 +25,10 @@ def readme_generator_err():
             raise RuntimeError("boom!")
 
 
-stream.stream(readme_generator())
-stream2.stream(readme_generator_err())
+@reactive.effect
+async def _():
+    await stream.stream(readme_generator())
+    await stream2.stream(readme_generator_err())
 
 
 with ui.card(
