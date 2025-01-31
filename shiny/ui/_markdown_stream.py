@@ -168,6 +168,14 @@ class MarkdownStream:
                 await self._raise_exception(e)
             _handle_error.destroy()  # type: ignore
 
+        return _task
+
+    async def clear(self):
+        """
+        Clear the content of the markdown stream.
+        """
+        return await self.stream([], clear=True)
+
     @asynccontextmanager
     async def _streaming_dot(self):
         await self._send_stream_message(True)
