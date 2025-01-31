@@ -219,8 +219,9 @@ class MarkdownElement extends LightElement {
 
 // ------- Register custom elements and shiny bindings ---------
 
-customElements.get("shiny-markdown-stream") ||
+if (!customElements.get("shiny-markdown-stream")) {
   customElements.define("shiny-markdown-stream", MarkdownElement);
+}
 
 function handleMessage(message: ContentMessage | IsStreamingMessage): void {
   const el = document.getElementById(message.id) as MarkdownElement;
@@ -230,7 +231,7 @@ function handleMessage(message: ContentMessage | IsStreamingMessage): void {
       status: "error",
       message: `Unable to handle MarkdownStream() message since element with id
       ${message.id} wasn't found. Do you need to call .ui() (Express) or need a
-      output_markdown_stream('${message.id}') in the UI (Core)?`,
+      markdown_stream_ui('${message.id}') in the UI (Core)?`,
     });
     return;
   }
@@ -246,7 +247,7 @@ function handleMessage(message: ContentMessage | IsStreamingMessage): void {
     const content = el.getAttribute("content");
     el.setAttribute("content", content + message.content);
   } else {
-    console.error(`Unknown operation: ${message.operation}`);
+    throw new Error(`Unknown operation: ${message.operation}`);
   }
 }
 
