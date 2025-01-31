@@ -7,6 +7,15 @@ from shiny.express import session, ui
 
 ui.page_opts(full_width=True)
 
+# Initialize a markdown stream object
+md = ui.MarkdownStream("shiny-readme")
+
+# Display the stream UI in a card
+with ui.card(height="400px", class_="mt-3", full_screen=True):
+    ui.card_header("Shiny README.md")
+    md.ui()
+
+
 # Read in the README.md file from the py-shiny repository
 readme = requests.get(
     "https://raw.githubusercontent.com/posit-dev/py-shiny/refs/heads/main/README.md"
@@ -20,15 +29,6 @@ async def chunk_generator():
         if not session.is_stub_session():
             await asyncio.sleep(0.02)
         yield chunk + " "
-
-
-md = ui.MarkdownStream("shiny-readme")
-
-with ui.card(height="400px", class_="mt-3", full_screen=True):
-    ui.card_header("Shiny README.md")
-    md.ui()
-
-md.ui(height=300)
 
 
 @reactive.effect
