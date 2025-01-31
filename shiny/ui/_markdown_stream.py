@@ -39,12 +39,14 @@ class isStreamingMessage(TypedDict):
 @add_example()
 class MarkdownStream:
     """
-    Stream markdown (or HTML) content.
+    A component for streaming markdown or HTML content.
 
     Parameters
     ----------
     id
-        A unique identifier for this markdown stream.
+        A unique identifier for this `MarkdownStream`. In Shiny Core, make sure this id
+        matches a corresponding :func:`~shiny.ui.markdown_stream_ui` call in the app's
+        UI.
     on_error
         How to handle errors that occur while streaming. When `"unhandled"`,
         the app will stop running when an error occurs. Otherwise, a notification
@@ -92,7 +94,7 @@ class MarkdownStream:
         height: CssUnit = "auto",
     ) -> Tag:
         """
-        Get the UI element for this markdown stream.
+        Create a UI element for this `MarkdownStream`.
 
         This method is only relevant for Shiny Express. In Shiny Core, use
         :func:`~shiny.ui.markdown_stream_ui` for placing the markdown stream
@@ -136,15 +138,23 @@ class MarkdownStream:
         clear: bool = True,
     ):
         """
-        Stream content into the markdown stream.
+        Send a stream of content to the UI.
+
+        This method streams content into the relevant UI element.
 
         Parameters
         ----------
         content
-            The content to stream. This can be any iterable of strings, such as a list,
-            generator, or file-like object.
+            The content to stream. This can be a Iterable or an AsyncIterable of strings.
+            Note that this includes synchronous and asynchronous generators, which is
+            a useful way to stream content in as it arrives (e.g. from a LLM).
         clear
             Whether to clear the existing content before streaming the new content.
+
+        Note
+        ----
+        If you already have the content available as a string, you can do
+        `.stream([content])` to set the content.
         """
 
         content = _utils.wrap_async_iterable(content)
@@ -235,7 +245,7 @@ def markdown_stream_ui(
     height: CssUnit = "auto",
 ) -> Tag:
     """
-    Create a UI element for a markdown stream.
+    Create a UI element for a :class:`~shiny.ui.MarkdownStream`.
 
     This method is only relevant for Shiny Core. In Shiny Express, use
     :meth:`~shiny.ui.MarkdownStream.ui` to get the UI element for the markdown stream
@@ -243,7 +253,8 @@ def markdown_stream_ui(
     Parameters
     ----------
     id
-        A unique identifier for this markdown stream.
+        A unique identifier for the UI element containing the markdown stream.
+        This id should match the id of the :class:`~shiny.ui.MarkdownStream` instance.
     content
         Some content to display before any streaming occurs.
     content_type
