@@ -1,7 +1,8 @@
+import asyncio
 from pathlib import Path
 
 from shiny import reactive
-from shiny.express import ui
+from shiny.express import render, ui
 
 # Read in the py-shiny README.md file
 readme = Path(__file__).parent / "README.md"
@@ -10,11 +11,12 @@ with open(readme, "r") as f:
 
 
 stream = ui.MarkdownStream("shiny-readme")
-stream2 = ui.MarkdownStream("shiny-readme-err")
+stream_err = ui.MarkdownStream("shiny-readme-err")
 
 
-def readme_generator():
+async def readme_generator():
     for chunk in readme_chunks:
+        await asyncio.sleep(0.02)
         yield chunk + " "
 
 
@@ -28,7 +30,7 @@ def readme_generator_err():
 @reactive.effect
 async def _():
     await stream.stream(readme_generator())
-    await stream2.stream(readme_generator_err())
+    await stream_err.stream(readme_generator_err())
 
 
 with ui.card(
@@ -41,4 +43,29 @@ with ui.card(
 
 with ui.card(class_="mt-3"):
     ui.card_header("Shiny README.md with error")
-    stream2.ui()
+    stream_err.ui()
+
+
+basic_stream = ui.MarkdownStream("basic-stream-result")
+basic_stream.ui()
+
+
+def basic_generator():
+    yield "Basic "
+    yield "stream"
+
+
+@reactive.calc
+async def stream_task():
+    return await basic_stream.stream(basic_generator())
+
+
+@reactive.effect
+async def _():
+    await stream_task()
+
+
+@render.text
+async def stream_result():
+    task = await stream_task()
+    return f"Stream result: {task.result()}"

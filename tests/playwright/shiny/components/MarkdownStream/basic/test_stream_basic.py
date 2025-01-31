@@ -1,5 +1,6 @@
 from playwright.sync_api import Page, expect
 
+from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
 
@@ -43,3 +44,6 @@ def test_validate_stream_basic(page: Page, local_app: ShinyAppProc) -> None:
     notification = page.locator(".shiny-notification-error")
     expect(notification).to_be_visible(timeout=30 * 1000)
     expect(notification).to_contain_text("boom!")
+
+    txt_result = controller.OutputText(page, "basic-stream-result")
+    txt_result.expect_value("Stream result: Basic stream")

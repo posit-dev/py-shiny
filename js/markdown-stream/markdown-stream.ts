@@ -92,24 +92,24 @@ class MarkdownElement extends LightElement {
   protected willUpdate(changedProperties: PropertyValues): void {
     if (changedProperties.has("content")) {
       this.#isContentBeingAdded = true;
-      // A scrollable element might not be available until the content
-      // grows to a certain size. So, keep looking for it until it's found.
-      if (!this.#scrollableElement) this.#updateScrollableElement();
     }
-    if (changedProperties.has("streaming")) {
-      this.#updateScrollableElement();
-    }
+    super.willUpdate(changedProperties);
   }
 
   protected updated(changedProperties: Map<string, unknown>): void {
     if (changedProperties.has("content")) {
+      // Post-process DOM after content has been added
       try {
         this.#highlightAndCodeCopy();
       } catch (error) {
         console.warn("Failed to highlight code:", error);
       }
-
       if (this.streaming) this.#appendStreamingDot();
+
+      // Update scrollable element after content has been added
+      this.#updateScrollableElement();
+
+      // Possibly scroll to bottom after content has been added
       this.#isContentBeingAdded = false;
       this.#maybeScrollToBottom();
     }
