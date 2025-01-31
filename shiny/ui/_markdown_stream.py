@@ -87,6 +87,7 @@ class MarkdownStream:
         *,
         content: str = "",
         content_type: StreamingContentType = "markdown",
+        auto_scroll: bool = True,
         width: CssUnit = "100%",
         height: CssUnit = "auto",
     ) -> Tag:
@@ -107,6 +108,9 @@ class MarkdownStream:
             - `"html"`: for rendering HTML content.
             - `"text"`: for plain text.
             - `"semi-markdown"`: for rendering markdown, but with HTML tags escaped.
+        auto_scroll
+            Whether to automatically scroll to the bottom of a scrollable container
+            when new content is added. Default is True.
         width
             The width of the markdown stream container.
         height
@@ -121,6 +125,7 @@ class MarkdownStream:
             self.id,
             content=content,
             content_type=content_type,
+            auto_scroll=auto_scroll,
             width=width,
             height=height,
         )
@@ -212,6 +217,7 @@ def markdown_stream_ui(
     *,
     content: str = "",
     content_type: StreamingContentType = "markdown",
+    auto_scroll: bool = True,
     width: CssUnit = "100%",
     height: CssUnit = "auto",
 ) -> Tag:
@@ -233,6 +239,9 @@ def markdown_stream_ui(
         - `"html"`: for rendering HTML content.
         - `"text"`: for plain text.
         - `"semi-markdown"`: for rendering markdown, but with HTML tags escaped.
+    auto_scroll
+        Whether to automatically scroll to the bottom of a scrollable container
+        when new content is added. Default is True.
     width
         The width of the markdown stream container.
     height
@@ -245,9 +254,10 @@ def markdown_stream_ui(
             "style": css(
                 width=as_css_unit(width),
                 height=as_css_unit(height),
-            )
+            ),
+            "content-type": content_type,
+            "auto-scroll": "" if auto_scroll else None,
         },
         id=id,
         content=content,
-        content_type=content_type,
     )

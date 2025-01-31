@@ -73,8 +73,12 @@ function contentToHTML(content: string, content_type: ContentType) {
 
 class MarkdownElement extends LightElement {
   @property() content = "";
-  @property() content_type: ContentType = "markdown";
-  @property({ type: Boolean, reflect: true }) streaming = false;
+  @property({ attribute: "content-type" })
+  content_type: ContentType = "markdown";
+  @property({ type: Boolean, reflect: true })
+  streaming = false;
+  @property({ type: Boolean, reflect: true, attribute: "auto-scroll" })
+  auto_scroll = false;
 
   render() {
     return html`${contentToHTML(this.content, this.content_type)}`;
@@ -185,6 +189,8 @@ class MarkdownElement extends LightElement {
   }
 
   #findScrollableParent(): HTMLElement | null {
+    if (!this.auto_scroll) return null;
+
     // eslint-disable-next-line
     let el: HTMLElement | null = this;
     while (el) {
