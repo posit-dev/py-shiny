@@ -147,10 +147,10 @@ class MarkdownStream:
         @reactive.extended_task
         async def _task():
             if clear:
-                await self._replace("")
+                await self._send_content_message("", "replace")
             async with self._streaming_dot():
                 async for c in content:
-                    await self._append(c)
+                    await self._send_content_message(c, "append")
 
         _task()
 
@@ -163,40 +163,39 @@ class MarkdownStream:
                 await self._raise_exception(e)
             _handle_error.destroy()  # type: ignore
 
-    async def _append(self, content: str):
-        msg: ContentMessage = {
-            "id": self.id,
-            "content": content,
-            "operation": "append",
-        }
-
-        await self._send_custom_message(msg)
-
-    async def _replace(self, content: str):
-        msg: ContentMessage = {
-            "id": self.id,
-            "content": content,
-            "operation": "replace",
-        }
-
-        await self._send_custom_message(msg)
-
     @asynccontextmanager
     async def _streaming_dot(self):
-        start: isStreamingMessage = {
-            "id": self.id,
-            "isStreaming": True,
-        }
-        await self._send_custom_message(start)
-
+        await self._send_stream_message(True)
         try:
             yield
         finally:
-            end: isStreamingMessage = {
-                "id": self.id,
-                "isStreaming": False,
-            }
-            await self._send_custom_message(end)
+            await self._send_stream_message(False)
+
+    async def _send_content_message(
+        self,
+        content: str,
+        operation: Literal["append", "replace"],
+    ):
+        msg: ContentMessage = {
+            "id": self.id,
+            "content": content,
+            "operation": operation,
+        }
+        await self._send_custom_message(msg)
+
+    async def _send_stream_message(self, is_streaming: bool):
+        msg: isStreamingMessage = {
+            "id": self.id,
+            "isStreaming": is_streaming,
+        }
+        await self._send_custom_message(msg)
+
+    async def _send_custom_message(
+        self, msg: Union[ContentMessage, isStreamingMessage]
+    ):
+        if self._session.is_stub_session():
+            return
+        await self._session.send_custom_message("shinyMarkdownStreamMessage", {**msg})
 
     async def _raise_exception(self, e: BaseException):
         if self.on_error == "unhandled":
@@ -205,13 +204,6 @@ class MarkdownStream:
             sanitize = self.on_error == "sanitize"
             msg = f"Error in MarkdownStream('{self.id}'): {str(e)}"
             raise NotifyException(msg, sanitize=sanitize) from e
-
-    async def _send_custom_message(
-        self, msg: Union[ContentMessage, isStreamingMessage]
-    ):
-        if self._session.is_stub_session():
-            return
-        await self._session.send_custom_message("shinyMarkdownStreamMessage", msg)
 
 
 @add_example()
