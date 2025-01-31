@@ -153,9 +153,14 @@ class MarkdownStream:
         async def _task():
             if clear:
                 await self._send_content_message("", "replace")
+
+            result = ""
             async with self._streaming_dot():
                 async for c in content:
+                    result += c
                     await self._send_content_message(c, "append")
+
+            return result
 
         _task()
 
