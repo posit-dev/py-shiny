@@ -1,7 +1,8 @@
-import time
+import asyncio
 
 import requests
 
+from shiny import reactive
 from shiny.express import session, ui
 
 ui.page_opts(full_width=True)
@@ -14,10 +15,10 @@ readme_chunks = readme.text.replace("\n", " \n ").split(" ")
 
 
 # Generate words from the README.md file (with a small delay)
-def chunk_generator():
+async def chunk_generator():
     for chunk in readme_chunks:
         if not session.is_stub_session():
-            time.sleep(0.02)
+            await asyncio.sleep(0.02)
         yield chunk + " "
 
 
@@ -27,4 +28,9 @@ with ui.card(height="400px", class_="mt-3", full_screen=True):
     ui.card_header("Shiny README.md")
     md.ui()
 
-md.stream(chunk_generator())
+md.ui(height=300)
+
+
+@reactive.effect
+async def _():
+    await md.stream(chunk_generator())

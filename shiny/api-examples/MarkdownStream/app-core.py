@@ -1,8 +1,8 @@
-import time
+import asyncio
 
 import requests
 
-from shiny import App, ui
+from shiny import App, ui, reactive
 
 app_ui = ui.page_fluid(
     ui.card(
@@ -23,13 +23,16 @@ def server(input, output, session):
     readme_chunks = readme.text.replace("\n", " \n ").split(" ")
 
     # Generate words from the README.md file (with a small delay)
-    def chunk_generator():
+    async def chunk_generator():
         for chunk in readme_chunks:
-            time.sleep(0.02)
+            await asyncio.sleep(0.02)
             yield chunk + " "
 
     md = ui.MarkdownStream("shiny-readme")
-    md.stream(chunk_generator())
+
+    @reactive.effect
+    async def _():
+        await md.stream(chunk_generator())
 
 
 app = App(app_ui, server)

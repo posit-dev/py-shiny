@@ -1,9 +1,9 @@
-from contextlib import contextmanager
-from typing import Iterable, Literal, Union
+from contextlib import asynccontextmanager
+from typing import AsyncIterable, Iterable, Literal, Union
 
 from htmltools import css
 
-from .. import reactive
+from .. import _utils, reactive
 from .._docstring import add_example
 from .._typing_extensions import TypedDict
 from ..session import require_active_session
@@ -125,7 +125,11 @@ class MarkdownStream:
             height=height,
         )
 
-    def stream(self, content: Iterable[str], clear: bool = True):
+    async def stream(
+        self,
+        content: Iterable[str] | AsyncIterable[str],
+        clear: bool = True,
+    ):
         """
         Stream content into the markdown stream.
 
@@ -138,13 +142,15 @@ class MarkdownStream:
             Whether to clear the existing content before streaming the new content.
         """
 
+        content = _utils.wrap_async_iterable(content)
+
         @reactive.extended_task
         async def _task():
             if clear:
-                self._replace("")
-            with self._streaming_dot():
-                for c in content:
-                    self._append(c)
+                await self._replace("")
+            async with self._streaming_dot():
+                async for c in content:
+                    await self._append(c)
 
         _task()
 
@@ -157,31 +163,31 @@ class MarkdownStream:
                 await self._raise_exception(e)
             _handle_error.destroy()  # type: ignore
 
-    def _append(self, content: str):
+    async def _append(self, content: str):
         msg: ContentMessage = {
             "id": self.id,
             "content": content,
             "operation": "append",
         }
 
-        self._send_custom_message(msg)
+        await self._send_custom_message(msg)
 
-    def _replace(self, content: str):
+    async def _replace(self, content: str):
         msg: ContentMessage = {
             "id": self.id,
             "content": content,
             "operation": "replace",
         }
 
-        self._send_custom_message(msg)
+        await self._send_custom_message(msg)
 
-    @contextmanager
-    def _streaming_dot(self):
+    @asynccontextmanager
+    async def _streaming_dot(self):
         start: isStreamingMessage = {
             "id": self.id,
             "isStreaming": True,
         }
-        self._send_custom_message(start)
+        await self._send_custom_message(start)
 
         try:
             yield
@@ -190,7 +196,7 @@ class MarkdownStream:
                 "id": self.id,
                 "isStreaming": False,
             }
-            self._send_custom_message(end)
+            await self._send_custom_message(end)
 
     async def _raise_exception(self, e: BaseException):
         if self.on_error == "unhandled":
@@ -200,12 +206,12 @@ class MarkdownStream:
             msg = f"Error in MarkdownStream('{self.id}'): {str(e)}"
             raise NotifyException(msg, sanitize=sanitize) from e
 
-    def _send_custom_message(self, msg: Union[ContentMessage, isStreamingMessage]):
+    async def _send_custom_message(
+        self, msg: Union[ContentMessage, isStreamingMessage]
+    ):
         if self._session.is_stub_session():
             return
-        self._session._send_message_sync(
-            {"custom": {"shinyMarkdownStreamMessage": msg}}
-        )
+        await self._session.send_custom_message("shinyMarkdownStreamMessage", msg)
 
 
 @add_example()
