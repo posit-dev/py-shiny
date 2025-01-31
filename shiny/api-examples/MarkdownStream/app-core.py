@@ -2,7 +2,7 @@ import asyncio
 
 import requests
 
-from shiny import App, ui, reactive
+from shiny import App, reactive, ui
 
 app_ui = ui.page_fluid(
     ui.card(
