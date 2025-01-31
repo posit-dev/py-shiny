@@ -95,7 +95,7 @@ class MarkdownStream:
         Get the UI element for this markdown stream.
 
         This method is only relevant for Shiny Express. In Shiny Core, use
-        :func:`~shiny.ui.output_markdown_stream` for placing the markdown stream
+        :func:`~shiny.ui.markdown_stream_ui` for placing the markdown stream
         in the UI.
 
         Parameters

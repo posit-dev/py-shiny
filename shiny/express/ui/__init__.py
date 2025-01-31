@@ -328,7 +328,7 @@ _known_missing = {
         "output_ui",
         "output_data_frame",
         # MarkdownStream knows how to render itself in express
-        "output_markdown_stream",
+        "markdown_stream_ui",
         # Chat knows how to render itself in express
         "chat_ui",
     ),
