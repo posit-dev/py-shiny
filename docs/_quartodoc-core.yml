@@ -102,6 +102,11 @@ quartodoc:
       contents:
         - ui.Chat
         - ui.chat_ui
+    - title: Streaming markdown
+      desc: Stream markdown content into the UI
+      contents:
+        - ui.MarkdownStream
+        - ui.output_markdown_stream
     - title: Custom UI
       desc: Lower-level UI functions for creating custom HTML/CSS/JS
       contents:
@@ -358,4 +363,3 @@ quartodoc:
           contents:
             - name: experimental.ui.card_image
               dynamic: false
-
