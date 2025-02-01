@@ -234,7 +234,7 @@ class ExpressMarkdownStream(MarkdownStream):
         )
 
 
-@add_example("app-core.py")
+@add_example(ex_dir="../api-examples/MarkdownStream")
 def output_markdown_stream(
     id: str,
     *,
