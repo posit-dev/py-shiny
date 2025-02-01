@@ -134,7 +134,7 @@ class MarkdownStream:
 
     async def stream(
         self,
-        content: Iterable[str] | AsyncIterable[str],
+        content: Union[Iterable[str], AsyncIterable[str]],
         clear: bool = True,
     ):
         """

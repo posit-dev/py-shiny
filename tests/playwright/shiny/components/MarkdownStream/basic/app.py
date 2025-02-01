@@ -16,7 +16,7 @@ stream_err = ui.MarkdownStream("shiny-readme-err")
 
 async def readme_generator():
     for chunk in readme_chunks:
-        await asyncio.sleep(0.02)
+        await asyncio.sleep(0.005)
         yield chunk + " "
 
 

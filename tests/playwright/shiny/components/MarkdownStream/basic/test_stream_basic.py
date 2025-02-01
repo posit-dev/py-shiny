@@ -45,5 +45,5 @@ def test_validate_stream_basic(page: Page, local_app: ShinyAppProc) -> None:
     expect(notification).to_be_visible(timeout=30 * 1000)
     expect(notification).to_contain_text("boom!")
 
-    txt_result = controller.OutputText(page, "basic-stream-result")
+    txt_result = controller.OutputText(page, "stream_result")
     txt_result.expect_value("Stream result: Basic stream")
