@@ -15,6 +15,7 @@ from ._html_deps_py_shiny import markdown_stream_dependency
 __all__ = (
     "output_markdown_stream",
     "MarkdownStream",
+    "ExpressMarkdownStream",
 )
 
 StreamingContentType = Literal[
@@ -36,7 +37,7 @@ class isStreamingMessage(TypedDict):
     isStreaming: bool
 
 
-@add_example()
+@add_example("app-core.py")
 class MarkdownStream:
     """
     A component for streaming markdown or HTML content.
@@ -83,53 +84,6 @@ class MarkdownStream:
                 on_error = "actual"
 
         self.on_error = on_error
-
-    def ui(
-        self,
-        *,
-        content: str = "",
-        content_type: StreamingContentType = "markdown",
-        auto_scroll: bool = True,
-        width: CssUnit = "100%",
-        height: CssUnit = "auto",
-    ) -> Tag:
-        """
-        Create a UI element for this `MarkdownStream`.
-
-        This method is only relevant for Shiny Express. In Shiny Core, use
-        :func:`~shiny.ui.output_markdown_stream` to create the UI element.
-
-        Parameters
-        ----------
-        content
-            Content to display when the UI element is first rendered.
-        content_type
-            The content type. Default is `"markdown"` (specifically, CommonMark).
-            Other supported options are:
-            - `"html"`: for rendering HTML content.
-            - `"text"`: for plain text.
-            - `"semi-markdown"`: for rendering markdown, but with HTML tags escaped.
-        auto_scroll
-            Whether to automatically scroll to the bottom of a scrollable container
-            when new content is added. Default is `True`.
-        width
-            The width of the UI element.
-        height
-            The height of the UI element.
-
-        Returns
-        -------
-        Tag
-            A UI element for locating the `MarkdownStream` in the app.
-        """
-        return output_markdown_stream(
-            self.id,
-            content=content,
-            content_type=content_type,
-            auto_scroll=auto_scroll,
-            width=width,
-            height=height,
-        )
 
     async def stream(
         self,
@@ -233,7 +187,54 @@ class MarkdownStream:
             raise NotifyException(msg, sanitize=sanitize) from e
 
 
-@add_example()
+@add_example("app-express.py")
+class ExpressMarkdownStream(MarkdownStream):
+    def ui(
+        self,
+        *,
+        content: str = "",
+        content_type: StreamingContentType = "markdown",
+        auto_scroll: bool = True,
+        width: CssUnit = "100%",
+        height: CssUnit = "auto",
+    ) -> Tag:
+        """
+        Create a UI element for this `MarkdownStream`.
+
+        Parameters
+        ----------
+        content
+            Content to display when the UI element is first rendered.
+        content_type
+            The content type. Default is `"markdown"` (specifically, CommonMark).
+            Other supported options are:
+            - `"html"`: for rendering HTML content.
+            - `"text"`: for plain text.
+            - `"semi-markdown"`: for rendering markdown, but with HTML tags escaped.
+        auto_scroll
+            Whether to automatically scroll to the bottom of a scrollable container
+            when new content is added. Default is `True`.
+        width
+            The width of the UI element.
+        height
+            The height of the UI element.
+
+        Returns
+        -------
+        Tag
+            A UI element for locating the `MarkdownStream` in the app.
+        """
+        return output_markdown_stream(
+            self.id,
+            content=content,
+            content_type=content_type,
+            auto_scroll=auto_scroll,
+            width=width,
+            height=height,
+        )
+
+
+@add_example("app-core.py")
 def output_markdown_stream(
     id: str,
     *,
@@ -246,8 +247,8 @@ def output_markdown_stream(
     """
     Create a UI element for a :class:`~shiny.ui.MarkdownStream`.
 
-    This method is only relevant for Shiny Core. In Shiny Express, use
-    :meth:`~shiny.ui.MarkdownStream.ui` to create the UI element.
+    This function is only relevant for Shiny Core. In Shiny Express, use
+    :meth:`~shiny.express.ui.MarkdownStream.ui` to create the UI element.
 
     Parameters
     ----------

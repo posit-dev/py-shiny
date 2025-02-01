@@ -101,7 +101,6 @@ from ...ui import (
     insert_ui,
     remove_ui,
     markdown,
-    MarkdownStream,
     modal_button,
     modal,
     modal_show,
@@ -145,6 +144,10 @@ from ._cm_components import (
     panel_absolute,
     tooltip,
     popover,
+)
+
+from ...ui._markdown_stream import (
+    ExpressMarkdownStream as MarkdownStream,
 )
 
 from ._page import (
