@@ -231,7 +231,7 @@ function handleMessage(message: ContentMessage | IsStreamingMessage): void {
       status: "error",
       message: `Unable to handle MarkdownStream() message since element with id
       ${message.id} wasn't found. Do you need to call .ui() (Express) or need a
-      markdown_stream_ui('${message.id}') in the UI (Core)?`,
+      output_markdown_stream('${message.id}') in the UI (Core)?`,
     });
     return;
   }

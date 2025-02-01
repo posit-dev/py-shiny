@@ -13,7 +13,7 @@ from . import Tag
 from ._html_deps_py_shiny import markdown_stream_dependency
 
 __all__ = (
-    "markdown_stream_ui",
+    "output_markdown_stream",
     "MarkdownStream",
 )
 
@@ -45,7 +45,7 @@ class MarkdownStream:
     ----------
     id
         A unique identifier for this `MarkdownStream`. In Shiny Core, make sure this id
-        matches a corresponding :func:`~shiny.ui.markdown_stream_ui` call in the app's
+        matches a corresponding :func:`~shiny.ui.output_markdown_stream` call in the app's
         UI.
     on_error
         How to handle errors that occur while streaming. When `"unhandled"`,
@@ -97,7 +97,7 @@ class MarkdownStream:
         Create a UI element for this `MarkdownStream`.
 
         This method is only relevant for Shiny Express. In Shiny Core, use
-        :func:`~shiny.ui.markdown_stream_ui` to create the UI element.
+        :func:`~shiny.ui.output_markdown_stream` to create the UI element.
 
         Parameters
         ----------
@@ -122,7 +122,7 @@ class MarkdownStream:
         Tag
             A UI element for locating the `MarkdownStream` in the app.
         """
-        return markdown_stream_ui(
+        return output_markdown_stream(
             self.id,
             content=content,
             content_type=content_type,
@@ -234,7 +234,7 @@ class MarkdownStream:
 
 
 @add_example()
-def markdown_stream_ui(
+def output_markdown_stream(
     id: str,
     *,
     content: str = "",
