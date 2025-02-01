@@ -60,8 +60,8 @@ class MarkdownStream:
 
     Note
     ----
-    Markdown is parsed on the client via `marked.js`. Consider using :func:`~shiny.ui.markdown`
-    for server-side rendering of markdown content.
+    Markdown is parsed on the client via `marked.js`. Consider using
+    :func:`~shiny.ui.markdown` for server-side rendering of markdown content.
     """
 
     def __init__(
@@ -97,31 +97,30 @@ class MarkdownStream:
         Create a UI element for this `MarkdownStream`.
 
         This method is only relevant for Shiny Express. In Shiny Core, use
-        :func:`~shiny.ui.markdown_stream_ui` for placing the markdown stream
-        in the UI.
+        :func:`~shiny.ui.markdown_stream_ui` to create the UI element.
 
         Parameters
         ----------
         content
-            Some content to display before any streaming occurs.
+            Content to display when the UI element is first rendered.
         content_type
-            The content type. Default is "markdown" (specifically, CommonMark).
+            The content type. Default is `"markdown"` (specifically, CommonMark).
             Other supported options are:
             - `"html"`: for rendering HTML content.
             - `"text"`: for plain text.
             - `"semi-markdown"`: for rendering markdown, but with HTML tags escaped.
         auto_scroll
             Whether to automatically scroll to the bottom of a scrollable container
-            when new content is added. Default is True.
+            when new content is added. Default is `True`.
         width
-            The width of the markdown stream container.
+            The width of the UI element.
         height
-            The height of the markdown stream container.
+            The height of the UI element.
 
         Returns
         -------
         Tag
-            The UI element for this markdown stream.
+            A UI element for locating the `MarkdownStream` in the app.
         """
         return markdown_stream_ui(
             self.id,
@@ -140,7 +139,7 @@ class MarkdownStream:
         """
         Send a stream of content to the UI.
 
-        This method streams content into the relevant UI element.
+        Stream content into the relevant UI element.
 
         Parameters
         ----------
@@ -187,7 +186,7 @@ class MarkdownStream:
 
     async def clear(self):
         """
-        Clear the content of the markdown stream.
+        Empty the UI element of the `MarkdownStream`.
         """
         return await self.stream([], clear=True)
 
@@ -248,13 +247,13 @@ def markdown_stream_ui(
     Create a UI element for a :class:`~shiny.ui.MarkdownStream`.
 
     This method is only relevant for Shiny Core. In Shiny Express, use
-    :meth:`~shiny.ui.MarkdownStream.ui` to get the UI element for the markdown stream
+    :meth:`~shiny.ui.MarkdownStream.ui` to create the UI element.
 
     Parameters
     ----------
     id
-        A unique identifier for the UI element containing the markdown stream.
-        This id should match the id of the :class:`~shiny.ui.MarkdownStream` instance.
+        A unique identifier for the UI element. This id should match the id of the
+        :class:`~shiny.ui.MarkdownStream` instance.
     content
         Some content to display before any streaming occurs.
     content_type
@@ -267,9 +266,9 @@ def markdown_stream_ui(
         Whether to automatically scroll to the bottom of a scrollable container
         when new content is added. Default is True.
     width
-        The width of the markdown stream container.
+        The width of the UI element.
     height
-        The height of the markdown stream container.
+        The height of the UI element.
     """
     return Tag(
         "shiny-markdown-stream",
