@@ -36,7 +36,7 @@ nav = ui.navset_pill_list(
             ui.input_slider("cov", "Co-variance", min=0, max=1, value=0.4),
         ),
     ),
-    ui.nav_panel("Pandas", ui.output_plot("pandas")),
+    ui.nav_panel("pandas", ui.output_plot("pandas")),
     ui.nav_panel("Holoviews", ui.output_plot("holoviews", height="600px")),
     ui.nav_panel("xarray", ui.output_plot("xarray")),
     ui.nav_panel("geopandas", ui.output_plot("geopandas")),

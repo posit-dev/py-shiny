@@ -1,0 +1,4 @@
+shiny
+tokenizers
+chatlas
+ollama

@@ -1,0 +1,115 @@
+meta:
+  name:
+    full: "Retro Arcade Brand"
+    short: "RetroArc"
+  link:
+    home: https://retroarc.example.com
+    mastodon: https://mastodon.social/@retroarc
+    github: https://github.com/retroarc
+    linkedin: https://linkedin.com/company/retroarc
+    twitter: https://twitter.com/retroarc
+    facebook: https://facebook.com/retroarc
+
+# logo:
+#   images:
+#     icon-light: logos/retroarc-icon-light.png
+#     icon-dark: logos/retroarc-icon-dark.png
+#     wide-light: logos/retroarc-wide-light.png
+#     wide-dark: logos/retroarc-wide-dark.png
+#     tall-light: logos/retroarc-tall-light.png
+#     tall-dark: logos/retroarc-tall-dark.png
+#   small:
+#     light: logos/retroarc-icon-light.png
+#     dark: logos/retroarc-icon-dark.png
+#   medium:
+#     light: logos/retroarc-wide-light.png
+#     dark: logos/retroarc-wide-dark.png
+#   large:
+#     light: logos/retroarc-tall-light.png
+#     dark: logos/retroarc-tall-dark.png
+
+color:
+  palette:
+    pink: "#E83E8C"
+    blue: "#007BFF"
+    cyan: "#17A2B8"
+    teal: "#20C997"
+    green: "#28A745"
+    yellow: "#FFD700"
+    orange: "#FF7F50"
+    red: "#FF3333"
+    purple: "#6F42C1"
+    indigo: "#6610F2"
+    black: "#1A1A1A"
+    white: "#F8F8F8"
+  foreground: black
+  background: white
+  primary: purple
+  success: green
+  info: cyan
+  warning: yellow
+  danger: orange
+  light: white
+  dark: black
+
+typography:
+  fonts:
+    - family: Quantico
+      source: google
+      weight: [700]
+      style: [normal, italic]
+      display: swap
+    - family: Monda
+      source: file
+      files:
+        - path: Monda.ttf
+          weight: 400..700
+    - family: Share Tech Mono
+      source: bunny
+      weight: 400
+      style: normal
+      display: swap
+  base:
+    family: Monda
+    size: 17px
+    weight: 400
+    line-height: 1.5
+  headings:
+    family: Quantico
+    weight: 400
+    line-height: 1.2
+    style: normal
+  monospace:
+    family: Share Tech Mono
+    size: 0.9em
+    weight: 400
+  monospace-inline:
+    family: Share Tech Mono
+    # size: 0.9em
+    weight: 400
+    color: yellow
+    background-color: "#1a1a1add"
+  monospace-block:
+    family: Share Tech Mono
+    size: 1.1em
+    weight: 400
+    color: green
+    background-color: black
+    line-height: 1.4
+  link:
+    weight: 400
+    background-color: purple
+    color: white
+    decoration: "underline"
+
+defaults:
+  bootstrap:
+    defaults:
+      my-pink: "$brand-pink"
+  shiny:
+    theme:
+      preset: shiny
+      rules: |
+        .navbar-brand { color: $my-pink }
+      # TODO: Find an appropriate theme variable to set
+      # navbar-bg: $brand-purple

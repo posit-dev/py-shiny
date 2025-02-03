@@ -201,7 +201,11 @@ def test_langchain_normalization():
 
 
 def test_google_normalization():
-    from google.generativeai import (  # pyright: ignore[reportMissingTypeStubs]
+    # Not available for Python 3.8
+    if sys.version_info < (3, 9):
+        return
+
+    from google.generativeai.generative_models import (  # pyright: ignore[reportMissingTypeStubs]
         GenerativeModel,
     )
 
@@ -328,6 +332,20 @@ def test_openai_normalization():
     assert msg == {"content": "Hello ", "role": "assistant"}
 
 
+def test_ollama_normalization():
+    from ollama import ChatResponse
+    from ollama import Message as OllamaMessage
+
+    # Mock return object from ollama.chat()
+    msg = ChatResponse(
+        message=OllamaMessage(content="Hello world!", role="assistant"),
+    )
+
+    msg_dict = {"content": "Hello world!", "role": "assistant"}
+    assert normalize_message(msg) == msg_dict
+    assert normalize_message_chunk(msg) == msg_dict
+
+
 # ------------------------------------------------------------------------------------
 # Unit tests for as_provider_message()
 #
@@ -357,7 +375,13 @@ def test_as_anthropic_message():
 
 
 def test_as_google_message():
-    from google.generativeai import (  # pyright: ignore[reportMissingTypeStubs]
+    from shiny.ui._chat_provider_types import as_google_message
+
+    # Not available for Python 3.8
+    if sys.version_info < (3, 9):
+        return
+
+    from google.generativeai.generative_models import (  # pyright: ignore[reportMissingTypeStubs]
         GenerativeModel,
     )
 
@@ -380,7 +404,9 @@ def test_as_google_message():
 
 
 def test_as_langchain_message():
-    from langchain_core.language_models.base import LanguageModelInput
+    from langchain_core.language_models.base import (
+        LanguageModelInput,
+    )
     from langchain_core.language_models.base import (
         Sequence as LangchainSequence,  # pyright: ignore[reportPrivateImportUsage]
     )
@@ -453,9 +479,12 @@ def test_as_ollama_message():
     import ollama
     from ollama import Message as OllamaMessage
 
-    assert "typing.Sequence[ollama._types.Message]" in str(
-        ollama.chat.__annotations__["messages"]
-    )
+    # ollama 0.4.2 added Callable to the type hints, but pyright complains about
+    # missing arguments to the Callable type. We'll ignore this for now.
+    # https://github.com/ollama/ollama-python/commit/b50a65b
+    chat = ollama.chat  # type: ignore
+
+    assert "ollama._types.Message" in str(chat.__annotations__["messages"])
 
     from shiny.ui._chat_provider_types import as_ollama_message
 

@@ -7,17 +7,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### New features
+
+* Added a new `.add_sass_layer_file()` method to `ui.Theme` that supports reading a Sass file with layer boundary comments, e.g. `/*-- scss:defaults --*/`. This format [is supported by Quarto](https://quarto.org/docs/output-formats/html-themes-more.html#bootstrap-bootswatch-layering) and makes it easier to store Sass rules and declarations that need to be woven into Shiny's Sass Bootstrap files. (#1790)
+
+* The `ui.Chat()` component's `.on_user_submit()` decorator method now passes the user input to the decorated function. This makes it a bit more obvious how to access the user input inside the decorated function. See the new templates (mentioned below) for examples. (#1801)
+
+* `shiny create` includes new and improved `ui.Chat()` template options. Most of these templates leverage the new [`{chatlas}` package](https://posit-dev.github.io/chatlas/), our opinionated approach to interfacing with various LLM. (#1806)
+
+### Bug fixes
+
+* `ui.Chat()` now correctly handles new `ollama.chat()` return value introduced in `ollama` v0.4. (#1787)
+
+## [1.2.1] - 2024-11-14
+
+### Bug fixes
+
+* Branded theming via `ui.Theme.from_brand()` now correctly applies monospace inline and block font family choices. (#1762)
+
+* Compatibility with `websockets>=14.0`, which has changed its public APIs. Shiny now requires websockets 13 or later. (#1769)
+
+
+## [1.2.0] - 2024-10-29
+
 ### Breaking changes
 
 * `.expect_inverse()` for Navset controllers in `shiny.playwright.controllers` now requires a `bool` value. To keep behavior the same, use `.expect_inverse(False)`. (#1668)
 
-* `.expect_layout()` for Navset controllers in `shiny.playwright.controllers` is now renamed to `.expect_fluid()` and requires a `bool` value. To keep behavior the same, use `.expect_fluid(True)` (#1668)
+* `.expect_layout()` for Navset controllers in `shiny.playwright.controllers` is now renamed to `.expect_fluid()` and requires a `bool` value. To keep behavior the same, use `.expect_fluid(True)`. (#1668)
 
 * `.expect_icon()` for Accordion controllers in `shiny.playwright.controllers` now requires a `bool` value instead of a `str`. (#1710)
 
 ### New features
 
-* Added [narwhals](https://posit-dev.github.io/py-narwhals) support for `@render.data_frame`. This allows for any eager data frame supported by narwhals to be returned from a `@render.data_frame` output method. All internal methods and helper methods leverage the `narwhals` API to be data frame agnostic. (#1570)
+* New features for `@render.data_frame`:
+
+  * Added [narwhals](https://posit-dev.github.io/py-narwhals) support for `@render.data_frame`. This allows for any eager data frame supported by narwhals to be returned from a `@render.data_frame` output method. All internal methods and helper methods now leverage the `narwhals` API to be data frame agnostic. (#1570)
+
+  * Added `.data_patched()` reactive calculation that applies all `.cell_patches()` to `.data()`. (#1719)
+
+  * Added `.update_cell_value()` method to programmatically update the contents of a data frame cell. (#1719)
+
+  * Added `.update_data()` method to update the rendered data without resetting any user sort or filter. Note, all user edits will be forgotten. (#1719)
+
+* Added [narwhals](https://posit-dev.github.io/py-narwhals) support for `@render.table`. This allows for any eager data frame supported by narwhals to be returned from a `@render.table` output method. (#1570)
+
+* Shiny now supports theming via [brand.yml](https://posit-dev.github.io/brand-yml) with a single `_brand.yml` file. Call `ui.Theme.from_brand()` with `__file__` or the path to a `_brand.yml` file and pass the resulting theme to the `theme` argument of `express.ui.page_opts()` (Shiny Express) or `ui.page_*()` functions (Shiny Core) to apply the brand theme to the entire app. (#1743)
+
+* `chat_ui()` and `Chat.ui()` gain a `messages` parameter for providing starting messages. (#1736)
 
 ### Other changes
 
@@ -41,8 +78,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added `.expect_class()` and `.expect_multiple()` for `Accordion` in `shiny.playwright.controllers` (#1710)
 
-* Added [narwhals](https://posit-dev.github.io/py-narwhals) support for `@render.table`. This allows for any eager data frame supported by narwhals to be returned from a `@render.table` output method. (#1570)
-
 ### Bug fixes
 
 * A few fixes for `ui.Chat()`, including:
@@ -52,7 +87,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `shiny create` now uses the template `id` rather than the directory name as the default directory. (#1666)
 
-* `ui.Theme()` now works correctly on Windows when the theme requires Sass compilation. (thanks @yuuuxt, #1684)
+* `ui.Theme()` now works correctly on Windows when the theme requires Sass compilation. (Thanks, @yuuuxt!) (#1684)
 
 * Fixed multiple input controllers (`InputSlider`, `InputDate`, `InputDateRange`, `InputCheckbox`, and `InputCheckboxGroup`) in `shiny.playwright.controller` to check the `width` property within the `style` attribute. (#1691, #1696, #1702)
 
@@ -66,6 +101,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Fixed bug in `@render.data_frame` where `bool` or `object` columns were not being rendered. (#1570)
 
+* Fixed output controller `OutputDataFrame` in `shiny.playwright.controller` to correctly assert the number of rows in `.expect_nrow()` as the total number of virtual rows, not the number of currently displaying rows. (#1719)
+
+* Fixed issue where `@render.download` did not respect the module namespacing. (Thanks, @nsiicm0!) (#1732)
+
+* Added workaround in `Accordion` in `shiny.playwright.controller` where `.expect_open()` and `.expect_panels()` would hang while resolving a playwright locator. (Thanks, @joesho112358!) (#1165)
 
 ## [1.1.0] - 2024-09-03
 
@@ -89,7 +129,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * A few fixes for `ui.Chat()`, including:
   * A fix for use inside Shiny modules. (#1582)
   * `.messages(format="google")` now returns the correct role. (#1622)
-  * `ui.Chat(messages)` are no longer dropped when dynamically rendered. (#1593)
   * `transform_assistant_response` can now return `None` and correctly handles change of content on the last chunk. (#1641)
 
 * An empty `ui.input_date()` value no longer crashes Shiny. (#1528)

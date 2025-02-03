@@ -1,0 +1,215 @@
+/*-- scss:functions --*/
+@function brand-choose-white-black($foreground, $background) {
+  $lum_fg: luminance($foreground);
+  $lum_bg: luminance($background);
+  $contrast: contrast-ratio($foreground, $background);
+
+  @if $contrast < 4.5 {
+    @warn "The contrast ratio of #{$contrast} between the brand's foreground color (#{inspect($foreground)}) and background color (#{inspect($background)}) is very low. Consider picking colors with higher contrast for better readability.";
+  }
+
+  $white: if($lum_fg > $lum_bg, $foreground, $background);
+  $black: if($lum_fg <= $lum_bg, $foreground, $background);
+
+  // If the brand foreground/background are close enough to black/white, we
+  // use those values. Otherwise, we'll mix the white/black from the brand
+  // fg/bg with actual white and black to get something much closer.
+  @return (
+    "white": if(contrast-ratio($white, white) <= 1.15, $white, mix($white, white, 20%)),
+    "black": if(contrast-ratio($black, black) <= 1.15, $black, mix($black, black, 20%))
+  );
+}
+
+/*-- scss:defaults --*/
+
+// Sass variables from `brand` will be inserted (above) here in this order:
+// * brand.color.palette
+// * brand.defaults (Brand-defined Bootstrap defaults)
+// * brand.color
+// * brand.typography
+
+//*-- brand: initial defaults --*//
+$brand_color_foreground: null !default;
+$brand_color_background: null !default;
+$brand_color_primary: null !default;
+$brand_color_secondary: null !default;
+$brand_color_tertiary: null !default;
+$brand_color_success: null !default;
+$brand_color_info: null !default;
+$brand_color_warning: null !default;
+$brand_color_danger: null !default;
+$brand_color_light: null !default;
+$brand_color_dark: null !default;
+$brand_typography_base_family: null !default;
+$brand_typography_base_size: null !default;
+$brand_typography_base_line-height: null !default;
+$brand_typography_base_weight: null !default;
+$brand_typography_headings_family: null !default;
+$brand_typography_headings_line-height: null !default;
+$brand_typography_headings_weight: null !default;
+$brand_typography_headings_color: null !default;
+$brand_typography_headings_style: null !default;
+$brand_typography_monospace_family: null !default;
+$brand_typography_monospace_size: null !default;
+$brand_typography_monospace_weight: null !default;
+$brand_typography_monospace-inline_family: null !default;
+$brand_typography_monospace-inline_color: null !default;
+$brand_typography_monospace-inline_background-color: null !default;
+$brand_typography_monospace-inline_size: null !default;
+$brand_typography_monospace-inline_weight: null !default;
+$brand_typography_monospace-block_family: null !default;
+$brand_typography_monospace-block_line-height: null !default;
+$brand_typography_monospace-block_color: null !default;
+$brand_typography_monospace-block_background-color: null !default;
+$brand_typography_monospace-block_weight: null !default;
+$brand_typography_monospace-block_size: null !default;
+$brand_typography_link_background-color: null !default;
+$brand_typography_link_color: null !default;
+$brand_typography_link_weight: null !default;
+$brand_typography_link_decoration: null !default;
+
+//*-- brand.color --*//
+$primary: $brand_color_primary !default;
+$secondary: $brand_color_secondary !default;
+$tertiary: $brand_color_tertiary !default;
+$success: $brand_color_success !default;
+$info: $brand_color_info !default;
+$warning: $brand_color_warning !default;
+$danger: $brand_color_danger !default;
+$light: $brand_color_light !default;
+$dark: $brand_color_dark !default;
+
+$body-color: $brand_color_foreground !default;
+$body-bg-dark: $brand_color_foreground !default;
+$body-bg: $brand_color_background !default;
+$body-color-dark: $brand_color_background !default;
+$body-secondary-color: $brand_color_secondary !default;
+$body-secondary: $brand_color_secondary !default;
+$body-tertiary-color: $brand_color_tertiary !default;
+$body-tertiary: $brand_color_tertiary !default;
+
+//*-- brand.typography --*//
+// brand.typography.base
+$font-family-base: $brand_typography_base_family !default;
+$font-size-base: $brand_typography_base_size !default;
+$line-height-base: $brand_typography_base_line-height !default;
+$font-weight-base: $brand_typography_base_weight !default;
+// brand.typography.headings
+$headings-font-family: $brand_typography_headings_family !default;
+$headings-line-height: $brand_typography_headings_line-height !default;
+$headings-font-weight: $brand_typography_headings_weight !default;
+$headings-color: $brand_typography_headings_color !default;
+$headings-style: $brand_typography_headings_style !default;
+// brand.typography.monospace
+$font-family-monospace: $brand_typography_monospace_family !default;
+$code-font-size: $brand_typography_monospace_size !default;
+$code-font-weight: $brand_typography_monospace_weight !default;
+// brand.typography.monospace_inline
+$font-family-monospace-inline: $brand_typography_monospace-inline_family !default;
+$code-color: $brand_typography_monospace-inline_color !default;
+$code-color-dark: $brand_typography_monospace-inline_color !default;
+$code-bg: $brand_typography_monospace-inline_background-color !default;
+$code-inline-font-size: $brand_typography_monospace-inline_size !default;
+$code-inline-font-weight: $brand_typography_monospace-inline_weight !default;
+// brand.typography.monospace_block
+$font-family-monospace-block: $brand_typography_monospace-block_family !default;
+$code-block-line-height: $brand_typography_monospace-block_line-height !default;
+$pre-color: $brand_typography_monospace-block_color !default;
+$pre-bg: $brand_typography_monospace-block_background-color !default;
+$code-block-font-weight: $brand_typography_monospace-block_weight !default;
+$code-block-font-size: $brand_typography_monospace-block_size !default;
+// brand.typography.link
+$link-bg: $brand_typography_link_background-color !default;
+$link-color: $brand_typography_link_color !default;
+$link-color-dark: $brand_typography_link_color !default;
+$link-weight: $brand_typography_link_weight !default;
+$link-decoration: $brand_typography_link_decoration !default;
+
+// *---- brand: automatic gray gradient ----* //
+$enable-brand-grays: true !default;
+// Ensure these variables exist so that we can set them inside of @if context
+// They can still be overwritten by the user, even with !default;
+$white: null !default;
+$black: null !default;
+$gray-100: null !default;
+$gray-200: null !default;
+$gray-300: null !default;
+$gray-400: null !default;
+$gray-500: null !default;
+$gray-600: null !default;
+$gray-700: null !default;
+$gray-800: null !default;
+$gray-900: null !default;
+
+@if $enable-brand-grays {
+  @if $brand_color_foreground != null and $brand_color_background != null {
+    $brand-white-black: brand-choose-white-black($brand_color_foreground, $brand_color_background);
+    @if $white == null {
+      $white: map-get($brand-white-black, "white") !default;
+    }
+    @if $black == null {
+      $black: map-get($brand-white-black, "black") !default;
+    }
+  }
+  @if $white != null and $black != null {
+    $gray-100: mix($white, $black, 90%) !default;
+    $gray-200: mix($white, $black, 80%) !default;
+    $gray-300: mix($white, $black, 70%) !default;
+    $gray-400: mix($white, $black, 60%) !default;
+    $gray-500: mix($white, $black, 50%) !default;
+    $gray-600: mix($white, $black, 40%) !default;
+    $gray-700: mix($white, $black, 30%) !default;
+    $gray-800: mix($white, $black, 20%) !default;
+    $gray-900: mix($white, $black, 10%) !default;
+  }
+}
+
+// *---- brand: added variables ----* //
+$code-font-weight: null !default;
+$font-family-monospace-inline: null !default;
+$code-inline-font-weight: null !default;
+$code-inline-font-size: null !default;
+$font-family-monospace-block: null !default;
+$code-block-font-weight: null !default;
+$code-block-font-size: null !default;
+$code-block-line-height: null !default;
+$link-bg: null !default;
+$link-weight: null !default;
+
+/*-- scss:rules --*/
+
+// *---- brand: brand rules to augment Bootstrap rules ----* //
+// https://github.com/twbs/bootstrap/blob/5c2f2e7e/scss/_root.scss#L82
+:root {
+  --#{$prefix}link-bg: #{$link-bg};
+  --#{$prefix}link-weight: #{$link-weight};
+}
+// https://github.com/twbs/bootstrap/blob/5c2f2e7e/scss/_reboot.scss#L244
+a {
+  background-color: var(--#{$prefix}link-bg);
+  font-weight: var(--#{$prefix}link-weight);
+}
+code {
+  font-weight: $code-font-weight;
+}
+code:not(pre > code) {
+  font-family: $font-family-monospace-inline;
+  font-weight: $code-inline-font-weight;
+  font-size: $code-inline-font-size;
+}
+// https://github.com/twbs/bootstrap/blob/30e01525/scss/_reboot.scss#L287
+pre {
+  font-family: $font-family-monospace-block;
+  font-weight: $code-block-font-weight;
+  font-size: $code-block-font-size;
+  line-height: $code-block-line-height;
+}
+
+$bslib-dashboard-design: false !default;
+@if $bslib-dashboard-design and $brand_color_background != null {
+  // When brand makes dark mode, it usually hides card definition, so we add
+  // back card borders in dark mode.
+  [data-bs-theme="dark"] {
+    --bslib-card-border-color: RGBA(255, 255, 255, 0.15);
+  }
+}

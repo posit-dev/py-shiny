@@ -59,6 +59,7 @@ def reload_begin():
 # Called from child process when new application instance starts up
 def reload_end():
     import websockets
+    import websockets.asyncio.client
 
     # os.kill(os.getppid(), signal.SIGUSR1)
 
@@ -70,12 +71,12 @@ def reload_end():
 
     async def _() -> None:
         options = {
-            "extra_headers": {
+            "additional_headers": {
                 "Shiny-Autoreload-Secret": os.getenv("SHINY_AUTORELOAD_SECRET", ""),
             }
         }
         try:
-            async with websockets.connect(
+            async with websockets.asyncio.client.connect(
                 url, **options  # pyright: ignore[reportArgumentType]
             ) as websocket:
                 await websocket.send("reload_end")
@@ -169,6 +170,17 @@ def start_server(port: int, app_port: int, launch_browser: bool):
     os.environ["SHINY_AUTORELOAD_PORT"] = str(port)
     os.environ["SHINY_AUTORELOAD_SECRET"] = secret
 
+    # websockets 14.0 (and presumably later) log an error if a connection is opened and
+    # closed before any data is sent. Our VS Code extension does exactly this--opens a
+    # connection to check if the server is running, then closes it. It's better that it
+    # does this and doesn't actually perform an HTTP request because we can't guarantee
+    # that the HTTP request will be cheap (we do the same ping on both the autoreload
+    # socket and the main uvicorn socket). So better to just suppress all errors until
+    # we think we have a problem. You can unsuppress by setting the environment variable
+    # to DEBUG.
+    loglevel = os.getenv("SHINY_AUTORELOAD_LOG_LEVEL", "CRITICAL")
+    logging.getLogger("websockets").setLevel(loglevel)
+
     app_url = get_proxy_url(f"http://127.0.0.1:{app_port}/")
 
     # Run on a background thread so our event loop doesn't interfere with uvicorn.
@@ -186,6 +198,8 @@ async def _coro_main(
     port: int, app_url: str, secret: str, launch_browser: bool
 ) -> None:
     import websockets
+    import websockets.asyncio.server
+    from websockets.http11 import Request, Response
 
     reload_now: asyncio.Event = asyncio.Event()
 
@@ -198,18 +212,22 @@ async def _coro_main(
         reload_now.set()
         reload_now.clear()
 
-    async def reload_server(conn: websockets.server.WebSocketServerProtocol):
+    async def reload_server(conn: websockets.asyncio.server.ServerConnection):
         try:
-            if conn.path == "/autoreload":
+            if conn.request is None:
+                raise RuntimeError(
+                    "Autoreload server received a connection with no request"
+                )
+            elif conn.request.path == "/autoreload":
                 # The client wants to be notified when the app has reloaded. The client
                 # in this case is the web browser, specifically shiny-autoreload.js.
                 while True:
                     await reload_now.wait()
                     await conn.send("autoreload")
-            elif conn.path == "/notify":
+            elif conn.request.path == "/notify":
                 # The client is notifying us that the app has reloaded. The client in
                 # this case is the uvicorn worker process (see reload_end(), above).
-                req_secret = conn.request_headers.get("Shiny-Autoreload-Secret", "")
+                req_secret = conn.request.headers.get("Shiny-Autoreload-Secret", "")
                 if req_secret != secret:
                     # The client couldn't prove that they were from a child process
                     return
@@ -225,18 +243,19 @@ async def _coro_main(
     # VSCode extension used in RSW sniffs out ports that are being listened on, which
     # leads to confusion if all you get is an error.
     async def process_request(
-        path: str, request_headers: websockets.datastructures.Headers
-    ) -> Optional[tuple[http.HTTPStatus, websockets.datastructures.HeadersLike, bytes]]:
-        # If there's no Upgrade header, it's not a WebSocket request.
-        if request_headers.get("Upgrade") is None:
-            # For some unknown reason, this fixes a tendency on GitHub Codespaces to
-            # correctly proxy through this request, but give a 404 when the redirect is
-            # followed and app_url is requested. With the sleep, both requests tend to
-            # succeed reliably.
-            await asyncio.sleep(1)
-            return (http.HTTPStatus.MOVED_PERMANENTLY, [("Location", app_url)], b"")
+        connection: websockets.asyncio.server.ServerConnection,
+        request: Request,
+    ) -> Response | None:
+        if request.headers.get("Upgrade") is None:
+            return Response(
+                status_code=http.HTTPStatus.MOVED_PERMANENTLY,
+                reason_phrase="Moved Permanently",
+                headers=websockets.Headers(Location=app_url),
+            )
+        else:
+            return None
 
-    async with websockets.serve(
+    async with websockets.asyncio.server.serve(
         reload_server, "127.0.0.1", port, process_request=process_request
     ):
         await asyncio.Future()  # wait forever

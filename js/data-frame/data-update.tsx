@@ -17,6 +17,62 @@ export type CellPatchPy = {
   // prev: unknown;
 };
 
+type SetDataFn = (fn: (draft: unknown[][]) => void) => void;
+
+export function addPatchToData({
+  setData,
+  newPatches,
+  setCellEditMapAtLoc,
+}: {
+  setData: SetDataFn;
+  newPatches: CellPatch[];
+  setCellEditMapAtLoc: SetCellEditMapAtLoc;
+}): void {
+  // Update data
+  setData((draft) => {
+    newPatches.forEach(({ rowIndex, columnIndex, value }) => {
+      draft[rowIndex]![columnIndex] = value;
+    });
+  });
+  // Set the new patches in cell edit map info
+  newPatches.forEach(({ rowIndex, columnIndex, value }) => {
+    setCellEditMapAtLoc(rowIndex, columnIndex, (obj_draft) => {
+      obj_draft.value = value;
+      obj_draft.state = CellStateEnum.EditSuccess;
+      // Remove save_error if it exists
+      obj_draft.errorTitle = undefined;
+    });
+  });
+}
+
+export function cellPatchPyArrToCellPatchArr(
+  patchesPy: CellPatchPy[]
+): CellPatch[] {
+  const patches: CellPatch[] = patchesPy.map(
+    (patch: CellPatchPy): CellPatch => {
+      return {
+        rowIndex: patch.row_index,
+        columnIndex: patch.column_index,
+        value: patch.value,
+      };
+    }
+  );
+  return patches;
+}
+
+export function cellPatchArrToCellPatchPyArr(
+  patches: CellPatch[]
+): CellPatchPy[] {
+  const patchesPy: CellPatchPy[] = patches.map((patch) => {
+    return {
+      row_index: patch.rowIndex,
+      column_index: patch.columnIndex,
+      value: patch.value,
+    };
+  });
+  return patchesPy;
+}
+
 export function updateCellsData({
   patchInfo,
   patches,
@@ -31,20 +87,13 @@ export function updateCellsData({
   onSuccess: (values: CellPatch[]) => void;
   onError: (err: string) => void;
   columns: readonly string[];
-  setData: (fn: (draft: unknown[][]) => void) => void;
+  setData: SetDataFn;
   setCellEditMapAtLoc: SetCellEditMapAtLoc;
 }) {
   // // Skip page index reset until after next rerender
   // skipAutoResetPageIndex();
 
-  const patchesPy: CellPatchPy[] = patches.map((patch) => {
-    return {
-      row_index: patch.rowIndex,
-      column_index: patch.columnIndex,
-      value: patch.value,
-      // prev: patch.prev,
-    };
-  });
+  const patchesPy = cellPatchArrToCellPatchPyArr(patches);
 
   makeRequestPromise({
     method: patchInfo.key,
@@ -70,21 +119,7 @@ export function updateCellsData({
       }
       newPatchesPy = newPatchesPy as CellPatchPy[];
 
-      const newPatches: CellPatch[] = newPatchesPy.map(
-        (patch: CellPatchPy): CellPatch => {
-          return {
-            rowIndex: patch.row_index,
-            columnIndex: patch.column_index,
-            value: patch.value,
-          };
-        }
-      );
-
-      setData((draft) => {
-        newPatches.forEach(({ rowIndex, columnIndex, value }) => {
-          draft[rowIndex]![columnIndex] = value;
-        });
-      });
+      const newPatches = cellPatchPyArrToCellPatchArr(newPatchesPy);
 
       // Set the old patches locations back to success state
       // This may be overkill, but it guarantees that the incoming patches exit the saving state
@@ -99,15 +134,10 @@ export function updateCellsData({
           obj_draft.errorTitle = undefined;
         });
       });
-      // Set the new patches
-      newPatches.forEach(({ rowIndex, columnIndex, value }) => {
-        setCellEditMapAtLoc(rowIndex, columnIndex, (obj_draft) => {
-          obj_draft.value = value;
-          obj_draft.state = CellStateEnum.EditSuccess;
-          // Remove save_error if it exists
-          obj_draft.errorTitle = undefined;
-        });
-      });
+
+      // Update data and cell edit map with new patches
+      addPatchToData({ setData, newPatches, setCellEditMapAtLoc });
+
       onSuccess(newPatches);
     })
     .catch((err: string) => {

@@ -8,6 +8,7 @@ from typing import (
     Callable,
     Iterable,
     Literal,
+    Optional,
     Sequence,
     Tuple,
     Union,
@@ -64,23 +65,34 @@ TransformAssistantResponseFunction = Union[
     TransformAssistantResponseChunk,
     TransformAssistantResponseChunkAsync,
 ]
-SubmitFunction = Callable[[], None]
-SubmitFunctionAsync = Callable[[], Awaitable[None]]
+UserSubmitFunction0 = Union[
+    Callable[[], None],
+    Callable[[], Awaitable[None]],
+]
+UserSubmitFunction1 = Union[
+    Callable[[str], None],
+    Callable[[str], Awaitable[None]],
+]
+UserSubmitFunction = Union[
+    UserSubmitFunction0,
+    UserSubmitFunction1,
+]
 
 ChunkOption = Literal["start", "end", True, False]
 
 PendingMessage = Tuple[Any, ChunkOption, Union[str, None]]
 
 
-@add_example(ex_dir="../api-examples/chat")
+@add_example(ex_dir="../templates/chat/starters/hello")
 class Chat:
     """
     Create a chat interface.
 
     A UI component for building conversational interfaces. With it, end users can submit
-    messages, which will cause a `.on_user_submit()` callback to run. In that callback,
-    a response can be generated based on the chat's `.messages()`, and appended to the
-    chat using `.append_message()` or `.append_message_stream()`.
+    messages, which will cause a `.on_user_submit()` callback to run. That callback gets
+    passed the user input message, which can be used to generate a response. The
+    response can then be appended to the chat using `.append_message()` or
+    `.append_message_stream()`.
 
     Here's a rough outline for how to implement a `Chat`:
 
@@ -93,11 +105,9 @@ class Chat:
 
     # Define a callback to run when the user submits a message
     @chat.on_user_submit
-    async def _():
-        # Get messages currently in the chat
-        messages = chat.messages()
+    async def handle_user_input(user_input: str):
         # Create a response message stream
-        response = await my_model.generate_response(messages, stream=True)
+        response = await my_model.generate_response(user_input, stream=True)
         # Append the response into the chat
         await chat.append_message_stream(response)
     ```
@@ -110,6 +120,11 @@ class Chat:
     you'll use `.append_message_stream()` instead of `.append_message()` to append the
     response to the chat. Streaming is preferrable when available since it allows for
     more responsive and scalable chat interfaces.
+
+    It is also highly recommended to use a package like
+    [chatlas](https://posit-dev.github.io/chatlas/) to generate responses, especially
+    when responses should be aware of the chat history, support tool calls, etc.
+    See this [article](https://posit-dev.github.io/chatlas/web-apps.html) to learn more.
 
     Parameters
     ----------
@@ -193,7 +208,8 @@ class Chat:
                 reactive.Value(None)
             )
 
-            # Initialize the chat with the provided messages
+            # TODO: deprecate messages once we start promoting managing LLM message
+            # state through other means
             @reactive.effect
             async def _init_chat():
                 for msg in messages:
@@ -233,6 +249,7 @@ class Chat:
     def ui(
         self,
         *,
+        messages: Optional[Sequence[str | ChatMessage]] = None,
         placeholder: str = "Enter a message...",
         width: CssUnit = "min(680px, 100%)",
         height: CssUnit = "auto",
@@ -247,6 +264,11 @@ class Chat:
 
         Parameters
         ----------
+        messages
+            A sequence of messages to display in the chat. Each message can be either a
+            string or a dictionary with `content` and `role` keys. The `content` key
+            should contain the message text, and the `role` key can be "assistant" or
+            "user".
         placeholder
             Placeholder text for the chat input.
         width
@@ -261,6 +283,7 @@ class Chat:
         """
         return chat_ui(
             id=self.id,
+            messages=messages,
             placeholder=placeholder,
             width=width,
             height=height,
@@ -269,33 +292,31 @@ class Chat:
         )
 
     @overload
-    def on_user_submit(
-        self, fn: SubmitFunction | SubmitFunctionAsync
-    ) -> reactive.Effect_: ...
+    def on_user_submit(self, fn: UserSubmitFunction) -> reactive.Effect_: ...
 
     @overload
     def on_user_submit(
         self,
-    ) -> Callable[[SubmitFunction | SubmitFunctionAsync], reactive.Effect_]: ...
+    ) -> Callable[[UserSubmitFunction], reactive.Effect_]: ...
 
     def on_user_submit(
-        self, fn: SubmitFunction | SubmitFunctionAsync | None = None
-    ) -> (
-        reactive.Effect_
-        | Callable[[SubmitFunction | SubmitFunctionAsync], reactive.Effect_]
-    ):
+        self, fn: UserSubmitFunction | None = None
+    ) -> reactive.Effect_ | Callable[[UserSubmitFunction], reactive.Effect_]:
         """
         Define a function to invoke when user input is submitted.
 
-        Apply this method as a decorator to a function (`fn`) that should be invoked when the
-        user submits a message. The function should take no arguments.
+        Apply this method as a decorator to a function (`fn`) that should be invoked
+        when the user submits a message. This function can take an optional argument,
+        which will be the user input message.
 
-        In many cases, the implementation of `fn` should do at least the following:
+        In many cases, the implementation of `fn` should also do the following:
 
-        1. Call `.messages()` to obtain the current chat history.
-        2. Generate a response based on those messages.
-        3. Append the response to the chat history using `.append_message()` (
-           or `.append_message_stream()` if the response is streamed).
+        1. Generate a response based on the user input.
+          * If the response should be aware of chat history, use a package
+             like [chatlas](https://posit-dev.github.io/chatlas/) to manage the chat
+             state, or use the `.messages()` method to get the chat history.
+        2. Append that response to the chat component using `.append_message()` ( or
+           `.append_message_stream()` if the response is streamed).
 
         Parameters
         ----------
@@ -309,8 +330,8 @@ class Chat:
         but it will only be re-invoked when the user submits a message.
         """
 
-        def create_effect(fn: SubmitFunction | SubmitFunctionAsync):
-            afunc = _utils.wrap_async(fn)
+        def create_effect(fn: UserSubmitFunction):
+            fn_params = inspect.signature(fn).parameters
 
             @reactive.effect
             @reactive.event(self._user_input)
@@ -320,7 +341,21 @@ class Chat:
 
                     req(False)
                 try:
-                    await afunc()
+                    if len(fn_params) > 1:
+                        raise ValueError(
+                            "A on_user_submit function should not take more than 1 argument"
+                        )
+                    elif len(fn_params) == 1:
+                        input = self.user_input(transform=True)
+                        # The line immediately below handles the possibility of input
+                        # being transformed to None. Technically, input should never be
+                        # None at this point (since the handler should be suspended).
+                        input = "" if input is None else input
+                        afunc = _utils.wrap_async(cast(UserSubmitFunction1, fn))
+                        await afunc(input)
+                    else:
+                        afunc = _utils.wrap_async(cast(UserSubmitFunction0, fn))
+                        await afunc()
                 except Exception as e:
                     await self._raise_exception(e)
 
@@ -572,7 +607,7 @@ class Chat:
         async def _stream_task():
             await self._append_message_stream(message)
 
-        self._session.on_flushed(_stream_task, once=True)
+        _stream_task()
 
         # Since the task runs in the background (outside/beyond the current context,
         # if any), we need to manually raise any exceptions that occur
@@ -643,9 +678,7 @@ class Chat:
 
         # print(msg)
 
-        # When streaming (i.e., chunk is truthy), we can send messages immediately
-        # since we already waited for the flush in order to start the stream
-        await self._send_custom_message(msg_type, msg, on_flushed=chunk is False)
+        await self._send_custom_message(msg_type, msg)
         # TODO: Joe said it's a good idea to yield here, but I'm not sure why?
         # await asyncio.sleep(0)
 
@@ -907,15 +940,6 @@ class Chat:
         if self._tokenizer is None:
             self._tokenizer = get_default_tokenizer()
 
-        if self._tokenizer is None:
-            raise ValueError(
-                "A tokenizer is required to impose `token_limits` on messages. "
-                "To get a generic default tokenizer, install the `tokenizers` "
-                "package (`pip install tokenizers`). "
-                "To get a more precise token count, provide a specific tokenizer "
-                "to the `Chat` constructor."
-            )
-
         encoded = self._tokenizer.encode(content)
         if isinstance(encoded, TokenizersEncoding):
             return len(encoded.ids)
@@ -1012,29 +1036,22 @@ class Chat:
     async def _remove_loading_message(self):
         await self._send_custom_message("shiny-chat-remove-loading-message", None)
 
-    async def _send_custom_message(
-        self, handler: str, obj: ClientMessage | None, on_flushed: bool = True
-    ):
-        async def _do_send():
-            await self._session.send_custom_message(
-                "shinyChatMessage",
-                {
-                    "id": self.id,
-                    "handler": handler,
-                    "obj": obj,
-                },
-            )
-
-        if on_flushed:
-            self._session.on_flushed(_do_send, once=True)
-        else:
-            await _do_send()
+    async def _send_custom_message(self, handler: str, obj: ClientMessage | None):
+        await self._session.send_custom_message(
+            "shinyChatMessage",
+            {
+                "id": self.id,
+                "handler": handler,
+                "obj": obj,
+            },
+        )
 
 
-@add_example(ex_dir="../api-examples/chat")
+@add_example(ex_dir="../templates/chat/starters/hello")
 def chat_ui(
     id: str,
     *,
+    messages: Optional[Sequence[str | ChatMessage]] = None,
     placeholder: str = "Enter a message...",
     width: CssUnit = "min(680px, 100%)",
     height: CssUnit = "auto",
@@ -1052,6 +1069,10 @@ def chat_ui(
     ----------
     id
         A unique identifier for the chat UI.
+    messages
+        A sequence of messages to display in the chat. Each message can be either a string
+        or a dictionary with a `content` and `role` key. The `content` key should contain
+        the message text, and the `role` key can be "assistant" or "user".
     placeholder
         Placeholder text for the chat input.
     width
@@ -1066,8 +1087,35 @@ def chat_ui(
 
     id = resolve_id(id)
 
+    message_tags: list[Tag] = []
+    if messages is None:
+        messages = []
+    for msg in messages:
+        if isinstance(msg, str):
+            msg = {"content": msg, "role": "assistant"}
+        elif isinstance(msg, dict):
+            if "content" not in msg:
+                raise ValueError("Each message must have a 'content' key.")
+            if "role" not in msg:
+                raise ValueError("Each message must have a 'role' key.")
+        else:
+            raise ValueError("Each message must be a string or a dictionary.")
+
+        if msg["role"] == "user":
+            tag_name = "shiny-user-message"
+        else:
+            tag_name = "shiny-chat-message"
+
+        message_tags.append(Tag(tag_name, content=msg["content"]))
+
     res = Tag(
         "shiny-chat-container",
+        Tag("shiny-chat-messages", *message_tags),
+        Tag(
+            "shiny-chat-input",
+            id=f"{id}_user_input",
+            placeholder=placeholder,
+        ),
         chat_deps(),
         {
             "style": css(

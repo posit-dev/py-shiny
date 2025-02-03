@@ -37,8 +37,7 @@ def location_server(
     input: Inputs, output: Outputs, session: Session, *, wrap_long: bool = True
 ):
     map = L.Map(center=(0, 0), zoom=1, scoll_wheel_zoom=True)
-    with reactive.isolate():
-        marker = L.Marker(location=(input.lat() or 0, input.long() or 0))
+    marker = L.Marker(location=(0, 0))
 
     with reactive.isolate():  # Use this to ensure we only execute one time
         if input.lat() is None and input.long() is None:

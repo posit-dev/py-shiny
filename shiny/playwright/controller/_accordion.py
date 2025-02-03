@@ -255,6 +255,7 @@ class Accordion(
             arr=value,
             key="data-value",
             timeout=timeout,
+            alt_verify=True,
         )
 
     def expect_panels(
@@ -281,6 +282,7 @@ class Accordion(
             arr=value,
             key="data-value",
             timeout=timeout,
+            alt_verify=True,
         )
 
     def set(

@@ -12,8 +12,6 @@ import quartodoc.ast as qast
 from griffe import (
     Alias,
     DocstringAttribute,
-    DocstringParameter,
-    DocstringSectionParameters,
     DocstringSectionText,
     Expr,
     ExprName,
@@ -22,8 +20,8 @@ from griffe import (
 )
 from plum import dispatch
 from quartodoc import MdRenderer
-from quartodoc.pandoc.blocks import DefinitionList
 from quartodoc.renderers.base import convert_rst_link_to_md, sanitize
+from quartodoc.renderers.md_renderer import ParamRow
 
 # from quartodoc.ast import preview
 
@@ -101,12 +99,12 @@ class Renderer(MdRenderer):
     # TODO-future; Can be removed once we use quartodoc 0.3.5
     # Related: https://github.com/machow/quartodoc/pull/205
     @dispatch
-    def render(self, el: DocstringAttribute):
-        row = [
-            sanitize(el.name),
-            self.render_annotation(el.annotation),
-            sanitize(el.description or "", allow_markdown=True),
-        ]
+    def render(self, el: DocstringAttribute) -> ParamRow:
+        row = ParamRow(
+            el.name,
+            el.description or "",
+            annotation=self.render_annotation(el.annotation),
+        )
         return row
 
     @dispatch
@@ -169,28 +167,6 @@ class Renderer(MdRenderer):
             return short
 
         return ""
-
-    # Consolidate the parameter type info into a single column
-    @dispatch
-    def render(self, el: DocstringParameter):
-        param = f'<span class="parameter-name">{el.name}</span>'
-        annotation = self.render_annotation(el.annotation)
-        if annotation:
-            param = f'{param}<span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">{annotation}</span>'
-        if el.default:
-            param = f'{param} <span class="parameter-default-sep">=</span> <span class="parameter-default">{el.default}</span>'
-
-        # Wrap everything in a code block to allow for links
-        param = "<code>" + param + "</code>"
-
-        return (param, el.description)
-
-    @dispatch
-    def render(self, el: DocstringSectionParameters):
-        rows = list(map(self.render, el.value))
-        # rows is a list of tuples of (<parameter>, <description>)
-
-        return str(DefinitionList(rows))
 
     @dispatch
     def signature(self, el: Function, source: Optional[Alias] = None):
@@ -279,7 +255,7 @@ def read_file(file: str | Path, root_dir: str | Path | None = None) -> FileConte
 
 
 def check_if_missing_expected_example(el, converted):
-    if re.search(r"(^|\n)#{2,6} Examples\n", converted):
+    if re.search(r"(^|\n)#{2,6} Examples", converted):
         # Manually added examples are fine
         return
 

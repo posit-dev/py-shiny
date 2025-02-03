@@ -1,4 +1,0 @@
-shiny
-python-dotenv
-tokenizers
-openai

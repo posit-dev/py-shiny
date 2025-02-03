@@ -79,9 +79,6 @@ def test_accordion(page: Page, local_app: ShinyAppProc) -> None:
         "input.acc(): ('updated_section_a', 'Section C', 'Section D')"
     )
 
-    # TODO-karan-future; Remove return when test is able to pass. Currently it hangs indefinitely and no notification as to why.
-    return
-
     toggle_efg_button.click()
     acc.expect_panels(
         [
@@ -92,7 +89,7 @@ def test_accordion(page: Page, local_app: ShinyAppProc) -> None:
             "Section E",
             "Section F",
             "Section G",
-        ]
+        ],
     )
     acc.expect_open(
         [
@@ -102,7 +99,7 @@ def test_accordion(page: Page, local_app: ShinyAppProc) -> None:
             "Section E",
             "Section F",
             "Section G",
-        ]
+        ],
     )
     # Should be uncommented once https://github.com/rstudio/bslib/issues/565 is fixed
     # output_txt_verbatim.expect_value(

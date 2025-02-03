@@ -81,7 +81,7 @@ class RecallContextManager(Generic[R]):
 
 
 def wrap_recall_context_manager(
-    fn: Callable[P, R]
+    fn: Callable[P, R],
 ) -> Callable[P, RecallContextManager[R]]:
     @functools.wraps(fn)
     def wrapped_fn(*args: P.args, **kwargs: P.kwargs) -> RecallContextManager[R]:
