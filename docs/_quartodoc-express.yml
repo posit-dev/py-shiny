@@ -81,6 +81,10 @@ quartodoc:
       desc: Build a chatbot interface
       contents:
         - express.ui.Chat
+    - title: Streaming markdown
+      desc: Stream markdown content into the UI
+      contents:
+        - express.ui.MarkdownStream
     - title: Reactive programming
       desc: Create reactive functions and dependencies.
       contents:
