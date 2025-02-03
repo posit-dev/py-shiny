@@ -1,0 +1,173 @@
+name: Bug Report
+description: Report a bug in Shiny for Python
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report! Please fill out this form as completely as possible.
+
+        Providing a **Minimal Reproducible Example** is crucial for us to quickly understand and fix the issue.
+        Please take the time to create a minimal app that demonstrates the bug. Templates are provided in the "Minimal Reproducible Example" section.
+
+        **Please ensure you have searched for similar issues before submitting.** Duplicates slow down the process of fixing bugs.
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which part of Shiny for Python is affected?
+      options:
+        - UI Components (ui.*)
+        - Server Logic (server.*)
+        - Reactive Programming
+        - Input Bindings
+        - Output Bindings
+        - Session Management
+        - App Deployment
+        - Documentation
+        - Installation
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: How severe is this issue?
+      options:
+        - P0 - Critical (App crashes/unusable, blocking core functionality)
+        - P1 - High (Major feature broken, significant impact on usability)
+        - P2 - Medium (Feature works with workaround, noticeable impact)
+        - P3 - Low (Minor inconvenience, cosmetic issue, or documentation suggestion)
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Shiny Version
+      description: What version of Shiny for Python are you using? (Check `shiny --version` in your terminal)
+      placeholder: ex. 1.0.2
+    validations:
+      required: true
+
+  - type: input
+    id: python-version
+    attributes:
+      label: Python Version
+      description: What version of Python are you using? (Check `python --version` in your terminal)
+      placeholder: ex. 3.10.6
+    validations:
+      required: true
+
+  - type: textarea
+    id: minimal-example
+    attributes:
+      label: Minimal Reproducible Example
+      description: |
+        Please provide a *minimal*, self-contained Shiny app that clearly demonstrates the issue.
+        This is **the most important part** of your bug report. The easier it is for us to reproduce the bug, the faster we can fix it.
+
+        *   **Minimal:** Remove any code not directly related to the bug.
+        *   **Reproducible:** We should be able to copy and paste your code and run it to see the bug.
+        *   **Self-contained:** Include all necessary code in one file if possible.
+
+        Templates:
+
+        ```python
+        from shiny import App, render, ui
+
+        app_ui = ui.page_fluid(
+            # Your UI code here
+        )
+
+        def server(input, output, session):
+            # Your server code here
+            pass
+
+        app = App(app_ui, server)
+        ```
+      render: python
+    validations:
+      required: true
+
+  - type: textarea
+    id: current-behavior
+    attributes:
+      label: Current Behavior
+      description: A clear and concise description of what you are seeing happen. Be specific.
+      placeholder: When I click the button labeled "Update Plot", the app freezes and I see a spinner, but the plot does not update.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected Behavior
+      description: A clear and concise description of what you expected to happen instead.
+      placeholder: I expected the plot to update with new data points after clicking the "Update Plot" button, without freezing the app.
+    validations:
+      required: true
+
+  - type: textarea
+    id: error-messages
+    attributes:
+      label: Error Messages (if any)
+      description: Please copy and paste any relevant error messages or tracebacks. If there are no error messages, you can leave this blank.
+      render: shell
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment Information
+      description: |
+        Please provide details about your development/runtime environment. This information is very helpful for debugging.
+
+        **Please fill in the details below:**
+      value: |
+        - Operating System: [e.g., Windows 10, macOS 13.4, Ubuntu 20.04]
+        - Browser: [e.g., Chrome 114, Firefox 115, Safari 16]
+        - Key Dependencies (from `pip freeze` or `conda list`):
+          - shiny: [e.g., 1.0.2]
+          - pandas: [e.g., 2.0.0]
+          - numpy: [e.g., 1.23.0]
+          - plotly: [e.g., 5.15.0]
+          - matplotlib: [e.g., 3.7.0]
+          - any other relevant packages: [e.g.,  `requests==2.28.1`]
+      render: markdown
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: |
+        Add any other context or information about the problem here. This could include:
+          - Browser console logs (if relevant to UI issues)
+          - Screenshots or screen recordings
+          - Performance profiles
+          - Specific steps to reproduce the issue if your minimal example is still complex.
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of Conduct
+      description: By submitting this issue, you agree to follow our Code of Conduct. Please read it [link to Code of Conduct].
+      options:
+        - label: I agree to follow this project's Code of Conduct
+          required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Final Checks
+      description: Before submitting, please make sure you've completed these checks to help us resolve your issue faster.
+      options:
+        - label: I have searched for similar issues in the repository to avoid duplicates.
+        - label: I have tested with the latest version of Shiny for Python to ensure the bug still exists.
+        - label: I have included a minimal reproducible example that clearly demonstrates the issue.
+        - label: I have filled out all required fields in this issue template to the best of my ability.
