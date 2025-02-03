@@ -371,7 +371,6 @@ def test_dtype_coverage():
             # "NestedType",
             # "NumericType",
             # "TemporalType",
-            # "TemporalType",
             continue
         if dtype_name in (
             # narwhals
