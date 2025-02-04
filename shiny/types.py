@@ -379,7 +379,7 @@ Jsonifiable = Union[
     bool,
     None,
     List["Jsonifiable"],
-    Tuple["Jsonifiable"],
+    Tuple["Jsonifiable", ...],
     "JsonifiableDict",
 ]
 
