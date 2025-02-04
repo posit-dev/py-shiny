@@ -5,6 +5,7 @@ from htmltools import css
 
 from .. import _utils, reactive
 from .._docstring import add_example
+from .._namespaces import resolve_id
 from .._typing_extensions import TypedDict
 from ..session import require_active_session
 from ..types import NotifyException
@@ -71,7 +72,7 @@ class MarkdownStream:
         *,
         on_error: Literal["auto", "actual", "sanitize", "unhandled"] = "auto",
     ):
-        self.id = id
+        self.id = resolve_id(id)
         # TODO: remove the `None` when this PR lands:
         # https://github.com/posit-dev/py-shiny/pull/793/files
         self._session = require_active_session(None)
@@ -282,6 +283,6 @@ def output_markdown_stream(
             "content-type": content_type,
             "auto-scroll": "" if auto_scroll else None,
         },
-        id=id,
+        id=resolve_id(id),
         content=content,
     )
