@@ -31,10 +31,12 @@ from typing import (
 from htmltools import TagChild
 
 from ._docstring import add_example
-from ._typing_extensions import NotRequired, TypedDict
+from ._typing_extensions import NotRequired, TypedDict, TypeIs
 
 if TYPE_CHECKING:
     from matplotlib.figure import Figure
+
+T = TypeVar("T")
 
 
 # Sentinel value - indicates a missing value in a function call.
@@ -43,10 +45,14 @@ class MISSING_TYPE:
 
 
 MISSING: MISSING_TYPE = MISSING_TYPE()
+DEPRECATED: MISSING_TYPE = MISSING_TYPE()  # A MISSING that communicates deprecation
+MaybeMissing = Union[T, MISSING_TYPE]
 
-
-T = TypeVar("T")
 ListOrTuple = Union[List[T], Tuple[T, ...]]
+
+
+def is_missing(x: Any) -> TypeIs[MISSING_TYPE]:
+    return x is MISSING or isinstance(x, MISSING_TYPE)
 
 
 # Information about a single file, with a structure like:
