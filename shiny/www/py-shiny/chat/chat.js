@@ -4,13 +4,14 @@ var Nt=Object.defineProperty;var Rt=Object.getOwnPropertyDescriptor;var v=(i,t,e
       <div class="message-icon">${rt(s)}</div>
       <shiny-markdown-stream
         content=${this.content}
-        content_type=${this.content_type}
+        content-type=${this.content_type}
         ?streaming=${this.streaming}
+        auto-scroll
       ></shiny-markdown-stream>
     `}};v([f()],T.prototype,"content",2),v([f()],T.prototype,"content_type",2),v([f({type:Boolean,reflect:!0})],T.prototype,"streaming",2);var J=class extends E{constructor(){super(...arguments);this.content="..."}render(){return M`
       <shiny-markdown-stream
         content=${this.content}
-        content_type="semi-markdown"
+        content-type="semi-markdown"
       ></shiny-markdown-stream>
     `}};v([f()],J.prototype,"content",2);var ht=class extends E{render(){return M``}},I=class extends E{constructor(){super(...arguments);this.placeholder="Enter a message...";this.disabled=!1}get textarea(){return this.querySelector("textarea")}get value(){return this.textarea.value}get valueIsEmpty(){return this.value.trim().length===0}get button(){return this.querySelector("button")}render(){let e='<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-arrow-up-circle-fill" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 0 0 8a8 8 0 0 0 16 0m-7.5 3.5a.5.5 0 0 1-1 0V5.707L5.354 7.854a.5.5 0 1 1-.708-.708l3-3a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 5.707z"/></svg>';return M`
       <textarea
