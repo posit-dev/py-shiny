@@ -7,7 +7,7 @@ from shiny import App, reactive, ui
 app_ui = ui.page_fluid(
     ui.card(
         ui.card_header("Shiny's README.md"),
-        ui.output_markdown_stream("shiny-readme"),
+        ui.output_markdown_stream("shiny_readme"),
         height="400px",
         class_="mt-3",
         full_screen=True,
@@ -28,7 +28,7 @@ def server(input, output, session):
             await asyncio.sleep(0.02)
             yield chunk + " "
 
-    md = ui.MarkdownStream("shiny-readme")
+    md = ui.MarkdownStream("shiny_readme")
 
     @reactive.effect
     async def _():
