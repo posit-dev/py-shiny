@@ -67,8 +67,9 @@ class ChatMessage extends LightElement {
       <div class="message-icon">${unsafeHTML(icon)}</div>
       <shiny-markdown-stream
         content=${this.content}
-        content_type=${this.content_type}
+        content-type=${this.content_type}
         ?streaming=${this.streaming}
+        auto-scroll
       ></shiny-markdown-stream>
     `;
   }
@@ -81,7 +82,7 @@ class ChatUserMessage extends LightElement {
     return html`
       <shiny-markdown-stream
         content=${this.content}
-        content_type="semi-markdown"
+        content-type="semi-markdown"
       ></shiny-markdown-stream>
     `;
   }

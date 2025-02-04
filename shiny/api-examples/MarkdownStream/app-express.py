@@ -8,7 +8,7 @@ from shiny.express import session, ui
 ui.page_opts(full_width=True)
 
 # Initialize a markdown stream object
-md = ui.MarkdownStream("shiny-readme")
+md = ui.MarkdownStream("shiny_readme")
 
 # Display the stream UI in a card
 with ui.card(height="400px", class_="mt-3", full_screen=True):

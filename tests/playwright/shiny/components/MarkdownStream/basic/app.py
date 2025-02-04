@@ -10,8 +10,8 @@ with open(readme, "r") as f:
     readme_chunks = f.read().replace("\n", " \n ").split(" ")
 
 
-stream = ui.MarkdownStream("shiny-readme")
-stream_err = ui.MarkdownStream("shiny-readme-err")
+stream = ui.MarkdownStream("shiny_readme")
+stream_err = ui.MarkdownStream("shiny_readme_err")
 
 
 async def readme_generator():
@@ -46,7 +46,7 @@ with ui.card(class_="mt-3"):
     stream_err.ui()
 
 
-basic_stream = ui.MarkdownStream("basic-stream-result")
+basic_stream = ui.MarkdownStream("basic_stream_result")
 basic_stream.ui()
 
 
