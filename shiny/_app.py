@@ -6,7 +6,7 @@ import secrets
 from contextlib import AsyncExitStack, asynccontextmanager
 from inspect import signature
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Mapping, Optional, TypeVar, cast
+from typing import Any, Awaitable, Callable, Mapping, Optional, TypeVar, Union, cast
 
 import starlette.applications
 import starlette.exceptions
@@ -126,12 +126,12 @@ class App:
             self.server = wrap_async(noop_server_fn)
         elif len(signature(server).parameters) == 1:
             self.server = wrap_server_fn_with_output_session(
-                wrap_async(cast(Callable[[Inputs], Awaitable[None] | None], server))
+                wrap_async(cast(Callable[[Inputs], Union[Awaitable[None], None]], server))
             )
         elif len(signature(server).parameters) == 3:
             self.server = wrap_async(
                 cast(
-                    Callable[[Inputs, Outputs, Session], Awaitable[None] | None], server
+                    Callable[[Inputs, Outputs, Session], Union[Awaitable[None], None]], server
                 )
             )
         else:
