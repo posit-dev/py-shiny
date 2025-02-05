@@ -110,7 +110,9 @@ class App:
         self,
         ui: Tag | TagList | Callable[[Request], Tag | TagList] | Path,
         server: (
-            Callable[[Inputs], Awaitable[None] | None] | Callable[[Inputs, Outputs, Session], Awaitable[None] | None] | None
+            Callable[[Inputs], Awaitable[None] | None]
+            | Callable[[Inputs, Outputs, Session], Awaitable[None] | None]
+            | None
         ),
         *,
         static_assets: Optional[str | Path | Mapping[str, str | Path]] = None,
