@@ -129,7 +129,11 @@ class App:
                 wrap_async(cast(Callable[[Inputs], Awaitable[None] | None], server))
             )
         elif len(signature(server).parameters) == 3:
-            self.server = wrap_async(cast(Callable[[Inputs, Outputs, Session], Awaitable[None] | None], server))
+            self.server = wrap_async(
+                cast(
+                    Callable[[Inputs, Outputs, Session], Awaitable[None] | None], server
+                )
+            )
         else:
             raise ValueError(
                 "`server` must have 1 (Inputs) or 3 parameters (Inputs, Outputs, Session)"
