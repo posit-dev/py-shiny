@@ -633,7 +633,9 @@ class AppSession(Session):
                             self._manage_inputs(message_obj["data"])
 
                             with session_context(self):
-                                self.app.server(self.input, self.output, self)
+                                result = self.app.server(self.input, self.output, self)
+                                if isinstance(result, Awaitable):
+                                    await result
 
                         elif message_obj["method"] == "update":
                             verify_state(ConnectionState.Running)

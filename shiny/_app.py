@@ -6,7 +6,7 @@ import secrets
 from contextlib import AsyncExitStack, asynccontextmanager
 from inspect import signature
 from pathlib import Path
-from typing import Any, Callable, Mapping, Optional, TypeVar, cast
+from typing import Any, Awaitable, Callable, Mapping, Optional, TypeVar, cast
 
 import starlette.applications
 import starlette.exceptions
@@ -57,8 +57,8 @@ class App:
         returns a UI definition, if you need the UI definition to be created dynamically
         for each pageview.
     server
-        A function which is called once for each session, ensuring that each session is
-        independent.
+        A sync or async function which is called once for each session, ensuring that
+        each session is independent.
     static_assets
         Static files to be served by the app. If this is a string or Path object, it
         must be a directory, and it will be mounted at `/`. If this is a dictionary,
@@ -104,13 +104,13 @@ class App:
     """
 
     ui: RenderedHTML | Callable[[Request], Tag | TagList]
-    server: Callable[[Inputs, Outputs, Session], None]
+    server: Callable[[Inputs, Outputs, Session], Awaitable[None] | None]
 
     def __init__(
         self,
         ui: Tag | TagList | Callable[[Request], Tag | TagList] | Path,
         server: (
-            Callable[[Inputs], None] | Callable[[Inputs, Outputs, Session], None] | None
+            Callable[[Inputs], Awaitable[None] | None] | Callable[[Inputs, Outputs, Session], Awaitable[None] | None] | None
         ),
         *,
         static_assets: Optional[str | Path | Mapping[str, str | Path]] = None,
