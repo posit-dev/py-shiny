@@ -29,7 +29,7 @@ from ._autoreload import InjectAutoreloadMiddleware, autoreload_url
 from ._connection import Connection, StarletteConnection
 from ._error import ErrorMiddleware
 from ._shinyenv import is_pyodide
-from ._utils import guess_mime_type, is_async_callable, sort_keys_length
+from ._utils import guess_mime_type, is_async_callable, sort_keys_length, wrap_async
 from .html_dependencies import jquery_deps, require_deps, shiny_deps
 from .http_staticfiles import FileResponse, StaticFiles
 from .session._session import AppSession, Inputs, Outputs, Session, session_context
@@ -104,7 +104,7 @@ class App:
     """
 
     ui: RenderedHTML | Callable[[Request], Tag | TagList]
-    server: Callable[[Inputs, Outputs, Session], Awaitable[None] | None]
+    server: Callable[[Inputs, Outputs, Session], Awaitable[None]]
 
     def __init__(
         self,
@@ -123,13 +123,13 @@ class App:
         self._exit_stack = AsyncExitStack()
 
         if server is None:
-            self.server = noop_server_fn
+            self.server = wrap_async(noop_server_fn)
         elif len(signature(server).parameters) == 1:
             self.server = wrap_server_fn_with_output_session(
-                cast(Callable[[Inputs], None], server)
+                wrap_async(cast(Callable[[Inputs], Awaitable[None] | None], server))
             )
         elif len(signature(server).parameters) == 3:
-            self.server = cast(Callable[[Inputs, Outputs, Session], None], server)
+            self.server = wrap_async(cast(Callable[[Inputs, Outputs, Session], Awaitable[None] | None], server))
         else:
             raise ValueError(
                 "`server` must have 1 (Inputs) or 3 parameters (Inputs, Outputs, Session)"
@@ -522,10 +522,10 @@ def noop_server_fn(input: Inputs, output: Outputs, session: Session) -> None:
 
 
 def wrap_server_fn_with_output_session(
-    server: Callable[[Inputs], None],
-) -> Callable[[Inputs, Outputs, Session], None]:
-    def _server(input: Inputs, output: Outputs, session: Session):
+    server: Callable[[Inputs], Awaitable[None]],
+) -> Callable[[Inputs, Outputs, Session], Awaitable[None]]:
+    async def _server(input: Inputs, output: Outputs, session: Session):
         # Only has 1 parameter, ignore output, session
-        server(input)
+        await server(input)
 
     return _server

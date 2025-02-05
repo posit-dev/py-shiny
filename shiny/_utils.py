@@ -262,7 +262,7 @@ P = ParamSpec("P")
 
 
 def wrap_async(
-    fn: Callable[P, R] | Callable[P, Awaitable[R]],
+    fn: Callable[P, R] | Callable[P, Awaitable[R]] | Callable[P, Awaitable[R] | R],
 ) -> Callable[P, Awaitable[R]]:
     """
     Given a synchronous function that returns R, return an async function that wraps the
@@ -270,7 +270,7 @@ def wrap_async(
     """
 
     if is_async_callable(fn):
-        return fn
+        return cast(Callable[P, Awaitable[R]], fn)
 
     fn = cast(Callable[P, R], fn)
 
