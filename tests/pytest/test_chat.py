@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import sys
 from datetime import datetime
 from typing import Union, cast, get_args, get_origin
 
@@ -385,6 +384,8 @@ def test_as_google_message():
     from google.generativeai.generative_models import (  # pyright: ignore[reportMissingTypeStubs]
         GenerativeModel,
     )
+
+    from shiny.ui._chat_provider_types import as_google_message
 
     generate_content = GenerativeModel.generate_content  # type: ignore
 

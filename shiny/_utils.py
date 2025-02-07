@@ -72,7 +72,7 @@ def sort_keys_length(x: dict[str, T], descending: bool = False) -> dict[str, T]:
 
 
 def guess_mime_type(
-    url: "str | os.PathLike[str]",
+    url: str | os.PathLike[str],
     default: str = "application/octet-stream",
     strict: bool = True,
 ) -> str:
@@ -80,8 +80,6 @@ def guess_mime_type(
     Guess the MIME type of a file. This is a wrapper for mimetypes.guess_type, but it
     only returns the type (and not encoding), and it allows a default value.
     """
-    # Note that in the parameters above, "os.PathLike[str]" is in quotes to avoid
-    # "TypeError: 'ABCMeta' object is not subscriptable", in Python<=3.8.
     if url:
         # Work around issue #1601, some installations of Windows 10 return text/plain
         # as the mime type for .js files
@@ -279,60 +277,6 @@ def wrap_async(
         return fn(*args, **kwargs)
 
     return fn_async
-
-
-# # TODO-barret-future; Q: Keep code?
-# class WrapAsync(Generic[P, R]):
-#     """
-#     Make a function asynchronous.
-
-#     Parameters
-#     ----------
-#     fn
-#         Function to make asynchronous.
-
-#     Returns
-#     -------
-#     :
-#         Asynchronous function (within the `WrapAsync` instance)
-#     """
-
-#     def __init__(self, fn: Callable[P, R] | Callable[P, Awaitable[R]]):
-#         if isinstance(fn, WrapAsync):
-#             fn = cast(WrapAsync[P, R], fn)
-#             return fn
-#         self._is_async = is_async_callable(fn)
-#         self._fn = wrap_async(fn)
-
-#     async def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R:
-#         """
-#         Call the asynchronous function.
-#         """
-#         return await self._fn(*args, **kwargs)
-
-#     @property
-#     def is_async(self) -> bool:
-#         """
-#         Was the original function asynchronous?
-
-#         Returns
-#         -------
-#         :
-#             Whether the original function is asynchronous.
-#         """
-#         return self._is_async
-
-#     @property
-#     def fn(self) -> Callable[P, R] | Callable[P, Awaitable[R]]:
-#         """
-#         Retrieve the original function
-
-#         Returns
-#         -------
-#         :
-#             Original function supplied to the `WrapAsync` constructor.
-#         """
-#         return self._fn
 
 
 # This function should generally be used in this code base instead of
