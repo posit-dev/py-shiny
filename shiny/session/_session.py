@@ -697,6 +697,10 @@ class AppSession(Session):
             k = keys[0]
             self.input[ResolvedId(k)]._set(val)
 
+            # shiny.js sets a special class of inputs (clientdata) for things like the
+            # URL, output sizes, etc. On the frontend, these all have the prefix
+            # ".clientdata_". For example, this is where .clientdata_url_search is set:
+            # https://github.com/rstudio/shiny/blob/58e1521/srcts/src/shiny/index.ts#L631-L632
             if k.startswith(".clientdata_"):
                 k2 = k.split("_", 1)[1]
                 self.clientdata[ResolvedId(k2)]._set(val)
