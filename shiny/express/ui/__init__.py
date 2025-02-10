@@ -41,7 +41,6 @@ from ...ui import (
     AccordionPanel,
     AnimationOptions,
     CardItem,
-    Chat,
     ShowcaseLayout,
     Sidebar,
     SliderStepArg,
@@ -145,6 +144,8 @@ from ._cm_components import (
     tooltip,
     popover,
 )
+
+from ...ui._chat import ChatExpress as Chat
 
 from ...ui._markdown_stream import (
     ExpressMarkdownStream as MarkdownStream,
