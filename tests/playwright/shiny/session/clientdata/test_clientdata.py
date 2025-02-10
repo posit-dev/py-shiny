@@ -12,9 +12,12 @@ def test_output_image_kitchen(page: Page, local_app: ShinyAppProc) -> None:
 
     text = controller.OutputTextVerbatim(page, "clientdatatext")
 
-    # This doesn't cover all the clientdata values since some of them
-    # are environment-dependent. However, this at least checks that the
-    # clientdata object is available and that some values are present.
+    # This doesn't cover all the clientdata values since we already have
+    # tests that cover the frontend logic
+    # https://github.com/rstudio/shinycoreci/blob/main/inst/apps/032-client-data-and-query-string/
+    #
+    # The important part is that we're testing here is that at least
+    # some of these values are available in Python via session.clientdata
     text.expect.to_contain_text("url_protocol = http")
     text.expect.to_contain_text("url_pathname = /")
     text.expect.to_contain_text(

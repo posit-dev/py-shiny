@@ -10,8 +10,10 @@ with ui.sidebar(open="closed"):
 
 @render.code
 def clientdatatext():
-    cdata = session.clientdata
-    return "\n".join([f"{name} = {cdata[name]()}" for name in reversed(dir(cdata))])
+    client_data = session.clientdata
+    return "\n".join(
+        [f"{name} = {client_data[name]()}" for name in reversed(dir(client_data))]
+    )
 
 
 @render.plot
