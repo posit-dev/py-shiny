@@ -11,6 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added a new `ui.MarkdownStream()` component for performantly streaming in chunks of markdown/html strings into the UI. This component is primarily useful for text-based generative AI where responses are received incrementally. (#1782)
 
+* The `ui.Chat()` component now supports input suggestion links. This feature is useful for providing users with clickable suggestions that can be used to quickly input text into the chat. This can be done in 2
+different ways (see #1845 for more details):
+  * By adding a `.chat-input-suggestion` CSS class to an HTML element (e.g., `<span class="chat-input-suggestion">A suggestion</span>`)
+  * Add a `data-input-suggestion` attribute to an HTML element, and set the value to the input suggestion text (e.g., `<span data-input-suggestion="Suggestion value">Suggestion link</span>`)
+
 * Added a new `.add_sass_layer_file()` method to `ui.Theme` that supports reading a Sass file with layer boundary comments, e.g. `/*-- scss:defaults --*/`. This format [is supported by Quarto](https://quarto.org/docs/output-formats/html-themes-more.html#bootstrap-bootswatch-layering) and makes it easier to store Sass rules and declarations that need to be woven into Shiny's Sass Bootstrap files. (#1790)
 
 * The `ui.Chat()` component's `.on_user_submit()` decorator method now passes the user input to the decorated function. This makes it a bit more obvious how to access the user input inside the decorated function. See the new templates (mentioned below) for examples. (#1801)
