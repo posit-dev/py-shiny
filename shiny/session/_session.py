@@ -170,6 +170,7 @@ class Session(ABC):
     id: str
     input: Inputs
     output: Outputs
+    clientdata: Inputs
     user: str | None
     groups: list[str] | None
 
@@ -519,6 +520,7 @@ class AppSession(Session):
 
         self.input: Inputs = Inputs(dict())
         self.output: Outputs = Outputs(self, self.ns, outputs=dict())
+        self.clientdata: Inputs = Inputs(dict())
 
         self.user: str | None = None
         self.groups: list[str] | None = None
@@ -692,7 +694,12 @@ class AppSession(Session):
             # The keys[0] value is already a fully namespaced id; make that explicit by
             # wrapping it in ResolvedId, otherwise self.input will throw an id
             # validation error.
-            self.input[ResolvedId(keys[0])]._set(val)
+            k = keys[0]
+            self.input[ResolvedId(k)]._set(val)
+
+            if k.startswith(".clientdata_"):
+                k2 = k.split("_", 1)[1]
+                self.clientdata[ResolvedId(k2)]._set(val)
 
         self.output._manage_hidden()
 
@@ -1351,6 +1358,9 @@ class Inputs:
         # it populates the key if it doesn't exist yet. It then calls `is_set()`, which
         # creates a reactive dependency, and returns whether the value is set.
         return self[key].is_set()
+
+    def __dir__(self):
+        return list(self._map.keys())
 
 
 # ======================================================================================
