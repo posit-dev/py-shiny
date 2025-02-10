@@ -23,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changes
 
-* The `shiny.ui.Chat()` class no longer has a `.ui()` method. This method
+* The Shiny Core component `shiny.ui.Chat()` no longer has a `.ui()` method. This method
 was never intended to be used in Shiny Core (in that case, use `shiny.ui.chat_ui()`) to create the UI element. Note that the `shiny.express.ui.Chat()`
 class still has a `.ui()` method. (#1840)
 
