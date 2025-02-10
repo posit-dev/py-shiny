@@ -12,6 +12,13 @@ shiny-chat-container {
   p:last-child {
     margin-bottom: 0;
   }
+
+  .chat-input-suggestion, [data-input-suggestion] {
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-decoration-color: var(--bs-link-color, #007bc2);
+    cursor: pointer;
+  }
 }
 
 shiny-chat-messages {

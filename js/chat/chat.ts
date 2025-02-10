@@ -227,6 +227,7 @@ class ChatContainer extends LightElement {
       "shiny-chat-remove-loading-message",
       this.#onRemoveLoadingMessage
     );
+    this.addEventListener("click", this.#onInputSuggestionClick);
   }
 
   disconnectedCallback(): void {
@@ -247,6 +248,7 @@ class ChatContainer extends LightElement {
       "shiny-chat-remove-loading-message",
       this.#onRemoveLoadingMessage
     );
+    this.removeEventListener("click", this.#onInputSuggestionClick);
   }
 
   // When user submits input, append it to the chat, and add a loading message
@@ -329,6 +331,24 @@ class ChatContainer extends LightElement {
     }
     if (placeholder !== undefined) {
       this.input.placeholder = placeholder;
+    }
+  }
+
+  #onInputSuggestionClick(e: Event): void {
+    const target = e.target;
+    if (!(target instanceof HTMLElement)) return;
+
+    const isSuggestion =
+      target.classList.contains("chat-input-suggestion") ||
+      target.dataset.inputSuggestion !== undefined;
+
+    if (!isSuggestion) return;
+
+    e.preventDefault();
+
+    const suggestion = target.dataset.inputSuggestion || target.textContent;
+    if (suggestion) {
+      this.input.setInputValue(suggestion);
     }
   }
 
