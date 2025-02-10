@@ -606,7 +606,7 @@ class Chat:
         # Run the stream in the background to get non-blocking behavior
         @reactive.extended_task
         async def _stream_task():
-            await self._append_message_stream(message)
+            return await self._append_message_stream(message)
 
         _stream_task()
 
@@ -619,6 +619,8 @@ class Chat:
                 await self._raise_exception(e)
             _handle_error.destroy()  # type: ignore
 
+        return _stream_task
+
     async def _append_message_stream(self, message: AsyncIterable[Any]):
         id = _utils.private_random_id()
 
@@ -628,6 +630,7 @@ class Chat:
         try:
             async for msg in message:
                 await self._append_message(msg, chunk=True, stream_id=id)
+            return self._current_stream_message
         finally:
             await self._append_message(empty, chunk="end", stream_id=id)
             await self._flush_pending_messages()
