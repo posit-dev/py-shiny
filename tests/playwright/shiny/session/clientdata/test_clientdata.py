@@ -18,11 +18,13 @@ def test_output_image_kitchen(page: Page, local_app: ShinyAppProc) -> None:
     #
     # The important part is that we're testing here is that at least
     # some of these values are available in Python via session.clientdata
-    text.expect.to_contain_text("url_protocol = http")
-    text.expect.to_contain_text("url_pathname = /")
+    text.expect.to_contain_text(re.compile(r"url_protocol\(\)\s+->\s+http"))
+    text.expect.to_contain_text(re.compile(r"url_pathname\(\)\s+->\s+/"))
     text.expect.to_contain_text(
-        re.compile("url_hostname = (localhost|127\\.0\\.0\\.1)")
+        re.compile(r"url_hostname\(\)\s+->\s+(localhost|127\.0\.0\.1)")
     )
-    text.expect.to_contain_text("output_myplot_hidden = False")
-    text.expect.to_contain_text("output_myplot_bg = rgb(255, 255, 255)")
-    text.expect.to_contain_text("output_clientdatatext_hidden = False")
+    text.expect.to_contain_text(re.compile(r'output_hidden\("myplot"\)\s+->\s+False'))
+    text.expect.to_contain_text(
+        re.compile(r'output_bg_color\("myplot"\)\s+->\s+rgb\(255, 255, 255\)')
+    )
+    text.expect.to_contain_text(re.compile(r'output_hidden\("myplot"\)\s+->\s+False'))
