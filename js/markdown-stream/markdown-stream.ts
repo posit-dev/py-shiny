@@ -79,6 +79,8 @@ class MarkdownElement extends LightElement {
   streaming = false;
   @property({ type: Boolean, reflect: true, attribute: "auto-scroll" })
   auto_scroll = false;
+  @property({ type: Function }) onContentChange?: () => void;
+  @property({ type: Function }) onStreamEnd?: () => void;
 
   render() {
     return html`${contentToHTML(this.content, this.content_type)}`;
@@ -112,10 +114,29 @@ class MarkdownElement extends LightElement {
       // Possibly scroll to bottom after content has been added
       this.#isContentBeingAdded = false;
       this.#maybeScrollToBottom();
+
+      if (this.onContentChange) {
+        try {
+          this.onContentChange();
+        } catch (error) {
+          console.warn("Failed to call onContentUpdate callback:", error);
+        }
+      }
     }
 
     if (changedProperties.has("streaming")) {
-      this.streaming ? this.#appendStreamingDot() : this.#removeStreamingDot();
+      if (this.streaming) {
+        this.#appendStreamingDot();
+      } else {
+        this.#removeStreamingDot();
+        if (this.onStreamEnd) {
+          try {
+            this.onStreamEnd();
+          } catch (error) {
+            console.warn("Failed to call onStreamEnd callback:", error);
+          }
+        }
+      }
     }
   }
 
