@@ -209,9 +209,12 @@ class ChatInput extends LightElement {
     this.textarea.focus();
   }
 
-  setInputValue(value: string): void {
+  setInputValue(value: string, submit = false): void {
     this.textarea.value = value;
-    
+    if (submit) {
+      this.#sendInput();
+      return;
+    }
 
     // Simulate an input event (to trigger the textarea autoresize)
     const inputEvent = new Event("input", { bubbles: true, cancelable: true });
