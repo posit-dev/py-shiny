@@ -15,10 +15,27 @@ shiny-chat-container {
 
   .suggestion,
   [data-suggestion] {
-    text-decoration: underline;
-    text-decoration-style: dotted;
-    text-decoration-color: var(--bs-link-color, #007bc2);
     cursor: pointer;
+    color: var(--bs-link-color, #007bc2);
+
+    text-decoration-color: var(--bs-link-color, #007bc2);
+    text-decoration-line: underline;
+    text-decoration-style: dotted;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 2px;
+    text-underline-offset: 4px;
+    text-decoration-thickness: 2px;
+
+    padding: 2px;
+
+    &:hover {
+      text-decoration-style: solid;
+    }
+
+    &::after {
+      content: "\21B5";
+      margin-inline-start: 0.25rem;
+    }
   }
 }
 
