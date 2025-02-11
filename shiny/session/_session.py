@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-__all__ = ("Session", "Inputs", "Outputs")
+__all__ = ("Session", "Inputs", "Outputs", "ClientData")
 
 import asyncio
 import contextlib
@@ -1361,10 +1361,13 @@ class Inputs:
 @add_example()
 class ClientData:
     """
-    Reactively read client data from the browser.
+    Access (client-side) information from the browser.
 
-    This class provides access to client data values, such as the URL components, the
+    Provides access to client-side information, such as the URL components, the
     pixel ratio of the device, and the properties of outputs.
+
+    Each method in this class reads a reactive input value, which means that the
+    method will error if called outside of a reactive context.
 
     Raises
     ------
