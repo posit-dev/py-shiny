@@ -1,31 +1,29 @@
 name: Documentation Issue
-description: Report a documentation issue or suggest improvements
+description: Report an issue or suggest improvements to the documentation.
 title: "[Docs]: "
-labels: ["documentation", "needs-triage"]
+labels: ["documentation"]
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for helping improve Shiny for Python's documentation! Your contributions are highly valued.
-
-        Please provide as much detail as possible about the documentation issue or suggestion.
-        **Even if a field is marked as optional, providing the information is highly encouraged** to help us understand and address the issue effectively.
+        Thanks for helping improve the documentation!  Provide as much detail as possible.
 
   - type: dropdown
     id: doc-type
     attributes:
-      label: Documentation Type
-      description: What type of documentation does this issue relate to?
+      label: Type
+      description: What type of documentation?
       options:
-        - API Reference (Function/Class documentation)
-        - Tutorials/Guides (Longer, step-by-step instructions)
-        - Examples Gallery (Code examples)
-        - Getting Started (Installation, basic usage)
-        - Conceptual Guides (Explanations of core concepts)
-        - Function Docstrings (Documentation within the Python code)
+        - API Reference
+        - Tutorials/Guides
+        - Examples
+        - Getting Started
+        - Conceptual Guides
+        - Function Docstrings
         - Code Comments
-        - Installation Instructions
-        - Deployment Guides
+        - Installation
+        - Deployment
+        - Testing
         - Other
     validations:
       required: true
@@ -33,109 +31,59 @@ body:
   - type: input
     id: doc-location
     attributes:
-      label: Documentation Location
-      description: Where is the documentation you're referring to? Please be as specific as possible. (URL or file path if you know it)
-      placeholder: "e.g., https://shiny.rstudio.com/py/docs/reactive-programming.html or `shiny/ui/__init__.py`"
+      label: Location
+      description: URL or file path of the documentation.
+      placeholder: "e.g., https://... or `shiny/ui/__init__.py`"
     validations:
       required: true
 
   - type: dropdown
     id: issue-type
     attributes:
-      label: Issue Type
-      description: What kind of documentation issue is this?
+      label: Issue
+      description: What kind of issue?
       options:
-        - Missing Documentation (Something is not documented)
-        - Incorrect Information (Documentation is factually wrong)
-        - Unclear Explanation (Difficult to understand)
-        - Outdated Content (Documentation is no longer current)
-        - Broken Links/References
-        - Code Example Issue (Example doesn't work or is unclear)
-        - Grammar/Typo
-        - Translation Issue (For translated documentation)
-        - Enhancement Suggestion (Improve clarity, add detail, etc.)
+        - Missing
+        - Incorrect
+        - Unclear
+        - Outdated
+        - Broken Links
+        - Code Example Issue
+        - Typo/Grammar
+        - Translation
+        - Suggestion
         - Other
     validations:
       required: true
 
   - type: textarea
-    id: current-content
-    attributes:
-      label: Current Content (Optional, but helpful)
-      description: If applicable, please paste the relevant section of the current documentation. This helps us quickly locate the issue.
-      placeholder: |
-        Please paste the relevant current documentation text here...
-        (Leave blank if not directly applicable or for missing documentation issues)
-
-  - type: textarea
     id: suggested-content
     attributes:
-      label: Suggested Changes (Highly encouraged)
+      label: Suggested Changes
       description: |
-        What changes would you like to see? Please be as specific as possible.
-        If you have a suggested text or code, please provide it here.
-
-        For code examples, use markdown code blocks:
-
-        ```python
-        from shiny import App, ui
-        # Your example code here
-        ```
+        What changes would you like to see?  Be specific. Include suggested text or code (use markdown code blocks).
       placeholder: |
-        Please provide your suggested improvements or new content here.
-        (If you have a specific wording or code example in mind, please include it here)
+        Provide suggested improvements or new content here...
+        ```python
+        # Example code
+        ```
+    validations:
+      required: true
 
   - type: textarea
     id: motivation
     attributes:
-      label: Motivation (Optional, but helpful)
-      description: Why is this change needed? How will it help users of Shiny for Python? Explaining the impact is very helpful.
-      placeholder: |
-        Explain why this documentation improvement would be valuable...
-        (e.g., "This clarification will prevent users from misunderstanding X", "This example will make it easier to learn Y")
-
-  - type: textarea
-    id: additional-context
-    attributes:
-      label: Additional Context
-      description: Add any other context, screenshots, screen recordings, or details that might be helpful in understanding the documentation issue.
+      label: Motivation (Optional)
+      description: Why is this change needed? How will it help users?
+      placeholder: "e.g., This clarification will prevent misunderstanding..."
+    validations:
+      required: false
 
   - type: input
     id: shiny-version
     attributes:
-      label: Shiny Version (Optional, if applicable)
-      description: Which version of Shiny for Python are you using? (Only relevant if the documentation issue is version-specific)
-      placeholder: ex. 1.0.2
-
-  - type: checkboxes
-    id: preliminary-checks
-    attributes:
-      label: Preliminary Checks
-      description: Please confirm the following before submitting.
-      options:
-        - label: I have searched existing issues to avoid duplicate documentation requests.
-          required: true
-        - label: I have checked the latest documentation on the website/main branch to ensure this hasn't already been addressed.
-          required: true
-        - label: This issue is clearly a documentation issue or suggestion, and not a bug report or feature request.
-          required: true
-
-  - type: checkboxes
-    id: contribution
-    attributes:
-      label: Contribution (Optional)
-      description: Would you be interested in helping with this documentation improvement?  Your help is welcome!
-      options:
-        - label: I would be willing to submit a pull request with these changes
-          required: false
-        - label: I would be willing to review proposed changes
-          required: false
-
-  - type: checkboxes
-    id: terms
-    attributes:
-      label: Code of Conduct
-      description: By submitting this issue, you agree to follow our Code of Conduct. You can find it [link to Code of Conduct - Replace with actual link].
-      options:
-        - label: I agree to follow this project's Code of Conduct
-          required: true
+      label: Shiny Version (if applicable)
+      description: Only if the issue is version-specific.
+      placeholder: ex. 1.2.1
+    validations:
+      required: false
