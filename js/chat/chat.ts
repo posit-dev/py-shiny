@@ -211,14 +211,14 @@ class ChatInput extends LightElement {
 
   setInputValue(value: string, submit = false): void {
     this.textarea.value = value;
-    if (submit) {
-      this.#sendInput();
-      return;
-    }
 
     // Simulate an input event (to trigger the textarea autoresize)
     const inputEvent = new Event("input", { bubbles: true, cancelable: true });
     this.textarea.dispatchEvent(inputEvent);
+
+    if (submit) {
+      this.#sendInput();
+    }
   }
 }
 
@@ -384,11 +384,12 @@ class ChatContainer extends LightElement {
     e.preventDefault();
 
     const suggestion = target.dataset.suggestion || target.textContent;
-    const doSubmit =
-      target.classList.contains("submit") ||
-      ["", "true"].includes(target.dataset.suggestionSubmit || "false");
 
     if (suggestion) {
+      const doSubmit =
+        target.classList.contains("submit") ||
+        ["", "true"].includes(target.dataset.suggestionSubmit || "false");
+
       this.input.setInputValue(suggestion, doSubmit);
     }
   }
