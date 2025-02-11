@@ -1,13 +1,15 @@
 shiny-chat-container {
   --shiny-chat-border: var(--bs-border-width, 1px) solid var(--bs-border-color, #e9ecef);
   --shiny-chat-user-message-bg: RGBA(var(--bs-primary-rgb, 0, 123, 194), 0.06);
+  --_chat-container-padding: 0.25rem;
 
   display: flex;
   flex-direction: column;
   margin: 0 auto;
   gap: 1rem;
   overflow: auto;
-  padding: 0.25rem;
+  padding: var(--_chat-container-padding);
+  padding-bottom: 0; // Bottom padding is on input element
 
   p:last-child {
     margin-bottom: 0;
@@ -60,10 +62,15 @@ shiny-chat-message {
 }
 
 shiny-chat-input {
+  --_input-padding-top: 1rem;
+  --_input-padding-bottom: var(--_chat-container-padding, 0.25rem);
+
   margin-top: auto;
   position: sticky;
-  background-color: var(--bs-body-bg, white);
   bottom: 0;
+  background: linear-gradient(to bottom, transparent, var(--bs-body-bg, white) calc(var(--_input-padding-top) - var(--_input-padding-bottom)));
+  padding-block: var(--_input-padding-top) var(--_input-padding-bottom);
+
   textarea {
     --bs-border-radius: 26px;
     resize: none;
@@ -75,7 +82,7 @@ shiny-chat-input {
   }
   button {
     position: absolute;
-    bottom: 7px;
+    bottom: calc(6px + var(--_input-padding-bottom));
     right: 8px;
     background-color: transparent;
     color: var(--bs-primary, #007bc2);
