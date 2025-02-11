@@ -70,8 +70,27 @@ class ChatMessage extends LightElement {
         content-type=${this.content_type}
         ?streaming=${this.streaming}
         auto-scroll
+        .onContentChange=${this.#onContentChange}
+        .onStreamEnd=${this.#makeSuggestionsAccessible}
       ></shiny-markdown-stream>
     `;
+  }
+
+  #onContentChange(): void {
+    if (!this.streaming) this.#makeSuggestionsAccessible();
+  }
+
+  #makeSuggestionsAccessible(): void {
+    this.querySelectorAll(".suggestion,[data-suggestion]").forEach((el) => {
+      if (!(el instanceof HTMLElement)) return;
+      if (el.hasAttribute("tabindex")) return;
+
+      el.setAttribute("tabindex", "0");
+      el.setAttribute("role", "button");
+
+      const suggestion = el.dataset.suggestion || el.textContent;
+      el.setAttribute("aria-label", `Use chat suggestion: ${suggestion}`);
+    });
   }
 }
 
@@ -262,6 +281,7 @@ class ChatContainer extends LightElement {
       this.#onRemoveLoadingMessage
     );
     this.addEventListener("click", this.#onInputSuggestionClick);
+    this.addEventListener("keydown", this.#onInputSuggestionKeydown);
   }
 
   disconnectedCallback(): void {
@@ -283,6 +303,7 @@ class ChatContainer extends LightElement {
       this.#onRemoveLoadingMessage
     );
     this.removeEventListener("click", this.#onInputSuggestionClick);
+    this.removeEventListener("keydown", this.#onInputSuggestionKeydown);
   }
 
   // When user submits input, append it to the chat, and add a loading message
@@ -372,26 +393,41 @@ class ChatContainer extends LightElement {
   }
 
   #onInputSuggestionClick(e: Event): void {
-    const target = e.target;
-    if (!(target instanceof HTMLElement)) return;
-
-    const isSuggestion =
-      target.classList.contains("suggestion") ||
-      target.dataset.suggestion !== undefined;
-
-    if (!isSuggestion) return;
+    const { suggestion, submit } = this.#getSuggestion(e.target);
+    if (!suggestion) return;
 
     e.preventDefault();
+    this.input.setInputValue(suggestion, submit);
+  }
 
-    const suggestion = target.dataset.suggestion || target.textContent;
+  #onInputSuggestionKeydown(e: KeyboardEvent): void {
+    const isEnter = e.key === "Enter" || e.key === " ";
+    if (!isEnter) return;
+    const { suggestion, submit } = this.#getSuggestion(e.target);
+    if (!suggestion) return;
 
-    if (suggestion) {
-      const doSubmit =
-        target.classList.contains("submit") ||
-        ["", "true"].includes(target.dataset.suggestionSubmit || "false");
+    e.preventDefault();
+    this.input.setInputValue(suggestion, submit);
+  }
 
-      this.input.setInputValue(suggestion, doSubmit);
-    }
+  #getSuggestion(x: EventTarget | null): {
+    suggestion?: string;
+    submit?: boolean;
+  } {
+    if (!(x instanceof HTMLElement)) return {};
+
+    const isSuggestion =
+      x.classList.contains("suggestion") || x.dataset.suggestion !== undefined;
+    if (!isSuggestion) return {};
+
+    const suggestion = x.dataset.suggestion || x.textContent;
+
+    return {
+      suggestion: suggestion || undefined,
+      submit:
+        x.classList.contains("submit") ||
+        ["", "true"].includes(x.dataset.suggestionSubmit || "false"),
+    };
   }
 
   #onRemoveLoadingMessage(): void {
