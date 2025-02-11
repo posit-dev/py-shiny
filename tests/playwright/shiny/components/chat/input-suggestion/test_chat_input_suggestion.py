@@ -17,9 +17,9 @@ def test_validate_chat_input_suggestion(page: Page, local_app: ShinyAppProc) -> 
     expect(chat.loc_input_button).to_be_disabled()
 
     # Locate input suggestions
-    first = chat.loc.locator(".chat-input-suggestion", has_text="1st input suggestion")
-    second = chat.loc.locator("span[data-input-suggestion]")
-    third = chat.loc.locator("img[data-input-suggestion]")
+    first = chat.loc.locator(".suggestion", has_text="1st input suggestion")
+    second = chat.loc.locator("span[data-suggestion]")
+    third = chat.loc.locator("img[data-suggestion]")
 
     # Click on each suggestion and verify the input
     first.click()

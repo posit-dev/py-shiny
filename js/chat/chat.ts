@@ -339,14 +339,14 @@ class ChatContainer extends LightElement {
     if (!(target instanceof HTMLElement)) return;
 
     const isSuggestion =
-      target.classList.contains("chat-input-suggestion") ||
-      target.dataset.inputSuggestion !== undefined;
+      target.classList.contains("suggestion") ||
+      target.dataset.suggestion !== undefined;
 
     if (!isSuggestion) return;
 
     e.preventDefault();
 
-    const suggestion = target.dataset.inputSuggestion || target.textContent;
+    const suggestion = target.dataset.suggestion || target.textContent;
     if (suggestion) {
       this.input.setInputValue(suggestion);
     }

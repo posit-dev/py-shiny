@@ -2,9 +2,9 @@ from shiny.express import ui
 
 welcome = ui.HTML(
     """
-Here is the <span class='chat-input-suggestion'>1st input suggestion</span>.
-And here is a <span data-input-suggestion='The actual suggestion'>2nd suggestion</span>.
-Finally, a <img data-input-suggestion='A 3rd, image-based, suggestion' src='shiny-hex.svg' height="50px" alt='Shiny logo'> image suggestion.
+Here is the <span class='suggestion'>1st input suggestion</span>.
+And here is a <span data-suggestion='The actual suggestion'>2nd suggestion</span>.
+Finally, a <img data-suggestion='A 3rd, image-based, suggestion' src='shiny-hex.svg' height="50px" alt='Shiny logo'> image suggestion.
 """
 )
 

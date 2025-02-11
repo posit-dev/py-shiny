@@ -13,7 +13,8 @@ shiny-chat-container {
     margin-bottom: 0;
   }
 
-  .chat-input-suggestion, [data-input-suggestion] {
+  .suggestion,
+  [data-suggestion] {
     text-decoration: underline;
     text-decoration-style: dotted;
     text-decoration-color: var(--bs-link-color, #007bc2);
