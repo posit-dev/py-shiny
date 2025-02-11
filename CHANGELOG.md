@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
+* Added a new `ui.MarkdownStream()` component for performantly streaming in chunks of markdown/html strings into the UI. This component is primarily useful for text-based generative AI where responses are received incrementally. (#1782)
+
 * Added a new `.add_sass_layer_file()` method to `ui.Theme` that supports reading a Sass file with layer boundary comments, e.g. `/*-- scss:defaults --*/`. This format [is supported by Quarto](https://quarto.org/docs/output-formats/html-themes-more.html#bootstrap-bootswatch-layering) and makes it easier to store Sass rules and declarations that need to be woven into Shiny's Sass Bootstrap files. (#1790)
 
 * The `ui.Chat()` component's `.on_user_submit()` decorator method now passes the user input to the decorated function. This makes it a bit more obvious how to access the user input inside the decorated function. See the new templates (mentioned below) for examples. (#1801)
@@ -18,6 +20,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Bug fixes
 
 * `ui.Chat()` now correctly handles new `ollama.chat()` return value introduced in `ollama` v0.4. (#1787)
+
+### Changes
+
+* The Shiny Core component `shiny.ui.Chat()` no longer has a `.ui()` method. This method
+was never intended to be used in Shiny Core (in that case, use `shiny.ui.chat_ui()`) to create the UI element. Note that the `shiny.express.ui.Chat()`
+class still has a `.ui()` method. (#1840)
 
 ## [1.2.1] - 2024-11-14
 

@@ -41,7 +41,6 @@ from ...ui import (
     AccordionPanel,
     AnimationOptions,
     CardItem,
-    Chat,
     ShowcaseLayout,
     Sidebar,
     SliderStepArg,
@@ -146,6 +145,12 @@ from ._cm_components import (
     popover,
 )
 
+from ...ui._chat import ChatExpress as Chat
+
+from ...ui._markdown_stream import (
+    ExpressMarkdownStream as MarkdownStream,
+)
+
 from ._page import (
     page_opts,
 )
@@ -190,6 +195,7 @@ __all__ = (
     "AnimationOptions",
     "CardItem",
     "Chat",
+    "MarkdownStream",
     "ShowcaseLayout",
     "Sidebar",
     "SliderStepArg",
@@ -325,6 +331,8 @@ _known_missing = {
         "output_table",
         "output_ui",
         "output_data_frame",
+        # MarkdownStream knows how to render itself in express
+        "output_markdown_stream",
         # Chat knows how to render itself in express
         "chat_ui",
     ),
