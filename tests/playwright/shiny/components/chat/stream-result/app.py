@@ -1,4 +1,5 @@
 import asyncio
+from typing import Union
 
 from shiny import reactive
 from shiny.express import render, ui
@@ -22,7 +23,9 @@ async def _(message: str):
     current_stream.set(stream)
 
 
-current_stream: reactive.value[ExtendedTask[[], str] | None] = reactive.value(None)
+current_stream: reactive.value[Union[ExtendedTask[[], str], None]] = reactive.value(
+    None
+)
 
 
 @render.code
