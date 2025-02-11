@@ -384,8 +384,12 @@ class ChatContainer extends LightElement {
     e.preventDefault();
 
     const suggestion = target.dataset.suggestion || target.textContent;
+    const doSubmit =
+      target.classList.contains("submit") ||
+      ["", "true"].includes(target.dataset.suggestionSubmit || "false");
+
     if (suggestion) {
-      this.input.setInputValue(suggestion);
+      this.input.setInputValue(suggestion, doSubmit);
     }
   }
 
