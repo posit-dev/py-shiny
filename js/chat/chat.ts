@@ -95,8 +95,38 @@ class ChatMessages extends LightElement {
 }
 
 class ChatInput extends LightElement {
+  private _disabled = false;
+
   @property() placeholder = "Enter a message...";
-  @property({ type: Boolean, reflect: true }) disabled = false;
+  @property({ type: Boolean })
+  get disabled() {
+    return this._disabled;
+  }
+
+  set disabled(value: boolean) {
+    const oldValue = this._disabled;
+    if (value === oldValue) {
+      return;
+    }
+
+    this._disabled = value;
+    value
+      ? this.setAttribute("disabled", "")
+      : this.removeAttribute("disabled");
+
+    this.requestUpdate("disabled", oldValue);
+    this.#onInput();
+  }
+
+  attributeChangedCallback(
+    name: string,
+    oldValue: string | null,
+    newValue: string | null
+  ) {
+    if (name === "disabled") {
+      this.disabled = newValue !== null;
+    }
+  }
 
   private get textarea(): HTMLTextAreaElement {
     return this.querySelector("textarea") as HTMLTextAreaElement;
@@ -174,13 +204,14 @@ class ChatInput extends LightElement {
     this.dispatchEvent(sentEvent);
 
     this.setInputValue("");
+    this.disabled = true;
 
     this.textarea.focus();
   }
 
   setInputValue(value: string): void {
     this.textarea.value = value;
-    this.disabled = value.trim().length === 0;
+    
 
     // Simulate an input event (to trigger the textarea autoresize)
     const inputEvent = new Event("input", { bubbles: true, cancelable: true });
@@ -264,6 +295,9 @@ class ChatContainer extends LightElement {
 
   #appendMessage(message: Message, finalize = true): void {
     this.#removeLoadingMessage();
+    if (!this.input.disabled) {
+      this.input.disabled = true;
+    }
 
     const TAG_NAME =
       message.role === "user" ? CHAT_USER_MESSAGE_TAG : CHAT_MESSAGE_TAG;
