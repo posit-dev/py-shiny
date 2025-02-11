@@ -694,7 +694,6 @@ class AppSession(Session):
             # The keys[0] value is already a fully namespaced id; make that explicit by
             # wrapping it in ResolvedId, otherwise self.input will throw an id
             # validation error.
-
             self.input[ResolvedId(keys[0])]._set(val)
 
         self.output._manage_hidden()

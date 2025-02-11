@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `shiny create` includes new and improved `ui.Chat()` template options. Most of these templates leverage the new [`{chatlas}` package](https://posit-dev.github.io/chatlas/), our opinionated approach to interfacing with various LLM. (#1806)
 
-* Client data values (e.g., url info, output sizes/styles, etc.) can now be accessed in the server-side Python code via `session.clientdata`, which is collection of reactive `Inputs`. For example, `session.clientdata.url_search()` reactively reads the URL search parameters. See [this PR](https://github.com/posit-dev/py-shiny/pull/1832) for a more complete example. (#1832)
+* Client data values (e.g., url info, output sizes/styles, etc.) can now be accessed in the server-side Python code via `session.clientdata`. For example, `session.clientdata.url_search()` reactively reads the URL search parameters. (#1832)
 
 * Available `input` ids can now be listed via `dir(input)`. This also works on the new `session.clientdata` object. (#1832)
 
