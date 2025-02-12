@@ -233,19 +233,21 @@ quartodoc:
           path: Session
           summary:
             name: "Session"
-            desc: ""
+            desc: "Tools for managing user sessions and accessing session-related information."
           flatten: true
           contents:
             - session.get_current_session
             - session.require_active_session
             - session.session_context
             - reactive.get_current_context
+            - session.ClientData
             - session.Session.send_custom_message
             - session.Session.send_input_message
             - session.Session.on_flush
             - session.Session.on_flushed
             - session.Session.on_ended
             - session.Session.dynamic_route
+            - session.Session.close
             - input_handler.input_handlers
         - kind: page
           path: Renderer
