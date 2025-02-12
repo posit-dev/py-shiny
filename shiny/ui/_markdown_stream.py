@@ -109,6 +109,13 @@ class MarkdownStream:
         ----
         If you already have the content available as a string, you can do
         `.stream([content])` to set the content.
+
+        Returns
+        -------
+        :
+            An extended task that represents the streaming task. The `.result()` method
+            of the task can be called in a reactive context to get the final state of the
+            stream.
         """
 
         content = _utils.wrap_async_iterable(content)

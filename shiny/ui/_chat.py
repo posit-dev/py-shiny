@@ -558,7 +558,7 @@ class Chat:
 
         Returns
         -------
-        reactive.ExtendedTask
+        :
             An extended task that represents the streaming task. The `.result()` method
             of the task can be called in a reactive context to get the final state of the
             stream.
