@@ -43,6 +43,9 @@ shiny-chat-message {
       height: 20px;
       width: 20px;
       margin: 0 !important;
+      max-height: 85%;
+      max-width: 85%;
+      object-fit: contain;
     }
   }
   /* Vertically center the 2nd column (message content) */
