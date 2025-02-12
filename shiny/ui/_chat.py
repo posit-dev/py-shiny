@@ -44,6 +44,7 @@ from .fill import as_fill_item, as_fillable_container
 
 __all__ = (
     "Chat",
+    "ChatExpress",
     "chat_ui",
     "ChatMessage",
 )
@@ -246,51 +247,6 @@ class Chat:
             instance.destroy()
         CHAT_INSTANCES[instance_id] = self
 
-    def ui(
-        self,
-        *,
-        messages: Optional[Sequence[str | ChatMessage]] = None,
-        placeholder: str = "Enter a message...",
-        width: CssUnit = "min(680px, 100%)",
-        height: CssUnit = "auto",
-        fill: bool = True,
-        **kwargs: TagAttrValue,
-    ) -> Tag:
-        """
-        Place a chat component in the UI.
-
-        This method is only relevant fpr Shiny Express. In Shiny Core, use
-        :func:`~shiny.ui.chat_ui` instead to insert the chat UI.
-
-        Parameters
-        ----------
-        messages
-            A sequence of messages to display in the chat. Each message can be either a
-            string or a dictionary with `content` and `role` keys. The `content` key
-            should contain the message text, and the `role` key can be "assistant" or
-            "user".
-        placeholder
-            Placeholder text for the chat input.
-        width
-            The width of the chat container.
-        height
-            The height of the chat container.
-        fill
-            Whether the chat should vertically take available space inside a fillable
-            container.
-        kwargs
-            Additional attributes for the chat container element.
-        """
-        return chat_ui(
-            id=self.id,
-            messages=messages,
-            placeholder=placeholder,
-            width=width,
-            height=height,
-            fill=fill,
-            **kwargs,
-        )
-
     @overload
     def on_user_submit(self, fn: UserSubmitFunction) -> reactive.Effect_: ...
 
@@ -384,7 +340,7 @@ class Chat:
     def messages(
         self,
         *,
-        format: Literal["anthropic"] = "anthropic",
+        format: Literal["anthropic"],
         token_limits: tuple[int, int] | None = None,
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
@@ -394,7 +350,7 @@ class Chat:
     def messages(
         self,
         *,
-        format: Literal["google"] = "google",
+        format: Literal["google"],
         token_limits: tuple[int, int] | None = None,
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
@@ -404,7 +360,7 @@ class Chat:
     def messages(
         self,
         *,
-        format: Literal["langchain"] = "langchain",
+        format: Literal["langchain"],
         token_limits: tuple[int, int] | None = None,
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
@@ -414,7 +370,7 @@ class Chat:
     def messages(
         self,
         *,
-        format: Literal["openai"] = "openai",
+        format: Literal["openai"],
         token_limits: tuple[int, int] | None = None,
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
@@ -424,7 +380,7 @@ class Chat:
     def messages(
         self,
         *,
-        format: Literal["ollama"] = "ollama",
+        format: Literal["ollama"],
         token_limits: tuple[int, int] | None = None,
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
@@ -1057,6 +1013,52 @@ class Chat:
                 "handler": handler,
                 "obj": obj,
             },
+        )
+
+
+@add_example(ex_dir="../templates/chat/starters/hello")
+class ChatExpress(Chat):
+
+    def ui(
+        self,
+        *,
+        messages: Optional[Sequence[str | ChatMessage]] = None,
+        placeholder: str = "Enter a message...",
+        width: CssUnit = "min(680px, 100%)",
+        height: CssUnit = "auto",
+        fill: bool = True,
+        **kwargs: TagAttrValue,
+    ) -> Tag:
+        """
+        Create a UI element for this `Chat`.
+
+        Parameters
+        ----------
+        messages
+            A sequence of messages to display in the chat. Each message can be either a
+            string or a dictionary with `content` and `role` keys. The `content` key
+            should contain the message text, and the `role` key can be "assistant" or
+            "user".
+        placeholder
+            Placeholder text for the chat input.
+        width
+            The width of the UI element.
+        height
+            The height of the UI element.
+        fill
+            Whether the chat should vertically take available space inside a fillable
+            container.
+        kwargs
+            Additional attributes for the chat container element.
+        """
+        return chat_ui(
+            id=self.id,
+            messages=messages,
+            placeholder=placeholder,
+            width=width,
+            height=height,
+            fill=fill,
+            **kwargs,
         )
 
 

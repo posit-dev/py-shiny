@@ -23,11 +23,21 @@ different ways (see #1845 for more details):
 
 * `shiny create` includes new and improved `ui.Chat()` template options. Most of these templates leverage the new [`{chatlas}` package](https://posit-dev.github.io/chatlas/), our opinionated approach to interfacing with various LLM. (#1806)
 
+* Client data values (e.g., url info, output sizes/styles, etc.) can now be accessed in the server-side Python code via `session.clientdata`. For example, `session.clientdata.url_search()` reactively reads the URL search parameters. (#1832)
+
+* Available `input` ids can now be listed via `dir(input)`. This also works on the new `session.clientdata` object. (#1832)
+
 * The `ui.Chat()` component's `.update_user_input()` method gains `submit` and `focus` options that allow you to submit the input on behalf of the user and to choose whether the input receives focus after the update. (#1851)
 
 ### Bug fixes
 
 * `ui.Chat()` now correctly handles new `ollama.chat()` return value introduced in `ollama` v0.4. (#1787)
+
+### Changes
+
+* The Shiny Core component `shiny.ui.Chat()` no longer has a `.ui()` method. This method
+was never intended to be used in Shiny Core (in that case, use `shiny.ui.chat_ui()`) to create the UI element. Note that the `shiny.express.ui.Chat()`
+class still has a `.ui()` method. (#1840)
 
 ## [1.2.1] - 2024-11-14
 
