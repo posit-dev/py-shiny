@@ -61,10 +61,16 @@ class ChatMessage extends LightElement {
 
   render() {
     const noContent = this.content.trim().length === 0;
-    const icon = noContent ? ICONS.dots_fade : ICONS.robot;
+    const defaultIcon = noContent ? ICONS.dots_fade : ICONS.robot;
+
+    // Check if there's an existing message-icon element
+    const existingIcon = this.querySelector(".message-icon");
+    const icon = existingIcon
+      ? existingIcon
+      : html`<div class="message-icon">${unsafeHTML(defaultIcon)}</div>`;
 
     return html`
-      <div class="message-icon">${unsafeHTML(icon)}</div>
+      ${icon}
       <shiny-markdown-stream
         content=${this.content}
         content-type=${this.content_type}
@@ -204,6 +210,10 @@ class ChatContainer extends LightElement {
     return last ? (last as ChatMessage) : null;
   }
 
+  private get iconTemplate(): HTMLDivElement | null {
+    return this.querySelector('div[data-icon="assistant"]');
+  }
+
   render() {
     return html``;
   }
@@ -266,6 +276,16 @@ class ChatContainer extends LightElement {
     const TAG_NAME =
       message.role === "user" ? CHAT_USER_MESSAGE_TAG : CHAT_MESSAGE_TAG;
     const msg = createElement(TAG_NAME, message);
+
+    if (message.role !== "user") {
+      const iconTemplate = this.iconTemplate;
+      if (iconTemplate) {
+        const icon = iconTemplate.cloneNode(true) as HTMLDivElement;
+        icon.className = "message-icon";
+        msg.appendChild(icon);
+      }
+    }
+
     this.messages.appendChild(msg);
 
     if (finalize) {

@@ -17,7 +17,7 @@ from typing import (
 )
 from weakref import WeakValueDictionary
 
-from htmltools import HTML, Tag, TagAttrValue, css
+from htmltools import HTML, Tag, TagAttrValue, css, div
 
 from .. import _utils, reactive
 from .._deprecated import warn_deprecated
@@ -761,7 +761,6 @@ class Chat:
         chunk: ChunkOption = False,
         chunk_content: str | None = None,
     ) -> TransformedMessage | None:
-
         res = as_transformed_message(message)
         key = res["transform_key"]
 
@@ -791,7 +790,6 @@ class Chat:
         chunk: ChunkOption = False,
         index: int | None = None,
     ) -> None:
-
         # Don't actually store chunks until the end
         if chunk is True or chunk == "start":
             return None
@@ -817,7 +815,6 @@ class Chat:
         token_limits: tuple[int, int],
         format: MISSING_TYPE | ProviderMessageFormat,
     ) -> tuple[TransformedMessage, ...]:
-
         n_total, n_reserve = token_limits
         if n_total <= n_reserve:
             raise ValueError(
@@ -878,7 +875,6 @@ class Chat:
         self,
         messages: tuple[TransformedMessage, ...],
     ) -> tuple[TransformedMessage, ...]:
-
         if any(m["role"] == "system" for m in messages):
             raise ValueError(
                 "Anthropic requires a system prompt to be specified in it's `.create()` method "
@@ -1006,7 +1002,6 @@ class Chat:
 
 @add_example(ex_dir="../templates/chat/starters/hello")
 class ChatExpress(Chat):
-
     def ui(
         self,
         *,
@@ -1015,6 +1010,7 @@ class ChatExpress(Chat):
         width: CssUnit = "min(680px, 100%)",
         height: CssUnit = "auto",
         fill: bool = True,
+        icon_assistant: HTML | Tag | None = None,
         **kwargs: TagAttrValue,
     ) -> Tag:
         """
@@ -1036,6 +1032,10 @@ class ChatExpress(Chat):
         fill
             Whether the chat should vertically take available space inside a fillable
             container.
+        icon_assistant
+            The icon to use for the assistant chat messages. Can be a HTML or a tag in
+            the form of :class:`~htmltools.HTML` or :class:`~htmltools.Tag`. If `None`,
+            a default robot icon is used.
         kwargs
             Additional attributes for the chat container element.
         """
@@ -1046,6 +1046,7 @@ class ChatExpress(Chat):
             width=width,
             height=height,
             fill=fill,
+            icon_assistant=icon_assistant,
             **kwargs,
         )
 
@@ -1059,6 +1060,7 @@ def chat_ui(
     width: CssUnit = "min(680px, 100%)",
     height: CssUnit = "auto",
     fill: bool = True,
+    icon_assistant: HTML | Tag | None = None,
     **kwargs: TagAttrValue,
 ) -> Tag:
     """
@@ -1084,6 +1086,10 @@ def chat_ui(
         The height of the chat container.
     fill
         Whether the chat should vertically take available space inside a fillable container.
+    icon_assistant
+            The icon to use for the assistant chat messages. Can be a HTML or a tag in
+            the form of :class:`~htmltools.HTML` or :class:`~htmltools.Tag`. If `None`,
+            a default robot icon is used.
     kwargs
         Additional attributes for the chat container element.
     """
@@ -1105,14 +1111,27 @@ def chat_ui(
             raise ValueError("Each message must be a string or a dictionary.")
 
         if msg["role"] == "user":
-            tag_name = "shiny-user-message"
+            message_tags.append(Tag("shiny-user-message", content=msg["content"]))
         else:
-            tag_name = "shiny-chat-message"
-
-        message_tags.append(Tag(tag_name, content=msg["content"]))
+            message_tags.append(
+                Tag(
+                    "shiny-chat-message",
+                    (
+                        None
+                        if icon_assistant is None
+                        else div(icon_assistant, class_="message-icon")
+                    ),
+                    content=msg["content"],
+                ),
+            )
 
     res = Tag(
         "shiny-chat-container",
+        (
+            None
+            if icon_assistant is None
+            else div(HTML(icon_assistant), data_icon="assistant")
+        ),
         Tag("shiny-chat-messages", *message_tags),
         Tag(
             "shiny-chat-input",

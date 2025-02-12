@@ -12,6 +12,10 @@ shiny-chat-container {
   p:last-child {
     margin-bottom: 0;
   }
+
+  [data-icon="assistant"] {
+    display: none;
+  }
 }
 
 shiny-chat-messages {
@@ -30,10 +34,15 @@ shiny-chat-message {
   .message-icon {
     border-radius: 50%;
     border: var(--shiny-chat-border);
+    height: 2rem;
+    width: 2rem;
+    display: grid;
+    place-items: center;
+
     > * {
-      margin: 0.5rem;
       height: 20px;
       width: 20px;
+      margin: 0 !important;
     }
   }
   /* Vertically center the 2nd column (message content) */
