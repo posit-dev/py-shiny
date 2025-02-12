@@ -87,7 +87,7 @@ with ui.layout_columns():
         ui.h2("Shiny Bot")
         chat_shiny.ui(
             icon_assistant=ui.img(
-                src="https://github.com/rstudio/hex-stickers/raw/refs/heads/main/SVG/shiny.svg",
+                src="https://github.com/rstudio/hex-stickers/raw/refs/heads/main/PNG/shiny.png",
                 class_="icon-shiny",
             )
         )
