@@ -393,16 +393,17 @@ class ChatContainer extends LightElement {
   }
 
   #onInputSuggestionClick(e: Event): void {
-    const { suggestion, submit } = this.#getSuggestion(e.target);
-    if (!suggestion) return;
-
-    e.preventDefault();
-    this.input.setInputValue(suggestion, submit);
+    this.#applySuggestion(e);
   }
 
   #onInputSuggestionKeydown(e: KeyboardEvent): void {
     const isEnter = e.key === "Enter" || e.key === " ";
     if (!isEnter) return;
+
+    this.#applySuggestion(e);
+  }
+
+  #applySuggestion(e: Event | KeyboardEvent): void {
     const { suggestion, submit } = this.#getSuggestion(e.target);
     if (!suggestion) return;
 
