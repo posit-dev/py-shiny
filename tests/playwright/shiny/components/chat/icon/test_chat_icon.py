@@ -8,7 +8,7 @@ from shiny.run import ShinyAppProc
 class ChatModule:
     def __init__(self, page: Page, id: str, classes: str):
         self.id = id
-        self.chat = controller.Chat(page, f"{id}-chat")
+        self.chat = controller.Chat(page, f"chat_{id}")
         self.classes = classes
 
     def expect_last_message_icon_to_have_classes(self):
