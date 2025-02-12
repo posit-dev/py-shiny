@@ -340,7 +340,7 @@ class Chat:
     def messages(
         self,
         *,
-        format: Literal["anthropic"] = "anthropic",
+        format: Literal["anthropic"],
         token_limits: tuple[int, int] | None = None,
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
@@ -350,7 +350,7 @@ class Chat:
     def messages(
         self,
         *,
-        format: Literal["google"] = "google",
+        format: Literal["google"],
         token_limits: tuple[int, int] | None = None,
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
@@ -360,7 +360,7 @@ class Chat:
     def messages(
         self,
         *,
-        format: Literal["langchain"] = "langchain",
+        format: Literal["langchain"],
         token_limits: tuple[int, int] | None = None,
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
@@ -370,7 +370,7 @@ class Chat:
     def messages(
         self,
         *,
-        format: Literal["openai"] = "openai",
+        format: Literal["openai"],
         token_limits: tuple[int, int] | None = None,
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
@@ -380,7 +380,7 @@ class Chat:
     def messages(
         self,
         *,
-        format: Literal["ollama"] = "ollama",
+        format: Literal["ollama"],
         token_limits: tuple[int, int] | None = None,
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
