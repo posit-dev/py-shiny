@@ -247,9 +247,7 @@ class ChatInput extends LightElement {
 
     if (submit) {
       this.#sendInput(focus);
-    }
-
-    if (focus) {
+    } else if (focus) {
       this.textarea.focus();
     }
   }
