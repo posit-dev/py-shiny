@@ -805,7 +805,6 @@ class Chat:
         chunk: ChunkOption = False,
         chunk_content: str | None = None,
     ) -> TransformedMessage | None:
-
         res = as_transformed_message(message)
         key = res["transform_key"]
 
@@ -835,7 +834,6 @@ class Chat:
         chunk: ChunkOption = False,
         index: int | None = None,
     ) -> None:
-
         # Don't actually store chunks until the end
         if chunk is True or chunk == "start":
             return None
@@ -861,7 +859,6 @@ class Chat:
         token_limits: tuple[int, int],
         format: MISSING_TYPE | ProviderMessageFormat,
     ) -> tuple[TransformedMessage, ...]:
-
         n_total, n_reserve = token_limits
         if n_total <= n_reserve:
             raise ValueError(
@@ -922,7 +919,6 @@ class Chat:
         self,
         messages: tuple[TransformedMessage, ...],
     ) -> tuple[TransformedMessage, ...]:
-
         if any(m["role"] == "system" for m in messages):
             raise ValueError(
                 "Anthropic requires a system prompt to be specified in it's `.create()` method "
@@ -982,7 +978,12 @@ class Chat:
         return cast(str, self._session.input[id]())
 
     def update_user_input(
-        self, *, value: str | None = None, placeholder: str | None = None
+        self,
+        *,
+        value: str | None = None,
+        placeholder: str | None = None,
+        submit: bool = False,
+        focus: bool = False,
     ):
         """
         Update the user input.
@@ -993,9 +994,20 @@ class Chat:
             The value to set the user input to.
         placeholder
             The placeholder text for the user input.
+        submit
+            Whether to automatically submit the text for the user.
+        focus
+            Whether to move focus to the input element.
         """
 
-        obj = _utils.drop_none({"value": value, "placeholder": placeholder})
+        obj = _utils.drop_none(
+            {
+                "value": value,
+                "placeholder": placeholder,
+                "submit": submit,
+                "focus": focus,
+            }
+        )
 
         _utils.run_coro_sync(
             self._session.send_custom_message(

@@ -26,6 +26,8 @@ type ShinyChatMessage = {
 type UpdateUserInput = {
   value?: string;
   placeholder?: string;
+  submit?: false;
+  focus?: false;
 };
 
 // https://github.com/microsoft/TypeScript/issues/28357#issuecomment-748550734
@@ -111,6 +113,11 @@ class ChatMessages extends LightElement {
   render() {
     return html``;
   }
+}
+
+interface ChatInputSetInputOptions {
+  submit?: boolean;
+  focus?: boolean;
 }
 
 class ChatInput extends LightElement {
@@ -208,7 +215,7 @@ class ChatInput extends LightElement {
     this.#onInput();
   }
 
-  #sendInput(): void {
+  #sendInput(focus = true): void {
     if (this.valueIsEmpty) return;
     if (this.disabled) return;
 
@@ -225,10 +232,13 @@ class ChatInput extends LightElement {
     this.setInputValue("");
     this.disabled = true;
 
-    this.textarea.focus();
+    if (focus) this.textarea.focus();
   }
 
-  setInputValue(value: string, submit = false): void {
+  setInputValue(
+    value: string,
+    { submit = false, focus = false }: ChatInputSetInputOptions = {}
+  ): void {
     this.textarea.value = value;
 
     // Simulate an input event (to trigger the textarea autoresize)
@@ -236,7 +246,11 @@ class ChatInput extends LightElement {
     this.textarea.dispatchEvent(inputEvent);
 
     if (submit) {
-      this.#sendInput();
+      this.#sendInput(focus);
+    }
+
+    if (focus) {
+      this.textarea.focus();
     }
   }
 }
@@ -383,9 +397,9 @@ class ChatContainer extends LightElement {
   }
 
   #onUpdateUserInput(event: CustomEvent<UpdateUserInput>): void {
-    const { value, placeholder } = event.detail;
+    const { value, placeholder, submit, focus } = event.detail;
     if (value !== undefined) {
-      this.input.setInputValue(value);
+      this.input.setInputValue(value, { submit, focus });
     }
     if (placeholder !== undefined) {
       this.input.placeholder = placeholder;
@@ -408,7 +422,7 @@ class ChatContainer extends LightElement {
     if (!suggestion) return;
 
     e.preventDefault();
-    this.input.setInputValue(suggestion, submit);
+    this.input.setInputValue(suggestion, { submit, focus: !submit });
   }
 
   #getSuggestion(x: EventTarget | null): {
