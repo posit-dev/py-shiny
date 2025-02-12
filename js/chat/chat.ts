@@ -429,17 +429,22 @@ class ChatContainer extends LightElement {
   } {
     if (!(x instanceof HTMLElement)) return {};
 
+    const el = x.closest(".suggestion, [data-suggestion]");
+    if (!(el instanceof HTMLElement)) return {};
+
     const isSuggestion =
-      x.classList.contains("suggestion") || x.dataset.suggestion !== undefined;
+      el.classList.contains("suggestion") ||
+      el.dataset.suggestion !== undefined;
     if (!isSuggestion) return {};
 
-    const suggestion = x.dataset.suggestion || x.textContent;
+    const suggestion = el.dataset.suggestion || el.textContent;
 
     return {
       suggestion: suggestion || undefined,
       submit:
-        x.classList.contains("submit") ||
-        ["", "true"].includes(x.dataset.suggestionSubmit || "false"),
+        el.classList.contains("submit") ||
+        el.dataset.suggestionSubmit === "" ||
+        el.dataset.suggestionSubmit === "true",
     };
   }
 
