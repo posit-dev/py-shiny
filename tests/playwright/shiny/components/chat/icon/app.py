@@ -1,3 +1,5 @@
+import asyncio
+
 import faicons
 
 from shiny.express import ui
@@ -22,6 +24,7 @@ with ui.layout_columns():
 
     @chat_default.on_user_submit
     async def handle_user_input_default(user_input: str):
+        await asyncio.sleep(1)
         await chat_default.append_message(f"You said: {user_input}")
 
     # Otter Bot -----------------------------------------------------------------------
@@ -41,6 +44,7 @@ with ui.layout_columns():
 
     @chat_otter.on_user_submit
     async def handle_user_input_otter(user_input: str):
+        await asyncio.sleep(1)
         await chat_otter.append_message(f"You said: {user_input}")
 
     # SVG Bot -------------------------------------------------------------------------
