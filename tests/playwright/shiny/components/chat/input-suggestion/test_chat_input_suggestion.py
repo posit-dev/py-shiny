@@ -17,9 +17,11 @@ def test_validate_chat_input_suggestion(page: Page, local_app: ShinyAppProc) -> 
     expect(chat.loc_input_button).to_be_disabled()
 
     # Locate input suggestions
-    first = chat.loc.locator(".suggestion", has_text="1st input suggestion")
-    second = chat.loc.locator("span[data-suggestion]")
-    third = chat.loc.locator("img[data-suggestion]")
+    first = chat.loc.locator("#first", has_text="1st input suggestion")
+    second = chat.loc.locator("#second")
+    third = chat.loc.locator("#third")
+    fourth = chat.loc.locator("#fourth")
+    fifth = chat.loc.locator("#fifth")
 
     # Click on each suggestion and verify the input
     first.click()
@@ -39,3 +41,17 @@ def test_validate_chat_input_suggestion(page: Page, local_app: ShinyAppProc) -> 
     chat.expect_latest_message("You said: A 3rd, image-based, suggestion")
     chat.expect_user_input("")
     expect(chat.loc_input_button).to_be_disabled()
+
+    # Test auto-submitting suggestions
+    fourth.click()
+    chat.expect_latest_message("You said: this suggestion will auto-submit")
+    chat.expect_user_input("")
+    expect(chat.loc_input_button).to_be_disabled()
+    expect(chat.loc_input).not_to_be_focused()
+
+    fifth.focus()
+    page.keyboard.press("Enter")
+    chat.expect_latest_message("You said: another suggestion")
+    chat.expect_user_input("")
+    expect(chat.loc_input_button).to_be_disabled()
+    expect(chat.loc_input).not_to_be_focused()
