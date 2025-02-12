@@ -64,10 +64,11 @@ class ChatMessage extends LightElement {
     const defaultIcon = noContent ? ICONS.dots_fade : ICONS.robot;
 
     // Check if there's an existing message-icon element
-    const existingIcon = this.querySelector(".message-icon");
-    const icon = existingIcon
-      ? existingIcon
-      : html`<div class="message-icon">${unsafeHTML(defaultIcon)}</div>`;
+    const userIcon = this.querySelector(".message-icon");
+    const icon =
+      userIcon && !noContent
+        ? userIcon
+        : html`<div class="message-icon">${unsafeHTML(defaultIcon)}</div>`;
 
     return html`
       ${icon}
