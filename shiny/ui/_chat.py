@@ -1111,19 +1111,19 @@ def chat_ui(
             raise ValueError("Each message must be a string or a dictionary.")
 
         if msg["role"] == "user":
-            message_tags.append(Tag("shiny-user-message", content=msg["content"]))
+            msg_tag = Tag("shiny-user-message", content=msg["content"])
         else:
-            message_tags.append(
-                Tag(
-                    "shiny-chat-message",
-                    (
-                        None
-                        if icon_assistant is None
-                        else div(icon_assistant, class_="message-icon")
-                    ),
-                    content=msg["content"],
+            msg_tag = Tag(
+                "shiny-chat-message",
+                (
+                    None
+                    if icon_assistant is None
+                    else div(icon_assistant, class_="message-icon")
                 ),
+                content=msg["content"],
             )
+
+        message_tags.append(msg_tag)
 
     res = Tag(
         "shiny-chat-container",
