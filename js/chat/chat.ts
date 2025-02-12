@@ -211,10 +211,6 @@ class ChatContainer extends LightElement {
     return last ? (last as ChatMessage) : null;
   }
 
-  private get iconTemplate(): HTMLDivElement | null {
-    return this.querySelector('div[data-icon="assistant"]');
-  }
-
   render() {
     return html``;
   }
@@ -279,7 +275,7 @@ class ChatContainer extends LightElement {
     const msg = createElement(TAG_NAME, message);
 
     if (message.role !== "user") {
-      const iconTemplate = this.iconTemplate;
+      const iconTemplate = this.querySelector('div[data-icon="assistant"]');
       if (iconTemplate) {
         const icon = iconTemplate.cloneNode(true) as HTMLDivElement;
         icon.className = "message-icon";
