@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 different ways (see #1845 for more details):
   * By adding a `.suggestion` CSS class to an HTML element (e.g., `<span class="suggestion">A suggestion</span>`)
   * Add a `data-suggestion` attribute to an HTML element, and set the value to the input suggestion text (e.g., `<span data-suggestion="Suggestion value">Suggestion link</span>`)
+  * To auto-submit the suggestion when clicked by the user, include the `.submit` class or the `data-suggestion-submit="true"` attribute on the HTML element. Alternatively, use Cmd/Ctrl + click to auto-submit any suggestion or Alt/Opt + click to apply any suggestion to the chat input without submitting.
 
 * Added a new `.add_sass_layer_file()` method to `ui.Theme` that supports reading a Sass file with layer boundary comments, e.g. `/*-- scss:defaults --*/`. This format [is supported by Quarto](https://quarto.org/docs/output-formats/html-themes-more.html#bootstrap-bootswatch-layering) and makes it easier to store Sass rules and declarations that need to be woven into Shiny's Sass Bootstrap files. (#1790)
 
@@ -25,6 +26,8 @@ different ways (see #1845 for more details):
 * Client data values (e.g., url info, output sizes/styles, etc.) can now be accessed in the server-side Python code via `session.clientdata`. For example, `session.clientdata.url_search()` reactively reads the URL search parameters. (#1832)
 
 * Available `input` ids can now be listed via `dir(input)`. This also works on the new `session.clientdata` object. (#1832)
+
+* The `ui.Chat()` component's `.update_user_input()` method gains `submit` and `focus` options that allow you to submit the input on behalf of the user and to choose whether the input receives focus after the update. (#1851)
 
 ### Bug fixes
 

@@ -26,6 +26,8 @@ type ShinyChatMessage = {
 type UpdateUserInput = {
   value?: string;
   placeholder?: string;
+  submit?: false;
+  focus?: false;
 };
 
 // https://github.com/microsoft/TypeScript/issues/28357#issuecomment-748550734
@@ -111,6 +113,11 @@ class ChatMessages extends LightElement {
   render() {
     return html``;
   }
+}
+
+interface ChatInputSetInputOptions {
+  submit?: boolean;
+  focus?: boolean;
 }
 
 class ChatInput extends LightElement {
@@ -208,7 +215,7 @@ class ChatInput extends LightElement {
     this.#onInput();
   }
 
-  #sendInput(): void {
+  #sendInput(focus = true): void {
     if (this.valueIsEmpty) return;
     if (this.disabled) return;
 
@@ -225,10 +232,16 @@ class ChatInput extends LightElement {
     this.setInputValue("");
     this.disabled = true;
 
-    this.textarea.focus();
+    if (focus) this.textarea.focus();
   }
 
-  setInputValue(value: string, submit = false): void {
+  setInputValue(
+    value: string,
+    { submit = false, focus = false }: ChatInputSetInputOptions = {}
+  ): void {
+    // Store previous value to restore post-submit (if submitting)
+    const oldValue = this.textarea.value;
+
     this.textarea.value = value;
 
     // Simulate an input event (to trigger the textarea autoresize)
@@ -236,7 +249,12 @@ class ChatInput extends LightElement {
     this.textarea.dispatchEvent(inputEvent);
 
     if (submit) {
-      this.#sendInput();
+      this.#sendInput(false);
+      if (oldValue) this.setInputValue(oldValue);
+    }
+
+    if (focus) {
+      this.textarea.focus();
     }
   }
 }
@@ -383,31 +401,40 @@ class ChatContainer extends LightElement {
   }
 
   #onUpdateUserInput(event: CustomEvent<UpdateUserInput>): void {
-    const { value, placeholder } = event.detail;
+    const { value, placeholder, submit, focus } = event.detail;
     if (value !== undefined) {
-      this.input.setInputValue(value);
+      this.input.setInputValue(value, { submit, focus });
     }
     if (placeholder !== undefined) {
       this.input.placeholder = placeholder;
     }
   }
 
-  #onInputSuggestionClick(e: Event): void {
-    const { suggestion, submit } = this.#getSuggestion(e.target);
-    if (!suggestion) return;
-
-    e.preventDefault();
-    this.input.setInputValue(suggestion, submit);
+  #onInputSuggestionClick(e: MouseEvent): void {
+    this.#onInputSuggestionEvent(e);
   }
 
   #onInputSuggestionKeydown(e: KeyboardEvent): void {
-    const isEnter = e.key === "Enter" || e.key === " ";
-    if (!isEnter) return;
+    const isEnterOrSpace = e.key === "Enter" || e.key === " ";
+    if (!isEnterOrSpace) return;
+
+    this.#onInputSuggestionEvent(e);
+  }
+
+  #onInputSuggestionEvent(e: MouseEvent | KeyboardEvent): void {
     const { suggestion, submit } = this.#getSuggestion(e.target);
     if (!suggestion) return;
 
     e.preventDefault();
-    this.input.setInputValue(suggestion, submit);
+    // Cmd/Ctrl + (event) = force submitting
+    // Alt/Opt  + (event) = force setting without submitting
+    const shouldSubmit =
+      e.metaKey || e.ctrlKey ? true : e.altKey ? false : submit;
+
+    this.input.setInputValue(suggestion, {
+      submit: shouldSubmit,
+      focus: !shouldSubmit,
+    });
   }
 
   #getSuggestion(x: EventTarget | null): {
@@ -416,17 +443,22 @@ class ChatContainer extends LightElement {
   } {
     if (!(x instanceof HTMLElement)) return {};
 
+    const el = x.closest(".suggestion, [data-suggestion]");
+    if (!(el instanceof HTMLElement)) return {};
+
     const isSuggestion =
-      x.classList.contains("suggestion") || x.dataset.suggestion !== undefined;
+      el.classList.contains("suggestion") ||
+      el.dataset.suggestion !== undefined;
     if (!isSuggestion) return {};
 
-    const suggestion = x.dataset.suggestion || x.textContent;
+    const suggestion = el.dataset.suggestion || el.textContent;
 
     return {
       suggestion: suggestion || undefined,
       submit:
-        x.classList.contains("submit") ||
-        ["", "true"].includes(x.dataset.suggestionSubmit || "false"),
+        el.classList.contains("submit") ||
+        el.dataset.suggestionSubmit === "" ||
+        el.dataset.suggestionSubmit === "true",
     };
   }
 
