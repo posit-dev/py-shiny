@@ -209,6 +209,10 @@ class Chat:
                 reactive.Value(None)
             )
 
+            self._latest_stream: reactive.Value[
+                reactive.ExtendedTask[[], str] | None
+            ] = reactive.Value(None)
+
             # TODO: deprecate messages once we start promoting managing LLM message
             # state through other means
             @reactive.effect
@@ -573,6 +577,8 @@ class Chat:
 
         _stream_task()
 
+        self._latest_stream.set(_stream_task)
+
         # Since the task runs in the background (outside/beyond the current context,
         # if any), we need to manually raise any exceptions that occur
         @reactive.effect
@@ -583,6 +589,33 @@ class Chat:
             _handle_error.destroy()  # type: ignore
 
         return _stream_task
+
+    def get_latest_stream_result(self) -> str | None:
+        """
+        Reactively read the latest message stream result.
+
+        This method reads a reactive value containing the result of the latest
+        `.append_message_stream()`. Therefore, this method must be called in a reactive
+        context (e.g., a render function, a :func:`~shiny.reactive.calc`, or a
+        :func:`~shiny.reactive.effect`).
+
+        Returns
+        -------
+        :
+            The result of the latest stream (a string).
+
+        Raises
+        ------
+        :
+            A silent exception if no stream has completed yet.
+        """
+        stream = self._latest_stream()
+        if stream is None:
+            from .. import req
+
+            req(False)
+        else:
+            return stream.result()
 
     async def _append_message_stream(self, message: AsyncIterable[Any]):
         id = _utils.private_random_id()
