@@ -951,9 +951,9 @@ class Chat:
         placeholder
             The placeholder text for the user input.
         submit
-            Whether to automatically submit the text for the user.
+            Whether to automatically submit the text for the user. Requires `value`.
         focus
-            Whether to move focus to the input element.
+            Whether to move focus to the input element. Requires `value`.
         """
 
         if value is None and (submit or focus):
