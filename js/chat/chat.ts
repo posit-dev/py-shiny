@@ -26,6 +26,8 @@ type ShinyChatMessage = {
 type UpdateUserInput = {
   value?: string;
   placeholder?: string;
+  submit?: false;
+  focus?: false;
 };
 
 // https://github.com/microsoft/TypeScript/issues/28357#issuecomment-748550734
@@ -113,9 +115,46 @@ class ChatMessages extends LightElement {
   }
 }
 
+interface ChatInputSetInputOptions {
+  submit?: boolean;
+  focus?: boolean;
+}
+
 class ChatInput extends LightElement {
+  private _disabled = false;
+
   @property() placeholder = "Enter a message...";
-  @property({ type: Boolean, reflect: true }) disabled = false;
+  // disabled is reflected manually because `reflect: true` doesn't work with LightElement
+  @property({ type: Boolean })
+  get disabled() {
+    return this._disabled;
+  }
+
+  set disabled(value: boolean) {
+    const oldValue = this._disabled;
+    if (value === oldValue) {
+      return;
+    }
+
+    this._disabled = value;
+    value
+      ? this.setAttribute("disabled", "")
+      : this.removeAttribute("disabled");
+
+    this.requestUpdate("disabled", oldValue);
+    this.#onInput();
+  }
+
+  attributeChangedCallback(
+    name: string,
+    _old: string | null,
+    value: string | null
+  ) {
+    super.attributeChangedCallback(name, _old, value);
+    if (name === "disabled") {
+      this.disabled = value !== null;
+    }
+  }
 
   private get textarea(): HTMLTextAreaElement {
     return this.querySelector("textarea") as HTMLTextAreaElement;
@@ -178,7 +217,7 @@ class ChatInput extends LightElement {
     this.#onInput();
   }
 
-  #sendInput(): void {
+  #sendInput(focus = true): void {
     if (this.valueIsEmpty) return;
     if (this.disabled) return;
 
@@ -193,17 +232,32 @@ class ChatInput extends LightElement {
     this.dispatchEvent(sentEvent);
 
     this.setInputValue("");
+    this.disabled = true;
 
-    this.textarea.focus();
+    if (focus) this.textarea.focus();
   }
 
-  setInputValue(value: string): void {
+  setInputValue(
+    value: string,
+    { submit = false, focus = false }: ChatInputSetInputOptions = {}
+  ): void {
+    // Store previous value to restore post-submit (if submitting)
+    const oldValue = this.textarea.value;
+
     this.textarea.value = value;
-    this.disabled = value.trim().length === 0;
 
     // Simulate an input event (to trigger the textarea autoresize)
     const inputEvent = new Event("input", { bubbles: true, cancelable: true });
     this.textarea.dispatchEvent(inputEvent);
+
+    if (submit) {
+      this.#sendInput(false);
+      if (oldValue) this.setInputValue(oldValue);
+    }
+
+    if (focus) {
+      this.textarea.focus();
+    }
   }
 }
 
@@ -283,8 +337,15 @@ class ChatContainer extends LightElement {
     this.#appendMessage(event.detail);
   }
 
-  #appendMessage(message: Message, finalize = true): void {
+  #initMessage(): void {
     this.#removeLoadingMessage();
+    if (!this.input.disabled) {
+      this.input.disabled = true;
+    }
+  }
+
+  #appendMessage(message: Message, finalize = true): void {
+    this.#initMessage();
 
     const TAG_NAME =
       message.role === "user" ? CHAT_USER_MESSAGE_TAG : CHAT_MESSAGE_TAG;
@@ -346,41 +407,65 @@ class ChatContainer extends LightElement {
   }
 
   #onUpdateUserInput(event: CustomEvent<UpdateUserInput>): void {
-    const { value, placeholder } = event.detail;
+    const { value, placeholder, submit, focus } = event.detail;
     if (value !== undefined) {
-      this.input.setInputValue(value);
+      this.input.setInputValue(value, { submit, focus });
     }
     if (placeholder !== undefined) {
       this.input.placeholder = placeholder;
     }
   }
 
-  #onInputSuggestionClick(e: Event): void {
-    const suggestion = this.#getSuggestion(e.target);
-    if (!suggestion) return;
-
-    e.preventDefault();
-    this.input.setInputValue(suggestion);
+  #onInputSuggestionClick(e: MouseEvent): void {
+    this.#onInputSuggestionEvent(e);
   }
 
   #onInputSuggestionKeydown(e: KeyboardEvent): void {
-    const isEnter = e.key === "Enter" || e.key === " ";
-    if (!isEnter) return;
-    const suggestion = this.#getSuggestion(e.target);
+    const isEnterOrSpace = e.key === "Enter" || e.key === " ";
+    if (!isEnterOrSpace) return;
+
+    this.#onInputSuggestionEvent(e);
+  }
+
+  #onInputSuggestionEvent(e: MouseEvent | KeyboardEvent): void {
+    const { suggestion, submit } = this.#getSuggestion(e.target);
     if (!suggestion) return;
 
     e.preventDefault();
-    this.input.setInputValue(suggestion);
+    // Cmd/Ctrl + (event) = force submitting
+    // Alt/Opt  + (event) = force setting without submitting
+    const shouldSubmit =
+      e.metaKey || e.ctrlKey ? true : e.altKey ? false : submit;
+
+    this.input.setInputValue(suggestion, {
+      submit: shouldSubmit,
+      focus: !shouldSubmit,
+    });
   }
 
-  #getSuggestion(x: EventTarget | null): string | null {
-    if (!(x instanceof HTMLElement)) return null;
+  #getSuggestion(x: EventTarget | null): {
+    suggestion?: string;
+    submit?: boolean;
+  } {
+    if (!(x instanceof HTMLElement)) return {};
+
+    const el = x.closest(".suggestion, [data-suggestion]");
+    if (!(el instanceof HTMLElement)) return {};
 
     const isSuggestion =
-      x.classList.contains("suggestion") || x.dataset.suggestion !== undefined;
-    if (!isSuggestion) return null;
+      el.classList.contains("suggestion") ||
+      el.dataset.suggestion !== undefined;
+    if (!isSuggestion) return {};
 
-    return x.dataset.suggestion || x.textContent;
+    const suggestion = el.dataset.suggestion || el.textContent;
+
+    return {
+      suggestion: suggestion || undefined,
+      submit:
+        el.classList.contains("submit") ||
+        el.dataset.suggestionSubmit === "" ||
+        el.dataset.suggestionSubmit === "true",
+    };
   }
 
   #onRemoveLoadingMessage(): void {
