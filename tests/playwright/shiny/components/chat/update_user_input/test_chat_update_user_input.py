@@ -39,7 +39,7 @@ def test_validate_chat_update_user_input(page: Page, local_app: ShinyAppProc) ->
     # Auto submit ----
     submit.loc.focus()
     submit.click()
-    chat.expect_user_input(set_msg) # User doesn't lose what they had written
+    chat.expect_user_input(set_msg)  # User doesn't lose what they had written
     chat.expect_latest_message("You said: This chat was sent on behalf of the user.")
     expect(chat.loc_input_button).to_be_enabled()
     expect(chat.loc_input).not_to_be_focused()
