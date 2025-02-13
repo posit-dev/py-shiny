@@ -88,7 +88,7 @@ class MarkdownStream:
 
         with session_context(self._session):
             self._latest_stream: reactive.Value[
-                reactive.ExtendedTask[[], str] | None
+                Union[reactive.ExtendedTask[[], str], None]
             ] = reactive.Value(None)
 
     async def stream(
@@ -151,7 +151,7 @@ class MarkdownStream:
 
         return _task
 
-    def get_latest_stream_result(self) -> str | None:
+    def get_latest_stream_result(self) -> Union[str, None]:
         """
         Reactively read the latest stream result.
 
