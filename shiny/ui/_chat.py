@@ -956,6 +956,11 @@ class Chat:
             Whether to move focus to the input element.
         """
 
+        if value is None and (submit or focus):
+            raise ValueError(
+                "An input `value` must be provided when `submit` or `focus` are `True`."
+            )
+
         obj = _utils.drop_none(
             {
                 "value": value,
