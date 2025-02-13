@@ -33,7 +33,7 @@ shiny-chat-container {
     }
 
     &::after {
-      content: "\2726"; // diamond/star
+      content: "\29C9"; // two overlapping squares
       display: inline-block;
       margin-inline-start: 0.15em;
     }

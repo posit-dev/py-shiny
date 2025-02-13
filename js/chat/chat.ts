@@ -262,7 +262,6 @@ class ChatInput extends LightElement {
 }
 
 class ChatContainer extends LightElement {
-  @property() placeholder = "Enter a message...";
 
   private get input(): ChatInput {
     return this.querySelector(CHAT_INPUT_TAG) as ChatInput;
