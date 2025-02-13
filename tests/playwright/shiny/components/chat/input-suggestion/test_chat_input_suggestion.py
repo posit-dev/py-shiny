@@ -55,3 +55,29 @@ def test_validate_chat_input_suggestion(page: Page, local_app: ShinyAppProc) -> 
     chat.expect_user_input("")
     expect(chat.loc_input_button).to_be_disabled()
     expect(chat.loc_input).not_to_be_focused()
+
+    # Test keyboard modifiers - Alt + event = set but do not submit
+    fourth.click(modifiers = ["Alt"])
+    chat.expect_user_input("this suggestion will auto-submit")
+
+    fifth.focus()
+    page.keyboard.press("Alt+Enter")
+    chat.expect_user_input("another suggestion")
+
+    # Reset chat
+    chat.send_user_input()
+    chat.expect_user_input("")
+
+    # Test keyboard modifiers - Cmd/Ctrl + event = submit the suggestion
+    first.click(modifiers = ["ControlOrMeta"])
+    chat.expect_latest_message("You said: 1st input suggestion")
+    chat.expect_user_input("")
+    expect(chat.loc_input_button).to_be_disabled()
+    expect(chat.loc_input).not_to_be_focused()
+
+    second.focus()
+    page.keyboard.press("ControlOrMeta+Enter")
+    chat.expect_latest_message("You said: The actual suggestion")
+    chat.expect_user_input("")
+    expect(chat.loc_input_button).to_be_disabled()
+    expect(chat.loc_input).not_to_be_focused()

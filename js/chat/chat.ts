@@ -410,23 +410,31 @@ class ChatContainer extends LightElement {
     }
   }
 
-  #onInputSuggestionClick(e: Event): void {
-    this.#applySuggestion(e);
+  #onInputSuggestionClick(e: MouseEvent): void {
+    this.#onInputSuggestionEvent(e);
   }
 
   #onInputSuggestionKeydown(e: KeyboardEvent): void {
-    const isEnter = e.key === "Enter" || e.key === " ";
-    if (!isEnter) return;
+    const isEnterOrSpace = e.key === "Enter" || e.key === " ";
+    if (!isEnterOrSpace) return;
 
-    this.#applySuggestion(e);
+    this.#onInputSuggestionEvent(e);
   }
 
-  #applySuggestion(e: Event | KeyboardEvent): void {
+  #onInputSuggestionEvent(e: MouseEvent | KeyboardEvent): void {
     const { suggestion, submit } = this.#getSuggestion(e.target);
     if (!suggestion) return;
 
     e.preventDefault();
-    this.input.setInputValue(suggestion, { submit, focus: !submit });
+    // Cmd/Ctrl + (event) = force submitting
+    // Alt/Opt  + (event) = force setting without submitting
+    const shouldSubmit =
+      e.metaKey || e.ctrlKey ? true : e.altKey ? false : submit;
+
+    this.input.setInputValue(suggestion, {
+      submit: shouldSubmit,
+      focus: !shouldSubmit,
+    });
   }
 
   #getSuggestion(x: EventTarget | null): {
