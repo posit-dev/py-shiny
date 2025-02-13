@@ -124,6 +124,7 @@ class ChatInput extends LightElement {
   private _disabled = false;
 
   @property() placeholder = "Enter a message...";
+  // disabled is reflected manually because `reflect: true` doesn't work with LightElement
   @property({ type: Boolean })
   get disabled() {
     return this._disabled;
@@ -146,11 +147,12 @@ class ChatInput extends LightElement {
 
   attributeChangedCallback(
     name: string,
-    oldValue: string | null,
-    newValue: string | null
+    _old: string | null,
+    value: string | null
   ) {
+    super.attributeChangedCallback(name, _old, value);
     if (name === "disabled") {
-      this.disabled = newValue !== null;
+      this.disabled = value !== null;
     }
   }
 
@@ -335,11 +337,15 @@ class ChatContainer extends LightElement {
     this.#appendMessage(event.detail);
   }
 
-  #appendMessage(message: Message, finalize = true): void {
+  #initMessage(): void {
     this.#removeLoadingMessage();
     if (!this.input.disabled) {
       this.input.disabled = true;
     }
+  }
+
+  #appendMessage(message: Message, finalize = true): void {
+    this.#initMessage();
 
     const TAG_NAME =
       message.role === "user" ? CHAT_USER_MESSAGE_TAG : CHAT_MESSAGE_TAG;
