@@ -32,16 +32,18 @@ shiny-chat-container {
       text-decoration-style: solid;
     }
 
+    &::after {
+      content: "\2726"; // diamond/star
+      display: inline-block;
+      margin-inline-start: 0.15em;
+    }
+
     &.submit,
     &[data-suggestion-submit=""],
     &[data-suggestion-submit="true"] {
       &::after {
-        content: " \21B5"; // return key symbol
+        content: "\21B5"; // return key symbol
       }
-    }
-
-    &::after {
-      content: " \2726"; // diamond/star
     }
   }
 }
