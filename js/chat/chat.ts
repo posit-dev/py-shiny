@@ -239,6 +239,9 @@ class ChatInput extends LightElement {
     value: string,
     { submit = false, focus = false }: ChatInputSetInputOptions = {}
   ): void {
+    // Store previous value to restore post-submit (if submitting)
+    const oldValue = this.textarea.value;
+
     this.textarea.value = value;
 
     // Simulate an input event (to trigger the textarea autoresize)
@@ -246,8 +249,11 @@ class ChatInput extends LightElement {
     this.textarea.dispatchEvent(inputEvent);
 
     if (submit) {
-      this.#sendInput(focus);
-    } else if (focus) {
+      this.#sendInput(false);
+      if (oldValue) this.setInputValue(oldValue);
+    }
+
+    if (focus) {
       this.textarea.focus();
     }
   }

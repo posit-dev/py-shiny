@@ -31,11 +31,26 @@ def test_validate_chat_update_user_input(page: Page, local_app: ShinyAppProc) ->
 
     # Set the input and move focus ----
     set_and_focus.click()
-    chat.expect_user_input("Input was set and focused, but not submitted.")
+    set_msg = "Input was set and focused, but not submitted."
+    chat.expect_user_input(set_msg)
     expect(chat.loc_input_button).to_be_enabled()
     expect(chat.loc_input).to_be_focused()
 
     # Auto submit ----
+    submit.loc.focus()
+    submit.click()
+    chat.expect_user_input(set_msg) # User doesn't lose what they had written
+    chat.expect_latest_message("You said: This chat was sent on behalf of the user.")
+    expect(chat.loc_input_button).to_be_enabled()
+    expect(chat.loc_input).not_to_be_focused()
+
+    # Input remains cleared if previously clear (have to clear the input first)
+    chat.loc_input.focus()
+    while chat.loc_input.input_value():
+        chat.loc_input.press("Backspace")
+
+    chat.expect_user_input("")
+
     submit.loc.focus()
     submit.click()
     chat.expect_user_input("")
