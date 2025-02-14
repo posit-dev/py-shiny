@@ -2,7 +2,7 @@ import asyncio
 
 import faicons
 
-from shiny.express import ui
+from shiny.express import input, ui
 
 ui.page_opts(title="Chat Icons")
 
@@ -27,25 +27,30 @@ with ui.layout_columns():
         await asyncio.sleep(1)
         await chat_default.append_message(f"You said: {user_input}")
 
-    # Otter Bot -----------------------------------------------------------------------
-    chat_otter = ui.Chat(
-        id="chat_otter",
+    # Animal Bot ----------------------------------------------------------------------
+    chat_animal = ui.Chat(
+        id="chat_animal",
         messages=[
             {
-                "content": "Hello! I'm Otter Bot. How can I help you today?",
+                "content": "Hello! I'm Animal Bot. How can I help you today?",
                 "role": "assistant",
             },
         ],
     )
 
     with ui.div():
-        ui.h2("Otter Bot")
-        chat_otter.ui(icon_assistant=faicons.icon_svg("otter").add_class("icon-otter"))
+        ui.h2("Animal Bot")
+        chat_animal.ui(icon_assistant=faicons.icon_svg("otter").add_class("icon-otter"))
+        ui.input_select("animal", "Animal", choices=["Otter", "Hippo", "Frog", "Dove"])
 
-    @chat_otter.on_user_submit
+    @chat_animal.on_user_submit
     async def handle_user_input_otter(user_input: str):
         await asyncio.sleep(1)
-        await chat_otter.append_message(f"You said: {user_input}")
+        icon_name = input.animal().lower()
+        await chat_animal.append_message(
+            f"{input.animal()} said: {user_input}",
+            icon = faicons.icon_svg(icon_name).add_class(f"icon-{icon_name}")
+        )
 
     # SVG Bot -------------------------------------------------------------------------
     bs_icon_info_circle_fill = """

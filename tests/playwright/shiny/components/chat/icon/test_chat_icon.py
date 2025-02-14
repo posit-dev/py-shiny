@@ -11,7 +11,7 @@ class ChatModule:
         self.chat = controller.Chat(page, f"chat_{id}")
         self.classes = classes
 
-    def expect_last_message_icon_to_have_classes(self):
+    def expect_last_message_icon_to_have_classes(self, classes: str | None = None):
         # TODO: Fix this test to find icon in shadow root
         if self.id == "default":
             last_msg_icon = self.chat.loc_latest_message.locator(
@@ -22,7 +22,7 @@ class ChatModule:
                 '[slot="icon"]'
             )
 
-        expect(last_msg_icon).to_have_class(self.classes)
+        expect(last_msg_icon).to_have_class(classes or self.classes)
 
 
 @skip_on_webkit
@@ -31,7 +31,7 @@ def test_validate_chat_basic(page: Page, local_app: ShinyAppProc) -> None:
 
     chats: list[ChatModule] = [
         ChatModule(page, "default", "bi bi-robot"),
-        ChatModule(page, "otter", "fa icon-otter"),
+        ChatModule(page, "animal", "fa icon-otter"),
         ChatModule(page, "svg", "bi bi-info-circle-fill icon-svg"),
         ChatModule(page, "shiny", "icon-shiny"),
     ]
@@ -44,3 +44,16 @@ def test_validate_chat_basic(page: Page, local_app: ShinyAppProc) -> None:
         mod.chat.send_user_input()
 
         mod.expect_last_message_icon_to_have_classes()
+
+    animal = controller.InputSelect(page, "animal")
+    chat_animal = chats[1]
+
+    animal.set("Hippo")
+    chat_animal.chat.set_user_input("hello")
+    chat_animal.chat.send_user_input()
+    chat_animal.expect_last_message_icon_to_have_classes("fa icon-hippo")
+
+    animal.set("Frog")
+    chat_animal.chat.set_user_input("hello")
+    chat_animal.chat.send_user_input()
+    chat_animal.expect_last_message_icon_to_have_classes("fa icon-frog")
