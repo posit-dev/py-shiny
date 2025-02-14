@@ -133,11 +133,12 @@ class Chat:
         A unique identifier for the chat session. In Shiny Core, make sure this id
         matches a corresponding :func:`~shiny.ui.chat_ui` call in the UI.
     messages
-        A sequence of messages to display in the chat. Each message can be a
-        dictionary with a `content` and `role` key. The `content` key should contain
-        the message text, and the `role` key can be "assistant", "user", or "system".
-        Note that system messages are not actually displayed in the chat, but will
-        still be stored in the chat's `.messages()`.
+        A sequence of messages to display in the chat. Each message can be either a
+        string or a dictionary with `content` and `role` keys. The `content` key
+        should contain a string, and the `role` key can be "assistant" or "user".
+        Content strings are interpreted as markdown and rendered to HTML on the client.
+        Content may also include specially formatted **input suggestion** links (see
+        `.append_message_stream()` for more information).
     on_error
         How to handle errors that occur in response to user input. When `"unhandled"`,
         the app will stop running when an error occurs. Otherwise, a notification
@@ -502,11 +503,37 @@ class Chat:
             The message to append. A variety of message formats are supported including
             a string, a dictionary with `content` and `role` keys, or a relevant chat
             completion object from platforms like OpenAI, Anthropic, Ollama, and others.
+            Content strings are interpreted as markdown and rendered to HTML on the
+            client. Content may also include specially formatted **input suggestion**
+            links (see note below).
 
         Note
         ----
+        ``{.callout-note title="Input suggestions"}
+        Input suggestions are special links that send text to the user input box when
+        clicked (or accessed via keyboard). They can be created in the following ways:
+
+        * `<span class='suggestion'>Suggestion text</span>`: An inline text link that
+            places 'Suggestion text' in the user input box when clicked.
+        * `<img data-suggestion='Suggestion text' src='image.jpg'>`: An image link with
+            the same functionality as above.
+        * `<span data-suggestion='Suggestion text'>Actual text</span>`: An inline text
+            link that places 'Suggestion text' in the user input box when clicked.
+
+        A suggestion can also be submitted automatically by doing one of the following:
+
+        * Adding a `submit` CSS class or a `data-suggestion-submit="true"` attribute to
+          the suggestion element.
+        * Holding the `Ctrl/Cmd` key while clicking the suggestion link.
+
+        Note that a user may also opt-out of submitting a suggestion by holding the
+        `Alt/Option` key while clicking the suggestion link.
+        ```
+
+        ```{.callout-note title="Streamed messages"}
         Use `.append_message_stream()` instead of this method when `stream=True` (or
         similar) is specified in model's completion method.
+        ```
         """
         await self._append_message(message)
 
@@ -550,15 +577,40 @@ class Chat:
         Parameters
         ----------
         message
-            An iterable or async iterable of message chunks to append. A variety of
-            message chunk formats are supported, including a string, a dictionary with
-            `content` and `role` keys, or a relevant chat completion object from
-            platforms like OpenAI, Anthropic, Ollama, and others.
+            An (async) iterable of message chunks to append. A variety of message chunk
+            formats are supported, including a string, a dictionary with `content` and
+            `role` keys, or a relevant chat completion object from platforms like
+            OpenAI, Anthropic, Ollama, and others. Content strings are interpreted as
+            markdown and rendered to HTML on the client. Content may also include
+            specially formatted **input suggestion** links (see note below).
 
         Note
         ----
+        ```{.callout-note title="Input suggestions"}
+        Input suggestions are special links that send text to the user input box when
+        clicked (or accessed via keyboard). They can be created in the following ways:
+
+        * `<span class='suggestion'>Suggestion text</span>`: An inline text link that
+            places 'Suggestion text' in the user input box when clicked.
+        * `<img data-suggestion='Suggestion text' src='image.jpg'>`: An image link with
+            the same functionality as above.
+        * `<span data-suggestion='Suggestion text'>Actual text</span>`: An inline text
+            link that places 'Suggestion text' in the user input box when clicked.
+
+        A suggestion can also be submitted automatically by doing one of the following:
+
+        * Adding a `submit` CSS class or a `data-suggestion-submit="true"` attribute to
+          the suggestion element.
+        * Holding the `Ctrl/Cmd` key while clicking the suggestion link.
+
+        Note that a user may also opt-out of submitting a suggestion by holding the
+        `Alt/Option` key while clicking the suggestion link.
+        ```
+
+        ```{.callout-note title="Streamed messages"}
         Use this method (over `.append_message()`) when `stream=True` (or similar) is
         specified in model's completion method.
+        ```
 
         Returns
         -------
@@ -804,7 +856,6 @@ class Chat:
         chunk: ChunkOption = False,
         chunk_content: str | None = None,
     ) -> TransformedMessage | None:
-
         res = as_transformed_message(message)
         key = res["transform_key"]
 
@@ -834,7 +885,6 @@ class Chat:
         chunk: ChunkOption = False,
         index: int | None = None,
     ) -> None:
-
         # Don't actually store chunks until the end
         if chunk is True or chunk == "start":
             return None
@@ -860,7 +910,6 @@ class Chat:
         token_limits: tuple[int, int],
         format: MISSING_TYPE | ProviderMessageFormat,
     ) -> tuple[TransformedMessage, ...]:
-
         n_total, n_reserve = token_limits
         if n_total <= n_reserve:
             raise ValueError(
@@ -921,7 +970,6 @@ class Chat:
         self,
         messages: tuple[TransformedMessage, ...],
     ) -> tuple[TransformedMessage, ...]:
-
         if any(m["role"] == "system" for m in messages):
             raise ValueError(
                 "Anthropic requires a system prompt to be specified in it's `.create()` method "
@@ -981,7 +1029,12 @@ class Chat:
         return cast(str, self._session.input[id]())
 
     def update_user_input(
-        self, *, value: str | None = None, placeholder: str | None = None
+        self,
+        *,
+        value: str | None = None,
+        placeholder: str | None = None,
+        submit: bool = False,
+        focus: bool = False,
     ):
         """
         Update the user input.
@@ -992,9 +1045,25 @@ class Chat:
             The value to set the user input to.
         placeholder
             The placeholder text for the user input.
+        submit
+            Whether to automatically submit the text for the user. Requires `value`.
+        focus
+            Whether to move focus to the input element. Requires `value`.
         """
 
-        obj = _utils.drop_none({"value": value, "placeholder": placeholder})
+        if value is None and (submit or focus):
+            raise ValueError(
+                "An input `value` must be provided when `submit` or `focus` are `True`."
+            )
+
+        obj = _utils.drop_none(
+            {
+                "value": value,
+                "placeholder": placeholder,
+                "submit": submit,
+                "focus": focus,
+            }
+        )
 
         _utils.run_coro_sync(
             self._session.send_custom_message(
@@ -1116,9 +1185,12 @@ def chat_ui(
     id
         A unique identifier for the chat UI.
     messages
-        A sequence of messages to display in the chat. Each message can be either a string
-        or a dictionary with a `content` and `role` key. The `content` key should contain
-        the message text, and the `role` key can be "assistant" or "user".
+        A sequence of messages to display in the chat. Each message can be either a
+        string or a dictionary with `content` and `role` keys. The `content` key
+        should contain a string, and the `role` key can be "assistant" or "user".
+        Content strings are interpreted as markdown and rendered to HTML on the client.
+        Content may also include specially formatted **input suggestion** links (see
+        :method:`~shiny.ui.Chat.append_message_stream` for more information).
     placeholder
         Placeholder text for the chat input.
     width
