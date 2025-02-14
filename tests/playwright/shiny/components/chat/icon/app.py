@@ -49,7 +49,7 @@ with ui.layout_columns():
         icon_name = input.animal().lower()
         await chat_animal.append_message(
             f"{input.animal()} said: {user_input}",
-            icon = faicons.icon_svg(icon_name).add_class(f"icon-{icon_name}")
+            icon=faicons.icon_svg(icon_name).add_class(f"icon-{icon_name}"),
         )
 
     # SVG Bot -------------------------------------------------------------------------
