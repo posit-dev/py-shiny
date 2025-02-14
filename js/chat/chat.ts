@@ -15,6 +15,7 @@ type Message = {
   role: "user" | "assistant";
   chunk_type: "message_start" | "message_end" | null;
   content_type: ContentType;
+  icon?: string;
   operation: "append" | null;
 };
 type ShinyChatMessage = {
@@ -60,20 +61,19 @@ class ChatMessage extends LightElement {
   @property() content = "...";
   @property() content_type: ContentType = "markdown";
   @property({ type: Boolean, reflect: true }) streaming = false;
+  @property() icon = "";
 
   render() {
-    const noContent = this.content.trim().length === 0;
-    const defaultIcon = noContent ? ICONS.dots_fade : ICONS.robot;
+    let msg_icon = ICONS.dots_fade;
 
-    // Check if there's an existing message-icon element
-    const userIcon = this.querySelector(".message-icon");
-    const icon =
-      userIcon && !noContent
-        ? userIcon
-        : html`<div class="message-icon">${unsafeHTML(defaultIcon)}</div>`;
+    // Show dots until we have content
+    const hasContent = this.content.trim().length !== 0;
+    if (hasContent) {
+      msg_icon = this.icon || ICONS.robot;
+    }
 
     return html`
-      ${icon}
+      <div class="message-icon">${unsafeHTML(msg_icon)}</div>
       <shiny-markdown-stream
         content=${this.content}
         content-type=${this.content_type}
@@ -269,6 +269,7 @@ class ChatInput extends LightElement {
 }
 
 class ChatContainer extends LightElement {
+  @property() icon = "";
 
   private get input(): ChatInput {
     return this.querySelector(CHAT_INPUT_TAG) as ChatInput;
@@ -355,17 +356,12 @@ class ChatContainer extends LightElement {
 
     const TAG_NAME =
       message.role === "user" ? CHAT_USER_MESSAGE_TAG : CHAT_MESSAGE_TAG;
-    const msg = createElement(TAG_NAME, message);
 
-    if (message.role !== "user") {
-      const iconTemplate = this.querySelector('div[data-icon="assistant"]');
-      if (iconTemplate) {
-        const icon = iconTemplate.cloneNode(true) as HTMLDivElement;
-        icon.className = "message-icon";
-        msg.appendChild(icon);
-      }
+    if (this.icon) {
+      message.icon = message.icon || this.icon;
     }
 
+    const msg = createElement(TAG_NAME, message);
     this.messages.appendChild(msg);
 
     if (finalize) {
