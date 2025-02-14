@@ -14,6 +14,40 @@ shiny-chat-container {
   p:last-child {
     margin-bottom: 0;
   }
+
+  .suggestion,
+  [data-suggestion] {
+    cursor: pointer;
+    color: var(--bs-link-color, #007bc2);
+
+    text-decoration-color: var(--bs-link-color, #007bc2);
+    text-decoration-line: underline;
+    text-decoration-style: dotted;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 2px;
+    text-underline-offset: 4px;
+    text-decoration-thickness: 2px;
+
+    padding: 2px;
+
+    &:hover {
+      text-decoration-style: solid;
+    }
+
+    &::after {
+      content: "\2726"; // diamond/star
+      display: inline-block;
+      margin-inline-start: 0.15em;
+    }
+
+    &.submit,
+    &[data-suggestion-submit=""],
+    &[data-suggestion-submit="true"] {
+      &::after {
+        content: "\21B5"; // return key symbol
+      }
+    }
+  }
 }
 
 shiny-chat-messages {
