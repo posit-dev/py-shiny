@@ -7,7 +7,7 @@ from .. import _utils, reactive
 from .._docstring import add_example
 from .._namespaces import resolve_id
 from .._typing_extensions import TypedDict
-from ..session import require_active_session
+from ..session import require_active_session, session_context
 from ..types import NotifyException
 from ..ui.css import CssUnit, as_css_unit
 from . import Tag
@@ -86,6 +86,11 @@ class MarkdownStream:
 
         self.on_error = on_error
 
+        with session_context(self._session):
+            self._latest_stream: reactive.Value[
+                Union[reactive.ExtendedTask[[], str], None]
+            ] = reactive.Value(None)
+
     async def stream(
         self,
         content: Union[Iterable[str], AsyncIterable[str]],
@@ -109,6 +114,13 @@ class MarkdownStream:
         ----
         If you already have the content available as a string, you can do
         `.stream([content])` to set the content.
+
+        Returns
+        -------
+        :
+            An extended task that represents the streaming task. The `.result()` method
+            of the task can be called in a reactive context to get the final state of the
+            stream.
         """
 
         content = _utils.wrap_async_iterable(content)
@@ -138,6 +150,33 @@ class MarkdownStream:
             _handle_error.destroy()  # type: ignore
 
         return _task
+
+    def get_latest_stream_result(self) -> Union[str, None]:
+        """
+        Reactively read the latest stream result.
+
+        This method reads a reactive value containing the result of the latest
+        `.stream()`. Therefore, this method must be called in a reactive context (e.g.,
+        a render function, a :func:`~shiny.reactive.calc`, or a
+        :func:`~shiny.reactive.effect`).
+
+        Returns
+        -------
+        :
+            The result of the latest stream (a string).
+
+        Raises
+        ------
+        :
+            A silent exception if no stream has completed yet.
+        """
+        stream = self._latest_stream()
+        if stream is None:
+            from .. import req
+
+            req(False)
+        else:
+            return stream.result()
 
     async def clear(self):
         """

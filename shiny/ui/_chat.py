@@ -210,6 +210,10 @@ class Chat:
                 reactive.Value(None)
             )
 
+            self._latest_stream: reactive.Value[
+                reactive.ExtendedTask[[], str] | None
+            ] = reactive.Value(None)
+
             # TODO: deprecate messages once we start promoting managing LLM message
             # state through other means
             @reactive.effect
@@ -633,6 +637,13 @@ class Chat:
         Use this method (over `.append_message()`) when `stream=True` (or similar) is
         specified in model's completion method.
         ```
+
+        Returns
+        -------
+        :
+            An extended task that represents the streaming task. The `.result()` method
+            of the task can be called in a reactive context to get the final state of the
+            stream.
         """
 
         message = _utils.wrap_async_iterable(message)
@@ -640,9 +651,11 @@ class Chat:
         # Run the stream in the background to get non-blocking behavior
         @reactive.extended_task
         async def _stream_task():
-            await self._append_message_stream(message, icon=assistant_icon)
+            return await self._append_message_stream(message, icon=assistant_icon)
 
         _stream_task()
+
+        self._latest_stream.set(_stream_task)
 
         # Since the task runs in the background (outside/beyond the current context,
         # if any), we need to manually raise any exceptions that occur
@@ -652,6 +665,35 @@ class Chat:
             if e:
                 await self._raise_exception(e)
             _handle_error.destroy()  # type: ignore
+
+        return _stream_task
+
+    def get_latest_stream_result(self) -> str | None:
+        """
+        Reactively read the latest message stream result.
+
+        This method reads a reactive value containing the result of the latest
+        `.append_message_stream()`. Therefore, this method must be called in a reactive
+        context (e.g., a render function, a :func:`~shiny.reactive.calc`, or a
+        :func:`~shiny.reactive.effect`).
+
+        Returns
+        -------
+        :
+            The result of the latest stream (a string).
+
+        Raises
+        ------
+        :
+            A silent exception if no stream has completed yet.
+        """
+        stream = self._latest_stream()
+        if stream is None:
+            from .. import req
+
+            req(False)
+        else:
+            return stream.result()
 
     async def _append_message_stream(
         self,
@@ -666,6 +708,7 @@ class Chat:
         try:
             async for msg in message:
                 await self._append_message(msg, chunk=True, stream_id=id)
+            return self._current_stream_message
         finally:
             await self._append_message(empty, chunk="end", stream_id=id)
             await self._flush_pending_messages()
