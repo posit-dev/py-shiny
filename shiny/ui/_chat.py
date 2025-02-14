@@ -493,7 +493,7 @@ class Chat:
         self,
         message: Any,
         *,
-        assistant_icon: HTML | Tag | None = None,
+        icon: HTML | Tag | None = None,
     ):
         """
         Append a message to the chat.
@@ -507,13 +507,14 @@ class Chat:
             Content strings are interpreted as markdown and rendered to HTML on the
             client. Content may also include specially formatted **input suggestion**
             links (see note below).
-        assistant_icon
-            An optional icon to display next to the assistant message. The icon can be
-            any HTML element (e.g., an :func:`~shiny.ui.img` tag) or a string of HTML.
+        icon
+            An optional icon to display next to the message, currently only used for
+            assistant messages . The icon can be any HTML element (e.g., an
+            :func:`~shiny.ui.img` tag) or a string of HTML.
 
         Note
         ----
-        ``{.callout-note title="Input suggestions"}
+        :::{.callout-note title="Input suggestions"}
         Input suggestions are special links that send text to the user input box when
         clicked (or accessed via keyboard). They can be created in the following ways:
 
@@ -532,14 +533,14 @@ class Chat:
 
         Note that a user may also opt-out of submitting a suggestion by holding the
         `Alt/Option` key while clicking the suggestion link.
-        ```
+        :::
 
-        ```{.callout-note title="Streamed messages"}
+        :::{.callout-note title="Streamed messages"}
         Use `.append_message_stream()` instead of this method when `stream=True` (or
         similar) is specified in model's completion method.
-        ```
+        :::
         """
-        await self._append_message(message, icon=assistant_icon)
+        await self._append_message(message, icon=icon)
 
     async def _append_message(
         self,
