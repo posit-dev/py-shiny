@@ -1,3 +1,5 @@
+from typing import Optional
+
 from playwright.sync_api import Page, expect
 from utils.deploy_utils import skip_on_webkit
 
@@ -11,7 +13,7 @@ class ChatModule:
         self.chat = controller.Chat(page, f"chat_{id}")
         self.classes = classes
 
-    def expect_last_message_icon_to_have_classes(self, classes: str | None = None):
+    def expect_last_message_icon_to_have_classes(self, classes: Optional[str] = None):
         # TODO: Fix this test to find icon in shadow root
         if self.id == "default":
             last_msg_icon = self.chat.loc_latest_message.locator(
