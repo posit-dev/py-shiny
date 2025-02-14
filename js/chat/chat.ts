@@ -2,6 +2,7 @@ import { LitElement, css, html } from "lit";
 import { unsafeHTML } from "lit-html/directives/unsafe-html.js";
 import { property } from "lit/decorators.js";
 
+import { MarkdownElement } from "../markdown-stream/markdown-stream";
 import {
   LightElement,
   createElement,
@@ -114,15 +115,53 @@ class ChatMessage extends LitElement {
       <div class="message-icon">
         <slot name="icon">${unsafeHTML(defaultIcon)}</slot>
       </div>
-      <shiny-markdown-stream
-        content=${this.content}
-        content-type=${this.content_type}
-        ?streaming=${this.streaming}
-        auto-scroll
-        .onContentChange=${this.#onContentChange}
-        .onStreamEnd=${this.#makeSuggestionsAccessible}
-      ></shiny-markdown-stream>
+      <slot name="content">${this.content}</slot>
     `;
+  }
+
+  updated(changedProperties: Map<string, unknown>) {
+    super.updated(changedProperties);
+
+    if (
+      changedProperties.has("content") ||
+      changedProperties.has("content_type") ||
+      changedProperties.has("streaming")
+    ) {
+      this.#onContentUpdate();
+    }
+  }
+
+  #onContentUpdate() {
+    const markdownStream = this.#getOrCreateMarkdownStream();
+    if (!markdownStream) return;
+
+    markdownStream.setAttribute("content", this.content);
+    markdownStream.setAttribute("content-type", this.content_type);
+    markdownStream.toggleAttribute("streaming", this.streaming);
+  }
+
+  #getOrCreateMarkdownStream(): MarkdownElement | void {
+    if (this.content_type === "text") return;
+
+    let markdownStream = this.querySelector('[slot="content"]');
+
+    if (!markdownStream) {
+      markdownStream = document.createElement("shiny-markdown-stream");
+      markdownStream.setAttribute("slot", "content");
+      markdownStream.setAttribute("auto-scroll", "");
+      this.appendChild(markdownStream);
+
+      if (markdownStream instanceof MarkdownElement) {
+        markdownStream.onContentChange = this.#onContentChange.bind(this);
+        markdownStream.onStreamEnd = this.#makeSuggestionsAccessible.bind(this);
+      }
+    }
+
+    if (!(markdownStream instanceof MarkdownElement)) {
+      throw `ChatMessage only accepts <shiny-markdown-stream> in the "content" slot.`;
+    }
+
+    return markdownStream;
   }
 
   #onContentChange(): void {
