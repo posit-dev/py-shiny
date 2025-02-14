@@ -12,7 +12,10 @@ class ChatModule:
         self.classes = classes
 
     def expect_last_message_icon_to_have_classes(self):
-        last_msg_icon = self.chat.loc_latest_message.locator(".message-icon > *")
+        # TODO: Fix this test to find icon in shadow root
+        last_msg_icon = self.chat.loc_latest_message.locator(
+            '.message-icon > slot[name="icon"] > *'
+        )
         expect(last_msg_icon).to_have_class(self.classes)
 
 

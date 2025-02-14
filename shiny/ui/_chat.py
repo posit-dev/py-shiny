@@ -1233,11 +1233,13 @@ def chat_ui(
 
     res = Tag(
         "shiny-chat-container",
-        Tag("shiny-chat-messages", *message_tags),
+        Tag("div", icon_assistant, class_="icon-container", slot="icon-assistant"),
+        Tag("shiny-chat-messages", *message_tags, slot="messages"),
         Tag(
             "shiny-chat-input",
             id=f"{id}_user_input",
             placeholder=placeholder,
+            slot="input",
         ),
         chat_deps(),
         html_deps,
@@ -1250,7 +1252,6 @@ def chat_ui(
         id=id,
         placeholder=placeholder,
         fill=fill,
-        icon=str(icon_assistant) if icon_assistant else None,
         **kwargs,
     )
 
