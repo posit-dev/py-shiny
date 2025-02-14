@@ -458,7 +458,7 @@ class ChatContainer extends LitElement {
       icon = document.createElement("div");
       icon.innerHTML = message.icon;
       if (icon.firstChild) {
-        icon = icon.firstChild.cloneNode() as HTMLElement;
+        icon = icon.firstChild as HTMLElement;
       } else {
         icon = undefined;
       }
