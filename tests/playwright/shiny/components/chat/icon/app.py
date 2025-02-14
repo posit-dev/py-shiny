@@ -47,9 +47,15 @@ with ui.layout_columns():
     async def handle_user_input_otter(user_input: str):
         await asyncio.sleep(1)
         icon_name = input.animal().lower()
+        if icon_name == "Otter":
+            # Don't include the icon in the custom message, i.e. use default icon
+            icon = None
+        else:
+            icon = faicons.icon_svg(icon_name).add_class(f"icon-{icon_name}")
+
         await chat_animal.append_message(
             f"{input.animal()} said: {user_input}",
-            icon=faicons.icon_svg(icon_name).add_class(f"icon-{icon_name}"),
+            icon=icon,
         )
 
     # SVG Bot -------------------------------------------------------------------------

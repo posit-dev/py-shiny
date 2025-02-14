@@ -55,3 +55,10 @@ def test_validate_chat_basic(page: Page, local_app: ShinyAppProc) -> None:
     chat_animal.chat.set_user_input("hello")
     chat_animal.chat.send_user_input()
     chat_animal.expect_last_message_icon_to_have_classes("fa icon-frog")
+
+    # Test that the icon used is the default if no icon is sent
+    # (the message-specific icon is just for that message)
+    animal.set("Otter")
+    chat_animal.chat.set_user_input("hello")
+    chat_animal.chat.send_user_input()
+    chat_animal.expect_last_message_icon_to_have_classes()
