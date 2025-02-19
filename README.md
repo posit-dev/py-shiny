@@ -77,6 +77,4 @@ make check-tests
 make check-types
 make check-lint
 make check-format
-# TODO: Requires uv.
-# make ci-check-mypy-can-run
 ```
