@@ -58,7 +58,7 @@ git fetch --tags upstream
 Then install:
 
 ```sh
-pip install -e ".[dev,test]"
+pip install -e ".[dev,test,doc]"
 ```
 
 Additionally, you can install pre-commit hooks which will automatically reformat and lint the code when you make a commit:
@@ -78,3 +78,5 @@ make check-types
 make check-lint
 make check-format
 ```
+
+See the [docs README](docs/README.md) for instructions on building the documentation locally.
