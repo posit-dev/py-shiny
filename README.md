@@ -69,3 +69,14 @@ pre-commit install
 # To disable:
 # pre-commit uninstall
 ```
+
+Tests should now pass:
+
+```sh
+make check-tests
+make check-types
+make check-lint
+make check-format
+# TODO: Requires uv.
+# make ci-check-mypy-can-run
+```
