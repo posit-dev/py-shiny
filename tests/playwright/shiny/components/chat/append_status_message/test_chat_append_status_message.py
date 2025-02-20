@@ -29,7 +29,6 @@ def test_validate_chat_basic(page: Page, local_app: ShinyAppProc) -> None:
     expect(chat.loc_latest_message).to_have_attribute("content_type", "html")
     expect(chat.loc_latest_message).to_have_attribute("type", "dynamic")
 
-
     # Send a status message that updates the original message
     content.set("Using model <code>phi4</code>")
     submit.click()
@@ -37,18 +36,23 @@ def test_validate_chat_basic(page: Page, local_app: ShinyAppProc) -> None:
     expect(chat.loc_latest_message).to_have_attribute("content_type", "html")
     expect(chat.loc_latest_message).to_have_attribute("type", "dynamic")
 
-
     # Send a new status message that is static (doesn't overwrite previous message)
-    html_message='<div class="alert alert-warning">Lost connection with provider.</div>'
+    html_message = (
+        '<div class="alert alert-warning">Lost connection with provider.</div>'
+    )
     content.set(html_message)
     status_type.set("static")
     submit.click()
     chat.expect_latest_message("Lost connection with provider.")
     expect(chat.loc_latest_message).to_have_attribute("content_type", "html")
     expect(chat.loc_latest_message).to_have_attribute("type", "static")
-    expect(chat.loc_latest_message.locator("> :first-child")).to_have_class("alert alert-warning")
+    expect(chat.loc_latest_message.locator("> :first-child")).to_have_class(
+        "alert alert-warning"
+    )
     # previous status message is still there
-    expect(chat.loc_messages.locator("> :nth-last-child(2)")).to_have_text("Using model phi4")
+    expect(chat.loc_messages.locator("> :nth-last-child(2)")).to_have_text(
+        "Using model phi4"
+    )
 
     # Now another message as raw text
     content.set("Using model <code>deepseek-r1</code>")
@@ -66,7 +70,6 @@ def test_validate_chat_basic(page: Page, local_app: ShinyAppProc) -> None:
     expect(chat.loc_latest_message).to_have_attribute("content_type", "html")
     expect(chat.loc_latest_message).to_have_attribute("type", "dynamic")
 
-
     chat.set_user_input("Hello")
     chat.send_user_input()
     chat.expect_latest_message("You said: Hello")
@@ -75,4 +78,6 @@ def test_validate_chat_basic(page: Page, local_app: ShinyAppProc) -> None:
     chat.expect_latest_message("Disconnecting. Goodbye!")
     expect(chat.loc_latest_message).to_have_attribute("content_type", "html")
     expect(chat.loc_latest_message).to_have_attribute("type", "dynamic")
-    expect(chat.loc_messages.locator("> :nth-last-child(4)")).to_have_text("Using model deepseek-r1")
+    expect(chat.loc_messages.locator("> :nth-last-child(4)")).to_have_text(
+        "Using model deepseek-r1"
+    )

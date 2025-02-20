@@ -20,7 +20,9 @@ with ui.card():
 
     with ui.layout_columns():
         with ui.div():
-            ui.input_text("content", "Message Content", "Using model <code>llama3.2</code>")
+            ui.input_text(
+                "content", "Message Content", "Using model <code>llama3.2</code>"
+            )
             ui.input_switch("content_is_html", "Raw HTML", True)
 
         ui.input_radio_buttons("type", "Status type", choices=["dynamic", "static"])
@@ -41,5 +43,4 @@ async def send_status_message():
     if input.content_is_html.get():
         content = ui.HTML(content)
 
-    await chat.append_status_message(content, type = input.type())
-
+    await chat.append_status_message(content, type=input.type())
