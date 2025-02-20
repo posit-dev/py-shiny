@@ -59,10 +59,8 @@ with ui.sidebar(title="Chat options"):
 
 
 # Create and display a Shiny chat component
-chat = ui.Chat(
-    id="chat",
-    messages=["Hello! How can I help you today?"],
-)
+INITIAL_MESSAGE = "Hello! How can I help you today?"
+chat = ui.Chat(id="chat", messages=[INITIAL_MESSAGE])
 
 chat.ui()
 
@@ -87,7 +85,7 @@ async def cancel_chat_stream(chat: ChatOllama, stream: ExtendedTask):
             ui.div(
                 "The previous response was cancelled.",
                 class_="alert alert-warning",
-                style="margin-inline: auto; width: max-content;"
+                style="margin-inline: auto; width: max-content;",
             ),
             type="static",
         )
@@ -99,7 +97,7 @@ async def change_model():
     if chat_client.get() is None:
         client = ChatOllama(model=input.model())
         await chat.append_status_message(
-            ui.HTML(f"Using model <code>{input.model()}</code>"), type="static"
+            ui.HTML(f"Using model <code>{input.model()}</code>"), type="dynamic"
         )
     else:
         stream = streaming_task.get()
@@ -141,11 +139,11 @@ async def reset_chat():
         await cancel_chat_stream(chat, stream)
     else:
         await chat.clear_messages()
-        await chat.append_message("Hello! How can I help you today?")
         chat_client.set(ChatOllama(model=input.model()))
         await chat.append_status_message(
             ui.HTML(f"Using model <code>{input.model()}</code>")
         )
+        await chat.append_message(INITIAL_MESSAGE)
 
 
 @reactive.effect
