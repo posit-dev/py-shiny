@@ -34,7 +34,7 @@ type UpdateUserInput = {
 type StatusMessage = {
   content: string;
   content_type: Exclude<ContentType, "markdown">;
-  replaceable: "true" | "false" | "";
+  type: "dynamic" | "static";
 };
 
 // https://github.com/microsoft/TypeScript/issues/28357#issuecomment-748550734
@@ -444,12 +444,14 @@ class ChatContainer extends LightElement {
   }
 
   #onAppendStatus(event: CustomEvent<StatusMessage>): void {
-    if (this.messages.lastChild instanceof ChatStatusMessage) {
-      if (this.messages.lastChild.type == "dynamic") {
-        // Update previous status message if last message was a status item
-        this.messages.lastChild.content = event.detail.content;
-        this.messages.lastChild.content_type = event.detail.content_type;
-        return;
+    if (event.detail.type === "dynamic") {
+      if (this.messages.lastChild instanceof ChatStatusMessage) {
+        if (this.messages.lastChild.type == "dynamic") {
+          // Update previous status message if last message was a status item
+          this.messages.lastChild.content = event.detail.content;
+          this.messages.lastChild.content_type = event.detail.content_type;
+          return;
+        }
       }
     }
 
