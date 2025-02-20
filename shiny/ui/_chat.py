@@ -513,7 +513,7 @@ class Chat:
             links (see note below).
         icon
             An optional icon to display next to the message, currently only used for
-            assistant messages . The icon can be any HTML element (e.g., an
+            assistant messages. The icon can be any HTML element (e.g., an
             :func:`~shiny.ui.img` tag) or a string of HTML.
 
         Note
@@ -608,7 +608,7 @@ class Chat:
             specially formatted **input suggestion** links (see note below).
         icon
             An optional icon to display next to the message, currently only used for
-            assistant messages . The icon can be any HTML element (e.g., an
+            assistant messages. The icon can be any HTML element (e.g., an
             :func:`~shiny.ui.img` tag) or a string of HTML.
 
         Note
