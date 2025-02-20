@@ -742,7 +742,7 @@ class Chat:
     async def append_status_message(
         self,
         content: str | Tag | HTML,
-        type: Literal["dynamic", "static"] = "dynamic"
+        type: Literal["dynamic", "static"] = "dynamic",
     ) -> None:
         """
         Append a status message to the chat.
@@ -763,7 +763,7 @@ class Chat:
         msg: ChatStatusMessage = {
             "content": str(content),
             "content_type": "html" if isinstance(content, (Tag, HTML)) else "text",
-            "type": type
+            "type": type,
         }
         await self._send_custom_message("shiny-chat-append-status-message", msg)
 
