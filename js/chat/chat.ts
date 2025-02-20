@@ -1,8 +1,7 @@
-import { LitElement, css, html } from "lit";
+import { LitElement, html } from "lit";
 import { unsafeHTML } from "lit-html/directives/unsafe-html.js";
 import { property } from "lit/decorators.js";
 
-import { MarkdownElement } from "../markdown-stream/markdown-stream";
 import {
   LightElement,
   createElement,
@@ -58,110 +57,28 @@ const ICONS = {
     '<svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><style>.spinner_S1WN{animation:spinner_MGfb .8s linear infinite;animation-delay:-.8s}.spinner_Km9P{animation-delay:-.65s}.spinner_JApP{animation-delay:-.5s}@keyframes spinner_MGfb{93.75%,100%{opacity:.2}}</style><circle class="spinner_S1WN" cx="4" cy="12" r="3"/><circle class="spinner_S1WN spinner_Km9P" cx="12" cy="12" r="3"/><circle class="spinner_S1WN spinner_JApP" cx="20" cy="12" r="3"/></svg>',
 };
 
-class ChatMessage extends LitElement {
+class ChatMessage extends LightElement {
   @property() content = "...";
   @property() content_type: ContentType = "markdown";
   @property({ type: Boolean, reflect: true }) streaming = false;
-
-  static styles = css`
-    :host {
-      display: grid;
-      grid-template-columns: auto minmax(0, 1fr);
-      gap: 1rem;
-      align-items: start;
-    }
-
-    :host > * {
-      height: fit-content;
-    }
-
-    .message-icon {
-      border-radius: 50%;
-      border: var(--shiny-chat-border);
-      height: 2rem;
-      width: 2rem;
-      display: grid;
-      place-items: center;
-    }
-
-    slot[name="icon"] > * {
-      height: 20px;
-      width: 20px;
-      margin: 0 !important;
-      max-height: 85%;
-      max-width: 85%;
-      object-fit: contain;
-    }
-
-    /* Vertically center the 2nd column (message content) */
-    shiny-markdown-stream {
-      align-self: center;
-
-      p:first-child {
-        margin-block-start: 0;
-      }
-      p:last-child {
-        margin-block-end: 0;
-      }
-    }
-  `;
+  @property() icon = "";
 
   render() {
     // Show dots until we have content
-    const hasContent = this.content.trim().length > 0;
-    const defaultIcon = hasContent ? ICONS.robot : ICONS.dots_fade;
+    const isEmpty = this.content.trim().length === 0;
+    const icon = isEmpty ? ICONS.dots_fade : this.icon || ICONS.robot;
 
     return html`
-      <div class="message-icon">
-        <slot name="icon">${unsafeHTML(defaultIcon)}</slot>
-      </div>
-      <slot name="content">${this.content}</slot>
+      <div class="message-icon">${unsafeHTML(icon)}</div>
+      <shiny-markdown-stream
+        content=${this.content}
+        content-type=${this.content_type}
+        ?streaming=${this.streaming}
+        auto-scroll
+        .onContentChange=${this.#onContentChange}
+        .onStreamEnd=${this.#makeSuggestionsAccessible}
+      ></shiny-markdown-stream>
     `;
-  }
-
-  updated(changedProperties: Map<string, unknown>) {
-    super.updated(changedProperties);
-
-    if (
-      changedProperties.has("content") ||
-      changedProperties.has("content_type") ||
-      changedProperties.has("streaming")
-    ) {
-      this.#onContentUpdate();
-    }
-  }
-
-  #onContentUpdate() {
-    const markdownStream = this.#getOrCreateMarkdownStream();
-    if (!markdownStream) return;
-
-    markdownStream.setAttribute("content", this.content);
-    markdownStream.setAttribute("content-type", this.content_type);
-    markdownStream.toggleAttribute("streaming", this.streaming);
-  }
-
-  #getOrCreateMarkdownStream(): MarkdownElement | void {
-    if (this.content_type === "text") return;
-
-    let markdownStream = this.querySelector('[slot="content"]');
-
-    if (!markdownStream) {
-      markdownStream = document.createElement("shiny-markdown-stream");
-      markdownStream.setAttribute("slot", "content");
-      markdownStream.setAttribute("auto-scroll", "");
-      this.appendChild(markdownStream);
-
-      if (markdownStream instanceof MarkdownElement) {
-        markdownStream.onContentChange = this.#onContentChange.bind(this);
-        markdownStream.onStreamEnd = this.#makeSuggestionsAccessible.bind(this);
-      }
-    }
-
-    if (!(markdownStream instanceof MarkdownElement)) {
-      throw `ChatMessage only accepts <shiny-markdown-stream> in the "content" slot.`;
-    }
-
-    return markdownStream;
   }
 
   #onContentChange(): void {
@@ -347,7 +264,9 @@ class ChatInput extends LightElement {
   }
 }
 
-class ChatContainer extends LitElement {
+class ChatContainer extends LightElement {
+  @property({ attribute: "icon-assistant" }) iconAssistant = "";
+
   private get input(): ChatInput {
     return this.querySelector(CHAT_INPUT_TAG) as ChatInput;
   }
@@ -361,30 +280,8 @@ class ChatContainer extends LitElement {
     return last ? (last as ChatMessage) : null;
   }
 
-  private get iconAssistant(): Element | void {
-    const slot = this.shadowRoot?.querySelector(
-      'slot[name="icon-assistant"]'
-    ) as HTMLSlotElement;
-
-    if (!slot) return;
-
-    let icon: Element | undefined | null = slot.assignedElements()[0];
-    if (!icon) return;
-
-    if (icon?.matches(".icon-container")) {
-      // From Python/R we use a wrapper element because users may give raw HTML
-      icon = icon.firstElementChild;
-    }
-
-    return icon ? icon : undefined;
-  }
-
   render() {
-    return html`
-      <slot name="icon-assistant" style="display: none"></slot>
-      <slot name="messages"></slot>
-      <slot name="input"></slot>
-    `;
+    return html``;
   }
 
   firstUpdated(): void {
@@ -450,42 +347,17 @@ class ChatContainer extends LitElement {
     }
   }
 
-  #messageIcon(message: Message): HTMLElement | undefined {
-    if (message.role === "user") return;
-
-    let icon: HTMLElement | undefined;
-    if (message.icon) {
-      icon = document.createElement("div");
-      icon.innerHTML = message.icon;
-      if (icon.firstChild) {
-        icon = icon.firstChild as HTMLElement;
-      } else {
-        icon = undefined;
-      }
-    }
-
-    if (!icon && this.iconAssistant) {
-      icon = this.iconAssistant.cloneNode(true) as HTMLElement;
-    }
-
-    if (!icon) return;
-    icon.setAttribute("slot", "icon");
-    return icon;
-  }
-
   #appendMessage(message: Message, finalize = true): void {
     this.#initMessage();
 
     const TAG_NAME =
       message.role === "user" ? CHAT_USER_MESSAGE_TAG : CHAT_MESSAGE_TAG;
 
-    const msg = createElement(TAG_NAME, message);
-
-    const icon = this.#messageIcon(message);
-    if (icon) {
-      msg.appendChild(icon);
+    if (this.iconAssistant) {
+      message.icon = message.icon || this.iconAssistant;
     }
 
+    const msg = createElement(TAG_NAME, message);
     this.messages.appendChild(msg);
 
     if (finalize) {

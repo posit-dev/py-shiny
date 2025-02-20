@@ -592,7 +592,7 @@ class Chat:
         self,
         message: Iterable[Any] | AsyncIterable[Any],
         *,
-        assistant_icon: HTML | Tag | None = None,
+        icon: HTML | Tag | None = None,
     ):
         """
         Append a message as a stream of message chunks.
@@ -606,9 +606,10 @@ class Chat:
             OpenAI, Anthropic, Ollama, and others. Content strings are interpreted as
             markdown and rendered to HTML on the client. Content may also include
             specially formatted **input suggestion** links (see note below).
-        assistant_icon
-            An optional icon to display next to the assistant message. The icon can be
-            any HTML element (e.g., an :func:`~shiny.ui.img` tag) or a string of HTML.
+        icon
+            An optional icon to display next to the message, currently only used for
+            assistant messages . The icon can be any HTML element (e.g., an
+            :func:`~shiny.ui.img` tag) or a string of HTML.
 
         Note
         ----
@@ -651,7 +652,7 @@ class Chat:
         # Run the stream in the background to get non-blocking behavior
         @reactive.extended_task
         async def _stream_task():
-            return await self._append_message_stream(message, icon=assistant_icon)
+            return await self._append_message_stream(message, icon=icon)
 
         _stream_task()
 
@@ -1277,13 +1278,11 @@ def chat_ui(
 
     res = Tag(
         "shiny-chat-container",
-        Tag("div", icon_assistant, class_="icon-container", slot="icon-assistant"),
-        Tag("shiny-chat-messages", *message_tags, slot="messages"),
+        Tag("shiny-chat-messages", *message_tags),
         Tag(
             "shiny-chat-input",
             id=f"{id}_user_input",
             placeholder=placeholder,
-            slot="input",
         ),
         chat_deps(),
         html_deps,
@@ -1296,6 +1295,7 @@ def chat_ui(
         id=id,
         placeholder=placeholder,
         fill=fill,
+        icon_assistant=str(icon_assistant) if icon_assistant is not None else None,
         **kwargs,
     )
 
