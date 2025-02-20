@@ -17,7 +17,7 @@ from typing import (
 )
 from weakref import WeakValueDictionary
 
-from htmltools import HTML, Tag, TagAttrValue, css
+from htmltools import HTML, Tag, TagAttrValue, TagList, css
 
 from .. import _utils, reactive
 from .._deprecated import warn_deprecated
@@ -497,7 +497,7 @@ class Chat:
         self,
         message: Any,
         *,
-        icon: HTML | Tag | None = None,
+        icon: HTML | Tag | TagList | None = None,
     ):
         """
         Append a message to the chat.
@@ -552,7 +552,7 @@ class Chat:
         *,
         chunk: ChunkOption = False,
         stream_id: str | None = None,
-        icon: HTML | Tag | None = None,
+        icon: HTML | Tag | TagList | None = None,
     ) -> None:
         # If currently we're in a stream, handle other messages (outside the stream) later
         if not self._can_append_message(stream_id):
@@ -733,7 +733,7 @@ class Chat:
         self,
         message: TransformedMessage,
         chunk: ChunkOption = False,
-        icon: HTML | Tag | None = None,
+        icon: HTML | Tag | TagList | None = None,
     ):
         if message["role"] == "system":
             # System messages are not displayed in the UI
@@ -1162,7 +1162,7 @@ class ChatExpress(Chat):
         width: CssUnit = "min(680px, 100%)",
         height: CssUnit = "auto",
         fill: bool = True,
-        icon_assistant: HTML | Tag | None = None,
+        icon_assistant: HTML | Tag | TagList | None = None,
         **kwargs: TagAttrValue,
     ) -> Tag:
         """
@@ -1212,7 +1212,7 @@ def chat_ui(
     width: CssUnit = "min(680px, 100%)",
     height: CssUnit = "auto",
     fill: bool = True,
-    icon_assistant: HTML | Tag | None = None,
+    icon_assistant: HTML | Tag | TagList | None = None,
     **kwargs: TagAttrValue,
 ) -> Tag:
     """
@@ -1273,7 +1273,7 @@ def chat_ui(
         message_tags.append(Tag(tag_name, content=msg["content"]))
 
     html_deps = None
-    if isinstance(icon_assistant, Tag):
+    if isinstance(icon_assistant, (Tag, TagList)):
         html_deps = icon_assistant.get_dependencies()
 
     res = Tag(
