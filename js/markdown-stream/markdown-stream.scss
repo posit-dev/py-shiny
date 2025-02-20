@@ -49,3 +49,24 @@ pre:has(.code-copy-button) {
     background-color: var(--bs-success, #198754);
   }
 }
+
+@keyframes markdown-stream-dot-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(0.4);
+    opacity: 0.4;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.markdown-stream-dot {
+  animation: markdown-stream-dot-pulse 2s infinite cubic-bezier(0.18, 0.89, 0.32, 1.28);
+  display: inline-block;
+  transform-origin: center;
+}
