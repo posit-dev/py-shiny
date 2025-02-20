@@ -83,7 +83,14 @@ async def cancel_chat_stream(chat: ChatOllama, stream: ExtendedTask):
             chunk="end",
             stream_id=stream_id,
         )
-        await chat.append_status_message("In-progress response was cancelled.", type="static")
+        await chat.append_status_message(
+            ui.div(
+                "The previous response was cancelled.",
+                class_="alert alert-warning",
+                style="margin-inline: auto; width: max-content;"
+            ),
+            type="static",
+        )
 
 
 @reactive.effect
@@ -136,7 +143,9 @@ async def reset_chat():
         await chat.clear_messages()
         await chat.append_message("Hello! How can I help you today?")
         chat_client.set(ChatOllama(model=input.model()))
-        await chat.append_status_message(ui.HTML(f"Using model <code>{input.model()}</code>"))
+        await chat.append_status_message(
+            ui.HTML(f"Using model <code>{input.model()}</code>")
+        )
 
 
 @reactive.effect
@@ -162,7 +171,8 @@ async def edit_last_message():
 
     # Find the index of the last user message
     last_user_index = next(
-        (i for i, msg in enumerate(messages) if msg["role"] == "user"), None
+        (i for i, msg in reversed(list(enumerate(messages))) if msg["role"] == "user"),
+        None,
     )
     if last_user_index is None:
         raise ValueError("No user messages found")
