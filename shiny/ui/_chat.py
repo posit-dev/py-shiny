@@ -38,7 +38,12 @@ from ._chat_provider_types import (
     as_provider_message,
 )
 from ._chat_tokenizer import TokenEncoding, TokenizersEncoding, get_default_tokenizer
-from ._chat_types import ChatMessage, ClientMessage, TransformedMessage
+from ._chat_types import (
+    ChatMessage,
+    ChatStatusMessage,
+    ClientMessage,
+    TransformedMessage,
+)
 from ._html_deps_py_shiny import chat_deps
 from .fill import as_fill_item, as_fillable_container
 
@@ -734,6 +739,34 @@ class Chat:
         # TODO: Joe said it's a good idea to yield here, but I'm not sure why?
         # await asyncio.sleep(0)
 
+    async def append_status_message(
+        self,
+        content: str | Tag | HTML,
+        type: Literal["dynamic", "static"] = "dynamic"
+    ) -> None:
+        """
+        Append a status message to the chat.
+
+        Adds or updates a status message in the chat messages area.
+
+        Parameters
+        ----------
+        content
+            The content of the message to append, as a string of plain text or as HTML
+            in the form of :class:`~htmltools.Tag` or :class:`~htmltools.HTML`.
+        type
+            Whether this status message is `"dynamic"` and can be replaced by a
+            subsequent status message before the next user or assistant turn, or if the
+            message should not be updated by subsequent status messages (`"static"`).
+        """
+
+        msg: ChatStatusMessage = {
+            "content": str(content),
+            "content_type": "html" if isinstance(content, (Tag, HTML)) else "text",
+            "type": type
+        }
+        await self._send_custom_message("shiny-chat-append-status-message", msg)
+
     @overload
     def transform_user_input(
         self, fn: TransformUserInput | TransformUserInputAsync
@@ -1105,7 +1138,9 @@ class Chat:
     async def _remove_loading_message(self):
         await self._send_custom_message("shiny-chat-remove-loading-message", None)
 
-    async def _send_custom_message(self, handler: str, obj: ClientMessage | None):
+    async def _send_custom_message(
+        self, handler: str, obj: ClientMessage | ChatStatusMessage | None
+    ):
         await self._session.send_custom_message(
             "shinyChatMessage",
             {

@@ -14,6 +14,12 @@ class ChatMessage(TypedDict):
     role: Role
 
 
+class ChatStatusMessage(TypedDict):
+    content: str
+    content_type: Literal["html", "text"]
+    type: Literal["dynamic", "static"]
+
+
 # A message once transformed have been applied
 class TransformedMessage(TypedDict):
     content_client: str | HTML

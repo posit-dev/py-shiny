@@ -95,6 +95,12 @@ shiny-chat-message {
   }
 }
 
+shiny-status-message {
+  opacity: 0.8;
+  text-align: center;
+  font-size: 0.9em;
+}
+
 shiny-chat-input {
   --_input-padding-top: 1rem;
   --_input-padding-bottom: var(--_chat-container-padding, 0.25rem);
