@@ -448,8 +448,11 @@ class ChatContainer extends LightElement {
       if (this.messages.lastChild instanceof ChatStatusMessage) {
         if (this.messages.lastChild.type == "dynamic") {
           // Update previous status message if last message was a status item
-          this.messages.lastChild.content = event.detail.content;
-          this.messages.lastChild.content_type = event.detail.content_type;
+          this.messages.lastChild.setAttribute("content", event.detail.content);
+          this.messages.lastChild.setAttribute(
+            "content_type",
+            event.detail.content_type
+          );
           return;
         }
       }
