@@ -46,6 +46,7 @@ const CHAT_MESSAGE_TAG = "shiny-chat-message";
 const CHAT_USER_MESSAGE_TAG = "shiny-user-message";
 const CHAT_MESSAGES_TAG = "shiny-chat-messages";
 const CHAT_INPUT_TAG = "shiny-chat-input";
+const CHAT_INPUT_SENTINEL_TAG = "shiny-chat-input-sentinel";
 const CHAT_CONTAINER_TAG = "shiny-chat-container";
 
 const ICONS = {
@@ -262,6 +263,8 @@ class ChatInput extends LightElement {
 }
 
 class ChatContainer extends LightElement {
+  inputSentinel?: HTMLElement;
+  inputSentinelObserver?: IntersectionObserver;
 
   private get input(): ChatInput {
     return this.querySelector(CHAT_INPUT_TAG) as ChatInput;
@@ -278,6 +281,34 @@ class ChatContainer extends LightElement {
 
   render() {
     return html``;
+  }
+
+  connectedCallback(): void {
+    super.connectedCallback();
+
+    // We use a sentinel element that we place just above the shiny-chat-input. When it
+    // moves off-screen we know that the text area input is now floating, add shadow.
+    let sentinel = this.querySelector<HTMLElement>(CHAT_INPUT_SENTINEL_TAG);
+    if (!sentinel) {
+      sentinel = createElement(CHAT_INPUT_SENTINEL_TAG, {}) as HTMLElement;
+      this.input.insertAdjacentElement("beforebegin", sentinel);
+    }
+
+    this.inputSentinel = sentinel;
+    this.inputSentinelObserver = new IntersectionObserver(
+      (entries) => {
+        const inputTextarea = this.input.querySelector("textarea");
+        if (!inputTextarea) return;
+        const addShadow = entries[0]?.intersectionRatio === 0;
+        inputTextarea.classList.toggle("shadow", addShadow);
+      },
+      {
+        threshold: [0, 1],
+        rootMargin: "0px",
+      }
+    );
+
+    this.inputSentinelObserver.observe(this.inputSentinel);
   }
 
   firstUpdated(): void {
@@ -305,6 +336,9 @@ class ChatContainer extends LightElement {
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
+
+    this.inputSentinelObserver?.disconnect();
+    this.inputSentinel?.remove();
 
     this.removeEventListener("shiny-chat-input-sent", this.#onInputSent);
     this.removeEventListener("shiny-chat-append-message", this.#onAppend);

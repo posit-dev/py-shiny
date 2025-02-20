@@ -3,13 +3,14 @@ shiny-chat-container {
   --shiny-chat-user-message-bg: RGBA(var(--bs-primary-rgb, 0, 123, 194), 0.06);
   --_chat-container-padding: 0.25rem;
 
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr auto;
   margin: 0 auto;
-  gap: 1rem;
-  overflow: auto;
+  gap: 0.625rem;
   padding: var(--_chat-container-padding);
   padding-bottom: 0; // Bottom padding is on input element
+  overflow: clip;
 
   p:last-child {
     margin-bottom: 0;
@@ -54,6 +55,12 @@ shiny-chat-messages {
   display: flex;
   flex-direction: column;
   gap: 2rem;
+  overflow: auto;
+
+  // Make space for the scroll bar
+  --_scroll-margin: 1rem;
+  padding-right: var(--_scroll-margin);
+  margin-right: calc(-1 * var(--_scroll-margin));
 }
 
 shiny-chat-message {
@@ -96,13 +103,12 @@ shiny-chat-message {
 }
 
 shiny-chat-input {
-  --_input-padding-top: 1rem;
+  --_input-padding-top: 0;
   --_input-padding-bottom: var(--_chat-container-padding, 0.25rem);
 
-  margin-top: auto;
+  margin-top: calc(-1 * var(--_input-padding-top));
   position: sticky;
-  bottom: 0;
-  background: linear-gradient(to bottom, transparent, var(--bs-body-bg, white) calc(var(--_input-padding-top) - var(--_input-padding-bottom)));
+  bottom: calc(-1 * var(--_input-padding-bottom));
   padding-block: var(--_input-padding-top) var(--_input-padding-bottom);
 
   textarea {
@@ -131,6 +137,12 @@ shiny-chat-input {
       color: var(--bs-gray-500, #8d959e);
     }
   }
+}
+
+shiny-chat-input-sentinel {
+  // sentinel element with 0 height that lets us know when input element is floating
+  height: 0;
+  width: 100%;
 }
 
 /*
