@@ -70,16 +70,26 @@ shiny-chat-message {
     width: 2rem;
     display: grid;
     place-items: center;
+    overflow: clip;
 
     > * {
-      height: 20px;
-      width: 20px;
+      // images and avatars are full-bleed
+      height: 100%;
+      width: 100%;
       margin: 0 !important;
-      max-height: 85%;
-      max-width: 85%;
       object-fit: contain;
     }
+
+    > svg,
+    > .icon,
+    > .fa,
+    > .bi {
+      // icons and svgs need some padding within the circle
+      max-height: 66%;
+      max-width: 66%;
+    }
   }
+
   /* Vertically center the 2nd column (message content) */
   shiny-markdown-stream {
     align-self: center;

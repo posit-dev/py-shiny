@@ -26,7 +26,7 @@ def test_validate_chat_basic(page: Page, local_app: ShinyAppProc) -> None:
         ChatModule(page, "default", "bi bi-robot"),
         ChatModule(page, "animal", "fa icon-otter"),
         ChatModule(page, "svg", "bi bi-info-circle-fill icon-svg"),
-        ChatModule(page, "shiny", "icon-shiny"),
+        ChatModule(page, "image", "icon-image grace-hopper"),
     ]
 
     for mod in chats:
@@ -38,6 +38,7 @@ def test_validate_chat_basic(page: Page, local_app: ShinyAppProc) -> None:
 
         mod.expect_last_message_icon_to_have_classes()
 
+    # Test changing icons during the chat
     animal = controller.InputSelect(page, "animal")
     chat_animal = chats[1]
 
@@ -57,3 +58,12 @@ def test_validate_chat_basic(page: Page, local_app: ShinyAppProc) -> None:
     chat_animal.chat.set_user_input("hello")
     chat_animal.chat.send_user_input()
     chat_animal.expect_last_message_icon_to_have_classes()
+
+    # Test changing icon images during the chat
+    image = controller.InputSelect(page, "image")
+    chat_image = chats[3]
+
+    image.set("Shiny")
+    chat_image.chat.set_user_input("hi shiny")
+    chat_image.chat.send_user_input()
+    chat_image.expect_last_message_icon_to_have_classes("icon-image shiny")

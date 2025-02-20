@@ -1,10 +1,13 @@
 import asyncio
+from pathlib import Path
 
 import faicons
 
-from shiny.express import input, ui
+from shiny.express import app_opts, input, ui
 
 ui.page_opts(title="Chat Icons")
+
+app_opts({"/img": Path(__file__).parent / "img"})
 
 with ui.layout_columns():
     # Default Bot ---------------------------------------------------------------------
@@ -83,26 +86,33 @@ with ui.layout_columns():
     async def handle_user_input_svg(user_input: str):
         await chat_svg.append_message(f"You said: {user_input}")
 
-    # Shiny Bot -----------------------------------------------------------------------
-    chat_shiny = ui.Chat(
-        id="chat_shiny",
+    # Image Bot -----------------------------------------------------------------------
+    chat_image = ui.Chat(
+        id="chat_image",
         messages=[
             {
-                "content": "Hello! I'm Shiny Bot. How can I help you today?",
+                "content": "Hello! I'm Image Bot. How can I help you today?",
                 "role": "assistant",
             },
         ],
     )
 
     with ui.div():
-        ui.h2("Shiny Bot")
-        chat_shiny.ui(
+        ui.h2("Image Bot")
+        chat_image.ui(
             icon_assistant=ui.img(
-                src="https://github.com/rstudio/hex-stickers/raw/refs/heads/main/PNG/shiny.png",
-                class_="icon-shiny",
+                src="img/grace-hopper.jpg",
+                class_="icon-image grace-hopper",
             )
         )
+        ui.input_select("image", "Image", choices=["Grace Hopper", "Shiny"])
 
-    @chat_shiny.on_user_submit
-    async def handle_user_input_shiny(user_input: str):
-        await chat_shiny.append_message(f"You said: {user_input}")
+    @chat_image.on_user_submit
+    async def handle_user_input_image(user_input: str):
+        icon = None
+        if input.image() == "Shiny":
+            icon = ui.img(
+                src="img/shiny.png",
+                class_="icon-image shiny",
+            )
+        await chat_image.append_message(f"You said: {user_input}", icon=icon)
