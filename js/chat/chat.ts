@@ -5,8 +5,11 @@ import { property } from "lit/decorators.js";
 import {
   LightElement,
   createElement,
+  renderDependencies,
   showShinyClientMessage,
 } from "../utils/_utils";
+
+import type { HtmlDep } from "../utils/_utils";
 
 type ContentType = "markdown" | "html" | "text";
 
@@ -18,10 +21,13 @@ type Message = {
   icon?: string;
   operation: "append" | null;
 };
+
 type ShinyChatMessage = {
   id: string;
   handler: string;
-  obj: Message;
+  // Message keys will create custom element attributes, but html_deps are handled
+  // separately
+  obj: Message & { html_deps: HtmlDep[] };
 };
 
 type UpdateUserInput = {
@@ -59,7 +65,8 @@ const ICONS = {
 
 class ChatMessage extends LightElement {
   @property() content = "...";
-  @property() content_type: ContentType = "markdown";
+  @property({ attribute: "content-type" }) contentType: ContentType =
+    "markdown";
   @property({ type: Boolean, reflect: true }) streaming = false;
   @property() icon = "";
 
@@ -72,7 +79,7 @@ class ChatMessage extends LightElement {
       <div class="message-icon">${unsafeHTML(icon)}</div>
       <shiny-markdown-stream
         content=${this.content}
-        content-type=${this.content_type}
+        content-type=${this.contentType}
         ?streaming=${this.streaming}
         auto-scroll
         .onContentChange=${this.#onContentChange.bind(this)}
@@ -530,9 +537,15 @@ customElements.define(CHAT_CONTAINER_TAG, ChatContainer);
 $(function () {
   Shiny.addCustomMessageHandler(
     "shinyChatMessage",
-    function (message: ShinyChatMessage) {
+    async function (message: ShinyChatMessage) {
+      const { html_deps, ...msg } = message.obj;
+
+      if (html_deps) {
+        await renderDependencies(html_deps);
+      }
+
       const evt = new CustomEvent(message.handler, {
-        detail: message.obj,
+        detail: msg,
       });
 
       const el = document.getElementById(message.id);

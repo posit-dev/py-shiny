@@ -10,6 +10,8 @@ from contextlib import contextmanager
 from contextvars import ContextVar, Token
 from typing import TYPE_CHECKING, Any, Callable, Optional, TypeVar
 
+from htmltools import TagChild
+
 if TYPE_CHECKING:
     from ._session import Session
 
@@ -130,6 +132,17 @@ def require_active_session(session: Optional[Session]) -> Session:
             f"{calling_fn_name}() must be called from within an active Shiny session."
         )
     return session
+
+
+def process_ui(ui: TagChild) -> tuple[str, list[dict[str, str]]]:
+    """
+    Process a UI element with the session, returning the HTML and dependencies.
+    """
+    if isinstance(ui, (str, float, int)):
+        return str(ui), []
+    session = require_active_session(None)
+    res = session._process_ui(ui)
+    return res["html"], res["deps"]
 
 
 # Ideally I'd love not to limit the types for T, but if I don't, the type checker has
