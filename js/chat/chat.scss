@@ -7,10 +7,9 @@ shiny-chat-container {
   grid-template-columns: 1fr;
   grid-template-rows: 1fr auto;
   margin: 0 auto;
-  gap: 0.625rem;
+  gap: 0;
   padding: var(--_chat-container-padding);
   padding-bottom: 0; // Bottom padding is on input element
-  overflow: clip;
 
   p:last-child {
     margin-bottom: 0;
@@ -56,6 +55,7 @@ shiny-chat-messages {
   flex-direction: column;
   gap: 2rem;
   overflow: auto;
+  margin-bottom: 1rem;
 
   // Make space for the scroll bar
   --_scroll-margin: 1rem;
@@ -137,12 +137,6 @@ shiny-chat-input {
       color: var(--bs-gray-500, #8d959e);
     }
   }
-}
-
-shiny-chat-input-sentinel {
-  // sentinel element with 0 height that lets us know when input element is floating
-  height: 0;
-  width: 100%;
 }
 
 /*
