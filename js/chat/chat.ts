@@ -46,7 +46,6 @@ const CHAT_MESSAGE_TAG = "shiny-chat-message";
 const CHAT_USER_MESSAGE_TAG = "shiny-user-message";
 const CHAT_MESSAGES_TAG = "shiny-chat-messages";
 const CHAT_INPUT_TAG = "shiny-chat-input";
-const CHAT_INPUT_SENTINEL_TAG = "shiny-chat-input-sentinel";
 const CHAT_CONTAINER_TAG = "shiny-chat-container";
 
 const ICONS = {
@@ -263,7 +262,6 @@ class ChatInput extends LightElement {
 }
 
 class ChatContainer extends LightElement {
-  inputSentinel?: HTMLElement;
   inputSentinelObserver?: IntersectionObserver;
 
   private get input(): ChatInput {
@@ -288,15 +286,14 @@ class ChatContainer extends LightElement {
 
     // We use a sentinel element that we place just above the shiny-chat-input. When it
     // moves off-screen we know that the text area input is now floating, add shadow.
-    let sentinel = this.querySelector<HTMLElement>(CHAT_INPUT_SENTINEL_TAG);
+    let sentinel = this.querySelector<HTMLElement>("div");
     if (!sentinel) {
-      sentinel = createElement(CHAT_INPUT_SENTINEL_TAG, {
-        style: "width: 100%; height: 0",
+      sentinel = createElement("div", {
+        style: "width: 100%; height: 0;",
       }) as HTMLElement;
       this.input.insertAdjacentElement("afterend", sentinel);
     }
 
-    this.inputSentinel = sentinel;
     this.inputSentinelObserver = new IntersectionObserver(
       (entries) => {
         const inputTextarea = this.input.querySelector("textarea");
@@ -310,7 +307,7 @@ class ChatContainer extends LightElement {
       }
     );
 
-    this.inputSentinelObserver.observe(this.inputSentinel);
+    this.inputSentinelObserver.observe(sentinel);
   }
 
   firstUpdated(): void {
@@ -340,7 +337,7 @@ class ChatContainer extends LightElement {
     super.disconnectedCallback();
 
     this.inputSentinelObserver?.disconnect();
-    this.inputSentinel?.remove();
+    this.inputSentinelObserver = undefined;
 
     this.removeEventListener("shiny-chat-input-sent", this.#onInputSent);
     this.removeEventListener("shiny-chat-append-message", this.#onAppend);
