@@ -290,8 +290,10 @@ class ChatContainer extends LightElement {
     // moves off-screen we know that the text area input is now floating, add shadow.
     let sentinel = this.querySelector<HTMLElement>(CHAT_INPUT_SENTINEL_TAG);
     if (!sentinel) {
-      sentinel = createElement(CHAT_INPUT_SENTINEL_TAG, {}) as HTMLElement;
-      this.input.insertAdjacentElement("beforebegin", sentinel);
+      sentinel = createElement(CHAT_INPUT_SENTINEL_TAG, {
+        style: "width: 100%; height: 0",
+      }) as HTMLElement;
+      this.input.insertAdjacentElement("afterend", sentinel);
     }
 
     this.inputSentinel = sentinel;
