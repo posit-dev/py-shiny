@@ -39,7 +39,7 @@ jobs:
         run: |
           if [[ `git status --porcelain` ]]; then
             git diff
-            echo "Uncommitted changes found. Please commit any changes that result from 'npm run build'."
+            echo "Uncommitted changes found. Please commit any changes that result from 'npm ci && npm run build'."
             exit 1
           else
             echo "No uncommitted changes found."
