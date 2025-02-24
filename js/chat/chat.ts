@@ -262,6 +262,8 @@ class ChatInput extends LightElement {
 }
 
 class ChatContainer extends LightElement {
+  inputSentinelObserver?: IntersectionObserver;
+
   private get input(): ChatInput {
     return this.querySelector(CHAT_INPUT_TAG) as ChatInput;
   }
@@ -277,6 +279,35 @@ class ChatContainer extends LightElement {
 
   render() {
     return html``;
+  }
+
+  connectedCallback(): void {
+    super.connectedCallback();
+
+    // We use a sentinel element that we place just above the shiny-chat-input. When it
+    // moves off-screen we know that the text area input is now floating, add shadow.
+    let sentinel = this.querySelector<HTMLElement>("div");
+    if (!sentinel) {
+      sentinel = createElement("div", {
+        style: "width: 100%; height: 0;",
+      }) as HTMLElement;
+      this.input.insertAdjacentElement("afterend", sentinel);
+    }
+
+    this.inputSentinelObserver = new IntersectionObserver(
+      (entries) => {
+        const inputTextarea = this.input.querySelector("textarea");
+        if (!inputTextarea) return;
+        const addShadow = entries[0]?.intersectionRatio === 0;
+        inputTextarea.classList.toggle("shadow", addShadow);
+      },
+      {
+        threshold: [0, 1],
+        rootMargin: "0px",
+      }
+    );
+
+    this.inputSentinelObserver.observe(sentinel);
   }
 
   firstUpdated(): void {
@@ -304,6 +335,9 @@ class ChatContainer extends LightElement {
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
+
+    this.inputSentinelObserver?.disconnect();
+    this.inputSentinelObserver = undefined;
 
     this.removeEventListener("shiny-chat-input-sent", this.#onInputSent);
     this.removeEventListener("shiny-chat-append-message", this.#onAppend);

@@ -117,7 +117,7 @@ dev = [
     "google-generativeai;python_version>='3.9'",
     "langchain_core",
     # langsmith (needed for langchain_core) versions >= 0.3
-    # (up to at least 0.3.2 as of 2025-01-29) 
+    # (up to at least 0.3.2 as of 2025-01-29)
     # cause an `argparse.ArgumentError` when running `pytest`.
     # https://github.com/posit-dev/py-shiny/issues/1829
     "langsmith<0.3",
@@ -158,7 +158,7 @@ ignore = ["E302", "E501", "F403", "F405", "W503", "E203", "E701", "E704"]
 
 [tool.isort]
 profile = "black"
-skip = ["__init__.py", "typings/", "_dev/", ".venv", "venv", ".tox", "build"]
+skip = ["__init__.py", "typings/", "_dev/", ".venv", "venv", ".tox", "build", "_version.py"]
 
 [tool.mypy]
 # The goal of our usage of mypy is to make to sure mypy can run, not that it catches any errors (we use pyright to find our errors).
