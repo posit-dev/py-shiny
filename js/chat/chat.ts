@@ -75,8 +75,8 @@ class ChatMessage extends LightElement {
         content-type=${this.content_type}
         ?streaming=${this.streaming}
         auto-scroll
-        .onContentChange=${this.#onContentChange}
-        .onStreamEnd=${this.#makeSuggestionsAccessible}
+        .onContentChange=${this.#onContentChange.bind(this)}
+        .onStreamEnd=${this.#makeSuggestionsAccessible.bind(this)}
       ></shiny-markdown-stream>
     `;
   }
