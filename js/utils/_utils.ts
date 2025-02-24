@@ -1,3 +1,4 @@
+import DOMPurify from "dompurify";
 import { LitElement } from "lit";
 
 import type { HtmlDep } from "rstudio-shiny/srcts/types/src/shiny/render";
@@ -71,6 +72,24 @@ async function renderDependencies(deps: HtmlDep[]): Promise<void> {
 // General helpers
 ////////////////////////////////////////////////
 
+function sanitizeHTML(html: string): string {
+  return sanitizer.sanitize(html, { ADD_TAGS: ["script"] });
+}
+
+// Allow htmlwidgets' script tags through the sanitizer
+// by allowing type="application/json" with data-for="*",
+// which every widget should follow
+const sanitizer = DOMPurify();
+sanitizer.addHook("uponSanitizeElement", (node, data) => {
+  if (node.nodeName && node.nodeName === "SCRIPT") {
+    const isOK =
+      node.getAttribute("type") === "application/json" &&
+      node.getAttribute("data-for") !== null;
+
+    data.allowedTags["script"] = isOK;
+  }
+});
+
 /**
  * Creates a throttle decorator that ensures the decorated method isn't called more
  * frequently than the specified delay
@@ -106,6 +125,7 @@ export {
   createElement,
   createSVGIcon,
   renderDependencies,
+  sanitizeHTML,
   showShinyClientMessage,
 };
 

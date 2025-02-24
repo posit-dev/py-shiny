@@ -3,7 +3,6 @@ import { unsafeHTML } from "lit-html/directives/unsafe-html.js";
 import { property } from "lit/decorators.js";
 
 import ClipboardJS from "clipboard";
-import { sanitize } from "dompurify";
 import hljs from "highlight.js/lib/common";
 import { Renderer, parse } from "marked";
 
@@ -12,6 +11,7 @@ import {
   createElement,
   createSVGIcon,
   renderDependencies,
+  sanitizeHTML,
   showShinyClientMessage,
   throttle,
 } from "../utils/_utils";
@@ -66,11 +66,11 @@ const markedEscapeOpts = { renderer: rendererEscapeHTML };
 
 function contentToHTML(content: string, content_type: ContentType) {
   if (content_type === "markdown") {
-    return unsafeHTML(sanitize(parse(content) as string));
+    return unsafeHTML(sanitizeHTML(parse(content) as string));
   } else if (content_type === "semi-markdown") {
-    return unsafeHTML(sanitize(parse(content, markedEscapeOpts) as string));
+    return unsafeHTML(sanitizeHTML(parse(content, markedEscapeOpts) as string));
   } else if (content_type === "html") {
-    return unsafeHTML(sanitize(content));
+    return unsafeHTML(sanitizeHTML(content));
   } else if (content_type === "text") {
     return content;
   } else {
