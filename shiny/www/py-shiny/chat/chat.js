@@ -7,8 +7,8 @@ var kt=Object.defineProperty;var Nt=Object.getOwnPropertyDescriptor;var E=(n,t,e
         content-type=${this.content_type}
         ?streaming=${this.streaming}
         auto-scroll
-        .onContentChange=${this.#e}
-        .onStreamEnd=${this.#t}
+        .onContentChange=${this.#e.bind(this)}
+        .onStreamEnd=${this.#t.bind(this)}
       ></shiny-markdown-stream>
     `}#e(){this.streaming||this.#t()}#t(){this.querySelectorAll(".suggestion,[data-suggestion]").forEach(e=>{if(!(e instanceof HTMLElement)||e.hasAttribute("tabindex"))return;e.setAttribute("tabindex","0"),e.setAttribute("role","button");let s=e.dataset.suggestion||e.textContent;e.setAttribute("aria-label",`Use chat suggestion: ${s}`)})}};E([_()],T.prototype,"content",2),E([_()],T.prototype,"content_type",2),E([_({type:Boolean,reflect:!0})],T.prototype,"streaming",2);var J=class extends A{constructor(){super(...arguments);this.content="..."}render(){return M`
       <shiny-markdown-stream
