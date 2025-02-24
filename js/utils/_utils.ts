@@ -73,12 +73,23 @@ async function renderDependencies(deps: HtmlDep[]): Promise<void> {
 ////////////////////////////////////////////////
 
 function sanitizeHTML(html: string): string {
-  return sanitizer.sanitize(html, { ADD_TAGS: ["script"] });
+  return sanitizer.sanitize(html, {
+    // Sanitize scripts manually (see below)
+    ADD_TAGS: ["script"],
+    // Allow any (defined) custom element
+    CUSTOM_ELEMENT_HANDLING: {
+      tagNameCheck: (tagName) => {
+        return window.customElements.get(tagName) !== undefined;
+      },
+      attributeNameCheck: (attr) => true,
+      allowCustomizedBuiltInElements: true,
+    },
+  });
 }
 
 // Allow htmlwidgets' script tags through the sanitizer
-// by allowing type="application/json" with data-for="*",
-// which every widget should follow
+// by allowing `<script type="application/json" data-for="*"`,
+// which every widget should follow, and seems generally safe.
 const sanitizer = DOMPurify();
 sanitizer.addHook("uponSanitizeElement", (node, data) => {
   if (node.nodeName && node.nodeName === "SCRIPT") {

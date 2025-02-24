@@ -62,8 +62,6 @@ rendererEscapeHTML.html = (html: string) =>
     .replaceAll("'", "&#039;");
 const markedEscapeOpts = { renderer: rendererEscapeHTML };
 
-// TODO: Allow htmlwidgets' script tags through the sanitizer?
-
 function contentToHTML(content: string, content_type: ContentType) {
   if (content_type === "markdown") {
     return unsafeHTML(sanitizeHTML(parse(content) as string));
