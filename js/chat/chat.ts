@@ -15,6 +15,7 @@ type Message = {
   role: "user" | "assistant";
   chunk_type: "message_start" | "message_end" | null;
   content_type: ContentType;
+  icon?: string;
   operation: "append" | null;
 };
 type ShinyChatMessage = {
@@ -60,10 +61,12 @@ class ChatMessage extends LightElement {
   @property() content = "...";
   @property() content_type: ContentType = "markdown";
   @property({ type: Boolean, reflect: true }) streaming = false;
+  @property() icon = "";
 
   render() {
-    const noContent = this.content.trim().length === 0;
-    const icon = noContent ? ICONS.dots_fade : ICONS.robot;
+    // Show dots until we have content
+    const isEmpty = this.content.trim().length === 0;
+    const icon = isEmpty ? ICONS.dots_fade : this.icon || ICONS.robot;
 
     return html`
       <div class="message-icon">${unsafeHTML(icon)}</div>
@@ -262,6 +265,7 @@ class ChatInput extends LightElement {
 }
 
 class ChatContainer extends LightElement {
+  @property({ attribute: "icon-assistant" }) iconAssistant = "";
   inputSentinelObserver?: IntersectionObserver;
 
   private get input(): ChatInput {
@@ -381,6 +385,11 @@ class ChatContainer extends LightElement {
 
     const TAG_NAME =
       message.role === "user" ? CHAT_USER_MESSAGE_TAG : CHAT_MESSAGE_TAG;
+
+    if (this.iconAssistant) {
+      message.icon = message.icon || this.iconAssistant;
+    }
+
     const msg = createElement(TAG_NAME, message);
     this.messages.appendChild(msg);
 

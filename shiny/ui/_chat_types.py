@@ -4,6 +4,8 @@ from typing import Literal, TypedDict
 
 from htmltools import HTML
 
+from .._typing_extensions import NotRequired
+
 Role = Literal["assistant", "user", "system"]
 
 
@@ -27,3 +29,4 @@ class TransformedMessage(TypedDict):
 class ClientMessage(ChatMessage):
     content_type: Literal["markdown", "html"]
     chunk_type: Literal["message_start", "message_end"] | None
+    icon: NotRequired[str]
