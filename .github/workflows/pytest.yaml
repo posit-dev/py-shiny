@@ -154,7 +154,7 @@ jobs:
 
   playwright-examples:
     if: github.event_name != 'release'
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: ["3.12", "3.11", "3.10", "3.9"]
