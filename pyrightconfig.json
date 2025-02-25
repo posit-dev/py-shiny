@@ -10,7 +10,7 @@
     "docs",
     "tests/playwright/deploys/*/app.py",
     "shiny/templates",
-    "tests/playwright/shiny/ai_generated_app_test_hub"
+    "tests/playwright/shiny/tests_for_ai_generated_apps"
   ],
   "typeCheckingMode": "strict",
   "reportImportCycles": "none",
