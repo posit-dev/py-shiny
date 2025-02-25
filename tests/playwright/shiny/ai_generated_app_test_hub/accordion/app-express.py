@@ -1,5 +1,4 @@
-from shiny import reactive
-from shiny.express import input, ui, render
+from shiny.express import input, render, ui
 
 # Add Font Awesome CSS in the head section
 ui.head_content(
@@ -29,12 +28,12 @@ with ui.accordion(id="acc_demo", open=["Panel B", "Panel D"], multiple=True):
         ui.markdown(
             """
         This panel contains longer content to demonstrate scrolling:
-        
+
         - Item 1
         - Item 2
         - Item 3
-        
-        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do 
+
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do
         eiusmod tempor incididunt ut labore et dolore magna aliqua.
         """
         )

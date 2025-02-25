@@ -1,4 +1,4 @@
-from shiny import App, reactive, render, ui
+from shiny import App, render, ui
 
 # Define the UI
 app_ui = ui.page_fluid(
@@ -30,12 +30,12 @@ app_ui = ui.page_fluid(
             ui.markdown(
                 """
                 This panel contains longer content to demonstrate scrolling:
-                
+
                 - Item 1
                 - Item 2
                 - Item 3
-                
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do 
+
+                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do
                 eiusmod tempor incididunt ut labore et dolore magna aliqua.
                 """
             ),
