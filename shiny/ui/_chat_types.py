@@ -24,7 +24,7 @@ class TransformedMessage(TypedDict):
     role: Role
     transform_key: Literal["content_client", "content_server"]
     pre_transform_key: Literal["content_client", "content_server"]
-    html_deps: list[dict[str, str]]
+    html_deps: NotRequired[list[dict[str, str]]]
 
 
 # A message that can be sent to the client

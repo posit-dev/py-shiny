@@ -1317,14 +1317,19 @@ def as_transformed_message(message: ChatMessage) -> TransformedMessage:
         transform_key = "content_client"
         pre_transform_key = "content_server"
 
-    return TransformedMessage(
+    res = TransformedMessage(
         content_client=message["content"],
         content_server=message["content"],
         role=message["role"],
         transform_key=transform_key,
         pre_transform_key=pre_transform_key,
-        html_deps=message.get("html_deps", []),
     )
+
+    deps = message.get("html_deps", [])
+    if deps:
+        res["html_deps"] = deps
+
+    return res
 
 
 CHAT_INSTANCES: WeakValueDictionary[str, Chat] = WeakValueDictionary()
