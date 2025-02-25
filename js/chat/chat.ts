@@ -27,7 +27,7 @@ type ShinyChatMessage = {
   handler: string;
   // Message keys will create custom element attributes, but html_deps are handled
   // separately
-  obj: Message & { html_deps?: HtmlDep[] };
+  obj: (Message & { html_deps?: HtmlDep[] }) | null;
 };
 
 type UpdateUserInput = {
@@ -538,14 +538,13 @@ $(function () {
   Shiny.addCustomMessageHandler(
     "shinyChatMessage",
     async function (message: ShinyChatMessage) {
-      const { html_deps, ...msg } = message.obj;
 
-      if (html_deps) {
-        await renderDependencies(html_deps);
+      if (message.obj?.html_deps) {
+        await renderDependencies(message.obj.html_deps);
       }
 
       const evt = new CustomEvent(message.handler, {
-        detail: msg,
+        detail: message.obj,
       });
 
       const el = document.getElementById(message.id);
