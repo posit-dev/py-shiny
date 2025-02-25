@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from shiny.bookmark._serializers import Unserializable
+
 __all__ = ("Session", "Inputs", "Outputs", "ClientData")
 
 import asyncio
@@ -1356,6 +1358,75 @@ class Inputs:
 
     def __dir__(self):
         return list(self._map.keys())
+
+    _serializers: dict[
+        str,
+        Callable[
+            [Any, Path | None],
+            Awaitable[Any | Unserializable],
+        ],
+    ]
+
+    # This method can not be on the `Value` class as the _value_ may not exist when the
+    # "creating" method is executed.
+    # Ex: File inputs do not _make_ the input reactive value. The browser does when the
+    # client sets the value.
+    def set_serializer(
+        self,
+        id: str,
+        fn: (
+            Callable[
+                [Any, Path | None],
+                Awaitable[Any | Unserializable],
+            ]
+            | Callable[
+                [Any, Path | None],
+                Any | Unserializable,
+            ]
+        ),
+    ) -> None:
+        """
+        Add a function for serializing an input before bookmarking application state
+
+        Parameters
+        ----------
+        id
+            The ID of the input value.
+        fn
+            A function that takes the input value and returns a modified value. The
+            returned value will be used for test snapshots and bookmarking.
+        """
+        self._serializers[id] = wrap_async(fn)
+
+    async def _serialize(
+        self,
+        /,
+        *,
+        exclude: list[str],
+        state_dir: Path | None,
+    ) -> dict[str, Any]:
+        from ..bookmark._serializers import serializer_default
+
+        exclude_set = set(exclude)
+        serialized_values: dict[str, Any] = {}
+
+        with reactive.isolate():
+
+            for key, value in self._map.items():
+                if key in exclude_set:
+                    continue
+                val = value()
+
+                # Possibly apply custom serialization given the input id
+                serializer = self._serializers.get(key, serializer_default)
+                serialized_value = await serializer(val, state_dir)
+
+                # Filter out any values that were marked as unserializable.
+                if isinstance(serialized_value, Unserializable):
+                    continue
+                serialized_values[key] = serialized_value
+
+        return serialized_values
 
 
 @add_example()
