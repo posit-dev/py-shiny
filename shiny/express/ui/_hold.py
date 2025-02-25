@@ -4,7 +4,7 @@ import sys
 from types import TracebackType
 from typing import Callable, Optional, Type, TypeVar
 
-from htmltools import wrap_displayhook_handler, TagList
+from htmltools import TagList, wrap_displayhook_handler
 
 from ..._docstring import no_example
 from ..._typing_extensions import ParamSpec
