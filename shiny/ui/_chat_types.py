@@ -34,4 +34,4 @@ class ClientMessage(TypedDict):
     content_type: Literal["markdown", "html"]
     chunk_type: Literal["message_start", "message_end"] | None
     icon: NotRequired[str]
-    html_deps: list[dict[str, str]]
+    html_deps: NotRequired[list[dict[str, str]]]

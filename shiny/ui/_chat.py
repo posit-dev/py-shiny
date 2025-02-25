@@ -759,11 +759,14 @@ class Chat:
             role=message["role"],
             content_type=content_type,
             chunk_type=chunk_type,
-            html_deps=message.get("html_deps", []),
         )
 
         if icon is not None:
             msg["icon"] = str(icon)
+
+        deps = message.get("html_deps", [])
+        if deps:
+            msg["html_deps"] = deps
 
         # print(msg)
 

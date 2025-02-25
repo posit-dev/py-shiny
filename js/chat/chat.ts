@@ -27,7 +27,7 @@ type ShinyChatMessage = {
   handler: string;
   // Message keys will create custom element attributes, but html_deps are handled
   // separately
-  obj: Message & { html_deps: HtmlDep[] };
+  obj: Message & { html_deps?: HtmlDep[] };
 };
 
 type UpdateUserInput = {

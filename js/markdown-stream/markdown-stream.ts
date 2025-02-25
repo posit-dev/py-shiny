@@ -24,7 +24,7 @@ type ContentMessage = {
   id: string;
   content: string;
   operation: "append" | "replace";
-  html_deps: HtmlDep[];
+  html_deps?: HtmlDep[];
 };
 
 type IsStreamingMessage = {
