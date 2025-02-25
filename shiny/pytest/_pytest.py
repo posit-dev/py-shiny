@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import PurePath
-from typing import Generator, Optional
+from typing import Generator
 
 import pytest
 
