@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import PurePath
-from typing import Generator
+from typing import Generator, Optional
 
 import pytest
 
@@ -17,5 +17,7 @@ def local_app(request: pytest.FixtureRequest) -> Generator[ShinyAppProc, None, N
     Parameters:
         request (pytest.FixtureRequest): The request object for the fixture.
     """
-    sa_gen = shiny_app_gen(PurePath(request.path).parent / "app.py")
+    # Get the app_file from the parametrize marker if available
+    app_file = getattr(request, "param", "app.py")
+    sa_gen = shiny_app_gen(PurePath(request.path).parent / app_file)
     yield next(sa_gen)
