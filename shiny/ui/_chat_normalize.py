@@ -64,22 +64,20 @@ class DictNormalizer(BaseMessageNormalizer):
         if "content" not in x:
             raise ValueError("Message must have 'content' key")
         content, deps = process_ui(cast(TagChild, x["content"]))
-        return ChatMessage(
-            content=content,
-            role=x.get("role", "assistant"),
-            html_deps=deps,
-        )
+        res = ChatMessage(content=content, role=x.get("role", "assistant"))
+        if deps:
+            res["html_deps"] = deps
+        return res
 
     def normalize_chunk(self, chunk: Any) -> ChatMessage:
         x = cast("dict[str, Any]", chunk)
         if "content" not in x:
             raise ValueError("Message must have 'content' key")
         content, deps = process_ui(cast(TagChild, x["content"]))
-        return ChatMessage(
-            content=content,
-            role=x.get("role", "assistant"),
-            html_deps=deps,
-        )
+        res = ChatMessage(content=content, role=x.get("role", "assistant"))
+        if deps:
+            res["html_deps"] = deps
+        return res
 
     def can_normalize(self, message: Any) -> bool:
         return isinstance(message, dict)
