@@ -14,11 +14,16 @@
 # {values} -> dict (where as in R is an environment)
 # √ values is a dict!
 # {exclude} -> Requires `session.setBookmarkExclude(names)`, `session.getBookmarkExclude()`
-# * `session.setBookmarkExclude(names)`
+# * `session.setBookmarkExclude(names)` TODO:
 # * `session.getBookmarkExclude()`
+# * `session.bookmark_exclude` value?
+# Using a `.bookmark_exclude = []` and `._get_bookmark_exclude()` helper that accesses a `._bookmark_exclude_fns` list of functions which return scoped bookmark excluded values
+# Enable bookmarking hooks:
+# * types: `url`, `server`, `disable`
+# * where to store it? `session` object feels too late. `App` may not exist yet.
 # Session hooks -> `onBookmark()`, `onBookmarked()`, `onRestore(), `onRestored()`
-# * `session.onBookmark()`
-# * `session.onBookmarked()`
+# * `session.onBookmark()` TODO:
+# * `session.onBookmarked()` TODO:
 # * `session.onRestore()`
 # * `session.onRestored()`
 # Session hooks -> Require list of callback functions for each
@@ -47,7 +52,8 @@ from ._utils import is_hosted, to_json
 
 class ShinySaveState:
     # session: ?
-    # WOuld get us access to inputs, possibly app dir, registered on save / load classes.
+    # * Would get us access to inputs, possibly app dir, registered on save / load classes (?), exclude
+    #
     input: Inputs
     values: dict[str, Any]
     exclude: list[str]
@@ -78,7 +84,10 @@ class ShinySaveState:
             with isolate():
                 self.on_save(self)
 
-    # def _get_save_interface(self) -> Callable[[str, ]]
+    def _exclude_bookmark_value(self):
+        # If the bookmark value is not in the exclude list, add it.
+        if "._bookmark_" not in self.exclude:
+            self.exclude.append("._bookmark_")
 
     async def _save_state(self) -> str:
         """
@@ -99,11 +108,11 @@ class ShinySaveState:
 
             self._call_on_save()
 
-            if self.exclude.index("._bookmark_") == -1:
-                self.exclude.append("._bookmark_")
+            self._exclude_bookmark_value()
 
             input_values_json = self.input._serialize(
-                exclude=self.exclude, state_dir=None
+                exclude=self.exclude,
+                state_dir=self.dir,
             )
             assert self.dir is not None
             with open(self.dir / "input.pickle", "wb") as f:
@@ -158,13 +167,15 @@ class ShinySaveState:
         # Allow user-supplied onSave function to do things like add state$values.
         self._call_on_save()
 
-        if self.exclude.index("._bookmark_") == -1:
-            self.exclude.append("._bookmark_")
+        self._exclude_bookmark_value()
 
         input_values_serialized = await self.input._serialize(
-            exclude=self.exclude, state_dir=None
+            exclude=self.exclude,
+            # Do not include directory as we are not saving to disk.
+            state_dir=None,
         )
 
+        # Using an array to construct string to avoid multiple serial concatenations.
         qs_str_parts: list[str] = []
 
         # If any input values are present, add them.
