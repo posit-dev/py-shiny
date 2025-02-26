@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### Breaking changes
+
+* The navbar-related style options of `ui.page_navbar()` and `ui.navset_bar()` have been consolidated into a single `navbar_options` argument that pairs with a new `ui.navbar_options()` helper. Using the direct `position`, `bg`, `inverse`, `collapsible`, and `underline` arguments will continue to work with a deprecation message.
+
+  Related to this change, `ui.navset_bar()` now defaults to using `underline=True` so that it uses the same set of default `ui.navbar_options()` as the page variant. In `ui.navbar_options()`, `inverse` is replaced by `theme`, which takes values `"light"` (dark text on a **light** background), `"dark"` (light text on a **dark** background), or `"auto"` (follow page settings).
+
 ### New features
 
 * Added a new `ui.MarkdownStream()` component for performantly streaming in chunks of markdown/html strings into the UI. This component is primarily useful for text-based generative AI where responses are received incrementally. (#1782)
