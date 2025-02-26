@@ -3,7 +3,7 @@ from __future__ import annotations
 import collections.abc
 import copy
 import re
-from typing import Any, Generic, Literal, Optional, Sequence, TypeVar, cast
+from typing import Any, Literal, Optional, Sequence, TypeVar, cast
 
 from htmltools import (
     HTML,
