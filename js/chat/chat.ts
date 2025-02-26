@@ -15,6 +15,7 @@ type Message = {
   role: "user" | "assistant";
   chunk_type: "message_start" | "message_end" | null;
   content_type: ContentType;
+  icon?: string;
   operation: "append" | null;
 };
 type ShinyChatMessage = {
@@ -60,10 +61,12 @@ class ChatMessage extends LightElement {
   @property() content = "...";
   @property() content_type: ContentType = "markdown";
   @property({ type: Boolean, reflect: true }) streaming = false;
+  @property() icon = "";
 
   render() {
-    const noContent = this.content.trim().length === 0;
-    const icon = noContent ? ICONS.dots_fade : ICONS.robot;
+    // Show dots until we have content
+    const isEmpty = this.content.trim().length === 0;
+    const icon = isEmpty ? ICONS.dots_fade : this.icon || ICONS.robot;
 
     return html`
       <div class="message-icon">${unsafeHTML(icon)}</div>
@@ -72,8 +75,8 @@ class ChatMessage extends LightElement {
         content-type=${this.content_type}
         ?streaming=${this.streaming}
         auto-scroll
-        .onContentChange=${this.#onContentChange}
-        .onStreamEnd=${this.#makeSuggestionsAccessible}
+        .onContentChange=${this.#onContentChange.bind(this)}
+        .onStreamEnd=${this.#makeSuggestionsAccessible.bind(this)}
       ></shiny-markdown-stream>
     `;
   }
@@ -262,6 +265,8 @@ class ChatInput extends LightElement {
 }
 
 class ChatContainer extends LightElement {
+  @property({ attribute: "icon-assistant" }) iconAssistant = "";
+  inputSentinelObserver?: IntersectionObserver;
 
   private get input(): ChatInput {
     return this.querySelector(CHAT_INPUT_TAG) as ChatInput;
@@ -278,6 +283,35 @@ class ChatContainer extends LightElement {
 
   render() {
     return html``;
+  }
+
+  connectedCallback(): void {
+    super.connectedCallback();
+
+    // We use a sentinel element that we place just above the shiny-chat-input. When it
+    // moves off-screen we know that the text area input is now floating, add shadow.
+    let sentinel = this.querySelector<HTMLElement>("div");
+    if (!sentinel) {
+      sentinel = createElement("div", {
+        style: "width: 100%; height: 0;",
+      }) as HTMLElement;
+      this.input.insertAdjacentElement("afterend", sentinel);
+    }
+
+    this.inputSentinelObserver = new IntersectionObserver(
+      (entries) => {
+        const inputTextarea = this.input.querySelector("textarea");
+        if (!inputTextarea) return;
+        const addShadow = entries[0]?.intersectionRatio === 0;
+        inputTextarea.classList.toggle("shadow", addShadow);
+      },
+      {
+        threshold: [0, 1],
+        rootMargin: "0px",
+      }
+    );
+
+    this.inputSentinelObserver.observe(sentinel);
   }
 
   firstUpdated(): void {
@@ -305,6 +339,9 @@ class ChatContainer extends LightElement {
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
+
+    this.inputSentinelObserver?.disconnect();
+    this.inputSentinelObserver = undefined;
 
     this.removeEventListener("shiny-chat-input-sent", this.#onInputSent);
     this.removeEventListener("shiny-chat-append-message", this.#onAppend);
@@ -348,6 +385,11 @@ class ChatContainer extends LightElement {
 
     const TAG_NAME =
       message.role === "user" ? CHAT_USER_MESSAGE_TAG : CHAT_MESSAGE_TAG;
+
+    if (this.iconAssistant) {
+      message.icon = message.icon || this.iconAssistant;
+    }
+
     const msg = createElement(TAG_NAME, message);
     this.messages.appendChild(msg);
 
