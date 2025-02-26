@@ -14,7 +14,7 @@ from shiny.express import ui
 load_dotenv()
 chat_model = ChatAnthropic(
     api_key=os.environ.get("ANTHROPIC_API_KEY"),
-    model="claude-3-5-sonnet-latest",
+    model="claude-3-7-sonnet-latest",
     system_prompt="You are a helpful assistant.",
 )
 

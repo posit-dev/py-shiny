@@ -1,5 +1,4 @@
 shiny
 python-dotenv
-tokenizers
-chatlas
-google-generativeai
+chatlas>=0.4.0
+google-genai

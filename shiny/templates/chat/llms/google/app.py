@@ -15,7 +15,7 @@ load_dotenv()
 chat_model = ChatGoogle(
     api_key=os.environ.get("GOOGLE_API_KEY"),
     system_prompt="You are a helpful assistant.",
-    model="gemini-1.5-flash",
+    model="gemini-2.0-flash",
 )
 
 # Set some Shiny page options
