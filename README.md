@@ -73,10 +73,15 @@ pre-commit install
 Tests should now pass:
 
 ```sh
-make check-tests
-make check-types
-make check-lint
-make check-format
+make check
+# To apply formatting fixes instead of erroring:
+# make check-fix
 ```
+
+Or get a full list of helpers with just:
+```sh
+make
+```
+
 
 See the [docs README](docs/README.md) for instructions on building the documentation locally.

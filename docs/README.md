@@ -18,13 +18,6 @@ After those dependencies are installed, build the .qmd files for Shiny, using qu
 make quartodoc
 ```
 
-Then build the web site using Quarto:
-
-```bash
-make site
-# When this completes, the docs will be available at _site/index.html.
-```
-
 Alternatively, running `make serve` will build the docs, and serve them locally, and watch for changes to the .qmd files:
 
 ```bash

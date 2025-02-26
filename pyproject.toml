@@ -126,7 +126,6 @@ dev = [
     "tokenizers",
     "aiohttp",
     "beautifulsoup4",
-    "uv",
 ]
 doc = [
     "jupyter",
