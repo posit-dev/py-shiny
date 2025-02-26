@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import inspect
 from typing import (
+    TYPE_CHECKING,
     Any,
     AsyncIterable,
     Awaitable,
@@ -27,20 +28,23 @@ from ..session import require_active_session, session_context
 from ..types import MISSING, MISSING_TYPE, NotifyException
 from ..ui.css import CssUnit, as_css_unit
 from ._chat_normalize import normalize_message, normalize_message_chunk
-from ._chat_provider_types import (
-    AnthropicMessage,
-    GoogleMessage,
-    LangChainMessage,
-    OllamaMessage,
-    OpenAIMessage,
-    ProviderMessage,
-    ProviderMessageFormat,
-    as_provider_message,
-)
+from ._chat_provider_types import as_provider_message
 from ._chat_tokenizer import TokenEncoding, TokenizersEncoding, get_default_tokenizer
 from ._chat_types import ChatMessage, ClientMessage, TransformedMessage
 from ._html_deps_py_shiny import chat_deps
 from .fill import as_fill_item, as_fillable_container
+
+if TYPE_CHECKING:
+    from ._chat_provider_types import (
+        AnthropicMessage,
+        GoogleMessage,
+        LangChainMessage,
+        OllamaMessage,
+        OpenAIMessage,
+        ProviderMessage,
+        ProviderMessageFormat,
+    )
+
 
 __all__ = (
     "Chat",
@@ -349,7 +353,7 @@ class Chat:
         token_limits: tuple[int, int] | None = None,
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
-    ) -> tuple[AnthropicMessage, ...]: ...
+    ) -> tuple["AnthropicMessage", ...]: ...
 
     @overload
     def messages(
@@ -359,7 +363,7 @@ class Chat:
         token_limits: tuple[int, int] | None = None,
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
-    ) -> tuple[GoogleMessage, ...]: ...
+    ) -> tuple["GoogleMessage", ...]: ...
 
     @overload
     def messages(
@@ -369,7 +373,7 @@ class Chat:
         token_limits: tuple[int, int] | None = None,
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
-    ) -> tuple[LangChainMessage, ...]: ...
+    ) -> tuple["LangChainMessage", ...]: ...
 
     @overload
     def messages(
@@ -379,7 +383,7 @@ class Chat:
         token_limits: tuple[int, int] | None = None,
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
-    ) -> tuple[OpenAIMessage, ...]: ...
+    ) -> tuple["OpenAIMessage", ...]: ...
 
     @overload
     def messages(
@@ -389,7 +393,7 @@ class Chat:
         token_limits: tuple[int, int] | None = None,
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
-    ) -> tuple[OllamaMessage, ...]: ...
+    ) -> tuple["OllamaMessage", ...]: ...
 
     @overload
     def messages(
@@ -399,16 +403,16 @@ class Chat:
         token_limits: tuple[int, int] | None = None,
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
-    ) -> tuple[ChatMessage, ...]: ...
+    ) -> tuple["ChatMessage", ...]: ...
 
     def messages(
         self,
         *,
-        format: MISSING_TYPE | ProviderMessageFormat = MISSING,
+        format: "MISSING_TYPE | ProviderMessageFormat" = MISSING,
         token_limits: tuple[int, int] | None = None,
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
-    ) -> tuple[ChatMessage | ProviderMessage, ...]:
+    ) -> tuple["ChatMessage | ProviderMessage", ...]:
         """
         Reactively read chat messages
 
