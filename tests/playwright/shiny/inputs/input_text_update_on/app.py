@@ -134,8 +134,13 @@ def text_input_server(input: Inputs, output: Outputs, session: Session):
 
 app_ui = ui.page_fluid(
     ui.row(
-        ui.column(6, ui.div({"class": "col-sm-12"}, text_input_ui("change"))),
-        ui.column(6, ui.div({"class": "col-sm-12"}, text_input_ui("blur"))),
+        ui.column(
+            6,
+            ui.div({"class": "col-sm-12"}, text_input_ui("change", update_on="change")),
+        ),
+        ui.column(
+            6, ui.div({"class": "col-sm-12"}, text_input_ui("blur", update_on="blur"))
+        ),
     )
 )
 
