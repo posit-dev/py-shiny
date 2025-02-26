@@ -90,7 +90,8 @@ test = [
     "faicons",
     "ridgeplot",
     "great_tables",
-    "modin[all]",
+    # modin depends on ray, which doesn't support Python 3.13
+    "modin[all];python_version<'3.13'",
     # ray doesn't currently support Python 3.13
     "ray;python_version<'3.13'",
     "polars",
