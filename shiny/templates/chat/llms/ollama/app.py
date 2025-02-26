@@ -29,5 +29,5 @@ chat.ui()
 # Generate a response when the user submits a message
 @chat.on_user_submit
 async def handle_user_input(user_input: str):
-    response = chat_model.stream(user_input)
+    response = await chat_model.stream_async(user_input)
     await chat.append_message_stream(response)
