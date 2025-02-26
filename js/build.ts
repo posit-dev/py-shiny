@@ -76,6 +76,20 @@ const opts: Array<BuildOptions> = [
   },
   {
     entryPoints: {
+      "markdown-stream/markdown-stream": "markdown-stream/markdown-stream.ts",
+    },
+    minify: true,
+    sourcemap: true,
+  },
+  {
+    entryPoints: {
+      "markdown-stream/markdown-stream": "markdown-stream/markdown-stream.scss",
+    },
+    plugins: [sassPlugin({ type: "css", sourceMap: false })],
+    metafile: true,
+  },
+  {
+    entryPoints: {
       "chat/chat": "chat/chat.ts",
     },
     minify: true,

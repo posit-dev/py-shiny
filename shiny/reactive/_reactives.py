@@ -596,7 +596,7 @@ class Effect_:
                     from .._app import SANITIZE_ERROR_MSG
                     from ..ui import notification_show
 
-                    msg = "Error in Effect: " + str(e)
+                    msg = str(e)
                     if e.sanitize:
                         msg = SANITIZE_ERROR_MSG
                     notification_show(msg, type="error", duration=5000)
