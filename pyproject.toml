@@ -91,6 +91,8 @@ test = [
     "ridgeplot",
     "great_tables",
     "modin[all]",
+    # ray doesn't currently support Python 3.13
+    "ray;python_version<'3.13'",
     "polars",
     "dask[dataframe]",
     "pyarrow",
