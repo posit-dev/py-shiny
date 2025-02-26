@@ -15,10 +15,6 @@ from shiny.express import ui
 load_dotenv()
 chat_model = ChatBedrockAnthropic(
     model="anthropic.claude-3-sonnet-20240229-v1:0",
-    # aws_secret_key=os.getenv("AWS_SECRET_KEY"),
-    # aws_access_key=os.getenv("AWS_ACCESS_KEY"),
-    # aws_region=os.getenv("AWS_REGION"),
-    # aws_account_id=os.getenv("AWS_ACCOUNT_ID"),
 )
 
 # Set some Shiny page options
