@@ -79,9 +79,9 @@ make check
 ```
 
 Or get a full list of helpers with just:
+
 ```sh
 make
 ```
-
 
 See the [docs README](docs/README.md) for instructions on building the documentation locally.
