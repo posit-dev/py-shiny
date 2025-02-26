@@ -175,9 +175,7 @@ def page_navbar(
     lang: Optional[str] = None,
     theme: Optional[str | Path | Theme | ThemeProvider] = None,
     # Deprecated -- v1.3.0 2025-01 ----
-    position: Maybe[
-        Literal["static-top", "fixed-top", "fixed-bottom"]
-    ] = DEPRECATED,
+    position: Maybe[Literal["static-top", "fixed-top", "fixed-bottom"]] = DEPRECATED,
     bg: Maybe[str | None] = DEPRECATED,
     inverse: Maybe[bool] = DEPRECATED,
     underline: Maybe[bool] = DEPRECATED,
