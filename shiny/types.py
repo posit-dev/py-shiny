@@ -31,7 +31,7 @@ from typing import (
 from htmltools import TagChild
 
 from ._docstring import add_example
-from ._typing_extensions import NotRequired, TypedDict, TypeIs
+from ._typing_extensions import NotRequired, TypedDict
 
 if TYPE_CHECKING:
     from matplotlib.figure import Figure
@@ -46,13 +46,8 @@ class MISSING_TYPE:
 
 MISSING: MISSING_TYPE = MISSING_TYPE()
 DEPRECATED: MISSING_TYPE = MISSING_TYPE()  # A MISSING that communicates deprecation
-Maybe = Union[T, MISSING_TYPE]
 
 ListOrTuple = Union[List[T], Tuple[T, ...]]
-
-
-def is_missing(x: Any) -> TypeIs[MISSING_TYPE]:
-    return isinstance(x, MISSING_TYPE)
 
 
 # Information about a single file, with a structure like:
