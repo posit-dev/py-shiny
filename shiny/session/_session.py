@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from shiny.bookmark._serializers import Unserializable
-
 __all__ = ("Session", "Inputs", "Outputs", "ClientData")
 
 import asyncio
@@ -1405,7 +1403,7 @@ class Inputs:
         exclude: list[str],
         state_dir: Path | None,
     ) -> dict[str, Any]:
-        from ..bookmark._serializers import serializer_default
+        from ..bookmark._serializers import Unserializable, serializer_default
 
         exclude_set = set(exclude)
         serialized_values: dict[str, Any] = {}
