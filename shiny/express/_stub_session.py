@@ -44,11 +44,20 @@ class ExpressStubSession(Session):
         # Application-level (not session-level) options that may be set via app_opts().
         self.app_opts: AppOpts = {}
 
+        self.bookmark_exclude = []
+        self.bookmark_store = "disable"  # TODO: Is this correct?
+
     def is_stub_session(self) -> Literal[True]:
         return True
 
     async def close(self, code: int = 1001) -> None:
         return
+
+    def _get_bookmark_exclude(self) -> list[str]:
+        raise NotImplementedError("Please call this only from a real session object")
+
+    def do_bookmark(self) -> None:
+        raise NotImplementedError("Please call this only from a real session object")
 
     # This is needed so that Outputs don't throw an error.
     def _is_hidden(self, name: str) -> bool:

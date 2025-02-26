@@ -59,7 +59,12 @@ from ..types import (
 from ._utils import RenderedDeps, read_thunk_opt, session_context
 
 if TYPE_CHECKING:
+    from shiny.bookmark._serializers import Unserializable
+
     from .._app import App
+
+
+BookmarkStore = Literal["url", "server", "disable"]
 
 
 class ConnectionState(enum.Enum):
@@ -171,6 +176,9 @@ class Session(ABC):
     input: Inputs
     output: Outputs
     clientdata: ClientData
+    bookmark_exclude: list[str]
+    bookmark_store: BookmarkStore
+    _bookmark_exclude_fns: list[Callable[[], list[str]]]
     user: str | None
     groups: list[str] | None
 
@@ -477,6 +485,38 @@ class Session(ABC):
     @abstractmethod
     def _decrement_busy_count(self) -> None: ...
 
+    @abstractmethod
+    def _get_bookmark_exclude(self) -> list[str]:
+        """
+        Retrieve the list of inputs excluded from being bookmarked.
+        """
+        ...
+
+    @abstractmethod
+    def do_bookmark(self) -> None:
+        """
+        Perform bookmarking.
+
+        This method will also call the `on_bookmark` and `on_bookmarked` callbacks to alter the bookmark state. Then, the bookmark state will be either saved to the server or encoded in the URL, depending on the `bookmark_store` option.
+
+        No actions will be performed if the `bookmark_store` option is set to `"disable"`.
+        """
+        ...
+
+    # @abstractmethod
+    # def set_bookmark_exclude(self, *names: str) -> None:
+    #     """
+    #     Exclude inputs from being bookmarked.
+    #     """
+    #     ...
+
+    # @abstractmethod
+    # def get_bookmark_exclude(self) -> list[str]:
+    #     """
+    #     Get the list of inputs excluded from being bookmarked.
+    #     """
+    #     ...
+
 
 # ======================================================================================
 # AppSession
@@ -521,6 +561,10 @@ class AppSession(Session):
         self.input: Inputs = Inputs(dict())
         self.output: Outputs = Outputs(self, self.ns, outputs=dict())
         self.clientdata: ClientData = ClientData(self)
+
+        self.bookmark_exclude: list[str] = []
+        self.bookmark_store = "disable"
+        self._bookmark_exclude_fns: list[Callable[[], list[str]]] = []
 
         self.user: str | None = None
         self.groups: list[str] | None = None
@@ -710,6 +754,21 @@ class AppSession(Session):
                 return True
 
             return hidden_value_obj()
+
+    # ==========================================================================
+    # Bookmarking
+    # ==========================================================================
+
+    def _get_bookmark_exclude(self) -> list[str]:
+        """
+        Get the list of inputs excluded from being bookmarked.
+        """
+        scoped_excludes: list[str] = []
+        for exclude_fn in self._bookmark_exclude_fns:
+            # Call the function and append the result to the list
+            scoped_excludes.extend(exclude_fn())
+        # Remove duplicates
+        return list(set([*self.bookmark_exclude, *scoped_excludes]))
 
     # ==========================================================================
     # Message handlers
@@ -1173,8 +1232,31 @@ class SessionProxy(Session):
         self._outbound_message_queues = parent._outbound_message_queues
         self._downloads = parent._downloads
 
+        self.bookmark_exclude: list[str] = []
+
+        def ns_bookmark_exclude() -> list[str]:
+            return [self.ns(name) for name in self.bookmark_exclude]
+
+        self._parent._bookmark_exclude_fns.append(ns_bookmark_exclude)
+
     def _is_hidden(self, name: str) -> bool:
         return self._parent._is_hidden(name)
+
+    def _get_bookmark_exclude(self) -> list[str]:
+        raise NotImplementedError(
+            "Please call `._get_bookmark_exclude()` from the root session only."
+        )
+
+    @property
+    def bookmark_store(self) -> BookmarkStore:
+        return self._parent.bookmark_store
+
+    @bookmark_store.setter
+    def bookmark_store(  # pyright: ignore[reportIncompatibleVariableOverride]
+        self,
+        value: BookmarkStore,
+    ) -> None:
+        self._parent.bookmark_store = value
 
     def on_ended(
         self,
