@@ -995,16 +995,16 @@ class Default(Generic[T]):
         self._default = value
 
 
-NavbarOptionsPositionT = Literal[
+NavbarOptionsPositionType = Literal[
     "static-top", "fixed-top", "fixed-bottom", "sticky-top"
 ]
-NavbarOptionsThemeT = Literal["auto", "light", "dark"]
+NavbarOptionsThemeType = Literal["auto", "light", "dark"]
 
 
 class NavbarOptions:
-    position: NavbarOptionsPositionT
+    position: NavbarOptionsPositionType
     bg: Optional[str]
-    theme: NavbarOptionsThemeT
+    theme: NavbarOptionsThemeType
     underline: bool
     collapsible: bool
     attrs: dict[str, Any]
@@ -1013,9 +1013,9 @@ class NavbarOptions:
     def __init__(
         self,
         *,
-        position: NavbarOptionsPositionT | MISSING_TYPE = MISSING,
+        position: NavbarOptionsPositionType | MISSING_TYPE = MISSING,
         bg: str | None | MISSING_TYPE = MISSING,
-        theme: NavbarOptionsThemeT | MISSING_TYPE = MISSING,
+        theme: NavbarOptionsThemeType | MISSING_TYPE = MISSING,
         underline: bool | MISSING_TYPE = MISSING,
         collapsible: bool | MISSING_TYPE = MISSING,
         **attrs: TagAttrValue,
@@ -1070,9 +1070,9 @@ class NavbarOptions:
 
 @add_example()
 def navbar_options(
-    position: NavbarOptionsPositionT | MISSING_TYPE = MISSING,
+    position: NavbarOptionsPositionType | MISSING_TYPE = MISSING,
     bg: str | None | MISSING_TYPE = MISSING,
-    theme: NavbarOptionsThemeT | MISSING_TYPE = MISSING,
+    theme: NavbarOptionsThemeType | MISSING_TYPE = MISSING,
     underline: bool | MISSING_TYPE = MISSING,
     collapsible: bool | MISSING_TYPE = MISSING,
     **attrs: TagAttrValue,
@@ -1120,7 +1120,7 @@ def navbar_options(
 
 def navbar_options_resolve_deprecated(
     options_user: Optional[NavbarOptions] = None,
-    position: NavbarOptionsPositionT | MISSING_TYPE = DEPRECATED,
+    position: NavbarOptionsPositionType | MISSING_TYPE = DEPRECATED,
     bg: str | None | MISSING_TYPE = DEPRECATED,
     inverse: bool | MISSING_TYPE = DEPRECATED,
     underline: bool | MISSING_TYPE = DEPRECATED,
@@ -1377,7 +1377,7 @@ def navset_bar(
     navbar_options: Optional[NavbarOptions] = None,
     fluid: bool = True,
     # Deprecated -- v1.3.0 2025-01 ----
-    position: NavbarOptionsPositionT | MISSING_TYPE = DEPRECATED,
+    position: NavbarOptionsPositionType | MISSING_TYPE = DEPRECATED,
     bg: str | None | MISSING_TYPE = DEPRECATED,
     inverse: bool | MISSING_TYPE = DEPRECATED,
     underline: bool | MISSING_TYPE = DEPRECATED,

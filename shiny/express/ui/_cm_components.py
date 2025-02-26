@@ -14,7 +14,7 @@ from ...ui._card import CardItem
 from ...ui._layout_columns import BreakpointsUser
 from ...ui._navs import (
     NavbarOptions,
-    NavbarOptionsPositionT,
+    NavbarOptionsPositionType,
     NavMenu,
     NavPanel,
     NavSet,
@@ -1080,7 +1080,7 @@ def navset_bar(
     navbar_options: Optional[NavbarOptions] = None,
     fluid: bool = True,
     # Deprecated ----
-    position: NavbarOptionsPositionT | MISSING_TYPE = DEPRECATED,
+    position: NavbarOptionsPositionType | MISSING_TYPE = DEPRECATED,
     bg: str | None | MISSING_TYPE = DEPRECATED,
     inverse: bool | MISSING_TYPE = DEPRECATED,
     underline: bool | MISSING_TYPE = DEPRECATED,
