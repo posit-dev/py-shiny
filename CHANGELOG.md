@@ -9,15 +9,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
+* Added a new `ui.MarkdownStream()` component for performantly streaming in chunks of markdown/html strings into the UI. This component is primarily useful for text-based generative AI where responses are received incrementally. (#1782)
+
+* The `ui.Chat()` component now supports input suggestion links. This feature is useful for providing users with clickable suggestions that can be used to quickly input text into the chat. This can be done in 2 different ways (see #1845 for more details):
+  * By adding a `.suggestion` CSS class to an HTML element (e.g., `<span class="suggestion">A suggestion</span>`)
+  * Add a `data-suggestion` attribute to an HTML element, and set the value to the input suggestion text (e.g., `<span data-suggestion="Suggestion value">Suggestion link</span>`)
+  * To auto-submit the suggestion when clicked by the user, include the `.submit` class or the `data-suggestion-submit="true"` attribute on the HTML element. Alternatively, use Cmd/Ctrl + click to auto-submit any suggestion or Alt/Opt + click to apply any suggestion to the chat input without submitting.
+
 * Added a new `.add_sass_layer_file()` method to `ui.Theme` that supports reading a Sass file with layer boundary comments, e.g. `/*-- scss:defaults --*/`. This format [is supported by Quarto](https://quarto.org/docs/output-formats/html-themes-more.html#bootstrap-bootswatch-layering) and makes it easier to store Sass rules and declarations that need to be woven into Shiny's Sass Bootstrap files. (#1790)
 
-* The `ui.Chat()` component's `.on_user_submit()` decorator method now passes the user input to the decorated function. This makes it a bit more obvious how to access the user input inside the decorated function. See the new templates (mentioned below) for examples. (#1801)
+* The `ui.Chat()` component gains the following:
+    * The `.on_user_submit()` decorator method now passes the user input to the decorated function. This makes it a bit easier to access the user input. See the new templates (mentioned below) for examples. (#1801)
+    * A new `get_latest_stream_result()` method was added for an easy way to access the final result of the stream when it completes. (#1846)
+    * The `.append_message_stream()` method now returns the `reactive.extended_task` instance that it launches. (#1846)
 
 * `shiny create` includes new and improved `ui.Chat()` template options. Most of these templates leverage the new [`{chatlas}` package](https://posit-dev.github.io/chatlas/), our opinionated approach to interfacing with various LLM. (#1806)
+
+* Client data values (e.g., url info, output sizes/styles, etc.) can now be accessed in the server-side Python code via `session.clientdata`. For example, `session.clientdata.url_search()` reactively reads the URL search parameters. (#1832)
+
+* Available `input` ids can now be listed via `dir(input)`. This also works on the new `session.clientdata` object. (#1832)
+
+* The `ui.Chat()` component's `.update_user_input()` method gains `submit` and `focus` options that allow you to submit the input on behalf of the user and to choose whether the input receives focus after the update. (#1851)
+
+* The assistant icons is now configurable via `ui.chat_ui()` (or the `ui.Chat.ui()` method in Shiny Express) or for individual messages in the `.append_message()` and `.append_message_stream()` methods of `ui.Chat()`. (#1853)
 
 ### Bug fixes
 
 * `ui.Chat()` now correctly handles new `ollama.chat()` return value introduced in `ollama` v0.4. (#1787)
+
+### Changes
+
+* The Shiny Core component `shiny.ui.Chat()` no longer has a `.ui()` method. This method
+was never intended to be used in Shiny Core (in that case, use `shiny.ui.chat_ui()`) to create the UI element. Note that the `shiny.express.ui.Chat()`
+class still has a `.ui()` method. (#1840)
 
 ## [1.2.1] - 2024-11-14
 

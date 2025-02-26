@@ -39,7 +39,20 @@ def chat_deps() -> list[HTMLDependency]:
         stylesheet={"href": "chat.css"},
     )
     # Chat's <textarea> input autoresizes
-    return [dep, autoresize_dependency()]
+    return [dep, markdown_stream_dependency(), autoresize_dependency()]
+
+
+def markdown_stream_dependency() -> HTMLDependency:
+    return HTMLDependency(
+        name="shiny-markdown-stream",
+        version=__version__,
+        source={
+            "package": "shiny",
+            "subdir": "www/py-shiny/markdown-stream",
+        },
+        script={"src": "markdown-stream.js", "type": "module"},
+        stylesheet={"href": "markdown-stream.css"},
+    )
 
 
 def autoresize_dependency() -> HTMLDependency:

@@ -47,15 +47,7 @@ You can create and run your first application with `shiny create`, the CLI will 
     * https://posit-dev.github.io/py-shiny/docs/api/express/
     * https://posit-dev.github.io/py-shiny/docs/api/core/
 
-If you are working from a fork you may not have the git tags from the original repo.
-Git tags are required for the install to succeed. To add tags to your own fork:
-
-```sh
-git remote add upstream https://github.com/posit-dev/py-shiny.git
-git fetch --tags upstream
-```
-
-Then install:
+If you want to do development on Shiny for Python:
 
 ```sh
 pip install -e ".[dev,test]"

@@ -2,12 +2,11 @@ import { LitElement, html } from "lit";
 import { unsafeHTML } from "lit-html/directives/unsafe-html.js";
 import { property } from "lit/decorators.js";
 
-import ClipboardJS from "clipboard";
-import { sanitize } from "dompurify";
-import hljs from "highlight.js/lib/common";
-import { Renderer, parse } from "marked";
-
-import { createElement } from "./_utils";
+import {
+  LightElement,
+  createElement,
+  showShinyClientMessage,
+} from "../utils/_utils";
 
 type ContentType = "markdown" | "html" | "text";
 
@@ -16,6 +15,7 @@ type Message = {
   role: "user" | "assistant";
   chunk_type: "message_start" | "message_end" | null;
   content_type: ContentType;
+  icon?: string;
   operation: "append" | null;
 };
 type ShinyChatMessage = {
@@ -24,13 +24,11 @@ type ShinyChatMessage = {
   obj: Message;
 };
 
-type requestScrollEvent = {
-  cancelIfScrolledUp: boolean;
-};
-
 type UpdateUserInput = {
   value?: string;
   placeholder?: string;
+  submit?: false;
+  focus?: false;
 };
 
 // https://github.com/microsoft/TypeScript/issues/28357#issuecomment-748550734
@@ -42,7 +40,6 @@ declare global {
     "shiny-chat-clear-messages": CustomEvent;
     "shiny-chat-update-user-input": CustomEvent<UpdateUserInput>;
     "shiny-chat-remove-loading-message": CustomEvent;
-    "shiny-chat-request-scroll": CustomEvent<requestScrollEvent>;
   }
 }
 
@@ -58,131 +55,46 @@ const ICONS = {
   // https://github.com/n3r4zzurr0/svg-spinners/blob/main/svg-css/3-dots-fade.svg
   dots_fade:
     '<svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><style>.spinner_S1WN{animation:spinner_MGfb .8s linear infinite;animation-delay:-.8s}.spinner_Km9P{animation-delay:-.65s}.spinner_JApP{animation-delay:-.5s}@keyframes spinner_MGfb{93.75%,100%{opacity:.2}}</style><circle class="spinner_S1WN" cx="4" cy="12" r="3"/><circle class="spinner_S1WN spinner_Km9P" cx="12" cy="12" r="3"/><circle class="spinner_S1WN spinner_JApP" cx="20" cy="12" r="3"/></svg>',
-  dot: '<svg width="12" height="12" xmlns="http://www.w3.org/2000/svg" class="chat-streaming-dot" style="margin-left:.25em;margin-top:-.25em"><circle cx="6" cy="6" r="6"/></svg>',
 };
-
-function createSVGIcon(icon: string): HTMLElement {
-  const parser = new DOMParser();
-  const svgDoc = parser.parseFromString(icon, "image/svg+xml");
-  return svgDoc.documentElement;
-}
-
-const SVG_DOT = createSVGIcon(ICONS.dot);
-
-const requestScroll = (el: HTMLElement, cancelIfScrolledUp = false) => {
-  el.dispatchEvent(
-    new CustomEvent("shiny-chat-request-scroll", {
-      detail: { cancelIfScrolledUp },
-      bubbles: true,
-      composed: true,
-    })
-  );
-};
-
-// For rendering chat output, we use typical Markdown behavior of passing through raw
-// HTML (albeit sanitizing afterwards).
-//
-// For echoing chat input, we escape HTML. This is not for security reasons but just
-// because it's confusing if the user is using tag-like syntax to demarcate parts of
-// their prompt for other reasons (like <User>/<Assistant> for providing examples to the
-// chat model), and those tags simply vanish.
-const rendererEscapeHTML = new Renderer();
-rendererEscapeHTML.html = (html: string) =>
-  html
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-const markedEscapeOpts = { renderer: rendererEscapeHTML };
-
-function contentToHTML(
-  content: string,
-  content_type: ContentType | "semi-markdown"
-) {
-  if (content_type === "markdown") {
-    return unsafeHTML(sanitize(parse(content) as string));
-  } else if (content_type === "semi-markdown") {
-    return unsafeHTML(sanitize(parse(content, markedEscapeOpts) as string));
-  } else if (content_type === "html") {
-    return unsafeHTML(sanitize(content));
-  } else if (content_type === "text") {
-    return content;
-  } else {
-    throw new Error(`Unknown content type: ${content_type}`);
-  }
-}
-
-// https://lit.dev/docs/components/shadow-dom/#implementing-createrenderroot
-class LightElement extends LitElement {
-  createRenderRoot() {
-    return this;
-  }
-}
 
 class ChatMessage extends LightElement {
-  @property() content = "";
+  @property() content = "...";
   @property() content_type: ContentType = "markdown";
   @property({ type: Boolean, reflect: true }) streaming = false;
+  @property() icon = "";
 
-  render(): ReturnType<LitElement["render"]> {
-    const content = contentToHTML(this.content, this.content_type);
-
-    const noContent = this.content.trim().length === 0;
-    const icon = noContent ? ICONS.dots_fade : ICONS.robot;
+  render() {
+    // Show dots until we have content
+    const isEmpty = this.content.trim().length === 0;
+    const icon = isEmpty ? ICONS.dots_fade : this.icon || ICONS.robot;
 
     return html`
       <div class="message-icon">${unsafeHTML(icon)}</div>
-      <div class="message-content">${content}</div>
+      <shiny-markdown-stream
+        content=${this.content}
+        content-type=${this.content_type}
+        ?streaming=${this.streaming}
+        auto-scroll
+        .onContentChange=${this.#onContentChange.bind(this)}
+        .onStreamEnd=${this.#makeSuggestionsAccessible.bind(this)}
+      ></shiny-markdown-stream>
     `;
   }
 
-  updated(changedProperties: Map<string, unknown>): void {
-    if (changedProperties.has("content")) {
-      this.#highlightAndCodeCopy();
-      if (this.streaming) this.#appendStreamingDot();
-      // It's important that the scroll request happens at this point in time, since
-      // otherwise, the content may not be fully rendered yet
-      requestScroll(this, this.streaming);
-    }
-    if (changedProperties.has("streaming")) {
-      this.streaming ? this.#appendStreamingDot() : this.#removeStreamingDot();
-    }
+  #onContentChange(): void {
+    if (!this.streaming) this.#makeSuggestionsAccessible();
   }
 
-  #appendStreamingDot(): void {
-    const content = this.querySelector(".message-content") as HTMLElement;
-    content.lastElementChild?.appendChild(SVG_DOT);
-  }
+  #makeSuggestionsAccessible(): void {
+    this.querySelectorAll(".suggestion,[data-suggestion]").forEach((el) => {
+      if (!(el instanceof HTMLElement)) return;
+      if (el.hasAttribute("tabindex")) return;
 
-  #removeStreamingDot(): void {
-    this.querySelector(".message-content svg.chat-streaming-dot")?.remove();
-  }
+      el.setAttribute("tabindex", "0");
+      el.setAttribute("role", "button");
 
-  // Highlight code blocks after the element is rendered
-  #highlightAndCodeCopy(): void {
-    const el = this.querySelector("pre code");
-    if (!el) return;
-    this.querySelectorAll<HTMLElement>("pre code").forEach((el) => {
-      // Highlight the code
-      hljs.highlightElement(el);
-      // Add a button to the code block to copy to clipboard
-      const btn = createElement("button", {
-        class: "code-copy-button",
-        title: "Copy to clipboard",
-      });
-      btn.innerHTML = '<i class="bi"></i>';
-      el.prepend(btn);
-      // Add the clipboard functionality
-      const clipboard = new ClipboardJS(btn, { target: () => el });
-      clipboard.on("success", function (e: ClipboardJS.Event) {
-        btn.classList.add("code-copy-button-checked");
-        setTimeout(
-          () => btn.classList.remove("code-copy-button-checked"),
-          2000
-        );
-        e.clearSelection();
-      });
+      const suggestion = el.dataset.suggestion || el.textContent;
+      el.setAttribute("aria-label", `Use chat suggestion: ${suggestion}`);
     });
   }
 }
@@ -190,20 +102,62 @@ class ChatMessage extends LightElement {
 class ChatUserMessage extends LightElement {
   @property() content = "...";
 
-  render(): ReturnType<LitElement["render"]> {
-    return contentToHTML(this.content, "semi-markdown");
+  render() {
+    return html`
+      <shiny-markdown-stream
+        content=${this.content}
+        content-type="semi-markdown"
+      ></shiny-markdown-stream>
+    `;
   }
 }
 
 class ChatMessages extends LightElement {
-  render(): ReturnType<LitElement["render"]> {
+  render() {
     return html``;
   }
 }
 
+interface ChatInputSetInputOptions {
+  submit?: boolean;
+  focus?: boolean;
+}
+
 class ChatInput extends LightElement {
+  private _disabled = false;
+
   @property() placeholder = "Enter a message...";
-  @property({ type: Boolean, reflect: true }) disabled = false;
+  // disabled is reflected manually because `reflect: true` doesn't work with LightElement
+  @property({ type: Boolean })
+  get disabled() {
+    return this._disabled;
+  }
+
+  set disabled(value: boolean) {
+    const oldValue = this._disabled;
+    if (value === oldValue) {
+      return;
+    }
+
+    this._disabled = value;
+    value
+      ? this.setAttribute("disabled", "")
+      : this.removeAttribute("disabled");
+
+    this.requestUpdate("disabled", oldValue);
+    this.#onInput();
+  }
+
+  attributeChangedCallback(
+    name: string,
+    _old: string | null,
+    value: string | null
+  ) {
+    super.attributeChangedCallback(name, _old, value);
+    if (name === "disabled") {
+      this.disabled = value !== null;
+    }
+  }
 
   private get textarea(): HTMLTextAreaElement {
     return this.querySelector("textarea") as HTMLTextAreaElement;
@@ -221,7 +175,7 @@ class ChatInput extends LightElement {
     return this.querySelector("button") as HTMLButtonElement;
   }
 
-  render(): ReturnType<LitElement["render"]> {
+  render() {
     const icon =
       '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-arrow-up-circle-fill" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 0 0 8a8 8 0 0 0 16 0m-7.5 3.5a.5.5 0 0 1-1 0V5.707L5.354 7.854a.5.5 0 1 1-.708-.708l3-3a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 5.707z"/></svg>';
 
@@ -266,7 +220,7 @@ class ChatInput extends LightElement {
     this.#onInput();
   }
 
-  #sendInput(): void {
+  #sendInput(focus = true): void {
     if (this.valueIsEmpty) return;
     if (this.disabled) return;
 
@@ -281,22 +235,38 @@ class ChatInput extends LightElement {
     this.dispatchEvent(sentEvent);
 
     this.setInputValue("");
+    this.disabled = true;
 
-    this.textarea.focus();
+    if (focus) this.textarea.focus();
   }
 
-  setInputValue(value: string): void {
+  setInputValue(
+    value: string,
+    { submit = false, focus = false }: ChatInputSetInputOptions = {}
+  ): void {
+    // Store previous value to restore post-submit (if submitting)
+    const oldValue = this.textarea.value;
+
     this.textarea.value = value;
-    this.disabled = value.trim().length === 0;
 
     // Simulate an input event (to trigger the textarea autoresize)
     const inputEvent = new Event("input", { bubbles: true, cancelable: true });
     this.textarea.dispatchEvent(inputEvent);
+
+    if (submit) {
+      this.#sendInput(false);
+      if (oldValue) this.setInputValue(oldValue);
+    }
+
+    if (focus) {
+      this.textarea.focus();
+    }
   }
 }
 
 class ChatContainer extends LightElement {
-  @property() placeholder = "Enter a message...";
+  @property({ attribute: "icon-assistant" }) iconAssistant = "";
+  inputSentinelObserver?: IntersectionObserver;
 
   private get input(): ChatInput {
     return this.querySelector(CHAT_INPUT_TAG) as ChatInput;
@@ -311,10 +281,37 @@ class ChatContainer extends LightElement {
     return last ? (last as ChatMessage) : null;
   }
 
-  private resizeObserver!: ResizeObserver;
-
-  render(): ReturnType<LitElement["render"]> {
+  render() {
     return html``;
+  }
+
+  connectedCallback(): void {
+    super.connectedCallback();
+
+    // We use a sentinel element that we place just above the shiny-chat-input. When it
+    // moves off-screen we know that the text area input is now floating, add shadow.
+    let sentinel = this.querySelector<HTMLElement>("div");
+    if (!sentinel) {
+      sentinel = createElement("div", {
+        style: "width: 100%; height: 0;",
+      }) as HTMLElement;
+      this.input.insertAdjacentElement("afterend", sentinel);
+    }
+
+    this.inputSentinelObserver = new IntersectionObserver(
+      (entries) => {
+        const inputTextarea = this.input.querySelector("textarea");
+        if (!inputTextarea) return;
+        const addShadow = entries[0]?.intersectionRatio === 0;
+        inputTextarea.classList.toggle("shadow", addShadow);
+      },
+      {
+        threshold: [0, 1],
+        rootMargin: "0px",
+      }
+    );
+
+    this.inputSentinelObserver.observe(sentinel);
   }
 
   firstUpdated(): void {
@@ -336,14 +333,15 @@ class ChatContainer extends LightElement {
       "shiny-chat-remove-loading-message",
       this.#onRemoveLoadingMessage
     );
-    this.addEventListener("shiny-chat-request-scroll", this.#onRequestScroll);
-
-    this.resizeObserver = new ResizeObserver(() => requestScroll(this, true));
-    this.resizeObserver.observe(this);
+    this.addEventListener("click", this.#onInputSuggestionClick);
+    this.addEventListener("keydown", this.#onInputSuggestionKeydown);
   }
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
+
+    this.inputSentinelObserver?.disconnect();
+    this.inputSentinelObserver = undefined;
 
     this.removeEventListener("shiny-chat-input-sent", this.#onInputSent);
     this.removeEventListener("shiny-chat-append-message", this.#onAppend);
@@ -360,12 +358,8 @@ class ChatContainer extends LightElement {
       "shiny-chat-remove-loading-message",
       this.#onRemoveLoadingMessage
     );
-    this.removeEventListener(
-      "shiny-chat-request-scroll",
-      this.#onRequestScroll
-    );
-
-    this.resizeObserver.disconnect();
+    this.removeEventListener("click", this.#onInputSuggestionClick);
+    this.removeEventListener("keydown", this.#onInputSuggestionKeydown);
   }
 
   // When user submits input, append it to the chat, and add a loading message
@@ -379,11 +373,23 @@ class ChatContainer extends LightElement {
     this.#appendMessage(event.detail);
   }
 
-  #appendMessage(message: Message, finalize = true): void {
+  #initMessage(): void {
     this.#removeLoadingMessage();
+    if (!this.input.disabled) {
+      this.input.disabled = true;
+    }
+  }
+
+  #appendMessage(message: Message, finalize = true): void {
+    this.#initMessage();
 
     const TAG_NAME =
       message.role === "user" ? CHAT_USER_MESSAGE_TAG : CHAT_MESSAGE_TAG;
+
+    if (this.iconAssistant) {
+      message.icon = message.icon || this.iconAssistant;
+    }
+
     const msg = createElement(TAG_NAME, message);
     this.messages.appendChild(msg);
 
@@ -442,13 +448,65 @@ class ChatContainer extends LightElement {
   }
 
   #onUpdateUserInput(event: CustomEvent<UpdateUserInput>): void {
-    const { value, placeholder } = event.detail;
+    const { value, placeholder, submit, focus } = event.detail;
     if (value !== undefined) {
-      this.input.setInputValue(value);
+      this.input.setInputValue(value, { submit, focus });
     }
     if (placeholder !== undefined) {
       this.input.placeholder = placeholder;
     }
+  }
+
+  #onInputSuggestionClick(e: MouseEvent): void {
+    this.#onInputSuggestionEvent(e);
+  }
+
+  #onInputSuggestionKeydown(e: KeyboardEvent): void {
+    const isEnterOrSpace = e.key === "Enter" || e.key === " ";
+    if (!isEnterOrSpace) return;
+
+    this.#onInputSuggestionEvent(e);
+  }
+
+  #onInputSuggestionEvent(e: MouseEvent | KeyboardEvent): void {
+    const { suggestion, submit } = this.#getSuggestion(e.target);
+    if (!suggestion) return;
+
+    e.preventDefault();
+    // Cmd/Ctrl + (event) = force submitting
+    // Alt/Opt  + (event) = force setting without submitting
+    const shouldSubmit =
+      e.metaKey || e.ctrlKey ? true : e.altKey ? false : submit;
+
+    this.input.setInputValue(suggestion, {
+      submit: shouldSubmit,
+      focus: !shouldSubmit,
+    });
+  }
+
+  #getSuggestion(x: EventTarget | null): {
+    suggestion?: string;
+    submit?: boolean;
+  } {
+    if (!(x instanceof HTMLElement)) return {};
+
+    const el = x.closest(".suggestion, [data-suggestion]");
+    if (!(el instanceof HTMLElement)) return {};
+
+    const isSuggestion =
+      el.classList.contains("suggestion") ||
+      el.dataset.suggestion !== undefined;
+    if (!isSuggestion) return {};
+
+    const suggestion = el.dataset.suggestion || el.textContent;
+
+    return {
+      suggestion: suggestion || undefined,
+      submit:
+        el.classList.contains("submit") ||
+        el.dataset.suggestionSubmit === "" ||
+        el.dataset.suggestionSubmit === "true",
+    };
   }
 
   #onRemoveLoadingMessage(): void {
@@ -458,22 +516,6 @@ class ChatContainer extends LightElement {
 
   #finalizeMessage(): void {
     this.input.disabled = false;
-  }
-
-  #onRequestScroll(event: CustomEvent<requestScrollEvent>): void {
-    // When streaming or resizing, only scroll if the user near the bottom
-    const { cancelIfScrolledUp } = event.detail;
-    if (cancelIfScrolledUp) {
-      if (this.scrollTop + this.clientHeight < this.scrollHeight - 100) {
-        return;
-      }
-    }
-
-    // Smooth scroll to the bottom if we're not streaming or resizing
-    this.scroll({
-      top: this.scrollHeight,
-      behavior: cancelIfScrolledUp ? "auto" : "smooth",
-    });
   }
 }
 
@@ -492,8 +534,21 @@ $(function () {
       const evt = new CustomEvent(message.handler, {
         detail: message.obj,
       });
+
       const el = document.getElementById(message.id);
-      el?.dispatchEvent(evt);
+
+      if (!el) {
+        showShinyClientMessage({
+          status: "error",
+          message: `Unable to handle Chat() message since element with id
+          ${message.id} wasn't found. Do you need to call .ui() (Express) or need a
+          chat_ui('${message.id}') in the UI (Core)?
+        `,
+        });
+        return;
+      }
+
+      el.dispatchEvent(evt);
     }
   );
 });
