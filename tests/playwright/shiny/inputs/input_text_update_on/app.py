@@ -69,11 +69,20 @@ def random_value(
 def text_input_ui(update_on: Literal["change", "blur"] = "change"):
     return ui.TagList(
         ui.h2(f'updateOn="{update_on}"'),
-        ui.input_text("txt", "Text", value="Hello", update_on=update_on),
-        ui.input_text_area("txtarea", "Text Area", update_on=update_on),
-        ui.input_numeric("num", "Numeric", value=1, update_on=update_on),
-        ui.input_password("pwd", "Password", update_on=update_on),
-        ui.output_text_verbatim("value"),
+        ui.layout_columns(
+            ui.input_text("txt", "Text", value="Hello", update_on=update_on),
+            ui.div("Text", ui.output_text_verbatim("value_txt")),
+
+            ui.input_text_area("txtarea", "Text Area", update_on=update_on),
+            ui.div("Text Area", ui.output_text_verbatim("value_txtarea")),
+
+            ui.input_numeric("num", "Numeric", value=1, update_on=update_on),
+            ui.div("Numeric", ui.output_text_verbatim("value_num")),
+
+            ui.input_password("pwd", "Password", update_on=update_on),
+            ui.div("Password", ui.output_text_verbatim("value_pwd")),
+            col_widths=6,
+        ),
         ui.input_action_button("update_text", "Update Text"),
         ui.input_action_button("update_text_area", "Update Text Area"),
         ui.input_action_button("update_number", "Update Number"),
@@ -84,19 +93,20 @@ def text_input_ui(update_on: Literal["change", "blur"] = "change"):
 @module.server
 def text_input_server(input: Inputs, output: Outputs, session: Session):
     @render.text
-    def value() -> str:
-        return "\n".join(
-            [
-                "---- Text ----",
-                input.txt(),
-                "---- Text Area ----",
-                input.txtarea(),
-                "---- Numeric ----",
-                str(input.num()),
-                "---- Password ----",
-                input.pwd(),
-            ]
-        )
+    def value_txt() -> str:
+        return input.txt()
+
+    @render.text
+    def value_txtarea() -> str:
+        return input.txtarea()
+
+    @render.text
+    def value_num() -> str:
+        return str(input.num())
+
+    @render.text
+    def value_pwd() -> str:
+        return input.pwd()
 
     @reactive.effect
     @reactive.event(input.update_text)
