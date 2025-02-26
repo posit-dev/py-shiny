@@ -990,11 +990,6 @@ def navset_pill_list(
     )
 
 
-class Default(Generic[T]):
-    def __init__(self, value: T):
-        self._default = value
-
-
 NavbarOptionsPositionType = Literal[
     "static-top", "fixed-top", "fixed-bottom", "sticky-top"
 ]
