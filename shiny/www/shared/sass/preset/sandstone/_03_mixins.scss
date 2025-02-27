@@ -1,8 +1,6 @@
 $bslib-preset-type: bootswatch;
 $bslib-preset-name: sandstone;
 @import "../../bslib/lib/bsw5/dist/sandstone/_variables.scss";
-$navbar-light-bg: $dark !default;
-$navbar-dark-bg: $success !default;
 $enable-cssgrid: true !default;
 @import "../../bslib/bs3compat/_defaults.scss";
 @import "../../bslib/lib/bs5/scss/_variables.scss";

@@ -16,12 +16,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   * Add a `data-suggestion` attribute to an HTML element, and set the value to the input suggestion text (e.g., `<span data-suggestion="Suggestion value">Suggestion link</span>`)
   * To auto-submit the suggestion when clicked by the user, include the `.submit` class or the `data-suggestion-submit="true"` attribute on the HTML element. Alternatively, use Cmd/Ctrl + click to auto-submit any suggestion or Alt/Opt + click to apply any suggestion to the chat input without submitting.
 
-* Added a new `.add_sass_layer_file()` method to `ui.Theme` that supports reading a Sass file with layer boundary comments, e.g. `/*-- scss:defaults --*/`. This format [is supported by Quarto](https://quarto.org/docs/output-formats/html-themes-more.html#bootstrap-bootswatch-layering) and makes it easier to store Sass rules and declarations that need to be woven into Shiny's Sass Bootstrap files. (#1790)
-
-* The `ui.Chat()` component gains the following:
+* The `ui.Chat()` component also gains the following:
     * The `.on_user_submit()` decorator method now passes the user input to the decorated function. This makes it a bit easier to access the user input. See the new templates (mentioned below) for examples. (#1801)
+    * The assistant icon is now configurable via `ui.chat_ui()` (or the `ui.Chat.ui()` method in Shiny Express) or for individual messages in the `.append_message()` and `.append_message_stream()` methods of `ui.Chat()`. (#1853)
     * A new `get_latest_stream_result()` method was added for an easy way to access the final result of the stream when it completes. (#1846)
     * The `.append_message_stream()` method now returns the `reactive.extended_task` instance that it launches. (#1846)
+    * The `ui.Chat()` component's `.update_user_input()` method gains `submit` and `focus` options that allow you to submit the input on behalf of the user and to choose whether the input receives focus after the update. (#1851)
 
 * `shiny create` includes new and improved `ui.Chat()` template options. Most of these templates leverage the new [`{chatlas}` package](https://posit-dev.github.io/chatlas/), our opinionated approach to interfacing with various LLM. (#1806)
 
@@ -29,9 +29,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Available `input` ids can now be listed via `dir(input)`. This also works on the new `session.clientdata` object. (#1832)
 
-* The `ui.Chat()` component's `.update_user_input()` method gains `submit` and `focus` options that allow you to submit the input on behalf of the user and to choose whether the input receives focus after the update. (#1851)
+* Added a new `.add_sass_layer_file()` method to `ui.Theme` that supports reading a Sass file with layer boundary comments, e.g. `/*-- scss:defaults --*/`. This format [is supported by Quarto](https://quarto.org/docs/output-formats/html-themes-more.html#bootstrap-bootswatch-layering) and makes it easier to store Sass rules and declarations that need to be woven into Shiny's Sass Bootstrap files. (#1790)
 
-* The assistant icons is now configurable via `ui.chat_ui()` (or the `ui.Chat.ui()` method in Shiny Express) or for individual messages in the `.append_message()` and `.append_message_stream()` methods of `ui.Chat()`. (#1853)
+* `ui.input_text()`, `ui.input_text_area()`, `ui.input_numeric()` and `ui.input_password()` all gain an `update_on` option. `update_on="change"` is the default and previous behavior, where the input value updates immediately whenever the value changes. With `update_on="blur"`, the input value will update only when the text input loses focus or when the user presses Enter (or Cmd/Ctrl + Enter for `ui.input_text_area()`). (#1874)
 
 * `shiny.pytest.create_app_fixture(app)` gained support for multiple app file paths when creating your test fixture. If multiple file paths are given, it will behave as a parameterized fixture value and execute the test for each app path. (#1869)
 
