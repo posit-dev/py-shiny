@@ -35,6 +35,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `ui.input_text()`, `ui.input_text_area()`, `ui.input_numeric()` and `ui.input_password()` all gain an `update_on` option. `update_on="change"` is the default and previous behavior, where the input value updates immediately whenever the value changes. With `update_on="blur"`, the input value will update only when the text input loses focus or when the user presses Enter (or Cmd/Ctrl + Enter for `ui.input_text_area()`). (#1874)
 
+* `shiny.pytest.create_app_fixture(app)` gained support for multiple app file paths when creating your test fixture. If multiple file paths are given, it will behave as a parameterized fixture value and execute the test for each app path. (#1869)
+
 ### Bug fixes
 
 * `ui.Chat()` now correctly handles new `ollama.chat()` return value introduced in `ollama` v0.4. (#1787)
