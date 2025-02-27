@@ -34,20 +34,24 @@ Documentation taken from [https://docs.pytest.org/en/7.1.x/how-to/fixtures.html#
 
 @no_example()
 def create_app_fixture(
-    app: Union[PurePath, str],
+    app: PurePath | str | list[PurePath | str],
     scope: ScopeName = "module",
 ):
     """
     Create a fixture for a local Shiny app directory.
 
-    Creates a fixture for a local Shiny app that is not contained within the same folder. This fixture is used to start the Shiny app process and return the local URL of the app.
+    Creates a fixture for a local Shiny app that is not contained within the same
+    folder. This fixture is used to start the Shiny app process and return the local URL
+    of the app.
 
-    If the app path is located in the same directory as the test file, then `create_app_fixture()` can be skipped and `local_app` test fixture can be used instead.
+    If the app path is located in the same directory as the test file, then
+    `create_app_fixture()` can be skipped and `local_app` test fixture can be used
+    instead.
 
     Parameters
     ----------
     app
-        The path to the Shiny app file.
+        The path (or a list of paths) to the Shiny app file.
 
         If `app` is a `Path` or `PurePath` instance and `Path(app).is_file()` returns
         `True`, then this value will be used directly. Note, `app`'s file path will be
@@ -58,8 +62,14 @@ def create_app_fixture(
         the test function was collected.
 
         To be sure that your `app` path is always relative, supply a `str` value.
+
+        If `app` is a list of path values, then the fixture will be parametrized and each test
+        will be run for each path in the list.
     scope
-        The scope of the fixture.
+        The scope of the fixture. The default is `module`, which means that the fixture
+        will be created once per module. See [Pytest fixture
+        scopes](https://docs.pytest.org/en/stable/how-to/fixtures.html#fixture-scopes)
+        for more details.
 
     Returns
     -------
@@ -85,13 +95,51 @@ def create_app_fixture(
         # Add test code here
         ...
     ```
+
+    ```python
+    from playwright.sync_api import Page
+
+    from shiny.playwright import controller
+    from shiny.pytest import create_app_fixture
+    from shiny.run import ShinyAppProc
+
+    # The variable name `app` MUST match the parameter name in the test function
+    # The tests below will run for each path provided
+    app = create_app_fixture(["relative/path/to/first/app.py", "relative/path/to/second/app.py"])
+
+    def test_app_code(page: Page, app: ShinyAppProc):
+
+        page.goto(app.url)
+        # Add test code here
+        ...
+
+    def test_more_app_code(page: Page, app: ShinyAppProc):
+
+        page.goto(app.url)
+        # Add test code here
+        ...
+    ```
     """
 
-    @pytest.fixture(scope=scope)
-    def fixture_func(request: pytest.FixtureRequest):
+    def yield_app(app: PurePath | str):
         app_purepath_exists = isinstance(app, PurePath) and Path(app).is_file()
-        app_path = app if app_purepath_exists else request.path.parent / app
+        app_path = app if app_purepath_exists else Path(app)
         sa_gen = shiny_app_gen(app_path)
         yield next(sa_gen)
+
+    if isinstance(app, list):
+
+        # Multiple app values provided
+        # Will display the app value as a parameter in the logs
+        @pytest.fixture(scope=scope, params=app)
+        def fixture_func(request: pytest.FixtureRequest):
+            yield yield_app(request.param)
+
+    else:
+        # Single app value provided
+        # No indication of the app value in the logs
+        @pytest.fixture(scope=scope)
+        def fixture_func(request: pytest.FixtureRequest):
+            yield yield_app(app)
 
     return fixture_func
