@@ -9,7 +9,7 @@ from shiny.express import ui
 # ChatOllama() requires an Ollama model server to be running locally.
 # See the docs for more information on how to set up a local Ollama server.
 # https://posit-dev.github.io/chatlas/reference/ChatOllama.html
-chat_model = ChatOllama(model="llama3.1")
+chat_model = ChatOllama(model="llama3.2")
 
 # Set some Shiny page options
 ui.page_opts(
