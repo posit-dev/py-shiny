@@ -33,6 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * The assistant icons is now configurable via `ui.chat_ui()` (or the `ui.Chat.ui()` method in Shiny Express) or for individual messages in the `.append_message()` and `.append_message_stream()` methods of `ui.Chat()`. (#1853)
 
+* `shiny.pytest.create_app_fixture(app)` gained support for multiple app file paths when creating your test fixture. If multiple file paths are given, it will behave as a parameterized fixture value and execute the test for each app path. (#1869)
+
 ### Bug fixes
 
 * `ui.Chat()` now correctly handles new `ollama.chat()` return value introduced in `ollama` v0.4. (#1787)
