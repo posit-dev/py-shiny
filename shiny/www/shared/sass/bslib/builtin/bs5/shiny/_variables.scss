@@ -148,6 +148,21 @@ $bslib-sidebar-fg: null !default;
   $bslib-sidebar-fg: color-contrast($bslib-sidebar-bg);
 }
 
+// From inst/lib/bs5/scss/_variables.scss
+// Repeated here so that we can set navbar light/dark to `--bs-body-bg`
+$navbar-bg:       null !default; // Background color for any navbarPage()
+$navbar-light-bg: $navbar-bg !default; // Background color for navbarPage(inverse = FALSE)
+$navbar-dark-bg:  $navbar-bg !default; // Background color for navbarPage(inverse = TRUE)
+
+@if $bslib-dashboard-design and $navbar-bg == null {
+  @if $navbar-light-bg == null {
+    $navbar-light-bg: var(--#{$prefix}body-bg);
+  }
+  @if $navbar-dark-bg == null {
+    $navbar-dark-bg: var(--#{$prefix}body-bg);
+  }
+}
+
 $border-color-translucent: if($bslib-dashboard-design, rgba(40, 70, 94, 0.1), null) !default;
 $border-color-translucent-dark: if($bslib-dashboard-design, rgba(255, 255, 255, 0.1), null) !default;
 
