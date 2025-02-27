@@ -35,7 +35,7 @@ def ui(fn: Callable[P, R]) -> Callable[Concatenate[str, P], R]:
 
 @no_example()
 def server(
-    fn: Callable[Concatenate[Inputs, Outputs, Session, P], R]
+    fn: Callable[Concatenate[Inputs, Outputs, Session, P], R],
 ) -> Callable[Concatenate[str, P], R]:
     from .session import require_active_session, session_context
 

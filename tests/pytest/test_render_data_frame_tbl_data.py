@@ -366,11 +366,14 @@ def test_dtype_coverage():
     for dtype_name in dtype_names:
 
         # Skip known types or imports that are not dtypes
+        if dtype_name.endswith("Type"):
+            # "DType",
+            # "NestedType",
+            # "NumericType",
+            # "TemporalType",
+            continue
         if dtype_name in (
             # narwhals
-            "DType",
-            "NumericType",
-            "TemporalType",
             "Unknown",
             # typing import
             "Literal",

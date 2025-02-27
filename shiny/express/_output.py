@@ -47,7 +47,7 @@ def output_args(
 
 
 def suspend_display(
-    fn: Callable[P, R] | RendererT | None = None
+    fn: Callable[P, R] | RendererT | None = None,
 ) -> Callable[P, R] | RendererT | AbstractContextManager[None]:
     warn_deprecated(
         "`suspend_display` is deprecated. Please use `ui.hold` instead. "

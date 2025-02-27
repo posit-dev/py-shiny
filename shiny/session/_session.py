@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-__all__ = ("Session", "Inputs", "Outputs")
+__all__ = ("Session", "Inputs", "Outputs", "ClientData")
 
 import asyncio
 import contextlib
@@ -170,6 +170,7 @@ class Session(ABC):
     id: str
     input: Inputs
     output: Outputs
+    clientdata: ClientData
     user: str | None
     groups: list[str] | None
 
@@ -519,6 +520,7 @@ class AppSession(Session):
 
         self.input: Inputs = Inputs(dict())
         self.output: Outputs = Outputs(self, self.ns, outputs=dict())
+        self.clientdata: ClientData = ClientData(self)
 
         self.user: str | None = None
         self.groups: list[str] | None = None
@@ -1351,6 +1353,225 @@ class Inputs:
         # it populates the key if it doesn't exist yet. It then calls `is_set()`, which
         # creates a reactive dependency, and returns whether the value is set.
         return self[key].is_set()
+
+    def __dir__(self):
+        return list(self._map.keys())
+
+
+@add_example()
+class ClientData:
+    """
+    Access (client-side) information from the browser.
+
+    Provides access to client-side information, such as the URL components, the
+    pixel ratio of the device, and the properties of outputs.
+
+    Each method in this class reads a reactive input value, which means that the
+    method will error if called outside of a reactive context.
+
+    Raises
+    ------
+    RuntimeError
+        If a method is called outside of a reactive context.
+    """
+
+    def __init__(self, session: Session) -> None:
+        self._session: Session = session
+
+    def url_hash(self) -> str:
+        """
+        Reactively read the hash part of the URL.
+        """
+        return self._read_input("url_hash")
+
+    def url_hash_initial(self) -> str:
+        """
+        Reactively read the initial hash part of the URL.
+        """
+        return self._read_input("url_hash_initial")
+
+    def url_hostname(self) -> str:
+        """
+        Reactively read the hostname part of the URL.
+        """
+        return self._read_input("url_hostname")
+
+    def url_pathname(self) -> str:
+        """
+        The pathname part of the URL.
+        """
+        return self._read_input("url_pathname")
+
+    def url_port(self) -> int:
+        """
+        Reactively read the port part of the URL.
+        """
+        return cast(int, self._read_input("url_port"))
+
+    def url_protocol(self) -> str:
+        """
+        Reactively read the protocol part of the URL.
+        """
+        return self._read_input("url_protocol")
+
+    def url_search(self) -> str:
+        """
+        Reactively read the search part of the URL.
+        """
+        return self._read_input("url_search")
+
+    def pixelratio(self) -> float:
+        """
+        Reactively read the pixel ratio of the device.
+        """
+        return cast(int, self._read_input("pixelratio"))
+
+    def output_height(self, id: str) -> float | None:
+        """
+        Reactively read the height of an output.
+
+        Parameters
+        ----------
+        id
+            The id of the output.
+
+        Returns
+        -------
+        float | None
+            The height of the output, or None if the output does not exist (or does not
+            report its height).
+        """
+        return cast(float, self._read_output(id, "height"))
+
+    def output_width(self, id: str) -> float | None:
+        """
+        Reactively read the width of an output.
+
+        Parameters
+        ----------
+        id
+            The id of the output.
+
+        Returns
+        -------
+        float | None
+            The width of the output, or None if the output does not exist (or does not
+            report its width).
+        """
+        return cast(float, self._read_output(id, "width"))
+
+    def output_hidden(self, id: str) -> bool | None:
+        """
+        Reactively read whether an output is hidden.
+
+        Parameters
+        ----------
+        id
+            The id of the output.
+
+        Returns
+        -------
+        bool | None
+            Whether the output is hidden, or None if the output does not exist.
+        """
+        return cast(bool, self._read_output(id, "hidden"))
+
+    def output_bg_color(self, id: str) -> str | None:
+        """
+        Reactively read the background color of an output.
+
+        Parameters
+        ----------
+        id
+            The id of the output.
+
+        Returns
+        -------
+        str | None
+            The background color of the output, or None if the output does not exist (or
+            does not report its bg color).
+        """
+        return cast(str, self._read_output(id, "bg"))
+
+    def output_fg_color(self, id: str) -> str | None:
+        """
+        Reactively read the foreground color of an output.
+
+        Parameters
+        ----------
+        id
+            The id of the output.
+
+        Returns
+        -------
+        str | None
+            The foreground color of the output, or None if the output does not exist (or
+            does not report its fg color).
+        """
+        return cast(str, self._read_output(id, "fg"))
+
+    def output_accent_color(self, id: str) -> str | None:
+        """
+        Reactively read the accent color of an output.
+
+        Parameters
+        ----------
+        id
+            The id of the output.
+
+        Returns
+        -------
+        str | None
+            The accent color of the output, or None if the output does not exist (or
+            does not report its accent color).
+        """
+        return cast(str, self._read_output(id, "accent"))
+
+    def output_font(self, id: str) -> str | None:
+        """
+        Reactively read the font(s) of an output.
+
+        Parameters
+        ----------
+        id
+            The id of the output.
+
+        Returns
+        -------
+        str | None
+            The font family of the output, or None if the output does not exist (or
+            does not report its font styles).
+        """
+        return cast(str, self._read_output(id, "font"))
+
+    def _read_input(self, key: str) -> str:
+        self._check_current_context(key)
+
+        id = ResolvedId(f".clientdata_{key}")
+        if id not in self._session.input:
+            raise ValueError(
+                f"ClientData value '{key}' not found. Please report this issue."
+            )
+
+        return self._session.input[id]()
+
+    def _read_output(self, id: str, key: str) -> str | None:
+        self._check_current_context(f"output_{key}")
+
+        input_id = ResolvedId(f".clientdata_output_{id}_{key}")
+        if input_id in self._session.input:
+            return self._session.input[input_id]()
+        else:
+            return None
+
+    @staticmethod
+    def _check_current_context(key: str) -> None:
+        try:
+            reactive.get_current_context()
+        except RuntimeError:
+            raise RuntimeError(
+                f"session.clientdata.{key}() must be called from within a reactive context."
+            )
 
 
 # ======================================================================================
