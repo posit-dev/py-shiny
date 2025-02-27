@@ -10,9 +10,8 @@ from shiny.run import ShinyAppProc
 
 def click_action_button(page: Page, x: controller.InputActionButton):
     """Click the button without moving focus (changes input, doesn't change value)"""
-    page.evaluate(
-        "([id]) => document.getElementById(id).click()", [x.id]
-    )
+    page.evaluate("([id]) => document.getElementById(id).click()", [x.id])
+
 
 def test_text_input_change(page: Page, local_app: ShinyAppProc):
     page.goto(local_app.url)
@@ -142,11 +141,15 @@ def test_text_area_input_blur(page: Page, local_app: ShinyAppProc):
     output.expect_value(the_value)  # changes after Control+Enter
 
     click_action_button(page, update)
-    input.expect_value("The old oak tree whispered secrets to the wind.\nClouds painted shadows on the mountain peaks.")
+    input.expect_value(
+        "The old oak tree whispered secrets to the wind.\nClouds painted shadows on the mountain peaks."
+    )
     output.expect_value(the_value)
 
     click_action_button(page, update)
-    input.expect_value("Clouds painted shadows on the mountain peaks.\nStars danced across the midnight canvas.")
+    input.expect_value(
+        "Clouds painted shadows on the mountain peaks.\nStars danced across the midnight canvas."
+    )
     output.expect_value(the_value)
 
     the_value = "Clouds painted shadows on the mountain peaks.\nStars danced across the midnight canvas."

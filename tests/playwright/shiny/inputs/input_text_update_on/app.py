@@ -72,13 +72,10 @@ def text_input_ui(update_on: Literal["change", "blur"] = "change"):
         ui.layout_columns(
             ui.input_text("txt", "Text", value="Hello", update_on=update_on),
             ui.div("Text", ui.output_text_verbatim("value_txt")),
-
             ui.input_text_area("txtarea", "Text Area", update_on=update_on),
             ui.div("Text Area", ui.output_text_verbatim("value_txtarea")),
-
             ui.input_numeric("num", "Numeric", value=1, update_on=update_on),
             ui.div("Numeric", ui.output_text_verbatim("value_num")),
-
             ui.input_password("pwd", "Password", update_on=update_on),
             ui.div("Password", ui.output_text_verbatim("value_pwd")),
             col_widths=6,
