@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Literal, overload
 
 from shiny import App, Inputs, Outputs, Session, module, reactive, render, ui
