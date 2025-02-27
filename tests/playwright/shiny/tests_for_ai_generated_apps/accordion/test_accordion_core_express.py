@@ -50,7 +50,7 @@ def test_accordion_demo2(page: Page, app: ShinyAppProc) -> None:
     panel_a = accordion.accordion_panel("Panel A")
     panel_b = accordion.accordion_panel("Panel B")
     panel_c = accordion.accordion_panel("Panel C")
-    _panel_d = accordion.accordion_panel("Panel D")
+    # panel_d = accordion.accordion_panel("Panel D")
 
     # Test panel content
     panel_a.expect_body("This is a basic accordion panel with default settings.")

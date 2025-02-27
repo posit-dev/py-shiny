@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path, PurePath
-from typing import Literal, Union
+from typing import Literal
 
 import pytest
 
