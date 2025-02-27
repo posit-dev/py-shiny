@@ -1,0 +1,108 @@
+name: Bug Report
+description: Report a bug in Shiny for Python
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug!  Please provide a **Minimal Reproducible Example** (MRE).  This is the *most important* part.  The easier it is for us to reproduce the bug, the faster we can fix it.  Search for similar issues before submitting.
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which part of Shiny is affected?
+      options:
+        - UI (ui.*)
+        - Server (server.*)
+        - Reactive Programming
+        - Input/Output Bindings
+        - Session Management
+        - Deployment
+        - Documentation
+        - Installation
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - P0 - Critical (crash/unusable)
+        - P1 - High (major feature broken)
+        - P2 - Medium (workaround exists)
+        - P3 - Low (minor inconvenience)
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Shiny Version
+      description: '`shiny --version`'
+      placeholder: ex. 1.2.1
+    validations:
+      required: true
+
+  - type: input
+    id: python-version
+    attributes:
+      label: Python Version
+      description: '`python --version`'
+      placeholder: ex. 3.10.6
+    validations:
+      required: true
+
+  - type: textarea
+    id: minimal-example
+    attributes:
+      label: Minimal Reproducible Example
+      description: |
+        A *minimal*, self-contained app demonstrating the issue.  Remove unrelated code. We should be able to copy, paste, and run it.
+
+        Template:
+
+        ```python
+        from shiny import App, render, ui
+
+        app_ui = ui.page_fluid()
+        def server(input, output, session):
+            pass
+        app = App(app_ui, server)
+        ```
+      render: python
+    validations:
+      required: true
+
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Behavior
+      description: Describe what *is* happening and what you *expected* to happen.
+      placeholder: |
+        Current: When I click..., the app freezes.
+        Expected:  The plot should update without freezing.
+    validations:
+        required: true
+
+  - type: textarea
+    id: errors
+    attributes:
+      label: Error Messages (if any)
+      description: Copy and paste any errors/tracebacks.
+      render: shell
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: |
+        - OS: [e.g., Windows 10, macOS 15.2]
+        - Browser: [e.g., Chrome 132]
+        - Dependencies:  `pip freeze` or `conda list` (especially `shiny`, `pandas`, `numpy`, etc.)
+      render: markdown
+    validations:
+      required: true

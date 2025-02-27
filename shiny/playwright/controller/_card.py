@@ -240,6 +240,21 @@ class ValueBox(
             The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         _expect_style_to_have_value(
+            self.loc_container, "height", value, timeout=timeout
+        )
+
+    def expect_max_height(self, value: StyleValue, *, timeout: Timeout = None) -> None:
+        """
+        Expects the value box to have a specific maximum height.
+
+        Parameters
+        ----------
+        value
+            The expected maximum height value.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
+        _expect_style_to_have_value(
             self.loc_container, "max-height", value, timeout=timeout
         )
 
