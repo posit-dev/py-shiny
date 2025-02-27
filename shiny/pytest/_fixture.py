@@ -121,11 +121,10 @@ def create_app_fixture(
     ```
     """
 
-    def yield_app(app: PurePath | str):
+    def get_app_path(app: PurePath | str):
         app_purepath_exists = isinstance(app, PurePath) and Path(app).is_file()
         app_path = app if app_purepath_exists else Path(app)
-        sa_gen = shiny_app_gen(app_path)
-        yield next(sa_gen)
+        return app_path
 
     if isinstance(app, list):
 
@@ -133,13 +132,17 @@ def create_app_fixture(
         # Will display the app value as a parameter in the logs
         @pytest.fixture(scope=scope, params=app)
         def fixture_func(request: pytest.FixtureRequest):
-            yield yield_app(request.param)
+            app_path = get_app_path(request.param)
+            sa_gen = shiny_app_gen(app_path)
+            yield next(sa_gen)
 
     else:
         # Single app value provided
         # No indication of the app value in the logs
         @pytest.fixture(scope=scope)
         def fixture_func(request: pytest.FixtureRequest):
-            yield yield_app(app)
+            app_path = get_app_path(app)
+            sa_gen = shiny_app_gen(app_path)
+            yield next(sa_gen)
 
     return fixture_func
