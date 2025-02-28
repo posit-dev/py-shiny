@@ -1,53 +1,31 @@
-from shiny.express import expressify, ui
+from shiny.express import ui
 
+# Set some Shiny page options
+ui.page_opts(
+    title="Hello Shiny Chat",
+    fillable=True,
+    fillable_mobile=True,
+)
 
-@expressify
-def card_suggestion(title: str, suggestion: str, img_src: str, img_alt: str):
-    with ui.card(data_suggestion=suggestion):
-        ui.card_header(title)
-        ui.img(
-            src=img_src,
-            alt=img_alt,
-            style="margin-top:auto; margin-bottom:auto;",
-        )
-
-
-@expressify
-def card_suggestions():
-    with ui.layout_column_wrap():
-        card_suggestion(
-            title="Learn Python",
-            suggestion="Teach me Python",
-            img_src="https://upload.wikimedia.org/wikipedia/commons/c/c3/Python-logo-notext.svg",
-            img_alt="Python logo",
-        )
-        card_suggestion(
-            title="Learn R",
-            suggestion="Teach me R",
-            img_src="https://upload.wikimedia.org/wikipedia/commons/1/1b/R_logo.svg",
-            img_alt="R logo",
-        )
-
-
-with ui.hold() as suggestions:
-    card_suggestions()
-
-welcome = f"""
-**Hello!** How can I help you today?
-
-Here are a couple suggestions:
-
-{suggestions[0]}
+# Create a welcome message
+welcome = """
+Hi! This is a simple Shiny `Chat` UI. Enter a message below and I will
+simply repeat it back to you. For more examples, see this
+[folder of examples](https://github.com/posit-dev/py-shiny/tree/main/shiny/templates/chat).
 """
 
+# Create a chat instance
 chat = ui.Chat(
     id="chat",
     messages=[welcome],
 )
 
+# Display it
 chat.ui()
 
 
+# Define a callback to run when the user submits a message
 @chat.on_user_submit
 async def handle_user_input(user_input: str):
+    # Append a response to the chat
     await chat.append_message(f"You said: {user_input}")
