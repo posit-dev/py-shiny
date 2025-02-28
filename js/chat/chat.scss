@@ -54,8 +54,7 @@ shiny-chat-container {
   }
 
   // Styling for card suggestions
-  .card[data-suggestion]:hover,
-  .card:has([data-suggestion]) {
+  .card[data-suggestion]:hover {
     color: var(--bs-link-color, #007bc2);
     border-color: rgba(var(--bs-link-color-rgb), 0.5);
   }
