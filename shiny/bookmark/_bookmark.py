@@ -14,33 +14,37 @@
 # {values} -> dict (where as in R is an environment)
 # √ values is a dict!
 # {exclude} -> Requires `session.setBookmarkExclude(names)`, `session.getBookmarkExclude()`
-# * `session.setBookmarkExclude(names)` TODO:
-# * `session.getBookmarkExclude()`
-# * `session.bookmark_exclude` value?
+# √ `session.bookmark_exclude: list[str]` value!
+# √ `session._get_bookmark_exclude()` & `session._bookmark_exclude_fn`
 # Using a `.bookmark_exclude = []` and `._get_bookmark_exclude()` helper that accesses a `._bookmark_exclude_fns` list of functions which return scoped bookmark excluded values
 # Enable bookmarking hooks:
-# * types: `url`, `server`, `disable`
-# * where to store it? `session` object feels too late. `App` may not exist yet.
+# * √ `session.bookmark_store`: `url`, `server`, `disable`
 # Session hooks -> `onBookmark()`, `onBookmarked()`, `onRestore(), `onRestored()`
-# * `session.onBookmark()` TODO:
-# * `session.onBookmarked()` TODO:
+# * √ `session.on_bookmark()` # Takes the save state
+# * √ `session.on_bookmarked()` # Takes a url
 # * `session.onRestore()`
 # * `session.onRestored()`
 # Session hooks -> Require list of callback functions for each
-# Session hooks -> Calling hooks in proper locations with info
-# Session hook -> Call bookmark "right now": `doBookmark()`
-# * `session.doBookmark()`
+# * √ Session hooks -> Calling hooks in proper locations with info
+# * √ Session hook -> Call bookmark "right now": `doBookmark()`
+# * √ `session.do_bookmark()`
 # Session updates -> Require updates for `SessionProxy` object
-# `doBookmark()` -> Update query string
-# * Update query string
+# * √ `doBookmark()` -> Update query string
+# * √ Update query string
 
 # bookmark -> restore state
 # restore state -> {inputs, values, exclude}
 # restore {inputs} -> Update all inputs given restored value
 
+# Shinylive!
+# Get query string from parent frame / tab
+# * Ignore the code itself
+# * May need to escape (all?) the parameters to avoid collisions with `h=` or `code=`.
+# Set query string to parent frame / tab
+
 import pickle
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Awaitable, Callable
 from urllib.parse import urlencode as urllib_urlencode
 
 from .. import Inputs
@@ -57,8 +61,9 @@ class ShinySaveState:
     input: Inputs
     values: dict[str, Any]
     exclude: list[str]
+    # _bookmark_: A special value that is always excluded from the bookmark.
     on_save: (
-        Callable[["ShinySaveState"], None] | None
+        Callable[["ShinySaveState"], Awaitable[None]] | None
     )  # A callback to invoke during the saving process.
 
     # These are set not in initialize(), but by external functions that modify
@@ -69,7 +74,7 @@ class ShinySaveState:
         self,
         input: Inputs,
         exclude: list[str],
-        on_save: Callable[["ShinySaveState"], None] | None,
+        on_save: Callable[["ShinySaveState"], Awaitable[None]] | None,
     ):
         self.input = input
         self.exclude = exclude
@@ -77,12 +82,14 @@ class ShinySaveState:
         self.dir = None  # This will be set by external functions.
         self.values = {}
 
-    def _call_on_save(self):
-        # Allow user-supplied onSave function to do things like add state$values, or
+        self._always_exclude: list[str] = ["._bookmark_"]
+
+    async def _call_on_save(self):
+        # Allow user-supplied save function to do things like add state$values, or
         # save data to state dir.
         if self.on_save:
             with isolate():
-                self.on_save(self)
+                await self.on_save(self)
 
     def _exclude_bookmark_value(self):
         # If the bookmark value is not in the exclude list, add it.
@@ -98,7 +105,7 @@ class ShinySaveState:
         str
             A query string which can be used to restore the session.
         """
-        id = private_random_id(prefix="", bytes=3)
+        id = private_random_id(prefix="", bytes=8)
 
         # TODO: barret move code to single call location
         # A function for saving the state object to disk, given a directory to save
@@ -106,11 +113,11 @@ class ShinySaveState:
         async def save_state_to_dir(state_dir: Path) -> None:
             self.dir = state_dir
 
-            self._call_on_save()
+            await self._call_on_save()
 
             self._exclude_bookmark_value()
 
-            input_values_json = self.input._serialize(
+            input_values_json = await self.input._serialize(
                 exclude=self.exclude,
                 state_dir=self.dir,
             )
@@ -165,7 +172,7 @@ class ShinySaveState:
             A query string which can be used to restore the session.
         """
         # Allow user-supplied onSave function to do things like add state$values.
-        self._call_on_save()
+        await self._call_on_save()
 
         self._exclude_bookmark_value()
 
