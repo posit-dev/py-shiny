@@ -210,9 +210,13 @@ class Chat:
                 reactive.Value(None)
             )
 
-            self._latest_stream: reactive.Value[
-                reactive.ExtendedTask[[], str] | None
-            ] = reactive.Value(None)
+            @reactive.extended_task
+            async def _mock_task() -> str:
+                return ""
+
+            self._latest_stream: reactive.Value[reactive.ExtendedTask[[], str]] = (
+                reactive.Value(_mock_task)
+            )
 
             # TODO: deprecate messages once we start promoting managing LLM message
             # state through other means
@@ -669,32 +673,34 @@ class Chat:
 
         return _stream_task
 
-    def get_latest_stream_result(self) -> str | None:
+    def get_message_stream(self) -> reactive.ExtendedTask[[], str]:
         """
-        Reactively read the latest message stream result.
+        React to changes in the latest message stream.
 
-        This method reads a reactive value containing the result of the latest
-        `.append_message_stream()`. Therefore, this method must be called in a reactive
-        context (e.g., a render function, a :func:`~shiny.reactive.calc`, or a
-        :func:`~shiny.reactive.effect`).
+        Reactively reads for the latest :class:`~shiny.reactive.ExtendedTask` behind the
+        latest message stream.
+
+        From the return value (i.e., the extended task), you can then:
+
+        1. Reactively read for the final `.result()`.
+        2. `.cancel()` the stream.
+        3. Check the `.status()` of the stream.
 
         Returns
         -------
         :
-            The result of the latest stream (a string).
+            An extended task that represents the streaming task. The `.result()` method
+            of the task can be called in a reactive context to get the final state of the
+            stream.
 
-        Raises
-        ------
-        :
-            A silent exception if no stream has completed yet.
+        Note
+        ----
+        If no stream has yet been started when this method is called, then a "mock" task
+        is returned. This mock task behaves much like a stream that hasn't yet completed,
+        except it has a `.status()` of "initial" instead of "running", and `.cancel()`
+        is a no-op.
         """
-        stream = self._latest_stream()
-        if stream is None:
-            from .. import req
-
-            req(False)
-        else:
-            return stream.result()
+        return self._latest_stream()
 
     async def _append_message_stream(
         self,
