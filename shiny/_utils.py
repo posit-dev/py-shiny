@@ -517,11 +517,11 @@ class MakeIterableAsync:
 # ==============================================================================
 class Callbacks:
     def __init__(self) -> None:
-        self._callbacks: dict[int, tuple[Callable[[], None], bool]] = {}
+        self._callbacks: dict[int, tuple[Callable[..., None], bool]] = {}
         self._id: int = 0
 
     def register(
-        self, fn: Callable[[], None], once: bool = False
+        self, fn: Callable[..., None], once: bool = False
     ) -> Callable[[], None]:
         self._id += 1
         id = self._id
@@ -533,14 +533,14 @@ class Callbacks:
 
         return _
 
-    def invoke(self) -> None:
+    def invoke(self, *args: Any, **kwargs: Any) -> None:
         # The list() wrapper is necessary to force collection of all the items before
         # iteration begins. This is necessary because self._callbacks may be mutated
         # by callbacks.
         for id, value in list(self._callbacks.items()):
             fn, once = value
             try:
-                fn()
+                fn(*args, **kwargs)
             finally:
                 if once:
                     if id in self._callbacks:
@@ -552,11 +552,11 @@ class Callbacks:
 
 class AsyncCallbacks:
     def __init__(self) -> None:
-        self._callbacks: dict[int, tuple[Callable[[], Awaitable[None]], bool]] = {}
+        self._callbacks: dict[int, tuple[Callable[..., Awaitable[None]], bool]] = {}
         self._id: int = 0
 
     def register(
-        self, fn: Callable[[], Awaitable[None]], once: bool = False
+        self, fn: Callable[..., Awaitable[None]], once: bool = False
     ) -> Callable[[], None]:
         self._id += 1
         id = self._id
@@ -568,14 +568,14 @@ class AsyncCallbacks:
 
         return _
 
-    async def invoke(self) -> None:
+    async def invoke(self, *args: Any, **kwargs: Any) -> None:
         # The list() wrapper is necessary to force collection of all the items before
         # iteration begins. This is necessary because self._callbacks may be mutated
         # by callbacks.
         for id, value in list(self._callbacks.items()):
             fn, once = value
             try:
-                await fn()
+                await fn(*args, **kwargs)
             finally:
                 if once:
                     if id in self._callbacks:
