@@ -21,7 +21,9 @@
 # * √ `session.bookmark_store`: `url`, `server`, `disable`
 # Session hooks -> `onBookmark()`, `onBookmarked()`, `onRestore(), `onRestored()`
 # * √ `session.on_bookmark()` # Takes the save state
+#     * Cancel callback
 # * √ `session.on_bookmarked()` # Takes a url
+#     * Cancel callback
 # * `session.onRestore()`
 # * `session.onRestored()`
 # Session hooks -> Require list of callback functions for each
