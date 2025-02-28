@@ -18,6 +18,10 @@ shiny-chat-container {
   .suggestion,
   [data-suggestion] {
     cursor: pointer;
+  }
+
+  // Styling for inline-text
+  .suggestion {
     color: var(--bs-link-color, #007bc2);
 
     text-decoration-color: var(--bs-link-color, #007bc2);
@@ -47,6 +51,12 @@ shiny-chat-container {
         content: "\21B5"; // return key symbol
       }
     }
+  }
+
+  // Styling for card suggestions
+  .card[data-suggestion]:hover {
+    color: var(--bs-link-color, #007bc2);
+    border-color: rgba(var(--bs-link-color-rgb), 0.5);
   }
 }
 
