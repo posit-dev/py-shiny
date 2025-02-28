@@ -149,8 +149,14 @@ class ExpressStubSession(Session):
 
 class BookmarkExpressStub(Bookmark):
 
+    def __init__(self, root_session: ExpressStubSession) -> None:
+        super().__init__(root_session)
+        self._proxy_exclude_fns = []
+
     def _get_bookmark_exclude(self) -> list[str]:
-        raise NotImplementedError("Please call this only from a real session object")
+        raise NotImplementedError(
+            "Please call `._get_bookmark_exclude()` only from a real session object"
+        )
 
     def on_bookmark(
         self,
@@ -159,18 +165,26 @@ class BookmarkExpressStub(Bookmark):
             | Callable[[ShinySaveState], Awaitable[None]]
         ),
     ) -> None:
-        raise NotImplementedError("Please call this only from a real session object")
+        raise NotImplementedError(
+            "Please call `.on_bookmark()` only from a real session object"
+        )
 
     def on_bookmarked(
         self,
         callback: Callable[[str], None] | Callable[[str], Awaitable[None]],
     ) -> None:
-        raise NotImplementedError("Please call this only from a real session object")
+        raise NotImplementedError(
+            "Please call `.on_bookmarked()` only from a real session object"
+        )
 
     async def update_query_string(
         self, query_string: str, mode: Literal["replace", "push"] = "replace"
     ) -> None:
-        raise NotImplementedError("Please call this only from a real session object")
+        raise NotImplementedError(
+            "Please call `.update_query_string()` only from a real session object"
+        )
 
     async def do_bookmark(self) -> None:
-        raise NotImplementedError("Please call this only from a real session object")
+        raise NotImplementedError(
+            "Please call `.do_bookmark()` only from a real session object"
+        )

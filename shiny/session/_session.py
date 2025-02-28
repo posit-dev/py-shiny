@@ -428,7 +428,8 @@ class BookmarkProxy(Bookmark):
         async def scoped_on_bookmark(root_state: ShinySaveState) -> None:
             return await self._scoped_on_bookmark(root_state)
 
-        self._root_bookmark.on_bookmark(scoped_on_bookmark)
+        if isinstance(self._root_session, BookmarkApp):
+            self._root_bookmark.on_bookmark(scoped_on_bookmark)
 
         # TODO: Barret - Implement restore scoped state!
 
