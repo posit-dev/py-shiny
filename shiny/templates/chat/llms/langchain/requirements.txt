@@ -1,4 +1,3 @@
 shiny
 python-dotenv
-tokenizers
 langchain-openai

@@ -93,6 +93,8 @@ shiny-chat-message {
       // images and avatars are full-bleed
       height: 100%;
       width: 100%;
+      max-width: 100%;
+      max-height: 100%;
       margin: 0 !important;
       object-fit: contain;
     }
@@ -104,6 +106,13 @@ shiny-chat-message {
       // icons and svgs need some padding within the circle
       max-height: 66%;
       max-width: 66%;
+    }
+
+    // Provide .border-0 as a way to opt-out of border container
+    &:has(> .border-0) {
+      border: none;
+      border-radius: unset;
+      overflow: unset;
     }
   }
 
