@@ -9,7 +9,7 @@ from shiny.express import ui
 # ChatOllama() requires an Ollama model server to be running locally.
 # See the docs for more information on how to set up a local Ollama server.
 # https://posit-dev.github.io/chatlas/reference/ChatOllama.html
-chat_model = ChatOllama(model="llama3.1")
+chat_model = ChatOllama(model="llama3.2")
 
 # Set some Shiny page options
 ui.page_opts(
@@ -29,5 +29,5 @@ chat.ui()
 # Generate a response when the user submits a message
 @chat.on_user_submit
 async def handle_user_input(user_input: str):
-    response = chat_model.stream(user_input)
+    response = await chat_model.stream_async(user_input)
     await chat.append_message_stream(response)

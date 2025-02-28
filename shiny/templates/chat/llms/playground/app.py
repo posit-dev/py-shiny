@@ -15,13 +15,13 @@ from shiny.express import input, ui
 load_dotenv()
 
 models = {
-    "openai": ["gpt-4o-mini", "gpt-4o"],
     "claude": [
+        "claude-3-7-sonnet-latest",
         "claude-3-opus-latest",
-        "claude-3-5-sonnet-latest",
         "claude-3-haiku-20240307",
     ],
-    "google": ["gemini-1.5-pro-latest"],
+    "openai": ["gpt-4o-mini", "gpt-4o"],
+    "google": ["gemini-2.0-flash"],
 }
 
 model_choices: dict[str, dict[str, str]] = {}

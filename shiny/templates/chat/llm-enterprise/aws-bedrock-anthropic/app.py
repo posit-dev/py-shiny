@@ -15,10 +15,6 @@ from shiny.express import ui
 load_dotenv()
 chat_model = ChatBedrockAnthropic(
     model="anthropic.claude-3-sonnet-20240229-v1:0",
-    # aws_secret_key=os.getenv("AWS_SECRET_KEY"),
-    # aws_access_key=os.getenv("AWS_ACCESS_KEY"),
-    # aws_region=os.getenv("AWS_REGION"),
-    # aws_account_id=os.getenv("AWS_ACCOUNT_ID"),
 )
 
 # Set some Shiny page options
@@ -36,5 +32,5 @@ chat.ui()
 # Define a callback to run when the user submits a message
 @chat.on_user_submit
 async def handle_user_input(user_input: str):
-    response = chat_model.stream(user_input)
+    response = await chat_model.stream_async(user_input)
     await chat.append_message_stream(response)
