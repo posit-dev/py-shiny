@@ -230,7 +230,9 @@ class Bookmark(ABC):
 
     @abstractmethod
     def on_bookmarked(
-        self, callback: Callable[[str], None] | Callable[[str], Awaitable[None]], /
+        self,
+        callback: Callable[[str], None] | Callable[[str], Awaitable[None]],
+        /,
     ) -> None:
         """
         Registers a function that will be called just after bookmarking state.
@@ -353,6 +355,12 @@ class BookmarkApp(Bookmark):
                 query_string = await root_state._save_state()
             elif self.store == "url":
                 query_string = await root_state._encode_state()
+            # # Can we have browser storage?
+            # elif self.store == "browser":
+            #     get_json object
+            #     get consistent storage value (not session id)
+            #     send object to browser storage
+            #     return server-like-id url value
             else:
                 raise ValueError("Unknown bookmark store: " + self.store)
 
@@ -467,7 +475,9 @@ class BookmarkProxy(Bookmark):
         self._root_bookmark.on_bookmark(callback)
 
     def on_bookmarked(
-        self, callback: Callable[[str], None] | Callable[[str], Awaitable[None]], /
+        self,
+        callback: Callable[[str], None] | Callable[[str], Awaitable[None]],
+        /,
     ) -> None:
         # TODO: Barret - Q: Shouldn't we implement this? `self._root_bookmark.on_bookmark()`
         raise NotImplementedError(
