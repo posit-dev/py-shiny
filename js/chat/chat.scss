@@ -96,6 +96,17 @@ shiny-chat-message {
       max-height: 66%;
       max-width: 66%;
     }
+
+    // Provide .border-0 as a way to opt-out of border container
+    &:has(> .border-0) {
+      border: none;
+      border-radius: unset;
+      overflow: unset;
+    }
+    > .border-0 {
+      max-height: 100%;
+      max-width: 100%;
+    }
   }
 
   /* Vertically center the 2nd column (message content) */
