@@ -20,5 +20,5 @@ async def _(message: str):
 
 
 @render.code
-async def stream_result_ui():
-    return chat.get_latest_stream_result()
+async def stream_result():
+    return chat.get_message_stream().result()
