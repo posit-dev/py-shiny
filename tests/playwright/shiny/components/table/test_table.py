@@ -1,11 +1,17 @@
 import re
+import sys
 
+import pytest
 from playwright.sync_api import Page
 
 from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
 
+@pytest.mark.skipif(
+    sys.version_info >= (3, 13),
+    reason="Skipping on Python 3.13, since modin is not supported on 3.13",
+)
 def test_table_data_support(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 
