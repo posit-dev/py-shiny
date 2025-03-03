@@ -44,166 +44,366 @@
 # * May need to escape (all?) the parameters to avoid collisions with `h=` or `code=`.
 # Set query string to parent frame / tab
 
-import pickle
+from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Awaitable, Callable
-from urllib.parse import urlencode as urllib_urlencode
+from typing import TYPE_CHECKING, Awaitable, Callable, Literal
 
-from .. import Inputs
-from .._utils import private_random_id
-from ..reactive import isolate
-from ._save_state import SaveState, SaveStateLocal
-from ._utils import is_hosted, to_json
+from .._utils import AsyncCallbacks, wrap_async
+from ._save_state import ShinySaveState
+
+if TYPE_CHECKING:
+    from .._namespaces import ResolvedId
+    from ..session import Session
+
+BookmarkStore = Literal["url", "server", "disable"]
 
 
-class ShinySaveState:
-    # session: ?
-    # * Would get us access to inputs, possibly app dir, registered on save / load classes (?), exclude
-    #
-    input: Inputs
-    values: dict[str, Any]
+class Bookmark(ABC):
+
+    _root_session: Session
+
+    store: BookmarkStore
+
+    _proxy_exclude_fns: list[Callable[[], list[str]]]
     exclude: list[str]
-    # _bookmark_: A special value that is always excluded from the bookmark.
-    on_save: (
-        Callable[["ShinySaveState"], Awaitable[None]] | None
-    )  # A callback to invoke during the saving process.
 
-    # These are set not in initialize(), but by external functions that modify
-    # the ShinySaveState object.
-    dir: Path | None
+    _on_bookmark_callbacks: AsyncCallbacks
+    _on_bookmarked_callbacks: AsyncCallbacks
 
-    def __init__(
+    async def __call__(self) -> None:
+        await self._root_bookmark.do_bookmark()
+
+    @property
+    def _root_bookmark(self) -> "Bookmark":
+        return self._root_session.bookmark
+
+    def __init__(self, root_session: Session):
+        super().__init__()
+        self._root_session = root_session
+
+    # # TODO: Barret - Implement this?!?
+    # @abstractmethod
+    # async def get_url(self) -> str:
+    #     ...
+
+    # # `session.bookmark.on_bookmarked(session.bookmark.update_query_string)`
+    # # `session.bookmark.on_bookmarked(session.bookmark.show_modal)`
+    # await def show_modal(self, url: Optional[str] = None) -> None:
+    #     if url is None:
+    #         url:str = self._get_encoded_url()
+
+    #     await session.insert_ui(modal_with_url(url))
+
+    @abstractmethod
+    def _get_bookmark_exclude(self) -> list[str]:
+        """
+        Retrieve the list of inputs excluded from being bookmarked.
+        """
+        ...
+
+    @abstractmethod
+    def on_bookmark(
         self,
-        input: Inputs,
-        exclude: list[str],
-        on_save: Callable[["ShinySaveState"], Awaitable[None]] | None,
-    ):
-        self.input = input
-        self.exclude = exclude
-        self.on_save = on_save
-        self.dir = None  # This will be set by external functions.
-        self.values = {}
-
-        self._always_exclude: list[str] = ["._bookmark_"]
-
-    async def _call_on_save(self):
-        # Allow user-supplied save function to do things like add state$values, or
-        # save data to state dir.
-        if self.on_save:
-            with isolate():
-                await self.on_save(self)
-
-    def _exclude_bookmark_value(self):
-        # If the bookmark value is not in the exclude list, add it.
-        if "._bookmark_" not in self.exclude:
-            self.exclude.append("._bookmark_")
-
-    async def _save_state(self) -> str:
+        callback: (
+            Callable[[ShinySaveState], None]
+            | Callable[[ShinySaveState], Awaitable[None]]
+        ),
+        /,
+    ) -> None:
         """
-        Save a state to disk (pickle).
+        Registers a function that will be called just before bookmarking state.
 
-        Returns
-        -------
-        str
-            A query string which can be used to restore the session.
+        This callback will be executed **before** the bookmark state is saved serverside or in the URL.
+
+        Parameters
+        ----------
+        callback
+            The callback function to call when the session is bookmarked.
+            This method should accept a single argument, which is a
+            :class:`~shiny.bookmark._bookmark.ShinySaveState` object.
         """
-        id = private_random_id(prefix="", bytes=8)
+        ...
 
-        # TODO: barret move code to single call location
-        # A function for saving the state object to disk, given a directory to save
-        # to.
-        async def save_state_to_dir(state_dir: Path) -> None:
-            self.dir = state_dir
-
-            await self._call_on_save()
-
-            self._exclude_bookmark_value()
-
-            input_values_json = await self.input._serialize(
-                exclude=self.exclude,
-                state_dir=self.dir,
-            )
-            assert self.dir is not None
-            with open(self.dir / "input.pickle", "wb") as f:
-                pickle.dump(input_values_json, f)
-
-            if len(self.values) > 0:
-                with open(self.dir / "values.pickle", "wb") as f:
-                    pickle.dump(self.values, f)
-
-            return
-
-        # Pass the saveState function to the save interface function, which will
-        # invoke saveState after preparing the directory.
-
-        # TODO: FUTURE - Get the save interface from the session object?
-        # Look for a save.interface function. This will be defined by the hosting
-        # environment if it supports bookmarking.
-        save_interface_loaded: SaveState | None = None
-
-        if save_interface_loaded is None:
-            if is_hosted():
-                # TODO: Barret
-                raise NotImplementedError(
-                    "The hosting environment does not support server-side bookmarking."
-                )
-            else:
-                # We're running Shiny locally.
-                save_interface_loaded = SaveStateLocal()
-
-        if not isinstance(save_interface_loaded, SaveState):
-            raise TypeError(
-                "The save interface retrieved must be an instance of `shiny.bookmark.SaveState`."
-            )
-
-        save_dir = Path(await save_interface_loaded.save_dir(id))
-        await save_state_to_dir(save_dir)
-
-        # No need to encode URI component as it is only ascii characters.
-        return f"_state_id_={id}"
-
-    async def _encode_state(self) -> str:
+    @abstractmethod
+    def on_bookmarked(
+        self,
+        callback: Callable[[str], None] | Callable[[str], Awaitable[None]],
+        /,
+    ) -> None:
         """
-        Encode the state to a URL.
+        Registers a function that will be called just after bookmarking state.
 
-        This does not save to disk!
+        This callback will be executed **after** the bookmark state is saved serverside or in the URL.
 
-        Returns
-        -------
-        str
-            A query string which can be used to restore the session.
+        Parameters
+        ----------
+        callback
+            The callback function to call when the session is bookmarked.
+            This method should accept a single argument, the string representing the query parameter component of the URL.
         """
-        # Allow user-supplied onSave function to do things like add state$values.
-        await self._call_on_save()
+        ...
 
-        self._exclude_bookmark_value()
+    @abstractmethod
+    async def update_query_string(
+        self,
+        query_string: str,
+        mode: Literal["replace", "push"] = "replace",
+    ) -> None:
+        """
+        Update the query string of the current URL.
 
-        input_values_serialized = await self.input._serialize(
-            exclude=self.exclude,
-            # Do not include directory as we are not saving to disk.
-            state_dir=None,
+        Parameters
+        ----------
+        query_string
+            The query string to set.
+        mode
+            Whether to replace the current URL or push a new one. Pushing a new value will add to the user's browser history.
+        """
+        ...
+
+    @abstractmethod
+    # TODO: Barret - Q: Rename to `update()`? `session.bookmark.update()`?
+    async def do_bookmark(self) -> None:
+        """
+        Perform bookmarking.
+
+        This method will also call the `on_bookmark` and `on_bookmarked` callbacks to alter the bookmark state. Then, the bookmark state will be either saved to the server or encoded in the URL, depending on the `.store` option.
+
+        No actions will be performed if the `.store` option is set to `"disable"`.
+        """
+        ...
+
+
+class BookmarkApp(Bookmark):
+    def __init__(self, root_session: Session):
+
+        super().__init__(root_session)
+
+        self.store = "disable"
+        self.exclude = []
+        self._proxy_exclude_fns = []
+        self._on_bookmark_callbacks = AsyncCallbacks()
+        self._on_bookmarked_callbacks = AsyncCallbacks()
+
+    def _get_bookmark_exclude(self) -> list[str]:
+        """
+        Get the list of inputs excluded from being bookmarked.
+        """
+
+        scoped_excludes: list[str] = []
+        for proxy_exclude_fn in self._proxy_exclude_fns:
+            scoped_excludes.extend(proxy_exclude_fn())
+        # Remove duplicates
+        return list(set([*self.exclude, *scoped_excludes]))
+
+    def on_bookmark(
+        self,
+        callback: (
+            Callable[[ShinySaveState], None]
+            | Callable[[ShinySaveState], Awaitable[None]]
+        ),
+        /,
+    ) -> None:
+        self._on_bookmark_callbacks.register(wrap_async(callback))
+
+    def on_bookmarked(
+        self,
+        callback: Callable[[str], None] | Callable[[str], Awaitable[None]],
+        /,
+    ) -> None:
+        self._on_bookmarked_callbacks.register(wrap_async(callback))
+
+    async def update_query_string(
+        self,
+        query_string: str,
+        mode: Literal["replace", "push"] = "replace",
+    ) -> None:
+        if mode not in {"replace", "push"}:
+            raise ValueError(f"Invalid mode: {mode}")
+        await self._root_session._send_message(
+            {
+                "updateQueryString": {
+                    "queryString": query_string,
+                    "mode": mode,
+                }
+            }
         )
 
-        # Using an array to construct string to avoid multiple serial concatenations.
-        qs_str_parts: list[str] = []
+    async def do_bookmark(self) -> None:
 
-        # If any input values are present, add them.
-        if len(input_values_serialized) > 0:
-            input_qs = urllib_urlencode(to_json(input_values_serialized))
+        if self.store == "disable":
+            return
 
-            qs_str_parts.append("_inputs_&")
-            qs_str_parts.append(input_qs)
+        try:
+            # ?withLogErrors
+            from ..bookmark._bookmark import ShinySaveState
 
-        if len(self.values) > 0:
-            if len(qs_str_parts) > 0:
-                qs_str_parts.append("&")
+            async def root_state_on_save(state: ShinySaveState) -> None:
+                await self._on_bookmark_callbacks.invoke(state)
 
-            values_qs = urllib_urlencode(to_json(self.values))
+            root_state = ShinySaveState(
+                input=self._root_session.input,
+                exclude=self._get_bookmark_exclude(),
+                on_save=root_state_on_save,
+            )
 
-            qs_str_parts.append("_values_&")
-            qs_str_parts.append(values_qs)
+            if self.store == "server":
+                query_string = await root_state._save_state()
+            elif self.store == "url":
+                query_string = await root_state._encode_state()
+            # # Can we have browser storage?
+            # elif self.store == "browser":
+            #     get_json object
+            #     get consistent storage value (not session id)
+            #     send object to browser storage
+            #     return server-like-id url value
+            else:
+                raise ValueError("Unknown bookmark store: " + self.store)
 
-        return "".join(qs_str_parts)
+            clientdata = self._root_session.clientdata
+
+            port = str(clientdata.url_port())
+            full_url = "".join(
+                [
+                    clientdata.url_protocol(),
+                    "//",
+                    clientdata.url_hostname(),
+                    ":" if port else "",
+                    port,
+                    clientdata.url_pathname(),
+                    "?",
+                    query_string,
+                ]
+            )
+
+            # If onBookmarked callback was provided, invoke it; if not call
+            # the default.
+            if self._on_bookmarked_callbacks.count() > 0:
+                await self._on_bookmarked_callbacks.invoke(full_url)
+            else:
+                # `session.bookmark.show_modal(url)`
+
+                # showBookmarkUrlModal(url)
+                # This action feels weird. I don't believe it should occur
+                # Instead, I believe it should update the query string automatically.
+                # `session.bookmark.update_query_string(url)`
+                raise NotImplementedError("Show bookmark modal not implemented")
+        except Exception as e:
+            msg = f"Error bookmarking state: {e}"
+            from ..ui._notification import notification_show
+
+            notification_show(msg, duration=None, type="error")
+            # TODO: Barret - Remove this!
+            raise RuntimeError("Error bookmarking state") from e
+
+
+class BookmarkProxy(Bookmark):
+
+    _ns: ResolvedId
+
+    def __init__(self, root_session: Session, ns: ResolvedId):
+        super().__init__(root_session)
+
+        self._ns = ns
+
+        self.exclude = []
+        self._proxy_exclude_fns = []
+        self._on_bookmark_callbacks = AsyncCallbacks()
+        self._on_bookmarked_callbacks = AsyncCallbacks()
+
+        # TODO: Barret - Double check that this works with nested modules!
+        self._root_session.bookmark._proxy_exclude_fns.append(
+            lambda: [self._ns(name) for name in self.exclude]
+        )
+
+        # When scope is created, register these bookmarking callbacks on the main
+        # session object. They will invoke the scope's own callbacks, if any are
+        # present.
+        # The goal of this method is to save the scope's values. All namespaced inputs
+        # will already exist within the `root_state`.
+        async def scoped_on_bookmark(root_state: ShinySaveState) -> None:
+            return await self._scoped_on_bookmark(root_state)
+
+        if isinstance(self._root_session, BookmarkApp):
+            self._root_bookmark.on_bookmark(scoped_on_bookmark)
+
+        # TODO: Barret - Implement restore scoped state!
+
+    async def _scoped_on_bookmark(self, root_state: ShinySaveState) -> None:
+        # Exit if no user-defined callbacks.
+        if self._on_bookmark_callbacks.count() == 0:
+            return
+
+        from ..bookmark._bookmark import ShinySaveState
+
+        scoped_state = ShinySaveState(
+            input=self._root_session.input,
+            exclude=self._root_bookmark.exclude,
+            on_save=None,
+        )
+
+        # Make subdir for scope
+        if root_state.dir is not None:
+            scope_subpath = self._ns("")
+            scoped_state.dir = Path(root_state.dir) / scope_subpath
+            if not scoped_state.dir.exists():
+                raise FileNotFoundError(
+                    f"Scope directory could not be created for {scope_subpath}"
+                )
+
+        # Invoke the callback on the scopeState object
+        await self._on_bookmark_callbacks.invoke(scoped_state)
+
+        # Copy `values` from scoped_state to root_state (adding namespace)
+        if scoped_state.values:
+            for key, value in scoped_state.values.items():
+                if key.strip() == "":
+                    raise ValueError("All scope values must be named.")
+                root_state.values[self._ns(key)] = value
+
+    def on_bookmark(
+        self,
+        callback: (
+            Callable[[ShinySaveState], None]
+            | Callable[[ShinySaveState], Awaitable[None]]
+        ),
+        /,
+    ) -> None:
+        self._root_bookmark.on_bookmark(callback)
+
+    def on_bookmarked(
+        self,
+        callback: Callable[[str], None] | Callable[[str], Awaitable[None]],
+        /,
+    ) -> None:
+        # TODO: Barret - Q: Shouldn't we implement this? `self._root_bookmark.on_bookmark()`
+        raise NotImplementedError(
+            "Please call `.on_bookmarked()` from the root session only, e.g. `session.root_scope().bookmark.on_bookmark()`."
+        )
+
+    def _get_bookmark_exclude(self) -> list[str]:
+        raise NotImplementedError(
+            "Please call `._get_bookmark_exclude()` from the root session only."
+        )
+
+    async def update_query_string(
+        self, query_string: str, mode: Literal["replace", "push"] = "replace"
+    ) -> None:
+        await self._root_bookmark.update_query_string(query_string, mode)
+
+    async def do_bookmark(self) -> None:
+        await self._root_bookmark.do_bookmark()
+
+    @property
+    def store(self) -> BookmarkStore:
+        return self._root_bookmark.store
+
+    @store.setter
+    def store(  # pyright: ignore[reportIncompatibleVariableOverride]
+        self,
+        value: BookmarkStore,
+    ) -> None:
+        self._root_bookmark.store = value
 
 
 # RestoreContext <- R6Class("RestoreContext",
