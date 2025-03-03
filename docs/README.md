@@ -5,7 +5,7 @@ This directory contains files to generate Shiny for Python API documentation, us
 
 ## Building the docs
 
-To build the docs, first install the Python dependencies and Quarto extensions:
+To build the docs, first [download and install Quarto](https://quarto.org/docs/get-started/), and then install the Python dependencies and Quarto extensions:
 
 ```bash
 # Install build dependencies
@@ -18,14 +18,14 @@ After those dependencies are installed, build the .qmd files for Shiny, using qu
 make quartodoc
 ```
 
-Then build the web site using Quarto:
-
-```bash
-make site
-```
-
-Alternatively, running `make serve` will build the docs, and serve them locally, and watch for changes to the .qmd files:
+Then you can build the docs, and serve them locally, and watch for changes to the .qmd files:
 
 ```bash
 make serve
+```
+
+Alternatively, build the site just once:
+
+```bash
+make site
 ```

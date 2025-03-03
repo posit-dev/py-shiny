@@ -18,6 +18,10 @@ shiny-chat-container {
   .suggestion,
   [data-suggestion] {
     cursor: pointer;
+  }
+
+  // Styling for inline-text
+  .suggestion {
     color: var(--bs-link-color, #007bc2);
 
     text-decoration-color: var(--bs-link-color, #007bc2);
@@ -47,6 +51,12 @@ shiny-chat-container {
         content: "\21B5"; // return key symbol
       }
     }
+  }
+
+  // Styling for card suggestions
+  .card[data-suggestion]:hover {
+    color: var(--bs-link-color, #007bc2);
+    border-color: rgba(var(--bs-link-color-rgb), 0.5);
   }
 }
 
@@ -83,6 +93,8 @@ shiny-chat-message {
       // images and avatars are full-bleed
       height: 100%;
       width: 100%;
+      max-width: 100%;
+      max-height: 100%;
       margin: 0 !important;
       object-fit: contain;
     }
@@ -94,6 +106,13 @@ shiny-chat-message {
       // icons and svgs need some padding within the circle
       max-height: 66%;
       max-width: 66%;
+    }
+
+    // Provide .border-0 as a way to opt-out of border container
+    &:has(> .border-0) {
+      border: none;
+      border-radius: unset;
+      overflow: unset;
     }
   }
 

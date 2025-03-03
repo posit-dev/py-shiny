@@ -1,6 +1,6 @@
-chatlas
+chatlas>=0.4
 openai
 anthropic
-google-generativeai
+google-genai
 python-dotenv
 shiny

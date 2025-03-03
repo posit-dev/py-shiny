@@ -1,0 +1,89 @@
+name: Documentation Issue
+description: Report an issue or suggest improvements to the documentation.
+title: "[Docs]: "
+labels: ["documentation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve the documentation!  Provide as much detail as possible.
+
+  - type: dropdown
+    id: doc-type
+    attributes:
+      label: Type
+      description: What type of documentation?
+      options:
+        - API Reference
+        - Tutorials/Guides
+        - Examples
+        - Getting Started
+        - Conceptual Guides
+        - Function Docstrings
+        - Code Comments
+        - Installation
+        - Deployment
+        - Testing
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: doc-location
+    attributes:
+      label: Location
+      description: URL or file path of the documentation.
+      placeholder: "e.g., https://... or `shiny/ui/__init__.py`"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: issue-type
+    attributes:
+      label: Issue
+      description: What kind of issue?
+      options:
+        - Missing
+        - Incorrect
+        - Unclear
+        - Outdated
+        - Broken Links
+        - Code Example Issue
+        - Typo/Grammar
+        - Translation
+        - Suggestion
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggested-content
+    attributes:
+      label: Suggested Changes
+      description: |
+        What changes would you like to see?  Be specific. Include suggested text or code (use markdown code blocks).
+      placeholder: |
+        Provide suggested improvements or new content here...
+        ```python
+        # Example code
+        ```
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation (Optional)
+      description: Why is this change needed? How will it help users?
+      placeholder: "e.g., This clarification will prevent misunderstanding..."
+    validations:
+      required: false
+
+  - type: input
+    id: shiny-version
+    attributes:
+      label: Shiny Version (if applicable)
+      description: Only if the issue is version-specific.
+      placeholder: ex. 1.2.1
+    validations:
+      required: false

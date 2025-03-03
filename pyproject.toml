@@ -51,10 +51,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-theme = [
-    "libsass>=0.23.0",
-    "brand_yml>=0.1.0"
-]
+theme = ["libsass>=0.23.0", "brand_yml>=0.1.0"]
 test = [
     "pytest>=6.2.4",
     "pytest-asyncio>=0.17.2",
@@ -107,7 +104,7 @@ dev = [
     "isort>=5.10.1",
     "libsass>=0.23.0",
     "brand_yml>=0.1.0",
-    "pyright>=1.1.383",
+    "pyright>=1.1.383,<1.1.395",
     "pre-commit>=2.15.0",
     "wheel",
     "matplotlib",
@@ -162,7 +159,16 @@ ignore = ["E302", "E501", "F403", "F405", "W503", "E203", "E701", "E704"]
 
 [tool.isort]
 profile = "black"
-skip = ["__init__.py", "typings/", "_dev/", ".venv", "venv", ".tox", "build", "_version.py"]
+skip = [
+    "__init__.py",
+    "typings/",
+    "_dev/",
+    ".venv",
+    "venv",
+    ".tox",
+    "build",
+    "_version.py",
+]
 
 [tool.mypy]
 # The goal of our usage of mypy is to make to sure mypy can run, not that it catches any errors (we use pyright to find our errors).

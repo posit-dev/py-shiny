@@ -83,6 +83,7 @@ quartodoc:
         - ui.navset_card_underline
         - ui.navset_pill_list
         - ui.navset_hidden
+        - ui.navbar_options
     - title: UI panels
       desc: Visually group together a section of UI components.
       contents:
