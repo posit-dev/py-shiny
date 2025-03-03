@@ -5,6 +5,12 @@ All notable changes to Shiny for Python will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [UNRELEASED]
+
+### Changes
+
+* The `.get_latest_stream_result()` method on `ui.MarkdownStream()` was deprecated in favor of the new `.latest_stream` property. Call `.result()` on the property to get the latest result, `.status` to check the status, and `.cancel()` to cancel the stream.
+
 ## [1.3.0] - 2025-03-03
 
 ### New features

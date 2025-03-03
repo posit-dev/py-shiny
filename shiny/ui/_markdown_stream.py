@@ -4,6 +4,7 @@ from typing import AsyncIterable, Iterable, Literal, Union
 from htmltools import css
 
 from .. import _utils, reactive
+from .._deprecated import warn_deprecated
 from .._docstring import add_example
 from .._namespaces import resolve_id
 from .._typing_extensions import TypedDict
@@ -87,9 +88,14 @@ class MarkdownStream:
         self.on_error = on_error
 
         with session_context(self._session):
-            self._latest_stream: reactive.Value[
-                Union[reactive.ExtendedTask[[], str], None]
-            ] = reactive.Value(None)
+
+            @reactive.extended_task
+            async def _mock_task() -> str:
+                return ""
+
+            self._latest_stream: reactive.Value[reactive.ExtendedTask[[], str]] = (
+                reactive.Value(_mock_task)
+            )
 
     async def stream(
         self,
@@ -151,32 +157,46 @@ class MarkdownStream:
 
         return _task
 
-    def get_latest_stream_result(self) -> Union[str, None]:
+    @property
+    def latest_stream(self) -> reactive.ExtendedTask[[], str]:
         """
-        Reactively read the latest stream result.
+        React to changes in the latest stream.
 
-        This method reads a reactive value containing the result of the latest
-        `.stream()`. Therefore, this method must be called in a reactive context (e.g.,
-        a render function, a :func:`~shiny.reactive.calc`, or a
-        :func:`~shiny.reactive.effect`).
+        Reactively reads for the :class:`~shiny.reactive.ExtendedTask` behind the
+        latest stream.
+
+        From the return value (i.e., the extended task), you can then:
+
+        1. Reactively read for the final `.result()`.
+        2. `.cancel()` the stream.
+        3. Check the `.status()` of the stream.
 
         Returns
         -------
         :
-            The result of the latest stream (a string).
+            An extended task that represents the streaming task. The `.result()` method
+            of the task can be called in a reactive context to get the final state of the
+            stream.
 
-        Raises
-        ------
-        :
-            A silent exception if no stream has completed yet.
+        Note
+        ----
+        If no stream has yet been started when this method is called, then it returns an
+        extended task with `.status()` of `"initial"` and that it status doesn't change
+        state until a message is streamed.
         """
-        stream = self._latest_stream()
-        if stream is None:
-            from .. import req
+        return self._latest_stream()
 
-            req(False)
-        else:
-            return stream.result()
+    def get_latest_stream_result(self) -> Union[str, None]:
+        """
+        Reactively read the latest stream result.
+
+        Deprecated. Use `latest_stream.result()` instead.
+        """
+        warn_deprecated(
+            "The `.get_latest_stream_result()` method is deprecated and will be removed "
+            "in a future release. Use `.latest_stream.result()` instead. "
+        )
+        self.latest_stream.result()
 
     async def clear(self):
         """
