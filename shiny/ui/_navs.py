@@ -1105,7 +1105,8 @@ def navbar_options(
     ```
 
     This particular combination of `class="bg-primary"` and `theme="dark"` works well
-    for most Bootswatch presets.
+    for most Bootswatch presets. Note that in Shiny Express, `theme` and
+    `navbar_options` both are set using :func:`~shiny.express.ui.page_opts`.
 
     Another variation from the Flatly documentation features a navar with dark text on a
     light background:
