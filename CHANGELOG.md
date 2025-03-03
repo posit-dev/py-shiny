@@ -25,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * The `ui.Chat()` component also gains the following:
     * The `.on_user_submit()` decorator method now passes the user input to the decorated function. This makes it a bit easier to access the user input. See the new templates (mentioned below) for examples. (#1801)
     * The assistant icon is now configurable via `ui.chat_ui()` (or the `ui.Chat.ui()` method in Shiny Express) or for individual messages in the `.append_message()` and `.append_message_stream()` methods of `ui.Chat()`. (#1853)
-    * A new `get_message_stream()` method was added for an easy way to reactive read the stream's status, result, and also cancel an in progress stream. (#1846)
+    * A new `get_message_stream()` method was added for an easy way to reactively read the stream's status, result, and also cancel an in progress stream. (#1846)
     * The `.append_message_stream()` method now returns the `reactive.extended_task` instance that it launches. (#1846)
     * The `ui.Chat()` component's `.update_user_input()` method gains `submit` and `focus` options that allow you to submit the input on behalf of the user and to choose whether the input receives focus after the update. (#1851)
 
