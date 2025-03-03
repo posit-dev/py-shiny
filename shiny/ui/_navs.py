@@ -1077,7 +1077,7 @@ def navbar_options(
 
     ## Navbar style with Bootstrap 5 and Bootswatch themes
 
-    In `shiny` v1.3.0, the default navbar colors for Bootswatch themes are less
+    In Shiny v1.3.0, the default navbar colors for Bootswatch themes are less
     opinionated by default and follow light or dark mode (see
     :func:`~shiny.ui.input_dark_mode`).
 
