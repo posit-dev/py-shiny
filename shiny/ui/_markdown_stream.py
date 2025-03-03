@@ -158,7 +158,7 @@ class MarkdownStream:
         return _task
 
     @property
-    def latest_stream(self) -> reactive.ExtendedTask[[], str]:
+    def latest_stream(self):
         """
         React to changes in the latest stream.
 
