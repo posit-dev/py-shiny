@@ -5,13 +5,7 @@ All notable changes to Shiny for Python will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [UNRELEASED]
-
-### Breaking changes
-
-* The navbar-related style options of `ui.page_navbar()` and `ui.navset_bar()` have been consolidated into a single `navbar_options` argument that pairs with a new `ui.navbar_options()` helper. Using the direct `position`, `bg`, `inverse`, `collapsible`, and `underline` arguments will continue to work with a deprecation message.
-
-  Related to this change, `ui.navset_bar()` now defaults to using `underline=True` so that it uses the same set of default `ui.navbar_options()` as the page variant. In `ui.navbar_options()`, `inverse` is replaced by `theme`, which takes values `"light"` (dark text on a **light** background), `"dark"` (light text on a **dark** background), or `"auto"` (follow page settings).
+## [1.3.0] - 2025-03-03
 
 ### New features
 
@@ -31,29 +25,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `shiny create` includes new and improved `ui.Chat()` template options. Most of these templates leverage the new [`{chatlas}` package](https://posit-dev.github.io/chatlas/), our opinionated approach to interfacing with various LLM. (#1806)
 
-* Added a new `expect_max_height()` method to the Valuebox controllers to check the maximum height of a value box (#1816)
-
 * Client data values (e.g., url info, output sizes/styles, etc.) can now be accessed in the server-side Python code via `session.clientdata`. For example, `session.clientdata.url_search()` reactively reads the URL search parameters. (#1832)
 
 * Available `input` ids can now be listed via `dir(input)`. This also works on the new `session.clientdata` object. (#1832)
 
-* Added a new `.add_sass_layer_file()` method to `ui.Theme` that supports reading a Sass file with layer boundary comments, e.g. `/*-- scss:defaults --*/`. This format [is supported by Quarto](https://quarto.org/docs/output-formats/html-themes-more.html#bootstrap-bootswatch-layering) and makes it easier to store Sass rules and declarations that need to be woven into Shiny's Sass Bootstrap files. (#1790)
-
 * `ui.input_text()`, `ui.input_text_area()`, `ui.input_numeric()` and `ui.input_password()` all gain an `update_on` option. `update_on="change"` is the default and previous behavior, where the input value updates immediately whenever the value changes. With `update_on="blur"`, the input value will update only when the text input loses focus or when the user presses Enter (or Cmd/Ctrl + Enter for `ui.input_text_area()`). (#1874)
 
+* Added a new `.add_sass_layer_file()` method to `ui.Theme` that supports reading a Sass file with layer boundary comments, e.g. `/*-- scss:defaults --*/`. This format [is supported by Quarto](https://quarto.org/docs/output-formats/html-themes-more.html#bootstrap-bootswatch-layering) and makes it easier to store Sass rules and declarations that need to be woven into Shiny's Sass Bootstrap files. (#1790)
+
+* Added a new `expect_max_height()` method to the Valuebox controllers to check the maximum height of a value box (#1816)
+
 * `shiny.pytest.create_app_fixture(app)` gained support for multiple app file paths when creating your test fixture. If multiple file paths are given, it will behave as a parameterized fixture value and execute the test for each app path. (#1869)
+
+### Breaking changes
+
+* The navbar-related style options of `ui.page_navbar()` and `ui.navset_bar()` have been consolidated into a single `navbar_options` argument that pairs with a new `ui.navbar_options()` helper. Using the direct `position`, `bg`, `inverse`, `collapsible`, and `underline` arguments will continue to work with a deprecation message.
+
+  Related to this change, `ui.navset_bar()` now defaults to using `underline=True` so that it uses the same set of default `ui.navbar_options()` as the page variant. In `ui.navbar_options()`, `inverse` is replaced by `theme`, which takes values `"light"` (dark text on a **light** background), `"dark"` (light text on a **dark** background), or `"auto"` (follow page settings).
+
+* The Shiny Core component `shiny.ui.Chat()` no longer has a `.ui()` method. This method
+was never intended to be used in Shiny Core (in that case, use `shiny.ui.chat_ui()`) to create the UI element. Note that the `shiny.express.ui.Chat()` class still has a `.ui()` method. (#1840)
 
 ### Bug fixes
 
 * `ui.Chat()` now correctly handles new `ollama.chat()` return value introduced in `ollama` v0.4. (#1787)
 
 * Updated `expect_height()` for Valuebox controllers to check the height property instead of max-height. (#1816)
-
-### Changes
-
-* The Shiny Core component `shiny.ui.Chat()` no longer has a `.ui()` method. This method
-was never intended to be used in Shiny Core (in that case, use `shiny.ui.chat_ui()`) to create the UI element. Note that the `shiny.express.ui.Chat()`
-class still has a `.ui()` method. (#1840)
 
 ## [1.2.1] - 2024-11-14
 
