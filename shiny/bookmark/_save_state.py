@@ -13,6 +13,8 @@ from ._utils import is_hosted, to_json
 
 if TYPE_CHECKING:
     from .. import Inputs
+else:
+    Inputs = Any
 
 
 class SaveState(ABC):

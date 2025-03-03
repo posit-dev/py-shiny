@@ -53,7 +53,15 @@ from ._save_state import ShinySaveState
 
 if TYPE_CHECKING:
     from .._namespaces import ResolvedId
+    from ..express._stub_session import ExpressStubSession
     from ..session import Session
+else:
+    from typing import Any
+
+    Session = Any
+    ResolvedId = Any
+    ExpressStubSession = Any
+
 
 BookmarkStore = Literal["url", "server", "disable"]
 
@@ -404,6 +412,49 @@ class BookmarkProxy(Bookmark):
         value: BookmarkStore,
     ) -> None:
         self._root_bookmark.store = value
+
+
+class BookmarkExpressStub(Bookmark):
+
+    def __init__(self, root_session: ExpressStubSession) -> None:
+        super().__init__(root_session)
+        self._proxy_exclude_fns = []
+
+    def _get_bookmark_exclude(self) -> list[str]:
+        raise NotImplementedError(
+            "Please call `._get_bookmark_exclude()` only from a real session object"
+        )
+
+    def on_bookmark(
+        self,
+        callback: (
+            Callable[[ShinySaveState], None]
+            | Callable[[ShinySaveState], Awaitable[None]]
+        ),
+    ) -> None:
+        raise NotImplementedError(
+            "Please call `.on_bookmark()` only from a real session object"
+        )
+
+    def on_bookmarked(
+        self,
+        callback: Callable[[str], None] | Callable[[str], Awaitable[None]],
+    ) -> None:
+        raise NotImplementedError(
+            "Please call `.on_bookmarked()` only from a real session object"
+        )
+
+    async def update_query_string(
+        self, query_string: str, mode: Literal["replace", "push"] = "replace"
+    ) -> None:
+        raise NotImplementedError(
+            "Please call `.update_query_string()` only from a real session object"
+        )
+
+    async def do_bookmark(self) -> None:
+        raise NotImplementedError(
+            "Please call `.do_bookmark()` only from a real session object"
+        )
 
 
 # RestoreContext <- R6Class("RestoreContext",
