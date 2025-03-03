@@ -66,6 +66,12 @@ else:
 BookmarkStore = Literal["url", "server", "disable"]
 
 
+# TODO: future - Local storage Bookmark class!
+# * Needs a consistent id for storage.
+# * Needs ways to clean up other storage
+# * Needs ways to see available IDs
+
+
 class Bookmark(ABC):
 
     _root_session: Session
@@ -94,6 +100,7 @@ class Bookmark(ABC):
     # async def get_url(self) -> str:
     #     ...
 
+    # # TODO: Barret - Implement this?!?
     # # `session.bookmark.on_bookmarked(session.bookmark.update_query_string)`
     # # `session.bookmark.on_bookmarked(session.bookmark.show_modal)`
     # await def show_modal(self, url: Optional[str] = None) -> None:
