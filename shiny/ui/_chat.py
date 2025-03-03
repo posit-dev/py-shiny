@@ -673,11 +673,12 @@ class Chat:
 
         return _stream_task
 
-    def get_message_stream(self) -> reactive.ExtendedTask[[], str]:
+    @property
+    def latest_message_stream(self) -> reactive.ExtendedTask[[], str]:
         """
         React to changes in the latest message stream.
 
-        Reactively reads for the latest :class:`~shiny.reactive.ExtendedTask` behind the
+        Reactively reads for the :class:`~shiny.reactive.ExtendedTask` behind the
         latest message stream.
 
         From the return value (i.e., the extended task), you can then:
@@ -695,10 +696,9 @@ class Chat:
 
         Note
         ----
-        If no stream has yet been started when this method is called, then a "mock" task
-        is returned. This mock task behaves much like a stream that hasn't yet completed,
-        except it has a `.status()` of "initial" instead of "running", and `.cancel()`
-        is a no-op.
+        If no stream has yet been started when this method is called, then it returns an
+        extended task with `.status()` of `"initial"` and that it status doesn't change
+        state until a message is streamed.
         """
         return self._latest_stream()
 
