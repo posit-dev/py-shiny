@@ -1108,7 +1108,7 @@ def navbar_options(
     for most Bootswatch presets. Note that in Shiny Express, `theme` and
     `navbar_options` both are set using :func:`~shiny.express.ui.page_opts`.
 
-    Another variation from the Flatly documentation features a navar with dark text on a
+    Another variation from the Flatly documentation features a navbar with dark text on a
     light background:
 
     ```python
