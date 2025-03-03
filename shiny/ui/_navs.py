@@ -1075,6 +1075,77 @@ def navbar_options(
     """
     Configure the appearance and behavior of the navbar.
 
+    ## Navbar style with Bootstrap 5 and Bootswatch themes
+
+    In Shiny v1.3.0, the default navbar colors for Bootswatch themes are less
+    opinionated by default and follow light or dark mode (see
+    :func:`~shiny.ui.input_dark_mode`).
+
+    You can use `ui.navbar_options()` to adjust the colors of the navbar when using a
+    Bootswatch preset theme with Bootstrap 5. For example, the [Bootswatch documentation
+    for the Flatly theme](https://bootswatch.com/flatly/) shows 4 navbar variations.
+    Inspecting the source code for the first example reveals the following markup:
+
+    ```html
+    <nav class="navbar navbar-expand-lg bg-primary" data-bs-theme="dark">
+      <!-- all of the navbar html -->
+    </nav>
+    ```
+
+    Note that this navbar uses the `bg-primary` class for a dark navy background. The
+    navbar's white text is controlled by the `data-bs-theme="dark"` attribute, which is
+    used by Bootstrap for light text on a _dark_ background. In Shiny, you can achieve
+    this look with:
+
+    ```python
+    ui.page_navbar(
+      theme=ui.Theme(version=5, preset="flatly"),
+      navbar_options=ui.navbar_options(class="bg-primary", theme="dark")
+    )
+    ```
+
+    This particular combination of `class="bg-primary"` and `theme="dark"` works well
+    for most Bootswatch presets. Note that in Shiny Express, `theme` and
+    `navbar_options` both are set using :func:`~shiny.express.ui.page_opts`.
+
+    Another variation from the Flatly documentation features a navbar with dark text on a
+    light background:
+
+    ```python
+    ui.page_navbar(
+      theme = ui.Theme(version=5, preset="flatly"),
+      navbar_options = ui.navbar_options(class="bg-light", theme="light")
+    )
+    ```
+
+    The above options set navbar foreground and background colors that are always the
+    same in both light and dark modes. To customize the navbar colors used in light or
+    dark mode, you can use the `$navbar-light-bg` and `$navbar-dark-bg` Sass variables.
+    When provided, Shiny will automatically choose to use light or dark text as the
+    foreground color.
+
+    ```python
+    ui.page_navbar(
+        theme=(
+            ui.Theme(version=5, preset = "flatly")
+            .add_defaults(
+                navbar_light_bg="#18BC9C", # flatly's success color (teal)
+                navbar_dark_bg="#2C3E50"   # flatly's primary color (navy)
+            )
+        )
+      )
+    )
+    ```
+
+    Finally, you can also use the `$navbar-bg` Sass variable to set the navbar
+    background color for both light and dark modes:
+
+    ```python
+    ui.page_navbar(
+        theme=ui.Theme(version=5, preset="flatly").add_defaults(navbar_bg="#E74C3C") # flatly's red
+    )
+    ```
+
     Parameters
     -----------
     position
@@ -1095,7 +1166,7 @@ def navbar_options(
     collapsible
         If `True`, automatically collapses the elements into an expandable menu on
         mobile devices or narrow window widths.
-    **attrs : dict
+    attrs
         Additional HTML attributes to apply to the navbar container element.
 
     Returns:
