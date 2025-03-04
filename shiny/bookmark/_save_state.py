@@ -1,113 +1,20 @@
 # TODO: barret - Set / Load SaveState for Connect. Ex: Connect https://github.com/posit-dev/connect/blob/8de330aec6a61cf21e160b5081d08a1d3d7e8129/R/connect.R#L915
+# Might need to have independent save/load functions to register to avoid a class constructor
 
-import os
 import pickle
-from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Awaitable, Callable
 from urllib.parse import urlencode as urllib_urlencode
 
 from .._utils import private_random_id
 from ..reactive import isolate
-from ._utils import is_hosted, to_json
+from ._bookmark_state import BookmarkState
+from ._utils import is_hosted, to_json_str
 
 if TYPE_CHECKING:
     from .. import Inputs
 else:
     Inputs = Any
-
-
-class SaveState(ABC):
-    """
-    Class for saving and restoring state to/from disk.
-    """
-
-    @abstractmethod
-    async def save_dir(
-        self,
-        id: str,
-        # write_files: Callable[[Path], Awaitable[None]],
-    ) -> Path:
-        """
-        Construct directory for saving state.
-
-        Parameters
-        ----------
-        id
-            The unique identifier for the state.
-
-        Returns
-        -------
-        Path
-            Directory location for saving state. This directory must exist.
-        """
-        # write_files
-        #     A async function that writes the state to a serializable location. The method receives a path object and
-        ...
-
-    @abstractmethod
-    async def load_dir(
-        self,
-        id: str,
-        # read_files: Callable[[Path], Awaitable[None]],
-    ) -> Path:
-        """
-        Construct directory for loading state.
-
-        Parameters
-        ----------
-        id
-            The unique identifier for the state.
-
-        Returns
-        -------
-        Path | None
-            Directory location for loading state. If `None`, state loading will be ignored. If a `Path`, the directory must exist.
-        """
-        ...
-
-
-class SaveStateLocal(SaveState):
-    """
-    Function wrappers for saving and restoring state to/from disk when running Shiny
-    locally.
-    """
-
-    def _local_dir(self, id: str) -> Path:
-        # Try to save/load from current working directory as we do not know where the
-        # app file is located
-        return Path(os.getcwd()) / "shiny_bookmarks" / id
-
-    async def save_dir(self, id: str) -> Path:
-        state_dir = self._local_dir(id)
-        if not state_dir.exists():
-            state_dir.mkdir(parents=True)
-        return state_dir
-
-    async def load_dir(self, id: str) -> Path:
-        return self._local_dir(id)
-
-    # async def save(
-    #     self,
-    #     id: str,
-    #     write_files: Callable[[Path], Awaitable[None]],
-    # ) -> None:
-    #     state_dir = self._local_dir(id)
-    #     if not state_dir.exists():
-    #         state_dir.mkdir(parents=True)
-
-    #     await write_files(state_dir)
-
-    # async def load(
-    #     self,
-    #     id: str,
-    #     read_files: Callable[[Path], Awaitable[None]],
-    # ) -> None:
-    #     await read_files(self._local_dir(id))
-    #     await read_files(self._local_dir(id))
-
-
-# #############################################################################
 
 
 class ShinySaveState:
@@ -163,37 +70,13 @@ class ShinySaveState:
         """
         id = private_random_id(prefix="", bytes=8)
 
-        # TODO: barret move code to single call location
-        # A function for saving the state object to disk, given a directory to save
-        # to.
-        async def save_state_to_dir(state_dir: Path) -> None:
-            self.dir = state_dir
-
-            await self._call_on_save()
-
-            self._exclude_bookmark_value()
-
-            input_values_json = await self.input._serialize(
-                exclude=self.exclude,
-                state_dir=self.dir,
-            )
-            assert self.dir is not None
-            with open(self.dir / "input.pickle", "wb") as f:
-                pickle.dump(input_values_json, f)
-
-            if len(self.values) > 0:
-                with open(self.dir / "values.pickle", "wb") as f:
-                    pickle.dump(self.values, f)
-
-            return
-
         # Pass the saveState function to the save interface function, which will
         # invoke saveState after preparing the directory.
 
         # TODO: FUTURE - Get the save interface from the session object?
         # Look for a save.interface function. This will be defined by the hosting
         # environment if it supports bookmarking.
-        save_interface_loaded: SaveState | None = None
+        save_interface_loaded: BookmarkState | None = None
 
         if save_interface_loaded is None:
             if is_hosted():
@@ -203,15 +86,33 @@ class ShinySaveState:
                 )
             else:
                 # We're running Shiny locally.
-                save_interface_loaded = SaveStateLocal()
+                save_interface_loaded = BookmarkStateLocal()
 
-        if not isinstance(save_interface_loaded, SaveState):
+        if not isinstance(save_interface_loaded, BookmarkState):
             raise TypeError(
-                "The save interface retrieved must be an instance of `shiny.bookmark.SaveState`."
+                "The save interface retrieved must be an instance of `shiny.bookmark.BookmarkStateLocal`."
             )
 
         save_dir = Path(await save_interface_loaded.save_dir(id))
-        await save_state_to_dir(save_dir)
+
+        # Save the state to disk.
+        self.dir = save_dir
+        await self._call_on_save()
+
+        self._exclude_bookmark_value()
+
+        input_values_json = await self.input._serialize(
+            exclude=self.exclude,
+            state_dir=self.dir,
+        )
+        assert self.dir is not None
+        with open(self.dir / "input.pickle", "wb") as f:
+            pickle.dump(input_values_json, f)
+
+        if len(self.values) > 0:
+            with open(self.dir / "values.pickle", "wb") as f:
+                pickle.dump(self.values, f)
+        # End save to disk
 
         # No need to encode URI component as it is only ascii characters.
         return f"_state_id_={id}"
@@ -243,7 +144,12 @@ class ShinySaveState:
 
         # If any input values are present, add them.
         if len(input_values_serialized) > 0:
-            input_qs = urllib_urlencode(to_json(input_values_serialized))
+            input_qs = urllib_urlencode(
+                {
+                    key: to_json_str(value)
+                    for key, value in input_values_serialized.items()
+                }
+            )
 
             qs_str_parts.append("_inputs_&")
             qs_str_parts.append(input_qs)
@@ -252,7 +158,10 @@ class ShinySaveState:
             if len(qs_str_parts) > 0:
                 qs_str_parts.append("&")
 
-            values_qs = urllib_urlencode(to_json(self.values))
+            # print("\n\nself.values", self.values)
+            values_qs = urllib_urlencode(
+                {key: to_json_str(value) for key, value in self.values.items()}
+            )
 
             qs_str_parts.append("_values_&")
             qs_str_parts.append(values_qs)
