@@ -3,12 +3,11 @@ from __future__ import annotations
 import sys
 
 # Remove this conditional once modin is supported on Python 3.13
-if sys.version_info < (3, 13):
-    import modin.pandas as mpd  # pyright: ignore[reportMissingTypeStubs]
-else:
-    # This block executes for Python 3.13 and above
+if sys.version_info[:2] == (3, 13):
+    # This block executes for Python 3.13
     raise RuntimeError("This test is not supported on Python 3.13")
-
+else:
+    import modin.pandas as mpd  # pyright: ignore[reportMissingTypeStubs]
 import narwhals.stable.v1 as nw
 import palmerpenguins  # pyright: ignore[reportMissingTypeStubs]
 import polars as pl
