@@ -8,7 +8,7 @@ from urllib.parse import urlencode as urllib_urlencode
 
 from .._utils import private_random_id
 from ..reactive import isolate
-from ._bookmark_state import BookmarkState
+from ._bookmark_state import BookmarkState, BookmarkStateLocal
 from ._utils import is_hosted, to_json_str
 
 if TYPE_CHECKING:

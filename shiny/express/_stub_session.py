@@ -7,6 +7,7 @@ from htmltools import TagChild
 from .._namespaces import Id, ResolvedId, Root
 from ..bookmark import BookmarkExpressStub
 from ..session import Inputs, Outputs, Session
+from ..session._session import SessionProxy
 
 if TYPE_CHECKING:
     from ..session._session import DownloadHandler, DynamicRouteHandler, RenderedDeps

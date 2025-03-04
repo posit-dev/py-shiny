@@ -363,8 +363,8 @@ class App:
         # TODO: Barret implement how to get bookmark_store value
         # bookmarkStore <- getShinyOption("bookmarkStore", default = "disable")
         print("TODO: Figure this out")
-        bookmark_store: str = "disable"
-        bookmark_store: str = "query"
+        bookmark_store: str = str("disable")
+        bookmark_store: str = str("query")
 
         if bookmark_store == "disable":
             restore_ctx = RestoreContext()
@@ -389,7 +389,8 @@ class App:
                 if cur_restore_ctx is not None and cur_restore_ctx.active:
                     # TODO: See ?enableBookmarking
                     warnings.warn(
-                        "Trying to restore saved app state, but UI code must be a function for this to work!"
+                        "Trying to restore saved app state, but UI code must be a function for this to work!",
+                        stacklevel=1,
                     )
 
                 ui = self.ui

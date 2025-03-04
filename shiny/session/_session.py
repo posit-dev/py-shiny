@@ -49,8 +49,9 @@ from .._utils import wrap_async
 from ..bookmark import BookmarkApp, BookmarkProxy
 from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
-from ..reactive import Effect_, Value, effect, isolate
+from ..reactive import Effect_, Value, effect
 from ..reactive import flush as reactive_flush
+from ..reactive import isolate
 from ..reactive._core import lock
 from ..reactive._core import on_flushed as reactive_on_flushed
 from ..render.renderer import Renderer, RendererT
@@ -639,11 +640,14 @@ class AppSession(Session):
                             verify_state(ConnectionState.Start)
 
                             # BOOKMARKS!
-                            self.bookmark._restore_context = (
-                                await RestoreContext.from_query_string(
-                                    message_obj["data"][".clientdata_url_search"]
+                            if ".clientdata_url_search" in message_obj["data"]:
+                                self.bookmark._restore_context = (
+                                    await RestoreContext.from_query_string(
+                                        message_obj["data"][".clientdata_url_search"]
+                                    )
                                 )
-                            )
+                            else:
+                                self.bookmark._restore_context = RestoreContext()
 
                             # When a reactive flush occurs, flush the session's outputs,
                             # errors, etc. to the client. Note that this is

@@ -135,21 +135,21 @@ class RestoreContext:
 
         return res_ctx
 
-    def set(
-        self,
-        *,
-        active: bool = False,
-        init_error_msg: str | None = None,
-        input_: dict[str, Any] = {},
-        values: dict[str, Any] = {},
-        dir_: Path | None = None,
-    ) -> None:
-        self.active = active
-        self._init_error_msg = init_error_msg
-        self.input = RestoreInputSet()
-        self.input._values = input_
-        self.values = values
-        self.dir = dir_
+    # def set(
+    #     self,
+    #     *,
+    #     active: bool = False,
+    #     init_error_msg: str | None = None,
+    #     input_: dict[str, Any] = {},
+    #     values: dict[str, Any] = {},
+    #     dir_: Path | None = None,
+    # ) -> None:
+    #     self.active = active
+    #     self._init_error_msg = init_error_msg
+    #     self.input = RestoreInputSet()
+    #     self.input._values = input_
+    #     self.values = values
+    #     self.dir = dir_
 
     # This should be called before a restore context is popped off the stack.
     def flush_pending(self) -> None:
@@ -258,7 +258,9 @@ class RestoreContext:
                     elif storing_to == "values":
                         value_vals[qs_key] = from_json_str(qs_value)
                 except Exception as e:
-                    warnings.warn(f'Failed to parse URL parameter "{qs_key}"')
+                    warnings.warn(
+                        f'Failed to parse URL parameter "{qs_key}"', stacklevel=3
+                    )
                     print(e, storing_to, qs_key, qs_value)
 
         self.input = RestoreInputSet(input_vals)

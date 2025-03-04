@@ -454,8 +454,6 @@ class BookmarkApp(Bookmark):
             # If onBookmarked callback was provided, invoke it; if not call
             # the default.
             if self._on_bookmarked_callbacks.count() > 0:
-                from ..session import session_context
-
                 with session_context(self._session_root):
                     await self._on_bookmarked_callbacks.invoke(full_url)
             else:
