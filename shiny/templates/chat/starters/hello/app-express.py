@@ -8,13 +8,11 @@ ui.page_opts(
 )
 
 # Create a welcome message
-welcome = ui.markdown(
-    """
-    Hi! This is a simple Shiny `Chat` UI. Enter a message below and I will
-    simply repeat it back to you. For more examples, see this
-    [folder of examples](https://github.com/posit-dev/py-shiny/tree/main/shiny/templates/chat).
-    """
-)
+welcome = """
+Hi! This is a simple Shiny `Chat` UI. Enter a message below and I will
+simply repeat it back to you. For more examples, see this
+[folder of examples](https://github.com/posit-dev/py-shiny/tree/main/shiny/templates/chat).
+"""
 
 # Create a chat instance
 chat = ui.Chat(

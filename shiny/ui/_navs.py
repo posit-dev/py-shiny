@@ -3,13 +3,14 @@ from __future__ import annotations
 import collections.abc
 import copy
 import re
-from typing import Any, Literal, Optional, Sequence, cast
+from typing import Any, Literal, Optional, Sequence, TypeVar, cast
 
 from htmltools import (
     HTML,
     MetadataNode,
     Tag,
     TagAttrs,
+    TagAttrValue,
     TagChild,
     TagList,
     css,
@@ -17,10 +18,11 @@ from htmltools import (
     tags,
 )
 
+from .._deprecated import warn_deprecated
 from .._docstring import add_example
 from .._namespaces import resolve_id_or_none
 from .._utils import private_random_int
-from ..types import NavSetArg
+from ..types import DEPRECATED, MISSING, MISSING_TYPE, NavSetArg
 from ._bootstrap import column, row
 from ._card import CardItem, WrapperCallable, card, card_body, card_footer, card_header
 from ._html_deps_shinyverse import components_dependencies
@@ -42,7 +44,10 @@ __all__ = (
     "navset_pill_list",
     "navset_hidden",
     "navset_bar",
+    "navbar_options",
 )
+
+T = TypeVar("T")
 
 
 # -----------------------------------------------------------------------------
@@ -985,18 +990,206 @@ def navset_pill_list(
     )
 
 
+NavbarOptionsPositionType = Literal[
+    "static-top", "fixed-top", "fixed-bottom", "sticky-top"
+]
+NavbarOptionsThemeType = Literal["auto", "light", "dark"]
+
+
+class NavbarOptions:
+    position: NavbarOptionsPositionType
+    bg: Optional[str]
+    theme: NavbarOptionsThemeType
+    underline: bool
+    collapsible: bool
+    attrs: dict[str, Any]
+    _is_default: dict[str, bool]
+
+    def __init__(
+        self,
+        *,
+        position: NavbarOptionsPositionType | MISSING_TYPE = MISSING,
+        bg: str | None | MISSING_TYPE = MISSING,
+        theme: NavbarOptionsThemeType | MISSING_TYPE = MISSING,
+        underline: bool | MISSING_TYPE = MISSING,
+        collapsible: bool | MISSING_TYPE = MISSING,
+        **attrs: TagAttrValue,
+    ):
+        self._is_default = {}
+
+        self.position = self._maybe_default("position", position, default="static-top")
+        self.bg = self._maybe_default("bg", bg, default=None)
+        self.theme = self._maybe_default("theme", theme, default="auto")
+        self.underline = self._maybe_default("underline", underline, default=True)
+        self.collapsible = self._maybe_default("collapsible", collapsible, default=True)
+
+        if "inverse" in attrs:
+            warn_deprecated(
+                "`navbar_options()` does not support `inverse`, please use `theme` instead."
+            )
+            del attrs["inverse"]
+
+        self.attrs = attrs
+
+    def _maybe_default(self, name: str, value: Any, default: Any):
+        if isinstance(value, MISSING_TYPE):
+            self._is_default[name] = True
+            return default
+        return value
+
+    def __eq__(self, other: Any):
+        if not isinstance(other, NavbarOptions):
+            return False
+
+        return (
+            self.position == other.position
+            and self.bg == other.bg
+            and self.theme == other.theme
+            and self.underline == other.underline
+            and self.collapsible == other.collapsible
+            and self.attrs == other.attrs
+        )
+
+    def __repr__(self):
+        fields: list[str] = []
+        for key, value in self.__dict__.items():
+            if key == "_is_default":
+                continue
+            if not self._is_default.get(key, False):
+                if key == "attrs" and len(value) == 0:
+                    continue
+                fields.append(f"{key}={value!r}")
+
+        return f"navbar_options({', '.join(fields)})"
+
+
+@add_example()
+def navbar_options(
+    position: NavbarOptionsPositionType | MISSING_TYPE = MISSING,
+    bg: str | None | MISSING_TYPE = MISSING,
+    theme: NavbarOptionsThemeType | MISSING_TYPE = MISSING,
+    underline: bool | MISSING_TYPE = MISSING,
+    collapsible: bool | MISSING_TYPE = MISSING,
+    **attrs: TagAttrValue,
+) -> NavbarOptions:
+    """
+    Configure the appearance and behavior of the navbar.
+
+    Parameters
+    -----------
+    position
+        Determines whether the navbar should be displayed at the top of the page with
+        normal scrolling behavior (`"static-top"`), pinned at the top (`"fixed-top"`),
+        or pinned at the bottom (`"fixed-bottom"`). Note that using `"fixed-top"` or
+        `"fixed-bottom"` will cause the navbar to overlay your body content, unless you
+        add padding (e.g., `tags.style("body {padding-top: 70px;}")`)
+    bg
+        Background color of the navbar (a CSS color).
+    theme
+        The navbar theme: either `"dark"` for a light text color (on a **dark**
+        background) or `"light"` for a dark text color (on a **light** background). If
+        `"auto"` (the default) and `bg` is provided, the best contrast to `bg` is
+        chosen.
+    underline
+        If `True`, adds an underline effect to the navbar.
+    collapsible
+        If `True`, automatically collapses the elements into an expandable menu on
+        mobile devices or narrow window widths.
+    **attrs : dict
+        Additional HTML attributes to apply to the navbar container element.
+
+    Returns:
+    --------
+    NavbarOptions
+        A NavbarOptions object configured with the specified options.
+    """
+    return NavbarOptions(
+        position=position,
+        bg=bg,
+        theme=theme,
+        underline=underline,
+        collapsible=collapsible,
+        **attrs,
+    )
+
+
+def navbar_options_resolve_deprecated(
+    options_user: Optional[NavbarOptions] = None,
+    position: NavbarOptionsPositionType | MISSING_TYPE = DEPRECATED,
+    bg: str | None | MISSING_TYPE = DEPRECATED,
+    inverse: bool | MISSING_TYPE = DEPRECATED,
+    underline: bool | MISSING_TYPE = DEPRECATED,
+    collapsible: bool | MISSING_TYPE = DEPRECATED,
+    fn_caller: str = "navset_bar",
+) -> NavbarOptions:
+    options_user = options_user if options_user is not None else navbar_options()
+
+    options_old = {
+        "position": position,
+        "bg": bg,
+        "inverse": inverse,
+        "collapsible": collapsible,
+        "underline": underline,
+    }
+    options_old = {
+        k: v for k, v in options_old.items() if not isinstance(v, MISSING_TYPE)
+    }
+
+    args_deprecated = list(options_old.keys())
+
+    if not args_deprecated:
+        return options_user
+
+    args_deprecated = ", ".join([f"`{arg}`" for arg in args_deprecated])
+    warn_deprecated(
+        "In shiny v1.3.0, the arguments of "
+        f"`{fn_caller}()` for navbar options (including {args_deprecated}) "
+        f"have been consolidated into a single `navbar_options` argument."
+    )
+
+    if "inverse" in options_old:
+        inverse_old = options_old["inverse"]
+        del options_old["inverse"]
+
+        if not isinstance(inverse_old, bool):
+            raise ValueError(f"Invalid `inverse` value: {inverse}")
+
+        options_old["theme"] = "dark" if inverse_old else "light"
+
+    options_resolved = {
+        k: v
+        for k, v in vars(options_user).items()
+        if k != "_is_default" and not options_user._is_default.get(k, False)
+    }
+
+    ignored: list[str] = []
+    for opt in options_old:
+        if opt not in options_resolved:
+            options_resolved[opt] = options_old[opt]
+        elif options_old[opt] != options_resolved[opt]:
+            ignored.append("inverse" if opt == "theme" else opt)
+
+    if ignored:
+        warn_deprecated(
+            f"`{', '.join(ignored)}` {'was' if len(ignored) == 1 else 'were'} provided twice: "
+            "once directly and once in `navbar_options`.\n"
+            "The deprecated direct option(s) will be ignored and the values from `navbar_options` will be used."
+        )
+
+    attrs = options_resolved.pop("attrs", {})
+
+    return navbar_options(**options_resolved, **attrs)
+
+
 class NavSetBar(NavSet):
     title: TagChild
     sidebar: Optional[Sidebar]
     fillable: bool | list[str]
     gap: Optional[CssUnit]
     padding: Optional[CssUnit | list[CssUnit]]
-    position: Literal["static-top", "fixed-top", "fixed-bottom", "sticky-top"]
-    bg: Optional[str]
-    inverse: bool
-    underline: bool
-    collapsible: bool
     fluid: bool
+    navbar_options: NavbarOptions
+    # Internal ----
     _is_page_level: bool
 
     def __init__(
@@ -1010,17 +1203,10 @@ class NavSetBar(NavSet):
         fillable: bool | list[str] = False,
         gap: Optional[CssUnit],
         padding: Optional[CssUnit | list[CssUnit]],
-        position: Literal[
-            "static-top", "fixed-top", "fixed-bottom", "sticky-top"
-        ] = "static-top",
+        fluid: bool = True,
         header: TagChild = None,
         footer: TagChild = None,
-        bg: Optional[str] = None,
-        # TODO: default to 'auto', like we have in R (parse color via webcolors?)
-        inverse: bool = False,
-        underline: bool = True,
-        collapsible: bool = True,
-        fluid: bool = True,
+        navbar_options: Optional[NavbarOptions] = None,
     ) -> None:
         super().__init__(
             *args,
@@ -1035,11 +1221,9 @@ class NavSetBar(NavSet):
         self.fillable = fillable
         self.gap = gap
         self.padding = padding
-        self.position = position
-        self.bg = bg
-        self.inverse = inverse
-        self.underline = underline
-        self.collapsible = collapsible
+        self.navbar_options = (
+            navbar_options if navbar_options is not None else NavbarOptions()
+        )
         self.fluid = fluid
         self._is_page_level = False
 
@@ -1048,7 +1232,7 @@ class NavSetBar(NavSet):
             {"class": "container-fluid" if self.fluid else "container"},
             tags.span({"class": "navbar-brand"}, self.title),
         )
-        if self.collapsible:
+        if self.navbar_options.collapsible:
             collapse_id = "navbar-collapse-" + nav_random_int()
             nav_container.append(
                 tags.button(
@@ -1067,15 +1251,21 @@ class NavSetBar(NavSet):
         nav_container.append(nav)
         nav_final = tags.nav({"class": "navbar navbar-expand-md"}, nav_container)
 
-        if self.position != "static-top":
-            nav_final.add_class(self.position)
+        if self.navbar_options.position != "static-top":
+            nav_final.add_class(self.navbar_options.position)
 
         # bslib supports navbar-default/navbar-inverse (which is no longer
         # a thing in Bootstrap 5) in a way that's still useful, especially Bootswatch.
-        nav_final.add_class(f"navbar-{'inverse' if self.inverse else 'default'}")
+        nav_final.add_class(
+            "navbar-inverse"
+            if self.navbar_options.theme == "dark"
+            else "navbar-default"
+        )
 
-        if self.bg:
-            nav_final.add_style(f"background-color: {self.bg} !important;")
+        if self.navbar_options.bg:
+            nav_final.add_style(
+                f"background-color: {self.navbar_options.bg} !important;"
+            )
 
         content = _make_tabs_fillable(
             content,
@@ -1177,17 +1367,16 @@ def navset_bar(
     fillable: bool | list[str] = True,
     gap: Optional[CssUnit] = None,
     padding: Optional[CssUnit | list[CssUnit]] = None,
-    position: Literal[
-        "static-top", "fixed-top", "fixed-bottom", "sticky-top"
-    ] = "static-top",
     header: TagChild = None,
     footer: TagChild = None,
-    bg: Optional[str] = None,
-    # TODO: default to 'auto', like we have in R (parse color via webcolors?)
-    inverse: bool = False,
-    underline: bool = True,
-    collapsible: bool = True,
+    navbar_options: Optional[NavbarOptions] = None,
     fluid: bool = True,
+    # Deprecated -- v1.3.0 2025-01 ----
+    position: NavbarOptionsPositionType | MISSING_TYPE = DEPRECATED,
+    bg: str | None | MISSING_TYPE = DEPRECATED,
+    inverse: bool | MISSING_TYPE = DEPRECATED,
+    underline: bool | MISSING_TYPE = DEPRECATED,
+    collapsible: bool | MISSING_TYPE = DEPRECATED,
 ) -> NavSetBar:
     """
     Render nav items as a navbar.
@@ -1223,24 +1412,44 @@ def navset_bar(
         be used for top, the second will be left and right, and the third will be
         bottom. If four, then the values will be interpreted as top, right, bottom, and
         left respectively. This value is only used when the navbar is `fillable`.
+    header
+        UI to display above the selected content.
+    footer
+        UI to display below the selected content.
+    fluid
+        ``True`` to use fluid layout; ``False`` to use fixed layout.
+    navbar_options
+        Configure the appearance and behavior of the navbar using
+        :func:`~shiny.ui.navbar_options` to set properties like position, background
+        color, and more.
+
+        `navbar_options` was added in v1.3.0 and replaces deprecated arguments
+        `position`, `bg`, `inverse`, `collapsible`, and `underline`.
     position
+        Deprecated in v1.3.0. Please use `navbar_options` instead; see
+        :func:`~shiny.ui.navbar_options` for details.
+
         Determines whether the navbar should be displayed at the top of the page with
         normal scrolling behavior ("static-top"), pinned at the top ("fixed-top"), or
         pinned at the bottom ("fixed-bottom"). Note that using "fixed-top" or
         "fixed-bottom" will cause the navbar to overlay your body content, unless you
         add padding (e.g., ``tags.style("body {padding-top: 70px;}")``).
-    header
-        UI to display above the selected content.
-    footer
-        UI to display below the selected content.
     bg
+        Deprecated in v1.3.0. Please use `navbar_options` instead; see
+        :func:`~shiny.ui.navbar_options` for details.
+
         Background color of the navbar (a CSS color).
     inverse
+        Deprecated in v1.3.0. Please use `navbar_options` instead; see
+        :func:`~shiny.ui.navbar_options` for details.
+
         Either ``True`` for a light text color or ``False`` for a dark text color.
     collapsible
-        ``True`` to automatically collapse the navigation elements into an expandable menu on mobile devices or narrow window widths.
-    fluid
-        ``True`` to use fluid layout; ``False`` to use fixed layout.
+        Deprecated in v1.3.0. Please use `navbar_options` instead; see
+        :func:`~shiny.ui.navbar_options` for details.
+
+        ``True`` to automatically collapse the elements into an expandable menu on
+        mobile devices or narrow window widths.
 
     See Also
     --------
@@ -1271,8 +1480,18 @@ def navset_bar(
         else:
             new_args.append(cast(NavSetArg, arg))
 
+    navbar_opts = navbar_options_resolve_deprecated(
+        fn_caller="navset_bar",
+        options_user=navbar_options or NavbarOptions(),
+        position=position,
+        bg=bg,
+        inverse=inverse,
+        underline=underline,
+        collapsible=collapsible,
+    )
+
     ul_class = "nav navbar-nav"
-    if underline:
+    if navbar_opts.underline:
         ul_class += " nav-underline"
 
     return NavSetBar(
@@ -1285,14 +1504,10 @@ def navset_bar(
         gap=gap,
         padding=padding,
         title=title,
-        position=position,
         header=header,
         footer=footer,
-        bg=bg,
-        inverse=inverse,
-        underline=underline,
-        collapsible=collapsible,
         fluid=fluid,
+        navbar_options=navbar_opts,
     )
 
 

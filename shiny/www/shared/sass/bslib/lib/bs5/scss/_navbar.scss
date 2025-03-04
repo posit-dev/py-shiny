@@ -3,7 +3,8 @@
 // Provide a static navbar from which we expand to create full-width, fixed, and
 // other navbar variations.
 
-.navbar {
+.navbar,
+:where([data-bs-theme="light"]) .navbar { // bslib-patched: explicitly set navbar props in light mode regions
   // scss-docs-start navbar-css-vars
   --#{$prefix}navbar-padding-x: #{if($navbar-padding-x == null, 0, $navbar-padding-x)};
   --#{$prefix}navbar-padding-y: #{$navbar-padding-y};
@@ -26,7 +27,9 @@
   --#{$prefix}navbar-toggler-focus-width: #{$navbar-toggler-focus-width};
   --#{$prefix}navbar-toggler-transition: #{$navbar-toggler-transition};
   // scss-docs-end navbar-css-vars
+}
 
+.navbar {
   position: relative;
   display: flex;
   display: -webkit-flex;
@@ -296,6 +299,7 @@
 }
 
 .navbar-dark,
+:where([data-bs-theme="dark"]) .navbar, // bslib-patched: dark mode inside dark regions
 .navbar[data-bs-theme="dark"] {
   // scss-docs-start navbar-dark-css-vars
   --#{$prefix}navbar-color: #{$navbar-dark-color};
@@ -309,10 +313,32 @@
   // scss-docs-end navbar-dark-css-vars
 }
 
+:where(.navbar[data-bs-theme="dark"] .navbar-toggler-icon) {
+  // bslib-patched: toggler icon should follow closest navbar color mode over global mode
+  --#{$prefix}navbar-toggler-icon-bg: #{escape-svg($navbar-dark-toggler-icon-bg)};
+}
+
 @if $enable-dark-mode {
   @include color-mode(dark) {
-    .navbar-toggler-icon {
+    // bslib-patched: toggler follows global theme unless in a light region
+    :where(.navbar:not([data-bs-theme="light"]) .navbar-toggler-icon) {
       --#{$prefix}navbar-toggler-icon-bg: #{escape-svg($navbar-dark-toggler-icon-bg)};
     }
+  }
+}
+
+.navbar[data-bs-theme="light"] {
+  // bslib-patched: Make sure local light navbar overrides page global
+  --#{$prefix}navbar-color: #{$navbar-light-color};
+  --#{$prefix}navbar-hover-color: #{$navbar-light-hover-color};
+  --#{$prefix}navbar-disabled-color: #{$navbar-light-disabled-color};
+  --#{$prefix}navbar-active-color: #{$navbar-light-active-color};
+  --#{$prefix}navbar-brand-color: #{$navbar-light-brand-color};
+  --#{$prefix}navbar-brand-hover-color: #{$navbar-light-brand-hover-color};
+  --#{$prefix}navbar-toggler-border-color: #{$navbar-light-toggler-border-color};
+
+  .navbar-toggler-icon {
+    // bslib-patched: Make sure toggler icon follows local light mode, too
+    --#{$prefix}navbar-toggler-icon-bg: #{escape-svg($navbar-light-toggler-icon-bg)};
   }
 }
