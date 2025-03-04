@@ -1365,7 +1365,7 @@ class NavSetBar(NavSet):
                 # TODO-future: This could also be applied to the non-sidebar page layout above
                 from ._page import page_main_container
 
-                tab_content = page_main_container(*contents)
+                tab_content = page_main_container(*contents, fillable=self.fillable is not False)
 
             content_div = div(
                 # In the fluid case, the sidebar layout should be flush (i.e.,
