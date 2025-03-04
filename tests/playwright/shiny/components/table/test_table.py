@@ -9,7 +9,7 @@ from shiny.run import ShinyAppProc
 
 
 @pytest.mark.skipif(
-    sys.version_info >= (3, 13),
+    sys.version_info[:2] == (3, 13),
     reason="Skipping on Python 3.13, since modin is not supported on 3.13",
 )
 def test_table_data_support(page: Page, local_app: ShinyAppProc) -> None:

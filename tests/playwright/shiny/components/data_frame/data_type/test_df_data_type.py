@@ -42,7 +42,7 @@ backends = [
 
 
 @pytest.mark.skipif(
-    sys.version_info >= (3, 13),
+    sys.version_info[:2] == (3, 13),
     reason="Skipping on Python 3.13, since modin is not supported on 3.13",
 )
 def test_data_frame_data_type(
