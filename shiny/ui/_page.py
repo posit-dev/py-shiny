@@ -151,11 +151,9 @@ def page_sidebar(
 
 def page_main_container(*args: TagChild, fillable: bool = True) -> Tag:
     main = tags.main({"class": "bslib-page-main bslib-gap-spacing"}, *args)
-    main = as_fill_item(main)
     if not fillable:
         return main
-    else:
-        return as_fillable_container(main)
+    return as_fillable_container(as_fill_item(main))
 
 
 @no_example()
