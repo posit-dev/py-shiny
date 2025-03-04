@@ -550,6 +550,9 @@ class Callbacks:
         return len(self._callbacks)
 
 
+CancelCallback = Callable[[], None]
+
+
 class AsyncCallbacks:
     def __init__(self) -> None:
         self._callbacks: dict[int, tuple[Callable[..., Awaitable[None]], bool]] = {}
@@ -557,16 +560,16 @@ class AsyncCallbacks:
 
     def register(
         self, fn: Callable[..., Awaitable[None]], once: bool = False
-    ) -> Callable[[], None]:
+    ) -> CancelCallback:
         self._id += 1
         id = self._id
         self._callbacks[id] = (fn, once)
 
-        def _():
+        def cancel_callback():
             if id in self._callbacks:
                 del self._callbacks[id]
 
-        return _
+        return cancel_callback
 
     async def invoke(self, *args: Any, **kwargs: Any) -> None:
         # The list() wrapper is necessary to force collection of all the items before

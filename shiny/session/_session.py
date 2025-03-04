@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from shiny.bookmark._restore_state import RestoreContext
+
 __all__ = ("Session", "Inputs", "Outputs", "ClientData")
 
 import asyncio
@@ -47,8 +49,10 @@ from .._utils import wrap_async
 from ..bookmark import BookmarkApp, BookmarkProxy
 from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
-from ..reactive import Effect_, Value, effect, flush, isolate
-from ..reactive._core import lock, on_flushed
+from ..reactive import Effect_, Value, effect, isolate
+from ..reactive import flush as reactive_flush
+from ..reactive._core import lock
+from ..reactive._core import on_flushed as reactive_on_flushed
 from ..render.renderer import Renderer, RendererT
 from ..types import (
     Jsonifiable,
@@ -630,16 +634,27 @@ class AppSession(Session):
                         return
 
                     async with lock():
+                        print("with lock")
                         if message_obj["method"] == "init":
                             verify_state(ConnectionState.Start)
+
+                            # BOOKMARKS!
+                            self.bookmark._restore_context = (
+                                await RestoreContext.from_query_string(
+                                    message_obj["data"][".clientdata_url_search"]
+                                )
+                            )
 
                             # When a reactive flush occurs, flush the session's outputs,
                             # errors, etc. to the client. Note that this is
                             # `reactive._core.on_flushed`, not `self.on_flushed`.
-                            unreg = on_flushed(self._flush)
+                            unreg = reactive_on_flushed(self._flush)
                             # When the session ends, stop flushing outputs on reactive
                             # flush.
                             stack.callback(unreg)
+
+                            # Set up bookmark callbacks here
+                            self.bookmark._create_effects()
 
                             conn_state = ConnectionState.Running
                             message_obj = typing.cast(ClientMessageInit, message_obj)
@@ -647,6 +662,9 @@ class AppSession(Session):
 
                             with session_context(self):
                                 self.app.server(self.input, self.output, self)
+
+                            if self.bookmark.store != "disable":
+                                await reactive_flush()  # TODO: Barret; Why isn't the reactive flush triggering itself?
 
                         elif message_obj["method"] == "update":
                             verify_state(ConnectionState.Running)
@@ -673,7 +691,7 @@ class AppSession(Session):
 
                         self._request_flush()
 
-                        await flush()
+                        await reactive_flush()
 
             except ConnectionClosed:
                 ...
@@ -942,6 +960,7 @@ class AppSession(Session):
         return HTMLResponse("<h1>Not Found</h1>", 404)
 
     def send_input_message(self, id: str, message: dict[str, object]) -> None:
+        print("Send input message", id, message)
         self._outbound_message_queues.add_input_message(id, message)
         self._request_flush()
 
@@ -1019,6 +1038,12 @@ class AppSession(Session):
 
     async def _flush(self) -> None:
         with session_context(self):
+            # This is the only place in the session where the restoreContext is flushed.
+            if self.bookmark._restore_context:
+                print("Flushing restore context pending")
+                self.bookmark._restore_context.flush_pending()
+                print("Flushing restore context pending - done")
+            # Flush the callbacks
             await self._flush_callbacks.invoke()
 
         try:
@@ -1031,11 +1056,13 @@ class AppSession(Session):
             }
 
             try:
+                print("Sending message!", message)
                 await self._send_message(message)
             finally:
                 self._outbound_message_queues.reset()
         finally:
             with session_context(self):
+                print("Invoking flushed callbacks")
                 await self._flushed_callbacks.invoke()
 
     def _increment_busy_count(self) -> None:
@@ -1187,7 +1214,7 @@ class SessionProxy(Session):
         self._downloads = parent._downloads
 
         self._root = parent.root_scope()
-        self.bookmark = BookmarkProxy(parent.root_scope(), ns)
+        self.bookmark = BookmarkProxy(self)
 
     def _is_hidden(self, name: str) -> bool:
         return self._parent._is_hidden(name)
@@ -1428,7 +1455,7 @@ class Inputs:
         with reactive.isolate():
 
             for key, value in self._map.items():
-                # print(key, value)
+                # TODO: Barret - Q: Should this be anything that starts with a "."?
                 if key.startswith(".clientdata_"):
                     continue
                 if key in exclude_set:

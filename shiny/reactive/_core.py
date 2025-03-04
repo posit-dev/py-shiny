@@ -174,15 +174,21 @@ class ReactiveEnvironment:
 
     async def flush(self) -> None:
         """Flush all pending operations"""
+        print("--Reactive flush--")
         await self._flush_sequential()
+        print("--Reactive flush callbacks--")
         await self._flushed_callbacks.invoke()
+        print("--Reactive flush done--")
 
     async def _flush_sequential(self) -> None:
         # Sequential flush: instead of storing the tasks in a list and calling gather()
         # on them later, just run each effect in sequence.
+        print("--Sequential flush--")
         while not self._pending_flush_queue.empty():
+            print("--item")
             ctx = self._pending_flush_queue.get()
             await ctx.execute_flush_callbacks()
+        print("--Sequential flush done--")
 
     def add_pending_flush(self, ctx: Context, priority: int) -> None:
         self._pending_flush_queue.put(priority, ctx)

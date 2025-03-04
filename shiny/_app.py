@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import os
 import secrets
+import warnings
 from contextlib import AsyncExitStack, asynccontextmanager
 from inspect import signature
 from pathlib import Path
@@ -30,6 +31,11 @@ from ._connection import Connection, StarletteConnection
 from ._error import ErrorMiddleware
 from ._shinyenv import is_pyodide
 from ._utils import guess_mime_type, is_async_callable, sort_keys_length
+from .bookmark._restore_state import (
+    RestoreContext,
+    get_current_restore_context,
+    restore_context,
+)
 from .html_dependencies import jquery_deps, require_deps, shiny_deps
 from .http_staticfiles import FileResponse, StaticFiles
 from .session._session import AppSession, Inputs, Outputs, Session, session_context
@@ -167,7 +173,7 @@ class App:
 
         self._sessions: dict[str, AppSession] = {}
 
-        self._sessions_needing_flush: dict[int, AppSession] = {}
+        # self._sessions_needing_flush: dict[int, AppSession] = {}
 
         self._registered_dependencies: dict[str, HTMLDependency] = {}
         self._dependency_handler = starlette.routing.Router()
@@ -353,11 +359,41 @@ class App:
         request for / occurs.
         """
         ui: RenderedHTML
-        if callable(self.ui):
-            ui = self._render_page(self.ui(request), self.lib_prefix)
+        # Create a restore context using query string
+        # TODO: Barret implement how to get bookmark_store value
+        # bookmarkStore <- getShinyOption("bookmarkStore", default = "disable")
+        print("TODO: Figure this out")
+        bookmark_store: str = "disable"
+        bookmark_store: str = "query"
+
+        if bookmark_store == "disable":
+            restore_ctx = RestoreContext()
         else:
-            ui = self.ui
-        return HTMLResponse(content=ui["html"])
+            restore_ctx = await RestoreContext.from_query_string(request.url.query)
+
+        print(
+            {
+                "values": restore_ctx.as_state().values,
+                "input": restore_ctx.as_state().input,
+            }
+        )
+
+        with restore_context(restore_ctx):
+            if callable(self.ui):
+                ui = self._render_page(self.ui(request), self.lib_prefix)
+            else:
+                # TODO: Why is this here as there's a with restore_context above?
+                # TODO: Why not `if restore_ctx.active:`?
+                cur_restore_ctx = get_current_restore_context()
+                print("cur_restore_ctx", cur_restore_ctx)
+                if cur_restore_ctx is not None and cur_restore_ctx.active:
+                    # TODO: See ?enableBookmarking
+                    warnings.warn(
+                        "Trying to restore saved app state, but UI code must be a function for this to work!"
+                    )
+
+                ui = self.ui
+            return HTMLResponse(content=ui["html"])
 
     async def _on_connect_cb(self, ws: starlette.websockets.WebSocket) -> None:
         """

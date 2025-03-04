@@ -5,13 +5,19 @@ from ._bookmark import (
     BookmarkProxy,
     ShinySaveState,
 )
-from ._save_state import SaveState
+from ._bookmark_state import BookmarkState
+from ._restore_state import RestoreContext, RestoreContextState
 
 __all__ = (
-    "SaveState",
+    # _bookmark
     "ShinySaveState",
     "Bookmark",
     "BookmarkApp",
     "BookmarkProxy",
     "BookmarkExpressStub",
+    # _bookmark_state
+    "BookmarkState",
+    # _restore_state
+    "RestoreContext",
+    "RestoreContextState",
 )

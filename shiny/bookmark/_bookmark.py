@@ -1,3 +1,5 @@
+# TODO: bookmark button
+
 # TODO:
 # bookmark -> save/load interface
 # * √ base class
@@ -35,7 +37,7 @@
 # * √ Update query string
 
 # bookmark -> restore state
-# restore state -> {inputs, values, exclude}
+# restore state -> {inputs, values}
 # restore {inputs} -> Update all inputs given restored value
 
 # Shinylive!
@@ -46,19 +48,24 @@
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import TYPE_CHECKING, Awaitable, Callable, Literal
+from typing import TYPE_CHECKING, Awaitable, Callable, Literal, NoReturn
 
-from .._utils import AsyncCallbacks, wrap_async
+from .._utils import AsyncCallbacks, CancelCallback, wrap_async
+from ._restore_state import RestoreContextState
 from ._save_state import ShinySaveState
 
 if TYPE_CHECKING:
     from .._namespaces import ResolvedId
     from ..express._stub_session import ExpressStubSession
     from ..session import Session
+    from ..session._session import SessionProxy
+    from ._restore_state import RestoreContext
 else:
     from typing import Any
 
+    RestoreContext = Any
     Session = Any
+    SessionProxy = Any
     ResolvedId = Any
     ExpressStubSession = Any
 
@@ -74,7 +81,8 @@ BookmarkStore = Literal["url", "server", "disable"]
 
 class Bookmark(ABC):
 
-    _root_session: Session
+    # TODO: Barret - This feels like it needs to be a weakref
+    _session_root: Session
 
     store: BookmarkStore
 
@@ -83,17 +91,24 @@ class Bookmark(ABC):
 
     _on_bookmark_callbacks: AsyncCallbacks
     _on_bookmarked_callbacks: AsyncCallbacks
+    _on_restore_callbacks: AsyncCallbacks
+    _on_restored_callbacks: AsyncCallbacks
+
+    _restore_context: RestoreContext | None
 
     async def __call__(self) -> None:
         await self._root_bookmark.do_bookmark()
 
     @property
     def _root_bookmark(self) -> "Bookmark":
-        return self._root_session.bookmark
+        return self._session_root.bookmark
 
-    def __init__(self, root_session: Session):
+    def __init__(self, session_root: Session):
+        # from ._restore_state import RestoreContext
+
         super().__init__()
-        self._root_session = root_session
+        self._session_root = session_root
+        self._restore_context = None
 
     # # TODO: Barret - Implement this?!?
     # @abstractmethod
@@ -110,6 +125,15 @@ class Bookmark(ABC):
     #     await session.insert_ui(modal_with_url(url))
 
     @abstractmethod
+    def _create_effects(self) -> None:
+        """
+        Create the effects for the bookmarking system.
+
+        This method should be called when the session is created after the initial inputs have been set.
+        """
+        ...
+
+    @abstractmethod
     def _get_bookmark_exclude(self) -> list[str]:
         """
         Retrieve the list of inputs excluded from being bookmarked.
@@ -124,7 +148,7 @@ class Bookmark(ABC):
             | Callable[[ShinySaveState], Awaitable[None]]
         ),
         /,
-    ) -> None:
+    ) -> CancelCallback:
         """
         Registers a function that will be called just before bookmarking state.
 
@@ -144,7 +168,7 @@ class Bookmark(ABC):
         self,
         callback: Callable[[str], None] | Callable[[str], Awaitable[None]],
         /,
-    ) -> None:
+    ) -> CancelCallback:
         """
         Registers a function that will be called just after bookmarking state.
 
@@ -185,20 +209,136 @@ class Bookmark(ABC):
         This method will also call the `on_bookmark` and `on_bookmarked` callbacks to alter the bookmark state. Then, the bookmark state will be either saved to the server or encoded in the URL, depending on the `.store` option.
 
         No actions will be performed if the `.store` option is set to `"disable"`.
+
+        Note: this method is called when `session.bookmark()` is executed.
+        """
+        ...
+
+    @abstractmethod
+    def on_restore(
+        self,
+        callback: (
+            Callable[[RestoreContextState], None]
+            | Callable[[RestoreContextState], Awaitable[None]]
+        ),
+    ) -> CancelCallback:
+        """
+        Registers a function that will be called just before restoring state.
+
+        This callback will be executed **before** the bookmark state is restored.
+        """
+        ...
+
+    @abstractmethod
+    def on_restored(
+        self,
+        callback: (
+            Callable[[RestoreContextState], None]
+            | Callable[[RestoreContextState], Awaitable[None]]
+        ),
+    ) -> CancelCallback:
+        """
+        Registers a function that will be called just after restoring state.
+
+        This callback will be executed **after** the bookmark state is restored.
         """
         ...
 
 
 class BookmarkApp(Bookmark):
-    def __init__(self, root_session: Session):
+    def __init__(self, session_root: Session):
 
-        super().__init__(root_session)
+        super().__init__(session_root)
 
         self.store = "disable"
+        self.store = "url"
         self.exclude = []
         self._proxy_exclude_fns = []
         self._on_bookmark_callbacks = AsyncCallbacks()
         self._on_bookmarked_callbacks = AsyncCallbacks()
+        self._on_restore_callbacks = AsyncCallbacks()
+        self._on_restored_callbacks = AsyncCallbacks()
+
+    def _create_effects(self) -> None:
+        # Get bookmarking config
+        if self.store == "disable":
+            return
+
+        print("Creating effects")
+
+        session = self._session_root
+
+        from .. import reactive
+        from ..session import session_context
+        from ..ui._notification import notification_show
+
+        with session_context(session):
+
+            # Fires when the bookmark button is clicked.
+            @reactive.effect
+            @reactive.event(session.input["._bookmark_"])
+            async def _():
+                await session.bookmark()
+
+            # If there was an error initializing the current restore context, show
+            # notification in the client.
+            @reactive.effect
+            def init_error_message():
+                if self._restore_context and self._restore_context._init_error_msg:
+                    notification_show(
+                        f"Error in RestoreContext initialization: {self._restore_context._init_error_msg}",
+                        duration=None,
+                        type="error",
+                    )
+
+            # Run the on_restore function at the beginning of the flush cycle, but after
+            # the server function has been executed.
+            @reactive.effect(priority=1000000)
+            async def invoke_on_restore_callbacks():
+                print("Trying on restore")
+                if self._on_restore_callbacks.count() == 0:
+                    return
+
+                with session_context(session):
+
+                    try:
+                        # ?withLogErrors
+                        with reactive.isolate():
+                            if self._restore_context and self._restore_context.active:
+                                restore_state = self._restore_context.as_state()
+                                await self._on_restore_callbacks.invoke(restore_state)
+                    except Exception as e:
+                        raise e
+                        print(f"Error calling on_restore callback: {e}")
+                        notification_show(
+                            f"Error calling on_restore callback: {e}",
+                            duration=None,
+                            type="error",
+                        )
+
+            # Run the on_restored function after the flush cycle completes and
+            # information is sent to the client.
+            @session.on_flushed
+            async def invoke_on_restored_callbacks():
+                print("Trying on restored")
+                if self._on_restored_callbacks.count() == 0:
+                    return
+
+                with session_context(session):
+                    try:
+                        with reactive.isolate():
+                            if self._restore_context and self._restore_context.active:
+                                restore_state = self._restore_context.as_state()
+                                await self._on_restored_callbacks.invoke(restore_state)
+                    except Exception as e:
+                        print(f"Error calling on_restored callback: {e}")
+                        notification_show(
+                            f"Error calling on_restored callback: {e}",
+                            duration=None,
+                            type="error",
+                        )
+
+        return
 
     def _get_bookmark_exclude(self) -> list[str]:
         """
@@ -218,15 +358,33 @@ class BookmarkApp(Bookmark):
             | Callable[[ShinySaveState], Awaitable[None]]
         ),
         /,
-    ) -> None:
-        self._on_bookmark_callbacks.register(wrap_async(callback))
+    ) -> CancelCallback:
+        return self._on_bookmark_callbacks.register(wrap_async(callback))
 
     def on_bookmarked(
         self,
         callback: Callable[[str], None] | Callable[[str], Awaitable[None]],
         /,
-    ) -> None:
-        self._on_bookmarked_callbacks.register(wrap_async(callback))
+    ) -> CancelCallback:
+        return self._on_bookmarked_callbacks.register(wrap_async(callback))
+
+    def on_restore(
+        self,
+        callback: (
+            Callable[[RestoreContextState], None]
+            | Callable[[RestoreContextState], Awaitable[None]]
+        ),
+    ) -> CancelCallback:
+        return self._on_restore_callbacks.register(wrap_async(callback))
+
+    def on_restored(
+        self,
+        callback: (
+            Callable[[RestoreContextState], None]
+            | Callable[[RestoreContextState], Awaitable[None]]
+        ),
+    ) -> CancelCallback:
+        return self._on_restored_callbacks.register(wrap_async(callback))
 
     async def update_query_string(
         self,
@@ -235,7 +393,7 @@ class BookmarkApp(Bookmark):
     ) -> None:
         if mode not in {"replace", "push"}:
             raise ValueError(f"Invalid mode: {mode}")
-        await self._root_session._send_message(
+        await self._session_root._send_message(
             {
                 "updateQueryString": {
                     "queryString": query_string,
@@ -252,12 +410,14 @@ class BookmarkApp(Bookmark):
         try:
             # ?withLogErrors
             from ..bookmark._bookmark import ShinySaveState
+            from ..session import session_context
 
             async def root_state_on_save(state: ShinySaveState) -> None:
-                await self._on_bookmark_callbacks.invoke(state)
+                with session_context(self._session_root):
+                    await self._on_bookmark_callbacks.invoke(state)
 
             root_state = ShinySaveState(
-                input=self._root_session.input,
+                input=self._session_root.input,
                 exclude=self._get_bookmark_exclude(),
                 on_save=root_state_on_save,
             )
@@ -275,7 +435,7 @@ class BookmarkApp(Bookmark):
             else:
                 raise ValueError("Unknown bookmark store: " + self.store)
 
-            clientdata = self._root_session.clientdata
+            clientdata = self._session_root.clientdata
 
             port = str(clientdata.url_port())
             full_url = "".join(
@@ -294,7 +454,10 @@ class BookmarkApp(Bookmark):
             # If onBookmarked callback was provided, invoke it; if not call
             # the default.
             if self._on_bookmarked_callbacks.count() > 0:
-                await self._on_bookmarked_callbacks.invoke(full_url)
+                from ..session import session_context
+
+                with session_context(self._session_root):
+                    await self._on_bookmarked_callbacks.invoke(full_url)
             else:
                 # `session.bookmark.show_modal(url)`
 
@@ -316,33 +479,57 @@ class BookmarkProxy(Bookmark):
 
     _ns: ResolvedId
 
-    def __init__(self, root_session: Session, ns: ResolvedId):
-        super().__init__(root_session)
+    def __init__(self, session_proxy: SessionProxy):
+        super().__init__(session_proxy.root_scope())
 
-        self._ns = ns
+        self._ns = session_proxy.ns
+        # TODO: Barret - This feels like it needs to be a weakref
+        self._session_proxy = session_proxy
 
         self.exclude = []
         self._proxy_exclude_fns = []
         self._on_bookmark_callbacks = AsyncCallbacks()
         self._on_bookmarked_callbacks = AsyncCallbacks()
+        self._on_restore_callbacks = AsyncCallbacks()
+        self._on_restored_callbacks = AsyncCallbacks()
 
         # TODO: Barret - Double check that this works with nested modules!
-        self._root_session.bookmark._proxy_exclude_fns.append(
-            lambda: [self._ns(name) for name in self.exclude]
+        self._session_root.bookmark._proxy_exclude_fns.append(
+            lambda: [str(self._ns(name)) for name in self.exclude]
         )
 
         # When scope is created, register these bookmarking callbacks on the main
         # session object. They will invoke the scope's own callbacks, if any are
         # present.
+
         # The goal of this method is to save the scope's values. All namespaced inputs
         # will already exist within the `root_state`.
+        @self._root_bookmark.on_bookmark
         async def scoped_on_bookmark(root_state: ShinySaveState) -> None:
             return await self._scoped_on_bookmark(root_state)
 
-        if isinstance(self._root_session, BookmarkApp):
-            self._root_bookmark.on_bookmark(scoped_on_bookmark)
+        from ..session import session_context
 
-        # TODO: Barret - Implement restore scoped state!
+        ns_prefix = str(self._ns + self._ns._sep)
+
+        @self._root_bookmark.on_restore
+        async def scoped_on_restore(restore_state: RestoreContextState) -> None:
+            if self._on_restore_callbacks.count() == 0:
+                return
+
+            scoped_restore_state = restore_state._state_within_namespace(ns_prefix)
+
+            with session_context(self._session_proxy):
+                await self._on_restore_callbacks.invoke(scoped_restore_state)
+
+        @self._root_bookmark.on_restored
+        async def scoped_on_restored(restore_state: RestoreContextState) -> None:
+            if self._on_restored_callbacks.count() == 0:
+                return
+
+            scoped_restore_state = restore_state._state_within_namespace(ns_prefix)
+            with session_context(self._session_proxy):
+                await self._on_restored_callbacks.invoke(scoped_restore_state)
 
     async def _scoped_on_bookmark(self, root_state: ShinySaveState) -> None:
         # Exit if no user-defined callbacks.
@@ -352,14 +539,14 @@ class BookmarkProxy(Bookmark):
         from ..bookmark._bookmark import ShinySaveState
 
         scoped_state = ShinySaveState(
-            input=self._root_session.input,
+            input=self._session_root.input,
             exclude=self._root_bookmark.exclude,
             on_save=None,
         )
 
         # Make subdir for scope
         if root_state.dir is not None:
-            scope_subpath = self._ns("")
+            scope_subpath = self._ns
             scoped_state.dir = Path(root_state.dir) / scope_subpath
             if not scoped_state.dir.exists():
                 raise FileNotFoundError(
@@ -367,14 +554,22 @@ class BookmarkProxy(Bookmark):
                 )
 
         # Invoke the callback on the scopeState object
-        await self._on_bookmark_callbacks.invoke(scoped_state)
+        from ..session import session_context
+
+        with session_context(self._session_proxy):
+            await self._on_bookmark_callbacks.invoke(scoped_state)
 
         # Copy `values` from scoped_state to root_state (adding namespace)
         if scoped_state.values:
             for key, value in scoped_state.values.items():
                 if key.strip() == "":
                     raise ValueError("All scope values must be named.")
-                root_state.values[self._ns(key)] = value
+                root_state.values[str(self._ns(key))] = value
+
+    def _create_effects(self) -> NoReturn:
+        raise NotImplementedError(
+            "Please call `._create_effects()` from the root session only."
+        )
 
     def on_bookmark(
         self,
@@ -383,20 +578,20 @@ class BookmarkProxy(Bookmark):
             | Callable[[ShinySaveState], Awaitable[None]]
         ),
         /,
-    ) -> None:
-        self._root_bookmark.on_bookmark(callback)
+    ) -> CancelCallback:
+        return self._on_bookmark_callbacks.register(wrap_async(callback))
 
     def on_bookmarked(
         self,
         callback: Callable[[str], None] | Callable[[str], Awaitable[None]],
         /,
-    ) -> None:
+    ) -> NoReturn:
         # TODO: Barret - Q: Shouldn't we implement this? `self._root_bookmark.on_bookmark()`
         raise NotImplementedError(
             "Please call `.on_bookmarked()` from the root session only, e.g. `session.root_scope().bookmark.on_bookmark()`."
         )
 
-    def _get_bookmark_exclude(self) -> list[str]:
+    def _get_bookmark_exclude(self) -> NoReturn:
         raise NotImplementedError(
             "Please call `._get_bookmark_exclude()` from the root session only."
         )
@@ -420,14 +615,41 @@ class BookmarkProxy(Bookmark):
     ) -> None:
         self._root_bookmark.store = value
 
+    def on_restore(
+        self,
+        callback: (
+            Callable[[RestoreContextState], None]
+            | Callable[[RestoreContextState], Awaitable[None]]
+        ),
+    ) -> CancelCallback:
+        return self._on_restore_callbacks.register(wrap_async(callback))
+
+    def on_restored(
+        self,
+        callback: (
+            Callable[[RestoreContextState], None]
+            | Callable[[RestoreContextState], Awaitable[None]]
+        ),
+    ) -> CancelCallback:
+        return self._on_restored_callbacks.register(wrap_async(callback))
+
 
 class BookmarkExpressStub(Bookmark):
 
-    def __init__(self, root_session: ExpressStubSession) -> None:
-        super().__init__(root_session)
+    def __init__(self, session_root: ExpressStubSession) -> None:
+        super().__init__(session_root)
         self._proxy_exclude_fns = []
+        self._on_bookmark_callbacks = AsyncCallbacks()
+        self._on_bookmarked_callbacks = AsyncCallbacks()
+        self._on_restore_callbacks = AsyncCallbacks()
+        self._on_restored_callbacks = AsyncCallbacks()
 
-    def _get_bookmark_exclude(self) -> list[str]:
+    def _create_effects(self) -> NoReturn:
+        raise NotImplementedError(
+            "Please call `._create_effects()` only from a real session object"
+        )
+
+    def _get_bookmark_exclude(self) -> NoReturn:
         raise NotImplementedError(
             "Please call `._get_bookmark_exclude()` only from a real session object"
         )
@@ -438,7 +660,7 @@ class BookmarkExpressStub(Bookmark):
             Callable[[ShinySaveState], None]
             | Callable[[ShinySaveState], Awaitable[None]]
         ),
-    ) -> None:
+    ) -> NoReturn:
         raise NotImplementedError(
             "Please call `.on_bookmark()` only from a real session object"
         )
@@ -446,400 +668,45 @@ class BookmarkExpressStub(Bookmark):
     def on_bookmarked(
         self,
         callback: Callable[[str], None] | Callable[[str], Awaitable[None]],
-    ) -> None:
+    ) -> NoReturn:
         raise NotImplementedError(
             "Please call `.on_bookmarked()` only from a real session object"
         )
 
     async def update_query_string(
         self, query_string: str, mode: Literal["replace", "push"] = "replace"
-    ) -> None:
+    ) -> NoReturn:
         raise NotImplementedError(
             "Please call `.update_query_string()` only from a real session object"
         )
 
-    async def do_bookmark(self) -> None:
+    async def do_bookmark(self) -> NoReturn:
         raise NotImplementedError(
             "Please call `.do_bookmark()` only from a real session object"
         )
 
+    def on_restore(
+        self,
+        callback: (
+            Callable[[RestoreContextState], None]
+            | Callable[[RestoreContextState], Awaitable[None]]
+        ),
+    ) -> NoReturn:
+        raise NotImplementedError(
+            "Please call `.on_restore()` only from a real session object"
+        )
 
-# RestoreContext <- R6Class("RestoreContext",
-#   public = list(
-#     # This will be set to TRUE if there's actually a state to restore
-#     active = FALSE,
+    def on_restored(
+        self,
+        callback: (
+            Callable[[RestoreContextState], None]
+            | Callable[[RestoreContextState], Awaitable[None]]
+        ),
+    ) -> NoReturn:
+        raise NotImplementedError(
+            "Please call `.on_restored()` only from a real session object"
+        )
 
-#     # This is set to an error message string in case there was an initialization
-#     # error. Later, after the app has started on the client, the server can send
-#     # this message as a notification on the client.
-#     initErrorMessage = NULL,
-
-#     # This is a RestoreInputSet for input values. This is a key-value store with
-#     # some special handling.
-#     input = NULL,
-
-#     # Directory for extra files, if restoring from state that was saved to disk.
-#     dir = NULL,
-
-#     # For values other than input values. These values don't need the special
-#     # phandling that's needed for input values, because they're only accessed
-#     # from the onRestore function.
-#     values = NULL,
-
-#     initialize = function(queryString = NULL) {
-#       self$reset() # Need this to initialize self$input
-
-#       if (!is.null(queryString) && nzchar(queryString)) {
-#         tryCatch(
-#           withLogErrors({
-#             qsValues <- parseQueryString(queryString, nested = TRUE)
-
-#             if (!is.null(qsValues[["__subapp__"]]) && qsValues[["__subapp__"]] == 1) {
-#               # Ignore subapps in shiny docs
-#               self$reset()
-
-#             } else if (!is.null(qsValues[["_state_id_"]]) && nzchar(qsValues[["_state_id_"]])) {
-#               # If we have a "_state_id_" key, restore from saved state and
-#               # ignore other key/value pairs. If not, restore from key/value
-#               # pairs in the query string.
-#               self$active <- TRUE
-#               private$loadStateQueryString(queryString)
-
-#             } else {
-#               # The query string contains the saved keys and values
-#               self$active <- TRUE
-#               private$decodeStateQueryString(queryString)
-#             }
-#           }),
-#           error = function(e) {
-#             # If there's an error in restoring problem, just reset these values
-#             self$reset()
-#             self$initErrorMessage <- e$message
-#             warning(e$message)
-#           }
-#         )
-#       }
-#     },
-
-#     reset = function() {
-#       self$active <- FALSE
-#       self$initErrorMessage <- NULL
-#       self$input <- RestoreInputSet$new(list())
-#       self$values <- new.env(parent = emptyenv())
-#       self$dir <- NULL
-#     },
-
-#     # Completely replace the state
-#     set = function(active = FALSE, initErrorMessage = NULL, input = list(), values = list(), dir = NULL) {
-#       # Validate all inputs
-#       stopifnot(is.logical(active))
-#       stopifnot(is.null(initErrorMessage) || is.character(initErrorMessage))
-#       stopifnot(is.list(input))
-#       stopifnot(is.list(values))
-#       stopifnot(is.null(dir) || is.character(dir))
-
-#       self$active <- active
-#       self$initErrorMessage <- initErrorMessage
-#       self$input <- RestoreInputSet$new(input)
-#       self$values <- list2env2(values, parent = emptyenv())
-#       self$dir <- dir
-#     },
-
-#     # This should be called before a restore context is popped off the stack.
-#     flushPending = function() {
-#       self$input$flushPending()
-#     },
-
-
-#     # Returns a list representation of the RestoreContext object. This is passed
-#     # to the app author's onRestore function. An important difference between
-#     # the RestoreContext object and the list is that the former's `input` field
-#     # is a RestoreInputSet object, while the latter's `input` field is just a
-#     # list.
-#     asList = function() {
-#       list(
-#         input = self$input$asList(),
-#         dir = self$dir,
-#         values = self$values
-#       )
-#     }
-#   ),
-
-#   private = list(
-#     # Given a query string with a _state_id_, load saved state with that ID.
-#     loadStateQueryString = function(queryString) {
-#       values <- parseQueryString(queryString, nested = TRUE)
-#       id <- values[["_state_id_"]]
-
-#       # Check that id has only alphanumeric chars
-#       if (grepl("[^a-zA-Z0-9]", id)) {
-#         stop("Invalid state id: ", id)
-#       }
-
-#       # This function is passed to the loadInterface function; given a
-#       # directory, it will load state from that directory
-#       loadFun <- function(stateDir) {
-#         self$dir <- stateDir
-
-#         if (!dirExists(stateDir)) {
-#           stop("Bookmarked state directory does not exist.")
-#         }
-
-#         tryCatch({
-#             inputValues <- readRDS(file.path(stateDir, "input.rds"))
-#             self$input <- RestoreInputSet$new(inputValues)
-#           },
-#           error = function(e) {
-#             stop("Error reading input values file.")
-#           }
-#         )
-
-#         valuesFile <- file.path(stateDir, "values.rds")
-#         if (file.exists(valuesFile)) {
-#           tryCatch({
-#               self$values <- readRDS(valuesFile)
-#             },
-#             error = function(e) {
-#               stop("Error reading values file.")
-#             }
-#           )
-#         }
-#       }
-
-#       # Look for a load.interface function. This will be defined by the hosting
-#       # environment if it supports bookmarking.
-#       loadInterface <- getShinyOption("load.interface", default = NULL)
-
-#       if (is.null(loadInterface)) {
-#         if (inShinyServer()) {
-#           # We're in a version of Shiny Server/Connect that doesn't have
-#           # bookmarking support.
-#           loadInterface <- function(id, callback) {
-#             stop("The hosting environment does not support saved-to-server bookmarking.")
-#           }
-
-#         } else {
-#           # We're running Shiny locally.
-#           loadInterface <- loadInterfaceLocal
-#         }
-#       }
-
-#       loadInterface(id, loadFun)
-
-#       invisible()
-#     },
-
-#     # Given a query string with values encoded in it, restore saved state
-#     # from those values.
-#     decodeStateQueryString = function(queryString) {
-#       # Remove leading '?'
-#       if (substr(queryString, 1, 1) == '?')
-#         queryString <- substr(queryString, 2, nchar(queryString))
-
-#       # The "=" after "_inputs_" is optional. Shiny doesn't generate URLs with
-#       # "=", but httr always adds "=".
-#       inputs_reg <- "(^|&)_inputs_=?(&|$)"
-#       values_reg <- "(^|&)_values_=?(&|$)"
-
-#       # Error if multiple '_inputs_' or '_values_'. This is needed because
-#       # strsplit won't add an entry if the search pattern is at the end of a
-#       # string.
-#       if (length(gregexpr(inputs_reg, queryString)[[1]]) > 1)
-#         stop("Invalid state string: more than one '_inputs_' found")
-#       if (length(gregexpr(values_reg, queryString)[[1]]) > 1)
-#         stop("Invalid state string: more than one '_values_' found")
-
-#       # Look for _inputs_ and store following content in inputStr
-#       splitStr <- strsplit(queryString, inputs_reg)[[1]]
-#       if (length(splitStr) == 2) {
-#         inputStr <- splitStr[2]
-#         # Remove any _values_ (and content after _values_) that may come after
-#         # _inputs_
-#         inputStr <- strsplit(inputStr, values_reg)[[1]][1]
-
-#       } else {
-#         inputStr <- ""
-#       }
-
-#       # Look for _values_ and store following content in valueStr
-#       splitStr <- strsplit(queryString, values_reg)[[1]]
-#       if (length(splitStr) == 2) {
-#         valueStr <- splitStr[2]
-#         # Remove any _inputs_ (and content after _inputs_) that may come after
-#         # _values_
-#         valueStr <- strsplit(valueStr, inputs_reg)[[1]][1]
-
-#       } else {
-#         valueStr <- ""
-#       }
-
-
-#       inputs <- parseQueryString(inputStr, nested = TRUE)
-#       values <- parseQueryString(valueStr, nested = TRUE)
-
-#       valuesFromJSON <- function(vals) {
-#         varsUnparsed <- c()
-#         valsParsed <- mapply(names(vals), vals, SIMPLIFY = FALSE,
-#           FUN = function(name, value) {
-#             tryCatch(
-#               safeFromJSON(value),
-#               error = function(e) {
-#                 varsUnparsed <<- c(varsUnparsed, name)
-#                 warning("Failed to parse URL parameter \"", name, "\"")
-#               }
-#             )
-#           }
-#         )
-#         valsParsed[varsUnparsed] <- NULL
-#         valsParsed
-#       }
-
-#       inputs <- valuesFromJSON(inputs)
-#       self$input <- RestoreInputSet$new(inputs)
-
-#       values <- valuesFromJSON(values)
-#       self$values <- list2env2(values, self$values)
-#     }
-#   )
-# )
-
-
-# # Restore input set. This is basically a key-value store, except for one
-# # important difference: When the user `get()`s a value, the value is marked as
-# # pending; when `flushPending()` is called, those pending values are marked as
-# # used. When a value is marked as used, `get()` will not return it, unless
-# # called with `force=TRUE`. This is to make sure that a particular value can be
-# # restored only within a single call to `withRestoreContext()`. Without this, if
-# # a value is restored in a dynamic UI, it could completely prevent any other
-# # (non- restored) kvalue from being used.
-# RestoreInputSet <- R6Class("RestoreInputSet",
-#   private = list(
-#     values = NULL,
-#     pending = character(0),
-#     used = character(0)     # Names of values which have been used
-#   ),
-
-#   public = list(
-#     initialize = function(values) {
-#       private$values <- list2env2(values, parent = emptyenv())
-#     },
-
-#     exists = function(name) {
-#       exists(name, envir = private$values)
-#     },
-
-#     # Return TRUE if the value exists and has not been marked as used.
-#     available = function(name) {
-#       self$exists(name) && !self$isUsed(name)
-#     },
-
-#     isPending = function(name) {
-#       name %in% private$pending
-#     },
-
-#     isUsed = function(name) {
-#       name %in% private$used
-#     },
-
-#     # Get a value. If `force` is TRUE, get the value without checking whether
-#     # has been used, and without marking it as pending.
-#     get = function(name, force = FALSE) {
-#       if (force)
-#         return(private$values[[name]])
-
-#       if (!self$available(name))
-#         return(NULL)
-
-#       # Mark this name as pending. Use unique so that it's not added twice.
-#       private$pending <- unique(c(private$pending, name))
-#       private$values[[name]]
-#     },
-
-#     # Take pending names and mark them as used, then clear pending list.
-#     flushPending = function() {
-#       private$used <- unique(c(private$used, private$pending))
-#       private$pending <- character(0)
-#     },
-
-#     asList = function() {
-#       as.list.environment(private$values, all.names = TRUE)
-#     }
-#   )
-# )
-
-# restoreCtxStack <- NULL
-# on_load({
-#     restoreCtxStack <- fastmap::faststack()
-# })
-
-# withRestoreContext <- function(ctx, expr) {
-#   restoreCtxStack$push(ctx)
-
-#   on.exit({
-#     # Mark pending names as used
-#     restoreCtxStack$peek()$flushPending()
-#     restoreCtxStack$pop()
-#   }, add = TRUE)
-
-#   force(expr)
-# }
-
-# # Is there a current restore context?
-# hasCurrentRestoreContext <- function() {
-#   if (restoreCtxStack$size() > 0)
-#     return(TRUE)
-#   domain <- getDefaultReactiveDomain()
-#   if (!is.null(domain) && !is.null(domain$restoreContext))
-#     return(TRUE)
-
-#   return(FALSE)
-# }
-
-# # Call to access the current restore context. First look on the restore
-# # context stack, and if not found, then see if there's one on the current
-# # reactive domain. In practice, the only time there will be a restore context
-# # on the stack is when executing the UI function; when executing server code,
-# # the restore context will be attached to the domain/session.
-# getCurrentRestoreContext <- function() {
-#   ctx <- restoreCtxStack$peek()
-#   if (is.null(ctx)) {
-#     domain <- getDefaultReactiveDomain()
-
-#     if (is.null(domain) || is.null(domain$restoreContext)) {
-#       stop("No restore context found")
-#     }
-
-#     ctx <- domain$restoreContext
-#   }
-#   ctx
-# }
-
-# #' Restore an input value
-# #'
-# #' This restores an input value from the current restore context. It should be
-# #' called early on inside of input functions (like [textInput()]).
-# #'
-# #' @param id Name of the input value to restore.
-# #' @param default A default value to use, if there's no value to restore.
-# #'
-# #' @export
-# restoreInput <- function(id, default) {
-#   # Need to evaluate `default` in case it contains reactives like input$x. If we
-#   # don't, then the calling code won't take a reactive dependency on input$x
-#   # when restoring a value.
-#   force(default)
-
-#   if (!hasCurrentRestoreContext()) {
-#     return(default)
-#   }
-
-#   oldInputs <- getCurrentRestoreContext()$input
-#   if (oldInputs$available(id)) {
-#     oldInputs$get(id)
-#   } else {
-#     default
-#   }
-# }
 
 # #' Update URL in browser's location bar
 # #'

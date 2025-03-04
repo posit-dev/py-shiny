@@ -17,5 +17,9 @@ def is_hosted() -> bool:
     return False
 
 
-def to_json(x: Any) -> dict[str, Any]:
-    return orjson.loads(orjson.dumps(x))
+def to_json_str(x: Any) -> str:
+    return orjson.dumps(x).decode()
+
+
+def from_json_str(x: str) -> Any:
+    return orjson.loads(x)
