@@ -1,3 +1,4 @@
+from . import _globals as globals
 from ._bookmark import (
     Bookmark,
     BookmarkApp,
@@ -9,6 +10,8 @@ from ._bookmark_state import BookmarkState
 from ._restore_state import RestoreContext, RestoreContextState
 
 __all__ = (
+    # _globals
+    "globals",
     # _bookmark
     "ShinySaveState",
     "Bookmark",
