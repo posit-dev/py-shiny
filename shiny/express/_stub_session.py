@@ -47,9 +47,6 @@ class ExpressStubSession(Session):
 
         self.bookmark = BookmarkExpressStub(self)
 
-        self.exclude = []
-        self.store = "disable"  # TODO: Is this correct?
-
     def is_stub_session(self) -> Literal[True]:
         return True
 

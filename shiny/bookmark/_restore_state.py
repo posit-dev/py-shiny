@@ -12,7 +12,7 @@ from shiny.types import MISSING_TYPE
 
 from . import _globals as bookmark_globals
 from ._bookmark_state import local_load_dir
-from ._globals import BookmarkStateLoadDir
+from ._globals import BookmarkLoadDir
 from ._utils import from_json_str, is_hosted
 
 
@@ -186,13 +186,13 @@ class RestoreContext:
 
         id = id[0]
 
-        load_bookmark_fn: BookmarkStateLoadDir | None = None
-        if not isinstance(bookmark_globals.bookmark_state_load_dir, MISSING_TYPE):
-            load_bookmark_fn = bookmark_globals.bookmark_state_load_dir
+        load_bookmark_fn: BookmarkLoadDir | None = None
+        if not isinstance(bookmark_globals.bookmark_load_dir, MISSING_TYPE):
+            load_bookmark_fn = bookmark_globals.bookmark_load_dir
 
         if load_bookmark_fn is None:
             if is_hosted():
-                # TODO: Barret
+                # TODO: Barret; Implement Connect's `bookmark_load_dir` function
                 raise NotImplementedError(
                     "The hosting environment does not support server-side bookmarking."
                 )

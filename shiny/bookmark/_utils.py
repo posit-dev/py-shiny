@@ -9,7 +9,7 @@ import orjson
 def is_hosted() -> bool:
     # Can't look at SHINY_PORT, as we already set it in shiny/_main.py's `run_app()`
 
-    # TODO: Support shinyapps.io or use `SHINY_PORT` how R-shiny did
+    # TODO: Barret: Q: How to support shinyapps.io? Or use `SHINY_PORT` how R-shiny did
 
     # Instead, looking for the presence of the environment variable that Connect sets
     # (*_Connect) or Shiny Server sets (SHINY_APP)

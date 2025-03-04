@@ -12,26 +12,24 @@ from ._globals import BookmarkStore
 from ._restore_state import RestoreContextState
 from ._save_state import ShinySaveState
 
-# TODO: bookmark button
-
-# TODO:
+# TODO: Barret - Bookmark state
 # bookmark -> save/load interface
-# * √ base class
-# * √ local
-# save/load interface -> register interface
-# * implement; Q on approach!
+# * √ global hooks
+# * √ default local functions
+# save/load interface -> register functions
+# * `shiny.bookmark.globals`
 # register interface -> Make interface for Connect
-# * implement in Connect PR
+# * TODO: implement in Connect PR
 # bookmark -> save state
 # save state -> {inputs, values, exclude}
 # {inputs} -> custom serializer
-# √ Hook to `Inputs.set_serializer(id, fn)`
-# √ `Inputs._serialize()` to create a dict
+# * √ Hook to `Inputs.set_serializer(id, fn)`
+# * √ `Inputs._serialize()` to create a dict
 # {values} -> dict (where as in R is an environment)
-# √ values is a dict!
+# * √ values is a dict!
 # {exclude} -> Requires `session.setBookmarkExclude(names)`, `session.getBookmarkExclude()`
-# √ `session.bookmark_exclude: list[str]` value!
-# √ `session._get_bookmark_exclude()` & `session._bookmark_exclude_fn`
+# * √ `session.bookmark_exclude: list[str]` value!
+# * √ `session._get_bookmark_exclude()` & `session._bookmark_exclude_fn`
 # Using a `.bookmark_exclude = []` and `._get_bookmark_exclude()` helper that accesses a `._bookmark_exclude_fns` list of functions which return scoped bookmark excluded values
 # Enable bookmarking hooks:
 # * √ `session.bookmark_store`: `url`, `server`, `disable`
@@ -485,8 +483,6 @@ class BookmarkApp(Bookmark):
             from ..ui._notification import notification_show
 
             notification_show(msg, duration=None, type="error")
-            # TODO: Barret - Remove this!
-            raise RuntimeError("Error bookmarking state") from e
 
 
 class BookmarkProxy(Bookmark):

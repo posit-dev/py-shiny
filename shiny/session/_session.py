@@ -1457,7 +1457,7 @@ class Inputs:
         with reactive.isolate():
 
             for key, value in self._map.items():
-                # TODO: Barret - Q: Should this be anything that starts with a "."?
+                # TODO: Barret - Q: Should this be ignoring any Input key that starts with a "."?
                 if key.startswith(".clientdata_"):
                     continue
                 if key == BOOKMARK_ID or key.endswith(

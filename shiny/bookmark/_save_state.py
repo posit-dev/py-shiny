@@ -10,10 +10,10 @@ from ..reactive import isolate
 from ..types import MISSING_TYPE
 from . import _globals as bookmark_globals
 from ._bookmark_state import local_save_dir
-from ._globals import BookmarkStateSaveDir
+from ._globals import BookmarkSaveDir
 from ._utils import is_hosted, to_json_str
 
-# TODO: barret - Set / Load SaveState for Connect. Ex: Connect https://github.com/posit-dev/connect/blob/8de330aec6a61cf21e160b5081d08a1d3d7e8129/R/connect.R#L915
+# TODO: Barret - Set / Load SaveState for Connect. Ex: Connect https://github.com/posit-dev/connect/blob/8de330aec6a61cf21e160b5081d08a1d3d7e8129/R/connect.R#L915
 # Might need to have independent save/load functions to register to avoid a class constructor
 
 
@@ -76,13 +76,13 @@ class ShinySaveState:
         # to `self.dir`.
 
         # This will be defined by the hosting environment if it supports bookmarking.
-        save_bookmark_fn: BookmarkStateSaveDir | None = None
-        if not isinstance(bookmark_globals.bookmark_state_save_dir, MISSING_TYPE):
-            save_bookmark_fn = bookmark_globals.bookmark_state_save_dir
+        save_bookmark_fn: BookmarkSaveDir | None = None
+        if not isinstance(bookmark_globals.bookmark_save_dir, MISSING_TYPE):
+            save_bookmark_fn = bookmark_globals.bookmark_save_dir
 
         if save_bookmark_fn is None:
             if is_hosted():
-                # TODO: Barret
+                # TODO: Barret; Implement `bookmark_save_dir` for Connect
                 raise NotImplementedError(
                     "The hosting environment does not support server-side bookmarking."
                 )

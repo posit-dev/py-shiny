@@ -281,7 +281,7 @@ def wrap_async(
     return fn_async
 
 
-# # TODO-barret-future; Q: Keep code?
+# # TODO: Barret - Future: Q: Keep code?
 # class WrapAsync(Generic[P, R]):
 #     """
 #     Make a function asynchronous.

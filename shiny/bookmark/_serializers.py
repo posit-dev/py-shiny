@@ -27,7 +27,7 @@ async def serializer_default(value: T, state_dir: Path | None) -> T:
     return value
 
 
-# TODO-barret; Integrate
+# TODO: Barret - Integrate
 def serializer_file_input(
     value: Any,
     state_dir: Path | None,
@@ -35,7 +35,7 @@ def serializer_file_input(
     if state_dir is None:
         return Unserializable()
 
-    # TODO: barret; Double check this logic!
+    # TODO: Barret - Double check this logic!
 
     # `value` is a data frame. When persisting files, we need to copy the file to
     # the persistent dir and then strip the original path before saving.
