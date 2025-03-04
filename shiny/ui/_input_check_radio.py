@@ -287,11 +287,14 @@ def input_radio_buttons(
 
     resolved_id = resolve_id(id)
     input_label = shiny_input_label(resolved_id, label)
+
+    from ..bookmark._restore_state import restore_input
+
     options = _generate_options(
         id=resolved_id,
         type="radio",
         choices=choices,
-        selected=selected,
+        selected=restore_input(resolved_id, selected),
         inline=inline,
     )
     return div(
