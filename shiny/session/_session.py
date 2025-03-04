@@ -665,9 +665,6 @@ class AppSession(Session):
                             with session_context(self):
                                 self.app.server(self.input, self.output, self)
 
-                            if self.bookmark.store != "disable":
-                                await reactive_flush()  # TODO: Barret; Why isn't the reactive flush triggering itself?
-
                         elif message_obj["method"] == "update":
                             verify_state(ConnectionState.Running)
 
