@@ -7,7 +7,7 @@ import warnings
 from contextlib import AsyncExitStack, asynccontextmanager
 from inspect import signature
 from pathlib import Path
-from typing import Any, Callable, Mapping, Optional, TypeVar, cast
+from typing import Any, Callable, Literal, Mapping, Optional, TypeVar, cast
 
 import starlette.applications
 import starlette.exceptions
@@ -31,6 +31,7 @@ from ._connection import Connection, StarletteConnection
 from ._error import ErrorMiddleware
 from ._shinyenv import is_pyodide
 from ._utils import guess_mime_type, is_async_callable, sort_keys_length
+from .bookmark import _globals as bookmark_globals
 from .bookmark._restore_state import (
     RestoreContext,
     get_current_restore_context,
@@ -120,6 +121,7 @@ class App:
         ),
         *,
         static_assets: Optional[str | Path | Mapping[str, str | Path]] = None,
+        bookmarking: Optional[Literal["url", "query", "disable"]] = None,
         debug: bool = False,
     ) -> None:
         # Used to store callbacks to be called when the app is shutting down (according
@@ -139,6 +141,8 @@ class App:
                 "`server` must have 1 (Inputs) or 3 parameters (Inputs, Outputs, Session)"
             )
 
+        if bookmarking is not None:
+            bookmark_globals.bookmark_store = bookmarking
         self._debug: bool = debug
 
         # Settings that the user can change after creating the App object.
@@ -359,35 +363,29 @@ class App:
         request for / occurs.
         """
         ui: RenderedHTML
-        # Create a restore context using query string
-        # TODO: Barret implement how to get bookmark_store value
-        # bookmarkStore <- getShinyOption("bookmarkStore", default = "disable")
-        print("TODO: Figure this out")
-        bookmark_store: str = str("disable")
-        bookmark_store: str = str("query")
-
-        if bookmark_store == "disable":
+        if bookmark_globals.bookmark_store == "disable":
             restore_ctx = RestoreContext()
         else:
             restore_ctx = await RestoreContext.from_query_string(request.url.query)
 
         print(
+            "Restored state",
             {
                 "values": restore_ctx.as_state().values,
                 "input": restore_ctx.as_state().input,
-            }
+            },
         )
 
         with restore_context(restore_ctx):
             if callable(self.ui):
                 ui = self._render_page(self.ui(request), self.lib_prefix)
             else:
-                # TODO: Why is this here as there's a with restore_context above?
-                # TODO: Why not `if restore_ctx.active:`?
+                # TODO: Barret - Q: Why is this here as there's a with restore_context above?
+                # TODO: Barret - Q: Why not `if restore_ctx.active:`?
                 cur_restore_ctx = get_current_restore_context()
                 print("cur_restore_ctx", cur_restore_ctx)
                 if cur_restore_ctx is not None and cur_restore_ctx.active:
-                    # TODO: See ?enableBookmarking
+                    # TODO: Barret - Docs: See ?enableBookmarking
                     warnings.warn(
                         "Trying to restore saved app state, but UI code must be a function for this to work!",
                         stacklevel=1,

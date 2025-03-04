@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-from shiny.bookmark._restore_state import RestoreContext
-
 __all__ = ("Session", "Inputs", "Outputs", "ClientData")
-
 import asyncio
 import contextlib
 import dataclasses
@@ -47,11 +44,12 @@ from .._namespaces import Id, ResolvedId, Root
 from .._typing_extensions import NotRequired, TypedDict
 from .._utils import wrap_async
 from ..bookmark import BookmarkApp, BookmarkProxy
+from ..bookmark._button import BOOKMARK_ID
+from ..bookmark._restore_state import RestoreContext
 from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
-from ..reactive import Effect_, Value, effect
+from ..reactive import Effect_, Value, effect, isolate
 from ..reactive import flush as reactive_flush
-from ..reactive import isolate
 from ..reactive._core import lock
 from ..reactive._core import on_flushed as reactive_on_flushed
 from ..render.renderer import Renderer, RendererT
@@ -1461,6 +1459,10 @@ class Inputs:
             for key, value in self._map.items():
                 # TODO: Barret - Q: Should this be anything that starts with a "."?
                 if key.startswith(".clientdata_"):
+                    continue
+                if key == BOOKMARK_ID or key.endswith(
+                    f"{ResolvedId._sep}{BOOKMARK_ID}"
+                ):
                     continue
                 if key in exclude_set:
                     continue

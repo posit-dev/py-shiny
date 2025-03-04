@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pickle
 import warnings
 from contextlib import contextmanager
@@ -6,7 +8,11 @@ from pathlib import Path
 from typing import Any, Literal, Optional
 from urllib.parse import parse_qs, parse_qsl
 
-from ._bookmark_state import BookmarkState, BookmarkStateLocal
+from shiny.types import MISSING_TYPE
+
+from . import _globals as bookmark_globals
+from ._bookmark_state import local_load_dir
+from ._globals import BookmarkStateLoadDir
 from ._utils import from_json_str, is_hosted
 
 
@@ -180,12 +186,11 @@ class RestoreContext:
 
         id = id[0]
 
-        # TODO: FUTURE - Get the load interface from the session object?
-        # Look for a load.interface function. This will be defined by the hosting
-        # environment if it supports bookmarking.
-        load_interface: BookmarkState | None = None
+        load_bookmark_fn: BookmarkStateLoadDir | None = None
+        if not isinstance(bookmark_globals.bookmark_state_load_dir, MISSING_TYPE):
+            load_bookmark_fn = bookmark_globals.bookmark_state_load_dir
 
-        if load_interface is None:
+        if load_bookmark_fn is None:
             if is_hosted():
                 # TODO: Barret
                 raise NotImplementedError(
@@ -193,12 +198,10 @@ class RestoreContext:
                 )
             else:
                 # We're running Shiny locally.
-                load_interface = BookmarkStateLocal()
-
-        load_dir = Path(await load_interface.load_dir(id))
+                load_bookmark_fn = local_load_dir
 
         # Load the state from disk.
-        self.dir = load_dir
+        self.dir = Path(await load_bookmark_fn(id))
 
         if not self.dir.exists():
             raise ValueError("Bookmarked state directory does not exist.")

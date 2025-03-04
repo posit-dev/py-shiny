@@ -1,5 +1,4 @@
-# TODO: barret - Set / Load SaveState for Connect. Ex: Connect https://github.com/posit-dev/connect/blob/8de330aec6a61cf21e160b5081d08a1d3d7e8129/R/connect.R#L915
-# Might need to have independent save/load functions to register to avoid a class constructor
+from __future__ import annotations
 
 import pickle
 from pathlib import Path
@@ -8,8 +7,15 @@ from urllib.parse import urlencode as urllib_urlencode
 
 from .._utils import private_random_id
 from ..reactive import isolate
-from ._bookmark_state import BookmarkState, BookmarkStateLocal
+from ..types import MISSING_TYPE
+from . import _globals as bookmark_globals
+from ._bookmark_state import local_save_dir
+from ._globals import BookmarkStateSaveDir
 from ._utils import is_hosted, to_json_str
+
+# TODO: barret - Set / Load SaveState for Connect. Ex: Connect https://github.com/posit-dev/connect/blob/8de330aec6a61cf21e160b5081d08a1d3d7e8129/R/connect.R#L915
+# Might need to have independent save/load functions to register to avoid a class constructor
+
 
 if TYPE_CHECKING:
     from .. import Inputs
@@ -45,7 +51,7 @@ class ShinySaveState:
         self.dir = None  # This will be set by external functions.
         self.values = {}
 
-        self._always_exclude: list[str] = ["._bookmark_"]
+        self._always_exclude: list[str] = []
 
     async def _call_on_save(self):
         # Allow user-supplied save function to do things like add state$values, or
@@ -53,11 +59,6 @@ class ShinySaveState:
         if self.on_save:
             with isolate():
                 await self.on_save(self)
-
-    def _exclude_bookmark_value(self):
-        # If the bookmark value is not in the exclude list, add it.
-        if "._bookmark_" not in self.exclude:
-            self.exclude.append("._bookmark_")
 
     async def _save_state(self) -> str:
         """
@@ -70,15 +71,16 @@ class ShinySaveState:
         """
         id = private_random_id(prefix="", bytes=8)
 
-        # Pass the saveState function to the save interface function, which will
-        # invoke saveState after preparing the directory.
+        # Get the save directory from the `bookmark_save_dir` function.
+        # Then we invoke `.on_save(state)` via `._call_on_save() with the directory set
+        # to `self.dir`.
 
-        # TODO: FUTURE - Get the save interface from the session object?
-        # Look for a save.interface function. This will be defined by the hosting
-        # environment if it supports bookmarking.
-        save_interface_loaded: BookmarkState | None = None
+        # This will be defined by the hosting environment if it supports bookmarking.
+        save_bookmark_fn: BookmarkStateSaveDir | None = None
+        if not isinstance(bookmark_globals.bookmark_state_save_dir, MISSING_TYPE):
+            save_bookmark_fn = bookmark_globals.bookmark_state_save_dir
 
-        if save_interface_loaded is None:
+        if save_bookmark_fn is None:
             if is_hosted():
                 # TODO: Barret
                 raise NotImplementedError(
@@ -86,20 +88,11 @@ class ShinySaveState:
                 )
             else:
                 # We're running Shiny locally.
-                save_interface_loaded = BookmarkStateLocal()
-
-        if not isinstance(save_interface_loaded, BookmarkState):
-            raise TypeError(
-                "The save interface retrieved must be an instance of `shiny.bookmark.BookmarkStateLocal`."
-            )
-
-        save_dir = Path(await save_interface_loaded.save_dir(id))
+                save_bookmark_fn = local_save_dir
 
         # Save the state to disk.
-        self.dir = save_dir
+        self.dir = Path(await save_bookmark_fn(id))
         await self._call_on_save()
-
-        self._exclude_bookmark_value()
 
         input_values_json = await self.input._serialize(
             exclude=self.exclude,
@@ -130,8 +123,6 @@ class ShinySaveState:
         """
         # Allow user-supplied onSave function to do things like add state$values.
         await self._call_on_save()
-
-        self._exclude_bookmark_value()
 
         input_values_serialized = await self.input._serialize(
             exclude=self.exclude,

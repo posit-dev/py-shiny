@@ -1,3 +1,16 @@
+from __future__ import annotations
+
+from abc import ABC, abstractmethod
+from pathlib import Path
+from typing import TYPE_CHECKING, Awaitable, Callable, Literal, NoReturn
+
+from .._utils import AsyncCallbacks, CancelCallback, wrap_async
+from ..types import MISSING, MISSING_TYPE
+from . import _globals as bookmark_globals
+from ._globals import BookmarkStore
+from ._restore_state import RestoreContextState
+from ._save_state import ShinySaveState
+
 # TODO: bookmark button
 
 # TODO:
@@ -46,13 +59,6 @@
 # * May need to escape (all?) the parameters to avoid collisions with `h=` or `code=`.
 # Set query string to parent frame / tab
 
-from abc import ABC, abstractmethod
-from pathlib import Path
-from typing import TYPE_CHECKING, Awaitable, Callable, Literal, NoReturn
-
-from .._utils import AsyncCallbacks, CancelCallback, wrap_async
-from ._restore_state import RestoreContextState
-from ._save_state import ShinySaveState
 
 if TYPE_CHECKING:
     from .._namespaces import ResolvedId
@@ -70,9 +76,6 @@ else:
     ExpressStubSession = Any
 
 
-BookmarkStore = Literal["url", "server", "disable"]
-
-
 # TODO: future - Local storage Bookmark class!
 # * Needs a consistent id for storage.
 # * Needs ways to clean up other storage
@@ -84,7 +87,20 @@ class Bookmark(ABC):
     # TODO: Barret - This feels like it needs to be a weakref
     _session_root: Session
 
-    store: BookmarkStore
+    _store: BookmarkStore | MISSING_TYPE
+
+    @property
+    def store(self) -> BookmarkStore:
+        # Should we allow for this?
+        # Allows a per-session override of the global bookmark store
+        if isinstance(self._session_root.bookmark._store, MISSING_TYPE):
+            return bookmark_globals.bookmark_store
+        return self._session_root.bookmark._store
+
+    @store.setter
+    def store(self, value: BookmarkStore) -> None:
+        self._session_root.bookmark._store = value
+        self._store = value
 
     _proxy_exclude_fns: list[Callable[[], list[str]]]
     exclude: list[str]
@@ -107,8 +123,18 @@ class Bookmark(ABC):
         # from ._restore_state import RestoreContext
 
         super().__init__()
+        # TODO: Barret - Q: Should this be a weakref; Session -> Bookmark -> Session
         self._session_root = session_root
         self._restore_context = None
+        self._store = MISSING
+
+        self._proxy_exclude_fns = []
+        self.exclude = []
+
+        self._on_bookmark_callbacks = AsyncCallbacks()
+        self._on_bookmarked_callbacks = AsyncCallbacks()
+        self._on_restore_callbacks = AsyncCallbacks()
+        self._on_restored_callbacks = AsyncCallbacks()
 
     # # TODO: Barret - Implement this?!?
     # @abstractmethod
@@ -247,17 +273,7 @@ class Bookmark(ABC):
 
 class BookmarkApp(Bookmark):
     def __init__(self, session_root: Session):
-
         super().__init__(session_root)
-
-        self.store = "disable"
-        self.store = "url"
-        self.exclude = []
-        self._proxy_exclude_fns = []
-        self._on_bookmark_callbacks = AsyncCallbacks()
-        self._on_bookmarked_callbacks = AsyncCallbacks()
-        self._on_restore_callbacks = AsyncCallbacks()
-        self._on_restored_callbacks = AsyncCallbacks()
 
     def _create_effects(self) -> None:
         # Get bookmarking config
@@ -265,7 +281,6 @@ class BookmarkApp(Bookmark):
             return
 
         print("Creating effects")
-
         session = self._session_root
 
         from .. import reactive
@@ -481,17 +496,9 @@ class BookmarkProxy(Bookmark):
         super().__init__(session_proxy.root_scope())
 
         self._ns = session_proxy.ns
-        # TODO: Barret - This feels like it needs to be a weakref
+        # TODO: Barret - Q: Should this be a weakref
         self._session_proxy = session_proxy
 
-        self.exclude = []
-        self._proxy_exclude_fns = []
-        self._on_bookmark_callbacks = AsyncCallbacks()
-        self._on_bookmarked_callbacks = AsyncCallbacks()
-        self._on_restore_callbacks = AsyncCallbacks()
-        self._on_restored_callbacks = AsyncCallbacks()
-
-        # TODO: Barret - Double check that this works with nested modules!
         self._session_root.bookmark._proxy_exclude_fns.append(
             lambda: [str(self._ns(name)) for name in self.exclude]
         )
@@ -507,6 +514,14 @@ class BookmarkProxy(Bookmark):
             return await self._scoped_on_bookmark(root_state)
 
         from ..session import session_context
+
+        @self._root_bookmark.on_bookmarked
+        async def scoped_on_bookmarked(url: str) -> None:
+            if self._on_bookmarked_callbacks.count() == 0:
+                return
+
+            with session_context(self._session_proxy):
+                await self._on_bookmarked_callbacks.invoke(url)
 
         ns_prefix = str(self._ns + self._ns._sep)
 

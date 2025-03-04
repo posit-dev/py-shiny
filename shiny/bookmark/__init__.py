@@ -6,7 +6,7 @@ from ._bookmark import (
     BookmarkProxy,
     ShinySaveState,
 )
-from ._bookmark_state import BookmarkState
+from ._button import input_bookmark_button
 from ._restore_state import RestoreContext, RestoreContextState
 
 __all__ = (
@@ -18,8 +18,8 @@ __all__ = (
     "BookmarkApp",
     "BookmarkProxy",
     "BookmarkExpressStub",
-    # _bookmark_state
-    "BookmarkState",
+    # _button
+    "input_bookmark_button",
     # _restore_state
     "RestoreContext",
     "RestoreContextState",
