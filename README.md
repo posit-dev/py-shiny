@@ -58,7 +58,7 @@ git fetch --tags upstream
 Then install:
 
 ```sh
-pip install -e ".[dev,test]"
+pip install -e ".[dev,test,doc]"
 ```
 
 Additionally, you can install pre-commit hooks which will automatically reformat and lint the code when you make a commit:
@@ -69,3 +69,29 @@ pre-commit install
 # To disable:
 # pre-commit uninstall
 ```
+
+Tests should now pass:
+
+```sh
+make check
+# To apply formatting fixes instead of erroring:
+# make check-fix
+```
+
+Or get a full list of helpers with just:
+
+```sh
+make
+```
+
+Typically, when developing new features for Shiny, you'll want to try them out in an application.
+In a **separate** application directory, use can use `-e` to reference your local checkout of `py-shiny`:
+
+```sh
+# Rather than
+#   pip install shiny
+# run:
+pip install -e ../py-shiny --config-settings editable_mode=compat
+```
+
+See the [docs README](docs/README.md) for instructions on building the documentation locally.
