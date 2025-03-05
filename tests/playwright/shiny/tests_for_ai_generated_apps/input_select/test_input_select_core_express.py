@@ -59,7 +59,6 @@ def test_input_select_demo(page: Page, app: ShinyAppProc) -> None:
     select5_value = controller.OutputText(page, "selected_value5")
     select5_value.expect_value("Selected: A")
 
-
     # Test select with size parameter
     select6 = controller.InputSelect(page, "select6")
     select6.expect_label("Select with size parameter")
@@ -68,4 +67,3 @@ def test_input_select_demo(page: Page, app: ShinyAppProc) -> None:
     select6.expect_multiple(False)
     select6_value = controller.OutputText(page, "selected_value6")
     select6_value.expect_value("Selected: A")
-

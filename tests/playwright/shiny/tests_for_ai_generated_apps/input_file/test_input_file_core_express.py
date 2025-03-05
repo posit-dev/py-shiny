@@ -33,7 +33,7 @@ def test_file_input_demo(page: Page, app: ShinyAppProc) -> None:
     file_info: FilePayload = {
         "name": "users.csv",
         "mimeType": "text/csv",
-        "buffer": b",user_id,name,email\n1,Alice,alice@example.com\n2,\"Bob, Los Angeles\", bob\n",
+        "buffer": b',user_id,name,email\n1,Alice,alice@example.com\n2,"Bob, Los Angeles", bob\n',
     }
 
     file_input.set(file_info)
@@ -46,7 +46,9 @@ def test_file_input_demo(page: Page, app: ShinyAppProc) -> None:
     # simulate uploading multiple files
     file_info2 = file_info.copy()
     file_info2["name"] = "users2.csv"
-    file_info2["buffer"] = b",user_id,name,email\n3,Charlie,charlie@example.com\n4,Dave,dave@example.com\n"
+    file_info2["buffer"] = (
+        b",user_id,name,email\n3,Charlie,charlie@example.com\n4,Dave,dave@example.com\n"
+    )
     file_input.set([file_info, file_info2])
     file_input.expect_complete()
 

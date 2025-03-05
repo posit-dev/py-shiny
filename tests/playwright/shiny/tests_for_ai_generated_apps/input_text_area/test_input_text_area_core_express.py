@@ -18,7 +18,7 @@ def test_text_area_demo(page: Page, app: ShinyAppProc) -> None:
         "This is some default text.\nIt has multiple lines.\nYou can edit it!"
     )
     text_area.expect_width("500px")
-    text_area.expect_height("192px") # 8 rows * 24px per row instead of 200px
+    text_area.expect_height("192px")  # 8 rows * 24px per row instead of 200px
     text_area.expect_cols("50")
     text_area.expect_rows("8")
     text_area.expect_placeholder("Type something here...")

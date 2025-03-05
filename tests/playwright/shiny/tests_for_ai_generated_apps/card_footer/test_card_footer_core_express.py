@@ -5,6 +5,7 @@ from shiny.pytest import create_app_fixture
 
 app = create_app_fixture(["app-core.py", "app-express.py"])
 
+
 def test_cards_with_footer(page: Page, app: ShinyAppProc) -> None:
     page.goto(app.url)
 

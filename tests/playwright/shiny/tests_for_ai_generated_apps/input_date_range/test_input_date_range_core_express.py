@@ -44,5 +44,3 @@ def test_date_range_input(page: Page, app: ShinyAppProc) -> None:
     # Test setting dates at the boundaries
     date_range.set(("2020-01-01", "2025-12-31"))  # Min and max dates
     date_range.expect_value(("2020-01-01", "2025-12-31"))
-
-

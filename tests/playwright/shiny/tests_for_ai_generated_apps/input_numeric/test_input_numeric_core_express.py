@@ -17,7 +17,6 @@ def test_numeric_inputs(page: Page, app: ShinyAppProc) -> None:
     basic.expect_value("10")
     basic_output.expect_value("Current value: 10")
 
-
     # Test with new value
     basic.set("20")
     basic_output.expect_value("Current value: 20")

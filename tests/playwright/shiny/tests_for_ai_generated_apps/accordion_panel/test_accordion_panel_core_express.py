@@ -6,6 +6,7 @@ from shiny.run import ShinyAppProc
 
 app = create_app_fixture(["app-core.py", "app-express.py"])
 
+
 def test_accordion_demo(page: Page, app: ShinyAppProc) -> None:
     page.goto(app.url)
 

@@ -5,6 +5,7 @@ from shiny.run import ShinyAppProc
 
 app = create_app_fixture(["app-core.py", "app-express.py"])
 
+
 def test_tooltip_demo(page: Page, app: ShinyAppProc) -> None:
     page.goto(app.url)
 
@@ -48,4 +49,3 @@ def test_tooltip_demo(page: Page, app: ShinyAppProc) -> None:
     update_btn.click()
     tooltip.expect_active(True)
     tooltip.expect_body("Tooltip updated 2 times!")
-
