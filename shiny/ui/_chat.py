@@ -17,7 +17,7 @@ from typing import (
 )
 from weakref import WeakValueDictionary
 
-from htmltools import HTML, Tag, TagAttrValue, css
+from htmltools import HTML, Tag, TagAttrValue, TagList, css
 
 from .. import _utils, reactive
 from .._deprecated import warn_deprecated
@@ -215,9 +215,13 @@ class Chat:
                 reactive.Value(None)
             )
 
-            self._latest_stream: reactive.Value[
-                reactive.ExtendedTask[[], str] | None
-            ] = reactive.Value(None)
+            @reactive.extended_task
+            async def _mock_task() -> str:
+                return ""
+
+            self._latest_stream: reactive.Value[reactive.ExtendedTask[[], str]] = (
+                reactive.Value(_mock_task)
+            )
 
             # TODO: deprecate messages once we start promoting managing LLM message
             # state through other means
@@ -498,7 +502,12 @@ class Chat:
 
         return tuple(res)
 
-    async def append_message(self, message: Any) -> None:
+    async def append_message(
+        self,
+        message: Any,
+        *,
+        icon: HTML | Tag | TagList | None = None,
+    ):
         """
         Append a message to the chat.
 
@@ -511,10 +520,14 @@ class Chat:
             Content strings are interpreted as markdown and rendered to HTML on the
             client. Content may also include specially formatted **input suggestion**
             links (see note below).
+        icon
+            An optional icon to display next to the message, currently only used for
+            assistant messages. The icon can be any HTML element (e.g., an
+            :func:`~shiny.ui.img` tag) or a string of HTML.
 
         Note
         ----
-        ``{.callout-note title="Input suggestions"}
+        :::{.callout-note title="Input suggestions"}
         Input suggestions are special links that send text to the user input box when
         clicked (or accessed via keyboard). They can be created in the following ways:
 
@@ -533,17 +546,22 @@ class Chat:
 
         Note that a user may also opt-out of submitting a suggestion by holding the
         `Alt/Option` key while clicking the suggestion link.
-        ```
+        :::
 
-        ```{.callout-note title="Streamed messages"}
+        :::{.callout-note title="Streamed messages"}
         Use `.append_message_stream()` instead of this method when `stream=True` (or
         similar) is specified in model's completion method.
-        ```
+        :::
         """
-        await self._append_message(message)
+        await self._append_message(message, icon=icon)
 
     async def _append_message(
-        self, message: Any, *, chunk: ChunkOption = False, stream_id: str | None = None
+        self,
+        message: Any,
+        *,
+        chunk: ChunkOption = False,
+        stream_id: str | None = None,
+        icon: HTML | Tag | TagList | None = None,
     ) -> None:
         # If currently we're in a stream, handle other messages (outside the stream) later
         if not self._can_append_message(stream_id):
@@ -573,9 +591,18 @@ class Chat:
         if msg is None:
             return
         self._store_message(msg, chunk=chunk)
-        await self._send_append_message(msg, chunk=chunk)
+        await self._send_append_message(
+            msg,
+            chunk=chunk,
+            icon=icon,
+        )
 
-    async def append_message_stream(self, message: Iterable[Any] | AsyncIterable[Any]):
+    async def append_message_stream(
+        self,
+        message: Iterable[Any] | AsyncIterable[Any],
+        *,
+        icon: HTML | Tag | None = None,
+    ):
         """
         Append a message as a stream of message chunks.
 
@@ -588,6 +615,10 @@ class Chat:
             OpenAI, Anthropic, Ollama, and others. Content strings are interpreted as
             markdown and rendered to HTML on the client. Content may also include
             specially formatted **input suggestion** links (see note below).
+        icon
+            An optional icon to display next to the message, currently only used for
+            assistant messages. The icon can be any HTML element (e.g., an
+            :func:`~shiny.ui.img` tag) or a string of HTML.
 
         Note
         ----
@@ -630,7 +661,7 @@ class Chat:
         # Run the stream in the background to get non-blocking behavior
         @reactive.extended_task
         async def _stream_task():
-            return await self._append_message_stream(message)
+            return await self._append_message_stream(message, icon=icon)
 
         _stream_task()
 
@@ -647,38 +678,44 @@ class Chat:
 
         return _stream_task
 
-    def get_latest_stream_result(self) -> str | None:
+    @property
+    def latest_message_stream(self) -> reactive.ExtendedTask[[], str]:
         """
-        Reactively read the latest message stream result.
+        React to changes in the latest message stream.
 
-        This method reads a reactive value containing the result of the latest
-        `.append_message_stream()`. Therefore, this method must be called in a reactive
-        context (e.g., a render function, a :func:`~shiny.reactive.calc`, or a
-        :func:`~shiny.reactive.effect`).
+        Reactively reads for the :class:`~shiny.reactive.ExtendedTask` behind the
+        latest message stream.
+
+        From the return value (i.e., the extended task), you can then:
+
+        1. Reactively read for the final `.result()`.
+        2. `.cancel()` the stream.
+        3. Check the `.status()` of the stream.
 
         Returns
         -------
         :
-            The result of the latest stream (a string).
+            An extended task that represents the streaming task. The `.result()` method
+            of the task can be called in a reactive context to get the final state of the
+            stream.
 
-        Raises
-        ------
-        :
-            A silent exception if no stream has completed yet.
+        Note
+        ----
+        If no stream has yet been started when this method is called, then it returns an
+        extended task with `.status()` of `"initial"` and that it status doesn't change
+        state until a message is streamed.
         """
-        stream = self._latest_stream()
-        if stream is None:
-            from .. import req
+        return self._latest_stream()
 
-            req(False)
-        else:
-            return stream.result()
-
-    async def _append_message_stream(self, message: AsyncIterable[Any]):
+    async def _append_message_stream(
+        self,
+        message: AsyncIterable[Any],
+        icon: HTML | Tag | None = None,
+    ):
         id = _utils.private_random_id()
 
         empty = ChatMessage(content="", role="assistant")
-        await self._append_message(empty, chunk="start", stream_id=id)
+        await self._append_message(empty, chunk="start", stream_id=id, icon=icon)
 
         try:
             async for msg in message:
@@ -707,6 +744,7 @@ class Chat:
         self,
         message: TransformedMessage,
         chunk: ChunkOption = False,
+        icon: HTML | Tag | TagList | None = None,
     ):
         if message["role"] == "system":
             # System messages are not displayed in the UI
@@ -726,12 +764,16 @@ class Chat:
         content = message["content_client"]
         content_type = "html" if isinstance(content, HTML) else "markdown"
 
+        # TODO: pass along dependencies for both content and icon (if any)
         msg = ClientMessage(
             content=str(content),
             role=message["role"],
             content_type=content_type,
             chunk_type=chunk_type,
         )
+
+        if icon is not None:
+            msg["icon"] = str(icon)
 
         # print(msg)
 
@@ -1153,7 +1195,6 @@ class Chat:
 
 @add_example(ex_dir="../templates/chat/starters/hello")
 class ChatExpress(Chat):
-
     def ui(
         self,
         *,
@@ -1162,6 +1203,7 @@ class ChatExpress(Chat):
         width: CssUnit = "min(680px, 100%)",
         height: CssUnit = "auto",
         fill: bool = True,
+        icon_assistant: HTML | Tag | TagList | None = None,
         **kwargs: TagAttrValue,
     ) -> Tag:
         """
@@ -1183,6 +1225,10 @@ class ChatExpress(Chat):
         fill
             Whether the chat should vertically take available space inside a fillable
             container.
+        icon_assistant
+            The icon to use for the assistant chat messages. Can be a HTML or a tag in
+            the form of :class:`~htmltools.HTML` or :class:`~htmltools.Tag`. If `None`,
+            a default robot icon is used.
         kwargs
             Additional attributes for the chat container element.
         """
@@ -1193,6 +1239,7 @@ class ChatExpress(Chat):
             width=width,
             height=height,
             fill=fill,
+            icon_assistant=icon_assistant,
             **kwargs,
         )
 
@@ -1206,6 +1253,7 @@ def chat_ui(
     width: CssUnit = "min(680px, 100%)",
     height: CssUnit = "auto",
     fill: bool = True,
+    icon_assistant: HTML | Tag | TagList | None = None,
     **kwargs: TagAttrValue,
 ) -> Tag:
     """
@@ -1234,6 +1282,10 @@ def chat_ui(
         The height of the chat container.
     fill
         Whether the chat should vertically take available space inside a fillable container.
+    icon_assistant
+            The icon to use for the assistant chat messages. Can be a HTML or a tag in
+            the form of :class:`~htmltools.HTML` or :class:`~htmltools.Tag`. If `None`,
+            a default robot icon is used.
     kwargs
         Additional attributes for the chat container element.
     """
@@ -1261,6 +1313,10 @@ def chat_ui(
 
         message_tags.append(Tag(tag_name, content=msg["content"]))
 
+    html_deps = None
+    if isinstance(icon_assistant, (Tag, TagList)):
+        html_deps = icon_assistant.get_dependencies()
+
     res = Tag(
         "shiny-chat-container",
         Tag("shiny-chat-messages", *message_tags),
@@ -1270,6 +1326,7 @@ def chat_ui(
             placeholder=placeholder,
         ),
         chat_deps(),
+        html_deps,
         {
             "style": css(
                 width=as_css_unit(width),
@@ -1279,6 +1336,7 @@ def chat_ui(
         id=id,
         placeholder=placeholder,
         fill=fill,
+        icon_assistant=str(icon_assistant) if icon_assistant is not None else None,
         **kwargs,
     )
 

@@ -1,8 +1,6 @@
 $bslib-preset-type: bootswatch;
 $bslib-preset-name: cerulean;
 @import "../../bslib/lib/bsw5/dist/cerulean/_variables.scss";
-$navbar-light-bg: $primary !default;
-$navbar-dark-bg: $info !default;
 $enable-cssgrid: true !default;
 @import "../../bslib/bs3compat/_defaults.scss";
 @import "../../bslib/lib/bs5/scss/_variables.scss";
