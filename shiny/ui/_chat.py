@@ -1107,16 +1107,13 @@ class Chat:
             }
         )
 
-        _utils.run_coro_hybrid(
-            self._session.send_custom_message(
-                "shinyChatMessage",
-                {
-                    "id": self.id,
-                    "handler": "shiny-chat-update-user-input",
-                    "obj": obj,
-                },
-            )
-        )
+        msg = {
+            "id": self.id,
+            "handler": "shiny-chat-update-user-input",
+            "obj": obj,
+        }
+
+        self._session._send_message_sync({"custom": {"shinyChatMessage": msg}})
 
     def set_user_message(self, value: str):
         """
