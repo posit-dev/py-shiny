@@ -1107,7 +1107,7 @@ class Chat:
             }
         )
 
-        _utils.run_coro_sync(
+        _utils.run_coro_hybrid(
             self._session.send_custom_message(
                 "shinyChatMessage",
                 {
