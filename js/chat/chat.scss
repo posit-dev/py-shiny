@@ -32,7 +32,8 @@ shiny-chat-container {
     text-underline-offset: 4px;
     text-decoration-thickness: 2px;
 
-    padding: 2px;
+    padding-left: 2px;
+    padding-right: 2px;
 
     &:hover {
       text-decoration-style: solid;
