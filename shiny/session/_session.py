@@ -638,13 +638,13 @@ class AppSession(Session):
 
                             # BOOKMARKS!
                             if ".clientdata_url_search" in message_obj["data"]:
-                                self.bookmark._restore_context = (
+                                self.bookmark._restore_context_value = (
                                     await RestoreContext.from_query_string(
                                         message_obj["data"][".clientdata_url_search"]
                                     )
                                 )
                             else:
-                                self.bookmark._restore_context = RestoreContext()
+                                self.bookmark._restore_context_value = RestoreContext()
 
                             # When a reactive flush occurs, flush the session's outputs,
                             # errors, etc. to the client. Note that this is
@@ -1035,7 +1035,7 @@ class AppSession(Session):
 
     async def _flush(self) -> None:
         with session_context(self):
-            # This is the only place in the session where the restoreContext is flushed.
+            # This is the only place in the session where the RestoreContext is flushed.
             if self.bookmark._restore_context:
                 self.bookmark._restore_context.flush_pending()
             # Flush the callbacks
