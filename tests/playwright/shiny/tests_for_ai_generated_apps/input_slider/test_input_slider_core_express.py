@@ -82,11 +82,11 @@ def test_slider_parameters(page: Page, app: ShinyAppProc) -> None:
     slider9 = controller.InputSliderRange(page, "slider9")
     value9 = controller.OutputText(page, "value9")
     value9.expect_value(
-        "Value: (datetime.date(2023, 3, 1), datetime.date(2023, 9, 30))"
+        "Value: (datetime.datetime(2023, 3, 1, 0, 0), datetime.datetime(2023, 9, 30, 0, 0))"
     )
     slider9.expect_label("Draggable range")
-    slider9.expect_min("1672560000000.0")  # 2023-01-01
-    slider9.expect_max("1704009600000.0")  # 2023-12-31
+    slider9.expect_min("1672531200000.0")  # 2023-01-01
+    slider9.expect_max("1703980800000.0")  # 2023-12-31
     slider9.expect_value(("2023-03-01", "2023-09-30"))
     slider9.expect_drag_range("true")
 

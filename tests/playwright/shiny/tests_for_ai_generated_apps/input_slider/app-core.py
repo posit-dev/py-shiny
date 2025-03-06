@@ -78,9 +78,12 @@ app_ui = ui.page_fluid(
             ui.input_slider(
                 "slider9",
                 "Draggable range",
-                min=date(2023, 1, 1),
-                max=date(2023, 12, 31),
-                value=(date(2023, 3, 1), date(2023, 9, 30)),
+                min=datetime(2023, 1, 1, 0, 0).replace(tzinfo=timezone.utc),
+                max=datetime(2023, 12, 31, 0, 0).replace(tzinfo=timezone.utc),
+                value=(
+                    datetime(2023, 3, 1, 0, 0).replace(tzinfo=timezone.utc),
+                    datetime(2023, 9, 30, 0, 0).replace(tzinfo=timezone.utc),
+                ),
                 time_format="%Y-%m-%d",
                 timezone="UTC",
                 drag_range=True,
