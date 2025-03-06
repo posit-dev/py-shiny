@@ -633,7 +633,6 @@ class AppSession(Session):
                         return
 
                     async with lock():
-                        print("with lock")
                         if message_obj["method"] == "init":
                             verify_state(ConnectionState.Start)
 
@@ -959,7 +958,6 @@ class AppSession(Session):
         return HTMLResponse("<h1>Not Found</h1>", 404)
 
     def send_input_message(self, id: str, message: dict[str, object]) -> None:
-        print("Send input message", id, message)
         self._outbound_message_queues.add_input_message(id, message)
         self._request_flush()
 
@@ -1039,9 +1037,7 @@ class AppSession(Session):
         with session_context(self):
             # This is the only place in the session where the restoreContext is flushed.
             if self.bookmark._restore_context:
-                print("Flushing restore context pending")
                 self.bookmark._restore_context.flush_pending()
-                print("Flushing restore context pending - done")
             # Flush the callbacks
             await self._flush_callbacks.invoke()
 
@@ -1055,13 +1051,11 @@ class AppSession(Session):
             }
 
             try:
-                print("Sending message!", message)
                 await self._send_message(message)
             finally:
                 self._outbound_message_queues.reset()
         finally:
             with session_context(self):
-                print("Invoking flushed callbacks")
                 await self._flushed_callbacks.invoke()
 
     def _increment_busy_count(self) -> None:

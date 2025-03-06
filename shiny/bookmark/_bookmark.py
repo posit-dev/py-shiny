@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, Awaitable, Callable, Literal, NoReturn
@@ -279,7 +280,6 @@ class BookmarkApp(Bookmark):
         if self.store == "disable":
             return
 
-        print("Creating effects")
         session = self._session_root
 
         from .. import reactive
@@ -309,7 +309,6 @@ class BookmarkApp(Bookmark):
             # the server function has been executed.
             @reactive.effect(priority=1000000)
             async def invoke_on_restore_callbacks():
-                print("Trying on restore")
                 if self._on_restore_callbacks.count() == 0:
                     return
 
@@ -322,8 +321,10 @@ class BookmarkApp(Bookmark):
                                 restore_state = self._restore_context.as_state()
                                 await self._on_restore_callbacks.invoke(restore_state)
                     except Exception as e:
-                        raise e
-                        print(f"Error calling on_restore callback: {e}")
+                        warnings.warn(
+                            f"Error calling on_restore callback: {e}",
+                            stacklevel=2,
+                        )
                         notification_show(
                             f"Error calling on_restore callback: {e}",
                             duration=None,
@@ -337,7 +338,6 @@ class BookmarkApp(Bookmark):
             # until the next `on_flushed` invocation.
             @session.on_flush
             async def invoke_on_restored_callbacks():
-                print("Trying on restored")
                 if self._on_restored_callbacks.count() == 0:
                     return
 
@@ -348,7 +348,10 @@ class BookmarkApp(Bookmark):
                                 restore_state = self._restore_context.as_state()
                                 await self._on_restored_callbacks.invoke(restore_state)
                     except Exception as e:
-                        print(f"Error calling on_restored callback: {e}")
+                        warnings.warn(
+                            f"Error calling on_restored callback: {e}",
+                            stacklevel=2,
+                        )
                         notification_show(
                             f"Error calling on_restored callback: {e}",
                             duration=None,
