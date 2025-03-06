@@ -1,4 +1,4 @@
-from shiny import App, render, ui
+from shiny import App, reactive, render, ui
 
 # Define the UI
 app_ui = ui.page_fillable(

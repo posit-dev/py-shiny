@@ -1,4 +1,3 @@
-from shiny import reactive
 from shiny.express import ui
 
 ui.page_opts(fillable=True)

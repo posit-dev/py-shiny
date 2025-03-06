@@ -1,5 +1,3 @@
-from datetime import date, datetime
-
 from playwright.sync_api import Page
 
 from shiny.playwright import controller
@@ -45,7 +43,7 @@ def test_slider_parameters(page: Page, app: ShinyAppProc) -> None:
     value4 = controller.OutputText(page, "value4")
     value4.expect_value("Value: 2023-06-15")
     slider4.expect_label("Select a date")
-    slider4.expect_min("1672560000000.0")  # 2023-01-01
+    slider4.expect_min("1672531200000.0")  # 2023-01-01
     slider4.expect_max("1704009600000.0")  # 2023-12-31
     slider4.expect_value("2023-06-15")
 
