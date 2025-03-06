@@ -1,7 +1,7 @@
 {
   "type": "app",
   "id": "chat-ai-ollama",
-  "title": "Chat AI using Ollama",
+  "title": "Basic Chat AI using Ollama",
   "next_steps": [
     "If you haven't already, download the Ollama executable from https://ollama.com/",
     "Run the executable and download the relevant model (llama3.2)",

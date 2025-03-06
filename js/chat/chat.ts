@@ -18,6 +18,7 @@ type Message = {
   icon?: string;
   operation: "append" | null;
 };
+
 type ShinyChatMessage = {
   id: string;
   handler: string;
@@ -31,6 +32,12 @@ type UpdateUserInput = {
   focus?: false;
 };
 
+type StatusMessage = {
+  content: string;
+  content_type: Exclude<ContentType, "markdown">;
+  type: "dynamic" | "static";
+};
+
 // https://github.com/microsoft/TypeScript/issues/28357#issuecomment-748550734
 declare global {
   interface GlobalEventHandlersEventMap {
@@ -40,11 +47,13 @@ declare global {
     "shiny-chat-clear-messages": CustomEvent;
     "shiny-chat-update-user-input": CustomEvent<UpdateUserInput>;
     "shiny-chat-remove-loading-message": CustomEvent;
+    "shiny-chat-append-status-message": CustomEvent<StatusMessage>;
   }
 }
 
 const CHAT_MESSAGE_TAG = "shiny-chat-message";
 const CHAT_USER_MESSAGE_TAG = "shiny-user-message";
+const CHAT_STATUS_MESSAGE_TAG = "shiny-status-message";
 const CHAT_MESSAGES_TAG = "shiny-chat-messages";
 const CHAT_INPUT_TAG = "shiny-chat-input";
 const CHAT_CONTAINER_TAG = "shiny-chat-container";
@@ -109,6 +118,32 @@ class ChatUserMessage extends LightElement {
         content-type="semi-markdown"
       ></shiny-markdown-stream>
     `;
+  }
+}
+
+class ChatStatusMessage extends LightElement {
+  @property() content = "";
+  @property() content_type: Exclude<ContentType, "markdown"> = "text";
+  @property() type: "dynamic" | "static" = "static";
+
+  render() {
+    const content =
+      this.content_type === "html" ? unsafeHTML(this.content) : this.content;
+    return html`${content}`;
+  }
+
+  updated(changedProperties: Map<string, unknown>) {
+    super.updated(changedProperties);
+    if (
+      changedProperties.has("content") ||
+      changedProperties.has("content_type")
+    ) {
+      this.#scrollIntoView();
+    }
+  }
+
+  #scrollIntoView() {
+    this.scrollIntoView({ behavior: "smooth", block: "end" });
   }
 }
 
@@ -277,7 +312,7 @@ class ChatContainer extends LightElement {
   }
 
   private get lastMessage(): ChatMessage | null {
-    const last = this.messages.lastElementChild;
+    const last = this.messages.querySelector("shiny-chat-message:last-child");
     return last ? (last as ChatMessage) : null;
   }
 
@@ -324,6 +359,10 @@ class ChatContainer extends LightElement {
       "shiny-chat-append-message-chunk",
       this.#onAppendChunk
     );
+    this.addEventListener(
+      "shiny-chat-append-status-message",
+      this.#onAppendStatus
+    );
     this.addEventListener("shiny-chat-clear-messages", this.#onClear);
     this.addEventListener(
       "shiny-chat-update-user-input",
@@ -348,6 +387,10 @@ class ChatContainer extends LightElement {
     this.removeEventListener(
       "shiny-chat-append-message-chunk",
       this.#onAppendChunk
+    );
+    this.removeEventListener(
+      "shiny-chat-append-status-message",
+      this.#onAppendStatus
     );
     this.removeEventListener("shiny-chat-clear-messages", this.#onClear);
     this.removeEventListener(
@@ -443,6 +486,25 @@ class ChatContainer extends LightElement {
     }
   }
 
+  #onAppendStatus(event: CustomEvent<StatusMessage>): void {
+    if (event.detail.type === "dynamic") {
+      if (this.messages.lastChild instanceof ChatStatusMessage) {
+        if (this.messages.lastChild.type == "dynamic") {
+          // Update previous status message if last message was a status item
+          this.messages.lastChild.setAttribute("content", event.detail.content);
+          this.messages.lastChild.setAttribute(
+            "content_type",
+            event.detail.content_type
+          );
+          return;
+        }
+      }
+    }
+
+    const status = createElement(CHAT_STATUS_MESSAGE_TAG, event.detail);
+    this.messages.appendChild(status);
+  }
+
   #onClear(): void {
     this.messages.innerHTML = "";
   }
@@ -523,6 +585,7 @@ class ChatContainer extends LightElement {
 
 customElements.define(CHAT_MESSAGE_TAG, ChatMessage);
 customElements.define(CHAT_USER_MESSAGE_TAG, ChatUserMessage);
+customElements.define(CHAT_STATUS_MESSAGE_TAG, ChatStatusMessage);
 customElements.define(CHAT_MESSAGES_TAG, ChatMessages);
 customElements.define(CHAT_INPUT_TAG, ChatInput);
 customElements.define(CHAT_CONTAINER_TAG, ChatContainer);
