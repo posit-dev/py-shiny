@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 from shiny.express import input, render, ui
 
@@ -41,6 +41,8 @@ with ui.layout_column_wrap(width="400px"):
             min=date(2023, 1, 1),
             max=date(2023, 12, 31),
             value=date(2023, 6, 15),
+            time_format="%Y-%m-%d",
+            timezone="UTC",
         )
 
         @render.text
@@ -97,6 +99,8 @@ with ui.layout_column_wrap(width="400px"):
             max=date(2023, 12, 31),
             value=(date(2023, 3, 1), date(2023, 9, 30)),
             drag_range=True,
+            time_format="%Y-%m-%d",
+            timezone="UTC",
         )
 
         @render.text
@@ -109,11 +113,11 @@ with ui.layout_column_wrap(width="400px"):
         ui.input_slider(
             "slider10",
             "With time format",
-            min=datetime(2023, 1, 1, 0, 0),
-            max=datetime(2023, 12, 31, 23, 59),
-            value=datetime(2023, 6, 15, 12, 30),
+            min=datetime(2023, 1, 1, 0, 0).replace(tzinfo=timezone.utc),
+            max=datetime(2023, 12, 31, 23, 59).replace(tzinfo=timezone.utc),
+            value=datetime(2023, 6, 15, 12, 30).replace(tzinfo=timezone.utc),
             time_format="%Y-%m-%d %H:%M",
-            timezone="+0000",
+            timezone="UTC",
         )
 
         @render.text
