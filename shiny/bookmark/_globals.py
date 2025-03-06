@@ -13,8 +13,5 @@ bookmark_save_dir: BookmarkSaveDir | MISSING_TYPE = MISSING
 bookmark_load_dir: BookmarkLoadDir | MISSING_TYPE = MISSING
 
 BookmarkStore = Literal["url", "server", "disable"]
-# TODO: Barret - Q: Should we have a `enable_bookmarking(store: BookmarkStore)` function?
-bookmark_store: BookmarkStore = "disable"
-
 
 # TODO: Barret; Q: I feel like there could be a `@shiny.globals.on_session_start` decorator that would allow us to set these values.

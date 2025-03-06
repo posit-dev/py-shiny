@@ -97,18 +97,20 @@ class Bookmark(ABC):
     This value could help determine how session state is saved. However, app authors will not be able to change how the session is restored as the server function will run after the session has been restored.
     """
 
+    # Making this a read only property as app authors will not be able to change how the session is restored as the server function will run after the session has been restored.
     @property
     def store(self) -> BookmarkStore:
-        # Should we allow for this?
-        # Allows a per-session override of the global bookmark store
-        if isinstance(self._session_root.bookmark._store, MISSING_TYPE):
-            return bookmark_globals.bookmark_store
-        return self._session_root.bookmark._store
+        """
+        App's bookmark store value
 
-    @store.setter
-    def store(self, value: BookmarkStore) -> None:
-        self._session_root.bookmark._store = value
-        self._store = value
+        Possible values:
+        * `"url"`: Save / reload the bookmark state in the URL.
+        * `"server"`: Save / reload the bookmark state on the server.
+        * `"disable"` (default): Bookmarking is diabled.
+        """
+
+        # Read from the App's bookmark store value.
+        return self._session_root.app.bookmark_store
 
     _proxy_exclude_fns: list[Callable[[], list[str]]]
     """Callbacks that BookmarkProxy classes utilize to help determine the list of inputs to exclude from bookmarking."""

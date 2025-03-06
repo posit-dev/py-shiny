@@ -31,7 +31,7 @@ from ._connection import Connection, StarletteConnection
 from ._error import ErrorMiddleware
 from ._shinyenv import is_pyodide
 from ._utils import guess_mime_type, is_async_callable, sort_keys_length
-from .bookmark import _globals as bookmark_globals
+from .bookmark._globals import BookmarkStore
 from .bookmark._restore_state import (
     RestoreContext,
     get_current_restore_context,
@@ -113,6 +113,12 @@ class App:
     ui: RenderedHTML | Callable[[Request], Tag | TagList]
     server: Callable[[Inputs, Outputs, Session], None]
 
+    _bookmark_store: BookmarkStore
+
+    @property
+    def bookmark_store(self) -> BookmarkStore:
+        return self._bookmark_store
+
     def __init__(
         self,
         ui: Tag | TagList | Callable[[Request], Tag | TagList] | Path,
@@ -121,7 +127,8 @@ class App:
         ),
         *,
         static_assets: Optional[str | Path | Mapping[str, str | Path]] = None,
-        bookmarking: Optional[Literal["url", "query", "disable"]] = None,
+        # Document type as Literal to have clearer type hints to App author
+        bookmark_store: Literal["url", "server", "disable"] = "disable",
         debug: bool = False,
     ) -> None:
         # Used to store callbacks to be called when the app is shutting down (according
@@ -141,8 +148,8 @@ class App:
                 "`server` must have 1 (Inputs) or 3 parameters (Inputs, Outputs, Session)"
             )
 
-        if bookmarking is not None:
-            bookmark_globals.bookmark_store = bookmarking
+        self._bookmark_store = bookmark_store
+
         self._debug: bool = debug
 
         # Settings that the user can change after creating the App object.
@@ -363,7 +370,7 @@ class App:
         request for / occurs.
         """
         ui: RenderedHTML
-        if bookmark_globals.bookmark_store == "disable":
+        if self.bookmark_store == "disable":
             restore_ctx = RestoreContext()
         else:
             restore_ctx = await RestoreContext.from_query_string(request.url.query)
