@@ -173,14 +173,15 @@ $bslib-checkbox-radio-margin-right: 0.35em !default;
     background-color: var(--bslib-dashboard-main-bg);
   }
 
+  .navbar {
+    // Add border-bottom for general navbars (primarily in non-bslib contexts)
+    border-bottom: $card-border-width solid $card-border-color;
+  }
+
   .bslib-page-navbar, .bslib-page-dashboard {
-    > .navbar {
-      @if not $navbar-light-bg and not $navbar-bg {
-        --bslib-navbar-default-bg: var(--#{$prefix}body-bg);
-      }
-      @if not $navbar-dark-bg and not $navbar-bg {
-        --bslib-navbar-inverse-bg: var(--#{$prefix}body-color);
-      }
+    // Inside bslib we only add the border on the top-level navbar
+    .navbar {
+      border-bottom: none;
     }
 
     > .navbar + div {
@@ -215,7 +216,7 @@ $bslib-checkbox-radio-margin-right: 0.35em !default;
   --#{$prefix}link-hover-color: rgba(var(--bs-body-color-rgb), 0.8);
   --#{$prefix}nav-link-font-size: 0.875rem;
 
-  .nav-link {
+  .nav-link:not(:empty) {
     padding-left: 5px !important;
     padding-right: 5px !important;
 

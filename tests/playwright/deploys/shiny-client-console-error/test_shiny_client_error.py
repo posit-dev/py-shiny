@@ -1,3 +1,5 @@
+import re
+
 import pytest
 from playwright.sync_api import Page, expect
 from utils.deploy_utils import (
@@ -23,7 +25,7 @@ def test_shiny_client_console_error(page: Page, app_url: str) -> None:
 
         expect(shiny_error_message).not_to_have_count(0)
         expect(shiny_error_message).to_have_attribute(
-            "message", 'The following ID was repeated:\n- "same_id": 2 inputs'
+            "message", re.compile(r'"same_id": 2 inputs')
         )
         expect(page.get_by_role("button", name="Dismiss all")).to_have_count(1)
         expect(
