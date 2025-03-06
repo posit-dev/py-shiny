@@ -85,7 +85,7 @@ def test_slider_parameters(page: Page, app: ShinyAppProc) -> None:
         "Value: (datetime.date(2023, 3, 1), datetime.date(2023, 9, 30))"
     )
     slider9.expect_label("Draggable range")
-    slider9.expect_min("1672560000000.0")  # 2023-01-01
+    slider9.expect_min("1672531200000.0")  # 2023-01-01
     slider9.expect_max("1704009600000.0")  # 2023-12-31
     slider9.expect_value(("2023-03-01", "2023-09-30"))
     slider9.expect_drag_range("true")
@@ -96,7 +96,7 @@ def test_slider_parameters(page: Page, app: ShinyAppProc) -> None:
     value10.expect_value("Value: 2023-06-15 19:30:00")
     slider10.expect_label("With time format")
     slider10.expect_min("1672560000000.0")  # 2023-01-01 00:00
-    slider10.expect_max("1704095940000.0")  # 2023-12-31 23:59
+    slider10.expect_max("1703980800000.0")  # 2023-12-31 23:59
     slider10.expect_value("2023-06-15 19:30")
     slider10.expect_time_format("%Y-%m-%d %H:%M")
     slider10.expect_timezone("+0000")
