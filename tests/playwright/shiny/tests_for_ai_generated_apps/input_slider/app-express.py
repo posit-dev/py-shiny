@@ -42,7 +42,7 @@ with ui.layout_column_wrap(width="400px"):
             max=date(2023, 12, 31),
             value=date(2023, 6, 15),
             time_format="%Y-%m-%d",
-            timezone="UTC",
+            timezone="+0000",
         )
 
         @render.text
@@ -102,7 +102,7 @@ with ui.layout_column_wrap(width="400px"):
                 datetime(2023, 9, 30, 0, 0).replace(tzinfo=timezone.utc),
             ),
             time_format="%Y-%m-%d",
-            timezone="UTC",
+            timezone="+0000",
             drag_range=True,
         )
 
@@ -120,7 +120,7 @@ with ui.layout_column_wrap(width="400px"):
             max=datetime(2023, 12, 31, 23, 59).replace(tzinfo=timezone.utc),
             value=datetime(2023, 6, 15, 12, 30).replace(tzinfo=timezone.utc),
             time_format="%Y-%m-%d %H:%M",
-            timezone="UTC",
+            timezone="+0000",
         )
 
         @render.text
