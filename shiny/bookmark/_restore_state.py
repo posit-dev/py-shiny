@@ -161,13 +161,14 @@ class RestoreContext:
     def flush_pending(self) -> None:
         self.input.flush_pending()
 
-    # Returns a dict representation of the RestoreContext object. This is passed
-    # to the app author's onRestore function. An important difference between
-    # the RestoreContext object and the dict is that the former's `input` field
-    # is a RestoreInputSet object, while the latter's `input` field is just a
-    # list.
-
     def as_state(self) -> RestoreContextState:
+        """
+        Returns a dict representation of the RestoreContext object. This is passed
+        to the app author's onRestore function. An important difference between
+        the RestoreContext object and the dict is that the former's `input` field
+        is a RestoreInputSet object, while the latter's `input` field is just a
+        list.
+        """
         return RestoreContextState(
             # Shallow copy
             input={**self.input.as_dict()},

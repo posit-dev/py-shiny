@@ -86,8 +86,16 @@ class Bookmark(ABC):
 
     # TODO: Barret - This feels like it needs to be a weakref
     _session_root: Session
+    """
+    The root session object (most likely a `AppSession` object).
+    """
 
     _store: BookmarkStore | MISSING_TYPE
+    """
+    Session specific bookmark store value.
+
+    This value could help determine how session state is saved. However, app authors will not be able to change how the session is restored as the server function will run after the session has been restored.
+    """
 
     @property
     def store(self) -> BookmarkStore:
@@ -103,20 +111,33 @@ class Bookmark(ABC):
         self._store = value
 
     _proxy_exclude_fns: list[Callable[[], list[str]]]
+    """Callbacks that BookmarkProxy classes utilize to help determine the list of inputs to exclude from bookmarking."""
     exclude: list[str]
+    """A list of scoped Input names to exclude from bookmarking."""
 
     _on_bookmark_callbacks: AsyncCallbacks
     _on_bookmarked_callbacks: AsyncCallbacks
     _on_restore_callbacks: AsyncCallbacks
     _on_restored_callbacks: AsyncCallbacks
 
-    _restore_context: RestoreContext | None
+    _restore_context_value: RestoreContext | None
+    """
+    Placeholder value that should only be manually set within the session's `init` websocket message.
+    """
+
+    @property
+    def _restore_context(self) -> RestoreContext | None:
+        """
+        A read-only value of the session's RestoreContext object.
+        """
+        return self._root_bookmark._restore_context_value
 
     async def __call__(self) -> None:
         await self._root_bookmark.do_bookmark()
 
     @property
     def _root_bookmark(self) -> "Bookmark":
+        """The base session's bookmark object."""
         return self._session_root.bookmark
 
     def __init__(self, session_root: Session):
@@ -125,7 +146,7 @@ class Bookmark(ABC):
         super().__init__()
         # TODO: Barret - Q: Should this be a weakref; Session -> Bookmark -> Session
         self._session_root = session_root
-        self._restore_context = None
+        self._restore_context_value = None
         self._store = MISSING
 
         self._proxy_exclude_fns = []
@@ -276,6 +297,15 @@ class BookmarkApp(Bookmark):
         super().__init__(session_root)
 
     def _create_effects(self) -> None:
+        """
+        Create the bookmarking `@reactive.effect`s for the session.
+
+        Effects:
+        * Call `session.bookmark()` on the bookmark button click.
+        * Show an error message if the restore context has an error.
+        * Invoke the `@session.bookmark.on_restore` callbacks at the beginning of the flush cycle.
+        * Invoke the `@session.bookmark.on_restored` callbacks after the flush cycle completes.
+        """
         # Get bookmarking config
         if self.store == "disable":
             return
