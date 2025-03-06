@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Fixed an issue where the `<main>` areas of `ui.page_sidebar()` and `ui.page_navbar()` (with a `sidebar`) were made to be a fillable containers even when `fillable=False`. (#1816)
 
+* Fixed an issue where the `.update_user_input()` method on `ui.Chat()` isn't working in shinylive.  (#1891)
+
 ## [1.3.0] - 2025-03-03
 
 ### New features
