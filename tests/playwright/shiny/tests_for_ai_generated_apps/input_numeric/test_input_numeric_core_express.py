@@ -51,6 +51,3 @@ def test_numeric_inputs(page: Page, app: ShinyAppProc) -> None:
     with_width.expect_value("42")
     with_width.expect_width("200px")
     width_output.expect_value("Current value: 42")
-
-    # Test all values output
-    all_values_output = controller.OutputText(page, "all_values")

@@ -1,5 +1,4 @@
-from shiny import reactive
-from shiny.express import input, render, ui
+from shiny.express import render, ui
 
 # Set page options
 ui.page_opts(fillable=True)
@@ -20,7 +19,7 @@ with ui.card(
         """
     This is the main content of the card.
     The card has various parameters set including:
-    
+
     * full_screen=True - allows expanding to full screen
     * height='300px' - sets fixed height
     * fill=True - allows card to grow/shrink

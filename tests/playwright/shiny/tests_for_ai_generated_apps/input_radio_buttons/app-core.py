@@ -1,4 +1,4 @@
-from shiny import App, reactive, render, ui
+from shiny import App, render, ui
 
 # Create sample choices with HTML content
 choices = {

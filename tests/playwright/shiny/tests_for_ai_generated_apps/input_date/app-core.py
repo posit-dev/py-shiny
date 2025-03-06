@@ -1,6 +1,6 @@
 from datetime import date
 
-from shiny import App, reactive, render, ui
+from shiny import App, render, ui
 
 app_ui = ui.page_fluid(
     ui.layout_column_wrap(

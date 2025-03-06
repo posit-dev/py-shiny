@@ -1,4 +1,4 @@
-from shiny import App, reactive, render, ui
+from shiny import App, render, ui
 
 app_ui = ui.page_fillable(
     # First card with basic footer
@@ -42,7 +42,6 @@ app_ui = ui.page_fillable(
 
 
 def server(input, output, session):
-    @output
     @render.text
     def click_count():
         if not input.btn():

@@ -1,4 +1,3 @@
-from shiny import reactive
 from shiny.express import input, render, ui
 
 # Set page options for a clean layout

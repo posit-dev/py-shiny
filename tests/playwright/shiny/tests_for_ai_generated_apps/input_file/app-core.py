@@ -1,6 +1,6 @@
 import pandas as pd
 
-from shiny import App, reactive, render, ui
+from shiny import App, render, ui
 from shiny.types import FileInfo
 
 # Define the UI

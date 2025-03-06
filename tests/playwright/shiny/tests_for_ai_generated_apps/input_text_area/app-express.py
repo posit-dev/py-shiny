@@ -1,4 +1,3 @@
-from shiny import reactive
 from shiny.express import input, render, ui
 
 ui.page_opts(full_width=True)

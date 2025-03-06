@@ -1,4 +1,4 @@
-from shiny import App, reactive, render, ui
+from shiny import App, render, ui
 
 # Sample data for different types of choices
 simple_choices = ["A", "B", "C", "D"]
