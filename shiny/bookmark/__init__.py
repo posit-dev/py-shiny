@@ -7,7 +7,7 @@ from ._bookmark import (
     ShinySaveState,
 )
 from ._button import input_bookmark_button
-from ._restore_state import RestoreContext, RestoreContextState
+from ._restore_state import RestoreContext, RestoreContextState, restore_input
 
 __all__ = (
     # _globals
@@ -23,4 +23,5 @@ __all__ = (
     # _restore_state
     "RestoreContext",
     "RestoreContextState",
+    "restore_input",
 )
