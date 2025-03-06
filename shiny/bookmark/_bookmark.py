@@ -363,10 +363,7 @@ class BookmarkApp(Bookmark):
 
             # Run the on_restored function after the flush cycle completes and
             # information is sent to the client.
-            # Update: Using `on_flush` to have the callbacks populate the output message
-            # queue going to the browser. If `on_flushed` is used, the messages stall
-            # until the next `on_flushed` invocation.
-            @session.on_flush
+            @session.on_flushed
             async def invoke_on_restored_callbacks():
                 if self._on_restored_callbacks.count() == 0:
                     return
