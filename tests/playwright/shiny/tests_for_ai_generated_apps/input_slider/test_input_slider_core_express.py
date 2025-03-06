@@ -86,7 +86,7 @@ def test_slider_parameters(page: Page, app: ShinyAppProc) -> None:
     )
     slider9.expect_label("Draggable range")
     slider9.expect_min("1672531200000.0")  # 2023-01-01
-    slider9.expect_max("1704009600000.0")  # 2023-12-31
+    slider9.expect_max("1703980800000.0")  # 2023-12-31
     slider9.expect_value(("2023-03-01", "2023-09-30"))
     slider9.expect_drag_range("true")
 
