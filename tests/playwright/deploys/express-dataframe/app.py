@@ -1,7 +1,5 @@
 import pandas as pd
-
-from shiny import render
-from shiny.express import ui
+from shiny.express import render, ui
 
 data = {
     "A": [1, 2, 3, 4, 5, 6],

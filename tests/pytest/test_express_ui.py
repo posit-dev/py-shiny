@@ -6,9 +6,8 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-
-from shiny import render, ui
-from shiny.express import output_args
+from shiny import ui
+from shiny.express import output_args, render
 from shiny.express import ui as xui
 from shiny.express._run import run_express
 

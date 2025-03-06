@@ -1,8 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-
-from shiny import render
-from shiny.express import input, ui
+from shiny.express import input, render, ui
 
 with ui.accordion(open=["Panel 1", "Panel 2"]):
     with ui.accordion_panel("Panel 1"):

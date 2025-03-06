@@ -1,5 +1,4 @@
-from shiny import render
-from shiny.express import input, ui
+from shiny.express import input, render, ui
 
 ui.page_opts(full_width=True)
 

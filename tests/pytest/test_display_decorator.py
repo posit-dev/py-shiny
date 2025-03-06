@@ -9,9 +9,7 @@ from typing import Generator, cast
 
 import pytest
 from htmltools import Tagifiable
-
-from shiny import render, ui
-from shiny.express import expressify
+from shiny.express import expressify, render, ui
 
 
 @contextlib.contextmanager

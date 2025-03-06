@@ -1,5 +1,4 @@
-from shiny import render
-from shiny.express import ui
+from shiny.express import render, ui
 
 chat = ui.Chat(id="chat")
 chat.ui()

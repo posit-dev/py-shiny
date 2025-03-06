@@ -1,8 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-
-from shiny import render
-from shiny.express import input, ui
+from shiny.express import input, render, ui
 
 with ui.layout_column_wrap(width=1 / 2):
     with ui.navset_underline():

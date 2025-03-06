@@ -1,7 +1,5 @@
 import folium
-
-from shiny import render
-from shiny.express import input, ui
+from shiny.express import input, render, ui
 
 locations_coords = {
     "San Francisco": (37.79554, -122.39348),
