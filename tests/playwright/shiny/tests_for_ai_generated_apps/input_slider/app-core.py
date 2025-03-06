@@ -37,7 +37,7 @@ app_ui = ui.page_fluid(
                 max=date(2023, 12, 31),
                 value=date(2023, 6, 15),
                 time_format="%Y-%m-%d",
-                timezone="+0000",
+                timezone="+0800",
             ),
             ui.output_text("value4"),
         ),
@@ -85,7 +85,7 @@ app_ui = ui.page_fluid(
                     datetime(2023, 9, 30, 0, 0).replace(tzinfo=timezone.utc),
                 ),
                 time_format="%Y-%m-%d",
-                timezone="+0000",
+                timezone="+0800",
                 drag_range=True,
             ),
             ui.output_text("value9"),
@@ -100,7 +100,7 @@ app_ui = ui.page_fluid(
                 max=datetime(2023, 12, 31, 23, 59).replace(tzinfo=timezone.utc),
                 value=datetime(2023, 6, 15, 12, 30).replace(tzinfo=timezone.utc),
                 time_format="%Y-%m-%d %H:%M",
-                timezone="+0000",  # Use "+0000" instead of UTC
+                timezone="+0800",  # Use "+0000" instead of UTC
             ),
             ui.output_text("value10"),
         ),

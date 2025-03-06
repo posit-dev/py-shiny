@@ -97,6 +97,6 @@ def test_slider_parameters(page: Page, app: ShinyAppProc) -> None:
     slider10.expect_label("With time format")
     slider10.expect_min("1672531200000.0")  # 2023-01-01 00:00
     slider10.expect_max("1704067140000.0")  # 2023-12-31 23:59
-    slider10.expect_value("2023-06-15 12:30")
+    slider10.expect_value("2023-06-15 20:30")
     slider10.expect_time_format("%Y-%m-%d %H:%M")
-    slider10.expect_timezone("+0000")
+    slider10.expect_timezone("+0800")
