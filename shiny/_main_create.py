@@ -775,8 +775,7 @@ def copy_template_files(
         )
         sys.exit(1)
 
-    if not dest_dir.exists():
-        dest_dir.mkdir()
+    dest_dir.mkdir(parents=True, exist_ok=True)
 
     for item in template.path.iterdir():
         if item.is_file():

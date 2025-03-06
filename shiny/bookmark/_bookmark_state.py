@@ -12,8 +12,7 @@ def _local_dir(id: str) -> Path:
 
 async def local_save_dir(id: str) -> Path:
     state_dir = _local_dir(id)
-    if not state_dir.exists():
-        state_dir.mkdir(parents=True)
+    state_dir.mkdir(parents=True, exist_ok=True)
     return state_dir
 
 
