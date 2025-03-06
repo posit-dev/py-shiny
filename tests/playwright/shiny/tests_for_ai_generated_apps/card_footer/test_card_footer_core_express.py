@@ -1,7 +1,8 @@
 from playwright.sync_api import Page
+
 from shiny.playwright import controller
-from shiny.run import ShinyAppProc
 from shiny.pytest import create_app_fixture
+from shiny.run import ShinyAppProc
 
 app = create_app_fixture(["app-core.py", "app-express.py"])
 

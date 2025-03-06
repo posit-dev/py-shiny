@@ -1,6 +1,7 @@
 from datetime import date, datetime
+
 from shiny import reactive
-from shiny.express import input, ui, render
+from shiny.express import input, render, ui
 
 ui.page_opts(title="Slider Parameters Demo", full_width=True)
 

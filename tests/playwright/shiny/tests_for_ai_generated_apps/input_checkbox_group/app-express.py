@@ -1,7 +1,6 @@
 from shiny import reactive
 from shiny.express import input, render, ui
 
-
 # Create sample choices with HTML formatting for demonstration
 choices = {
     "red": ui.span("Red", style="color: #FF0000;"),

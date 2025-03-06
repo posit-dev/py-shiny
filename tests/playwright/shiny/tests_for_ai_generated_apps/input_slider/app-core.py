@@ -1,4 +1,5 @@
 from datetime import date, datetime
+
 from shiny import App, reactive, render, ui
 
 app_ui = ui.page_fluid(

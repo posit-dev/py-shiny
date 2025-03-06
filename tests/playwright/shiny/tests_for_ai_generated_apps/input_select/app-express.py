@@ -1,5 +1,5 @@
 from shiny import reactive
-from shiny.express import input, ui, render
+from shiny.express import input, render, ui
 
 # Sample data for different types of choices
 simple_choices = ["A", "B", "C", "D"]

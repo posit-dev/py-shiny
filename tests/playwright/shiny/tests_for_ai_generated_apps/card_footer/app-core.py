@@ -1,4 +1,4 @@
-from shiny import App, render, reactive, ui
+from shiny import App, reactive, render, ui
 
 app_ui = ui.page_fillable(
     # First card with basic footer

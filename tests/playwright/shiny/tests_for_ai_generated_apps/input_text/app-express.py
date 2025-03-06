@@ -1,5 +1,5 @@
 from shiny import reactive
-from shiny.express import input, ui, render
+from shiny.express import input, render, ui
 
 # Set page options for a clean layout
 ui.page_opts(fillable=True)

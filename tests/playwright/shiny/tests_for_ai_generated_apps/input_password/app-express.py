@@ -1,5 +1,5 @@
 from shiny import reactive
-from shiny.express import input, ui, render
+from shiny.express import input, render, ui
 
 # Set page title
 ui.page_opts(full_width=True)

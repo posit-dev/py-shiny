@@ -1,5 +1,5 @@
 from shiny import reactive
-from shiny.express import input, ui, render
+from shiny.express import input, render, ui
 
 # Add Font Awesome CSS for icons - this needs to be before any UI elements
 ui.head_content(

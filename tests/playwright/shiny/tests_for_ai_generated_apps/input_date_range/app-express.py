@@ -1,7 +1,7 @@
 from datetime import date
-from shiny import reactive
-from shiny.express import input, ui, render
 
+from shiny import reactive
+from shiny.express import input, render, ui
 
 # Add some descriptive text
 ui.h2("Date Range Input Example")

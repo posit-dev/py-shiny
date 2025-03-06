@@ -1,4 +1,4 @@
-from shiny.express import input, ui, render
+from shiny.express import input, render, ui
 
 # Set page options including title
 ui.page_opts(title="Card Footer Demo", fillable=True)
