@@ -157,6 +157,7 @@ TEST_FILE:=tests/playwright/$(SUB_FILE)
 DEPLOYS_TEST_FILE:=tests/playwright/deploys$(SUB_FILE)
 SHINY_TEST_FILE:=tests/playwright/shiny/$(SUB_FILE)
 EXAMPLES_TEST_FILE:=tests/playwright/examples/$(SUB_FILE)
+AI_TEST_FILE:=tests/playwright/ai_generated_apps/$(SUB_FILE)
 
 install-playwright: FORCE
 	playwright install --with-deps
@@ -186,6 +187,10 @@ playwright-deploys: FORCE
 # end-to-end tests on all py-shiny examples with playwright; (SUB_FILE="" within tests/playwright/examples/)
 playwright-examples: FORCE
 	$(MAKE) playwright TEST_FILE="$(EXAMPLES_TEST_FILE)"
+
+# end-to-end tests for all AI generated apps
+playwright-ai: FORCE
+	$(MAKE) playwright TEST_FILE="$(AI_TEST_FILE)"
 
 coverage: FORCE ## check combined code coverage (must run e2e last)
 	pytest --cov-report term-missing --cov=shiny tests/pytest/ $(SHINY_TEST_FILE) $(PYTEST_BROWSERS)
