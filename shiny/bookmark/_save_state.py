@@ -13,10 +13,6 @@ from ._bookmark_state import local_save_dir
 from ._types import GetBookmarkSaveDir
 from ._utils import is_hosted, to_json_str
 
-# TODO: Barret - Set / Load SaveState for Connect. Ex: Connect https://github.com/posit-dev/connect/blob/8de330aec6a61cf21e160b5081d08a1d3d7e8129/R/connect.R#L915
-# Might need to have independent save/load functions to register to avoid a class constructor
-
-
 if TYPE_CHECKING:
     from .. import Inputs
 else:

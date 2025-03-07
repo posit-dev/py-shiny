@@ -37,6 +37,8 @@ GetBookmarkDirT = TypeVar(
     bound=Callable[[str], Awaitable[Path]] | Callable[[str], Awaitable[Path]],
 )
 
+# TODO: Barret - Integrate Set / Restore for Connect. Ex: Connect https://github.com/posit-dev/connect/blob/8de330aec6a61cf21e160b5081d08a1d3d7e8129/R/connect.R#L915
+
 
 def set_save_dir(fn: GetBookmarkDirT) -> GetBookmarkDirT:
     """TODO: Barret document"""

@@ -83,7 +83,6 @@ else:
 
 class Bookmark(ABC):
 
-    # TODO: Barret - This feels like it needs to be a weakref
     _session_root: Session
     """
     The root session object (most likely a `AppSession` object).
@@ -145,7 +144,6 @@ class Bookmark(ABC):
         # from ._restore_state import RestoreContext
 
         super().__init__()
-        # TODO: Barret - Q: Should this be a weakref; Session -> Bookmark -> Session
         self._session_root = session_root
         self._restore_context_value = None
         self._store = MISSING
@@ -248,7 +246,6 @@ class Bookmark(ABC):
         ...
 
     @abstractmethod
-    # TODO: Barret - Q: Rename to `update()`? `session.bookmark.update()`?
     async def do_bookmark(self) -> None:
         """
         Perform bookmarking.
@@ -521,7 +518,6 @@ class BookmarkProxy(Bookmark):
         super().__init__(session_proxy.root_scope())
 
         self._ns = session_proxy.ns
-        # TODO: Barret - Q: Should this be a weakref
         self._session_proxy = session_proxy
 
         self._session_root.bookmark._proxy_exclude_fns.append(
@@ -625,11 +621,8 @@ class BookmarkProxy(Bookmark):
         self,
         callback: Callable[[str], None] | Callable[[str], Awaitable[None]],
         /,
-    ) -> NoReturn:
-        # TODO: Barret - Q: Shouldn't we implement this? `self._root_bookmark.on_bookmark()`
-        raise NotImplementedError(
-            "Please call `.on_bookmarked()` from the root session only, e.g. `session.root_scope().bookmark.on_bookmark()`."
-        )
+    ) -> CancelCallback:
+        return self._on_bookmarked_callbacks.register(wrap_async(callback))
 
     def _get_bookmark_exclude(self) -> NoReturn:
         raise NotImplementedError(

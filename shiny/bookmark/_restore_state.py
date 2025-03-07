@@ -59,7 +59,7 @@ class RestoreState:
             if self._name_has_namespace(name, prefix)
         }
 
-        # TODO: Barret; Is this for bookmarking?!?
+        # TODO: Barret; Is this for file inputs?!?
         dir = self.dir
         if dir is not None:
             dir = dir / prefix
@@ -194,7 +194,6 @@ class RestoreContext:
 
         if load_bookmark_fn is None:
             if is_hosted():
-                # TODO: Barret; Implement Connect's `bookmark_load_dir` function
                 raise NotImplementedError(
                     "The hosting environment does not support server-side bookmarking."
                 )
