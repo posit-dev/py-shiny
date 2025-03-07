@@ -245,7 +245,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: failure() && steps.browsers.outputs.has-playwright-diagnostics
         with:
-          name: "playright-examples-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.browser }}-results"
+          name: "playright-ai-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.browser }}-results"
           path: test-results/
           retention-days: 5
 
