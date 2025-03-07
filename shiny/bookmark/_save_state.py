@@ -23,7 +23,7 @@ else:
     Inputs = Any
 
 
-class ShinySaveState:
+class BookmarkState:
     # session: ?
     # * Would get us access to inputs, possibly app dir, registered on save / load classes (?), exclude
     #
@@ -32,7 +32,7 @@ class ShinySaveState:
     exclude: list[str]
     # _bookmark_: A special value that is always excluded from the bookmark.
     on_save: (
-        Callable[["ShinySaveState"], Awaitable[None]] | None
+        Callable[["BookmarkState"], Awaitable[None]] | None
     )  # A callback to invoke during the saving process.
 
     # These are set not in initialize(), but by external functions that modify
@@ -43,7 +43,7 @@ class ShinySaveState:
         self,
         input: Inputs,
         exclude: list[str],
-        on_save: Callable[["ShinySaveState"], Awaitable[None]] | None,
+        on_save: Callable[["BookmarkState"], Awaitable[None]] | None,
     ):
         self.input = input
         self.exclude = exclude

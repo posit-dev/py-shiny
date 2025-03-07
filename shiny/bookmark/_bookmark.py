@@ -8,8 +8,8 @@ from typing import TYPE_CHECKING, Awaitable, Callable, Literal, NoReturn
 from .._utils import AsyncCallbacks, CancelCallback, wrap_async
 from ..types import MISSING, MISSING_TYPE
 from ._button import BOOKMARK_ID
-from ._restore_state import RestoreContextState
-from ._save_state import ShinySaveState
+from ._restore_state import RestoreState
+from ._save_state import BookmarkState
 from ._types import BookmarkStore
 
 # TODO: Barret - Bookmark state
@@ -192,8 +192,7 @@ class Bookmark(ABC):
     def on_bookmark(
         self,
         callback: (
-            Callable[[ShinySaveState], None]
-            | Callable[[ShinySaveState], Awaitable[None]]
+            Callable[[BookmarkState], None] | Callable[[BookmarkState], Awaitable[None]]
         ),
         /,
     ) -> CancelCallback:
@@ -266,8 +265,7 @@ class Bookmark(ABC):
     def on_restore(
         self,
         callback: (
-            Callable[[RestoreContextState], None]
-            | Callable[[RestoreContextState], Awaitable[None]]
+            Callable[[RestoreState], None] | Callable[[RestoreState], Awaitable[None]]
         ),
     ) -> CancelCallback:
         """
@@ -281,8 +279,7 @@ class Bookmark(ABC):
     def on_restored(
         self,
         callback: (
-            Callable[[RestoreContextState], None]
-            | Callable[[RestoreContextState], Awaitable[None]]
+            Callable[[RestoreState], None] | Callable[[RestoreState], Awaitable[None]]
         ),
     ) -> CancelCallback:
         """
@@ -402,8 +399,7 @@ class BookmarkApp(Bookmark):
     def on_bookmark(
         self,
         callback: (
-            Callable[[ShinySaveState], None]
-            | Callable[[ShinySaveState], Awaitable[None]]
+            Callable[[BookmarkState], None] | Callable[[BookmarkState], Awaitable[None]]
         ),
         /,
     ) -> CancelCallback:
@@ -419,8 +415,7 @@ class BookmarkApp(Bookmark):
     def on_restore(
         self,
         callback: (
-            Callable[[RestoreContextState], None]
-            | Callable[[RestoreContextState], Awaitable[None]]
+            Callable[[RestoreState], None] | Callable[[RestoreState], Awaitable[None]]
         ),
     ) -> CancelCallback:
         return self._on_restore_callbacks.register(wrap_async(callback))
@@ -428,8 +423,7 @@ class BookmarkApp(Bookmark):
     def on_restored(
         self,
         callback: (
-            Callable[[RestoreContextState], None]
-            | Callable[[RestoreContextState], Awaitable[None]]
+            Callable[[RestoreState], None] | Callable[[RestoreState], Awaitable[None]]
         ),
     ) -> CancelCallback:
         return self._on_restored_callbacks.register(wrap_async(callback))
@@ -457,14 +451,14 @@ class BookmarkApp(Bookmark):
 
         try:
             # ?withLogErrors
-            from ..bookmark._bookmark import ShinySaveState
+            from ..bookmark._bookmark import BookmarkState
             from ..session import session_context
 
-            async def root_state_on_save(state: ShinySaveState) -> None:
+            async def root_state_on_save(state: BookmarkState) -> None:
                 with session_context(self._session_root):
                     await self._on_bookmark_callbacks.invoke(state)
 
-            root_state = ShinySaveState(
+            root_state = BookmarkState(
                 input=self._session_root.input,
                 exclude=self._get_bookmark_exclude(),
                 on_save=root_state_on_save,
@@ -541,7 +535,7 @@ class BookmarkProxy(Bookmark):
         # The goal of this method is to save the scope's values. All namespaced inputs
         # will already exist within the `root_state`.
         @self._root_bookmark.on_bookmark
-        async def scoped_on_bookmark(root_state: ShinySaveState) -> None:
+        async def scoped_on_bookmark(root_state: BookmarkState) -> None:
             return await self._scoped_on_bookmark(root_state)
 
         from ..session import session_context
@@ -557,7 +551,7 @@ class BookmarkProxy(Bookmark):
         ns_prefix = str(self._ns + self._ns._sep)
 
         @self._root_bookmark.on_restore
-        async def scoped_on_restore(restore_state: RestoreContextState) -> None:
+        async def scoped_on_restore(restore_state: RestoreState) -> None:
             if self._on_restore_callbacks.count() == 0:
                 return
 
@@ -567,7 +561,7 @@ class BookmarkProxy(Bookmark):
                 await self._on_restore_callbacks.invoke(scoped_restore_state)
 
         @self._root_bookmark.on_restored
-        async def scoped_on_restored(restore_state: RestoreContextState) -> None:
+        async def scoped_on_restored(restore_state: RestoreState) -> None:
             if self._on_restored_callbacks.count() == 0:
                 return
 
@@ -575,14 +569,14 @@ class BookmarkProxy(Bookmark):
             with session_context(self._session_proxy):
                 await self._on_restored_callbacks.invoke(scoped_restore_state)
 
-    async def _scoped_on_bookmark(self, root_state: ShinySaveState) -> None:
+    async def _scoped_on_bookmark(self, root_state: BookmarkState) -> None:
         # Exit if no user-defined callbacks.
         if self._on_bookmark_callbacks.count() == 0:
             return
 
-        from ..bookmark._bookmark import ShinySaveState
+        from ..bookmark._bookmark import BookmarkState
 
-        scoped_state = ShinySaveState(
+        scoped_state = BookmarkState(
             input=self._session_root.input,
             exclude=self._root_bookmark.exclude,
             on_save=None,
@@ -621,8 +615,7 @@ class BookmarkProxy(Bookmark):
     def on_bookmark(
         self,
         callback: (
-            Callable[[ShinySaveState], None]
-            | Callable[[ShinySaveState], Awaitable[None]]
+            Callable[[BookmarkState], None] | Callable[[BookmarkState], Awaitable[None]]
         ),
         /,
     ) -> CancelCallback:
@@ -658,8 +651,7 @@ class BookmarkProxy(Bookmark):
     def on_restore(
         self,
         callback: (
-            Callable[[RestoreContextState], None]
-            | Callable[[RestoreContextState], Awaitable[None]]
+            Callable[[RestoreState], None] | Callable[[RestoreState], Awaitable[None]]
         ),
     ) -> CancelCallback:
         return self._on_restore_callbacks.register(wrap_async(callback))
@@ -667,8 +659,7 @@ class BookmarkProxy(Bookmark):
     def on_restored(
         self,
         callback: (
-            Callable[[RestoreContextState], None]
-            | Callable[[RestoreContextState], Awaitable[None]]
+            Callable[[RestoreState], None] | Callable[[RestoreState], Awaitable[None]]
         ),
     ) -> CancelCallback:
         return self._on_restored_callbacks.register(wrap_async(callback))
@@ -697,8 +688,7 @@ class BookmarkExpressStub(Bookmark):
     def on_bookmark(
         self,
         callback: (
-            Callable[[ShinySaveState], None]
-            | Callable[[ShinySaveState], Awaitable[None]]
+            Callable[[BookmarkState], None] | Callable[[BookmarkState], Awaitable[None]]
         ),
     ) -> NoReturn:
         raise NotImplementedError(
@@ -728,8 +718,7 @@ class BookmarkExpressStub(Bookmark):
     def on_restore(
         self,
         callback: (
-            Callable[[RestoreContextState], None]
-            | Callable[[RestoreContextState], Awaitable[None]]
+            Callable[[RestoreState], None] | Callable[[RestoreState], Awaitable[None]]
         ),
     ) -> NoReturn:
         raise NotImplementedError(
@@ -739,8 +728,7 @@ class BookmarkExpressStub(Bookmark):
     def on_restored(
         self,
         callback: (
-            Callable[[RestoreContextState], None]
-            | Callable[[RestoreContextState], Awaitable[None]]
+            Callable[[RestoreState], None] | Callable[[RestoreState], Awaitable[None]]
         ),
     ) -> NoReturn:
         raise NotImplementedError(

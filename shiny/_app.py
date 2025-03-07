@@ -31,11 +31,7 @@ from ._connection import Connection, StarletteConnection
 from ._error import ErrorMiddleware
 from ._shinyenv import is_pyodide
 from ._utils import guess_mime_type, is_async_callable, sort_keys_length
-from .bookmark._restore_state import (
-    RestoreContext,
-    get_current_restore_context,
-    restore_context,
-)
+from .bookmark._restore_state import RestoreContext, restore_context
 from .bookmark._types import BookmarkStore
 from .html_dependencies import jquery_deps, require_deps, shiny_deps
 from .http_staticfiles import FileResponse, StaticFiles

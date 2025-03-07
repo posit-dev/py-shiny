@@ -16,7 +16,7 @@ from ._types import GetBookmarkRestoreDir
 from ._utils import from_json_str, is_hosted
 
 
-class RestoreContextState:
+class RestoreState:
     input: dict[str, Any]
     values: dict[str, Any]
     dir: Path | None
@@ -41,7 +41,7 @@ class RestoreContextState:
 
         return name.removeprefix(prefix)
 
-    def _state_within_namespace(self, prefix: str) -> "RestoreContextState":
+    def _state_within_namespace(self, prefix: str) -> "RestoreState":
         # Given a restore state object, return a modified version that's scoped to this
         # namespace.
 
@@ -69,7 +69,7 @@ class RestoreContextState:
             # if not dir.exists():
             #     dir = None
 
-        return RestoreContextState(input=input, values=values, dir=dir)
+        return RestoreState(input=input, values=values, dir=dir)
 
 
 class RestoreContext:
@@ -162,7 +162,7 @@ class RestoreContext:
     def flush_pending(self) -> None:
         self.input.flush_pending()
 
-    def as_state(self) -> RestoreContextState:
+    def as_state(self) -> RestoreState:
         """
         Returns a dict representation of the RestoreContext object. This is passed
         to the app author's onRestore function. An important difference between
@@ -170,7 +170,7 @@ class RestoreContext:
         is a RestoreInputSet object, while the latter's `input` field is just a
         list.
         """
-        return RestoreContextState(
+        return RestoreState(
             # Shallow copy
             input={**self.input.as_dict()},
             # Shallow copy

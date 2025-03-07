@@ -54,6 +54,7 @@ def input_action_button(
     --------
     * :func:`~shiny.ui.update_action_button`
     * :func:`~shiny.ui.input_action_link`
+    * :func:`~shiny.ui.input_bookmark_button`
     * :func:`~shiny.reactive.event`
     """
 
