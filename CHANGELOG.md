@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Fixed an issue where the `.update_user_input()` method on `ui.Chat()` isn't working in shinylive.  (#1891)
 
+* Fixed an issue with the `.click()` method on InputActionButton controllers in `shiny.playwright.controllers` where the method would not work as expected. (#1886)
+
 ## [1.3.0] - 2025-03-03
 
 ### New features

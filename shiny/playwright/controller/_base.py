@@ -123,8 +123,12 @@ def set_text(
 
 
 def _expect_multiple(loc: Locator, multiple: bool, timeout: Timeout = None) -> None:
-    value = "True" if multiple else None
-    _expect_style_to_have_value(loc, "multiple", value, timeout=timeout)
+    _expect_attribute_to_have_value(
+        loc,
+        "multiple",
+        value="multiple" if multiple else None,
+        timeout=timeout,
+    )
 
 
 ######################################################
