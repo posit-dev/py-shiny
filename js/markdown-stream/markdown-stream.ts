@@ -3,7 +3,6 @@ import { unsafeHTML } from "lit-html/directives/unsafe-html.js";
 import { property } from "lit/decorators.js";
 
 import ClipboardJS from "clipboard";
-import { sanitize } from "dompurify";
 import hljs from "highlight.js/lib/common";
 import { Renderer, parse } from "marked";
 
@@ -11,8 +10,13 @@ import {
   LightElement,
   createElement,
   createSVGIcon,
+  renderDependencies,
+  sanitizeHTML,
   showShinyClientMessage,
+  throttle,
 } from "../utils/_utils";
+
+import type { HtmlDep } from "../utils/_utils";
 
 type ContentType = "markdown" | "semi-markdown" | "html" | "text";
 
@@ -20,6 +24,7 @@ type ContentMessage = {
   id: string;
   content: string;
   operation: "append" | "replace";
+  html_deps?: HtmlDep[];
 };
 
 type IsStreamingMessage = {
@@ -59,11 +64,11 @@ const markedEscapeOpts = { renderer: rendererEscapeHTML };
 
 function contentToHTML(content: string, content_type: ContentType) {
   if (content_type === "markdown") {
-    return unsafeHTML(sanitize(parse(content) as string));
+    return unsafeHTML(sanitizeHTML(parse(content) as string));
   } else if (content_type === "semi-markdown") {
-    return unsafeHTML(sanitize(parse(content, markedEscapeOpts) as string));
+    return unsafeHTML(sanitizeHTML(parse(content, markedEscapeOpts) as string));
   } else if (content_type === "html") {
-    return unsafeHTML(sanitize(content));
+    return unsafeHTML(sanitizeHTML(content));
   } else if (content_type === "text") {
     return content;
   } else {
@@ -106,7 +111,14 @@ class MarkdownElement extends LightElement {
       } catch (error) {
         console.warn("Failed to highlight code:", error);
       }
-      if (this.streaming) this.#appendStreamingDot();
+
+      // Render Shiny HTML dependencies and bind inputs/outputs
+      if (this.streaming) {
+        this.#appendStreamingDot();
+        MarkdownElement._throttledShinyBind(this);
+      } else {
+        MarkdownElement.#doShinyBind(this);
+      }
 
       // Update scrollable element after content has been added
       this.#updateScrollableElement();
@@ -146,6 +158,35 @@ class MarkdownElement extends LightElement {
 
   #removeStreamingDot(): void {
     this.querySelector(`svg.${SVG_DOT_CLASS}`)?.remove();
+  }
+
+  static async #doShinyBind(el: HTMLElement): Promise<void> {
+    if (!window.Shiny) return;
+    if (!Shiny.initializeInputs) return;
+    if (!Shiny.bindAll) return;
+
+    try {
+      Shiny.initializeInputs(el);
+    } catch (initError) {
+      showShinyClientMessage({
+        status: "error",
+        message: `Failed to initialize Shiny inputs: ${initError}`,
+      });
+    }
+
+    try {
+      await Shiny.bindAll(el);
+    } catch (bindError) {
+      showShinyClientMessage({
+        status: "error",
+        message: `Failed to bind Shiny inputs/outputs: ${bindError}`,
+      });
+    }
+  }
+
+  @throttle(200)
+  private static async _throttledShinyBind(el: HTMLElement): Promise<void> {
+    await this.#doShinyBind(el);
   }
 
   #highlightAndCodeCopy(): void {
@@ -244,7 +285,9 @@ if (!customElements.get("shiny-markdown-stream")) {
   customElements.define("shiny-markdown-stream", MarkdownElement);
 }
 
-function handleMessage(message: ContentMessage | IsStreamingMessage): void {
+async function handleMessage(
+  message: ContentMessage | IsStreamingMessage
+): Promise<void> {
   const el = document.getElementById(message.id) as MarkdownElement;
 
   if (!el) {
@@ -260,6 +303,10 @@ function handleMessage(message: ContentMessage | IsStreamingMessage): void {
   if (isStreamingMessage(message)) {
     el.streaming = message.isStreaming;
     return;
+  }
+
+  if (message.html_deps) {
+    await renderDependencies(message.html_deps);
   }
 
   if (message.operation === "replace") {
