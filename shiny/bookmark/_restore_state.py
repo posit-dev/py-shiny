@@ -211,7 +211,7 @@ class RestoreContext:
             input_values = pickle.load(f)
         self.input = RestoreInputSet(input_values)
 
-        values_file = self.dir / "values.rds"
+        values_file = self.dir / "values.pickle"
         if values_file.exists():
             with open(values_file, "rb") as f:
                 self.values = pickle.load(f)
