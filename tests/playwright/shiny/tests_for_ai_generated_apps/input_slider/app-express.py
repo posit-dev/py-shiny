@@ -95,11 +95,11 @@ with ui.layout_column_wrap(width="400px"):
         ui.input_slider(
             "slider9",
             "Draggable range",
-            min=datetime(2023, 1, 1, 0, 0).replace(tzinfo=timezone.utc),
-            max=datetime(2023, 12, 31, 0, 0).replace(tzinfo=timezone.utc),
+            min=datetime(2023, 1, 1, 0, 0),
+            max=datetime(2023, 12, 31, 0, 0),
             value=(
-                datetime(2023, 3, 1, 0, 0).replace(tzinfo=timezone.utc),
-                datetime(2023, 9, 30, 0, 0).replace(tzinfo=timezone.utc),
+                datetime(2023, 3, 1, 0, 0),
+                datetime(2023, 9, 30, 0, 0),
             ),
             time_format="%Y-%m-%d",
             timezone="+0800",
@@ -116,9 +116,9 @@ with ui.layout_column_wrap(width="400px"):
         ui.input_slider(
             "slider10",
             "With time format",
-            min=datetime(2023, 1, 1, 0, 0).replace(tzinfo=timezone.utc),
-            max=datetime(2023, 12, 31, 23, 59).replace(tzinfo=timezone.utc),
-            value=datetime(2023, 6, 15, 12, 30).replace(tzinfo=timezone.utc),
+            min=datetime(2023, 1, 1, 0, 0),
+            max=datetime(2023, 12, 31, 23, 59),
+            value=datetime(2023, 6, 15, 12, 30),
             time_format="%Y-%m-%d %H:%M",
             timezone="+0800",
         )
