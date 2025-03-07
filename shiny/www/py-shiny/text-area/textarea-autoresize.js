@@ -27,7 +27,7 @@ function callUpdateHeightWhenTargetIsVisible(target) {
 function update_height(target) {
   if (target.scrollHeight > 0) {
     target.style.height = "auto";
-    target.style.height = target.scrollHeight + "px";
+    target.style.height = target.scrollHeight + 2 + "px";
   } else {
     callUpdateHeightWhenTargetIsVisible(target);
   }

@@ -49,7 +49,7 @@ function update_height(target: HTMLTextAreaElement) {
   if (target.scrollHeight > 0) {
     // Automatically resize the textarea to fit its content.
     target.style.height = "auto";
-    target.style.height = target.scrollHeight + "px";
+    target.style.height = target.scrollHeight + 2 + "px";
   } else {
     // The textarea is not visible on the page, therefore it has a 0 scroll height.
 
