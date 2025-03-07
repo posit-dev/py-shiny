@@ -589,7 +589,7 @@ class BookmarkProxy(Bookmark):
         )
 
         # Make subdir for scope
-        # TODO-barret; Is this for uploaded files?!?
+        # TODO: Barret; Is this for uploaded files?!?
         if root_state.dir is not None:
             scope_subpath = self._ns
             scoped_state.dir = Path(root_state.dir) / scope_subpath

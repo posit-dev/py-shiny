@@ -387,11 +387,7 @@ class App:
             if callable(self.ui):
                 ui = self._render_page(self.ui(request), self.lib_prefix)
             else:
-                # TODO: Barret - Q: Why is this here as there's a with restore_context above?
-                # TODO: Barret - Q: Why not `if restore_ctx.active:`?
-                cur_restore_ctx = get_current_restore_context()
-                print("cur_restore_ctx", cur_restore_ctx)
-                if cur_restore_ctx is not None and cur_restore_ctx.active:
+                if restore_ctx.active:
                     # TODO: Barret - Docs: See ?enableBookmarking
                     warnings.warn(
                         "Trying to restore saved app state, but UI code must be a function for this to work!",
