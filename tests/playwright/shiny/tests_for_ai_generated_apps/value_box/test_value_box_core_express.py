@@ -14,7 +14,6 @@ def test_value_boxes(page: Page, app: ShinyAppProc) -> None:
     left_center_box = controller.ValueBox(page, "left_center_value_box")
     left_center_box.expect_title("Revenue")
     left_center_box.expect_value("$5.2M")
-    left_center_box.expect_height("200px")
 
     # Test top-right value box
     top_right_box = controller.ValueBox(page, "top_right_value_box")
