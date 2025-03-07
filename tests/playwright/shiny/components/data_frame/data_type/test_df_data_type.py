@@ -1,5 +1,7 @@
 import re
+import sys
 
+import pytest
 from playwright.sync_api import Page
 
 from shiny.playwright import controller
@@ -39,6 +41,10 @@ backends = [
 ]
 
 
+@pytest.mark.skipif(
+    sys.version_info[:2] == (3, 13),
+    reason="Skipping on Python 3.13, since modin is not supported on 3.13",
+)
 def test_data_frame_data_type(
     page: Page,
     local_app: ShinyAppProc,
