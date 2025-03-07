@@ -1,10 +1,10 @@
-from datetime import date, datetime
+from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from shiny.express import input, render, ui
 
 # Define a consistent timezone
-TIMEZONE = ZoneInfo("Asia/Singapore")
+TIMEZONE = ZoneInfo("UTC")
 
 ui.page_opts(title="Slider Parameters Demo", full_width=True)
 
@@ -42,11 +42,11 @@ with ui.layout_column_wrap(width="400px"):
         ui.input_slider(
             "slider4",
             "Select a date",
-            min=date(2023, 1, 1),
-            max=date(2023, 12, 31),
-            value=date(2023, 6, 15),
+            min=datetime(2023, 1, 1, 0, 0, tzinfo=TIMEZONE),
+            max=datetime(2023, 12, 31, 0, 0, tzinfo=TIMEZONE),
+            value=datetime(2023, 6, 15, 12, 30, tzinfo=TIMEZONE),
             time_format="%Y-%m-%d",
-            timezone="Asia/Singapore",
+            timezone="UTC",
         )
 
         @render.text
@@ -106,7 +106,7 @@ with ui.layout_column_wrap(width="400px"):
                 datetime(2023, 9, 30, 0, 0, tzinfo=TIMEZONE),
             ),
             time_format="%Y-%m-%d",
-            timezone="Asia/Singapore",
+            timezone="UTC",
             drag_range=True,
         )
 
@@ -124,7 +124,7 @@ with ui.layout_column_wrap(width="400px"):
             max=datetime(2023, 12, 31, 23, 59, tzinfo=TIMEZONE),
             value=datetime(2023, 6, 15, 12, 30, tzinfo=TIMEZONE),
             time_format="%Y-%m-%d %H:%M",
-            timezone="Asia/Singapore",
+            timezone="UTC",
         )
 
         @render.text

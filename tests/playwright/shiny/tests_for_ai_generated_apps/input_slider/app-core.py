@@ -1,10 +1,10 @@
-from datetime import date, datetime
+from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from shiny import App, reactive, render, ui
 
 # Define a consistent timezone
-TIMEZONE = ZoneInfo("Asia/Singapore")
+TIMEZONE = ZoneInfo("UTC")
 
 app_ui = ui.page_fluid(
     ui.panel_title("Slider Parameters Demo"),
@@ -37,11 +37,10 @@ app_ui = ui.page_fluid(
             ui.input_slider(
                 "slider4",
                 "Select a date",
-                min=date(2023, 1, 1),
-                max=date(2023, 12, 31),
-                value=date(2023, 6, 15),
+                min=datetime(2023, 1, 1, 0, 0, tzinfo=TIMEZONE),
+                max=datetime(2023, 12, 31, 0, 0, tzinfo=TIMEZONE),
+                value=datetime(2023, 6, 15, 12, 30, tzinfo=TIMEZONE),
                 time_format="%Y-%m-%d",
-                timezone="Asia/Singapore",
             ),
             ui.output_text("value4"),
         ),
@@ -89,7 +88,7 @@ app_ui = ui.page_fluid(
                     datetime(2023, 9, 30, 0, 0, tzinfo=TIMEZONE),
                 ),
                 time_format="%Y-%m-%d",
-                timezone="Asia/Singapore",
+                timezone="UTC",
                 drag_range=True,
             ),
             ui.output_text("value9"),
@@ -104,7 +103,7 @@ app_ui = ui.page_fluid(
                 max=datetime(2023, 12, 31, 23, 59, tzinfo=TIMEZONE),
                 value=datetime(2023, 6, 15, 12, 30, tzinfo=TIMEZONE),
                 time_format="%Y-%m-%d %H:%M",
-                timezone="Asia/Singapore",
+                timezone="UTC",
             ),
             ui.output_text("value10"),
         ),
