@@ -16,5 +16,5 @@ async def local_save_dir(id: str) -> Path:
     return state_dir
 
 
-async def local_load_dir(id: str) -> Path:
+async def local_restore_dir(id: str) -> Path:
     return _local_dir(id)

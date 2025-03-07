@@ -10,9 +10,9 @@ from urllib.parse import parse_qs, parse_qsl
 
 from shiny.types import MISSING_TYPE
 
-from . import _globals as bookmark_globals
-from ._bookmark_state import local_load_dir
-from ._globals import BookmarkLoadDir
+from . import _external as bookmark_external
+from ._bookmark_state import local_restore_dir
+from ._types import GetBookmarkRestoreDir
 from ._utils import from_json_str, is_hosted
 
 
@@ -59,6 +59,7 @@ class RestoreContextState:
             if self._name_has_namespace(name, prefix)
         }
 
+        # TODO-barret; Is this for bookmarking?!?
         dir = self.dir
         if dir is not None:
             dir = dir / prefix
@@ -187,9 +188,9 @@ class RestoreContext:
 
         id = id[0]
 
-        load_bookmark_fn: BookmarkLoadDir | None = None
-        if not isinstance(bookmark_globals.bookmark_load_dir, MISSING_TYPE):
-            load_bookmark_fn = bookmark_globals.bookmark_load_dir
+        load_bookmark_fn: GetBookmarkRestoreDir | None = None
+        if not isinstance(bookmark_external._bookmark_restore_dir, MISSING_TYPE):
+            load_bookmark_fn = bookmark_external._bookmark_restore_dir
 
         if load_bookmark_fn is None:
             if is_hosted():
@@ -199,7 +200,7 @@ class RestoreContext:
                 )
             else:
                 # We're running Shiny locally.
-                load_bookmark_fn = local_load_dir
+                load_bookmark_fn = local_restore_dir
 
         # Load the state from disk.
         self.dir = Path(await load_bookmark_fn(id))
@@ -401,7 +402,6 @@ def restore_input(id: str, default: Any) -> Any:
     default
         A default value to use, if there's no value to restore.
     """
-    # print("\n", "restore_input-1", id, default, "\n")
     # Will run even if the domain is missing
     if not has_current_restore_context():
         return default

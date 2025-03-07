@@ -48,8 +48,9 @@ from ..bookmark._button import BOOKMARK_ID
 from ..bookmark._restore_state import RestoreContext
 from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
-from ..reactive import Effect_, Value, effect, isolate
+from ..reactive import Effect_, Value, effect
 from ..reactive import flush as reactive_flush
+from ..reactive import isolate
 from ..reactive._core import lock
 from ..reactive._core import on_flushed as reactive_on_flushed
 from ..render.renderer import Renderer, RendererT

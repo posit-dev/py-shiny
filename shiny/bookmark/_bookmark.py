@@ -7,11 +7,10 @@ from typing import TYPE_CHECKING, Awaitable, Callable, Literal, NoReturn
 
 from .._utils import AsyncCallbacks, CancelCallback, wrap_async
 from ..types import MISSING, MISSING_TYPE
-from . import _globals as bookmark_globals
 from ._button import BOOKMARK_ID
-from ._globals import BookmarkStore
 from ._restore_state import RestoreContextState
 from ._save_state import ShinySaveState
+from ._types import BookmarkStore
 
 # TODO: Barret - Bookmark state
 # bookmark -> save/load interface
@@ -590,9 +589,12 @@ class BookmarkProxy(Bookmark):
         )
 
         # Make subdir for scope
+        # TODO-barret; Is this for uploaded files?!?
         if root_state.dir is not None:
             scope_subpath = self._ns
             scoped_state.dir = Path(root_state.dir) / scope_subpath
+            scoped_state.dir.mkdir(parents=True, exist_ok=True)
+
             if not scoped_state.dir.exists():
                 raise FileNotFoundError(
                     f"Scope directory could not be created for {scope_subpath}"
@@ -652,13 +654,6 @@ class BookmarkProxy(Bookmark):
     @property
     def store(self) -> BookmarkStore:
         return self._root_bookmark.store
-
-    @store.setter
-    def store(  # pyright: ignore[reportIncompatibleVariableOverride]
-        self,
-        value: BookmarkStore,
-    ) -> None:
-        self._root_bookmark.store = value
 
     def on_restore(
         self,

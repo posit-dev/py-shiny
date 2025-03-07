@@ -8,9 +8,9 @@ from urllib.parse import urlencode as urllib_urlencode
 from .._utils import private_random_id
 from ..reactive import isolate
 from ..types import MISSING_TYPE
-from . import _globals as bookmark_globals
+from . import _external as bookmark_external
 from ._bookmark_state import local_save_dir
-from ._globals import BookmarkSaveDir
+from ._types import GetBookmarkSaveDir
 from ._utils import is_hosted, to_json_str
 
 # TODO: Barret - Set / Load SaveState for Connect. Ex: Connect https://github.com/posit-dev/connect/blob/8de330aec6a61cf21e160b5081d08a1d3d7e8129/R/connect.R#L915
@@ -76,9 +76,9 @@ class ShinySaveState:
         # to `self.dir`.
 
         # This will be defined by the hosting environment if it supports bookmarking.
-        save_bookmark_fn: BookmarkSaveDir | None = None
-        if not isinstance(bookmark_globals.bookmark_save_dir, MISSING_TYPE):
-            save_bookmark_fn = bookmark_globals.bookmark_save_dir
+        save_bookmark_fn: GetBookmarkSaveDir | None = None
+        if not isinstance(bookmark_external._bookmark_save_dir, MISSING_TYPE):
+            save_bookmark_fn = bookmark_external._bookmark_save_dir
 
         if save_bookmark_fn is None:
             if is_hosted():
@@ -99,6 +99,7 @@ class ShinySaveState:
             state_dir=self.dir,
         )
         assert self.dir is not None
+
         with open(self.dir / "input.pickle", "wb") as f:
             pickle.dump(input_values_json, f)
 
