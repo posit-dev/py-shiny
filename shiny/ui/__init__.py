@@ -32,14 +32,13 @@ from htmltools import (
 )
 
 # The css module is for internal use, so we won't re-export it.
-from . import css  # noqa: F401  # pyright: ignore[reportUnusedImport]
-
 # Expose the fill module for extended usage: ex: ui.fill.as_fill_item(x).
-from . import fill
-
 # Export busy_indicators module
-from . import busy_indicators
-
+from . import (
+    busy_indicators,
+    css,  # noqa: F401  # pyright: ignore[reportUnusedImport]
+    fill,
+)
 from ._accordion import (
     AccordionPanel,
     accordion,
@@ -168,6 +167,7 @@ from ._valuebox import (
     value_box,
     value_box_theme,
 )
+from ._webr import webr
 from .dataframe import output_data_frame
 
 __all__ = (
@@ -365,4 +365,6 @@ __all__ = (
     "fill",
     # utils
     "js_eval",
+    # webr
+    "webr",
 )

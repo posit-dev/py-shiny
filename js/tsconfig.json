@@ -20,6 +20,10 @@
     "noUncheckedIndexedAccess": true,
     "experimentalDecorators": true,
     "useDefineForClassFields": false,
+    // I think these are necessary for importing modules from remote URLs?
+    "allowImportingTsExtensions": true,
+    "allowSyntheticDefaultImports": true,
+    "typeRoots": ["./types", "./node_modules/@types"]
   },
-  "include": ["**/*.tsx", "**/*.ts"],
+  "include": ["**/*.tsx", "**/*.ts", "types/**/*.d.ts"],
 }

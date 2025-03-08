@@ -357,7 +357,15 @@ class App:
             ui = self._render_page(self.ui(request), self.lib_prefix)
         else:
             ui = self.ui
-        return HTMLResponse(content=ui["html"])
+        return HTMLResponse(
+            content=ui["html"],
+            # These headers allow webR to use SharedArrayBuffers for communication
+            # https://docs.r-wasm.org/webr/latest/communication.html#webr-channels
+            # headers={
+            #     "Cross-Origin-Opener-Policy": "same-origin",
+            #     "Cross-Origin-Embedder-Policy": "require-corp",
+            # },
+        )
 
     async def _on_connect_cb(self, ws: starlette.websockets.WebSocket) -> None:
         """

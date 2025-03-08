@@ -125,6 +125,11 @@ const opts: Array<BuildOptions> = [
     entryPoints: { "chat/chat": "chat/chat.scss" },
     plugins: [sassPlugin({ type: "css", sourceMap: false })],
   },
+  {
+    entryPoints: { "webr/webr": "webr/webr.ts" },
+    metafile: true,
+    external: ["https://webr.r-wasm.org/latest/webr.mjs"],
+  },
 ];
 
 (async () => {

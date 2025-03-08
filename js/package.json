@@ -32,7 +32,8 @@
     "react": "npm:@preact/compat@^17.1.2",
     "react-dom": "npm:@preact/compat@^17.1.2",
     "tsx": "^3.12.7",
-    "typescript": "^5.0.3"
+    "typescript": "^5.0.3",
+    "webr": "^0.2.0"
   },
   "dependencies": {
     "@tanstack/react-table": "^8.19.2",

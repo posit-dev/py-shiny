@@ -92,3 +92,15 @@ def busy_indicators_dep() -> HTMLDependency:
         head=busy_indicators.use(),  # Enable busy indicators by default.
         all_files=True,
     )
+
+
+def webr_dependency() -> HTMLDependency:
+    return HTMLDependency(
+        name="shiny-webr",
+        version=__version__,
+        source={
+            "package": "shiny",
+            "subdir": "www/py-shiny/webr",
+        },
+        script={"src": "webr.js", "type": "module"},
+    )
