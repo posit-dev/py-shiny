@@ -12,13 +12,33 @@ const RUN_ID = "webr-run";
 class WebRComponent extends LightElement {
   webRConsole: Console;
 
+  private resolveEvalCode: ((value: string) => void) | null = null;
+
+  private enableCaptureOutput = false;
+  private capturedOutput: string[] = [];
+  private captureOutput(s: string) {
+    if (this.enableCaptureOutput) {
+      this.capturedOutput.push(s);
+    }
+  }
+
   constructor() {
     super();
 
     this.webRConsole = new Console({
       stdout: (line) => this.appendToOutEl(line + "\n"),
       stderr: (line) => this.appendToOutEl(line + "\n"),
-      prompt: (p) => this.appendToOutEl(p),
+      prompt: (p) => {
+        if (this.resolveEvalCode) {
+          this.resolveEvalCode(this.capturedOutput.join("\n"));
+          this.enableCaptureOutput = false;
+
+          // Reset the captured output
+          this.capturedOutput.length = 0;
+          this.resolveEvalCode = null;
+        }
+        this.appendToOutEl(p);
+      },
     });
     this.webRConsole.run();
   }
@@ -55,25 +75,30 @@ class WebRComponent extends LightElement {
     runButton.addEventListener("click", sendInput);
   }
 
-  evalR(code: string) {
+  evalR(code: string): Promise<string> {
     this.webRConsole.stdin(code);
     this.appendToOutEl(code + "\n");
+
+    this.enableCaptureOutput = true;
+    return new Promise((resolve) => {
+      this.resolveEvalCode = resolve;
+    });
   }
 
   private appendToOutEl(line: string) {
-    const outEl = document.getElementById(OUTPUT_ID);
-    if (outEl) {
-      outEl.append(line);
-    }
+    const outEl = document.getElementById(OUTPUT_ID) as HTMLElement;
+    outEl.append(line);
+    this.captureOutput(line);
   }
 }
 
 customElements.define(WEBR_COMPONENT_TAG, WebRComponent);
 
 Shiny.initializedPromise.then(() => {
-  Shiny.addCustomMessageHandler("eval_r", function (message) {
+  Shiny.addCustomMessageHandler("eval_r", async function (message) {
     const el = document.getElementById(message.id) as WebRComponent;
-    el.evalR(message.code);
+    const result = await el.evalR(message.code);
+    Shiny.setInputValue!(message.id + "_result", result);
   });
 });
 
