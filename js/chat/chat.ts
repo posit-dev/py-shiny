@@ -527,28 +527,26 @@ customElements.define(CHAT_MESSAGES_TAG, ChatMessages);
 customElements.define(CHAT_INPUT_TAG, ChatInput);
 customElements.define(CHAT_CONTAINER_TAG, ChatContainer);
 
-$(function () {
-  window.Shiny.addCustomMessageHandler(
-    "shinyChatMessage",
-    function (message: ShinyChatMessage) {
-      const evt = new CustomEvent(message.handler, {
-        detail: message.obj,
-      });
+window.Shiny.addCustomMessageHandler(
+  "shinyChatMessage",
+  function (message: ShinyChatMessage) {
+    const evt = new CustomEvent(message.handler, {
+      detail: message.obj,
+    });
 
-      const el = document.getElementById(message.id);
+    const el = document.getElementById(message.id);
 
-      if (!el) {
-        showShinyClientMessage({
-          status: "error",
-          message: `Unable to handle Chat() message since element with id
+    if (!el) {
+      showShinyClientMessage({
+        status: "error",
+        message: `Unable to handle Chat() message since element with id
           ${message.id} wasn't found. Do you need to call .ui() (Express) or need a
           chat_ui('${message.id}') in the UI (Core)?
         `,
-        });
-        return;
-      }
-
-      el.dispatchEvent(evt);
+      });
+      return;
     }
-  );
-});
+
+    el.dispatchEvent(evt);
+  }
+);

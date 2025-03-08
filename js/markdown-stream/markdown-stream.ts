@@ -272,11 +272,9 @@ function handleMessage(message: ContentMessage | IsStreamingMessage): void {
   }
 }
 
-$(function () {
-  window.Shiny.addCustomMessageHandler(
-    "shinyMarkdownStreamMessage",
-    handleMessage
-  );
-});
+window.Shiny.addCustomMessageHandler(
+  "shinyMarkdownStreamMessage",
+  handleMessage
+);
 
 export { MarkdownElement, contentToHTML };

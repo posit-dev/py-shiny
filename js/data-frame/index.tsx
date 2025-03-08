@@ -1214,15 +1214,13 @@ customElements.define("shiny-data-frame", ShinyDataFrameOutput);
 // react listener.
 // It would be better to have something similar to session.send_input_message
 // for updating outputs, but that requires changes to ShinyJS.
-$(function () {
-  window.Shiny.addCustomMessageHandler(
-    "shinyDataFrameMessage",
-    function (message) {
-      const evt = new CustomEvent(message.handler, {
-        detail: message.obj,
-      });
-      const el = document.getElementById(message.id);
-      el?.dispatchEvent(evt);
-    }
-  );
-});
+window.Shiny.addCustomMessageHandler(
+  "shinyDataFrameMessage",
+  function (message) {
+    const evt = new CustomEvent(message.handler, {
+      detail: message.obj,
+    });
+    const el = document.getElementById(message.id);
+    el?.dispatchEvent(evt);
+  }
+);
