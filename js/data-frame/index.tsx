@@ -527,7 +527,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
   useEffect(() => {
     if (!htmlDeps) return;
     // Register the Shiny HtmlDependencies
-    Shiny.renderDependenciesAsync([...htmlDeps]);
+    window.Shiny.renderDependenciesAsync([...htmlDeps]);
   }, [htmlDeps]);
 
   useEffect(() => {
@@ -701,7 +701,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
     } else {
       console.error("Unhandled row selection mode:", selectionModes);
     }
-    Shiny.setInputValue!(`${id}_cell_selection`, shinyValue);
+    window.Shiny.setInputValue!(`${id}_cell_selection`, shinyValue);
   }, [id, selection, selectionModes, table, table.getSortedRowModel]);
 
   useEffect(() => {
@@ -714,10 +714,10 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
         desc: sortObj.desc,
       });
     });
-    Shiny.setInputValue!(`${id}_sort`, shinySort);
+    window.Shiny.setInputValue!(`${id}_sort`, shinySort);
 
     // Deprecated as of 2024-05-21
-    Shiny.setInputValue!(`${id}_column_sort`, shinySort);
+    window.Shiny.setInputValue!(`${id}_column_sort`, shinySort);
   }, [columns, id, sorting]);
   useEffect(() => {
     if (!id) return;
@@ -732,10 +732,10 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
         value: filterObj.value as FilterValue,
       });
     });
-    Shiny.setInputValue!(`${id}_filter`, shinyFilter);
+    window.Shiny.setInputValue!(`${id}_filter`, shinyFilter);
 
     // Deprecated as of 2024-05-21
-    Shiny.setInputValue!(`${id}_column_filter`, shinyFilter);
+    window.Shiny.setInputValue!(`${id}_column_filter`, shinyFilter);
   }, [id, columnFilters, columns]);
   useEffect(() => {
     if (!id) return;
@@ -744,10 +744,10 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
       // Already prefiltered rows!
       .getSortedRowModel()
       .rows.map((row) => row.index);
-    Shiny.setInputValue!(`${id}_data_view_rows`, shinyRows);
+    window.Shiny.setInputValue!(`${id}_data_view_rows`, shinyRows);
 
     // Legacy value as of 2024-05-13
-    Shiny.setInputValue!(`${id}_data_view_indices`, shinyRows);
+    window.Shiny.setInputValue!(`${id}_data_view_indices`, shinyRows);
   }, [
     id,
     table,
@@ -773,7 +773,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
         .filter((x): x is number => x !== null)
         .sort();
     }
-    Shiny.setInputValue!(`${id}_selected_rows`, shinyValue);
+    window.Shiny.setInputValue!(`${id}_selected_rows`, shinyValue);
   }, [id, selection, selectionModes, table]);
 
   // ### End row selection ############################################################
@@ -1083,7 +1083,7 @@ function useVirtualizerMeasureWorkaround(
   return measureElementWithRetry;
 }
 
-class ShinyDataFrameOutputBinding extends Shiny.OutputBinding {
+class ShinyDataFrameOutputBinding extends window.Shiny.OutputBinding {
   find(scope: HTMLElement | JQuery<HTMLElement>): JQuery<HTMLElement> {
     return $(scope).find("shiny-data-frame");
   }
@@ -1103,7 +1103,7 @@ class ShinyDataFrameOutputBinding extends Shiny.OutputBinding {
     el.clearError();
   }
 }
-Shiny.outputBindings.register(
+window.Shiny.outputBindings.register(
   new ShinyDataFrameOutputBinding(),
   "shinyDataFrame"
 );
@@ -1215,11 +1215,14 @@ customElements.define("shiny-data-frame", ShinyDataFrameOutput);
 // It would be better to have something similar to session.send_input_message
 // for updating outputs, but that requires changes to ShinyJS.
 $(function () {
-  Shiny.addCustomMessageHandler("shinyDataFrameMessage", function (message) {
-    const evt = new CustomEvent(message.handler, {
-      detail: message.obj,
-    });
-    const el = document.getElementById(message.id);
-    el?.dispatchEvent(evt);
-  });
+  window.Shiny.addCustomMessageHandler(
+    "shinyDataFrameMessage",
+    function (message) {
+      const evt = new CustomEvent(message.handler, {
+        detail: message.obj,
+      });
+      const el = document.getElementById(message.id);
+      el?.dispatchEvent(evt);
+    }
+  );
 });
