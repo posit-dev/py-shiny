@@ -1,7 +1,6 @@
 import { html } from "lit";
 
 import { Console } from "https://webr.r-wasm.org/latest/webr.mjs";
-import { ShinyClass } from "rstudio-shiny/srcts/types/src/shiny";
 import { LightElement } from "../utils/_utils";
 
 const WEBR_COMPONENT_TAG = "shiny-webr-component";
@@ -94,19 +93,8 @@ class WebRComponent extends LightElement {
 
 customElements.define(WEBR_COMPONENT_TAG, WebRComponent);
 
-Shiny.initializedPromise.then(() => {
-  Shiny.addCustomMessageHandler("eval_r", async function (message) {
-    const el = document.getElementById(message.id) as WebRComponent;
-    const result = await el.evalR(message.code);
-    Shiny.setInputValue!(message.id + "_result", result);
-  });
+window.Shiny.addCustomMessageHandler("eval_r", async function (message) {
+  const el = document.getElementById(message.id) as WebRComponent;
+  const result = await el.evalR(message.code);
+  window.Shiny.setInputValue!(message.id + "_result", result);
 });
-
-// This is a workaround to let TypeScript know that Shiny is a global.
-// See https://github.com/rstudio/shiny/issues/4197
-declare global {
-  const Shiny: ShinyClass;
-  interface Window {
-    Shiny: ShinyClass;
-  }
-}
