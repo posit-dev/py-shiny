@@ -4,12 +4,13 @@ import { Console } from "https://webr.r-wasm.org/latest/webr.mjs";
 import { LightElement } from "../utils/_utils";
 
 const WEBR_COMPONENT_TAG = "shiny-webr-component";
-const OUTPUT_ID = "webr-output";
-const INPUT_ID = "webr-input";
-const RUN_ID = "webr-run";
 
 class WebRComponent extends LightElement {
   webRConsole: Console;
+
+  private outputId: string;
+  private inputId: string;
+  private runId: string;
 
   private resolveEvalCode: ((value: string) => void) | null = null;
 
@@ -23,6 +24,9 @@ class WebRComponent extends LightElement {
 
   constructor() {
     super();
+    this.outputId = this.id + "_output";
+    this.inputId = this.id + "_input";
+    this.runId = this.id + "_run";
 
     this.webRConsole = new Console({
       stdout: (line) => this.appendToOutEl(line + "\n"),
@@ -44,20 +48,20 @@ class WebRComponent extends LightElement {
 
   render() {
     return html`<div>
-      <pre><code id="${OUTPUT_ID}">Loading webR, please wait...</code></pre>
+      <pre><code id="${this.outputId}">Loading webR, please wait...</code></pre>
       <input
         spellcheck="false"
         autocomplete="off"
-        id="${INPUT_ID}"
+        id="${this.inputId}"
         type="text"
         style="width: 100%;"
       />
-      <button id="${RUN_ID}">Run</button>
+      <button id="${this.runId}">Run</button>
     </div>`;
   }
 
   firstUpdated() {
-    const input = document.getElementById(INPUT_ID) as HTMLInputElement;
+    const input = document.getElementById(this.inputId) as HTMLInputElement;
 
     const sendInput = () => {
       this.webRConsole.stdin(input.value);
@@ -70,7 +74,7 @@ class WebRComponent extends LightElement {
       if (e.code === "Enter") sendInput();
     });
 
-    const runButton = document.getElementById(RUN_ID) as HTMLButtonElement;
+    const runButton = document.getElementById(this.runId) as HTMLButtonElement;
     runButton.addEventListener("click", sendInput);
   }
 
@@ -85,7 +89,7 @@ class WebRComponent extends LightElement {
   }
 
   private appendToOutEl(line: string) {
-    const outEl = document.getElementById(OUTPUT_ID) as HTMLElement;
+    const outEl = document.getElementById(this.outputId) as HTMLElement;
     outEl.append(line);
     this.captureOutput(line);
   }
