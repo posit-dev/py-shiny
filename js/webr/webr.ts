@@ -180,5 +180,11 @@ customElements.define(WEBR_COMPONENT_TAG, WebRComponent);
 window.Shiny.addCustomMessageHandler("eval_r", async function (message) {
   const el = document.getElementById(message.id) as WebRComponent;
   const result = await el.evalInConsole(message.code);
-  window.Shiny.setInputValue!(message.id + "_result", result);
+  window.Shiny.shinyapp!.makeRequest(
+    message.handler_id,
+    [{ result }],
+    (msg) => {},
+    (msg) => {},
+    undefined
+  );
 });
