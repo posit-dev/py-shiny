@@ -202,6 +202,12 @@ def serialize_dtype(col: nw.Series) -> FrameDtype:
         type_ = "datetime"
     elif isinstance(dtype, nw.Duration):
         type_ = "duration"
+    elif hasattr(nw, "Time") and isinstance(
+        dtype,
+        # https://github.com/narwhals-dev/narwhals/pull/2113
+        nw.Time,  # pyright: ignore[reportUnknownMemberType,reportAttributeAccessIssue]
+    ):
+        type_ = "time"
     elif isinstance(dtype, nw.Object):
         type_ = "object"
         if series_contains_htmltoolslike(col):
