@@ -151,12 +151,14 @@ def _(value: str, name: ResolvedId, session: Session) -> str:
 
 
 # TODO: implement when we have bookmarking
+# TODO: Barret: Input handler for passwords
 @input_handlers.add("shiny.password")
 def _(value: str, name: ResolvedId, session: Session) -> str:
     return value
 
 
 # TODO: implement when we have bookmarking
+# TODO: Barret: Input handler for file inputs
 @input_handlers.add("shiny.file")
 def _(value: Any, name: ResolvedId, session: Session) -> Any:
     return value

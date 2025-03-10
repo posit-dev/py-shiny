@@ -31,15 +31,16 @@ from htmltools import (
     tags,
 )
 
+from ..bookmark._button import input_bookmark_button
+
 # The css module is for internal use, so we won't re-export it.
-from . import css  # noqa: F401  # pyright: ignore[reportUnusedImport]
-
 # Expose the fill module for extended usage: ex: ui.fill.as_fill_item(x).
-from . import fill
-
 # Export busy_indicators module
-from . import busy_indicators
-
+from . import (  # noqa: F401
+    busy_indicators,
+    css,  # pyright: ignore[reportUnusedImport]
+    fill,
+)
 from ._accordion import (
     AccordionPanel,
     accordion,
@@ -365,4 +366,6 @@ __all__ = (
     "fill",
     # utils
     "js_eval",
+    # bookmark
+    "input_bookmark_button",
 )

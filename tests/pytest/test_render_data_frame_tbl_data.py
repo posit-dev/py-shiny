@@ -1,4 +1,4 @@
-# TODO-barret: ts code to stringify objects?
+# TODO: Barret: ts code to stringify objects?
 
 from __future__ import annotations
 
