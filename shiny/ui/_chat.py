@@ -17,7 +17,7 @@ from typing import (
 )
 from weakref import WeakValueDictionary
 
-from htmltools import HTML, Tag, TagAttrValue, TagList, css
+from htmltools import HTML, Tag, TagAttrValue, TagChild, TagList, css
 
 from .. import _utils, reactive
 from .._deprecated import warn_deprecated
@@ -1244,7 +1244,7 @@ class ChatExpress(Chat):
 def chat_ui(
     id: str,
     *,
-    messages: Optional[Sequence[str | ChatMessage]] = None,
+    messages: Optional[Sequence[TagChild | ChatMessage]] = None,
     placeholder: str = "Enter a message...",
     width: CssUnit = "min(680px, 100%)",
     height: CssUnit = "auto",
@@ -1300,23 +1300,33 @@ def chat_ui(
     message_tags: list[Tag] = []
     if messages is None:
         messages = []
-    for msg in messages:
-        if isinstance(msg, str):
-            msg = {"content": msg, "role": "assistant"}
-        elif isinstance(msg, dict):
-            if "content" not in msg:
-                raise ValueError("Each message must have a 'content' key.")
-            if "role" not in msg:
-                raise ValueError("Each message must have a 'role' key.")
+    for x in messages:
+        role = "assistant"
+        content: TagChild = None
+        if not isinstance(x, dict):
+            content = x
         else:
-            raise ValueError("Each message must be a string or a dictionary.")
+            if "content" not in x:
+                raise ValueError("Each message dictionary must have a 'content' key.")
 
-        if msg["role"] == "user":
+            content = x["content"]
+            if "role" in x:
+                role = x["role"]
+
+        ui = TagList(content).render()
+
+        if role == "user":
             tag_name = "shiny-user-message"
         else:
             tag_name = "shiny-chat-message"
 
-        message_tags.append(Tag(tag_name, content=msg["content"]))
+        message_tags.append(
+            Tag(
+                tag_name,
+                ui["dependencies"],
+                content=ui["html"],
+            )
+        )
 
     html_deps = None
     if isinstance(icon_assistant, (Tag, TagList)):
