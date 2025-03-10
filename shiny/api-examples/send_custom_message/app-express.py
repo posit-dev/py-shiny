@@ -8,10 +8,8 @@ ui.input_action_button("submit", "Submit the message")
 ui.tags.div(id="messages")
 ui.tags.script(
     """
-    $(function() {
-        Shiny.addCustomMessageHandler("append_msg", function(message) {
-            $("<p>").text(message.msg).appendTo("#messages");
-        });
+    Shiny.addCustomMessageHandler("append_msg", function(message) {
+        $("<p>").text(message.msg).appendTo("#messages");
     });
     """
 )
