@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 from typing import AsyncIterable, Iterable, Literal, Union
 
-from htmltools import css
+from htmltools import TagChild, css
 
 from .. import _utils, reactive
 from .._deprecated import warn_deprecated
@@ -9,6 +9,7 @@ from .._docstring import add_example
 from .._namespaces import resolve_id
 from .._typing_extensions import TypedDict
 from ..session import require_active_session, session_context
+from ..session._utils import process_ui
 from ..types import NotifyException
 from ..ui.css import CssUnit, as_css_unit
 from . import Tag
@@ -32,6 +33,7 @@ class ContentMessage(TypedDict):
     id: str
     content: str
     operation: Literal["append", "replace"]
+    html_deps: list[dict[str, str]]
 
 
 class isStreamingMessage(TypedDict):
@@ -99,7 +101,7 @@ class MarkdownStream:
 
     async def stream(
         self,
-        content: Union[Iterable[str], AsyncIterable[str]],
+        content: Union[Iterable[TagChild], AsyncIterable[TagChild]],
         clear: bool = True,
     ):
         """
@@ -134,13 +136,14 @@ class MarkdownStream:
         @reactive.extended_task
         async def _task():
             if clear:
-                await self._send_content_message("", "replace")
+                await self._send_content_message("", "replace", [])
 
             result = ""
             async with self._streaming_dot():
                 async for c in content:
-                    result += c
-                    await self._send_content_message(c, "append")
+                    html, deps = process_ui(c)
+                    result += html
+                    await self._send_content_message(html, "append", deps)
 
             return result
 
@@ -216,11 +219,13 @@ class MarkdownStream:
         self,
         content: str,
         operation: Literal["append", "replace"],
+        html_deps: list[dict[str, str]],
     ):
         msg: ContentMessage = {
             "id": self.id,
             "content": content,
             "operation": operation,
+            "html_deps": html_deps,
         }
         await self._send_custom_message(msg)
 

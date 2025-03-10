@@ -133,12 +133,21 @@ class Chat:
         A unique identifier for the chat session. In Shiny Core, make sure this id
         matches a corresponding :func:`~shiny.ui.chat_ui` call in the UI.
     messages
-        A sequence of messages to display in the chat. Each message can be either a
-        string or a dictionary with `content` and `role` keys. The `content` key
-        should contain a string, and the `role` key can be "assistant" or "user".
-        Content strings are interpreted as markdown and rendered to HTML on the client.
-        Content may also include specially formatted **input suggestion** links (see
-        `.append_message_stream()` for more information).
+        A sequence of messages to display in the chat. A given message can be one of the
+        following:
+
+        * A string, which is interpreted as markdown and rendered to HTML on the client.
+            * To prevent interpreting as markdown, mark the string as
+              :class:`~shiny.ui.HTML`.
+        * A UI element (specifically, a :class:`~shiny.ui.TagChild`).
+            * This includes :class:`~shiny.ui.TagList`, which take UI elements
+              (including strings) as children. In this case, strings are still
+              interpreted as markdown as long as they're not inside HTML.
+        * A dictionary with `content` and `role` keys. The `content` key can contain a
+          content as described above, and the `role` key can be "assistant" or "user".
+
+        **NOTE:** content may include specially formatted **input suggestion** links
+        (see `.append_message()` for more information).
     on_error
         How to handle errors that occur in response to user input. When `"unhandled"`,
         the app will stop running when an error occurs. Otherwise, a notification
@@ -509,12 +518,22 @@ class Chat:
         Parameters
         ----------
         message
-            The message to append. A variety of message formats are supported including
-            a string, a dictionary with `content` and `role` keys, or a relevant chat
-            completion object from platforms like OpenAI, Anthropic, Ollama, and others.
-            Content strings are interpreted as markdown and rendered to HTML on the
-            client. Content may also include specially formatted **input suggestion**
-            links (see note below).
+            A given message can be one of the following:
+
+            * A string, which is interpreted as markdown and rendered to HTML on the
+              client.
+                * To prevent interpreting as markdown, mark the string as
+                  :class:`~shiny.ui.HTML`.
+            * A UI element (specifically, a :class:`~shiny.ui.TagChild`).
+                * This includes :class:`~shiny.ui.TagList`, which take UI elements
+                  (including strings) as children. In this case, strings are still
+                  interpreted as markdown as long as they're not inside HTML.
+            * A dictionary with `content` and `role` keys. The `content` key can contain
+              content as described above, and the `role` key can be "assistant" or
+              "user".
+
+            **NOTE:** content may include specially formatted **input suggestion** links
+            (see note below).
         icon
             An optional icon to display next to the message, currently only used for
             assistant messages. The icon can be any HTML element (e.g., an
@@ -604,12 +623,23 @@ class Chat:
         Parameters
         ----------
         message
-            An (async) iterable of message chunks to append. A variety of message chunk
-            formats are supported, including a string, a dictionary with `content` and
-            `role` keys, or a relevant chat completion object from platforms like
-            OpenAI, Anthropic, Ollama, and others. Content strings are interpreted as
-            markdown and rendered to HTML on the client. Content may also include
-            specially formatted **input suggestion** links (see note below).
+            An (async) iterable of message chunks. Each chunk can be one of the
+            following:
+
+            * A string, which is interpreted as markdown and rendered to HTML on the
+              client.
+                * To prevent interpreting as markdown, mark the string as
+                  :class:`~shiny.ui.HTML`.
+            * A UI element (specifically, a :class:`~shiny.ui.TagChild`).
+                * This includes :class:`~shiny.ui.TagList`, which take UI elements
+                  (including strings) as children. In this case, strings are still
+                  interpreted as markdown as long as they're not inside HTML.
+            * A dictionary with `content` and `role` keys. The `content` key can contain
+              content as described above, and the `role` key can be "assistant" or
+              "user".
+
+            **NOTE:** content may include specially formatted **input suggestion** links
+            (see note below).
         icon
             An optional icon to display next to the message, currently only used for
             assistant messages. The icon can be any HTML element (e.g., an
@@ -769,6 +799,10 @@ class Chat:
 
         if icon is not None:
             msg["icon"] = str(icon)
+
+        deps = message.get("html_deps", [])
+        if deps:
+            msg["html_deps"] = deps
 
         # print(msg)
 
@@ -1230,12 +1264,21 @@ def chat_ui(
     id
         A unique identifier for the chat UI.
     messages
-        A sequence of messages to display in the chat. Each message can be either a
-        string or a dictionary with `content` and `role` keys. The `content` key
-        should contain a string, and the `role` key can be "assistant" or "user".
-        Content strings are interpreted as markdown and rendered to HTML on the client.
-        Content may also include specially formatted **input suggestion** links (see
-        :method:`~shiny.ui.Chat.append_message_stream` for more information).
+        A sequence of messages to display in the chat. A given message can be one of the
+        following:
+
+        * A string, which is interpreted as markdown and rendered to HTML on the client.
+            * To prevent interpreting as markdown, mark the string as
+              :class:`~shiny.ui.HTML`.
+        * A UI element (specifically, a :class:`~shiny.ui.TagChild`).
+            * This includes :class:`~shiny.ui.TagList`, which take UI elements
+              (including strings) as children. In this case, strings are still
+              interpreted as markdown as long as they're not inside HTML.
+        * A dictionary with `content` and `role` keys. The `content` key can contain a
+          content as described above, and the `role` key can be "assistant" or "user".
+
+        **NOTE:** content may include specially formatted **input suggestion** links
+        (see :method:`~shiny.ui.Chat.append_message` for more info).
     placeholder
         Placeholder text for the chat input.
     width
@@ -1316,13 +1359,19 @@ def as_transformed_message(message: ChatMessage) -> TransformedMessage:
         transform_key = "content_client"
         pre_transform_key = "content_server"
 
-    return TransformedMessage(
+    res = TransformedMessage(
         content_client=message["content"],
         content_server=message["content"],
         role=message["role"],
         transform_key=transform_key,
         pre_transform_key=pre_transform_key,
     )
+
+    deps = message.get("html_deps", [])
+    if deps:
+        res["html_deps"] = deps
+
+    return res
 
 
 CHAT_INSTANCES: WeakValueDictionary[str, Chat] = WeakValueDictionary()
