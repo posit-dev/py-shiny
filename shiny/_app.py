@@ -371,14 +371,6 @@ class App:
         else:
             restore_ctx = await RestoreContext.from_query_string(request.url.query)
 
-        print(
-            "Restored state",
-            {
-                "values": restore_ctx.as_state().values,
-                "input": restore_ctx.as_state().input,
-            },
-        )
-
         with restore_context(restore_ctx):
             if callable(self.ui):
                 ui = self._render_page(self.ui(request), self.lib_prefix)

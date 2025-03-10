@@ -662,11 +662,6 @@ class BookmarkExpressStub(Bookmark):
 
     def __init__(self, session_root: ExpressStubSession) -> None:
         super().__init__(session_root)
-        self._proxy_exclude_fns = []
-        self._on_bookmark_callbacks = AsyncCallbacks()
-        self._on_bookmarked_callbacks = AsyncCallbacks()
-        self._on_restore_callbacks = AsyncCallbacks()
-        self._on_restored_callbacks = AsyncCallbacks()
 
     def _create_effects(self) -> NoReturn:
         raise NotImplementedError(
@@ -683,50 +678,42 @@ class BookmarkExpressStub(Bookmark):
         callback: (
             Callable[[BookmarkState], None] | Callable[[BookmarkState], Awaitable[None]]
         ),
-    ) -> NoReturn:
-        raise NotImplementedError(
-            "Please call `.on_bookmark()` only from a real session object"
-        )
+    ) -> CancelCallback:
+        # Provide a no-op function within ExpressStub
+        return lambda: None
 
     def on_bookmarked(
         self,
         callback: Callable[[str], None] | Callable[[str], Awaitable[None]],
-    ) -> NoReturn:
-        raise NotImplementedError(
-            "Please call `.on_bookmarked()` only from a real session object"
-        )
+    ) -> CancelCallback:
+        # Provide a no-op function within ExpressStub
+        return lambda: None
 
     async def update_query_string(
         self, query_string: str, mode: Literal["replace", "push"] = "replace"
-    ) -> NoReturn:
-        raise NotImplementedError(
-            "Please call `.update_query_string()` only from a real session object"
-        )
+    ) -> None:
+        return None
 
-    async def do_bookmark(self) -> NoReturn:
-        raise NotImplementedError(
-            "Please call `.do_bookmark()` only from a real session object"
-        )
+    async def do_bookmark(self) -> None:
+        return None
 
     def on_restore(
         self,
         callback: (
             Callable[[RestoreState], None] | Callable[[RestoreState], Awaitable[None]]
         ),
-    ) -> NoReturn:
-        raise NotImplementedError(
-            "Please call `.on_restore()` only from a real session object"
-        )
+    ) -> CancelCallback:
+        # Provide a no-op function within ExpressStub
+        return lambda: None
 
     def on_restored(
         self,
         callback: (
             Callable[[RestoreState], None] | Callable[[RestoreState], Awaitable[None]]
         ),
-    ) -> NoReturn:
-        raise NotImplementedError(
-            "Please call `.on_restored()` only from a real session object"
-        )
+    ) -> CancelCallback:
+        # Provide a no-op function within ExpressStub
+        return lambda: None
 
 
 # #' Generate a modal dialog that displays a URL
