@@ -64,10 +64,9 @@ from ..types import (
 from ._utils import RenderedDeps, read_thunk_opt, session_context
 
 if TYPE_CHECKING:
-    from shiny.bookmark._serializers import Unserializable
-
     from .._app import App
     from ..bookmark import Bookmark
+    from ..bookmark._serializers import Unserializable
 
 
 class ConnectionState(enum.Enum):
@@ -1457,6 +1456,7 @@ class Inputs:
                 # TODO: Barret - Q: Should this be ignoring any Input key that starts with a "."?
                 if key.startswith(".clientdata_"):
                     continue
+                # Ignore all bookmark inputs
                 if key == BOOKMARK_ID or key.endswith(
                     f"{ResolvedId._sep}{BOOKMARK_ID}"
                 ):

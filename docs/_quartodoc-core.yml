@@ -104,7 +104,6 @@ quartodoc:
         - ui.input_bookmark_button
         - bookmark.restore_input
         - bookmark.Bookmark
-        - session.Session.bookmark.exclude
         - bookmark.BookmarkState
         - bookmark.RestoreState
         - kind: page
