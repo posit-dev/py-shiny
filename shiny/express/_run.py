@@ -295,6 +295,7 @@ class AppOpts(TypedDict):
 
 @no_example()
 def app_opts(
+    *,
     static_assets: str | Path | Mapping[str, str | Path] | MISSING_TYPE = MISSING,
     debug: bool | MISSING_TYPE = MISSING,
 ):
