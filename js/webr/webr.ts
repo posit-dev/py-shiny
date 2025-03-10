@@ -11,7 +11,7 @@ type CaptureRResult = {
     type: string;
     data: any;
   }[];
-  images: ImageBitmap[];
+  images: string[];
 };
 
 const WEBR_COMPONENT_TAG = "shiny-webr-component";
@@ -146,14 +146,21 @@ class WebRComponent extends LightElement {
     let resultJson: WebRDataJs = {
       type: "null",
     };
+    let imagesJson: string[] = [];
     try {
       resultJson = await res.result.toJs();
+      imagesJson = await Promise.all(
+        res.images.map(async (img) => {
+          return await imageBitmapToPngBase64(img);
+        })
+      );
     } catch (e) {
       console.warn(e);
     }
     const newResult = {
       ...res,
       result: resultJson,
+      images: imagesJson,
     };
     await shelter.purge();
     this.prompt();
@@ -182,9 +189,41 @@ window.Shiny.addCustomMessageHandler("eval_r", async function (message) {
   const result = await el.evalInConsole(message.code);
   window.Shiny.shinyapp!.makeRequest(
     message.handler_id,
-    [{ result }],
+    [result],
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
     (msg) => {},
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
     (msg) => {},
     undefined
   );
 });
+
+/**
+ * Converts an ImageBitmap to a base64 encoded PNG string
+ * @param bitmap - The ImageBitmap to convert
+ * @returns A Promise that resolves to a base64 encoded PNG string
+ */
+async function imageBitmapToPngBase64(bitmap: ImageBitmap): Promise<string> {
+  // Create a canvas element with the same dimensions as the bitmap
+  const canvas = document.createElement("canvas");
+  canvas.width = bitmap.width;
+  canvas.height = bitmap.height;
+
+  // Get the 2D rendering context
+  const ctx = canvas.getContext("2d");
+
+  if (!ctx) {
+    throw new Error("Could not get canvas context");
+  }
+
+  // Draw the bitmap onto the canvas
+  ctx.drawImage(bitmap, 0, 0);
+
+  // Convert the canvas to a PNG data URL
+  const dataURL = canvas.toDataURL("image/png");
+
+  // Extract the base64 data (remove the data URL prefix)
+  const base64Data = dataURL.split(",")[1];
+
+  return base64Data;
+}
