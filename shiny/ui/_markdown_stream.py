@@ -9,7 +9,7 @@ from .._docstring import add_example
 from .._namespaces import resolve_id
 from .._typing_extensions import TypedDict
 from ..session import require_active_session, session_context
-from ..session._utils import process_ui
+from ..session._session import RenderedDeps
 from ..types import NotifyException
 from ..ui.css import CssUnit, as_css_unit
 from . import Tag
@@ -140,10 +140,16 @@ class MarkdownStream:
 
             result = ""
             async with self._streaming_dot():
-                async for c in content:
-                    html, deps = process_ui(c)
-                    result += html
-                    await self._send_content_message(html, "append", deps)
+                async for x in content:
+                    # x _can_ be a TagChild, but it's most likely just a string (of
+                    # markdown), so optimize for that case
+                    if isinstance(x, str):
+                        ui: RenderedDeps = {"html": x, "deps": []}
+                    else:
+                        ui = self._session._process_ui(x)
+
+                    result += ui["html"]
+                    await self._send_content_message(ui["html"], "append", ui["deps"])
 
             return result
 
