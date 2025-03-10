@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changes
 
+* Express mode's `app_opts()` requires all arguments to be keyword-only. If you are using positional arguments, you will need to update your code. (#1895)
+
 * The `.get_latest_stream_result()` method on `ui.MarkdownStream()` was deprecated in favor of the new `.latest_stream` property. Call `.result()` on the property to get the latest result, `.status` to check the status, and `.cancel()` to cancel the stream.
 
 ### Bug fixes
