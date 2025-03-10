@@ -44,7 +44,7 @@ $bslib-sidebar-padding: $spacer * 1.5 !default;
   // Ensure the page-level main area has a minimum height and width to prevent
   // overly squished content in small screens, like IDE preview panels.
   .bslib-sidebar-layout {
-    .bslib-page-main {
+    .bslib-page-main.html-fill-container {
       min-height: var(--bslib-page-main-min-height, #{$bslib-page-main-min-height});
     }
 
@@ -52,7 +52,7 @@ $bslib-sidebar-padding: $spacer * 1.5 !default;
     // not collapsed or in transition) to prevent overlap with toggle button.
     &:not(.sidebar-collapsed),
     &.transitioning {
-      .bslib-page-main {
+      .bslib-page-main.html-fill-container {
         min-width: var(--bslib-page-main-min-width, #{$bslib-page-main-min-width});
       }
     }
