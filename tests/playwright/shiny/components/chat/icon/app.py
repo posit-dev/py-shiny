@@ -7,7 +7,7 @@ from shiny.express import app_opts, input, ui
 
 ui.page_opts(title="Chat Icons")
 
-app_opts({"/img": Path(__file__).parent / "img"})
+app_opts(static_assets={"/img": Path(__file__).parent / "img"})
 
 with ui.layout_columns():
     # Default Bot ---------------------------------------------------------------------
