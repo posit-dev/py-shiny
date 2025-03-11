@@ -1,0 +1,46 @@
+name: Conventional Commits
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
+jobs:
+  default:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: amannn/action-semantic-pull-request@v5
+        id: lint
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            build
+            chore
+            ci
+            docs
+            feat
+            fix
+            perf
+            style
+            refactor
+            test
+      - uses: marocchino/sticky-pull-request-comment@v2
+        if: always() && (steps.lint.outputs.error_message != null)
+        with:
+          header: lint-error
+          message: |
+            Hey there! 👋
+
+            We noticed that the title of your pull request doesn't follow the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) specification. To ensure consistency, we kindly ask you to adjust the title accordingly.
+
+            Here are the details:
+
+            ```
+            ${{ steps.lint.outputs.error_message }}
+            ```
+      - if: ${{ steps.lint.outputs.error_message == null }}
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: lint-error
+          delete: true
