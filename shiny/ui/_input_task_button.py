@@ -10,8 +10,8 @@ from htmltools import HTML, Tag, TagAttrValue, TagChild, css, tags
 from shiny.types import MISSING, MISSING_TYPE
 
 from .._docstring import add_example
-from .._namespaces import resolve_id
 from .._typing_extensions import ParamSpec
+from ..module import resolve_id
 from ..reactive._extended_task import ExtendedTask
 from ..reactive._reactives import effect
 from ._html_deps_py_shiny import spin_dependency
