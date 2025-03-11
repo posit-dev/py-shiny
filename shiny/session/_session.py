@@ -639,14 +639,14 @@ class AppSession(Session):
 
                             # BOOKMARKS!
                             if ".clientdata_url_search" in message_obj["data"]:
-                                self.bookmark._restore_context_value = (
+                                self.bookmark._set_restore_context(
                                     await RestoreContext.from_query_string(
                                         message_obj["data"][".clientdata_url_search"],
                                         app=self.app,
                                     )
                                 )
                             else:
-                                self.bookmark._restore_context_value = RestoreContext()
+                                self.bookmark._set_restore_context(RestoreContext())
 
                             # When a reactive flush occurs, flush the session's outputs,
                             # errors, etc. to the client. Note that this is
@@ -1213,7 +1213,6 @@ class SessionProxy(Session):
         self._outbound_message_queues = parent._outbound_message_queues
         self._downloads = parent._downloads
 
-        self._root = parent.root_scope()
         self.bookmark = BookmarkProxy(self)
 
     def _is_hidden(self, name: str) -> bool:
@@ -1223,7 +1222,7 @@ class SessionProxy(Session):
         self,
         fn: Callable[[], None] | Callable[[], Awaitable[None]],
     ) -> Callable[[], None]:
-        return self._root.on_ended(fn)
+        return self._parent.on_ended(fn)
 
     def is_stub_session(self) -> bool:
         return self._parent.is_stub_session()
@@ -1349,6 +1348,19 @@ class Inputs:
     it can be accessed via `input["x"]()` or ``input.x()``.
     """
 
+    _serializers: dict[
+        str,
+        Callable[
+            [Any, Path | None],
+            Awaitable[Any | Unserializable],
+        ],
+    ]
+    """
+    A dictionary of serializers for input values.
+
+    Set this value via `Inputs.set_serializer(id, fn)`.
+    """
+
     def __init__(
         self, values: dict[str, Value[Any]], ns: Callable[[str], str] = Root
     ) -> None:
@@ -1400,14 +1412,6 @@ class Inputs:
 
     def __dir__(self):
         return list(self._map.keys())
-
-    _serializers: dict[
-        str,
-        Callable[
-            [Any, Path | None],
-            Awaitable[Any | Unserializable],
-        ],
-    ]
 
     # This method can not be on the `Value` class as the _value_ may not exist when the
     # "creating" method is executed.

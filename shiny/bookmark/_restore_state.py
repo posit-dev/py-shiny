@@ -396,7 +396,7 @@ def restore_input(id: str, default: Any) -> Any:
     Parameters
     ----------
     id
-        Name of the input value to restore.
+        Name of the input value to restore. (This calling this within a module, it should be the unresolved ID value (e.g. `"id"`), not the resolved ID value (e.g. `"mymod-id"`).
     default
         A default value to use, if there's no value to restore.
     """

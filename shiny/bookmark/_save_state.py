@@ -12,11 +12,8 @@ from ._types import BookmarkSaveDirFn
 from ._utils import in_shiny_server, to_json_str
 
 if TYPE_CHECKING:
-    from shiny._app import App
-
     from .. import Inputs
-else:
-    Inputs = Any
+    from .._app import App
 
 
 class BookmarkState:
