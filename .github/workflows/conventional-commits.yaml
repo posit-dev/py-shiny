@@ -32,12 +32,11 @@ jobs:
           message: |
             Hey there! 👋
 
-            We noticed that the title of your pull request doesn't follow the 
-            [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) 
-            specification. To ensure consistency, we kindly ask you to adjust the 
-            title accordingly.
+            We noticed that the title of your pull request doesn't follow the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) specification. To ensure consistency, we kindly ask you to adjust the title accordingly.
 
-            Here are the details:
+            Details are below the break:
+            
+            ----------------------------
 
             ${{ steps.lint.outputs.error_message }}
 
