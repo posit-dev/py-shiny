@@ -462,7 +462,7 @@ class BookmarkApp(Bookmark):
             )
 
             if self.store == "server":
-                query_string = await root_state._save_state()
+                query_string = await root_state._save_state(app=self._session_root.app)
             elif self.store == "url":
                 query_string = await root_state._encode_state()
             # # Can we have browser storage?

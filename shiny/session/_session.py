@@ -641,7 +641,8 @@ class AppSession(Session):
                             if ".clientdata_url_search" in message_obj["data"]:
                                 self.bookmark._restore_context_value = (
                                     await RestoreContext.from_query_string(
-                                        message_obj["data"][".clientdata_url_search"]
+                                        message_obj["data"][".clientdata_url_search"],
+                                        app=self.app,
                                     )
                                 )
                             else:

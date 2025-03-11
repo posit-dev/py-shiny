@@ -31,8 +31,15 @@ from ._connection import Connection, StarletteConnection
 from ._error import ErrorMiddleware
 from ._shinyenv import is_pyodide
 from ._utils import guess_mime_type, is_async_callable, sort_keys_length
+from .bookmark import _global as bookmark_global_state
+from .bookmark._global import as_bookmark_dir_fn
 from .bookmark._restore_state import RestoreContext, restore_context
-from .bookmark._types import BookmarkStore
+from .bookmark._types import (
+    BookmarkDirFn,
+    BookmarkRestoreDirFn,
+    BookmarkSaveDirFn,
+    BookmarkStore,
+)
 from .html_dependencies import jquery_deps, require_deps, shiny_deps
 from .http_staticfiles import FileResponse, StaticFiles
 from .session._session import AppSession, Inputs, Outputs, Session, session_context
@@ -109,11 +116,9 @@ class App:
     ui: RenderedHTML | Callable[[Request], Tag | TagList]
     server: Callable[[Inputs, Outputs, Session], None]
 
+    _bookmark_save_dir_fn: BookmarkSaveDirFn | None
+    _bookmark_restore_dir_fn: BookmarkRestoreDirFn | None
     _bookmark_store: BookmarkStore
-
-    @property
-    def bookmark_store(self) -> BookmarkStore:
-        return self._bookmark_store
 
     def __init__(
         self,
@@ -144,7 +149,7 @@ class App:
                 "`server` must have 1 (Inputs) or 3 parameters (Inputs, Outputs, Session)"
             )
 
-        self._bookmark_store = bookmark_store
+        self._init_bookmarking(bookmark_store=bookmark_store)
 
         self._debug: bool = debug
 
@@ -369,7 +374,9 @@ class App:
         if self.bookmark_store == "disable":
             restore_ctx = RestoreContext()
         else:
-            restore_ctx = await RestoreContext.from_query_string(request.url.query)
+            restore_ctx = await RestoreContext.from_query_string(
+                request.url.query, app=self
+            )
 
         with restore_context(restore_ctx):
             if callable(self.ui):
@@ -491,6 +498,25 @@ class App:
         self._ensure_web_dependencies(rendered["dependencies"])
 
         return rendered
+
+    # ==========================================================================
+    # Bookmarking
+    # ==========================================================================
+
+    def _init_bookmarking(self, *, bookmark_store: BookmarkStore) -> None:
+        self._bookmark_save_dir_fn = bookmark_global_state.bookmark_save_dir
+        self._bookmark_restore_dir_fn = bookmark_global_state.bookmark_restore_dir
+        self._bookmark_store = bookmark_store
+
+    @property
+    def bookmark_store(self) -> BookmarkStore:
+        return self._bookmark_store
+
+    def set_bookmark_save_dir_fn(self, bookmark_save_dir_fn: BookmarkDirFn):
+        self._bookmark_save_dir_fn = as_bookmark_dir_fn(bookmark_save_dir_fn)
+
+    def set_bookmark_restore_dir_fn(self, bookmark_restore_dir_fn: BookmarkDirFn):
+        self._bookmark_restore_dir_fn = as_bookmark_dir_fn(bookmark_restore_dir_fn)
 
 
 def is_uifunc(x: Path | Tag | TagList | Callable[[Request], Tag | TagList]) -> bool:

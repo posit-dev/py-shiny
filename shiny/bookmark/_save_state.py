@@ -7,13 +7,13 @@ from urllib.parse import urlencode as urllib_urlencode
 
 from .._utils import private_random_id
 from ..reactive import isolate
-from ..types import MISSING_TYPE
-from . import _external as bookmark_external
 from ._bookmark_state import local_save_dir
-from ._types import GetBookmarkSaveDir
 from ._utils import is_hosted, to_json_str
+from ._types import BookmarkSaveDirFn
 
 if TYPE_CHECKING:
+    from shiny._app import App
+
     from .. import Inputs
 else:
     Inputs = Any
@@ -56,7 +56,7 @@ class BookmarkState:
             with isolate():
                 await self.on_save(self)
 
-    async def _save_state(self) -> str:
+    async def _save_state(self, *, app: App) -> str:
         """
         Save a state to disk (pickle).
 
@@ -72,9 +72,7 @@ class BookmarkState:
         # to `self.dir`.
 
         # This will be defined by the hosting environment if it supports bookmarking.
-        save_bookmark_fn: GetBookmarkSaveDir | None = None
-        if not isinstance(bookmark_external._bookmark_save_dir, MISSING_TYPE):
-            save_bookmark_fn = bookmark_external._bookmark_save_dir
+        save_bookmark_fn: BookmarkSaveDirFn | None = app._bookmark_save_dir_fn
 
         if save_bookmark_fn is None:
             if is_hosted():

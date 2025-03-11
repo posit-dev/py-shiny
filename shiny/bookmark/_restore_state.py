@@ -5,15 +5,15 @@ import warnings
 from contextlib import contextmanager
 from contextvars import ContextVar, Token
 from pathlib import Path
-from typing import Any, Literal, Optional
+from typing import TYPE_CHECKING, Any, Literal, Optional
 from urllib.parse import parse_qs, parse_qsl
 
-from shiny.types import MISSING_TYPE
-
-from . import _external as bookmark_external
 from ._bookmark_state import local_restore_dir
-from ._types import GetBookmarkRestoreDir
 from ._utils import from_json_str, is_hosted
+from ._types import BookmarkRestoreDirFn
+
+if TYPE_CHECKING:
+    from .._app import App
 
 
 class RestoreState:
@@ -105,7 +105,7 @@ class RestoreContext:
         self.dir = None
 
     @staticmethod
-    async def from_query_string(query_string: str) -> "RestoreContext":
+    async def from_query_string(query_string: str, *, app: App) -> "RestoreContext":
         res_ctx = RestoreContext()
 
         if query_string.startswith("?"):
@@ -128,7 +128,7 @@ class RestoreContext:
                 # ignore other key/value pairs. If not, restore from key/value
                 # pairs in the query string.
                 res_ctx.active = True
-                await res_ctx._load_state_qs(query_string)
+                await res_ctx._load_state_qs(query_string, app=app)
 
             else:
                 # The query string contains the saved keys and values
@@ -178,7 +178,7 @@ class RestoreContext:
             dir=self.dir,
         )
 
-    async def _load_state_qs(self, query_string: str) -> None:
+    async def _load_state_qs(self, query_string: str, *, app: App) -> None:
         """Given a query string with a _state_id_, load saved state with that ID."""
         values = parse_qs(query_string)
         id = values.get("_state_id_", None)
@@ -188,9 +188,7 @@ class RestoreContext:
 
         id = id[0]
 
-        load_bookmark_fn: GetBookmarkRestoreDir | None = None
-        if not isinstance(bookmark_external._bookmark_restore_dir, MISSING_TYPE):
-            load_bookmark_fn = bookmark_external._bookmark_restore_dir
+        load_bookmark_fn: BookmarkRestoreDirFn | None = app._bookmark_restore_dir_fn
 
         if load_bookmark_fn is None:
             if is_hosted():
@@ -207,6 +205,7 @@ class RestoreContext:
         if not self.dir.exists():
             raise ValueError("Bookmarked state directory does not exist.")
 
+        # TODO: Barret; Store/restore as JSON
         with open(self.dir / "input.pickle", "rb") as f:
             input_values = pickle.load(f)
         self.input = RestoreInputSet(input_values)
