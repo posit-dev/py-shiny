@@ -6,7 +6,7 @@ on:
       - edited
       - synchronize
 jobs:
-  default:
+  conventional-commits:
     runs-on: ubuntu-latest
     steps:
       - uses: amannn/action-semantic-pull-request@v5
