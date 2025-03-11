@@ -5,7 +5,7 @@ from typing import Literal, Optional
 from htmltools import Tag, TagChild, css, div, tags
 
 from .._docstring import add_example
-from .._namespaces import resolve_id
+from ..module import resolve_id
 from ._html_deps_py_shiny import autoresize_dependency
 from ._utils import shiny_input_label
 

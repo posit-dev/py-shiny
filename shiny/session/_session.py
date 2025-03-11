@@ -41,11 +41,12 @@ from .._connection import Connection, ConnectionClosed
 from .._deprecated import warn_deprecated
 from .._docstring import add_example
 from .._fileupload import FileInfo, FileUploadManager
-from .._namespaces import Id, ResolvedId, Root
+from .._namespaces import Id, Root
 from .._typing_extensions import NotRequired, TypedDict
 from .._utils import wrap_async
 from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
+from ..module import ResolvedId
 from ..reactive import Effect_, Value, effect, flush, isolate
 from ..reactive._core import lock, on_flushed
 from ..render.renderer import Renderer, RendererT
