@@ -99,6 +99,8 @@ class MarkdownElement extends LightElement {
   protected willUpdate(changedProperties: PropertyValues): void {
     if (changedProperties.has("content")) {
       this.#isContentBeingAdded = true;
+
+      MarkdownElement.#doUnBind(this);
     }
     super.willUpdate(changedProperties);
   }
@@ -115,9 +117,9 @@ class MarkdownElement extends LightElement {
       // Render Shiny HTML dependencies and bind inputs/outputs
       if (this.streaming) {
         this.#appendStreamingDot();
-        MarkdownElement._throttledShinyBind(this);
+        MarkdownElement._throttledBind(this);
       } else {
-        MarkdownElement.#doShinyBind(this);
+        MarkdownElement.#doBind(this);
       }
 
       // Update scrollable element after content has been added
@@ -160,33 +162,47 @@ class MarkdownElement extends LightElement {
     this.querySelector(`svg.${SVG_DOT_CLASS}`)?.remove();
   }
 
-  static async #doShinyBind(el: HTMLElement): Promise<void> {
+  static async #doUnBind(el: HTMLElement): Promise<void> {
+    if (!window.Shiny) return;
+    if (!Shiny.unbindAll) return;
+
+    try {
+      Shiny.unbindAll(el);
+    } catch (err) {
+      showShinyClientMessage({
+        status: "error",
+        message: `Failed to unbind Shiny inputs/outputs: ${err}`,
+      });
+    }
+  }
+
+  static async #doBind(el: HTMLElement): Promise<void> {
     if (!window.Shiny) return;
     if (!Shiny.initializeInputs) return;
     if (!Shiny.bindAll) return;
 
     try {
       Shiny.initializeInputs(el);
-    } catch (initError) {
+    } catch (err) {
       showShinyClientMessage({
         status: "error",
-        message: `Failed to initialize Shiny inputs: ${initError}`,
+        message: `Failed to initialize Shiny inputs: ${err}`,
       });
     }
 
     try {
       await Shiny.bindAll(el);
-    } catch (bindError) {
+    } catch (err) {
       showShinyClientMessage({
         status: "error",
-        message: `Failed to bind Shiny inputs/outputs: ${bindError}`,
+        message: `Failed to bind Shiny inputs/outputs: ${err}`,
       });
     }
   }
 
   @throttle(200)
-  private static async _throttledShinyBind(el: HTMLElement): Promise<void> {
-    await this.#doShinyBind(el);
+  private static async _throttledBind(el: HTMLElement): Promise<void> {
+    await this.#doBind(el);
   }
 
   #highlightAndCodeCopy(): void {
