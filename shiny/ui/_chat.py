@@ -956,7 +956,7 @@ class Chat:
         if content is None:
             return None
 
-        res[key] = content  # type: ignore
+        setattr(res, key, content)
 
         return res
 
