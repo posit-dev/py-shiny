@@ -295,8 +295,8 @@ def run_app(
     if port == 0:
         port = _utils.random_port(host=host)
 
-    os.environ["SHINY_HOST"] = host
-    os.environ["SHINY_PORT"] = str(port)
+    os.environ["SHINY_BROWSER_HOST"] = host
+    os.environ["SHINY_BROWSER_PORT"] = str(port)
     if dev_mode:
         os.environ["SHINY_DEV_MODE"] = "1"
 
