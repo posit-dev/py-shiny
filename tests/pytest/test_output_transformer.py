@@ -12,8 +12,9 @@ from typing import Any, cast, overload
 import pytest
 
 from shiny._deprecated import ShinyDeprecationWarning
-from shiny._namespaces import ResolvedId, Root
+from shiny._namespaces import Root
 from shiny._utils import is_async_callable
+from shiny.module import ResolvedId
 from shiny.render.transformer import (
     TransformerMetadata,
     ValueFn,

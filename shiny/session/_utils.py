@@ -16,8 +16,8 @@ if TYPE_CHECKING:
     from ._session import Session
 
 from .._docstring import no_example
-from .._namespaces import namespace_context
 from .._typing_extensions import TypedDict
+from ..module import namespace_context
 
 
 class RenderedDeps(TypedDict):

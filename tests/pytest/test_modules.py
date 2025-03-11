@@ -10,7 +10,7 @@ from htmltools import HTML, Tag, TagList
 
 from shiny import App, Inputs, Outputs, Session, module, reactive, ui
 from shiny._connection import MockConnection
-from shiny._namespaces import resolve_id
+from shiny.module import resolve_id
 from shiny.session import get_current_session
 from shiny.session._session import AppSession, SessionProxy
 

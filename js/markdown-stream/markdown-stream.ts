@@ -335,8 +335,9 @@ async function handleMessage(
   }
 }
 
-$(function () {
-  Shiny.addCustomMessageHandler("shinyMarkdownStreamMessage", handleMessage);
-});
+window.Shiny.addCustomMessageHandler(
+  "shinyMarkdownStreamMessage",
+  handleMessage
+);
 
 export { MarkdownElement, contentToHTML };
