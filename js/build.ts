@@ -38,7 +38,7 @@ function mergeMetadatas(metadatas: Array<Metafile>): Metafile {
         // could have different values if tree-shaking is enabled -- this will detect
         // those cases and warn the user, and if it happens we can figure out how to
         // handle it.
-        console.warn(
+        console.error(
           `Different values found for key in metadata: ${key}. Overwriting.`
         );
       }
@@ -46,7 +46,7 @@ function mergeMetadatas(metadatas: Array<Metafile>): Metafile {
     });
     Object.entries(metafile.outputs).forEach(([key, value]) => {
       if (mergedMetadata.outputs[key]) {
-        console.warn(`Duplicate key found in metadata: ${key}. Overwriting.`);
+        console.error(`Duplicate key found in metadata: ${key}. Overwriting.`);
       }
       mergedMetadata.outputs[key] = value;
     });
