@@ -3,7 +3,7 @@ from typing import Optional
 from htmltools import HTML, Tag, TagAttrValue, TagChild
 
 from .._docstring import add_example
-from .._namespaces import resolve_id
+from ..module import resolve_id
 from ..types import MISSING, MISSING_TYPE
 from ..ui._input_action_button import input_action_button
 

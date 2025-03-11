@@ -60,11 +60,11 @@ from ._types import BookmarkStore
 
 
 if TYPE_CHECKING:
-    from .._namespaces import ResolvedId
     from ..express._stub_session import ExpressStubSession
+    from ..module import ResolvedId
     from ..session import Session
     from ..session._session import SessionProxy
-    from ._restore_state import RestoreContext
+    from . import RestoreContext
 else:
     from typing import Any
 
