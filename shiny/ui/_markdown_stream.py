@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 from typing import AsyncIterable, Iterable, Literal, Union
 
-from htmltools import TagChild, css
+from htmltools import TagChild, TagList, css
 
 from .. import _utils, reactive
 from .._deprecated import warn_deprecated
@@ -263,7 +263,7 @@ class ExpressMarkdownStream(MarkdownStream):
     def ui(
         self,
         *,
-        content: str = "",
+        content: TagChild = "",
         content_type: StreamingContentType = "markdown",
         auto_scroll: bool = True,
         width: CssUnit = "100%",
@@ -275,7 +275,9 @@ class ExpressMarkdownStream(MarkdownStream):
         Parameters
         ----------
         content
-            Content to display when the UI element is first rendered.
+            A string of content to display before any streaming occurs. When
+            `content_type` isn't `"text"`, it may also be UI element(s) such as input
+            and output bindings.
         content_type
             The content type. Default is `"markdown"` (specifically, CommonMark).
             Other supported options are:
@@ -309,7 +311,7 @@ class ExpressMarkdownStream(MarkdownStream):
 def output_markdown_stream(
     id: str,
     *,
-    content: str = "",
+    content: TagChild = "",
     content_type: StreamingContentType = "markdown",
     auto_scroll: bool = True,
     width: CssUnit = "100%",
@@ -327,7 +329,8 @@ def output_markdown_stream(
         A unique identifier for the UI element. This id should match the id of the
         :class:`~shiny.ui.MarkdownStream` instance.
     content
-        Some content to display before any streaming occurs.
+        A string of content to display before any streaming occurs. When `content_type`
+        isn't `"text"`, it may also be UI element(s) such as input and output bindings.
     content_type
         The content type. Default is "markdown" (specifically, CommonMark).
         Other supported options are:
@@ -342,9 +345,12 @@ def output_markdown_stream(
     height
         The height of the UI element.
     """
+    ui = TagList(content).render()
+
     return Tag(
         "shiny-markdown-stream",
         markdown_stream_dependency(),
+        ui["dependencies"],
         {
             "style": css(
                 width=as_css_unit(width),
@@ -354,5 +360,5 @@ def output_markdown_stream(
             "auto-scroll": "" if auto_scroll else None,
         },
         id=resolve_id(id),
-        content=content,
+        content=ui["html"],
     )
