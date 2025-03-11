@@ -40,7 +40,7 @@ from .._connection import Connection, ConnectionClosed
 from .._deprecated import warn_deprecated
 from .._docstring import add_example
 from .._fileupload import FileInfo, FileUploadManager
-from .._namespaces import Id, ResolvedId, Root
+from .._namespaces import Id, Root
 from .._typing_extensions import NotRequired, TypedDict
 from .._utils import wrap_async
 from ..bookmark import BookmarkApp, BookmarkProxy
@@ -48,6 +48,7 @@ from ..bookmark._button import BOOKMARK_ID
 from ..bookmark._restore_state import RestoreContext
 from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
+from ..module import ResolvedId
 from ..reactive import Effect_, Value, effect
 from ..reactive import flush as reactive_flush
 from ..reactive import isolate

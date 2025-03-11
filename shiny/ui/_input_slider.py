@@ -14,8 +14,8 @@ from typing import Iterable, Optional, TypeVar, Union, cast
 from htmltools import HTML, Tag, TagAttrValue, TagChild, css, div, tags
 
 from .._docstring import add_example
-from .._namespaces import resolve_id
 from .._typing_extensions import NotRequired, TypedDict
+from ..module import resolve_id
 from ._html_deps_external import ionrangeslider_deps
 from ._utils import shiny_input_label
 

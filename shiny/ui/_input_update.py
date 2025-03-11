@@ -28,10 +28,10 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
 from .._docstring import add_example, doc_format, no_example
-from .._namespaces import ResolvedId, resolve_id
 from .._typing_extensions import NotRequired, TypedDict
 from .._utils import drop_none
 from ..input_handler import input_handlers
+from ..module import ResolvedId, resolve_id
 from ..session import require_active_session, session_context
 from ..types import ActionButtonValue
 from ._input_check_radio import ChoicesArg, _generate_options

@@ -4,8 +4,9 @@ from typing import TYPE_CHECKING, Awaitable, Callable, Literal, Optional
 
 from htmltools import TagChild
 
-from .._namespaces import Id, ResolvedId, Root
+from .._namespaces import Id, Root
 from ..bookmark import BookmarkExpressStub
+from ..module import ResolvedId
 from ..session import Inputs, Outputs, Session
 from ..session._session import SessionProxy
 

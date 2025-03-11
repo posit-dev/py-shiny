@@ -6,8 +6,8 @@ from htmltools import css
 from .. import _utils, reactive
 from .._deprecated import warn_deprecated
 from .._docstring import add_example
-from .._namespaces import resolve_id
 from .._typing_extensions import TypedDict
+from ..module import resolve_id
 from ..session import require_active_session, session_context
 from ..types import NotifyException
 from ..ui.css import CssUnit, as_css_unit

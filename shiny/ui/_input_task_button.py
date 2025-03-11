@@ -8,8 +8,8 @@ from typing import Callable, Optional, TypeVar, cast, overload
 from htmltools import HTML, Tag, TagAttrValue, TagChild, css, tags
 
 from .._docstring import add_example
-from .._namespaces import resolve_id
 from .._typing_extensions import ParamSpec
+from ..module import resolve_id
 from ..reactive._extended_task import ExtendedTask
 from ..reactive._reactives import effect
 from ..types import MISSING, MISSING_TYPE

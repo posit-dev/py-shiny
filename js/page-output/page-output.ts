@@ -1,6 +1,6 @@
 import type { ErrorsMessageValue } from "rstudio-shiny/srcts/types/src/shiny/shinyapp";
 
-class PageOutputBinding extends Shiny.OutputBinding {
+class PageOutputBinding extends window.Shiny.OutputBinding {
   originalBodyTagAttrs: Array<Attr> | null = null;
 
   find(scope: HTMLElement | JQuery<HTMLElement>): JQuery<HTMLElement> {
@@ -8,13 +8,13 @@ class PageOutputBinding extends Shiny.OutputBinding {
   }
 
   onValueError(el: HTMLElement, err: ErrorsMessageValue): void {
-    if (Shiny.unbindAll) Shiny.unbindAll(el);
+    if (window.Shiny.unbindAll) window.Shiny.unbindAll(el);
     this.renderError(el, err);
   }
 
   async renderValue(
     el: HTMLElement,
-    data: Parameters<typeof Shiny.renderContentAsync>[1]
+    data: Parameters<typeof window.Shiny.renderContentAsync>[1]
   ): Promise<void> {
     if (data === null) return;
     if (el !== document.body) {
@@ -67,11 +67,11 @@ class PageOutputBinding extends Shiny.OutputBinding {
       data.html = content;
     }
 
-    await Shiny.renderContentAsync(el, data);
+    await window.Shiny.renderContentAsync(el, data);
   }
 }
 
-Shiny.outputBindings.register(
+window.Shiny.outputBindings.register(
   new PageOutputBinding(),
   "shinyPageOutputBinding"
 );

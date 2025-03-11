@@ -13,6 +13,8 @@ import polars as pl
 import polars.testing as pl_testing
 import pytest
 
+from shiny._namespaces import Root
+from shiny.module import ResolvedId
 from shiny.render._data_frame_utils._tbl_data import (
     as_data_frame,
     serialize_dtype,
@@ -21,7 +23,7 @@ from shiny.render._data_frame_utils._tbl_data import (
 )
 from shiny.render._data_frame_utils._types import IntoDataFrame
 from shiny.session import Session, session_context
-from shiny.session._session import RenderedDeps, ResolvedId, Root
+from shiny.session._session import RenderedDeps
 from shiny.ui import HTML, TagChild, TagList, h1, span
 
 
