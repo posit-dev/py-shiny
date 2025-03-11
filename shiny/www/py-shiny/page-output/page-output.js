@@ -1,5 +1,5 @@
 // page-output/page-output.ts
-var PageOutputBinding = class extends Shiny.OutputBinding {
+var PageOutputBinding = class extends window.Shiny.OutputBinding {
   constructor() {
     super(...arguments);
     this.originalBodyTagAttrs = null;
@@ -8,8 +8,8 @@ var PageOutputBinding = class extends Shiny.OutputBinding {
     return $(scope).find(".shiny-page-output");
   }
   onValueError(el, err) {
-    if (Shiny.unbindAll)
-      Shiny.unbindAll(el);
+    if (window.Shiny.unbindAll)
+      window.Shiny.unbindAll(el);
     this.renderError(el, err);
   }
   async renderValue(el, data) {
@@ -48,10 +48,10 @@ var PageOutputBinding = class extends Shiny.OutputBinding {
     } else {
       data.html = content;
     }
-    await Shiny.renderContentAsync(el, data);
+    await window.Shiny.renderContentAsync(el, data);
   }
 };
-Shiny.outputBindings.register(
+window.Shiny.outputBindings.register(
   new PageOutputBinding(),
   "shinyPageOutputBinding"
 );
