@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Literal, TypedDict
 
-from htmltools import HTML
+from htmltools import HTML, TagChild
 
 from .._typing_extensions import NotRequired
+from ..session import require_active_session
 
 Role = Literal["assistant", "user", "system"]
 
@@ -14,17 +16,55 @@ Role = Literal["assistant", "user", "system"]
 class ChatMessage(TypedDict):
     content: str
     role: Role
-    html_deps: NotRequired[list[dict[str, str]]]
+
+
+class ChatUIMessage:
+    def __init__(
+        self,
+        content: TagChild,
+        role: Role,
+    ):
+        self.role: Role = role
+
+        # content _can_ be a TagChild, but it's most likely just a string (of
+        # markdown), so only process it if it's not a string.
+        deps = []
+        if not isinstance(content, str):
+            session = require_active_session(None)
+            res = session._process_ui(content)
+            content = res["html"]
+            deps = res["deps"]
+
+        self.content = content
+        self.html_deps = deps
+
+    def as_transformed_message(self) -> "TransformedMessage":
+        if self.role == "user":
+            transform_key = "content_server"
+            pre_transform_key = "content_client"
+        else:
+            transform_key = "content_client"
+            pre_transform_key = "content_server"
+
+        return TransformedMessage(
+            content_client=self.content,
+            content_server=self.content,
+            role=self.role,
+            transform_key=transform_key,
+            pre_transform_key=pre_transform_key,
+            html_deps=self.html_deps,
+        )
 
 
 # A message once transformed have been applied
-class TransformedMessage(TypedDict):
+@dataclass
+class TransformedMessage:
     content_client: str | HTML
     content_server: str
     role: Role
     transform_key: Literal["content_client", "content_server"]
     pre_transform_key: Literal["content_client", "content_server"]
-    html_deps: NotRequired[list[dict[str, str]]]
+    html_deps: list[dict[str, str]] | None = None
 
 
 # A message that can be sent to the client
