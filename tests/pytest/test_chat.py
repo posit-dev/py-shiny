@@ -7,7 +7,8 @@ from typing import Union, cast, get_args, get_origin
 import pytest
 
 from shiny import Session
-from shiny._namespaces import ResolvedId, Root
+from shiny._namespaces import Root
+from shiny.module import ResolvedId
 from shiny.session import session_context
 from shiny.types import MISSING
 from shiny.ui import Chat

@@ -6,16 +6,13 @@ from htmltools import TagChild, TagList
 
 from shiny import reactive, render
 from shiny._deprecated import ShinyDeprecationWarning
+from shiny._namespaces import Root
 from shiny._utils import wrap_async
+from shiny.module import ResolvedId
 from shiny.render._data_frame_utils._selection import SelectionModes
 from shiny.render._data_frame_utils._tbl_data import as_data_frame
-from shiny.session._session import (
-    RenderedDeps,
-    ResolvedId,
-    Root,
-    Session,
-    session_context,
-)
+from shiny.session import Session, session_context
+from shiny.session._session import RenderedDeps
 
 
 class _MockSession:
