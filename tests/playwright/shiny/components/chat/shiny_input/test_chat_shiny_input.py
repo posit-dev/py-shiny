@@ -13,16 +13,29 @@ def test_validate_chat_shiny_output(page: Page, local_app: ShinyAppProc) -> None
 
     chat = controller.Chat(page, "chat")
     expect(chat.loc).to_be_visible(timeout=TIMEOUT)
+    expect(chat.loc).to_have_css("color", "rgb(41, 70, 91)")
 
     select = controller.InputSelect(page, "select")
-    slider = controller.InputSlider(page, "slider")
+    toggle = controller.InputSwitch(page, "toggle")
     expect(select.loc).to_be_visible(timeout=TIMEOUT)
-    expect(slider.loc).to_be_visible(timeout=TIMEOUT)
+    expect(toggle.loc).to_be_visible(timeout=TIMEOUT)
 
-    chat.expect_latest_message("Now selected: a and 50")
+    chat.expect_latest_message("Now selected: a and False")
 
     select.set("b")
-    chat.expect_latest_message("Now selected: b and 50")
+    chat.expect_latest_message("Now selected: b and False")
 
-    slider.set("5")
-    chat.expect_latest_message("Now selected: b and 5")
+    toggle.set(True)
+    chat.expect_latest_message("Now selected: b and True")
+
+    btn = controller.InputActionButton(page, "insert_input")
+    expect(btn.loc).to_be_visible(timeout=TIMEOUT)
+    btn.click()
+
+    chat.expect_latest_message("Numeric value: 0")
+
+    numeric = controller.InputNumeric(page, "numeric")
+    expect(numeric.loc).to_be_visible(timeout=TIMEOUT)
+    numeric.set("42")
+
+    chat.expect_latest_message("Numeric value: 42")
