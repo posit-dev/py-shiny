@@ -4,7 +4,7 @@ from typing import Literal
 from shiny import Inputs, Outputs, Session, reactive, render
 from shiny.bookmark import BookmarkState
 from shiny.bookmark._restore_state import RestoreState
-from shiny.express import app_opts, input, module, session, ui
+from shiny.express import app_opts, module, session, ui
 
 SHINY_BOOKMARK_STORE: Literal["url", "server"] = os.getenv(
     "SHINY_BOOKMARK_STORE", "url"

@@ -1,7 +1,4 @@
-from starlette.requests import Request
-
-from shiny import reactive, render
-from shiny.express import app_opts, input, session, ui
+from shiny.express import app_opts, session, ui
 
 app_opts(bookmark_store="url")
 

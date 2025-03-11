@@ -1,26 +1,27 @@
 from htmltools import tags
 from starlette.requests import Request
 
-from shiny import App, Inputs, Outputs, Session, reactive, render, ui
-from shiny._namespaces import resolve_id
+from shiny import App, Inputs, Outputs, Session, ui
+from shiny.bookmark import restore_input
+from shiny.module import resolve_id
 
 
 def custom_input_text(
     id: str,
     value: str = "",
-) -> Tag:
+) -> ui.Tag:
 
     resolved_id = resolve_id(id)
     return tags.div(
         "Custom input text:",
         tags.input(
-            id=resolve_id(id),
+            id=resolved_id,
             type="text",
-            value=value,
+            value=restore_input(resolved_id, value),
             placeholder="Type here...",
         ),
         class_="shiny-input-container",
-        style=css(width=width),
+        style=ui.css(width="400px"),
     )
 
 
