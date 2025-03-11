@@ -38,23 +38,6 @@ class ChatUIMessage:
         self.content = content
         self.html_deps = deps
 
-    def as_transformed_message(self) -> "TransformedMessage":
-        if self.role == "user":
-            transform_key = "content_server"
-            pre_transform_key = "content_client"
-        else:
-            transform_key = "content_client"
-            pre_transform_key = "content_server"
-
-        return TransformedMessage(
-            content_client=self.content,
-            content_server=self.content,
-            role=self.role,
-            transform_key=transform_key,
-            pre_transform_key=pre_transform_key,
-            html_deps=self.html_deps,
-        )
-
 
 # A message once transformed have been applied
 @dataclass
@@ -65,6 +48,24 @@ class TransformedMessage:
     transform_key: Literal["content_client", "content_server"]
     pre_transform_key: Literal["content_client", "content_server"]
     html_deps: list[dict[str, str]] | None = None
+
+    @classmethod
+    def from_chat_message(cls, message: ChatUIMessage) -> "TransformedMessage":
+        if message.role == "user":
+            transform_key = "content_server"
+            pre_transform_key = "content_client"
+        else:
+            transform_key = "content_client"
+            pre_transform_key = "content_server"
+
+        return TransformedMessage(
+            content_client=message.content,
+            content_server=message.content,
+            role=message.role,
+            transform_key=transform_key,
+            pre_transform_key=pre_transform_key,
+            html_deps=message.html_deps,
+        )
 
 
 # A message that can be sent to the client

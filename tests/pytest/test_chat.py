@@ -13,7 +13,7 @@ from shiny.session import session_context
 from shiny.types import MISSING
 from shiny.ui import Chat
 from shiny.ui._chat_normalize import normalize_message, normalize_message_chunk
-from shiny.ui._chat_types import ChatMessage, ChatUIMessage
+from shiny.ui._chat_types import ChatMessage, ChatUIMessage, Role, TransformedMessage
 
 # ----------------------------------------------------------------------
 # Helpers
@@ -42,6 +42,12 @@ def is_type_in_union(type: object, union: object) -> bool:
     return False
 
 
+def transformed_message(content: str, role: Role) -> TransformedMessage:
+    return TransformedMessage.from_chat_message(
+        ChatUIMessage(content=content, role=role)
+    )
+
+
 def test_chat_message_trimming():
     with session_context(test_session):
         chat = Chat(id="chat")
@@ -52,9 +58,10 @@ def test_chat_message_trimming():
             return " ".join(["foo" for _ in range(1, n)])
 
         msgs = (
-            ChatUIMessage(
-                content=generate_content(102), role="system"
-            ).as_transformed_message(),
+            transformed_message(
+                content=generate_content(102),
+                role="system",
+            ),
         )
 
         # Throws since system message is too long
@@ -62,12 +69,8 @@ def test_chat_message_trimming():
             chat._trim_messages(msgs, token_limits=(100, 0), format=MISSING)
 
         msgs = (
-            ChatUIMessage(
-                content=generate_content(100), role="system"
-            ).as_transformed_message(),
-            ChatUIMessage(
-                content=generate_content(2), role="user"
-            ).as_transformed_message(),
+            transformed_message(content=generate_content(100), role="system"),
+            transformed_message(content=generate_content(2), role="user"),
         )
 
         # Throws since only the system message fits
@@ -83,18 +86,18 @@ def test_chat_message_trimming():
         content3 = generate_content(2)
 
         msgs = (
-            ChatUIMessage(
+            transformed_message(
                 content=content1,
                 role="system",
-            ).as_transformed_message(),
-            ChatUIMessage(
+            ),
+            transformed_message(
                 content=content2,
                 role="user",
-            ).as_transformed_message(),
-            ChatUIMessage(
+            ),
+            transformed_message(
                 content=content3,
                 role="user",
-            ).as_transformed_message(),
+            ),
         )
 
         # Should discard the 1st user message
@@ -109,22 +112,22 @@ def test_chat_message_trimming():
         content4 = generate_content(2)
 
         msgs = (
-            ChatUIMessage(
+            transformed_message(
                 content=content1,
                 role="system",
-            ).as_transformed_message(),
-            ChatUIMessage(
+            ),
+            transformed_message(
                 content=content2,
                 role="user",
-            ).as_transformed_message(),
-            ChatUIMessage(
+            ),
+            transformed_message(
                 content=content3,
                 role="system",
-            ).as_transformed_message(),
-            ChatUIMessage(
+            ),
+            transformed_message(
                 content=content4,
                 role="user",
-            ).as_transformed_message(),
+            ),
         )
 
         # Should discard the 1st user message
@@ -137,14 +140,14 @@ def test_chat_message_trimming():
         content2 = generate_content(10)
 
         msgs = (
-            ChatUIMessage(
+            transformed_message(
                 content=content1,
                 role="assistant",
-            ).as_transformed_message(),
-            ChatUIMessage(
+            ),
+            transformed_message(
                 content=content2,
                 role="user",
-            ).as_transformed_message(),
+            ),
         )
 
         # Anthropic requires 1st message to be a user message

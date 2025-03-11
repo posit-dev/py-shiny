@@ -251,7 +251,10 @@ class Chat:
                 else:
                     # A transformed value of None is a special signal to suspend input
                     # handling (i.e., don't generate a response)
-                    self._store_message(msg.as_transformed_message(), index=n_pre)
+                    self._store_message(
+                        TransformedMessage.from_chat_message(msg),
+                        index=n_pre,
+                    )
                     await self._remove_loading_message()
                     self._suspend_input_handler = True
 
@@ -935,7 +938,7 @@ class Chat:
         chunk: ChunkOption = False,
         chunk_content: str | None = None,
     ) -> TransformedMessage | None:
-        res = message.as_transformed_message()
+        res = TransformedMessage.from_chat_message(message)
         key = res.transform_key
 
         if message.role == "user" and self._transform_user is not None:
