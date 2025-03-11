@@ -62,7 +62,7 @@ async function bundle_helper(
       format: "esm",
       bundle: true,
       minify: minify,
-      sourcemap: true,
+      sourcemap: minify,
       metafile: metafile,
       outdir: outDir,
       ...options,
