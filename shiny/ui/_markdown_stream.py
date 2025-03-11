@@ -141,11 +141,14 @@ class MarkdownStream:
             result = ""
             async with self._streaming_dot():
                 async for x in content:
-                    # x _can_ be a TagChild, but it's most likely just a string (of
-                    # markdown), so optimize for that case
                     if isinstance(x, str):
+                        # x is most likely a string, so avoid overhead in that case
                         ui: RenderedDeps = {"html": x, "deps": []}
                     else:
+                        # process_ui() does *not* render markdown->HTML, but it does:
+                        # 1. Extract and register HTMLdependency()s with the session.
+                        # 2. Returns a HTML string representation of the TagChild
+                        #    (i.e., `div()` -> `"<div>"`).
                         ui = self._session._process_ui(x)
 
                     result += ui["html"]
