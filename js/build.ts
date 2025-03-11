@@ -62,6 +62,8 @@ async function bundle_helper(
       format: "esm",
       bundle: true,
       minify: minify,
+      // No need to clean up old source maps, as `minify==false` only during `npm run watch-fast`
+      // GHA will run `npm run build` which will minify
       sourcemap: minify,
       metafile: metafile,
       outdir: outDir,
