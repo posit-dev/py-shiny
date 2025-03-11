@@ -8,8 +8,8 @@ from urllib.parse import urlencode as urllib_urlencode
 from .._utils import private_random_id
 from ..reactive import isolate
 from ._bookmark_state import local_save_dir
-from ._utils import is_hosted, to_json_str
 from ._types import BookmarkSaveDirFn
+from ._utils import in_shiny_server, to_json_str
 
 if TYPE_CHECKING:
     from shiny._app import App
@@ -75,7 +75,7 @@ class BookmarkState:
         save_bookmark_fn: BookmarkSaveDirFn | None = app._bookmark_save_dir_fn
 
         if save_bookmark_fn is None:
-            if is_hosted():
+            if in_shiny_server():
                 # TODO: Barret; Implement `bookmark_save_dir` for Connect
                 raise NotImplementedError(
                     "The hosting environment does not support server-side bookmarking."

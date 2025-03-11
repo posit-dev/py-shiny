@@ -9,8 +9,8 @@ from typing import TYPE_CHECKING, Any, Literal, Optional
 from urllib.parse import parse_qs, parse_qsl
 
 from ._bookmark_state import local_restore_dir
-from ._utils import from_json_str, is_hosted
 from ._types import BookmarkRestoreDirFn
+from ._utils import from_json_str, in_shiny_server
 
 if TYPE_CHECKING:
     from .._app import App
@@ -191,7 +191,7 @@ class RestoreContext:
         load_bookmark_fn: BookmarkRestoreDirFn | None = app._bookmark_restore_dir_fn
 
         if load_bookmark_fn is None:
-            if is_hosted():
+            if in_shiny_server():
                 raise NotImplementedError(
                     "The hosting environment does not support server-side bookmarking."
                 )

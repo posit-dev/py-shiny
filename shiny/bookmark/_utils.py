@@ -6,17 +6,13 @@ from typing import Any
 import orjson
 
 
-def is_hosted() -> bool:
-    # Can't look at SHINY_PORT, as we already set it in shiny/_main.py's `run_app()`
+# https://github.com/rstudio/shiny/blob/f55c26af4a0493b082d2967aca6d36b90795adf1/R/server.R#L510-L514
+def in_shiny_server() -> bool:
+    shiny_port = os.environ.get("SHINY_PORT")
+    if shiny_port is None or shiny_port == "":
+        return False
 
-    # TODO: Barret: Q: How to support shinyapps.io? Or use `SHINY_PORT` how R-shiny did
-
-    # Instead, looking for the presence of the environment variable that Connect sets
-    # (*_Connect) or Shiny Server sets (SHINY_APP)
-    for env_var in ("POSIT_CONNECT", "RSTUDIO_CONNECT", "SHINY_APP"):
-        if env_var in os.environ:
-            return True
-    return False
+    return True
 
 
 def to_json_str(x: Any) -> str:
