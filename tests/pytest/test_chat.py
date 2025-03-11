@@ -12,9 +12,8 @@ from shiny.module import ResolvedId
 from shiny.session import session_context
 from shiny.types import MISSING
 from shiny.ui import Chat
-from shiny.ui._chat import as_transformed_message
 from shiny.ui._chat_normalize import normalize_message, normalize_message_chunk
-from shiny.ui._chat_types import ChatMessage
+from shiny.ui._chat_types import ChatMessage, ChatUIMessage
 
 # ----------------------------------------------------------------------
 # Helpers
@@ -53,12 +52,9 @@ def test_chat_message_trimming():
             return " ".join(["foo" for _ in range(1, n)])
 
         msgs = (
-            as_transformed_message(
-                {
-                    "content": generate_content(102),
-                    "role": "system",
-                }
-            ),
+            ChatUIMessage(
+                content=generate_content(102), role="system"
+            ).as_transformed_message(),
         )
 
         # Throws since system message is too long
@@ -66,18 +62,12 @@ def test_chat_message_trimming():
             chat._trim_messages(msgs, token_limits=(100, 0), format=MISSING)
 
         msgs = (
-            as_transformed_message(
-                {
-                    "content": generate_content(100),
-                    "role": "system",
-                }
-            ),
-            as_transformed_message(
-                {
-                    "content": generate_content(2),
-                    "role": "user",
-                }
-            ),
+            ChatUIMessage(
+                content=generate_content(100), role="system"
+            ).as_transformed_message(),
+            ChatUIMessage(
+                content=generate_content(2), role="user"
+            ).as_transformed_message(),
         )
 
         # Throws since only the system message fits
@@ -93,30 +83,24 @@ def test_chat_message_trimming():
         content3 = generate_content(2)
 
         msgs = (
-            as_transformed_message(
-                {
-                    "content": content1,
-                    "role": "system",
-                }
-            ),
-            as_transformed_message(
-                {
-                    "content": content2,
-                    "role": "user",
-                }
-            ),
-            as_transformed_message(
-                {
-                    "content": content3,
-                    "role": "user",
-                }
-            ),
+            ChatUIMessage(
+                content=content1,
+                role="system",
+            ).as_transformed_message(),
+            ChatUIMessage(
+                content=content2,
+                role="user",
+            ).as_transformed_message(),
+            ChatUIMessage(
+                content=content3,
+                role="user",
+            ).as_transformed_message(),
         )
 
         # Should discard the 1st user message
         trimmed = chat._trim_messages(msgs, token_limits=(103, 0), format=MISSING)
         assert len(trimmed) == 2
-        contents = [msg["content_server"] for msg in trimmed]
+        contents = [msg.content_server for msg in trimmed]
         assert contents == [content1, content3]
 
         content1 = generate_content(50)
@@ -125,38 +109,48 @@ def test_chat_message_trimming():
         content4 = generate_content(2)
 
         msgs = (
-            as_transformed_message(
-                {"content": content1, "role": "system"},
-            ),
-            as_transformed_message(
-                {"content": content2, "role": "user"},
-            ),
-            as_transformed_message(
-                {"content": content3, "role": "system"},
-            ),
-            as_transformed_message(
-                {"content": content4, "role": "user"},
-            ),
+            ChatUIMessage(
+                content=content1,
+                role="system",
+            ).as_transformed_message(),
+            ChatUIMessage(
+                content=content2,
+                role="user",
+            ).as_transformed_message(),
+            ChatUIMessage(
+                content=content3,
+                role="system",
+            ).as_transformed_message(),
+            ChatUIMessage(
+                content=content4,
+                role="user",
+            ).as_transformed_message(),
         )
 
         # Should discard the 1st user message
         trimmed = chat._trim_messages(msgs, token_limits=(103, 0), format=MISSING)
         assert len(trimmed) == 3
-        contents = [msg["content_server"] for msg in trimmed]
+        contents = [msg.content_server for msg in trimmed]
         assert contents == [content1, content3, content4]
 
         content1 = generate_content(50)
         content2 = generate_content(10)
 
         msgs = (
-            as_transformed_message({"content": content1, "role": "assistant"}),
-            as_transformed_message({"content": content2, "role": "user"}),
+            ChatUIMessage(
+                content=content1,
+                role="assistant",
+            ).as_transformed_message(),
+            ChatUIMessage(
+                content=content2,
+                role="user",
+            ).as_transformed_message(),
         )
 
         # Anthropic requires 1st message to be a user message
         trimmed = chat._trim_messages(msgs, token_limits=(30, 0), format="anthropic")
         assert len(trimmed) == 1
-        contents = [msg["content_server"] for msg in trimmed]
+        contents = [msg.content_server for msg in trimmed]
         assert contents == [content2]
 
 
@@ -173,13 +167,15 @@ def test_chat_message_trimming():
 
 
 def test_string_normalization():
-    msg = normalize_message_chunk("Hello world!")
-    assert msg == {"content": "Hello world!", "role": "assistant"}
+    m = normalize_message_chunk("Hello world!")
+    assert m.content == "Hello world!"
+    assert m.role == "assistant"
 
 
 def test_dict_normalization():
-    msg = normalize_message_chunk({"content": "Hello world!", "role": "assistant"})
-    assert msg == {"content": "Hello world!", "role": "assistant"}
+    m = normalize_message_chunk({"content": "Hello world!", "role": "assistant"})
+    assert m.content == "Hello world!"
+    assert m.role == "assistant"
 
 
 def test_langchain_normalization():
@@ -195,11 +191,15 @@ def test_langchain_normalization():
 
     # Mock & normalize return value of BaseChatModel.invoke()
     msg = BaseMessage(content="Hello world!", role="assistant", type="foo")
-    assert normalize_message(msg) == {"content": "Hello world!", "role": "assistant"}
+    m = normalize_message(msg)
+    assert m.content == "Hello world!"
+    assert m.role == "assistant"
 
     # Mock & normalize return value of BaseChatModel.stream()
     chunk = BaseMessageChunk(content="Hello ", type="foo")
-    assert normalize_message_chunk(chunk) == {"content": "Hello ", "role": "assistant"}
+    m = normalize_message_chunk(chunk)
+    assert m.content == "Hello "
+    assert m.role == "assistant"
 
 
 def test_google_normalization():
@@ -256,7 +256,9 @@ def test_anthropic_normalization():
         usage=Usage(input_tokens=0, output_tokens=0),
     )
 
-    assert normalize_message(msg) == {"content": "Hello world!", "role": "assistant"}
+    m = normalize_message(msg)
+    assert m.content == "Hello world!"
+    assert m.role == "assistant"
 
     # Mock return object from Anthropic().messages.create(stream=True)
     chunk = RawContentBlockDeltaEvent(
@@ -265,7 +267,9 @@ def test_anthropic_normalization():
         index=0,
     )
 
-    assert normalize_message_chunk(chunk) == {"content": "Hello ", "role": "assistant"}
+    m = normalize_message_chunk(chunk)
+    assert m.content == "Hello "
+    assert m.role == "assistant"
 
 
 def test_openai_normalization():
@@ -310,8 +314,9 @@ def test_openai_normalization():
         created=int(datetime.now().timestamp()),
     )
 
-    msg = normalize_message(completion)
-    assert msg == {"content": "Hello world!", "role": "assistant"}
+    m = normalize_message(completion)
+    assert m.content == "Hello world!"
+    assert m.role == "assistant"
 
     # Mock return object from OpenAI().chat.completions.create(stream=True)
     chunk = ChatCompletionChunk(
@@ -330,8 +335,9 @@ def test_openai_normalization():
         ],
     )
 
-    msg = normalize_message_chunk(chunk)
-    assert msg == {"content": "Hello ", "role": "assistant"}
+    m = normalize_message_chunk(chunk)
+    assert m.content == "Hello "
+    assert m.role == "assistant"
 
 
 def test_ollama_normalization():
@@ -344,8 +350,13 @@ def test_ollama_normalization():
     )
 
     msg_dict = {"content": "Hello world!", "role": "assistant"}
-    assert normalize_message(msg) == msg_dict
-    assert normalize_message_chunk(msg) == msg_dict
+    m = normalize_message(msg)
+    assert m.content == msg_dict["content"]
+    assert m.role == msg_dict["role"]
+
+    m = normalize_message_chunk(msg)
+    assert m.content == msg_dict["content"]
+    assert m.role == msg_dict["role"]
 
 
 # ------------------------------------------------------------------------------------
