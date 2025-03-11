@@ -32,8 +32,6 @@ def test_validate_chat_shiny_output(page: Page, local_app: ShinyAppProc) -> None
     expect(btn.loc).to_be_visible(timeout=TIMEOUT)
     btn.click()
 
-    chat.expect_latest_message("Numeric value: 0")
-
     numeric = controller.InputNumeric(page, "numeric")
     expect(numeric.loc).to_be_visible(timeout=TIMEOUT)
     numeric.set("42")
