@@ -444,6 +444,16 @@ class BookmarkApp(Bookmark):
     async def do_bookmark(self) -> None:
 
         if self.store == "disable":
+            # If you have a bookmark button or request a bookmark to be saved,
+            # then it should be saved. (Present a warning telling author how to fix it)
+            warnings.warn(
+                "Saving the bookmark state has been requested. "
+                'However, bookmarking is current set to `"disable"`. '
+                "Please enable bookmarking by setting "
+                "`shiny.App(bookmark_store=)` or "
+                "`shiny.express.app_opts(bookmark_store=)`",
+                stacklevel=2,
+            )
             return
 
         try:
