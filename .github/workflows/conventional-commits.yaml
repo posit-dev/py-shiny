@@ -34,11 +34,11 @@ jobs:
 
             We noticed that the title of your pull request doesn't follow the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) specification. To ensure consistency, we kindly ask you to adjust the title accordingly.
 
-            Details are below the break:
-            
-            ----------------------------
+            <details><summary>Additional details</summary>
 
             ${{ steps.lint.outputs.error_message }}
+
+            </details>
 
       - if: ${{ steps.lint.outputs.error_message == null }}
         uses: marocchino/sticky-pull-request-comment@v2
