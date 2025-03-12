@@ -13,7 +13,7 @@ from shiny.session import session_context
 from shiny.types import MISSING
 from shiny.ui import Chat
 from shiny.ui._chat_normalize import normalize_message, normalize_message_chunk
-from shiny.ui._chat_types import ChatMessage, ChatUIMessage, Role, TransformedMessage
+from shiny.ui._chat_types import ChatMessage, ChatMessageDict, Role, TransformedMessage
 
 # ----------------------------------------------------------------------
 # Helpers
@@ -43,9 +43,7 @@ def is_type_in_union(type: object, union: object) -> bool:
 
 
 def transformed_message(content: str, role: Role) -> TransformedMessage:
-    return TransformedMessage.from_chat_message(
-        ChatUIMessage(content=content, role=role)
-    )
+    return TransformedMessage.from_chat_message(ChatMessage(content=content, role=role))
 
 
 def test_chat_message_trimming():
@@ -384,7 +382,7 @@ def test_as_anthropic_message():
     assert AsyncMessages.create.__annotations__["messages"] == "Iterable[MessageParam]"
     assert Messages.create.__annotations__["messages"] == "Iterable[MessageParam]"
 
-    msg = ChatMessage(content="I have a question", role="user")
+    msg = ChatMessageDict(content="I have a question", role="user")
     assert as_anthropic_message(msg) == MessageParam(
         content="I have a question", role="user"
     )
@@ -411,16 +409,14 @@ def test_as_google_message():
 
     assert is_type_in_union(content_types.ContentDict, content_types.ContentsType)
 
-    msg = ChatMessage(content="I have a question", role="user")
+    msg = ChatMessageDict(content="I have a question", role="user")
     assert as_google_message(msg) == content_types.ContentDict(
         parts=["I have a question"], role="user"
     )
 
 
 def test_as_langchain_message():
-    from langchain_core.language_models.base import (
-        LanguageModelInput,
-    )
+    from langchain_core.language_models.base import LanguageModelInput
     from langchain_core.language_models.base import (
         Sequence as LangchainSequence,  # pyright: ignore[reportPrivateImportUsage]
     )
@@ -450,7 +446,7 @@ def test_as_langchain_message():
     assert issubclass(HumanMessage, BaseMessage)
     assert issubclass(SystemMessage, BaseMessage)
 
-    msg = ChatMessage(content="I have a question", role="user")
+    msg = ChatMessageDict(content="I have a question", role="user")
     assert as_langchain_message(msg) == HumanMessage(content="I have a question")
 
 
@@ -483,7 +479,7 @@ def test_as_openai_message():
     )
     assert is_type_in_union(ChatCompletionUserMessageParam, ChatCompletionMessageParam)
 
-    msg = ChatMessage(content="I have a question", role="user")
+    msg = ChatMessageDict(content="I have a question", role="user")
     assert as_openai_message(msg) == ChatCompletionUserMessageParam(
         content="I have a question", role="user"
     )
@@ -502,7 +498,10 @@ def test_as_ollama_message():
 
     from shiny.ui._chat_provider_types import as_ollama_message
 
-    msg = ChatMessage(content="I have a question", role="user")
+    msg = ChatMessageDict(content="I have a question", role="user")
+    assert as_ollama_message(msg) == OllamaMessage(
+        content="I have a question", role="user"
+    )
     assert as_ollama_message(msg) == OllamaMessage(
         content="I have a question", role="user"
     )

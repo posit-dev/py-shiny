@@ -38,7 +38,7 @@ from ._chat_provider_types import (
     as_provider_message,
 )
 from ._chat_tokenizer import TokenEncoding, TokenizersEncoding, get_default_tokenizer
-from ._chat_types import ChatMessage, ChatUIMessage, ClientMessage, TransformedMessage
+from ._chat_types import ChatMessage, ChatMessageDict, ClientMessage, TransformedMessage
 from ._html_deps_py_shiny import chat_deps
 from .fill import as_fill_item, as_fillable_container
 
@@ -46,7 +46,7 @@ __all__ = (
     "Chat",
     "ChatExpress",
     "chat_ui",
-    "ChatMessage",
+    "ChatMessageDict",
 )
 
 
@@ -240,7 +240,7 @@ class Chat:
             @reactive.effect(priority=9999)
             @reactive.event(self._user_input)
             async def _on_user_input():
-                msg = ChatUIMessage(content=self._user_input(), role="user")
+                msg = ChatMessage(content=self._user_input(), role="user")
                 # It's possible that during the transform, a message is appended, so get
                 # the length now, so we can insert the new message at the right index
                 n_pre = len(self._messages())
@@ -415,7 +415,7 @@ class Chat:
         token_limits: tuple[int, int] | None = None,
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
-    ) -> tuple[ChatMessage, ...]: ...
+    ) -> tuple[ChatMessageDict, ...]: ...
 
     def messages(
         self,
@@ -424,7 +424,7 @@ class Chat:
         token_limits: tuple[int, int] | None = None,
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
-    ) -> tuple[ChatMessage | ProviderMessage, ...]:
+    ) -> tuple[ChatMessageDict | ProviderMessage, ...]:
         """
         Reactively read chat messages
 
@@ -492,7 +492,7 @@ class Chat:
         if token_limits is not None:
             messages = self._trim_messages(messages, token_limits, format)
 
-        res: list[ChatMessage | ProviderMessage] = []
+        res: list[ChatMessageDict | ProviderMessage] = []
         for i, m in enumerate(messages):
             transform = False
             if m.role == "assistant":
@@ -505,7 +505,7 @@ class Chat:
                 m, "transform_key" if transform else "pre_transform_key"
             )
             content = getattr(m, content_key)
-            chat_msg = ChatMessage(content=str(content), role=m.role)
+            chat_msg = ChatMessageDict(content=str(content), role=m.role)
             if not isinstance(format, MISSING_TYPE):
                 chat_msg = as_provider_message(chat_msg, format)
             res.append(chat_msg)
@@ -745,7 +745,7 @@ class Chat:
     ):
         id = _utils.private_random_id()
 
-        empty = ChatMessage(content="", role="assistant")
+        empty = ChatMessageDict(content="", role="assistant")
         await self._append_message(empty, chunk="start", stream_id=id, icon=icon)
 
         try:
@@ -934,7 +934,7 @@ class Chat:
 
     async def _transform_message(
         self,
-        message: ChatUIMessage,
+        message: ChatMessage,
         chunk: ChunkOption = False,
         chunk_content: str | None = None,
     ) -> TransformedMessage | None:
@@ -1201,7 +1201,7 @@ class ChatExpress(Chat):
     def ui(
         self,
         *,
-        messages: Optional[Sequence[str | ChatMessage]] = None,
+        messages: Optional[Sequence[str | ChatMessageDict]] = None,
         placeholder: str = "Enter a message...",
         width: CssUnit = "min(680px, 100%)",
         height: CssUnit = "auto",
@@ -1251,7 +1251,7 @@ class ChatExpress(Chat):
 def chat_ui(
     id: str,
     *,
-    messages: Optional[Sequence[TagChild | ChatMessage]] = None,
+    messages: Optional[Sequence[TagChild | ChatMessageDict]] = None,
     placeholder: str = "Enter a message...",
     width: CssUnit = "min(680px, 100%)",
     height: CssUnit = "auto",

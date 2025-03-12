@@ -13,12 +13,12 @@ Role = Literal["assistant", "user", "system"]
 
 # TODO: content should probably be [{"type": "text", "content": "..."}, {"type": "image", ...}]
 # in order to support multiple content types...
-class ChatMessage(TypedDict):
+class ChatMessageDict(TypedDict):
     content: str
     role: Role
 
 
-class ChatUIMessage:
+class ChatMessage:
     def __init__(
         self,
         content: TagChild,
@@ -50,7 +50,7 @@ class TransformedMessage:
     html_deps: list[dict[str, str]] | None = None
 
     @classmethod
-    def from_chat_message(cls, message: ChatUIMessage) -> "TransformedMessage":
+    def from_chat_message(cls, message: ChatMessage) -> "TransformedMessage":
         if message.role == "user":
             transform_key = "content_server"
             pre_transform_key = "content_client"
