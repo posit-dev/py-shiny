@@ -3,7 +3,6 @@ from __future__ import annotations
 import copy
 import os
 import secrets
-import warnings
 from contextlib import AsyncExitStack, asynccontextmanager
 from inspect import signature
 from pathlib import Path
