@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import inspect
+import warnings
 from typing import (
     Any,
     AsyncIterable,
@@ -38,7 +39,7 @@ from ._chat_provider_types import (
     as_provider_message,
 )
 from ._chat_tokenizer import TokenEncoding, TokenizersEncoding, get_default_tokenizer
-from ._chat_types import ChatMessage, ClientMessage, TransformedMessage
+from ._chat_types import ChatMessage, ClientMessage, Role, TransformedMessage
 from ._html_deps_py_shiny import chat_deps
 from .fill import as_fill_item, as_fillable_container
 
@@ -231,18 +232,18 @@ class Chat:
             @reactive.effect(priority=9999)
             @reactive.event(self._user_input)
             async def _on_user_input():
-                msg = ChatMessage(content=self._user_input(), role="user")
+                content = self._user_input()
                 # It's possible that during the transform, a message is appended, so get
                 # the length now, so we can insert the new message at the right index
                 n_pre = len(self._messages())
-                msg_post = await self._transform_message(msg)
-                if msg_post is not None:
-                    self._store_message(msg_post)
+                content, _ = await self._transform_content(content, role="user")
+                if content is not None:
+                    self._store_content(content, role="user")
                     self._suspend_input_handler = False
                 else:
                     # A transformed value of None is a special signal to suspend input
                     # handling (i.e., don't generate a response)
-                    self._store_message(as_transformed_message(msg), index=n_pre)
+                    self._store_content(content or "", role="user", index=n_pre)
                     await self._remove_loading_message()
                     self._suspend_input_handler = True
 
@@ -483,14 +484,15 @@ class Chat:
         res: list[ChatMessage | ProviderMessage] = []
         for i, m in enumerate(messages):
             transform = False
-            if m["role"] == "assistant":
+            if m.role == "assistant":
                 transform = transform_assistant
-            elif m["role"] == "user":
+            elif m.role == "user":
                 transform = transform_user == "all" or (
                     transform_user == "last" and i == len(messages) - 1
                 )
-            content_key = m["transform_key" if transform else "pre_transform_key"]
-            chat_msg = ChatMessage(content=str(m[content_key]), role=m["role"])
+            key = "transform_key" if transform else "pre_transform_key"
+            content_val = getattr(m, getattr(m, key))
+            chat_msg = ChatMessage(content=str(content_val), role=m.role)
             if not isinstance(format, MISSING_TYPE):
                 chat_msg = as_provider_message(chat_msg, format)
             res.append(chat_msg)
@@ -550,11 +552,89 @@ class Chat:
         """
         await self._append_message(message, icon=icon)
 
+    async def inject_message_chunk(
+        self,
+        message_chunk: Any,
+        *,
+        operation: Literal["append", "replace"] = "append",
+        force: bool = False,
+    ):
+        """
+        Inject a chunk of message content into the current message stream.
+
+        Sometimes when streaming a message (i.e., `.append_message_stream()`), you may
+        want to inject a content into the streaming message while the stream is
+        busy doing other things (e.g., calling a tool). This method allows you to
+        inject any content you want into the current message stream (assuming one is
+        active).
+
+        Parameters
+        ----------
+        message_chunk
+            A message chunk to inject.
+        operation
+            Whether to append or replace the current message stream content.
+        force
+            Whether to start a new stream if one is not currently active.
+        """
+        stream_id = self._current_stream_id
+        if stream_id is None:
+            if not force:
+                raise ValueError(
+                    "Can't inject a message chunk when no message stream is active. "
+                    "Use `force=True` to start a new stream if one is not currently active.",
+                )
+            await self.start_message_stream(force=True)
+
+        return await self._append_message(
+            message_chunk,
+            chunk=True,
+            stream_id=stream_id,
+            operation=operation,
+        )
+
+    async def start_message_stream(self, *, force: bool = False):
+        """
+        Start a new message stream.
+
+        Parameters
+        ----------
+        force
+            Whether to force starting a new stream even if one is already active
+        """
+        stream_id = self._current_stream_id
+        if stream_id is not None:
+            if not force:
+                raise ValueError(
+                    "Can't start a new message stream when a message stream is already active. "
+                    "Use `force=True` to end a currently active stream and start a new one.",
+                )
+            await self.end_message_stream()
+
+        id = _utils.private_random_id()
+        return await self._append_message("", chunk="start", stream_id=id)
+
+    async def end_message_stream(self):
+        """
+        End the current message stream (if any).
+        """
+        stream_id = self._current_stream_id
+        if stream_id is None:
+            warnings.warn("No currently active stream to end.", stacklevel=2)
+            return
+
+        with reactive.isolate():
+            # TODO: .cancel() method should probably just handle this
+            self.latest_message_stream.cancel()
+
+        return await self._append_message("", chunk="end", stream_id=stream_id)
+
     async def _append_message(
         self,
         message: Any,
         *,
         chunk: ChunkOption = False,
+        operation: Literal["append", "replace"] = "append",
         stream_id: str | None = None,
         icon: HTML | Tag | TagList | None = None,
     ) -> None:
@@ -570,27 +650,39 @@ class Chat:
 
         if chunk is False:
             msg = normalize_message(message)
-            chunk_content = None
         else:
             msg = normalize_message_chunk(message)
-            # Update the current stream message
-            chunk_content = msg["content"]
-            self._current_stream_message += chunk_content
-            msg["content"] = self._current_stream_message
+            if operation == "replace":
+                self._current_stream_message = ""
+            self._current_stream_message += msg["content"]
+
+        try:
+            content, transformed = await self._transform_content(
+                msg["content"], role=msg["role"], chunk=chunk
+            )
+            # Act like nothing happened if content transformed to None
+            if content is None:
+                return
+            # Store if this is a whole message or the end of a streaming message
+            if chunk is False:
+                self._store_content(content, role=msg["role"])
+            elif chunk == "end":
+                # Transforming content requires replacing all the content, so take
+                # it as is. Otherwise, store the accumulated stream message.
+                self._store_content(
+                    content=content if transformed else self._current_stream_message,
+                    role=msg["role"],
+                )
+            await self._send_append_message(
+                content=content,
+                role=msg["role"],
+                chunk=chunk,
+                operation="replace" if transformed else operation,
+                icon=icon,
+            )
+        finally:
             if chunk == "end":
                 self._current_stream_message = ""
-
-        msg = await self._transform_message(
-            msg, chunk=chunk, chunk_content=chunk_content
-        )
-        if msg is None:
-            return
-        self._store_message(msg, chunk=chunk)
-        await self._send_append_message(
-            msg,
-            chunk=chunk,
-            icon=icon,
-        )
 
     async def append_message_stream(
         self,
@@ -737,11 +829,13 @@ class Chat:
     # Send a message to the UI
     async def _send_append_message(
         self,
-        message: TransformedMessage,
+        content: str | HTML,
+        role: Role,
         chunk: ChunkOption = False,
+        operation: Literal["append", "replace"] = "append",
         icon: HTML | Tag | TagList | None = None,
     ):
-        if message["role"] == "system":
+        if role == "system":
             # System messages are not displayed in the UI
             return
 
@@ -756,15 +850,15 @@ class Chat:
         elif chunk == "end":
             chunk_type = "message_end"
 
-        content = message["content_client"]
         content_type = "html" if isinstance(content, HTML) else "markdown"
 
         # TODO: pass along dependencies for both content and icon (if any)
         msg = ClientMessage(
             content=str(content),
-            role=message["role"],
+            role=role,
             content_type=content_type,
             chunk_type=chunk_type,
+            operation=operation,
         )
 
         if icon is not None:
@@ -892,44 +986,35 @@ class Chat:
         else:
             return _set_transform(fn)
 
-    async def _transform_message(
+    async def _transform_content(
         self,
-        message: ChatMessage,
+        content: str,
+        role: Role,
         chunk: ChunkOption = False,
-        chunk_content: str | None = None,
-    ) -> TransformedMessage | None:
-        res = as_transformed_message(message)
-        key = res["transform_key"]
-
-        if message["role"] == "user" and self._transform_user is not None:
-            content = await self._transform_user(message["content"])
-
-        elif message["role"] == "assistant" and self._transform_assistant is not None:
-            content = await self._transform_assistant(
-                message["content"],
-                chunk_content or "",
+    ) -> tuple[str | HTML | None, bool]:
+        content2 = content
+        transformed = False
+        if role == "user" and self._transform_user is not None:
+            content2 = await self._transform_user(content)
+            transformed = True
+        elif role == "assistant" and self._transform_assistant is not None:
+            all_content = content if chunk is False else self._current_stream_message
+            content2 = await self._transform_assistant(
+                all_content,
+                content,
                 chunk == "end" or chunk is False,
             )
-        else:
-            return res
+            transformed = True
 
-        if content is None:
-            return None
-
-        res[key] = content  # type: ignore
-
-        return res
+        return (content2, transformed)
 
     # Just before storing, handle chunk msg type and calculate tokens
-    def _store_message(
+    def _store_content(
         self,
-        message: TransformedMessage,
-        chunk: ChunkOption = False,
+        content: str | HTML,
+        role: Role,
         index: int | None = None,
     ) -> None:
-        # Don't actually store chunks until the end
-        if chunk is True or chunk == "start":
-            return None
 
         with reactive.isolate():
             messages = self._messages()
@@ -937,12 +1022,14 @@ class Chat:
         if index is None:
             index = len(messages)
 
+        msg = TransformedMessage.from_content(content=content, role=role)
+
         messages = list(messages)
-        messages.insert(index, message)
+        messages.insert(index, msg)
 
         self._messages.set(tuple(messages))
-        if message["role"] == "user":
-            self._latest_user_input.set(message)
+        if role == "user":
+            self._latest_user_input.set(msg)
 
         return None
 
@@ -966,9 +1053,9 @@ class Chat:
         n_other_messages: int = 0
         token_counts: list[int] = []
         for m in messages:
-            count = self._get_token_count(m["content_server"])
+            count = self._get_token_count(m.content_server)
             token_counts.append(count)
-            if m["role"] == "system":
+            if m.role == "system":
                 n_system_tokens += count
                 n_system_messages += 1
             else:
@@ -989,7 +1076,7 @@ class Chat:
         n_other_messages2: int = 0
         token_counts.reverse()
         for i, m in enumerate(reversed(messages)):
-            if m["role"] == "system":
+            if m.role == "system":
                 messages2.append(m)
                 continue
             remaining_non_system_tokens -= token_counts[i]
@@ -1012,13 +1099,13 @@ class Chat:
         self,
         messages: tuple[TransformedMessage, ...],
     ) -> tuple[TransformedMessage, ...]:
-        if any(m["role"] == "system" for m in messages):
+        if any(m.role == "system" for m in messages):
             raise ValueError(
                 "Anthropic requires a system prompt to be specified in it's `.create()` method "
                 "(not in the chat messages with `role: system`)."
             )
         for i, m in enumerate(messages):
-            if m["role"] == "user":
+            if m.role == "user":
                 return messages[i:]
 
         return ()
@@ -1064,7 +1151,8 @@ class Chat:
         if msg is None:
             return None
         key = "content_server" if transform else "content_client"
-        return str(msg[key])
+        val = getattr(msg, key)
+        return str(val)
 
     def _user_input(self) -> str:
         id = self.user_input_id
@@ -1306,23 +1394,6 @@ def chat_ui(
         res = as_fillable_container(as_fill_item(res))
 
     return res
-
-
-def as_transformed_message(message: ChatMessage) -> TransformedMessage:
-    if message["role"] == "user":
-        transform_key = "content_server"
-        pre_transform_key = "content_client"
-    else:
-        transform_key = "content_client"
-        pre_transform_key = "content_server"
-
-    return TransformedMessage(
-        content_client=message["content"],
-        content_server=message["content"],
-        role=message["role"],
-        transform_key=transform_key,
-        pre_transform_key=pre_transform_key,
-    )
 
 
 CHAT_INSTANCES: WeakValueDictionary[str, Chat] = WeakValueDictionary()
