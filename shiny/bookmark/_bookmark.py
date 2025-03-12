@@ -75,7 +75,7 @@ else:
 
 class Bookmark(ABC):
 
-    _proxy_exclude_fns: list[Callable[[], list[str]]]
+    _on_get_exclude: list[Callable[[], list[str]]]
     """Callbacks that BookmarkProxy classes utilize to help determine the list of inputs to exclude from bookmarking."""
     exclude: list[str]
     """A list of scoped Input names to exclude from bookmarking."""
@@ -84,6 +84,21 @@ class Bookmark(ABC):
     _on_bookmarked_callbacks: AsyncCallbacks
     _on_restore_callbacks: AsyncCallbacks
     _on_restored_callbacks: AsyncCallbacks
+
+    async def __call__(self) -> None:
+        await self.do_bookmark()
+
+    def __init__(self):
+
+        super().__init__()
+
+        self._on_get_exclude = []
+        self.exclude = []
+
+        self._on_bookmark_callbacks = AsyncCallbacks()
+        self._on_bookmarked_callbacks = AsyncCallbacks()
+        self._on_restore_callbacks = AsyncCallbacks()
+        self._on_restored_callbacks = AsyncCallbacks()
 
     # Making this a read only property as app authors will not be able to change how the session is restored as the server function will run after the session has been restored.
     @property
@@ -116,20 +131,16 @@ class Bookmark(ABC):
         """
         ...
 
-    async def __call__(self) -> None:
-        await self.do_bookmark()
+    def _get_bookmark_exclude(self) -> list[str]:
+        """
+        Get the list of inputs excluded from being bookmarked.
+        """
 
-    def __init__(self):
-
-        super().__init__()
-
-        self._proxy_exclude_fns = []
-        self.exclude = []
-
-        self._on_bookmark_callbacks = AsyncCallbacks()
-        self._on_bookmarked_callbacks = AsyncCallbacks()
-        self._on_restore_callbacks = AsyncCallbacks()
-        self._on_restored_callbacks = AsyncCallbacks()
+        scoped_excludes: list[str] = []
+        for proxy_exclude_fn in self._on_get_exclude:
+            scoped_excludes.extend(proxy_exclude_fn())
+        # Remove duplicates
+        return list(set([*self.exclude, *scoped_excludes]))
 
     # # TODO: Barret - Implement this?!?
     # @abstractmethod
@@ -151,13 +162,6 @@ class Bookmark(ABC):
         Create the effects for the bookmarking system.
 
         This method should be called when the session is created after the initial inputs have been set.
-        """
-        ...
-
-    @abstractmethod
-    def _get_bookmark_exclude(self) -> list[str]:
-        """
-        Retrieve the list of inputs excluded from being bookmarked.
         """
         ...
 
@@ -396,17 +400,6 @@ class BookmarkApp(Bookmark):
 
         return
 
-    def _get_bookmark_exclude(self) -> list[str]:
-        """
-        Get the list of inputs excluded from being bookmarked.
-        """
-
-        scoped_excludes: list[str] = []
-        for proxy_exclude_fn in self._proxy_exclude_fns:
-            scoped_excludes.extend(proxy_exclude_fn())
-        # Remove duplicates
-        return list(set([*self.exclude, *scoped_excludes]))
-
     def on_bookmark(
         self,
         callback: (
@@ -548,9 +541,8 @@ class BookmarkProxy(Bookmark):
         self._ns = session_proxy.ns
         self._session = session_proxy
 
-        # TODO: Barret - This isn't getting to the root
         # Maybe `._get_bookmark_exclude()` should be used instead of`proxy_exclude_fns`?
-        self._session._parent.bookmark._proxy_exclude_fns.append(
+        self._session._parent.bookmark._on_get_exclude.append(
             lambda: [str(self._ns(name)) for name in self.exclude]
         )
 
@@ -667,12 +659,6 @@ class BookmarkProxy(Bookmark):
     ) -> CancelCallback:
         return self._on_bookmarked_callbacks.register(wrap_async(callback))
 
-    def _get_bookmark_exclude(self) -> NoReturn:
-
-        raise NotImplementedError(
-            "Please call `._get_bookmark_exclude()` from the root session only."
-        )
-
     async def update_query_string(
         self, query_string: str, mode: Literal["replace", "push"] = "replace"
     ) -> None:
@@ -706,7 +692,7 @@ class BookmarkExpressStub(Bookmark):
         from ..express._stub_session import ExpressStubSession
 
         assert isinstance(session, ExpressStubSession)
-        self._session = session
+        # self._session = session
 
     @property
     def store(self) -> BookmarkStore:
@@ -722,11 +708,6 @@ class BookmarkExpressStub(Bookmark):
     def _create_effects(self) -> NoReturn:
         raise NotImplementedError(
             "Please call `._create_effects()` only from a real session object"
-        )
-
-    def _get_bookmark_exclude(self) -> NoReturn:
-        raise NotImplementedError(
-            "Please call `._get_bookmark_exclude()` only from a real session object"
         )
 
     def on_bookmark(

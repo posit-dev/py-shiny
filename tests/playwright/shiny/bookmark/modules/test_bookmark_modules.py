@@ -8,9 +8,25 @@ from shiny.playwright.controller import InputRadioButtons, OutputCode
 from shiny.run import ShinyAppProc, run_shiny_app
 
 
-@pytest.mark.parametrize("app_name", ["app-express.py", "app.py"])
+@pytest.mark.parametrize(
+    "app_name,mod0_key,mod1_key",
+    [
+        # Express mode
+        ("app-express.py", "mod0", "mod1"),
+        # Core mode
+        ("app-core.py", "mod0", "mod1"),
+        # Recursive modules within core mode
+        ("app-core-recursive.py", "mod1-sub1", "mod1"),
+    ],
+)
 @pytest.mark.parametrize("bookmark_store", ["url", "server"])
-def test_bookmark_modules(page: Page, bookmark_store: str, app_name: str):
+def test_bookmark_modules(
+    page: Page,
+    bookmark_store: str,
+    app_name: str,
+    mod0_key: str,
+    mod1_key: str,
+) -> None:
 
     # Set environment variable before the app starts
     os.environ["SHINY_BOOKMARK_STORE"] = bookmark_store
@@ -41,18 +57,18 @@ def test_bookmark_modules(page: Page, bookmark_store: str, app_name: str):
             InputRadioButtons(page, f"{mod_key}-dyn1").set(values[2])
             InputRadioButtons(page, f"{mod_key}-dyn2").set(values[3])
 
-        expect_mod("mod0", ["a", "a", "a", "a"])
-        expect_mod("mod1", ["a", "a", "a", "a"])
+        expect_mod(mod0_key, ["a", "a", "a", "a"])
+        expect_mod(mod1_key, ["a", "a", "a", "a"])
 
-        set_mod("mod0", ["b", "b", "c", "c"])
+        set_mod(mod0_key, ["b", "b", "c", "c"])
 
-        expect_mod("mod0", ["b", "b", "c", "c"])
-        expect_mod("mod1", ["a", "a", "a", "a"])
+        expect_mod(mod0_key, ["b", "b", "c", "c"])
+        expect_mod(mod1_key, ["a", "a", "a", "a"])
 
         page.reload()
 
-        expect_mod("mod0", ["b", "b", "c", "c"])
-        expect_mod("mod1", ["a", "a", "a", "a"])
+        expect_mod(mod0_key, ["b", "b", "c", "c"])
+        expect_mod(mod1_key, ["a", "a", "a", "a"])
 
         if bookmark_store == "url":
             assert "_inputs_" in page.url
