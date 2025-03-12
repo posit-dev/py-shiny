@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 from typing import AsyncIterable, Iterable, Literal, Union
 
-from htmltools import css
+from htmltools import TagChild, TagList, css
 
 from .. import _utils, reactive
 from .._deprecated import warn_deprecated
@@ -9,6 +9,7 @@ from .._docstring import add_example
 from .._typing_extensions import TypedDict
 from ..module import resolve_id
 from ..session import require_active_session, session_context
+from ..session._session import RenderedDeps
 from ..types import NotifyException
 from ..ui.css import CssUnit, as_css_unit
 from . import Tag
@@ -32,6 +33,7 @@ class ContentMessage(TypedDict):
     id: str
     content: str
     operation: Literal["append", "replace"]
+    html_deps: list[dict[str, str]]
 
 
 class isStreamingMessage(TypedDict):
@@ -99,7 +101,7 @@ class MarkdownStream:
 
     async def stream(
         self,
-        content: Union[Iterable[str], AsyncIterable[str]],
+        content: Union[Iterable[TagChild], AsyncIterable[TagChild]],
         clear: bool = True,
     ):
         """
@@ -134,13 +136,23 @@ class MarkdownStream:
         @reactive.extended_task
         async def _task():
             if clear:
-                await self._send_content_message("", "replace")
+                await self._send_content_message("", "replace", [])
 
             result = ""
             async with self._streaming_dot():
-                async for c in content:
-                    result += c
-                    await self._send_content_message(c, "append")
+                async for x in content:
+                    if isinstance(x, str):
+                        # x is most likely a string, so avoid overhead in that case
+                        ui: RenderedDeps = {"html": x, "deps": []}
+                    else:
+                        # process_ui() does *not* render markdown->HTML, but it does:
+                        # 1. Extract and register HTMLdependency()s with the session.
+                        # 2. Returns a HTML string representation of the TagChild
+                        #    (i.e., `div()` -> `"<div>"`).
+                        ui = self._session._process_ui(x)
+
+                    result += ui["html"]
+                    await self._send_content_message(ui["html"], "append", ui["deps"])
 
             return result
 
@@ -216,11 +228,13 @@ class MarkdownStream:
         self,
         content: str,
         operation: Literal["append", "replace"],
+        html_deps: list[dict[str, str]],
     ):
         msg: ContentMessage = {
             "id": self.id,
             "content": content,
             "operation": operation,
+            "html_deps": html_deps,
         }
         await self._send_custom_message(msg)
 
@@ -252,7 +266,7 @@ class ExpressMarkdownStream(MarkdownStream):
     def ui(
         self,
         *,
-        content: str = "",
+        content: TagChild = "",
         content_type: StreamingContentType = "markdown",
         auto_scroll: bool = True,
         width: CssUnit = "100%",
@@ -264,13 +278,16 @@ class ExpressMarkdownStream(MarkdownStream):
         Parameters
         ----------
         content
-            Content to display when the UI element is first rendered.
+            A string of content to display before any streaming occurs. When
+            `content_type` is Markdown or HTML, it may also be UI element(s) such as
+            input and output bindings.
         content_type
             The content type. Default is `"markdown"` (specifically, CommonMark).
-            Other supported options are:
-            - `"html"`: for rendering HTML content.
-            - `"text"`: for plain text.
-            - `"semi-markdown"`: for rendering markdown, but with HTML tags escaped.
+            Supported content types include:
+                - `"markdown"`: markdown text, specifically CommonMark
+                - `"html"`: for rendering HTML content.
+                - `"text"`: for plain text.
+                - `"semi-markdown"`: for rendering markdown, but with HTML tags escaped.
         auto_scroll
             Whether to automatically scroll to the bottom of a scrollable container
             when new content is added. Default is `True`.
@@ -298,7 +315,7 @@ class ExpressMarkdownStream(MarkdownStream):
 def output_markdown_stream(
     id: str,
     *,
-    content: str = "",
+    content: TagChild = "",
     content_type: StreamingContentType = "markdown",
     auto_scroll: bool = True,
     width: CssUnit = "100%",
@@ -316,13 +333,16 @@ def output_markdown_stream(
         A unique identifier for the UI element. This id should match the id of the
         :class:`~shiny.ui.MarkdownStream` instance.
     content
-        Some content to display before any streaming occurs.
+        A string of content to display before any streaming occurs. When `content_type`
+        is Markdown or HTML, it may also be UI element(s) such as input and output
+        bindings.
     content_type
-        The content type. Default is "markdown" (specifically, CommonMark).
-        Other supported options are:
-        - `"html"`: for rendering HTML content.
-        - `"text"`: for plain text.
-        - `"semi-markdown"`: for rendering markdown, but with HTML tags escaped.
+        The content type. Default is "markdown" (specifically, CommonMark). Supported
+        content types include:
+            - `"markdown"`: markdown text, specifically CommonMark
+            - `"html"`: for rendering HTML content.
+            - `"text"`: for plain text.
+            - `"semi-markdown"`: for rendering markdown, but with HTML tags escaped.
     auto_scroll
         Whether to automatically scroll to the bottom of a scrollable container
         when new content is added. Default is True.
@@ -331,9 +351,12 @@ def output_markdown_stream(
     height
         The height of the UI element.
     """
+    ui = TagList(content).render()
+
     return Tag(
         "shiny-markdown-stream",
         markdown_stream_dependency(),
+        ui["dependencies"],
         {
             "style": css(
                 width=as_css_unit(width),
@@ -343,5 +366,5 @@ def output_markdown_stream(
             "auto-scroll": "" if auto_scroll else None,
         },
         id=resolve_id(id),
-        content=content,
+        content=ui["html"],
     )
