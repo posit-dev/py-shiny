@@ -11,7 +11,7 @@ def app_ui(request: Request):
             "Directions: "
             "\n1. Change the radio buttons below"
             "\n2. Refresh your browser."
-            "\n3. Only the first radio button will be restored."
+            "\n3. The radio buttons should be restored to their previous state."
             "\n4. Check the console messages for bookmarking events."
         ),
         ui.hr(),
@@ -45,12 +45,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @render.code
     def letters():
-        return str(
-            [
-                input.letter(),
-                lowercase_letter(),
-            ]
-        )
+        return str([input.letter(), lowercase_letter()])
 
     # When the user interacts with the input, we will bookmark the state.
     @reactive.effect
