@@ -1,4 +1,4 @@
-from htmltools import tags
+from htmltools import css, tags
 from starlette.requests import Request
 
 from shiny import App, Inputs, Outputs, Session, ui
@@ -13,32 +13,26 @@ def custom_input_text(
 
     resolved_id = resolve_id(id)
     return tags.div(
-        "Custom input text:",
-        tags.input(
+        tags.label(tags.strong("Custom input text:")),
+        tags.textarea(
+            restore_input(resolved_id, value),
             id=resolved_id,
             type="text",
-            value=restore_input(resolved_id, value),
             placeholder="Type here...",
+            style=css(width="400px", height="3hr"),
         ),
         class_="shiny-input-container",
-        style=ui.css(width="400px"),
     )
 
 
 # App UI **must** be a function to ensure that each user restores their own UI values.
 def app_ui(request: Request):
     return ui.page_fluid(
-        custom_input_text("myid", value="Default value - Hello, world!"),
+        custom_input_text(
+            "myid",
+            value="Change this value, then click bookmark and refresh the page.",
+        ),
         ui.input_bookmark_button(),
-        # ui.markdown(
-        #     "Directions: "
-        #     "\n1. Change the radio button selection below"
-        #     "\n2. Save the bookmark."
-        #     "\n3. Then, refresh your browser page to see the radio button selection has been restored."
-        # ),
-        # ui.hr(),
-        # ui.input_radio_buttons("letter", "Choose a letter", choices=["A", "B", "C"]),
-        # ui.input_bookmark_button(label="Save bookmark!"),
     )
 
 
@@ -49,4 +43,5 @@ def server(input: Inputs, output: Outputs, session: Session):
         await session.bookmark.update_query_string(url)
 
 
+# `bookmark_store` (`"url"` or `"server"`) must be passed to the `App` constructor to enable bookmarking.
 app = App(app_ui, server, bookmark_store="url")

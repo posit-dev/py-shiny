@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, Optional
 from urllib.parse import parse_qs, parse_qsl
 
+from ..module import ResolvedId
 from ._bookmark_state import local_restore_dir
 from ._types import BookmarkRestoreDirFn
 from ._utils import from_json_str, in_shiny_server
@@ -283,33 +284,36 @@ class RestoreInputSet:
     could completely prevent any other (non- restored) kvalue from being used.
     """
 
-    _values: dict[str, Any]
-    _pending: set[str]
+    _values: dict[ResolvedId, Any]
+    _pending: set[ResolvedId]
     """Names of values which have been marked as pending"""
-    _used: set[str]
+    _used: set[ResolvedId]
     """Names of values which have been used"""
 
     def __init__(self, values: Optional[dict[str, Any]] = None):
 
-        self._values = {} if values is None else values
+        if values is None:
+            self._values = {}
+        else:
+            self._values = {ResolvedId(key): value for key, value in values.items()}
         self._pending = set()
         self._used = set()
 
-    def exists(self, name: str) -> bool:
+    def exists(self, name: ResolvedId) -> bool:
         return name in self._values
 
-    def available(self, name: str) -> bool:
+    def available(self, name: ResolvedId) -> bool:
         return self.exists(name) and not self.is_used(name)
 
-    def is_pending(self, name: str) -> bool:
+    def is_pending(self, name: ResolvedId) -> bool:
         return name in self._pending
 
-    def is_used(self, name: str) -> bool:
+    def is_used(self, name: ResolvedId) -> bool:
         return name in self._used
 
     # Get a value. If `force` is TRUE, get the value without checking whether
     # has been used, and without marking it as pending.
-    def get(self, name: str, force: bool = False) -> Any:
+    def get(self, name: ResolvedId, force: bool = False) -> Any:
         if force:
             return self._values[name]
 
@@ -325,7 +329,7 @@ class RestoreInputSet:
         self._pending.clear()
 
     def as_dict(self) -> dict[str, Any]:
-        return self._values
+        return {str(key): value for key, value in self._values.items()}
 
 
 # #############################################################################
@@ -386,7 +390,7 @@ def get_current_restore_context() -> RestoreContext | None:
     return ctx
 
 
-def restore_input(id: str, default: Any) -> Any:
+def restore_input(resolved_id: ResolvedId, default: Any) -> Any:
     """
     Restore an input value
 
@@ -400,6 +404,10 @@ def restore_input(id: str, default: Any) -> Any:
     default
         A default value to use, if there's no value to restore.
     """
+    if not isinstance(resolved_id, ResolvedId):
+        raise TypeError(
+            "Expected `resolved_id` to be of type `ResolvedId` which is returned from `shiny.module.resolve_id(id)`."
+        )
     # Will run even if the domain is missing
     if not has_current_restore_context():
         return default
@@ -408,7 +416,7 @@ def restore_input(id: str, default: Any) -> Any:
     ctx = get_current_restore_context()
     if isinstance(ctx, RestoreContext):
         old_inputs = ctx.input
-        if old_inputs.available(id):
-            return old_inputs.get(id)
+        if old_inputs.available(resolved_id):
+            return old_inputs.get(resolved_id)
 
     return default
