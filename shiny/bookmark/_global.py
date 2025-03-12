@@ -35,11 +35,45 @@ def as_bookmark_dir_fn(fn: BookmarkDirFn | None) -> BookmarkDirFnAsync | None:
     return wrap_async(fn)
 
 
-# TODO: Barret - Integrate Set / Restore for Connect. Ex: Connect https://github.com/posit-dev/connect/blob/8de330aec6a61cf21e160b5081d08a1d3d7e8129/R/connect.R#L915
-
-
 def set_global_save_dir_fn(fn: BookmarkDirFn):
-    """TODO: Barret document"""
+    """
+    Set the global bookmark save directory function.
+
+    This function is NOT intended to be used by app authors. Instead, it is a last resort option for hosted invironments to adjust how bookmarks are saved.
+
+    Parameters
+    ----------
+    fn : BookmarkDirFn
+        The function that will be used to determine the directory where bookmarks are saved. This function should create the directory (`pathlib.Path` object) that is returned.
+
+    Examples
+    --------
+    ```python
+    from pathlib import Path
+    from shiny.bookmark import set_global_save_dir_fn, set_global_restore_dir_fn
+
+    bookmark_dir = Path(__file__).parent / "bookmarks"
+
+    def save_bookmark_dir(id: str) -> Path:
+        save_dir = bookmark_dir / id
+        save_dir.mkdir(parents=True, exist_ok=True)
+        return save_dir
+
+    def restore_bookmark_dir(id: str) -> Path:
+        return bookmark_dir / id
+
+    # Set global defaults for bookmark saving and restoring.
+    set_global_restore_dir_fn(restore_bookmark_dir)
+    set_global_save_dir_fn(save_bookmark_dir)
+
+    app = App(app_ui, server, bookmark_store="server")
+    ```
+
+
+    See Also
+    --------
+    * `~shiny.bookmark.set_global_restore_dir_fn` : Set the global bookmark restore directory function
+    """
     global bookmark_save_dir
 
     bookmark_save_dir = as_bookmark_dir_fn(fn)
@@ -47,7 +81,43 @@ def set_global_save_dir_fn(fn: BookmarkDirFn):
 
 
 def set_global_restore_dir_fn(fn: BookmarkDirFn):
-    """TODO: Barret document"""
+    """
+    Set the global bookmark restore directory function.
+
+    This function is NOT intended to be used by app authors. Instead, it is a last resort option for hosted invironments to adjust how bookmarks are restored.
+
+    Parameters
+    ----------
+    fn : BookmarkDirFn
+        The function that will be used to determine the directory (`pathlib.Path` object) where bookmarks are restored from.
+
+    Examples
+    --------
+    ```python
+    from pathlib import Path
+    from shiny.bookmark import set_global_save_dir_fn, set_global_restore_dir_fn
+
+    bookmark_dir = Path(__file__).parent / "bookmarks"
+
+    def save_bookmark_dir(id: str) -> Path:
+        save_dir = bookmark_dir / id
+        save_dir.mkdir(parents=True, exist_ok=True)
+        return save_dir
+
+    def restore_bookmark_dir(id: str) -> Path:
+        return bookmark_dir / id
+
+    # Set global defaults for bookmark saving and restoring.
+    set_global_restore_dir_fn(restore_bookmark_dir)
+    set_global_save_dir_fn(save_bookmark_dir)
+
+    app = App(app_ui, server, bookmark_store="server")
+    ```
+
+    See Also
+    --------
+    * `~shiny.bookmark.set_global_save_dir_fn` : Set the global bookmark save directory function.
+    """
     global bookmark_restore_dir
 
     bookmark_restore_dir = as_bookmark_dir_fn(fn)

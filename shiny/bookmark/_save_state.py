@@ -72,7 +72,6 @@ class BookmarkState:
 
         if save_bookmark_fn is None:
             if in_shiny_server():
-                # TODO: Barret; Implement `bookmark_save_dir` for Connect
                 raise NotImplementedError(
                     "The hosting environment does not support server-side bookmarking."
                 )

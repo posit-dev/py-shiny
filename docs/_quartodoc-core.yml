@@ -113,8 +113,8 @@ quartodoc:
             desc: "Decorators to set save and restore directories."
           flatten: true
           contents:
-            - bookmark.set_global_save_dir
-            - bookmark.set_global_restore_dir
+            - bookmark.set_global_save_dir_fn
+            - bookmark.set_global_restore_dir_fn
     - title: Chat interface
       desc: Build a chatbot interface
       contents:

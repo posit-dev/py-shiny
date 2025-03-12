@@ -15,7 +15,10 @@ def mod_btn(idx: int):
         ui.layout_column_wrap(
             ui.TagList(
                 ui.input_radio_buttons(
-                    "btn1", "Button Input", choices=["a", "b", "c"], selected="a"
+                    "btn1",
+                    "Button Input",
+                    choices=["a", "b", "c"],
+                    selected="a",
                 ),
                 ui.input_radio_buttons(
                     "btn2",

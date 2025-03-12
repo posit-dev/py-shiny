@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, Awaitable, Callable, Literal
 
+from .._docstring import add_example
 from .._utils import AsyncCallbacks, CancelCallback, wrap_async
 from ._button import BOOKMARK_ID
 from ._restore_state import RestoreState
@@ -85,6 +86,7 @@ class Bookmark(ABC):
     _on_restore_callbacks: AsyncCallbacks
     _on_restored_callbacks: AsyncCallbacks
 
+    @add_example("input_bookmark_button")
     async def __call__(self) -> None:
         await self.do_bookmark()
 
@@ -136,6 +138,7 @@ class Bookmark(ABC):
 
     #     await session.insert_ui(modal_with_url(url))
 
+    @add_example("bookmark_callbacks")
     def on_bookmark(
         self,
         callback: (
@@ -157,6 +160,7 @@ class Bookmark(ABC):
         """
         return self._on_bookmark_callbacks.register(wrap_async(callback))
 
+    @add_example("bookmark_callbacks")
     def on_bookmarked(
         self,
         callback: Callable[[str], None] | Callable[[str], Awaitable[None]],

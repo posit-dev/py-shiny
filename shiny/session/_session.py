@@ -1201,8 +1201,8 @@ class UpdateProgressMessage(TypedDict):
 
 class SessionProxy(Session):
     def __init__(self, parent: Session, ns: ResolvedId) -> None:
-        # TODO: Barret - Q: Why are we storing `parent`? It really feels like all `._parent` should be replaced with `.root_scope()` or `._root`, really
-        # TODO: Barret - Q: Why is there no super().__init__()? Why don't we proxy to the root on get/set?
+        super().__init__()
+
         self._parent = parent
         self.app = parent.app
         self.id = parent.id

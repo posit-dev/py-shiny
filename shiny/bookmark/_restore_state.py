@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, Optional
 from urllib.parse import parse_qs, parse_qsl
 
+from .._docstring import add_example
 from ..module import ResolvedId
 from ._bookmark_state import local_restore_dir
 from ._types import BookmarkRestoreDirFn
@@ -205,7 +206,6 @@ class RestoreContext:
         if not self.dir.exists():
             raise RuntimeError("Bookmarked state directory does not exist.")
 
-        # TODO: Barret; Store/restore as JSON
         input_values = from_json_file(self.dir / "input.json")
         self.input = RestoreInputSet(input_values)
 
@@ -387,6 +387,7 @@ def get_current_restore_context() -> RestoreContext | None:
     return ctx
 
 
+@add_example()
 def restore_input(resolved_id: ResolvedId, default: Any) -> Any:
     """
     Restore an input value
