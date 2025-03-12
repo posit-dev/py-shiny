@@ -504,6 +504,3 @@ def test_as_ollama_message():
     assert as_ollama_message(msg) == OllamaMessage(
         content="I have a question", role="user"
     )
-    assert as_ollama_message(msg) == OllamaMessage(
-        content="I have a question", role="user"
-    )

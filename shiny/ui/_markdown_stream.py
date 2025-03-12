@@ -279,14 +279,15 @@ class ExpressMarkdownStream(MarkdownStream):
         ----------
         content
             A string of content to display before any streaming occurs. When
-            `content_type` isn't `"text"`, it may also be UI element(s) such as input
-            and output bindings.
+            `content_type` is Markdown or HTML, it may also be UI element(s) such as
+            input and output bindings.
         content_type
             The content type. Default is `"markdown"` (specifically, CommonMark).
-            Other supported options are:
-            - `"html"`: for rendering HTML content.
-            - `"text"`: for plain text.
-            - `"semi-markdown"`: for rendering markdown, but with HTML tags escaped.
+            Supported content types include:
+                - `"markdown"`: markdown text, specifically CommonMark
+                - `"html"`: for rendering HTML content.
+                - `"text"`: for plain text.
+                - `"semi-markdown"`: for rendering markdown, but with HTML tags escaped.
         auto_scroll
             Whether to automatically scroll to the bottom of a scrollable container
             when new content is added. Default is `True`.
@@ -333,13 +334,15 @@ def output_markdown_stream(
         :class:`~shiny.ui.MarkdownStream` instance.
     content
         A string of content to display before any streaming occurs. When `content_type`
-        isn't `"text"`, it may also be UI element(s) such as input and output bindings.
+        is Markdown or HTML, it may also be UI element(s) such as input and output
+        bindings.
     content_type
-        The content type. Default is "markdown" (specifically, CommonMark).
-        Other supported options are:
-        - `"html"`: for rendering HTML content.
-        - `"text"`: for plain text.
-        - `"semi-markdown"`: for rendering markdown, but with HTML tags escaped.
+        The content type. Default is "markdown" (specifically, CommonMark). Supported
+        content types include:
+            - `"markdown"`: markdown text, specifically CommonMark
+            - `"html"`: for rendering HTML content.
+            - `"text"`: for plain text.
+            - `"semi-markdown"`: for rendering markdown, but with HTML tags escaped.
     auto_scroll
         Whether to automatically scroll to the bottom of a scrollable container
         when new content is added. Default is True.
