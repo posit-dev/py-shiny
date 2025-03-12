@@ -39,7 +39,7 @@ from ._chat_provider_types import (
     as_provider_message,
 )
 from ._chat_tokenizer import TokenEncoding, TokenizersEncoding, get_default_tokenizer
-from ._chat_types import ChatMessage, ClientMessage, Role, TransformedMessage
+from ._chat_types import ChatMessage, ClientMessage, TransformedMessage
 from ._html_deps_py_shiny import chat_deps
 from .fill import as_fill_item, as_fillable_container
 
@@ -192,6 +192,8 @@ class Chat:
         self._current_stream_message = ""
         self._current_stream_id: str | None = None
         self._pending_messages: list[PendingMessage] = []
+
+        self._manual_stream_id: str | None = None
 
         # If a user input message is transformed into a response, we need to cancel
         # the next user input submit handling
@@ -552,7 +554,7 @@ class Chat:
         """
         await self._append_message(message, icon=icon)
 
-    async def inject_message_chunk(
+    async def append_message_chunk(
         self,
         message_chunk: Any,
         *,
@@ -560,13 +562,11 @@ class Chat:
         force: bool = False,
     ):
         """
-        Inject a chunk of message content into the current message stream.
+        Append a message chunk to the current message stream.
 
-        Sometimes when streaming a message (i.e., `.append_message_stream()`), you may
-        want to inject a content into the streaming message while the stream is
-        busy doing other things (e.g., calling a tool). This method allows you to
-        inject any content you want into the current message stream (assuming one is
-        active).
+        Append a chunk of message content to either the currently running
+        `.append_message_stream()` or to one that was manually started with
+        `.start_message_stream()`.
 
         Parameters
         ----------
@@ -577,14 +577,16 @@ class Chat:
         force
             Whether to start a new stream if one is not currently active.
         """
-        stream_id = self._current_stream_id
+        # Can append to either an active `.start_message_stream()` or a
+        # # `.append_message_stream()`
+        stream_id = self._manual_stream_id or self._current_stream_id
         if stream_id is None:
             if not force:
                 raise ValueError(
-                    "Can't inject a message chunk when no message stream is active. "
-                    "Use `force=True` to start a new stream if one is not currently active.",
+                    "Can't append a message chunk without an active message stream. "
+                    "Use `force=True` to start a new message stream if one is not currently active.",
                 )
-            await self.start_message_stream(force=True)
+            await self.start_message_stream()
 
         return await self._append_message(
             message_chunk,
@@ -593,41 +595,41 @@ class Chat:
             operation=operation,
         )
 
-    async def start_message_stream(self, *, force: bool = False):
+    async def start_message_stream(self):
         """
         Start a new message stream.
 
-        Parameters
-        ----------
-        force
-            Whether to force starting a new stream even if one is already active
+        Starts a new message stream which can then be appended to using
+        `.append_message_chunk()`.
         """
-        stream_id = self._current_stream_id
-        if stream_id is not None:
-            if not force:
-                raise ValueError(
-                    "Can't start a new message stream when a message stream is already active. "
-                    "Use `force=True` to end a currently active stream and start a new one.",
-                )
-            await self.end_message_stream()
-
-        id = _utils.private_random_id()
-        return await self._append_message("", chunk="start", stream_id=id)
+        # Since `._append_message()` manages a queue of message streams, we can just
+        # start a new stream here. Note that, if a stream is already active, this
+        # stream should start once the current stream ends.
+        stream_id = _utils.private_random_id()
+        # Separately track the stream id so ``.append_message_chunk()``/`.end_message_stream()`
+        self._manual_stream_id = stream_id
+        return await self._append_message(
+            "",
+            chunk="start",
+            stream_id=stream_id,
+        )
 
     async def end_message_stream(self):
         """
         End the current message stream (if any).
+
+        Ends a message stream that was started with `.start_message_stream()`.
         """
-        stream_id = self._current_stream_id
+        stream_id = self._manual_stream_id
         if stream_id is None:
             warnings.warn("No currently active stream to end.", stacklevel=2)
             return
 
-        with reactive.isolate():
-            # TODO: .cancel() method should probably just handle this
-            self.latest_message_stream.cancel()
-
-        return await self._append_message("", chunk="end", stream_id=stream_id)
+        return await self._append_message(
+            "",
+            chunk="end",
+            stream_id=stream_id,
+        )
 
     async def _append_message(
         self,
@@ -771,8 +773,8 @@ class Chat:
         """
         React to changes in the latest message stream.
 
-        Reactively reads for the :class:`~shiny.reactive.ExtendedTask` behind the
-        latest message stream.
+        Reactively reads for the :class:`~shiny.reactive.ExtendedTask` behind an
+        `.append_message_stream()`.
 
         From the return value (i.e., the extended task), you can then:
 
