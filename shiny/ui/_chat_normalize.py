@@ -2,9 +2,8 @@ import sys
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Optional, cast
 
-from htmltools import HTML, TagChild, Tagifiable
+from htmltools import HTML, Tagifiable
 
-from ..session._utils import process_ui
 from ._chat_types import ChatMessage
 
 if TYPE_CHECKING:
@@ -63,21 +62,13 @@ class DictNormalizer(BaseMessageNormalizer):
         x = cast("dict[str, Any]", message)
         if "content" not in x:
             raise ValueError("Message must have 'content' key")
-        content, deps = process_ui(cast(TagChild, x["content"]))
-        res = ChatMessage(content=content, role=x.get("role", "assistant"))
-        if deps:
-            res["html_deps"] = deps
-        return res
+        return ChatMessage(content=x["content"], role=x.get("role", "assistant"))
 
     def normalize_chunk(self, chunk: Any) -> ChatMessage:
         x = cast("dict[str, Any]", chunk)
         if "content" not in x:
             raise ValueError("Message must have 'content' key")
-        content, deps = process_ui(cast(TagChild, x["content"]))
-        res = ChatMessage(content=content, role=x.get("role", "assistant"))
-        if deps:
-            res["html_deps"] = deps
-        return res
+        return ChatMessage(content=x["content"], role=x.get("role", "assistant"))
 
     def can_normalize(self, message: Any) -> bool:
         return isinstance(message, dict)

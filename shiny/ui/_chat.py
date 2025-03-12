@@ -38,7 +38,7 @@ from ._chat_provider_types import (
     as_provider_message,
 )
 from ._chat_tokenizer import TokenEncoding, TokenizersEncoding, get_default_tokenizer
-from ._chat_types import ChatMessage, ClientMessage, TransformedMessage
+from ._chat_types import ChatMessage, ChatMessageDict, ClientMessage, TransformedMessage
 from ._html_deps_py_shiny import chat_deps
 from .fill import as_fill_item, as_fillable_container
 
@@ -46,7 +46,7 @@ __all__ = (
     "Chat",
     "ChatExpress",
     "chat_ui",
-    "ChatMessage",
+    "ChatMessageDict",
 )
 
 
@@ -251,7 +251,10 @@ class Chat:
                 else:
                     # A transformed value of None is a special signal to suspend input
                     # handling (i.e., don't generate a response)
-                    self._store_message(as_transformed_message(msg), index=n_pre)
+                    self._store_message(
+                        TransformedMessage.from_chat_message(msg),
+                        index=n_pre,
+                    )
                     await self._remove_loading_message()
                     self._suspend_input_handler = True
 
@@ -412,7 +415,7 @@ class Chat:
         token_limits: tuple[int, int] | None = None,
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
-    ) -> tuple[ChatMessage, ...]: ...
+    ) -> tuple[ChatMessageDict, ...]: ...
 
     def messages(
         self,
@@ -421,7 +424,7 @@ class Chat:
         token_limits: tuple[int, int] | None = None,
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
-    ) -> tuple[ChatMessage | ProviderMessage, ...]:
+    ) -> tuple[ChatMessageDict | ProviderMessage, ...]:
         """
         Reactively read chat messages
 
@@ -489,17 +492,20 @@ class Chat:
         if token_limits is not None:
             messages = self._trim_messages(messages, token_limits, format)
 
-        res: list[ChatMessage | ProviderMessage] = []
+        res: list[ChatMessageDict | ProviderMessage] = []
         for i, m in enumerate(messages):
             transform = False
-            if m["role"] == "assistant":
+            if m.role == "assistant":
                 transform = transform_assistant
-            elif m["role"] == "user":
+            elif m.role == "user":
                 transform = transform_user == "all" or (
                     transform_user == "last" and i == len(messages) - 1
                 )
-            content_key = m["transform_key" if transform else "pre_transform_key"]
-            chat_msg = ChatMessage(content=str(m[content_key]), role=m["role"])
+            content_key = getattr(
+                m, "transform_key" if transform else "pre_transform_key"
+            )
+            content = getattr(m, content_key)
+            chat_msg = ChatMessageDict(content=str(content), role=m.role)
             if not isinstance(format, MISSING_TYPE):
                 chat_msg = as_provider_message(chat_msg, format)
             res.append(chat_msg)
@@ -593,9 +599,9 @@ class Chat:
         else:
             msg = normalize_message_chunk(message)
             # Update the current stream message
-            chunk_content = msg["content"]
+            chunk_content = msg.content
             self._current_stream_message += chunk_content
-            msg["content"] = self._current_stream_message
+            msg.content = self._current_stream_message
             if chunk == "end":
                 self._current_stream_message = ""
 
@@ -739,7 +745,7 @@ class Chat:
     ):
         id = _utils.private_random_id()
 
-        empty = ChatMessage(content="", role="assistant")
+        empty = ChatMessageDict(content="", role="assistant")
         await self._append_message(empty, chunk="start", stream_id=id, icon=icon)
 
         try:
@@ -771,7 +777,7 @@ class Chat:
         chunk: ChunkOption = False,
         icon: HTML | Tag | TagList | None = None,
     ):
-        if message["role"] == "system":
+        if message.role == "system":
             # System messages are not displayed in the UI
             return
 
@@ -786,13 +792,13 @@ class Chat:
         elif chunk == "end":
             chunk_type = "message_end"
 
-        content = message["content_client"]
+        content = message.content_client
         content_type = "html" if isinstance(content, HTML) else "markdown"
 
         # TODO: pass along dependencies for both content and icon (if any)
         msg = ClientMessage(
             content=str(content),
-            role=message["role"],
+            role=message.role,
             content_type=content_type,
             chunk_type=chunk_type,
         )
@@ -800,7 +806,7 @@ class Chat:
         if icon is not None:
             msg["icon"] = str(icon)
 
-        deps = message.get("html_deps", [])
+        deps = message.html_deps
         if deps:
             msg["html_deps"] = deps
 
@@ -932,15 +938,15 @@ class Chat:
         chunk: ChunkOption = False,
         chunk_content: str | None = None,
     ) -> TransformedMessage | None:
-        res = as_transformed_message(message)
-        key = res["transform_key"]
+        res = TransformedMessage.from_chat_message(message)
+        key = res.transform_key
 
-        if message["role"] == "user" and self._transform_user is not None:
-            content = await self._transform_user(message["content"])
+        if message.role == "user" and self._transform_user is not None:
+            content = await self._transform_user(message.content)
 
-        elif message["role"] == "assistant" and self._transform_assistant is not None:
+        elif message.role == "assistant" and self._transform_assistant is not None:
             content = await self._transform_assistant(
-                message["content"],
+                message.content,
                 chunk_content or "",
                 chunk == "end" or chunk is False,
             )
@@ -950,7 +956,7 @@ class Chat:
         if content is None:
             return None
 
-        res[key] = content  # type: ignore
+        setattr(res, key, content)
 
         return res
 
@@ -975,7 +981,7 @@ class Chat:
         messages.insert(index, message)
 
         self._messages.set(tuple(messages))
-        if message["role"] == "user":
+        if message.role == "user":
             self._latest_user_input.set(message)
 
         return None
@@ -1000,9 +1006,9 @@ class Chat:
         n_other_messages: int = 0
         token_counts: list[int] = []
         for m in messages:
-            count = self._get_token_count(m["content_server"])
+            count = self._get_token_count(m.content_server)
             token_counts.append(count)
-            if m["role"] == "system":
+            if m.role == "system":
                 n_system_tokens += count
                 n_system_messages += 1
             else:
@@ -1023,7 +1029,7 @@ class Chat:
         n_other_messages2: int = 0
         token_counts.reverse()
         for i, m in enumerate(reversed(messages)):
-            if m["role"] == "system":
+            if m.role == "system":
                 messages2.append(m)
                 continue
             remaining_non_system_tokens -= token_counts[i]
@@ -1046,13 +1052,13 @@ class Chat:
         self,
         messages: tuple[TransformedMessage, ...],
     ) -> tuple[TransformedMessage, ...]:
-        if any(m["role"] == "system" for m in messages):
+        if any(m.role == "system" for m in messages):
             raise ValueError(
                 "Anthropic requires a system prompt to be specified in it's `.create()` method "
                 "(not in the chat messages with `role: system`)."
             )
         for i, m in enumerate(messages):
-            if m["role"] == "user":
+            if m.role == "user":
                 return messages[i:]
 
         return ()
@@ -1098,7 +1104,8 @@ class Chat:
         if msg is None:
             return None
         key = "content_server" if transform else "content_client"
-        return str(msg[key])
+        val = getattr(msg, key)
+        return str(val)
 
     def _user_input(self) -> str:
         id = self.user_input_id
@@ -1194,7 +1201,7 @@ class ChatExpress(Chat):
     def ui(
         self,
         *,
-        messages: Optional[Sequence[str | ChatMessage]] = None,
+        messages: Optional[Sequence[str | ChatMessageDict]] = None,
         placeholder: str = "Enter a message...",
         width: CssUnit = "min(680px, 100%)",
         height: CssUnit = "auto",
@@ -1244,7 +1251,7 @@ class ChatExpress(Chat):
 def chat_ui(
     id: str,
     *,
-    messages: Optional[Sequence[TagChild | ChatMessage]] = None,
+    messages: Optional[Sequence[TagChild | ChatMessageDict]] = None,
     placeholder: str = "Enter a message...",
     width: CssUnit = "min(680px, 100%)",
     height: CssUnit = "auto",
@@ -1357,29 +1364,6 @@ def chat_ui(
 
     if fill:
         res = as_fillable_container(as_fill_item(res))
-
-    return res
-
-
-def as_transformed_message(message: ChatMessage) -> TransformedMessage:
-    if message["role"] == "user":
-        transform_key = "content_server"
-        pre_transform_key = "content_client"
-    else:
-        transform_key = "content_client"
-        pre_transform_key = "content_server"
-
-    res = TransformedMessage(
-        content_client=message["content"],
-        content_server=message["content"],
-        role=message["role"],
-        transform_key=transform_key,
-        pre_transform_key=pre_transform_key,
-    )
-
-    deps = message.get("html_deps", [])
-    if deps:
-        res["html_deps"] = deps
 
     return res
 

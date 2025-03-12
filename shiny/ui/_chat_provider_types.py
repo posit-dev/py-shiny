@@ -1,7 +1,7 @@
 import sys
 from typing import TYPE_CHECKING, Literal, Union
 
-from ._chat_types import ChatMessage
+from ._chat_types import ChatMessageDict
 
 if TYPE_CHECKING:
     from anthropic.types import MessageParam as AnthropicMessage
@@ -47,7 +47,7 @@ ProviderMessageFormat = Literal[
 # TODO: use a strategy pattern to allow others to register
 # their own message formats
 def as_provider_message(
-    message: ChatMessage, format: ProviderMessageFormat
+    message: ChatMessageDict, format: ProviderMessageFormat
 ) -> "ProviderMessage":
     if format == "anthropic":
         return as_anthropic_message(message)
@@ -62,7 +62,7 @@ def as_provider_message(
     raise ValueError(f"Unknown format: {format}")
 
 
-def as_anthropic_message(message: ChatMessage) -> "AnthropicMessage":
+def as_anthropic_message(message: ChatMessageDict) -> "AnthropicMessage":
     from anthropic.types import MessageParam as AnthropicMessage
 
     if message["role"] == "system":
@@ -72,7 +72,7 @@ def as_anthropic_message(message: ChatMessage) -> "AnthropicMessage":
     return AnthropicMessage(content=message["content"], role=message["role"])
 
 
-def as_google_message(message: ChatMessage) -> "GoogleMessage":
+def as_google_message(message: ChatMessageDict) -> "GoogleMessage":
     if sys.version_info < (3, 9):
         raise ValueError("Google requires Python 3.9")
 
@@ -89,7 +89,7 @@ def as_google_message(message: ChatMessage) -> "GoogleMessage":
     return gtypes.ContentDict(parts=[message["content"]], role=role)
 
 
-def as_langchain_message(message: ChatMessage) -> "LangChainMessage":
+def as_langchain_message(message: ChatMessageDict) -> "LangChainMessage":
     from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
     content = message["content"]
@@ -103,7 +103,7 @@ def as_langchain_message(message: ChatMessage) -> "LangChainMessage":
     raise ValueError(f"Unknown role: {message['role']}")
 
 
-def as_openai_message(message: ChatMessage) -> "OpenAIMessage":
+def as_openai_message(message: ChatMessageDict) -> "OpenAIMessage":
     from openai.types.chat import (
         ChatCompletionAssistantMessageParam,
         ChatCompletionSystemMessageParam,
@@ -121,7 +121,7 @@ def as_openai_message(message: ChatMessage) -> "OpenAIMessage":
     raise ValueError(f"Unknown role: {role}")
 
 
-def as_ollama_message(message: ChatMessage) -> "OllamaMessage":
+def as_ollama_message(message: ChatMessageDict) -> "OllamaMessage":
     from ollama import Message as OllamaMessage
 
     return OllamaMessage(content=message["content"], role=message["role"])
