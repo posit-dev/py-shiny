@@ -90,14 +90,14 @@ def app_ui(request: Request) -> ui.Tag:
     return ui.page_fixed(
         ui.output_code("bookmark_store"),
         "Click Buttons to update bookmark",
-        mod_btn(f"mod{k-1}", k - 1),
+        mod_btn(f"mod{k - 1}", k - 1),
     )
 
 
 # Needs access to the restore context to the dynamic UI
 def server(input: Inputs, output: Outputs, session: Session):
 
-    btn_server(f"mod{k-1}", k - 1)
+    btn_server(f"mod{k - 1}", k - 1)
 
     @render.code
     def bookmark_store():
