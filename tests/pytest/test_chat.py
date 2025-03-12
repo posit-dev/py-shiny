@@ -416,7 +416,9 @@ def test_as_google_message():
 
 
 def test_as_langchain_message():
-    from langchain_core.language_models.base import LanguageModelInput
+    from langchain_core.language_models.base import (
+        LanguageModelInput,
+    )
     from langchain_core.language_models.base import (
         Sequence as LangchainSequence,  # pyright: ignore[reportPrivateImportUsage]
     )
