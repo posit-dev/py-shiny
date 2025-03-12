@@ -27,8 +27,8 @@ class TransformedMessage:
     pre_transform_key: Literal["content_client", "content_server"]
 
     @classmethod
-    def from_content(cls, content: str | HTML, role: Role) -> TransformedMessage:
-        if role == "user":
+    def from_message(cls, message: ChatMessage) -> TransformedMessage:
+        if message["role"] == "user":
             transform_key = "content_server"
             pre_transform_key = "content_client"
         else:
@@ -36,9 +36,9 @@ class TransformedMessage:
             pre_transform_key = "content_server"
 
         return cls(
-            content_client=content,
-            content_server=str(content),
-            role=role,
+            content_client=message["content"],
+            content_server=message["content"],
+            role=message["role"],
             transform_key=transform_key,
             pre_transform_key=pre_transform_key,
         )

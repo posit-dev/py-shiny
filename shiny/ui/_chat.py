@@ -232,18 +232,20 @@ class Chat:
             @reactive.effect(priority=9999)
             @reactive.event(self._user_input)
             async def _on_user_input():
-                content = self._user_input()
+                msg = ChatMessage(content=self._user_input(), role="user")
                 # It's possible that during the transform, a message is appended, so get
                 # the length now, so we can insert the new message at the right index
                 n_pre = len(self._messages())
-                content, _ = await self._transform_content(content, role="user")
-                if content is not None:
-                    self._store_content(content, role="user")
+                msg_post, _ = await self._transform_message(msg)
+                if msg_post is not None:
+                    self._store_message(msg_post)
                     self._suspend_input_handler = False
                 else:
                     # A transformed value of None is a special signal to suspend input
                     # handling (i.e., don't generate a response)
-                    self._store_content(content or "", role="user", index=n_pre)
+                    self._store_message(
+                        TransformedMessage.from_message(msg), index=n_pre
+                    )
                     await self._remove_loading_message()
                     self._suspend_input_handler = True
 
@@ -657,25 +659,29 @@ class Chat:
             self._current_stream_message += msg["content"]
 
         try:
-            content, transformed = await self._transform_content(
-                msg["content"], role=msg["role"], chunk=chunk
-            )
+            msg_t, transformed = await self._transform_message(msg, chunk=chunk)
             # Act like nothing happened if content transformed to None
-            if content is None:
+            if msg_t is None:
                 return
             # Store if this is a whole message or the end of a streaming message
             if chunk is False:
-                self._store_content(content, role=msg["role"])
+                self._store_message(msg_t)
             elif chunk == "end":
                 # Transforming content requires replacing all the content, so take
                 # it as is. Otherwise, store the accumulated stream message.
-                self._store_content(
-                    content=content if transformed else self._current_stream_message,
-                    role=msg["role"],
-                )
+                if transformed:
+                    self._store_message(msg_t)
+                else:
+                    self._store_message(
+                        TransformedMessage.from_message(
+                            ChatMessage(
+                                content=self._current_stream_message, role="assistant"
+                            )
+                        )
+                    )
             await self._send_append_message(
-                content=content,
-                role=msg["role"],
+                content=msg_t.content_client,
+                role=msg_t.role,
                 chunk=chunk,
                 operation="replace" if transformed else operation,
                 icon=icon,
@@ -986,33 +992,43 @@ class Chat:
         else:
             return _set_transform(fn)
 
-    async def _transform_content(
+    async def _transform_message(
         self,
-        content: str,
-        role: Role,
+        message: ChatMessage,
         chunk: ChunkOption = False,
-    ) -> tuple[str | HTML | None, bool]:
-        content2 = content
+    ) -> tuple[TransformedMessage | None, bool]:
+        res = TransformedMessage.from_message(message)
+        key = res.transform_key
         transformed = False
-        if role == "user" and self._transform_user is not None:
-            content2 = await self._transform_user(content)
+
+        if message["role"] == "user" and self._transform_user is not None:
+            content = await self._transform_user(message["content"])
             transformed = True
-        elif role == "assistant" and self._transform_assistant is not None:
-            all_content = content if chunk is False else self._current_stream_message
-            content2 = await self._transform_assistant(
+        elif message["role"] == "assistant" and self._transform_assistant is not None:
+            all_content = (
+                message["content"] if chunk is False else self._current_stream_message
+            )
+            setattr(res, res.pre_transform_key, all_content)
+            content = await self._transform_assistant(
                 all_content,
-                content,
+                message["content"],
                 chunk == "end" or chunk is False,
             )
             transformed = True
+        else:
+            return (res, transformed)
 
-        return (content2, transformed)
+        if content is None:
+            return (None, transformed)
+
+        setattr(res, key, content)
+
+        return (res, transformed)
 
     # Just before storing, handle chunk msg type and calculate tokens
-    def _store_content(
+    def _store_message(
         self,
-        content: str | HTML,
-        role: Role,
+        message: TransformedMessage,
         index: int | None = None,
     ) -> None:
 
@@ -1022,14 +1038,12 @@ class Chat:
         if index is None:
             index = len(messages)
 
-        msg = TransformedMessage.from_content(content=content, role=role)
-
         messages = list(messages)
-        messages.insert(index, msg)
+        messages.insert(index, message)
 
         self._messages.set(tuple(messages))
-        if role == "user":
-            self._latest_user_input.set(msg)
+        if message.role == "user":
+            self._latest_user_input.set(message)
 
         return None
 
