@@ -43,6 +43,10 @@ def server(input: Inputs, ouput: Outputs, session: Session):
 did_save = False
 did_restore = False
 
+# Note:
+# This is a "temp" directory that is only used for testing and is cleaned up on app
+# shutdown. This should NOT be standard behavior of a hosting environment. Instead, it
+# should have a persistent directory that can be restored over time.
 bookmark_dir = Path(__file__).parent / f"bookmarks-{rand_hex(8)}"
 bookmark_dir.mkdir(exist_ok=True)
 
