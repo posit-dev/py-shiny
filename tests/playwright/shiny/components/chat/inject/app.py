@@ -22,7 +22,7 @@ async def _():
 
 @reactive.effect
 async def _():
-    await chat.inject_message_chunk("injected chunk")
+    await chat.append_message_chunk("injected chunk")
 
 
 ui.input_action_button("run_test", "Run test")
@@ -34,7 +34,7 @@ async def _():
     await chat.start_message_stream()
     for chunk in ["can ", "inject ", "chunks"]:
         await asyncio.sleep(0.2)
-        await chat.inject_message_chunk(chunk)
+        await chat.append_message_chunk(chunk)
     await chat.end_message_stream()
 
 
