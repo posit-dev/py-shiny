@@ -163,11 +163,10 @@ class MarkdownElement extends LightElement {
   }
 
   static async #doUnBind(el: HTMLElement): Promise<void> {
-    if (!window.Shiny) return;
-    if (!Shiny.unbindAll) return;
+    if (!window?.Shiny?.unbindAll) return;
 
     try {
-      Shiny.unbindAll(el);
+      window.Shiny.unbindAll(el);
     } catch (err) {
       showShinyClientMessage({
         status: "error",
@@ -177,12 +176,11 @@ class MarkdownElement extends LightElement {
   }
 
   static async #doBind(el: HTMLElement): Promise<void> {
-    if (!window.Shiny) return;
-    if (!Shiny.initializeInputs) return;
-    if (!Shiny.bindAll) return;
+    if (!window?.Shiny?.initializeInputs) return;
+    if (!window?.Shiny?.bindAll) return;
 
     try {
-      Shiny.initializeInputs(el);
+      window.Shiny.initializeInputs(el);
     } catch (err) {
       showShinyClientMessage({
         status: "error",
@@ -191,7 +189,7 @@ class MarkdownElement extends LightElement {
     }
 
     try {
-      await Shiny.bindAll(el);
+      await window.Shiny.bindAll(el);
     } catch (err) {
       showShinyClientMessage({
         status: "error",

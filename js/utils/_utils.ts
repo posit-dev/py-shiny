@@ -59,7 +59,7 @@ async function renderDependencies(deps: HtmlDep[]): Promise<void> {
   if (!deps) return;
 
   try {
-    await Shiny.renderDependenciesAsync(deps);
+    await window.Shiny.renderDependenciesAsync(deps);
   } catch (renderError) {
     showShinyClientMessage({
       status: "error",
