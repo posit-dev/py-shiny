@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from typing import Any
 
 import orjson
@@ -21,3 +22,17 @@ def to_json_str(x: Any) -> str:
 
 def from_json_str(x: str) -> Any:
     return orjson.loads(x)
+
+
+# When saving to a file, use plain text json.
+# (It's possible that we could store bytes, but unknown if there's any security benefit.)
+#
+# This makes the file contents independent of the json library used and
+# independent of the python version being used
+# (ex: pickle files are not compatible between python versions)
+def to_json_file(x: Any, file: Path) -> None:
+    file.write_text(to_json_str(x), encoding="utf-8")
+
+
+def from_json_file(file: Path) -> Any:
+    return from_json_str(file.read_text(encoding="utf-8"))

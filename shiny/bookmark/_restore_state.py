@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import pickle
 import warnings
 from contextlib import contextmanager
 from contextvars import ContextVar, Token
@@ -11,7 +10,7 @@ from urllib.parse import parse_qs, parse_qsl
 from ..module import ResolvedId
 from ._bookmark_state import local_restore_dir
 from ._types import BookmarkRestoreDirFn
-from ._utils import from_json_str, in_shiny_server
+from ._utils import from_json_file, from_json_str, in_shiny_server
 
 if TYPE_CHECKING:
     from .._app import App
@@ -204,17 +203,15 @@ class RestoreContext:
         self.dir = Path(await load_bookmark_fn(id))
 
         if not self.dir.exists():
-            raise ValueError("Bookmarked state directory does not exist.")
+            raise RuntimeError("Bookmarked state directory does not exist.")
 
         # TODO: Barret; Store/restore as JSON
-        with open(self.dir / "input.pickle", "rb") as f:
-            input_values = pickle.load(f)
+        input_values = from_json_file(self.dir / "input.json")
         self.input = RestoreInputSet(input_values)
 
-        values_file = self.dir / "values.pickle"
+        values_file = self.dir / "values.json"
         if values_file.exists():
-            with open(values_file, "rb") as f:
-                self.values = pickle.load(f)
+            self.values = from_json_file(values_file)
         # End load state from disk
 
         return

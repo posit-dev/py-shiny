@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import pickle
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Awaitable, Callable
 from urllib.parse import urlencode as urllib_urlencode
@@ -9,7 +8,7 @@ from .._utils import private_random_id
 from ..reactive import isolate
 from ._bookmark_state import local_save_dir
 from ._types import BookmarkSaveDirFn
-from ._utils import in_shiny_server, to_json_str
+from ._utils import in_shiny_server, to_json_file, to_json_str
 
 if TYPE_CHECKING:
     from .. import Inputs
@@ -55,7 +54,7 @@ class BookmarkState:
 
     async def _save_state(self, *, app: App) -> str:
         """
-        Save a state to disk (pickle).
+        Save a bookmark state to disk (JSON).
 
         Returns
         -------
@@ -91,12 +90,10 @@ class BookmarkState:
         )
         assert self.dir is not None
 
-        with open(self.dir / "input.pickle", "wb") as f:
-            pickle.dump(input_values_json, f)
+        to_json_file(input_values_json, self.dir / "input.json")
 
         if len(self.values) > 0:
-            with open(self.dir / "values.pickle", "wb") as f:
-                pickle.dump(self.values, f)
+            to_json_file(self.values, self.dir / "values.json")
         # End save to disk
 
         # No need to encode URI component as it is only ascii characters.
