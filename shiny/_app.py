@@ -149,7 +149,7 @@ class App:
                 "`server` must have 1 (Inputs) or 3 parameters (Inputs, Outputs, Session)"
             )
 
-        self._init_bookmarking(bookmark_store=bookmark_store)
+        self._init_bookmarking(bookmark_store=bookmark_store, ui=ui)
 
         self._debug: bool = debug
 
@@ -378,19 +378,14 @@ class App:
                 request.url.query, app=self
             )
 
-        with restore_context(restore_ctx):
-            if callable(self.ui):
+        if callable(self.ui):
+            # At this point, if `app.bookmark_store != "disable"`, then we've already
+            # checked that `ui` is a function (in `App._init_bookmarking()`). No need to throw warning if `ui` is _not_ a function.
+            with restore_context(restore_ctx):
                 ui = self._render_page(self.ui(request), self.lib_prefix)
-            else:
-                if restore_ctx.active:
-                    # TODO: Barret - Docs: See ?enableBookmarking
-                    warnings.warn(
-                        "Trying to restore saved app state, but UI code must be a function for this to work!",
-                        stacklevel=1,
-                    )
-
-                ui = self.ui
-            return HTMLResponse(content=ui["html"])
+        else:
+            ui = self.ui
+        return HTMLResponse(content=ui["html"])
 
     async def _on_connect_cb(self, ws: starlette.websockets.WebSocket) -> None:
         """
@@ -503,10 +498,15 @@ class App:
     # Bookmarking
     # ==========================================================================
 
-    def _init_bookmarking(self, *, bookmark_store: BookmarkStore) -> None:
+    def _init_bookmarking(self, *, bookmark_store: BookmarkStore, ui: Any) -> None:
         self._bookmark_save_dir_fn = bookmark_global_state.bookmark_save_dir
         self._bookmark_restore_dir_fn = bookmark_global_state.bookmark_restore_dir
         self._bookmark_store = bookmark_store
+
+        if bookmark_store != "disable" and not callable(ui):
+            raise TypeError(
+                "App(ui=) must be a function that accepts a request object to allow the UI to be properly reconstructed from a bookmarked state."
+            )
 
     @property
     def bookmark_store(self) -> BookmarkStore:
