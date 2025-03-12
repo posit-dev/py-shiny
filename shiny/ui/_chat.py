@@ -17,7 +17,7 @@ from typing import (
 )
 from weakref import WeakValueDictionary
 
-from htmltools import HTML, Tag, TagAttrValue, TagList, css
+from htmltools import HTML, Tag, TagAttrValue, TagChild, TagList, css
 
 from .. import _utils, reactive
 from .._deprecated import warn_deprecated
@@ -38,7 +38,7 @@ from ._chat_provider_types import (
     as_provider_message,
 )
 from ._chat_tokenizer import TokenEncoding, TokenizersEncoding, get_default_tokenizer
-from ._chat_types import ChatMessage, ClientMessage, TransformedMessage
+from ._chat_types import ChatMessage, ChatMessageDict, ClientMessage, TransformedMessage
 from ._html_deps_py_shiny import chat_deps
 from .fill import as_fill_item, as_fillable_container
 
@@ -46,7 +46,7 @@ __all__ = (
     "Chat",
     "ChatExpress",
     "chat_ui",
-    "ChatMessage",
+    "ChatMessageDict",
 )
 
 
@@ -133,12 +133,21 @@ class Chat:
         A unique identifier for the chat session. In Shiny Core, make sure this id
         matches a corresponding :func:`~shiny.ui.chat_ui` call in the UI.
     messages
-        A sequence of messages to display in the chat. Each message can be either a
-        string or a dictionary with `content` and `role` keys. The `content` key
-        should contain a string, and the `role` key can be "assistant" or "user".
-        Content strings are interpreted as markdown and rendered to HTML on the client.
-        Content may also include specially formatted **input suggestion** links (see
-        `.append_message_stream()` for more information).
+        A sequence of messages to display in the chat. A given message can be one of the
+        following:
+
+        * A string, which is interpreted as markdown and rendered to HTML on the client.
+            * To prevent interpreting as markdown, mark the string as
+              :class:`~shiny.ui.HTML`.
+        * A UI element (specifically, a :class:`~shiny.ui.TagChild`).
+            * This includes :class:`~shiny.ui.TagList`, which take UI elements
+              (including strings) as children. In this case, strings are still
+              interpreted as markdown as long as they're not inside HTML.
+        * A dictionary with `content` and `role` keys. The `content` key can contain a
+          content as described above, and the `role` key can be "assistant" or "user".
+
+        **NOTE:** content may include specially formatted **input suggestion** links
+        (see `.append_message()` for more information).
     on_error
         How to handle errors that occur in response to user input. When `"unhandled"`,
         the app will stop running when an error occurs. Otherwise, a notification
@@ -242,7 +251,10 @@ class Chat:
                 else:
                     # A transformed value of None is a special signal to suspend input
                     # handling (i.e., don't generate a response)
-                    self._store_message(as_transformed_message(msg), index=n_pre)
+                    self._store_message(
+                        TransformedMessage.from_chat_message(msg),
+                        index=n_pre,
+                    )
                     await self._remove_loading_message()
                     self._suspend_input_handler = True
 
@@ -403,7 +415,7 @@ class Chat:
         token_limits: tuple[int, int] | None = None,
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
-    ) -> tuple[ChatMessage, ...]: ...
+    ) -> tuple[ChatMessageDict, ...]: ...
 
     def messages(
         self,
@@ -412,7 +424,7 @@ class Chat:
         token_limits: tuple[int, int] | None = None,
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
-    ) -> tuple[ChatMessage | ProviderMessage, ...]:
+    ) -> tuple[ChatMessageDict | ProviderMessage, ...]:
         """
         Reactively read chat messages
 
@@ -480,17 +492,20 @@ class Chat:
         if token_limits is not None:
             messages = self._trim_messages(messages, token_limits, format)
 
-        res: list[ChatMessage | ProviderMessage] = []
+        res: list[ChatMessageDict | ProviderMessage] = []
         for i, m in enumerate(messages):
             transform = False
-            if m["role"] == "assistant":
+            if m.role == "assistant":
                 transform = transform_assistant
-            elif m["role"] == "user":
+            elif m.role == "user":
                 transform = transform_user == "all" or (
                     transform_user == "last" and i == len(messages) - 1
                 )
-            content_key = m["transform_key" if transform else "pre_transform_key"]
-            chat_msg = ChatMessage(content=str(m[content_key]), role=m["role"])
+            content_key = getattr(
+                m, "transform_key" if transform else "pre_transform_key"
+            )
+            content = getattr(m, content_key)
+            chat_msg = ChatMessageDict(content=str(content), role=m.role)
             if not isinstance(format, MISSING_TYPE):
                 chat_msg = as_provider_message(chat_msg, format)
             res.append(chat_msg)
@@ -509,12 +524,22 @@ class Chat:
         Parameters
         ----------
         message
-            The message to append. A variety of message formats are supported including
-            a string, a dictionary with `content` and `role` keys, or a relevant chat
-            completion object from platforms like OpenAI, Anthropic, Ollama, and others.
-            Content strings are interpreted as markdown and rendered to HTML on the
-            client. Content may also include specially formatted **input suggestion**
-            links (see note below).
+            A given message can be one of the following:
+
+            * A string, which is interpreted as markdown and rendered to HTML on the
+              client.
+                * To prevent interpreting as markdown, mark the string as
+                  :class:`~shiny.ui.HTML`.
+            * A UI element (specifically, a :class:`~shiny.ui.TagChild`).
+                * This includes :class:`~shiny.ui.TagList`, which take UI elements
+                  (including strings) as children. In this case, strings are still
+                  interpreted as markdown as long as they're not inside HTML.
+            * A dictionary with `content` and `role` keys. The `content` key can contain
+              content as described above, and the `role` key can be "assistant" or
+              "user".
+
+            **NOTE:** content may include specially formatted **input suggestion** links
+            (see note below).
         icon
             An optional icon to display next to the message, currently only used for
             assistant messages. The icon can be any HTML element (e.g., an
@@ -574,9 +599,9 @@ class Chat:
         else:
             msg = normalize_message_chunk(message)
             # Update the current stream message
-            chunk_content = msg["content"]
+            chunk_content = msg.content
             self._current_stream_message += chunk_content
-            msg["content"] = self._current_stream_message
+            msg.content = self._current_stream_message
             if chunk == "end":
                 self._current_stream_message = ""
 
@@ -604,12 +629,23 @@ class Chat:
         Parameters
         ----------
         message
-            An (async) iterable of message chunks to append. A variety of message chunk
-            formats are supported, including a string, a dictionary with `content` and
-            `role` keys, or a relevant chat completion object from platforms like
-            OpenAI, Anthropic, Ollama, and others. Content strings are interpreted as
-            markdown and rendered to HTML on the client. Content may also include
-            specially formatted **input suggestion** links (see note below).
+            An (async) iterable of message chunks. Each chunk can be one of the
+            following:
+
+            * A string, which is interpreted as markdown and rendered to HTML on the
+              client.
+                * To prevent interpreting as markdown, mark the string as
+                  :class:`~shiny.ui.HTML`.
+            * A UI element (specifically, a :class:`~shiny.ui.TagChild`).
+                * This includes :class:`~shiny.ui.TagList`, which take UI elements
+                  (including strings) as children. In this case, strings are still
+                  interpreted as markdown as long as they're not inside HTML.
+            * A dictionary with `content` and `role` keys. The `content` key can contain
+              content as described above, and the `role` key can be "assistant" or
+              "user".
+
+            **NOTE:** content may include specially formatted **input suggestion** links
+            (see note below).
         icon
             An optional icon to display next to the message, currently only used for
             assistant messages. The icon can be any HTML element (e.g., an
@@ -709,7 +745,7 @@ class Chat:
     ):
         id = _utils.private_random_id()
 
-        empty = ChatMessage(content="", role="assistant")
+        empty = ChatMessageDict(content="", role="assistant")
         await self._append_message(empty, chunk="start", stream_id=id, icon=icon)
 
         try:
@@ -741,7 +777,7 @@ class Chat:
         chunk: ChunkOption = False,
         icon: HTML | Tag | TagList | None = None,
     ):
-        if message["role"] == "system":
+        if message.role == "system":
             # System messages are not displayed in the UI
             return
 
@@ -756,19 +792,23 @@ class Chat:
         elif chunk == "end":
             chunk_type = "message_end"
 
-        content = message["content_client"]
+        content = message.content_client
         content_type = "html" if isinstance(content, HTML) else "markdown"
 
         # TODO: pass along dependencies for both content and icon (if any)
         msg = ClientMessage(
             content=str(content),
-            role=message["role"],
+            role=message.role,
             content_type=content_type,
             chunk_type=chunk_type,
         )
 
         if icon is not None:
             msg["icon"] = str(icon)
+
+        deps = message.html_deps
+        if deps:
+            msg["html_deps"] = deps
 
         # print(msg)
 
@@ -898,15 +938,15 @@ class Chat:
         chunk: ChunkOption = False,
         chunk_content: str | None = None,
     ) -> TransformedMessage | None:
-        res = as_transformed_message(message)
-        key = res["transform_key"]
+        res = TransformedMessage.from_chat_message(message)
+        key = res.transform_key
 
-        if message["role"] == "user" and self._transform_user is not None:
-            content = await self._transform_user(message["content"])
+        if message.role == "user" and self._transform_user is not None:
+            content = await self._transform_user(message.content)
 
-        elif message["role"] == "assistant" and self._transform_assistant is not None:
+        elif message.role == "assistant" and self._transform_assistant is not None:
             content = await self._transform_assistant(
-                message["content"],
+                message.content,
                 chunk_content or "",
                 chunk == "end" or chunk is False,
             )
@@ -916,7 +956,7 @@ class Chat:
         if content is None:
             return None
 
-        res[key] = content  # type: ignore
+        setattr(res, key, content)
 
         return res
 
@@ -941,7 +981,7 @@ class Chat:
         messages.insert(index, message)
 
         self._messages.set(tuple(messages))
-        if message["role"] == "user":
+        if message.role == "user":
             self._latest_user_input.set(message)
 
         return None
@@ -966,9 +1006,9 @@ class Chat:
         n_other_messages: int = 0
         token_counts: list[int] = []
         for m in messages:
-            count = self._get_token_count(m["content_server"])
+            count = self._get_token_count(m.content_server)
             token_counts.append(count)
-            if m["role"] == "system":
+            if m.role == "system":
                 n_system_tokens += count
                 n_system_messages += 1
             else:
@@ -989,7 +1029,7 @@ class Chat:
         n_other_messages2: int = 0
         token_counts.reverse()
         for i, m in enumerate(reversed(messages)):
-            if m["role"] == "system":
+            if m.role == "system":
                 messages2.append(m)
                 continue
             remaining_non_system_tokens -= token_counts[i]
@@ -1012,13 +1052,13 @@ class Chat:
         self,
         messages: tuple[TransformedMessage, ...],
     ) -> tuple[TransformedMessage, ...]:
-        if any(m["role"] == "system" for m in messages):
+        if any(m.role == "system" for m in messages):
             raise ValueError(
                 "Anthropic requires a system prompt to be specified in it's `.create()` method "
                 "(not in the chat messages with `role: system`)."
             )
         for i, m in enumerate(messages):
-            if m["role"] == "user":
+            if m.role == "user":
                 return messages[i:]
 
         return ()
@@ -1064,7 +1104,8 @@ class Chat:
         if msg is None:
             return None
         key = "content_server" if transform else "content_client"
-        return str(msg[key])
+        val = getattr(msg, key)
+        return str(val)
 
     def _user_input(self) -> str:
         id = self.user_input_id
@@ -1160,7 +1201,7 @@ class ChatExpress(Chat):
     def ui(
         self,
         *,
-        messages: Optional[Sequence[str | ChatMessage]] = None,
+        messages: Optional[Sequence[str | ChatMessageDict]] = None,
         placeholder: str = "Enter a message...",
         width: CssUnit = "min(680px, 100%)",
         height: CssUnit = "auto",
@@ -1210,7 +1251,7 @@ class ChatExpress(Chat):
 def chat_ui(
     id: str,
     *,
-    messages: Optional[Sequence[str | ChatMessage]] = None,
+    messages: Optional[Sequence[TagChild | ChatMessageDict]] = None,
     placeholder: str = "Enter a message...",
     width: CssUnit = "min(680px, 100%)",
     height: CssUnit = "auto",
@@ -1230,12 +1271,21 @@ def chat_ui(
     id
         A unique identifier for the chat UI.
     messages
-        A sequence of messages to display in the chat. Each message can be either a
-        string or a dictionary with `content` and `role` keys. The `content` key
-        should contain a string, and the `role` key can be "assistant" or "user".
-        Content strings are interpreted as markdown and rendered to HTML on the client.
-        Content may also include specially formatted **input suggestion** links (see
-        :method:`~shiny.ui.Chat.append_message_stream` for more information).
+        A sequence of messages to display in the chat. A given message can be one of the
+        following:
+
+        * A string, which is interpreted as markdown and rendered to HTML on the client.
+            * To prevent interpreting as markdown, mark the string as
+              :class:`~shiny.ui.HTML`.
+        * A UI element (specifically, a :class:`~shiny.ui.TagChild`).
+            * This includes :class:`~shiny.ui.TagList`, which take UI elements
+              (including strings) as children. In this case, strings are still
+              interpreted as markdown as long as they're not inside HTML.
+        * A dictionary with `content` and `role` keys. The `content` key can contain a
+          content as described above, and the `role` key can be "assistant" or "user".
+
+        **NOTE:** content may include specially formatted **input suggestion** links
+        (see :method:`~shiny.ui.Chat.append_message` for more info).
     placeholder
         Placeholder text for the chat input.
     width
@@ -1257,23 +1307,33 @@ def chat_ui(
     message_tags: list[Tag] = []
     if messages is None:
         messages = []
-    for msg in messages:
-        if isinstance(msg, str):
-            msg = {"content": msg, "role": "assistant"}
-        elif isinstance(msg, dict):
-            if "content" not in msg:
-                raise ValueError("Each message must have a 'content' key.")
-            if "role" not in msg:
-                raise ValueError("Each message must have a 'role' key.")
+    for x in messages:
+        role = "assistant"
+        content: TagChild = None
+        if not isinstance(x, dict):
+            content = x
         else:
-            raise ValueError("Each message must be a string or a dictionary.")
+            if "content" not in x:
+                raise ValueError("Each message dictionary must have a 'content' key.")
 
-        if msg["role"] == "user":
+            content = x["content"]
+            if "role" in x:
+                role = x["role"]
+
+        ui = TagList(content).render()
+
+        if role == "user":
             tag_name = "shiny-user-message"
         else:
             tag_name = "shiny-chat-message"
 
-        message_tags.append(Tag(tag_name, content=msg["content"]))
+        message_tags.append(
+            Tag(
+                tag_name,
+                ui["dependencies"],
+                content=ui["html"],
+            )
+        )
 
     html_deps = None
     if isinstance(icon_assistant, (Tag, TagList)):
@@ -1306,23 +1366,6 @@ def chat_ui(
         res = as_fillable_container(as_fill_item(res))
 
     return res
-
-
-def as_transformed_message(message: ChatMessage) -> TransformedMessage:
-    if message["role"] == "user":
-        transform_key = "content_server"
-        pre_transform_key = "content_client"
-    else:
-        transform_key = "content_client"
-        pre_transform_key = "content_server"
-
-    return TransformedMessage(
-        content_client=message["content"],
-        content_server=message["content"],
-        role=message["role"],
-        transform_key=transform_key,
-        pre_transform_key=pre_transform_key,
-    )
 
 
 CHAT_INSTANCES: WeakValueDictionary[str, Chat] = WeakValueDictionary()
