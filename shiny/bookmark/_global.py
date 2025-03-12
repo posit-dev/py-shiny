@@ -14,19 +14,6 @@ from ._types import (
 # During App initialization, the save_dir and restore_dir functions are conventionally set
 # to read-only on the App.
 
-# The set methods below are used to set the save_dir and restore_dir locations for locations like Connect or SSP.
-# Ex:
-# ```python
-# @shiny.bookmark.set_global_save_dir_fn
-# def connect_save_shiny_bookmark(id: str) -> Path:
-#     path = Path("connect") / id
-#     path.mkdir(parents=True, exist_ok=True)
-#     return path
-# @shiny.bookmark.set_global_restore_dir_fn
-# def connect_restore_shiny_bookmark(id: str) -> Path:
-#     return Path("connect") / id
-# ```
-
 
 bookmark_save_dir: BookmarkSaveDirFn | None = None
 bookmark_restore_dir: BookmarkRestoreDirFn | None = None

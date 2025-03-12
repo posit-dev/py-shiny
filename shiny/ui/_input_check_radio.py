@@ -11,6 +11,7 @@ from typing import Mapping, Optional, Union
 from htmltools import Tag, TagChild, css, div, span, tags
 
 from .._docstring import add_example
+from ..bookmark import restore_input
 from ..module import resolve_id
 from ._html_deps_shinyverse import components_dependencies
 from ._utils import shiny_input_label
@@ -287,8 +288,6 @@ def input_radio_buttons(
 
     resolved_id = resolve_id(id)
     input_label = shiny_input_label(resolved_id, label)
-
-    from ..bookmark import restore_input
 
     options = _generate_options(
         id=resolved_id,

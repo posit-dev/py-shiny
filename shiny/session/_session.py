@@ -638,6 +638,9 @@ class AppSession(Session):
                             verify_state(ConnectionState.Start)
 
                             # BOOKMARKS!
+                            if not isinstance(self.bookmark, BookmarkApp):
+                                raise RuntimeError("`.bookmark` must be a BookmarkApp")
+
                             if ".clientdata_url_search" in message_obj["data"]:
                                 self.bookmark._set_restore_context(
                                     await RestoreContext.from_query_string(

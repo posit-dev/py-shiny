@@ -3,7 +3,7 @@ from __future__ import annotations
 import warnings
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import TYPE_CHECKING, Awaitable, Callable, Literal, NoReturn
+from typing import TYPE_CHECKING, Awaitable, Callable, Literal
 
 from .._utils import AsyncCallbacks, CancelCallback, wrap_async
 from ._button import BOOKMARK_ID
@@ -122,26 +122,6 @@ class Bookmark(ABC):
         """
         ...
 
-    @abstractmethod
-    def _set_restore_context(self, restore_context: RestoreContext):
-        """
-        Set the session's RestoreContext object.
-
-        This should only be done within the `init` websocket message.
-        """
-        ...
-
-    def _get_bookmark_exclude(self) -> list[str]:
-        """
-        Get the list of inputs excluded from being bookmarked.
-        """
-
-        scoped_excludes: list[str] = []
-        for proxy_exclude_fn in self._on_get_exclude:
-            scoped_excludes.extend(proxy_exclude_fn())
-        # Remove duplicates
-        return list(set([*self.exclude, *scoped_excludes]))
-
     # # TODO: Barret - Implement this?!?
     # @abstractmethod
     # async def get_url(self) -> str:
@@ -156,16 +136,6 @@ class Bookmark(ABC):
 
     #     await session.insert_ui(modal_with_url(url))
 
-    @abstractmethod
-    def _create_effects(self) -> None:
-        """
-        Create the effects for the bookmarking system.
-
-        This method should be called when the session is created after the initial inputs have been set.
-        """
-        ...
-
-    @abstractmethod
     def on_bookmark(
         self,
         callback: (
@@ -185,9 +155,8 @@ class Bookmark(ABC):
             This method should accept a single argument, which is a
             :class:`~shiny.bookmark._bookmark.ShinySaveState` object.
         """
-        ...
+        return self._on_bookmark_callbacks.register(wrap_async(callback))
 
-    @abstractmethod
     def on_bookmarked(
         self,
         callback: Callable[[str], None] | Callable[[str], Awaitable[None]],
@@ -204,7 +173,33 @@ class Bookmark(ABC):
             The callback function to call when the session is bookmarked.
             This method should accept a single argument, the string representing the query parameter component of the URL.
         """
-        ...
+        return self._on_bookmarked_callbacks.register(wrap_async(callback))
+
+    def on_restore(
+        self,
+        callback: (
+            Callable[[RestoreState], None] | Callable[[RestoreState], Awaitable[None]]
+        ),
+    ) -> CancelCallback:
+        """
+        Registers a function that will be called just before restoring state.
+
+        This callback will be executed **before** the bookmark state is restored.
+        """
+        return self._on_restore_callbacks.register(wrap_async(callback))
+
+    def on_restored(
+        self,
+        callback: (
+            Callable[[RestoreState], None] | Callable[[RestoreState], Awaitable[None]]
+        ),
+    ) -> CancelCallback:
+        """
+        Registers a function that will be called just after restoring state.
+
+        This callback will be executed **after** the bookmark state is restored.
+        """
+        return self._on_restored_callbacks.register(wrap_async(callback))
 
     @abstractmethod
     async def update_query_string(
@@ -237,34 +232,6 @@ class Bookmark(ABC):
         """
         ...
 
-    @abstractmethod
-    def on_restore(
-        self,
-        callback: (
-            Callable[[RestoreState], None] | Callable[[RestoreState], Awaitable[None]]
-        ),
-    ) -> CancelCallback:
-        """
-        Registers a function that will be called just before restoring state.
-
-        This callback will be executed **before** the bookmark state is restored.
-        """
-        ...
-
-    @abstractmethod
-    def on_restored(
-        self,
-        callback: (
-            Callable[[RestoreState], None] | Callable[[RestoreState], Awaitable[None]]
-        ),
-    ) -> CancelCallback:
-        """
-        Registers a function that will be called just after restoring state.
-
-        This callback will be executed **after** the bookmark state is restored.
-        """
-        ...
-
 
 class BookmarkApp(Bookmark):
     _session: AppSession
@@ -288,25 +255,19 @@ class BookmarkApp(Bookmark):
     # Making this a read only property as app authors will not be able to change how the session is restored as the server function will run after the session has been restored.
     @property
     def store(self) -> BookmarkStore:
-        """
-        App's bookmark store value
-
-        Possible values:
-        * `"url"`: Save / reload the bookmark state in the URL.
-        * `"server"`: Save / reload the bookmark state on the server.
-        * `"disable"` (default): Bookmarking is diabled.
-        """
 
         return self._session.app.bookmark_store
 
     @property
     def _restore_context(self) -> RestoreContext | None:
-        """
-        A read-only value of the session's RestoreContext object.
-        """
         return self._restore_context_value
 
     def _set_restore_context(self, restore_context: RestoreContext):
+        """
+        Set the session's RestoreContext object.
+
+        This should only be done within the `init` websocket message.
+        """
         self._restore_context_value = restore_context
 
     def _create_effects(self) -> None:
@@ -448,6 +409,17 @@ class BookmarkApp(Bookmark):
             }
         )
 
+    def _get_bookmark_exclude(self) -> list[str]:
+        """
+        Get the list of inputs excluded from being bookmarked.
+        """
+
+        scoped_excludes: list[str] = []
+        for proxy_exclude_fn in self._on_get_exclude:
+            scoped_excludes.extend(proxy_exclude_fn())
+        # Remove duplicates
+        return list(set([*self.exclude, *scoped_excludes]))
+
     async def do_bookmark(self) -> None:
 
         if self.store == "disable":
@@ -552,9 +524,7 @@ class BookmarkProxy(Bookmark):
 
         # The goal of this method is to save the scope's values. All namespaced inputs
         # will already exist within the `root_state`.
-        @self._session._parent.bookmark.on_bookmark
-        async def scoped_on_bookmark(root_state: BookmarkState) -> None:
-            return await self._scoped_on_bookmark(root_state)
+        self._session._parent.bookmark.on_bookmark(self._scoped_on_bookmark)
 
         from ..session import session_context
 
@@ -633,32 +603,6 @@ class BookmarkProxy(Bookmark):
     def _restore_context(self) -> RestoreContext | None:
         return self._session._parent.bookmark._restore_context
 
-    def _set_restore_context(self, restore_context: RestoreContext) -> NoReturn:
-        raise NotImplementedError(
-            "The `RestoreContext` should only be set on the root session object."
-        )
-
-    def _create_effects(self) -> NoReturn:
-        raise NotImplementedError(
-            "Please call `._create_effects()` from the root session only."
-        )
-
-    def on_bookmark(
-        self,
-        callback: (
-            Callable[[BookmarkState], None] | Callable[[BookmarkState], Awaitable[None]]
-        ),
-        /,
-    ) -> CancelCallback:
-        return self._on_bookmark_callbacks.register(wrap_async(callback))
-
-    def on_bookmarked(
-        self,
-        callback: Callable[[str], None] | Callable[[str], Awaitable[None]],
-        /,
-    ) -> CancelCallback:
-        return self._on_bookmarked_callbacks.register(wrap_async(callback))
-
     async def update_query_string(
         self, query_string: str, mode: Literal["replace", "push"] = "replace"
     ) -> None:
@@ -666,22 +610,6 @@ class BookmarkProxy(Bookmark):
 
     async def do_bookmark(self) -> None:
         await self._session._parent.bookmark.do_bookmark()
-
-    def on_restore(
-        self,
-        callback: (
-            Callable[[RestoreState], None] | Callable[[RestoreState], Awaitable[None]]
-        ),
-    ) -> CancelCallback:
-        return self._on_restore_callbacks.register(wrap_async(callback))
-
-    def on_restored(
-        self,
-        callback: (
-            Callable[[RestoreState], None] | Callable[[RestoreState], Awaitable[None]]
-        ),
-    ) -> CancelCallback:
-        return self._on_restored_callbacks.register(wrap_async(callback))
 
 
 class BookmarkExpressStub(Bookmark):
@@ -692,7 +620,6 @@ class BookmarkExpressStub(Bookmark):
         from ..express._stub_session import ExpressStubSession
 
         assert isinstance(session, ExpressStubSession)
-        # self._session = session
 
     @property
     def store(self) -> BookmarkStore:
@@ -700,15 +627,8 @@ class BookmarkExpressStub(Bookmark):
 
     @property
     def _restore_context(self) -> RestoreContext | None:
+        # no-op within ExpressStub
         return None
-
-    def _set_restore_context(self, restore_context: RestoreContext) -> None:
-        return None
-
-    def _create_effects(self) -> NoReturn:
-        raise NotImplementedError(
-            "Please call `._create_effects()` only from a real session object"
-        )
 
     def on_bookmark(
         self,
@@ -729,9 +649,11 @@ class BookmarkExpressStub(Bookmark):
     async def update_query_string(
         self, query_string: str, mode: Literal["replace", "push"] = "replace"
     ) -> None:
+        # no-op within ExpressStub
         return None
 
     async def do_bookmark(self) -> None:
+        # no-op within ExpressStub
         return None
 
     def on_restore(
