@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import inspect
 import warnings
+from contextlib import asynccontextmanager
 from typing import (
     Any,
     AsyncIterable,
@@ -202,7 +203,11 @@ class Chat:
         self._current_stream_id: str | None = None
         self._pending_messages: list[PendingMessage] = []
 
+        # Identifier for a manual stream (i.e., one started with `.start_message_stream()`)
         self._manual_stream_id: str | None = None
+        # If a manual stream gets nested within another stream, we need to keep track of
+        # the accumulated message separately
+        self._nested_stream_message: str = ""
 
         # If a user input message is transformed into a response, we need to cancel
         # the next user input submit handling
@@ -578,34 +583,40 @@ class Chat:
         message_chunk: Any,
         *,
         operation: Literal["append", "replace"] = "append",
-        force: bool = False,
     ):
         """
         Append a message chunk to the current message stream.
 
-        Append a chunk of message content to either the currently running
-        `.append_message_stream()` or to one that was manually started with
-        `.start_message_stream()`.
+        Append a chunk of message content to either a stream started with
+        `.message_stream()` or an active `.append_message_stream()`.
 
         Parameters
         ----------
         message_chunk
             A message chunk to inject.
         operation
-            Whether to append or replace the current message stream content.
-        force
-            Whether to start a new stream if one is not currently active.
+            Whether to append or replace the *current* message stream content.
+
+        Note
+        ----
+        A useful pattern for displaying tool calls in a chat is for the tools to display
+        content using an "inner" `.message_stream()` while the response generation is
+        happening in an "outer" `.append_message_stream()`. This allows the inner stream
+        to display "ephemeral" content, then eventually show a final state with
+        `.append_message_chunk(operation="replace")`.
+
+        Raises
+        ------
+        ValueError
+            If there is active stream (i.e., no `.message_stream()` or
+            `.append_message_stream()`)
         """
-        # Can append to either an active `.start_message_stream()` or a
-        # # `.append_message_stream()`
-        stream_id = self._manual_stream_id or self._current_stream_id
+        stream_id = self._current_stream_id
         if stream_id is None:
-            if not force:
-                raise ValueError(
-                    "Can't append a message chunk without an active message stream. "
-                    "Use `force=True` to start a new message stream if one is not currently active.",
-                )
-            await self.start_message_stream()
+            raise ValueError(
+                "Can't .append_message_chunk() without an active message stream. "
+                "Use .message_stream() or .append_message_stream() to start one."
+            )
 
         return await self._append_message(
             message_chunk,
@@ -614,40 +625,84 @@ class Chat:
             operation=operation,
         )
 
-    async def start_message_stream(self):
+    @asynccontextmanager
+    async def message_stream(self):
         """
-        Start a new message stream.
+        Message stream context manager.
 
-        Starts a new message stream which can then be appended to using
-        `.append_message_chunk()`.
+        A context manager for streaming messages into the chat. Note this stream
+        can occur within a longer running `.append_message_stream()` or used on its own.
+
+        Note
+        ----
+        A useful pattern for displaying tool calls in a chat interface is for the
+        tool to display using `.message_stream()` while the the response generation
+        is happening through `.append_message_stream()`. This allows the inner stream
+        to display "ephemeral" content, then eventually show a final state
+        with `.append_message_chunk(operation="replace")`.
         """
-        # Since `._append_message()` manages a queue of message streams, we can just
-        # start a new stream here. Note that, if a stream is already active, this
-        # stream should start once the current stream ends.
-        stream_id = _utils.private_random_id()
-        # Separately track the stream id so ``.append_message_chunk()``/`.end_message_stream()`
-        self._manual_stream_id = stream_id
+        await self._start_stream()
+        try:
+            yield
+        finally:
+            await self._end_stream()
+
+    async def _start_stream(self):
+        if self._manual_stream_id is not None:
+            # TODO: support this?
+            raise ValueError("Nested .message_stream() isn't currently supported.")
+        # If we're currently streaming (i.e., through append_message_stream()), then
+        # end the client message stream (since we start a new one below)
+        if self._current_stream_id is not None:
+            await self._send_append_message(
+                message=ChatMessage(content="", role="assistant"),
+                chunk="end",
+                operation="append",
+            )
+        # Regardless whether this is an "inner" stream, we start a new message on the
+        # client so it can handle `operation="replace"` without having to track where
+        # the inner stream started.
+        self._manual_stream_id = _utils.private_random_id()
+        stream_id = self._current_stream_id or self._manual_stream_id
         return await self._append_message(
             "",
             chunk="start",
             stream_id=stream_id,
+            # TODO: find a cleaner way to do this, and remove the gap between the messages
+            icon=(
+                HTML("<span class='border-0'><span>")
+                if self._is_nested_stream
+                else None
+            ),
         )
 
-    async def end_message_stream(self):
-        """
-        End the current message stream (if any).
-
-        Ends a message stream that was started with `.start_message_stream()`.
-        """
-        stream_id = self._manual_stream_id
-        if stream_id is None:
-            warnings.warn("No currently active stream to end.", stacklevel=2)
+    async def _end_stream(self):
+        if self._manual_stream_id is None and self._current_stream_id is None:
+            warnings.warn(
+                "Tried to end a message stream, but one isn't currently active.",
+                stacklevel=2,
+            )
             return
 
-        return await self._append_message(
-            "",
-            chunk="end",
-            stream_id=stream_id,
+        if self._is_nested_stream:
+            # If inside another stream, just update server-side message state
+            self._current_stream_message += self._nested_stream_message
+            self._nested_stream_message = ""
+        else:
+            # Otherwise, end this "manual" message stream
+            await self._append_message(
+                "", chunk="end", stream_id=self._manual_stream_id
+            )
+
+        self._manual_stream_id = None
+        return
+
+    @property
+    def _is_nested_stream(self):
+        return (
+            self._current_stream_id is not None
+            and self._manual_stream_id is not None
+            and self._current_stream_id != self._manual_stream_id
         )
 
     async def _append_message(
@@ -673,9 +728,14 @@ class Chat:
             msg = normalize_message(message)
         else:
             msg = normalize_message_chunk(message)
-            if operation == "replace":
-                self._current_stream_message = ""
-            self._current_stream_message += msg.content
+            if self._is_nested_stream:
+                if operation == "replace":
+                    self._nested_stream_message = ""
+                self._nested_stream_message += msg.content
+            else:
+                if operation == "replace":
+                    self._current_stream_message = ""
+                self._current_stream_message += msg.content
 
         try:
             msg = await self._transform_message(msg, chunk=chunk)
@@ -704,7 +764,10 @@ class Chat:
             )
         finally:
             if chunk == "end":
-                self._current_stream_message = ""
+                if self._is_nested_stream:
+                    self._nested_stream_message = ""
+                else:
+                    self._current_stream_message = ""
 
     async def append_message_stream(
         self,
