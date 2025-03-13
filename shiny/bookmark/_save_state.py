@@ -22,8 +22,8 @@ class BookmarkState:
     input: Inputs
     values: dict[str, Any]
     exclude: list[str]
-    # _bookmark_: A special value that is always excluded from the bookmark.
-    on_save: (
+
+    _on_save: (
         Callable[["BookmarkState"], Awaitable[None]] | None
     )  # A callback to invoke during the saving process.
 
@@ -39,7 +39,7 @@ class BookmarkState:
     ):
         self.input = input
         self.exclude = exclude
-        self.on_save = on_save
+        self._on_save = on_save
         self.dir = None  # This will be set by external functions.
         self.values = {}
 
@@ -48,9 +48,9 @@ class BookmarkState:
     async def _call_on_save(self):
         # Allow user-supplied save function to do things like add state$values, or
         # save data to state dir.
-        if self.on_save:
+        if self._on_save:
             with isolate():
-                await self.on_save(self)
+                await self._on_save(self)
 
     async def _save_state(self, *, app: App) -> str:
         """
