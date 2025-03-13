@@ -6,8 +6,7 @@ from playwright.sync_api import Locator, Page
 from playwright.sync_api import expect as playwright_expect
 from typing_extensions import Literal
 
-from shiny.types import ListOrTuple
-
+from ...types import ListOrTuple
 from .._types import PatternOrStr, Timeout
 from ..expect import expect_to_have_class, expect_to_have_style
 from ..expect._internal import expect_attribute_to_have_value

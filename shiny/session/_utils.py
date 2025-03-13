@@ -57,7 +57,7 @@ def get_current_session() -> Optional[Session]:
 
 
 @contextmanager
-def session_context(session: Optional[Session]):
+def session_context(session: Session | None):
     """
     A context manager for current session.
 
