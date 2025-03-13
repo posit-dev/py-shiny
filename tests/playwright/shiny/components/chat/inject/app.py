@@ -3,7 +3,7 @@ import asyncio
 from shiny import reactive
 from shiny.express import input, render, ui
 
-ui.page_opts(title="Hello Chat")
+ui.page_opts(title="Hello message streams")
 
 chat = ui.Chat(id="chat")
 chat.ui()
@@ -15,30 +15,47 @@ async def _():
     await chat.append_message_stream(mock_stream())
 
 
+SLEEP_TIME = 0.25
+
+
 async def mock_stream():
     yield "Starting outer stream...\n\n"
-    await asyncio.sleep(0.5)
+    await asyncio.sleep(SLEEP_TIME)
     await mock_tool()
-    await asyncio.sleep(0.5)
+    await asyncio.sleep(SLEEP_TIME)
     yield "\n\n...outer stream complete"
 
 
-# While the "outer" `.append_message_stream()` is running,
-# start an "inner" stream with .message_stream()
 async def mock_tool():
-    steps = [
-        "Starting inner stream 🔄...\n\n",
-        "Progress: 0%...",
-        "Progress: 50%...",
-        "Progress: 100%...",
-    ]
+    # While the "outer" `.append_message_stream()` is running,
+    # start an "inner" stream with .message_stream()
     async with chat.message_stream():
-        for chunk in steps:
-            await chat.append_message_chunk(chunk)
-            await asyncio.sleep(0.5)
+        await chat.append_message_chunk("\n\nStarting inner stream 1 🔄...")
+        await asyncio.sleep(SLEEP_TIME)
+        await chat.append_message_chunk("Progress: 0%")
+        await asyncio.sleep(SLEEP_TIME)
+
+        async with chat.message_stream():
+            await chat.append_message_chunk("\n\nStarting nested stream 2 🔄...")
+            await asyncio.sleep(SLEEP_TIME)
+            await chat.append_message_chunk("Progress: 0%")
+            await asyncio.sleep(SLEEP_TIME)
+            await chat.append_message_chunk(" Progress: 50%")
+            await asyncio.sleep(SLEEP_TIME)
+            await chat.append_message_chunk(" Progress: 100%")
+            await asyncio.sleep(SLEEP_TIME)
+            await chat.append_message_chunk(
+                "\n\nCompleted _another_ inner stream ✅", operation="replace"
+            )
+
+        await chat.append_message_chunk("\n\nBack to stream 1...")
+        await chat.append_message_chunk(" Progress: 50%")
+        await asyncio.sleep(SLEEP_TIME)
+        await chat.append_message_chunk(" Progress: 100%")
+        await asyncio.sleep(SLEEP_TIME)
+
         await chat.append_message_chunk(
-            "Completed inner stream ✅",
-            operation="replace",
+            "\n\nCompleted inner _and nested_ stream ✅", operation="replace"
         )
 
 

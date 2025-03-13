@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import inspect
-import warnings
 from contextlib import asynccontextmanager
 from typing import (
     Any,
@@ -81,9 +80,7 @@ UserSubmitFunction = Union[
     UserSubmitFunction1,
 ]
 
-ChunkOption = Literal["start", "end", True, False]
-
-PendingMessage = Tuple[Any, ChunkOption, Union[str, None]]
+PendingMessage = Tuple[Any, Literal["start", "end", True], Union[str, None]]
 
 
 @add_example(ex_dir="../templates/chat/starters/hello")
@@ -199,15 +196,12 @@ class Chat:
         self.on_error = on_error
 
         # Chunked messages get accumulated (using this property) before changing state
-        self._current_stream_message = ""
+        self._current_stream_message: str = ""
         self._current_stream_id: str | None = None
         self._pending_messages: list[PendingMessage] = []
 
-        # Identifier for a manual stream (i.e., one started with `.start_message_stream()`)
-        self._manual_stream_id: str | None = None
-        # If a manual stream gets nested within another stream, we need to keep track of
-        # the accumulated message separately
-        self._nested_stream_message: str = ""
+        # For tracking message stream state when entering/exiting nested streams
+        self._message_stream_checkpoint: str = ""
 
         # If a user input message is transformed into a response, we need to cancel
         # the next user input submit handling
@@ -576,7 +570,16 @@ class Chat:
         similar) is specified in model's completion method.
         :::
         """
-        await self._append_message(message, icon=icon)
+        msg = normalize_message(message)
+        msg = await self._transform_message(msg)
+        if msg is None:
+            return
+        self._store_message(msg)
+        await self._send_append_message(
+            message=msg,
+            chunk=False,
+            icon=icon,
+        )
 
     async def append_message_chunk(
         self,
@@ -618,9 +621,8 @@ class Chat:
                 "Use .message_stream() or .append_message_stream() to start one."
             )
 
-        return await self._append_message(
+        return await self._append_message_chunk(
             message_chunk,
-            chunk=True,
             stream_id=stream_id,
             operation=operation,
         )
@@ -641,75 +643,39 @@ class Chat:
         to display "ephemeral" content, then eventually show a final state
         with `.append_message_chunk(operation="replace")`.
         """
-        await self._start_stream()
+        # Save the current stream state in a checkpoint (so that we can handle
+        # ``.append_message_chunk(operation="replace")` correctly)
+        old_checkpoint = self._message_stream_checkpoint
+        self._message_stream_checkpoint = self._current_stream_message
+
+        # No stream currently exists, start one
+        is_root_stream = not self._current_stream_id
+        if is_root_stream:
+            await self._append_message_chunk(
+                "",
+                chunk="start",
+                stream_id=_utils.private_random_id(),
+            )
+
         try:
             yield
         finally:
-            await self._end_stream()
+            # Restore the previous stream state
+            self._message_stream_checkpoint = old_checkpoint
 
-    async def _start_stream(self):
-        if self._manual_stream_id is not None:
-            # TODO: support this?
-            raise ValueError("Nested .message_stream() isn't currently supported.")
-        # If we're currently streaming (i.e., through append_message_stream()), then
-        # end the client message stream (since we start a new one below)
-        if self._current_stream_id is not None:
-            await self._send_append_message(
-                message=ChatMessage(content="", role="assistant"),
-                chunk="end",
-                operation="append",
-            )
-        # Regardless whether this is an "inner" stream, we start a new message on the
-        # client so it can handle `operation="replace"` without having to track where
-        # the inner stream started.
-        self._manual_stream_id = _utils.private_random_id()
-        stream_id = self._current_stream_id or self._manual_stream_id
-        return await self._append_message(
-            "",
-            chunk="start",
-            stream_id=stream_id,
-            # TODO: find a cleaner way to do this, and remove the gap between the messages
-            icon=(
-                HTML("<span class='border-0'><span>")
-                if self._is_nested_stream
-                else None
-            ),
-        )
+            # If this was the root stream, end it
+            if is_root_stream:
+                await self._append_message_chunk(
+                    "",
+                    chunk="end",
+                    stream_id=self._current_stream_id,
+                )
 
-    async def _end_stream(self):
-        if self._manual_stream_id is None and self._current_stream_id is None:
-            warnings.warn(
-                "Tried to end a message stream, but one isn't currently active.",
-                stacklevel=2,
-            )
-            return
-
-        if self._is_nested_stream:
-            # If inside another stream, just update server-side message state
-            self._current_stream_message += self._nested_stream_message
-            self._nested_stream_message = ""
-        else:
-            # Otherwise, end this "manual" message stream
-            await self._append_message(
-                "", chunk="end", stream_id=self._manual_stream_id
-            )
-
-        self._manual_stream_id = None
-        return
-
-    @property
-    def _is_nested_stream(self):
-        return (
-            self._current_stream_id is not None
-            and self._manual_stream_id is not None
-            and self._current_stream_id != self._manual_stream_id
-        )
-
-    async def _append_message(
+    async def _append_message_chunk(
         self,
         message: Any,
         *,
-        chunk: ChunkOption = False,
+        chunk: Literal[True, "start", "end"] = True,
         operation: Literal["append", "replace"] = "append",
         stream_id: str | None = None,
         icon: HTML | Tag | TagList | None = None,
@@ -724,37 +690,40 @@ class Chat:
         if chunk == "end":
             self._current_stream_id = None
 
-        if chunk is False:
-            msg = normalize_message(message)
+        # Normalize into a ChatMessage()
+        msg = normalize_message_chunk(message)
+
+        # Remember this content chunk for passing to transformer
+        this_chunk = msg.content
+
+        # Transforming requires replacing
+        if self._needs_transform(msg):
+            operation = "replace"
+
+        if operation == "replace":
+            # Replace up to the latest checkpoint
+            self._current_stream_message = self._message_stream_checkpoint + this_chunk
+            msg.content = self._current_stream_message
         else:
-            msg = normalize_message_chunk(message)
-            if self._is_nested_stream:
-                if operation == "replace":
-                    self._nested_stream_message = ""
-                self._nested_stream_message += msg.content
-            else:
-                if operation == "replace":
-                    self._current_stream_message = ""
-                self._current_stream_message += msg.content
+            self._current_stream_message += msg.content
 
         try:
-            msg = await self._transform_message(msg, chunk=chunk)
-            # Act like nothing happened if transformed to None
-            if msg is None:
-                return
-            msg_store = msg
-            # Transforming requires *replacing* content
-            if isinstance(msg, TransformedMessage):
-                operation = "replace"
-            elif chunk == "end":
-                # When not transforming, ensure full message is stored
-                msg_store = ChatMessage(
-                    content=self._current_stream_message,
-                    role="assistant",
+            if self._needs_transform(msg):
+                msg = await self._transform_message(
+                    msg, chunk=chunk, chunk_content=this_chunk
                 )
-            # Only store full messages
-            if chunk is False or chunk == "end":
-                self._store_message(msg_store)
+                # Act like nothing happened if transformed to None
+                if msg is None:
+                    return
+                if chunk == "end":
+                    self._store_message(msg)
+            elif chunk == "end":
+                # When `operation="append"`, msg.content is just a chunk, but we must
+                # store the full message
+                self._store_message(
+                    ChatMessage(content=self._current_stream_message, role=msg.role)
+                )
+
             # Send the message to the client
             await self._send_append_message(
                 message=msg,
@@ -764,10 +733,8 @@ class Chat:
             )
         finally:
             if chunk == "end":
-                if self._is_nested_stream:
-                    self._nested_stream_message = ""
-                else:
-                    self._current_stream_message = ""
+                self._current_stream_message = ""
+                self._message_stream_checkpoint = ""
 
     async def append_message_stream(
         self,
@@ -898,21 +865,21 @@ class Chat:
         id = _utils.private_random_id()
 
         empty = ChatMessageDict(content="", role="assistant")
-        await self._append_message(empty, chunk="start", stream_id=id, icon=icon)
+        await self._append_message_chunk(empty, chunk="start", stream_id=id, icon=icon)
 
         try:
             async for msg in message:
-                await self._append_message(msg, chunk=True, stream_id=id)
+                await self._append_message_chunk(msg, chunk=True, stream_id=id)
             return self._current_stream_message
         finally:
-            await self._append_message(empty, chunk="end", stream_id=id)
+            await self._append_message_chunk(empty, chunk="end", stream_id=id)
             await self._flush_pending_messages()
 
     async def _flush_pending_messages(self):
         still_pending: list[PendingMessage] = []
         for msg, chunk, stream_id in self._pending_messages:
             if self._can_append_message(stream_id):
-                await self._append_message(msg, chunk=chunk, stream_id=stream_id)
+                await self._append_message_chunk(msg, chunk=chunk, stream_id=stream_id)
             else:
                 still_pending.append((msg, chunk, stream_id))
         self._pending_messages = still_pending
@@ -926,7 +893,7 @@ class Chat:
     async def _send_append_message(
         self,
         message: TransformedMessage | ChatMessage,
-        chunk: ChunkOption = False,
+        chunk: Literal["start", "end", True, False] = False,
         operation: Literal["append", "replace"] = "append",
         icon: HTML | Tag | TagList | None = None,
     ):
@@ -1092,31 +1059,34 @@ class Chat:
     async def _transform_message(
         self,
         message: ChatMessage,
-        chunk: ChunkOption = False,
-    ) -> ChatMessage | TransformedMessage | None:
+        chunk: Literal["start", "end", True, False] = False,
+        chunk_content: str = "",
+    ) -> TransformedMessage | None:
         res = TransformedMessage.from_chat_message(message)
 
         if message.role == "user" and self._transform_user is not None:
             content = await self._transform_user(message.content)
         elif message.role == "assistant" and self._transform_assistant is not None:
-            all_content = (
-                message.content if chunk is False else self._current_stream_message
-            )
-            setattr(res, res.pre_transform_key, all_content)
             content = await self._transform_assistant(
-                all_content,
                 message.content,
+                chunk_content,
                 chunk == "end" or chunk is False,
             )
         else:
-            return message
+            return res
 
         if content is None:
             return None
 
         setattr(res, res.transform_key, content)
-
         return res
+
+    def _needs_transform(self, message: ChatMessage) -> bool:
+        if message.role == "user" and self._transform_user is not None:
+            return True
+        elif message.role == "assistant" and self._transform_assistant is not None:
+            return True
+        return False
 
     # Just before storing, handle chunk msg type and calculate tokens
     def _store_message(
