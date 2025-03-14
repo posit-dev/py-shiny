@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from shiny._namespaces import resolve_id_or_none
+from shiny.bookmark._restore_state import restore_input
+
 __all__ = ("input_dark_mode", "update_dark_mode")
 
 from typing import Literal, Optional
@@ -7,7 +10,8 @@ from typing import Literal, Optional
 from htmltools import Tag, TagAttrValue, css
 
 from .._docstring import add_example, no_example
-from ..module import resolve_id
+
+# from ..module import resolve_id
 from ..session import Session, require_active_session
 from ._web_component import web_component
 
@@ -46,12 +50,10 @@ def input_dark_mode(
     ----------
     * <https://getbootstrap.com/docs/5.3/customize/color-modes>
     """
+    resolved_id = resolve_id_or_none(id)
 
     if mode is not None:
         mode = validate_dark_mode_option(mode)
-
-    if id is not None:
-        id = resolve_id(id)
 
     return web_component(
         "bslib-input-dark-mode",
@@ -65,9 +67,9 @@ def input_dark_mode(
                 },
             )
         },
-        id=id,
+        id=resolved_id,
         attribute="data-bs-theme",
-        mode=mode,
+        mode=restore_input(resolved_id, mode),
         **kwargs,
     )
 

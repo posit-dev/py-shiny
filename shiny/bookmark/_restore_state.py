@@ -4,7 +4,7 @@ import warnings
 from contextlib import contextmanager
 from contextvars import ContextVar, Token
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, Optional
+from typing import TYPE_CHECKING, Any, Literal, Optional, TypeVar, overload
 from urllib.parse import parse_qs, parse_qsl
 
 from .._docstring import add_example
@@ -387,8 +387,15 @@ def get_current_restore_context() -> RestoreContext | None:
     return ctx
 
 
+T = TypeVar("T")
+
+
+@overload
+def restore_input(resolved_id: ResolvedId, default: Any) -> Any: ...
+@overload
+def restore_input(resolved_id: None, default: T) -> T: ...
 @add_example()
-def restore_input(resolved_id: ResolvedId, default: Any) -> Any:
+def restore_input(resolved_id: ResolvedId | None, default: Any) -> Any:
     """
     Restore an input value
 
@@ -402,6 +409,9 @@ def restore_input(resolved_id: ResolvedId, default: Any) -> Any:
     default
         A default value to use, if there's no value to restore.
     """
+    if resolved_id is None:
+        return default
+
     if not isinstance(resolved_id, ResolvedId):
         raise TypeError(
             "Expected `resolved_id` to be of type `ResolvedId` which is returned from `shiny.module.resolve_id(id)`."
