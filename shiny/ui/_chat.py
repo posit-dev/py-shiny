@@ -692,32 +692,26 @@ class Chat:
             self._pending_messages.append((message, chunk, stream_id))
             return
 
-        # Update current stream state
         self._current_stream_id = stream_id
-        if chunk == "end":
-            self._current_stream_id = None
 
-        # Normalize into a ChatMessage()
+        # Normalize various message types into a ChatMessage()
         msg = normalize_message_chunk(message)
 
-        # Remember this content chunk for passing to transformer
-        this_chunk = msg.content
-
-        # Transforming requires replacing
-        if self._needs_transform(msg):
-            operation = "replace"
-
         if operation == "replace":
-            # Replace up to the latest checkpoint
-            self._current_stream_message = self._message_stream_checkpoint + this_chunk
+            self._current_stream_message = self._message_stream_checkpoint + msg.content
             msg.content = self._current_stream_message
         else:
             self._current_stream_message += msg.content
 
         try:
             if self._needs_transform(msg):
+                # Transforming may change the meaning of msg.content to be a *replace*
+                # not *append*. So, update msg.content and the operation accordingly.
+                chunk_content = msg.content
+                msg.content = self._current_stream_message
+                operation = "replace"
                 msg = await self._transform_message(
-                    msg, chunk=chunk, chunk_content=this_chunk
+                    msg, chunk=chunk, chunk_content=chunk_content
                 )
                 # Act like nothing happened if transformed to None
                 if msg is None:
@@ -740,6 +734,7 @@ class Chat:
             )
         finally:
             if chunk == "end":
+                self._current_stream_id = None
                 self._current_stream_message = ""
                 self._message_stream_checkpoint = ""
 
@@ -1063,7 +1058,7 @@ class Chat:
     async def _transform_message(
         self,
         message: ChatMessage,
-        chunk: Literal["start", "end", True, False] = False,
+        chunk: ChunkOption = False,
         chunk_content: str = "",
     ) -> TransformedMessage | None:
         res = TransformedMessage.from_chat_message(message)
