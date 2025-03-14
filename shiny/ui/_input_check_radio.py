@@ -221,7 +221,7 @@ def input_checkbox_group(
     options = _generate_options(
         id=resolved_id,
         type="checkbox",
-        choices=choices,
+        choices=restore_input(resolved_id, choices),
         selected=selected,
         inline=inline,
     )
@@ -292,7 +292,7 @@ def input_radio_buttons(
     options = _generate_options(
         id=resolved_id,
         type="radio",
-        choices=choices,
+        choices=restore_input(resolved_id, choices),
         selected=restore_input(resolved_id, selected),
         inline=inline,
     )

@@ -8,7 +8,7 @@ __all__ = (
     "input_select",
     "input_selectize",
 )
-
+from shiny.bookmark._restore_state import restore_input
 import copy
 from json import dumps
 from typing import Any, Mapping, Optional, Union, cast
@@ -111,11 +111,12 @@ def input_selectize(
     * :func:`~shiny.ui.input_radio_buttons`
     * :func:`~shiny.ui.input_checkbox_group`
     """
+    resolved_id = resolve_id(id)
 
     x = input_select(
-        id,
-        label,
-        choices,
+        id=resolved_id,
+        label=label,
+        choices=restore_input(resolved_id, choices),
         selected=selected,
         multiple=multiple,
         selectize=True,
@@ -196,7 +197,9 @@ def input_select(
 
     remove_button = _resolve_remove_button(remove_button, multiple)
 
-    choices_ = _normalize_choices(choices)
+    resolved_id = resolve_id(id)
+
+    choices_ = restore_input(resolved_id, choices)
     if selected is None and not multiple:
         selected = _find_first_option(choices_)
 
@@ -206,8 +209,6 @@ def input_select(
     opts = _update_options(options, remove_button, multiple)
 
     choices_tags = _render_choices(choices_, selected)
-
-    resolved_id = resolve_id(id)
 
     return div(
         shiny_input_label(resolved_id, label),

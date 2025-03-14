@@ -4,6 +4,8 @@ from typing import Literal, Optional
 
 from htmltools import Tag, TagChild, css, div, tags
 
+from shiny.bookmark._restore_state import restore_input
+
 from .._docstring import add_example
 from ..module import resolve_id
 from ._html_deps_py_shiny import autoresize_dependency
@@ -76,7 +78,7 @@ def input_text(
             id=resolved_id,
             type="text",
             class_="shiny-input-text form-control",
-            value=value,
+            value=restore_input(resolved_id, value),
             placeholder=placeholder,
             autocomplete=autocomplete,
             spellcheck=spellcheck,
@@ -180,7 +182,7 @@ def input_text_area(
 
     resolved_id = resolve_id(id)
     area = tags.textarea(
-        value,
+        value=restore_input(resolved_id, value),
         id=resolved_id,
         class_=" ".join(classes),
         style=css(width=None if width else "100%", height=height, resize=resize),

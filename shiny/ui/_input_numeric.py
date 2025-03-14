@@ -4,6 +4,8 @@ from typing import Literal, Optional
 
 from htmltools import Tag, TagChild, css, div, tags
 
+from shiny.bookmark._restore_state import restore_input
+
 from .._docstring import add_example
 from ..module import resolve_id
 from ._utils import shiny_input_label
@@ -69,7 +71,7 @@ def input_numeric(
             id=resolved_id,
             type="number",
             class_="shiny-input-number form-control",
-            value=value,
+            value=restore_input(resolved_id, value),
             min=min,
             max=max,
             step=step,
