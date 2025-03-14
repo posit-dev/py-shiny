@@ -181,6 +181,26 @@ class Bookmark(ABC):
         ...
 
     @abstractmethod
+    async def get_bookmark_url(self) -> str | None:
+        """
+        Get the URL of the current bookmark state
+
+        This method should return the full URL, including the query string.
+
+        As a side effect, all `on_bookmark` callbacks will be invoked to allow the
+        bookmark state to be modified before it is serialized. This will cause the
+        bookmark state to be serialized to disk when `session.bookmark.store ==
+        "server"`.
+
+        Returns
+        -------
+        :
+            The full URL of the current bookmark state, including the query string.
+            `None` if bookmarking is not enabled.
+        """
+        ...
+
+    @abstractmethod
     async def do_bookmark(self) -> None:
         """
         Perform bookmarking.
@@ -385,66 +405,76 @@ class BookmarkApp(Bookmark):
         # Remove duplicates
         return list(set([*self.exclude, *scoped_excludes]))
 
+    async def get_bookmark_url(self) -> str | None:
+        if self.store == "disable":
+            return None
+
+        # ?withLogErrors
+        from ..bookmark._bookmark import BookmarkState
+        from ..session import session_context
+
+        async def root_state_on_save(state: BookmarkState) -> None:
+            with session_context(self._session):
+                await self._on_bookmark_callbacks.invoke(state)
+
+        root_state = BookmarkState(
+            input=self._session.input,
+            exclude=self._get_bookmark_exclude(),
+            on_save=root_state_on_save,
+        )
+
+        if self.store == "server":
+            query_string = await root_state._save_state(app=self._session.app)
+        elif self.store == "url":
+            query_string = await root_state._encode_state()
+        # # Can we have browser storage?
+        # elif self.store == "browser":
+        #     get_json object
+        #     get consistent storage value (not session id)
+        #     send object to browser storage
+        #     return server-like-id url value
+        else:
+            raise ValueError("Unknown bookmark store: " + self.store)
+
+        clientdata = self._session.clientdata
+
+        port = str(clientdata.url_port())
+        full_url = "".join(
+            [
+                clientdata.url_protocol(),
+                "//",
+                clientdata.url_hostname(),
+                ":" if port else "",
+                port,
+                clientdata.url_pathname(),
+                "?",
+                query_string,
+            ]
+        )
+
+        return full_url
+
     async def do_bookmark(self) -> None:
 
-        if self.store == "disable":
-            # If you have a bookmark button or request a bookmark to be saved,
-            # then it should be saved. (Present a warning telling author how to fix it)
-            warnings.warn(
-                "Saving the bookmark state has been requested. "
-                'However, bookmarking is current set to `"disable"`. '
-                "Please enable bookmarking by setting "
-                "`shiny.App(bookmark_store=)` or "
-                "`shiny.express.app_opts(bookmark_store=)`",
-                stacklevel=2,
-            )
-            return
+        from ..session import session_context
 
         try:
-            # ?withLogErrors
-            from ..bookmark._bookmark import BookmarkState
-            from ..session import session_context
+            full_url = await self.get_bookmark_url()
 
-            async def root_state_on_save(state: BookmarkState) -> None:
-                with session_context(self._session):
-                    await self._on_bookmark_callbacks.invoke(state)
+            if full_url is None:
+                # If you have a bookmark button or request a bookmark to be saved,
+                # then it should be saved. (Present a warning telling author how to fix it)
+                warnings.warn(
+                    "Saving the bookmark state has been requested. "
+                    'However, bookmarking is current set to `"disable"`. '
+                    "Please enable bookmarking by setting "
+                    "`shiny.App(bookmark_store=)` or "
+                    "`shiny.express.app_opts(bookmark_store=)`",
+                    stacklevel=2,
+                )
+                return
 
-            root_state = BookmarkState(
-                input=self._session.input,
-                exclude=self._get_bookmark_exclude(),
-                on_save=root_state_on_save,
-            )
-
-            if self.store == "server":
-                query_string = await root_state._save_state(app=self._session.app)
-            elif self.store == "url":
-                query_string = await root_state._encode_state()
-            # # Can we have browser storage?
-            # elif self.store == "browser":
-            #     get_json object
-            #     get consistent storage value (not session id)
-            #     send object to browser storage
-            #     return server-like-id url value
-            else:
-                raise ValueError("Unknown bookmark store: " + self.store)
-
-            clientdata = self._session.clientdata
-
-            port = str(clientdata.url_port())
-            full_url = "".join(
-                [
-                    clientdata.url_protocol(),
-                    "//",
-                    clientdata.url_hostname(),
-                    ":" if port else "",
-                    port,
-                    clientdata.url_pathname(),
-                    "?",
-                    query_string,
-                ]
-            )
-
-            # If onBookmarked callback was provided, invoke it; if not call
+            # If on_bookmarked callback was provided, invoke it; if not call
             # the default.
             if self._on_bookmarked_callbacks.count() > 0:
                 with session_context(self._session):
@@ -573,6 +603,9 @@ class BookmarkProxy(Bookmark):
     ) -> None:
         await self._session._parent.bookmark.update_query_string(query_string, mode)
 
+    async def get_bookmark_url(self) -> str | None:
+        return await self._session._parent.bookmark.get_bookmark_url()
+
     async def do_bookmark(self) -> None:
         await self._session._parent.bookmark.do_bookmark()
 
@@ -615,6 +648,9 @@ class BookmarkExpressStub(Bookmark):
         self, query_string: str, mode: Literal["replace", "push"] = "replace"
     ) -> None:
         # no-op within ExpressStub
+        return None
+
+    async def get_bookmark_url(self) -> str | None:
         return None
 
     async def do_bookmark(self) -> None:
