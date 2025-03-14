@@ -388,6 +388,8 @@ def get_current_restore_context() -> RestoreContext | None:
 
 
 T = TypeVar("T")
+
+
 @overload
 def restore_input(resolved_id: ResolvedId, default: Any) -> Any: ...
 @overload
