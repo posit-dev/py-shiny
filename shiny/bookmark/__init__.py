@@ -8,6 +8,7 @@ from ._button import input_bookmark_button
 from ._global import set_global_restore_dir_fn, set_global_save_dir_fn
 from ._restore_state import RestoreContext, RestoreState, restore_input
 from ._save_state import BookmarkState
+from ._serializers import Unserializable, serializer_unserializable
 
 __all__ = (
     # _bookmark
@@ -26,4 +27,7 @@ __all__ = (
     "restore_input",
     # _save_state
     "BookmarkState",
+    # _serializers
+    "Unserializable",
+    "serializer_unserializable",
 )

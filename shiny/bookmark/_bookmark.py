@@ -12,53 +12,6 @@ from ._restore_state import RestoreState
 from ._save_state import BookmarkState
 from ._types import BookmarkStore
 
-# TODO: Barret - Bookmark state
-# bookmark -> save/load interface
-# * √ global hooks
-# * √ default local functions
-# save/load interface -> register functions
-# * `shiny.bookmark.globals`
-# register interface -> Make interface for Connect
-# * TODO: implement in Connect PR
-# bookmark -> save state
-# save state -> {inputs, values, exclude}
-# {inputs} -> custom serializer
-# * √ Hook to `Inputs.set_serializer(id, fn)`
-# * √ `Inputs._serialize()` to create a dict
-# {values} -> dict (where as in R is an environment)
-# * √ values is a dict!
-# {exclude} -> Requires `session.setBookmarkExclude(names)`, `session.getBookmarkExclude()`
-# * √ `session.bookmark_exclude: list[str]` value!
-# * √ `session._get_bookmark_exclude()` & `session._bookmark_exclude_fn`
-# Using a `.bookmark_exclude = []` and `._get_bookmark_exclude()` helper that accesses a `._bookmark_exclude_fns` list of functions which return scoped bookmark excluded values
-# Enable bookmarking hooks:
-# * √ `session.bookmark_store`: `url`, `server`, `disable`
-# Session hooks -> `onBookmark()`, `onBookmarked()`, `onRestore(), `onRestored()`
-# * √ `session.on_bookmark()` # Takes the save state
-#     * Cancel callback
-# * √ `session.on_bookmarked()` # Takes a url
-#     * Cancel callback
-# * `session.onRestore()`
-# * `session.onRestored()`
-# Session hooks -> Require list of callback functions for each
-# * √ Session hooks -> Calling hooks in proper locations with info
-# * √ Session hook -> Call bookmark "right now": `doBookmark()`
-# * √ `session.do_bookmark()`
-# Session updates -> Require updates for `SessionProxy` object
-# * √ `doBookmark()` -> Update query string
-# * √ Update query string
-
-# bookmark -> restore state
-# restore state -> {inputs, values}
-# restore {inputs} -> Update all inputs given restored value
-
-# Shinylive!
-# Get query string from parent frame / tab
-# * Ignore the code itself
-# * May need to escape (all?) the parameters to avoid collisions with `h=` or `code=`.
-# Set query string to parent frame / tab
-
-
 if TYPE_CHECKING:
     from ..express._stub_session import ExpressStubSession
     from ..module import ResolvedId
@@ -102,7 +55,9 @@ class Bookmark(ABC):
         self._on_restore_callbacks = AsyncCallbacks()
         self._on_restored_callbacks = AsyncCallbacks()
 
-    # Making this a read only property as app authors will not be able to change how the session is restored as the server function will run after the session has been restored.
+    # Making this a read only property as app authors will not be able to change how the
+    # session is restored as the server function will run after the session has been
+    # restored.
     @property
     @abstractmethod
     def store(self) -> BookmarkStore:
@@ -174,8 +129,9 @@ class Bookmark(ABC):
         Parameters
         ----------
         callback
-            The callback function to call when the session is bookmarked.
-            This method should accept a single argument, the string representing the query parameter component of the URL.
+            The callback function to call when the session is bookmarked. This method
+            should accept a single argument, the string representing the query parameter
+            component of the URL.
         """
         return self._on_bookmarked_callbacks.register(wrap_async(callback))
 
@@ -219,7 +175,8 @@ class Bookmark(ABC):
         query_string
             The query string to set.
         mode
-            Whether to replace the current URL or push a new one. Pushing a new value will add to the user's browser history.
+            Whether to replace the current URL or push a new one. Pushing a new value
+            will add to the user's browser history.
         """
         ...
 
@@ -228,7 +185,9 @@ class Bookmark(ABC):
         """
         Perform bookmarking.
 
-        This method will also call the `on_bookmark` and `on_bookmarked` callbacks to alter the bookmark state. Then, the bookmark state will be either saved to the server or encoded in the URL, depending on the `.store` option.
+        This method will also call the `on_bookmark` and `on_bookmarked` callbacks to
+        alter the bookmark state. Then, the bookmark state will be either saved to the
+        server or encoded in the URL, depending on the `.store` option.
 
         No actions will be performed if the `.store` option is set to `"disable"`.
 
@@ -256,7 +215,9 @@ class BookmarkApp(Bookmark):
         self._session = session
         # self._restore_context_value = None
 
-    # Making this a read only property as app authors will not be able to change how the session is restored as the server function will run after the session has been restored.
+    # Making this a read only property as app authors will not be able to change how the
+    # session is restored as the server function will run after the session has been
+    # restored.
     @property
     def store(self) -> BookmarkStore:
 
