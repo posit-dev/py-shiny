@@ -201,14 +201,28 @@ class AnthropicNormalizer(BaseMessageNormalizer):
             # The actual MessageStreamEvent is a generic, so isinstance() can't
             # be used to check the type. Instead, we manually construct the relevant
             # union of relevant classes...
-            return (
+            if (
                 isinstance(chunk, RawContentBlockDeltaEvent)
                 or isinstance(chunk, RawContentBlockStartEvent)
                 or isinstance(chunk, RawContentBlockStopEvent)
                 or isinstance(chunk, RawMessageDeltaEvent)
                 or isinstance(chunk, RawMessageStartEvent)
                 or isinstance(chunk, RawMessageStopEvent)
+            ):
+                return True
+
+            # Older versions of the anthropic library don't have the beta prompt caching
+            # types, so we need to check for them separately. If this import fails or
+            # errors, then we'll end up in the Exception handler and return False.
+            from anthropic.types.beta.prompt_caching import (
+                RawPromptCachingBetaMessageStartEvent,
             )
+
+            if isinstance(chunk, RawPromptCachingBetaMessageStartEvent):
+                return True
+
+            return False
+
         except Exception:
             return False
 
