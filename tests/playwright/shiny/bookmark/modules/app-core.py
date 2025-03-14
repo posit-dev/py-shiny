@@ -30,9 +30,6 @@ def mod_btn(idx: int):
             ui.output_ui("ui_html"),
             ui.output_code("value"),
             width="200px",
-            # fill=True,
-            # fillable=True,
-            # height="75px",
         ),
         ui.hr(),
     )
@@ -60,7 +57,6 @@ def btn_server(input: Inputs, output: Outputs, session: Session, idx: int = 3):
     @reactive.effect
     @reactive.event(input.btn1, input.btn2, input.dyn1, input.dyn2, ignore_init=True)
     async def _():
-        # print("app-Bookmarking!")
         await session.bookmark()
 
     session.bookmark.exclude.append("btn2")
@@ -73,7 +69,6 @@ def btn_server(input: Inputs, output: Outputs, session: Session, idx: int = 3):
 
     @session.bookmark.on_restore
     def _(restore_state: RestoreState) -> None:
-        # print("app-Restore state:", restore_state.values)
 
         if "btn2" in restore_state.values:
 
@@ -88,15 +83,10 @@ k = 2
 
 
 def app_ui(request: Request) -> ui.Tag:
-    # print("app-Making UI")
     return ui.page_fixed(
         ui.output_code("bookmark_store"),
         "Click Button to update bookmark",
-        # ui.input_action_button("btn", "Button"),
         *[mod_btn(f"mod{i}", i) for i in reversed(range(k))],
-        # ui.input_radio_buttons("btn", "Button", choices=["a", "b", "c"], selected="a"),
-        # ui.output_code("code"),
-        # ui.input_bookmark_button(),
     )
 
 
@@ -110,26 +100,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     for i in reversed(range(k)):
         btn_server(f"mod{i}", i)
 
-    @session.bookmark.on_bookmark
-    async def on_bookmark(state: BookmarkState) -> None:
-        # print(
-        #     "app-On Bookmark",
-        #     "\nInputs: ",
-        #     await state.input._serialize(exclude=state.exclude, state_dir=None),
-        #     "\nValues: ",
-        #     state.values,
-        #     "\n\n",
-        # )
-        # session.bookmark.update_query_string()
-
-        pass
-
     session.bookmark.on_bookmarked(session.bookmark.update_query_string)
-    # session.bookmark.on_bookmarked(session.bookmark.show_modal)
-
-    # @render.code
-    # def code():
-    #     return f"{input.btn()}"
 
 
 SHINY_BOOKMARK_STORE: Literal["url", "server"] = os.getenv(
