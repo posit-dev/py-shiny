@@ -8,12 +8,13 @@ __all__ = (
     "input_select",
     "input_selectize",
 )
-from shiny.bookmark._restore_state import restore_input
 import copy
 from json import dumps
 from typing import Any, Mapping, Optional, Union, cast
 
 from htmltools import Tag, TagChild, TagList, css, div, tags
+
+from shiny.bookmark._restore_state import restore_input
 
 from .._docstring import add_example
 from ..module import resolve_id

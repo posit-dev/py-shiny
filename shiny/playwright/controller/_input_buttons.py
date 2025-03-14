@@ -65,6 +65,7 @@ class InputActionButton(
             self.loc, "disabled", re.compile(".*") if value else None, timeout=timeout
         )
 
+
 class InputBookmarkButton(
     WidthLocStlyeM,
     InputActionBase,
@@ -106,6 +107,7 @@ class InputBookmarkButton(
         _expect_attribute_to_have_value(
             self.loc, "disabled", re.compile(".*") if value else None, timeout=timeout
         )
+
 
 class InputDarkMode(UiBase):
     """Controller for :func:`shiny.ui.input_dark_mode`."""
