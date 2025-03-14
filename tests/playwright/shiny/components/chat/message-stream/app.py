@@ -3,7 +3,7 @@ import asyncio
 from shiny import reactive
 from shiny.express import input, render, ui
 
-SLEEP_TIME = 0.75
+SLEEP_TIME = 0.25
 
 ui.page_opts(title="Hello chat message streams")
 
@@ -37,11 +37,12 @@ async def _():
         " Progress: 50%",
         " Progress: 100%",
     ]
-    async with chat.message_stream():
+    async with chat.message_stream() as stream:
         for chunk in chunks:
-            await chat.append_message_chunk(chunk)
+            await stream.append(chunk)
             await asyncio.sleep(SLEEP_TIME)
-        await chat.append_message_chunk("Completed stream 1 ✅", operation="replace")
+        await stream.restore()
+        await stream.append("Completed stream 1 ✅")
 
 
 # TODO: add test here for nested .message_stream()
@@ -68,8 +69,12 @@ async def mock_tool():
         " Progress: 50%",
         " Progress: 100%",
     ]
-    for chunk in chunks:
-        await chat.append_message_chunk(chunk, operation="replace")
+    async with chat.message_stream() as stream:
+        for chunk in chunks:
+            await stream.append(chunk)
+            await asyncio.sleep(SLEEP_TIME)
+        await stream.restore()
+        await stream.append("Completed inner stream ✅")
 
 
 # TODO: more tests, like submitting input, etc.

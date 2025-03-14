@@ -590,12 +590,7 @@ class Chat:
             icon=icon,
         )
 
-    async def append_message_chunk(
-        self,
-        message_chunk: Any,
-        *,
-        operation: Literal["append", "replace"] = "append",
-    ):
+    async def append_message_chunk(self, message_chunk: Any):
         """
         Append a message chunk to the current message stream.
 
@@ -606,8 +601,6 @@ class Chat:
         ----------
         message_chunk
             A message chunk to inject.
-        operation
-            Whether to append or replace the *current* message stream content.
 
         Note
         ----
@@ -633,7 +626,6 @@ class Chat:
         return await self._append_message_chunk(
             message_chunk,
             stream_id=stream_id,
-            operation=operation,
         )
 
     @asynccontextmanager
@@ -643,6 +635,12 @@ class Chat:
 
         A context manager for streaming messages into the chat. Note this stream
         can occur within a longer running `.append_message_stream()` or used on its own.
+
+        Yields
+        ------
+        :
+            A `MessageStream` instance with a method for `.append()`ing message chunks
+            and a method for `.restore()`ing the stream back to it's initial state.
 
         Note
         ----
@@ -658,16 +656,14 @@ class Chat:
         self._message_stream_checkpoint = self._current_stream_message
 
         # No stream currently exists, start one
-        is_root_stream = not self._current_stream_id
+        stream_id = self._current_stream_id
+        is_root_stream = stream_id is None
         if is_root_stream:
-            await self._append_message_chunk(
-                "",
-                chunk="start",
-                stream_id=_utils.private_random_id(),
-            )
+            stream_id = _utils.private_random_id()
+            await self._append_message_chunk("", chunk="start", stream_id=stream_id)
 
         try:
-            yield
+            yield MessageStream(self, stream_id)
         finally:
             # Restore the previous stream state
             self._message_stream_checkpoint = old_checkpoint
@@ -677,7 +673,7 @@ class Chat:
                 await self._append_message_chunk(
                     "",
                     chunk="end",
-                    stream_id=cast(str, self._current_stream_id),
+                    stream_id=stream_id,
                 )
 
     async def _append_message_chunk(
@@ -1494,6 +1490,38 @@ def chat_ui(
         res = as_fillable_container(as_fill_item(res))
 
     return res
+
+
+class MessageStream:
+    """"""
+
+    def __init__(self, chat: Chat, stream_id: str):
+        self._chat = chat
+        self._stream_id = stream_id
+
+    async def restore(self):
+        """
+        Restore the stream back to its initial state.
+        """
+        await self._chat._append_message_chunk(
+            "",
+            operation="replace",
+            stream_id=self._stream_id,
+        )
+
+    async def append(self, message_chunk: Any):
+        """
+        Append a message chunk to the stream.
+
+        Parameters
+        -----------
+        message_chunk
+            A message chunk to append to this stream
+        """
+        await self._chat._append_message_chunk(
+            message_chunk,
+            stream_id=self._stream_id,
+        )
 
 
 CHAT_INSTANCES: WeakValueDictionary[str, Chat] = WeakValueDictionary()
