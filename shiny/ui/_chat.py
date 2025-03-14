@@ -80,7 +80,9 @@ UserSubmitFunction = Union[
     UserSubmitFunction1,
 ]
 
-PendingMessage = Tuple[Any, Literal["start", "end", True], Union[str, None]]
+ChunkOption = Literal["start", "end", True, False]
+
+PendingMessage = Tuple[Any, ChunkOption, Union[str, None]]
 
 
 @add_example(ex_dir="../templates/chat/starters/hello")
@@ -570,6 +572,11 @@ class Chat:
         similar) is specified in model's completion method.
         :::
         """
+        # If we're in a stream, queue the message
+        if self._current_stream_id:
+            self._pending_messages.append((message, False, None))
+            return
+
         msg = normalize_message(message)
         msg = await self._transform_message(msg)
         if msg is None:
@@ -668,7 +675,7 @@ class Chat:
                 await self._append_message_chunk(
                     "",
                     chunk="end",
-                    stream_id=self._current_stream_id,
+                    stream_id=cast(str, self._current_stream_id),
                 )
 
     async def _append_message_chunk(
@@ -676,12 +683,12 @@ class Chat:
         message: Any,
         *,
         chunk: Literal[True, "start", "end"] = True,
+        stream_id: str,
         operation: Literal["append", "replace"] = "append",
-        stream_id: str | None = None,
         icon: HTML | Tag | TagList | None = None,
     ) -> None:
-        # If currently we're in a stream, handle other messages (outside the stream) later
-        if not self._can_append_message(stream_id):
+        # If currently we're in a *different* stream, queue the message chunk
+        if self._current_stream_id and self._current_stream_id != stream_id:
             self._pending_messages.append((message, chunk, stream_id))
             return
 
@@ -876,24 +883,21 @@ class Chat:
             await self._flush_pending_messages()
 
     async def _flush_pending_messages(self):
-        still_pending: list[PendingMessage] = []
-        for msg, chunk, stream_id in self._pending_messages:
-            if self._can_append_message(stream_id):
-                await self._append_message_chunk(msg, chunk=chunk, stream_id=stream_id)
+        pending = self._pending_messages
+        self._pending_messages = []
+        for msg, chunk, stream_id in pending:
+            if chunk is False:
+                await self.append_message(msg)
             else:
-                still_pending.append((msg, chunk, stream_id))
-        self._pending_messages = still_pending
-
-    def _can_append_message(self, stream_id: str | None) -> bool:
-        if self._current_stream_id is None:
-            return True
-        return self._current_stream_id == stream_id
+                await self._append_message_chunk(
+                    msg, chunk=chunk, stream_id=cast(str, stream_id)
+                )
 
     # Send a message to the UI
     async def _send_append_message(
         self,
         message: TransformedMessage | ChatMessage,
-        chunk: Literal["start", "end", True, False] = False,
+        chunk: ChunkOption = False,
         operation: Literal["append", "replace"] = "append",
         icon: HTML | Tag | TagList | None = None,
     ):
