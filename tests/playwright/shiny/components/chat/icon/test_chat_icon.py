@@ -15,7 +15,7 @@ class ChatModule:
 
     def expect_last_message_icon_to_have_classes(self, classes: Optional[str] = None):
         last_msg_icon = self.chat.loc_latest_message.locator(".message-icon > *").first
-        expect(last_msg_icon).to_have_class(classes or self.classes)
+        expect(last_msg_icon).to_have_class(classes or self.classes, timeout=30 * 1000)
 
 
 @skip_on_webkit
@@ -30,7 +30,7 @@ def test_validate_chat_basic(page: Page, local_app: ShinyAppProc) -> None:
     ]
 
     for mod in chats:
-        expect(mod.chat.loc).to_be_visible(timeout=30 * 100)
+        expect(mod.chat.loc).to_be_visible(timeout=30 * 1000)
         mod.expect_last_message_icon_to_have_classes()
 
         mod.chat.set_user_input(f"Hi {mod.id}.")

@@ -6,8 +6,7 @@ from typing import Literal, Protocol
 from playwright.sync_api import Locator, Page
 from playwright.sync_api import expect as playwright_expect
 
-from shiny.render._data_frame import ColumnFilter, ColumnSort
-
+from ...render._data_frame import ColumnFilter, ColumnSort
 from .._types import AttrValue, ListPatternOrStr, PatternOrStr, StyleValue, Timeout
 from ..expect import expect_not_to_have_class, expect_to_have_class
 from ..expect._internal import (

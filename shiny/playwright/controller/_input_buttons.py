@@ -101,7 +101,7 @@ class InputDarkMode(UiBase):
         timeout
             The maximum time to wait for the input dark mode to be clicked. Defaults to `None`.
         """
-        self.loc.click(timeout=timeout)
+        self.loc.locator("button").click(timeout=timeout)
         return self
 
     def expect_mode(self, value: str, *, timeout: Timeout = None):
