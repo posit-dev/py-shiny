@@ -218,11 +218,12 @@ def input_checkbox_group(
 
     resolved_id = resolve_id(id)
     input_label = shiny_input_label(resolved_id, label)
+
     options = _generate_options(
         id=resolved_id,
         type="checkbox",
-        choices=restore_input(resolved_id, choices),
-        selected=selected,
+        choices=choices,
+        selected=restore_input(resolved_id, selected),
         inline=inline,
     )
     return div(
@@ -292,7 +293,7 @@ def input_radio_buttons(
     options = _generate_options(
         id=resolved_id,
         type="radio",
-        choices=restore_input(resolved_id, choices),
+        choices=choices,
         selected=restore_input(resolved_id, selected),
         inline=inline,
     )
