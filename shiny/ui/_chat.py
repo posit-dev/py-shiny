@@ -502,9 +502,11 @@ class Chat:
                 transform = transform_user == "all" or (
                     transform_user == "last" and i == len(messages) - 1
                 )
-            key = "transform_key" if transform else "pre_transform_key"
-            content_val = getattr(m, getattr(m, key))
-            chat_msg = ChatMessageDict(content=str(content_val), role=m.role)
+            content_key = getattr(
+                m, "transform_key" if transform else "pre_transform_key"
+            )
+            content = getattr(m, content_key)
+            chat_msg = ChatMessageDict(content=str(content), role=m.role)
             if not isinstance(format, MISSING_TYPE):
                 chat_msg = as_provider_message(chat_msg, format)
             res.append(chat_msg)
