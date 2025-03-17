@@ -25,9 +25,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Fixed an issue with the `.click()` method on InputActionButton controllers in `shiny.playwright.controllers` where the method would not work as expected. (#1886)
 
-* Fixed an issue where the parent session of a nested module's session was not being set to the calling session. Now, a session who's namespace is `A-B` has a parent of `A` and grandparent of `(root)` (whereas before it would have skipped `A` and the parent would have been `(root)`). (#1923)
-
-
 ## [1.3.0] - 2025-03-03
 
 ### New features
