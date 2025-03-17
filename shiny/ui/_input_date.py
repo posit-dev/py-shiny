@@ -12,7 +12,6 @@ from shiny.bookmark import restore_input
 from shiny.module import resolve_id
 
 from .._docstring import add_example
-from ..module import resolve_id
 from ._html_deps_external import datepicker_deps
 from ._utils import shiny_input_label
 
