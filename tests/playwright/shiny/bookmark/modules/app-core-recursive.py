@@ -29,7 +29,7 @@ def mod_btn(idx: int = 1):
             width="200px",
         ),
         ui.hr(),
-        mod_btn(f"sub{idx}", idx - 1) if idx > 0 else None,
+        mod_btn(f"sub{idx - 1}", idx - 1) if idx > 0 else None,
     )
 
 
@@ -55,7 +55,6 @@ def btn_server(input: Inputs, output: Outputs, session: Session, idx: int = 1):
     @reactive.effect
     @reactive.event(input.btn1, input.btn2, input.dyn1, input.dyn2, ignore_init=True)
     async def _():
-        # print("app-Bookmarking!")
         await session.bookmark()
 
     session.bookmark.exclude.append("btn2")
@@ -68,7 +67,6 @@ def btn_server(input: Inputs, output: Outputs, session: Session, idx: int = 1):
 
     @session.bookmark.on_restore
     def _(restore_state: RestoreState) -> None:
-        # print("app-Restore state:", restore_state.values)
 
         if "btn2" in restore_state.values:
 
@@ -79,14 +77,16 @@ def btn_server(input: Inputs, output: Outputs, session: Session, idx: int = 1):
             ui.update_radio_buttons("dyn2", selected=restore_state.values["dyn2"])
 
     if idx > 0:
-        btn_server(f"sub{idx}", idx - 1)
+        btn_server(f"sub{idx - 1}", idx - 1)
+    else:
+        # Attempt to call on_bookmarked at the very end of the proxy chain
+        session.bookmark.on_bookmarked(session.bookmark.update_query_string)
 
 
-k = 2
+k = 4
 
 
 def app_ui(request: Request) -> ui.Tag:
-    # print("app-Making UI")
     return ui.page_fixed(
         ui.output_code("bookmark_store"),
         "Click Buttons to update bookmark",
@@ -102,23 +102,6 @@ def server(input: Inputs, output: Outputs, session: Session):
     @render.code
     def bookmark_store():
         return f"{session.bookmark.store}"
-
-    @session.bookmark.on_bookmark
-    async def on_bookmark(state: BookmarkState) -> None:
-        print(
-            "app-On Bookmark",
-            "\nInputs: ",
-            await state.input._serialize(exclude=state.exclude, state_dir=None),
-            "\nValues: ",
-            state.values,
-            "\n\n",
-        )
-        # session.bookmark.update_query_string()
-
-        pass
-
-    session.bookmark.on_bookmarked(session.bookmark.update_query_string)
-    # session.bookmark.on_bookmarked(session.bookmark.show_modal)
 
 
 SHINY_BOOKMARK_STORE: Literal["url", "server"] = os.getenv(

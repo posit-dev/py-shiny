@@ -15,13 +15,18 @@ if SHINY_BOOKMARK_STORE not in ["url", "server"]:
 app_opts(bookmark_store=SHINY_BOOKMARK_STORE)
 
 
+@session.bookmark.on_bookmarked
+async def _(url: str):
+    await session.bookmark.update_query_string(url)
+
+
 @render.code
 def bookmark_store():
     return f"{session.bookmark.store}"
 
 
 @module
-def recursive_mod(input: Inputs, output: Outputs, session: Session, recurse: int = 3):
+def ex_mod(input: Inputs, output: Outputs, session: Session, recurse: int = 3):
 
     ui.h3(f"Module {recurse}")
     with ui.layout_column_wrap(width="200px"):
@@ -84,38 +89,6 @@ def recursive_mod(input: Inputs, output: Outputs, session: Session, recurse: int
 
 "Click Button to update bookmark"
 
-k = 2
+k = 4
 for i in reversed(range(k)):
-    recursive_mod(f"mod{i}", i)
-
-
-# ui.input_radio_buttons("btn", "Button", choices=["a", "b", "c"], selected="a")
-
-
-# @render.code
-# def code():
-#     return f"{input.btn()}"
-
-
-# ui.input_bookmark_button()
-
-
-# @session.bookmark.on_bookmark
-# async def on_bookmark(state: BookmarkState) -> None:
-#     print(
-#         "app-On Bookmark",
-#         "\nInputs: ",
-#         await state.input._serialize(exclude=state.exclude, state_dir=None),
-#         "\nValues: ",
-#         state.values,
-#         "\n\n",
-#     )
-#     # session.bookmark.update_query_string()
-
-
-@session.bookmark.on_bookmarked
-async def _(url: str):
-    await session.bookmark.update_query_string(url)
-
-
-# session.bookmark.on_bookmarked(session.bookmark.show_modal)
+    ex_mod(f"mod{i}", i)

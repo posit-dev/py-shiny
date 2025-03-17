@@ -12,11 +12,11 @@ from shiny.run import ShinyAppProc, run_shiny_app
     "app_name,mod0_key,mod1_key",
     [
         # Express mode
-        ("app-express.py", "mod0", "mod1"),
+        ("app-express.py", "mod0", "mod3"),
         # Core mode
-        ("app-core.py", "mod0", "mod1"),
+        ("app-core.py", "mod0", "mod3"),
         # Recursive modules within core mode
-        ("app-core-recursive.py", "mod1-sub1", "mod1"),
+        ("app-core-recursive.py", "mod3", "mod3-sub2-sub1-sub0"),
     ],
 )
 @pytest.mark.parametrize("bookmark_store", ["url", "server"])
