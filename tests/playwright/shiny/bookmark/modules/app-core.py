@@ -79,7 +79,7 @@ def btn_server(input: Inputs, output: Outputs, session: Session, idx: int = 3):
             ui.update_radio_buttons("dyn2", selected=restore_state.values["dyn2"])
 
 
-k = 2
+k = 4
 
 
 def app_ui(request: Request) -> ui.Tag:
@@ -93,14 +93,14 @@ def app_ui(request: Request) -> ui.Tag:
 # Needs access to the restore context to the dynamic UI
 def server(input: Inputs, output: Outputs, session: Session):
 
+    session.bookmark.on_bookmarked(session.bookmark.update_query_string)
+
     @render.code
     def bookmark_store():
         return f"{session.bookmark.store}"
 
     for i in reversed(range(k)):
         btn_server(f"mod{i}", i)
-
-    session.bookmark.on_bookmarked(session.bookmark.update_query_string)
 
 
 SHINY_BOOKMARK_STORE: Literal["url", "server"] = os.getenv(

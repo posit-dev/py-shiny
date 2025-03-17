@@ -29,7 +29,7 @@ def mod_btn(idx: int = 1):
             width="200px",
         ),
         ui.hr(),
-        mod_btn(f"sub{idx}", idx - 1) if idx > 0 else None,
+        mod_btn(f"sub{idx - 1}", idx - 1) if idx > 0 else None,
     )
 
 
@@ -77,10 +77,13 @@ def btn_server(input: Inputs, output: Outputs, session: Session, idx: int = 1):
             ui.update_radio_buttons("dyn2", selected=restore_state.values["dyn2"])
 
     if idx > 0:
-        btn_server(f"sub{idx}", idx - 1)
+        btn_server(f"sub{idx - 1}", idx - 1)
+    else:
+        # Attempt to call on_bookmarked at the very end of the proxy chain
+        session.bookmark.on_bookmarked(session.bookmark.update_query_string)
 
 
-k = 2
+k = 4
 
 
 def app_ui(request: Request) -> ui.Tag:
@@ -99,8 +102,6 @@ def server(input: Inputs, output: Outputs, session: Session):
     @render.code
     def bookmark_store():
         return f"{session.bookmark.store}"
-
-    session.bookmark.on_bookmarked(session.bookmark.update_query_string)
 
 
 SHINY_BOOKMARK_STORE: Literal["url", "server"] = os.getenv(
