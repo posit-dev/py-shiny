@@ -18,4 +18,4 @@ def test_bookmark_date_inputs(page: Page, app: ShinyAppProc) -> None:
     text1 = controller.Text(page, "selected_date1")
     text1.expect_text("Selected date: 2024-01-01")
 
-    bookmark_button = controller.InputActionButton(page, "bookmark_button")
+    # bookmark_button = controller.InputActionLink(page, "bookmark_button")
