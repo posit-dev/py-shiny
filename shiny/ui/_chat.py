@@ -595,16 +595,50 @@ class Chat:
         """
         Message stream context manager.
 
-        A context manager for streaming messages into the chat. Note this context
-        manager can be used in isolation, nested within itself, or used while a
-        long-running `.append_message_stream()` is in progress.
+        A context manager for appending streaming messages into the chat. This context
+        manager can:
+
+        1. Be used in isolation to append a new streaming message to the chat.
+            * Compared to `.append_message_stream()` this method is more flexible but
+              isn't non-blocking by default (i.e., it doesn't launch an extended task).
+        2. Be nested within itself
+            * Nesting is primarily useful for making checkpoints to `.restore()` back
+              to (see the example below).
+        3. Be used from within a `.append_message_stream()`
+            * Useful for inserting additional content from another context into the
+              stream (e.g., see the note about tool calls below).
 
         Yields
         ------
         :
             A `MessageStream` class instance, which has a method for `.append()`ing
-            message chunks to as well as way to `.restore()` the stream back to it's
-            initial state.
+            message content chunks to as well as way to `.restore()` the stream back to
+            it's initial state. Note that `.append()` supports the same message content
+            types as `.append_message()`.
+
+        Example
+        -------
+        ```python
+        import asyncio
+
+        from shiny import reactive
+        from shiny.express import ui
+
+        chat = ui.Chat(id="my_chat")
+        chat.ui()
+
+        @reactive.effect
+        async def _():
+            async with chat.append_message_context() as msg:
+                await msg.append("Starting stream...\n\nProgress:")
+                async with chat.append_message_context() as progress:
+                    for x in [0, 50, 100]:
+                        await progress.append(f" {x}%")
+                        await asyncio.sleep(1)
+                        await progress.restore()
+                await msg.restore()
+                await msg.append("Completed stream")
+        ```
 
         Note
         ----
