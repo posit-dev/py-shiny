@@ -18,7 +18,8 @@ def is_unserializable(x: Any) -> TypeIs[Unserializable]:
 
 
 async def serializer_unserializable(
-    value: Any = None, state_dir: Path | None = None
+    value: Any = None,
+    state_dir: Path | None = None,
 ) -> Unserializable:
     return Unserializable()
 
@@ -28,10 +29,7 @@ async def serializer_default(value: T, state_dir: Path | None) -> T:
 
 
 # TODO: Barret - Integrate
-def serializer_file_input(
-    value: Any,
-    state_dir: Path | None,
-) -> Any | Unserializable:
+def serializer_file_input(value: Any, state_dir: Path | None) -> Any | Unserializable:
     if state_dir is None:
         return Unserializable()
 
