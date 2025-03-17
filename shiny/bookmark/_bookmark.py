@@ -15,13 +15,14 @@ from ._types import BookmarkStore
 if TYPE_CHECKING:
     from ..express._stub_session import ExpressStubSession
     from ..module import ResolvedId
-    from ..session._session import AppSession, SessionProxy
+    from ..session._session import AppSession, Session, SessionProxy
     from . import RestoreContext
 else:
     from typing import Any
 
     RestoreContext = Any
     SessionProxy = Any
+    Session = Any
     AppSession = Any
     ResolvedId = Any
     ExpressStubSession = Any
@@ -217,22 +218,26 @@ class Bookmark(ABC):
 
 
 class BookmarkApp(Bookmark):
-    _session: AppSession
+    _root_session: AppSession
     """
-    The root session object (most likely a `AppSession` object).
+    The root session object.
     """
+
     _restore_context_value: RestoreContext
     """
     Placeholder value that should only be manually set within the session's `init` websocket message.
     """
 
-    def __init__(self, session: AppSession):
+    def __init__(self, root_session: AppSession):
         from ..session._session import AppSession
 
-        assert isinstance(session, AppSession)
+        assert isinstance(root_session, AppSession)
         super().__init__()
 
-        self._session = session
+        self._root_session = root_session
+
+        # # Do not set it to avoid supporting a `None` type.
+        # # Instead, only use it after it's been set.
         # self._restore_context_value = None
 
     # Making this a read only property as app authors will not be able to change how the
@@ -241,7 +246,7 @@ class BookmarkApp(Bookmark):
     @property
     def store(self) -> BookmarkStore:
 
-        return self._session.app.bookmark_store
+        return self._root_session.app.bookmark_store
 
     @property
     def _restore_context(self) -> RestoreContext | None:
@@ -269,19 +274,19 @@ class BookmarkApp(Bookmark):
         if self.store == "disable":
             return
 
-        session = self._session
+        root_session = self._root_session
 
         from .. import reactive
         from ..session import session_context
         from ..ui._notification import notification_show
 
-        with session_context(session):
+        with session_context(root_session):
 
             # Fires when the bookmark button is clicked.
             @reactive.effect
-            @reactive.event(session.input[BOOKMARK_ID])
+            @reactive.event(root_session.input[BOOKMARK_ID])
             async def _():
-                await session.bookmark()
+                await root_session.bookmark()
 
             # If there was an error initializing the current restore context, show
             # notification in the client.
@@ -292,6 +297,7 @@ class BookmarkApp(Bookmark):
                         f"Error in RestoreContext initialization: {self._restore_context._init_error_msg}",
                         duration=None,
                         type="error",
+                        session=root_session,
                     )
 
             # Run the on_restore function at the beginning of the flush cycle, but after
@@ -301,7 +307,7 @@ class BookmarkApp(Bookmark):
                 if self._on_restore_callbacks.count() == 0:
                     return
 
-                with session_context(session):
+                with session_context(root_session):
 
                     try:
                         # ?withLogErrors
@@ -322,12 +328,12 @@ class BookmarkApp(Bookmark):
 
             # Run the on_restored function after the flush cycle completes and
             # information is sent to the client.
-            @session.on_flushed
+            @root_session.on_flushed
             async def invoke_on_restored_callbacks():
                 if self._on_restored_callbacks.count() == 0:
                     return
 
-                with session_context(session):
+                with session_context(root_session):
                     try:
                         with reactive.isolate():
                             if self._restore_context and self._restore_context.active:
@@ -385,7 +391,7 @@ class BookmarkApp(Bookmark):
     ) -> None:
         if mode not in {"replace", "push"}:
             raise ValueError(f"Invalid mode: {mode}")
-        await self._session._send_message(
+        await self._root_session._send_message(
             {
                 "updateQueryString": {
                     "queryString": query_string,
@@ -414,17 +420,17 @@ class BookmarkApp(Bookmark):
         from ..session import session_context
 
         async def root_state_on_save(state: BookmarkState) -> None:
-            with session_context(self._session):
+            with session_context(self._root_session):
                 await self._on_bookmark_callbacks.invoke(state)
 
         root_state = BookmarkState(
-            input=self._session.input,
+            input=self._root_session.input,
             exclude=self._get_bookmark_exclude(),
             on_save=root_state_on_save,
         )
 
         if self.store == "server":
-            query_string = await root_state._save_state(app=self._session.app)
+            query_string = await root_state._save_state(app=self._root_session.app)
         elif self.store == "url":
             query_string = await root_state._encode_state()
         # # Can we have browser storage?
@@ -436,7 +442,7 @@ class BookmarkApp(Bookmark):
         else:
             raise ValueError("Unknown bookmark store: " + self.store)
 
-        clientdata = self._session.clientdata
+        clientdata = self._root_session.clientdata
 
         port = str(clientdata.url_port())
         full_url = "".join(
@@ -477,7 +483,7 @@ class BookmarkApp(Bookmark):
             # If on_bookmarked callback was provided, invoke it; if not call
             # the default.
             if self._on_bookmarked_callbacks.count() > 0:
-                with session_context(self._session):
+                with session_context(self._root_session):
                     await self._on_bookmarked_callbacks.invoke(full_url)
             else:
                 # `session.bookmark.show_modal(url)`
@@ -497,7 +503,12 @@ class BookmarkApp(Bookmark):
 class BookmarkProxy(Bookmark):
 
     _ns: ResolvedId
-    _session: SessionProxy
+    _proxy_session: SessionProxy
+    _root_session: Session
+
+    @property
+    def _root_bookmark(self) -> Bookmark:
+        return self._root_session.bookmark
 
     def __init__(self, session_proxy: SessionProxy):
         from ..session._session import SessionProxy
@@ -506,10 +517,11 @@ class BookmarkProxy(Bookmark):
         super().__init__()
 
         self._ns = session_proxy.ns
-        self._session = session_proxy
+        self._proxy_session = session_proxy
+        self._root_session = session_proxy._root_session
 
         # Maybe `._get_bookmark_exclude()` should be used instead of`proxy_exclude_fns`?
-        self._session._parent.bookmark._on_get_exclude.append(
+        self._root_bookmark._on_get_exclude.append(
             lambda: [str(self._ns(name)) for name in self.exclude]
         )
 
@@ -519,37 +531,37 @@ class BookmarkProxy(Bookmark):
 
         # The goal of this method is to save the scope's values. All namespaced inputs
         # will already exist within the `root_state`.
-        self._session._parent.bookmark.on_bookmark(self._scoped_on_bookmark)
+        self._root_bookmark.on_bookmark(self._scoped_on_bookmark)
 
         from ..session import session_context
 
-        @self._session._parent.bookmark.on_bookmarked
+        @self._root_bookmark.on_bookmarked
         async def scoped_on_bookmarked(url: str) -> None:
             if self._on_bookmarked_callbacks.count() == 0:
                 return
 
-            with session_context(self._session):
+            with session_context(self._proxy_session):
                 await self._on_bookmarked_callbacks.invoke(url)
 
         ns_prefix = str(self._ns + self._ns._sep)
 
-        @self._session._parent.bookmark.on_restore
+        @self._root_bookmark.on_restore
         async def scoped_on_restore(restore_state: RestoreState) -> None:
             if self._on_restore_callbacks.count() == 0:
                 return
 
             scoped_restore_state = restore_state._state_within_namespace(ns_prefix)
 
-            with session_context(self._session):
+            with session_context(self._proxy_session):
                 await self._on_restore_callbacks.invoke(scoped_restore_state)
 
-        @self._session._parent.bookmark.on_restored
+        @self._root_bookmark.on_restored
         async def scoped_on_restored(restore_state: RestoreState) -> None:
             if self._on_restored_callbacks.count() == 0:
                 return
 
             scoped_restore_state = restore_state._state_within_namespace(ns_prefix)
-            with session_context(self._session):
+            with session_context(self._proxy_session):
                 await self._on_restored_callbacks.invoke(scoped_restore_state)
 
     async def _scoped_on_bookmark(self, root_state: BookmarkState) -> None:
@@ -560,7 +572,7 @@ class BookmarkProxy(Bookmark):
         from ..bookmark._bookmark import BookmarkState
 
         scoped_state = BookmarkState(
-            input=self._session.input,
+            input=self._proxy_session.input,
             exclude=self.exclude,
             on_save=None,
         )
@@ -580,7 +592,7 @@ class BookmarkProxy(Bookmark):
         # Invoke the callback on the scopeState object
         from ..session import session_context
 
-        with session_context(self._session):
+        with session_context(self._proxy_session):
             await self._on_bookmark_callbacks.invoke(scoped_state)
 
         # Copy `values` from scoped_state to root_state (adding namespace)
@@ -592,22 +604,22 @@ class BookmarkProxy(Bookmark):
 
     @property
     def store(self) -> BookmarkStore:
-        return self._session._parent.bookmark.store
+        return self._root_bookmark.store
 
     @property
     def _restore_context(self) -> RestoreContext | None:
-        return self._session._parent.bookmark._restore_context
+        return self._root_bookmark._restore_context
 
     async def update_query_string(
         self, query_string: str, mode: Literal["replace", "push"] = "replace"
     ) -> None:
-        await self._session._parent.bookmark.update_query_string(query_string, mode)
+        await self._root_bookmark.update_query_string(query_string, mode)
 
     async def get_bookmark_url(self) -> str | None:
-        return await self._session._parent.bookmark.get_bookmark_url()
+        return await self._root_bookmark.get_bookmark_url()
 
     async def do_bookmark(self) -> None:
-        await self._session._parent.bookmark.do_bookmark()
+        await self._root_bookmark.do_bookmark()
 
 
 class BookmarkExpressStub(Bookmark):
