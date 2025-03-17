@@ -1233,9 +1233,8 @@ class SessionProxy(Session):
     async def close(self, code: int = 1001) -> None:
         await self._parent.close(code)
 
-    def make_scope(self, id: Id) -> Session:
-        ns = self.ns(id)
-        return SessionProxy(parent=self, ns=ns)
+    def make_scope(self, id: str) -> Session:
+        return self._parent.make_scope(self.ns(id))
 
     def root_scope(self) -> Session:
         res = self
