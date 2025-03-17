@@ -590,68 +590,32 @@ class Chat:
             icon=icon,
         )
 
-    async def append_message_chunk(self, message_chunk: Any):
-        """
-        Append a message chunk to the current message stream.
-
-        Append a chunk of message content to either a stream started with
-        `.message_stream()` or an active `.append_message_stream()`.
-
-        Parameters
-        ----------
-        message_chunk
-            A message chunk to inject.
-
-        Note
-        ----
-        A useful pattern for displaying tool calls in a chat is for the tools to display
-        content using an "inner" `.message_stream()` while the response generation is
-        happening in an "outer" `.append_message_stream()`. This allows the inner stream
-        to display "ephemeral" content, then eventually show a final state with
-        `.append_message_chunk(operation="replace")`.
-
-        Raises
-        ------
-        ValueError
-            If there is active stream (i.e., no `.message_stream()` or
-            `.append_message_stream()`)
-        """
-        stream_id = self._current_stream_id
-        if stream_id is None:
-            raise ValueError(
-                "Can't .append_message_chunk() without an active message stream. "
-                "Use .message_stream() or .append_message_stream() to start one."
-            )
-
-        return await self._append_message_chunk(
-            message_chunk,
-            stream_id=stream_id,
-        )
-
     @asynccontextmanager
-    async def message_stream(self):
+    async def append_message_context(self):
         """
         Message stream context manager.
 
-        A context manager for streaming messages into the chat. Note this stream
-        can occur within a longer running `.append_message_stream()` or used on its own.
+        A context manager for streaming messages into the chat. Note this context
+        manager can be used in isolation, nested within itself, or used while a
+        long-running `.append_message_stream()` is in progress.
 
         Yields
         ------
         :
-            A `MessageStream` instance with a method for `.append()`ing message chunks
-            and a method for `.restore()`ing the stream back to it's initial state.
+            A `MessageStream` class instance, which has a method for `.append()`ing
+            message chunks to as well as way to `.restore()` the stream back to it's
+            initial state.
 
         Note
         ----
-        A useful pattern for displaying tool calls in a chat interface is for the
-        tool to display using `.message_stream()` while the the response generation
-        is happening through `.append_message_stream()`. This allows the inner stream
-        to display "ephemeral" content, then eventually show a final state
-        with `.append_message_chunk(operation="replace")`.
+        A useful pattern for displaying tool calls in a chatbot is for the tool to
+        display using `.append_message_context()` while the the response generation is
+        happening through `.append_message_stream()`. This allows the tool to display
+        things like progress updates (or other "ephemeral" content) and optionally
+        `.restore()` the stream back to it's initial state when ready to display the
+        "final" content.
         """
-        # Save the current stream state in a checkpoint (so that we can handle
-        # ``.append_message_chunk(operation="replace")` correctly)
+        # Checkpoint the current stream state so operation="replace"  can return to it
         old_checkpoint = self._message_stream_checkpoint
         self._message_stream_checkpoint = self._current_stream_message
 
@@ -665,7 +629,7 @@ class Chat:
         try:
             yield MessageStream(self, stream_id)
         finally:
-            # Restore the previous stream state
+            # Restore the checkpoint
             self._message_stream_checkpoint = old_checkpoint
 
             # If this was the root stream, end it
@@ -1493,7 +1457,9 @@ def chat_ui(
 
 
 class MessageStream:
-    """"""
+    """
+    An object to yield from a `.append_message_context()` context manager.
+    """
 
     def __init__(self, chat: Chat, stream_id: str):
         self._chat = chat

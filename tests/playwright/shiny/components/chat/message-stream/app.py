@@ -37,7 +37,7 @@ async def _():
         " Progress: 50%",
         " Progress: 100%",
     ]
-    async with chat.message_stream() as stream:
+    async with chat.append_message_context() as stream:
         for chunk in chunks:
             await stream.append(chunk)
             await asyncio.sleep(SLEEP_TIME)
@@ -45,7 +45,7 @@ async def _():
         await stream.append("Completed stream 1 ✅")
 
 
-# TODO: add test here for nested .message_stream()
+# TODO: add test here for nested .append_message_context()
 
 
 @reactive.effect
@@ -69,7 +69,7 @@ async def mock_tool():
         " Progress: 50%",
         " Progress: 100%",
     ]
-    async with chat.message_stream() as stream:
+    async with chat.append_message_context() as stream:
         for chunk in chunks:
             await stream.append(chunk)
             await asyncio.sleep(SLEEP_TIME)
