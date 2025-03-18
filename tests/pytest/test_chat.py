@@ -7,13 +7,13 @@ from typing import Union, cast, get_args, get_origin
 import pytest
 
 from shiny import Session
-from shiny._namespaces import ResolvedId, Root
+from shiny._namespaces import Root
+from shiny.module import ResolvedId
 from shiny.session import session_context
 from shiny.types import MISSING
 from shiny.ui import Chat
-from shiny.ui._chat import as_transformed_message
 from shiny.ui._chat_normalize import normalize_message, normalize_message_chunk
-from shiny.ui._chat_types import ChatMessage
+from shiny.ui._chat_types import ChatMessage, ChatMessageDict, Role, TransformedMessage
 
 # ----------------------------------------------------------------------
 # Helpers
@@ -42,6 +42,10 @@ def is_type_in_union(type: object, union: object) -> bool:
     return False
 
 
+def transformed_message(content: str, role: Role) -> TransformedMessage:
+    return TransformedMessage.from_chat_message(ChatMessage(content=content, role=role))
+
+
 def test_chat_message_trimming():
     with session_context(test_session):
         chat = Chat(id="chat")
@@ -52,11 +56,9 @@ def test_chat_message_trimming():
             return " ".join(["foo" for _ in range(1, n)])
 
         msgs = (
-            as_transformed_message(
-                {
-                    "content": generate_content(102),
-                    "role": "system",
-                }
+            transformed_message(
+                content=generate_content(102),
+                role="system",
             ),
         )
 
@@ -65,18 +67,8 @@ def test_chat_message_trimming():
             chat._trim_messages(msgs, token_limits=(100, 0), format=MISSING)
 
         msgs = (
-            as_transformed_message(
-                {
-                    "content": generate_content(100),
-                    "role": "system",
-                }
-            ),
-            as_transformed_message(
-                {
-                    "content": generate_content(2),
-                    "role": "user",
-                }
-            ),
+            transformed_message(content=generate_content(100), role="system"),
+            transformed_message(content=generate_content(2), role="user"),
         )
 
         # Throws since only the system message fits
@@ -92,30 +84,24 @@ def test_chat_message_trimming():
         content3 = generate_content(2)
 
         msgs = (
-            as_transformed_message(
-                {
-                    "content": content1,
-                    "role": "system",
-                }
+            transformed_message(
+                content=content1,
+                role="system",
             ),
-            as_transformed_message(
-                {
-                    "content": content2,
-                    "role": "user",
-                }
+            transformed_message(
+                content=content2,
+                role="user",
             ),
-            as_transformed_message(
-                {
-                    "content": content3,
-                    "role": "user",
-                }
+            transformed_message(
+                content=content3,
+                role="user",
             ),
         )
 
         # Should discard the 1st user message
         trimmed = chat._trim_messages(msgs, token_limits=(103, 0), format=MISSING)
         assert len(trimmed) == 2
-        contents = [msg["content_server"] for msg in trimmed]
+        contents = [msg.content_server for msg in trimmed]
         assert contents == [content1, content3]
 
         content1 = generate_content(50)
@@ -124,38 +110,48 @@ def test_chat_message_trimming():
         content4 = generate_content(2)
 
         msgs = (
-            as_transformed_message(
-                {"content": content1, "role": "system"},
+            transformed_message(
+                content=content1,
+                role="system",
             ),
-            as_transformed_message(
-                {"content": content2, "role": "user"},
+            transformed_message(
+                content=content2,
+                role="user",
             ),
-            as_transformed_message(
-                {"content": content3, "role": "system"},
+            transformed_message(
+                content=content3,
+                role="system",
             ),
-            as_transformed_message(
-                {"content": content4, "role": "user"},
+            transformed_message(
+                content=content4,
+                role="user",
             ),
         )
 
         # Should discard the 1st user message
         trimmed = chat._trim_messages(msgs, token_limits=(103, 0), format=MISSING)
         assert len(trimmed) == 3
-        contents = [msg["content_server"] for msg in trimmed]
+        contents = [msg.content_server for msg in trimmed]
         assert contents == [content1, content3, content4]
 
         content1 = generate_content(50)
         content2 = generate_content(10)
 
         msgs = (
-            as_transformed_message({"content": content1, "role": "assistant"}),
-            as_transformed_message({"content": content2, "role": "user"}),
+            transformed_message(
+                content=content1,
+                role="assistant",
+            ),
+            transformed_message(
+                content=content2,
+                role="user",
+            ),
         )
 
         # Anthropic requires 1st message to be a user message
         trimmed = chat._trim_messages(msgs, token_limits=(30, 0), format="anthropic")
         assert len(trimmed) == 1
-        contents = [msg["content_server"] for msg in trimmed]
+        contents = [msg.content_server for msg in trimmed]
         assert contents == [content2]
 
 
@@ -172,13 +168,15 @@ def test_chat_message_trimming():
 
 
 def test_string_normalization():
-    msg = normalize_message_chunk("Hello world!")
-    assert msg == {"content": "Hello world!", "role": "assistant"}
+    m = normalize_message_chunk("Hello world!")
+    assert m.content == "Hello world!"
+    assert m.role == "assistant"
 
 
 def test_dict_normalization():
-    msg = normalize_message_chunk({"content": "Hello world!", "role": "assistant"})
-    assert msg == {"content": "Hello world!", "role": "assistant"}
+    m = normalize_message_chunk({"content": "Hello world!", "role": "assistant"})
+    assert m.content == "Hello world!"
+    assert m.role == "assistant"
 
 
 def test_langchain_normalization():
@@ -194,11 +192,15 @@ def test_langchain_normalization():
 
     # Mock & normalize return value of BaseChatModel.invoke()
     msg = BaseMessage(content="Hello world!", role="assistant", type="foo")
-    assert normalize_message(msg) == {"content": "Hello world!", "role": "assistant"}
+    m = normalize_message(msg)
+    assert m.content == "Hello world!"
+    assert m.role == "assistant"
 
     # Mock & normalize return value of BaseChatModel.stream()
     chunk = BaseMessageChunk(content="Hello ", type="foo")
-    assert normalize_message_chunk(chunk) == {"content": "Hello ", "role": "assistant"}
+    m = normalize_message_chunk(chunk)
+    assert m.content == "Hello "
+    assert m.role == "assistant"
 
 
 def test_google_normalization():
@@ -206,7 +208,7 @@ def test_google_normalization():
     if sys.version_info < (3, 9):
         return
 
-    from google.generativeai import (  # pyright: ignore[reportMissingTypeStubs]
+    from google.generativeai.generative_models import (  # pyright: ignore[reportMissingTypeStubs]
         GenerativeModel,
     )
 
@@ -255,7 +257,9 @@ def test_anthropic_normalization():
         usage=Usage(input_tokens=0, output_tokens=0),
     )
 
-    assert normalize_message(msg) == {"content": "Hello world!", "role": "assistant"}
+    m = normalize_message(msg)
+    assert m.content == "Hello world!"
+    assert m.role == "assistant"
 
     # Mock return object from Anthropic().messages.create(stream=True)
     chunk = RawContentBlockDeltaEvent(
@@ -264,7 +268,9 @@ def test_anthropic_normalization():
         index=0,
     )
 
-    assert normalize_message_chunk(chunk) == {"content": "Hello ", "role": "assistant"}
+    m = normalize_message_chunk(chunk)
+    assert m.content == "Hello "
+    assert m.role == "assistant"
 
 
 def test_openai_normalization():
@@ -309,8 +315,9 @@ def test_openai_normalization():
         created=int(datetime.now().timestamp()),
     )
 
-    msg = normalize_message(completion)
-    assert msg == {"content": "Hello world!", "role": "assistant"}
+    m = normalize_message(completion)
+    assert m.content == "Hello world!"
+    assert m.role == "assistant"
 
     # Mock return object from OpenAI().chat.completions.create(stream=True)
     chunk = ChatCompletionChunk(
@@ -329,8 +336,28 @@ def test_openai_normalization():
         ],
     )
 
-    msg = normalize_message_chunk(chunk)
-    assert msg == {"content": "Hello ", "role": "assistant"}
+    m = normalize_message_chunk(chunk)
+    assert m.content == "Hello "
+    assert m.role == "assistant"
+
+
+def test_ollama_normalization():
+    from ollama import ChatResponse
+    from ollama import Message as OllamaMessage
+
+    # Mock return object from ollama.chat()
+    msg = ChatResponse(
+        message=OllamaMessage(content="Hello world!", role="assistant"),
+    )
+
+    msg_dict = {"content": "Hello world!", "role": "assistant"}
+    m = normalize_message(msg)
+    assert m.content == msg_dict["content"]
+    assert m.role == msg_dict["role"]
+
+    m = normalize_message_chunk(msg)
+    assert m.content == msg_dict["content"]
+    assert m.role == msg_dict["role"]
 
 
 # ------------------------------------------------------------------------------------
@@ -355,7 +382,7 @@ def test_as_anthropic_message():
     assert AsyncMessages.create.__annotations__["messages"] == "Iterable[MessageParam]"
     assert Messages.create.__annotations__["messages"] == "Iterable[MessageParam]"
 
-    msg = ChatMessage(content="I have a question", role="user")
+    msg = ChatMessageDict(content="I have a question", role="user")
     assert as_anthropic_message(msg) == MessageParam(
         content="I have a question", role="user"
     )
@@ -368,7 +395,7 @@ def test_as_google_message():
     if sys.version_info < (3, 9):
         return
 
-    from google.generativeai import (  # pyright: ignore[reportMissingTypeStubs]
+    from google.generativeai.generative_models import (  # pyright: ignore[reportMissingTypeStubs]
         GenerativeModel,
     )
 
@@ -382,14 +409,16 @@ def test_as_google_message():
 
     assert is_type_in_union(content_types.ContentDict, content_types.ContentsType)
 
-    msg = ChatMessage(content="I have a question", role="user")
+    msg = ChatMessageDict(content="I have a question", role="user")
     assert as_google_message(msg) == content_types.ContentDict(
         parts=["I have a question"], role="user"
     )
 
 
 def test_as_langchain_message():
-    from langchain_core.language_models.base import LanguageModelInput
+    from langchain_core.language_models.base import (
+        LanguageModelInput,
+    )
     from langchain_core.language_models.base import (
         Sequence as LangchainSequence,  # pyright: ignore[reportPrivateImportUsage]
     )
@@ -419,7 +448,7 @@ def test_as_langchain_message():
     assert issubclass(HumanMessage, BaseMessage)
     assert issubclass(SystemMessage, BaseMessage)
 
-    msg = ChatMessage(content="I have a question", role="user")
+    msg = ChatMessageDict(content="I have a question", role="user")
     assert as_langchain_message(msg) == HumanMessage(content="I have a question")
 
 
@@ -452,7 +481,7 @@ def test_as_openai_message():
     )
     assert is_type_in_union(ChatCompletionUserMessageParam, ChatCompletionMessageParam)
 
-    msg = ChatMessage(content="I have a question", role="user")
+    msg = ChatMessageDict(content="I have a question", role="user")
     assert as_openai_message(msg) == ChatCompletionUserMessageParam(
         content="I have a question", role="user"
     )
@@ -462,13 +491,16 @@ def test_as_ollama_message():
     import ollama
     from ollama import Message as OllamaMessage
 
-    assert "typing.Sequence[ollama._types.Message]" in str(
-        ollama.chat.__annotations__["messages"]
-    )
+    # ollama 0.4.2 added Callable to the type hints, but pyright complains about
+    # missing arguments to the Callable type. We'll ignore this for now.
+    # https://github.com/ollama/ollama-python/commit/b50a65b
+    chat = ollama.chat  # type: ignore
+
+    assert "ollama._types.Message" in str(chat.__annotations__["messages"])
 
     from shiny.ui._chat_provider_types import as_ollama_message
 
-    msg = ChatMessage(content="I have a question", role="user")
+    msg = ChatMessageDict(content="I have a question", role="user")
     assert as_ollama_message(msg) == OllamaMessage(
         content="I have a question", role="user"
     )

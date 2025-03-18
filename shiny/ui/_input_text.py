@@ -5,7 +5,7 @@ from typing import Literal, Optional
 from htmltools import Tag, TagChild, css, div, tags
 
 from .._docstring import add_example
-from .._namespaces import resolve_id
+from ..module import resolve_id
 from ._html_deps_py_shiny import autoresize_dependency
 from ._utils import shiny_input_label
 
@@ -20,6 +20,7 @@ def input_text(
     placeholder: Optional[str] = None,
     autocomplete: Optional[str] = "off",
     spellcheck: Optional[Literal["true", "false"]] = None,
+    update_on: Literal["change", "blur"] = "change",
 ) -> Tag:
     """
     Create an input control for entry of text values.
@@ -45,6 +46,11 @@ def input_text(
     spellcheck
         Whether to enable browser spell checking of the text input (default is ``None``). If
         None, then it will use the browser's default behavior.
+    update_on
+        When should the input value be updated? Options are `"change"` (default) and
+        `"blur"`. Use `"change"` to update the input immediately whenever the value
+        changes. Use `"blur"`to delay the input update until the input loses focus (the
+        user moves away from the input), or when Enter is pressed.
 
     Returns
     -------
@@ -74,6 +80,7 @@ def input_text(
             placeholder=placeholder,
             autocomplete=autocomplete,
             spellcheck=spellcheck,
+            data_update_on=update_on,
         ),
         class_="form-group shiny-input-container",
         style=css(width=width),
@@ -95,6 +102,7 @@ def input_text_area(
     autoresize: bool = False,
     autocomplete: Optional[str] = None,
     spellcheck: Optional[Literal["true", "false"]] = None,
+    update_on: Literal["change", "blur"] = "change",
 ) -> Tag:
     """
     Create a textarea input control for entry of unstructured text values.
@@ -137,6 +145,11 @@ def input_text_area(
     spellcheck
         Whether to enable browser spell checking of the text input (default is ``None``). If
         None, then it will use the browser's default behavior.
+    update_on
+        When should the input value be updated? Options are `"change"` (default) and
+        `"blur"`. Use `"change"` to update the input immediately whenever the value
+        changes. Use `"blur"`to delay the input update until the input loses focus (the
+        user moves away from the input), or when Ctrl/Cmd + Enter is pressed.
 
     Returns
     -------
@@ -176,6 +189,7 @@ def input_text_area(
         cols=cols,
         autocomplete=autocomplete,
         spellcheck=spellcheck,
+        data_update_on=update_on,
     )
 
     return div(

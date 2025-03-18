@@ -4,7 +4,9 @@ from typing import TYPE_CHECKING, Awaitable, Callable, Literal, Optional
 
 from htmltools import TagChild
 
-from .._namespaces import Id, ResolvedId, Root
+from .._namespaces import Id, Root
+from ..bookmark import BookmarkExpressStub
+from ..module import ResolvedId
 from ..session import Inputs, Outputs, Session
 from ..session._session import SessionProxy
 
@@ -44,6 +46,8 @@ class ExpressStubSession(Session):
         # Application-level (not session-level) options that may be set via app_opts().
         self.app_opts: AppOpts = {}
 
+        self.bookmark = BookmarkExpressStub(self)
+
     def is_stub_session(self) -> Literal[True]:
         return True
 
@@ -62,7 +66,7 @@ class ExpressStubSession(Session):
 
     def make_scope(self, id: Id) -> Session:
         ns = self.ns(id)
-        return SessionProxy(parent=self, ns=ns)
+        return SessionProxy(root_session=self, ns=ns)
 
     def root_scope(self) -> ExpressStubSession:
         return self

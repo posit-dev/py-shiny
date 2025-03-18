@@ -6,7 +6,7 @@ import secrets
 from contextlib import AsyncExitStack, asynccontextmanager
 from inspect import signature
 from pathlib import Path
-from typing import Any, Callable, Mapping, Optional, TypeVar, cast
+from typing import Any, Callable, Literal, Mapping, Optional, TypeVar, cast
 
 import starlette.applications
 import starlette.exceptions
@@ -30,6 +30,15 @@ from ._connection import Connection, StarletteConnection
 from ._error import ErrorMiddleware
 from ._shinyenv import is_pyodide
 from ._utils import guess_mime_type, is_async_callable, sort_keys_length
+from .bookmark import _global as bookmark_global_state
+from .bookmark._global import as_bookmark_dir_fn
+from .bookmark._restore_state import RestoreContext, restore_context
+from .bookmark._types import (
+    BookmarkDirFn,
+    BookmarkRestoreDirFn,
+    BookmarkSaveDirFn,
+    BookmarkStore,
+)
 from .html_dependencies import jquery_deps, require_deps, shiny_deps
 from .http_staticfiles import FileResponse, StaticFiles
 from .session._session import AppSession, Inputs, Outputs, Session, session_context
@@ -106,6 +115,10 @@ class App:
     ui: RenderedHTML | Callable[[Request], Tag | TagList]
     server: Callable[[Inputs, Outputs, Session], None]
 
+    _bookmark_save_dir_fn: BookmarkSaveDirFn | None
+    _bookmark_restore_dir_fn: BookmarkRestoreDirFn | None
+    _bookmark_store: BookmarkStore
+
     def __init__(
         self,
         ui: Tag | TagList | Callable[[Request], Tag | TagList] | Path,
@@ -114,6 +127,8 @@ class App:
         ),
         *,
         static_assets: Optional[str | Path | Mapping[str, str | Path]] = None,
+        # Document type as Literal to have clearer type hints to App author
+        bookmark_store: Literal["url", "server", "disable"] = "disable",
         debug: bool = False,
     ) -> None:
         # Used to store callbacks to be called when the app is shutting down (according
@@ -132,6 +147,8 @@ class App:
             raise ValueError(
                 "`server` must have 1 (Inputs) or 3 parameters (Inputs, Outputs, Session)"
             )
+
+        self._init_bookmarking(bookmark_store=bookmark_store, ui=ui)
 
         self._debug: bool = debug
 
@@ -167,7 +184,7 @@ class App:
 
         self._sessions: dict[str, AppSession] = {}
 
-        self._sessions_needing_flush: dict[int, AppSession] = {}
+        # self._sessions_needing_flush: dict[int, AppSession] = {}
 
         self._registered_dependencies: dict[str, HTMLDependency] = {}
         self._dependency_handler = starlette.routing.Router()
@@ -353,8 +370,18 @@ class App:
         request for / occurs.
         """
         ui: RenderedHTML
+        if self.bookmark_store == "disable":
+            restore_ctx = RestoreContext()
+        else:
+            restore_ctx = await RestoreContext.from_query_string(
+                request.url.query, app=self
+            )
+
         if callable(self.ui):
-            ui = self._render_page(self.ui(request), self.lib_prefix)
+            # At this point, if `app.bookmark_store != "disable"`, then we've already
+            # checked that `ui` is a function (in `App._init_bookmarking()`). No need to throw warning if `ui` is _not_ a function.
+            with restore_context(restore_ctx):
+                ui = self._render_page(self.ui(request), self.lib_prefix)
         else:
             ui = self.ui
         return HTMLResponse(content=ui["html"])
@@ -466,6 +493,30 @@ class App:
 
         return rendered
 
+    # ==========================================================================
+    # Bookmarking
+    # ==========================================================================
+
+    def _init_bookmarking(self, *, bookmark_store: BookmarkStore, ui: Any) -> None:
+        self._bookmark_save_dir_fn = bookmark_global_state.bookmark_save_dir
+        self._bookmark_restore_dir_fn = bookmark_global_state.bookmark_restore_dir
+        self._bookmark_store = bookmark_store
+
+        if bookmark_store != "disable" and not callable(ui):
+            raise TypeError(
+                "App(ui=) must be a function that accepts a request object to allow the UI to be properly reconstructed from a bookmarked state."
+            )
+
+    @property
+    def bookmark_store(self) -> BookmarkStore:
+        return self._bookmark_store
+
+    def set_bookmark_save_dir_fn(self, bookmark_save_dir_fn: BookmarkDirFn):
+        self._bookmark_save_dir_fn = as_bookmark_dir_fn(bookmark_save_dir_fn)
+
+    def set_bookmark_restore_dir_fn(self, bookmark_restore_dir_fn: BookmarkDirFn):
+        self._bookmark_restore_dir_fn = as_bookmark_dir_fn(bookmark_restore_dir_fn)
+
 
 def is_uifunc(x: Path | Tag | TagList | Callable[[Request], Tag | TagList]) -> bool:
     if (
@@ -520,7 +571,7 @@ def noop_server_fn(input: Inputs, output: Outputs, session: Session) -> None:
 
 
 def wrap_server_fn_with_output_session(
-    server: Callable[[Inputs], None]
+    server: Callable[[Inputs], None],
 ) -> Callable[[Inputs, Outputs, Session], None]:
     def _server(input: Inputs, output: Outputs, session: Session):
         # Only has 1 parameter, ignore output, session

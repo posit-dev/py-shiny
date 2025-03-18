@@ -1,0 +1,3 @@
+shiny
+chatlas
+ollama

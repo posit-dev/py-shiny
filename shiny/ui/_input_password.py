@@ -1,11 +1,11 @@
 __all__ = ("input_password",)
 
-from typing import Optional
+from typing import Literal, Optional
 
 from htmltools import Tag, TagChild, css, div, tags
 
 from .._docstring import add_example
-from .._namespaces import resolve_id
+from ..module import resolve_id
 from ._utils import shiny_input_label
 
 
@@ -17,6 +17,7 @@ def input_password(
     *,
     width: Optional[str] = None,
     placeholder: Optional[str] = None,
+    update_on: Literal["change", "blur"] = "change",
 ) -> Tag:
     """
     Create an password control for entry of passwords.
@@ -33,6 +34,11 @@ def input_password(
         The CSS width, e.g., '400px', or '100%'.
     placeholder
         The placeholder of the input.
+    update_on
+        When should the input value be updated? Options are `"change"` (default) and
+        `"blur"`. Use `"change"` to update the input immediately whenever the value
+        changes. Use `"blur"`to delay the input update until the input loses focus (the
+        user moves away from the input), or when Enter is pressed.
 
     Returns
     -------
@@ -58,6 +64,7 @@ def input_password(
             value=value,
             class_="shiny-input-password form-control",
             placeholder=placeholder,
+            data_update_on=update_on,
         ),
         class_="form-group shiny-input-container",
         style=css(width=width),

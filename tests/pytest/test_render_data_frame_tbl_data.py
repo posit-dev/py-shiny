@@ -1,4 +1,4 @@
-# TODO-barret: ts code to stringify objects?
+# TODO: Barret: ts code to stringify objects?
 
 from __future__ import annotations
 
@@ -13,6 +13,8 @@ import polars as pl
 import polars.testing as pl_testing
 import pytest
 
+from shiny._namespaces import Root
+from shiny.module import ResolvedId
 from shiny.render._data_frame_utils._tbl_data import (
     as_data_frame,
     serialize_dtype,
@@ -21,7 +23,7 @@ from shiny.render._data_frame_utils._tbl_data import (
 )
 from shiny.render._data_frame_utils._types import IntoDataFrame
 from shiny.session import Session, session_context
-from shiny.session._session import RenderedDeps, ResolvedId, Root
+from shiny.session._session import RenderedDeps
 from shiny.ui import HTML, TagChild, TagList, h1, span
 
 
@@ -366,11 +368,14 @@ def test_dtype_coverage():
     for dtype_name in dtype_names:
 
         # Skip known types or imports that are not dtypes
+        if dtype_name.endswith("Type"):
+            # "DType",
+            # "NestedType",
+            # "NumericType",
+            # "TemporalType",
+            continue
         if dtype_name in (
             # narwhals
-            "DType",
-            "NumericType",
-            "TemporalType",
             "Unknown",
             # typing import
             "Literal",

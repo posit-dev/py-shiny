@@ -2,7 +2,7 @@ import sys
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Optional, cast
 
-from htmltools import HTML
+from htmltools import HTML, Tagifiable
 
 from ._chat_types import ChatMessage
 
@@ -75,6 +75,22 @@ class DictNormalizer(BaseMessageNormalizer):
 
     def can_normalize_chunk(self, chunk: Any) -> bool:
         return isinstance(chunk, dict)
+
+
+class TagifiableNormalizer(DictNormalizer):
+    def normalize(self, message: Any) -> ChatMessage:
+        x = cast("Tagifiable", message)
+        return super().normalize({"content": x})
+
+    def normalize_chunk(self, chunk: Any) -> ChatMessage:
+        x = cast("Tagifiable", chunk)
+        return super().normalize_chunk({"content": x})
+
+    def can_normalize(self, message: Any) -> bool:
+        return isinstance(message, Tagifiable)
+
+    def can_normalize_chunk(self, chunk: Any) -> bool:
+        return isinstance(chunk, Tagifiable)
 
 
 class LangChainNormalizer(BaseMessageNormalizer):
@@ -231,11 +247,19 @@ class OllamaNormalizer(DictNormalizer):
         return super().normalize_chunk(msg)
 
     def can_normalize(self, message: Any) -> bool:
-        if not isinstance(message, dict):
+        try:
+            from ollama import ChatResponse
+
+            # Ollama<0.4 used TypedDict (now it uses pydantic)
+            # https://github.com/ollama/ollama-python/pull/276
+            if isinstance(ChatResponse, dict):
+                return "message" in message and super().can_normalize(
+                    message["message"]
+                )
+            else:
+                return isinstance(message, ChatResponse)
+        except Exception:
             return False
-        if "message" not in message:
-            return False
-        return super().can_normalize(message["message"])
 
     def can_normalize_chunk(self, chunk: Any) -> bool:
         return self.can_normalize(chunk)
@@ -251,6 +275,7 @@ class NormalizerRegistry:
             "google": GoogleNormalizer(),
             "langchain": LangChainNormalizer(),
             "ollama": OllamaNormalizer(),
+            "tagify": TagifiableNormalizer(),
             "dict": DictNormalizer(),
             "string": StringNormalizer(),
         }

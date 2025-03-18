@@ -149,6 +149,7 @@ class Theme:
                 self._include_paths.append(str(path))
 
         # User-provided Sass code
+        self._uses: list[str] = []
         self._functions: list[str] = []
         self._defaults: list[str] = []
         self._mixins: list[str] = []
@@ -247,6 +248,24 @@ class Theme:
                 values.append(f"${key}: {value}{default};")
 
         return [textwrap.dedent(x) for x in values]
+
+    def add_uses(self: T, *args: str) -> T:
+        """
+        Add custom Sass "uses" declarations to the theme.
+
+        Sass code added via this method will be placed **before** the function
+        declarations from the theme preset, allowing you to add Sass code that appears
+        before any other Sass code in the theme layer.
+
+        Parameters
+        ----------
+        *args
+            The Sass functions to add as a single or multiple strings.
+        """
+        uses = self._combine_args_kwargs(*args, kwargs={})
+        self._uses.extend(uses)
+        self._reset_css()
+        return self
 
     def add_functions(self: T, *args: str) -> T:
         """
@@ -356,6 +375,88 @@ class Theme:
         self._reset_css()
         return self
 
+    def add_sass_layer_file(self: T, path: str | pathlib.Path) -> T:
+        """
+        Add a Sass layer file to the theme.
+
+        This method reads a special `.scss` file formatted with layer boundary comments
+        to denote regions of functions, defaults, mixins, and rules. It then splits the
+        file into these constituent pieces and adds them to the appropriate layers of
+        the theme.
+
+        The theme file should contain at least one of the following boundary comments:
+
+        ```scss
+        /*-- scss:uses --*/
+        /*-- scss:functions --*/
+        /*-- scss:defaults --*/
+        /*-- scss:mixins --*/
+        /*-- scss:rules --*/
+        ```
+
+        Each layer, once extracted, is added to the theme using the corresponding
+        `add_` method, e.g. the `scss:rules` layer is added via `.add_rules()`.
+
+        Layer types can appear more than once in the `.scss` file. They are coalesced
+        into a single layer by order of appearance and then added as a block via their
+        corresponding `add_` method.
+
+        Parameters
+        ----------
+        path
+            The path to the `.scss` file to be added.
+
+        Raises
+        ------
+        ValueError
+            If the `.scss` file doesn't contain at least one valid region decorator.
+        """
+        with open(path, "r") as file:
+            src = file.readlines()
+
+        layer_keys = ["uses", "functions", "defaults", "mixins", "rules"]
+        rx_pattern = re.compile(rf"^/\*--\s*scss:({'|'.join(layer_keys)})\s*--\*/$")
+
+        layer_boundaries = [rx_pattern.match(line.strip()) for line in src]
+
+        if not any(layer_boundaries):
+            raise ValueError(
+                f"The file {path} doesn't contain at least one layer boundary "
+                f"(/*-- scss:{{{','.join(layer_keys)}}} --*/)",
+            )
+
+        layers: dict[str, list[str]] = {}
+        layer_name: str = ""
+        for i, line in enumerate(src):
+            layer_boundary = layer_boundaries[i]
+            if layer_boundary:
+                layer_name = layer_boundary.group(1)
+                continue
+
+            if not layer_name:
+                # Preamble lines are dropped (both in Quarto and {sass})
+                continue
+
+            if layer_name not in layers:
+                layers[layer_name] = []
+
+            layers[layer_name].append(line)
+
+        for key, value in layers.items():
+            # Call the appropriate add_*() method to add each layer
+            add_method = getattr(self, f"add_{key}", None)
+            if add_method:
+                add_method("".join(value))
+            else:
+                # We'd get here if we add a new layer boundary name but forget to
+                # include it in the supported `.add_{layer}()` methods.
+                raise ValueError(
+                    f"Unsupported Sass layer: {key}. Please report this issue to the "
+                    "Shiny maintainers at https://github.com/posit-dev/py-shiny."
+                )
+
+        return self
+
     def to_sass(self) -> str:
         """
         Returns the custom theme as a single Sass string.
@@ -371,6 +472,7 @@ class Theme:
         path_rules = path_pkg_preset(self._preset, "_04_rules.scss")
 
         sass_lines = [
+            *self._uses,
             f'@import "{path_functions}";',
             *self._functions,
             *self._defaults,

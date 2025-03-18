@@ -1,3 +1,4 @@
+import tempfile
 from typing import Callable, Optional
 
 import pytest
@@ -218,3 +219,72 @@ def test_theme_dependency_has_data_attribute():
 
     theme = Theme("shiny", name="My Fancy Theme")
     assert theme._html_dependencies()[0].stylesheet[0]["data-shiny-theme"] == "My Fancy Theme"  # type: ignore
+
+
+def test_theme_add_sass_layer_file():
+    with tempfile.TemporaryDirectory() as temp_dir:
+        with open(f"{temp_dir}/no-layers.scss", "w") as f:
+            f.write("// no layers")
+
+        # Throws if no special layer boundary comments are found
+        with pytest.raises(ValueError, match="one layer boundary"):
+            Theme().add_sass_layer_file(f"{temp_dir}/no-layers.scss")
+
+        with open(f"{temp_dir}/layers.scss", "w") as temp_scss:
+            temp_scss.write(
+                """
+/*-- scss:uses --*/
+// uses
+/*-- scss:functions --*/
+// functions
+/*-- scss:defaults --*/
+// defaults 1
+/*-- scss:mixins --*/
+// mixins
+/*-- scss:rules --*/
+// rules 1
+/*-- scss:defaults --*/
+// defaults 2
+/*-- scss:rules --*/
+// rules 2
+            """
+            )
+
+        theme = Theme().add_sass_layer_file(temp_scss.name)
+
+    assert theme._uses == ["// uses\n"]
+    assert theme._functions == ["// functions\n"]
+    assert theme._defaults == ["// defaults 1\n// defaults 2\n"]
+    assert theme._mixins == ["// mixins\n"]
+    assert theme._rules == ["// rules 1\n// rules 2\n"]
+
+
+@skip_on_windows
+@pytest.mark.parametrize("preset", shiny_theme_presets)
+def test_theme_from_brand_base_case_compiles(preset: str):
+    brand_txt = f"""
+meta:
+  name: Brand Test
+defaults:
+  shiny:
+    theme:
+      preset: {preset}
+    """
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        with open(f"{tmpdir}/_brand.yml", "w") as f:
+            f.write(brand_txt)
+
+        theme = Theme.from_brand(f"{tmpdir}")
+
+        # Check that the theme preset is set from the brand
+        assert theme.preset == preset
+
+        # Check that the brand Sass layer is included
+        assert any(["brand-choose" in f for f in theme._functions])
+        assert any(["brand: initial" in d for d in theme._defaults])
+        assert any(["brand: brand rules" in r for r in theme._rules])
+
+        # Check that the CSS compiles without error
+        css = theme.to_css()
+        assert isinstance(css, str)

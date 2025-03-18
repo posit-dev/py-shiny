@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pathlib
+import re
 from typing import Literal, Optional
 
 from playwright.sync_api import FilePayload, Locator, Page
@@ -61,7 +62,7 @@ class InputActionButton(
             The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
         _expect_attribute_to_have_value(
-            self.loc, "disabled", "" if value else None, timeout=timeout
+            self.loc, "disabled", re.compile(".*") if value else None, timeout=timeout
         )
 
 
@@ -100,7 +101,7 @@ class InputDarkMode(UiBase):
         timeout
             The maximum time to wait for the input dark mode to be clicked. Defaults to `None`.
         """
-        self.loc.click(timeout=timeout)
+        self.loc.locator("button").click(timeout=timeout)
         return self
 
     def expect_mode(self, value: str, *, timeout: Timeout = None):

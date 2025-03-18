@@ -83,6 +83,7 @@ quartodoc:
         - ui.navset_card_underline
         - ui.navset_pill_list
         - ui.navset_hidden
+        - ui.navbar_options
     - title: UI panels
       desc: Visually group together a section of UI components.
       contents:
@@ -97,11 +98,33 @@ quartodoc:
         - ui.input_file
         - ui.download_button
         - ui.download_link
+    - title: Bookmarking
+      desc: Saving and restoring app state
+      contents:
+        - ui.input_bookmark_button
+        - bookmark.restore_input
+        - bookmark.Bookmark
+        - bookmark.BookmarkState
+        - bookmark.RestoreState
+        - kind: page
+          path: bookmark_integration
+          summary:
+            name: "Integration"
+            desc: "Decorators to set save and restore directories."
+          flatten: true
+          contents:
+            - bookmark.set_global_save_dir_fn
+            - bookmark.set_global_restore_dir_fn
     - title: Chat interface
       desc: Build a chatbot interface
       contents:
         - ui.Chat
         - ui.chat_ui
+    - title: Streaming markdown
+      desc: Stream markdown content into the UI
+      contents:
+        - ui.MarkdownStream
+        - ui.output_markdown_stream
     - title: Custom UI
       desc: Lower-level UI functions for creating custom HTML/CSS/JS
       contents:
@@ -228,19 +251,21 @@ quartodoc:
           path: Session
           summary:
             name: "Session"
-            desc: ""
+            desc: "Tools for managing user sessions and accessing session-related information."
           flatten: true
           contents:
             - session.get_current_session
             - session.require_active_session
             - session.session_context
             - reactive.get_current_context
+            - session.ClientData
             - session.Session.send_custom_message
             - session.Session.send_input_message
             - session.Session.on_flush
             - session.Session.on_flushed
             - session.Session.on_ended
             - session.Session.dynamic_route
+            - session.Session.close
             - input_handler.input_handlers
         - kind: page
           path: Renderer
@@ -358,4 +383,3 @@ quartodoc:
           contents:
             - name: experimental.ui.card_image
               dynamic: false
-

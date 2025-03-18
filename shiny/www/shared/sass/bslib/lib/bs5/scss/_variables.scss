@@ -300,7 +300,7 @@ $cyans: (
 // Semantically, $secondary is closest to BS3's 'default' theme color;
 // so use that if specified. Otherwise, use a light instead of dark gray
 // default color for $default since that's closer to bootstrap 3's default
-$default: if(variable-exists("secondary"), $secondary, $gray-300) !default;
+$default: if(variable-exists("secondary") and type-of($secondary) == color, $secondary, $gray-300) !default;
 
 // scss-docs-start theme-color-variables
 $primary:       $blue !default;

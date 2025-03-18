@@ -5,7 +5,7 @@ from typing import Optional
 from htmltools import Tag, TagAttrValue, TagChild, css, tags
 
 from .._docstring import add_example
-from .._namespaces import resolve_id
+from ..module import resolve_id
 
 
 @add_example()
@@ -54,6 +54,7 @@ def input_action_button(
     --------
     * :func:`~shiny.ui.update_action_button`
     * :func:`~shiny.ui.input_action_link`
+    * :func:`~shiny.ui.input_bookmark_button`
     * :func:`~shiny.reactive.event`
     """
 

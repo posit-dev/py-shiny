@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -7,10 +6,8 @@ import numpy as np
 from shiny import App, render, ui
 from shiny.ui._theme_brand import bootstrap_colors
 
-# TODO: Move this into the test that runs this app
-os.environ["SHINY_BRAND_YML_RAISE_UNMAPPED"] = "true"
 theme = ui.Theme.from_brand(__file__)
-# theme = ui.Theme()
+# theme = ui.Theme()  ## default theme
 theme.add_rules((Path(__file__).parent / "_colors.scss").read_text())
 
 app_ui = ui.page_navbar(
@@ -34,16 +31,19 @@ app_ui = ui.page_navbar(
                     "Metric 1",
                     "100",
                     theme="primary",
+                    id="value_box_primary",
                 ),
                 ui.value_box(
                     "Metric 2",
                     "200",
                     theme="secondary",
+                    id="value_box_secondary",
                 ),
                 ui.value_box(
                     "Metric 3",
                     "300",
                     theme="info",
+                    id="value_box_info",
                 ),
             ),
             ui.card(
@@ -61,13 +61,15 @@ app_ui = ui.page_navbar(
         ui.layout_column_wrap(
             ui.card(
                 ui.card_header("Button Variants"),
-                ui.input_action_button("btn1", "Default"),
-                ui.input_action_button("btn2", "Primary", class_="btn-primary"),
-                ui.input_action_button("btn3", "Secondary", class_="btn-secondary"),
-                ui.input_action_button("btn4", "Info", class_="btn-info"),
-                ui.input_action_button("btn5", "Success", class_="btn-success"),
-                ui.input_action_button("btn6", "Warning", class_="btn-warning"),
-                ui.input_action_button("btn7", "Danger", class_="btn-danger"),
+                ui.input_action_button("btn_default", "Default"),
+                ui.input_action_button("btn_primary", "Primary", class_="btn-primary"),
+                ui.input_action_button(
+                    "btn_secondary", "Secondary", class_="btn-secondary"
+                ),
+                ui.input_action_button("btn_success", "Success", class_="btn-success"),
+                ui.input_action_button("btn_danger", "Danger", class_="btn-danger"),
+                ui.input_action_button("btn_warning", "Warning", class_="btn-warning"),
+                ui.input_action_button("btn_info", "Info", class_="btn-info"),
             ),
             ui.card(
                 ui.card_header("Radio Button Examples"),
@@ -252,12 +254,12 @@ def server(input, output, session):
     @render.plot
     def plot1():
         colors = {
-            "foreground": theme.brand.color.foreground,
-            "background": theme.brand.color.background,
-            "primary": theme.brand.color.primary,
+            "foreground": "#000000",
+            "background": "#FFFFFF",
+            "primary": "#007BC2",
         }
 
-        if theme.brand.color:
+        if hasattr(theme, "brand") and theme.brand.color:
             colors.update(theme.brand.color.to_dict("theme"))
 
         if input.color_mode() == "dark":

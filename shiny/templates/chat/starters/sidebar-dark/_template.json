@@ -1,0 +1,8 @@
+{
+  "type": "app",
+  "id": "chat-sidebar-dark",
+  "title": "Chat in a sidebar with dark mode",
+  "next_steps": [
+    "Run the app with `shiny run app.py`."
+  ]
+}

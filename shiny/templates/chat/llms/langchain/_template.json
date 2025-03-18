@@ -1,0 +1,9 @@
+{
+  "type": "app",
+  "id": "chat-ai-langchain",
+  "title": "Chat AI using LangChain",
+  "next_steps": [
+    "Put your OpenAI API key in the `template.env` file and rename it to `.env`.",
+    "Run the app with `shiny run app.py`."
+  ]
+}

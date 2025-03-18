@@ -7,7 +7,7 @@ from typing import Literal, Optional
 from htmltools import Tag, TagAttrValue, css
 
 from .._docstring import add_example, no_example
-from .._namespaces import resolve_id
+from ..module import resolve_id
 from ..session import Session, require_active_session
 from ._web_component import web_component
 

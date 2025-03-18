@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-__all__ = ("Session", "Inputs", "Outputs")
-
+__all__ = ("Session", "Inputs", "Outputs", "ClientData")
 import asyncio
 import contextlib
 import dataclasses
@@ -41,13 +40,20 @@ from .._connection import Connection, ConnectionClosed
 from .._deprecated import warn_deprecated
 from .._docstring import add_example
 from .._fileupload import FileInfo, FileUploadManager
-from .._namespaces import Id, ResolvedId, Root
+from .._namespaces import Id, Root
 from .._typing_extensions import NotRequired, TypedDict
 from .._utils import wrap_async
+from ..bookmark import BookmarkApp, BookmarkProxy
+from ..bookmark._button import BOOKMARK_ID
+from ..bookmark._restore_state import RestoreContext
 from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
-from ..reactive import Effect_, Value, effect, flush, isolate
-from ..reactive._core import lock, on_flushed
+from ..module import ResolvedId
+from ..reactive import Effect_, Value, effect
+from ..reactive import flush as reactive_flush
+from ..reactive import isolate
+from ..reactive._core import lock
+from ..reactive._core import on_flushed as reactive_on_flushed
 from ..render.renderer import Renderer, RendererT
 from ..types import (
     Jsonifiable,
@@ -60,6 +66,8 @@ from ._utils import RenderedDeps, read_thunk_opt, session_context
 
 if TYPE_CHECKING:
     from .._app import App
+    from ..bookmark import Bookmark
+    from ..bookmark._serializers import Unserializable
 
 
 class ConnectionState(enum.Enum):
@@ -170,6 +178,12 @@ class Session(ABC):
     id: str
     input: Inputs
     output: Outputs
+    clientdata: ClientData
+
+    # Could be done with a weak ref dict from root to all children. Then we could just
+    # iterate over all modules and check the `.bookmark_exclude` list of each proxy
+    # session.
+    bookmark: Bookmark
     user: str | None
     groups: list[str] | None
 
@@ -519,6 +533,9 @@ class AppSession(Session):
 
         self.input: Inputs = Inputs(dict())
         self.output: Outputs = Outputs(self, self.ns, outputs=dict())
+        self.clientdata: ClientData = ClientData(self)
+
+        self.bookmark: Bookmark = BookmarkApp(self)
 
         self.user: str | None = None
         self.groups: list[str] | None = None
@@ -620,13 +637,30 @@ class AppSession(Session):
                         if message_obj["method"] == "init":
                             verify_state(ConnectionState.Start)
 
+                            # BOOKMARKS!
+                            if not isinstance(self.bookmark, BookmarkApp):
+                                raise RuntimeError("`.bookmark` must be a BookmarkApp")
+
+                            if ".clientdata_url_search" in message_obj["data"]:
+                                self.bookmark._set_restore_context(
+                                    await RestoreContext.from_query_string(
+                                        message_obj["data"][".clientdata_url_search"],
+                                        app=self.app,
+                                    )
+                                )
+                            else:
+                                self.bookmark._set_restore_context(RestoreContext())
+
                             # When a reactive flush occurs, flush the session's outputs,
                             # errors, etc. to the client. Note that this is
                             # `reactive._core.on_flushed`, not `self.on_flushed`.
-                            unreg = on_flushed(self._flush)
+                            unreg = reactive_on_flushed(self._flush)
                             # When the session ends, stop flushing outputs on reactive
                             # flush.
                             stack.callback(unreg)
+
+                            # Set up bookmark callbacks here
+                            self.bookmark._create_effects()
 
                             conn_state = ConnectionState.Running
                             message_obj = typing.cast(ClientMessageInit, message_obj)
@@ -634,6 +668,11 @@ class AppSession(Session):
 
                             with session_context(self):
                                 self.app.server(self.input, self.output, self)
+
+                            # TODO: Remove this call to reactive_flush() once https://github.com/posit-dev/py-shiny/issues/1889 is fixed
+                            # Workaround: Any `on_flushed()` calls from bookmark's `on_restored()` will be flushed here
+                            if self.bookmark.store != "disable":
+                                await reactive_flush()
 
                         elif message_obj["method"] == "update":
                             verify_state(ConnectionState.Running)
@@ -660,7 +699,7 @@ class AppSession(Session):
 
                         self._request_flush()
 
-                        await flush()
+                        await reactive_flush()
 
             except ConnectionClosed:
                 ...
@@ -1006,6 +1045,10 @@ class AppSession(Session):
 
     async def _flush(self) -> None:
         with session_context(self):
+            # This is the only place in the session where the RestoreContext is flushed.
+            if self.bookmark._restore_context:
+                self.bookmark._restore_context.flush_pending()
+            # Flush the callbacks
             await self._flush_callbacks.invoke()
 
         try:
@@ -1122,7 +1165,7 @@ class AppSession(Session):
 
     def make_scope(self, id: Id) -> Session:
         ns = self.ns(id)
-        return SessionProxy(parent=self, ns=ns)
+        return SessionProxy(root_session=self, ns=ns)
 
     def root_scope(self) -> AppSession:
         return self
@@ -1157,69 +1200,70 @@ class UpdateProgressMessage(TypedDict):
 
 
 class SessionProxy(Session):
-    def __init__(self, parent: Session, ns: ResolvedId) -> None:
-        self._parent = parent
-        self.app = parent.app
-        self.id = parent.id
+    def __init__(self, root_session: Session, ns: ResolvedId) -> None:
+        super().__init__()
+
+        self._root_session = root_session
+        self.app = root_session.app
+        self.id = root_session.id
         self.ns = ns
-        self.input = Inputs(values=parent.input._map, ns=ns)
+        self.input = Inputs(values=root_session.input._map, ns=ns)
         self.output = Outputs(
             self,
             ns=ns,
-            outputs=parent.output._outputs,
+            outputs=root_session.output._outputs,
         )
-        self._outbound_message_queues = parent._outbound_message_queues
-        self._downloads = parent._downloads
+        self._outbound_message_queues = root_session._outbound_message_queues
+        self._downloads = root_session._downloads
+
+        self.bookmark = BookmarkProxy(self)
 
     def _is_hidden(self, name: str) -> bool:
-        return self._parent._is_hidden(name)
+        return self._root_session._is_hidden(name)
 
     def on_ended(
         self,
         fn: Callable[[], None] | Callable[[], Awaitable[None]],
     ) -> Callable[[], None]:
-        return self._parent.on_ended(fn)
+        return self._root_session.on_ended(fn)
 
     def is_stub_session(self) -> bool:
-        return self._parent.is_stub_session()
+        return self._root_session.is_stub_session()
 
     async def close(self, code: int = 1001) -> None:
-        await self._parent.close(code)
+        await self._root_session.close(code)
 
     def make_scope(self, id: str) -> Session:
-        return self._parent.make_scope(self.ns(id))
+        return self._root_session.make_scope(self.ns(id))
 
     def root_scope(self) -> Session:
-        res = self
-        while isinstance(res, SessionProxy):
-            res = res._parent
-        return res
+        return self._root_session
 
     def _process_ui(self, ui: TagChild) -> RenderedDeps:
-        return self._parent._process_ui(ui)
+        return self._root_session._process_ui(ui)
 
     def send_input_message(self, id: str, message: dict[str, object]) -> None:
-        self._parent.send_input_message(self.ns(id), message)
+        self._root_session.send_input_message(self.ns(id), message)
 
     def _send_insert_ui(
         self, selector: str, multiple: bool, where: str, content: RenderedDeps
     ) -> None:
-        self._parent._send_insert_ui(selector, multiple, where, content)
+        self._root_session._send_insert_ui(selector, multiple, where, content)
 
     def _send_remove_ui(self, selector: str, multiple: bool) -> None:
-        self._parent._send_remove_ui(selector, multiple)
+        self._root_session._send_remove_ui(selector, multiple)
 
     def _send_progress(self, type: str, message: object) -> None:
-        self._parent._send_progress(type, message)  # pyright: ignore
+        self._root_session._send_progress(type, message)  # pyright: ignore
 
     async def send_custom_message(self, type: str, message: dict[str, object]) -> None:
-        await self._parent.send_custom_message(type, message)
+        await self._root_session.send_custom_message(type, message)
 
     def _increment_busy_count(self) -> None:
-        self._parent._increment_busy_count()
+        self._root_session._increment_busy_count()
 
     def _decrement_busy_count(self) -> None:
-        self._parent._decrement_busy_count()
+        self._root_session._decrement_busy_count()
 
     def set_message_handler(
         self,
@@ -1236,7 +1280,7 @@ class SessionProxy(Session):
         if _handler_session is None:
             _handler_session = self
 
-        return self._parent.set_message_handler(
+        return self._root_session.set_message_handler(
             self.ns(name),
             handler,
             _handler_session=_handler_session,
@@ -1247,26 +1291,26 @@ class SessionProxy(Session):
         fn: Callable[[], None] | Callable[[], Awaitable[None]],
         once: bool = True,
     ) -> Callable[[], None]:
-        return self._parent.on_flush(fn, once)
+        return self._root_session.on_flush(fn, once)
 
     async def _send_message(self, message: dict[str, object]) -> None:
-        await self._parent._send_message(message)
+        await self._root_session._send_message(message)
 
     def _send_message_sync(self, message: dict[str, object]) -> None:
-        self._parent._send_message_sync(message)
+        self._root_session._send_message_sync(message)
 
     def on_flushed(
         self,
         fn: Callable[[], None] | Callable[[], Awaitable[None]],
         once: bool = True,
     ) -> Callable[[], None]:
-        return self._parent.on_flushed(fn, once)
+        return self._root_session.on_flushed(fn, once)
 
     def dynamic_route(self, name: str, handler: DynamicRouteHandler) -> str:
-        return self._parent.dynamic_route(self.ns(name), handler)
+        return self._root_session.dynamic_route(self.ns(name), handler)
 
     async def _unhandled_error(self, e: Exception) -> None:
-        await self._parent._unhandled_error(e)
+        await self._root_session._unhandled_error(e)
 
     def download(
         self,
@@ -1277,7 +1321,7 @@ class SessionProxy(Session):
     ) -> Callable[[DownloadHandler], None]:
         def wrapper(fn: DownloadHandler):
             id_ = self.ns(id or fn.__name__)
-            return self._parent.download(
+            return self._root_session.download(
                 id=id_,
                 filename=filename,
                 media_type=media_type,
@@ -1304,11 +1348,25 @@ class Inputs:
     it can be accessed via `input["x"]()` or ``input.x()``.
     """
 
+    _serializers: dict[
+        str,
+        Callable[
+            [Any, Path | None],
+            Awaitable[Any | Unserializable],
+        ],
+    ]
+    """
+    A dictionary of serializers for input values.
+
+    Set this value via `Inputs.set_serializer(id, fn)`.
+    """
+
     def __init__(
         self, values: dict[str, Value[Any]], ns: Callable[[str], str] = Root
     ) -> None:
         self._map = values
         self._ns = ns
+        self._serializers = {}
 
     def __setitem__(self, key: str, value: Value[Any]) -> None:
         if not isinstance(value, reactive.Value):
@@ -1331,14 +1389,14 @@ class Inputs:
 
     # Allow access of values as attributes.
     def __setattr__(self, attr: str, value: Value[Any]) -> None:
-        if attr in ("_map", "_ns"):
+        if attr in ("_map", "_ns", "_serializers"):
             super().__setattr__(attr, value)
             return
 
         self.__setitem__(attr, value)
 
     def __getattr__(self, attr: str) -> Value[Any]:
-        if attr in ("_map", "_ns"):
+        if attr in ("_map", "_ns", "_serializers"):
             return object.__getattribute__(self, attr)
         return self.__getitem__(attr)
 
@@ -1351,6 +1409,294 @@ class Inputs:
         # it populates the key if it doesn't exist yet. It then calls `is_set()`, which
         # creates a reactive dependency, and returns whether the value is set.
         return self[key].is_set()
+
+    def __dir__(self):
+        return list(self._map.keys())
+
+    # This method can not be on the `Value` class as the _value_ may not exist when the
+    # "creating" method is executed.
+    # Ex: File inputs do not _make_ the input reactive value. The browser does when the
+    # client sets the value.
+    def set_serializer(
+        self,
+        id: str,
+        fn: (
+            Callable[
+                [Any, Path | None],
+                Awaitable[Any | Unserializable],
+            ]
+            | Callable[
+                [Any, Path | None],
+                Any | Unserializable,
+            ]
+        ),
+    ) -> None:
+        """
+        Add a function for serializing an input before bookmarking application state
+
+        Parameters
+        ----------
+        id
+            The ID of the input value.
+        fn
+            A function that takes the input value and returns a modified value. The
+            returned value will be used for test snapshots and bookmarking.
+        """
+        self._serializers[id] = wrap_async(fn)
+
+    async def _serialize(
+        self,
+        /,
+        *,
+        exclude: list[str],
+        state_dir: Path | None,
+    ) -> dict[str, Any]:
+        from ..bookmark._serializers import Unserializable, serializer_default
+
+        exclude_set = set(exclude)
+        serialized_values: dict[str, Any] = {}
+
+        with reactive.isolate():
+
+            for key, value in self._map.items():
+                # TODO: Barret - Q: Should this be ignoring any Input key that starts with a "."?
+                if key.startswith(".clientdata_"):
+                    continue
+                # Ignore all bookmark inputs
+                if key == BOOKMARK_ID or key.endswith(
+                    f"{ResolvedId._sep}{BOOKMARK_ID}"
+                ):
+                    continue
+                if key in exclude_set:
+                    continue
+                val = value()
+
+                # Possibly apply custom serialization given the input id
+                serializer = self._serializers.get(key, serializer_default)
+                serialized_value = await serializer(val, state_dir)
+
+                # Filter out any values that were marked as unserializable.
+                if isinstance(serialized_value, Unserializable):
+                    continue
+                serialized_values[str(key)] = serialized_value
+
+        return serialized_values
+
+
+@add_example()
+class ClientData:
+    """
+    Access (client-side) information from the browser.
+
+    Provides access to client-side information, such as the URL components, the
+    pixel ratio of the device, and the properties of outputs.
+
+    Each method in this class reads a reactive input value, which means that the
+    method will error if called outside of a reactive context.
+
+    Raises
+    ------
+    RuntimeError
+        If a method is called outside of a reactive context.
+    """
+
+    def __init__(self, session: Session) -> None:
+        self._session: Session = session
+
+    def url_hash(self) -> str:
+        """
+        Reactively read the hash part of the URL.
+        """
+        return self._read_input("url_hash")
+
+    def url_hash_initial(self) -> str:
+        """
+        Reactively read the initial hash part of the URL.
+        """
+        return self._read_input("url_hash_initial")
+
+    def url_hostname(self) -> str:
+        """
+        Reactively read the hostname part of the URL.
+        """
+        return self._read_input("url_hostname")
+
+    def url_pathname(self) -> str:
+        """
+        The pathname part of the URL.
+        """
+        return self._read_input("url_pathname")
+
+    def url_port(self) -> int:
+        """
+        Reactively read the port part of the URL.
+        """
+        return cast(int, self._read_input("url_port"))
+
+    def url_protocol(self) -> str:
+        """
+        Reactively read the protocol part of the URL.
+        """
+        return self._read_input("url_protocol")
+
+    def url_search(self) -> str:
+        """
+        Reactively read the search part of the URL.
+        """
+        return self._read_input("url_search")
+
+    def pixelratio(self) -> float:
+        """
+        Reactively read the pixel ratio of the device.
+        """
+        return cast(int, self._read_input("pixelratio"))
+
+    def output_height(self, id: str) -> float | None:
+        """
+        Reactively read the height of an output.
+
+        Parameters
+        ----------
+        id
+            The id of the output.
+
+        Returns
+        -------
+        float | None
+            The height of the output, or None if the output does not exist (or does not
+            report its height).
+        """
+        return cast(float, self._read_output(id, "height"))
+
+    def output_width(self, id: str) -> float | None:
+        """
+        Reactively read the width of an output.
+
+        Parameters
+        ----------
+        id
+            The id of the output.
+
+        Returns
+        -------
+        float | None
+            The width of the output, or None if the output does not exist (or does not
+            report its width).
+        """
+        return cast(float, self._read_output(id, "width"))
+
+    def output_hidden(self, id: str) -> bool | None:
+        """
+        Reactively read whether an output is hidden.
+
+        Parameters
+        ----------
+        id
+            The id of the output.
+
+        Returns
+        -------
+        bool | None
+            Whether the output is hidden, or None if the output does not exist.
+        """
+        return cast(bool, self._read_output(id, "hidden"))
+
+    def output_bg_color(self, id: str) -> str | None:
+        """
+        Reactively read the background color of an output.
+
+        Parameters
+        ----------
+        id
+            The id of the output.
+
+        Returns
+        -------
+        str | None
+            The background color of the output, or None if the output does not exist (or
+            does not report its bg color).
+        """
+        return cast(str, self._read_output(id, "bg"))
+
+    def output_fg_color(self, id: str) -> str | None:
+        """
+        Reactively read the foreground color of an output.
+
+        Parameters
+        ----------
+        id
+            The id of the output.
+
+        Returns
+        -------
+        str | None
+            The foreground color of the output, or None if the output does not exist (or
+            does not report its fg color).
+        """
+        return cast(str, self._read_output(id, "fg"))
+
+    def output_accent_color(self, id: str) -> str | None:
+        """
+        Reactively read the accent color of an output.
+
+        Parameters
+        ----------
+        id
+            The id of the output.
+
+        Returns
+        -------
+        str | None
+            The accent color of the output, or None if the output does not exist (or
+            does not report its accent color).
+        """
+        return cast(str, self._read_output(id, "accent"))
+
+    def output_font(self, id: str) -> str | None:
+        """
+        Reactively read the font(s) of an output.
+
+        Parameters
+        ----------
+        id
+            The id of the output.
+
+        Returns
+        -------
+        str | None
+            The font family of the output, or None if the output does not exist (or
+            does not report its font styles).
+        """
+        return cast(str, self._read_output(id, "font"))
+
+    def _read_input(self, key: str) -> str:
+        self._check_current_context(key)
+
+        id = ResolvedId(f".clientdata_{key}")
+        if id not in self._session.input:
+            raise ValueError(
+                f"ClientData value '{key}' not found. Please report this issue."
+            )
+
+        return self._session.input[id]()
+
+    def _read_output(self, id: str, key: str) -> str | None:
+        self._check_current_context(f"output_{key}")
+
+        input_id = ResolvedId(f".clientdata_output_{id}_{key}")
+        if input_id in self._session.input:
+            return self._session.input[input_id]()
+        else:
+            return None
+
+    @staticmethod
+    def _check_current_context(key: str) -> None:
+        try:
+            reactive.get_current_context()
+        except RuntimeError:
+            raise RuntimeError(
+                f"session.clientdata.{key}() must be called from within a reactive context."
+            )
 
 
 # ======================================================================================

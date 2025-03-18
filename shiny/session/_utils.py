@@ -14,8 +14,8 @@ if TYPE_CHECKING:
     from ._session import Session
 
 from .._docstring import no_example
-from .._namespaces import namespace_context
 from .._typing_extensions import TypedDict
+from ..module import namespace_context
 
 
 class RenderedDeps(TypedDict):
@@ -57,7 +57,7 @@ def get_current_session() -> Optional[Session]:
 
 
 @contextmanager
-def session_context(session: Optional[Session]):
+def session_context(session: Session | None):
     """
     A context manager for current session.
 

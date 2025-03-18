@@ -72,42 +72,58 @@ ul.nav.navbar-nav {
   }
 }
 
+:root {
+  --bslib-navbar-light-bg: var(--bslib-navbar-default-bg, var(--#{$prefix}light));
+  --bslib-navbar-dark-bg: var(--bslib-navbar-inverse-bg, var(--#{$prefix}black));
+}
+
+@mixin navbar-background-dark($important: false) {
+  background-color: var(--bslib-navbar-dark-bg) if($important, !important, null);
+}
+
+@mixin navbar-background-light($important: false) {
+  background-color: var(--bslib-navbar-light-bg) if($important, !important, null);
+}
 
 .navbar {
 
   // Defaults to null (and in that case, we don't want to define the CSS var)
   @if $navbar-light-bg {
-    --bslib-navbar-default-bg: #{$navbar-light-bg};
+    --bslib-navbar-light-bg: #{$navbar-light-bg};
   }
   @if $navbar-dark-bg {
-    --bslib-navbar-inverse-bg: #{$navbar-dark-bg};
+    --bslib-navbar-dark-bg: #{$navbar-dark-bg};
   }
 
-  // BS3 .navbar-default -> BS4 .navbar-light
-  &.navbar-default {
-    // Sets a variety of fg colors which are configurable via $navbar-light-* options
-    @extend .navbar-light;
-    background-color: var(--bslib-navbar-default-bg, var(--#{$prefix}light)) !important;
-  }
-
-  // BS3 .navbar-inverse -> BS4 .navbar-dark
-  &.navbar-inverse {
-    // Sets a variety of fg colors which are configurable via $navbar-dark-* options
-    @extend .navbar-dark;
-    background-color: var(--bslib-navbar-inverse-bg, var(--#{$prefix}dark)) !important;
-    // For BS5+ lean on emphasis-color
-    --bs-emphasis-color: white;
-    --bs-emphasis-color-rgb: 255, 255, 255;
+  @if $bootstrap-version < 5 {
+    // BS3 .navbar-default -> BS4 .navbar-light
+    &.navbar-default {
+      // Sets a variety of fg colors which are configurable via $navbar-light-* options
+      @extend .navbar-light;
+      @include navbar-background-light($important: true);
+    }
+  
+    // BS3 .navbar-inverse -> BS4 .navbar-dark
+    &.navbar-inverse {
+      // Sets a variety of fg colors which are configurable via $navbar-dark-* options
+      @extend .navbar-dark;
+      @include navbar-background-dark($important: true);
+    }
   }
 }
 
-$enable-dark-mode: false !default;
-@if $enable-dark-mode {
-  @include color-mode(dark) {
-    .navbar.navbar-default {
-      background-color: var(--bslib-navbar-default-bg, var(--#{$prefix}dark)) !important;
-    }
+@if $bootstrap-version >= 5 {
+  .navbar {
+    background-color: $navbar-bg;
   }
+  
+  [data-bs-theme="dark"] :where(.navbar) { @include navbar-background-dark(); }
+  [data-bs-theme="light"] :where(.navbar), :where(.navbar) { @include navbar-background-light(); }
+  
+  // These are defined *after* the above rules because we want the local version
+  // to win without having to resort to specificity tricks.
+  :where(.navbar)[data-bs-theme="dark"] { @include navbar-background-dark(); }
+  :where(.navbar)[data-bs-theme="light"] { @include navbar-background-light(); }
 }
 
 // Implement bs3 navbar toggler; used in Rmd websites, i.e.

@@ -1,0 +1,99 @@
+name: Feature Request
+description: Suggest an idea for Shiny for Python.
+title: "[Feature]: "
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a new feature! Please provide as much detail as possible.
+
+  - type: dropdown
+    id: feature-category
+    attributes:
+      label: Category
+      description: What area of Shiny would this enhance?
+      options:
+        - UI Components
+        - Reactive Programming
+        - Input/Output
+        - Deployment
+        - Dev Tools
+        - Performance
+        - Testing
+        - Accessibility
+        - Integrations
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: feature-scope
+    attributes:
+      label: Scope
+      options:
+        - Major Feature
+        - Minor Enhancement
+        - Quality of Life
+        - Experimental
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem-description
+    attributes:
+      label: Problem
+      description: What problem does this feature solve? Why is it needed?
+      placeholder: |
+        As a user, I'm frustrated when... because...
+        I have to workaround this by..., which is not ideal because...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: Solution
+      description: Describe the feature. What should it do? How should it work?
+      placeholder: |
+        I would like a feature that...
+        ```python
+        # Potential API (if applicable)
+        from shiny import ui
+        ui.new_component(...)
+        ```
+    validations:
+      required: true
+  - type: textarea
+    id: alternative-solutions
+    attributes:
+      label: Alternatives (Optional)
+      description: Have you considered alternatives? Why are they less suitable?
+      placeholder: "I've considered... but my solution is better because..."
+
+  - type: textarea
+    id: example-usage
+    attributes:
+      label: Example (Optional)
+      description: Code example of how this feature would be used.
+      placeholder: |
+        ```python
+        from shiny import App, ui
+        app_ui = ui.page_fluid(ui.your_new_feature(...))
+        ```
+      render: python
+
+  - type: textarea
+    id: expected-impact
+    attributes:
+      label: Impact (Optional)
+      description: How would this benefit users? Who would use it?
+      placeholder: "Useful for users who want to... Enables new use cases..."
+  - type: dropdown
+    id: contribution-interest
+    attributes:
+      label: Contribution? (Optional)
+      options:
+        - Yes, I can implement (or help).
+        - Yes, I can review/test.
+        - No, just suggesting.

@@ -1,0 +1,8 @@
+{
+  "type": "app",
+  "id": "chat-hello",
+  "title": "Hello Shiny Chat",
+  "next_steps": [
+    "Run the app with `shiny run app.py`."
+  ]
+}
