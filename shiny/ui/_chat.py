@@ -591,7 +591,7 @@ class Chat:
         )
 
     @asynccontextmanager
-    async def append_message_context(self):
+    async def message_stream_context(self):
         """
         Message stream context manager.
 
@@ -629,9 +629,9 @@ class Chat:
 
         @reactive.effect
         async def _():
-            async with chat.append_message_context() as msg:
+            async with chat.message_stream_context() as msg:
                 await msg.append("Starting stream...\n\nProgress:")
-                async with chat.append_message_context() as progress:
+                async with chat.message_stream_context() as progress:
                     for x in [0, 50, 100]:
                         await progress.append(f" {x}%")
                         await asyncio.sleep(1)
@@ -643,7 +643,7 @@ class Chat:
         Note
         ----
         A useful pattern for displaying tool calls in a chatbot is for the tool to
-        display using `.append_message_context()` while the the response generation is
+        display using `.message_stream_context()` while the the response generation is
         happening through `.append_message_stream()`. This allows the tool to display
         things like progress updates (or other "ephemeral" content) and optionally
         `.restore()` the stream back to it's initial state when ready to display the
@@ -1492,7 +1492,7 @@ def chat_ui(
 
 class MessageStream:
     """
-    An object to yield from a `.append_message_context()` context manager.
+    An object to yield from a `.message_stream_context()` context manager.
     """
 
     def __init__(self, chat: Chat, stream_id: str):

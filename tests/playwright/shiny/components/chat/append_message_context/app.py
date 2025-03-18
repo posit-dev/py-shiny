@@ -34,7 +34,7 @@ async def _(user_input: str):
 @reactive.effect
 @reactive.event(input.stream_1)
 async def _():
-    async with chat.append_message_context() as msg:
+    async with chat.message_stream_context() as msg:
         await msg.append("Basic")
         await asyncio.sleep(SLEEP_TIME)
         await msg.append(" stream")
@@ -43,7 +43,7 @@ async def _():
 @reactive.effect
 @reactive.event(input.stream_2)
 async def _():
-    async with chat.append_message_context() as msg:
+    async with chat.message_stream_context() as msg:
         await msg.append("Basic")
         await asyncio.sleep(SLEEP_TIME)
         await msg.append(" stream")
@@ -56,10 +56,10 @@ async def _():
 @reactive.effect
 @reactive.event(input.stream_3)
 async def _():
-    async with chat.append_message_context() as outer:
+    async with chat.message_stream_context() as outer:
         await outer.append("Outer start")
         await asyncio.sleep(SLEEP_TIME)
-        async with chat.append_message_context() as inner:
+        async with chat.message_stream_context() as inner:
             await inner.append("Inner start")
             await asyncio.sleep(SLEEP_TIME)
             await inner.append("Inner end")
@@ -70,10 +70,10 @@ async def _():
 @reactive.effect
 @reactive.event(input.stream_4)
 async def _():
-    async with chat.append_message_context() as outer:
+    async with chat.message_stream_context() as outer:
         await outer.append("Outer start")
         await asyncio.sleep(SLEEP_TIME)
-        async with chat.append_message_context() as inner:
+        async with chat.message_stream_context() as inner:
             await inner.append("Inner start")
             await asyncio.sleep(SLEEP_TIME)
             await inner.restore()
@@ -85,11 +85,11 @@ async def _():
 @reactive.effect
 @reactive.event(input.stream_5)
 async def _():
-    async with chat.append_message_context() as outer:
+    async with chat.message_stream_context() as outer:
         await outer.append("Outer start")
         await asyncio.sleep(SLEEP_TIME)
         await outer.restore()
-        async with chat.append_message_context() as inner:
+        async with chat.message_stream_context() as inner:
             await inner.append("Inner start")
             await asyncio.sleep(SLEEP_TIME)
             await inner.append("Inner end")
@@ -112,7 +112,7 @@ async def outer_stream():
 
 
 async def inner_stream():
-    async with chat.append_message_context() as stream:
+    async with chat.message_stream_context() as stream:
         await stream.append("Inner start")
         await asyncio.sleep(SLEEP_TIME)
         await stream.append("Inner progress")
