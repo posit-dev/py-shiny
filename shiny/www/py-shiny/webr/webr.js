@@ -589,6 +589,7 @@ var WebRComponent = class extends LightElement {
     this.plotId = this.id + "_plot";
     this.dropZoneId = this.id + "_dropzone";
     this.fileListId = this.id + "_filelist";
+    this.dropZoneTextId = this.id + "_dropzone_text";
     this.webR = new WebR();
   }
   render() {
@@ -609,7 +610,9 @@ var WebRComponent = class extends LightElement {
         id="${this.dropZoneId}"
         style="border: 2px dashed #ccc; border-radius: 5px; padding: 20px; text-align: center; margin-top: 20px; cursor: pointer;"
       >
-        <p>Drag and drop files here or click to upload</p>
+        <p id="${this.dropZoneTextId}">
+          Drag and drop files here or click to upload
+        </p>
         <input type="file" style="display: none;" multiple />
       </div>
       <div id="${this.fileListId}" style="margin-top: 10px;"></div>
@@ -621,6 +624,9 @@ var WebRComponent = class extends LightElement {
     this.plot = document.getElementById(this.plotId);
     this.dropZone = document.getElementById(this.dropZoneId);
     this.fileList = document.getElementById(this.fileListId);
+    this.dropZoneText = document.getElementById(
+      this.dropZoneTextId
+    );
     (async () => {
       await this.webR.init();
       this.output.textContent = `webR ${this.webR.version}
@@ -709,6 +715,7 @@ var WebRComponent = class extends LightElement {
       const uint8Array = new Uint8Array(arrayBuffer);
       await this.webR.FS.writeFile(file.name, uint8Array);
       this.addFileToList(file.name);
+      this.showSuccessMessage(`${file.name} uploaded successfully!`);
       this.appendToOutEl(`File uploaded to webR: ${file.name}
 `);
       await this.evalInConsole(`list.files()`);
@@ -717,6 +724,19 @@ var WebRComponent = class extends LightElement {
       this.appendToOutEl(`Error uploading file: ${file.name}
 `);
     }
+  }
+  showSuccessMessage(message) {
+    const originalText = this.dropZoneText.textContent;
+    const originalBorderColor = this.dropZone.style.borderColor;
+    const originalBackgroundColor = this.dropZone.style.backgroundColor;
+    this.dropZoneText.textContent = message;
+    this.dropZone.style.borderColor = "#4CAF50";
+    this.dropZone.style.backgroundColor = "rgba(76, 175, 80, 0.1)";
+    setTimeout(() => {
+      this.dropZoneText.textContent = originalText;
+      this.dropZone.style.borderColor = originalBorderColor;
+      this.dropZone.style.backgroundColor = originalBackgroundColor;
+    }, 2e3);
   }
   addFileToList(fileName) {
     const fileItem = document.createElement("div");
