@@ -3,7 +3,7 @@ from __future__ import annotations
 import warnings
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import TYPE_CHECKING, Awaitable, Callable, Literal
+from typing import TYPE_CHECKING, Awaitable, Callable, Literal, Optional
 
 from .._docstring import add_example
 from .._utils import AsyncCallbacks, CancelCallback, wrap_async
@@ -167,7 +167,7 @@ class Bookmark(ABC):
     @abstractmethod
     async def update_query_string(
         self,
-        query_string: str,
+        query_string: Optional[str] = None,
         mode: Literal["replace", "push"] = "replace",
     ) -> None:
         """
@@ -176,7 +176,7 @@ class Bookmark(ABC):
         Parameters
         ----------
         query_string
-            The query string to set.
+            The query string to set. If `None`, the current bookmark state URL will be used.
         mode
             Whether to replace the current URL or push a new one. Pushing a new value
             will add to the user's browser history.
@@ -448,9 +448,12 @@ class BookmarkApp(Bookmark):
 
     async def update_query_string(
         self,
-        query_string: str,
+        query_string: Optional[str] = None,
         mode: Literal["replace", "push"] = "replace",
     ) -> None:
+        if query_string is None:
+            query_string = await self.get_bookmark_url()
+
         if mode not in {"replace", "push"}:
             raise ValueError(f"Invalid mode: {mode}")
         await self._root_session._send_message(
