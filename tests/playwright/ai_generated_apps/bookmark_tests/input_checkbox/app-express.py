@@ -1,6 +1,6 @@
 from shiny.express import app_opts, input, module, render, session, ui
 
-app_opts(bookmark_store="url")
+app_opts(bookmark_store="url", debug=True)
 
 with ui.card():
     ui.card_header("Bookmarking Checkbox Demo")
@@ -30,7 +30,7 @@ with ui.card():
 
     checkbox_module("first")
 
-ui.input_bookmark_button(id="bookmark_button", label="Bookmark this page")
+ui.input_bookmark_button()
 
 
 @session.bookmark.on_bookmarked

@@ -12,6 +12,7 @@ with ui.card():
     ui.input_date(
         id="basic",
         label="Basic date input",
+        value="2024-01-01",
     )
 
     @render.text
@@ -28,6 +29,7 @@ with ui.card():
         ui.input_date(
             id="module_date",
             label="Module date input",
+            value="2024-01-01",
         )
 
         @render.text
@@ -36,7 +38,7 @@ with ui.card():
 
     date_module("first")
 
-ui.input_bookmark_button(id="bookmark_button", label="Bookmark this page")
+ui.input_bookmark_button()
 
 
 @session.bookmark.on_bookmarked

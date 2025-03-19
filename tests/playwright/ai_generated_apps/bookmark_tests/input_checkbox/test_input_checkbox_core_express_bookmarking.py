@@ -33,9 +33,11 @@ def test_checkbox_demo(page: Page, app: ShinyAppProc) -> None:
     module_checkbox.expect_checked(True)
     module_text.expect_value("Checkbox value: True")
 
-    # Test bookmark button
-    bookmark_button = controller.InputActionButton(page, "bookmark_button")
-    bookmark_button.click()
+    # TODO-Karan: Implement bookmark button controller
+    # bookmark_button = controller.InputBookmarkButton(page)
+    # bookmark_button.click()
+
+    page.get_by_role("button", name="🔗 Bookmark...").click()
 
     # reload the page to test bookmark
     page.reload()

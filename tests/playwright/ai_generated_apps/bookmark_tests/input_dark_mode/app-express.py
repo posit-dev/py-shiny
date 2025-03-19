@@ -9,7 +9,7 @@ with ui.card():
     ui.h3("Non-Module Section")
 
     # Basic dark mode toggle
-    ui.input_dark_mode(id="basic", label="Basic dark mode toggle")
+    ui.input_dark_mode(id="basic", label="Basic dark mode toggle", mode="dark")
 
     @render.text
     def basic_text():
@@ -22,7 +22,9 @@ with ui.card():
         ui.h3("Dark Mode Module")
 
         # Module dark mode toggle
-        ui.input_dark_mode(id="module_dark_mode", label="Module dark mode toggle")
+        ui.input_dark_mode(
+            id="module_dark_mode", label="Module dark mode toggle", mode="dark"
+        )
 
         @render.text
         def dark_mode_text():
@@ -30,7 +32,7 @@ with ui.card():
 
     dark_mode_module("first")
 
-ui.input_bookmark_button(id="bookmark_button", label="Bookmark this page")
+ui.input_bookmark_button()
 
 
 @session.bookmark.on_bookmarked

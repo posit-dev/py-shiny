@@ -47,7 +47,7 @@ class InputActionButton(
         super().__init__(
             page,
             id=id,
-            loc=f"button#{id}.action-button.shiny-bound-input",
+            loc=f'button[id="{id}"].action-button.shiny-bound-input',
         )
 
     def expect_disabled(self, value: bool, *, timeout: Timeout = None):
@@ -75,7 +75,7 @@ class InputBookmarkButton(
     def __init__(
         self,
         page: Page,
-        id: str,
+        id: str = "`._bookmark_`",
     ) -> None:
         """
         Initializes the input bookmark button.
@@ -85,7 +85,7 @@ class InputBookmarkButton(
         page
             The page where the input bookmark button is located.
         id
-            The id of the input bookmark button.
+            The id of the input bookmark button. Defaults to "._bookmark_".
         """
         super().__init__(
             page,
