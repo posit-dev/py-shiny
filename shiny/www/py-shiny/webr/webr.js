@@ -1,6 +1,598 @@
-var U=globalThis,I=U.ShadowRoot&&(U.ShadyCSS===void 0||U.ShadyCSS.nativeShadow)&&"adoptedStyleSheets"in Document.prototype&&"replace"in CSSStyleSheet.prototype,F=Symbol(),K=new WeakMap,H=class{constructor(t,e,s){if(this._$cssResult$=!0,s!==F)throw Error("CSSResult is not constructable. Use `unsafeCSS` or `css` instead.");this.cssText=t,this.t=e}get styleSheet(){let t=this.o,e=this.t;if(I&&t===void 0){let s=e!==void 0&&e.length===1;s&&(t=K.get(e)),t===void 0&&((this.o=t=new CSSStyleSheet).replaceSync(this.cssText),s&&K.set(e,t))}return t}toString(){return this.cssText}},Z=n=>new H(typeof n=="string"?n:n+"",void 0,F);var k=(n,t)=>{if(I)n.adoptedStyleSheets=t.map(e=>e instanceof CSSStyleSheet?e:e.styleSheet);else for(let e of t){let s=document.createElement("style"),i=U.litNonce;i!==void 0&&s.setAttribute("nonce",i),s.textContent=e.cssText,n.appendChild(s)}},O=I?n=>n:n=>n instanceof CSSStyleSheet?(t=>{let e="";for(let s of t.cssRules)e+=s.cssText;return Z(e)})(n):n;var{is:mt,defineProperty:$t,getOwnPropertyDescriptor:gt,getOwnPropertyNames:_t,getOwnPropertySymbols:ft,getPrototypeOf:yt}=Object,M=globalThis,Q=M.trustedTypes,At=Q?Q.emptyScript:"",vt=M.reactiveElementPolyfillSupport,S=(n,t)=>n,B={toAttribute(n,t){switch(t){case Boolean:n=n?At:null;break;case Object:case Array:n=n==null?n:JSON.stringify(n)}return n},fromAttribute(n,t){let e=n;switch(t){case Boolean:e=n!==null;break;case Number:e=n===null?null:Number(n);break;case Object:case Array:try{e=JSON.parse(n)}catch{e=null}}return e}},Y=(n,t)=>!mt(n,t),X={attribute:!0,type:String,converter:B,reflect:!1,hasChanged:Y};Symbol.metadata??=Symbol("metadata"),M.litPropertyMetadata??=new WeakMap;var m=class extends HTMLElement{static addInitializer(t){this._$Ei(),(this.l??=[]).push(t)}static get observedAttributes(){return this.finalize(),this._$Eh&&[...this._$Eh.keys()]}static createProperty(t,e=X){if(e.state&&(e.attribute=!1),this._$Ei(),this.elementProperties.set(t,e),!e.noAccessor){let s=Symbol(),i=this.getPropertyDescriptor(t,s,e);i!==void 0&&$t(this.prototype,t,i)}}static getPropertyDescriptor(t,e,s){let{get:i,set:o}=gt(this.prototype,t)??{get(){return this[e]},set(r){this[e]=r}};return{get(){return i?.call(this)},set(r){let d=i?.call(this);o.call(this,r),this.requestUpdate(t,d,s)},configurable:!0,enumerable:!0}}static getPropertyOptions(t){return this.elementProperties.get(t)??X}static _$Ei(){if(this.hasOwnProperty(S("elementProperties")))return;let t=yt(this);t.finalize(),t.l!==void 0&&(this.l=[...t.l]),this.elementProperties=new Map(t.elementProperties)}static finalize(){if(this.hasOwnProperty(S("finalized")))return;if(this.finalized=!0,this._$Ei(),this.hasOwnProperty(S("properties"))){let e=this.properties,s=[..._t(e),...ft(e)];for(let i of s)this.createProperty(i,e[i])}let t=this[Symbol.metadata];if(t!==null){let e=litPropertyMetadata.get(t);if(e!==void 0)for(let[s,i]of e)this.elementProperties.set(s,i)}this._$Eh=new Map;for(let[e,s]of this.elementProperties){let i=this._$Eu(e,s);i!==void 0&&this._$Eh.set(i,e)}this.elementStyles=this.finalizeStyles(this.styles)}static finalizeStyles(t){let e=[];if(Array.isArray(t)){let s=new Set(t.flat(1/0).reverse());for(let i of s)e.unshift(O(i))}else t!==void 0&&e.push(O(t));return e}static _$Eu(t,e){let s=e.attribute;return s===!1?void 0:typeof s=="string"?s:typeof t=="string"?t.toLowerCase():void 0}constructor(){super(),this._$Ep=void 0,this.isUpdatePending=!1,this.hasUpdated=!1,this._$Em=null,this._$Ev()}_$Ev(){this._$ES=new Promise(t=>this.enableUpdating=t),this._$AL=new Map,this._$E_(),this.requestUpdate(),this.constructor.l?.forEach(t=>t(this))}addController(t){(this._$EO??=new Set).add(t),this.renderRoot!==void 0&&this.isConnected&&t.hostConnected?.()}removeController(t){this._$EO?.delete(t)}_$E_(){let t=new Map,e=this.constructor.elementProperties;for(let s of e.keys())this.hasOwnProperty(s)&&(t.set(s,this[s]),delete this[s]);t.size>0&&(this._$Ep=t)}createRenderRoot(){let t=this.shadowRoot??this.attachShadow(this.constructor.shadowRootOptions);return k(t,this.constructor.elementStyles),t}connectedCallback(){this.renderRoot??=this.createRenderRoot(),this.enableUpdating(!0),this._$EO?.forEach(t=>t.hostConnected?.())}enableUpdating(t){}disconnectedCallback(){this._$EO?.forEach(t=>t.hostDisconnected?.())}attributeChangedCallback(t,e,s){this._$AK(t,s)}_$EC(t,e){let s=this.constructor.elementProperties.get(t),i=this.constructor._$Eu(t,s);if(i!==void 0&&s.reflect===!0){let o=(s.converter?.toAttribute!==void 0?s.converter:B).toAttribute(e,s.type);this._$Em=t,o==null?this.removeAttribute(i):this.setAttribute(i,o),this._$Em=null}}_$AK(t,e){let s=this.constructor,i=s._$Eh.get(t);if(i!==void 0&&this._$Em!==i){let o=s.getPropertyOptions(i),r=typeof o.converter=="function"?{fromAttribute:o.converter}:o.converter?.fromAttribute!==void 0?o.converter:B;this._$Em=i,this[i]=r.fromAttribute(e,o.type),this._$Em=null}}requestUpdate(t,e,s){if(t!==void 0){if(s??=this.constructor.getPropertyOptions(t),!(s.hasChanged??Y)(this[t],e))return;this.P(t,e,s)}this.isUpdatePending===!1&&(this._$ES=this._$ET())}P(t,e,s){this._$AL.has(t)||this._$AL.set(t,e),s.reflect===!0&&this._$Em!==t&&(this._$Ej??=new Set).add(t)}async _$ET(){this.isUpdatePending=!0;try{await this._$ES}catch(e){Promise.reject(e)}let t=this.scheduleUpdate();return t!=null&&await t,!this.isUpdatePending}scheduleUpdate(){return this.performUpdate()}performUpdate(){if(!this.isUpdatePending)return;if(!this.hasUpdated){if(this.renderRoot??=this.createRenderRoot(),this._$Ep){for(let[i,o]of this._$Ep)this[i]=o;this._$Ep=void 0}let s=this.constructor.elementProperties;if(s.size>0)for(let[i,o]of s)o.wrapped!==!0||this._$AL.has(i)||this[i]===void 0||this.P(i,this[i],o)}let t=!1,e=this._$AL;try{t=this.shouldUpdate(e),t?(this.willUpdate(e),this._$EO?.forEach(s=>s.hostUpdate?.()),this.update(e)):this._$EU()}catch(s){throw t=!1,this._$EU(),s}t&&this._$AE(e)}willUpdate(t){}_$AE(t){this._$EO?.forEach(e=>e.hostUpdated?.()),this.hasUpdated||(this.hasUpdated=!0,this.firstUpdated(t)),this.updated(t)}_$EU(){this._$AL=new Map,this.isUpdatePending=!1}get updateComplete(){return this.getUpdateComplete()}getUpdateComplete(){return this._$ES}shouldUpdate(t){return!0}update(t){this._$Ej&&=this._$Ej.forEach(e=>this._$EC(e,this[e])),this._$EU()}updated(t){}firstUpdated(t){}};m.elementStyles=[],m.shadowRootOptions={mode:"open"},m[S("elementProperties")]=new Map,m[S("finalized")]=new Map,vt?.({ReactiveElement:m}),(M.reactiveElementVersions??=[]).push("2.0.4");var q=globalThis,L=q.trustedTypes,tt=L?L.createPolicy("lit-html",{createHTML:n=>n}):void 0,rt="$lit$",g=`lit$${Math.random().toFixed(9).slice(2)}$`,at="?"+g,Et=`<${at}>`,A=document,C=()=>A.createComment(""),x=n=>n===null||typeof n!="object"&&typeof n!="function",ht=Array.isArray,wt=n=>ht(n)||typeof n?.[Symbol.iterator]=="function",D=`[ 	
-\f\r]`,b=/<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g,et=/-->/g,st=/>/g,f=RegExp(`>|${D}(?:([^\\s"'>=/]+)(${D}*=${D}*(?:[^ 	
-\f\r"'\`<>=]|("|')|))|$)`,"g"),it=/'/g,nt=/"/g,lt=/^(?:script|style|textarea|title)$/i,ct=n=>(t,...e)=>({_$litType$:n,strings:t,values:e}),dt=ct(1),Nt=ct(2),v=Symbol.for("lit-noChange"),c=Symbol.for("lit-nothing"),ot=new WeakMap,y=A.createTreeWalker(A,129);function pt(n,t){if(!Array.isArray(n)||!n.hasOwnProperty("raw"))throw Error("invalid template strings array");return tt!==void 0?tt.createHTML(t):t}var St=(n,t)=>{let e=n.length-1,s=[],i,o=t===2?"<svg>":"",r=b;for(let d=0;d<e;d++){let a=n[d],h,p,l=-1,u=0;for(;u<a.length&&(r.lastIndex=u,p=r.exec(a),p!==null);)u=r.lastIndex,r===b?p[1]==="!--"?r=et:p[1]!==void 0?r=st:p[2]!==void 0?(lt.test(p[2])&&(i=RegExp("</"+p[2],"g")),r=f):p[3]!==void 0&&(r=f):r===f?p[0]===">"?(r=i??b,l=-1):p[1]===void 0?l=-2:(l=r.lastIndex-p[2].length,h=p[1],r=p[3]===void 0?f:p[3]==='"'?nt:it):r===nt||r===it?r=f:r===et||r===st?r=b:(r=f,i=void 0);let $=r===f&&n[d+1].startsWith("/>")?" ":"";o+=r===b?a+Et:l>=0?(s.push(h),a.slice(0,l)+rt+a.slice(l)+g+$):a+g+(l===-2?d:$)}return[pt(n,o+(n[e]||"<?>")+(t===2?"</svg>":"")),s]},R=class n{constructor({strings:t,_$litType$:e},s){let i;this.parts=[];let o=0,r=0,d=t.length-1,a=this.parts,[h,p]=St(t,e);if(this.el=n.createElement(h,s),y.currentNode=this.el.content,e===2){let l=this.el.content.firstChild;l.replaceWith(...l.childNodes)}for(;(i=y.nextNode())!==null&&a.length<d;){if(i.nodeType===1){if(i.hasAttributes())for(let l of i.getAttributeNames())if(l.endsWith(rt)){let u=p[r++],$=i.getAttribute(l).split(g),T=/([.?@])?(.*)/.exec(u);a.push({type:1,index:o,name:T[2],strings:$,ctor:T[1]==="."?j:T[1]==="?"?W:T[1]==="@"?V:w}),i.removeAttribute(l)}else l.startsWith(g)&&(a.push({type:6,index:o}),i.removeAttribute(l));if(lt.test(i.tagName)){let l=i.textContent.split(g),u=l.length-1;if(u>0){i.textContent=L?L.emptyScript:"";for(let $=0;$<u;$++)i.append(l[$],C()),y.nextNode(),a.push({type:2,index:++o});i.append(l[u],C())}}}else if(i.nodeType===8)if(i.data===at)a.push({type:2,index:o});else{let l=-1;for(;(l=i.data.indexOf(g,l+1))!==-1;)a.push({type:7,index:o}),l+=g.length-1}o++}}static createElement(t,e){let s=A.createElement("template");return s.innerHTML=t,s}};function E(n,t,e=n,s){if(t===v)return t;let i=s!==void 0?e._$Co?.[s]:e._$Cl,o=x(t)?void 0:t._$litDirective$;return i?.constructor!==o&&(i?._$AO?.(!1),o===void 0?i=void 0:(i=new o(n),i._$AT(n,e,s)),s!==void 0?(e._$Co??=[])[s]=i:e._$Cl=i),i!==void 0&&(t=E(n,i._$AS(n,t.values),i,s)),t}var z=class{constructor(t,e){this._$AV=[],this._$AN=void 0,this._$AD=t,this._$AM=e}get parentNode(){return this._$AM.parentNode}get _$AU(){return this._$AM._$AU}u(t){let{el:{content:e},parts:s}=this._$AD,i=(t?.creationScope??A).importNode(e,!0);y.currentNode=i;let o=y.nextNode(),r=0,d=0,a=s[0];for(;a!==void 0;){if(r===a.index){let h;a.type===2?h=new P(o,o.nextSibling,this,t):a.type===1?h=new a.ctor(o,a.name,a.strings,this,t):a.type===6&&(h=new J(o,this,t)),this._$AV.push(h),a=s[++d]}r!==a?.index&&(o=y.nextNode(),r++)}return y.currentNode=A,i}p(t){let e=0;for(let s of this._$AV)s!==void 0&&(s.strings!==void 0?(s._$AI(t,s,e),e+=s.strings.length-2):s._$AI(t[e])),e++}},P=class n{get _$AU(){return this._$AM?._$AU??this._$Cv}constructor(t,e,s,i){this.type=2,this._$AH=c,this._$AN=void 0,this._$AA=t,this._$AB=e,this._$AM=s,this.options=i,this._$Cv=i?.isConnected??!0}get parentNode(){let t=this._$AA.parentNode,e=this._$AM;return e!==void 0&&t?.nodeType===11&&(t=e.parentNode),t}get startNode(){return this._$AA}get endNode(){return this._$AB}_$AI(t,e=this){t=E(this,t,e),x(t)?t===c||t==null||t===""?(this._$AH!==c&&this._$AR(),this._$AH=c):t!==this._$AH&&t!==v&&this._(t):t._$litType$!==void 0?this.$(t):t.nodeType!==void 0?this.T(t):wt(t)?this.k(t):this._(t)}S(t){return this._$AA.parentNode.insertBefore(t,this._$AB)}T(t){this._$AH!==t&&(this._$AR(),this._$AH=this.S(t))}_(t){this._$AH!==c&&x(this._$AH)?this._$AA.nextSibling.data=t:this.T(A.createTextNode(t)),this._$AH=t}$(t){let{values:e,_$litType$:s}=t,i=typeof s=="number"?this._$AC(t):(s.el===void 0&&(s.el=R.createElement(pt(s.h,s.h[0]),this.options)),s);if(this._$AH?._$AD===i)this._$AH.p(e);else{let o=new z(i,this),r=o.u(this.options);o.p(e),this.T(r),this._$AH=o}}_$AC(t){let e=ot.get(t.strings);return e===void 0&&ot.set(t.strings,e=new R(t)),e}k(t){ht(this._$AH)||(this._$AH=[],this._$AR());let e=this._$AH,s,i=0;for(let o of t)i===e.length?e.push(s=new n(this.S(C()),this.S(C()),this,this.options)):s=e[i],s._$AI(o),i++;i<e.length&&(this._$AR(s&&s._$AB.nextSibling,i),e.length=i)}_$AR(t=this._$AA.nextSibling,e){for(this._$AP?.(!1,!0,e);t&&t!==this._$AB;){let s=t.nextSibling;t.remove(),t=s}}setConnected(t){this._$AM===void 0&&(this._$Cv=t,this._$AP?.(t))}},w=class{get tagName(){return this.element.tagName}get _$AU(){return this._$AM._$AU}constructor(t,e,s,i,o){this.type=1,this._$AH=c,this._$AN=void 0,this.element=t,this.name=e,this._$AM=i,this.options=o,s.length>2||s[0]!==""||s[1]!==""?(this._$AH=Array(s.length-1).fill(new String),this.strings=s):this._$AH=c}_$AI(t,e=this,s,i){let o=this.strings,r=!1;if(o===void 0)t=E(this,t,e,0),r=!x(t)||t!==this._$AH&&t!==v,r&&(this._$AH=t);else{let d=t,a,h;for(t=o[0],a=0;a<o.length-1;a++)h=E(this,d[s+a],e,a),h===v&&(h=this._$AH[a]),r||=!x(h)||h!==this._$AH[a],h===c?t=c:t!==c&&(t+=(h??"")+o[a+1]),this._$AH[a]=h}r&&!i&&this.j(t)}j(t){t===c?this.element.removeAttribute(this.name):this.element.setAttribute(this.name,t??"")}},j=class extends w{constructor(){super(...arguments),this.type=3}j(t){this.element[this.name]=t===c?void 0:t}},W=class extends w{constructor(){super(...arguments),this.type=4}j(t){this.element.toggleAttribute(this.name,!!t&&t!==c)}},V=class extends w{constructor(t,e,s,i,o){super(t,e,s,i,o),this.type=5}_$AI(t,e=this){if((t=E(this,t,e,0)??c)===v)return;let s=this._$AH,i=t===c&&s!==c||t.capture!==s.capture||t.once!==s.once||t.passive!==s.passive,o=t!==c&&(s===c||i);i&&this.element.removeEventListener(this.name,this,s),o&&this.element.addEventListener(this.name,this,t),this._$AH=t}handleEvent(t){typeof this._$AH=="function"?this._$AH.call(this.options?.host??this.element,t):this._$AH.handleEvent(t)}},J=class{constructor(t,e,s){this.element=t,this.type=6,this._$AN=void 0,this._$AM=e,this.options=s}get _$AU(){return this._$AM._$AU}_$AI(t){E(this,t)}};var bt=q.litHtmlPolyfillSupport;bt?.(R,P),(q.litHtmlVersions??=[]).push("3.1.3");var ut=(n,t,e)=>{let s=e?.renderBefore??t,i=s._$litPart$;if(i===void 0){let o=e?.renderBefore??null;s._$litPart$=i=new P(t.insertBefore(C(),o),o,void 0,e??{})}return i._$AI(n),i};var _=class extends m{constructor(){super(...arguments),this.renderOptions={host:this},this._$Do=void 0}createRenderRoot(){let t=super.createRenderRoot();return this.renderOptions.renderBefore??=t.firstChild,t}update(t){let e=this.render();this.hasUpdated||(this.renderOptions.isConnected=this.isConnected),super.update(t),this._$Do=ut(e,this.renderRoot,this.renderOptions)}connectedCallback(){super.connectedCallback(),this._$Do?.setConnected(!0)}disconnectedCallback(){super.disconnectedCallback(),this._$Do?.setConnected(!1)}render(){return v}};_._$litElement$=!0,_["finalized"]=!0,globalThis.litElementHydrateSupport?.({LitElement:_});var Ct=globalThis.litElementPolyfillSupport;Ct?.({LitElement:_});(globalThis.litElementVersions??=[]).push("4.0.5");import{WebR as xt}from"https://webr.r-wasm.org/latest/webr.mjs";var N=class extends _{createRenderRoot(){return this}};var Rt="shiny-webr-component",Pt=400,Tt=300,G=class extends N{constructor(){super();this.outputId=this.id+"_output",this.inputId=this.id+"_input",this.runId=this.id+"_run",this.plotId=this.id+"_plot",this.webR=new xt}render(){return dt`<div>
+// node_modules/@lit/reactive-element/css-tag.js
+var t = globalThis;
+var e = t.ShadowRoot && (void 0 === t.ShadyCSS || t.ShadyCSS.nativeShadow) && "adoptedStyleSheets" in Document.prototype && "replace" in CSSStyleSheet.prototype;
+var s = Symbol();
+var o = /* @__PURE__ */ new WeakMap();
+var n = class {
+  constructor(t3, e4, o4) {
+    if (this._$cssResult$ = true, o4 !== s)
+      throw Error("CSSResult is not constructable. Use `unsafeCSS` or `css` instead.");
+    this.cssText = t3, this.t = e4;
+  }
+  get styleSheet() {
+    let t3 = this.o;
+    const s4 = this.t;
+    if (e && void 0 === t3) {
+      const e4 = void 0 !== s4 && 1 === s4.length;
+      e4 && (t3 = o.get(s4)), void 0 === t3 && ((this.o = t3 = new CSSStyleSheet()).replaceSync(this.cssText), e4 && o.set(s4, t3));
+    }
+    return t3;
+  }
+  toString() {
+    return this.cssText;
+  }
+};
+var r = (t3) => new n("string" == typeof t3 ? t3 : t3 + "", void 0, s);
+var S = (s4, o4) => {
+  if (e)
+    s4.adoptedStyleSheets = o4.map((t3) => t3 instanceof CSSStyleSheet ? t3 : t3.styleSheet);
+  else
+    for (const e4 of o4) {
+      const o5 = document.createElement("style"), n4 = t.litNonce;
+      void 0 !== n4 && o5.setAttribute("nonce", n4), o5.textContent = e4.cssText, s4.appendChild(o5);
+    }
+};
+var c = e ? (t3) => t3 : (t3) => t3 instanceof CSSStyleSheet ? ((t4) => {
+  let e4 = "";
+  for (const s4 of t4.cssRules)
+    e4 += s4.cssText;
+  return r(e4);
+})(t3) : t3;
+
+// node_modules/@lit/reactive-element/reactive-element.js
+var { is: i2, defineProperty: e2, getOwnPropertyDescriptor: r2, getOwnPropertyNames: h, getOwnPropertySymbols: o2, getPrototypeOf: n2 } = Object;
+var a = globalThis;
+var c2 = a.trustedTypes;
+var l = c2 ? c2.emptyScript : "";
+var p = a.reactiveElementPolyfillSupport;
+var d = (t3, s4) => t3;
+var u = { toAttribute(t3, s4) {
+  switch (s4) {
+    case Boolean:
+      t3 = t3 ? l : null;
+      break;
+    case Object:
+    case Array:
+      t3 = null == t3 ? t3 : JSON.stringify(t3);
+  }
+  return t3;
+}, fromAttribute(t3, s4) {
+  let i4 = t3;
+  switch (s4) {
+    case Boolean:
+      i4 = null !== t3;
+      break;
+    case Number:
+      i4 = null === t3 ? null : Number(t3);
+      break;
+    case Object:
+    case Array:
+      try {
+        i4 = JSON.parse(t3);
+      } catch (t4) {
+        i4 = null;
+      }
+  }
+  return i4;
+} };
+var f = (t3, s4) => !i2(t3, s4);
+var y = { attribute: true, type: String, converter: u, reflect: false, hasChanged: f };
+Symbol.metadata ??= Symbol("metadata"), a.litPropertyMetadata ??= /* @__PURE__ */ new WeakMap();
+var b = class extends HTMLElement {
+  static addInitializer(t3) {
+    this._$Ei(), (this.l ??= []).push(t3);
+  }
+  static get observedAttributes() {
+    return this.finalize(), this._$Eh && [...this._$Eh.keys()];
+  }
+  static createProperty(t3, s4 = y) {
+    if (s4.state && (s4.attribute = false), this._$Ei(), this.elementProperties.set(t3, s4), !s4.noAccessor) {
+      const i4 = Symbol(), r5 = this.getPropertyDescriptor(t3, i4, s4);
+      void 0 !== r5 && e2(this.prototype, t3, r5);
+    }
+  }
+  static getPropertyDescriptor(t3, s4, i4) {
+    const { get: e4, set: h3 } = r2(this.prototype, t3) ?? { get() {
+      return this[s4];
+    }, set(t4) {
+      this[s4] = t4;
+    } };
+    return { get() {
+      return e4?.call(this);
+    }, set(s5) {
+      const r5 = e4?.call(this);
+      h3.call(this, s5), this.requestUpdate(t3, r5, i4);
+    }, configurable: true, enumerable: true };
+  }
+  static getPropertyOptions(t3) {
+    return this.elementProperties.get(t3) ?? y;
+  }
+  static _$Ei() {
+    if (this.hasOwnProperty(d("elementProperties")))
+      return;
+    const t3 = n2(this);
+    t3.finalize(), void 0 !== t3.l && (this.l = [...t3.l]), this.elementProperties = new Map(t3.elementProperties);
+  }
+  static finalize() {
+    if (this.hasOwnProperty(d("finalized")))
+      return;
+    if (this.finalized = true, this._$Ei(), this.hasOwnProperty(d("properties"))) {
+      const t4 = this.properties, s4 = [...h(t4), ...o2(t4)];
+      for (const i4 of s4)
+        this.createProperty(i4, t4[i4]);
+    }
+    const t3 = this[Symbol.metadata];
+    if (null !== t3) {
+      const s4 = litPropertyMetadata.get(t3);
+      if (void 0 !== s4)
+        for (const [t4, i4] of s4)
+          this.elementProperties.set(t4, i4);
+    }
+    this._$Eh = /* @__PURE__ */ new Map();
+    for (const [t4, s4] of this.elementProperties) {
+      const i4 = this._$Eu(t4, s4);
+      void 0 !== i4 && this._$Eh.set(i4, t4);
+    }
+    this.elementStyles = this.finalizeStyles(this.styles);
+  }
+  static finalizeStyles(s4) {
+    const i4 = [];
+    if (Array.isArray(s4)) {
+      const e4 = new Set(s4.flat(1 / 0).reverse());
+      for (const s5 of e4)
+        i4.unshift(c(s5));
+    } else
+      void 0 !== s4 && i4.push(c(s4));
+    return i4;
+  }
+  static _$Eu(t3, s4) {
+    const i4 = s4.attribute;
+    return false === i4 ? void 0 : "string" == typeof i4 ? i4 : "string" == typeof t3 ? t3.toLowerCase() : void 0;
+  }
+  constructor() {
+    super(), this._$Ep = void 0, this.isUpdatePending = false, this.hasUpdated = false, this._$Em = null, this._$Ev();
+  }
+  _$Ev() {
+    this._$ES = new Promise((t3) => this.enableUpdating = t3), this._$AL = /* @__PURE__ */ new Map(), this._$E_(), this.requestUpdate(), this.constructor.l?.forEach((t3) => t3(this));
+  }
+  addController(t3) {
+    (this._$EO ??= /* @__PURE__ */ new Set()).add(t3), void 0 !== this.renderRoot && this.isConnected && t3.hostConnected?.();
+  }
+  removeController(t3) {
+    this._$EO?.delete(t3);
+  }
+  _$E_() {
+    const t3 = /* @__PURE__ */ new Map(), s4 = this.constructor.elementProperties;
+    for (const i4 of s4.keys())
+      this.hasOwnProperty(i4) && (t3.set(i4, this[i4]), delete this[i4]);
+    t3.size > 0 && (this._$Ep = t3);
+  }
+  createRenderRoot() {
+    const t3 = this.shadowRoot ?? this.attachShadow(this.constructor.shadowRootOptions);
+    return S(t3, this.constructor.elementStyles), t3;
+  }
+  connectedCallback() {
+    this.renderRoot ??= this.createRenderRoot(), this.enableUpdating(true), this._$EO?.forEach((t3) => t3.hostConnected?.());
+  }
+  enableUpdating(t3) {
+  }
+  disconnectedCallback() {
+    this._$EO?.forEach((t3) => t3.hostDisconnected?.());
+  }
+  attributeChangedCallback(t3, s4, i4) {
+    this._$AK(t3, i4);
+  }
+  _$EC(t3, s4) {
+    const i4 = this.constructor.elementProperties.get(t3), e4 = this.constructor._$Eu(t3, i4);
+    if (void 0 !== e4 && true === i4.reflect) {
+      const r5 = (void 0 !== i4.converter?.toAttribute ? i4.converter : u).toAttribute(s4, i4.type);
+      this._$Em = t3, null == r5 ? this.removeAttribute(e4) : this.setAttribute(e4, r5), this._$Em = null;
+    }
+  }
+  _$AK(t3, s4) {
+    const i4 = this.constructor, e4 = i4._$Eh.get(t3);
+    if (void 0 !== e4 && this._$Em !== e4) {
+      const t4 = i4.getPropertyOptions(e4), r5 = "function" == typeof t4.converter ? { fromAttribute: t4.converter } : void 0 !== t4.converter?.fromAttribute ? t4.converter : u;
+      this._$Em = e4, this[e4] = r5.fromAttribute(s4, t4.type), this._$Em = null;
+    }
+  }
+  requestUpdate(t3, s4, i4) {
+    if (void 0 !== t3) {
+      if (i4 ??= this.constructor.getPropertyOptions(t3), !(i4.hasChanged ?? f)(this[t3], s4))
+        return;
+      this.P(t3, s4, i4);
+    }
+    false === this.isUpdatePending && (this._$ES = this._$ET());
+  }
+  P(t3, s4, i4) {
+    this._$AL.has(t3) || this._$AL.set(t3, s4), true === i4.reflect && this._$Em !== t3 && (this._$Ej ??= /* @__PURE__ */ new Set()).add(t3);
+  }
+  async _$ET() {
+    this.isUpdatePending = true;
+    try {
+      await this._$ES;
+    } catch (t4) {
+      Promise.reject(t4);
+    }
+    const t3 = this.scheduleUpdate();
+    return null != t3 && await t3, !this.isUpdatePending;
+  }
+  scheduleUpdate() {
+    return this.performUpdate();
+  }
+  performUpdate() {
+    if (!this.isUpdatePending)
+      return;
+    if (!this.hasUpdated) {
+      if (this.renderRoot ??= this.createRenderRoot(), this._$Ep) {
+        for (const [t5, s5] of this._$Ep)
+          this[t5] = s5;
+        this._$Ep = void 0;
+      }
+      const t4 = this.constructor.elementProperties;
+      if (t4.size > 0)
+        for (const [s5, i4] of t4)
+          true !== i4.wrapped || this._$AL.has(s5) || void 0 === this[s5] || this.P(s5, this[s5], i4);
+    }
+    let t3 = false;
+    const s4 = this._$AL;
+    try {
+      t3 = this.shouldUpdate(s4), t3 ? (this.willUpdate(s4), this._$EO?.forEach((t4) => t4.hostUpdate?.()), this.update(s4)) : this._$EU();
+    } catch (s5) {
+      throw t3 = false, this._$EU(), s5;
+    }
+    t3 && this._$AE(s4);
+  }
+  willUpdate(t3) {
+  }
+  _$AE(t3) {
+    this._$EO?.forEach((t4) => t4.hostUpdated?.()), this.hasUpdated || (this.hasUpdated = true, this.firstUpdated(t3)), this.updated(t3);
+  }
+  _$EU() {
+    this._$AL = /* @__PURE__ */ new Map(), this.isUpdatePending = false;
+  }
+  get updateComplete() {
+    return this.getUpdateComplete();
+  }
+  getUpdateComplete() {
+    return this._$ES;
+  }
+  shouldUpdate(t3) {
+    return true;
+  }
+  update(t3) {
+    this._$Ej &&= this._$Ej.forEach((t4) => this._$EC(t4, this[t4])), this._$EU();
+  }
+  updated(t3) {
+  }
+  firstUpdated(t3) {
+  }
+};
+b.elementStyles = [], b.shadowRootOptions = { mode: "open" }, b[d("elementProperties")] = /* @__PURE__ */ new Map(), b[d("finalized")] = /* @__PURE__ */ new Map(), p?.({ ReactiveElement: b }), (a.reactiveElementVersions ??= []).push("2.0.4");
+
+// node_modules/lit-html/lit-html.js
+var t2 = globalThis;
+var i3 = t2.trustedTypes;
+var s2 = i3 ? i3.createPolicy("lit-html", { createHTML: (t3) => t3 }) : void 0;
+var e3 = "$lit$";
+var h2 = `lit$${Math.random().toFixed(9).slice(2)}$`;
+var o3 = "?" + h2;
+var n3 = `<${o3}>`;
+var r3 = document;
+var l2 = () => r3.createComment("");
+var c3 = (t3) => null === t3 || "object" != typeof t3 && "function" != typeof t3;
+var a2 = Array.isArray;
+var u2 = (t3) => a2(t3) || "function" == typeof t3?.[Symbol.iterator];
+var d2 = "[ 	\n\f\r]";
+var f2 = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g;
+var v = /-->/g;
+var _ = />/g;
+var m = RegExp(`>|${d2}(?:([^\\s"'>=/]+)(${d2}*=${d2}*(?:[^ 	
+\f\r"'\`<>=]|("|')|))|$)`, "g");
+var p2 = /'/g;
+var g = /"/g;
+var $ = /^(?:script|style|textarea|title)$/i;
+var y2 = (t3) => (i4, ...s4) => ({ _$litType$: t3, strings: i4, values: s4 });
+var x = y2(1);
+var b2 = y2(2);
+var w = Symbol.for("lit-noChange");
+var T = Symbol.for("lit-nothing");
+var A = /* @__PURE__ */ new WeakMap();
+var E = r3.createTreeWalker(r3, 129);
+function C(t3, i4) {
+  if (!Array.isArray(t3) || !t3.hasOwnProperty("raw"))
+    throw Error("invalid template strings array");
+  return void 0 !== s2 ? s2.createHTML(i4) : i4;
+}
+var P = (t3, i4) => {
+  const s4 = t3.length - 1, o4 = [];
+  let r5, l3 = 2 === i4 ? "<svg>" : "", c4 = f2;
+  for (let i5 = 0; i5 < s4; i5++) {
+    const s5 = t3[i5];
+    let a3, u3, d3 = -1, y3 = 0;
+    for (; y3 < s5.length && (c4.lastIndex = y3, u3 = c4.exec(s5), null !== u3); )
+      y3 = c4.lastIndex, c4 === f2 ? "!--" === u3[1] ? c4 = v : void 0 !== u3[1] ? c4 = _ : void 0 !== u3[2] ? ($.test(u3[2]) && (r5 = RegExp("</" + u3[2], "g")), c4 = m) : void 0 !== u3[3] && (c4 = m) : c4 === m ? ">" === u3[0] ? (c4 = r5 ?? f2, d3 = -1) : void 0 === u3[1] ? d3 = -2 : (d3 = c4.lastIndex - u3[2].length, a3 = u3[1], c4 = void 0 === u3[3] ? m : '"' === u3[3] ? g : p2) : c4 === g || c4 === p2 ? c4 = m : c4 === v || c4 === _ ? c4 = f2 : (c4 = m, r5 = void 0);
+    const x2 = c4 === m && t3[i5 + 1].startsWith("/>") ? " " : "";
+    l3 += c4 === f2 ? s5 + n3 : d3 >= 0 ? (o4.push(a3), s5.slice(0, d3) + e3 + s5.slice(d3) + h2 + x2) : s5 + h2 + (-2 === d3 ? i5 : x2);
+  }
+  return [C(t3, l3 + (t3[s4] || "<?>") + (2 === i4 ? "</svg>" : "")), o4];
+};
+var V = class _V {
+  constructor({ strings: t3, _$litType$: s4 }, n4) {
+    let r5;
+    this.parts = [];
+    let c4 = 0, a3 = 0;
+    const u3 = t3.length - 1, d3 = this.parts, [f3, v2] = P(t3, s4);
+    if (this.el = _V.createElement(f3, n4), E.currentNode = this.el.content, 2 === s4) {
+      const t4 = this.el.content.firstChild;
+      t4.replaceWith(...t4.childNodes);
+    }
+    for (; null !== (r5 = E.nextNode()) && d3.length < u3; ) {
+      if (1 === r5.nodeType) {
+        if (r5.hasAttributes())
+          for (const t4 of r5.getAttributeNames())
+            if (t4.endsWith(e3)) {
+              const i4 = v2[a3++], s5 = r5.getAttribute(t4).split(h2), e4 = /([.?@])?(.*)/.exec(i4);
+              d3.push({ type: 1, index: c4, name: e4[2], strings: s5, ctor: "." === e4[1] ? k : "?" === e4[1] ? H : "@" === e4[1] ? I : R }), r5.removeAttribute(t4);
+            } else
+              t4.startsWith(h2) && (d3.push({ type: 6, index: c4 }), r5.removeAttribute(t4));
+        if ($.test(r5.tagName)) {
+          const t4 = r5.textContent.split(h2), s5 = t4.length - 1;
+          if (s5 > 0) {
+            r5.textContent = i3 ? i3.emptyScript : "";
+            for (let i4 = 0; i4 < s5; i4++)
+              r5.append(t4[i4], l2()), E.nextNode(), d3.push({ type: 2, index: ++c4 });
+            r5.append(t4[s5], l2());
+          }
+        }
+      } else if (8 === r5.nodeType)
+        if (r5.data === o3)
+          d3.push({ type: 2, index: c4 });
+        else {
+          let t4 = -1;
+          for (; -1 !== (t4 = r5.data.indexOf(h2, t4 + 1)); )
+            d3.push({ type: 7, index: c4 }), t4 += h2.length - 1;
+        }
+      c4++;
+    }
+  }
+  static createElement(t3, i4) {
+    const s4 = r3.createElement("template");
+    return s4.innerHTML = t3, s4;
+  }
+};
+function N(t3, i4, s4 = t3, e4) {
+  if (i4 === w)
+    return i4;
+  let h3 = void 0 !== e4 ? s4._$Co?.[e4] : s4._$Cl;
+  const o4 = c3(i4) ? void 0 : i4._$litDirective$;
+  return h3?.constructor !== o4 && (h3?._$AO?.(false), void 0 === o4 ? h3 = void 0 : (h3 = new o4(t3), h3._$AT(t3, s4, e4)), void 0 !== e4 ? (s4._$Co ??= [])[e4] = h3 : s4._$Cl = h3), void 0 !== h3 && (i4 = N(t3, h3._$AS(t3, i4.values), h3, e4)), i4;
+}
+var S2 = class {
+  constructor(t3, i4) {
+    this._$AV = [], this._$AN = void 0, this._$AD = t3, this._$AM = i4;
+  }
+  get parentNode() {
+    return this._$AM.parentNode;
+  }
+  get _$AU() {
+    return this._$AM._$AU;
+  }
+  u(t3) {
+    const { el: { content: i4 }, parts: s4 } = this._$AD, e4 = (t3?.creationScope ?? r3).importNode(i4, true);
+    E.currentNode = e4;
+    let h3 = E.nextNode(), o4 = 0, n4 = 0, l3 = s4[0];
+    for (; void 0 !== l3; ) {
+      if (o4 === l3.index) {
+        let i5;
+        2 === l3.type ? i5 = new M(h3, h3.nextSibling, this, t3) : 1 === l3.type ? i5 = new l3.ctor(h3, l3.name, l3.strings, this, t3) : 6 === l3.type && (i5 = new L(h3, this, t3)), this._$AV.push(i5), l3 = s4[++n4];
+      }
+      o4 !== l3?.index && (h3 = E.nextNode(), o4++);
+    }
+    return E.currentNode = r3, e4;
+  }
+  p(t3) {
+    let i4 = 0;
+    for (const s4 of this._$AV)
+      void 0 !== s4 && (void 0 !== s4.strings ? (s4._$AI(t3, s4, i4), i4 += s4.strings.length - 2) : s4._$AI(t3[i4])), i4++;
+  }
+};
+var M = class _M {
+  get _$AU() {
+    return this._$AM?._$AU ?? this._$Cv;
+  }
+  constructor(t3, i4, s4, e4) {
+    this.type = 2, this._$AH = T, this._$AN = void 0, this._$AA = t3, this._$AB = i4, this._$AM = s4, this.options = e4, this._$Cv = e4?.isConnected ?? true;
+  }
+  get parentNode() {
+    let t3 = this._$AA.parentNode;
+    const i4 = this._$AM;
+    return void 0 !== i4 && 11 === t3?.nodeType && (t3 = i4.parentNode), t3;
+  }
+  get startNode() {
+    return this._$AA;
+  }
+  get endNode() {
+    return this._$AB;
+  }
+  _$AI(t3, i4 = this) {
+    t3 = N(this, t3, i4), c3(t3) ? t3 === T || null == t3 || "" === t3 ? (this._$AH !== T && this._$AR(), this._$AH = T) : t3 !== this._$AH && t3 !== w && this._(t3) : void 0 !== t3._$litType$ ? this.$(t3) : void 0 !== t3.nodeType ? this.T(t3) : u2(t3) ? this.k(t3) : this._(t3);
+  }
+  S(t3) {
+    return this._$AA.parentNode.insertBefore(t3, this._$AB);
+  }
+  T(t3) {
+    this._$AH !== t3 && (this._$AR(), this._$AH = this.S(t3));
+  }
+  _(t3) {
+    this._$AH !== T && c3(this._$AH) ? this._$AA.nextSibling.data = t3 : this.T(r3.createTextNode(t3)), this._$AH = t3;
+  }
+  $(t3) {
+    const { values: i4, _$litType$: s4 } = t3, e4 = "number" == typeof s4 ? this._$AC(t3) : (void 0 === s4.el && (s4.el = V.createElement(C(s4.h, s4.h[0]), this.options)), s4);
+    if (this._$AH?._$AD === e4)
+      this._$AH.p(i4);
+    else {
+      const t4 = new S2(e4, this), s5 = t4.u(this.options);
+      t4.p(i4), this.T(s5), this._$AH = t4;
+    }
+  }
+  _$AC(t3) {
+    let i4 = A.get(t3.strings);
+    return void 0 === i4 && A.set(t3.strings, i4 = new V(t3)), i4;
+  }
+  k(t3) {
+    a2(this._$AH) || (this._$AH = [], this._$AR());
+    const i4 = this._$AH;
+    let s4, e4 = 0;
+    for (const h3 of t3)
+      e4 === i4.length ? i4.push(s4 = new _M(this.S(l2()), this.S(l2()), this, this.options)) : s4 = i4[e4], s4._$AI(h3), e4++;
+    e4 < i4.length && (this._$AR(s4 && s4._$AB.nextSibling, e4), i4.length = e4);
+  }
+  _$AR(t3 = this._$AA.nextSibling, i4) {
+    for (this._$AP?.(false, true, i4); t3 && t3 !== this._$AB; ) {
+      const i5 = t3.nextSibling;
+      t3.remove(), t3 = i5;
+    }
+  }
+  setConnected(t3) {
+    void 0 === this._$AM && (this._$Cv = t3, this._$AP?.(t3));
+  }
+};
+var R = class {
+  get tagName() {
+    return this.element.tagName;
+  }
+  get _$AU() {
+    return this._$AM._$AU;
+  }
+  constructor(t3, i4, s4, e4, h3) {
+    this.type = 1, this._$AH = T, this._$AN = void 0, this.element = t3, this.name = i4, this._$AM = e4, this.options = h3, s4.length > 2 || "" !== s4[0] || "" !== s4[1] ? (this._$AH = Array(s4.length - 1).fill(new String()), this.strings = s4) : this._$AH = T;
+  }
+  _$AI(t3, i4 = this, s4, e4) {
+    const h3 = this.strings;
+    let o4 = false;
+    if (void 0 === h3)
+      t3 = N(this, t3, i4, 0), o4 = !c3(t3) || t3 !== this._$AH && t3 !== w, o4 && (this._$AH = t3);
+    else {
+      const e5 = t3;
+      let n4, r5;
+      for (t3 = h3[0], n4 = 0; n4 < h3.length - 1; n4++)
+        r5 = N(this, e5[s4 + n4], i4, n4), r5 === w && (r5 = this._$AH[n4]), o4 ||= !c3(r5) || r5 !== this._$AH[n4], r5 === T ? t3 = T : t3 !== T && (t3 += (r5 ?? "") + h3[n4 + 1]), this._$AH[n4] = r5;
+    }
+    o4 && !e4 && this.j(t3);
+  }
+  j(t3) {
+    t3 === T ? this.element.removeAttribute(this.name) : this.element.setAttribute(this.name, t3 ?? "");
+  }
+};
+var k = class extends R {
+  constructor() {
+    super(...arguments), this.type = 3;
+  }
+  j(t3) {
+    this.element[this.name] = t3 === T ? void 0 : t3;
+  }
+};
+var H = class extends R {
+  constructor() {
+    super(...arguments), this.type = 4;
+  }
+  j(t3) {
+    this.element.toggleAttribute(this.name, !!t3 && t3 !== T);
+  }
+};
+var I = class extends R {
+  constructor(t3, i4, s4, e4, h3) {
+    super(t3, i4, s4, e4, h3), this.type = 5;
+  }
+  _$AI(t3, i4 = this) {
+    if ((t3 = N(this, t3, i4, 0) ?? T) === w)
+      return;
+    const s4 = this._$AH, e4 = t3 === T && s4 !== T || t3.capture !== s4.capture || t3.once !== s4.once || t3.passive !== s4.passive, h3 = t3 !== T && (s4 === T || e4);
+    e4 && this.element.removeEventListener(this.name, this, s4), h3 && this.element.addEventListener(this.name, this, t3), this._$AH = t3;
+  }
+  handleEvent(t3) {
+    "function" == typeof this._$AH ? this._$AH.call(this.options?.host ?? this.element, t3) : this._$AH.handleEvent(t3);
+  }
+};
+var L = class {
+  constructor(t3, i4, s4) {
+    this.element = t3, this.type = 6, this._$AN = void 0, this._$AM = i4, this.options = s4;
+  }
+  get _$AU() {
+    return this._$AM._$AU;
+  }
+  _$AI(t3) {
+    N(this, t3);
+  }
+};
+var Z = t2.litHtmlPolyfillSupport;
+Z?.(V, M), (t2.litHtmlVersions ??= []).push("3.1.3");
+var j = (t3, i4, s4) => {
+  const e4 = s4?.renderBefore ?? i4;
+  let h3 = e4._$litPart$;
+  if (void 0 === h3) {
+    const t4 = s4?.renderBefore ?? null;
+    e4._$litPart$ = h3 = new M(i4.insertBefore(l2(), t4), t4, void 0, s4 ?? {});
+  }
+  return h3._$AI(t3), h3;
+};
+
+// node_modules/lit-element/lit-element.js
+var s3 = class extends b {
+  constructor() {
+    super(...arguments), this.renderOptions = { host: this }, this._$Do = void 0;
+  }
+  createRenderRoot() {
+    const t3 = super.createRenderRoot();
+    return this.renderOptions.renderBefore ??= t3.firstChild, t3;
+  }
+  update(t3) {
+    const i4 = this.render();
+    this.hasUpdated || (this.renderOptions.isConnected = this.isConnected), super.update(t3), this._$Do = j(i4, this.renderRoot, this.renderOptions);
+  }
+  connectedCallback() {
+    super.connectedCallback(), this._$Do?.setConnected(true);
+  }
+  disconnectedCallback() {
+    super.disconnectedCallback(), this._$Do?.setConnected(false);
+  }
+  render() {
+    return w;
+  }
+};
+s3._$litElement$ = true, s3["finalized", "finalized"] = true, globalThis.litElementHydrateSupport?.({ LitElement: s3 });
+var r4 = globalThis.litElementPolyfillSupport;
+r4?.({ LitElement: s3 });
+(globalThis.litElementVersions ??= []).push("4.0.5");
+
+// webr/webr.ts
+import { WebR } from "https://webr.r-wasm.org/latest/webr.mjs";
+
+// utils/_utils.ts
+var LightElement = class extends s3 {
+  createRenderRoot() {
+    return this;
+  }
+};
+
+// webr/webr.ts
+var WEBR_COMPONENT_TAG = "shiny-webr-component";
+var PLOT_WIDTH = 400;
+var PLOT_HEIGHT = 300;
+var WebRComponent = class extends LightElement {
+  constructor() {
+    super();
+    this.outputId = this.id + "_output";
+    this.inputId = this.id + "_input";
+    this.runId = this.id + "_run";
+    this.plotId = this.id + "_plot";
+    this.dropZoneId = this.id + "_dropzone";
+    this.fileListId = this.id + "_filelist";
+    this.webR = new WebR();
+  }
+  render() {
+    return x`<div>
       <pre style="max-height: 500px"><code id="${this.outputId}">Loading webR, please wait...</code></pre>
       <div>
         <input
@@ -13,11 +605,270 @@ var U=globalThis,I=U.ShadowRoot&&(U.ShadyCSS===void 0||U.ShadyCSS.nativeShadow)&
         <button id="${this.runId}">Run</button>
       </div>
       <div id="${this.plotId}"></div>
-    </div>`}firstUpdated(){this.output=document.getElementById(this.outputId),this.input=document.getElementById(this.inputId),this.plot=document.getElementById(this.plotId),(async()=>(await this.webR.init(),this.output.textContent=`webR ${this.webR.version}
-`,(await this.webR.flush()).forEach(o=>this.handleOutput(o))))();let e=async()=>{await this.evalInConsole(this.input.value),this.input.value=""};this.input.addEventListener("keydown",i=>{i.code==="Enter"&&e()}),document.getElementById(this.runId).addEventListener("click",e)}handleOutput(e){switch(e.type){case"stdout":this.appendToOutEl(e.data+`
-`);break;case"stderr":this.appendToOutEl(e.data+`
-`);break;case"prompt":console.log("prompt"),this.appendToOutEl(e.data);break;case"canvas":this.handleImage(e.data.image);break;case"closed":return;default:console.warn(`Unhandled output type for webR: ${e.type}.`)}}handleImage(e){let s=document.createElement("canvas");s.style.width=`${e.width/2}px`,s.style.height=`${e.height/2}px`,s.style.margin="2px",s.style.border="1px solid black",s.style.borderRadius="3",s.width=e.width,s.height=e.height,s.getContext("2d").drawImage(e,0,0,e.width,e.height),this.plot.insertBefore(s,this.plot.firstChild)}async evalInConsole(e){this.appendToOutEl(e+`
-`);let s=await new this.webR.Shelter,i=await s.captureR(e,{withAutoprint:!0,captureGraphics:{width:Pt,height:Tt}}),o=await this.webR.flush();i.output.forEach(h=>this.handleOutput(h)),i.images.forEach(h=>this.handleImage(h)),console.log(i),console.log(o);let r={type:"null"},d=[];try{r=await i.result.toJs(),d=await Promise.all(i.images.map(async h=>await Ut(h)))}catch(h){console.warn(h)}let a={...i,result:r,images:d};return await s.purge(),this.prompt(),a}prompt(){this.appendToOutEl("> ")}appendToOutEl(e){this.output.append(e);let s=this.output.parentElement;s.scrollTo({top:s.scrollHeight,behavior:"smooth"})}};customElements.define(Rt,G);window.Shiny.addCustomMessageHandler("eval_r",async function(n){let e=await document.getElementById(n.id).evalInConsole(n.code);window.Shiny.shinyapp.makeRequest(n.handler_id,[e],s=>{},s=>{},void 0)});async function Ut(n){let t=document.createElement("canvas");t.width=n.width,t.height=n.height;let e=t.getContext("2d");if(!e)throw new Error("Could not get canvas context");return e.drawImage(n,0,0),t.toDataURL("image/png").split(",")[1]}
+      <div
+        id="${this.dropZoneId}"
+        style="border: 2px dashed #ccc; border-radius: 5px; padding: 20px; text-align: center; margin-top: 20px; cursor: pointer;"
+      >
+        <p>Drag and drop files here or click to upload</p>
+        <input type="file" style="display: none;" multiple />
+      </div>
+      <div id="${this.fileListId}" style="margin-top: 10px;"></div>
+    </div>`;
+  }
+  firstUpdated() {
+    this.output = document.getElementById(this.outputId);
+    this.input = document.getElementById(this.inputId);
+    this.plot = document.getElementById(this.plotId);
+    this.dropZone = document.getElementById(this.dropZoneId);
+    this.fileList = document.getElementById(this.fileListId);
+    (async () => {
+      await this.webR.init();
+      this.output.textContent = `webR ${this.webR.version}
+`;
+      const result = await this.webR.flush();
+      result.forEach((msg) => this.handleOutput(msg));
+    })();
+    const sendInput = async () => {
+      await this.evalInConsole(this.input.value);
+      this.input.value = "";
+    };
+    this.input.addEventListener("keydown", (e4) => {
+      if (e4.code === "Enter")
+        sendInput();
+    });
+    const runButton = document.getElementById(this.runId);
+    runButton.addEventListener("click", sendInput);
+    this.setupFileDragAndDrop();
+  }
+  setupFileDragAndDrop() {
+    const dropZone = this.dropZone;
+    const fileInput = dropZone.querySelector(
+      'input[type="file"]'
+    );
+    dropZone.addEventListener("click", () => {
+      fileInput.click();
+    });
+    fileInput.addEventListener("change", (e4) => {
+      const files = fileInput.files;
+      if (files) {
+        void this.handleFiles(files);
+      }
+    });
+    ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
+      dropZone.addEventListener(
+        eventName,
+        (e4) => {
+          e4.preventDefault();
+          e4.stopPropagation();
+        },
+        false
+      );
+    });
+    ["dragenter", "dragover"].forEach((eventName) => {
+      dropZone.addEventListener(
+        eventName,
+        () => {
+          dropZone.style.borderColor = "#2196F3";
+          dropZone.style.backgroundColor = "rgba(33, 150, 243, 0.1)";
+        },
+        false
+      );
+    });
+    ["dragleave", "drop"].forEach((eventName) => {
+      dropZone.addEventListener(
+        eventName,
+        () => {
+          dropZone.style.borderColor = "#ccc";
+          dropZone.style.backgroundColor = "";
+        },
+        false
+      );
+    });
+    dropZone.addEventListener(
+      "drop",
+      (e4) => {
+        const dt = e4.dataTransfer;
+        if (dt && dt.files) {
+          void this.handleFiles(dt.files);
+        }
+      },
+      false
+    );
+  }
+  async handleFiles(files) {
+    for (let i4 = 0; i4 < files.length; i4++) {
+      const file = files[i4];
+      if (file) {
+        await this.uploadFileToWebR(file);
+      }
+    }
+  }
+  async uploadFileToWebR(file) {
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+      await this.webR.FS.writeFile(file.name, uint8Array);
+      this.addFileToList(file.name);
+      this.appendToOutEl(`File uploaded to webR: ${file.name}
+`);
+      await this.evalInConsole(`list.files()`);
+    } catch (error) {
+      console.error("Error uploading file to webR:", error);
+      this.appendToOutEl(`Error uploading file: ${file.name}
+`);
+    }
+  }
+  addFileToList(fileName) {
+    const fileItem = document.createElement("div");
+    fileItem.style.margin = "5px 0";
+    fileItem.style.padding = "5px";
+    fileItem.style.backgroundColor = "#f5f5f5";
+    fileItem.style.borderRadius = "3px";
+    fileItem.style.display = "flex";
+    fileItem.style.justifyContent = "space-between";
+    const fileNameSpan = document.createElement("span");
+    fileNameSpan.textContent = fileName;
+    fileItem.appendChild(fileNameSpan);
+    const loadButton = document.createElement("button");
+    loadButton.textContent = "Load in R";
+    loadButton.style.marginLeft = "10px";
+    loadButton.addEventListener("click", async () => {
+      const ext = fileName.split(".").pop()?.toLowerCase();
+      let rCode = "";
+      switch (ext) {
+        case "csv":
+          rCode = `data <- read.csv("${fileName}")
+head(data)`;
+          break;
+        case "rds":
+          rCode = `data <- readRDS("${fileName}")
+print(data)`;
+          break;
+        case "r":
+          rCode = `source("${fileName}")`;
+          break;
+        default:
+          rCode = `# File loaded: ${fileName}
+# Use appropriate R function to read this file type`;
+      }
+      await this.evalInConsole(rCode);
+    });
+    fileItem.appendChild(loadButton);
+    this.fileList.appendChild(fileItem);
+  }
+  handleOutput(msg) {
+    switch (msg.type) {
+      case "stdout":
+        this.appendToOutEl(msg.data + "\n");
+        break;
+      case "stderr":
+        this.appendToOutEl(msg.data + "\n");
+        break;
+      case "prompt":
+        console.log("prompt");
+        this.appendToOutEl(msg.data);
+        break;
+      case "canvas":
+        this.handleImage(msg.data.image);
+        break;
+      case "closed":
+        return;
+      default:
+        console.warn(`Unhandled output type for webR: ${msg.type}.`);
+    }
+  }
+  handleImage(img) {
+    const canvas = document.createElement("canvas");
+    canvas.style.width = `${img.width / 2}px`;
+    canvas.style.height = `${img.height / 2}px`;
+    canvas.style.margin = "2px";
+    canvas.style.border = "1px solid black";
+    canvas.style.borderRadius = "3";
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(img, 0, 0, img.width, img.height);
+    this.plot.insertBefore(canvas, this.plot.firstChild);
+  }
+  async evalInConsole(code) {
+    this.appendToOutEl(code + "\n");
+    const shelter = await new this.webR.Shelter();
+    const res = await shelter.captureR(code, {
+      withAutoprint: true,
+      captureGraphics: {
+        width: PLOT_WIDTH,
+        height: PLOT_HEIGHT
+      }
+    });
+    const moreResults = await this.webR.flush();
+    res.output.forEach((msg) => this.handleOutput(msg));
+    res.images.forEach((img) => this.handleImage(img));
+    console.log(res);
+    console.log(moreResults);
+    let resultJson = {
+      type: "null"
+    };
+    let imagesJson = [];
+    try {
+      resultJson = await res.result.toJs();
+      imagesJson = await Promise.all(
+        res.images.map(async (img) => {
+          return await imageBitmapToPngBase64(img);
+        })
+      );
+    } catch (e4) {
+      console.warn(e4);
+    }
+    const newResult = {
+      ...res,
+      result: resultJson,
+      images: imagesJson
+    };
+    await shelter.purge();
+    this.prompt();
+    return newResult;
+  }
+  prompt() {
+    this.appendToOutEl("> ");
+  }
+  appendToOutEl(line) {
+    this.output.append(line);
+    const parent = this.output.parentElement;
+    parent.scrollTo({
+      top: parent.scrollHeight,
+      behavior: "smooth"
+    });
+  }
+};
+customElements.define(WEBR_COMPONENT_TAG, WebRComponent);
+window.Shiny.addCustomMessageHandler("eval_r", async function(message) {
+  const el = document.getElementById(message.id);
+  const result = await el.evalInConsole(message.code);
+  window.Shiny.shinyapp.makeRequest(
+    message.handler_id,
+    [result],
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    (msg) => {
+    },
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    (msg) => {
+    },
+    void 0
+  );
+});
+async function imageBitmapToPngBase64(bitmap) {
+  const canvas = document.createElement("canvas");
+  canvas.width = bitmap.width;
+  canvas.height = bitmap.height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    throw new Error("Could not get canvas context");
+  }
+  ctx.drawImage(bitmap, 0, 0);
+  const dataURL = canvas.toDataURL("image/png");
+  const base64Data = dataURL.split(",")[1];
+  return base64Data;
+}
 /*! Bundled license information:
 
 @lit/reactive-element/css-tag.js:
