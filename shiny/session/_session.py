@@ -560,26 +560,26 @@ class AppSession(Session):
 
         self._file_upload_manager: FileUploadManager = FileUploadManager()
         self._on_ended_callbacks = _utils.AsyncCallbacks()
-        self._has_run_session_end_tasks: bool = False
+        self._has_run_session_ended_tasks: bool = False
         self._downloads: dict[str, DownloadInfo] = {}
         self._dynamic_routes: dict[str, DynamicRouteHandler] = {}
 
-        self._register_session_end_callbacks()
+        self._register_session_ended_callbacks()
 
         self._flush_callbacks = _utils.AsyncCallbacks()
         self._flushed_callbacks = _utils.AsyncCallbacks()
 
-    def _register_session_end_callbacks(self) -> None:
+    def _register_session_ended_callbacks(self) -> None:
         # This is to be called from the initialization. It registers functions
         # that are called when a session ends.
 
         # Clear file upload directories, if present
         self.on_ended(self._file_upload_manager.rm_upload_dir)
 
-    async def _run_session_end_tasks(self) -> None:
-        if self._has_run_session_end_tasks:
+    async def _run_session_ended_tasks(self) -> None:
+        if self._has_run_session_ended_tasks:
             return
-        self._has_run_session_end_tasks = True
+        self._has_run_session_ended_tasks = True
 
         try:
             await self._on_ended_callbacks.invoke()
@@ -591,7 +591,7 @@ class AppSession(Session):
 
     async def close(self, code: int = 1001) -> None:
         await self._conn.close(code, None)
-        await self._run_session_end_tasks()
+        await self._run_session_ended_tasks()
 
     async def _run(self) -> None:
         conn_state: ConnectionState = ConnectionState.Start
@@ -713,7 +713,7 @@ class AppSession(Session):
                 finally:
                     await self.close()
             finally:
-                await self._run_session_end_tasks()
+                await self._run_session_ended_tasks()
 
     def _manage_inputs(self, data: dict[str, object]) -> None:
         for key, val in data.items():
