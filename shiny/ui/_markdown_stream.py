@@ -41,6 +41,13 @@ class isStreamingMessage(TypedDict):
     isStreaming: bool
 
 
+PendingMessage = tuple[
+    TagChild,
+    Literal["replace", "append"],
+    Union[str, None],
+]
+
+
 @add_example("app-core.py")
 class MarkdownStream:
     """
@@ -79,6 +86,12 @@ class MarkdownStream:
         # TODO: remove the `None` when this PR lands:
         # https://github.com/posit-dev/py-shiny/pull/793/files
         self._session = require_active_session(None)
+
+        self._current_stream_id: str | None = None
+        self._pending_messages: list[PendingMessage] = []
+
+        self._current_stream_message: str = ""
+        self._message_stream_checkpoint: str = ""
 
         # Default to sanitizing until we know the app isn't sanitizing errors
         if on_error == "auto":
@@ -135,26 +148,7 @@ class MarkdownStream:
 
         @reactive.extended_task
         async def _task():
-            if clear:
-                await self._send_content_message("", "replace", [])
-
-            result = ""
-            async with self._streaming_dot():
-                async for x in content:
-                    if isinstance(x, str):
-                        # x is most likely a string, so avoid overhead in that case
-                        ui: RenderedDeps = {"html": x, "deps": []}
-                    else:
-                        # process_ui() does *not* render markdown->HTML, but it does:
-                        # 1. Extract and register HTMLdependency()s with the session.
-                        # 2. Returns a HTML string representation of the TagChild
-                        #    (i.e., `div()` -> `"<div>"`).
-                        ui = self._session._process_ui(x)
-
-                    result += ui["html"]
-                    await self._send_content_message(ui["html"], "append", ui["deps"])
-
-            return result
+            return await self._do_stream_loop(content, clear)
 
         _task()
 
@@ -218,27 +212,90 @@ class MarkdownStream:
         """
         return await self.stream([], clear=True)
 
+    async def _do_stream_loop(
+        self, content: AsyncIterable[TagChild], clear: bool
+    ) -> str:
+        stream_id = _utils.private_random_id()
+
+        async with self._new_streaming_context():
+            if clear:
+                await self._append_content_chunk("", "replace", stream_id)
+            async for x in content:
+                await self._append_content_chunk(x, "append", stream_id)
+            return self._current_stream_message
+
     @asynccontextmanager
-    async def _streaming_dot(self):
+    async def stream_context(self):
+        """
+        Context manager for streaming content.
+        """
+        # Checkpoint the current stream state so operation="replace"  can return to it
+        old_checkpoint = self._message_stream_checkpoint
+        self._message_stream_checkpoint = self._current_stream_message
+
+        stream_id = self._current_stream_id or _utils.private_random_id()
+        try:
+            async with self._new_streaming_context():
+                yield StreamingContext(self, stream_id)
+        finally:
+            self._message_stream_checkpoint = old_checkpoint
+
+    @asynccontextmanager
+    async def _new_streaming_context(self):
         await self._send_stream_message(True)
         try:
             yield
         finally:
             await self._send_stream_message(False)
+            self._current_stream_id = None
+            self._current_stream_message = ""
+            self._message_stream_checkpoint = ""
+            await self._flush_pending_messages()
 
-    async def _send_content_message(
+    async def _append_content_chunk(
         self,
-        content: str,
+        content: TagChild,
         operation: Literal["append", "replace"],
-        html_deps: list[dict[str, str]],
+        stream_id: str | None = None,
     ):
+        # If currently we're in a *different* stream, queue the message chunk
+        if self._current_stream_id and self._current_stream_id != stream_id:
+            self._pending_messages.append((content, operation, stream_id))
+            return
+
+        self._current_stream_id = stream_id
+
+        if isinstance(content, str):
+            # x is most likely a string, so avoid overhead in that case
+            ui: RenderedDeps = {"html": content, "deps": []}
+        else:
+            # process_ui() does *not* render markdown->HTML, but it does:
+            # 1. Extract and register HTMLdependency()s with the session.
+            # 2. Returns a HTML string representation of the TagChild
+            #    (i.e., `div()` -> `"<div>"`).
+            ui = self._session._process_ui(content)
+
+        content = ui["html"]
+
+        if operation == "replace":
+            self._current_stream_message = self._message_stream_checkpoint + content
+            content = self._current_stream_message
+        else:
+            self._current_stream_message += content
+
         msg: ContentMessage = {
             "id": self.id,
             "content": content,
             "operation": operation,
-            "html_deps": html_deps,
+            "html_deps": ui["deps"],
         }
         await self._send_custom_message(msg)
+
+    async def _flush_pending_messages(self):
+        pending = self._pending_messages
+        self._pending_messages = []
+        for content, operation, stream_id in pending:
+            await self._append_content_chunk(content, operation, stream_id)
 
     async def _send_stream_message(self, is_streaming: bool):
         msg: isStreamingMessage = {
@@ -376,3 +433,43 @@ def output_markdown_stream(
         id=resolve_id(id),
         content=ui["html"],
     )
+
+
+class StreamingContext:
+    """
+    An object to yield from a `.stream_context()` context manager.
+    """
+
+    def __init__(self, stream: MarkdownStream, stream_id: str):
+        self._stream = stream
+        self._stream_id = stream_id
+
+    async def replace(self, content: TagChild):
+        """
+        Replace the content of the stream with new content.
+
+        Parameters
+        -----------
+        content
+            The new content to replace the current content.
+        """
+        await self._stream._append_content_chunk(
+            content,
+            operation="replace",
+            stream_id=self._stream_id,
+        )
+
+    async def append(self, content: TagChild):
+        """
+        Append a content chunk to the stream.
+
+        Parameters
+        -----------
+        content
+            A chunk of content to append to this stream
+        """
+        await self._stream._append_content_chunk(
+            content,
+            operation="append",
+            stream_id=self._stream_id,
+        )
