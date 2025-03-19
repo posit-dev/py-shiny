@@ -158,6 +158,8 @@ class MarkdownStream:
 
         _task()
 
+        self._latest_stream.set(_task)
+
         # Since the task runs in the background (outside/beyond the current context,
         # if any), we need to manually raise any exceptions that occur
         @reactive.effect
@@ -208,7 +210,7 @@ class MarkdownStream:
             "The `.get_latest_stream_result()` method is deprecated and will be removed "
             "in a future release. Use `.latest_stream.result()` instead. "
         )
-        self.latest_stream.result()
+        return self.latest_stream.result()
 
     async def clear(self):
         """
