@@ -201,7 +201,7 @@ class Session(ABC):
         which expects a session can run without raising errors.
         """
 
-    @add_example()
+    @add_example("session_close")
     @abstractmethod
     async def close(self, code: int = 1001) -> None:
         """
@@ -211,7 +211,7 @@ class Session(ABC):
     @abstractmethod
     def _is_hidden(self, name: str) -> bool: ...
 
-    @add_example()
+    @add_example("session_on_ended")
     @abstractmethod
     def on_ended(
         self,
@@ -298,7 +298,7 @@ class Session(ABC):
     @abstractmethod
     def _send_progress(self, type: str, message: object) -> None: ...
 
-    @add_example()
+    @add_example("session_send_custom_message")
     @abstractmethod
     async def send_custom_message(self, type: str, message: dict[str, object]) -> None:
         """
@@ -331,7 +331,7 @@ class Session(ABC):
         that, if there is a lot of contention for the main thread).
         """
 
-    @add_example()
+    @add_example("session_on_flush")
     @abstractmethod
     def on_flush(
         self,
@@ -354,7 +354,7 @@ class Session(ABC):
             A function that can be used to cancel the registration.
         """
 
-    @add_example()
+    @add_example("session_on_flushed")
     @abstractmethod
     def on_flushed(
         self,
@@ -408,7 +408,7 @@ class Session(ABC):
             The decorated function.
         """
 
-    @add_example()
+    @add_example("session_dynamic_route")
     @abstractmethod
     def dynamic_route(self, name: str, handler: DynamicRouteHandler) -> str:
         """
@@ -560,26 +560,26 @@ class AppSession(Session):
 
         self._file_upload_manager: FileUploadManager = FileUploadManager()
         self._on_ended_callbacks = _utils.AsyncCallbacks()
-        self._has_run_session_end_tasks: bool = False
+        self._has_run_session_ended_tasks: bool = False
         self._downloads: dict[str, DownloadInfo] = {}
         self._dynamic_routes: dict[str, DynamicRouteHandler] = {}
 
-        self._register_session_end_callbacks()
+        self._register_session_ended_callbacks()
 
         self._flush_callbacks = _utils.AsyncCallbacks()
         self._flushed_callbacks = _utils.AsyncCallbacks()
 
-    def _register_session_end_callbacks(self) -> None:
+    def _register_session_ended_callbacks(self) -> None:
         # This is to be called from the initialization. It registers functions
         # that are called when a session ends.
 
         # Clear file upload directories, if present
         self.on_ended(self._file_upload_manager.rm_upload_dir)
 
-    async def _run_session_end_tasks(self) -> None:
-        if self._has_run_session_end_tasks:
+    async def _run_session_ended_tasks(self) -> None:
+        if self._has_run_session_ended_tasks:
             return
-        self._has_run_session_end_tasks = True
+        self._has_run_session_ended_tasks = True
 
         try:
             await self._on_ended_callbacks.invoke()
@@ -591,7 +591,7 @@ class AppSession(Session):
 
     async def close(self, code: int = 1001) -> None:
         await self._conn.close(code, None)
-        await self._run_session_end_tasks()
+        await self._run_session_ended_tasks()
 
     async def _run(self) -> None:
         conn_state: ConnectionState = ConnectionState.Start
@@ -713,7 +713,7 @@ class AppSession(Session):
                 finally:
                     await self.close()
             finally:
-                await self._run_session_end_tasks()
+                await self._run_session_ended_tasks()
 
     def _manage_inputs(self, data: dict[str, object]) -> None:
         for key, val in data.items():
