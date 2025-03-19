@@ -24,11 +24,15 @@ class WebRComponent extends LightElement {
   private output!: HTMLElement;
   private input!: HTMLInputElement;
   private plot!: HTMLCanvasElement;
+  private dropZone!: HTMLElement;
+  private fileList!: HTMLElement;
 
   private outputId: string;
   private inputId: string;
   private runId: string;
   private plotId: string;
+  private dropZoneId: string;
+  private fileListId: string;
 
   constructor() {
     super();
@@ -36,6 +40,8 @@ class WebRComponent extends LightElement {
     this.inputId = this.id + "_input";
     this.runId = this.id + "_run";
     this.plotId = this.id + "_plot";
+    this.dropZoneId = this.id + "_dropzone";
+    this.fileListId = this.id + "_filelist";
 
     this.webR = new WebR();
   }
@@ -55,6 +61,14 @@ class WebRComponent extends LightElement {
         <button id="${this.runId}">Run</button>
       </div>
       <div id="${this.plotId}"></div>
+      <div
+        id="${this.dropZoneId}"
+        style="border: 2px dashed #ccc; border-radius: 5px; padding: 20px; text-align: center; margin-top: 20px; cursor: pointer;"
+      >
+        <p>Drag and drop files here or click to upload</p>
+        <input type="file" style="display: none;" multiple />
+      </div>
+      <div id="${this.fileListId}" style="margin-top: 10px;"></div>
     </div>`;
   }
 
@@ -62,6 +76,8 @@ class WebRComponent extends LightElement {
     this.output = document.getElementById(this.outputId) as HTMLElement;
     this.input = document.getElementById(this.inputId) as HTMLInputElement;
     this.plot = document.getElementById(this.plotId) as HTMLCanvasElement;
+    this.dropZone = document.getElementById(this.dropZoneId) as HTMLElement;
+    this.fileList = document.getElementById(this.fileListId) as HTMLElement;
 
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     (async () => {
@@ -88,6 +104,156 @@ class WebRComponent extends LightElement {
 
     const runButton = document.getElementById(this.runId) as HTMLButtonElement;
     runButton.addEventListener("click", sendInput);
+
+    // Set up file drag and drop
+    this.setupFileDragAndDrop();
+  }
+
+  setupFileDragAndDrop() {
+    const dropZone = this.dropZone;
+    const fileInput = dropZone.querySelector(
+      'input[type="file"]'
+    ) as HTMLInputElement;
+
+    // Handle click on drop zone
+    dropZone.addEventListener("click", () => {
+      fileInput.click();
+    });
+
+    // Handle file selection via input
+    fileInput.addEventListener("change", (e) => {
+      const files = fileInput.files;
+      if (files) {
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
+        void this.handleFiles(files);
+      }
+    });
+
+    // Handle drag and drop events
+    ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
+      dropZone.addEventListener(
+        eventName,
+        (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        },
+        false
+      );
+    });
+
+    // Highlight drop zone when file is dragged over it
+    ["dragenter", "dragover"].forEach((eventName) => {
+      dropZone.addEventListener(
+        eventName,
+        () => {
+          dropZone.style.borderColor = "#2196F3";
+          dropZone.style.backgroundColor = "rgba(33, 150, 243, 0.1)";
+        },
+        false
+      );
+    });
+
+    // Remove highlight when file leaves drop zone
+    ["dragleave", "drop"].forEach((eventName) => {
+      dropZone.addEventListener(
+        eventName,
+        () => {
+          dropZone.style.borderColor = "#ccc";
+          dropZone.style.backgroundColor = "";
+        },
+        false
+      );
+    });
+
+    // Handle dropped files
+    dropZone.addEventListener(
+      "drop",
+      (e) => {
+        const dt = e.dataTransfer;
+        if (dt && dt.files) {
+          // eslint-disable-next-line @typescript-eslint/no-floating-promises
+          void this.handleFiles(dt.files);
+        }
+      },
+      false
+    );
+  }
+
+  async handleFiles(files: FileList) {
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (file) {
+        await this.uploadFileToWebR(file);
+      }
+    }
+  }
+
+  async uploadFileToWebR(file: File) {
+    try {
+      // Read file content
+      const arrayBuffer = await file.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+
+      // Write file to webR virtual filesystem
+      await this.webR.FS.writeFile(file.name, uint8Array);
+
+      // Add file to the list
+      this.addFileToList(file.name);
+
+      // Notify user
+      this.appendToOutEl(`File uploaded to webR: ${file.name}\n`);
+
+      // Run ls command to show files in the current directory
+      await this.evalInConsole(`list.files()`);
+    } catch (error) {
+      console.error("Error uploading file to webR:", error);
+      this.appendToOutEl(`Error uploading file: ${file.name}\n`);
+    }
+  }
+
+  addFileToList(fileName: string) {
+    const fileItem = document.createElement("div");
+    fileItem.style.margin = "5px 0";
+    fileItem.style.padding = "5px";
+    fileItem.style.backgroundColor = "#f5f5f5";
+    fileItem.style.borderRadius = "3px";
+    fileItem.style.display = "flex";
+    fileItem.style.justifyContent = "space-between";
+
+    const fileNameSpan = document.createElement("span");
+    fileNameSpan.textContent = fileName;
+    fileItem.appendChild(fileNameSpan);
+
+    const loadButton = document.createElement("button");
+    loadButton.textContent = "Load in R";
+    loadButton.style.marginLeft = "10px";
+    loadButton.addEventListener("click", async () => {
+      // Generate appropriate R code based on file extension
+      const ext = fileName.split(".").pop()?.toLowerCase();
+      let rCode = "";
+
+      switch (ext) {
+        case "csv":
+          rCode = `data <- read.csv("${fileName}")
+head(data)`;
+          break;
+        case "rds":
+          rCode = `data <- readRDS("${fileName}")
+print(data)`;
+          break;
+        case "r":
+          rCode = `source("${fileName}")`;
+          break;
+        default:
+          rCode = `# File loaded: ${fileName}
+# Use appropriate R function to read this file type`;
+      }
+
+      await this.evalInConsole(rCode);
+    });
+
+    fileItem.appendChild(loadButton);
+    this.fileList.appendChild(fileItem);
   }
 
   handleOutput(msg: Message) {
@@ -223,7 +389,7 @@ async function imageBitmapToPngBase64(bitmap: ImageBitmap): Promise<string> {
   const dataURL = canvas.toDataURL("image/png");
 
   // Extract the base64 data (remove the data URL prefix)
-  const base64Data = dataURL.split(",")[1];
+  const base64Data = dataURL.split(",")[1] as string;
 
   return base64Data;
 }
