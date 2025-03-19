@@ -1,45 +1,69 @@
 from starlette.requests import Request
 
-from shiny import App, Inputs, Outputs, Session, module, ui
+from shiny import App, Inputs, Outputs, Session, module, reactive, render, ui
 from shiny.bookmark import BookmarkState, RestoreState
 
 
 @module.ui
-def mod_ui(label: str):
+def mod_ui():
     return ui.div(
-        ui.input_text("text", f"{label} Text", "Initial Module Text"),
-        ui.input_numeric("num", f"{label} Numeric", 1),
-        ui.input_text("excluded", f"{label} Excluded", "Module Excluded"),
+        ui.input_text("text_in", "Initial Module Text"),
+        ui.output_text("included_module_text"),
+        ui.input_numeric("num_in", "Enter number", 1),
+        ui.output_text("included_module_num"),
+        ui.input_text("text_excl", "Module Excluded"),
+        ui.output_text("excluded_module_text"),
     )
 
 
 @module.server
 def mod_server(input: Inputs, output: Outputs, session: Session):
-    session.bookmark.exclude.append("excluded")
+    # 1. Fix: Correct input ID for exclusion
+    session.bookmark.exclude.append("text_excl")  # Changed from "excluded"
+
+    @render.text
+    def included_module_text():
+        return f"Included text: {input.text_in()}"
+
+    @render.text
+    def included_module_num():
+        return f"Included num: {input.num_in()}"
+
+    @render.text
+    def excluded_module_text():
+        return f"Excluded text: {input.text_excl()}"
+
+    # 2. Add: Trigger bookmarking when inputs change
+    @reactive.effect
+    @reactive.event(input.text_in, input.num_in, ignore_init=True)
+    async def _():
+        await session.bookmark()
 
     @session.bookmark.on_bookmark
     async def _(state: BookmarkState):
-        state.values["module_num"] = input.num()
+        # 3. Store the value directly
+        state.values["module_num"] = input.num_in()
 
     @session.bookmark.on_restore
     def _(state: RestoreState):
+        # 4. Fix: Correct key name and input access
         if "module_num" in state.values:
-            ui.update_numeric("num", value=state.values["module_num"])
-        if "text" in state.input:
-            print(f"module on_restore: text: {state.input['text']}")
+            ui.update_numeric("num_in", value=state.values["module_num"])
+
+        # 5. Fix: Correct input access for module
+        if "text_in" in state.input:
+            print(f"module on_restore: text: {state.input['text_in']}")
 
 
 def app_ui(request: Request):
     return ui.page_fluid(
-        mod_ui("mod1", "Module 1"),
-        mod_ui("mod2", "Module 2"),
+        mod_ui("mod1"),
         ui.input_bookmark_button(),
     )
 
 
 def server(input: Inputs, output: Outputs, session: Session):
     mod_server("mod1")
-    mod_server("mod2")
 
     @session.bookmark.on_bookmarked
     async def _(url: str):
