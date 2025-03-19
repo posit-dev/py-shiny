@@ -211,6 +211,7 @@ class Session(ABC):
     @abstractmethod
     def _is_hidden(self, name: str) -> bool: ...
 
+    @add_example("session_on_end")
     @abstractmethod
     def on_end(
         self,
