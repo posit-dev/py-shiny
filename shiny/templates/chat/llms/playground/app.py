@@ -63,15 +63,15 @@ def get_model():
     }
 
     if input.model() in models["openai"]:
-        chat_model = ctl.ChatOpenAI(**model_params)
+        chat_client = ctl.ChatOpenAI(**model_params)
     elif input.model() in models["claude"]:
-        chat_model = ctl.ChatAnthropic(**model_params)
+        chat_client = ctl.ChatAnthropic(**model_params)
     elif input.model() in models["google"]:
-        chat_model = ctl.ChatGoogle(**model_params)
+        chat_client = ctl.ChatGoogle(**model_params)
     else:
         raise ValueError(f"Invalid model: {input.model()}")
 
-    return chat_model
+    return chat_client
 
 
 @reactive.calc
