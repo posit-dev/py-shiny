@@ -726,7 +726,9 @@ class BookmarkProxy(Bookmark):
         return self._root_bookmark._restore_context
 
     async def update_query_string(
-        self, query_string: str, mode: Literal["replace", "push"] = "replace"
+        self,
+        query_string: Optional[str] = None,
+        mode: Literal["replace", "push"] = "replace",
     ) -> None:
         await self._root_bookmark.update_query_string(query_string, mode)
 
@@ -772,7 +774,9 @@ class BookmarkExpressStub(Bookmark):
         return lambda: None
 
     async def update_query_string(
-        self, query_string: str, mode: Literal["replace", "push"] = "replace"
+        self,
+        query_string: Optional[str] = None,
+        mode: Literal["replace", "push"] = "replace",
     ) -> None:
         # no-op within ExpressStub
         return None
