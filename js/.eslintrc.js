@@ -11,13 +11,14 @@ module.exports = {
     "plugin:@typescript-eslint/recommended",
     "plugin:react-hooks/recommended",
   ],
-  ignorePatterns: ["dist/*"],
+  ignorePatterns: ["dist/*", ".eslintrc.js"],
   overrides: [],
   parser: "@typescript-eslint/parser",
   parserOptions: {
     ecmaVersion: "latest",
     sourceType: "module",
-    project: "js/tsconfig.json",
+    project: "tsconfig.json",
+    tsconfigRootDir: __dirname,
   },
   plugins: ["react", "@typescript-eslint"],
   rules: {

@@ -132,6 +132,7 @@ const opts: Array<BuildOptions> = [
   },
 ];
 
+// eslint-disable-next-line @typescript-eslint/no-floating-promises
 (async () => {
   await Promise.all(opts.map(bundle_helper));
 
