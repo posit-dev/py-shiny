@@ -1,7 +1,6 @@
 from starlette.requests import Request
 
 from shiny import App, Inputs, Outputs, Session, module, reactive, render, ui
-from shiny.bookmark import BookmarkState, RestoreState
 
 
 @module.ui
