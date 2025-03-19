@@ -26,7 +26,8 @@ def test_dark_mode_demo(page: Page, app: ShinyAppProc) -> None:
     basic_text.expect_value("Dark mode value: light")
 
     # Bookmark the state
-    page.get_by_role("button", name="🔗 Bookmark...").click()
+    bookmark_button = controller.InputBookmarkButton(page)
+    bookmark_button.click()
 
     basic_dark_mode.click()
     module_text.expect_value("Dark mode value: dark")

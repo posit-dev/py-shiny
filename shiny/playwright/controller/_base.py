@@ -120,7 +120,6 @@ def set_text(
     # TODO-future; Composable set() method
     loc.fill("", timeout=timeout)  # Reset the value
     loc.type(text, delay=delay, timeout=timeout)  # Type the value
-    loc.press("Enter", timeout=timeout)
 
 
 def _expect_multiple(loc: Locator, multiple: bool, timeout: Timeout = None) -> None:

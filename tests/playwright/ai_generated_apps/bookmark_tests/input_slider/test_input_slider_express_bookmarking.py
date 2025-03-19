@@ -32,7 +32,8 @@ def test_slider_parameters(page: Page, app: ShinyAppProc) -> None:
     mod_value1.expect_value("Slider value: 25")
 
     # click bookmark button
-    page.get_by_role("button", name="🔗 Bookmark...").click()
+    bookmark_button = controller.InputBookmarkButton(page)
+    bookmark_button.click()
 
     # Change the basic slider value again
     slider1.set("100")

@@ -17,8 +17,8 @@ def test_text_area_demo(page: Page, app: ShinyAppProc) -> None:
     mod_input_txt = controller.InputTextArea(page, "first-module_text_area")
     mod_output_txt = controller.OutputText(page, "first-text_area_text")
 
-    text_output.expect_value("Text area value:")
-    mod_output_txt.expect_value("Text area value:")
+    text_output.expect_value("Text area value: Enter text here")
+    mod_output_txt.expect_value("Text area value: Enter module text here")
 
     text_input.set("Hello world")
     text_output.expect_value("Text area value: Hello world")
@@ -27,14 +27,15 @@ def test_text_area_demo(page: Page, app: ShinyAppProc) -> None:
     mod_output_txt.expect_value("Text area value: Hello Miami")
 
     # click bookmark button
-    page.get_by_role("button", name="🔗 Bookmark...").click()
+    bookmark_button = controller.InputBookmarkButton(page)
+    bookmark_button.click()
 
     text_input.set("Hello again")
     text_output.expect_value("Text area value: Hello again")
     mod_input_txt.set("Hello again Miami")
     mod_output_txt.expect_value("Text area value: Hello again Miami")
 
-    # reload pagw
+    # reload page
     page.reload()
 
     text_output.expect_value("Text area value: Hello world")

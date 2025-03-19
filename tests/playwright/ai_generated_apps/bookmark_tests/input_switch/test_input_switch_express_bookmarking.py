@@ -32,7 +32,8 @@ def test_switch_demo(page: Page, app: ShinyAppProc) -> None:
     module_txt.expect_value("Switch value: True")
 
     # click bookmark button
-    page.get_by_role("button", name="🔗 Bookmark...").click()
+    bookmark_button = controller.InputBookmarkButton(page)
+    bookmark_button.click()
 
     switch1.set(False)
     switch1.expect_checked(False)

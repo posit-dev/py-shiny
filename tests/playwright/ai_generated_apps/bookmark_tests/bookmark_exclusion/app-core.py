@@ -39,26 +39,10 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
     async def _():
         await session.bookmark()
 
-    @session.bookmark.on_bookmark
-    async def _(state: BookmarkState):
-        # 3. Store the value directly
-        state.values["module_num"] = input.num_in()
-
-    @session.bookmark.on_restore
-    def _(state: RestoreState):
-        # 4. Fix: Correct key name and input access
-        if "module_num" in state.values:
-            ui.update_numeric("num_in", value=state.values["module_num"])
-
-        # 5. Fix: Correct input access for module
-        if "text_in" in state.input:
-            print(f"module on_restore: text: {state.input['text_in']}")
-
 
 def app_ui(request: Request):
     return ui.page_fluid(
         mod_ui("mod1"),
-        ui.input_bookmark_button(),
     )
 
 

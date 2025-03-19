@@ -27,7 +27,8 @@ def test_text_input_demo(page: Page, app: ShinyAppProc) -> None:
     mod_output_txt.expect_value("Text input value: Hello Miami")
 
     # click bookmark button
-    page.get_by_role("button", name="🔗 Bookmark...").click()
+    bookmark_button = controller.InputBookmarkButton(page)
+    bookmark_button.click()
 
     text_input.set("Hello again")
     text_output.expect_value("Text input value: Hello again")

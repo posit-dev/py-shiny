@@ -31,7 +31,8 @@ def test_input_select_demo(page: Page, app: ShinyAppProc) -> None:
     mod_select_txt.expect_value("Select value: choiceB")
 
     # click bookmark button
-    page.get_by_role("button", name="🔗 Bookmark...").click()
+    bookmark_button = controller.InputBookmarkButton(page)
+    bookmark_button.click()
 
     # Change the basic select value again
     select1.set("option3")

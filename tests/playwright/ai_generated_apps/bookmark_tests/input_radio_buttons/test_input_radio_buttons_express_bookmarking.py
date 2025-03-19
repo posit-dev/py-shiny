@@ -26,7 +26,8 @@ def test_radio_buttons_demo(page: Page, app: ShinyAppProc) -> None:
     mod_selection_output.expect_value("Radio button value: Choice B")
 
     # click bookmark button
-    page.get_by_role("button", name="🔗 Bookmark...").click()
+    bookmark_button = controller.InputBookmarkButton(page)
+    bookmark_button.click()
 
     mod_radio_button.set("Choice C")
     mod_selection_output.expect_value("Radio button value: Choice C")

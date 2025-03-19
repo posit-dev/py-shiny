@@ -200,7 +200,9 @@ def input_select(
 
     resolved_id = resolve_id(id)
 
-    choices_ = restore_input(resolved_id, choices)
+    choices_ = _normalize_choices(choices)
+
+    selected = restore_input(resolved_id, selected)
     if selected is None and not multiple:
         selected = _find_first_option(choices_)
 

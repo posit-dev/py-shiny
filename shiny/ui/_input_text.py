@@ -182,7 +182,7 @@ def input_text_area(
 
     resolved_id = resolve_id(id)
     area = tags.textarea(
-        value=restore_input(resolved_id, value),
+        restore_input(resolved_id, value),
         id=resolved_id,
         class_=" ".join(classes),
         style=css(width=None if width else "100%", height=height, resize=resize),

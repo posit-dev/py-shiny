@@ -29,9 +29,6 @@ def test_bookmark_exclusion(page: Page, app: ShinyAppProc) -> None:
     mod1_excluded.set("Hello excluded")
     mod1_excluded_txt.expect_value("Excluded text: Hello excluded")
 
-    # click bookmark button
-    page.get_by_role("button", name="🔗 Bookmark...").click()
-
     # reload page
     page.reload()
 

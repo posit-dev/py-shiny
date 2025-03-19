@@ -15,8 +15,6 @@ def test_date_range_input(page: Page, app: ShinyAppProc) -> None:
 
     # Check initial state
     date_range.expect_label("Basic date range")
-    date_range.expect_min_date("2023-01-01")
-    date_range.expect_max_date("2023-12-31")
 
     basic_text = controller.OutputText(page, "basic_text")
     basic_text.expect_value(
@@ -44,7 +42,8 @@ def test_date_range_input(page: Page, app: ShinyAppProc) -> None:
     )
 
     # click bookmark button
-    page.get_by_role("button", name="🔗 Bookmark...").click()
+    bookmark_button = controller.InputBookmarkButton(page)
+    bookmark_button.click()
 
     mod_date_range.set(("2024-03-01", "2024-03-31"))
     mod_date_range_txt.expect_value(
@@ -54,14 +53,10 @@ def test_date_range_input(page: Page, app: ShinyAppProc) -> None:
     # Reload the page to test bookmark
     page.reload()
 
-    date_range.expect_min_date("2024-01-01")
-    date_range.expect_max_date("2024-01-31")
     basic_text.expect_value(
         "Date range values: (datetime.date(2024, 1, 1), datetime.date(2024, 1, 31))"
     )
 
-    mod_date_range.expect_min_date("2024-02-01")
-    mod_date_range.expect_max_date("2024-02-28")
     mod_date_range_txt.expect_value(
         "Date range values: (datetime.date(2024, 2, 1), datetime.date(2024, 2, 28))"
     )

@@ -28,7 +28,8 @@ def test_bookmark_date_inputs(page: Page, app: ShinyAppProc) -> None:
     text1.expect_value("Date value: 2024-01-01")
 
     # Bookmark the state
-    page.get_by_role("button", name="🔗 Bookmark...").click()
+    bookmark_button = controller.InputBookmarkButton(page)
+    bookmark_button.click()
 
     date1.set("2024-03-03")
     text1.expect_value("Date value: 2024-03-03")
