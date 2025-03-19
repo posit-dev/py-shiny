@@ -26,6 +26,7 @@ class WebRComponent extends LightElement {
   private plot!: HTMLCanvasElement;
   private dropZone!: HTMLElement;
   private fileList!: HTMLElement;
+  private dropZoneText!: HTMLElement;
 
   private outputId: string;
   private inputId: string;
@@ -33,6 +34,7 @@ class WebRComponent extends LightElement {
   private plotId: string;
   private dropZoneId: string;
   private fileListId: string;
+  private dropZoneTextId: string;
 
   constructor() {
     super();
@@ -42,6 +44,7 @@ class WebRComponent extends LightElement {
     this.plotId = this.id + "_plot";
     this.dropZoneId = this.id + "_dropzone";
     this.fileListId = this.id + "_filelist";
+    this.dropZoneTextId = this.id + "_dropzone_text";
 
     this.webR = new WebR();
   }
@@ -65,7 +68,9 @@ class WebRComponent extends LightElement {
         id="${this.dropZoneId}"
         style="border: 2px dashed #ccc; border-radius: 5px; padding: 20px; text-align: center; margin-top: 20px; cursor: pointer;"
       >
-        <p>Drag and drop files here or click to upload</p>
+        <p id="${this.dropZoneTextId}">
+          Drag and drop files here or click to upload
+        </p>
         <input type="file" style="display: none;" multiple />
       </div>
       <div id="${this.fileListId}" style="margin-top: 10px;"></div>
@@ -78,6 +83,9 @@ class WebRComponent extends LightElement {
     this.plot = document.getElementById(this.plotId) as HTMLCanvasElement;
     this.dropZone = document.getElementById(this.dropZoneId) as HTMLElement;
     this.fileList = document.getElementById(this.fileListId) as HTMLElement;
+    this.dropZoneText = document.getElementById(
+      this.dropZoneTextId
+    ) as HTMLElement;
 
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     (async () => {
@@ -200,6 +208,9 @@ class WebRComponent extends LightElement {
       // Add file to the list
       this.addFileToList(file.name);
 
+      // Show success message in the upload box for 1 second
+      this.showSuccessMessage(`${file.name} uploaded successfully!`);
+
       // Notify user
       this.appendToOutEl(`File uploaded to webR: ${file.name}\n`);
 
@@ -209,6 +220,25 @@ class WebRComponent extends LightElement {
       console.error("Error uploading file to webR:", error);
       this.appendToOutEl(`Error uploading file: ${file.name}\n`);
     }
+  }
+
+  showSuccessMessage(message: string) {
+    // Store the original text and styling
+    const originalText = this.dropZoneText.textContent;
+    const originalBorderColor = this.dropZone.style.borderColor;
+    const originalBackgroundColor = this.dropZone.style.backgroundColor;
+
+    // Change the text and styling to show success
+    this.dropZoneText.textContent = message;
+    this.dropZone.style.borderColor = "#4CAF50";
+    this.dropZone.style.backgroundColor = "rgba(76, 175, 80, 0.1)";
+
+    // Reset after 1 second
+    setTimeout(() => {
+      this.dropZoneText.textContent = originalText;
+      this.dropZone.style.borderColor = originalBorderColor;
+      this.dropZone.style.backgroundColor = originalBackgroundColor;
+    }, 2000);
   }
 
   addFileToList(fileName: string) {
