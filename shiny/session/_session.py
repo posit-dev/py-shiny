@@ -211,6 +211,25 @@ class Session(ABC):
     @abstractmethod
     def _is_hidden(self, name: str) -> bool: ...
 
+    @abstractmethod
+    def on_end(
+        self,
+        fn: Callable[[], None] | Callable[[], Awaitable[None]],
+    ) -> Callable[[], None]:
+        """
+        Registers a function to be called hopefully before the client is disconnected.
+
+        Parameters
+        ----------
+        fn
+            The function to call.
+
+        Returns
+        -------
+        :
+            A function that can be used to cancel the registration.
+        """
+
     @add_example()
     @abstractmethod
     def on_ended(
@@ -559,7 +578,9 @@ class AppSession(Session):
         self._outbound_message_queues = OutBoundMessageQueues()
 
         self._file_upload_manager: FileUploadManager = FileUploadManager()
+        self._on_end_callbacks = _utils.AsyncCallbacks()
         self._on_ended_callbacks = _utils.AsyncCallbacks()
+        self._has_run_session_end_tasks: bool = False
         self._has_run_session_ended_tasks: bool = False
         self._downloads: dict[str, DownloadInfo] = {}
         self._dynamic_routes: dict[str, DynamicRouteHandler] = {}
@@ -576,13 +597,29 @@ class AppSession(Session):
         # Clear file upload directories, if present
         self.on_ended(self._file_upload_manager.rm_upload_dir)
 
+    async def _run_session_end_tasks(self) -> None:
+        if self._has_run_session_end_tasks:
+            return
+        self._has_run_session_end_tasks = True
+
+        try:
+            with isolate():
+                await self._on_end_callbacks.invoke()
+        except Exception as e:
+            warnings.warn(
+                f"Error running session end tasks: {str(e)}",
+                SessionWarning,
+                stacklevel=2,
+            )
+
     async def _run_session_ended_tasks(self) -> None:
         if self._has_run_session_ended_tasks:
             return
         self._has_run_session_ended_tasks = True
 
         try:
-            await self._on_ended_callbacks.invoke()
+            with isolate():
+                await self._on_ended_callbacks.invoke()
         finally:
             self.app._remove_session(self)
 
@@ -590,6 +627,7 @@ class AppSession(Session):
         return False
 
     async def close(self, code: int = 1001) -> None:
+        await self._run_session_end_tasks()
         await self._conn.close(code, None)
         await self._run_session_ended_tasks()
 
@@ -713,6 +751,7 @@ class AppSession(Session):
                 finally:
                     await self.close()
             finally:
+                await self._run_session_end_tasks()
                 await self._run_session_ended_tasks()
 
     def _manage_inputs(self, data: dict[str, object]) -> None:
@@ -1079,8 +1118,15 @@ class AppSession(Session):
             self._send_message_sync({"busy": "idle"})
 
     # ==========================================================================
-    # On session ended
+    # On session end / ended
     # ==========================================================================
+
+    def on_end(
+        self,
+        fn: Callable[[], None] | Callable[[], Awaitable[None]],
+    ) -> Callable[[], None]:
+        return self._on_end_callbacks.register(wrap_async(fn))
+
     def on_ended(
         self,
         fn: Callable[[], None] | Callable[[], Awaitable[None]],
@@ -1220,6 +1266,12 @@ class SessionProxy(Session):
 
     def _is_hidden(self, name: str) -> bool:
         return self._root_session._is_hidden(name)
+
+    def on_end(
+        self,
+        fn: Callable[[], None] | Callable[[], Awaitable[None]],
+    ) -> Callable[[], None]:
+        return self._root_session.on_end(fn)
 
     def on_ended(
         self,

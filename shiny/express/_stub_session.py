@@ -58,6 +58,12 @@ class ExpressStubSession(Session):
     def _is_hidden(self, name: str) -> bool:
         return False
 
+    def on_end(
+        self,
+        fn: Callable[[], None] | Callable[[], Awaitable[None]],
+    ) -> Callable[[], None]:
+        return lambda: None
+
     def on_ended(
         self,
         fn: Callable[[], None] | Callable[[], Awaitable[None]],
