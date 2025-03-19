@@ -602,7 +602,7 @@ class Chat:
             * Compared to `.append_message_stream()` this method is more flexible but
               isn't non-blocking by default (i.e., it doesn't launch an extended task).
         2. Be nested within itself
-            * Nesting is primarily useful for making checkpoints to `.restore()` back
+            * Nesting is primarily useful for making checkpoints to `.clear()` back
               to (see the example below).
         3. Be used from within a `.append_message_stream()`
             * Useful for inserting additional content from another context into the
@@ -612,7 +612,7 @@ class Chat:
         ------
         :
             A `MessageStream` class instance, which has a method for `.append()`ing
-            message content chunks to as well as way to `.restore()` the stream back to
+            message content chunks to as well as way to `.clear()` the stream back to
             it's initial state. Note that `.append()` supports the same message content
             types as `.append_message()`.
 
@@ -635,8 +635,8 @@ class Chat:
                     for x in [0, 50, 100]:
                         await progress.append(f" {x}%")
                         await asyncio.sleep(1)
-                        await progress.restore()
-                await msg.restore()
+                        await progress.clear()
+                await msg.clear()
                 await msg.append("Completed stream")
         ```
 
@@ -646,7 +646,7 @@ class Chat:
         display using `.message_stream_context()` while the the response generation is
         happening through `.append_message_stream()`. This allows the tool to display
         things like progress updates (or other "ephemeral" content) and optionally
-        `.restore()` the stream back to it's initial state when ready to display the
+        `.clear()` the stream back to it's initial state when ready to display the
         "final" content.
         """
         # Checkpoint the current stream state so operation="replace"  can return to it
@@ -1499,9 +1499,9 @@ class MessageStream:
         self._chat = chat
         self._stream_id = stream_id
 
-    async def restore(self):
+    async def clear(self):
         """
-        Restore the stream back to its initial state.
+        Set the stream back to its original state.
         """
         await self._chat._append_message_chunk(
             "",

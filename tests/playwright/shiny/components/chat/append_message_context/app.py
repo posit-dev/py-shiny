@@ -48,7 +48,7 @@ async def _():
         await asyncio.sleep(SLEEP_TIME)
         await msg.append(" stream")
         await asyncio.sleep(SLEEP_TIME)
-        await msg.restore()
+        await msg.clear()
         await asyncio.sleep(SLEEP_TIME)
         await msg.append("Finished")
 
@@ -76,7 +76,7 @@ async def _():
         async with chat.message_stream_context() as inner:
             await inner.append("Inner start")
             await asyncio.sleep(SLEEP_TIME)
-            await inner.restore()
+            await inner.clear()
             await inner.append("Inner end")
         await asyncio.sleep(SLEEP_TIME)
         await outer.append("Outer end")
@@ -88,7 +88,7 @@ async def _():
     async with chat.message_stream_context() as outer:
         await outer.append("Outer start")
         await asyncio.sleep(SLEEP_TIME)
-        await outer.restore()
+        await outer.clear()
         async with chat.message_stream_context() as inner:
             await inner.append("Inner start")
             await asyncio.sleep(SLEEP_TIME)
@@ -116,5 +116,5 @@ async def inner_stream():
         await stream.append("Inner start")
         await asyncio.sleep(SLEEP_TIME)
         await stream.append("Inner progress")
-        await stream.restore()
+        await stream.clear()
         await stream.append("Inner end")
