@@ -66,7 +66,7 @@ class ExpressStubSession(Session):
 
     def make_scope(self, id: Id) -> Session:
         ns = self.ns(id)
-        return SessionProxy(parent=self, ns=ns)
+        return SessionProxy(root_session=self, ns=ns)
 
     def root_scope(self) -> ExpressStubSession:
         return self

@@ -43,8 +43,6 @@ class BookmarkState:
         self.dir = None  # This will be set by external functions.
         self.values = {}
 
-        self._always_exclude: list[str] = []
-
     async def _call_on_save(self):
         # Allow user-supplied save function to do things like add state$values, or
         # save data to state dir.

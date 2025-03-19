@@ -15,13 +15,14 @@ from ._types import BookmarkStore
 if TYPE_CHECKING:
     from ..express._stub_session import ExpressStubSession
     from ..module import ResolvedId
-    from ..session._session import AppSession, SessionProxy
+    from ..session._session import AppSession, Session, SessionProxy
     from . import RestoreContext
 else:
     from typing import Any
 
     RestoreContext = Any
     SessionProxy = Any
+    Session = Any
     AppSession = Any
     ResolvedId = Any
     ExpressStubSession = Any
@@ -31,6 +32,7 @@ class Bookmark(ABC):
 
     _on_get_exclude: list[Callable[[], list[str]]]
     """Callbacks that BookmarkProxy classes utilize to help determine the list of inputs to exclude from bookmarking."""
+
     exclude: list[str]
     """A list of scoped Input names to exclude from bookmarking."""
 
@@ -133,6 +135,7 @@ class Bookmark(ABC):
             should accept a single argument, the string representing the query parameter
             component of the URL.
         """
+
         return self._on_bookmarked_callbacks.register(wrap_async(callback))
 
     def on_restore(
@@ -215,24 +218,120 @@ class Bookmark(ABC):
         """
         ...
 
+    async def show_bookmark_url_modal(
+        self,
+        url: str | None = None,
+    ) -> None:
+        """
+        Display a modal dialog for displaying the bookmark URL.
+
+        This method should be called when the bookmark button is clicked, and it
+        should display a modal dialog with the current bookmark URL.
+
+        Parameters
+        ----------
+        url
+            The URL to display in the modal dialog. If `None`, the current bookmark
+            URL will be retrieved using `session.bookmark.get_bookmark_url()`.
+        """
+        import textwrap
+
+        from htmltools import TagList, tags
+
+        from ..ui import modal, modal_show
+
+        title = "Bookmarked application link"
+        subtitle: str | None = None
+        if self.store == "url":
+            subtitle = "This link stores the current state of this application."
+        elif self.store == "server":
+            subtitle = (
+                "The current state of this application has been stored on the server."
+            )
+
+        if url is None:
+            url = await self.get_bookmark_url()
+
+        subtitle_tag = TagList(
+            tags.br(),
+            (
+                tags.span(subtitle + " ", class_="text-muted")
+                if isinstance(subtitle, str)
+                else subtitle
+            ),
+            tags.span(id="shiny-bookmark-copy-text", class_="text-muted"),
+        )
+        # Need separate show and shown listeners. The show listener sizes the
+        # textarea just as the modal starts to fade in. The 200ms delay is needed
+        # because if we try to resize earlier, it can't calculate the text height
+        # (scrollHeight will be reported as zero). The shown listener selects the
+        # text; it's needed because because selection has to be done after the fade-
+        # in is completed.
+        modal_js = tags.script(
+            textwrap.dedent(
+                """
+            $('#shiny-modal').
+                one('show.bs.modal', function() {
+                setTimeout(function() {
+                    var $textarea = $('#shiny-modal textarea');
+                    $textarea.innerHeight($textarea[0].scrollHeight);
+                }, 200);
+            });
+            $('#shiny-modal')
+                .one('shown.bs.modal', function() {
+                $('#shiny-modal textarea').select().focus();
+            });
+            $('#shiny-bookmark-copy-text')
+                .text(function() {
+                if (/Mac/i.test(navigator.userAgent)) {
+                    return 'Press \u2318-C to copy.';
+                } else {
+                    return 'Press Ctrl-C to copy.';
+                }
+            });
+            """
+            )
+        )
+
+        url_modal = modal(
+            tags.textarea(
+                url,
+                class_="form-control",
+                rows="1",
+                style="resize: none;",
+                readonly="readonly",
+            ),
+            subtitle_tag,
+            modal_js,
+            title=title,
+            easy_close=True,
+        )
+
+        modal_show(url_modal)
+        return
+
 
 class BookmarkApp(Bookmark):
-    _session: AppSession
+    _root_session: AppSession
     """
-    The root session object (most likely a `AppSession` object).
+    The root session object.
     """
+
     _restore_context_value: RestoreContext
     """
     Placeholder value that should only be manually set within the session's `init` websocket message.
     """
 
-    def __init__(self, session: AppSession):
+    def __init__(self, root_session: AppSession):
         from ..session._session import AppSession
 
-        assert isinstance(session, AppSession)
+        assert isinstance(root_session, AppSession)
         super().__init__()
 
-        self._session = session
+        self._root_session = root_session
+
+        # # Do not set it to avoid supporting a `None` type.
+        # # Instead, only use it after it's been set.
         # self._restore_context_value = None
 
     # Making this a read only property as app authors will not be able to change how the
@@ -241,7 +340,7 @@ class BookmarkApp(Bookmark):
     @property
     def store(self) -> BookmarkStore:
 
-        return self._session.app.bookmark_store
+        return self._root_session.app.bookmark_store
 
     @property
     def _restore_context(self) -> RestoreContext | None:
@@ -269,19 +368,19 @@ class BookmarkApp(Bookmark):
         if self.store == "disable":
             return
 
-        session = self._session
+        root_session = self._root_session
 
         from .. import reactive
         from ..session import session_context
         from ..ui._notification import notification_show
 
-        with session_context(session):
+        with session_context(root_session):
 
             # Fires when the bookmark button is clicked.
             @reactive.effect
-            @reactive.event(session.input[BOOKMARK_ID])
+            @reactive.event(root_session.input[BOOKMARK_ID])
             async def _():
-                await session.bookmark()
+                await root_session.bookmark()
 
             # If there was an error initializing the current restore context, show
             # notification in the client.
@@ -292,6 +391,7 @@ class BookmarkApp(Bookmark):
                         f"Error in RestoreContext initialization: {self._restore_context._init_error_msg}",
                         duration=None,
                         type="error",
+                        session=root_session,
                     )
 
             # Run the on_restore function at the beginning of the flush cycle, but after
@@ -301,7 +401,7 @@ class BookmarkApp(Bookmark):
                 if self._on_restore_callbacks.count() == 0:
                     return
 
-                with session_context(session):
+                with session_context(root_session):
 
                     try:
                         # ?withLogErrors
@@ -322,12 +422,12 @@ class BookmarkApp(Bookmark):
 
             # Run the on_restored function after the flush cycle completes and
             # information is sent to the client.
-            @session.on_flushed
+            @root_session.on_flushed
             async def invoke_on_restored_callbacks():
                 if self._on_restored_callbacks.count() == 0:
                     return
 
-                with session_context(session):
+                with session_context(root_session):
                     try:
                         with reactive.isolate():
                             if self._restore_context and self._restore_context.active:
@@ -346,38 +446,6 @@ class BookmarkApp(Bookmark):
 
         return
 
-    def on_bookmark(
-        self,
-        callback: (
-            Callable[[BookmarkState], None] | Callable[[BookmarkState], Awaitable[None]]
-        ),
-        /,
-    ) -> CancelCallback:
-        return self._on_bookmark_callbacks.register(wrap_async(callback))
-
-    def on_bookmarked(
-        self,
-        callback: Callable[[str], None] | Callable[[str], Awaitable[None]],
-        /,
-    ) -> CancelCallback:
-        return self._on_bookmarked_callbacks.register(wrap_async(callback))
-
-    def on_restore(
-        self,
-        callback: (
-            Callable[[RestoreState], None] | Callable[[RestoreState], Awaitable[None]]
-        ),
-    ) -> CancelCallback:
-        return self._on_restore_callbacks.register(wrap_async(callback))
-
-    def on_restored(
-        self,
-        callback: (
-            Callable[[RestoreState], None] | Callable[[RestoreState], Awaitable[None]]
-        ),
-    ) -> CancelCallback:
-        return self._on_restored_callbacks.register(wrap_async(callback))
-
     async def update_query_string(
         self,
         query_string: str,
@@ -385,7 +453,7 @@ class BookmarkApp(Bookmark):
     ) -> None:
         if mode not in {"replace", "push"}:
             raise ValueError(f"Invalid mode: {mode}")
-        await self._session._send_message(
+        await self._root_session._send_message(
             {
                 "updateQueryString": {
                     "queryString": query_string,
@@ -403,7 +471,7 @@ class BookmarkApp(Bookmark):
         for proxy_exclude_fn in self._on_get_exclude:
             scoped_excludes.extend(proxy_exclude_fn())
         # Remove duplicates
-        return list(set([*self.exclude, *scoped_excludes]))
+        return [str(name) for name in set([*self.exclude, *scoped_excludes])]
 
     async def get_bookmark_url(self) -> str | None:
         if self.store == "disable":
@@ -414,17 +482,17 @@ class BookmarkApp(Bookmark):
         from ..session import session_context
 
         async def root_state_on_save(state: BookmarkState) -> None:
-            with session_context(self._session):
+            with session_context(self._root_session):
                 await self._on_bookmark_callbacks.invoke(state)
 
         root_state = BookmarkState(
-            input=self._session.input,
+            input=self._root_session.input,
             exclude=self._get_bookmark_exclude(),
             on_save=root_state_on_save,
         )
 
         if self.store == "server":
-            query_string = await root_state._save_state(app=self._session.app)
+            query_string = await root_state._save_state(app=self._root_session.app)
         elif self.store == "url":
             query_string = await root_state._encode_state()
         # # Can we have browser storage?
@@ -436,7 +504,7 @@ class BookmarkApp(Bookmark):
         else:
             raise ValueError("Unknown bookmark store: " + self.store)
 
-        clientdata = self._session.clientdata
+        clientdata = self._root_session.clientdata
 
         port = str(clientdata.url_port())
         full_url = "".join(
@@ -477,16 +545,15 @@ class BookmarkApp(Bookmark):
             # If on_bookmarked callback was provided, invoke it; if not call
             # the default.
             if self._on_bookmarked_callbacks.count() > 0:
-                with session_context(self._session):
+                with session_context(self._root_session):
                     await self._on_bookmarked_callbacks.invoke(full_url)
             else:
-                # `session.bookmark.show_modal(url)`
-
-                # showBookmarkUrlModal(url)
+                # Barret:
                 # This action feels weird. I don't believe it should occur
-                # Instead, I believe it should update the query string automatically.
-                # `session.bookmark.update_query_string(url)`
-                raise NotImplementedError("Show bookmark modal not implemented")
+                # Instead, I believe it should update the query string and set the user's clipboard with a UI notification in the corner.
+                with session_context(self._root_session):
+                    await self.show_bookmark_url_modal(full_url)
+
         except Exception as e:
             msg = f"Error bookmarking state: {e}"
             from ..ui._notification import notification_show
@@ -497,7 +564,12 @@ class BookmarkApp(Bookmark):
 class BookmarkProxy(Bookmark):
 
     _ns: ResolvedId
-    _session: SessionProxy
+    _proxy_session: SessionProxy
+    _root_session: Session
+
+    @property
+    def _root_bookmark(self) -> Bookmark:
+        return self._root_session.bookmark
 
     def __init__(self, session_proxy: SessionProxy):
         from ..session._session import SessionProxy
@@ -506,61 +578,30 @@ class BookmarkProxy(Bookmark):
         super().__init__()
 
         self._ns = session_proxy.ns
-        self._session = session_proxy
+        self._proxy_session = session_proxy
+        self._root_session = session_proxy._root_session
 
-        # Maybe `._get_bookmark_exclude()` should be used instead of`proxy_exclude_fns`?
-        self._session._parent.bookmark._on_get_exclude.append(
+        # Be sure root bookmark has access to proxy's excluded values
+        self._root_bookmark._on_get_exclude.append(
             lambda: [str(self._ns(name)) for name in self.exclude]
         )
 
-        # When scope is created, register these bookmarking callbacks on the main
-        # session object. They will invoke the scope's own callbacks, if any are
-        # present.
+        # Note: This proxy bookmark class will not register a handler (`on_bookmark`,
+        # `on_bookmarked`, `on_restore`, `on_restored`) until one is requested either by
+        # the app author or a sub-proxy bookmark class
+        # These function are utilized
 
-        # The goal of this method is to save the scope's values. All namespaced inputs
-        # will already exist within the `root_state`.
-        self._session._parent.bookmark.on_bookmark(self._scoped_on_bookmark)
+    @property
+    def _ns_prefix(self) -> str:
+        return str(self._ns + self._ns._sep)
 
-        from ..session import session_context
-
-        @self._session._parent.bookmark.on_bookmarked
-        async def scoped_on_bookmarked(url: str) -> None:
-            if self._on_bookmarked_callbacks.count() == 0:
-                return
-
-            with session_context(self._session):
-                await self._on_bookmarked_callbacks.invoke(url)
-
-        ns_prefix = str(self._ns + self._ns._sep)
-
-        @self._session._parent.bookmark.on_restore
-        async def scoped_on_restore(restore_state: RestoreState) -> None:
-            if self._on_restore_callbacks.count() == 0:
-                return
-
-            scoped_restore_state = restore_state._state_within_namespace(ns_prefix)
-
-            with session_context(self._session):
-                await self._on_restore_callbacks.invoke(scoped_restore_state)
-
-        @self._session._parent.bookmark.on_restored
-        async def scoped_on_restored(restore_state: RestoreState) -> None:
-            if self._on_restored_callbacks.count() == 0:
-                return
-
-            scoped_restore_state = restore_state._state_within_namespace(ns_prefix)
-            with session_context(self._session):
-                await self._on_restored_callbacks.invoke(scoped_restore_state)
-
+    # The goal of this method is to save the scope's values. All namespaced inputs
+    # will already exist within the `root_state`.
     async def _scoped_on_bookmark(self, root_state: BookmarkState) -> None:
-        # Exit if no user-defined callbacks.
-        if self._on_bookmark_callbacks.count() == 0:
-            return
-
         from ..bookmark._bookmark import BookmarkState
 
         scoped_state = BookmarkState(
-            input=self._session.input,
+            input=self._proxy_session.input,
             exclude=self.exclude,
             on_save=None,
         )
@@ -570,6 +611,12 @@ class BookmarkProxy(Bookmark):
         if root_state.dir is not None:
             scope_subpath = self._ns
             scoped_state.dir = Path(root_state.dir) / scope_subpath
+            # Barret - 2025-03-17:
+            # Having Shiny make this directory feels like the wrong thing to do here.
+            # Feels like we should be using the App's bookmark_save_dir function to
+            # determine where to save the bookmark state.
+            # However, R-Shiny currently creates the directory:
+            # https://github.com/rstudio/shiny/blob/f55c26af4a0493b082d2967aca6d36b90795adf1/R/shiny.R#L940
             scoped_state.dir.mkdir(parents=True, exist_ok=True)
 
             if not scoped_state.dir.exists():
@@ -577,10 +624,9 @@ class BookmarkProxy(Bookmark):
                     f"Scope directory could not be created for {scope_subpath}"
                 )
 
-        # Invoke the callback on the scopeState object
         from ..session import session_context
 
-        with session_context(self._session):
+        with session_context(self._proxy_session):
             await self._on_bookmark_callbacks.invoke(scoped_state)
 
         # Copy `values` from scoped_state to root_state (adding namespace)
@@ -590,24 +636,102 @@ class BookmarkProxy(Bookmark):
                     raise ValueError("All scope values must be named.")
                 root_state.values[str(self._ns(key))] = value
 
+    def on_bookmark(
+        self,
+        callback: (
+            Callable[[BookmarkState], None] | Callable[[BookmarkState], Awaitable[None]]
+        ),
+    ) -> CancelCallback:
+        if self._on_bookmark_callbacks.count() == 0:
+            # Register a proxy callback on the parent session
+            self._root_bookmark.on_bookmark(self._scoped_on_bookmark)
+        return super().on_bookmark(callback)
+
+    def on_bookmarked(
+        self,
+        callback: Callable[[str], None] | Callable[[str], Awaitable[None]],
+    ) -> CancelCallback:
+        if self._on_bookmarked_callbacks.count() == 0:
+            from ..session import session_context
+
+            # Register a proxy callback on the parent session
+            @self._root_bookmark.on_bookmarked
+            async def scoped_on_bookmarked(url: str) -> None:
+                if self._on_bookmarked_callbacks.count() == 0:
+                    return
+                with session_context(self._proxy_session):
+                    await self._on_bookmarked_callbacks.invoke(url)
+
+        return super().on_bookmarked(callback)
+
+    def on_restore(
+        self,
+        callback: (
+            Callable[[RestoreState], None] | Callable[[RestoreState], Awaitable[None]]
+        ),
+    ) -> CancelCallback:
+
+        if self._on_restore_callbacks.count() == 0:
+            from ..session import session_context
+
+            # Register a proxy callback on the parent session
+            @self._root_bookmark.on_restore
+            async def scoped_on_restore(restore_state: RestoreState) -> None:
+                if self._on_restore_callbacks.count() == 0:
+                    return
+
+                scoped_restore_state = restore_state._state_within_namespace(
+                    self._ns_prefix
+                )
+
+                with session_context(self._proxy_session):
+                    await self._on_restore_callbacks.invoke(scoped_restore_state)
+
+        return super().on_restore(callback)
+
+    def on_restored(
+        self,
+        callback: (
+            Callable[[RestoreState], None] | Callable[[RestoreState], Awaitable[None]]
+        ),
+    ) -> CancelCallback:
+
+        if self._on_restored_callbacks.count() == 0:
+            from ..session import session_context
+
+            # Register a proxy callback on the parent session
+            @self._root_bookmark.on_restored
+            async def scoped_on_restored(restore_state: RestoreState) -> None:
+                if self._on_restored_callbacks.count() == 0:
+                    return
+
+                scoped_restore_state = restore_state._state_within_namespace(
+                    self._ns_prefix
+                )
+
+                with session_context(self._proxy_session):
+                    await self._on_restored_callbacks.invoke(scoped_restore_state)
+
+        return super().on_restored(callback)
+
     @property
     def store(self) -> BookmarkStore:
-        return self._session._parent.bookmark.store
+        return self._root_bookmark.store
 
     @property
     def _restore_context(self) -> RestoreContext | None:
-        return self._session._parent.bookmark._restore_context
+        return self._root_bookmark._restore_context
 
     async def update_query_string(
         self, query_string: str, mode: Literal["replace", "push"] = "replace"
     ) -> None:
-        await self._session._parent.bookmark.update_query_string(query_string, mode)
+        await self._root_bookmark.update_query_string(query_string, mode)
 
     async def get_bookmark_url(self) -> str | None:
-        return await self._session._parent.bookmark.get_bookmark_url()
+        return await self._root_bookmark.get_bookmark_url()
 
     async def do_bookmark(self) -> None:
-        await self._session._parent.bookmark.do_bookmark()
+        await self._root_bookmark.do_bookmark()
 
 
 class BookmarkExpressStub(Bookmark):
@@ -676,65 +800,6 @@ class BookmarkExpressStub(Bookmark):
         return lambda: None
 
 
-# #' Generate a modal dialog that displays a URL
-# #'
-# #' The modal dialog generated by `urlModal` will display the URL in a
-# #' textarea input, and the URL text will be selected so that it can be easily
-# #' copied. The result from `urlModal` should be passed to the
-# #' [showModal()] function to display it in the browser.
-# #'
-# #' @param url A URL to display in the dialog box.
-# #' @param title A title for the dialog box.
-# #' @param subtitle Text to display underneath URL.
-# #' @export
-# urlModal <- function(url, title = "Bookmarked application link", subtitle = NULL) {
-
-#   subtitleTag <- tagList(
-#     br(),
-#     span(class = "text-muted", subtitle),
-#     span(id = "shiny-bookmark-copy-text", class = "text-muted")
-#   )
-
-#   modalDialog(
-#     title = title,
-#     easyClose = TRUE,
-#     tags$textarea(class = "form-control", rows = "1", style = "resize: none;",
-#       readonly = "readonly",
-#       url
-#     ),
-#     subtitleTag,
-#     # Need separate show and shown listeners. The show listener sizes the
-#     # textarea just as the modal starts to fade in. The 200ms delay is needed
-#     # because if we try to resize earlier, it can't calculate the text height
-#     # (scrollHeight will be reported as zero). The shown listener selects the
-#     # text; it's needed because because selection has to be done after the fade-
-#     # in is completed.
-#     tags$script(
-#       "$('#shiny-modal').
-#         one('show.bs.modal', function() {
-#           setTimeout(function() {
-#             var $textarea = $('#shiny-modal textarea');
-#             $textarea.innerHeight($textarea[0].scrollHeight);
-#           }, 200);
-#         });
-#       $('#shiny-modal')
-#         .one('shown.bs.modal', function() {
-#           $('#shiny-modal textarea').select().focus();
-#         });
-#       $('#shiny-bookmark-copy-text')
-#         .text(function() {
-#           if (/Mac/i.test(navigator.userAgent)) {
-#             return 'Press \u2318-C to copy.';
-#           } else {
-#             return 'Press Ctrl-C to copy.';
-#           }
-#         });
-#       "
-#     )
-#   )
-# }
-
-
 # #' Display a modal dialog for bookmarking
 # #'
 # #' This is a wrapper function for [urlModal()] that is automatically
@@ -756,233 +821,4 @@ class BookmarkExpressStub(Bookmark):
 #   }
 
 #   showModal(urlModal(url, subtitle = subtitle))
-# }
-
-# #' Enable bookmarking for a Shiny application
-# #'
-# #' @description
-# #'
-# #' There are two types of bookmarking: saving an application's state to disk on
-# #' the server, and encoding the application's state in a URL. For state that has
-# #' been saved to disk, the state can be restored with the corresponding state
-# #' ID. For URL-encoded state, the state of the application is encoded in the
-# #' URL, and no server-side storage is needed.
-# #'
-# #' URL-encoded bookmarking is appropriate for applications where there not many
-# #' input values that need to be recorded. Some browsers have a length limit for
-# #' URLs of about 2000 characters, and if there are many inputs, the length of
-# #' the URL can exceed that limit.
-# #'
-# #' Saved-on-server bookmarking is appropriate when there are many inputs, or
-# #' when the bookmarked state requires storing files.
-# #'
-# #' @details
-# #'
-# #' For restoring state to work properly, the UI must be a function that takes
-# #' one argument, `request`. In most Shiny applications, the UI is not a
-# #' function; it might have the form `fluidPage(....)`. Converting it to a
-# #' function is as simple as wrapping it in a function, as in
-# #' \code{function(request) \{ fluidPage(....) \}}.
-# #'
-# #' By default, all input values will be bookmarked, except for the values of
-# #' passwordInputs. fileInputs will be saved if the state is saved on a server,
-# #' but not if the state is encoded in a URL.
-# #'
-# #' When bookmarking state, arbitrary values can be stored, by passing a function
-# #' as the `onBookmark` argument. That function will be passed a
-# #' `ShinySaveState` object. The `values` field of the object is a list
-# #' which can be manipulated to save extra information. Additionally, if the
-# #' state is being saved on the server, and the `dir` field of that object
-# #' can be used to save extra information to files in that directory.
-# #'
-# #' For saved-to-server state, this is how the state directory is chosen:
-# #' \itemize{
-# #'   \item If running in a hosting environment such as Shiny Server or
-# #'     Connect, the hosting environment will choose the directory.
-# #'   \item If running an app in a directory with [runApp()], the
-# #'     saved states will be saved in a subdirectory of the app called
-# #'    shiny_bookmarks.
-# #'   \item If running a Shiny app object that is generated from code (not run
-# #'     from a directory), the saved states will be saved in a subdirectory of
-# #'     the current working directory called shiny_bookmarks.
-# #' }
-# #'
-# #' When used with [shinyApp()], this function must be called before
-# #' `shinyApp()`, or in the `shinyApp()`'s `onStart` function. An
-# #' alternative to calling the `enableBookmarking()` function is to use the
-# #' `enableBookmarking` *argument* for `shinyApp()`. See examples
-# #' below.
-# #'
-# #' @param store Either `"url"`, which encodes all of the relevant values in
-# #'   a URL, `"server"`, which saves to disk on the server, or
-# #'   `"disable"`, which disables any previously-enabled bookmarking.
-# #'
-# #' @seealso [onBookmark()], [onBookmarked()],
-# #'   [onRestore()], and [onRestored()] for registering
-# #'   callback functions that are invoked when the state is bookmarked or
-# #'   restored.
-# #'
-# #'   Also see [updateQueryString()].
-# #'
-# #' @export
-# #' @examples
-# #' ## Only run these examples in interactive R sessions
-# #' if (interactive()) {
-# #'
-# #' # Basic example with state encoded in URL
-# #' ui <- function(request) {
-# #'   fluidPage(
-# #'     textInput("txt", "Text"),
-# #'     checkboxInput("chk", "Checkbox"),
-# #'     bookmarkButton()
-# #'   )
-# #' }
-# #' server <- function(input, output, session) { }
-# #' enableBookmarking("url")
-# #' shinyApp(ui, server)
-# #'
-# #'
-# #' # An alternative to calling enableBookmarking(): use shinyApp's
-# #' # enableBookmarking argument
-# #' shinyApp(ui, server, enableBookmarking = "url")
-# #'
-# #'
-# #' # Same basic example with state saved to disk
-# #' enableBookmarking("server")
-# #' shinyApp(ui, server)
-# #'
-# #'
-# #' # Save/restore arbitrary values
-# #' ui <- function(req) {
-# #'   fluidPage(
-# #'     textInput("txt", "Text"),
-# #'     checkboxInput("chk", "Checkbox"),
-# #'     bookmarkButton(),
-# #'     br(),
-# #'     textOutput("lastSaved")
-# #'   )
-# #' }
-# #' server <- function(input, output, session) {
-# #'   vals <- reactiveValues(savedTime = NULL)
-# #'   output$lastSaved <- renderText({
-# #'     if (!is.null(vals$savedTime))
-# #'       paste("Last saved at", vals$savedTime)
-# #'     else
-# #'       ""
-# #'   })
-# #'
-# #'   onBookmark(function(state) {
-# #'     vals$savedTime <- Sys.time()
-# #'     # state is a mutable reference object, and we can add arbitrary values
-# #'     # to it.
-# #'     state$values$time <- vals$savedTime
-# #'   })
-# #'   onRestore(function(state) {
-# #'     vals$savedTime <- state$values$time
-# #'   })
-# #' }
-# #' enableBookmarking(store = "url")
-# #' shinyApp(ui, server)
-# #'
-# #'
-# #' # Usable with dynamic UI (set the slider, then change the text input,
-# #' # click the bookmark button)
-# #' ui <- function(request) {
-# #'   fluidPage(
-# #'     sliderInput("slider", "Slider", 1, 100, 50),
-# #'     uiOutput("ui"),
-# #'     bookmarkButton()
-# #'   )
-# #' }
-# #' server <- function(input, output, session) {
-# #'   output$ui <- renderUI({
-# #'     textInput("txt", "Text", input$slider)
-# #'   })
-# #' }
-# #' enableBookmarking("url")
-# #' shinyApp(ui, server)
-# #'
-# #'
-# #' # Exclude specific inputs (The only input that will be saved in this
-# #' # example is chk)
-# #' ui <- function(request) {
-# #'   fluidPage(
-# #'     passwordInput("pw", "Password"), # Passwords are never saved
-# #'     sliderInput("slider", "Slider", 1, 100, 50), # Manually excluded below
-# #'     checkboxInput("chk", "Checkbox"),
-# #'     bookmarkButton()
-# #'   )
-# #' }
-# #' server <- function(input, output, session) {
-# #'   setBookmarkExclude("slider")
-# #' }
-# #' enableBookmarking("url")
-# #' shinyApp(ui, server)
-# #'
-# #'
-# #' # Update the browser's location bar every time an input changes. This should
-# #' # not be used with enableBookmarking("server"), because that would create a
-# #' # new saved state on disk every time the user changes an input.
-# #' ui <- function(req) {
-# #'   fluidPage(
-# #'     textInput("txt", "Text"),
-# #'     checkboxInput("chk", "Checkbox")
-# #'   )
-# #' }
-# #' server <- function(input, output, session) {
-# #'   observe({
-# #'     # Trigger this observer every time an input changes
-# #'     reactiveValuesToList(input)
-# #'     session$doBookmark()
-# #'   })
-# #'   onBookmarked(function(url) {
-# #'     updateQueryString(url)
-# #'   })
-# #' }
-# #' enableBookmarking("url")
-# #' shinyApp(ui, server)
-# #'
-# #'
-# #' # Save/restore uploaded files
-# #' ui <- function(request) {
-# #'   fluidPage(
-# #'     sidebarLayout(
-# #'       sidebarPanel(
-# #'         fileInput("file1", "Choose CSV File", multiple = TRUE,
-# #'           accept = c(
-# #'             "text/csv",
-# #'             "text/comma-separated-values,text/plain",
-# #'             ".csv"
-# #'           )
-# #'         ),
-# #'         tags$hr(),
-# #'         checkboxInput("header", "Header", TRUE),
-# #'         bookmarkButton()
-# #'       ),
-# #'       mainPanel(
-# #'         tableOutput("contents")
-# #'       )
-# #'     )
-# #'   )
-# #' }
-# #' server <- function(input, output) {
-# #'   output$contents <- renderTable({
-# #'     inFile <- input$file1
-# #'     if (is.null(inFile))
-# #'       return(NULL)
-# #'
-# #'     if (nrow(inFile) == 1) {
-# #'       read.csv(inFile$datapath, header = input$header)
-# #'     } else {
-# #'       data.frame(x = "multiple files")
-# #'     }
-# #'   })
-# #' }
-# #' enableBookmarking("server")
-# #' shinyApp(ui, server)
-# #'
-# #' }
-# enableBookmarking <- function(store = c("url", "server", "disable")) {
-#   store <- match.arg(store)
-#   shinyOptions(bookmarkStore = store)
 # }
