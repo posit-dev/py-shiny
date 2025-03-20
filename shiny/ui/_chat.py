@@ -1499,12 +1499,17 @@ class MessageStream:
         self._chat = chat
         self._stream_id = stream_id
 
-    async def clear(self):
+    async def replace(self, message_chunk: Any):
         """
-        Set the stream back to its original state.
+        Replace the content of the stream with new content.
+
+        Parameters
+        -----------
+        message_chunk
+            The new content to replace the current content.
         """
         await self._chat._append_message_chunk(
-            "",
+            message_chunk,
             operation="replace",
             stream_id=self._stream_id,
         )

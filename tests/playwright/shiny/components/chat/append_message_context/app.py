@@ -48,9 +48,7 @@ async def _():
         await asyncio.sleep(SLEEP_TIME)
         await msg.append(" stream")
         await asyncio.sleep(SLEEP_TIME)
-        await msg.clear()
-        await asyncio.sleep(SLEEP_TIME)
-        await msg.append("Finished")
+        await msg.replace("Finished")
 
 
 @reactive.effect
@@ -76,8 +74,7 @@ async def _():
         async with chat.message_stream_context() as inner:
             await inner.append("Inner start")
             await asyncio.sleep(SLEEP_TIME)
-            await inner.clear()
-            await inner.append("Inner end")
+            await inner.replace("Inner end")
         await asyncio.sleep(SLEEP_TIME)
         await outer.append("Outer end")
 
@@ -88,7 +85,7 @@ async def _():
     async with chat.message_stream_context() as outer:
         await outer.append("Outer start")
         await asyncio.sleep(SLEEP_TIME)
-        await outer.clear()
+        await outer.replace("")
         async with chat.message_stream_context() as inner:
             await inner.append("Inner start")
             await asyncio.sleep(SLEEP_TIME)
@@ -116,5 +113,4 @@ async def inner_stream():
         await stream.append("Inner start")
         await asyncio.sleep(SLEEP_TIME)
         await stream.append("Inner progress")
-        await stream.clear()
-        await stream.append("Inner end")
+        await stream.replace("Inner end")
