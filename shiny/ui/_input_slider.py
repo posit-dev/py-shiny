@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from ..bookmark import restore_input
+
 __all__ = (
     "input_slider",
     "SliderValueArg",
@@ -140,9 +142,10 @@ def input_slider(
     * :func:`~shiny.ui.update_slider`
     """
 
+    resolved_id = resolve_id(id)
+    value = restore_input(resolved_id, value)
     # Thanks to generic typing, max, value, etc. should be of the same type
     data_type = _slider_type(min)
-
     # Make sure min, max, value, and step are all numeric
     # (converts dates/datetimes to milliseconds since epoch...this is the value JS wants)
     min_num = _as_numeric(min)
@@ -201,7 +204,6 @@ def input_slider(
     # ionRangeSlider wants attr = 'true'/'false'
     props = {k: str(v).lower() if isinstance(v, bool) else v for k, v in props.items()}
 
-    resolved_id = resolve_id(id)
     slider_tag = div(
         shiny_input_label(resolved_id, label),
         tags.input(**props),

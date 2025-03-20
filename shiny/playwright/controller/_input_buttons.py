@@ -47,7 +47,7 @@ class InputActionButton(
         super().__init__(
             page,
             id=id,
-            loc=f"button#{id}.action-button.shiny-bound-input",
+            loc=f'button[id="{id}"].action-button.shiny-bound-input',
         )
 
     def expect_disabled(self, value: bool, *, timeout: Timeout = None):
@@ -64,6 +64,45 @@ class InputActionButton(
         _expect_attribute_to_have_value(
             self.loc, "disabled", re.compile(".*") if value else None, timeout=timeout
         )
+
+
+class InputBookmarkButton(
+    InputActionButton,
+):
+    """Controller for :func:`shiny.ui.input_bookmark_button`."""
+
+    def __init__(
+        self,
+        page: Page,
+        id: str = "._bookmark_",
+    ) -> None:
+        """
+        Initializes the input bookmark button.
+
+        Parameters
+        ----------
+        page
+            The page where the input bookmark button is located.
+        id
+            The id of the input bookmark button. Defaults to "._bookmark_".
+        """
+        super().__init__(
+            page,
+            id=id,
+        )
+
+    def expect_disabled(self, value: bool, *, timeout: Timeout = None):
+        """
+        Expect the input bookmark button to be disabled.
+
+        Parameters
+        ----------
+        value
+            The expected value of the `disabled` attribute.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        super().expect_disabled(value, timeout=timeout)
 
 
 class InputDarkMode(UiBase):
