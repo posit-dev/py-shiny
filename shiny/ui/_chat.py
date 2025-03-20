@@ -82,7 +82,12 @@ UserSubmitFunction = Union[
 
 ChunkOption = Literal["start", "end", True, False]
 
-PendingMessage = Tuple[Any, ChunkOption, Union[str, None]]
+PendingMessage = Tuple[
+    Any,
+    ChunkOption,
+    Literal["append", "replace"],
+    Union[str, None],
+]
 
 
 @add_example(ex_dir="../templates/chat/starters/hello")
@@ -576,7 +581,7 @@ class Chat:
         """
         # If we're in a stream, queue the message
         if self._current_stream_id:
-            self._pending_messages.append((message, False, None))
+            self._pending_messages.append((message, False, "append", None))
             return
 
         msg = normalize_message(message)
@@ -685,7 +690,7 @@ class Chat:
     ) -> None:
         # If currently we're in a *different* stream, queue the message chunk
         if self._current_stream_id and self._current_stream_id != stream_id:
-            self._pending_messages.append((message, chunk, stream_id))
+            self._pending_messages.append((message, chunk, operation, stream_id))
             return
 
         self._current_stream_id = stream_id
@@ -876,12 +881,15 @@ class Chat:
     async def _flush_pending_messages(self):
         pending = self._pending_messages
         self._pending_messages = []
-        for msg, chunk, stream_id in pending:
+        for msg, chunk, operation, stream_id in pending:
             if chunk is False:
                 await self.append_message(msg)
             else:
                 await self._append_message_chunk(
-                    msg, chunk=chunk, stream_id=cast(str, stream_id)
+                    msg,
+                    chunk=chunk,
+                    operation=operation,
+                    stream_id=cast(str, stream_id),
                 )
 
     # Send a message to the UI
