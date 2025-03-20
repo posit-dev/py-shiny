@@ -8,9 +8,7 @@ from shiny.run import ShinyAppProc
 app = create_app_fixture(["app-express.py"])
 
 
-pytest.skip("Broken test!")
-
-
+@pytest.mark.skip("Broken test! TODO: Barret")
 def test_file_input_bookmarking(page: Page, app: ShinyAppProc) -> None:
     page.goto(app.url)
 
