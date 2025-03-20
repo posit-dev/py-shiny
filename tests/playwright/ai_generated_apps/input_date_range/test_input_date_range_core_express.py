@@ -31,17 +31,17 @@ def test_date_range_input(page: Page, app: ShinyAppProc) -> None:
     date_range.expect_autoclose("true")  # Test autoclose
 
     # Test setting new values
-    date_range.set(("2023-06-01", "2023-06-30"))
-    date_range.expect_value(("2023-06-01", "2023-06-30"))
+    date_range.set(("06/01/2023", "06/30/2023"))
+    date_range.expect_value(("06/01/2023", "06/30/2023"))
 
     # Test setting only start date
-    date_range.set(("2023-07-01", None))
-    date_range.expect_value(("2023-07-01", "2023-06-30"))
+    date_range.set(("07/01/2023", None))
+    date_range.expect_value(("07/01/2023", "06/30/2023"))
 
     # Test setting only end date
-    date_range.set((None, "2023-07-31"))
-    date_range.expect_value(("2023-07-01", "2023-07-31"))
+    date_range.set((None, "07/31/2023"))
+    date_range.expect_value(("07/01/2023", "07/31/2023"))
 
     # Test setting dates at the boundaries
-    date_range.set(("2020-01-01", "2025-12-31"))  # Min and max dates
-    date_range.expect_value(("2020-01-01", "2025-12-31"))
+    date_range.set(("01/01/2020", "12/31/2025"))  # Min and max dates
+    date_range.expect_value(("01/01/2020", "12/31/2025"))
