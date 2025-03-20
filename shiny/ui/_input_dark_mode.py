@@ -1,19 +1,16 @@
 from __future__ import annotations
 
-from shiny._namespaces import resolve_id_or_none
-from shiny.bookmark._restore_state import restore_input
-
-__all__ = ("input_dark_mode", "update_dark_mode")
-
 from typing import Literal, Optional
 
 from htmltools import Tag, TagAttrValue, css
 
 from .._docstring import add_example, no_example
-
-# from ..module import resolve_id
+from .._namespaces import resolve_id_or_none
+from ..bookmark import restore_input
 from ..session import Session, require_active_session
 from ._web_component import web_component
+
+__all__ = ("input_dark_mode", "update_dark_mode")
 
 BootstrapColorMode = Literal["light", "dark"]
 

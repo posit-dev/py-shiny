@@ -1,19 +1,18 @@
 from __future__ import annotations
 
-__all__ = ("input_date", "input_date_range")
-
 import json
 from datetime import date
 from typing import Optional
 
 from htmltools import Tag, TagAttrValue, TagChild, css, div, span, tags
 
-from shiny.bookmark import restore_input
-from shiny.module import resolve_id
-
 from .._docstring import add_example
+from ..bookmark import restore_input
+from ..module import resolve_id
 from ._html_deps_external import datepicker_deps
 from ._utils import shiny_input_label
+
+__all__ = ("input_date", "input_date_range")
 
 
 @add_example()

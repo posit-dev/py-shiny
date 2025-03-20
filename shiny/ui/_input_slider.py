@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from shiny.bookmark._restore_state import restore_input
+from ..bookmark import restore_input
 
 __all__ = (
     "input_slider",

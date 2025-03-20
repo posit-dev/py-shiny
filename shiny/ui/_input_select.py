@@ -14,9 +14,8 @@ from typing import Any, Mapping, Optional, Union, cast
 
 from htmltools import Tag, TagChild, TagList, css, div, tags
 
-from shiny.bookmark._restore_state import restore_input
-
 from .._docstring import add_example
+from ..bookmark import restore_input
 from ..module import resolve_id
 from ._html_deps_external import selectize_deps
 from ._utils import JSEval, extract_js_keys, shiny_input_label
