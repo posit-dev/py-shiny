@@ -302,7 +302,7 @@ def normalize_message(message: Any) -> ChatMessage:
             return strategy.normalize(message)
     raise ValueError(
         f"Could not find a normalizer for message of type {type(message)}: {message}. "
-        "Consider registering a custom normalizer via shiny.ui._chat_types.registry.register()"
+        "Consider registering a custom normalizer via shiny.ui._chat_normalize.message_normalizer_registry.register()"
     )
 
 
@@ -313,5 +313,5 @@ def normalize_message_chunk(chunk: Any) -> ChatMessage:
             return strategy.normalize_chunk(chunk)
     raise ValueError(
         f"Could not find a normalizer for message chunk of type {type(chunk)}: {chunk}. "
-        "Consider registering a custom normalizer via shiny.ui._chat_types.registry.register()"
+        "Consider registering a custom normalizer via shiny.ui._chat_normalize.message_normalizer_registry.register()"
     )
