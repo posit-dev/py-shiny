@@ -145,7 +145,8 @@ shiny-chat-input {
 
   margin-top: calc(-1 * var(--_input-padding-top));
   position: sticky;
-  bottom: calc(-1 * var(--_input-padding-bottom));
+  bottom: calc(-1 * var(--_input-padding-bottom) + 4px);
+  // 4px: autoscroll adds 2px to height, this keeps input from wiggling when scrolling on top of chat
   padding-block: var(--_input-padding-top) var(--_input-padding-bottom);
 
   textarea {
