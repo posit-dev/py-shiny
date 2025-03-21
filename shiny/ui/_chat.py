@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import functools
 import inspect
 from contextlib import asynccontextmanager
 from typing import (
@@ -12,6 +13,7 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
+    TypeVar,
     Union,
     cast,
     overload,
@@ -23,6 +25,7 @@ from htmltools import HTML, Tag, TagAttrValue, TagChild, TagList, css
 from .. import _utils, reactive
 from .._deprecated import warn_deprecated
 from .._docstring import add_example
+from .._typing_extensions import ParamSpec
 from ..module import ResolvedId, resolve_id
 from ..session import require_active_session, session_context
 from ..types import MISSING, MISSING_TYPE, NotifyException
@@ -42,6 +45,9 @@ from ._chat_tokenizer import TokenEncoding, TokenizersEncoding, get_default_toke
 from ._chat_types import ChatMessage, ChatMessageDict, ClientMessage, TransformedMessage
 from ._html_deps_py_shiny import chat_deps
 from .fill import as_fill_item, as_fillable_container
+
+P = ParamSpec("P")
+R = TypeVar("R")
 
 __all__ = (
     "Chat",
@@ -594,6 +600,79 @@ class Chat:
             chunk=False,
             icon=icon,
         )
+
+    # TODO: also allow for Callable[P, Awaitable[R]] input
+    def display_tool(self, tool: Callable[P, R]) -> Callable[P, Awaitable[R]]:
+        """
+        Display a tool call in the chat.
+
+        Parameters
+        ----------
+        tool
+            A function that will be provided to the chat as a tool call.
+        *args
+            Positional arguments to pass to the tool
+
+        Returns
+        -------
+        :
+            The return value of the tool call.
+        """
+
+        atool = _utils.wrap_async(tool)
+
+        @functools.wraps(atool)
+        async def wrapped_tool(*args: P.args, **kwargs: P.kwargs) -> R:
+            async with self.message_stream_context() as stream:
+                await stream.append(self._tool_request_ui(atool))
+                res = None
+                try:
+                    res = await atool(*args, **kwargs)
+                    return res
+                except Exception as e:
+                    await stream.replace(self._tool_error_ui(atool.__name__, e))
+                    raise e
+                finally:
+                    await stream.replace(
+                        self._tool_result_ui(atool, res, *args, **kwargs)
+                    )
+
+        return wrapped_tool
+
+    @staticmethod
+    def _tool_request_ui(tool: Callable[P, Awaitable[R]]) -> str:
+        # TODO: Better UI styling/design
+        return f"> Requesting tool: `{tool.__name__}` 🔄"
+
+    @staticmethod
+    def _tool_result_ui(
+        tool: Callable[P, Awaitable[R]],
+        result: Any,
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> str:
+        # TODO:
+        # * Main problem here is that we don't exactly how the result gets sent to the model
+        #   * A potential workaround would be for `tool` to accept a `chatlas.Tool()` and have
+        #      that know how to prepare the result for the model
+        # * Better UI styling/design
+        return f"""
+        <details class="tool-result">
+           <summary>Tool `{tool.__name__}` completed</summary>
+            <div><span>Return value:</span> {result} </div>
+            <div><span>Positional args:</span> <code>{args}</code></div>
+            <div><span>Keyword args:</span> <code>{kwargs}</code></div>
+        </details>
+        """
+
+    @staticmethod
+    def _tool_error_ui(tool_name: str, e: Exception) -> str:
+        return f"""
+        <details class="tool-result tool-error">
+           <summary>Tool `{tool_name}` errored</summary>
+            <div><span>Error:</span> {e} </div>
+        </details>
+        """
 
     @asynccontextmanager
     async def message_stream_context(self):
