@@ -68,6 +68,7 @@ pre:has(.code-copy-button) {
 .markdown-stream-dot {
   // The stream dot is appended with each streaming chunk update, so the pulse animation
   // only shows up when streaming pauses but isn't complete.
+  animation: markdown-stream-dot-pulse 1.75s infinite cubic-bezier(0.18, 0.89, 0.32, 1.28);
   animation-delay: 250ms;
   display: inline-block;
   transform-origin: center;
