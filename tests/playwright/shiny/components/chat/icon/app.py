@@ -82,7 +82,7 @@ with ui.layout_columns():
     with ui.div():
         ui.h2("Image Bot")
         chat_image.ui(
-            messsages=["Hello! I'm Image Bot. How can I help you today?"],
+            messages=["Hello! I'm Image Bot. How can I help you today?"],
             icon_assistant=ui.img(
                 src="img/grace-hopper.jpg",
                 class_="icon-image grace-hopper",
