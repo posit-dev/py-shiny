@@ -295,6 +295,39 @@ class NormalizerRegistry:
 message_normalizer_registry = NormalizerRegistry()
 
 
+def register_custom_normalizer(
+    provider: str, normalizer: BaseMessageNormalizer, force: bool = False
+) -> None:
+    """
+    Register a custom normalizer for handling specific message types.
+
+    Parameters
+    ----------
+    provider : str
+        A unique identifier for this normalizer in the registry
+    normalizer : BaseMessageNormalizer
+        A normalizer instance that can handle your specific message type
+    force : bool, optional
+        Whether to override an existing normalizer with the same provider name,
+        by default False
+
+    Examples
+    --------
+    >>> class MyCustomMessage:
+    ...     def __init__(self, content):
+    ...         self.content = content
+    ...
+    >>> class MyCustomNormalizer(StringNormalizer):
+    ...     def normalize(self, message):
+    ...         return ChatMessage(content=message.content, role="assistant")
+    ...     def can_normalize(self, message):
+    ...         return isinstance(message, MyCustomMessage)
+    ...
+    >>> register_custom_normalizer("my_provider", MyCustomNormalizer())
+    """
+    message_normalizer_registry.register(provider, normalizer, force)
+
+
 def normalize_message(message: Any) -> ChatMessage:
     strategies = message_normalizer_registry._strategies
     for strategy in strategies.values():
@@ -313,5 +346,5 @@ def normalize_message_chunk(chunk: Any) -> ChatMessage:
             return strategy.normalize_chunk(chunk)
     raise ValueError(
         f"Could not find a normalizer for message chunk of type {type(chunk)}: {chunk}. "
-        "Consider registering a custom normalizer via shiny.ui._chat_types.registry.register()"
+        "Consider registering a custom normalizer via shiny.ui._chat_normalize.register_custom_normalizer()"
     )
