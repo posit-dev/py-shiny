@@ -4,6 +4,8 @@ from typing import TYPE_CHECKING, Literal, Optional, TypeVar
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, tags
 
+from shiny.bookmark._restore_state import restore_input
+
 from .._docstring import add_example
 from .._namespaces import resolve_id_or_none
 from .._utils import drop_none, private_random_id
@@ -274,7 +276,7 @@ def accordion(
     for panel, open in zip(panels, is_open):
         panel._accordion_id = accordion_id
         panel._is_multiple = multiple
-        panel._is_open = open
+        panel._is_open = restore_input(accordion_id, open)
 
     panel_tags = [panel.resolve() for panel in panels]
 

@@ -16,6 +16,8 @@ from htmltools import (
     tags,
 )
 
+from shiny.bookmark._restore_state import restore_input
+
 from .._docstring import add_example, no_example
 from .._namespaces import resolve_id_or_none
 from .._typing_extensions import TypedDict
@@ -545,13 +547,15 @@ def sidebar(
 
     attrs, children = consolidate_attrs(*args, **kwargs)
 
+    resolved_id = resolve_id_or_none(id)
+
     return Sidebar(
         children=children,
         attrs=attrs,
         width=width,
         position=position,
-        open=open,
-        id=id,
+        open=restore_input(resolved_id, open),
+        id=resolved_id,
         title=title,
         fg=fg,
         bg=bg,
