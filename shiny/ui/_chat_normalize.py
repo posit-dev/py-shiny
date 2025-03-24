@@ -323,7 +323,7 @@ def register_custom_normalizer(
     ...     def can_normalize(self, message):
     ...         return isinstance(message, MyCustomMessage)
     ...
-    >>> register_custom_normalizer("my_provider", MyCustomNormalizer)
+    >>> register_custom_normalizer("my_provider", MyCustomNormalizer())
     """
     message_normalizer_registry.register(provider, normalizer, force)
 
