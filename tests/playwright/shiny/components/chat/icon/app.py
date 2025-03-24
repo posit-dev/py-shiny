@@ -31,19 +31,14 @@ with ui.layout_columns():
         await chat_default.append_message(f"You said: {user_input}")
 
     # Animal Bot ----------------------------------------------------------------------
-    chat_animal = ui.Chat(
-        id="chat_animal",
-        messages=[
-            {
-                "content": "Hello! I'm Animal Bot. How can I help you today?",
-                "role": "assistant",
-            },
-        ],
-    )
+    chat_animal = ui.Chat(id="chat_animal")
 
     with ui.div():
         ui.h2("Animal Bot")
-        chat_animal.ui(icon_assistant=faicons.icon_svg("otter").add_class("icon-otter"))
+        chat_animal.ui(
+            messages=["Hello! I'm Animal Bot. How can I help you today?"],
+            icon_assistant=faicons.icon_svg("otter").add_class("icon-otter"),
+        )
         ui.input_select("animal", "Animal", choices=["Otter", "Hippo", "Frog", "Dove"])
 
     @chat_animal.on_user_submit
@@ -68,42 +63,30 @@ with ui.layout_columns():
     </svg>
     """
 
-    chat_svg = ui.Chat(
-        id="chat_svg",
-        messages=[
-            {
-                "content": "Hello! I'm SVG Bot. How can I help you today?",
-                "role": "assistant",
-            },
-        ],
-    )
+    chat_svg = ui.Chat(id="chat_svg")
 
     with ui.div():
         ui.h2("SVG Bot")
-        chat_svg.ui(icon_assistant=ui.HTML(bs_icon_info_circle_fill))
+        chat_svg.ui(
+            messages=["Hello! I'm SVG Bot. How can I help you today?"],
+            icon_assistant=ui.HTML(bs_icon_info_circle_fill),
+        )
 
     @chat_svg.on_user_submit
     async def handle_user_input_svg(user_input: str):
         await chat_svg.append_message(f"You said: {user_input}")
 
     # Image Bot -----------------------------------------------------------------------
-    chat_image = ui.Chat(
-        id="chat_image",
-        messages=[
-            {
-                "content": "Hello! I'm Image Bot. How can I help you today?",
-                "role": "assistant",
-            },
-        ],
-    )
+    chat_image = ui.Chat(id="chat_image")
 
     with ui.div():
         ui.h2("Image Bot")
         chat_image.ui(
+            messsages=["Hello! I'm Image Bot. How can I help you today?"],
             icon_assistant=ui.img(
                 src="img/grace-hopper.jpg",
                 class_="icon-image grace-hopper",
-            )
+            ),
         )
         ui.input_select("image", "Image", choices=["Grace Hopper", "Shiny"])
 
