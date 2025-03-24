@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 from typing import AsyncIterable, Iterable, Literal, Union
 
-from htmltools import TagChild, TagList, css
+from htmltools import RenderedHTML, TagChild, TagList, css
 
 from .. import _utils, reactive
 from .._deprecated import warn_deprecated
@@ -353,7 +353,13 @@ def output_markdown_stream(
     height
         The height of the UI element.
     """
-    ui = TagList(content).render()
+
+    # `content` is most likely a string, so avoid overhead in that case
+    # (it's also important that we *don't escape HTML* here).
+    if isinstance(content, str):
+        ui: RenderedHTML = {"html": content, "dependencies": []}
+    else:
+        ui = TagList(content).render()
 
     return Tag(
         "shiny-markdown-stream",

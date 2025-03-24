@@ -18,7 +18,7 @@ from typing import (
 )
 from weakref import WeakValueDictionary
 
-from htmltools import HTML, Tag, TagAttrValue, TagChild, TagList, css
+from htmltools import HTML, Tag, TagAttrValue, TagChild, TagList, css, RenderedHTML
 
 from .. import _utils, reactive
 from .._deprecated import warn_deprecated
@@ -1450,7 +1450,12 @@ def chat_ui(
             if "role" in x:
                 role = x["role"]
 
-        ui = TagList(content).render()
+        # `content` is most likely a string, so avoid overhead in that case
+        # (it's also important that we *don't escape HTML* here).
+        if isinstance(content, str):
+            ui: RenderedHTML = {"html": content, "dependencies": []}
+        else:
+            ui = TagList(content).render()
 
         if role == "user":
             tag_name = "shiny-user-message"
