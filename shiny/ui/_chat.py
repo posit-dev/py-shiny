@@ -1434,6 +1434,14 @@ def chat_ui(
 
     id = resolve_id(id)
 
+    icon_attr = None
+    if icon_assistant is not None:
+        icon_attr = str(icon_assistant)
+
+    icon_deps = None
+    if isinstance(icon_assistant, (Tag, TagList)):
+        icon_deps = icon_assistant.get_dependencies()
+
     message_tags: list[Tag] = []
     if messages is None:
         messages = []
@@ -1462,12 +1470,9 @@ def chat_ui(
                 tag_name,
                 ui["dependencies"],
                 content=ui["html"],
+                icon=icon_attr,
             )
         )
-
-    html_deps = None
-    if isinstance(icon_assistant, (Tag, TagList)):
-        html_deps = icon_assistant.get_dependencies()
 
     res = Tag(
         "shiny-chat-container",
@@ -1478,7 +1483,7 @@ def chat_ui(
             placeholder=placeholder,
         ),
         chat_deps(),
-        html_deps,
+        icon_deps,
         {
             "style": css(
                 width=as_css_unit(width),
@@ -1488,7 +1493,9 @@ def chat_ui(
         id=id,
         placeholder=placeholder,
         fill=fill,
-        icon_assistant=str(icon_assistant) if icon_assistant is not None else None,
+        # Also include icon on the parent so that when messages are dynamically added,
+        # we know the default icon has changed
+        icon_assistant=icon_attr,
         **kwargs,
     )
 
