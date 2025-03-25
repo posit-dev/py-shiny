@@ -157,7 +157,7 @@ def test_navset_bar_markup():
 
     assert TagList(x).render()["html"] == textwrap.dedent(
         """\
-        <nav class="navbar navbar-expand-md navbar-default">
+        <nav class="navbar navbar-expand-md navbar-default" data-bs-theme="auto">
           <div class="container-fluid">
             <span class="navbar-brand">Page title</span><button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar-collapse-795772" aria-controls="navbar-collapse-795772" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
             <div id="navbar-collapse-795772" class="collapse navbar-collapse">
