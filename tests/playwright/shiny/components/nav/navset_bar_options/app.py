@@ -1,4 +1,4 @@
-from shiny import App, ui
+from shiny import App, Inputs, Outputs, Session, ui
 
 app_ui = ui.page_navbar(
     ui.nav_panel(
@@ -16,7 +16,7 @@ app_ui = ui.page_navbar(
 )
 
 
-def server(input, output, session):
+def server(input: Inputs, output: Outputs, session: Session):
     pass
 
 
