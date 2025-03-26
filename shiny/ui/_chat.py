@@ -90,7 +90,7 @@ PendingMessage = Tuple[
 ]
 
 
-@add_example(ex_dir="../templates/chat/starters/hello")
+@add_example("app-core.py")
 class Chat:
     """
     Create a chat interface.
@@ -1326,7 +1326,7 @@ class Chat:
         )
 
 
-@add_example(ex_dir="../templates/chat/starters/hello")
+@add_example("app-express.py")
 class ChatExpress(Chat):
     def ui(
         self,
@@ -1377,7 +1377,7 @@ class ChatExpress(Chat):
         )
 
 
-@add_example(ex_dir="../templates/chat/starters/hello")
+@add_example(ex_dir="../api-examples/Chat")
 def chat_ui(
     id: str,
     *,
