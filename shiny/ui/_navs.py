@@ -1338,7 +1338,12 @@ class NavSetBar(NavSet):
             nav = div(nav, id=collapse_id, class_="collapse navbar-collapse")
 
         nav_container.append(nav)
-        nav_final = tags.nav({"class": "navbar navbar-expand-md"}, nav_container)
+        nav_final = tags.nav(
+            {"class": "navbar navbar-expand-md"},
+            nav_container,
+            {"data-bs-theme": self.navbar_options.theme},
+            **self.navbar_options.attrs,
+        )
 
         if self.navbar_options.position != "static-top":
             nav_final.add_class(self.navbar_options.position)

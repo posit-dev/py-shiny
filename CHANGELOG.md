@@ -11,17 +11,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Both `ui.Chat()` and `ui.MarkdownStream()` now support arbirary Shiny UI elements inside of messages. This allows for gathering input from the user (e.g., `ui.input_select()`), displaying of rich output (e.g., `render.DataGrid()`), and more. (#1868)
 
+* Added a new `.message_stream_context()` method to `ui.Chat()`. This context manager is a useful alternative to `.append_message_stream()` when you want to: (1) Nest a stream within another and/or
+(2) Overwrite/replace streaming content. (#1906)
+
 ### Changes
 
 * Express mode's `app_opts()` requires all arguments to be keyword-only. If you are using positional arguments, you will need to update your code. (#1895)
 
 * The `.get_latest_stream_result()` method on `ui.MarkdownStream()` was deprecated in favor of the new `.latest_stream` property. Call `.result()` on the property to get the latest result, `.status` to check the status, and `.cancel()` to cancel the stream.
 
+* `MarkdownStream()` now has a default maximum width of `680px` for better readability. Also, similar to `Chat()`, it now also horizontally centers itself. (#1944)
+
+* `ui.page_navbar()` and `ui.navset_bar()` now correctly apply `theme` and additional attributes from `navbar_options` created with `ui.navbar_options()`. (#1942)
+
 ### Bug fixes
 
 * Fixed an issue where the `<main>` areas of `ui.page_sidebar()` and `ui.page_navbar()` (with a `sidebar`) were made to be a fillable containers even when `fillable=False`. (#1816)
 
 * Fixed an issue where the `.update_user_input()` method on `ui.Chat()` isn't working in shinylive.  (#1891)
+
+* Fixed an issue where `width` and `height` on `MarkdownStream()` were not working as intended. (#1944)
 
 * Fixed an issue with the `.click()` method on InputActionButton controllers in `shiny.playwright.controllers` where the method would not work as expected. (#1886)
 
@@ -59,12 +68,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Breaking changes
 
-* The navbar-related style options of `ui.page_navbar()` and `ui.navset_bar()` have been consolidated into a single `navbar_options` argument that pairs with a new `ui.navbar_options()` helper. Using the direct `position`, `bg`, `inverse`, `collapsible`, and `underline` arguments will continue to work with a deprecation message.
+* The navbar-related style options of `ui.page_navbar()` and `ui.navset_bar()` have been consolidated into a single `navbar_options` argument that pairs with a new `ui.navbar_options()` helper. Using the direct `position`, `bg`, `inverse`, `collapsible`, and `underline` arguments will continue to work with a deprecation message. (#1822)
 
   Related to this change, `ui.navset_bar()` now defaults to using `underline=True` so that it uses the same set of default `ui.navbar_options()` as the page variant. In `ui.navbar_options()`, `inverse` is replaced by `theme`, which takes values `"light"` (dark text on a **light** background), `"dark"` (light text on a **dark** background), or `"auto"` (follow page settings).
 
-* The Shiny Core component `shiny.ui.Chat()` no longer has a `.ui()` method. This method
-was never intended to be used in Shiny Core (in that case, use `shiny.ui.chat_ui()`) to create the UI element. Note that the `shiny.express.ui.Chat()` class still has a `.ui()` method. (#1840)
+* The Shiny Core component `shiny.ui.Chat()` no longer has a `.ui()` method. This method was never intended to be used in Shiny Core (in that case, use `shiny.ui.chat_ui()`) to create the UI element. Note that the `shiny.express.ui.Chat()` class still has a `.ui()` method. (#1840)
 
 ### Bug fixes
 

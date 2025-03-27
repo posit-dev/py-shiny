@@ -184,6 +184,7 @@ class FrameDtypeSubset(TypedDict):
         "object",
         "unknown",
         "html",
+        "binary",
     ]
 
 

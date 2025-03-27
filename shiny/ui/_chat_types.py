@@ -74,5 +74,6 @@ class ClientMessage(TypedDict):
     role: Literal["assistant", "user"]
     content_type: Literal["markdown", "html"]
     chunk_type: Literal["message_start", "message_end"] | None
+    operation: Literal["append", "replace"]
     icon: NotRequired[str]
     html_deps: NotRequired[list[dict[str, str]]]
