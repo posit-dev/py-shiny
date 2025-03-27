@@ -46,6 +46,7 @@ from .._utils import wrap_async
 from ..bookmark import BookmarkApp, BookmarkProxy
 from ..bookmark._button import BOOKMARK_ID
 from ..bookmark._restore_state import RestoreContext
+from ..bookmark._serializers import serializer_file_input
 from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
 from ..module import ResolvedId
@@ -824,6 +825,10 @@ class AppSession(Session):
             # by wrapping it in ResolvedId, otherwise self.input will throw an id
             # validation error.
             self.input[ResolvedId(input_id)]._set(file_data)
+
+            # This also occurs during input handler: shiny.file
+            self.input.set_serializer(input_id, serializer_file_input)
+
             # Explicitly return None to signal that the message was handled.
             return None
 
