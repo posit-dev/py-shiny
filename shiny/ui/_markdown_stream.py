@@ -271,7 +271,7 @@ class ExpressMarkdownStream(MarkdownStream):
         content: TagChild = "",
         content_type: StreamingContentType = "markdown",
         auto_scroll: bool = True,
-        width: CssUnit = "100%",
+        width: CssUnit = "min(680px, 100%)",
         height: CssUnit = "auto",
     ) -> Tag:
         """
