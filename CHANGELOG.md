@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * The `.get_latest_stream_result()` method on `ui.MarkdownStream()` was deprecated in favor of the new `.latest_stream` property. Call `.result()` on the property to get the latest result, `.status` to check the status, and `.cancel()` to cancel the stream.
 
+* `MarkdownStream()` now has a default maximum width of `680px` for better readability. Also, similar to `Chat()`, it now also horizontally centers itself. (#1944)
+
 * `ui.page_navbar()` and `ui.navset_bar()` now correctly apply `theme` and additional attributes from `navbar_options` created with `ui.navbar_options()`. (#1942)
 
 ### Bug fixes
@@ -27,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Fixed an issue where the `<main>` areas of `ui.page_sidebar()` and `ui.page_navbar()` (with a `sidebar`) were made to be a fillable containers even when `fillable=False`. (#1816)
 
 * Fixed an issue where the `.update_user_input()` method on `ui.Chat()` isn't working in shinylive.  (#1891)
+
+* Fixed an issue where `width` and `height` on `MarkdownStream()` were not working as intended. (#1944)
 
 * Fixed an issue with the `.click()` method on InputActionButton controllers in `shiny.playwright.controllers` where the method would not work as expected. (#1886)
 

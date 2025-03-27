@@ -6,6 +6,10 @@
   @include highlight_styles.atom_one_dark;
 }
 
+shiny-markdown-stream {
+  display: block;
+}
+
 /*
   Styling for the code-copy button (inspired by Quarto's code-copy feature)
 */
