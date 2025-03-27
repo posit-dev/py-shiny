@@ -38,5 +38,10 @@ chat.ui()
 # Define a callback to run when the user submits a message
 @chat.on_user_submit
 async def handle_user_input(user_input: str):
-    response = await chat_client.stream_async(user_input)
-    await chat.append_message_stream(response)
+    response = chat_client.astream(user_input)
+
+    async def stream_wrapper():
+        async for item in response:
+            yield item.content
+
+    await chat.append_message_stream(stream_wrapper())

@@ -1,7 +1,7 @@
 {
   "type": "app",
-  "id": "chat-ai-ollama",
-  "title": "Chat AI using Ollama",
+  "id": "stream-ai-ollama",
+  "title": "Stream from Ollama",
   "next_steps": [
     "If you haven't already, download the Ollama executable from https://ollama.com/",
     "Run the executable and download the relevant model (llama3.2)",
@@ -14,15 +14,15 @@
     },
     {
       "type": "action",
-      "text": "Learn more at https://posit-dev.github.io/chatlas/reference/ChatOllama.html"
+      "text": "Visit https://posit-dev.github.io/chatlas/reference/ChatOllama.html"
     },
     {
       "type": "info",
-      "text": "Want to learn more about AI chatbots?"
+      "text": "Want to learn more about streaming content?"
     },
     {
       "type": "action",
-      "text": "Visit https://shiny.posit.co/py/docs/genai-chatbots.html"
+      "text": "Visit https://shiny.posit.co/py/docs/genai-stream.html"
     }
   ]
 }

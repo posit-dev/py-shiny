@@ -1,20 +1,12 @@
 {
   "type": "app",
-  "id": "chat-ai-openai",
-  "title": "Chat AI using OpenAI",
+  "id": "stream-ai-langchain",
+  "title": "Stream from LangChain",
   "next_steps": [
     "Put your OpenAI API key in the `template.env` file and rename it to `.env`.",
     "Run the app with `shiny run app.py`."
   ],
   "follow_up": [
-    {
-      "type": "info",
-      "text": "Need help obtaining an API key?"
-    },
-    {
-      "type": "action",
-      "text": "Learn how to obtain one at https://posit-dev.github.io/chatlas/reference/ChatOpenAI.html"
-    },
     {
       "type": "info",
       "text": "Want to learn more about AI chatbots?"
