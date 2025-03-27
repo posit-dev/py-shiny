@@ -320,7 +320,7 @@ def output_markdown_stream(
     content: TagChild = "",
     content_type: StreamingContentType = "markdown",
     auto_scroll: bool = True,
-    width: CssUnit = "100%",
+    width: CssUnit = "min(680px, 100%)",
     height: CssUnit = "auto",
 ) -> Tag:
     """
@@ -369,6 +369,7 @@ def output_markdown_stream(
             "style": css(
                 width=as_css_unit(width),
                 height=as_css_unit(height),
+                margin="0 auto",
             ),
             "content-type": content_type,
             "auto-scroll": "" if auto_scroll else None,
