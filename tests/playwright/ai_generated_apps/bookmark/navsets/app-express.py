@@ -1,10 +1,10 @@
 from typing import Any, Dict
 
-from shiny.express import expressify, module, session, ui
+from shiny.express import app_opts, expressify, module, session, ui
 
-ui.page_opts(
-    title="Navsets kitchensink App", id="navsets_collection", bookmark_store="url"
-)
+app_opts(bookmark_store="url")
+
+ui.page_opts(title="Navsets kitchensink App", id="navsets_collection")
 
 
 navset_configs: Dict[str, Dict[str, Dict[str, Any]]] = {
@@ -39,19 +39,10 @@ def create_navset(navset_type: str) -> None:
     for navset_id, params in navset_configs[navset_type].items():
         navset_kwargs = params.copy()
 
-        if "header" in navset_kwargs:
-            header_content = navset_kwargs["header"]["content"]
-            header_id = navset_kwargs["header"]["id"]
-            navset_kwargs["header"] = ui.tags.div(header_content, id=f"{header_id}")
-
-        if "footer" in navset_kwargs:
-            footer_content = navset_kwargs["footer"]["content"]
-            footer_id = navset_kwargs["footer"]["id"]
-            navset_kwargs["footer"] = ui.tags.div(footer_content, id=f"{footer_id}")
-
         with navset_function(id=f"{navset_type}_{navset_id}", **navset_kwargs):
             for suffix in ["a", "b", "c"]:
-                with ui.nav_panel(f"{navset_type}_{suffix}"):
+                id = f"{navset_type}_{suffix}"
+                with ui.nav_panel(id, value=id):
                     ui.markdown(f"{navset_type}_{suffix} content")
 
 

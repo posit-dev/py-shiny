@@ -549,12 +549,17 @@ def sidebar(
 
     resolved_id = resolve_id_or_none(id)
 
+    if resolved_id:
+        restored_open: bool | None = restore_input(resolved_id)
+        if restored_open is not None:
+            open = "open" if restored_open else "closed"
+
     return Sidebar(
         children=children,
         attrs=attrs,
         width=width,
         position=position,
-        open=restore_input(resolved_id, open),
+        open=open,
         id=resolved_id,
         title=title,
         fg=fg,
