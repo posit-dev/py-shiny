@@ -1,8 +1,9 @@
 import functools
-from typing import Callable, TypeVar
+from typing import Awaitable, Callable, TypeVar, overload
 
 from .._docstring import add_example
 from .._typing_extensions import Concatenate, ParamSpec
+from .._utils import is_async_callable, not_is_async_callable
 from ..module import Id
 from ..session._session import Inputs, Outputs, Session
 from ..session._utils import require_active_session, session_context
@@ -16,9 +17,21 @@ __all__ = ("module",)
 
 
 @add_example(ex_dir="../api-examples/express_module")
+# Use overloads so the function type stays the same for when the user calls it
+@overload
+def module(
+    fn: Callable[Concatenate[Inputs, Outputs, Session, P], Awaitable[R]],
+) -> Callable[Concatenate[Id, P], Awaitable[R]]: ...
+@overload
 def module(
     fn: Callable[Concatenate[Inputs, Outputs, Session, P], R],
-) -> Callable[Concatenate[Id, P], R]:
+) -> Callable[Concatenate[Id, P], R]: ...
+def module(
+    fn: (
+        Callable[Concatenate[Inputs, Outputs, Session, P], R]
+        | Callable[Concatenate[Inputs, Outputs, Session, P], Awaitable[R]]
+    ),
+) -> Callable[Concatenate[Id, P], R] | Callable[Concatenate[Id, P], Awaitable[R]]:
     """
     Create a Shiny module using Shiny Express syntax
 
@@ -42,18 +55,43 @@ def module(
     """
     fn = expressify(fn)
 
-    @functools.wraps(fn)
-    def wrapper(id: Id, *args: P.args, **kwargs: P.kwargs) -> R:
-        parent_session = require_active_session(None)
-        module_session = parent_session.make_scope(id)
+    if is_async_callable(fn):
+        # If the function is async, we need to wrap it in an async wrapper
+        @functools.wraps(fn)
+        async def async_wrapper(id: Id, *args: P.args, **kwargs: P.kwargs) -> R:
+            parent_session = require_active_session(None)
+            module_session = parent_session.make_scope(id)
 
-        with session_context(module_session):
-            return fn(
-                module_session.input,
-                module_session.output,
-                module_session,
-                *args,
-                **kwargs,
-            )
+            with session_context(module_session):
+                return await fn(
+                    module_session.input,
+                    module_session.output,
+                    module_session,
+                    *args,
+                    **kwargs,
+                )
 
-    return wrapper
+        return async_wrapper
+
+    # Required for type narrowing. `TypeIs` did not seem to work as expected here.
+    if not_is_async_callable(fn):
+
+        @functools.wraps(fn)
+        def wrapper(id: Id, *args: P.args, **kwargs: P.kwargs) -> R:
+            parent_session = require_active_session(None)
+            module_session = parent_session.make_scope(id)
+
+            with session_context(module_session):
+                return fn(
+                    module_session.input,
+                    module_session.output,
+                    module_session,
+                    *args,
+                    **kwargs,
+                )
+
+        return wrapper
+
+    raise RuntimeError(
+        "The provided function must be either synchronous or asynchronous."
+    )
