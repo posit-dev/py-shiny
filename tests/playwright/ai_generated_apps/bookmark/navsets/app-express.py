@@ -4,10 +4,10 @@ from shiny.express import app_opts, expressify, module, session, ui
 
 app_opts(bookmark_store="url")
 
-ui.page_opts(title="Navsets kitchensink App", id="navsets_collection")
-
-
 navset_configs: Dict[str, Dict[str, Dict[str, Any]]] = {
+    "navset_bar": {
+        "default": {"title": "navset_bar_default"},
+    },
     "navset_pill": {
         "default": {},
     },
@@ -47,7 +47,7 @@ def create_navset(navset_type: str) -> None:
 
 
 with ui.card():
-    ui.card_header("Bookmarking Navset Demo")
+    ui.card_header("Bookmarking Navset Kitchensink")
 
     # Non-modular section
     ui.h3("Non-Module Section")
