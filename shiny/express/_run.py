@@ -7,14 +7,16 @@ import sys
 import types
 from importlib.machinery import ModuleSpec
 from pathlib import Path
-from typing import Mapping, Sequence, cast
+from typing import Literal, Mapping, Sequence, cast
 
 from htmltools import Tag, TagList
+from starlette.requests import Request
 
 from .._app import App
 from .._docstring import no_example
 from .._typing_extensions import NotRequired, TypedDict
 from .._utils import import_module_from_path
+from ..bookmark._types import BookmarkStore
 from ..session import Inputs, Outputs, Session, get_current_session, session_context
 from ..types import MISSING, MISSING_TYPE
 from ._is_express import find_magic_comment_mode
@@ -115,13 +117,13 @@ def create_express_app(file: Path, package_name: str) -> App:
 
     file = file.resolve()
 
+    stub_session = ExpressStubSession()
     try:
         globals_file = file.parent / "globals.py"
         if globals_file.is_file():
             with session_context(None):
                 import_module_from_path("globals", globals_file)
 
-        stub_session = ExpressStubSession()
         with session_context(stub_session):
             # We tagify here, instead of waiting for the App object to do it when it wraps
             # the UI in a HTMLDocument and calls render() on it. This is because
@@ -133,6 +135,17 @@ def create_express_app(file: Path, package_name: str) -> App:
 
     except AttributeError as e:
         raise RuntimeError(e) from e
+
+    express_bookmark_store = stub_session.app_opts.get("bookmark_store", "disable")
+    if express_bookmark_store != "disable":
+        # If bookmarking is enabled, wrap UI in function to automatically leverage UI
+        # functions to restore their values
+        def app_ui_wrapper(request: Request):
+            # Stub session used to pass `app_opts()` checks.
+            with session_context(ExpressStubSession()):
+                return run_express(file, package_name).tagify()
+
+        app_ui = app_ui_wrapper
 
     def express_server(input: Inputs, output: Outputs, session: Session):
         try:
@@ -290,12 +303,15 @@ class InputNotImportedShim:
 
 class AppOpts(TypedDict):
     static_assets: NotRequired[dict[str, Path]]
+    bookmark_store: NotRequired[BookmarkStore]
     debug: NotRequired[bool]
 
 
 @no_example()
 def app_opts(
+    *,
     static_assets: str | Path | Mapping[str, str | Path] | MISSING_TYPE = MISSING,
+    bookmark_store: Literal["url", "server", "disable"] | MISSING_TYPE = MISSING,
     debug: bool | MISSING_TYPE = MISSING,
 ):
     """
@@ -313,6 +329,12 @@ def app_opts(
         that mount point. In Shiny Express, if there is a `www` subdirectory of the
         directory containing the app file, it will automatically be mounted at `/`, even
         without needing to set the option here.
+    bookmark_store
+        Where to store the bookmark state.
+
+        * `"url"`: Encode the bookmark state in the URL.
+        * `"server"`: Store the bookmark state on the server.
+        * `"disable"`: Disable bookmarking.
     debug
         Whether to enable debug mode.
     """
@@ -339,6 +361,9 @@ def app_opts(
 
         stub_session.app_opts["static_assets"] = static_assets_paths
 
+    if not isinstance(bookmark_store, MISSING_TYPE):
+        stub_session.app_opts["bookmark_store"] = bookmark_store
+
     if not isinstance(debug, MISSING_TYPE):
         stub_session.app_opts["debug"] = debug
 
@@ -356,6 +381,9 @@ def _merge_app_opts(app_opts: AppOpts, app_opts_new: AppOpts) -> AppOpts:
         app_opts["static_assets"].update(app_opts_new["static_assets"])
     elif "static_assets" in app_opts_new:
         app_opts["static_assets"] = app_opts_new["static_assets"].copy()
+
+    if "bookmark_store" in app_opts_new:
+        app_opts["bookmark_store"] = app_opts_new["bookmark_store"]
 
     if "debug" in app_opts_new:
         app_opts["debug"] = app_opts_new["debug"]

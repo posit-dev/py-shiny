@@ -1,0 +1,27 @@
+{
+  "type": "app",
+  "id": "stream-ai-openai",
+  "title": "Stream from OpenAI",
+  "next_steps": [
+    "Put your OpenAI API key in the `template.env` file and rename it to `.env`.",
+    "Run the app with `shiny run app.py`."
+  ],
+  "follow_up": [
+    {
+      "type": "info",
+      "text": "Need help obtaining an API key?"
+    },
+    {
+      "type": "action",
+      "text": "Learn how to obtain one at https://posit-dev.github.io/chatlas/reference/ChatOpenAI.html"
+    },
+    {
+      "type": "info",
+      "text": "Want to learn more about streaming content?"
+    },
+    {
+      "type": "action",
+      "text": "Learn more at https://shiny.posit.co/py/docs/genai-stream.html"
+    }
+  ]
+}

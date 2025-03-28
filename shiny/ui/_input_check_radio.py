@@ -11,7 +11,8 @@ from typing import Mapping, Optional, Union
 from htmltools import Tag, TagChild, css, div, span, tags
 
 from .._docstring import add_example
-from .._namespaces import resolve_id
+from ..bookmark import restore_input
+from ..module import resolve_id
 from ._html_deps_shinyverse import components_dependencies
 from ._utils import shiny_input_label
 
@@ -65,12 +66,13 @@ def input_checkbox(
     * :func:`~shiny.ui.input_checkbox_group`
     * :func:`~shiny.ui.input_radio_buttons`
     """
-
+    resolved_id = resolve_id(id)
+    value = restore_input(resolved_id, value)
     return div(
         div(
             tags.label(
                 tags.input(
-                    id=resolve_id(id),
+                    id=resolved_id,
                     type="checkbox",
                     checked="checked" if value else None,
                     class_="shiny-input-checkbox",
@@ -141,11 +143,13 @@ def _bslib_input_checkbox(
     *,
     width: Optional[str] = None,
 ) -> Tag:
+    resolved_id = resolve_id(id)
+    value = restore_input(resolved_id, value)
     return div(
         div(
             {"class": "form-check"},
             tags.input(
-                id=resolve_id(id),
+                id=resolved_id,
                 class_="form-check-input",
                 type="checkbox",
                 role="switch",
@@ -156,7 +160,7 @@ def _bslib_input_checkbox(
                 # Must be wrapped in `span` for update_switch(label=) method to work
                 tags.span(label),
                 class_="form-check-label",
-                for_=resolve_id(id),
+                for_=resolved_id,
             ),
             class_=class_,
         ),
@@ -217,11 +221,12 @@ def input_checkbox_group(
 
     resolved_id = resolve_id(id)
     input_label = shiny_input_label(resolved_id, label)
+
     options = _generate_options(
         id=resolved_id,
         type="checkbox",
         choices=choices,
-        selected=selected,
+        selected=restore_input(resolved_id, selected),
         inline=inline,
     )
     return div(
@@ -287,11 +292,12 @@ def input_radio_buttons(
 
     resolved_id = resolve_id(id)
     input_label = shiny_input_label(resolved_id, label)
+
     options = _generate_options(
         id=resolved_id,
         type="radio",
         choices=choices,
-        selected=selected,
+        selected=restore_input(resolved_id, selected),
         inline=inline,
     )
     return div(

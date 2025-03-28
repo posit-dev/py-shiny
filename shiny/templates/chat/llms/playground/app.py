@@ -15,13 +15,13 @@ from shiny.express import input, ui
 load_dotenv()
 
 models = {
-    "openai": ["gpt-4o-mini", "gpt-4o"],
     "claude": [
+        "claude-3-7-sonnet-latest",
         "claude-3-opus-latest",
-        "claude-3-5-sonnet-latest",
         "claude-3-haiku-20240307",
     ],
-    "google": ["gemini-1.5-pro-latest"],
+    "openai": ["gpt-4o-mini", "gpt-4o"],
+    "google": ["gemini-2.0-flash"],
 }
 
 model_choices: dict[str, dict[str, str]] = {}
@@ -63,15 +63,15 @@ def get_model():
     }
 
     if input.model() in models["openai"]:
-        chat_model = ctl.ChatOpenAI(**model_params)
+        chat_client = ctl.ChatOpenAI(**model_params)
     elif input.model() in models["claude"]:
-        chat_model = ctl.ChatAnthropic(**model_params)
+        chat_client = ctl.ChatAnthropic(**model_params)
     elif input.model() in models["google"]:
-        chat_model = ctl.ChatGoogle(**model_params)
+        chat_client = ctl.ChatGoogle(**model_params)
     else:
         raise ValueError(f"Invalid model: {input.model()}")
 
-    return chat_model
+    return chat_client
 
 
 @reactive.calc

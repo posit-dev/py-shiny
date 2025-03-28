@@ -179,10 +179,12 @@ class FrameDtypeSubset(TypedDict):
         "boolean",
         "date",
         "datetime",
+        "time",
         "duration",
         "object",
         "unknown",
         "html",
+        "binary",
     ]
 
 

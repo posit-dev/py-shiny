@@ -15,7 +15,7 @@ from shiny.express import ui
 # app, or set them in a file named `.env`. The `python-dotenv` package will load `.env`
 # as environment variables which can later be read by `os.getenv()`.
 load_dotenv()
-chat_model = ChatOpenAI(
+chat_client = ChatOpenAI(
     api_key=os.environ.get("OPENAI_API_KEY"),
     model="gpt-4o",
 )
@@ -38,5 +38,10 @@ chat.ui()
 # Define a callback to run when the user submits a message
 @chat.on_user_submit
 async def handle_user_input(user_input: str):
-    response = chat_model.stream(user_input)
-    await chat.append_message_stream(response)
+    response = chat_client.astream(user_input)
+
+    async def stream_wrapper():
+        async for item in response:
+            yield item.content
+
+    await chat.append_message_stream(stream_wrapper())

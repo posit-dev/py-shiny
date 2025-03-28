@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import inspect
+from contextlib import asynccontextmanager
 from typing import (
     Any,
     AsyncIterable,
@@ -17,12 +18,12 @@ from typing import (
 )
 from weakref import WeakValueDictionary
 
-from htmltools import HTML, Tag, TagAttrValue, css
+from htmltools import HTML, RenderedHTML, Tag, TagAttrValue, TagChild, TagList, css
 
 from .. import _utils, reactive
 from .._deprecated import warn_deprecated
 from .._docstring import add_example
-from .._namespaces import ResolvedId, resolve_id
+from ..module import ResolvedId, resolve_id
 from ..session import require_active_session, session_context
 from ..types import MISSING, MISSING_TYPE, NotifyException
 from ..ui.css import CssUnit, as_css_unit
@@ -38,14 +39,15 @@ from ._chat_provider_types import (
     as_provider_message,
 )
 from ._chat_tokenizer import TokenEncoding, TokenizersEncoding, get_default_tokenizer
-from ._chat_types import ChatMessage, ClientMessage, TransformedMessage
+from ._chat_types import ChatMessage, ChatMessageDict, ClientMessage, TransformedMessage
 from ._html_deps_py_shiny import chat_deps
 from .fill import as_fill_item, as_fillable_container
 
 __all__ = (
     "Chat",
+    "ChatExpress",
     "chat_ui",
-    "ChatMessage",
+    "ChatMessageDict",
 )
 
 
@@ -80,10 +82,15 @@ UserSubmitFunction = Union[
 
 ChunkOption = Literal["start", "end", True, False]
 
-PendingMessage = Tuple[Any, ChunkOption, Union[str, None]]
+PendingMessage = Tuple[
+    Any,
+    ChunkOption,
+    Literal["append", "replace"],
+    Union[str, None],
+]
 
 
-@add_example(ex_dir="../templates/chat/starters/hello")
+@add_example("app-core.py")
 class Chat:
     """
     Create a chat interface.
@@ -132,11 +139,21 @@ class Chat:
         A unique identifier for the chat session. In Shiny Core, make sure this id
         matches a corresponding :func:`~shiny.ui.chat_ui` call in the UI.
     messages
-        A sequence of messages to display in the chat. Each message can be a
-        dictionary with a `content` and `role` key. The `content` key should contain
-        the message text, and the `role` key can be "assistant", "user", or "system".
-        Note that system messages are not actually displayed in the chat, but will
-        still be stored in the chat's `.messages()`.
+        A sequence of messages to display in the chat. A given message can be one of the
+        following:
+
+        * A string, which is interpreted as markdown and rendered to HTML on the client.
+            * To prevent interpreting as markdown, mark the string as
+              :class:`~shiny.ui.HTML`.
+        * A UI element (specifically, a :class:`~shiny.ui.TagChild`).
+            * This includes :class:`~shiny.ui.TagList`, which take UI elements
+              (including strings) as children. In this case, strings are still
+              interpreted as markdown as long as they're not inside HTML.
+        * A dictionary with `content` and `role` keys. The `content` key can contain a
+          content as described above, and the `role` key can be "assistant" or "user".
+
+        **NOTE:** content may include specially formatted **input suggestion** links
+        (see `.append_message()` for more information).
     on_error
         How to handle errors that occur in response to user input. When `"unhandled"`,
         the app will stop running when an error occurs. Otherwise, a notification
@@ -186,9 +203,12 @@ class Chat:
         self.on_error = on_error
 
         # Chunked messages get accumulated (using this property) before changing state
-        self._current_stream_message = ""
+        self._current_stream_message: str = ""
         self._current_stream_id: str | None = None
         self._pending_messages: list[PendingMessage] = []
+
+        # For tracking message stream state when entering/exiting nested streams
+        self._message_stream_checkpoint: str = ""
 
         # If a user input message is transformed into a response, we need to cancel
         # the next user input submit handling
@@ -206,6 +226,14 @@ class Chat:
 
             self._latest_user_input: reactive.Value[TransformedMessage | None] = (
                 reactive.Value(None)
+            )
+
+            @reactive.extended_task
+            async def _mock_task() -> str:
+                return ""
+
+            self._latest_stream: reactive.Value[reactive.ExtendedTask[[], str]] = (
+                reactive.Value(_mock_task)
             )
 
             # TODO: deprecate messages once we start promoting managing LLM message
@@ -232,7 +260,7 @@ class Chat:
                 else:
                     # A transformed value of None is a special signal to suspend input
                     # handling (i.e., don't generate a response)
-                    self._store_message(as_transformed_message(msg), index=n_pre)
+                    self._store_message(msg, index=n_pre)
                     await self._remove_loading_message()
                     self._suspend_input_handler = True
 
@@ -245,51 +273,6 @@ class Chat:
         if instance is not None:
             instance.destroy()
         CHAT_INSTANCES[instance_id] = self
-
-    def ui(
-        self,
-        *,
-        messages: Optional[Sequence[str | ChatMessage]] = None,
-        placeholder: str = "Enter a message...",
-        width: CssUnit = "min(680px, 100%)",
-        height: CssUnit = "auto",
-        fill: bool = True,
-        **kwargs: TagAttrValue,
-    ) -> Tag:
-        """
-        Place a chat component in the UI.
-
-        This method is only relevant fpr Shiny Express. In Shiny Core, use
-        :func:`~shiny.ui.chat_ui` instead to insert the chat UI.
-
-        Parameters
-        ----------
-        messages
-            A sequence of messages to display in the chat. Each message can be either a
-            string or a dictionary with `content` and `role` keys. The `content` key
-            should contain the message text, and the `role` key can be "assistant" or
-            "user".
-        placeholder
-            Placeholder text for the chat input.
-        width
-            The width of the chat container.
-        height
-            The height of the chat container.
-        fill
-            Whether the chat should vertically take available space inside a fillable
-            container.
-        kwargs
-            Additional attributes for the chat container element.
-        """
-        return chat_ui(
-            id=self.id,
-            messages=messages,
-            placeholder=placeholder,
-            width=width,
-            height=height,
-            fill=fill,
-            **kwargs,
-        )
 
     @overload
     def on_user_submit(self, fn: UserSubmitFunction) -> reactive.Effect_: ...
@@ -384,7 +367,7 @@ class Chat:
     def messages(
         self,
         *,
-        format: Literal["anthropic"] = "anthropic",
+        format: Literal["anthropic"],
         token_limits: tuple[int, int] | None = None,
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
@@ -394,7 +377,7 @@ class Chat:
     def messages(
         self,
         *,
-        format: Literal["google"] = "google",
+        format: Literal["google"],
         token_limits: tuple[int, int] | None = None,
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
@@ -404,7 +387,7 @@ class Chat:
     def messages(
         self,
         *,
-        format: Literal["langchain"] = "langchain",
+        format: Literal["langchain"],
         token_limits: tuple[int, int] | None = None,
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
@@ -414,7 +397,7 @@ class Chat:
     def messages(
         self,
         *,
-        format: Literal["openai"] = "openai",
+        format: Literal["openai"],
         token_limits: tuple[int, int] | None = None,
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
@@ -424,7 +407,7 @@ class Chat:
     def messages(
         self,
         *,
-        format: Literal["ollama"] = "ollama",
+        format: Literal["ollama"],
         token_limits: tuple[int, int] | None = None,
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
@@ -438,7 +421,7 @@ class Chat:
         token_limits: tuple[int, int] | None = None,
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
-    ) -> tuple[ChatMessage, ...]: ...
+    ) -> tuple[ChatMessageDict, ...]: ...
 
     def messages(
         self,
@@ -447,7 +430,7 @@ class Chat:
         token_limits: tuple[int, int] | None = None,
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
-    ) -> tuple[ChatMessage | ProviderMessage, ...]:
+    ) -> tuple[ChatMessageDict | ProviderMessage, ...]:
         """
         Reactively read chat messages
 
@@ -515,90 +498,315 @@ class Chat:
         if token_limits is not None:
             messages = self._trim_messages(messages, token_limits, format)
 
-        res: list[ChatMessage | ProviderMessage] = []
+        res: list[ChatMessageDict | ProviderMessage] = []
         for i, m in enumerate(messages):
             transform = False
-            if m["role"] == "assistant":
+            if m.role == "assistant":
                 transform = transform_assistant
-            elif m["role"] == "user":
+            elif m.role == "user":
                 transform = transform_user == "all" or (
                     transform_user == "last" and i == len(messages) - 1
                 )
-            content_key = m["transform_key" if transform else "pre_transform_key"]
-            chat_msg = ChatMessage(content=str(m[content_key]), role=m["role"])
+            content_key = getattr(
+                m, "transform_key" if transform else "pre_transform_key"
+            )
+            content = getattr(m, content_key)
+            chat_msg = ChatMessageDict(content=str(content), role=m.role)
             if not isinstance(format, MISSING_TYPE):
                 chat_msg = as_provider_message(chat_msg, format)
             res.append(chat_msg)
 
         return tuple(res)
 
-    async def append_message(self, message: Any) -> None:
+    async def append_message(
+        self,
+        message: Any,
+        *,
+        icon: HTML | Tag | TagList | None = None,
+    ):
         """
         Append a message to the chat.
 
         Parameters
         ----------
         message
-            The message to append. A variety of message formats are supported including
-            a string, a dictionary with `content` and `role` keys, or a relevant chat
-            completion object from platforms like OpenAI, Anthropic, Ollama, and others.
+            A given message can be one of the following:
+
+            * A string, which is interpreted as markdown and rendered to HTML on the
+              client.
+                * To prevent interpreting as markdown, mark the string as
+                  :class:`~shiny.ui.HTML`.
+            * A UI element (specifically, a :class:`~shiny.ui.TagChild`).
+                * This includes :class:`~shiny.ui.TagList`, which take UI elements
+                  (including strings) as children. In this case, strings are still
+                  interpreted as markdown as long as they're not inside HTML.
+            * A dictionary with `content` and `role` keys. The `content` key can contain
+              content as described above, and the `role` key can be "assistant" or
+              "user".
+
+            **NOTE:** content may include specially formatted **input suggestion** links
+            (see note below).
+        icon
+            An optional icon to display next to the message, currently only used for
+            assistant messages. The icon can be any HTML element (e.g., an
+            :func:`~shiny.ui.img` tag) or a string of HTML.
 
         Note
         ----
+        :::{.callout-note title="Input suggestions"}
+        Input suggestions are special links that send text to the user input box when
+        clicked (or accessed via keyboard). They can be created in the following ways:
+
+        * `<span class='suggestion'>Suggestion text</span>`: An inline text link that
+            places 'Suggestion text' in the user input box when clicked.
+        * `<img data-suggestion='Suggestion text' src='image.jpg'>`: An image link with
+            the same functionality as above.
+        * `<span data-suggestion='Suggestion text'>Actual text</span>`: An inline text
+            link that places 'Suggestion text' in the user input box when clicked.
+
+        A suggestion can also be submitted automatically by doing one of the following:
+
+        * Adding a `submit` CSS class or a `data-suggestion-submit="true"` attribute to
+          the suggestion element.
+        * Holding the `Ctrl/Cmd` key while clicking the suggestion link.
+
+        Note that a user may also opt-out of submitting a suggestion by holding the
+        `Alt/Option` key while clicking the suggestion link.
+        :::
+
+        :::{.callout-note title="Streamed messages"}
         Use `.append_message_stream()` instead of this method when `stream=True` (or
         similar) is specified in model's completion method.
+        :::
         """
-        await self._append_message(message)
-
-    async def _append_message(
-        self, message: Any, *, chunk: ChunkOption = False, stream_id: str | None = None
-    ) -> None:
-        # If currently we're in a stream, handle other messages (outside the stream) later
-        if not self._can_append_message(stream_id):
-            self._pending_messages.append((message, chunk, stream_id))
+        # If we're in a stream, queue the message
+        if self._current_stream_id:
+            self._pending_messages.append((message, False, "append", None))
             return
 
-        # Update current stream state
-        self._current_stream_id = stream_id
-        if chunk == "end":
-            self._current_stream_id = None
-
-        if chunk is False:
-            msg = normalize_message(message)
-            chunk_content = None
-        else:
-            msg = normalize_message_chunk(message)
-            # Update the current stream message
-            chunk_content = msg["content"]
-            self._current_stream_message += chunk_content
-            msg["content"] = self._current_stream_message
-            if chunk == "end":
-                self._current_stream_message = ""
-
-        msg = await self._transform_message(
-            msg, chunk=chunk, chunk_content=chunk_content
-        )
+        msg = normalize_message(message)
+        msg = await self._transform_message(msg)
         if msg is None:
             return
-        self._store_message(msg, chunk=chunk)
-        await self._send_append_message(msg, chunk=chunk)
+        self._store_message(msg)
+        await self._send_append_message(
+            message=msg,
+            chunk=False,
+            icon=icon,
+        )
 
-    async def append_message_stream(self, message: Iterable[Any] | AsyncIterable[Any]):
+    @asynccontextmanager
+    async def message_stream_context(self):
+        """
+        Message stream context manager.
+
+        A context manager for appending streaming messages into the chat. This context
+        manager can:
+
+        1. Be used in isolation to append a new streaming message to the chat.
+            * Compared to `.append_message_stream()` this method is more flexible but
+              isn't non-blocking by default (i.e., it doesn't launch an extended task).
+        2. Be nested within itself
+            * Nesting is primarily useful for making checkpoints to `.clear()` back
+              to (see the example below).
+        3. Be used from within a `.append_message_stream()`
+            * Useful for inserting additional content from another context into the
+              stream (e.g., see the note about tool calls below).
+
+        Yields
+        ------
+        :
+            A `MessageStream` class instance, which has a method for `.append()`ing
+            message content chunks to as well as way to `.clear()` the stream back to
+            it's initial state. Note that `.append()` supports the same message content
+            types as `.append_message()`.
+
+        Example
+        -------
+        ```python
+        import asyncio
+
+        from shiny import reactive
+        from shiny.express import ui
+
+        chat = ui.Chat(id="my_chat")
+        chat.ui()
+
+        @reactive.effect
+        async def _():
+            async with chat.message_stream_context() as msg:
+                await msg.append("Starting stream...\n\nProgress:")
+                async with chat.message_stream_context() as progress:
+                    for x in [0, 50, 100]:
+                        await progress.append(f" {x}%")
+                        await asyncio.sleep(1)
+                        await progress.clear()
+                await msg.clear()
+                await msg.append("Completed stream")
+        ```
+
+        Note
+        ----
+        A useful pattern for displaying tool calls in a chatbot is for the tool to
+        display using `.message_stream_context()` while the the response generation is
+        happening through `.append_message_stream()`. This allows the tool to display
+        things like progress updates (or other "ephemeral" content) and optionally
+        `.clear()` the stream back to it's initial state when ready to display the
+        "final" content.
+        """
+        # Checkpoint the current stream state so operation="replace"  can return to it
+        old_checkpoint = self._message_stream_checkpoint
+        self._message_stream_checkpoint = self._current_stream_message
+
+        # No stream currently exists, start one
+        stream_id = self._current_stream_id
+        is_root_stream = stream_id is None
+        if is_root_stream:
+            stream_id = _utils.private_random_id()
+            await self._append_message_chunk("", chunk="start", stream_id=stream_id)
+
+        try:
+            yield MessageStream(self, stream_id)
+        finally:
+            # Restore the checkpoint
+            self._message_stream_checkpoint = old_checkpoint
+
+            # If this was the root stream, end it
+            if is_root_stream:
+                await self._append_message_chunk(
+                    "",
+                    chunk="end",
+                    stream_id=stream_id,
+                )
+
+    async def _append_message_chunk(
+        self,
+        message: Any,
+        *,
+        chunk: Literal[True, "start", "end"] = True,
+        stream_id: str,
+        operation: Literal["append", "replace"] = "append",
+        icon: HTML | Tag | TagList | None = None,
+    ) -> None:
+        # If currently we're in a *different* stream, queue the message chunk
+        if self._current_stream_id and self._current_stream_id != stream_id:
+            self._pending_messages.append((message, chunk, operation, stream_id))
+            return
+
+        self._current_stream_id = stream_id
+
+        # Normalize various message types into a ChatMessage()
+        msg = normalize_message_chunk(message)
+
+        if operation == "replace":
+            self._current_stream_message = self._message_stream_checkpoint + msg.content
+            msg.content = self._current_stream_message
+        else:
+            self._current_stream_message += msg.content
+
+        try:
+            if self._needs_transform(msg):
+                # Transforming may change the meaning of msg.content to be a *replace*
+                # not *append*. So, update msg.content and the operation accordingly.
+                chunk_content = msg.content
+                msg.content = self._current_stream_message
+                operation = "replace"
+                msg = await self._transform_message(
+                    msg, chunk=chunk, chunk_content=chunk_content
+                )
+                # Act like nothing happened if transformed to None
+                if msg is None:
+                    return
+                if chunk == "end":
+                    self._store_message(msg)
+            elif chunk == "end":
+                # When `operation="append"`, msg.content is just a chunk, but we must
+                # store the full message
+                self._store_message(
+                    ChatMessage(content=self._current_stream_message, role=msg.role)
+                )
+
+            # Send the message to the client
+            await self._send_append_message(
+                message=msg,
+                chunk=chunk,
+                operation=operation,
+                icon=icon,
+            )
+        finally:
+            if chunk == "end":
+                self._current_stream_id = None
+                self._current_stream_message = ""
+                self._message_stream_checkpoint = ""
+
+    async def append_message_stream(
+        self,
+        message: Iterable[Any] | AsyncIterable[Any],
+        *,
+        icon: HTML | Tag | None = None,
+    ):
         """
         Append a message as a stream of message chunks.
 
         Parameters
         ----------
         message
-            An iterable or async iterable of message chunks to append. A variety of
-            message chunk formats are supported, including a string, a dictionary with
-            `content` and `role` keys, or a relevant chat completion object from
-            platforms like OpenAI, Anthropic, Ollama, and others.
+            An (async) iterable of message chunks. Each chunk can be one of the
+            following:
+
+            * A string, which is interpreted as markdown and rendered to HTML on the
+              client.
+                * To prevent interpreting as markdown, mark the string as
+                  :class:`~shiny.ui.HTML`.
+            * A UI element (specifically, a :class:`~shiny.ui.TagChild`).
+                * This includes :class:`~shiny.ui.TagList`, which take UI elements
+                  (including strings) as children. In this case, strings are still
+                  interpreted as markdown as long as they're not inside HTML.
+            * A dictionary with `content` and `role` keys. The `content` key can contain
+              content as described above, and the `role` key can be "assistant" or
+              "user".
+
+            **NOTE:** content may include specially formatted **input suggestion** links
+            (see note below).
+        icon
+            An optional icon to display next to the message, currently only used for
+            assistant messages. The icon can be any HTML element (e.g., an
+            :func:`~shiny.ui.img` tag) or a string of HTML.
 
         Note
         ----
+        ```{.callout-note title="Input suggestions"}
+        Input suggestions are special links that send text to the user input box when
+        clicked (or accessed via keyboard). They can be created in the following ways:
+
+        * `<span class='suggestion'>Suggestion text</span>`: An inline text link that
+            places 'Suggestion text' in the user input box when clicked.
+        * `<img data-suggestion='Suggestion text' src='image.jpg'>`: An image link with
+            the same functionality as above.
+        * `<span data-suggestion='Suggestion text'>Actual text</span>`: An inline text
+            link that places 'Suggestion text' in the user input box when clicked.
+
+        A suggestion can also be submitted automatically by doing one of the following:
+
+        * Adding a `submit` CSS class or a `data-suggestion-submit="true"` attribute to
+          the suggestion element.
+        * Holding the `Ctrl/Cmd` key while clicking the suggestion link.
+
+        Note that a user may also opt-out of submitting a suggestion by holding the
+        `Alt/Option` key while clicking the suggestion link.
+        ```
+
+        ```{.callout-note title="Streamed messages"}
         Use this method (over `.append_message()`) when `stream=True` (or similar) is
         specified in model's completion method.
+        ```
+
+        Returns
+        -------
+        :
+            An extended task that represents the streaming task. The `.result()` method
+            of the task can be called in a reactive context to get the final state of the
+            stream.
         """
 
         message = _utils.wrap_async_iterable(message)
@@ -606,9 +814,11 @@ class Chat:
         # Run the stream in the background to get non-blocking behavior
         @reactive.extended_task
         async def _stream_task():
-            await self._append_message_stream(message)
+            return await self._append_message_stream(message, icon=icon)
 
         _stream_task()
+
+        self._latest_stream.set(_stream_task)
 
         # Since the task runs in the background (outside/beyond the current context,
         # if any), we need to manually raise any exceptions that occur
@@ -619,40 +829,81 @@ class Chat:
                 await self._raise_exception(e)
             _handle_error.destroy()  # type: ignore
 
-    async def _append_message_stream(self, message: AsyncIterable[Any]):
+        return _stream_task
+
+    @property
+    def latest_message_stream(self) -> reactive.ExtendedTask[[], str]:
+        """
+        React to changes in the latest message stream.
+
+        Reactively reads for the :class:`~shiny.reactive.ExtendedTask` behind an
+        `.append_message_stream()`.
+
+        From the return value (i.e., the extended task), you can then:
+
+        1. Reactively read for the final `.result()`.
+        2. `.cancel()` the stream.
+        3. Check the `.status()` of the stream.
+
+        Returns
+        -------
+        :
+            An extended task that represents the streaming task. The `.result()` method
+            of the task can be called in a reactive context to get the final state of the
+            stream.
+
+        Note
+        ----
+        If no stream has yet been started when this method is called, then it returns an
+        extended task with `.status()` of `"initial"` and that it status doesn't change
+        state until a message is streamed.
+        """
+        return self._latest_stream()
+
+    async def _append_message_stream(
+        self,
+        message: AsyncIterable[Any],
+        icon: HTML | Tag | None = None,
+    ):
         id = _utils.private_random_id()
 
-        empty = ChatMessage(content="", role="assistant")
-        await self._append_message(empty, chunk="start", stream_id=id)
+        empty = ChatMessageDict(content="", role="assistant")
+        await self._append_message_chunk(empty, chunk="start", stream_id=id, icon=icon)
 
         try:
             async for msg in message:
-                await self._append_message(msg, chunk=True, stream_id=id)
+                await self._append_message_chunk(msg, chunk=True, stream_id=id)
+            return self._current_stream_message
         finally:
-            await self._append_message(empty, chunk="end", stream_id=id)
+            await self._append_message_chunk(empty, chunk="end", stream_id=id)
             await self._flush_pending_messages()
 
     async def _flush_pending_messages(self):
-        still_pending: list[PendingMessage] = []
-        for msg, chunk, stream_id in self._pending_messages:
-            if self._can_append_message(stream_id):
-                await self._append_message(msg, chunk=chunk, stream_id=stream_id)
+        pending = self._pending_messages
+        self._pending_messages = []
+        for msg, chunk, operation, stream_id in pending:
+            if chunk is False:
+                await self.append_message(msg)
             else:
-                still_pending.append((msg, chunk, stream_id))
-        self._pending_messages = still_pending
-
-    def _can_append_message(self, stream_id: str | None) -> bool:
-        if self._current_stream_id is None:
-            return True
-        return self._current_stream_id == stream_id
+                await self._append_message_chunk(
+                    msg,
+                    chunk=chunk,
+                    operation=operation,
+                    stream_id=cast(str, stream_id),
+                )
 
     # Send a message to the UI
     async def _send_append_message(
         self,
-        message: TransformedMessage,
+        message: TransformedMessage | ChatMessage,
         chunk: ChunkOption = False,
+        operation: Literal["append", "replace"] = "append",
+        icon: HTML | Tag | TagList | None = None,
     ):
-        if message["role"] == "system":
+        if not isinstance(message, TransformedMessage):
+            message = TransformedMessage.from_chat_message(message)
+
+        if message.role == "system":
             # System messages are not displayed in the UI
             return
 
@@ -667,15 +918,24 @@ class Chat:
         elif chunk == "end":
             chunk_type = "message_end"
 
-        content = message["content_client"]
+        content = message.content_client
         content_type = "html" if isinstance(content, HTML) else "markdown"
 
+        # TODO: pass along dependencies for both content and icon (if any)
         msg = ClientMessage(
             content=str(content),
-            role=message["role"],
+            role=message.role,
             content_type=content_type,
             chunk_type=chunk_type,
+            operation=operation,
         )
+
+        if icon is not None:
+            msg["icon"] = str(icon)
+
+        deps = message.html_deps
+        if deps:
+            msg["html_deps"] = deps
 
         # print(msg)
 
@@ -803,19 +1063,16 @@ class Chat:
         self,
         message: ChatMessage,
         chunk: ChunkOption = False,
-        chunk_content: str | None = None,
+        chunk_content: str = "",
     ) -> TransformedMessage | None:
+        res = TransformedMessage.from_chat_message(message)
 
-        res = as_transformed_message(message)
-        key = res["transform_key"]
-
-        if message["role"] == "user" and self._transform_user is not None:
-            content = await self._transform_user(message["content"])
-
-        elif message["role"] == "assistant" and self._transform_assistant is not None:
+        if message.role == "user" and self._transform_user is not None:
+            content = await self._transform_user(message.content)
+        elif message.role == "assistant" and self._transform_assistant is not None:
             content = await self._transform_assistant(
-                message["content"],
-                chunk_content or "",
+                message.content,
+                chunk_content,
                 chunk == "end" or chunk is False,
             )
         else:
@@ -824,21 +1081,25 @@ class Chat:
         if content is None:
             return None
 
-        res[key] = content  # type: ignore
-
+        setattr(res, res.transform_key, content)
         return res
+
+    def _needs_transform(self, message: ChatMessage) -> bool:
+        if message.role == "user" and self._transform_user is not None:
+            return True
+        elif message.role == "assistant" and self._transform_assistant is not None:
+            return True
+        return False
 
     # Just before storing, handle chunk msg type and calculate tokens
     def _store_message(
         self,
-        message: TransformedMessage,
-        chunk: ChunkOption = False,
+        message: TransformedMessage | ChatMessage,
         index: int | None = None,
     ) -> None:
 
-        # Don't actually store chunks until the end
-        if chunk is True or chunk == "start":
-            return None
+        if not isinstance(message, TransformedMessage):
+            message = TransformedMessage.from_chat_message(message)
 
         with reactive.isolate():
             messages = self._messages()
@@ -850,7 +1111,7 @@ class Chat:
         messages.insert(index, message)
 
         self._messages.set(tuple(messages))
-        if message["role"] == "user":
+        if message.role == "user":
             self._latest_user_input.set(message)
 
         return None
@@ -861,7 +1122,6 @@ class Chat:
         token_limits: tuple[int, int],
         format: MISSING_TYPE | ProviderMessageFormat,
     ) -> tuple[TransformedMessage, ...]:
-
         n_total, n_reserve = token_limits
         if n_total <= n_reserve:
             raise ValueError(
@@ -876,9 +1136,9 @@ class Chat:
         n_other_messages: int = 0
         token_counts: list[int] = []
         for m in messages:
-            count = self._get_token_count(m["content_server"])
+            count = self._get_token_count(m.content_server)
             token_counts.append(count)
-            if m["role"] == "system":
+            if m.role == "system":
                 n_system_tokens += count
                 n_system_messages += 1
             else:
@@ -899,7 +1159,7 @@ class Chat:
         n_other_messages2: int = 0
         token_counts.reverse()
         for i, m in enumerate(reversed(messages)):
-            if m["role"] == "system":
+            if m.role == "system":
                 messages2.append(m)
                 continue
             remaining_non_system_tokens -= token_counts[i]
@@ -922,14 +1182,13 @@ class Chat:
         self,
         messages: tuple[TransformedMessage, ...],
     ) -> tuple[TransformedMessage, ...]:
-
-        if any(m["role"] == "system" for m in messages):
+        if any(m.role == "system" for m in messages):
             raise ValueError(
                 "Anthropic requires a system prompt to be specified in it's `.create()` method "
                 "(not in the chat messages with `role: system`)."
             )
         for i, m in enumerate(messages):
-            if m["role"] == "user":
+            if m.role == "user":
                 return messages[i:]
 
         return ()
@@ -975,14 +1234,20 @@ class Chat:
         if msg is None:
             return None
         key = "content_server" if transform else "content_client"
-        return str(msg[key])
+        val = getattr(msg, key)
+        return str(val)
 
     def _user_input(self) -> str:
         id = self.user_input_id
         return cast(str, self._session.input[id]())
 
     def update_user_input(
-        self, *, value: str | None = None, placeholder: str | None = None
+        self,
+        *,
+        value: str | None = None,
+        placeholder: str | None = None,
+        submit: bool = False,
+        focus: bool = False,
     ):
         """
         Update the user input.
@@ -993,20 +1258,33 @@ class Chat:
             The value to set the user input to.
         placeholder
             The placeholder text for the user input.
+        submit
+            Whether to automatically submit the text for the user. Requires `value`.
+        focus
+            Whether to move focus to the input element. Requires `value`.
         """
 
-        obj = _utils.drop_none({"value": value, "placeholder": placeholder})
-
-        _utils.run_coro_sync(
-            self._session.send_custom_message(
-                "shinyChatMessage",
-                {
-                    "id": self.id,
-                    "handler": "shiny-chat-update-user-input",
-                    "obj": obj,
-                },
+        if value is None and (submit or focus):
+            raise ValueError(
+                "An input `value` must be provided when `submit` or `focus` are `True`."
             )
+
+        obj = _utils.drop_none(
+            {
+                "value": value,
+                "placeholder": placeholder,
+                "submit": submit,
+                "focus": focus,
+            }
         )
+
+        msg = {
+            "id": self.id,
+            "handler": "shiny-chat-update-user-input",
+            "obj": obj,
+        }
+
+        self._session._send_message_sync({"custom": {"shinyChatMessage": msg}})
 
     def set_user_message(self, value: str):
         """
@@ -1048,15 +1326,67 @@ class Chat:
         )
 
 
-@add_example(ex_dir="../templates/chat/starters/hello")
+@add_example("app-express.py")
+class ChatExpress(Chat):
+    def ui(
+        self,
+        *,
+        messages: Optional[Sequence[str | ChatMessageDict]] = None,
+        placeholder: str = "Enter a message...",
+        width: CssUnit = "min(680px, 100%)",
+        height: CssUnit = "auto",
+        fill: bool = True,
+        icon_assistant: HTML | Tag | TagList | None = None,
+        **kwargs: TagAttrValue,
+    ) -> Tag:
+        """
+        Create a UI element for this `Chat`.
+
+        Parameters
+        ----------
+        messages
+            A sequence of messages to display in the chat. Each message can be either a
+            string or a dictionary with `content` and `role` keys. The `content` key
+            should contain the message text, and the `role` key can be "assistant" or
+            "user".
+        placeholder
+            Placeholder text for the chat input.
+        width
+            The width of the UI element.
+        height
+            The height of the UI element.
+        fill
+            Whether the chat should vertically take available space inside a fillable
+            container.
+        icon_assistant
+            The icon to use for the assistant chat messages. Can be a HTML or a tag in
+            the form of :class:`~htmltools.HTML` or :class:`~htmltools.Tag`. If `None`,
+            a default robot icon is used.
+        kwargs
+            Additional attributes for the chat container element.
+        """
+        return chat_ui(
+            id=self.id,
+            messages=messages,
+            placeholder=placeholder,
+            width=width,
+            height=height,
+            fill=fill,
+            icon_assistant=icon_assistant,
+            **kwargs,
+        )
+
+
+@add_example(ex_dir="../api-examples/Chat")
 def chat_ui(
     id: str,
     *,
-    messages: Optional[Sequence[str | ChatMessage]] = None,
+    messages: Optional[Sequence[TagChild | ChatMessageDict]] = None,
     placeholder: str = "Enter a message...",
     width: CssUnit = "min(680px, 100%)",
     height: CssUnit = "auto",
     fill: bool = True,
+    icon_assistant: HTML | Tag | TagList | None = None,
     **kwargs: TagAttrValue,
 ) -> Tag:
     """
@@ -1071,9 +1401,21 @@ def chat_ui(
     id
         A unique identifier for the chat UI.
     messages
-        A sequence of messages to display in the chat. Each message can be either a string
-        or a dictionary with a `content` and `role` key. The `content` key should contain
-        the message text, and the `role` key can be "assistant" or "user".
+        A sequence of messages to display in the chat. A given message can be one of the
+        following:
+
+        * A string, which is interpreted as markdown and rendered to HTML on the client.
+            * To prevent interpreting as markdown, mark the string as
+              :class:`~shiny.ui.HTML`.
+        * A UI element (specifically, a :class:`~shiny.ui.TagChild`).
+            * This includes :class:`~shiny.ui.TagList`, which take UI elements
+              (including strings) as children. In this case, strings are still
+              interpreted as markdown as long as they're not inside HTML.
+        * A dictionary with `content` and `role` keys. The `content` key can contain a
+          content as described above, and the `role` key can be "assistant" or "user".
+
+        **NOTE:** content may include specially formatted **input suggestion** links
+        (see :method:`~shiny.ui.Chat.append_message` for more info).
     placeholder
         Placeholder text for the chat input.
     width
@@ -1082,32 +1424,60 @@ def chat_ui(
         The height of the chat container.
     fill
         Whether the chat should vertically take available space inside a fillable container.
+    icon_assistant
+            The icon to use for the assistant chat messages. Can be a HTML or a tag in
+            the form of :class:`~htmltools.HTML` or :class:`~htmltools.Tag`. If `None`,
+            a default robot icon is used.
     kwargs
         Additional attributes for the chat container element.
     """
 
     id = resolve_id(id)
 
+    icon_attr = None
+    if icon_assistant is not None:
+        icon_attr = str(icon_assistant)
+
+    icon_deps = None
+    if isinstance(icon_assistant, (Tag, TagList)):
+        icon_deps = icon_assistant.get_dependencies()
+
     message_tags: list[Tag] = []
     if messages is None:
         messages = []
-    for msg in messages:
-        if isinstance(msg, str):
-            msg = {"content": msg, "role": "assistant"}
-        elif isinstance(msg, dict):
-            if "content" not in msg:
-                raise ValueError("Each message must have a 'content' key.")
-            if "role" not in msg:
-                raise ValueError("Each message must have a 'role' key.")
+    for x in messages:
+        role = "assistant"
+        content: TagChild = None
+        if not isinstance(x, dict):
+            content = x
         else:
-            raise ValueError("Each message must be a string or a dictionary.")
+            if "content" not in x:
+                raise ValueError("Each message dictionary must have a 'content' key.")
 
-        if msg["role"] == "user":
+            content = x["content"]
+            if "role" in x:
+                role = x["role"]
+
+        # `content` is most likely a string, so avoid overhead in that case
+        # (it's also important that we *don't escape HTML* here).
+        if isinstance(content, str):
+            ui: RenderedHTML = {"html": content, "dependencies": []}
+        else:
+            ui = TagList(content).render()
+
+        if role == "user":
             tag_name = "shiny-user-message"
         else:
             tag_name = "shiny-chat-message"
 
-        message_tags.append(Tag(tag_name, content=msg["content"]))
+        message_tags.append(
+            Tag(
+                tag_name,
+                ui["dependencies"],
+                content=ui["html"],
+                icon=icon_attr,
+            )
+        )
 
     res = Tag(
         "shiny-chat-container",
@@ -1118,6 +1488,7 @@ def chat_ui(
             placeholder=placeholder,
         ),
         chat_deps(),
+        icon_deps,
         {
             "style": css(
                 width=as_css_unit(width),
@@ -1127,6 +1498,9 @@ def chat_ui(
         id=id,
         placeholder=placeholder,
         fill=fill,
+        # Also include icon on the parent so that when messages are dynamically added,
+        # we know the default icon has changed
+        icon_assistant=icon_attr,
         **kwargs,
     )
 
@@ -1136,21 +1510,43 @@ def chat_ui(
     return res
 
 
-def as_transformed_message(message: ChatMessage) -> TransformedMessage:
-    if message["role"] == "user":
-        transform_key = "content_server"
-        pre_transform_key = "content_client"
-    else:
-        transform_key = "content_client"
-        pre_transform_key = "content_server"
+class MessageStream:
+    """
+    An object to yield from a `.message_stream_context()` context manager.
+    """
 
-    return TransformedMessage(
-        content_client=message["content"],
-        content_server=message["content"],
-        role=message["role"],
-        transform_key=transform_key,
-        pre_transform_key=pre_transform_key,
-    )
+    def __init__(self, chat: Chat, stream_id: str):
+        self._chat = chat
+        self._stream_id = stream_id
+
+    async def replace(self, message_chunk: Any):
+        """
+        Replace the content of the stream with new content.
+
+        Parameters
+        -----------
+        message_chunk
+            The new content to replace the current content.
+        """
+        await self._chat._append_message_chunk(
+            message_chunk,
+            operation="replace",
+            stream_id=self._stream_id,
+        )
+
+    async def append(self, message_chunk: Any):
+        """
+        Append a message chunk to the stream.
+
+        Parameters
+        -----------
+        message_chunk
+            A message chunk to append to this stream
+        """
+        await self._chat._append_message_chunk(
+            message_chunk,
+            stream_id=self._stream_id,
+        )
 
 
 CHAT_INSTANCES: WeakValueDictionary[str, Chat] = WeakValueDictionary()

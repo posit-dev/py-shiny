@@ -6,6 +6,10 @@
   @include highlight_styles.atom_one_dark;
 }
 
+shiny-markdown-stream {
+  display: block;
+}
+
 /*
   Styling for the code-copy button (inspired by Quarto's code-copy feature)
 */
@@ -48,4 +52,28 @@ pre:has(.code-copy-button) {
     mask-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/></svg>');
     background-color: var(--bs-success, #198754);
   }
+}
+
+@keyframes markdown-stream-dot-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(0.4);
+    opacity: 0.4;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.markdown-stream-dot {
+  // The stream dot is appended with each streaming chunk update, so the pulse animation
+  // only shows up when streaming pauses but isn't complete.
+  animation: markdown-stream-dot-pulse 1.75s infinite cubic-bezier(0.18, 0.89, 0.32, 1.28);
+  animation-delay: 250ms;
+  display: inline-block;
+  transform-origin: center;
 }

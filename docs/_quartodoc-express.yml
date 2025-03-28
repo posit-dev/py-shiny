@@ -77,6 +77,7 @@ quartodoc:
         - express.ui.navset_underline
         - express.ui.navset_pill_list
         - express.ui.navset_hidden
+        - express.ui.navbar_options
     - title: Chat interface
       desc: Build a chatbot interface
       contents:
@@ -168,6 +169,14 @@ quartodoc:
         - express.ui.panel_conditional
         - express.ui.insert_ui
         - express.ui.remove_ui
+    - title: User Session
+      desc: Tools for managing user sessions and accessing session-related information.
+      contents:
+        - session.Session
+    - title: Client Data
+      desc: Access (client-side) information about the user session (e.g., URL, output info, etc).
+      contents:
+        - session.ClientData
     - title: UI as HTML
       desc: Tools for creating HTML/CSS/JS
       contents:

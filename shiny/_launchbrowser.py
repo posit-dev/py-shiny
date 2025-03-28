@@ -27,14 +27,14 @@ class LaunchBrowserHandler(logging.Handler):
 
         if "Application startup complete." in record.getMessage():
             self._launched = True
-            port = os.environ["SHINY_PORT"]
+            port = os.environ["SHINY_BROWSER_PORT"]
             if not port.isnumeric():
                 print(
-                    "SHINY_PORT environment variable not set or unusable; "
+                    "SHINY_BROWSER_PORT environment variable not set or unusable; "
                     "--launch-browser will be ignored"
                 )
                 # For some reason the shiny port isn't set correctly!?
                 return
-            host = os.environ["SHINY_HOST"]
+            host = os.environ["SHINY_BROWSER_HOST"]
             url = get_proxy_url(f"http://{host}:{port}/")
             webbrowser.open(url, 1)

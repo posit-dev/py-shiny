@@ -1,6 +1,7 @@
 from ._input_buttons import (
     InputActionButton,
     InputActionLink,
+    InputBookmarkButton,
     InputDarkMode,
     InputFile,
     InputTaskButton,
@@ -77,6 +78,7 @@ from ._output import (
 __all__ = [
     "InputActionButton",
     "InputActionLink",
+    "InputBookmarkButton",
     "InputCheckbox",
     "InputCheckboxGroup",
     "InputDarkMode",

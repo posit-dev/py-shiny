@@ -1,4 +1,5 @@
-from shiny._namespaces import namespace_context, resolve_id
+from shiny._namespaces import namespace_context
+from shiny.module import resolve_id
 
 
 def test_namespaces():

@@ -5,10 +5,17 @@ import random
 import textwrap
 from typing import Generator
 
+import pytest
 from htmltools import TagList
 
 from shiny import ui
+from shiny._deprecated import ShinyDeprecationWarning
 from shiny._utils import private_seed
+from shiny.ui._navs import (
+    NavbarOptions,
+    navbar_options,
+    navbar_options_resolve_deprecated,
+)
 
 
 # Fix the randomness of these functions to make the tests deterministic
@@ -150,7 +157,7 @@ def test_navset_bar_markup():
 
     assert TagList(x).render()["html"] == textwrap.dedent(
         """\
-        <nav class="navbar navbar-expand-md navbar-default">
+        <nav class="navbar navbar-expand-md navbar-default" data-bs-theme="auto">
           <div class="container-fluid">
             <span class="navbar-brand">Page title</span><button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar-collapse-795772" aria-controls="navbar-collapse-795772" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
             <div id="navbar-collapse-795772" class="collapse navbar-collapse">
@@ -176,3 +183,119 @@ def test_navset_bar_markup():
           Page footer
         </div>"""
     )
+
+
+# navbar_options() -------------------------------------------------------------------
+
+
+def test_navbar_options_no_deprecated_arguments():
+    options_user = navbar_options()
+    result = navbar_options_resolve_deprecated(options_user)
+    assert isinstance(result, NavbarOptions)
+    assert result == navbar_options()
+
+
+def test_navbar_options_deprecated_arguments():
+    options_user = navbar_options()
+    assert options_user._is_default.get("position", False)
+    assert options_user._is_default.get("underline", False)
+
+    with pytest.warns(ShinyDeprecationWarning, match="`position`, `underline`"):
+        result = navbar_options_resolve_deprecated(
+            options_user,
+            position="static-top",
+            underline=True,
+        )
+
+    assert isinstance(result, NavbarOptions)
+    assert result == navbar_options()
+
+
+def test_navbar_options_inverse_true():
+    options_user = navbar_options()
+    with pytest.warns(ShinyDeprecationWarning, match="`inverse`"):
+        result = navbar_options_resolve_deprecated(options_user, inverse=True)
+    assert isinstance(result, NavbarOptions)
+    assert result.theme == "dark"
+
+
+def test_navbar_options_inverse_false():
+    options_user = navbar_options()
+    with pytest.warns(ShinyDeprecationWarning, match="`inverse`"):
+        result = navbar_options_resolve_deprecated(options_user, inverse=False)
+    assert isinstance(result, NavbarOptions)
+    assert result.theme == "light"
+
+
+def test_navbar_options_inverse_invalid():
+    options_user = navbar_options()
+    with pytest.warns(ShinyDeprecationWarning, match="`inverse`"):
+        with pytest.raises(ValueError, match="Invalid `inverse` value: 42"):
+            navbar_options_resolve_deprecated(options_user, inverse=42)  # type: ignore
+
+
+def test_navbar_options_conflicting_options():
+    options_user = navbar_options(position="fixed-top")
+    with pytest.warns(ShinyDeprecationWarning, match="`position`"):
+        with pytest.warns(
+            ShinyDeprecationWarning, match="`position` was provided twice"
+        ):
+            result = navbar_options_resolve_deprecated(
+                options_user, position="fixed-bottom"
+            )
+    assert isinstance(result, NavbarOptions)
+    assert result.position == "fixed-top"
+
+
+def test_navbar_options_attribs_in_options_user():
+    options_user = navbar_options(class_="my-navbar")
+    result = navbar_options_resolve_deprecated(options_user)
+    assert isinstance(result, NavbarOptions)
+    assert result.attrs == {"class_": "my-navbar"}
+
+
+def test_navbar_options_mixed_options():
+    options_user = navbar_options(position="fixed-bottom", bg="light")
+    assert not options_user._is_default.get("position", False)
+    assert not options_user._is_default.get("bg", False)
+
+    with pytest.warns(ShinyDeprecationWarning, match="`bg`"):
+        with pytest.warns(ShinyDeprecationWarning, match="`bg` was provided twice"):
+            result = navbar_options_resolve_deprecated(options_user, bg="dark")
+
+    assert isinstance(result, NavbarOptions)
+    assert result.position == "fixed-bottom"
+    assert result.bg == "light"
+
+
+def test_navbar_options_all_deprecated_arguments():
+    options_user = navbar_options()
+    with pytest.warns(
+        ShinyDeprecationWarning,
+        match="arguments of `navset_bar\\(\\)` for navbar options",
+    ):
+        result = navbar_options_resolve_deprecated(
+            options_user,
+            position="static-top",
+            bg="dark",
+            inverse=True,
+            collapsible=True,
+            underline=True,
+        )
+    assert isinstance(result, NavbarOptions)
+    assert result.theme == "dark"
+
+
+def test_navbar_options_fn_caller_custom():
+    options_user = navbar_options()
+    with pytest.warns(
+        ShinyDeprecationWarning,
+        match="arguments of `custom_caller\\(\\)` for navbar options",
+    ):
+        result = navbar_options_resolve_deprecated(
+            options_user,
+            position="static-top",
+            fn_caller="custom_caller",
+        )
+    assert isinstance(result, NavbarOptions)
+    assert result == navbar_options()

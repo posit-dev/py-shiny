@@ -31,12 +31,18 @@ from htmltools import (
 
 from .._docstring import add_example, no_example
 from .._namespaces import resolve_id_or_none
-from ..types import MISSING, MISSING_TYPE, NavSetArg
+from ..types import DEPRECATED, MISSING, MISSING_TYPE, NavSetArg
 from ._bootstrap import panel_title
 from ._html_deps_external import Theme, ThemeProvider, shiny_page_theme_deps
 from ._html_deps_py_shiny import page_output_dependency
 from ._html_deps_shinyverse import components_dependencies
-from ._navs import NavMenu, NavPanel, navset_bar
+from ._navs import (
+    NavbarOptions,
+    NavMenu,
+    NavPanel,
+    navbar_options_resolve_deprecated,
+    navset_bar,
+)
 from ._sidebar import Sidebar, SidebarOpen, layout_sidebar
 from ._tag import consolidate_attrs
 from ._utils import get_window_title
@@ -128,7 +134,7 @@ def page_sidebar(
         navbar_title,
         layout_sidebar(
             sidebar,
-            page_main_container(*children),
+            page_main_container(*children, fillable=fillable),
             attrs,
             fillable=fillable,
             border=False,
@@ -143,8 +149,10 @@ def page_sidebar(
     )
 
 
-def page_main_container(*args: TagChild) -> Tag:
+def page_main_container(*args: TagChild, fillable: bool = True) -> Tag:
     main = tags.main({"class": "bslib-page-main bslib-gap-spacing"}, *args)
+    if not fillable:
+        return main
     return as_fillable_container(as_fill_item(main))
 
 
@@ -161,17 +169,21 @@ def page_navbar(
     fillable_mobile: bool = False,
     gap: Optional[CssUnit] = None,
     padding: Optional[CssUnit | list[CssUnit]] = None,
-    position: Literal["static-top", "fixed-top", "fixed-bottom"] = "static-top",
     header: Optional[TagChild] = None,
     footer: Optional[TagChild] = None,
-    bg: Optional[str] = None,
-    inverse: bool = False,
-    underline: bool = True,
-    collapsible: bool = True,
+    navbar_options: Optional[NavbarOptions] = None,
     fluid: bool = True,
     window_title: str | MISSING_TYPE = MISSING,
     lang: Optional[str] = None,
     theme: Optional[str | Path | Theme | ThemeProvider] = None,
+    # Deprecated -- v1.3.0 2025-01 ----
+    position: (
+        Literal["static-top", "fixed-top", "fixed-bottom"] | MISSING_TYPE
+    ) = DEPRECATED,
+    bg: str | None | MISSING_TYPE = DEPRECATED,
+    inverse: bool | MISSING_TYPE = DEPRECATED,
+    underline: bool | MISSING_TYPE = DEPRECATED,
+    collapsible: bool | MISSING_TYPE = DEPRECATED,
 ) -> Tag:
     """
     Create a page with a navbar and a title.
@@ -208,24 +220,10 @@ def page_navbar(
         be used for top, the second will be left and right, and the third will be
         bottom. If four, then the values will be interpreted as top, right, bottom, and
         left respectively. This value is only used when the navbar is _fillable_.
-    position
-        Determines whether the navbar should be displayed at the top of the page with
-        normal scrolling behavior ("static-top"), pinned at the top ("fixed-top"), or
-        pinned at the bottom ("fixed-bottom"). Note that using "fixed-top" or
-        "fixed-bottom" will cause the navbar to overlay your body content, unless you
-        add padding (e.g., ``tags.style("body {padding-top: 70px;}")``).
     header
         UI to display above the selected content.
     footer
         UI to display below the selected content.
-    bg
-        Background color of the navbar (a CSS color).
-    inverse
-        Either ``True`` for a light text color or ``False`` for a dark text color.
-    collapsible
-        ``True`` to automatically collapse the elements into an expandable menu on mobile devices or narrow window widths.
-    fluid
-        ``True`` to use fluid layout; ``False`` to use fixed layout.
     window_title
         The browser's window title (defaults to the host URL of the page). Can also be
         set as a side effect via :func:`~shiny.ui.panel_title`.
@@ -244,6 +242,39 @@ def page_navbar(
 
         To modify the theme of an app without replacing the Bootstrap CSS entirely, use
         :func:`~shiny.ui.include_css` to add custom CSS.
+    fluid
+        ``True`` to use fluid layout; ``False`` to use fixed layout.
+    navbar_options
+        Configure the appearance and behavior of the navbar using
+        :func:`~shiny.ui.navbar_options` to set properties like position, background
+        color, and more.
+
+        `navbar_options` was added in v1.3.0 and replaces deprecated arguments
+        `position`, `bg`, `inverse`, `collapsible`, and `underline`.
+    position
+        Deprecated in v1.3.0. Please use `navbar_options` instead; see
+        :func:`~shiny.ui.navbar_options` for details.
+
+        Determines whether the navbar should be displayed at the top of the page with
+        normal scrolling behavior ("static-top"), pinned at the top ("fixed-top"), or
+        pinned at the bottom ("fixed-bottom"). Note that using "fixed-top" or
+        "fixed-bottom" will cause the navbar to overlay your body content, unless you
+        add padding (e.g., ``tags.style("body {padding-top: 70px;}")``).
+    bg
+        Deprecated in v1.3.0. Please use `navbar_options` instead; see
+        :func:`~shiny.ui.navbar_options` for details.
+
+        Background color of the navbar (a CSS color).
+    inverse
+        Deprecated in v1.3.0. Please use `navbar_options` instead; see
+        :func:`~shiny.ui.navbar_options` for details.
+
+        Either ``True`` for a light text color or ``False`` for a dark text color.
+    collapsible
+        Deprecated in v1.3.0. Please use `navbar_options` instead; see
+        :func:`~shiny.ui.navbar_options` for details.
+
+        ``True`` to automatically collapse the elements into an expandable menu on mobile devices or narrow window widths.
 
     Returns
     -------
@@ -276,6 +307,16 @@ def page_navbar(
 
     tagAttrs: TagAttrs = {"class": pageClass}
 
+    navbar_options = navbar_options_resolve_deprecated(
+        fn_caller="page_navbar",
+        options_user=navbar_options,
+        position=position,
+        bg=bg,
+        inverse=inverse,
+        underline=underline,
+        collapsible=collapsible,
+    )
+
     navbar = navset_bar(
         *args,
         title=title,
@@ -285,13 +326,9 @@ def page_navbar(
         fillable=fillable,
         gap=gap,
         padding=padding,
-        position=position,
+        navbar_options=navbar_options,
         header=header,
         footer=footer,
-        bg=bg,
-        inverse=inverse,
-        underline=underline,
-        collapsible=collapsible,
         fluid=fluid,
     )
     # This is a page-level navbar, so opt into page-level layouts (in particular for

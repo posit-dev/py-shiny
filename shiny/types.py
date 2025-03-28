@@ -36,6 +36,8 @@ from ._typing_extensions import NotRequired, TypedDict
 if TYPE_CHECKING:
     from matplotlib.figure import Figure
 
+T = TypeVar("T")
+
 
 # Sentinel value - indicates a missing value in a function call.
 class MISSING_TYPE:
@@ -43,9 +45,8 @@ class MISSING_TYPE:
 
 
 MISSING: MISSING_TYPE = MISSING_TYPE()
+DEPRECATED: MISSING_TYPE = MISSING_TYPE()  # A MISSING that communicates deprecation
 
-
-T = TypeVar("T")
 ListOrTuple = Union[List[T], Tuple[T, ...]]
 
 
@@ -379,7 +380,7 @@ Jsonifiable = Union[
     bool,
     None,
     List["Jsonifiable"],
-    Tuple["Jsonifiable"],
+    Tuple["Jsonifiable", ...],
     "JsonifiableDict",
 ]
 

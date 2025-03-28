@@ -17,9 +17,11 @@ from htmltools import (
 )
 
 from .._docstring import add_example, no_example
-from .._namespaces import ResolvedId, resolve_id_or_none
+from .._namespaces import resolve_id_or_none
 from .._typing_extensions import TypedDict
 from .._utils import private_random_id
+from ..bookmark import restore_input
+from ..module import ResolvedId
 from ..session import require_active_session
 from ..types import MISSING, MISSING_TYPE
 from ._card import CardItem
@@ -544,13 +546,20 @@ def sidebar(
 
     attrs, children = consolidate_attrs(*args, **kwargs)
 
+    resolved_id = resolve_id_or_none(id)
+
+    if resolved_id:
+        restored_open: bool | None = restore_input(resolved_id)
+        if restored_open is not None:
+            open = "open" if restored_open else "closed"
+
     return Sidebar(
         children=children,
         attrs=attrs,
         width=width,
         position=position,
         open=open,
-        id=id,
+        id=resolved_id,
         title=title,
         fg=fg,
         bg=bg,

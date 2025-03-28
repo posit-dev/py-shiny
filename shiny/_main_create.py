@@ -224,16 +224,20 @@ class ShinyInternalTemplates:
         return self._templates("templates/package")
 
     @property
-    def chat_starters(self) -> list[ShinyTemplate]:
-        return self._templates("templates/chat/starters")
-
-    @property
     def chat_llms(self) -> list[ShinyTemplate]:
         return self._templates("templates/chat/llms")
 
     @property
     def chat_enterprise(self) -> list[ShinyTemplate]:
         return self._templates("templates/chat/llm-enterprise")
+
+    @property
+    def stream_llms(self) -> list[ShinyTemplate]:
+        return self._templates("templates/markdown-stream/llms")
+
+    @property
+    def stream_enterprise(self) -> list[ShinyTemplate]:
+        return self._templates("templates/markdown-stream/llm-enterpise")
 
 
 shiny_internal_templates = ShinyInternalTemplates()
@@ -261,15 +265,16 @@ def use_internal_template(
 
     app_templates = shiny_internal_templates.apps
     pkg_templates = shiny_internal_templates.packages
-    chat_templates = [
-        *shiny_internal_templates.chat_starters,
+    gen_ai_templates = [
         *shiny_internal_templates.chat_llms,
         *shiny_internal_templates.chat_enterprise,
+        *shiny_internal_templates.stream_llms,
+        *shiny_internal_templates.stream_enterprise,
     ]
 
     menu_choices = [
+        Choice(title="Generative AI...", value="_gen-ai"),
         Choice(title="Custom JavaScript component...", value="_js-component"),
-        Choice(title="Chat component templates...", value="_chat"),
         Choice(
             title="Choose from the Shiny Templates website", value="_external-gallery"
         ),
@@ -279,7 +284,7 @@ def use_internal_template(
         question_state = question_choose_template(app_templates, *menu_choices)
 
     template = template_by_name(
-        [*app_templates, *pkg_templates, *chat_templates], question_state
+        [*app_templates, *pkg_templates, *gen_ai_templates], question_state
     )
 
     if template is not None:
@@ -302,8 +307,8 @@ def use_internal_template(
         sys.exit(0)
     elif question_state == "_js-component":
         use_internal_package_template(dest_dir=dest_dir, package_name=package_name)
-    elif question_state == "_chat":
-        use_internal_chat_ai_template(dest_dir=dest_dir, package_name=package_name)
+    elif question_state == "_gen-ai":
+        use_internal_gen_ai_template(dest_dir=dest_dir, package_name=package_name)
     else:
         valid_choices = [t.id for t in app_templates + pkg_templates]
         if question_state not in valid_choices:
@@ -345,18 +350,24 @@ def use_internal_package_template(
     package_template_questions(template, dest_dir=dest_dir, package_name=package_name)
 
 
-def use_internal_chat_ai_template(
+def use_internal_gen_ai_template(
     input: str | None = None,
     dest_dir: Optional[Path] = None,
     package_name: Optional[str] = None,
 ):
     if input is None:
         input = questionary.select(
-            "Which kind of chat template would you like?",
+            "Which kind of Gen AI template would you like?",
             choices=[
-                Choice(title="Chat starters...", value="_chat-starters"),
-                Choice(title="LLM powered chat...", value="_chat-llms"),
-                Choice(title="Enterprise LLM...", value="_chat-llm_enterprise"),
+                Choice(title="Chat with LLM...", value="_chat-llms"),
+                Choice(
+                    title="Chat with enterprise LLM...", value="_chat-llm_enterprise"
+                ),
+                Choice(title="Stream markdown with LLM...", value="_stream-llms"),
+                Choice(
+                    title="Stream markdown with enterprise LLM...",
+                    value="_stream-enterprise",
+                ),
                 back_choice,
                 cancel_choice,
             ],
@@ -370,29 +381,34 @@ def use_internal_chat_ai_template(
             use_internal_template(dest_dir=dest_dir, package_name=package_name)
             return
 
-        use_internal_chat_ai_template(
+        use_internal_gen_ai_template(
             input, dest_dir=dest_dir, package_name=package_name
         )
         return
 
-    if input == "_chat-starters":
-        template_choices = shiny_internal_templates.chat_starters
-    elif input == "_chat-llms":
+    if input == "_chat-llms":
         template_choices = shiny_internal_templates.chat_llms
-    else:
+    elif input == "_chat-llm_enterprise":
         template_choices = shiny_internal_templates.chat_enterprise
+    elif input == "_stream-llms":
+        template_choices = shiny_internal_templates.stream_llms
+    elif input == "_stream-enterprise":
+        template_choices = shiny_internal_templates.stream_enterprise
+    else:
+        raise ValueError(f"Invalid Gen AI template choice: {input}")
 
     choice = question_choose_template(template_choices, back_choice)
 
     if choice == "back":
-        use_internal_chat_ai_template(dest_dir=dest_dir, package_name=package_name)
+        use_internal_gen_ai_template(dest_dir=dest_dir, package_name=package_name)
         return
 
     template = template_by_name(
         [
-            *shiny_internal_templates.chat_starters,
             *shiny_internal_templates.chat_llms,
             *shiny_internal_templates.chat_enterprise,
+            *shiny_internal_templates.stream_llms,
+            *shiny_internal_templates.stream_enterprise,
         ],
         choice,
     )
@@ -775,8 +791,7 @@ def copy_template_files(
         )
         sys.exit(1)
 
-    if not dest_dir.exists():
-        dest_dir.mkdir()
+    dest_dir.mkdir(parents=True, exist_ok=True)
 
     for item in template.path.iterdir():
         if item.is_file():
