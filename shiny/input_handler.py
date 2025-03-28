@@ -227,29 +227,24 @@ def _(value: Any, name: ResolvedId, session: Session) -> Any:
 
     restore_ctx_dir = Path(restore_ctx.dir)
 
-    def cleanup_tempdir(tempdir_root: tempfile.TemporaryDirectory[str]):
-        @session.on_ended
-        def _():
-            # Cleanup the temporary directory after the session ends
-            tempdir_root.cleanup()
-
-    for f in value_list:
-        assert f["datapath"] is not None and isinstance(f["datapath"], str)
-
-        data_path = f["datapath"]
-
-        # Prepend the persistent dir
-        old_file = restore_ctx_dir / data_path
-
-        # Copy the original file to a new temp dir, so that a restored session can't
-        # modify the original.
+    if len(value_list) > 0:
         tempdir_root = tempfile.TemporaryDirectory()
-        cleanup_tempdir(tempdir_root)
+        session.on_ended(lambda: tempdir_root.cleanup())
 
-        tempdir = Path(tempdir_root.name) / rand_hex(12)
-        tempdir.mkdir(parents=True, exist_ok=True)
-        f["datapath"] = str(tempdir / Path(data_path).name)
-        shutil.copy2(old_file, f["datapath"])
+        for f in value_list:
+            assert f["datapath"] is not None and isinstance(f["datapath"], str)
+
+            data_path = f["datapath"]
+
+            # Prepend the persistent dir
+            old_file = restore_ctx_dir / data_path
+
+            # Copy the original file to a new temp dir, so that a restored session can't
+            # modify the original.
+            tempdir = Path(tempdir_root.name) / rand_hex(12)
+            tempdir.mkdir(parents=True, exist_ok=True)
+            f["datapath"] = str(tempdir / Path(data_path).name)
+            shutil.copy2(old_file, f["datapath"])
 
     # Need to mark this input value with the correct serializer. When a file is
     # uploaded the usual way (instead of being restored), this occurs in
