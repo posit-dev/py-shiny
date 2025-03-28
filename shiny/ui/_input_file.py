@@ -102,9 +102,10 @@ def input_file(
                 restored_obj["type"].append(file.get("type", None))
                 restored_obj["datapath"].append(file.get("datapath", None))
             restored_value = to_json_str(restored_obj)
-        except:
+        except Exception:
             warnings.warn(
-                f"Error while restoring file input value for `{resolved_id}`. Resetting to `None`."
+                f"Error while restoring file input value for `{resolved_id}`. Resetting to `None`.",
+                stacklevel=1,
             )
 
     btn_file = span(

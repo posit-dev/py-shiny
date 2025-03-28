@@ -1,4 +1,3 @@
-import pytest
 from playwright.sync_api import FilePayload, Page
 
 from shiny.playwright import controller

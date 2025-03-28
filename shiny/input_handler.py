@@ -227,6 +227,12 @@ def _(value: Any, name: ResolvedId, session: Session) -> Any:
 
     restore_ctx_dir = Path(restore_ctx.dir)
 
+    def cleanup_tempdir(tempdir_root: tempfile.TemporaryDirectory[str]):
+        @session.on_ended
+        def _():
+            # Cleanup the temporary directory after the session ends
+            tempdir_root.cleanup()
+
     for f in value_list:
         assert f["datapath"] is not None and isinstance(f["datapath"], str)
 
@@ -238,7 +244,7 @@ def _(value: Any, name: ResolvedId, session: Session) -> Any:
         # Copy the original file to a new temp dir, so that a restored session can't
         # modify the original.
         tempdir_root = tempfile.TemporaryDirectory()
-        session.on_ended(lambda: tempdir_root.cleanup())
+        cleanup_tempdir(tempdir_root)
 
         tempdir = Path(tempdir_root.name) / rand_hex(12)
         tempdir.mkdir(parents=True, exist_ok=True)
