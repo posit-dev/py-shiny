@@ -258,7 +258,6 @@ def accordion(
         restore_input(accordion_id, MISSING), MISSING_TYPE
     )
     open = restore_input(accordion_id, open)
-    print(f"restored open: {restore_input(accordion_id, MISSING)}")
 
     is_open: list[bool] = []
     if open is None:
