@@ -22,6 +22,7 @@ from .._deprecated import warn_deprecated
 from .._docstring import add_example
 from .._namespaces import resolve_id_or_none
 from .._utils import private_random_int
+from ..bookmark import restore_input
 from ..types import DEPRECATED, MISSING, MISSING_TYPE, NavSetArg
 from ._bootstrap import column, row
 from ._card import CardItem, WrapperCallable, card, card_body, card_footer, card_header
@@ -393,9 +394,12 @@ class NavSet:
         header: TagChild = None,
         footer: TagChild = None,
     ) -> None:
+        id_resolved = resolve_id_or_none(id)
+        selected = restore_input(id_resolved, selected)
+
         self.args = args
         self.ul_class = ul_class
-        self.id = id
+        self.id = id_resolved
         self.selected = selected
         self.header = header
         self.footer = footer
@@ -464,11 +468,10 @@ def navset_tab(
     -------
     See :func:`~shiny.ui.nav_panel`
     """
-
     return NavSet(
         *args,
         ul_class="nav nav-tabs",
-        id=resolve_id_or_none(id),
+        id=id,
         selected=selected,
         header=header,
         footer=footer,
@@ -520,11 +523,10 @@ def navset_pill(
     -------
     See :func:`~shiny.ui.nav_panel`
     """
-
     return NavSet(
         *args,
         ul_class="nav nav-pills",
-        id=resolve_id_or_none(id),
+        id=id,
         selected=selected,
         header=header,
         footer=footer,
@@ -579,7 +581,7 @@ def navset_underline(
     return NavSet(
         *args,
         ul_class="nav nav-underline",
-        id=resolve_id_or_none(id),
+        id=id,
         selected=selected,
         header=header,
         footer=footer,
@@ -627,11 +629,10 @@ def navset_hidden(
     * :func:`~shiny.ui.navset_card_underline`
     * :func:`~shiny.ui.navset_pill_list`
     """
-
     return NavSet(
         *args,
         ul_class="nav nav-hidden",
-        id=resolve_id_or_none(id),
+        id=id,
         selected=selected,
         header=header,
         footer=footer,
@@ -747,11 +748,10 @@ def navset_card_tab(
     -------
     See :func:`~shiny.ui.nav_panel`
     """
-
     return NavSetCard(
         *args,
         ul_class="nav nav-tabs card-header-tabs",
-        id=resolve_id_or_none(id),
+        id=id,
         selected=selected,
         title=title,
         sidebar=sidebar,
@@ -813,11 +813,10 @@ def navset_card_pill(
     -------
     See :func:`~shiny.ui.nav_panel`
     """
-
     return NavSetCard(
         *args,
         ul_class="nav nav-pills card-header-pills",
-        id=resolve_id_or_none(id),
+        id=id,
         selected=selected,
         title=title,
         sidebar=sidebar,
@@ -882,7 +881,7 @@ def navset_card_underline(
     return NavSetCard(
         *args,
         ul_class="nav nav-underline",
-        id=resolve_id_or_none(id),
+        id=id,
         selected=selected,
         title=title,
         sidebar=sidebar,
@@ -977,11 +976,10 @@ def navset_pill_list(
     -------
     See :func:`~shiny.ui.nav_panel`
     """
-
     return NavSetPillList(
         *args,
         ul_class="nav nav-pills nav-stacked",
-        id=resolve_id_or_none(id),
+        id=id,
         selected=selected,
         header=header,
         footer=footer,
@@ -1571,11 +1569,10 @@ def navset_bar(
     ul_class = "nav navbar-nav"
     if navbar_opts.underline:
         ul_class += " nav-underline"
-
     return NavSetBar(
         *new_args,
         ul_class=ul_class,
-        id=resolve_id_or_none(id),
+        id=id,
         selected=selected,
         sidebar=sidebar,
         fillable=fillable,

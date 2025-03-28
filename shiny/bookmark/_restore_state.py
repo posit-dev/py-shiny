@@ -391,11 +391,11 @@ T = TypeVar("T")
 
 
 @overload
-def restore_input(resolved_id: ResolvedId, default: Any) -> Any: ...
+def restore_input(resolved_id: ResolvedId, default: Optional[Any] = None) -> Any: ...
 @overload
 def restore_input(resolved_id: None, default: T) -> T: ...
 @add_example()
-def restore_input(resolved_id: ResolvedId | None, default: Any) -> Any:
+def restore_input(resolved_id: ResolvedId | None, default: Optional[Any] = None) -> Any:
     """
     Restore an input value
 

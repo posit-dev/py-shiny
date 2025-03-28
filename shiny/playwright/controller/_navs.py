@@ -187,7 +187,7 @@ class NavPanel(UiWithContainer):
 
 
 class _NavsetBase(UiWithContainer):
-    """A Base mixin class for Nav controls"""
+    """A Base class for Nav controls"""
 
     def nav_panel(
         self,
