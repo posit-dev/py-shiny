@@ -16,12 +16,11 @@ from htmltools import (
     tags,
 )
 
-from shiny.bookmark._restore_state import restore_input
-
 from .._docstring import add_example, no_example
 from .._namespaces import resolve_id_or_none
 from .._typing_extensions import TypedDict
 from .._utils import private_random_id
+from ..bookmark import restore_input
 from ..module import ResolvedId
 from ..session import require_active_session
 from ..types import MISSING, MISSING_TYPE

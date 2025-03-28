@@ -18,12 +18,11 @@ from htmltools import (
     tags,
 )
 
-from shiny.bookmark._restore_state import restore_input
-
 from .._deprecated import warn_deprecated
 from .._docstring import add_example
 from .._namespaces import resolve_id_or_none
 from .._utils import private_random_int
+from ..bookmark import restore_input
 from ..types import DEPRECATED, MISSING, MISSING_TYPE, NavSetArg
 from ._bootstrap import column, row
 from ._card import CardItem, WrapperCallable, card, card_body, card_footer, card_header
