@@ -113,7 +113,7 @@ def input_selectize(
     """
     resolved_id = resolve_id(id)
 
-    x = input_select(
+    x = _input_select_impl(
         id=resolved_id,
         label=label,
         choices=restore_input(resolved_id, choices),
@@ -192,6 +192,37 @@ def input_select(
     * :func:`~shiny.ui.input_radio_buttons`
     * :func:`~shiny.ui.input_checkbox_group`
     """
+    resolved_id = resolve_id(id)
+
+    x = _input_select_impl(
+        id=resolved_id,
+        label=label,
+        choices=restore_input(resolved_id, choices),
+        selected=selected,
+        multiple=multiple,
+        selectize=selectize,
+        width=width,
+        size=size,
+        remove_button=remove_button,
+        options=options,
+    )
+
+    return x
+
+
+def _input_select_impl(
+    id: str,
+    label: TagChild,
+    choices: SelectChoicesArg,
+    *,
+    selected: Optional[str | list[str]] = None,
+    multiple: bool = False,
+    selectize: bool = False,
+    width: Optional[str] = None,
+    size: Optional[str] = None,
+    remove_button: Optional[bool] = None,
+    options: Optional[dict[str, Jsonifiable | JSEval]] = None,
+) -> Tag:
     if options is not None and selectize is False:
         raise Exception("Options can only be set when selectize is `True`.")
 
