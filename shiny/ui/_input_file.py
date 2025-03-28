@@ -89,11 +89,11 @@ def input_file(
     restored_value = restore_input(resolved_id, default=None)
 
     if restored_value is not None:
-        restored_obj = {
-            "name": list[str | None](),
-            "size": list[int | None](),
-            "type": list[str | None](),
-            "datapath": list[str | None](),
+        restored_obj: dict[str, list[str | int | None]] = {
+            "name": [],
+            "size": [],
+            "type": [],
+            "datapath": [],
         }
         try:
             for file in restored_value:
