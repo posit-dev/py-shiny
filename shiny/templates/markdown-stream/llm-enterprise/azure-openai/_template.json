@@ -1,0 +1,27 @@
+{
+  "type": "app",
+  "id": "stream-ai-azure-openai",
+  "title": "Stream from OpenAI via Azure",
+  "next_steps": [
+    "Put your Azure credentials in the `template.env` file and rename it to `.env`.",
+    "Run the app with `shiny run app.py`."
+  ],
+  "follow_up": [
+    {
+      "type": "info",
+      "text": "Need help connecting to Azure?"
+    },
+    {
+      "type": "action",
+      "text": "Visit https://posit-dev.github.io/chatlas/reference/ChatAzureOpenAI.html"
+    },
+    {
+      "type": "info",
+      "text": "Want to learn more about streaming content?"
+    },
+    {
+      "type": "action",
+      "text": "Learn more at https://shiny.posit.co/py/docs/genai-stream.html"
+    }
+  ]
+}
