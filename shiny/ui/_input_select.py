@@ -245,8 +245,6 @@ def _input_select_impl(
     if options is not None and selectize is False:
         raise Exception("Options can only be set when selectize is `True`.")
 
-    # TODO: Warn if remove is not None and selectize is False
-
     remove_button = _resolve_remove_button(remove_button, multiple)
 
     resolved_id = resolve_id(id)
