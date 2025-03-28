@@ -362,10 +362,10 @@ def is_async_callable(
     return False
 
 
-# def not_is_async_callable(
-#     obj: Callable[P, T] | Callable[P, Awaitable[T]]
-# ) -> TypeGuard[Callable[P, T]]:
-#     return not is_async_callable(obj)
+def not_is_async_callable(
+    obj: Callable[P, T] | Callable[P, Awaitable[T]]
+) -> TypeGuard[Callable[P, T]]:
+    return not is_async_callable(obj)
 
 
 # See https://stackoverflow.com/a/59780868/412655 for an excellent explanation
