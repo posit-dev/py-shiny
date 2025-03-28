@@ -1,14 +1,17 @@
 from __future__ import annotations
 
-__all__ = ("input_file",)
-
+import warnings
 from typing import Literal, Optional
 
 from htmltools import Tag, TagChild, css, div, span, tags
 
 from .._docstring import add_example
+from ..bookmark import restore_input
+from ..bookmark._utils import to_json_str
 from ..module import resolve_id
 from ._utils import shiny_input_label
+
+__all__ = ("input_file",)
 
 
 @add_example()
@@ -83,6 +86,28 @@ def input_file(
         accept = [accept]
 
     resolved_id = resolve_id(id)
+    restored_value = restore_input(resolved_id, default=None)
+
+    if restored_value is not None:
+        restored_obj: dict[str, list[str | int | None]] = {
+            "name": [],
+            "size": [],
+            "type": [],
+            "datapath": [],
+        }
+        try:
+            for file in restored_value:
+                restored_obj["name"].append(file.get("name", None))
+                restored_obj["size"].append(file.get("size", None))
+                restored_obj["type"].append(file.get("type", None))
+                restored_obj["datapath"].append(file.get("datapath", None))
+            restored_value = to_json_str(restored_obj)
+        except Exception:
+            warnings.warn(
+                f"Error while restoring file input value for `{resolved_id}`. Resetting to `None`.",
+                stacklevel=1,
+            )
+
     btn_file = span(
         button_label,
         tags.input(
@@ -95,6 +120,7 @@ def input_file(
             # Don't use "display: none;" style, which causes keyboard accessibility issue; instead use the following workaround: https://css-tricks.com/places-its-tempting-to-use-display-none-but-dont/
             style="position: absolute !important; top: -99999px !important; left: -99999px !important;",
             class_="shiny-input-file",
+            **({"data-restore": restored_value} if restored_value else {}),
         ),
         class_="btn btn-default btn-file",
     )

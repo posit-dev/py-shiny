@@ -21,6 +21,7 @@ import shiny
 from . import __version__, _autoreload, _hostenv, _static, _utils
 from ._docstring import no_example
 from ._typing_extensions import NotRequired, TypedDict
+from .bookmark._bookmark_state import shiny_bookmarks_folder_name
 from .express import is_express_app
 from .express._utils import escape_to_var_name
 
@@ -44,7 +45,15 @@ RELOAD_INCLUDES_DEFAULT = (
     "*.yml",
     "*.yaml",
 )
-RELOAD_EXCLUDES_DEFAULT = (".*", "*.py[cod]", "__pycache__", "env", "venv")
+RELOAD_EXCLUDES_DEFAULT = (
+    ".*",
+    "*.py[cod]",
+    "__pycache__",
+    "env",
+    "venv",
+    ".venv",
+    shiny_bookmarks_folder_name,
+)
 
 
 @main.command(

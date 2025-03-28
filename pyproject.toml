@@ -134,6 +134,10 @@ doc = [
     "griffe>=1.3.2",
 ]
 
+[tool.uv.sources]
+# https://github.com/encode/uvicorn/pull/2602
+uvicorn = { git = "https://github.com/schloerke/uvicorn", branch = "reload-exclude-abs-path" }
+
 [project.urls]
 Homepage = "https://github.com/posit-dev/py-shiny"
 Documentation = "https://shiny.posit.co/py/"

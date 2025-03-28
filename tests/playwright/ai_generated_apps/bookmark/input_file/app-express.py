@@ -1,6 +1,6 @@
 from shiny.express import app_opts, input, module, render, session, ui
 
-app_opts(bookmark_store="url")
+app_opts(bookmark_store="server")
 
 with ui.card():
     ui.card_header("Bookmarking File Input Demo")
