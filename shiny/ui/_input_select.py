@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from .._deprecated import warn_deprecated
 from ..types import Jsonifiable
 
 __all__ = (
@@ -163,7 +164,7 @@ def input_select(
     multiple
         Is selection of multiple items allowed?
     selectize
-        Whether to use selectize.js or not.
+        Deprecated. Use ``input_selectize()`` instead of passing ``selectize=True``.
     width
         The CSS width, e.g. '400px', or '100%'
     size
@@ -192,6 +193,24 @@ def input_select(
     * :func:`~shiny.ui.input_radio_buttons`
     * :func:`~shiny.ui.input_checkbox_group`
     """
+    if selectize:
+        warn_deprecated(
+            "`selectize` parameter of `input_select()` is deprecated. "
+            "Use `input_selectize()` instead of passing `selectize=True`."
+        )
+
+    if remove_button is not None:
+        warn_deprecated(
+            "`remove_button` parameter of `input_select()` is deprecated. "
+            "Use `input_selectize()` instead."
+        )
+
+    if options is not None:
+        warn_deprecated(
+            "`options` parameter of `input_select()` is deprecated. "
+            "Use `input_selectize()` instead."
+        )
+
     resolved_id = resolve_id(id)
 
     x = _input_select_impl(
@@ -225,6 +244,8 @@ def _input_select_impl(
 ) -> Tag:
     if options is not None and selectize is False:
         raise Exception("Options can only be set when selectize is `True`.")
+
+    # TODO: Warn if remove is not None and selectize is False
 
     remove_button = _resolve_remove_button(remove_button, multiple)
 
