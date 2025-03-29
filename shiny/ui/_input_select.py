@@ -251,6 +251,12 @@ def _input_select_impl(
 
     choices_ = _normalize_choices(choices)
 
+    if _contains_html(choices_):
+        warn_deprecated(
+            "Passing anything other than a string to `choices` parameter of "
+            "`input_select()` and `input_selectize()` is deprecated."
+        )
+
     selected = restore_input(resolved_id, selected)
     if selected is None and not multiple:
         selected = _find_first_option(choices_)
@@ -330,6 +336,17 @@ def _normalize_choices(x: SelectChoicesArg) -> _SelectChoices:
         return {k: k for k in x}
     else:
         return x
+
+
+def _contains_html(x: _SelectChoices) -> bool:
+    for v in x.values():
+        if isinstance(v, Mapping):
+            if _contains_html(cast(_OptGrpChoices, v)):
+                return True
+        else:
+            if not isinstance(v, str):
+                return True
+    return False
 
 
 def _render_choices(
