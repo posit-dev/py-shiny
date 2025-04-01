@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import inspect
-from abc import ABC
 from contextlib import asynccontextmanager
 from typing import (
+    TYPE_CHECKING,
     Any,
     AsyncIterable,
     Awaitable,
@@ -12,7 +12,6 @@ from typing import (
     Literal,
     Optional,
     Protocol,
-    Self,
     Sequence,
     Tuple,
     Union,
@@ -27,13 +26,12 @@ from htmltools import HTML, RenderedHTML, Tag, TagAttrValue, TagChild, TagList, 
 from .. import _utils, reactive
 from .._deprecated import warn_deprecated
 from .._docstring import add_example
-from .._typing_extensions import TypedDict
-from .._utils import CancelCallback
+from .._utils import CancelCallback, wrap_async
 from ..bookmark import BookmarkState, RestoreState
 from ..bookmark._types import BookmarkStore
-from ..module import Id, ResolvedId, resolve_id
+from ..module import ResolvedId, resolve_id
 from ..session import get_current_session, require_active_session, session_context
-from ..types import MISSING, MISSING_TYPE, NotifyException
+from ..types import MISSING, MISSING_TYPE, Jsonifiable, NotifyException
 from ..ui.css import CssUnit, as_css_unit
 from ._chat_normalize import normalize_message, normalize_message_chunk
 from ._chat_provider_types import (
@@ -57,6 +55,37 @@ __all__ = (
     "chat_ui",
     "ChatMessageDict",
 )
+
+if TYPE_CHECKING:
+
+    from chatlas import Chat as ChatlasClient
+    from chatlas import Turn as ChatlasTurn
+
+    # ChatlasClient
+    has_chatlas = True
+else:
+    ChatlasTurn = ChatlasClient = object
+    has_chatlas = False
+
+
+@runtime_checkable
+class ClientWithState(Protocol):
+    async def get_state(self) -> Jsonifiable: ...
+    async def set_state(self, value: Jsonifiable): ...
+
+
+class BookmarkCancelCallback:
+    def __init__(self, cancel: CancelCallback):
+        self.cancel = cancel
+
+    def __call__(self):
+        self.cancel()
+
+    def tagify(self) -> TagChild:
+        return ""
+
+
+# TODO: Barret - Integrate!!
 
 
 # TODO: UserInput might need to be a list of dicts if we want to support multiple
@@ -1347,14 +1376,28 @@ class Chat:
             },
         )
 
+    @overload
     def enable_bookmarking(
         self,
-        client: ClientWithTurns,
+        client: ClientWithState,
         /,
-        # **kwargs: Any,
-        # bookmark_id: Id | None = None,
         *,
-        # TODO: Barret - bookmark
+        bookmark_on: Optional[Literal["response"]] = "response",
+    ) -> CancelCallback: ...
+    @overload
+    def enable_bookmarking(
+        self,
+        client: ChatlasClient[Any, Any],
+        /,
+        *,
+        bookmark_on: Optional[Literal["response"]] = "response",
+    ) -> CancelCallback: ...
+    def enable_bookmarking(
+        self,
+        client: Any,
+        /,
+        *,
+        # TODO: Barret - bookmark_on docs
         bookmark_on: Optional[Literal["response"]] = "response",
     ) -> CancelCallback:
         """
@@ -1371,17 +1414,55 @@ class Chat:
         """
         from ..express._stub_session import ExpressStubSession
 
-        # TODO: Barret - if client does not have ClientToFromJson methods, then check if chatlas. If chatlas do it automatically, otherwise display warning.
+        get_state: Callable[[], Awaitable[Jsonifiable]]
+        set_state: Callable[[Jsonifiable], Awaitable[None]]
 
-        if not isinstance(client, ClientWithTurns):
+        if isinstance(client, ClientWithState):
+            # Do client with state stuff here
+            get_state = wrap_async(client.get_state)
+            set_state = wrap_async(client.set_state)
+
+        elif has_chatlas and isinstance(client, ChatlasClient):
+
+            # Chatlas specific implementation
+            async def get_chatlas_state() -> Jsonifiable:
+                turns: list[ChatlasTurn[Any]] = client.get_turns()
+                turns_json_str: list[str] = [turn.model_dump_json() for turn in turns]
+                return cast(Jsonifiable, turns_json_str)
+
+            async def set_chatlas_state(value: Jsonifiable) -> None:
+                assert isinstance(
+                    value, list
+                ), "Chat bookmark value must be a list of strings"
+                for v in value:
+                    assert isinstance(
+                        v, str
+                    ), "Chat bookmark value must be a list of strings"
+
+                turns_json_str = cast(list[str], value)
+
+                print("restored messages", turns_json_str)
+                print("restored messages", type(turns_json_str))
+                print("restored messages", len(turns_json_str))
+                print("restored messages", turns_json_str[0])
+
+                turns: list[ChatlasTurn[Any]] = [
+                    ChatlasTurn.model_validate_json(turn_json_str)
+                    for turn_json_str in turns_json_str
+                ]
+                client.set_turns(turns)  # pyright: ignore[reportUnknownMemberType]
+
+            get_state = get_chatlas_state
+            set_state = set_chatlas_state
+
+        else:
             raise ValueError(
-                "Bookmarking requires a client that supports `.get_turns()` which return a list of objects that support `.model_dump_json()` and `.set_turns()` which is the result of the object's `.model_validate_json()` class method. Please see https://docs.pydantic.dev/latest/api/base_model/#pydantic.BaseModel.model_dump_json and https://docs.pydantic.dev/latest/api/base_model/#pydantic.BaseModel.model_validate_json for more information. "
+                "Bookmarking requires a client that supports "
+                "`async def get_state(self) -> shiny.types.Jsonifiable` (which returns an object that can be used when bookmarking to save the state of the `client=`) and "
+                "`async def set_state(self, value: Jsonifiable)` (which should restore the `client=`'s state given the `value=`)."
             )
 
-        # if bookmark_id is None:
-        bookmark_id = self.id
-        resolved_bookmark_id = resolve_id(bookmark_id)
-        resolved_bookmark_id_str = str(resolved_bookmark_id)
+        resolved_bookmark_id_str = str(self.id)
         resolved_bookmark_id_msgs_str = resolved_bookmark_id_str + "--msgs"
 
         session = get_current_session()
@@ -1396,7 +1477,7 @@ class Chat:
         # Reset prior bookmarking hooks
         self._destroy_bookmarks()
 
-        # Must use `root_session` as the id is already resolved.
+        # Must use `root_session` as the id is already resolved. :-/
         # Using a proxy session would double-encode the proxy-prefix
         root_session = session.root_scope()
         root_session.bookmark.exclude.append(self.id + "_user_input")
@@ -1424,108 +1505,46 @@ class Chat:
                 if last_message.get("role") == "assistant":
                     await session.bookmark()
 
-        TurnCls: PydanticModel | None = None
-        ClientCls = client.__class__
-
         @root_session.bookmark.on_bookmark
-        def cancel_on_bookmark_client(state: BookmarkState):
-            # Check if the bookmark value already exists
+        async def cancel_on_bookmark_client(state: BookmarkState):
             if resolved_bookmark_id_str in state.values:
                 raise ValueError(
                     f'Bookmark value with id (`"{resolved_bookmark_id_str}"`) already exists.'
-                    # "Please remove it or use a different id with `chat.enable_bookmarking(bookmark_id=)`."
                 )
 
-            # Save the chat turns to the bookmark state
             with reactive.isolate():
-                # turns = client.get_turns()
-                # turns_json_str = [turn.model_dump_json() for turn in turns]
-                my_obj = self._client_to_json()
-
-            # if len(turns) > 0:
-            #     # A hacky way to get access to the "turn" class object
-            #     # This makes it so that the user doesn't need to supply it. ...
-            #     # ... If the model returns the object, then it can be restored.
-            #     turn_obj = turns[0]
-            #     if not isinstance(turn_obj, PydanticModel):
-            #         raise ValueError(
-            #             f"Bookmarking requires that `client.get_turns()` result values each support `def model_dump_json(self) -> str: ...` and a class method of `def model_validate_json(cls, json_data: Any, **kwargs: Any) -> Self: ...`"
-            #         )
-            #     nonlocal TurnCls
-            #     TurnCls = turn_obj.__class__
-
-            # print("bookmarking turns:", turns_json_str)
-            # state.values[resolved_bookmark_id_str] = turns_json_str
-            state.values[resolved_bookmark_id_str] = my_obj
+                state.values[resolved_bookmark_id_str] = await get_state()
 
         @root_session.bookmark.on_bookmark
         def cancel_on_bookmark_ui(state: BookmarkState):
-            # Check if the bookmark value already exists
             if resolved_bookmark_id_msgs_str in state.values:
                 raise ValueError(
                     f'Bookmark value with id (`"{resolved_bookmark_id_msgs_str}"`) already exists.'
-                    # "Please remove it or use a different id with `chat.enable_bookmarking(bookmark_id=)`."
                 )
 
-            # Save the chat turns to the bookmark state
             with reactive.isolate():
                 # This only contains `ui.Chat(messages=)`
                 # This does NOT contain the `chat.ui(messages=)` values.
                 # When restoring, the `chat.ui(messages=)` values will need to be kept
                 # and the `ui.Chat(messages=)` values will need to be reset
-                msgs = self.messages(format=MISSING)
-
-            print("bookmarking msgs:", msgs)
-            state.values[resolved_bookmark_id_msgs_str] = msgs
+                state.values[resolved_bookmark_id_msgs_str] = self.messages(
+                    format=MISSING
+                )
 
         ###############
         # On Restore
 
-        # Attempt to stop the initialization of the chat. This will help prevent a blip of UI.
-        # (If it has already been initialized, the UI will blip as it will be cleared and then set below)
+        # Attempt to stop the initialization of the `ui.Chat(messages=)` messages
         self._init_chat.destroy()
-
-        # cur_turns = client.get_turns()
-        # assert len(cur_turns) > 0, "Chat must have at least one turn to restore"
-        # TurnCls = cur_turns[0].__class__
-        # TODO: Barret - Figure out how to get Turn class
-        # from chatlas import Turn
 
         @root_session.bookmark.on_restore
         async def cancel_on_restore_client(state: RestoreState):
-            # Check if the bookmark value exists
             if resolved_bookmark_id_str not in state.values:
                 return
 
             # Retrieve the chat turns from the bookmark state
-            message_list: list[str] = state.values[resolved_bookmark_id_str]
-            assert isinstance(
-                message_list, list
-            ), "Bookmark value must be a list of turns"
-            print("checking length", len(message_list))
-
-            turns: list[Any] = []
-            print("restored messages", message_list)
-            print("restored messages", type(message_list))
-            print("restored messages", len(message_list))
-            print("restored messages", message_list[0])
-
-            # if TurnCls is None:
-            #     # A user hasn't tried to bookmark yet. Therefore, we don't know the
-            #     # class object to use for restoration.
-            #     #
-            #     # Instead, make a temp client and make a single chat
-
-            #     client.
-
-            assert TurnCls is not None, "TurnCls must be set"
-
-            for message_str in message_list:
-                # Append each turn to the client
-                turns.append(TurnCls.model_validate_json(message_str))
-            print("restore turns:", turns)
-            client.set_turns(turns)
-            print("done-restore client")
+            info = state.values[resolved_bookmark_id_str]
+            await set_state(info)
 
         @root_session.bookmark.on_restore
         async def cancel_on_restore_ui(state: RestoreState):
@@ -1560,73 +1579,6 @@ class Chat:
         self._bookmark_callbacks.append(cancel_bookmark)
 
         return BookmarkCancelCallback(cancel_bookmark)
-
-
-class BookmarkCancelCallback:
-    def __init__(self, cancel: CancelCallback):
-        self.cancel = cancel
-
-    def __call__(self):
-        self.cancel()
-
-    def tagify(self) -> TagChild:
-        return ""
-
-
-# TODO: Barret - Integrate!!
-@runtime_checkable
-class ClientWithState(Protocol):
-    def get_state_as_json(self) -> str: ...
-    def set_state_from_json(self, value: str): ...
-
-
-# # TODO: Barret - Drop
-# @runtime_checkable
-# class PydanticModel(Protocol):
-#     def model_dump_json(self, **kwargs: Any) -> str: ...
-#     @classmethod
-#     def model_validate_json(cls, json_data: Any, **kwargs: Any) -> Self: ...
-
-
-# # TODO: Barret - Drop
-# @runtime_checkable
-# class ClientWithTurns(Protocol):
-#     def get_turns(self) -> list[PydanticModelT]: ...
-#     def set_turns(self, turns: list[PydanticModelT]): ...
-#     _turn_class: PydanticModelT
-#     # If value doesn't exist, check if chatlas, otherwise yell
-
-
-# # TODO: Barret - Drop
-# class ChatClient(Protocol):
-#     def _shiny_chat(self, chat: Chat) -> None: ...
-
-
-# # TODO: Barret - Drop
-# @runtime_checkable
-# class ClientToFromJson(Protocol):
-#     def _chat_to_json(self) -> Jsonifiable: ...
-#     def _chat_from_json(self, value: Jsonifiable) -> None: ...
-
-
-# class EnableBookmarkingReturnValue:
-#     bookmark_id: Id
-#     cancel_on_bookmark: CancelCallback
-#     cancel_on_restore: CancelCallback
-
-#     def __init__(
-#         self,
-#         *,
-#         bookmark_id: Id,
-#         cancel_on_bookmark: Optional[CancelCallback] = None,
-#         cancel_on_restore: Optional[CancelCallback] = None,
-#     ):
-#         self.bookmark_id = bookmark_id
-#         self.cancel_on_bookmark = cancel_on_bookmark or (lambda: None)
-#         self.cancel_on_restore = cancel_on_restore or (lambda: None)
-
-#     def tagify(self) -> TagChild:
-#         return ""
 
 
 @add_example("app-express.py")
@@ -1680,17 +1632,32 @@ class ChatExpress(Chat):
             **kwargs,
         )
 
+    @overload
     def enable_bookmarking(
         self,
-        client: ClientWithTurns,
+        client: ClientWithState,
         /,
         *,
-        # bookmark_id: Optional[Id] = None,
         bookmark_store: Optional[BookmarkStore] = None,
+        bookmark_on: Optional[Literal["response"]] = "response",
+    ) -> CancelCallback: ...
+    @overload
+    def enable_bookmarking(
+        self,
+        client: ChatlasClient[Any, Any],
+        /,
+        *,
+        bookmark_store: Optional[BookmarkStore] = None,
+        bookmark_on: Optional[Literal["response"]] = "response",
+    ) -> CancelCallback: ...
+    def enable_bookmarking(
+        self,
+        client: Any,
+        /,
+        *,
+        bookmark_store: Optional[BookmarkStore] = None,
+        bookmark_on: Optional[Literal["response"]] = "response",
     ) -> CancelCallback:
-
-        # if bookmark_id is None:
-        #     bookmark_id = self.id
 
         if bookmark_store is not None:
             from ..express import app_opts
@@ -1699,7 +1666,7 @@ class ChatExpress(Chat):
 
         return super().enable_bookmarking(
             client,
-            #   bookmark_id=bookmark_id
+            bookmark_on=bookmark_on,
         )
 
 
