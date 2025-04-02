@@ -27,7 +27,7 @@ class RepeaterClient:
     A simple chat client repeater that echoes back the user's input.
     """
 
-    def __init__(self, *, messages: list[str] = []):
+    def __init__(self, *, messages: list[str]):
         self.messages = messages
 
     def append_message(self, message: str) -> str:
