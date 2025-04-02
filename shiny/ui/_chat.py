@@ -1411,7 +1411,6 @@ class Chat:
         client: ClientWithState | chatlas.Chat[Any, Any],
         /,
         *,
-        # TODO: Barret - `on` docs
         on: Optional[Literal["response"]] = "response",
     ) -> CancelCallback:
         """
@@ -1420,12 +1419,21 @@ class Chat:
         This method registers `on_bookmark` and `on_restore` hooks on `session.bookmark`
         to save/restore chat state on both the `Chat` and `client` instances.
         In order for this method to actually work correctly, a `bookmark_store`
-        must be specified on the `App` object. 
+        must be specified within `shiny.App()` or `shiny.express.app_opts()`.
 
         Parameters
         ----------
         client
-            The chat client instance to use for bookmarking. This can be a Chat model provider from [chatlas](https://posit-dev.github.io/chatlas/), or more generally, an instance following the `ClientWithState` protocol.
+            The chat client instance to use for bookmarking. This can be a Chat model
+            provider from [chatlas](https://posit-dev.github.io/chatlas/), or more
+            generally, an instance following the `ClientWithState` protocol.
+        on
+            The event to trigger the bookmarking on.
+
+            When `on` is not `None`, the query string with the latest bookmark URL.
+
+            When `on` is `"response"`, the session will attempt to bookmark when the
+            assistant is done responding.
 
         Raises
         ------
@@ -1579,7 +1587,7 @@ class Chat:
 
             msgs: list[Any] = state.values[resolved_bookmark_id_msgs_str]
             if not msgs:
-                # If no messages, set the default messages
+                # If no messages to restore, display the `__init__(messages=)` messages
                 await self._append_init_messages()
                 return
 
@@ -1659,6 +1667,37 @@ class ChatExpress(Chat):
         store: Optional[BookmarkStore] = None,
         on: Optional[Literal["response"]] = "response",
     ) -> CancelCallback:
+        """
+        Enable bookmarking for the chat instance.
+
+        This method registers `on_bookmark` and `on_restore` hooks on `session.bookmark`
+        to save/restore chat state on both the `Chat` and `client` instances.
+        In order for this method to actually work correctly, a `bookmark_store`
+        must be specified within `shiny.App()` or `shiny.express.app_opts()`.
+
+        Parameters
+        ----------
+        client
+            The chat client instance to use for bookmarking. This can be a Chat model
+            provider from [chatlas](https://posit-dev.github.io/chatlas/), or more
+            generally, an instance following the `ClientWithState` protocol.
+        store
+            A convenience parameter to set the `shiny.express.app_opts(bookmark_store=)`
+            which is required for bookmarking (and `.enable_bookmarking()`). If `None`,
+            no value will be set.
+        on
+            The event to trigger the bookmarking on.
+
+            When `on` is not `None`, the query string with the latest bookmark URL.
+
+            When `on` is `"response"`, the session will attempt to bookmark when the
+            assistant is done responding.
+
+        Raises
+        ------
+        ValueError
+            If the Shiny App does have bookmarking enabled.
+        """
 
         if store is not None:
             from ..express import app_opts
