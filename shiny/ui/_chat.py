@@ -91,7 +91,7 @@ class ClientWithState(Protocol):
         A JSON-like representation of the current state of the client. It is not required to be a JSON string but something that can be serialized to JSON without further conversion.
     """
 
-    async def set_state(self, value: Jsonifiable): ...
+    async def set_state(self, state: Jsonifiable): ...
 
     """
     Method to set the chat client state.
@@ -101,7 +101,7 @@ class ClientWithState(Protocol):
 
     Parameters
     ----------
-    value
+    state
         The value to infer the state from. This value will be the JSON capable value
         returned by the `get_state()` method (after a round trip through JSON
         serialization and unserialization).
