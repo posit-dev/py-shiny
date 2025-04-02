@@ -1427,7 +1427,7 @@ class Chat:
         This method registers `on_bookmark` and `on_restore` hooks on `session.bookmark`
         to save/restore chat state on both the `Chat` and `client` instances.
         In order for this method to actually work correctly, a `bookmark_store`
-        must be specified within `shiny.App()` or `shiny.express.app_opts()`.
+        must be specified in `shiny.App()`.
 
         Parameters
         ----------
@@ -1436,12 +1436,13 @@ class Chat:
             provider from [chatlas](https://posit-dev.github.io/chatlas/), or more
             generally, an instance following the `ClientWithState` protocol.
         on
-            The event to trigger the bookmarking on.
+            The event to trigger the bookmarking on. Supported values include:
 
-            When `on` is not `None`, the query string with the latest bookmark URL.
+                - `"response"` (the default): a bookmark is triggered when the assistant is done responding.
+                - `None`: no bookmark is triggered
 
-            When `on` is `"response"`, the session will attempt to bookmark when the
-            assistant is done responding.
+            When this method triggers a bookmark, it also updates the URL query string to reflect the bookmarked state.
+
 
         Raises
         ------
@@ -1528,7 +1529,6 @@ class Chat:
         if on == "response":
 
             @reactive.effect
-            # @reactive.event(lambda: chat.latest_message_stream.result, ignore_init=True)
             @reactive.event(lambda: self.messages(format=MISSING), ignore_init=True)
             async def _():
                 messages = self.messages(format=MISSING)
@@ -1559,7 +1559,6 @@ class Chat:
                 )
 
             with reactive.isolate():
-                # This only contains `ui.Chat(messages=)`
                 # This does NOT contain the `chat.ui(messages=)` values.
                 # When restoring, the `chat.ui(messages=)` values will need to be kept
                 # and the `ui.Chat(messages=)` values will need to be reset
@@ -1683,7 +1682,7 @@ class ChatExpress(Chat):
         This method registers `on_bookmark` and `on_restore` hooks on `session.bookmark`
         to save/restore chat state on both the `Chat` and `client` instances.
         In order for this method to actually work correctly, a `bookmark_store`
-        must be specified within `shiny.App()` or `shiny.express.app_opts()`.
+        must be specified in `shiny.express.app_opts()`.
 
         Parameters
         ----------
@@ -1696,12 +1695,12 @@ class ChatExpress(Chat):
             which is required for bookmarking (and `.enable_bookmarking()`). If `None`,
             no value will be set.
         on
-            The event to trigger the bookmarking on.
+            The event to trigger the bookmarking on. Supported values include:
 
-            When `on` is not `None`, the query string with the latest bookmark URL.
+                - `"response"` (the default): a bookmark is triggered when the assistant is done responding.
+                - `None`: no bookmark is triggered
 
-            When `on` is `"response"`, the session will attempt to bookmark when the
-            assistant is done responding.
+            When this method triggers a bookmark, it also updates the URL query string to reflect the bookmarked state.
 
         Raises
         ------
