@@ -119,9 +119,6 @@ class BookmarkCancelCallback:
         return ""
 
 
-# TODO: Barret - Integrate!!
-
-
 # TODO: UserInput might need to be a list of dicts if we want to support multiple
 # user input content types
 TransformUserInput = Callable[[str], Union[str, None]]
@@ -1508,7 +1505,7 @@ class Chat:
             raise ValueError(
                 "Bookmarking requires a client that supports "
                 "`async def get_state(self) -> shiny.types.Jsonifiable` (which returns an object that can be used when bookmarking to save the state of the `client=`) and "
-                "`async def set_state(self, value: Jsonifiable)` (which should restore the `client=`'s state given the `value=`)."
+                "`async def set_state(self, value: Jsonifiable)` (which should restore the `client=`'s state given the `state=`)."
             )
 
         # Reset prior bookmarking hooks
