@@ -1416,7 +1416,7 @@ class Chat:
         client: ClientWithState | chatlas.Chat[Any, Any],
         /,
         *,
-        on: Optional[Literal["response"]] = "response",
+        bookmark_on: Optional[Literal["response"]] = "response",
     ) -> CancelCallback:
         """
         Enable bookmarking for the chat instance.
@@ -1432,11 +1432,11 @@ class Chat:
             The chat client instance to use for bookmarking. This can be a Chat model
             provider from [chatlas](https://posit-dev.github.io/chatlas/), or more
             generally, an instance following the `ClientWithState` protocol.
-        on
+        bookmark_on
             The event to trigger the bookmarking on. Supported values include:
 
-                - `"response"` (the default): a bookmark is triggered when the assistant is done responding.
-                - `None`: no bookmark is triggered
+            - `"response"` (the default): a bookmark is triggered when the assistant is done responding.
+            - `None`: no bookmark is triggered
 
             When this method triggers a bookmark, it also updates the URL query string to reflect the bookmarked state.
 
@@ -1516,14 +1516,14 @@ class Chat:
         root_session = session.root_scope()
         root_session.bookmark.exclude.append(self.id + "_user_input")
 
-        if on is not None:
+        if bookmark_on is not None:
 
             # When ever the bookmark is requested, update the query string (indep of store type)
             @root_session.bookmark.on_bookmarked
             async def _(url: str):
                 await session.bookmark.update_query_string(url)
 
-        if on == "response":
+        if bookmark_on == "response":
 
             @reactive.effect
             @reactive.event(lambda: self.messages(format=MISSING), ignore_init=True)
@@ -1537,6 +1537,9 @@ class Chat:
 
                 if last_message.get("role") == "assistant":
                     await session.bookmark()
+
+        ###############
+        # On Bookmark
 
         @root_session.bookmark.on_bookmark
         async def _on_bookmark_client(state: BookmarkState):
@@ -1670,8 +1673,8 @@ class ChatExpress(Chat):
         client: ClientWithState | chatlas.Chat[Any, Any],
         /,
         *,
-        store: Optional[BookmarkStore] = None,
-        on: Optional[Literal["response"]] = "response",
+        bookmark_store: Optional[BookmarkStore] = None,
+        bookmark_on: Optional[Literal["response"]] = "response",
     ) -> CancelCallback:
         """
         Enable bookmarking for the chat instance.
@@ -1687,15 +1690,15 @@ class ChatExpress(Chat):
             The chat client instance to use for bookmarking. This can be a Chat model
             provider from [chatlas](https://posit-dev.github.io/chatlas/), or more
             generally, an instance following the `ClientWithState` protocol.
-        store
+        bookmark_store
             A convenience parameter to set the `shiny.express.app_opts(bookmark_store=)`
             which is required for bookmarking (and `.enable_bookmarking()`). If `None`,
             no value will be set.
-        on
+        bookmark_on
             The event to trigger the bookmarking on. Supported values include:
 
-                - `"response"` (the default): a bookmark is triggered when the assistant is done responding.
-                - `None`: no bookmark is triggered
+            - `"response"` (the default): a bookmark is triggered when the assistant is done responding.
+            - `None`: no bookmark is triggered
 
             When this method triggers a bookmark, it also updates the URL query string to reflect the bookmarked state.
 
@@ -1705,12 +1708,12 @@ class ChatExpress(Chat):
             If the Shiny App does have bookmarking enabled.
         """
 
-        if store is not None:
+        if bookmark_store is not None:
             from ..express import app_opts
 
-            app_opts(bookmark_store=store)
+            app_opts(bookmark_store=bookmark_store)
 
-        return super().enable_bookmarking(client, on=on)
+        return super().enable_bookmarking(client, bookmark_on=bookmark_on)
 
 
 @add_example(ex_dir="../api-examples/Chat")
