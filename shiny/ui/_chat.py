@@ -71,7 +71,33 @@ else:
 @runtime_checkable
 class ClientWithState(Protocol):
     async def get_state(self) -> Jsonifiable: ...
+
+    """
+    Retrieve JSON-like representation of chat client state.
+
+    This method is used to retrieve the state of the client object when saving a bookmark.
+
+    Returns
+    -------
+    :
+        A JSON-like representation of the current state of the client. It is not required to be a JSON string but something that can be serialized to JSON without further conversion.
+    """
+
     async def set_state(self, value: Jsonifiable): ...
+
+    """
+    Method to set the chat client state.
+
+    This method is used to restore the state of the client when the app is restored from
+    a bookmark.
+
+    Parameters
+    ----------
+    value
+        The value to infer the state from. This value will be the JSON capable value
+        returned by the `get_state()` method (after a round trip through JSON
+        serialization and unserialization).
+    """
 
 
 class BookmarkCancelCallback:
