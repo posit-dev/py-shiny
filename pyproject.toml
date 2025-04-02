@@ -120,7 +120,7 @@ dev = [
     "langsmith<0.3",
     "openai",
     "ollama",
-    "chatlas",
+    "chatlas>=0.6.0",
     "tokenizers",
     "aiohttp",
     "beautifulsoup4",
@@ -135,8 +135,6 @@ doc = [
     "griffe>=1.3.2",
 ]
 
-[tool.uv.sources]
-chatlas = { git = "https://github.com/posit-dev/chatlas", branch = "main" }
 
 [project.urls]
 Homepage = "https://github.com/posit-dev/py-shiny"
