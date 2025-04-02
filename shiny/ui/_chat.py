@@ -1436,7 +1436,8 @@ class Chat:
 
         if session.bookmark.store == "disable":
             raise ValueError(
-                "Bookmarking requires a `bookmark_store` to be set. Please set `bookmark_store=` in `App()`."
+                "Bookmarking requires a `bookmark_store` to be set. "
+                "Please set `bookmark_store=` in `shiny.App()` or `shiny.express.app_opts()."
             )
 
         resolved_bookmark_id_str = str(self.id)
@@ -1718,12 +1719,6 @@ def chat_ui(
     kwargs
         Additional attributes for the chat container element.
     """
-
-    if "bookmark_store" in kwargs:
-        raise ValueError(
-            "The `bookmark_store=` argument is not supported in this function. "
-            "Please use the `bookmark_store` argument when constructing the `App()`."
-        )
 
     id = resolve_id(id)
 
