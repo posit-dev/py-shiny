@@ -27,6 +27,7 @@ ui.page_opts(
 # Create and display empty chat
 chat = ui.Chat(id="chat")
 chat.ui()
+chat.enable_bookmarking(chat_client, store="url")
 
 
 # Define a callback to run when the user submits a message

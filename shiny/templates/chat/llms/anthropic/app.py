@@ -32,6 +32,7 @@ chat = ui.Chat(
     messages=["Hello! How can I help you today?"],
 )
 chat.ui()
+chat.enable_bookmarking(chat_client, store="url")
 
 
 # Generate a response when the user submits a message

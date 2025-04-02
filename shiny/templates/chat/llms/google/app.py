@@ -28,6 +28,7 @@ ui.page_opts(
 # Create and display empty chat
 chat = ui.Chat(id="chat")
 chat.ui()
+chat.enable_bookmarking(chat_client, store="url")
 
 
 # Generate a response when the user submits a message

@@ -33,6 +33,7 @@ chat = ui.Chat(
     messages=["Hello! How can I help you today?"],
 )
 chat.ui()
+chat.enable_bookmarking(chat_client, store="url")
 
 
 # Define a callback to run when the user submits a message
