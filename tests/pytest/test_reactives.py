@@ -235,7 +235,6 @@ async def test_async_sequential():
     async def react_chain(n: int):
         @calc()
         async def r():
-            nonlocal exec_order
             exec_order.append(f"r{n}-1")
             await asyncio.sleep(0)
             exec_order.append(f"r{n}-2")
@@ -243,7 +242,6 @@ async def test_async_sequential():
 
         @effect()
         async def _():
-            nonlocal exec_order
             exec_order.append(f"o{n}-1")
             await asyncio.sleep(0)
             exec_order.append(f"o{n}-2")
@@ -402,19 +400,16 @@ async def test_effect_priority():
 
     @effect(priority=1)
     def o1():
-        nonlocal results
         v()
         results.append(1)
 
     @effect(priority=2)
     def o2():
-        nonlocal results
         v()
         results.append(2)
 
     @effect(priority=1)
     def o3():
-        nonlocal results
         v()
         results.append(3)
 
@@ -425,7 +420,6 @@ async def test_effect_priority():
     # invalidate others by changing v).
     @effect(priority=2)
     def o4():
-        nonlocal results
         v()
         results.append(4)
 
@@ -453,19 +447,16 @@ async def test_async_effect_priority():
 
     @effect(priority=1)
     async def o1():
-        nonlocal results
         v()
         results.append(1)
 
     @effect(priority=2)
     async def o2():
-        nonlocal results
         v()
         results.append(2)
 
     @effect(priority=1)
     async def o3():
-        nonlocal results
         v()
         results.append(3)
 
@@ -476,7 +467,6 @@ async def test_async_effect_priority():
     # invalidate others by changing v).
     @effect(priority=2)
     async def o4():
-        nonlocal results
         v()
         results.append(4)
 
@@ -506,7 +496,6 @@ async def test_effect_destroy():
 
     @effect()
     def o1():
-        nonlocal results
         v()
         results.append(1)
 
@@ -524,7 +513,6 @@ async def test_effect_destroy():
 
     @effect()
     def o2():
-        nonlocal results
         v()
         results.append(1)
 

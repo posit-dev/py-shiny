@@ -11,7 +11,6 @@ n: int = 0
 @reactive.effect
 @reactive.event(input.show)
 def _():
-    global ids
     global n
     # Save the ID for removal later
     id = ui.notification_show("Message " + str(n), duration=None)
@@ -22,6 +21,5 @@ def _():
 @reactive.effect
 @reactive.event(input.remove)
 def _():
-    global ids
     if ids:
         ui.notification_remove(ids.pop())
