@@ -1422,9 +1422,9 @@ class Chat:
         Enable bookmarking for the chat instance.
 
         This method registers `on_bookmark` and `on_restore` hooks on `session.bookmark`
-        to save/restore chat state on both the `Chat` and `client` instances.
-        In order for this method to actually work correctly, a `bookmark_store`
-        must be specified in `shiny.App()`.
+        (:class:`shiny.bookmark.Bookmark`) to save/restore chat state on both the `Chat`
+        and `client=` instances. In order for this method to actually work correctly, a
+        `bookmark_store=` must be specified in `shiny.App()`.
 
         Parameters
         ----------
@@ -1445,6 +1445,11 @@ class Chat:
         ------
         ValueError
             If the Shiny App does have bookmarking enabled.
+
+        Returns
+        -------
+        :
+            A callback to cancel the bookmarking hooks.
         """
         from ..express._stub_session import ExpressStubSession
 
@@ -1680,9 +1685,9 @@ class ChatExpress(Chat):
         Enable bookmarking for the chat instance.
 
         This method registers `on_bookmark` and `on_restore` hooks on `session.bookmark`
-        to save/restore chat state on both the `Chat` and `client` instances.
-        In order for this method to actually work correctly, a `bookmark_store`
-        must be specified in `shiny.express.app_opts()`.
+        (:class:`shiny.bookmark.Bookmark`) to save/restore chat state on both the `Chat`
+        and `client=` instances. In order for this method to actually work correctly, a
+        `bookmark_store=` must be specified in `shiny.express.app_opts()`.
 
         Parameters
         ----------
@@ -1706,6 +1711,11 @@ class ChatExpress(Chat):
         ------
         ValueError
             If the Shiny App does have bookmarking enabled.
+
+        Returns
+        -------
+        :
+            A callback to cancel the bookmarking hooks.
         """
 
         if bookmark_store is not None:
