@@ -302,13 +302,16 @@ class Chat:
 
             # TODO: deprecate messages once we start promoting managing LLM message
             # state through other means
-            @reactive.effect
-            async def _init_chat():
+            async def _append_init_messages():
                 for msg in messages:
                     await self.append_message(msg)
 
+            @reactive.effect
+            async def _init_chat():
+                await _append_init_messages()
+
+            self._append_init_messages = _append_init_messages
             self._init_chat = _init_chat
-            self._init_chat_messages = messages
 
             # When user input is submitted, transform, and store it in the chat state
             # (and make sure this runs before other effects since when the user
@@ -1576,8 +1579,7 @@ class Chat:
             msgs: list[Any] = state.values[resolved_bookmark_id_msgs_str]
             if not msgs:
                 # If no messages, set the default messages
-                for default_message in self._init_chat_messages:
-                    await self.append_message(default_message)
+                await self._append_init_messages()
                 return
 
             print("restored msgs", msgs)
