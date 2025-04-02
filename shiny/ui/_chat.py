@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import importlib.util
 import inspect
 from contextlib import asynccontextmanager
 from typing import (
@@ -12,13 +11,11 @@ from typing import (
     Iterable,
     Literal,
     Optional,
-    Protocol,
     Sequence,
     Tuple,
     Union,
     cast,
     overload,
-    runtime_checkable,
 )
 from weakref import WeakValueDictionary
 
@@ -34,6 +31,13 @@ from ..module import ResolvedId, resolve_id
 from ..session import get_current_session, require_active_session, session_context
 from ..types import MISSING, MISSING_TYPE, Jsonifiable, NotifyException
 from ..ui.css import CssUnit, as_css_unit
+from ._chat_bookmark import (
+    BookmarkCancelCallback,
+    ClientWithState,
+    get_chatlas_state,
+    is_chatlas_chat_client,
+    set_chatlas_state,
+)
 from ._chat_normalize import normalize_message, normalize_message_chunk
 from ._chat_provider_types import (
     AnthropicMessage,
@@ -63,60 +67,6 @@ __all__ = (
     "chat_ui",
     "ChatMessageDict",
 )
-
-
-chatlas_is_installed = importlib.util.find_spec("chatlas") is not None
-
-
-def is_chatlas_chat_client(client: Any) -> bool:
-    if not chatlas_is_installed:
-        return False
-    import chatlas
-
-    return isinstance(client, chatlas.Chat)
-
-
-@runtime_checkable
-class ClientWithState(Protocol):
-    async def get_state(self) -> Jsonifiable: ...
-
-    """
-    Retrieve JSON-like representation of chat client state.
-
-    This method is used to retrieve the state of the client object when saving a bookmark.
-
-    Returns
-    -------
-    :
-        A JSON-like representation of the current state of the client. It is not required to be a JSON string but something that can be serialized to JSON without further conversion.
-    """
-
-    async def set_state(self, state: Jsonifiable): ...
-
-    """
-    Method to set the chat client state.
-
-    This method is used to restore the state of the client when the app is restored from
-    a bookmark.
-
-    Parameters
-    ----------
-    state
-        The value to infer the state from. This value will be the JSON capable value
-        returned by the `get_state()` method (after a round trip through JSON
-        serialization and unserialization).
-    """
-
-
-class BookmarkCancelCallback:
-    def __init__(self, cancel: CancelCallback):
-        self.cancel = cancel
-
-    def __call__(self):
-        self.cancel()
-
-    def tagify(self) -> TagChild:
-        return ""
 
 
 # TODO: UserInput might need to be a list of dicts if we want to support multiple
@@ -1476,35 +1426,8 @@ class Chat:
 
         elif is_chatlas_chat_client(client):
 
-            from chatlas import Turn as ChatlasTurn
-
-            # Chatlas specific implementation
-            async def get_chatlas_state() -> Jsonifiable:
-                turns: list[ChatlasTurn[Any]] = client.get_turns()
-                turns_json_str: list[str] = [turn.model_dump_json() for turn in turns]
-                return cast(Jsonifiable, turns_json_str)
-
-            async def set_chatlas_state(value: Jsonifiable) -> None:
-                if not isinstance(value, list):
-                    raise ValueError(
-                        "Chatlas bookmark value must be a list of JSON strings"
-                    )
-                for v in value:
-                    if not isinstance(v, str):
-                        raise ValueError(
-                            "Chat bookmark value must be a list of strings"
-                        )
-
-                turns_json_str = cast(list[str], value)
-
-                turns: list[ChatlasTurn[Any]] = [
-                    ChatlasTurn.model_validate_json(turn_json_str)
-                    for turn_json_str in turns_json_str
-                ]
-                client.set_turns(turns)  # pyright: ignore[reportUnknownMemberType]
-
-            get_state = get_chatlas_state
-            set_state = set_chatlas_state
+            get_state = get_chatlas_state(client)
+            set_state = set_chatlas_state(client)
 
         else:
             raise ValueError(
