@@ -32,6 +32,8 @@ chat = ui.Chat(
     messages=["Hello! How can I help you today?"],
 )
 chat.ui()
+
+# Store chat state in the url when an "assistant" response occurs
 chat.enable_bookmarking(chat_client, store="url")
 
 

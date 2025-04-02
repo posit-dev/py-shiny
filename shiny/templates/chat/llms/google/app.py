@@ -28,6 +28,8 @@ ui.page_opts(
 # Create and display empty chat
 chat = ui.Chat(id="chat")
 chat.ui()
+
+# Store chat state in the url when an "assistant" response occurs
 chat.enable_bookmarking(chat_client, store="url")
 
 
