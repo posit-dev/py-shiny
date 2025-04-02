@@ -1406,8 +1406,8 @@ class Chat:
         client: ClientWithState | chatlas.Chat[Any, Any],
         /,
         *,
-        # TODO: Barret - bookmark_on docs
-        bookmark_on: Optional[Literal["response"]] = "response",
+        # TODO: Barret - `on` docs
+        on: Optional[Literal["response"]] = "response",
     ) -> CancelCallback:
         """
         Enable bookmarking for the chat instance.
@@ -1495,14 +1495,14 @@ class Chat:
         root_session = session.root_scope()
         root_session.bookmark.exclude.append(self.id + "_user_input")
 
-        if bookmark_on is not None:
+        if on is not None:
 
             # When ever the bookmark is requested, update the query string (indep of store type)
             @root_session.bookmark.on_bookmarked
             async def _(url: str):
                 await session.bookmark.update_query_string(url)
 
-        if bookmark_on == "response":
+        if on == "response":
 
             @reactive.effect
             # @reactive.event(lambda: chat.latest_message_stream.result, ignore_init=True)
@@ -1645,42 +1645,21 @@ class ChatExpress(Chat):
             **kwargs,
         )
 
-    @overload
     def enable_bookmarking(
         self,
         client: ClientWithState | chatlas.Chat[Any, Any],
         /,
         *,
-        bookmark_store: Optional[BookmarkStore] = None,
-        bookmark_on: Optional[Literal["response"]] = "response",
-    ) -> CancelCallback: ...
-    @overload
-    def enable_bookmarking(
-        self,
-        client: ChatlasClient[Any, Any],
-        /,
-        *,
-        bookmark_store: Optional[BookmarkStore] = None,
-        bookmark_on: Optional[Literal["response"]] = "response",
-    ) -> CancelCallback: ...
-    def enable_bookmarking(
-        self,
-        client: Any,
-        /,
-        *,
-        bookmark_store: Optional[BookmarkStore] = None,
-        bookmark_on: Optional[Literal["response"]] = "response",
+        store: Optional[BookmarkStore] = None,
+        on: Optional[Literal["response"]] = "response",
     ) -> CancelCallback:
 
-        if bookmark_store is not None:
+        if store is not None:
             from ..express import app_opts
 
-            app_opts(bookmark_store=bookmark_store)
+            app_opts(bookmark_store=store)
 
-        return super().enable_bookmarking(
-            client,
-            bookmark_on=bookmark_on,
-        )
+        return super().enable_bookmarking(client, on=on)
 
 
 @add_example(ex_dir="../api-examples/Chat")
