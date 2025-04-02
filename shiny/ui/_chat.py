@@ -1444,6 +1444,9 @@ class Chat:
         root_session = session.root_scope()
         root_session.bookmark.exclude.append(self.id + "_user_input")
 
+        # ###########
+        # Bookmarking
+
         if bookmark_on is not None:
 
             # When ever the bookmark is requested, update the query string (indep of store type)
@@ -1467,7 +1470,7 @@ class Chat:
                     await session.bookmark()
 
         ###############
-        # On Bookmark
+        # Client Bookmarking
 
         @root_session.bookmark.on_bookmark
         async def _on_bookmark_client(state: BookmarkState):
@@ -1478,6 +1481,18 @@ class Chat:
 
             with reactive.isolate():
                 state.values[resolved_bookmark_id_str] = await get_state()
+
+        @root_session.bookmark.on_restore
+        async def _on_restore_client(state: RestoreState):
+            if resolved_bookmark_id_str not in state.values:
+                return
+
+            # Retrieve the chat turns from the bookmark state
+            info = state.values[resolved_bookmark_id_str]
+            await set_state(info)
+
+        ###############
+        # UI Bookmarking
 
         @root_session.bookmark.on_bookmark
         def _on_bookmark_ui(state: BookmarkState):
@@ -1494,20 +1509,8 @@ class Chat:
                     format=MISSING
                 )
 
-        ###############
-        # On Restore
-
         # Attempt to stop the initialization of the `ui.Chat(messages=)` messages
         self._init_chat.destroy()
-
-        @root_session.bookmark.on_restore
-        async def _on_restore_client(state: RestoreState):
-            if resolved_bookmark_id_str not in state.values:
-                return
-
-            # Retrieve the chat turns from the bookmark state
-            info = state.values[resolved_bookmark_id_str]
-            await set_state(info)
 
         @root_session.bookmark.on_restore
         async def _on_restore_ui(state: RestoreState):
