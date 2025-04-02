@@ -246,7 +246,6 @@ class Chat:
         if not isinstance(id, str):
             raise TypeError("`id` must be a string.")
 
-        self._id_original = id
         self.id = resolve_id(id)
         self.user_input_id = ResolvedId(f"{self.id}_user_input")
         self._transform_user: TransformUserInputAsync | None = None
