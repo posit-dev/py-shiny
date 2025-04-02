@@ -1417,14 +1417,15 @@ class Chat:
         """
         Enable bookmarking for the chat instance.
 
-        This method allows the chat instance to be bookmarked, which means that the
-        current state of the chat (including messages) can be saved and restored
-        when the app is reloaded.
+        This method registers `on_bookmark` and `on_restore` hooks on `session.bookmark`
+        to save/restore chat state on both the `Chat` and `client` instances.
+        In order for this method to actually work correctly, a `bookmark_store`
+        must be specified on the `App` object. 
 
         Parameters
         ----------
         client
-            The chat client (e.g. [chatlas](https://posit-dev.github.io/chatlas/)) instance to use for bookmarking.
+            The chat client instance to use for bookmarking. This can be a Chat model provider from [chatlas](https://posit-dev.github.io/chatlas/), or more generally, an instance following the `ClientWithState` protocol.
 
         Raises
         ------
