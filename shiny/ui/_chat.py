@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 import inspect
 from contextlib import asynccontextmanager
 from typing import (
@@ -49,6 +50,13 @@ from ._chat_types import ChatMessage, ChatMessageDict, ClientMessage, Transforme
 from ._html_deps_py_shiny import chat_deps
 from .fill import as_fill_item, as_fillable_container
 
+if TYPE_CHECKING:
+
+    import chatlas
+
+else:
+    chatlas = object
+
 __all__ = (
     "Chat",
     "ChatExpress",
@@ -56,16 +64,8 @@ __all__ = (
     "ChatMessageDict",
 )
 
-if TYPE_CHECKING:
 
-    from chatlas import Chat as ChatlasClient
-    from chatlas import Turn as ChatlasTurn
-
-    # ChatlasClient
-    has_chatlas = True
-else:
-    ChatlasTurn = ChatlasClient = object
-    has_chatlas = False
+chatlas_is_installed = importlib.util.find_spec("chatlas") is not None
 
 
 @runtime_checkable
@@ -1401,25 +1401,9 @@ class Chat:
             },
         )
 
-    @overload
     def enable_bookmarking(
         self,
-        client: ClientWithState,
-        /,
-        *,
-        bookmark_on: Optional[Literal["response"]] = "response",
-    ) -> CancelCallback: ...
-    @overload
-    def enable_bookmarking(
-        self,
-        client: ChatlasClient[Any, Any],
-        /,
-        *,
-        bookmark_on: Optional[Literal["response"]] = "response",
-    ) -> CancelCallback: ...
-    def enable_bookmarking(
-        self,
-        client: Any,
+        client: ClientWithState | chatlas.Chat[Any, Any],
         /,
         *,
         # TODO: Barret - bookmark_on docs
@@ -1436,18 +1420,37 @@ class Chat:
         ----------
         client
             The chat client (e.g. [chatlas](https://posit-dev.github.io/chatlas/)) instance to use for bookmarking.
+
+        Raises
+        ------
+        ValueError
+            If the Shiny App does have bookmarking enabled.
         """
         from ..express._stub_session import ExpressStubSession
 
+        session = get_current_session()
+        if session is None or isinstance(session, ExpressStubSession):
+            return BookmarkCancelCallback(lambda: None)
+
+        if session.bookmark.store == "disable":
+            raise ValueError(
+                "Bookmarking requires a `bookmark_store` to be set. Please set `bookmark_store=` in `App()`."
+            )
+
+        resolved_bookmark_id_str = str(self.id)
+        resolved_bookmark_id_msgs_str = resolved_bookmark_id_str + "--msgs"
         get_state: Callable[[], Awaitable[Jsonifiable]]
         set_state: Callable[[Jsonifiable], Awaitable[None]]
 
+        # Retrieve get_state/set_state functions from the client
         if isinstance(client, ClientWithState):
             # Do client with state stuff here
             get_state = wrap_async(client.get_state)
             set_state = wrap_async(client.set_state)
 
-        elif has_chatlas and isinstance(client, ChatlasClient):
+        elif chatlas_is_installed and isinstance(client, chatlas.Chat):
+
+            from chatlas import Turn as ChatlasTurn
 
             # Chatlas specific implementation
             async def get_chatlas_state() -> Jsonifiable:
@@ -1456,20 +1459,17 @@ class Chat:
                 return cast(Jsonifiable, turns_json_str)
 
             async def set_chatlas_state(value: Jsonifiable) -> None:
-                assert isinstance(
-                    value, list
-                ), "Chat bookmark value must be a list of strings"
+                if not isinstance(value, list):
+                    raise ValueError(
+                        "Chatlas bookmark value must be a list of JSON strings"
+                    )
                 for v in value:
-                    assert isinstance(
-                        v, str
-                    ), "Chat bookmark value must be a list of strings"
+                    if not isinstance(v, str):
+                        raise ValueError(
+                            "Chat bookmark value must be a list of strings"
+                        )
 
                 turns_json_str = cast(list[str], value)
-
-                print("restored messages", turns_json_str)
-                print("restored messages", type(turns_json_str))
-                print("restored messages", len(turns_json_str))
-                print("restored messages", turns_json_str[0])
 
                 turns: list[ChatlasTurn[Any]] = [
                     ChatlasTurn.model_validate_json(turn_json_str)
@@ -1485,18 +1485,6 @@ class Chat:
                 "Bookmarking requires a client that supports "
                 "`async def get_state(self) -> shiny.types.Jsonifiable` (which returns an object that can be used when bookmarking to save the state of the `client=`) and "
                 "`async def set_state(self, value: Jsonifiable)` (which should restore the `client=`'s state given the `value=`)."
-            )
-
-        resolved_bookmark_id_str = str(self.id)
-        resolved_bookmark_id_msgs_str = resolved_bookmark_id_str + "--msgs"
-
-        session = get_current_session()
-        if session is None or isinstance(session, ExpressStubSession):
-            return BookmarkCancelCallback(lambda: None)
-
-        if session.bookmark.store == "disable":
-            raise ValueError(
-                "Bookmarking requires a `bookmark_store` to be set. Please set `bookmark_store=` in `App()`."
             )
 
         # Reset prior bookmarking hooks
@@ -1660,7 +1648,7 @@ class ChatExpress(Chat):
     @overload
     def enable_bookmarking(
         self,
-        client: ClientWithState,
+        client: ClientWithState | chatlas.Chat[Any, Any],
         /,
         *,
         bookmark_store: Optional[BookmarkStore] = None,
