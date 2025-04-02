@@ -68,6 +68,14 @@ __all__ = (
 chatlas_is_installed = importlib.util.find_spec("chatlas") is not None
 
 
+def is_chatlas_chat_client(client: Any) -> bool:
+    if not chatlas_is_installed:
+        return False
+    import chatlas
+
+    return isinstance(client, chatlas.Chat)
+
+
 @runtime_checkable
 class ClientWithState(Protocol):
     async def get_state(self) -> Jsonifiable: ...
@@ -279,7 +287,7 @@ class Chat:
 
         # Keep track of effects so we can destroy them when the chat is destroyed
         self._effects: list[reactive.Effect_] = []
-        self._cancel_bookmarking_callbacks: CancelCallback | None
+        self._cancel_bookmarking_callbacks: CancelCallback | None = None
 
         # Initialize chat state and user input effect
         with session_context(self._session):
@@ -1463,7 +1471,7 @@ class Chat:
             get_state = wrap_async(client.get_state)
             set_state = wrap_async(client.set_state)
 
-        elif chatlas_is_installed and isinstance(client, chatlas.Chat):
+        elif is_chatlas_chat_client(client):
 
             from chatlas import Turn as ChatlasTurn
 
@@ -1576,7 +1584,6 @@ class Chat:
 
         @root_session.bookmark.on_restore
         async def _on_restore_ui(state: RestoreState):
-            print("set chat ui")
             # Do not call `self.clear_messages()` as it will clear the
             # `chat.ui(messages=)` in addition to the `self.messages()`
             # (which is not what we want).
@@ -1585,16 +1592,19 @@ class Chat:
             # and `self.messages()` are never initialized due to
             # calling `self._init_chat.destroy()` above
 
-            msgs: list[Any] = state.values[resolved_bookmark_id_msgs_str]
-            if not msgs:
+            if resolved_bookmark_id_msgs_str not in state.values:
                 # If no messages to restore, display the `__init__(messages=)` messages
                 await self._append_init_messages()
                 return
 
-            print("restored msgs", msgs)
+            msgs: list[Any] = state.values[resolved_bookmark_id_msgs_str]
+            if not isinstance(msgs, list):
+                raise ValueError(
+                    f"Bookmark value with id (`{resolved_bookmark_id_msgs_str}`) must be a list of messages."
+                )
+
             for message_dict in msgs:
                 await self.append_message(message_dict)
-            print("done-restore ui")
 
         def _cancel_bookmarking():
             _on_bookmark_client()
