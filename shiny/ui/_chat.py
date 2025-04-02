@@ -279,7 +279,7 @@ class Chat:
 
         # Keep track of effects so we can destroy them when the chat is destroyed
         self._effects: list[reactive.Effect_] = []
-        self._bookmark_callbacks: list[CancelCallback] = []
+        self._cancel_bookmarking_callbacks: CancelCallback | None
 
         # Initialize chat state and user input effect
         with session_context(self._session):
@@ -1376,17 +1376,19 @@ class Chat:
         Destroy the chat instance.
         """
         self._destroy_effects()
-        self._destroy_bookmarks()
+        self._destroy_bookmarking()
 
     def _destroy_effects(self):
         for x in self._effects:
             x.destroy()
         self._effects.clear()
 
-    def _destroy_bookmarks(self):
-        for x in self._bookmark_callbacks:
-            x()
-        self._bookmark_callbacks.clear()
+    def _destroy_bookmarking(self):
+        if not self._cancel_bookmarking_callbacks:
+            return
+
+        self._cancel_bookmarking_callbacks()
+        self._cancel_bookmarking_callbacks = None
 
     async def _remove_loading_message(self):
         await self._send_custom_message("shiny-chat-remove-loading-message", None)
@@ -1488,7 +1490,7 @@ class Chat:
             )
 
         # Reset prior bookmarking hooks
-        self._destroy_bookmarks()
+        self._destroy_bookmarking()
 
         # Must use `root_session` as the id is already resolved. :-/
         # Using a proxy session would double-encode the proxy-prefix
@@ -1519,7 +1521,7 @@ class Chat:
                     await session.bookmark()
 
         @root_session.bookmark.on_bookmark
-        async def cancel_on_bookmark_client(state: BookmarkState):
+        async def _on_bookmark_client(state: BookmarkState):
             if resolved_bookmark_id_str in state.values:
                 raise ValueError(
                     f'Bookmark value with id (`"{resolved_bookmark_id_str}"`) already exists.'
@@ -1529,7 +1531,7 @@ class Chat:
                 state.values[resolved_bookmark_id_str] = await get_state()
 
         @root_session.bookmark.on_bookmark
-        def cancel_on_bookmark_ui(state: BookmarkState):
+        def _on_bookmark_ui(state: BookmarkState):
             if resolved_bookmark_id_msgs_str in state.values:
                 raise ValueError(
                     f'Bookmark value with id (`"{resolved_bookmark_id_msgs_str}"`) already exists.'
@@ -1551,7 +1553,7 @@ class Chat:
         self._init_chat.destroy()
 
         @root_session.bookmark.on_restore
-        async def cancel_on_restore_client(state: RestoreState):
+        async def _on_restore_client(state: RestoreState):
             if resolved_bookmark_id_str not in state.values:
                 return
 
@@ -1560,7 +1562,7 @@ class Chat:
             await set_state(info)
 
         @root_session.bookmark.on_restore
-        async def cancel_on_restore_ui(state: RestoreState):
+        async def _on_restore_ui(state: RestoreState):
             print("set chat ui")
             # Do not call `self.clear_messages()` as it will clear the
             # `chat.ui(messages=)` in addition to the `self.messages()`
@@ -1582,16 +1584,16 @@ class Chat:
                 await self.append_message(message_dict)
             print("done-restore ui")
 
-        def cancel_bookmark():
-            cancel_on_bookmark_client()
-            cancel_on_bookmark_ui()
-            cancel_on_restore_client()
-            cancel_on_restore_ui()
+        def _cancel_bookmarking():
+            _on_bookmark_client()
+            _on_bookmark_ui()
+            _on_restore_client()
+            _on_restore_ui()
 
         # Store the callbacks to be able to destroy them later
-        self._bookmark_callbacks.append(cancel_bookmark)
+        self._cancel_bookmarking_callbacks = _cancel_bookmarking
 
-        return BookmarkCancelCallback(cancel_bookmark)
+        return BookmarkCancelCallback(_cancel_bookmarking)
 
 
 @add_example("app-express.py")
