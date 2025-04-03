@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from .._deprecated import warn_deprecated
 from ..types import Jsonifiable
 
 __all__ = (
@@ -73,8 +74,9 @@ def input_selectize(
         An input label.
     choices
         Either a list of choices or a dictionary mapping choice values to labels. Note
-        that if a dictionary is provided, the keys are used as the (input) values so
-        that the dictionary values can hold HTML labels. A dictionary of dictionaries is
+        that if a dictionary is provided, the keys are used as the (input) values and
+        the values are labels displayed to the user. It is not recommended to use
+        anything other than a string for these labels. A dictionary of dictionaries is
         also supported, and in that case, the top-level keys are treated as
         ``<optgroup>`` labels.
     selected
@@ -113,7 +115,7 @@ def input_selectize(
     """
     resolved_id = resolve_id(id)
 
-    x = input_select(
+    x = _input_select_impl(
         id=resolved_id,
         label=label,
         choices=restore_input(resolved_id, choices),
@@ -154,8 +156,9 @@ def input_select(
         An input label.
     choices
         Either a list of choices or a dictionary mapping choice values to labels. Note
-        that if a dictionary is provided, the keys are used as the (input) values so
-        that the dictionary values can hold HTML labels. A dictionary of dictionaries is
+        that if a dictionary is provided, the keys are used as the (input) values and
+        the values are labels displayed to the user. It is not recommended to use
+        anything other than a string for these labels. A dictionary of dictionaries is
         also supported, and in that case, the top-level keys are treated as
         ``<optgroup>`` labels.
     selected
@@ -163,7 +166,7 @@ def input_select(
     multiple
         Is selection of multiple items allowed?
     selectize
-        Whether to use selectize.js or not.
+        Deprecated. Use ``input_selectize()`` instead of passing ``selectize=True``.
     width
         The CSS width, e.g. '400px', or '100%'
     size
@@ -192,6 +195,55 @@ def input_select(
     * :func:`~shiny.ui.input_radio_buttons`
     * :func:`~shiny.ui.input_checkbox_group`
     """
+    if selectize:
+        warn_deprecated(
+            "`selectize` parameter of `input_select()` is deprecated. "
+            "Use `input_selectize()` instead of passing `selectize=True`."
+        )
+
+    if remove_button is not None:
+        warn_deprecated(
+            "`remove_button` parameter of `input_select()` is deprecated. "
+            "Use `input_selectize()` instead."
+        )
+
+    if options is not None:
+        warn_deprecated(
+            "`options` parameter of `input_select()` is deprecated. "
+            "Use `input_selectize()` instead."
+        )
+
+    resolved_id = resolve_id(id)
+
+    x = _input_select_impl(
+        id=resolved_id,
+        label=label,
+        choices=restore_input(resolved_id, choices),
+        selected=selected,
+        multiple=multiple,
+        selectize=selectize,
+        width=width,
+        size=size,
+        remove_button=remove_button,
+        options=options,
+    )
+
+    return x
+
+
+def _input_select_impl(
+    id: str,
+    label: TagChild,
+    choices: SelectChoicesArg,
+    *,
+    selected: Optional[str | list[str]] = None,
+    multiple: bool = False,
+    selectize: bool = False,
+    width: Optional[str] = None,
+    size: Optional[str] = None,
+    remove_button: Optional[bool] = None,
+    options: Optional[dict[str, Jsonifiable | JSEval]] = None,
+) -> Tag:
     if options is not None and selectize is False:
         raise Exception("Options can only be set when selectize is `True`.")
 
@@ -200,6 +252,12 @@ def input_select(
     resolved_id = resolve_id(id)
 
     choices_ = _normalize_choices(choices)
+
+    if _contains_html(choices_):
+        warn_deprecated(
+            "Passing anything other than a string to `choices` parameter of "
+            "`input_select()` and `input_selectize()` is deprecated."
+        )
 
     selected = restore_input(resolved_id, selected)
     if selected is None and not multiple:
@@ -280,6 +338,17 @@ def _normalize_choices(x: SelectChoicesArg) -> _SelectChoices:
         return {k: k for k in x}
     else:
         return x
+
+
+def _contains_html(x: _SelectChoices) -> bool:
+    for v in x.values():
+        if isinstance(v, Mapping):
+            if _contains_html(cast(_OptGrpChoices, v)):
+                return True
+        else:
+            if not isinstance(v, str):
+                return True
+    return False
 
 
 def _render_choices(
