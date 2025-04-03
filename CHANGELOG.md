@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added a new `.enable_bookmarking(client)` method to `ui.Chat()`. This method will attach bookmark hooks to save and restore the chat's messages and client state. (#1951)
 
-* Both `ui.Chat()` and `ui.MarkdownStream()` now support arbirary Shiny UI elements inside of messages. This allows for gathering input from the user (e.g., `ui.input_select()`), displaying of rich output (e.g., `render.DataGrid()`), and more. (#1868)
+* Both `ui.Chat()` and `ui.MarkdownStream()` now support the inclusion of Shiny UI elements inside of messages. This allows for gathering input from the user (e.g., `ui.input_select()`), displaying of rich output (e.g., `render.DataGrid()`), and more. (#1868)
 
 * Added a new `.message_stream_context()` method to `ui.Chat()`. This context manager is a useful alternative to `.append_message_stream()` when you want to: (1) Nest a stream within another and/or
 (2) Overwrite/replace streaming content. (#1906)
