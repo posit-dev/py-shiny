@@ -120,7 +120,7 @@ dev = [
     "langsmith<0.3",
     "openai",
     "ollama",
-    "chatlas>=0.6.0",
+    "chatlas>=0.6.1",
     "tokenizers",
     "aiohttp",
     "beautifulsoup4",
