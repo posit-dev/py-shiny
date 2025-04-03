@@ -1,26 +1,10 @@
 import importlib.util
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Awaitable,
-    Callable,
-    Protocol,
-    cast,
-    runtime_checkable,
-)
+from typing import Any, Awaitable, Callable, Protocol, runtime_checkable
 
 from htmltools import TagChild
 
 from .._utils import CancelCallback
 from ..types import Jsonifiable
-
-if TYPE_CHECKING:
-
-    import chatlas
-
-else:
-    chatlas = object
-
 
 chatlas_is_installed = importlib.util.find_spec("chatlas") is not None
 
@@ -78,39 +62,34 @@ class BookmarkCancelCallback:
 
 # Chatlas specific implementation
 def get_chatlas_state(
-    client: chatlas.Chat[Any, Any],
+    client: Any,
 ) -> Callable[[], Awaitable[Jsonifiable]]:
 
-    from chatlas import Turn as ChatlasTurn
+    from chatlas import Chat, Turn
+
+    assert isinstance(client, Chat)
 
     async def get_state() -> Jsonifiable:
 
-        turns: list[ChatlasTurn[Any]] = client.get_turns()
-        turns_json_str: list[str] = [turn.model_dump_json() for turn in turns]
-        return cast(Jsonifiable, turns_json_str)
+        turns: list[Turn[Any]] = client.get_turns()
+        return [turn.model_dump(mode="json") for turn in turns]
 
     return get_state
 
 
 def set_chatlas_state(
-    client: chatlas.Chat[Any, Any],
+    client: Any,
 ) -> Callable[[Jsonifiable], Awaitable[None]]:
-    from chatlas import Turn as ChatlasTurn
+    from chatlas import Chat, Turn
+
+    assert isinstance(client, Chat)
 
     async def set_state(value: Jsonifiable) -> None:
 
         if not isinstance(value, list):
-            raise ValueError("Chatlas bookmark value must be a list of JSON strings")
-        for v in value:
-            if not isinstance(v, str):
-                raise ValueError("Chat bookmark value must be a list of strings")
+            raise ValueError("Chatlas bookmark value was not a list of objects")
 
-        turns_json_str = cast(list[str], value)
-
-        turns: list[ChatlasTurn[Any]] = [
-            ChatlasTurn.model_validate_json(turn_json_str)
-            for turn_json_str in turns_json_str
-        ]
+        turns: list[Turn[Any]] = [Turn.model_validate(turn_obj) for turn_obj in value]
         client.set_turns(turns)  # pyright: ignore[reportUnknownMemberType]
 
     return set_state
