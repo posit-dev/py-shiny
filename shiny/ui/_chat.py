@@ -3,6 +3,7 @@ from __future__ import annotations
 import inspect
 from contextlib import asynccontextmanager
 from typing import (
+    TYPE_CHECKING,
     Any,
     AsyncIterable,
     Awaitable,
@@ -23,10 +24,20 @@ from htmltools import HTML, RenderedHTML, Tag, TagAttrValue, TagChild, TagList, 
 from .. import _utils, reactive
 from .._deprecated import warn_deprecated
 from .._docstring import add_example
+from .._utils import CancelCallback, wrap_async
+from ..bookmark import BookmarkState, RestoreState
+from ..bookmark._types import BookmarkStore
 from ..module import ResolvedId, resolve_id
-from ..session import require_active_session, session_context
-from ..types import MISSING, MISSING_TYPE, NotifyException
+from ..session import get_current_session, require_active_session, session_context
+from ..types import MISSING, MISSING_TYPE, Jsonifiable, NotifyException
 from ..ui.css import CssUnit, as_css_unit
+from ._chat_bookmark import (
+    BookmarkCancelCallback,
+    ClientWithState,
+    get_chatlas_state,
+    is_chatlas_chat_client,
+    set_chatlas_state,
+)
 from ._chat_normalize import normalize_message, normalize_message_chunk
 from ._chat_provider_types import (
     AnthropicMessage,
@@ -42,6 +53,13 @@ from ._chat_tokenizer import TokenEncoding, TokenizersEncoding, get_default_toke
 from ._chat_types import ChatMessage, ChatMessageDict, ClientMessage, TransformedMessage
 from ._html_deps_py_shiny import chat_deps
 from .fill import as_fill_item, as_fillable_container
+
+if TYPE_CHECKING:
+
+    import chatlas
+
+else:
+    chatlas = object
 
 __all__ = (
     "Chat",
@@ -216,6 +234,7 @@ class Chat:
 
         # Keep track of effects so we can destroy them when the chat is destroyed
         self._effects: list[reactive.Effect_] = []
+        self._cancel_bookmarking_callbacks: CancelCallback | None = None
 
         # Initialize chat state and user input effect
         with session_context(self._session):
@@ -238,10 +257,16 @@ class Chat:
 
             # TODO: deprecate messages once we start promoting managing LLM message
             # state through other means
-            @reactive.effect
-            async def _init_chat():
+            async def _append_init_messages():
                 for msg in messages:
                     await self.append_message(msg)
+
+            @reactive.effect
+            async def _init_chat():
+                await _append_init_messages()
+
+            self._append_init_messages = _append_init_messages
+            self._init_chat = _init_chat
 
             # When user input is submitted, transform, and store it in the chat state
             # (and make sure this runs before other effects since when the user
@@ -1308,9 +1333,20 @@ class Chat:
         """
         Destroy the chat instance.
         """
+        self._destroy_effects()
+        self._destroy_bookmarking()
+
+    def _destroy_effects(self):
         for x in self._effects:
             x.destroy()
         self._effects.clear()
+
+    def _destroy_bookmarking(self):
+        if not self._cancel_bookmarking_callbacks:
+            return
+
+        self._cancel_bookmarking_callbacks()
+        self._cancel_bookmarking_callbacks = None
 
     async def _remove_loading_message(self):
         await self._send_custom_message("shiny-chat-remove-loading-message", None)
@@ -1324,6 +1360,192 @@ class Chat:
                 "obj": obj,
             },
         )
+
+    def enable_bookmarking(
+        self,
+        client: ClientWithState | chatlas.Chat[Any, Any],
+        /,
+        *,
+        bookmark_on: Optional[Literal["response"]] = "response",
+    ) -> CancelCallback:
+        """
+        Enable bookmarking for the chat instance.
+
+        This method registers `on_bookmark` and `on_restore` hooks on `session.bookmark`
+        (:class:`shiny.bookmark.Bookmark`) to save/restore chat state on both the `Chat`
+        and `client=` instances. In order for this method to actually work correctly, a
+        `bookmark_store=` must be specified in `shiny.App()`.
+
+        Parameters
+        ----------
+        client
+            The chat client instance to use for bookmarking. This can be a Chat model
+            provider from [chatlas](https://posit-dev.github.io/chatlas/), or more
+            generally, an instance following the `ClientWithState` protocol.
+        bookmark_on
+            The event to trigger the bookmarking on. Supported values include:
+
+            - `"response"` (the default): a bookmark is triggered when the assistant is done responding.
+            - `None`: no bookmark is triggered
+
+            When this method triggers a bookmark, it also updates the URL query string to reflect the bookmarked state.
+
+
+        Raises
+        ------
+        ValueError
+            If the Shiny App does have bookmarking enabled.
+
+        Returns
+        -------
+        :
+            A callback to cancel the bookmarking hooks.
+        """
+        from ..express._stub_session import ExpressStubSession
+
+        session = get_current_session()
+        if session is None or isinstance(session, ExpressStubSession):
+            return BookmarkCancelCallback(lambda: None)
+
+        if session.bookmark.store == "disable":
+            raise ValueError(
+                "Bookmarking requires a `bookmark_store` to be set. "
+                "Please set `bookmark_store=` in `shiny.App()` or `shiny.express.app_opts()."
+            )
+
+        resolved_bookmark_id_str = str(self.id)
+        resolved_bookmark_id_msgs_str = resolved_bookmark_id_str + "--msgs"
+        get_state: Callable[[], Awaitable[Jsonifiable]]
+        set_state: Callable[[Jsonifiable], Awaitable[None]]
+
+        # Retrieve get_state/set_state functions from the client
+        if isinstance(client, ClientWithState):
+            # Do client with state stuff here
+            get_state = wrap_async(client.get_state)
+            set_state = wrap_async(client.set_state)
+
+        elif is_chatlas_chat_client(client):
+
+            get_state = get_chatlas_state(client)
+            set_state = set_chatlas_state(client)
+
+        else:
+            raise ValueError(
+                "Bookmarking requires a client that supports "
+                "`async def get_state(self) -> shiny.types.Jsonifiable` (which returns an object that can be used when bookmarking to save the state of the `client=`) and "
+                "`async def set_state(self, value: Jsonifiable)` (which should restore the `client=`'s state given the `state=`)."
+            )
+
+        # Reset prior bookmarking hooks
+        self._destroy_bookmarking()
+
+        # Must use `root_session` as the id is already resolved. :-/
+        # Using a proxy session would double-encode the proxy-prefix
+        root_session = session.root_scope()
+        root_session.bookmark.exclude.append(self.id + "_user_input")
+
+        # ###########
+        # Bookmarking
+
+        if bookmark_on is not None:
+
+            # When ever the bookmark is requested, update the query string (indep of store type)
+            @root_session.bookmark.on_bookmarked
+            async def _(url: str):
+                await session.bookmark.update_query_string(url)
+
+        if bookmark_on == "response":
+
+            @reactive.effect
+            @reactive.event(lambda: self.messages(format=MISSING), ignore_init=True)
+            async def _():
+                messages = self.messages(format=MISSING)
+
+                if len(messages) == 0:
+                    return
+
+                last_message = messages[-1]
+
+                if last_message.get("role") == "assistant":
+                    await session.bookmark()
+
+        ###############
+        # Client Bookmarking
+
+        @root_session.bookmark.on_bookmark
+        async def _on_bookmark_client(state: BookmarkState):
+            if resolved_bookmark_id_str in state.values:
+                raise ValueError(
+                    f'Bookmark value with id (`"{resolved_bookmark_id_str}"`) already exists.'
+                )
+
+            with reactive.isolate():
+                state.values[resolved_bookmark_id_str] = await get_state()
+
+        @root_session.bookmark.on_restore
+        async def _on_restore_client(state: RestoreState):
+            if resolved_bookmark_id_str not in state.values:
+                return
+
+            # Retrieve the chat turns from the bookmark state
+            info = state.values[resolved_bookmark_id_str]
+            await set_state(info)
+
+        ###############
+        # UI Bookmarking
+
+        @root_session.bookmark.on_bookmark
+        def _on_bookmark_ui(state: BookmarkState):
+            if resolved_bookmark_id_msgs_str in state.values:
+                raise ValueError(
+                    f'Bookmark value with id (`"{resolved_bookmark_id_msgs_str}"`) already exists.'
+                )
+
+            with reactive.isolate():
+                # This does NOT contain the `chat.ui(messages=)` values.
+                # When restoring, the `chat.ui(messages=)` values will need to be kept
+                # and the `ui.Chat(messages=)` values will need to be reset
+                state.values[resolved_bookmark_id_msgs_str] = self.messages(
+                    format=MISSING
+                )
+
+        # Attempt to stop the initialization of the `ui.Chat(messages=)` messages
+        self._init_chat.destroy()
+
+        @root_session.bookmark.on_restore
+        async def _on_restore_ui(state: RestoreState):
+            # Do not call `self.clear_messages()` as it will clear the
+            # `chat.ui(messages=)` in addition to the `self.messages()`
+            # (which is not what we want).
+
+            # We always want to keep the `chat.ui(messages=)` values
+            # and `self.messages()` are never initialized due to
+            # calling `self._init_chat.destroy()` above
+
+            if resolved_bookmark_id_msgs_str not in state.values:
+                # If no messages to restore, display the `__init__(messages=)` messages
+                await self._append_init_messages()
+                return
+
+            msgs: list[Any] = state.values[resolved_bookmark_id_msgs_str]
+            if not isinstance(msgs, list):
+                raise ValueError(
+                    f"Bookmark value with id (`{resolved_bookmark_id_msgs_str}`) must be a list of messages."
+                )
+
+            for message_dict in msgs:
+                await self.append_message(message_dict)
+
+        def _cancel_bookmarking():
+            _on_bookmark_client()
+            _on_bookmark_ui()
+            _on_restore_client()
+            _on_restore_ui()
+
+        # Store the callbacks to be able to destroy them later
+        self._cancel_bookmarking_callbacks = _cancel_bookmarking
+
+        return BookmarkCancelCallback(_cancel_bookmarking)
 
 
 @add_example("app-express.py")
@@ -1365,6 +1587,7 @@ class ChatExpress(Chat):
         kwargs
             Additional attributes for the chat container element.
         """
+
         return chat_ui(
             id=self.id,
             messages=messages,
@@ -1375,6 +1598,58 @@ class ChatExpress(Chat):
             icon_assistant=icon_assistant,
             **kwargs,
         )
+
+    def enable_bookmarking(
+        self,
+        client: ClientWithState | chatlas.Chat[Any, Any],
+        /,
+        *,
+        bookmark_store: Optional[BookmarkStore] = None,
+        bookmark_on: Optional[Literal["response"]] = "response",
+    ) -> CancelCallback:
+        """
+        Enable bookmarking for the chat instance.
+
+        This method registers `on_bookmark` and `on_restore` hooks on `session.bookmark`
+        (:class:`shiny.bookmark.Bookmark`) to save/restore chat state on both the `Chat`
+        and `client=` instances. In order for this method to actually work correctly, a
+        `bookmark_store=` must be specified in `shiny.express.app_opts()`.
+
+        Parameters
+        ----------
+        client
+            The chat client instance to use for bookmarking. This can be a Chat model
+            provider from [chatlas](https://posit-dev.github.io/chatlas/), or more
+            generally, an instance following the `ClientWithState` protocol.
+        bookmark_store
+            A convenience parameter to set the `shiny.express.app_opts(bookmark_store=)`
+            which is required for bookmarking (and `.enable_bookmarking()`). If `None`,
+            no value will be set.
+        bookmark_on
+            The event to trigger the bookmarking on. Supported values include:
+
+            - `"response"` (the default): a bookmark is triggered when the assistant is done responding.
+            - `None`: no bookmark is triggered
+
+            When this method triggers a bookmark, it also updates the URL query string to reflect the bookmarked state.
+
+        Raises
+        ------
+        ValueError
+            If the Shiny App does have bookmarking enabled.
+
+        Returns
+        -------
+        :
+            A callback to cancel the bookmarking hooks.
+        """
+
+        if bookmark_store is not None:
+            from ..express import app_opts
+
+            app_opts(bookmark_store=bookmark_store)
+
+        return super().enable_bookmarking(client, bookmark_on=bookmark_on)
 
 
 @add_example(ex_dir="../api-examples/Chat")

@@ -34,6 +34,9 @@ chat = ui.Chat(
 )
 chat.ui()
 
+# Store chat state in the url when an "assistant" response occurs
+chat.enable_bookmarking(chat_client, bookmark_store="url")
+
 
 # Define a callback to run when the user submits a message
 @chat.on_user_submit
