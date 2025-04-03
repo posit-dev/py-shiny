@@ -12,7 +12,8 @@ def test_bookmark_chatlas(page: Page, local_app: ShinyAppProc):
 
     chat_controller = Chat(page, "chat")
 
-    chat_controller.expect_messages("Welcome!")
+    # adding the timeout to avoid webkit errors
+    chat_controller.expect_messages("Welcome!", timeout=2000)
 
     chat_controller.set_user_input("Testing")
     chat_controller.send_user_input()
