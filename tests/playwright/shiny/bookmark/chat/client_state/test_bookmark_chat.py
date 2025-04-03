@@ -1,4 +1,5 @@
 from playwright.sync_api import Page
+import re
 
 from shiny.playwright.controller import Chat
 from shiny.run import ShinyAppProc
@@ -19,7 +20,7 @@ def test_bookmark_chatlas(page: Page, local_app: ShinyAppProc):
 
     chat_controller.expect_messages("Welcome!\nTesting\nRepeater: Testing")
 
-    assert "?" in page.url
+    page.wait_for_url(re.compile(r".*\?.*"), timeout=2) # Wait up to 2 seconds
 
     page.reload()
 
