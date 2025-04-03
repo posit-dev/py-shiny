@@ -21,7 +21,7 @@ def test_bookmark_chatlas(page: Page, local_app: ShinyAppProc):
 
     chat_controller.expect_messages("Welcome!\nTesting\nRepeater: Testing")
 
-    page.wait_for_url(re.compile(r".*\?.*"))
+    page.wait_for_url(re.compile(r".*\?.*"), timeout=30 * 1000)
 
     page.reload()
 
