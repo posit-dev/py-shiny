@@ -20,7 +20,7 @@ def test_bookmark_chatlas(page: Page, local_app: ShinyAppProc):
 
     chat_controller.expect_messages("Welcome!\nTesting\nYou said to OpenAI: Testing")
 
-    assert "?" in page.url
+    page.wait_for_url(re.compile(r".*\?.*"), timeout=30 * 1000)
 
     page.reload()
 
