@@ -30,6 +30,9 @@ if _is_pyodide:
 else:
     from ._main import run_app
 
+# External hooks for bookmarking in places like Connect, SSO/SSP, Shinylive, etc.
+from .bookmark._global import set_app_bookmark_callbacks as _set_app_bookmark_callbacks
+
 
 # N.B.: we intentionally don't import 'developer-facing' submodules (e.g.,
 # html_dependencies) so that they aren't super visible when you `import shiny`, but
@@ -62,4 +65,6 @@ __all__ = (
     "render_image",
     "render_ui",
     "event",
+    # external hooks
+    "_set_app_bookmark_callbacks",
 )
