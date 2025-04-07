@@ -10,6 +10,7 @@ from urllib.parse import parse_qs, parse_qsl
 from .._docstring import add_example
 from ..module import ResolvedId
 from ._bookmark_state import local_restore_dir
+from ._global import get_bookmark_restore_dir_fn
 from ._types import BookmarkRestoreDirFn
 from ._utils import from_json_file, from_json_str, in_shiny_server
 
@@ -189,7 +190,9 @@ class RestoreContext:
 
         id = id[0]
 
-        load_bookmark_fn: BookmarkRestoreDirFn | None = app._bookmark_restore_dir_fn
+        load_bookmark_fn: BookmarkRestoreDirFn | None = get_bookmark_restore_dir_fn(
+            app._bookmark_restore_dir_fn
+        )
 
         if load_bookmark_fn is None:
             if in_shiny_server():

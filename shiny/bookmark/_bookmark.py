@@ -610,7 +610,8 @@ class BookmarkProxy(Bookmark):
         )
 
         # Make subdir for scope
-        # TODO: Barret; Is this for uploaded files?!?
+        #
+        # Folder only used by author callbacks. File uploads are handled by root session
         if root_state.dir is not None:
             scope_subpath = self._ns
             scoped_state.dir = Path(root_state.dir) / scope_subpath

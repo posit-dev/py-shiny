@@ -359,6 +359,32 @@ def run_app(
 
     reload_args: ReloadArgs = {}
     if reload:
+        if shiny_bookmarks_folder_name in reload_excludes:
+            # Related: https://github.com/posit-dev/py-shiny/pull/1950
+            #
+            # Temp hack to work around uvicorn
+            # https://github.com/encode/uvicorn/pull/2602 which will incorrectly reload
+            # an app if any matching files in `RELOAD_INCLUDES_DEFAULT` (e.g. `*.png`)
+            # are uploaded within `shiny_bookmarks` (an excluded relative directory).
+            #
+            # By extending `reload_excludes` to ignore everything under the bookmarks folder, we
+            # can prevent the unexpected reload from happening for the root session. File
+            # matches are performed via `pathlib.PurePath.match`, which is a right-match and
+            # only supports `*` glob.
+            #
+            # Ignore up to five modules deep. This should cover most cases.
+            #
+            # Note: file uploads are always in the root session, so they are always
+            # stored in the root bookmark dir of `shiny_bookmarks_folder_name / *`.
+            reload_excludes = [
+                *reload_excludes,
+                str(Path(shiny_bookmarks_folder_name) / "*"),
+                str(Path(shiny_bookmarks_folder_name) / "*" / "*"),
+                str(Path(shiny_bookmarks_folder_name) / "*" / "*" / "*"),
+                str(Path(shiny_bookmarks_folder_name) / "*" / "*" / "*" / "*"),
+                str(Path(shiny_bookmarks_folder_name) / "*" / "*" / "*" / "*" / "*"),
+            ]
+
         reload_args = {
             "reload": reload,
             # Adding `reload_includes` param while `reload=False` produces an warning

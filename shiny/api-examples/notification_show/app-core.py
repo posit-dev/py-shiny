@@ -14,7 +14,6 @@ def server(input: Inputs, output: Outputs, session: Session):
     @reactive.effect
     @reactive.event(input.show)
     def _():
-        nonlocal ids
         nonlocal n
         # Save the ID for removal later
         id = ui.notification_show("Message " + str(n), duration=None)
@@ -24,7 +23,6 @@ def server(input: Inputs, output: Outputs, session: Session):
     @reactive.effect
     @reactive.event(input.remove)
     def _():
-        nonlocal ids
         if ids:
             ui.notification_remove(ids.pop())
 
