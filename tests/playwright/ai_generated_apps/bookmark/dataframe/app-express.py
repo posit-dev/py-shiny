@@ -1,10 +1,18 @@
 from palmerpenguins import load_penguins
+
 from shiny import reactive
 from shiny.express import app_opts, input, render, session, ui
 
 penguins = load_penguins()
 
 app_opts(bookmark_store="url")
+
+ui.input_bookmark_button()
+
+
+@session.bookmark.on_bookmarked
+async def _(url: str):
+    await session.bookmark.update_query_string(url)
 
 
 ui.h2("Palmer Penguins")
@@ -70,12 +78,3 @@ def penguins_editable_df_text():
 
 
 ui.br()
-
-ui.input_bookmark_button()
-
-ui.br()
-
-
-@session.bookmark.on_bookmarked
-async def _(url: str):
-    await session.bookmark.update_query_string(url)

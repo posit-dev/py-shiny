@@ -607,29 +607,27 @@ class data_frame(
                     )
                 state.values[cell_patch_id_val] = cell_patch_map
 
-            updated_data = self._updated_data()
-            if updated_data:
+            if self._updated_data.is_set():
                 # TODO-barret-render.data_frame; Handle restoring updated data
                 # Related: Restoring Chat UI: https://github.com/posit-dev/py-shiny/issues/1952
                 raise RuntimeError(
-                    "Bookmarking an updated data frame is not supported."
+                    "Bookmarking a manually set data frame is not supported."
                 )
 
-        @self._get_session().bookmark.on_restore
-        def _(state: RestoreState):
-            if state.input[f"{self.output_id}_cell_selection"]:
-                self.update_cell_selection(
-                    state.input[f"{self.output_id}_cell_selection"]
-                )
-            if state.input[f"{self.output_id}_column_sort"]:
-                self.update_sort(state.input[f"{self.output_id}_column_sort"])
-            if state.input[f"{self.output_id}_column_filter"]:
-                self.update_filter(state.input[f"{self.output_id}_column_filter"])
-            if state.input[f"{self.output_id}_cell_selection"]:
-                self.update_cell_selection(
-                    state.input[f"{self.output_id}_cell_selection"]
-                )
-            if state.input[f"{self.output_id}_data_view_rows"]:
+        @self._get_session().bookmark.on_restored
+        async def _(state: RestoreState):
+            print("Available inputs:", list(state.input.keys()))
+            cell_selection_key = f"{self.output_id}_cell_selection"
+            column_sort_key = f"{self.output_id}_column_sort"
+            column_filter_key = f"{self.output_id}_column_filter"
+            if cell_selection_key in state.input:
+                print("setting cell selection", state.input[cell_selection_key])
+                await self.update_cell_selection(state.input[cell_selection_key])
+                print("done setting cell selection")
+            if column_sort_key in state.input:
+                await self.update_sort(state.input[column_sort_key])
+            if column_filter_key in state.input:
+                await self.update_filter(state.input[column_filter_key])
 
             cell_patch_map = state.values.get(bookmark_cell_patch_id(), None)
             if cell_patch_map:
