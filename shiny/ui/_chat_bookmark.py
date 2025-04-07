@@ -87,6 +87,8 @@ def set_chatlas_state(
 
     assert isinstance(client, Chat)
 
+    # TODO-future: Use pydantic model for validation
+    # instead of manual validation
     async def set_state(value: Jsonifiable) -> None:
 
         if not isinstance(value, dict):
