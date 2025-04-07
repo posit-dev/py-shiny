@@ -7,6 +7,7 @@ from urllib.parse import urlencode as urllib_urlencode
 from .._utils import private_random_id
 from ..reactive import isolate
 from ._bookmark_state import local_save_dir
+from ._global import get_bookmark_save_dir_fn
 from ._types import BookmarkSaveDirFn
 from ._utils import in_shiny_server, to_json_file, to_json_str
 
@@ -66,7 +67,9 @@ class BookmarkState:
         # to `self.dir`.
 
         # This will be defined by the hosting environment if it supports bookmarking.
-        save_bookmark_fn: BookmarkSaveDirFn | None = app._bookmark_save_dir_fn
+        save_bookmark_fn: BookmarkSaveDirFn | None = get_bookmark_save_dir_fn(
+            app._bookmark_save_dir_fn
+        )
 
         if save_bookmark_fn is None:
             if in_shiny_server():
