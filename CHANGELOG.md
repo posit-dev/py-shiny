@@ -9,7 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## New features
 
-* Both `ui.Chat()` and `ui.MarkdownStream()` now support arbirary Shiny UI elements inside of messages. This allows for gathering input from the user (e.g., `ui.input_select()`), displaying of rich output (e.g., `render.DataGrid()`), and more. (#1868)
+* Added support for bookmarking Shiny applications. Bookmarking allows users to save the current state of an application and return to it later. This feature is available in both Shiny Core and Shiny Express. (#1870, #1915, #1919, #1920, #1922, #1934, #1938, #1945, #1955)
+  * To enable bookmarking in Express mode, set `shiny.express.app_opts(bookmark_store=)` during the app's initial construction.
+  * To enable bookmarking in Core mode, set `shiny.App(bookmark_store=)` when constructing the `app` object.
+
+* Added a new `.enable_bookmarking(client)` method to `ui.Chat()`. This method will attach bookmark hooks to save and restore the chat's messages and client state. (#1951, #1954)
+
+* Both `ui.Chat()` and `ui.MarkdownStream()` now support the inclusion of Shiny UI elements inside of messages. This allows for gathering input from the user (e.g., `ui.input_select()`), displaying of rich output (e.g., `render.DataGrid()`), and more. (#1868)
 
 * Added a new `.message_stream_context()` method to `ui.Chat()`. This context manager is a useful alternative to `.append_message_stream()` when you want to: (1) Nest a stream within another and/or
 (2) Overwrite/replace streaming content. (#1906)
