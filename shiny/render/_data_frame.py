@@ -562,6 +562,8 @@ class data_frame(
         self._updated_data.unset()
 
     def _init_reactives(self) -> None:
+        from ..bookmark._restore_state import RestoreState
+        from ..bookmark._save_state import BookmarkState
 
         # Init
         self._value = reactive.Value(None)
@@ -587,6 +589,57 @@ class data_frame(
             # Be sure this is called within `isolate()` to isolate any reactivity
             # It currently is, as `@reactive.event()` is being used
             await self._attempt_update_cell_style()
+
+        def bookmark_cell_patch_id() -> str:
+            return f"{self.output_id}--cell_patch_map"
+
+        def bookmark_data_id() -> str:
+            return f"{self.output_id}--data"
+
+        @self._get_session().bookmark.on_bookmark
+        def _(state: BookmarkState):
+            cell_patch_map = self._cell_patch_map()
+            if cell_patch_map:
+                cell_patch_id_val = bookmark_cell_patch_id()
+                if cell_patch_id_val in state.values:
+                    raise RuntimeError(
+                        f"Bookmark state already contains a value for {cell_patch_id_val}. Please use a different ID."
+                    )
+                state.values[cell_patch_id_val] = cell_patch_map
+
+            updated_data = self._updated_data()
+            if updated_data:
+                # TODO-barret-render.data_frame; Handle restoring updated data
+                # Related: Restoring Chat UI: https://github.com/posit-dev/py-shiny/issues/1952
+                raise RuntimeError(
+                    "Bookmarking an updated data frame is not supported."
+                )
+
+        @self._get_session().bookmark.on_restore
+        def _(state: RestoreState):
+            if state.input[f"{self.output_id}_cell_selection"]:
+                self.update_cell_selection(
+                    state.input[f"{self.output_id}_cell_selection"]
+                )
+            if state.input[f"{self.output_id}_column_sort"]:
+                self.update_sort(state.input[f"{self.output_id}_column_sort"])
+            if state.input[f"{self.output_id}_column_filter"]:
+                self.update_filter(state.input[f"{self.output_id}_column_filter"])
+            if state.input[f"{self.output_id}_cell_selection"]:
+                self.update_cell_selection(
+                    state.input[f"{self.output_id}_cell_selection"]
+                )
+            if state.input[f"{self.output_id}_data_view_rows"]:
+
+            cell_patch_map = state.values.get(bookmark_cell_patch_id(), None)
+            if cell_patch_map:
+                self._cell_patch_map.set(cell_patch_map)
+                self._updated_data.set(self._nw_data_to_original_type(self._nw_data()))
+
+            updated_data = state.values.get(bookmark_data_id(), None)
+            if updated_data:
+                # TODO-barret-render.data_frame; Handle restoring updated data
+                raise RuntimeError("Restoring an updated data frame is not supported.")
 
     def _get_session(self) -> Session:
         if self._session is None:
