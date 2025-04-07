@@ -72,7 +72,10 @@ def get_chatlas_state(
     async def get_state() -> Jsonifiable:
 
         turns: list[Turn[Any]] = client.get_turns()
-        return [turn.model_dump(mode="json") for turn in turns]
+        return {
+            "version": 1,
+            "turns": [turn.model_dump(mode="json") for turn in turns],
+        }
 
     return get_state
 
@@ -84,12 +87,26 @@ def set_chatlas_state(
 
     assert isinstance(client, Chat)
 
+    # TODO-future: Use pydantic model for validation
+    # instead of manual validation
     async def set_state(value: Jsonifiable) -> None:
 
-        if not isinstance(value, list):
-            raise ValueError("Chatlas bookmark value was not a list of objects")
+        if not isinstance(value, dict):
+            raise ValueError("Chatlas bookmark value was not a dictionary")
 
-        turns: list[Turn[Any]] = [Turn.model_validate(turn_obj) for turn_obj in value]
+        version = value.get("version")
+        if version != 1:
+            raise ValueError(f"Unsupported Chatlas bookmark version: {version}")
+        turns_arr = value.get("turns")
+
+        if not isinstance(turns_arr, list):
+            raise ValueError(
+                "Chatlas bookmark value was not a list of chat message information"
+            )
+
+        turns: list[Turn[Any]] = [
+            Turn.model_validate(turn_obj) for turn_obj in turns_arr
+        ]
         client.set_turns(turns)  # pyright: ignore[reportUnknownMemberType]
 
     return set_state
