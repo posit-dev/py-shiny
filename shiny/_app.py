@@ -30,7 +30,6 @@ from ._connection import Connection, StarletteConnection
 from ._error import ErrorMiddleware
 from ._shinyenv import is_pyodide
 from ._utils import guess_mime_type, is_async_callable, sort_keys_length
-from .bookmark import _global as bookmark_global_state
 from .bookmark._global import as_bookmark_dir_fn
 from .bookmark._restore_state import RestoreContext, restore_context
 from .bookmark._types import (
@@ -42,6 +41,7 @@ from .bookmark._types import (
 from .html_dependencies import jquery_deps, require_deps, shiny_deps
 from .http_staticfiles import FileResponse, StaticFiles
 from .session._session import AppSession, Inputs, Outputs, Session, session_context
+from .types import MISSING, MISSING_TYPE
 
 T = TypeVar("T")
 
@@ -115,8 +115,8 @@ class App:
     ui: RenderedHTML | Callable[[Request], Tag | TagList]
     server: Callable[[Inputs, Outputs, Session], None]
 
-    _bookmark_save_dir_fn: BookmarkSaveDirFn | None
-    _bookmark_restore_dir_fn: BookmarkRestoreDirFn | None
+    _bookmark_save_dir_fn: BookmarkSaveDirFn | None | MISSING_TYPE
+    _bookmark_restore_dir_fn: BookmarkRestoreDirFn | None | MISSING_TYPE
     _bookmark_store: BookmarkStore
 
     def __init__(
@@ -498,8 +498,8 @@ class App:
     # ==========================================================================
 
     def _init_bookmarking(self, *, bookmark_store: BookmarkStore, ui: Any) -> None:
-        self._bookmark_save_dir_fn = bookmark_global_state.bookmark_save_dir
-        self._bookmark_restore_dir_fn = bookmark_global_state.bookmark_restore_dir
+        self._bookmark_save_dir_fn = MISSING
+        self._bookmark_restore_dir_fn = MISSING
         self._bookmark_store = bookmark_store
 
         if bookmark_store != "disable" and not callable(ui):

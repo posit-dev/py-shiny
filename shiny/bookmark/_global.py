@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import overload
 
 from .._utils import wrap_async
+from ..types import MISSING_TYPE
 from ._types import (
     BookmarkDirFn,
     BookmarkDirFnAsync,
@@ -10,13 +11,36 @@ from ._types import (
     BookmarkSaveDirFn,
 )
 
-# WARNING! This file contains global state!
+# WARNING! This file contains global default values!
+
+
 # During App initialization, the save_dir and restore_dir functions are conventionally set
 # to read-only on the App.
+# If nothing is set on the `app` object, the global default bookmark functions are found and used during every save/restore.
+_default_bookmark_save_dir_fn: BookmarkSaveDirFn | None = None
+_default_bookmark_restore_dir_fn: BookmarkRestoreDirFn | None = None
 
 
-bookmark_save_dir: BookmarkSaveDirFn | None = None
-bookmark_restore_dir: BookmarkRestoreDirFn | None = None
+def get_bookmark_save_dir_fn(
+    save_dir_fn: BookmarkSaveDirFn | None | MISSING_TYPE,
+) -> BookmarkSaveDirFn | None:
+    if isinstance(save_dir_fn, MISSING_TYPE):
+        # Allow for default bookmark function to be utilized after app initialization.
+        # Sometimes the app is created before hooks are registered.
+        return _default_bookmark_save_dir_fn
+    else:
+        return save_dir_fn
+
+
+def get_bookmark_restore_dir_fn(
+    restore_dir_fn: BookmarkRestoreDirFn | None | MISSING_TYPE,
+) -> BookmarkRestoreDirFn | None:
+    if isinstance(restore_dir_fn, MISSING_TYPE):
+        # Allow for default bookmark function to be utilized after app initialization.
+        # Sometimes the app is created before hooks are registered.
+        return _default_bookmark_restore_dir_fn
+    else:
+        return restore_dir_fn
 
 
 @overload
@@ -74,9 +98,9 @@ def set_global_save_dir_fn(fn: BookmarkDirFn):
     --------
     * `~shiny.bookmark.set_global_restore_dir_fn` : Set the global bookmark restore directory function
     """
-    global bookmark_save_dir
+    global _default_bookmark_save_dir_fn
 
-    bookmark_save_dir = as_bookmark_dir_fn(fn)
+    _default_bookmark_save_dir_fn = as_bookmark_dir_fn(fn)
     return fn
 
 
@@ -118,7 +142,7 @@ def set_global_restore_dir_fn(fn: BookmarkDirFn):
     --------
     * `~shiny.bookmark.set_global_save_dir_fn` : Set the global bookmark save directory function.
     """
-    global bookmark_restore_dir
+    global _default_bookmark_restore_dir_fn
 
-    bookmark_restore_dir = as_bookmark_dir_fn(fn)
+    _default_bookmark_restore_dir_fn = as_bookmark_dir_fn(fn)
     return fn
