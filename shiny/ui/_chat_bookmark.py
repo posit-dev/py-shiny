@@ -100,7 +100,9 @@ def set_chatlas_state(
         turns_arr = value.get("turns")
 
         if not isinstance(turns_arr, list):
-            raise ValueError("Chatlas bookmark value was not a list of objects")
+            raise ValueError(
+                "Chatlas bookmark value was not a list of chat message information"
+            )
 
         turns: list[Turn[Any]] = [
             Turn.model_validate(turn_obj) for turn_obj in turns_arr
