@@ -6,6 +6,7 @@ from playwright.sync_api import Page
 from shiny.playwright.controller import Chat
 from shiny.run import ShinyAppProc
 
+
 # Up to 5 retries for intermittent WebKit timing issues
 @pytest.mark.flaky(reruns=5, reruns_delay=1)
 def test_bookmark_chat(page: Page, local_app: ShinyAppProc):
