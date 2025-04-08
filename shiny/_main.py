@@ -21,6 +21,7 @@ import shiny
 from . import __version__, _autoreload, _hostenv, _static, _utils
 from ._docstring import no_example
 from ._typing_extensions import NotRequired, TypedDict
+from .bookmark._bookmark_state import shiny_bookmarks_folder_name
 from .express import is_express_app
 from .express._utils import escape_to_var_name
 
@@ -44,7 +45,15 @@ RELOAD_INCLUDES_DEFAULT = (
     "*.yml",
     "*.yaml",
 )
-RELOAD_EXCLUDES_DEFAULT = (".*", "*.py[cod]", "__pycache__", "env", "venv")
+RELOAD_EXCLUDES_DEFAULT = (
+    ".*",
+    "*.py[cod]",
+    "__pycache__",
+    "env",
+    "venv",
+    ".venv",
+    shiny_bookmarks_folder_name,
+)
 
 
 @main.command(
@@ -295,8 +304,8 @@ def run_app(
     if port == 0:
         port = _utils.random_port(host=host)
 
-    os.environ["SHINY_HOST"] = host
-    os.environ["SHINY_PORT"] = str(port)
+    os.environ["SHINY_BROWSER_HOST"] = host
+    os.environ["SHINY_BROWSER_PORT"] = str(port)
     if dev_mode:
         os.environ["SHINY_DEV_MODE"] = "1"
 
@@ -350,6 +359,32 @@ def run_app(
 
     reload_args: ReloadArgs = {}
     if reload:
+        if shiny_bookmarks_folder_name in reload_excludes:
+            # Related: https://github.com/posit-dev/py-shiny/pull/1950
+            #
+            # Temp hack to work around uvicorn
+            # https://github.com/encode/uvicorn/pull/2602 which will incorrectly reload
+            # an app if any matching files in `RELOAD_INCLUDES_DEFAULT` (e.g. `*.png`)
+            # are uploaded within `shiny_bookmarks` (an excluded relative directory).
+            #
+            # By extending `reload_excludes` to ignore everything under the bookmarks folder, we
+            # can prevent the unexpected reload from happening for the root session. File
+            # matches are performed via `pathlib.PurePath.match`, which is a right-match and
+            # only supports `*` glob.
+            #
+            # Ignore up to five modules deep. This should cover most cases.
+            #
+            # Note: file uploads are always in the root session, so they are always
+            # stored in the root bookmark dir of `shiny_bookmarks_folder_name / *`.
+            reload_excludes = [
+                *reload_excludes,
+                str(Path(shiny_bookmarks_folder_name) / "*"),
+                str(Path(shiny_bookmarks_folder_name) / "*" / "*"),
+                str(Path(shiny_bookmarks_folder_name) / "*" / "*" / "*"),
+                str(Path(shiny_bookmarks_folder_name) / "*" / "*" / "*" / "*"),
+                str(Path(shiny_bookmarks_folder_name) / "*" / "*" / "*" / "*" / "*"),
+            ]
+
         reload_args = {
             "reload": reload,
             # Adding `reload_includes` param while `reload=False` produces an warning

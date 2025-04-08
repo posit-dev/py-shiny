@@ -185,7 +185,6 @@ jobs:
       - name: Install node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "18"
           cache: npm
           cache-dependency-path: examples/brownian/shinymediapipe/package-lock.json
       - name: Install node.js package
@@ -201,6 +200,49 @@ jobs:
         if: failure() && steps.browsers.outputs.has-playwright-diagnostics
         with:
           name: "playright-examples-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.browser }}-results"
+          path: test-results/
+          retention-days: 5
+
+  playwright-ai:
+    if: github.event_name != 'release'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12", "3.11", "3.10", "3.9"]
+        browser: ["chromium", "firefox", "webkit"]
+        exclude:
+          - python-version: ${{ github.event.pull_request.draft && '3.11' }}
+          - python-version: ${{ github.event.pull_request.draft && '3.10' }}
+          - python-version: ${{ github.event.pull_request.draft && '3.9' }}
+          - browser: ${{ github.event.pull_request.draft && 'firefox' }}
+          - browser: ${{ github.event.pull_request.draft && 'webkit' }}
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup py-shiny
+        uses: ./.github/py-shiny/setup
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Determine browsers for testing
+        uses: ./.github/py-shiny/pytest-browsers
+        id: browsers
+        with:
+          browser: ${{ matrix.browser }}
+          # If anything other than `true`, it will heavily reduce webkit performance
+          # Related: https://github.com/microsoft/playwright/issues/18119
+          disable-playwright-diagnostics: ${{ matrix.browser == 'webkit' || matrix.browser == 'firefox' }}
+
+      - name: Run playwright tests for AI generated apps
+        timeout-minutes: 60
+        run: |
+          make playwright-ai SUB_FILE=". --numprocesses 3 ${{ steps.browsers.outputs.playwright-diagnostic-args }}" ${{ steps.browsers.outputs.browsers }}
+      - uses: actions/upload-artifact@v4
+        if: failure() && steps.browsers.outputs.has-playwright-diagnostics
+        with:
+          name: "playright-ai-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.browser }}-results"
           path: test-results/
           retention-days: 5
 

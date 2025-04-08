@@ -7,11 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
-### Breaking changes
+## New features
 
-* The navbar-related style options of `ui.page_navbar()` and `ui.navset_bar()` have been consolidated into a single `navbar_options` argument that pairs with a new `ui.navbar_options()` helper. Using the direct `position`, `bg`, `inverse`, `collapsible`, and `underline` arguments will continue to work with a deprecation message.
+* Added support for bookmarking Shiny applications. Bookmarking allows users to save the current state of an application and return to it later. This feature is available in both Shiny Core and Shiny Express. (#1870, #1915, #1919, #1920, #1922, #1934, #1938, #1945, #1955)
+  * To enable bookmarking in Express mode, set `shiny.express.app_opts(bookmark_store=)` during the app's initial construction.
+  * To enable bookmarking in Core mode, set `shiny.App(bookmark_store=)` when constructing the `app` object.
 
-  Related to this change, `ui.navset_bar()` now defaults to using `underline=True` so that it uses the same set of default `ui.navbar_options()` as the page variant. In `ui.navbar_options()`, `inverse` is replaced by `theme`, which takes values `"light"` (dark text on a **light** background), `"dark"` (light text on a **dark** background), or `"auto"` (follow page settings).
+* Added a new `.enable_bookmarking(client)` method to `ui.Chat()`. This method will attach bookmark hooks to save and restore the chat's messages and client state. (#1951, #1954)
+
+* Both `ui.Chat()` and `ui.MarkdownStream()` now support the inclusion of Shiny UI elements inside of messages. This allows for gathering input from the user (e.g., `ui.input_select()`), displaying of rich output (e.g., `render.DataGrid()`), and more. (#1868)
+
+* Added a new `.message_stream_context()` method to `ui.Chat()`. This context manager is a useful alternative to `.append_message_stream()` when you want to: (1) Nest a stream within another and/or
+(2) Overwrite/replace streaming content. (#1906)
+
+### Changes
+
+* Express mode's `app_opts()` requires all arguments to be keyword-only. If you are using positional arguments, you will need to update your code. (#1895)
+
+* The `.get_latest_stream_result()` method on `ui.MarkdownStream()` was deprecated in favor of the new `.latest_stream` property. Call `.result()` on the property to get the latest result, `.status` to check the status, and `.cancel()` to cancel the stream.
+
+* `MarkdownStream()` now has a default maximum width of `680px` for better readability. Also, similar to `Chat()`, it now also horizontally centers itself. (#1944)
+
+* `ui.page_navbar()` and `ui.navset_bar()` now correctly apply `theme` and additional attributes from `navbar_options` created with `ui.navbar_options()`. (#1942)
+
+### Bug fixes
+
+* Fixed an issue where the `<main>` areas of `ui.page_sidebar()` and `ui.page_navbar()` (with a `sidebar`) were made to be a fillable containers even when `fillable=False`. (#1816)
+
+* Fixed an issue where the `.update_user_input()` method on `ui.Chat()` isn't working in shinylive.  (#1891)
+
+* Fixed an issue where `width` and `height` on `MarkdownStream()` were not working as intended. (#1944)
+
+* Fixed an issue with the `.click()` method on InputActionButton controllers in `shiny.playwright.controllers` where the method would not work as expected. (#1886)
+
+## [1.3.0] - 2025-03-03
 
 ### New features
 
@@ -31,29 +60,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `shiny create` includes new and improved `ui.Chat()` template options. Most of these templates leverage the new [`{chatlas}` package](https://posit-dev.github.io/chatlas/), our opinionated approach to interfacing with various LLM. (#1806)
 
-* Added a new `expect_max_height()` method to the Valuebox controllers to check the maximum height of a value box (#1816)
-
 * Client data values (e.g., url info, output sizes/styles, etc.) can now be accessed in the server-side Python code via `session.clientdata`. For example, `session.clientdata.url_search()` reactively reads the URL search parameters. (#1832)
 
 * Available `input` ids can now be listed via `dir(input)`. This also works on the new `session.clientdata` object. (#1832)
 
-* Added a new `.add_sass_layer_file()` method to `ui.Theme` that supports reading a Sass file with layer boundary comments, e.g. `/*-- scss:defaults --*/`. This format [is supported by Quarto](https://quarto.org/docs/output-formats/html-themes-more.html#bootstrap-bootswatch-layering) and makes it easier to store Sass rules and declarations that need to be woven into Shiny's Sass Bootstrap files. (#1790)
-
 * `ui.input_text()`, `ui.input_text_area()`, `ui.input_numeric()` and `ui.input_password()` all gain an `update_on` option. `update_on="change"` is the default and previous behavior, where the input value updates immediately whenever the value changes. With `update_on="blur"`, the input value will update only when the text input loses focus or when the user presses Enter (or Cmd/Ctrl + Enter for `ui.input_text_area()`). (#1874)
 
+* Added a new `.add_sass_layer_file()` method to `ui.Theme` that supports reading a Sass file with layer boundary comments, e.g. `/*-- scss:defaults --*/`. This format [is supported by Quarto](https://quarto.org/docs/output-formats/html-themes-more.html#bootstrap-bootswatch-layering) and makes it easier to store Sass rules and declarations that need to be woven into Shiny's Sass Bootstrap files. (#1790)
+
+* Added a new `expect_max_height()` method to the Valuebox controllers to check the maximum height of a value box (#1816)
+
 * `shiny.pytest.create_app_fixture(app)` gained support for multiple app file paths when creating your test fixture. If multiple file paths are given, it will behave as a parameterized fixture value and execute the test for each app path. (#1869)
+
+### Breaking changes
+
+* The navbar-related style options of `ui.page_navbar()` and `ui.navset_bar()` have been consolidated into a single `navbar_options` argument that pairs with a new `ui.navbar_options()` helper. Using the direct `position`, `bg`, `inverse`, `collapsible`, and `underline` arguments will continue to work with a deprecation message. (#1822)
+
+  Related to this change, `ui.navset_bar()` now defaults to using `underline=True` so that it uses the same set of default `ui.navbar_options()` as the page variant. In `ui.navbar_options()`, `inverse` is replaced by `theme`, which takes values `"light"` (dark text on a **light** background), `"dark"` (light text on a **dark** background), or `"auto"` (follow page settings).
+
+* The Shiny Core component `shiny.ui.Chat()` no longer has a `.ui()` method. This method was never intended to be used in Shiny Core (in that case, use `shiny.ui.chat_ui()`) to create the UI element. Note that the `shiny.express.ui.Chat()` class still has a `.ui()` method. (#1840)
 
 ### Bug fixes
 
 * `ui.Chat()` now correctly handles new `ollama.chat()` return value introduced in `ollama` v0.4. (#1787)
 
 * Updated `expect_height()` for Valuebox controllers to check the height property instead of max-height. (#1816)
-
-### Changes
-
-* The Shiny Core component `shiny.ui.Chat()` no longer has a `.ui()` method. This method
-was never intended to be used in Shiny Core (in that case, use `shiny.ui.chat_ui()`) to create the UI element. Note that the `shiny.express.ui.Chat()`
-class still has a `.ui()` method. (#1840)
 
 ## [1.2.1] - 2024-11-14
 

@@ -22,6 +22,7 @@ from .._deprecated import warn_deprecated
 from .._docstring import add_example
 from .._namespaces import resolve_id_or_none
 from .._utils import private_random_int
+from ..bookmark import restore_input
 from ..types import DEPRECATED, MISSING, MISSING_TYPE, NavSetArg
 from ._bootstrap import column, row
 from ._card import CardItem, WrapperCallable, card, card_body, card_footer, card_header
@@ -393,9 +394,12 @@ class NavSet:
         header: TagChild = None,
         footer: TagChild = None,
     ) -> None:
+        id_resolved = resolve_id_or_none(id)
+        selected = restore_input(id_resolved, selected)
+
         self.args = args
         self.ul_class = ul_class
-        self.id = id
+        self.id = id_resolved
         self.selected = selected
         self.header = header
         self.footer = footer
@@ -464,11 +468,10 @@ def navset_tab(
     -------
     See :func:`~shiny.ui.nav_panel`
     """
-
     return NavSet(
         *args,
         ul_class="nav nav-tabs",
-        id=resolve_id_or_none(id),
+        id=id,
         selected=selected,
         header=header,
         footer=footer,
@@ -520,11 +523,10 @@ def navset_pill(
     -------
     See :func:`~shiny.ui.nav_panel`
     """
-
     return NavSet(
         *args,
         ul_class="nav nav-pills",
-        id=resolve_id_or_none(id),
+        id=id,
         selected=selected,
         header=header,
         footer=footer,
@@ -579,7 +581,7 @@ def navset_underline(
     return NavSet(
         *args,
         ul_class="nav nav-underline",
-        id=resolve_id_or_none(id),
+        id=id,
         selected=selected,
         header=header,
         footer=footer,
@@ -627,11 +629,10 @@ def navset_hidden(
     * :func:`~shiny.ui.navset_card_underline`
     * :func:`~shiny.ui.navset_pill_list`
     """
-
     return NavSet(
         *args,
         ul_class="nav nav-hidden",
-        id=resolve_id_or_none(id),
+        id=id,
         selected=selected,
         header=header,
         footer=footer,
@@ -747,11 +748,10 @@ def navset_card_tab(
     -------
     See :func:`~shiny.ui.nav_panel`
     """
-
     return NavSetCard(
         *args,
         ul_class="nav nav-tabs card-header-tabs",
-        id=resolve_id_or_none(id),
+        id=id,
         selected=selected,
         title=title,
         sidebar=sidebar,
@@ -813,11 +813,10 @@ def navset_card_pill(
     -------
     See :func:`~shiny.ui.nav_panel`
     """
-
     return NavSetCard(
         *args,
         ul_class="nav nav-pills card-header-pills",
-        id=resolve_id_or_none(id),
+        id=id,
         selected=selected,
         title=title,
         sidebar=sidebar,
@@ -882,7 +881,7 @@ def navset_card_underline(
     return NavSetCard(
         *args,
         ul_class="nav nav-underline",
-        id=resolve_id_or_none(id),
+        id=id,
         selected=selected,
         title=title,
         sidebar=sidebar,
@@ -977,11 +976,10 @@ def navset_pill_list(
     -------
     See :func:`~shiny.ui.nav_panel`
     """
-
     return NavSetPillList(
         *args,
         ul_class="nav nav-pills nav-stacked",
-        id=resolve_id_or_none(id),
+        id=id,
         selected=selected,
         header=header,
         footer=footer,
@@ -1075,6 +1073,77 @@ def navbar_options(
     """
     Configure the appearance and behavior of the navbar.
 
+    ## Navbar style with Bootstrap 5 and Bootswatch themes
+
+    In Shiny v1.3.0, the default navbar colors for Bootswatch themes are less
+    opinionated by default and follow light or dark mode (see
+    :func:`~shiny.ui.input_dark_mode`).
+
+    You can use `ui.navbar_options()` to adjust the colors of the navbar when using a
+    Bootswatch preset theme with Bootstrap 5. For example, the [Bootswatch documentation
+    for the Flatly theme](https://bootswatch.com/flatly/) shows 4 navbar variations.
+    Inspecting the source code for the first example reveals the following markup:
+
+    ```html
+    <nav class="navbar navbar-expand-lg bg-primary" data-bs-theme="dark">
+      <!-- all of the navbar html -->
+    </nav>
+    ```
+
+    Note that this navbar uses the `bg-primary` class for a dark navy background. The
+    navbar's white text is controlled by the `data-bs-theme="dark"` attribute, which is
+    used by Bootstrap for light text on a _dark_ background. In Shiny, you can achieve
+    this look with:
+
+    ```python
+    ui.page_navbar(
+      theme=ui.Theme(version=5, preset="flatly"),
+      navbar_options=ui.navbar_options(class="bg-primary", theme="dark")
+    )
+    ```
+
+    This particular combination of `class="bg-primary"` and `theme="dark"` works well
+    for most Bootswatch presets. Note that in Shiny Express, `theme` and
+    `navbar_options` both are set using :func:`~shiny.express.ui.page_opts`.
+
+    Another variation from the Flatly documentation features a navbar with dark text on a
+    light background:
+
+    ```python
+    ui.page_navbar(
+      theme = ui.Theme(version=5, preset="flatly"),
+      navbar_options = ui.navbar_options(class="bg-light", theme="light")
+    )
+    ```
+
+    The above options set navbar foreground and background colors that are always the
+    same in both light and dark modes. To customize the navbar colors used in light or
+    dark mode, you can use the `$navbar-light-bg` and `$navbar-dark-bg` Sass variables.
+    When provided, Shiny will automatically choose to use light or dark text as the
+    foreground color.
+
+    ```python
+    ui.page_navbar(
+        theme=(
+            ui.Theme(version=5, preset = "flatly")
+            .add_defaults(
+                navbar_light_bg="#18BC9C", # flatly's success color (teal)
+                navbar_dark_bg="#2C3E50"   # flatly's primary color (navy)
+            )
+        )
+      )
+    )
+    ```
+
+    Finally, you can also use the `$navbar-bg` Sass variable to set the navbar
+    background color for both light and dark modes:
+
+    ```python
+    ui.page_navbar(
+        theme=ui.Theme(version=5, preset="flatly").add_defaults(navbar_bg="#E74C3C") # flatly's red
+    )
+    ```
+
     Parameters
     -----------
     position
@@ -1095,7 +1164,7 @@ def navbar_options(
     collapsible
         If `True`, automatically collapses the elements into an expandable menu on
         mobile devices or narrow window widths.
-    **attrs : dict
+    attrs
         Additional HTML attributes to apply to the navbar container element.
 
     Returns:
@@ -1249,7 +1318,12 @@ class NavSetBar(NavSet):
             nav = div(nav, id=collapse_id, class_="collapse navbar-collapse")
 
         nav_container.append(nav)
-        nav_final = tags.nav({"class": "navbar navbar-expand-md"}, nav_container)
+        nav_final = tags.nav(
+            {"class": "navbar navbar-expand-md"},
+            nav_container,
+            {"data-bs-theme": self.navbar_options.theme},
+            **self.navbar_options.attrs,
+        )
 
         if self.navbar_options.position != "static-top":
             nav_final.add_class(self.navbar_options.position)
@@ -1294,7 +1368,9 @@ class NavSetBar(NavSet):
                 # TODO-future: This could also be applied to the non-sidebar page layout above
                 from ._page import page_main_container
 
-                tab_content = page_main_container(*contents)
+                tab_content = page_main_container(
+                    *contents, fillable=self.fillable is not False
+                )
 
             content_div = div(
                 # In the fluid case, the sidebar layout should be flush (i.e.,
@@ -1493,11 +1569,10 @@ def navset_bar(
     ul_class = "nav navbar-nav"
     if navbar_opts.underline:
         ul_class += " nav-underline"
-
     return NavSetBar(
         *new_args,
         ul_class=ul_class,
-        id=resolve_id_or_none(id),
+        id=id,
         selected=selected,
         sidebar=sidebar,
         fillable=fillable,

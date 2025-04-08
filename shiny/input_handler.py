@@ -1,15 +1,19 @@
 from __future__ import annotations
 
-__all__ = ("input_handlers",)
-
 from datetime import date, datetime, timezone
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Dict
+
+from .bookmark import serializer_unserializable
+from .bookmark._serializers import can_serialize_input_file, serializer_file_input
 
 if TYPE_CHECKING:
     from .session import Session
 
 from .module import ResolvedId
 from .types import ActionButtonValue
+
+__all__ = ("input_handlers",)
 
 InputHandlerType = Callable[[Any, ResolvedId, "Session"], Any]
 
@@ -91,6 +95,10 @@ getType: function(el) {
     return "mypackage.intify";
 }
 ```
+
+See Also
+--------
+* :class:`~shiny.session.Inputs`'s `.set_serializer(info: InputSerializerInfo)` method for determining how an object can be serialized for bookmarking.
 """
 
 
@@ -150,13 +158,97 @@ def _(value: str, name: ResolvedId, session: Session) -> str:
     return value
 
 
-# TODO: implement when we have bookmarking
 @input_handlers.add("shiny.password")
 def _(value: str, name: ResolvedId, session: Session) -> str:
+    # Never bookmark passwords
+    session.input.set_serializer(name, serializer_unserializable)
+
     return value
 
 
-# TODO: implement when we have bookmarking
 @input_handlers.add("shiny.file")
 def _(value: Any, name: ResolvedId, session: Session) -> Any:
-    return value
+
+    # This function is only used when restoring a Shiny ui.input_file.
+    # When a file is uploaded the usual way, it takes a different code path and won't
+    # hit this function.
+    if value is None:
+        return None
+
+    if not can_serialize_input_file(session):
+        raise ValueError(
+            "`shiny.ui.input_file()` is attempting to restore bookmark state. "
+            'However the App\'s `bookmark_store=` is not set to `"server"`. '
+            "Either exclude the input value (`session.bookmark.exclude.append(NAME)`) "
+            'or set `bookmark_store="server"`.'
+        )
+
+    value_obj = value
+
+    # Convert from:
+    # `{name: (n1, n2, n3), size: (s1, s2, s3), type: (t1, t2, t3), datapath: (d1, d2, d3)}`
+    # to:
+    # `[{name: n1, size: s1, type: t1, datapath: d1}, ...]`
+    value_list: list[dict[str, str | int | None]] = []
+    for i in range(len(value_obj["name"])):
+        value_list.append(
+            {
+                "name": value_obj["name"][i],
+                "size": value_obj["size"][i],
+                "type": value_obj["type"][i],
+                "datapath": value_obj["datapath"][i],
+            }
+        )
+
+    # Validate the input value
+    for value_item in value_list:
+        if value_item["datapath"] is not None:
+            if not isinstance(value_item["datapath"], str):
+                raise ValueError(
+                    "Invalid type for file input path: ", type(value_item["datapath"])
+                )
+            if Path(value_item["datapath"]).name != value_item["datapath"]:
+                raise ValueError("Invalid '/' found in file input path.")
+
+    import shutil
+    import tempfile
+
+    from shiny._utils import rand_hex
+
+    from .bookmark._restore_state import get_current_restore_context
+    from .session import session_context
+
+    with session_context(session):
+        restore_ctx = get_current_restore_context()
+
+    # These should not fail as we know
+    if restore_ctx is None or restore_ctx.dir is None:
+        raise RuntimeError("No restore context found. Cannot restore file input.")
+
+    restore_ctx_dir = Path(restore_ctx.dir)
+
+    if len(value_list) > 0:
+        tempdir_root = tempfile.TemporaryDirectory()
+        session.on_ended(lambda: tempdir_root.cleanup())
+
+        for f in value_list:
+            assert f["datapath"] is not None and isinstance(f["datapath"], str)
+
+            data_path = f["datapath"]
+
+            # Prepend the persistent dir
+            old_file = restore_ctx_dir / data_path
+
+            # Copy the original file to a new temp dir, so that a restored session can't
+            # modify the original.
+            tempdir = Path(tempdir_root.name) / rand_hex(12)
+            tempdir.mkdir(parents=True, exist_ok=True)
+            f["datapath"] = str(tempdir / Path(data_path).name)
+            shutil.copy2(old_file, f["datapath"])
+
+    # Need to mark this input value with the correct serializer. When a file is
+    # uploaded the usual way (instead of being restored), this occurs in
+    # session$`@uploadEnd`.
+    session.input.set_serializer(name, serializer_file_input)
+
+    return value_list

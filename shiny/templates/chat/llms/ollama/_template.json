@@ -15,6 +15,14 @@
     {
       "type": "action",
       "text": "Learn more at https://posit-dev.github.io/chatlas/reference/ChatOllama.html"
+    },
+    {
+      "type": "info",
+      "text": "Want to learn more about AI chatbots?"
+    },
+    {
+      "type": "action",
+      "text": "Visit https://shiny.posit.co/py/docs/genai-chatbots.html"
     }
   ]
 }

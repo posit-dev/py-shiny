@@ -7,6 +7,7 @@ from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, tags
 from .._docstring import add_example
 from .._namespaces import resolve_id_or_none
 from .._utils import drop_none, private_random_id
+from ..bookmark import restore_input
 from ..session import require_active_session
 from ..types import MISSING, MISSING_TYPE
 from ._html_deps_shinyverse import components_dependencies
@@ -243,6 +244,21 @@ def accordion(
                 "All `accordion(*args)` must be of type `AccordionPanel` which can be created using `accordion_panel()`"
             )
 
+    # Since multiple=False requires an id, we always include one,
+    # but only create a binding when it is provided
+    binding_class_value: TagAttrs | None = None
+    if id is None:
+        id = private_random_id("bslib_accordion")
+        binding_class_value = None
+    else:
+        binding_class_value = {"class": "bslib-accordion-input"}
+
+    accordion_id = resolve_id_or_none(id)
+    has_restored_input = not isinstance(
+        restore_input(accordion_id, MISSING), MISSING_TYPE
+    )
+    open = restore_input(accordion_id, open)
+
     is_open: list[bool] = []
     if open is None:
         is_open = [False for _ in panels]
@@ -254,27 +270,18 @@ def accordion(
         #
         is_open = [panel._data_value in open for panel in panels]
 
-    # Open the first panel by default
-    if open is not False and len(is_open) > 0 and not any(is_open):
-        is_open[0] = True
+    if not has_restored_input:
+        # Open the first panel by default
+        if open is not False and len(is_open) > 0 and not any(is_open):
+            is_open[0] = True
 
     if (not multiple) and sum(is_open) > 1:
         raise ValueError("Can't select more than one panel when `multiple = False`")
 
-    # Since multiple=False requires an id, we always include one,
-    # but only create a binding when it is provided
-    binding_class_value: TagAttrs | None = None
-    if id is None:
-        id = private_random_id("bslib_accordion")
-        binding_class_value = None
-    else:
-        binding_class_value = {"class": "bslib-accordion-input"}
-
-    accordion_id = resolve_id_or_none(id)
-    for panel, open in zip(panels, is_open):
+    for panel, panel_is_open in zip(panels, is_open):
         panel._accordion_id = accordion_id
         panel._is_multiple = multiple
-        panel._is_open = open
+        panel._is_open = panel_is_open
 
     panel_tags = [panel.resolve() for panel in panels]
 

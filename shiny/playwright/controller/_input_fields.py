@@ -647,6 +647,20 @@ class _DateBase(
             timeout=timeout,
         )
 
+    def set(self, value: str, *, timeout: Timeout = None) -> None:
+        """
+        Sets the text value
+
+        Parameters
+        ----------
+        value
+            The text to set.
+        timeout
+            The maximum time to wait for the text to be set. Defaults to `None`.
+        """
+        set_text(self.loc, value, timeout=timeout)
+        self.loc.press("Enter", timeout=timeout)
+
 
 class InputDate(_DateBase):
     def __init__(self, page: Page, id: str) -> None:

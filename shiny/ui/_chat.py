@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import inspect
+from contextlib import asynccontextmanager
 from typing import (
+    TYPE_CHECKING,
     Any,
     AsyncIterable,
     Awaitable,
@@ -17,15 +19,25 @@ from typing import (
 )
 from weakref import WeakValueDictionary
 
-from htmltools import HTML, Tag, TagAttrValue, TagList, css
+from htmltools import HTML, RenderedHTML, Tag, TagAttrValue, TagChild, TagList, css
 
 from .. import _utils, reactive
 from .._deprecated import warn_deprecated
 from .._docstring import add_example
-from .._namespaces import ResolvedId, resolve_id
-from ..session import require_active_session, session_context
-from ..types import MISSING, MISSING_TYPE, NotifyException
+from .._utils import CancelCallback, wrap_async
+from ..bookmark import BookmarkState, RestoreState
+from ..bookmark._types import BookmarkStore
+from ..module import ResolvedId, resolve_id
+from ..session import get_current_session, require_active_session, session_context
+from ..types import MISSING, MISSING_TYPE, Jsonifiable, NotifyException
 from ..ui.css import CssUnit, as_css_unit
+from ._chat_bookmark import (
+    BookmarkCancelCallback,
+    ClientWithState,
+    get_chatlas_state,
+    is_chatlas_chat_client,
+    set_chatlas_state,
+)
 from ._chat_normalize import normalize_message, normalize_message_chunk
 from ._chat_provider_types import (
     AnthropicMessage,
@@ -38,15 +50,22 @@ from ._chat_provider_types import (
     as_provider_message,
 )
 from ._chat_tokenizer import TokenEncoding, TokenizersEncoding, get_default_tokenizer
-from ._chat_types import ChatMessage, ClientMessage, TransformedMessage
+from ._chat_types import ChatMessage, ChatMessageDict, ClientMessage, TransformedMessage
 from ._html_deps_py_shiny import chat_deps
 from .fill import as_fill_item, as_fillable_container
+
+if TYPE_CHECKING:
+
+    import chatlas
+
+else:
+    chatlas = object
 
 __all__ = (
     "Chat",
     "ChatExpress",
     "chat_ui",
-    "ChatMessage",
+    "ChatMessageDict",
 )
 
 
@@ -81,10 +100,15 @@ UserSubmitFunction = Union[
 
 ChunkOption = Literal["start", "end", True, False]
 
-PendingMessage = Tuple[Any, ChunkOption, Union[str, None]]
+PendingMessage = Tuple[
+    Any,
+    ChunkOption,
+    Literal["append", "replace"],
+    Union[str, None],
+]
 
 
-@add_example(ex_dir="../templates/chat/starters/hello")
+@add_example("app-core.py")
 class Chat:
     """
     Create a chat interface.
@@ -133,12 +157,21 @@ class Chat:
         A unique identifier for the chat session. In Shiny Core, make sure this id
         matches a corresponding :func:`~shiny.ui.chat_ui` call in the UI.
     messages
-        A sequence of messages to display in the chat. Each message can be either a
-        string or a dictionary with `content` and `role` keys. The `content` key
-        should contain a string, and the `role` key can be "assistant" or "user".
-        Content strings are interpreted as markdown and rendered to HTML on the client.
-        Content may also include specially formatted **input suggestion** links (see
-        `.append_message_stream()` for more information).
+        A sequence of messages to display in the chat. A given message can be one of the
+        following:
+
+        * A string, which is interpreted as markdown and rendered to HTML on the client.
+            * To prevent interpreting as markdown, mark the string as
+              :class:`~shiny.ui.HTML`.
+        * A UI element (specifically, a :class:`~shiny.ui.TagChild`).
+            * This includes :class:`~shiny.ui.TagList`, which take UI elements
+              (including strings) as children. In this case, strings are still
+              interpreted as markdown as long as they're not inside HTML.
+        * A dictionary with `content` and `role` keys. The `content` key can contain a
+          content as described above, and the `role` key can be "assistant" or "user".
+
+        **NOTE:** content may include specially formatted **input suggestion** links
+        (see `.append_message()` for more information).
     on_error
         How to handle errors that occur in response to user input. When `"unhandled"`,
         the app will stop running when an error occurs. Otherwise, a notification
@@ -188,9 +221,12 @@ class Chat:
         self.on_error = on_error
 
         # Chunked messages get accumulated (using this property) before changing state
-        self._current_stream_message = ""
+        self._current_stream_message: str = ""
         self._current_stream_id: str | None = None
         self._pending_messages: list[PendingMessage] = []
+
+        # For tracking message stream state when entering/exiting nested streams
+        self._message_stream_checkpoint: str = ""
 
         # If a user input message is transformed into a response, we need to cancel
         # the next user input submit handling
@@ -198,6 +234,7 @@ class Chat:
 
         # Keep track of effects so we can destroy them when the chat is destroyed
         self._effects: list[reactive.Effect_] = []
+        self._cancel_bookmarking_callbacks: CancelCallback | None = None
 
         # Initialize chat state and user input effect
         with session_context(self._session):
@@ -220,10 +257,16 @@ class Chat:
 
             # TODO: deprecate messages once we start promoting managing LLM message
             # state through other means
-            @reactive.effect
-            async def _init_chat():
+            async def _append_init_messages():
                 for msg in messages:
                     await self.append_message(msg)
+
+            @reactive.effect
+            async def _init_chat():
+                await _append_init_messages()
+
+            self._append_init_messages = _append_init_messages
+            self._init_chat = _init_chat
 
             # When user input is submitted, transform, and store it in the chat state
             # (and make sure this runs before other effects since when the user
@@ -242,7 +285,7 @@ class Chat:
                 else:
                     # A transformed value of None is a special signal to suspend input
                     # handling (i.e., don't generate a response)
-                    self._store_message(as_transformed_message(msg), index=n_pre)
+                    self._store_message(msg, index=n_pre)
                     await self._remove_loading_message()
                     self._suspend_input_handler = True
 
@@ -403,7 +446,7 @@ class Chat:
         token_limits: tuple[int, int] | None = None,
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
-    ) -> tuple[ChatMessage, ...]: ...
+    ) -> tuple[ChatMessageDict, ...]: ...
 
     def messages(
         self,
@@ -412,7 +455,7 @@ class Chat:
         token_limits: tuple[int, int] | None = None,
         transform_user: Literal["all", "last", "none"] = "all",
         transform_assistant: bool = False,
-    ) -> tuple[ChatMessage | ProviderMessage, ...]:
+    ) -> tuple[ChatMessageDict | ProviderMessage, ...]:
         """
         Reactively read chat messages
 
@@ -480,17 +523,20 @@ class Chat:
         if token_limits is not None:
             messages = self._trim_messages(messages, token_limits, format)
 
-        res: list[ChatMessage | ProviderMessage] = []
+        res: list[ChatMessageDict | ProviderMessage] = []
         for i, m in enumerate(messages):
             transform = False
-            if m["role"] == "assistant":
+            if m.role == "assistant":
                 transform = transform_assistant
-            elif m["role"] == "user":
+            elif m.role == "user":
                 transform = transform_user == "all" or (
                     transform_user == "last" and i == len(messages) - 1
                 )
-            content_key = m["transform_key" if transform else "pre_transform_key"]
-            chat_msg = ChatMessage(content=str(m[content_key]), role=m["role"])
+            content_key = getattr(
+                m, "transform_key" if transform else "pre_transform_key"
+            )
+            content = getattr(m, content_key)
+            chat_msg = ChatMessageDict(content=str(content), role=m.role)
             if not isinstance(format, MISSING_TYPE):
                 chat_msg = as_provider_message(chat_msg, format)
             res.append(chat_msg)
@@ -509,12 +555,22 @@ class Chat:
         Parameters
         ----------
         message
-            The message to append. A variety of message formats are supported including
-            a string, a dictionary with `content` and `role` keys, or a relevant chat
-            completion object from platforms like OpenAI, Anthropic, Ollama, and others.
-            Content strings are interpreted as markdown and rendered to HTML on the
-            client. Content may also include specially formatted **input suggestion**
-            links (see note below).
+            A given message can be one of the following:
+
+            * A string, which is interpreted as markdown and rendered to HTML on the
+              client.
+                * To prevent interpreting as markdown, mark the string as
+                  :class:`~shiny.ui.HTML`.
+            * A UI element (specifically, a :class:`~shiny.ui.TagChild`).
+                * This includes :class:`~shiny.ui.TagList`, which take UI elements
+                  (including strings) as children. In this case, strings are still
+                  interpreted as markdown as long as they're not inside HTML.
+            * A dictionary with `content` and `role` keys. The `content` key can contain
+              content as described above, and the `role` key can be "assistant" or
+              "user".
+
+            **NOTE:** content may include specially formatted **input suggestion** links
+            (see note below).
         icon
             An optional icon to display next to the message, currently only used for
             assistant messages. The icon can be any HTML element (e.g., an
@@ -548,49 +604,165 @@ class Chat:
         similar) is specified in model's completion method.
         :::
         """
-        await self._append_message(message, icon=icon)
+        # If we're in a stream, queue the message
+        if self._current_stream_id:
+            self._pending_messages.append((message, False, "append", None))
+            return
 
-    async def _append_message(
+        msg = normalize_message(message)
+        msg = await self._transform_message(msg)
+        if msg is None:
+            return
+        self._store_message(msg)
+        await self._send_append_message(
+            message=msg,
+            chunk=False,
+            icon=icon,
+        )
+
+    @asynccontextmanager
+    async def message_stream_context(self):
+        """
+        Message stream context manager.
+
+        A context manager for appending streaming messages into the chat. This context
+        manager can:
+
+        1. Be used in isolation to append a new streaming message to the chat.
+            * Compared to `.append_message_stream()` this method is more flexible but
+              isn't non-blocking by default (i.e., it doesn't launch an extended task).
+        2. Be nested within itself
+            * Nesting is primarily useful for making checkpoints to `.clear()` back
+              to (see the example below).
+        3. Be used from within a `.append_message_stream()`
+            * Useful for inserting additional content from another context into the
+              stream (e.g., see the note about tool calls below).
+
+        Yields
+        ------
+        :
+            A `MessageStream` class instance, which has a method for `.append()`ing
+            message content chunks to as well as way to `.clear()` the stream back to
+            it's initial state. Note that `.append()` supports the same message content
+            types as `.append_message()`.
+
+        Example
+        -------
+        ```python
+        import asyncio
+
+        from shiny import reactive
+        from shiny.express import ui
+
+        chat = ui.Chat(id="my_chat")
+        chat.ui()
+
+        @reactive.effect
+        async def _():
+            async with chat.message_stream_context() as msg:
+                await msg.append("Starting stream...\n\nProgress:")
+                async with chat.message_stream_context() as progress:
+                    for x in [0, 50, 100]:
+                        await progress.append(f" {x}%")
+                        await asyncio.sleep(1)
+                        await progress.clear()
+                await msg.clear()
+                await msg.append("Completed stream")
+        ```
+
+        Note
+        ----
+        A useful pattern for displaying tool calls in a chatbot is for the tool to
+        display using `.message_stream_context()` while the the response generation is
+        happening through `.append_message_stream()`. This allows the tool to display
+        things like progress updates (or other "ephemeral" content) and optionally
+        `.clear()` the stream back to it's initial state when ready to display the
+        "final" content.
+        """
+        # Checkpoint the current stream state so operation="replace"  can return to it
+        old_checkpoint = self._message_stream_checkpoint
+        self._message_stream_checkpoint = self._current_stream_message
+
+        # No stream currently exists, start one
+        stream_id = self._current_stream_id
+        is_root_stream = stream_id is None
+        if is_root_stream:
+            stream_id = _utils.private_random_id()
+            await self._append_message_chunk("", chunk="start", stream_id=stream_id)
+
+        try:
+            yield MessageStream(self, stream_id)
+        finally:
+            # Restore the checkpoint
+            self._message_stream_checkpoint = old_checkpoint
+
+            # If this was the root stream, end it
+            if is_root_stream:
+                await self._append_message_chunk(
+                    "",
+                    chunk="end",
+                    stream_id=stream_id,
+                )
+
+    async def _append_message_chunk(
         self,
         message: Any,
         *,
-        chunk: ChunkOption = False,
-        stream_id: str | None = None,
+        chunk: Literal[True, "start", "end"] = True,
+        stream_id: str,
+        operation: Literal["append", "replace"] = "append",
         icon: HTML | Tag | TagList | None = None,
     ) -> None:
-        # If currently we're in a stream, handle other messages (outside the stream) later
-        if not self._can_append_message(stream_id):
-            self._pending_messages.append((message, chunk, stream_id))
+        # If currently we're in a *different* stream, queue the message chunk
+        if self._current_stream_id and self._current_stream_id != stream_id:
+            self._pending_messages.append((message, chunk, operation, stream_id))
             return
 
-        # Update current stream state
         self._current_stream_id = stream_id
-        if chunk == "end":
-            self._current_stream_id = None
 
-        if chunk is False:
-            msg = normalize_message(message)
-            chunk_content = None
+        # Normalize various message types into a ChatMessage()
+        msg = normalize_message_chunk(message)
+
+        if operation == "replace":
+            self._current_stream_message = self._message_stream_checkpoint + msg.content
+            msg.content = self._current_stream_message
         else:
-            msg = normalize_message_chunk(message)
-            # Update the current stream message
-            chunk_content = msg["content"]
-            self._current_stream_message += chunk_content
-            msg["content"] = self._current_stream_message
-            if chunk == "end":
-                self._current_stream_message = ""
+            self._current_stream_message += msg.content
 
-        msg = await self._transform_message(
-            msg, chunk=chunk, chunk_content=chunk_content
-        )
-        if msg is None:
-            return
-        self._store_message(msg, chunk=chunk)
-        await self._send_append_message(
-            msg,
-            chunk=chunk,
-            icon=icon,
-        )
+        try:
+            if self._needs_transform(msg):
+                # Transforming may change the meaning of msg.content to be a *replace*
+                # not *append*. So, update msg.content and the operation accordingly.
+                chunk_content = msg.content
+                msg.content = self._current_stream_message
+                operation = "replace"
+                msg = await self._transform_message(
+                    msg, chunk=chunk, chunk_content=chunk_content
+                )
+                # Act like nothing happened if transformed to None
+                if msg is None:
+                    return
+                if chunk == "end":
+                    self._store_message(msg)
+            elif chunk == "end":
+                # When `operation="append"`, msg.content is just a chunk, but we must
+                # store the full message
+                self._store_message(
+                    ChatMessage(content=self._current_stream_message, role=msg.role)
+                )
+
+            # Send the message to the client
+            await self._send_append_message(
+                message=msg,
+                chunk=chunk,
+                operation=operation,
+                icon=icon,
+            )
+        finally:
+            if chunk == "end":
+                self._current_stream_id = None
+                self._current_stream_message = ""
+                self._message_stream_checkpoint = ""
 
     async def append_message_stream(
         self,
@@ -604,12 +776,23 @@ class Chat:
         Parameters
         ----------
         message
-            An (async) iterable of message chunks to append. A variety of message chunk
-            formats are supported, including a string, a dictionary with `content` and
-            `role` keys, or a relevant chat completion object from platforms like
-            OpenAI, Anthropic, Ollama, and others. Content strings are interpreted as
-            markdown and rendered to HTML on the client. Content may also include
-            specially formatted **input suggestion** links (see note below).
+            An (async) iterable of message chunks. Each chunk can be one of the
+            following:
+
+            * A string, which is interpreted as markdown and rendered to HTML on the
+              client.
+                * To prevent interpreting as markdown, mark the string as
+                  :class:`~shiny.ui.HTML`.
+            * A UI element (specifically, a :class:`~shiny.ui.TagChild`).
+                * This includes :class:`~shiny.ui.TagList`, which take UI elements
+                  (including strings) as children. In this case, strings are still
+                  interpreted as markdown as long as they're not inside HTML.
+            * A dictionary with `content` and `role` keys. The `content` key can contain
+              content as described above, and the `role` key can be "assistant" or
+              "user".
+
+            **NOTE:** content may include specially formatted **input suggestion** links
+            (see note below).
         icon
             An optional icon to display next to the message, currently only used for
             assistant messages. The icon can be any HTML element (e.g., an
@@ -678,8 +861,8 @@ class Chat:
         """
         React to changes in the latest message stream.
 
-        Reactively reads for the :class:`~shiny.reactive.ExtendedTask` behind the
-        latest message stream.
+        Reactively reads for the :class:`~shiny.reactive.ExtendedTask` behind an
+        `.append_message_stream()`.
 
         From the return value (i.e., the extended task), you can then:
 
@@ -709,39 +892,43 @@ class Chat:
     ):
         id = _utils.private_random_id()
 
-        empty = ChatMessage(content="", role="assistant")
-        await self._append_message(empty, chunk="start", stream_id=id, icon=icon)
+        empty = ChatMessageDict(content="", role="assistant")
+        await self._append_message_chunk(empty, chunk="start", stream_id=id, icon=icon)
 
         try:
             async for msg in message:
-                await self._append_message(msg, chunk=True, stream_id=id)
+                await self._append_message_chunk(msg, chunk=True, stream_id=id)
             return self._current_stream_message
         finally:
-            await self._append_message(empty, chunk="end", stream_id=id)
+            await self._append_message_chunk(empty, chunk="end", stream_id=id)
             await self._flush_pending_messages()
 
     async def _flush_pending_messages(self):
-        still_pending: list[PendingMessage] = []
-        for msg, chunk, stream_id in self._pending_messages:
-            if self._can_append_message(stream_id):
-                await self._append_message(msg, chunk=chunk, stream_id=stream_id)
+        pending = self._pending_messages
+        self._pending_messages = []
+        for msg, chunk, operation, stream_id in pending:
+            if chunk is False:
+                await self.append_message(msg)
             else:
-                still_pending.append((msg, chunk, stream_id))
-        self._pending_messages = still_pending
-
-    def _can_append_message(self, stream_id: str | None) -> bool:
-        if self._current_stream_id is None:
-            return True
-        return self._current_stream_id == stream_id
+                await self._append_message_chunk(
+                    msg,
+                    chunk=chunk,
+                    operation=operation,
+                    stream_id=cast(str, stream_id),
+                )
 
     # Send a message to the UI
     async def _send_append_message(
         self,
-        message: TransformedMessage,
+        message: TransformedMessage | ChatMessage,
         chunk: ChunkOption = False,
+        operation: Literal["append", "replace"] = "append",
         icon: HTML | Tag | TagList | None = None,
     ):
-        if message["role"] == "system":
+        if not isinstance(message, TransformedMessage):
+            message = TransformedMessage.from_chat_message(message)
+
+        if message.role == "system":
             # System messages are not displayed in the UI
             return
 
@@ -756,19 +943,24 @@ class Chat:
         elif chunk == "end":
             chunk_type = "message_end"
 
-        content = message["content_client"]
+        content = message.content_client
         content_type = "html" if isinstance(content, HTML) else "markdown"
 
         # TODO: pass along dependencies for both content and icon (if any)
         msg = ClientMessage(
             content=str(content),
-            role=message["role"],
+            role=message.role,
             content_type=content_type,
             chunk_type=chunk_type,
+            operation=operation,
         )
 
         if icon is not None:
             msg["icon"] = str(icon)
+
+        deps = message.html_deps
+        if deps:
+            msg["html_deps"] = deps
 
         # print(msg)
 
@@ -896,18 +1088,16 @@ class Chat:
         self,
         message: ChatMessage,
         chunk: ChunkOption = False,
-        chunk_content: str | None = None,
+        chunk_content: str = "",
     ) -> TransformedMessage | None:
-        res = as_transformed_message(message)
-        key = res["transform_key"]
+        res = TransformedMessage.from_chat_message(message)
 
-        if message["role"] == "user" and self._transform_user is not None:
-            content = await self._transform_user(message["content"])
-
-        elif message["role"] == "assistant" and self._transform_assistant is not None:
+        if message.role == "user" and self._transform_user is not None:
+            content = await self._transform_user(message.content)
+        elif message.role == "assistant" and self._transform_assistant is not None:
             content = await self._transform_assistant(
-                message["content"],
-                chunk_content or "",
+                message.content,
+                chunk_content,
                 chunk == "end" or chunk is False,
             )
         else:
@@ -916,20 +1106,25 @@ class Chat:
         if content is None:
             return None
 
-        res[key] = content  # type: ignore
-
+        setattr(res, res.transform_key, content)
         return res
+
+    def _needs_transform(self, message: ChatMessage) -> bool:
+        if message.role == "user" and self._transform_user is not None:
+            return True
+        elif message.role == "assistant" and self._transform_assistant is not None:
+            return True
+        return False
 
     # Just before storing, handle chunk msg type and calculate tokens
     def _store_message(
         self,
-        message: TransformedMessage,
-        chunk: ChunkOption = False,
+        message: TransformedMessage | ChatMessage,
         index: int | None = None,
     ) -> None:
-        # Don't actually store chunks until the end
-        if chunk is True or chunk == "start":
-            return None
+
+        if not isinstance(message, TransformedMessage):
+            message = TransformedMessage.from_chat_message(message)
 
         with reactive.isolate():
             messages = self._messages()
@@ -941,7 +1136,7 @@ class Chat:
         messages.insert(index, message)
 
         self._messages.set(tuple(messages))
-        if message["role"] == "user":
+        if message.role == "user":
             self._latest_user_input.set(message)
 
         return None
@@ -966,9 +1161,9 @@ class Chat:
         n_other_messages: int = 0
         token_counts: list[int] = []
         for m in messages:
-            count = self._get_token_count(m["content_server"])
+            count = self._get_token_count(m.content_server)
             token_counts.append(count)
-            if m["role"] == "system":
+            if m.role == "system":
                 n_system_tokens += count
                 n_system_messages += 1
             else:
@@ -989,7 +1184,7 @@ class Chat:
         n_other_messages2: int = 0
         token_counts.reverse()
         for i, m in enumerate(reversed(messages)):
-            if m["role"] == "system":
+            if m.role == "system":
                 messages2.append(m)
                 continue
             remaining_non_system_tokens -= token_counts[i]
@@ -1012,13 +1207,13 @@ class Chat:
         self,
         messages: tuple[TransformedMessage, ...],
     ) -> tuple[TransformedMessage, ...]:
-        if any(m["role"] == "system" for m in messages):
+        if any(m.role == "system" for m in messages):
             raise ValueError(
                 "Anthropic requires a system prompt to be specified in it's `.create()` method "
                 "(not in the chat messages with `role: system`)."
             )
         for i, m in enumerate(messages):
-            if m["role"] == "user":
+            if m.role == "user":
                 return messages[i:]
 
         return ()
@@ -1064,7 +1259,8 @@ class Chat:
         if msg is None:
             return None
         key = "content_server" if transform else "content_client"
-        return str(msg[key])
+        val = getattr(msg, key)
+        return str(val)
 
     def _user_input(self) -> str:
         id = self.user_input_id
@@ -1107,16 +1303,13 @@ class Chat:
             }
         )
 
-        _utils.run_coro_sync(
-            self._session.send_custom_message(
-                "shinyChatMessage",
-                {
-                    "id": self.id,
-                    "handler": "shiny-chat-update-user-input",
-                    "obj": obj,
-                },
-            )
-        )
+        msg = {
+            "id": self.id,
+            "handler": "shiny-chat-update-user-input",
+            "obj": obj,
+        }
+
+        self._session._send_message_sync({"custom": {"shinyChatMessage": msg}})
 
     def set_user_message(self, value: str):
         """
@@ -1140,9 +1333,20 @@ class Chat:
         """
         Destroy the chat instance.
         """
+        self._destroy_effects()
+        self._destroy_bookmarking()
+
+    def _destroy_effects(self):
         for x in self._effects:
             x.destroy()
         self._effects.clear()
+
+    def _destroy_bookmarking(self):
+        if not self._cancel_bookmarking_callbacks:
+            return
+
+        self._cancel_bookmarking_callbacks()
+        self._cancel_bookmarking_callbacks = None
 
     async def _remove_loading_message(self):
         await self._send_custom_message("shiny-chat-remove-loading-message", None)
@@ -1157,13 +1361,199 @@ class Chat:
             },
         )
 
+    def enable_bookmarking(
+        self,
+        client: ClientWithState | chatlas.Chat[Any, Any],
+        /,
+        *,
+        bookmark_on: Optional[Literal["response"]] = "response",
+    ) -> CancelCallback:
+        """
+        Enable bookmarking for the chat instance.
 
-@add_example(ex_dir="../templates/chat/starters/hello")
+        This method registers `on_bookmark` and `on_restore` hooks on `session.bookmark`
+        (:class:`shiny.bookmark.Bookmark`) to save/restore chat state on both the `Chat`
+        and `client=` instances. In order for this method to actually work correctly, a
+        `bookmark_store=` must be specified in `shiny.App()`.
+
+        Parameters
+        ----------
+        client
+            The chat client instance to use for bookmarking. This can be a Chat model
+            provider from [chatlas](https://posit-dev.github.io/chatlas/), or more
+            generally, an instance following the `ClientWithState` protocol.
+        bookmark_on
+            The event to trigger the bookmarking on. Supported values include:
+
+            - `"response"` (the default): a bookmark is triggered when the assistant is done responding.
+            - `None`: no bookmark is triggered
+
+            When this method triggers a bookmark, it also updates the URL query string to reflect the bookmarked state.
+
+
+        Raises
+        ------
+        ValueError
+            If the Shiny App does have bookmarking enabled.
+
+        Returns
+        -------
+        :
+            A callback to cancel the bookmarking hooks.
+        """
+        from ..express._stub_session import ExpressStubSession
+
+        session = get_current_session()
+        if session is None or isinstance(session, ExpressStubSession):
+            return BookmarkCancelCallback(lambda: None)
+
+        if session.bookmark.store == "disable":
+            raise ValueError(
+                "Bookmarking requires a `bookmark_store` to be set. "
+                "Please set `bookmark_store=` in `shiny.App()` or `shiny.express.app_opts()."
+            )
+
+        resolved_bookmark_id_str = str(self.id)
+        resolved_bookmark_id_msgs_str = resolved_bookmark_id_str + "--msgs"
+        get_state: Callable[[], Awaitable[Jsonifiable]]
+        set_state: Callable[[Jsonifiable], Awaitable[None]]
+
+        # Retrieve get_state/set_state functions from the client
+        if isinstance(client, ClientWithState):
+            # Do client with state stuff here
+            get_state = wrap_async(client.get_state)
+            set_state = wrap_async(client.set_state)
+
+        elif is_chatlas_chat_client(client):
+
+            get_state = get_chatlas_state(client)
+            set_state = set_chatlas_state(client)
+
+        else:
+            raise ValueError(
+                "Bookmarking requires a client that supports "
+                "`async def get_state(self) -> shiny.types.Jsonifiable` (which returns an object that can be used when bookmarking to save the state of the `client=`) and "
+                "`async def set_state(self, value: Jsonifiable)` (which should restore the `client=`'s state given the `state=`)."
+            )
+
+        # Reset prior bookmarking hooks
+        self._destroy_bookmarking()
+
+        # Must use `root_session` as the id is already resolved. :-/
+        # Using a proxy session would double-encode the proxy-prefix
+        root_session = session.root_scope()
+        root_session.bookmark.exclude.append(self.id + "_user_input")
+
+        # ###########
+        # Bookmarking
+
+        if bookmark_on is not None:
+
+            # When ever the bookmark is requested, update the query string (indep of store type)
+            @root_session.bookmark.on_bookmarked
+            async def _(url: str):
+                await session.bookmark.update_query_string(url)
+
+        if bookmark_on == "response":
+
+            @reactive.effect
+            @reactive.event(lambda: self.messages(format=MISSING), ignore_init=True)
+            async def _():
+                messages = self.messages(format=MISSING)
+
+                if len(messages) == 0:
+                    return
+
+                last_message = messages[-1]
+
+                if last_message.get("role") == "assistant":
+                    await session.bookmark()
+
+        ###############
+        # Client Bookmarking
+
+        @root_session.bookmark.on_bookmark
+        async def _on_bookmark_client(state: BookmarkState):
+            if resolved_bookmark_id_str in state.values:
+                raise ValueError(
+                    f'Bookmark value with id (`"{resolved_bookmark_id_str}"`) already exists.'
+                )
+
+            with reactive.isolate():
+                state.values[resolved_bookmark_id_str] = await get_state()
+
+        @root_session.bookmark.on_restore
+        async def _on_restore_client(state: RestoreState):
+            if resolved_bookmark_id_str not in state.values:
+                return
+
+            # Retrieve the chat turns from the bookmark state
+            info = state.values[resolved_bookmark_id_str]
+            await set_state(info)
+
+        ###############
+        # UI Bookmarking
+
+        @root_session.bookmark.on_bookmark
+        def _on_bookmark_ui(state: BookmarkState):
+            if resolved_bookmark_id_msgs_str in state.values:
+                raise ValueError(
+                    f'Bookmark value with id (`"{resolved_bookmark_id_msgs_str}"`) already exists.'
+                )
+
+            with reactive.isolate():
+                # This does NOT contain the `chat.ui(messages=)` values.
+                # When restoring, the `chat.ui(messages=)` values will need to be kept
+                # and the `ui.Chat(messages=)` values will need to be reset
+                state.values[resolved_bookmark_id_msgs_str] = self.messages(
+                    format=MISSING
+                )
+
+        # Attempt to stop the initialization of the `ui.Chat(messages=)` messages
+        self._init_chat.destroy()
+
+        @root_session.bookmark.on_restore
+        async def _on_restore_ui(state: RestoreState):
+            # Do not call `self.clear_messages()` as it will clear the
+            # `chat.ui(messages=)` in addition to the `self.messages()`
+            # (which is not what we want).
+
+            # We always want to keep the `chat.ui(messages=)` values
+            # and `self.messages()` are never initialized due to
+            # calling `self._init_chat.destroy()` above
+
+            if resolved_bookmark_id_msgs_str not in state.values:
+                # If no messages to restore, display the `__init__(messages=)` messages
+                await self._append_init_messages()
+                return
+
+            msgs: list[Any] = state.values[resolved_bookmark_id_msgs_str]
+            if not isinstance(msgs, list):
+                raise ValueError(
+                    f"Bookmark value with id (`{resolved_bookmark_id_msgs_str}`) must be a list of messages."
+                )
+
+            for message_dict in msgs:
+                await self.append_message(message_dict)
+
+        def _cancel_bookmarking():
+            _on_bookmark_client()
+            _on_bookmark_ui()
+            _on_restore_client()
+            _on_restore_ui()
+
+        # Store the callbacks to be able to destroy them later
+        self._cancel_bookmarking_callbacks = _cancel_bookmarking
+
+        return BookmarkCancelCallback(_cancel_bookmarking)
+
+
+@add_example("app-express.py")
 class ChatExpress(Chat):
     def ui(
         self,
         *,
-        messages: Optional[Sequence[str | ChatMessage]] = None,
+        messages: Optional[Sequence[str | ChatMessageDict]] = None,
         placeholder: str = "Enter a message...",
         width: CssUnit = "min(680px, 100%)",
         height: CssUnit = "auto",
@@ -1197,6 +1587,7 @@ class ChatExpress(Chat):
         kwargs
             Additional attributes for the chat container element.
         """
+
         return chat_ui(
             id=self.id,
             messages=messages,
@@ -1208,12 +1599,64 @@ class ChatExpress(Chat):
             **kwargs,
         )
 
+    def enable_bookmarking(
+        self,
+        client: ClientWithState | chatlas.Chat[Any, Any],
+        /,
+        *,
+        bookmark_store: Optional[BookmarkStore] = None,
+        bookmark_on: Optional[Literal["response"]] = "response",
+    ) -> CancelCallback:
+        """
+        Enable bookmarking for the chat instance.
 
-@add_example(ex_dir="../templates/chat/starters/hello")
+        This method registers `on_bookmark` and `on_restore` hooks on `session.bookmark`
+        (:class:`shiny.bookmark.Bookmark`) to save/restore chat state on both the `Chat`
+        and `client=` instances. In order for this method to actually work correctly, a
+        `bookmark_store=` must be specified in `shiny.express.app_opts()`.
+
+        Parameters
+        ----------
+        client
+            The chat client instance to use for bookmarking. This can be a Chat model
+            provider from [chatlas](https://posit-dev.github.io/chatlas/), or more
+            generally, an instance following the `ClientWithState` protocol.
+        bookmark_store
+            A convenience parameter to set the `shiny.express.app_opts(bookmark_store=)`
+            which is required for bookmarking (and `.enable_bookmarking()`). If `None`,
+            no value will be set.
+        bookmark_on
+            The event to trigger the bookmarking on. Supported values include:
+
+            - `"response"` (the default): a bookmark is triggered when the assistant is done responding.
+            - `None`: no bookmark is triggered
+
+            When this method triggers a bookmark, it also updates the URL query string to reflect the bookmarked state.
+
+        Raises
+        ------
+        ValueError
+            If the Shiny App does have bookmarking enabled.
+
+        Returns
+        -------
+        :
+            A callback to cancel the bookmarking hooks.
+        """
+
+        if bookmark_store is not None:
+            from ..express import app_opts
+
+            app_opts(bookmark_store=bookmark_store)
+
+        return super().enable_bookmarking(client, bookmark_on=bookmark_on)
+
+
+@add_example(ex_dir="../api-examples/Chat")
 def chat_ui(
     id: str,
     *,
-    messages: Optional[Sequence[str | ChatMessage]] = None,
+    messages: Optional[Sequence[TagChild | ChatMessageDict]] = None,
     placeholder: str = "Enter a message...",
     width: CssUnit = "min(680px, 100%)",
     height: CssUnit = "auto",
@@ -1233,12 +1676,21 @@ def chat_ui(
     id
         A unique identifier for the chat UI.
     messages
-        A sequence of messages to display in the chat. Each message can be either a
-        string or a dictionary with `content` and `role` keys. The `content` key
-        should contain a string, and the `role` key can be "assistant" or "user".
-        Content strings are interpreted as markdown and rendered to HTML on the client.
-        Content may also include specially formatted **input suggestion** links (see
-        :method:`~shiny.ui.Chat.append_message_stream` for more information).
+        A sequence of messages to display in the chat. A given message can be one of the
+        following:
+
+        * A string, which is interpreted as markdown and rendered to HTML on the client.
+            * To prevent interpreting as markdown, mark the string as
+              :class:`~shiny.ui.HTML`.
+        * A UI element (specifically, a :class:`~shiny.ui.TagChild`).
+            * This includes :class:`~shiny.ui.TagList`, which take UI elements
+              (including strings) as children. In this case, strings are still
+              interpreted as markdown as long as they're not inside HTML.
+        * A dictionary with `content` and `role` keys. The `content` key can contain a
+          content as described above, and the `role` key can be "assistant" or "user".
+
+        **NOTE:** content may include specially formatted **input suggestion** links
+        (see :method:`~shiny.ui.Chat.append_message` for more info).
     placeholder
         Placeholder text for the chat input.
     width
@@ -1257,30 +1709,50 @@ def chat_ui(
 
     id = resolve_id(id)
 
+    icon_attr = None
+    if icon_assistant is not None:
+        icon_attr = str(icon_assistant)
+
+    icon_deps = None
+    if isinstance(icon_assistant, (Tag, TagList)):
+        icon_deps = icon_assistant.get_dependencies()
+
     message_tags: list[Tag] = []
     if messages is None:
         messages = []
-    for msg in messages:
-        if isinstance(msg, str):
-            msg = {"content": msg, "role": "assistant"}
-        elif isinstance(msg, dict):
-            if "content" not in msg:
-                raise ValueError("Each message must have a 'content' key.")
-            if "role" not in msg:
-                raise ValueError("Each message must have a 'role' key.")
+    for x in messages:
+        role = "assistant"
+        content: TagChild = None
+        if not isinstance(x, dict):
+            content = x
         else:
-            raise ValueError("Each message must be a string or a dictionary.")
+            if "content" not in x:
+                raise ValueError("Each message dictionary must have a 'content' key.")
 
-        if msg["role"] == "user":
+            content = x["content"]
+            if "role" in x:
+                role = x["role"]
+
+        # `content` is most likely a string, so avoid overhead in that case
+        # (it's also important that we *don't escape HTML* here).
+        if isinstance(content, str):
+            ui: RenderedHTML = {"html": content, "dependencies": []}
+        else:
+            ui = TagList(content).render()
+
+        if role == "user":
             tag_name = "shiny-user-message"
         else:
             tag_name = "shiny-chat-message"
 
-        message_tags.append(Tag(tag_name, content=msg["content"]))
-
-    html_deps = None
-    if isinstance(icon_assistant, (Tag, TagList)):
-        html_deps = icon_assistant.get_dependencies()
+        message_tags.append(
+            Tag(
+                tag_name,
+                ui["dependencies"],
+                content=ui["html"],
+                icon=icon_attr,
+            )
+        )
 
     res = Tag(
         "shiny-chat-container",
@@ -1291,7 +1763,7 @@ def chat_ui(
             placeholder=placeholder,
         ),
         chat_deps(),
-        html_deps,
+        icon_deps,
         {
             "style": css(
                 width=as_css_unit(width),
@@ -1301,7 +1773,9 @@ def chat_ui(
         id=id,
         placeholder=placeholder,
         fill=fill,
-        icon_assistant=str(icon_assistant) if icon_assistant is not None else None,
+        # Also include icon on the parent so that when messages are dynamically added,
+        # we know the default icon has changed
+        icon_assistant=icon_attr,
         **kwargs,
     )
 
@@ -1311,21 +1785,43 @@ def chat_ui(
     return res
 
 
-def as_transformed_message(message: ChatMessage) -> TransformedMessage:
-    if message["role"] == "user":
-        transform_key = "content_server"
-        pre_transform_key = "content_client"
-    else:
-        transform_key = "content_client"
-        pre_transform_key = "content_server"
+class MessageStream:
+    """
+    An object to yield from a `.message_stream_context()` context manager.
+    """
 
-    return TransformedMessage(
-        content_client=message["content"],
-        content_server=message["content"],
-        role=message["role"],
-        transform_key=transform_key,
-        pre_transform_key=pre_transform_key,
-    )
+    def __init__(self, chat: Chat, stream_id: str):
+        self._chat = chat
+        self._stream_id = stream_id
+
+    async def replace(self, message_chunk: Any):
+        """
+        Replace the content of the stream with new content.
+
+        Parameters
+        -----------
+        message_chunk
+            The new content to replace the current content.
+        """
+        await self._chat._append_message_chunk(
+            message_chunk,
+            operation="replace",
+            stream_id=self._stream_id,
+        )
+
+    async def append(self, message_chunk: Any):
+        """
+        Append a message chunk to the stream.
+
+        Parameters
+        -----------
+        message_chunk
+            A message chunk to append to this stream
+        """
+        await self._chat._append_message_chunk(
+            message_chunk,
+            stream_id=self._stream_id,
+        )
 
 
 CHAT_INSTANCES: WeakValueDictionary[str, Chat] = WeakValueDictionary()

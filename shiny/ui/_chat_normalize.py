@@ -2,7 +2,7 @@ import sys
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Optional, cast
 
-from htmltools import HTML
+from htmltools import HTML, Tagifiable
 
 from ._chat_types import ChatMessage
 
@@ -75,6 +75,22 @@ class DictNormalizer(BaseMessageNormalizer):
 
     def can_normalize_chunk(self, chunk: Any) -> bool:
         return isinstance(chunk, dict)
+
+
+class TagifiableNormalizer(DictNormalizer):
+    def normalize(self, message: Any) -> ChatMessage:
+        x = cast("Tagifiable", message)
+        return super().normalize({"content": x})
+
+    def normalize_chunk(self, chunk: Any) -> ChatMessage:
+        x = cast("Tagifiable", chunk)
+        return super().normalize_chunk({"content": x})
+
+    def can_normalize(self, message: Any) -> bool:
+        return isinstance(message, Tagifiable)
+
+    def can_normalize_chunk(self, chunk: Any) -> bool:
+        return isinstance(chunk, Tagifiable)
 
 
 class LangChainNormalizer(BaseMessageNormalizer):
@@ -259,6 +275,7 @@ class NormalizerRegistry:
             "google": GoogleNormalizer(),
             "langchain": LangChainNormalizer(),
             "ollama": OllamaNormalizer(),
+            "tagify": TagifiableNormalizer(),
             "dict": DictNormalizer(),
             "string": StringNormalizer(),
         }
@@ -276,6 +293,39 @@ class NormalizerRegistry:
 
 
 message_normalizer_registry = NormalizerRegistry()
+
+
+def register_custom_normalizer(
+    provider: str, normalizer: BaseMessageNormalizer, force: bool = False
+) -> None:
+    """
+    Register a custom normalizer for handling specific message types.
+
+    Parameters
+    ----------
+    provider : str
+        A unique identifier for this normalizer in the registry
+    normalizer : BaseMessageNormalizer
+        A normalizer instance that can handle your specific message type
+    force : bool, optional
+        Whether to override an existing normalizer with the same provider name,
+        by default False
+
+    Examples
+    --------
+    >>> class MyCustomMessage:
+    ...     def __init__(self, content):
+    ...         self.content = content
+    ...
+    >>> class MyCustomNormalizer(StringNormalizer):
+    ...     def normalize(self, message):
+    ...         return ChatMessage(content=message.content, role="assistant")
+    ...     def can_normalize(self, message):
+    ...         return isinstance(message, MyCustomMessage)
+    ...
+    >>> register_custom_normalizer("my_provider", MyCustomNormalizer())
+    """
+    message_normalizer_registry.register(provider, normalizer, force)
 
 
 def normalize_message(message: Any) -> ChatMessage:
@@ -296,5 +346,5 @@ def normalize_message_chunk(chunk: Any) -> ChatMessage:
             return strategy.normalize_chunk(chunk)
     raise ValueError(
         f"Could not find a normalizer for message chunk of type {type(chunk)}: {chunk}. "
-        "Consider registering a custom normalizer via shiny.ui._chat_types.registry.register()"
+        "Consider registering a custom normalizer via shiny.ui._chat_normalize.register_custom_normalizer()"
     )

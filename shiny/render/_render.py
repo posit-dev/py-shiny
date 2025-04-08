@@ -18,8 +18,8 @@ if TYPE_CHECKING:
 from .. import _utils
 from .. import ui as _ui
 from .._docstring import add_example, no_example
-from .._namespaces import ResolvedId
 from .._typing_extensions import Self
+from ..module import ResolvedId
 from ..session import get_current_session, require_active_session
 from ..session._session import DownloadHandler, DownloadInfo
 from ..types import MISSING, MISSING_TYPE, ImgData

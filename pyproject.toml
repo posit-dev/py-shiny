@@ -124,6 +124,7 @@ dev = [
     "langsmith<0.3",
     "openai",
     "ollama",
+    "chatlas>=0.6.1",
     "tokenizers",
     "aiohttp",
     "beautifulsoup4",
@@ -137,6 +138,7 @@ doc = [
     "quartodoc>=0.8.1",
     "griffe>=1.3.2",
 ]
+
 
 [project.urls]
 Homepage = "https://github.com/posit-dev/py-shiny"

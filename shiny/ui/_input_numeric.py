@@ -5,7 +5,8 @@ from typing import Literal, Optional
 from htmltools import Tag, TagChild, css, div, tags
 
 from .._docstring import add_example
-from .._namespaces import resolve_id
+from ..bookmark import restore_input
+from ..module import resolve_id
 from ._utils import shiny_input_label
 
 
@@ -69,7 +70,7 @@ def input_numeric(
             id=resolved_id,
             type="number",
             class_="shiny-input-number form-control",
-            value=value,
+            value=restore_input(resolved_id, value),
             min=min,
             max=max,
             step=step,

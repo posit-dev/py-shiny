@@ -12,7 +12,7 @@ from shiny.express import ui
 # See the docs for more information on how to obtain one.
 # https://posit-dev.github.io/chatlas/reference/ChatOpenAI.html
 load_dotenv()
-chat_model = ChatOpenAI(
+chat_client = ChatOpenAI(
     api_key=os.environ.get("OPENAI_API_KEY"),
     model="gpt-4o",
     system_prompt="You are a helpful assistant.",
@@ -33,9 +33,12 @@ chat = ui.Chat(
 )
 chat.ui()
 
+# Store chat state in the url when an "assistant" response occurs
+chat.enable_bookmarking(chat_client, bookmark_store="url")
+
 
 # Generate a response when the user submits a message
 @chat.on_user_submit
 async def handle_user_input(user_input: str):
-    response = await chat_model.stream_async(user_input)
+    response = await chat_client.stream_async(user_input)
     await chat.append_message_stream(response)

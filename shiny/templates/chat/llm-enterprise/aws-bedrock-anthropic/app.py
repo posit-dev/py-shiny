@@ -13,7 +13,7 @@ from shiny.express import ui
 # them in a file named `.env`. The `python-dotenv` package will load `.env` as
 # environment variables which can be read by `os.getenv()`.
 load_dotenv()
-chat_model = ChatBedrockAnthropic(
+chat_client = ChatBedrockAnthropic(
     model="anthropic.claude-3-sonnet-20240229-v1:0",
 )
 
@@ -28,9 +28,12 @@ ui.page_opts(
 chat = ui.Chat(id="chat")
 chat.ui()
 
+# Store chat state in the url when an "assistant" response occurs
+chat.enable_bookmarking(chat_client, bookmark_store="url")
+
 
 # Define a callback to run when the user submits a message
 @chat.on_user_submit
 async def handle_user_input(user_input: str):
-    response = await chat_model.stream_async(user_input)
+    response = await chat_client.stream_async(user_input)
     await chat.append_message_stream(response)

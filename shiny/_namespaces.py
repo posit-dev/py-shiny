@@ -7,6 +7,8 @@ from typing import Generator, Pattern, Union, overload
 
 
 class ResolvedId(str):
+    _sep: str = "-"  # Shared object for all instances
+
     def __call__(self, id: Id) -> ResolvedId:
         if isinstance(id, ResolvedId):
             return id
@@ -16,7 +18,7 @@ class ResolvedId(str):
         if self == "":
             return ResolvedId(id)
         else:
-            return ResolvedId(self + "-" + id)
+            return ResolvedId(str(self) + self._sep + id)
 
 
 Root: ResolvedId = ResolvedId("")

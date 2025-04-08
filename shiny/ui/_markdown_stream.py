@@ -1,13 +1,15 @@
 from contextlib import asynccontextmanager
 from typing import AsyncIterable, Iterable, Literal, Union
 
-from htmltools import css
+from htmltools import RenderedHTML, TagChild, TagList, css
 
 from .. import _utils, reactive
+from .._deprecated import warn_deprecated
 from .._docstring import add_example
-from .._namespaces import resolve_id
 from .._typing_extensions import TypedDict
+from ..module import resolve_id
 from ..session import require_active_session, session_context
+from ..session._session import RenderedDeps
 from ..types import NotifyException
 from ..ui.css import CssUnit, as_css_unit
 from . import Tag
@@ -31,6 +33,7 @@ class ContentMessage(TypedDict):
     id: str
     content: str
     operation: Literal["append", "replace"]
+    html_deps: list[dict[str, str]]
 
 
 class isStreamingMessage(TypedDict):
@@ -87,13 +90,18 @@ class MarkdownStream:
         self.on_error = on_error
 
         with session_context(self._session):
-            self._latest_stream: reactive.Value[
-                Union[reactive.ExtendedTask[[], str], None]
-            ] = reactive.Value(None)
+
+            @reactive.extended_task
+            async def _mock_task() -> str:
+                return ""
+
+            self._latest_stream: reactive.Value[reactive.ExtendedTask[[], str]] = (
+                reactive.Value(_mock_task)
+            )
 
     async def stream(
         self,
-        content: Union[Iterable[str], AsyncIterable[str]],
+        content: Union[Iterable[TagChild], AsyncIterable[TagChild]],
         clear: bool = True,
     ):
         """
@@ -128,17 +136,29 @@ class MarkdownStream:
         @reactive.extended_task
         async def _task():
             if clear:
-                await self._send_content_message("", "replace")
+                await self._send_content_message("", "replace", [])
 
             result = ""
             async with self._streaming_dot():
-                async for c in content:
-                    result += c
-                    await self._send_content_message(c, "append")
+                async for x in content:
+                    if isinstance(x, str):
+                        # x is most likely a string, so avoid overhead in that case
+                        ui: RenderedDeps = {"html": x, "deps": []}
+                    else:
+                        # process_ui() does *not* render markdown->HTML, but it does:
+                        # 1. Extract and register HTMLdependency()s with the session.
+                        # 2. Returns a HTML string representation of the TagChild
+                        #    (i.e., `div()` -> `"<div>"`).
+                        ui = self._session._process_ui(x)
+
+                    result += ui["html"]
+                    await self._send_content_message(ui["html"], "append", ui["deps"])
 
             return result
 
         _task()
+
+        self._latest_stream.set(_task)
 
         # Since the task runs in the background (outside/beyond the current context,
         # if any), we need to manually raise any exceptions that occur
@@ -151,32 +171,46 @@ class MarkdownStream:
 
         return _task
 
-    def get_latest_stream_result(self) -> Union[str, None]:
+    @property
+    def latest_stream(self):
         """
-        Reactively read the latest stream result.
+        React to changes in the latest stream.
 
-        This method reads a reactive value containing the result of the latest
-        `.stream()`. Therefore, this method must be called in a reactive context (e.g.,
-        a render function, a :func:`~shiny.reactive.calc`, or a
-        :func:`~shiny.reactive.effect`).
+        Reactively reads for the :class:`~shiny.reactive.ExtendedTask` behind the
+        latest stream.
+
+        From the return value (i.e., the extended task), you can then:
+
+        1. Reactively read for the final `.result()`.
+        2. `.cancel()` the stream.
+        3. Check the `.status()` of the stream.
 
         Returns
         -------
         :
-            The result of the latest stream (a string).
+            An extended task that represents the streaming task. The `.result()` method
+            of the task can be called in a reactive context to get the final state of the
+            stream.
 
-        Raises
-        ------
-        :
-            A silent exception if no stream has completed yet.
+        Note
+        ----
+        If no stream has yet been started when this method is called, then it returns an
+        extended task with `.status()` of `"initial"` and that it status doesn't change
+        state until a message is streamed.
         """
-        stream = self._latest_stream()
-        if stream is None:
-            from .. import req
+        return self._latest_stream()
 
-            req(False)
-        else:
-            return stream.result()
+    def get_latest_stream_result(self) -> Union[str, None]:
+        """
+        Reactively read the latest stream result.
+
+        Deprecated. Use `latest_stream.result()` instead.
+        """
+        warn_deprecated(
+            "The `.get_latest_stream_result()` method is deprecated and will be removed "
+            "in a future release. Use `.latest_stream.result()` instead. "
+        )
+        return self.latest_stream.result()
 
     async def clear(self):
         """
@@ -196,11 +230,13 @@ class MarkdownStream:
         self,
         content: str,
         operation: Literal["append", "replace"],
+        html_deps: list[dict[str, str]],
     ):
         msg: ContentMessage = {
             "id": self.id,
             "content": content,
             "operation": operation,
+            "html_deps": html_deps,
         }
         await self._send_custom_message(msg)
 
@@ -232,10 +268,10 @@ class ExpressMarkdownStream(MarkdownStream):
     def ui(
         self,
         *,
-        content: str = "",
+        content: TagChild = "",
         content_type: StreamingContentType = "markdown",
         auto_scroll: bool = True,
-        width: CssUnit = "100%",
+        width: CssUnit = "min(680px, 100%)",
         height: CssUnit = "auto",
     ) -> Tag:
         """
@@ -244,13 +280,16 @@ class ExpressMarkdownStream(MarkdownStream):
         Parameters
         ----------
         content
-            Content to display when the UI element is first rendered.
+            A string of content to display before any streaming occurs. When
+            `content_type` is Markdown or HTML, it may also be UI element(s) such as
+            input and output bindings.
         content_type
             The content type. Default is `"markdown"` (specifically, CommonMark).
-            Other supported options are:
-            - `"html"`: for rendering HTML content.
-            - `"text"`: for plain text.
-            - `"semi-markdown"`: for rendering markdown, but with HTML tags escaped.
+            Supported content types include:
+                - `"markdown"`: markdown text, specifically CommonMark
+                - `"html"`: for rendering HTML content.
+                - `"text"`: for plain text.
+                - `"semi-markdown"`: for rendering markdown, but with HTML tags escaped.
         auto_scroll
             Whether to automatically scroll to the bottom of a scrollable container
             when new content is added. Default is `True`.
@@ -278,10 +317,10 @@ class ExpressMarkdownStream(MarkdownStream):
 def output_markdown_stream(
     id: str,
     *,
-    content: str = "",
+    content: TagChild = "",
     content_type: StreamingContentType = "markdown",
     auto_scroll: bool = True,
-    width: CssUnit = "100%",
+    width: CssUnit = "min(680px, 100%)",
     height: CssUnit = "auto",
 ) -> Tag:
     """
@@ -296,13 +335,16 @@ def output_markdown_stream(
         A unique identifier for the UI element. This id should match the id of the
         :class:`~shiny.ui.MarkdownStream` instance.
     content
-        Some content to display before any streaming occurs.
+        A string of content to display before any streaming occurs. When `content_type`
+        is Markdown or HTML, it may also be UI element(s) such as input and output
+        bindings.
     content_type
-        The content type. Default is "markdown" (specifically, CommonMark).
-        Other supported options are:
-        - `"html"`: for rendering HTML content.
-        - `"text"`: for plain text.
-        - `"semi-markdown"`: for rendering markdown, but with HTML tags escaped.
+        The content type. Default is "markdown" (specifically, CommonMark). Supported
+        content types include:
+            - `"markdown"`: markdown text, specifically CommonMark
+            - `"html"`: for rendering HTML content.
+            - `"text"`: for plain text.
+            - `"semi-markdown"`: for rendering markdown, but with HTML tags escaped.
     auto_scroll
         Whether to automatically scroll to the bottom of a scrollable container
         when new content is added. Default is True.
@@ -311,17 +353,27 @@ def output_markdown_stream(
     height
         The height of the UI element.
     """
+
+    # `content` is most likely a string, so avoid overhead in that case
+    # (it's also important that we *don't escape HTML* here).
+    if isinstance(content, str):
+        ui: RenderedHTML = {"html": content, "dependencies": []}
+    else:
+        ui = TagList(content).render()
+
     return Tag(
         "shiny-markdown-stream",
         markdown_stream_dependency(),
+        ui["dependencies"],
         {
             "style": css(
                 width=as_css_unit(width),
                 height=as_css_unit(height),
+                margin="0 auto",
             ),
             "content-type": content_type,
             "auto-scroll": "" if auto_scroll else None,
         },
         id=resolve_id(id),
-        content=content,
+        content=ui["html"],
     )
