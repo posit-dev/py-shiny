@@ -166,9 +166,8 @@ def set_app_bookmark_callbacks(
     bookmark_restore_dir_fn = as_bookmark_dir_fn(get_bookmark_restore_dir)
 
     if isinstance(app, App):
-        # print("Raw Shiny App: ", app)
-        app._bookmark_save_dir_fn = bookmark_save_dir_fn
-        app._bookmark_restore_dir_fn = bookmark_restore_dir_fn
+        app.set_bookmark_save_dir_fn(bookmark_save_dir_fn)
+        app.set_bookmark_restore_dir_fn(bookmark_restore_dir_fn)
     elif isinstance(app, Starlette):
 
         an_app_found: bool = False
@@ -181,15 +180,13 @@ def set_app_bookmark_callbacks(
                 if isinstance(route.app, App):
                     nonlocal an_app_found
                     an_app_found = True
-                    # print("Shiny App: ", route.path)
-                    route.app._bookmark_save_dir_fn = bookmark_save_dir_fn
-                    route.app._bookmark_restore_dir_fn = bookmark_restore_dir_fn
+                    route.app.set_bookmark_save_dir_fn(bookmark_save_dir_fn)
+                    route.app.set_bookmark_restore_dir_fn(bookmark_restore_dir_fn)
                 else:
-                    # print("Inspecting Mount: ", route.path)
+                    # Recurse
                     inspect_starlette_routes(route.routes)
 
-        # print("Inspecting Starlette App: ", app)
-        inspect_starlette_routes(app.router.routes)
+        inspect_starlette_routes(app.routes)
 
         if not an_app_found:
             warnings.warn(
