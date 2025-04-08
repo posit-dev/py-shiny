@@ -498,8 +498,8 @@ class App:
     # ==========================================================================
 
     def _init_bookmarking(self, *, bookmark_store: BookmarkStore, ui: Any) -> None:
-        self._bookmark_save_dir_fn = bookmark_global_state.bookmark_save_dir
-        self._bookmark_restore_dir_fn = bookmark_global_state.bookmark_restore_dir
+        self._bookmark_save_dir_fn = None
+        self._bookmark_restore_dir_fn = None
         self._bookmark_store = bookmark_store
 
         if bookmark_store != "disable" and not callable(ui):
