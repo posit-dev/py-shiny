@@ -343,8 +343,10 @@ def _normalize_choices(x: SelectChoicesArg) -> _SelectChoices:
 def _contains_html(x: _SelectChoices) -> bool:
     for v in x.values():
         if isinstance(v, Mapping):
-            if _contains_html(cast(_OptGrpChoices, v)):
-                return True
+            # Check the `_Choices` values of `_OptGrpChoices`
+            for vv in v.values():
+                if not is instance(vv, str):
+                    return True
         else:
             if not isinstance(v, str):
                 return True
