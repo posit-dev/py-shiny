@@ -184,6 +184,21 @@ class Bookmark(ABC):
         ...
 
     @abstractmethod
+    async def update_on_session_disconnect(self, url: Optional[str] = None) -> None:
+        """
+        Update the query string of the current URL when the session ends/disconnects.
+
+        This is used to set the URL _only_ when the user's session disconnects from the
+        server.
+
+        Parameters
+        ----------
+        url
+            The URL to set. If `None`, the current bookmark state URL will be used.
+        """
+        ...
+
+    @abstractmethod
     async def get_bookmark_url(self) -> str | None:
         """
         Get the URL of the current bookmark state
@@ -465,6 +480,15 @@ class BookmarkApp(Bookmark):
             }
         )
 
+    async def update_on_session_disconnect(self, url: Optional[str] = None) -> None:
+        if url is None:
+            url = await self.get_bookmark_url()
+
+        await self._root_session.send_custom_message(
+            "updateUrlOnSessionDisconnect",
+            {"url": url},
+        )
+
     def _get_bookmark_exclude(self) -> list[str]:
         """
         Get the list of inputs excluded from being bookmarked.
@@ -732,6 +756,9 @@ class BookmarkProxy(Bookmark):
     ) -> None:
         await self._root_bookmark.update_query_string(query_string, mode)
 
+    async def update_on_session_disconnect(self, url: Optional[str] = None) -> None:
+        await self._root_bookmark.update_on_session_disconnect(url)
+
     async def get_bookmark_url(self) -> str | None:
         return await self._root_bookmark.get_bookmark_url()
 
@@ -778,6 +805,10 @@ class BookmarkExpressStub(Bookmark):
         query_string: Optional[str] = None,
         mode: Literal["replace", "push"] = "replace",
     ) -> None:
+        # no-op within ExpressStub
+        return None
+
+    async def update_on_session_disconnect(self, url: Optional[str] = None) -> None:
         # no-op within ExpressStub
         return None
 
