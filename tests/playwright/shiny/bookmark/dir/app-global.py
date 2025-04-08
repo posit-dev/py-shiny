@@ -5,7 +5,7 @@ from starlette.requests import Request
 
 from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 from shiny._utils import rand_hex
-from shiny.bookmark import set_global_restore_dir_fn, set_global_save_dir_fn
+from shiny.bookmark._global import set_app_bookmark_callbacks
 
 
 def app_ui(request: Request):
@@ -43,6 +43,10 @@ def server(input: Inputs, ouput: Outputs, session: Session):
 did_save = False
 did_restore = False
 
+
+app = App(app_ui, server, bookmark_store="server")
+
+
 # Note:
 # This is a "temp" directory that is only used for testing and is cleaned up on app
 # shutdown. This should NOT be standard behavior of a hosting environment. Instead, it
@@ -66,11 +70,10 @@ def save_bookmark_dir(id: str) -> Path:
 
 
 # Same exact app as `app-attr.py`, except we're using global functions to set the save and restore directories.
-set_global_restore_dir_fn(restore_bookmark_dir)
-set_global_save_dir_fn(save_bookmark_dir)
-
-
-app = App(app_ui, server, bookmark_store="server")
-
+set_app_bookmark_callbacks(
+    app,
+    get_bookmark_save_dir=save_bookmark_dir,
+    get_bookmark_restore_dir=restore_bookmark_dir,
+)
 
 app.on_shutdown(lambda: shutil.rmtree(bookmark_dir))

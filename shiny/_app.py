@@ -30,7 +30,6 @@ from ._connection import Connection, StarletteConnection
 from ._error import ErrorMiddleware
 from ._shinyenv import is_pyodide
 from ._utils import guess_mime_type, is_async_callable, sort_keys_length
-from .bookmark import _global as bookmark_global_state
 from .bookmark._global import as_bookmark_dir_fn
 from .bookmark._restore_state import RestoreContext, restore_context
 from .bookmark._types import (
