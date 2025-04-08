@@ -345,7 +345,7 @@ def _contains_html(x: _SelectChoices) -> bool:
         if isinstance(v, Mapping):
             # Check the `_Choices` values of `_OptGrpChoices`
             for vv in v.values():
-                if not is instance(vv, str):
+                if not isinstance(vv, str):
                     return True
         else:
             if not isinstance(v, str):
