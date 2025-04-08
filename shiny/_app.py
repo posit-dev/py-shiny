@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Any, Callable, Literal, Mapping, Optional, TypeVar, cast
 
 import starlette.applications
-import starlette.exceptions
 import starlette.middleware
 import starlette.routing
 import starlette.websockets
