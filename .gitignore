@@ -116,6 +116,7 @@ _dev/
 tests/playwright/deploys/**/requirements.txt
 test-results/
 shiny_bookmarks/
+.posit/
 
 # setuptools_scm
 shiny/_version.py
