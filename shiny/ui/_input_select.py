@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from .._deprecated import warn_deprecated
-from ..types import Jsonifiable
+from ..types import Jsonifiable, MISSING_TYPE, DEPRECATED
 
 __all__ = (
     "input_select",
@@ -138,11 +138,11 @@ def input_select(
     *,
     selected: Optional[str | list[str]] = None,
     multiple: bool = False,
-    selectize: bool = False,
+    selectize: bool | MISSING_TYPE = DEPRECATED,
     width: Optional[str] = None,
     size: Optional[str] = None,
-    remove_button: Optional[bool] = None,
-    options: Optional[dict[str, Jsonifiable | JSEval]] = None,
+    remove_button: Optional[bool] | MISSING_TYPE = DEPRECATED,
+    options: Optional[dict[str, Jsonifiable | JSEval]] | MISSING_TYPE = DEPRECATED,
 ) -> Tag:
     """
     Create a select list that can be used to choose a single or multiple items from a
@@ -195,19 +195,25 @@ def input_select(
     * :func:`~shiny.ui.input_radio_buttons`
     * :func:`~shiny.ui.input_checkbox_group`
     """
-    if selectize:
+    if isinstance(selectize, MISSING_TYPE):
+        selectize = False
+    else:
         warn_deprecated(
             "`selectize` parameter of `input_select()` is deprecated. "
             "Use `input_selectize()` instead of passing `selectize=True`."
         )
 
-    if remove_button is not None:
+    if isinstance(remove_button, MISSING_TYPE):
+        remove_button = None
+    else:
         warn_deprecated(
             "`remove_button` parameter of `input_select()` is deprecated. "
             "Use `input_selectize()` instead."
         )
 
-    if options is not None:
+    if isinstance(options, MISSING_TYPE):
+        options = None
+    else:
         warn_deprecated(
             "`options` parameter of `input_select()` is deprecated. "
             "Use `input_selectize()` instead."
