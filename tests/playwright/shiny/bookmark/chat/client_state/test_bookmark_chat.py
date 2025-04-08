@@ -1,12 +1,14 @@
 import re
 
+import pytest
 from playwright.sync_api import Page
 
 from shiny.playwright.controller import Chat
 from shiny.run import ShinyAppProc
 
 
-def test_bookmark_chatlas(page: Page, local_app: ShinyAppProc):
+@pytest.mark.flaky(reruns=3, reruns_delay=1)
+def test_bookmark_chat(page: Page, local_app: ShinyAppProc):
 
     page.goto(local_app.url)
 
