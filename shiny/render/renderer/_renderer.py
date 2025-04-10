@@ -336,9 +336,6 @@ class Renderer(Generic[IT]):
                 self._auto_registered = True
 
 
-# Not inheriting from `WrapAsync[[], IT]` as python 3.8 needs typing extensions that
-# doesn't support `[]` for a ParamSpec definition. :-( Would be minimal/clean if we
-# could do `class AsyncValueFn(WrapAsync[[], IT]):`
 class AsyncValueFn(Generic[IT]):
     """
     App-supplied output value function which returns type `IT`.
