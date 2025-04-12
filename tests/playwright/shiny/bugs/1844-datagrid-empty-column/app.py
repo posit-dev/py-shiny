@@ -8,11 +8,15 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs):
-    df = reactive.Value(pd.DataFrame({
-        "": [1, 2],
-        "A": [4, 5],
-        " ": [7, 8]
-    }))
+    df = reactive.Value(
+        pd.DataFrame(
+            {
+                "": [1, 2],
+                "A": [4, 5],
+                " ": [7, 8],
+            }
+        )
+    )
 
     @render.data_frame
     def df1():
