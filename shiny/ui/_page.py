@@ -14,7 +14,7 @@ __all__ = (
 )
 
 from copy import copy
-from typing import Any, Callable, Literal, Optional, Sequence, cast
+from typing import Any, Callable, Literal, Optional, Sequence
 
 from htmltools import (
     MetadataNode,
@@ -752,7 +752,6 @@ def page_auto(
                 )
 
     # If we got here, _page_fn is not None, but the type checker needs a little help.
-    page_fn = cast(Callable[..., Tag], page_fn)
     return page_fn(*args, **kwargs)
 
 

@@ -100,7 +100,7 @@ dev = [
     "isort>=5.10.1",
     "libsass>=0.23.0",
     "brand_yml>=0.1.0",
-    "pyright>=1.1.383,<1.1.395",
+    "pyright>=1.1.398",
     "pre-commit>=2.15.0",
     "wheel",
     "matplotlib",

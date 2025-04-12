@@ -111,11 +111,15 @@ docs/source/reference/
 
 /.luarc.json
 
+# uv
+/uv.lock
+
 # Developer scratch area
 _dev/
 tests/playwright/deploys/**/requirements.txt
 test-results/
 shiny_bookmarks/
+.posit/
 
 # setuptools_scm
 shiny/_version.py
