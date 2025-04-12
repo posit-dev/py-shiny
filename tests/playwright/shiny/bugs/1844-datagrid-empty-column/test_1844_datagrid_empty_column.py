@@ -6,7 +6,7 @@ from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
 
-def test_row_selection(page: Page, local_app: ShinyAppProc) -> None:
+def test_empty_column_name(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 
     df = controller.OutputDataFrame(page, "df1")
