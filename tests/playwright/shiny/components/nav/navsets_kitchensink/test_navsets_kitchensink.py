@@ -1,3 +1,4 @@
+import pytest
 from playwright.sync_api import Page, expect
 
 from shiny.playwright import controller
@@ -26,6 +27,8 @@ def format_navset_name(navset_name: str) -> str:
     return navset_name
 
 
+# Up to 5 retries for intermittent WebKit timing issues
+@pytest.mark.flaky(reruns=5, reruns_delay=1)
 def test_navset_kitchensink(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 

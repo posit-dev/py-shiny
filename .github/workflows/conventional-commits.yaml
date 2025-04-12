@@ -22,8 +22,9 @@ jobs:
             feat
             fix
             perf
-            style
             refactor
+            release
+            style
             test
       - uses: marocchino/sticky-pull-request-comment@v2
         if: always() && (steps.lint.outputs.error_message != null)
