@@ -29,6 +29,8 @@ def ui(fn: Callable[P, R]) -> Callable[Concatenate[str, P], R]:
     """Decorator for defining a Shiny module UI function.
 
     This decorator allows you to write the UI portion of a Shiny module.
+    When your decorated `ui` function is called with an `id`,
+    the UI elements defined within will automatically be namespaced using that `id`.
     This enables reuse of UI components and consistent input/output handling
     when paired with a `@module.server` function.
 
