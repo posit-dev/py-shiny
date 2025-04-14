@@ -24,7 +24,6 @@ R = TypeVar("R")
 _: Id  # type: ignore
 
 
-@no_example()
 def ui(fn: Callable[P, R]) -> Callable[Concatenate[str, P], R]:
     """Decorator for defining a Shiny module UI function.
 
@@ -105,7 +104,6 @@ def ui(fn: Callable[P, R]) -> Callable[Concatenate[str, P], R]:
     return wrapper
 
 
-@no_example()
 def server(
     fn: Callable[Concatenate[Inputs, Outputs, Session, P], R],
 ) -> Callable[Concatenate[str, P], R]:
