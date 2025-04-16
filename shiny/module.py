@@ -47,51 +47,6 @@ def ui(fn: Callable[P, R]) -> Callable[Concatenate[str, P], R]:
         parameters accepted by `fn`. When called, it returns UI elements with input/output
         IDs automatically namespaced using the provided module `id`.
 
-
-    Example
-    -------
-
-    ```python
-    from shiny import App, module, reactive, render, ui
-
-
-    @module.ui
-    def counter_ui(label: str = "Increment counter") -> ui.TagChild:
-        return ui.card(
-            ui.h2("This is " + label),
-            ui.input_action_button(id="button", label=label),
-            ui.output_code(id="out"),
-        )
-
-
-    @module.server
-    def counter_server(input, output, session, starting_value: int = 0):
-        count: reactive.value[int] = reactive.value(starting_value)
-
-        @reactive.effect
-        @reactive.event(input.button)
-        def _():
-            count.set(count() + 1)
-
-        @render.code
-        def out() -> str:
-            return f"Click count is {count()}"
-
-
-    app_ui = ui.page_fluid(
-        counter_ui("counter1", "Counter 1"),
-        counter_ui("counter2", "Counter 2"),
-    )
-
-
-    def server(input, output, session):
-        counter_server("counter1")
-        counter_server("counter2")
-
-
-    app = App(app_ui, server)
-    ```
-
     See Also
     --------
     * Shiny Modules documentation: https://shiny.posit.co/py/docs/modules.html
@@ -130,50 +85,6 @@ def server(
         A function that takes a module `id` (as a string) as its first argument,
         followed by any arguments expected by `fn`. When called, it will register
         the module's server logic in a namespaced context.
-
-    Example
-    -------
-
-    ```python
-    from shiny import App, module, reactive, render, ui
-
-
-    @module.ui
-    def counter_ui(label: str = "Increment counter") -> ui.TagChild:
-        return ui.card(
-            ui.h2("This is " + label),
-            ui.input_action_button(id="button", label=label),
-            ui.output_code(id="out"),
-        )
-
-
-    @module.server
-    def counter_server(input, output, session, starting_value: int = 0):
-        count: reactive.value[int] = reactive.value(starting_value)
-
-        @reactive.effect
-        @reactive.event(input.button)
-        def _():
-            count.set(count() + 1)
-
-        @render.code
-        def out() -> str:
-            return f"Click count is {count()}"
-
-
-    app_ui = ui.page_fluid(
-        counter_ui("counter1", "Counter 1"),
-        counter_ui("counter2", "Counter 2"),
-    )
-
-
-    def server(input, output, session):
-        counter_server("counter1")
-        counter_server("counter2")
-
-
-    app = App(app_ui, server)
-    ```
 
     See Also
     --------

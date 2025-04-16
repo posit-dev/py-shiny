@@ -9,7 +9,7 @@ def counter_ui(label: str = "Increment counter") -> ui.TagChild:
     return ui.card(
         ui.h2("This is " + label),
         ui.input_action_button(id="button", label=label),
-        ui.output_text_verbatim(id="out"),
+        ui.output_text(id="out"),
     )
 
 
