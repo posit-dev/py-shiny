@@ -4,7 +4,7 @@ __all__ = ("current_namespace", "resolve_id", "ui", "server", "ResolvedId")
 
 from typing import TYPE_CHECKING, Callable, TypeVar
 
-from ._docstring import no_example
+from ._docstring import add_example
 from ._namespaces import (
     Id,
     ResolvedId,
