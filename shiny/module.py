@@ -24,7 +24,7 @@ R = TypeVar("R")
 _: Id  # type: ignore
 
 
-@add_example(ex_dir="../api-examples/Module")
+@add_example(ex_dir="api-examples/Module")
 def ui(fn: Callable[P, R]) -> Callable[Concatenate[str, P], R]:
     """Decorator for defining a Shiny module UI function.
 
@@ -32,7 +32,7 @@ def ui(fn: Callable[P, R]) -> Callable[Concatenate[str, P], R]:
     When your decorated `ui` function is called with an `id`,
     the UI elements defined within will automatically be namespaced using that `id`.
     This enables reuse of UI components and consistent input/output handling
-    when paired with a `@module.server` function.
+    when paired with a :func:`~shiny.module.server()` function.
 
     Parameters
     ----------
@@ -50,7 +50,7 @@ def ui(fn: Callable[P, R]) -> Callable[Concatenate[str, P], R]:
     See Also
     --------
     * Shiny Modules documentation: https://shiny.posit.co/py/docs/modules.html
-    * ~shiny.module.server
+    * :func:`~shiny.module.server`
     """
 
     def wrapper(id: Id, *args: P.args, **kwargs: P.kwargs) -> R:
@@ -60,7 +60,7 @@ def ui(fn: Callable[P, R]) -> Callable[Concatenate[str, P], R]:
     return wrapper
 
 
-@add_example(ex_dir="../api-examples/Module")
+@add_example(ex_dir="api-examples/Module")
 def server(
     fn: Callable[Concatenate[Inputs, Outputs, Session, P], R],
 ) -> Callable[Concatenate[str, P], R]:
