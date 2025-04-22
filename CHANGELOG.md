@@ -7,13 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### New features
+
+* The `Session` class gains a `current_output_id` attribute. If an output renderer is currently executing, this attribute will contain the relevant ID. (#1978)
+* The `.output_*()` methods of the `ClientData` class (e.g., `session.clientdata.output_height()`) can now be called without an `id` inside a output renderer. (#1978)
+
 ### Improvements
 
 * Improved the styling and readability of markdown tables rendered by `ui.Chat()` and `ui.MarkdownStream()`. (#1973)
 
 ## [1.4.0] - 2025-04-08
 
-## New features
+### New features
 
 * Added support for bookmarking Shiny applications. Bookmarking allows users to save the current state of an application and return to it later. This feature is available in both Shiny Core and Shiny Express. (#1870, #1915, #1919, #1920, #1922, #1934, #1938, #1945, #1955)
   * To enable bookmarking in Express mode, set `shiny.express.app_opts(bookmark_store=)` during the app's initial construction.
