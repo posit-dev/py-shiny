@@ -50,9 +50,8 @@ from ..bookmark._serializers import serializer_file_input
 from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
 from ..module import ResolvedId
-from ..reactive import Effect_, Value, effect
+from ..reactive import Effect_, Value, effect, isolate
 from ..reactive import flush as reactive_flush
-from ..reactive import isolate
 from ..reactive._core import lock
 from ..reactive._core import on_flushed as reactive_on_flushed
 from ..render.renderer import Renderer, RendererT
@@ -180,6 +179,7 @@ class Session(ABC):
     input: Inputs
     output: Outputs
     clientdata: ClientData
+    current_output_id: str | None
 
     # Could be done with a weak ref dict from root to all children. Then we could just
     # iterate over all modules and check the `.bookmark_exclude` list of each proxy
