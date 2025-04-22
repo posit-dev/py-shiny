@@ -180,6 +180,7 @@ class Session(ABC):
     output: Outputs
     clientdata: ClientData
     current_output_id: str | None
+    "ID for the currently rendering output."
 
     # Could be done with a weak ref dict from root to all children. Then we could just
     # iterate over all modules and check the `.bookmark_exclude` list of each proxy
@@ -1556,7 +1557,7 @@ class ClientData:
         """
         return cast(int, self._read_input("pixelratio"))
 
-    def output_height(self, id: str) -> float | None:
+    def output_height(self, id: Optional[str] = None) -> float | None:
         """
         Reactively read the height of an output.
 
@@ -1573,7 +1574,7 @@ class ClientData:
         """
         return cast(float, self._read_output(id, "height"))
 
-    def output_width(self, id: str) -> float | None:
+    def output_width(self, id: Optional[str] = None) -> float | None:
         """
         Reactively read the width of an output.
 
@@ -1590,7 +1591,7 @@ class ClientData:
         """
         return cast(float, self._read_output(id, "width"))
 
-    def output_hidden(self, id: str) -> bool | None:
+    def output_hidden(self, id: Optional[str] = None) -> bool | None:
         """
         Reactively read whether an output is hidden.
 
@@ -1606,7 +1607,7 @@ class ClientData:
         """
         return cast(bool, self._read_output(id, "hidden"))
 
-    def output_bg_color(self, id: str) -> str | None:
+    def output_bg_color(self, id: Optional[str] = None) -> str | None:
         """
         Reactively read the background color of an output.
 
@@ -1623,7 +1624,7 @@ class ClientData:
         """
         return cast(str, self._read_output(id, "bg"))
 
-    def output_fg_color(self, id: str) -> str | None:
+    def output_fg_color(self, id: Optional[str] = None) -> str | None:
         """
         Reactively read the foreground color of an output.
 
@@ -1640,7 +1641,7 @@ class ClientData:
         """
         return cast(str, self._read_output(id, "fg"))
 
-    def output_accent_color(self, id: str) -> str | None:
+    def output_accent_color(self, id: Optional[str] = None) -> str | None:
         """
         Reactively read the accent color of an output.
 
@@ -1657,7 +1658,7 @@ class ClientData:
         """
         return cast(str, self._read_output(id, "accent"))
 
-    def output_font(self, id: str) -> str | None:
+    def output_font(self, id: Optional[str] = None) -> str | None:
         """
         Reactively read the font(s) of an output.
 
@@ -1685,8 +1686,17 @@ class ClientData:
 
         return self._session.input[id]()
 
-    def _read_output(self, id: str, key: str) -> str | None:
+    def _read_output(self, id: str | None, key: str) -> str | None:
         self._check_current_context(f"output_{key}")
+
+        if id is None:
+            id = self._session.current_output_id
+
+        if id is None:
+            raise ValueError(
+                "session.clientdata.output_*() must be either be supplied with an id "
+                "or called from within an output renderer."
+            )
 
         input_id = ResolvedId(f".clientdata_output_{id}_{key}")
         if input_id in self._session.input:
