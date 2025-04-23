@@ -9,8 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
-* The `Session` class gains a `current_output_id` attribute. If an output renderer is currently executing, this attribute will contain the relevant ID. (#1978)
 * The `.output_*()` methods of the `ClientData` class (e.g., `session.clientdata.output_height()`) can now be called without an `id` inside a output renderer. (#1978)
+* The `Session` class gains a `.current_output_id()` method. It returns the ID of the currently executing output renderer (if any). (#1978)
 
 ### Improvements
 

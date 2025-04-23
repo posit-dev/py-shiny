@@ -1699,8 +1699,8 @@ class ClientData:
 
         if id is None:
             raise ValueError(
-                "session.clientdata.output_*() must be either be supplied with an id "
-                "or called from within an output renderer."
+                "session.clientdata.output_*() requires an id when not called within "
+                "an output renderer."
             )
 
         input_id = ResolvedId(f".clientdata_output_{id}_{key}")
