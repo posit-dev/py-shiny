@@ -188,7 +188,7 @@ class Session(ABC):
     groups: list[str] | None
 
     # Internal state for current_output_id()
-    _current_output_id: str | None
+    _current_output_id: str | None = None
 
     # TODO: not sure these should be directly exposed
     _outbound_message_queues: OutBoundMessageQueues
