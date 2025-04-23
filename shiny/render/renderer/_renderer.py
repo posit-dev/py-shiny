@@ -416,7 +416,11 @@ class AsyncValueFn(Generic[IT]):
         session = get_current_session()
         if session is None:
             yield
-        else:
-            session.current_output_id = self._renderer.output_id
+            return
+
+        old_id = session._current_output_id
+        try:
+            session._current_output_id = self._renderer.output_id
             yield
-            session.current_output_id = None
+        finally:
+            session._current_output_id = old_id

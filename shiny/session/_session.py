@@ -50,9 +50,8 @@ from ..bookmark._serializers import serializer_file_input
 from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
 from ..module import ResolvedId
-from ..reactive import Effect_, Value, effect
+from ..reactive import Effect_, Value, effect, isolate
 from ..reactive import flush as reactive_flush
-from ..reactive import isolate
 from ..reactive._core import lock
 from ..reactive._core import on_flushed as reactive_on_flushed
 from ..render.renderer import Renderer, RendererT
@@ -180,8 +179,6 @@ class Session(ABC):
     input: Inputs
     output: Outputs
     clientdata: ClientData
-    current_output_id: str | None
-    "ID for the currently rendering output."
 
     # Could be done with a weak ref dict from root to all children. Then we could just
     # iterate over all modules and check the `.bookmark_exclude` list of each proxy
@@ -189,6 +186,9 @@ class Session(ABC):
     bookmark: Bookmark
     user: str | None
     groups: list[str] | None
+
+    # Internal state for current_output_id()
+    _current_output_id: str | None
 
     # TODO: not sure these should be directly exposed
     _outbound_message_queues: OutBoundMessageQueues
@@ -379,6 +379,10 @@ class Session(ABC):
         :
             A function that can be used to cancel the registration.
         """
+
+    def current_output_id(self) -> str | None:
+        "Returns the id of the currently executing output renderer (if any)."
+        return self._current_output_id
 
     @abstractmethod
     async def _unhandled_error(self, e: Exception) -> None: ...
@@ -1691,7 +1695,7 @@ class ClientData:
         self._check_current_context(f"output_{key}")
 
         if id is None:
-            id = self._session.current_output_id
+            id = self._session.current_output_id()
 
         if id is None:
             raise ValueError(
