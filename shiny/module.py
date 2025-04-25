@@ -50,7 +50,11 @@ def ui(fn: Callable[P, R]) -> Callable[Concatenate[str, P], R]:
     See Also
     --------
     * Shiny Modules documentation: https://shiny.posit.co/py/docs/modules.html
+<<<<<<< HEAD
     * :func:`~shiny.module.server`
+=======
+    * ~shiny.module.server
+>>>>>>> c39de9bd3d59add0cb5ec3ac08a188ca15ae8784
     """
 
     def wrapper(id: Id, *args: P.args, **kwargs: P.kwargs) -> R:
