@@ -12,10 +12,9 @@ def counter(input, output, session, label, starting_value: int = 0):
         ui.h2(f"This is {label}")
         ui.input_action_button("button", f"{label}")
 
-        with ui.div():
-            @render.text
-            def out():
-                return f"Click count is {count()}"
+        @render.text
+        def out():
+            return f"Click count is {count()}"
 
     @reactive.effect
     @reactive.event(input.button)
