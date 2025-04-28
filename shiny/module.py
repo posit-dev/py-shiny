@@ -91,7 +91,7 @@ def server(
     See Also
     --------
     * Shiny Modules documentation: <https://shiny.posit.co/py/docs/modules.html>
-    * ~shiny.module.ui
+    * shiny.module.ui
     """
     from .session import require_active_session, session_context
 
