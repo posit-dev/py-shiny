@@ -45,28 +45,38 @@ const SVG_DOT = createSVGIcon(
   `<svg width="12" height="12" xmlns="http://www.w3.org/2000/svg" class="${SVG_DOT_CLASS}" style="margin-left:.25em;margin-top:-.25em"><circle cx="6" cy="6" r="6"/></svg>`
 );
 
-// For rendering chat output, we use typical Markdown behavior of passing through raw
-// HTML (albeit sanitizing afterwards).
-//
-// For echoing chat input, we escape HTML. This is not for security reasons but just
-// because it's confusing if the user is using tag-like syntax to demarcate parts of
-// their prompt for other reasons (like <User>/<Assistant> for providing examples to the
-// chat model), and those tags simply vanish.
-const rendererEscapeHTML = new Renderer();
-rendererEscapeHTML.html = (html: string) =>
+// 'markdown' renderer (for assistant messages)
+const markdownRenderer = new Renderer();
+
+// Add some basic Bootstrap styling to markdown tables
+markdownRenderer.table = (header: string, body: string) => {
+  return `<table class="table table-striped table-bordered">
+      <thead>${header}</thead>
+      <tbody>${body}</tbody>
+    </table>`;
+};
+
+// 'semi-markdown' renderer (for user messages)
+const semiMarkdownRenderer = new Renderer();
+
+// Escape HTML, not for security reasons, but just because it's confusing if the user is
+// using tag-like syntax to demarcate parts of their prompt for other reasons (like
+// <User>/<Assistant> for providing examples to the model), and those tags vanish.
+semiMarkdownRenderer.html = (html: string) =>
   html
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
-const markedEscapeOpts = { renderer: rendererEscapeHTML };
 
 function contentToHTML(content: string, content_type: ContentType) {
   if (content_type === "markdown") {
-    return unsafeHTML(sanitizeHTML(parse(content) as string));
+    const html = parse(content, { renderer: markdownRenderer });
+    return unsafeHTML(sanitizeHTML(html as string));
   } else if (content_type === "semi-markdown") {
-    return unsafeHTML(sanitizeHTML(parse(content, markedEscapeOpts) as string));
+    const html = parse(content, { renderer: semiMarkdownRenderer });
+    return unsafeHTML(sanitizeHTML(html as string));
   } else if (content_type === "html") {
     return unsafeHTML(sanitizeHTML(content));
   } else if (content_type === "text") {
