@@ -7,7 +7,6 @@ from htmltools import Tag, TagChild, css, div, tags
 from .._docstring import add_example
 from ..bookmark import restore_input
 from ..module import resolve_id
-from ._html_deps_py_shiny import autoresize_dependency
 from ._utils import shiny_input_label
 
 
@@ -196,7 +195,6 @@ def input_text_area(
     return div(
         shiny_input_label(resolved_id, label),
         area,
-        autoresize_dependency() if autoresize else None,
         class_="shiny-input-textarea form-group shiny-input-container",
         style=css(width=width),
     )

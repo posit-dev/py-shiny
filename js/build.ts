@@ -95,11 +95,6 @@ const opts: Array<BuildOptions> = [
   },
   {
     entryPoints: {
-      "text-area/textarea-autoresize": "text-area/textarea-autoresize.ts",
-    },
-  },
-  {
-    entryPoints: {
       "page-output/page-output": "page-output/page-output.ts",
     },
   },
