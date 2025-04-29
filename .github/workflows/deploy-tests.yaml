@@ -109,7 +109,7 @@ jobs:
       - name: Deploy apps and run tests (on `push` or `deploy**` branches)
         env:
           DEPLOY_APPS: "true"
-          DEPLOY_CONNECT_SERVER_URL: "${{ (matrix.config.released_connect_server && 'https://connect.posit.it/') || 'https://rsc.radixu.com/' }}"
+          DEPLOY_CONNECT_SERVER_URL: "${{ (matrix.config.released_connect_server && 'https://connect.posit.it/') || 'https://dogfood.team.pct.posit.it/' }}"
           DEPLOY_CONNECT_SERVER_API_KEY: "${{ (matrix.config.released_connect_server && secrets.DEPLOY_CONNECT_POSIT_SERVER_API_KEY) || secrets.DEPLOY_CONNECT_SERVER_API_KEY }}"
           DEPLOY_SHINYAPPS_NAME: "${{ matrix.config.test_shinyappsio && secrets.DEPLOY_SHINYAPPS_NAME }}"
           DEPLOY_SHINYAPPS_TOKEN: "${{ matrix.config.test_shinyappsio && secrets.DEPLOY_SHINYAPPS_TOKEN }}"
