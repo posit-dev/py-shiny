@@ -28,7 +28,7 @@ def input_bookmark_button(
 
     A `bookmarkButton` is a [input_action_button()] with a default label that consists of a link icon and the text "Bookmark...". It is meant to be used for bookmarking state.
 
-    Default behavior
+    Multiple (module) buttons
     ----------------
 
     By default, Shiny will listen for the default `id` being used and call
