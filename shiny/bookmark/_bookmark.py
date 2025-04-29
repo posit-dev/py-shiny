@@ -436,7 +436,7 @@ class BookmarkApp(Bookmark):
                     except Exception as e:
                         warnings.warn(
                             f"Error calling on_restored callback: {e}",
-                            stacklevel=2,
+                            stacklevel=1,
                         )
                         notification_show(
                             f"Error calling on_restored callback: {e}",
@@ -561,7 +561,12 @@ class BookmarkApp(Bookmark):
             msg = f"Error bookmarking state: {e}"
             from ..ui._notification import notification_show
 
-            notification_show(msg, duration=None, type="error")
+            notification_show(
+                msg,
+                duration=None,
+                type="error",
+                session=self._root_session,
+            )
 
 
 class BookmarkProxy(Bookmark):
@@ -806,27 +811,3 @@ class BookmarkExpressStub(Bookmark):
     ) -> CancelCallback:
         # Provide a no-op function within ExpressStub
         return lambda: None
-
-
-# #' Display a modal dialog for bookmarking
-# #'
-# #' This is a wrapper function for [urlModal()] that is automatically
-# #' called if an application is bookmarked but no other [onBookmark()]
-# #' callback was set. It displays a modal dialog with the bookmark URL, along
-# #' with a subtitle that is appropriate for the type of bookmarking used ("url"
-# #' or "server").
-# #'
-# #' @param url A URL to show in the modal dialog.
-# #' @export
-# showBookmarkUrlModal <- function(url) {
-#   store <- getShinyOption("bookmarkStore", default = "")
-#   if (store == "url") {
-#     subtitle <- "This link stores the current state of this application."
-#   } else if (store == "server") {
-#     subtitle <- "The current state of this application has been stored on the server."
-#   } else {
-#     subtitle <- NULL
-#   }
-
-#   showModal(urlModal(url, subtitle = subtitle))
-# }
