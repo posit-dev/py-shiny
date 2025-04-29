@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from .._deprecated import warn_deprecated
-from ..types import Jsonifiable, MISSING_TYPE, DEPRECATED
+from ..types import DEPRECATED, MISSING_TYPE, Jsonifiable
 
 __all__ = (
     "input_select",
