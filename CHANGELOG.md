@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
+* Explicitly call out module usage in UI input bookmark button documentation. (#1983)
+
 * Fix missing session when trying to display an error duing bookmarking. (#1984)
 
 
