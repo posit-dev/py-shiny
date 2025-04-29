@@ -28,30 +28,6 @@ def input_bookmark_button(
 
     A `bookmarkButton` is a [input_action_button()] with a default label that consists of a link icon and the text "Bookmark...". It is meant to be used for bookmarking state.
 
-    Multiple (module) buttons
-    ----------------
-
-    By default, Shiny will listen for the default `id` being used and call
-    `session.bookmark()` on button click. However, this will not work if the bookmark
-    button is used within a module or more than one bookmark button is being utilized.
-
-    For both situations, a custom `id` value is required.
-
-    There are two recommendations to maintain the expected bookmark behavior:
-    * The supplied `id` value should be excluded from bookmarking with
-      `session.bookmark.exclude.append(ID)`.
-    * A reactive effect should be added that performs the bookmarking
-      (`session.bookmark()`) when the button is pressed.
-
-    ```python
-    session.bookmark.exclude.append("CUSTOM_ID")
-
-    @reactive.effect
-    @reactive.event(input.CUSTOM_ID)
-    async def _():
-        await session.bookmark()
-    ```
-
     Parameters
     ----------
     label
@@ -73,6 +49,30 @@ def input_bookmark_button(
     -------
     :
         A UI element.
+
+    Multiple (module) buttons
+    -------------------------
+
+    By default, Shiny will listen for the default `id` being used and call
+    `session.bookmark()` on button click. However, this will not work if the bookmark
+    button is used within a module or more than one bookmark button is being utilized.
+
+    For both situations, a custom `id` value is required.
+
+    There are two recommendations to maintain the expected bookmark behavior:
+    * The supplied `id` value should be excluded from bookmarking with
+      `session.bookmark.exclude.append(ID)`.
+    * A reactive effect should be added that performs the bookmarking
+      (`session.bookmark()`) when the button is pressed.
+
+    ```python
+    session.bookmark.exclude.append("CUSTOM_ID")
+
+    @reactive.effect
+    @reactive.event(input.CUSTOM_ID)
+    async def _():
+        await session.bookmark()
+    ```
 
     See Also
     --------
