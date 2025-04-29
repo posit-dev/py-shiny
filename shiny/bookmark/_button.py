@@ -63,7 +63,7 @@ def input_bookmark_button(
     disabled
         Whether the button is disabled.
     id
-        An ID for the bookmark button.
+        An ID for the bookmark button. This should only be provided when multiple buttons are needed (or used inside a module). See the note on multiple buttons.
     title
         A tooltip that is shown when the mouse cursor hovers over the button.
     kwargs
