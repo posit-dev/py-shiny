@@ -7,9 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### New features
+
 ### Improvements
 
+* `selectize`, `remove_button`, and `options` parameters of `ui.input_select()` have been deprecated; use `ui.input_selectize()` instead. (Thanks, @ErdaradunGaztea!) (#1947) 
+
 * Improved the styling and readability of markdown tables rendered by `ui.Chat()` and `ui.MarkdownStream()`. (#1973)
+
+### Bug fixes
+
 
 ## [1.4.0] - 2025-04-08
 
