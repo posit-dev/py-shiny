@@ -436,7 +436,7 @@ class BookmarkApp(Bookmark):
                     except Exception as e:
                         warnings.warn(
                             f"Error calling on_restored callback: {e}",
-                            stacklevel=2,
+                            stacklevel=1,
                         )
                         notification_show(
                             f"Error calling on_restored callback: {e}",
