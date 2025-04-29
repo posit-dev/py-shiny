@@ -561,7 +561,12 @@ class BookmarkApp(Bookmark):
             msg = f"Error bookmarking state: {e}"
             from ..ui._notification import notification_show
 
-            notification_show(msg, duration=None, type="error")
+            notification_show(
+                msg,
+                duration=None,
+                type="error",
+                session=self._root_session,
+            )
 
 
 class BookmarkProxy(Bookmark):
