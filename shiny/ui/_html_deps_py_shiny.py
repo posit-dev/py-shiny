@@ -6,11 +6,11 @@ from .. import __version__
 from . import busy_indicators
 
 """
-HTML dependencies for internal dependencies such as dataframe or text area's autoresize.
+HTML dependencies for internal dependencies such as dataframe.
 
 For...
 * External dependencies (e.g. jQuery, Bootstrap), see `shiny.ui._html_deps_external`
-* Internal dependencies (e.g. dataframe, autoresize), see `shiny.ui._html_deps_py_shiny`
+* Internal dependencies (e.g. dataframe), see `shiny.ui._html_deps_py_shiny`
 * shinyverse dependencies (e.g. bslib, htmltools), see `shiny.ui._html_deps_shinyverse`
 """
 
@@ -38,8 +38,7 @@ def chat_deps() -> list[HTMLDependency]:
         script={"src": "chat.js", "type": "module"},
         stylesheet={"href": "chat.css"},
     )
-    # Chat's <textarea> input autoresizes
-    return [dep, markdown_stream_dependency(), autoresize_dependency()]
+    return [dep, markdown_stream_dependency()]
 
 
 def markdown_stream_dependency() -> HTMLDependency:
@@ -52,16 +51,6 @@ def markdown_stream_dependency() -> HTMLDependency:
         },
         script={"src": "markdown-stream.js", "type": "module"},
         stylesheet={"href": "markdown-stream.css"},
-    )
-
-
-def autoresize_dependency() -> HTMLDependency:
-    return HTMLDependency(
-        "shiny-textarea-autoresize",
-        __version__,
-        source={"package": "shiny", "subdir": "www/py-shiny/text-area"},
-        script={"src": "textarea-autoresize.js", "type": "module"},
-        stylesheet={"href": "textarea-autoresize.css"},
     )
 
 
