@@ -1699,7 +1699,7 @@ class ClientData:
         self._check_current_context(f"output_{key}")
 
         if id is None:
-            id = self._session.current_output_id()
+            id = self._session._current_output_id()
 
         if id is None:
             raise ValueError(
