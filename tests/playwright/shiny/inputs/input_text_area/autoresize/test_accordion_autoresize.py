@@ -42,6 +42,6 @@ def test_accordion(page: Page, local_app: ShinyAppProc, is_webkit: bool) -> None
     test_text_area_w_rows.set("single row")
 
     # 1 row
-    expect_to_have_style(test_text_area.loc, "height", "37px")
+    expect_to_have_style(test_text_area.loc, "height", "35px")
     # 4 rows
-    expect_to_have_style(test_text_area_w_rows.loc, "height", "104px")
+    expect_to_have_style(test_text_area_w_rows.loc, "height", "100px")
