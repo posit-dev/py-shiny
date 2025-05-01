@@ -11,17 +11,6 @@ app_ui = ui.page_fluid(
 def server(input: Inputs, output: Outputs, session: Session):
 
     @render.text
-    def text1():
-        id = session.current_output_id() or "None"
-        return f"Output ID: {id}"
-
-    @output(id="text2")
-    @render.text
-    def _():
-        id = session.current_output_id() or "None"
-        return f"Output ID: {id}"
-
-    @render.text
     def info():
         bg_color = session.clientdata.output_bg_color()
         return f"BG color: {bg_color}"

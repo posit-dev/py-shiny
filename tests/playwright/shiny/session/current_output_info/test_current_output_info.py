@@ -8,13 +8,6 @@ def test_current_output_info(page: Page, local_app: ShinyAppProc) -> None:
 
     page.goto(local_app.url)
 
-    # Check that the output ID is displayed correctly in the UI
-    text1 = controller.OutputText(page, "text1")
-    text2 = controller.OutputText(page, "text2")
-
-    text1.expect_value("Output ID: text1")
-    text2.expect_value("Output ID: text2")
-
     # Check that we can get background color from clientdata
     info = controller.OutputText(page, "info")
     info.expect_value("BG color: rgb(255, 255, 255)")
