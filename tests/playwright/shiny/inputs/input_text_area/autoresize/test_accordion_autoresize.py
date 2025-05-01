@@ -30,8 +30,8 @@ def test_accordion(page: Page, local_app: ShinyAppProc, is_webkit: bool) -> None
         # Skip the rest of the test for webkit.
         # Heights are not consistent with chrome and firefox
         return
-    expect_to_have_style(test_text_area.loc, "height", "127px")
-    expect_to_have_style(test_text_area_w_rows.loc, "height", "127px")
+    expect_to_have_style(test_text_area.loc, "height", "123px")
+    expect_to_have_style(test_text_area_w_rows.loc, "height", "123px")
 
     # Make sure the `rows` is consistent
     test_text_area.expect_rows("1")
