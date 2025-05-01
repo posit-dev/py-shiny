@@ -50,9 +50,8 @@ from ..bookmark._serializers import serializer_file_input
 from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
 from ..module import ResolvedId
-from ..reactive import Effect_, Value, effect
+from ..reactive import Effect_, Value, effect, isolate
 from ..reactive import flush as reactive_flush
-from ..reactive import isolate
 from ..reactive._core import lock
 from ..reactive._core import on_flushed as reactive_on_flushed
 from ..render.renderer import Renderer, RendererT
@@ -189,7 +188,7 @@ class Session(ABC):
     groups: list[str] | None
 
     # Internal state for current_output_id()
-    _current_output_id: str | None = None
+    _current_renderer: Renderer[Any] | None = None
 
     # TODO: not sure these should be directly exposed
     _outbound_message_queues: OutBoundMessageQueues
@@ -381,9 +380,12 @@ class Session(ABC):
             A function that can be used to cancel the registration.
         """
 
-    def current_output_id(self) -> str | None:
+    def _current_output_id(self) -> str | None:
         "Returns the id of the currently executing output renderer (if any)."
-        return self._current_output_id
+        if self._current_renderer is None:
+            return None
+        else:
+            return self._current_renderer.output_id
 
     @abstractmethod
     async def _unhandled_error(self, e: Exception) -> None: ...

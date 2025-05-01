@@ -366,7 +366,7 @@ class AsyncValueFn(Generic[IT]):
         """
         Call the asynchronous function.
         """
-        with self._current_output_id():
+        with self._current_renderer():
             return await self._fn()
 
     def is_async(self) -> bool:
@@ -410,7 +410,7 @@ class AsyncValueFn(Generic[IT]):
         return sync_fn
 
     @contextmanager
-    def _current_output_id(self):
+    def _current_renderer(self):
         from ...session import get_current_session
 
         session = get_current_session()
@@ -418,9 +418,9 @@ class AsyncValueFn(Generic[IT]):
             yield
             return
 
-        old_id = session._current_output_id
+        old_renderer = session._current_renderer
         try:
-            session._current_output_id = self._renderer.output_id
+            session._current_renderer = self._renderer
             yield
         finally:
-            session._current_output_id = old_id
+            session._current_renderer = old_renderer
