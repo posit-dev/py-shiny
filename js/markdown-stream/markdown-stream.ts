@@ -285,8 +285,9 @@ class MarkdownElement extends LightElement {
       if (el.scrollHeight > el.clientHeight) return el;
       el = el.parentElement;
       if (el?.tagName === CHAT_CONTAINER_TAG) {
-        // Stop searching for scrollable parents if we reach <shiny-chat-container>.
-        // If the chat is scrollable, a scrollable element would've been found already.
+        // This ensures that we do not accidentally scroll a parent element of the chat
+        // container. If the chat container itself is scrollable, a scrollable element
+        // would already have been identified.
         break;
       }
     }
