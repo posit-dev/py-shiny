@@ -131,8 +131,6 @@ interface ChatInputSetInputOptions {
 }
 
 class ChatInput extends LightElement {
-  private _disabled = false;
-
   @property() placeholder = "Enter a message...";
   // disabled is reflected manually because `reflect: true` doesn't work with LightElement
   @property({ type: Boolean })
@@ -153,6 +151,27 @@ class ChatInput extends LightElement {
 
     this.requestUpdate("disabled", oldValue);
     this.#onInput();
+  }
+
+  private _disabled = false;
+  inputVisibleObserver?: IntersectionObserver;
+
+  connectedCallback(): void {
+    super.connectedCallback();
+
+    this.inputVisibleObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) this.#updateHeight();
+      });
+    });
+
+    this.inputVisibleObserver.observe(this);
+  }
+
+  disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.inputVisibleObserver?.disconnect();
+    this.inputVisibleObserver = undefined;
   }
 
   attributeChangedCallback(
@@ -189,7 +208,7 @@ class ChatInput extends LightElement {
     return html`
       <textarea
         id="${this.id}"
-        class="form-control textarea-autoresize"
+        class="form-control"
         rows="1"
         placeholder="${this.placeholder}"
         @keydown=${this.#onKeyDown}
@@ -217,6 +236,7 @@ class ChatInput extends LightElement {
   }
 
   #onInput(): void {
+    this.#updateHeight();
     this.button.disabled = this.disabled
       ? true
       : this.value.trim().length === 0;
@@ -245,6 +265,15 @@ class ChatInput extends LightElement {
     this.disabled = true;
 
     if (focus) this.textarea.focus();
+  }
+
+  #updateHeight(): void {
+    const el = this.textarea;
+    if (el.scrollHeight == 0) {
+      return;
+    }
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
   }
 
   setInputValue(
