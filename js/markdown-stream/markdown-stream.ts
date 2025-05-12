@@ -6,6 +6,8 @@ import ClipboardJS from "clipboard";
 import hljs from "highlight.js/lib/common";
 import { Renderer, parse } from "marked";
 
+import { CHAT_CONTAINER_TAG } from "../chat/chat";
+
 import {
   LightElement,
   createElement,
@@ -282,6 +284,11 @@ class MarkdownElement extends LightElement {
     while (el) {
       if (el.scrollHeight > el.clientHeight) return el;
       el = el.parentElement;
+      if (el?.tagName === CHAT_CONTAINER_TAG) {
+        // Stop searching for scrollable parents if we reach <shiny-chat-container>.
+        // If the chat is scrollable, a scrollable element would've been found already.
+        break;
+      }
     }
     return null;
   }
