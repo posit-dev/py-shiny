@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Fix missing session when trying to display an error duing bookmarking. (#1984)
 
+* Fixed an issue with `ui.Chat()` sometimes wanting to scroll a parent element. (#1996)
+
 
 ## [1.4.0] - 2025-04-08
 
