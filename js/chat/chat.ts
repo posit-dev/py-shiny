@@ -528,11 +528,19 @@ class ChatContainer extends LightElement {
 
 // ------- Register custom elements and shiny bindings ---------
 
-if (!customElements.get(CHAT_MESSAGES_TAG)) {
+if (!customElements.get(CHAT_MESSAGE_TAG)) {
   customElements.define(CHAT_MESSAGE_TAG, ChatMessage);
+}
+if (!customElements.get(CHAT_USER_MESSAGE_TAG)) {
   customElements.define(CHAT_USER_MESSAGE_TAG, ChatUserMessage);
+}
+if (!customElements.get(CHAT_MESSAGES_TAG)) {
   customElements.define(CHAT_MESSAGES_TAG, ChatMessages);
+}
+if (!customElements.get(CHAT_INPUT_TAG)) {
   customElements.define(CHAT_INPUT_TAG, ChatInput);
+}
+if (!customElements.get(CHAT_CONTAINER_TAG)) {
   customElements.define(CHAT_CONTAINER_TAG, ChatContainer);
 }
 
