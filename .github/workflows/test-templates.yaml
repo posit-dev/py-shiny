@@ -1,0 +1,45 @@
+name: Check Py-shiny App Templates
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  check_files:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11.6'
+
+      - name: Checkout py-shiny-templates repository
+        uses: actions/checkout@v4
+        with:
+          repository: posit-dev/py-shiny-templates
+          path: py-shiny-templates
+
+      - name: Check for app files in py-shiny-templates
+        shell: bash
+        run: |
+          echo "Starting search for app-core.py and app-express.py in ./py-shiny-templates..."
+          find ./py-shiny-templates -type d | while read dir_path; do
+            echo "-----------------------------------------------------"
+            echo "Checking directory: $dir_path"
+            if [ -f "$dir_path/app-core.py" ]; then
+              echo "  [FOUND] app-core.py in $dir_path"
+            else
+              echo "  [MISSING] app-core.py in $dir_path"
+            fi
+            if [ -f "$dir_path/app-express.py" ]; then
+              echo "  [FOUND] app-express.py in $dir_path"
+            else
+              echo "  [MISSING] app-express.py in $dir_path"
+            fi
+          done
+          echo "-----------------------------------------------------"
+          echo "Search complete."
