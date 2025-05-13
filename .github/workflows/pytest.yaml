@@ -193,6 +193,15 @@ jobs:
         working-directory: examples/brownian/shinymediapipe
         run: |
           npm ci
+      - name: Checkout py-shiny-templates repository
+        uses: actions/checkout@v4
+        with:
+          repository: posit-dev/py-shiny-templates
+          path: py-shiny-templates
+
+      - name: Copy py-shiny-templates to examples directory
+        run: |
+          cp -r py-shiny-templates/* examples/
 
       - name: Run example app tests
         timeout-minutes: 60
