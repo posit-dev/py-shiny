@@ -6,6 +6,8 @@ import ClipboardJS from "clipboard";
 import hljs from "highlight.js/lib/common";
 import { Renderer, parse } from "marked";
 
+import { CHAT_CONTAINER_TAG } from "../chat/chat";
+
 import {
   LightElement,
   createElement,
@@ -282,6 +284,12 @@ class MarkdownElement extends LightElement {
     while (el) {
       if (el.scrollHeight > el.clientHeight) return el;
       el = el.parentElement;
+      if (el?.tagName === CHAT_CONTAINER_TAG) {
+        // This ensures that we do not accidentally scroll a parent element of the chat
+        // container. If the chat container itself is scrollable, a scrollable element
+        // would already have been identified.
+        break;
+      }
     }
     return null;
   }

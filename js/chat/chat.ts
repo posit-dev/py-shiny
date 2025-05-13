@@ -557,11 +557,19 @@ class ChatContainer extends LightElement {
 
 // ------- Register custom elements and shiny bindings ---------
 
-customElements.define(CHAT_MESSAGE_TAG, ChatMessage);
-customElements.define(CHAT_USER_MESSAGE_TAG, ChatUserMessage);
-customElements.define(CHAT_MESSAGES_TAG, ChatMessages);
-customElements.define(CHAT_INPUT_TAG, ChatInput);
-customElements.define(CHAT_CONTAINER_TAG, ChatContainer);
+const chatCustomElements = [
+  { tag: CHAT_MESSAGE_TAG, component: ChatMessage },
+  { tag: CHAT_USER_MESSAGE_TAG, component: ChatUserMessage },
+  { tag: CHAT_MESSAGES_TAG, component: ChatMessages },
+  { tag: CHAT_INPUT_TAG, component: ChatInput },
+  { tag: CHAT_CONTAINER_TAG, component: ChatContainer }
+];
+
+chatCustomElements.forEach(({ tag, component }) => {
+  if (!customElements.get(tag)) {
+    customElements.define(tag, component);
+  }
+});
 
 window.Shiny.addCustomMessageHandler(
   "shinyChatMessage",
@@ -590,3 +598,5 @@ window.Shiny.addCustomMessageHandler(
     el.dispatchEvent(evt);
   }
 );
+
+export { CHAT_CONTAINER_TAG };
