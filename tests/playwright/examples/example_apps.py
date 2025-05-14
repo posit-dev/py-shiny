@@ -4,7 +4,7 @@ import typing
 from pathlib import PurePath
 from typing import Literal
 
-from playwright.sync_api import ConsoleMessage, Page
+from playwright.sync_api import ConsoleMessage, Page, expect
 
 from shiny.run import ShinyAppProc, run_shiny_app
 
@@ -15,6 +15,8 @@ is_interactive = hasattr(sys, "ps1")
 reruns = 1 if is_interactive else 3
 reruns_delay = 0
 
+SHINY_INIT_TIMEOUT = 30_000
+ERROR_ELEMENT_TIMEOUT = 1_000
 
 def get_apps(path: str) -> typing.List[str]:
     full_path = pyshiny_root / path
@@ -250,3 +252,8 @@ def validate_example(page: Page, ex_app_path: str) -> None:
             + " had JavaScript console errors!\n"
             + "* ".join(console_errors)
         )
+
+        # check for shiny output errors
+        expect(page.locator(".shiny-busy")).to_have_count(0, timeout=SHINY_INIT_TIMEOUT)
+        error_locator = page.locator(".shiny-output-error")
+        expect(error_locator).to_have_count(0, timeout=ERROR_ELEMENT_TIMEOUT)
