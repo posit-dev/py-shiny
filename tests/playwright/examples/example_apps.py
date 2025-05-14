@@ -18,6 +18,7 @@ reruns_delay = 0
 SHINY_INIT_TIMEOUT = 30_000
 ERROR_ELEMENT_TIMEOUT = 1_000
 
+
 def get_apps(path: str) -> typing.List[str]:
     full_path = pyshiny_root / path
     app_paths: typing.List[str] = []
