@@ -17,6 +17,7 @@ import pkgutil
 import great_tables as gt
 import palmerpenguins  # pyright: ignore[reportMissingTypeStubs]
 import polars as pl
+from plotly.graph_objs._figure import Figure
 
 from shiny import App, Inputs, Outputs, Session, module, reactive, render, req, ui
 from shiny.render import CellPatch
@@ -264,7 +265,7 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
     # from shiny import reactive
 
     @render_widget
-    def country_detail_pop():
+    def country_detail_pop() -> Figure:
         import plotly.express as px
 
         return px.line(

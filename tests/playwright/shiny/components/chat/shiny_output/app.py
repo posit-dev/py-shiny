@@ -1,7 +1,7 @@
 import ipyleaflet as ipyl  # pyright: ignore[reportMissingTypeStubs]
 import pandas as pd
 import plotly.express as px  # pyright: ignore[reportMissingTypeStubs]
-from plotly.graph_objs import Figure
+from plotly.graph_objs._figure import Figure
 from shinywidgets import render_plotly, render_widget
 
 from shiny import reactive, render
