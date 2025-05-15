@@ -1,6 +1,7 @@
 import ipyleaflet as ipyl  # pyright: ignore[reportMissingTypeStubs]
 import pandas as pd
 import plotly.express as px  # pyright: ignore[reportMissingTypeStubs]
+from plotly.graph_objs import Figure
 from shinywidgets import render_plotly, render_widget
 
 from shiny import reactive, render
@@ -55,7 +56,7 @@ async def _():
 with ui.hold() as plot_ui:
 
     @render_plotly
-    def plot():
+    def plot() -> Figure:
         dat = pd.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]})
         return px.scatter(dat, x="x", y="y")  # pyright: ignore[reportUnknownMemberType]
 
