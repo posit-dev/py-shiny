@@ -91,13 +91,6 @@ test = [
     "dask[dataframe]",
     "pyarrow",
     "pyarrow-stubs",
-    "nba_api",
-    "watchfiles",
-    "cufflinks",
-    "yfinance",
-    "shiny_validate",
-    "chatlas[anthropic]",
-    "geopy",
 
 ]
 dev = [
