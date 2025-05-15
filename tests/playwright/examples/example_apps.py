@@ -255,6 +255,13 @@ def validate_example(page: Page, ex_app_path: str) -> None:
         )
 
         # check for shiny output errors
-        expect(page.locator(".shiny-busy")).to_have_count(0, timeout=SHINY_INIT_TIMEOUT)
-        error_locator = page.locator(".shiny-output-error")
-        expect(error_locator).to_have_count(0, timeout=ERROR_ELEMENT_TIMEOUT)
+        # Skip output error checks for SafeException example apps
+        if ex_app_path not in [
+            "shiny/api-examples/SafeException/app-express.py",
+            "shiny/api-examples/SafeException/app-core.py",
+        ]:
+            expect(page.locator(".shiny-busy")).to_have_count(
+                0, timeout=SHINY_INIT_TIMEOUT
+            )
+            error_locator = page.locator(".shiny-output-error")
+            expect(error_locator).to_have_count(0, timeout=ERROR_ELEMENT_TIMEOUT)
