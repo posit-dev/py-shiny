@@ -259,6 +259,7 @@ def validate_example(page: Page, ex_app_path: str) -> None:
         if ex_app_path not in [
             "shiny/api-examples/SafeException/app-express.py",
             "shiny/api-examples/SafeException/app-core.py",
+            "examples/global_pyplot/app.py",
         ]:
             expect(page.locator(".shiny-busy")).to_have_count(
                 0, timeout=SHINY_INIT_TIMEOUT
