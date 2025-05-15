@@ -4,7 +4,7 @@ import typing
 from pathlib import PurePath
 from typing import Literal
 
-from playwright.sync_api import ConsoleMessage, Page
+from playwright.sync_api import ConsoleMessage, Page, expect
 
 from shiny.run import ShinyAppProc, run_shiny_app
 
@@ -14,6 +14,9 @@ pyshiny_root = here_tests_e2e_examples.parent.parent.parent
 is_interactive = hasattr(sys, "ps1")
 reruns = 1 if is_interactive else 3
 reruns_delay = 0
+
+SHINY_INIT_TIMEOUT = 30_000
+ERROR_ELEMENT_TIMEOUT = 1_000
 
 
 def get_apps(path: str) -> typing.List[str]:
@@ -94,6 +97,13 @@ app_allow_external_errors: typing.List[str] = [
 app_allow_js_errors: typing.Dict[str, typing.List[str]] = {
     "examples/brownian": ["Failed to acquire camera feed:"],
 }
+
+# Check for Shiny output errors, except for known exception cases
+app_allow_output_error = [
+    "shiny/api-examples/SafeException/app-express.py",
+    "shiny/api-examples/SafeException/app-core.py",
+    "examples/global_pyplot/app.py",
+]
 
 
 # Altered from `shinytest2:::app_wait_for_idle()`
@@ -250,3 +260,8 @@ def validate_example(page: Page, ex_app_path: str) -> None:
             + " had JavaScript console errors!\n"
             + "* ".join(console_errors)
         )
+
+        if ex_app_path not in app_allow_output_error:
+            # Ensure there are no output errors present
+            error_locator = page.locator(".shiny-output-error")
+            expect(error_locator).to_have_count(0, timeout=ERROR_ELEMENT_TIMEOUT)

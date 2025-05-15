@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pkgutil
+from typing import Any
 
 # pyright: reportUnknownMemberType = false
 # pyright: reportMissingTypeStubs = false
@@ -264,7 +265,7 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
     # from shiny import reactive
 
     @render_widget
-    def country_detail_pop():
+    def country_detail_pop() -> Any:
         import plotly.express as px
 
         return px.line(
