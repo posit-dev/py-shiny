@@ -268,7 +268,6 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
     def country_detail_pop() -> Figure:
         import plotly.express as px
 
-        return px.line(
         fig: Figure = px.line(
             px.data.gapminder(),
             x="year",
