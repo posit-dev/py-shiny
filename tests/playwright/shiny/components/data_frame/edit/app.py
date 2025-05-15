@@ -269,12 +269,15 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
         import plotly.express as px
 
         return px.line(
+        fig: Figure = px.line(
             px.data.gapminder(),
             x="year",
             y="lifeExp",
             color="country",
             title="Population Over Time",
         )
+
+        return fig
 
     @summary_data.set_patch_fn
     def upgrade_patch(
