@@ -254,15 +254,17 @@ def validate_example(page: Page, ex_app_path: str) -> None:
             + "* ".join(console_errors)
         )
 
-        # check for shiny output errors
-        # Skip output error checks for SafeException example apps
-        if ex_app_path not in [
+        # Check for Shiny output errors, except for known exception cases
+        excluded_apps = [
             "shiny/api-examples/SafeException/app-express.py",
             "shiny/api-examples/SafeException/app-core.py",
             "examples/global_pyplot/app.py",
-        ]:
+        ]
+        if ex_app_path not in excluded_apps:
+            # Ensure the application is not busy
             expect(page.locator(".shiny-busy")).to_have_count(
                 0, timeout=SHINY_INIT_TIMEOUT
             )
+            # Ensure there are no output errors present
             error_locator = page.locator(".shiny-output-error")
             expect(error_locator).to_have_count(0, timeout=ERROR_ELEMENT_TIMEOUT)
