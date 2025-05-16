@@ -17,7 +17,6 @@ import pkgutil
 import great_tables as gt
 import palmerpenguins  # pyright: ignore[reportMissingTypeStubs]
 import polars as pl
-from plotly.graph_objs._figure import Figure
 
 from shiny import App, Inputs, Outputs, Session, module, reactive, render, req, ui
 from shiny.render import CellPatch
@@ -262,21 +261,18 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
     #     print(summary_data._type_hints())
     from shinywidgets import render_widget
 
-    # from shiny import reactive
-
     @render_widget
-    def country_detail_pop() -> Figure:
+    def country_detail_pop():  # pyright: ignore[reportUnknownParameterType]
         import plotly.express as px
 
-        fig: Figure = px.line(
-            px.data.gapminder(),
+        # Create the figure explicitly
+        return px.line(
+            px.data.gapminder(),  # pyright: ignore[reportUnknownVariableType,reportAttributeAccessIssue]
             x="year",
             y="lifeExp",
             color="country",
             title="Population Over Time",
         )
-
-        return fig
 
     @summary_data.set_patch_fn
     def upgrade_patch(

@@ -74,11 +74,7 @@ typings/matplotlib/__init__.pyi:
 	git clone --depth 1 https://github.com/microsoft/python-type-stubs typings/python-type-stubs
 	mv typings/python-type-stubs/stubs/matplotlib typings/
 	rm -rf typings/python-type-stubs
-typings/plotly:
-	@echo "Creating plotly stubs"
-	pyright --createstub plotly
-
-pyright-typings: typings/appdirs typings/folium typings/uvicorn typings/seaborn typings/plotly typings/matplotlib/__init__.pyi
+pyright-typings: typings/appdirs typings/folium typings/uvicorn typings/seaborn typings/matplotlib/__init__.pyi
 
 check: check-format check-lint check-types check-tests  ## check code, style, types, and test (basic CI)
 check-fix: format check-lint check-types check-tests ## check and format code, style, types, and test
