@@ -55,9 +55,11 @@ async def _():
 with ui.hold() as plot_ui:
 
     @render_plotly
-    def plot():
+    def plot():  # pyright: ignore[reportUnknownReturnType,reportUnknownParameterType]
         dat = pd.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]})
-        return px.scatter(dat, x="x", y="y")  # pyright: ignore[reportUnknownMemberType]
+        return px.scatter(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
+            dat, x="x", y="y"
+        )
 
 
 @reactive.effect
