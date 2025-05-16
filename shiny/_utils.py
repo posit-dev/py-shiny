@@ -72,7 +72,7 @@ def sort_keys_length(x: dict[str, T], descending: bool = False) -> dict[str, T]:
 
 
 def guess_mime_type(
-    url: "str | os.PathLike[str]",
+    url: str | os.PathLike[str],
     default: str = "application/octet-stream",
     strict: bool = True,
 ) -> str:
@@ -80,8 +80,6 @@ def guess_mime_type(
     Guess the MIME type of a file. This is a wrapper for mimetypes.guess_type, but it
     only returns the type (and not encoding), and it allows a default value.
     """
-    # Note that in the parameters above, "os.PathLike[str]" is in quotes to avoid
-    # "TypeError: 'ABCMeta' object is not subscriptable", in Python<=3.8.
     if url:
         # Work around issue #1601, some installations of Windows 10 return text/plain
         # as the mime type for .js files
