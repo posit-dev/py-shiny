@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Literal, TypedDict
 
-from htmltools import HTML, TagChild
+from htmltools import TagChild
 
 from .._typing_extensions import NotRequired
 from ..session import require_active_session
@@ -37,35 +36,6 @@ class ChatMessage:
 
         self.content = content
         self.html_deps = deps
-
-
-# A message once transformed have been applied
-@dataclass
-class TransformedMessage:
-    content_client: str | HTML
-    content_server: str
-    role: Role
-    transform_key: Literal["content_client", "content_server"]
-    pre_transform_key: Literal["content_client", "content_server"]
-    html_deps: list[dict[str, str]] | None = None
-
-    @classmethod
-    def from_chat_message(cls, message: ChatMessage) -> "TransformedMessage":
-        if message.role == "user":
-            transform_key = "content_server"
-            pre_transform_key = "content_client"
-        else:
-            transform_key = "content_client"
-            pre_transform_key = "content_server"
-
-        return TransformedMessage(
-            content_client=message.content,
-            content_server=message.content,
-            role=message.role,
-            transform_key=transform_key,
-            pre_transform_key=pre_transform_key,
-            html_deps=message.html_deps,
-        )
 
 
 # A message that can be sent to the client

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### Breaking changes
+
+* Several breaking changes to `ui.Chat`:
+    * The `messages` parameter on `ui.Chat()` was removed. Use `chat.ui(messages=)` instead.
+    * The `tokenizer` parameter on `ui.Chat()` was removed. This was only used for `.messages(token_limits=[])` which was also removed.
+    * Several parameters were removed from `.messages()`, including:
+        * `token_limits`: Generally speaking, this wasn't ideal approach to limiting context windows. If you need to cap the context window, consider using a framework like chatlas, LangChain, or something else to manage the conversation history.
+        * `format`: `ui.Chat` component's 
+
 ### New features
 
 ### Improvements
