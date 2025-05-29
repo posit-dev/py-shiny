@@ -412,6 +412,7 @@ def run_app(
         # Don't allow shiny to use uvloop!
         # https://github.com/posit-dev/py-shiny/issues/1373
         loop="asyncio",
+        ws_per_message_deflate=False,  # Workaround for workbench issue 7368
         **reload_args,  # pyright: ignore[reportArgumentType]
         **kwargs,
     )
