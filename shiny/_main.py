@@ -331,6 +331,13 @@ def run_app(
 
     log_config: dict[str, Any] = copy.deepcopy(uvicorn.config.LOGGING_CONFIG)
 
+    # Workaround for workbench issue 7368
+    deflate_args: DeflateArgs = {}
+    if (RS_SERVER_URL := os.getenv("RS_SERVER_URL")):
+        deflate_args = {
+            "ws_per_message_deflate": False,
+        }
+
     if reload_dirs is None:
         reload_dirs = []
         if app_dir is not None:
@@ -412,7 +419,7 @@ def run_app(
         # Don't allow shiny to use uvloop!
         # https://github.com/posit-dev/py-shiny/issues/1373
         loop="asyncio",
-        ws_per_message_deflate=False,  # Workaround for workbench issue 7368
+        **deflate_args,  # pyright: ignore[reportArgumentType]
         **reload_args,  # pyright: ignore[reportArgumentType]
         **kwargs,
     )
@@ -713,6 +720,8 @@ class ReloadArgs(TypedDict):
     reload_excludes: NotRequired[list[str]]
     reload_dirs: NotRequired[list[str]]
 
+class DeflateArgs(TypedDict):
+    ws_per_message_deflate: NotRequired[bool]
 
 # Check that the version of rsconnect supports Shiny Express; can be removed in the
 # future once this version of rsconnect is widely used. The dependency on "packaging"
