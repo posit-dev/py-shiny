@@ -29,7 +29,7 @@ def test_validate_stream_basic(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 
     stream = page.locator("#shiny_readme")
-    expect(stream).to_be_visible(timeout=30 * 100000)
+    expect(stream).to_be_visible(timeout=30 * 1000000)
     expect(stream).to_contain_text("pip install shiny")
 
     # Check that the card body container (the parent of the markdown stream) is scrolled
