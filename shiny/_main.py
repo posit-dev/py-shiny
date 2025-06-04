@@ -19,6 +19,7 @@ import uvicorn.config
 import shiny
 
 from . import __version__, _autoreload, _hostenv, _static, _utils
+from ._hostenv import is_workbench
 from ._docstring import no_example
 from ._typing_extensions import NotRequired, TypedDict
 from .bookmark._bookmark_state import shiny_bookmarks_folder_name
