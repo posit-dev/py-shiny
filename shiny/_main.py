@@ -9,6 +9,7 @@ import platform
 import re
 import sys
 import types
+import warnings
 from pathlib import Path
 from typing import Any, Optional
 
@@ -19,14 +20,12 @@ import uvicorn.config
 import shiny
 
 from . import __version__, _autoreload, _hostenv, _static, _utils
-from ._hostenv import is_workbench
 from ._docstring import no_example
+from ._hostenv import is_workbench
 from ._typing_extensions import NotRequired, TypedDict
 from .bookmark._bookmark_state import shiny_bookmarks_folder_name
 from .express import is_express_app
 from .express._utils import escape_to_var_name
-from ._hostenv import is_workbench
-import warnings
 
 
 @click.group("main")
