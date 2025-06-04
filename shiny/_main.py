@@ -333,7 +333,7 @@ def run_app(
 
     # Workaround for workbench issue 7368
     deflate_args: DeflateArgs = {}
-    if (RS_SERVER_URL := os.getenv("RS_SERVER_URL")):
+    if os.getenv("RS_SERVER_URL"):
         deflate_args = {
             "ws_per_message_deflate": False,
         }
