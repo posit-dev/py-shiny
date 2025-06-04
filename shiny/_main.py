@@ -331,7 +331,8 @@ def run_app(
 
     log_config: dict[str, Any] = copy.deepcopy(uvicorn.config.LOGGING_CONFIG)
 
-    # Workaround for workbench issue 7368
+    # Workaround for nginx/uvicorn issue within Workbench
+    # https://github.com/rstudio/rstudio-pro/issues/7368#issuecomment-2918016088
     deflate_args: DeflateArgs = {}
     if os.getenv("RS_SERVER_URL"):
         deflate_args = {
