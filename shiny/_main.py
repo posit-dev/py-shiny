@@ -25,6 +25,8 @@ from ._typing_extensions import NotRequired, TypedDict
 from .bookmark._bookmark_state import shiny_bookmarks_folder_name
 from .express import is_express_app
 from .express._utils import escape_to_var_name
+from ._hostenv import is_workbench
+import warnings
 
 
 @click.group("main")
@@ -334,11 +336,6 @@ def run_app(
 
     # Workaround for nginx/uvicorn issue within Workbench
     # https://github.com/rstudio/rstudio-pro/issues/7368#issuecomment-2918016088
-    deflate_args: DeflateArgs = {}
-    if is_workbench():
-        deflate_args = {
-            "ws_per_message_deflate": False,
-        }
 
     if reload_dirs is None:
         reload_dirs = []
@@ -408,6 +405,17 @@ def run_app(
 
     maybe_setup_rsw_proxying(log_config)
 
+    if is_workbench() and kwargs.get("ws_per_message_deflate"):
+        # Workaround for nginx/uvicorn issue within Workbench
+        # https://github.com/rstudio/rstudio-pro/issues/7368#issuecomment-2918016088
+        warnings.warn(
+            "Overwriting kwarg 'ws_per_message_deflate'=True to False to avoid breaking issue in Workbench",
+            stacklevel=2,
+        )
+        kwargs["ws_per_message_deflate"] = False
+    elif is_workbench():
+        kwargs["ws_per_message_deflate"] = False
+
     uvicorn.run(  # pyright: ignore[reportUnknownMemberType]
         app,
         host=host,
@@ -421,7 +429,6 @@ def run_app(
         # Don't allow shiny to use uvloop!
         # https://github.com/posit-dev/py-shiny/issues/1373
         loop="asyncio",
-        **deflate_args,  # pyright: ignore[reportArgumentType]
         **reload_args,  # pyright: ignore[reportArgumentType]
         **kwargs,
     )
@@ -721,10 +728,6 @@ class ReloadArgs(TypedDict):
     reload_includes: NotRequired[list[str]]
     reload_excludes: NotRequired[list[str]]
     reload_dirs: NotRequired[list[str]]
-
-
-class DeflateArgs(TypedDict):
-    ws_per_message_deflate: NotRequired[bool]
 
 
 # Check that the version of rsconnect supports Shiny Express; can be removed in the
