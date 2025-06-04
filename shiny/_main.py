@@ -720,8 +720,10 @@ class ReloadArgs(TypedDict):
     reload_excludes: NotRequired[list[str]]
     reload_dirs: NotRequired[list[str]]
 
+
 class DeflateArgs(TypedDict):
     ws_per_message_deflate: NotRequired[bool]
+
 
 # Check that the version of rsconnect supports Shiny Express; can be removed in the
 # future once this version of rsconnect is widely used. The dependency on "packaging"
