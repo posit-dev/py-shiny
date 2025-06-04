@@ -29,8 +29,8 @@ def test_validate_stream_basic(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 
     stream = page.locator("#shiny_readme")
-    expect(stream).to_be_visible(timeout=30 * 1000000)
-    expect(stream).to_contain_text("pip install shiny")
+    expect(stream).to_be_visible(timeout=30_000)
+    expect(stream).to_contain_text("pip install shiny", timeout=30)
 
     # Check that the card body container (the parent of the markdown stream) is scrolled
     # all the way to the bottom
@@ -38,12 +38,12 @@ def test_validate_stream_basic(page: Page, local_app: ShinyAppProc) -> None:
     assert is_scrolled, "The card body container should be scrolled to the bottom"
 
     stream2 = page.locator("#shiny_readme_err")
-    expect(stream2).to_be_visible(timeout=30 * 100000)
-    expect(stream2).to_contain_text("Shiny")
+    expect(stream2).to_be_visible(timeout=30_000)
+    expect(stream2).to_contain_text("Shiny", timeout=30)
 
     notification = page.locator(".shiny-notification-error")
-    expect(notification).to_be_visible(timeout=30 * 100000)
-    expect(notification).to_contain_text("boom!")
+    expect(notification).to_be_visible(timeout=30_000)
+    expect(notification).to_contain_text("boom!", timeout=30)
 
     txt_result = controller.OutputText(page, "stream_result")
     txt_result.expect_value("Stream result: Basic stream")
