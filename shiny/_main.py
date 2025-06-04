@@ -334,7 +334,7 @@ def run_app(
     # Workaround for nginx/uvicorn issue within Workbench
     # https://github.com/rstudio/rstudio-pro/issues/7368#issuecomment-2918016088
     deflate_args: DeflateArgs = {}
-    if os.getenv("RS_SERVER_URL"):
+    if is_workbench():
         deflate_args = {
             "ws_per_message_deflate": False,
         }
