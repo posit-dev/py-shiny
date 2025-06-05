@@ -29,6 +29,7 @@ def test_workbench_kwargs_if_url_set():
         warnings.warn(
             "Overwriting kwarg `ws_per_message_deflate=True` to `False` to avoid breaking issue in Workbench",
             UserWarning,
+            stacklevel=2,
         )
         _set_workbench_kwargs(kwargs)
         assert kwargs.get("ws_per_message_deflate") is False
