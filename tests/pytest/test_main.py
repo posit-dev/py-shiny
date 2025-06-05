@@ -1,6 +1,7 @@
 import os
 import warnings
-from typing import Dict, Any
+from typing import Any, Dict
+
 import pytest
 
 from shiny._main import _set_workbench_kwargs
