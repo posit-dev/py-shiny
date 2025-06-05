@@ -1,4 +1,3 @@
-import os
 import warnings
 from typing import Any, Dict
 
@@ -7,7 +6,7 @@ import pytest
 from shiny._main import _set_workbench_kwargs
 
 
-def test_workbench_kwargs_if_url_set():
+def test_workbench_kwargs_if_url_set(monkeypatch: pytest.MonkeyPatch):
     """
     Test that the `ws_per_message_deflate` kwarg is set to False when
     RS_SERVER_URL and RS_SESSION_URL are set in the environment.
@@ -15,8 +14,8 @@ def test_workbench_kwargs_if_url_set():
     If the kwargs are set to True, a warning is raised and the value is set to False.
     """
     # Workbench URL is set, kwargs are not
-    os.environ["RS_SERVER_URL"] = "any_string"
-    os.environ["RS_SESSION_URL"] = "any_string"
+    monkeypatch.setenv("RS_SERVER_URL", "any_string")
+    monkeypatch.setenv("RS_SESSION_URL", "any_string")
 
     kwargs: Dict[str, Any] = {}
     _set_workbench_kwargs(kwargs)
@@ -34,10 +33,6 @@ def test_workbench_kwargs_if_url_set():
         )
         _set_workbench_kwargs(kwargs)
         assert kwargs.get("ws_per_message_deflate") is False
-
-    # Teardown
-    del os.environ["RS_SERVER_URL"]
-    del os.environ["RS_SESSION_URL"]
 
 
 def test_workbench_kwargs_if_url_not_set():
