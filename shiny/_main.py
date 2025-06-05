@@ -9,6 +9,7 @@ import platform
 import re
 import sys
 import types
+import warnings
 from pathlib import Path
 from typing import Any, Optional
 
@@ -20,6 +21,7 @@ import shiny
 
 from . import __version__, _autoreload, _hostenv, _static, _utils
 from ._docstring import no_example
+from ._hostenv import is_workbench
 from ._typing_extensions import NotRequired, TypedDict
 from .bookmark._bookmark_state import shiny_bookmarks_folder_name
 from .express import is_express_app
@@ -399,6 +401,8 @@ def run_app(
 
     maybe_setup_rsw_proxying(log_config)
 
+    _set_workbench_kwargs(kwargs)
+
     uvicorn.run(  # pyright: ignore[reportUnknownMemberType]
         app,
         host=host,
@@ -711,6 +715,18 @@ class ReloadArgs(TypedDict):
     reload_includes: NotRequired[list[str]]
     reload_excludes: NotRequired[list[str]]
     reload_dirs: NotRequired[list[str]]
+
+
+def _set_workbench_kwargs(kwargs: dict[str, Any]) -> None:
+    if is_workbench():
+        if kwargs.get("ws_per_message_deflate"):
+            # Workaround for nginx/uvicorn issue within Workbench
+            # https://github.com/rstudio/rstudio-pro/issues/7368#issuecomment-2918016088
+            warnings.warn(
+                "Overwriting kwarg `ws_per_message_deflate=True` to `False` to avoid breaking issue in Workbench",
+                stacklevel=2,
+            )
+        kwargs["ws_per_message_deflate"] = False
 
 
 # Check that the version of rsconnect supports Shiny Express; can be removed in the
