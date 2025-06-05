@@ -718,9 +718,7 @@ class ReloadArgs(TypedDict):
 
 
 def _set_workbench_kwargs(kwargs: dict[str, object]) -> None:
-    print(kwargs)
     if is_workbench():
-        print("hit")
         if kwargs.get("ws_per_message_deflate"):
             # Workaround for nginx/uvicorn issue within Workbench
             # https://github.com/rstudio/rstudio-pro/issues/7368#issuecomment-2918016088
@@ -729,7 +727,6 @@ def _set_workbench_kwargs(kwargs: dict[str, object]) -> None:
                 stacklevel=2,
             )
         kwargs["ws_per_message_deflate"] = False
-    print(kwargs)
 
 
 # Check that the version of rsconnect supports Shiny Express; can be removed in the
