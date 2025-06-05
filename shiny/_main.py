@@ -333,9 +333,6 @@ def run_app(
 
     log_config: dict[str, Any] = copy.deepcopy(uvicorn.config.LOGGING_CONFIG)
 
-    # Workaround for nginx/uvicorn issue within Workbench
-    # https://github.com/rstudio/rstudio-pro/issues/7368#issuecomment-2918016088
-
     if reload_dirs is None:
         reload_dirs = []
         if app_dir is not None:
@@ -404,16 +401,7 @@ def run_app(
 
     maybe_setup_rsw_proxying(log_config)
 
-    if is_workbench() and kwargs.get("ws_per_message_deflate"):
-        # Workaround for nginx/uvicorn issue within Workbench
-        # https://github.com/rstudio/rstudio-pro/issues/7368#issuecomment-2918016088
-        warnings.warn(
-            "Overwriting kwarg 'ws_per_message_deflate'=True to False to avoid breaking issue in Workbench",
-            stacklevel=2,
-        )
-        kwargs["ws_per_message_deflate"] = False
-    elif is_workbench():
-        kwargs["ws_per_message_deflate"] = False
+    _set_workbench_kwargs(kwargs)
 
     uvicorn.run(  # pyright: ignore[reportUnknownMemberType]
         app,
@@ -727,6 +715,21 @@ class ReloadArgs(TypedDict):
     reload_includes: NotRequired[list[str]]
     reload_excludes: NotRequired[list[str]]
     reload_dirs: NotRequired[list[str]]
+
+
+def _set_workbench_kwargs(kwargs: dict[str, object]) -> None:
+    print(kwargs)
+    if is_workbench():
+        print("hit")
+        if kwargs.get("ws_per_message_deflate"):
+            # Workaround for nginx/uvicorn issue within Workbench
+            # https://github.com/rstudio/rstudio-pro/issues/7368#issuecomment-2918016088
+            warnings.warn(
+                "Overwriting kwarg `ws_per_message_deflate=True` to `False` to avoid breaking issue in Workbench",
+                stacklevel=2,
+            )
+        kwargs["ws_per_message_deflate"] = False
+    print(kwargs)
 
 
 # Check that the version of rsconnect supports Shiny Express; can be removed in the
