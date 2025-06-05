@@ -40,7 +40,7 @@ def test_workbench_kwargs_if_url_set():
 
 def test_workbench_kwargs_if_url_not_set():
     """
-    Test that the `ws_per_message_deflate` kwarg is not changed if the RS_SERVER_URL and RS_SESSION_URL environment variables are not set are set.
+    Test that the `ws_per_message_deflate` kwarg is not changed if the RS_SERVER_URL and RS_SESSION_URL environment variables are not set.
     """
     kwargs = {
         "ws_per_message_deflate": True,
