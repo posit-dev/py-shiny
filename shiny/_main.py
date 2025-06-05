@@ -717,7 +717,7 @@ class ReloadArgs(TypedDict):
     reload_dirs: NotRequired[list[str]]
 
 
-def _set_workbench_kwargs(kwargs: dict[str, object]) -> None:
+def _set_workbench_kwargs(kwargs: dict[str, Any]) -> None:
     if is_workbench():
         if kwargs.get("ws_per_message_deflate"):
             # Workaround for nginx/uvicorn issue within Workbench
