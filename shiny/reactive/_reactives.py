@@ -126,9 +126,15 @@ class Value(Generic[T]):
     def __call__(self) -> T:
         return self.get()
 
-    def get(self) -> T:
+    def get(self, default: T | MISSING_TYPE = MISSING) -> T:
         """
-        Read the reactive value.
+        Read the reactive value. If value is not set, a default can be optionally
+        returned.
+
+        Parameters
+        ----------
+        default
+            An optional default to return if value is not set.
 
         Returns
         -------
@@ -138,7 +144,7 @@ class Value(Generic[T]):
         Raises
         ------
         :class:`~shiny.types.SilentException`
-            If the value is not set.
+            If the value is not set and default is not provided.
         RuntimeError
             If called from outside a reactive function.
         """
@@ -146,6 +152,8 @@ class Value(Generic[T]):
         self._value_dependents.register()
 
         if isinstance(self._value, MISSING_TYPE):
+            if default is not MISSING:
+                return default
             raise SilentException
 
         return self._value
