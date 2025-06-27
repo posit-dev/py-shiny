@@ -64,7 +64,15 @@ def input_action_button(
     return tags.button(
         {"class": "btn btn-default action-button", "style": css(width=width)},
         icon,
-        None if icon is None else " ",
+        # The separator element helps us distinguish between the icon and label
+        # when dynamically updating the button/link (see rstudio/shiny#4242)
+        tags.span(class_="shiny-icon-separator") if icon else None,
+        # Adds a space between the icon and label
+        # TODO: this space gets removed when icon/label are updated dynamically,
+        # which is not ideal. The 'right' way to do this would be to either
+        # add a CSS class to the separator element, or wrap both the icon and
+        # label in a container element.
+        " " if icon and label else None,
         label,
         id=resolve_id(id),
         type="button",
@@ -117,6 +125,9 @@ def input_action_link(
     return tags.a(
         {"class": "action-button"},
         icon,
+        # The separator element helps us distinguish between the icon and label
+        # when dynamically updating the button/link (see rstudio/shiny#4242)
+        tags.span(class_="shiny-icon-separator") if icon else None,
         label,
         id=resolve_id(id),
         href="#",
