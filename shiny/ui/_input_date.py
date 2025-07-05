@@ -102,7 +102,7 @@ def input_date(
     Notes
     ------
     ::: {.callout-note title="Server value"}
-    A :class:`~datetime.date` object.
+    A :class:`~datetime.date` object or `None` if the user deletes the input field.
     :::
 
     See Also
@@ -223,7 +223,8 @@ def input_date_range(
     Notes
     ------
     ::: {.callout-note title="Server value"}
-    A tuple of :class:`~datetime.date` objects.
+    A 2-element tuple containing :class:`~datetime.date` objects or `None`. Each tuple
+    element will be `None` if the user deletes the corresponding input field.
     :::
 
     See Also

@@ -43,9 +43,7 @@ SelectChoicesArg = Union[
 _topics = {
     "Server value": """
 If `multiple=False`, the server value is a string with the value of the selected item.
-If `multiple=True`, the server value is a tuple containing the values of the
-selected items. When ``multiple=True`` and nothing is selected, this value
-will be ``None``.
+If `multiple=True`, the server value is a tuple of string(s) with the selected value(s) (if any).
 """
 }
 
