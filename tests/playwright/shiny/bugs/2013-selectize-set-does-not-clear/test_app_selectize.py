@@ -10,10 +10,14 @@ app = create_app_fixture("app_selectize.py")
 def test_inputselectize(page: Page, app: ShinyAppProc):
     page.goto(app.url)
 
-    controller.InputSelectize(page, "test_selectize").set(
-        ["Choice 1"]
-    )  # Add Choice 1 to selections
-    controller.InputSelectize(page, "test_selectize").set(
-        ["Choice 1", "Choice 2"]
-    )  # Add Choice 2 to selections
-    controller.InputSelectize(page, "test_selectize").set([])  # Clear selections
+    input_selectize = controller.InputSelectize(page, "test_selectize")
+    output_text = controller.OutputText(page, "test_selectize_output")
+
+    input_selectize.set(["Choice 1", "Choice 2", "Choice 3"])
+    output_text.expect_value("Selected: Choice 1, Choice 2, Choice 3")
+    input_selectize.set(["Choice 2", "Choice 3"])
+    output_text.expect_value("Selected: Choice 2, Choice 3")
+    input_selectize.set(["Choice 3"])
+    output_text.expect_value("Selected: Choice 3")
+    input_selectize.set([])
+    output_text.expect_value("Selected: ")

@@ -1199,7 +1199,7 @@ class InputSelectize(
         self._loc_events.click()
 
         while True:
-            remove_button = self._loc_events.locator(".item .remove").first
+            remove_button = self._loc_events.locator("> .item > .remove").first
             if remove_button.count() == 0:
                 break
             remove_button.click()
