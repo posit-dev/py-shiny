@@ -1,4 +1,4 @@
-from shiny import App, ui, render
+from shiny import App, render, ui
 
 app_ui = ui.page_fluid(
     ui.input_selectize(
