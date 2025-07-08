@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Fixed an issue with `ui.Chat()` sometimes wanting to scroll a parent element. (#1996)
 
+* Fixed `set()` method of `InputSelectize` controller so it clears existing selections before applying new values. (#2024)
+
 
 ## [1.4.0] - 2025-04-08
 
