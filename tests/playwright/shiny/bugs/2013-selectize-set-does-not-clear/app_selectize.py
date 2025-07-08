@@ -1,4 +1,5 @@
 from shiny import App, render, ui
+from shiny.session import Inputs, Outputs, Session
 
 app_ui = ui.page_fluid(
     ui.input_selectize(
@@ -11,7 +12,7 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input, output, session):
+def server(input: Inputs, output: Outputs, session: Session) -> None:
     @render.text
     def test_selectize_output():
         return f"Selected: {', '.join(input.test_selectize())}"
