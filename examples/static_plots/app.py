@@ -78,7 +78,6 @@ def server(input: Inputs, output: Outputs, session: Session):
             facet_wrap,
             geom_point,
             ggplot,
-            stat_smooth,
             theme,
             theme_bw,
         )
@@ -86,10 +85,10 @@ def server(input: Inputs, output: Outputs, session: Session):
         color_var = input.color()
         if str(mtcars[color_var].dtype) == "int64":
             color_var = f"factor({color_var})"
+
         return (
             ggplot(mtcars, aes(input.x(), input.y(), color=color_var))
             + geom_point()
-            + stat_smooth(method="lm")
             + facet_wrap("~gear")
             + theme_bw(base_size=16)
             + theme(legend_position="top")
