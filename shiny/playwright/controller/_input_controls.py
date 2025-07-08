@@ -1197,6 +1197,13 @@ class InputSelectize(
         if isinstance(selected, str):
             selected = [selected]
         self._loc_events.click()
+
+        while True:
+            remove_button = self._loc_events.locator(".item .remove").first
+            if remove_button.count() == 0:
+                break
+            remove_button.click()
+
         for value in selected:
             self._loc_selectize.locator(f"[data-value='{value}']").click(
                 timeout=timeout
