@@ -80,24 +80,7 @@ def add_test_file(
     test_name = test_file.name.replace(".py", "")
     rel_path = os.path.relpath(app_file, test_file.parent)
 
-    template = (
-        f"""\
-from playwright.sync_api import Page
-
-from shiny.playwright import controller
-from shiny.pytest import create_app_fixture
-from shiny.run import ShinyAppProc
-
-app = create_app_fixture("{app_file.name}")
-
-
-def {test_name}(page: Page, app: ShinyAppProc):
-
-    page.goto(app.url)
-    # Add test code here
-"""
-        if is_same_dir
-        else f"""\
+    template = f"""\
 from playwright.sync_api import Page
 
 from shiny.playwright import controller
@@ -112,7 +95,6 @@ def {test_name}(page: Page, app: ShinyAppProc):
     page.goto(app.url)
     # Add test code here
 """
-    )
     # Make sure test file directory exists
     test_file.parent.mkdir(parents=True, exist_ok=True)
 
