@@ -73,10 +73,6 @@ def add_test_file(
     if not test_file.name.startswith("test_"):
         return "Test file must start with 'test_'"
 
-    # if app path directory is the same as the test file directory, use `local_app`
-    # otherwise, use `create_app_fixture`
-    is_same_dir = app_file.parent == test_file.parent
-
     test_name = test_file.name.replace(".py", "")
     rel_path = os.path.relpath(app_file, test_file.parent)
 
