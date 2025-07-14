@@ -6,6 +6,9 @@ from playwright.sync_api import Page
 from shiny.playwright import controller
 from shiny.pytest import create_app_fixture
 from shiny.run import ShinyAppProc
+from tests.playwright.ai_generated_apps.bookmark.bookmark_utils import (
+    wait_for_url_change,
+)
 
 app = create_app_fixture("app-hidden.py")
 
@@ -41,8 +44,11 @@ def test_navset_hidden_bookmarking(
     mod_navset_btn = controller.InputActionButton(page, f"first-{navset_id}_button")
     mod_navset_btn.click()
 
+    existing_url = page.url
+
     # Click bookmark button
     controller.InputBookmarkButton(page).click()
+    wait_for_url_change(page, existing_url)
 
     # Reload page
     page.reload()
