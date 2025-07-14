@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, Optional, TypeVar
+from typing import TYPE_CHECKING, Literal, Optional, TypeVar, Union
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, tags
 
@@ -16,6 +16,7 @@ from .css._css_unit import CssUnit, as_css_unit
 
 if TYPE_CHECKING:
     from ..session import Session
+    from ..express._recall_context import RecallContextManager
 
 __all__ = (
     "accordion",
@@ -447,7 +448,7 @@ def update_accordion(
 @add_example()
 def insert_accordion_panel(
     id: str,
-    panel: AccordionPanel,
+    panel: Union[AccordionPanel, "RecallContextManager[AccordionPanel]"],
     target: Optional[str] = None,
     position: Literal["after", "before"] = "after",
     session: Optional[Session] = None,
@@ -486,14 +487,24 @@ def insert_accordion_panel(
     if position not in ("after", "before"):
         raise ValueError("`position` must be either 'after' or 'before'")
     session = require_active_session(session)
+    
+    # Handle both AccordionPanel and RecallContextManager[AccordionPanel]
+    from ..express._recall_context import RecallContextManager
+    if isinstance(panel, RecallContextManager):
+        # This is a RecallContextManager, extract the AccordionPanel
+        accordion_panel = panel.fn(*panel.args, **panel.kwargs)
+    else:
+        # This is already an AccordionPanel
+        accordion_panel = panel
+    
     # Add accordion ID to panel; Used when `accordion(multiple=False)`
-    panel._accordion_id = id
+    accordion_panel._accordion_id = id
 
     _send_panel_message(
         id,
         session,
         method="insert",
-        panel=session._process_ui(panel.resolve()),
+        panel=session._process_ui(accordion_panel.resolve()),
         target=None if target is None else _assert_str(target),
         position=position,
     )
