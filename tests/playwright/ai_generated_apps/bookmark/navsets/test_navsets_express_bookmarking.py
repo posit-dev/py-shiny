@@ -6,9 +6,6 @@ from playwright.sync_api import Page
 from shiny.playwright import controller
 from shiny.pytest import create_app_fixture
 from shiny.run import ShinyAppProc
-from tests.playwright.ai_generated_apps.bookmark.bookmark_utils import (
-    wait_for_url_change,
-)
 
 app = create_app_fixture("app-express.py")
 
@@ -51,7 +48,7 @@ def test_navsets_bookmarking_demo(
 
     # Click bookmark button
     controller.InputBookmarkButton(page).click()
-    wait_for_url_change(page, existing_url)
+    page.wait_for_url(lambda url: url != existing_url, timeout=5 * 1000)
     # Reload page
     page.reload()
 
