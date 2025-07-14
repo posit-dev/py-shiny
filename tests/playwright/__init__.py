@@ -1,1 +1,0 @@
-# Makes playwright a package
