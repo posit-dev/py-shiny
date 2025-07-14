@@ -61,18 +61,15 @@ def input_action_button(
     if "_add_ws" not in kwargs:
         kwargs["_add_ws"] = True
 
+    if icon is not None:
+        icon = tags.span(icon, class_="action-icon")
+
+    if label is not None:
+        label = tags.span(label, class_="action-label")
+
     return tags.button(
         {"class": "btn btn-default action-button", "style": css(width=width)},
         icon,
-        # The separator element helps us distinguish between the icon and label
-        # when dynamically updating the button/link (see rstudio/shiny#4242)
-        tags.span(class_="shiny-icon-separator") if icon else None,
-        # Adds a space between the icon and label
-        # TODO: this space gets removed when icon/label are updated dynamically,
-        # which is not ideal. The 'right' way to do this would be to either
-        # add a CSS class to the separator element, or wrap both the icon and
-        # label in a container element.
-        " " if icon and label else None,
         label,
         id=resolve_id(id),
         type="button",
@@ -122,12 +119,15 @@ def input_action_link(
     * :func:`~shiny.reactive.event`
     """
 
+    if icon is not None:
+        icon = tags.span(icon, class_="action-icon")
+
+    if label is not None:
+        label = tags.span(label, class_="action-label")
+
     return tags.a(
-        {"class": "action-button"},
+        {"class": "action-button action-link"},
         icon,
-        # The separator element helps us distinguish between the icon and label
-        # when dynamically updating the button/link (see rstudio/shiny#4242)
-        tags.span(class_="shiny-icon-separator") if icon else None,
         label,
         id=resolve_id(id),
         href="#",
