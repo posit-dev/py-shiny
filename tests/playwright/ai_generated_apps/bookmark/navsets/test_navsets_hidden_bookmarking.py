@@ -41,8 +41,11 @@ def test_navset_hidden_bookmarking(
     mod_navset_btn = controller.InputActionButton(page, f"first-{navset_id}_button")
     mod_navset_btn.click()
 
+    existing_url = page.url
+
     # Click bookmark button
     controller.InputBookmarkButton(page).click()
+    page.wait_for_url(lambda url: url != existing_url, timeout=5 * 1000)
 
     # Reload page
     page.reload()
