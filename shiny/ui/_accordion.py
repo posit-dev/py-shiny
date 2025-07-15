@@ -15,8 +15,8 @@ from ._tag import consolidate_attrs
 from .css._css_unit import CssUnit, as_css_unit
 
 if TYPE_CHECKING:
-    from ..session import Session
     from ..express._recall_context import RecallContextManager
+    from ..session import Session
 
 __all__ = (
     "accordion",
@@ -487,16 +487,17 @@ def insert_accordion_panel(
     if position not in ("after", "before"):
         raise ValueError("`position` must be either 'after' or 'before'")
     session = require_active_session(session)
-    
+
     # Handle both AccordionPanel and RecallContextManager[AccordionPanel]
     from ..express._recall_context import RecallContextManager
+
     if isinstance(panel, RecallContextManager):
         # This is a RecallContextManager, extract the AccordionPanel
         accordion_panel = panel.fn(*panel.args, **panel.kwargs)
     else:
         # This is already an AccordionPanel
         accordion_panel = panel
-    
+
     # Add accordion ID to panel; Used when `accordion(multiple=False)`
     accordion_panel._accordion_id = id
 
