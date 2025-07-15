@@ -24,9 +24,9 @@ chat.ui()
 # Use ChatOpenAI as it does not need credentials until submission to the server.
 # However, if we use `.set_turns()` and `.get_turns()`, a submission is never made to the server... therefore we don't need credentials.
 chat_client = chatlas.ChatOpenAI(  # pyright: ignore[reportUnknownMemberType]
-    turns=[],
     api_key="<not_utilized>",
 )
+chat_client.set_turns([])  # type: ignore[arg-type]
 chat.enable_bookmarking(chat_client, bookmark_store="url")
 
 
