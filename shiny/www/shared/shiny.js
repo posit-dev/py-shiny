@@ -1,4 +1,4 @@
-/*! shiny 1.10.0.9001 | (c) 2012-2025 Posit Software, PBC. | License: GPL-3 | file LICENSE */
+/*! shiny 1.11.1.9000 | (c) 2012-2025 Posit Software, PBC. | License: GPL-3 | file LICENSE */
 "use strict";
 (() => {
   var __create = Object.create;
@@ -143,854 +143,10 @@
   var import_jquery39 = __toESM(require_jquery());
 
   // srcts/src/utils/index.ts
-  var import_jquery4 = __toESM(require_jquery());
-
-  // srcts/src/window/pixelRatio.ts
-  function windowDevicePixelRatio() {
-    return window.devicePixelRatio;
-  }
-
-  // srcts/src/utils/object.ts
-  function hasOwnProperty(obj, prop) {
-    return Object.prototype.hasOwnProperty.call(obj, prop);
-  }
-  function hasDefinedProperty(obj, prop) {
-    return Object.prototype.hasOwnProperty.call(obj, prop) && obj[prop] !== void 0;
-  }
-  function ifUndefined(value, alternate) {
-    if (value === void 0)
-      return alternate;
-    return value;
-  }
-
-  // srcts/src/utils/index.ts
-  function escapeHTML(str) {
-    const escaped = {
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      '"': "&quot;",
-      "'": "&#039;",
-      "/": "&#x2F;"
-    };
-    return str.replace(/[&<>'"/]/g, function(m2) {
-      return escaped[m2];
-    });
-  }
-  function randomId() {
-    return Math.floor(4294967296 + Math.random() * 64424509440).toString(16);
-  }
-  function strToBool(str) {
-    if (!str || !str.toLowerCase)
-      return void 0;
-    switch (str.toLowerCase()) {
-      case "true":
-        return true;
-      case "false":
-        return false;
-      default:
-        return void 0;
-    }
-  }
-  function getStyle(el, styleProp) {
-    let x2 = void 0;
-    if ("currentStyle" in el) {
-      x2 = el.currentStyle[styleProp];
-    } else {
-      const style = document?.defaultView?.getComputedStyle(el, null);
-      if (style)
-        x2 = style.getPropertyValue(styleProp);
-    }
-    return x2;
-  }
-  function padZeros(n4, digits) {
-    let str = n4.toString();
-    while (str.length < digits)
-      str = "0" + str;
-    return str;
-  }
-  function roundSignif(x2, digits = 1) {
-    if (digits < 1)
-      throw "Significant digits must be at least 1.";
-    return parseFloat(x2.toPrecision(digits));
-  }
-  function parseDate(dateString) {
-    let date = new Date(dateString);
-    if (date.toString() === "Invalid Date") {
-      date = new Date(dateString.replace(/-/g, "/"));
-    }
-    return date;
-  }
-  function formatDateUTC(date) {
-    if (date instanceof Date) {
-      return date.getUTCFullYear() + "-" + padZeros(date.getUTCMonth() + 1, 2) + "-" + padZeros(date.getUTCDate(), 2);
-    } else {
-      return null;
-    }
-  }
-  function makeResizeFilter(el, func) {
-    let lastSize = {};
-    return function() {
-      const rect = el.getBoundingClientRect();
-      const size = { w: rect.width, h: rect.height };
-      if (size.w === 0 && size.h === 0)
-        return;
-      if (size.w === lastSize.w && size.h === lastSize.h)
-        return;
-      lastSize = size;
-      func(size.w, size.h);
-    };
-  }
-  function pixelRatio() {
-    if (windowDevicePixelRatio()) {
-      return Math.round(windowDevicePixelRatio() * 100) / 100;
-    } else {
-      return 1;
-    }
-  }
-  function getBoundingClientSizeBeforeZoom(el) {
-    const rect = el.getBoundingClientRect();
-    const zoom = el.currentCSSZoom || 1;
-    return {
-      width: rect.width / zoom,
-      height: rect.height / zoom
-    };
-  }
-  function scopeExprToFunc(expr) {
-    const exprEscaped = expr.replace(/[\\"']/g, "\\$&").replace(/\u0000/g, "\\0").replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/[\b]/g, "\\b");
-    let func;
-    try {
-      func = new Function(
-        `with (this) {
-        try {
-          return (${expr});
-        } catch (e) {
-          console.error('Error evaluating expression: ${exprEscaped}');
-          throw e;
-        }
-      }`
-      );
-    } catch (e4) {
-      console.error("Error parsing expression: " + expr);
-      throw e4;
-    }
-    return function(scope) {
-      return func.call(scope);
-    };
-  }
-  function asArray(value) {
-    if (value === null || value === void 0)
-      return [];
-    if (Array.isArray(value))
-      return value;
-    return [value];
-  }
-  function mergeSort(list, sortfunc) {
-    function merge(a3, b3) {
-      let ia = 0;
-      let ib = 0;
-      const sorted = [];
-      while (ia < a3.length && ib < b3.length) {
-        if (sortfunc(a3[ia], b3[ib]) <= 0) {
-          sorted.push(a3[ia++]);
-        } else {
-          sorted.push(b3[ib++]);
-        }
-      }
-      while (ia < a3.length)
-        sorted.push(a3[ia++]);
-      while (ib < b3.length)
-        sorted.push(b3[ib++]);
-      return sorted;
-    }
-    list = list.slice(0);
-    for (let chunkSize = 1; chunkSize < list.length; chunkSize *= 2) {
-      for (let i4 = 0; i4 < list.length; i4 += chunkSize * 2) {
-        const listA = list.slice(i4, i4 + chunkSize);
-        const listB = list.slice(i4 + chunkSize, i4 + chunkSize * 2);
-        const merged = merge(listA, listB);
-        const args = [i4, merged.length];
-        Array.prototype.push.apply(args, merged);
-        Array.prototype.splice.apply(list, args);
-      }
-    }
-    return list;
-  }
-  function $escape(val) {
-    if (typeof val === "undefined")
-      return val;
-    return val.replace(/([!"#$%&'()*+,./:;<=>?@[\\\]^`{|}~])/g, "\\$1");
-  }
-  function mapValues(obj, f3) {
-    const newObj = {};
-    Object.keys(obj).forEach((key) => {
-      newObj[key] = f3(obj[key], key, obj);
-    });
-    return newObj;
-  }
-  function isnan(x2) {
-    return typeof x2 === "number" && isNaN(x2);
-  }
-  function _equal(x2, y3) {
-    if (import_jquery4.default.type(x2) === "object" && import_jquery4.default.type(y3) === "object") {
-      const xo = x2;
-      const yo = y3;
-      if (Object.keys(xo).length !== Object.keys(yo).length)
-        return false;
-      for (const prop in xo) {
-        if (!hasOwnProperty(yo, prop) || !_equal(xo[prop], yo[prop]))
-          return false;
-      }
-      return true;
-    } else if (import_jquery4.default.type(x2) === "array" && import_jquery4.default.type(y3) === "array") {
-      const xa = x2;
-      const ya = y3;
-      if (xa.length !== ya.length)
-        return false;
-      for (let i4 = 0; i4 < xa.length; i4++)
-        if (!_equal(xa[i4], ya[i4]))
-          return false;
-      return true;
-    } else {
-      return x2 === y3;
-    }
-  }
-  function equal(...args) {
-    if (args.length < 2)
-      throw new Error("equal requires at least two arguments.");
-    for (let i4 = 0; i4 < args.length - 1; i4++) {
-      if (!_equal(args[i4], args[i4 + 1]))
-        return false;
-    }
-    return true;
-  }
-  var compareVersion = function(a3, op, b3) {
-    function versionParts(ver) {
-      return (ver + "").replace(/-/, ".").replace(/(\.0)+[^.]*$/, "").split(".");
-    }
-    function cmpVersion(a4, b4) {
-      const aParts = versionParts(a4);
-      const bParts = versionParts(b4);
-      const len = Math.min(aParts.length, bParts.length);
-      let cmp;
-      for (let i4 = 0; i4 < len; i4++) {
-        cmp = parseInt(aParts[i4], 10) - parseInt(bParts[i4], 10);
-        if (cmp !== 0) {
-          return cmp;
-        }
-      }
-      return aParts.length - bParts.length;
-    }
-    const diff = cmpVersion(a3, b3);
-    if (op === "==")
-      return diff === 0;
-    else if (op === ">=")
-      return diff >= 0;
-    else if (op === ">")
-      return diff > 0;
-    else if (op === "<=")
-      return diff <= 0;
-    else if (op === "<")
-      return diff < 0;
-    else
-      throw `Unknown operator: ${op}`;
-  };
-  function updateLabel(labelTxt, labelNode) {
-    if (typeof labelTxt === "undefined")
-      return;
-    if (labelNode.length !== 1) {
-      throw new Error("labelNode must be of length 1");
-    }
-    const emptyLabel = Array.isArray(labelTxt) && labelTxt.length === 0;
-    if (emptyLabel) {
-      labelNode.addClass("shiny-label-null");
-    } else {
-      labelNode.text(labelTxt);
-      labelNode.removeClass("shiny-label-null");
-    }
-  }
-  function getComputedLinkColor(el) {
-    const a3 = document.createElement("a");
-    a3.href = "/";
-    const div = document.createElement("div");
-    div.style.setProperty("position", "absolute", "important");
-    div.style.setProperty("top", "-1000px", "important");
-    div.style.setProperty("left", "0", "important");
-    div.style.setProperty("width", "30px", "important");
-    div.style.setProperty("height", "10px", "important");
-    div.appendChild(a3);
-    el.appendChild(div);
-    const linkColor = window.getComputedStyle(a3).getPropertyValue("color");
-    el.removeChild(div);
-    return linkColor;
-  }
-  function isBS3() {
-    return !window.bootstrap;
-  }
-
-  // srcts/src/bindings/registry.ts
-  var BindingRegistry = class {
-    constructor() {
-      this.bindings = [];
-      this.bindingNames = {};
-    }
-    register(binding, bindingName, priority = 0) {
-      const bindingObj = { binding, priority };
-      this.bindings.unshift(bindingObj);
-      if (bindingName) {
-        this.bindingNames[bindingName] = bindingObj;
-        binding.name = bindingName;
-      }
-    }
-    setPriority(bindingName, priority) {
-      const bindingObj = this.bindingNames[bindingName];
-      if (!bindingObj)
-        throw "Tried to set priority on unknown binding " + bindingName;
-      bindingObj.priority = priority || 0;
-    }
-    getPriority(bindingName) {
-      const bindingObj = this.bindingNames[bindingName];
-      if (!bindingObj)
-        return false;
-      return bindingObj.priority;
-    }
-    getBindings() {
-      return mergeSort(this.bindings, function(a3, b3) {
-        return b3.priority - a3.priority;
-      });
-    }
-  };
-
-  // srcts/src/bindings/input/inputBinding.ts
-  var InputBinding = class {
-    find(scope) {
-      throw "Not implemented";
-      scope;
-    }
-    getId(el) {
-      return el.getAttribute("data-input-id") || el.id;
-    }
-    getType(el) {
-      return null;
-      el;
-    }
-    getValue(el) {
-      throw "Not implemented";
-      el;
-    }
-    subscribe(el, callback) {
-      el;
-      callback;
-    }
-    unsubscribe(el) {
-      el;
-    }
-    receiveMessage(el, data) {
-      throw "Not implemented";
-      el;
-      data;
-    }
-    getState(el) {
-      throw "Not implemented";
-      el;
-    }
-    getRatePolicy(el) {
-      return null;
-      el;
-    }
-    initialize(el) {
-      el;
-    }
-    dispose(el) {
-      el;
-    }
-  };
-
-  // srcts/src/bindings/input/actionbutton.ts
-  var import_jquery5 = __toESM(require_jquery());
-  var ActionButtonInputBinding = class extends InputBinding {
-    find(scope) {
-      return (0, import_jquery5.default)(scope).find(".action-button");
-    }
-    getValue(el) {
-      return (0, import_jquery5.default)(el).data("val") || 0;
-    }
-    setValue(el, value) {
-      (0, import_jquery5.default)(el).data("val", value);
-    }
-    getType(el) {
-      return "shiny.action";
-      el;
-    }
-    subscribe(el, callback) {
-      (0, import_jquery5.default)(el).on(
-        "click.actionButtonInputBinding",
-        function() {
-          const $el = (0, import_jquery5.default)(this);
-          const val = $el.data("val") || 0;
-          $el.data("val", val + 1);
-          callback(false);
-        }
-      );
-    }
-    getState(el) {
-      return { value: this.getValue(el) };
-    }
-    receiveMessage(el, data) {
-      const $el = (0, import_jquery5.default)(el);
-      if (hasDefinedProperty(data, "label") || hasDefinedProperty(data, "icon")) {
-        let label = $el.text();
-        let icon = "";
-        if ($el.find("i[class]").length > 0) {
-          const iconHtml = $el.find("i[class]")[0];
-          if (iconHtml === $el.children()[0]) {
-            icon = (0, import_jquery5.default)(iconHtml).prop("outerHTML");
-          }
-        }
-        if (hasDefinedProperty(data, "label")) {
-          label = data.label;
-        }
-        if (hasDefinedProperty(data, "icon")) {
-          icon = Array.isArray(data.icon) ? "" : data.icon ?? "";
-        }
-        $el.html(icon + " " + label);
-      }
-      if (hasDefinedProperty(data, "disabled")) {
-        if (data.disabled) {
-          $el.attr("disabled", "");
-        } else {
-          $el.attr("disabled", null);
-        }
-      }
-    }
-    unsubscribe(el) {
-      (0, import_jquery5.default)(el).off(".actionButtonInputBinding");
-    }
-  };
-  (0, import_jquery5.default)(document).on("click", "a.action-button", function(e4) {
-    e4.preventDefault();
-  });
-
-  // srcts/src/bindings/input/checkbox.ts
   var import_jquery6 = __toESM(require_jquery());
-  var CheckboxInputBinding = class extends InputBinding {
-    find(scope) {
-      return (0, import_jquery6.default)(scope).find('input[type="checkbox"]');
-    }
-    getValue(el) {
-      return el.checked;
-    }
-    setValue(el, value) {
-      el.checked = value;
-    }
-    subscribe(el, callback) {
-      (0, import_jquery6.default)(el).on("change.checkboxInputBinding", function() {
-        callback(true);
-      });
-    }
-    unsubscribe(el) {
-      (0, import_jquery6.default)(el).off(".checkboxInputBinding");
-    }
-    getState(el) {
-      return {
-        label: (0, import_jquery6.default)(el).parent().find("span").text(),
-        value: el.checked
-      };
-    }
-    receiveMessage(el, data) {
-      if (hasDefinedProperty(data, "value")) {
-        el.checked = data.value;
-      }
-      if (hasDefinedProperty(data, "label")) {
-        (0, import_jquery6.default)(el).parent().find("span").text(data.label);
-      }
-      (0, import_jquery6.default)(el).trigger("change");
-    }
-  };
 
-  // srcts/src/bindings/input/checkboxgroup.ts
-  var import_jquery7 = __toESM(require_jquery());
-  function getLabelNode(el) {
-    return (0, import_jquery7.default)(el).find('label[for="' + $escape(el.id) + '"]');
-  }
-  function getLabel(obj) {
-    const parentNode = obj.parentNode;
-    if (parentNode.tagName === "LABEL") {
-      return (0, import_jquery7.default)(parentNode).find("span").text().trim();
-    }
-    return null;
-  }
-  var CheckboxGroupInputBinding = class extends InputBinding {
-    find(scope) {
-      return (0, import_jquery7.default)(scope).find(".shiny-input-checkboxgroup");
-    }
-    getValue(el) {
-      const $objs = (0, import_jquery7.default)('input:checkbox[name="' + $escape(el.id) + '"]:checked');
-      const values = new Array($objs.length);
-      for (let i4 = 0; i4 < $objs.length; i4++) {
-        values[i4] = $objs[i4].value;
-      }
-      return values;
-    }
-    setValue(el, value) {
-      value = value ?? [];
-      (0, import_jquery7.default)('input:checkbox[name="' + $escape(el.id) + '"]').prop("checked", false);
-      if (value instanceof Array) {
-        for (let i4 = 0; i4 < value.length; i4++) {
-          (0, import_jquery7.default)(
-            'input:checkbox[name="' + $escape(el.id) + '"][value="' + $escape(value[i4]) + '"]'
-          ).prop("checked", true);
-        }
-      } else {
-        (0, import_jquery7.default)(
-          'input:checkbox[name="' + $escape(el.id) + '"][value="' + $escape(value) + '"]'
-        ).prop("checked", true);
-      }
-    }
-    getState(el) {
-      const $objs = (0, import_jquery7.default)(
-        'input:checkbox[name="' + $escape(el.id) + '"]'
-      );
-      const options = new Array($objs.length);
-      for (let i4 = 0; i4 < options.length; i4++) {
-        options[i4] = { value: $objs[i4].value, label: getLabel($objs[i4]) };
-      }
-      return {
-        label: getLabelNode(el).text(),
-        value: this.getValue(el),
-        options
-      };
-    }
-    receiveMessage(el, data) {
-      const $el = (0, import_jquery7.default)(el);
-      if (hasDefinedProperty(data, "options")) {
-        $el.find("div.shiny-options-group").remove();
-        $el.find("label.checkbox").remove();
-        $el.append(data.options);
-      }
-      if (hasDefinedProperty(data, "value")) {
-        this.setValue(el, data.value);
-      }
-      updateLabel(data.label, getLabelNode(el));
-      (0, import_jquery7.default)(el).trigger("change");
-    }
-    subscribe(el, callback) {
-      (0, import_jquery7.default)(el).on("change.checkboxGroupInputBinding", function() {
-        callback(false);
-      });
-    }
-    unsubscribe(el) {
-      (0, import_jquery7.default)(el).off(".checkboxGroupInputBinding");
-    }
-  };
-
-  // srcts/src/bindings/input/date.ts
-  var import_jquery8 = __toESM(require_jquery());
-  var DateInputBindingBase = class extends InputBinding {
-    find(scope) {
-      return (0, import_jquery8.default)(scope).find(".shiny-date-input");
-    }
-    getType(el) {
-      return "shiny.date";
-      el;
-    }
-    subscribe(el, callback) {
-      (0, import_jquery8.default)(el).on(
-        "changeDate.dateInputBinding change.dateInputBinding",
-        function() {
-          callback(false);
-        }
-      );
-    }
-    unsubscribe(el) {
-      (0, import_jquery8.default)(el).off(".dateInputBinding");
-    }
-    getRatePolicy() {
-      return {
-        policy: "debounce",
-        delay: 250
-      };
-    }
-    setValue(el, data) {
-      throw "not implemented";
-      el;
-      data;
-    }
-    initialize(el) {
-      const $input = (0, import_jquery8.default)(el).find("input");
-      let date = $input.data("initial-date");
-      if (date === void 0 || date === null) {
-        date = this._floorDateTime(this._dateAsUTC(new Date()));
-      }
-      this.setValue(el, date);
-      if ($input.data("min-date") !== void 0) {
-        this._setMin($input[0], $input.data("min-date"));
-      }
-      if ($input.data("max-date") !== void 0) {
-        this._setMax($input[0], $input.data("max-date"));
-      }
-    }
-    _getLabelNode(el) {
-      return (0, import_jquery8.default)(el).find('label[for="' + $escape(el.id) + '"]');
-    }
-    _formatToString(format) {
-      let str = "";
-      let i4;
-      for (i4 = 0; i4 < format.parts.length; i4++) {
-        str += format.separators[i4] + format.parts[i4];
-      }
-      str += format.separators[i4];
-      return str;
-    }
-    _setMin(el, date) {
-      if (date === null) {
-        (0, import_jquery8.default)(el).bsDatepicker("setStartDate", null);
-        return;
-      }
-      const parsedDate = this._newDate(date);
-      if (parsedDate === null)
-        return;
-      date = parsedDate;
-      if (isNaN(date.valueOf()))
-        return;
-      const curValue = (0, import_jquery8.default)(el).bsDatepicker("getUTCDate");
-      (0, import_jquery8.default)(el).bsDatepicker("setStartDate", this._utcDateAsLocal(date));
-      if (date && curValue && date.getTime() > curValue.getTime()) {
-        (0, import_jquery8.default)(el).bsDatepicker("clearDates");
-      } else {
-        (0, import_jquery8.default)(el).bsDatepicker("setUTCDate", curValue);
-      }
-    }
-    _setMax(el, date) {
-      if (date === null) {
-        (0, import_jquery8.default)(el).bsDatepicker("setEndDate", null);
-        return;
-      }
-      const parsedDate = this._newDate(date);
-      if (parsedDate === null)
-        return;
-      date = parsedDate;
-      if (isNaN(date.valueOf()))
-        return;
-      const curValue = (0, import_jquery8.default)(el).bsDatepicker("getUTCDate");
-      (0, import_jquery8.default)(el).bsDatepicker("setEndDate", this._utcDateAsLocal(date));
-      if (date && curValue && date.getTime() < curValue.getTime()) {
-        (0, import_jquery8.default)(el).bsDatepicker("clearDates");
-      } else {
-        (0, import_jquery8.default)(el).bsDatepicker("setUTCDate", curValue);
-      }
-    }
-    _newDate(date) {
-      if (date instanceof Date)
-        return date;
-      if (!date)
-        return null;
-      const d3 = parseDate(date);
-      if (isNaN(d3.valueOf()))
-        return null;
-      return d3;
-    }
-    _floorDateTime(date) {
-      date = new Date(date.getTime());
-      date.setUTCHours(0, 0, 0, 0);
-      return date;
-    }
-    _dateAsUTC(date) {
-      return new Date(date.getTime() - date.getTimezoneOffset() * 6e4);
-    }
-    _utcDateAsLocal(date) {
-      return new Date(date.getTime() + date.getTimezoneOffset() * 6e4);
-    }
-  };
-  var DateInputBinding = class extends DateInputBindingBase {
-    getValue(el) {
-      const date = (0, import_jquery8.default)(el).find("input").bsDatepicker("getUTCDate");
-      return formatDateUTC(date);
-    }
-    setValue(el, value) {
-      if (value === null) {
-        (0, import_jquery8.default)(el).find("input").val("").bsDatepicker("update");
-        return;
-      }
-      const date = this._newDate(value);
-      if (date === null) {
-        return;
-      }
-      if (isNaN(date.valueOf()))
-        return;
-      (0, import_jquery8.default)(el).find("input").bsDatepicker("setUTCDate", date);
-    }
-    getState(el) {
-      const $el = (0, import_jquery8.default)(el);
-      const $input = $el.find("input");
-      let min = $input.data("datepicker").startDate;
-      let max = $input.data("datepicker").endDate;
-      min = min === -Infinity ? null : formatDateUTC(min);
-      max = max === Infinity ? null : formatDateUTC(max);
-      let startview = $input.data("datepicker").startViewMode;
-      if (startview === 2)
-        startview = "decade";
-      else if (startview === 1)
-        startview = "year";
-      else if (startview === 0)
-        startview = "month";
-      return {
-        label: this._getLabelNode(el).text(),
-        value: this.getValue(el),
-        valueString: $input.val(),
-        min,
-        max,
-        language: $input.data("datepicker").language,
-        weekstart: $input.data("datepicker").weekStart,
-        format: this._formatToString($input.data("datepicker").format),
-        startview
-      };
-    }
-    receiveMessage(el, data) {
-      const $input = (0, import_jquery8.default)(el).find("input");
-      updateLabel(data.label, this._getLabelNode(el));
-      if (hasDefinedProperty(data, "min"))
-        this._setMin($input[0], data.min);
-      if (hasDefinedProperty(data, "max"))
-        this._setMax($input[0], data.max);
-      if (hasDefinedProperty(data, "value"))
-        this.setValue(el, data.value);
-      (0, import_jquery8.default)(el).trigger("change");
-    }
-  };
-
-  // srcts/src/bindings/input/daterange.ts
-  var import_jquery9 = __toESM(require_jquery());
-  function getLabelNode2(el) {
-    return (0, import_jquery9.default)(el).find('label[for="' + $escape(el.id) + '"]');
-  }
-  var DateRangeInputBinding = class extends DateInputBindingBase {
-    find(scope) {
-      return (0, import_jquery9.default)(scope).find(".shiny-date-range-input");
-    }
-    getValue(el) {
-      const $inputs = (0, import_jquery9.default)(el).find("input");
-      const start = $inputs.eq(0).bsDatepicker("getUTCDate");
-      const end = $inputs.eq(1).bsDatepicker("getUTCDate");
-      return [formatDateUTC(start), formatDateUTC(end)];
-    }
-    setValue(el, value) {
-      if (!(value instanceof Object)) {
-        return;
-      }
-      const $inputs = (0, import_jquery9.default)(el).find("input");
-      if (value.start !== void 0) {
-        if (value.start === null) {
-          $inputs.eq(0).val("").bsDatepicker("update");
-        } else {
-          const start = this._newDate(value.start);
-          $inputs.eq(0).bsDatepicker("setUTCDate", start);
-        }
-      }
-      if (value.end !== void 0) {
-        if (value.end === null) {
-          $inputs.eq(1).val("").bsDatepicker("update");
-        } else {
-          const end = this._newDate(value.end);
-          $inputs.eq(1).bsDatepicker("setUTCDate", end);
-        }
-      }
-    }
-    getState(el) {
-      const $el = (0, import_jquery9.default)(el);
-      const $inputs = $el.find("input");
-      const $startinput = $inputs.eq(0);
-      const $endinput = $inputs.eq(1);
-      const min = $startinput.bsDatepicker("getStartDate");
-      const max = $startinput.bsDatepicker("getEndDate");
-      const minStr = min === -Infinity ? null : formatDateUTC(min);
-      const maxStr = max === Infinity ? null : formatDateUTC(max);
-      let startview = $startinput.data("datepicker").startView;
-      if (startview === 2)
-        startview = "decade";
-      else if (startview === 1)
-        startview = "year";
-      else if (startview === 0)
-        startview = "month";
-      return {
-        label: getLabelNode2(el).text(),
-        value: this.getValue(el),
-        valueString: [$startinput.val(), $endinput.val()],
-        min: minStr,
-        max: maxStr,
-        weekstart: $startinput.data("datepicker").weekStart,
-        format: this._formatToString($startinput.data("datepicker").format),
-        language: $startinput.data("datepicker").language,
-        startview
-      };
-    }
-    receiveMessage(el, data) {
-      const $el = (0, import_jquery9.default)(el);
-      const $inputs = $el.find("input");
-      const $startinput = $inputs.eq(0);
-      const $endinput = $inputs.eq(1);
-      updateLabel(data.label, getLabelNode2(el));
-      if (hasDefinedProperty(data, "min")) {
-        this._setMin($startinput[0], data.min);
-        this._setMin($endinput[0], data.min);
-      }
-      if (hasDefinedProperty(data, "max")) {
-        this._setMax($startinput[0], data.max);
-        this._setMax($endinput[0], data.max);
-      }
-      if (hasDefinedProperty(data, "value")) {
-        this.setValue(el, data.value);
-      }
-      $el.trigger("change");
-    }
-    initialize(el) {
-      const $el = (0, import_jquery9.default)(el);
-      const $inputs = $el.find("input");
-      const $startinput = $inputs.eq(0);
-      const $endinput = $inputs.eq(1);
-      let start = $startinput.data("initial-date");
-      let end = $endinput.data("initial-date");
-      if (start === void 0 || start === null)
-        start = this._dateAsUTC(new Date());
-      if (end === void 0 || end === null)
-        end = this._dateAsUTC(new Date());
-      this.setValue(el, { start, end });
-      this._setMin($startinput[0], $startinput.data("min-date"));
-      this._setMin($endinput[0], $startinput.data("min-date"));
-      this._setMax($startinput[0], $endinput.data("max-date"));
-      this._setMax($endinput[0], $endinput.data("max-date"));
-    }
-    subscribe(el, callback) {
-      (0, import_jquery9.default)(el).on(
-        "changeDate.dateRangeInputBinding change.dateRangeInputBinding",
-        function() {
-          callback(false);
-        }
-      );
-    }
-    unsubscribe(el) {
-      (0, import_jquery9.default)(el).off(".dateRangeInputBinding");
-    }
-  };
-
-  // srcts/src/bindings/input/fileinput.ts
-  var import_jquery12 = __toESM(require_jquery());
-
-  // srcts/src/file/fileProcessor.ts
-  var import_jquery11 = __toESM(require_jquery());
-
-  // srcts/src/events/inputChanged.ts
-  var import_jquery10 = __toESM(require_jquery());
-  function triggerFileInputChanged(name, value, binding, el, inputType, onEl) {
-    const evt = import_jquery10.default.Event("shiny:inputchanged");
-    evt.name = name;
-    evt.value = value;
-    evt.binding = binding;
-    evt.el = el;
-    evt.inputType = inputType;
-    (0, import_jquery10.default)(onEl).trigger(evt);
-    return evt;
-  }
+  // srcts/src/shiny/render.ts
+  var import_jquery5 = __toESM(require_jquery());
 
   // srcts/src/shiny/initedMethods.ts
   var fullShinyObj;
@@ -1043,1240 +199,6 @@
   function getShinyCreateWebsocket() {
     return validateShinyHasBeenSet().createSocket;
   }
-
-  // srcts/src/file/fileProcessor.ts
-  var FileProcessor = class {
-    constructor(files, exec$run = true) {
-      this.fileIndex = -1;
-      this.aborted = false;
-      this.completed = false;
-      this.files = Array.from(files);
-      if (exec$run) {
-        this.$run();
-      }
-    }
-    onBegin(files, cont) {
-      files;
-      setTimeout(cont, 0);
-    }
-    onFile(file, cont) {
-      file;
-      setTimeout(cont, 0);
-    }
-    onComplete() {
-      return;
-    }
-    onAbort() {
-      return;
-    }
-    abort() {
-      if (this.completed || this.aborted)
-        return;
-      this.aborted = true;
-      this.onAbort();
-    }
-    $getRun() {
-      let called = false;
-      return () => {
-        if (called)
-          return;
-        called = true;
-        this.$run();
-      };
-    }
-    $run() {
-      if (this.aborted || this.completed)
-        return;
-      if (this.fileIndex < 0) {
-        this.fileIndex = 0;
-        this.onBegin(this.files, this.$getRun());
-        return;
-      }
-      if (this.fileIndex === this.files.length) {
-        this.completed = true;
-        this.onComplete();
-        return;
-      }
-      const file = this.files[this.fileIndex++];
-      this.onFile(file, this.$getRun());
-    }
-  };
-  var FileUploader = class extends FileProcessor {
-    constructor(shinyapp, id, files, el) {
-      super(files, false);
-      this.shinyapp = shinyapp;
-      this.id = id;
-      this.el = el;
-      this.$run();
-    }
-    makeRequest(method, args, onSuccess, onFailure, blobs) {
-      this.shinyapp.makeRequest(method, args, onSuccess, onFailure, blobs);
-    }
-    onBegin(files, cont) {
-      this.$setError(null);
-      this.$setActive(true);
-      this.$setVisible(true);
-      this.onProgress(null, 0);
-      this.totalBytes = 0;
-      this.progressBytes = 0;
-      import_jquery11.default.each(files, (i4, file) => {
-        this.totalBytes += file.size;
-      });
-      const fileInfo = import_jquery11.default.map(files, function(file) {
-        return {
-          name: file.name,
-          size: file.size,
-          type: file.type
-        };
-      });
-      this.makeRequest(
-        "uploadInit",
-        [fileInfo],
-        (response) => {
-          this.jobId = response.jobId;
-          this.uploadUrl = response.uploadUrl;
-          cont();
-        },
-        (error) => {
-          this.onError(error);
-        },
-        void 0
-      );
-    }
-    onFile(file, cont) {
-      this.onProgress(file, 0);
-      import_jquery11.default.ajax(this.uploadUrl, {
-        type: "POST",
-        cache: false,
-        xhr: () => {
-          if (typeof import_jquery11.default.ajaxSettings.xhr !== "function")
-            throw "jQuery's XHR is not a function";
-          const xhrVal = import_jquery11.default.ajaxSettings.xhr();
-          if (xhrVal.upload) {
-            xhrVal.upload.onprogress = (e4) => {
-              if (e4.lengthComputable) {
-                this.onProgress(
-                  file,
-                  (this.progressBytes + e4.loaded) / this.totalBytes
-                );
-              }
-            };
-          }
-          return xhrVal;
-        },
-        data: file,
-        contentType: "application/octet-stream",
-        processData: false,
-        success: () => {
-          this.progressBytes += file.size;
-          cont();
-        },
-        error: (jqXHR, textStatus, errorThrown) => {
-          errorThrown;
-          this.onError(jqXHR.responseText || textStatus);
-        }
-      });
-    }
-    onComplete() {
-      const fileInfo = import_jquery11.default.map(this.files, function(file, i4) {
-        return {
-          name: file.name,
-          size: file.size,
-          type: file.type
-        };
-        i4;
-      });
-      const evt = triggerFileInputChanged(
-        this.id,
-        fileInfo,
-        getFileInputBinding(),
-        this.el,
-        "shiny.fileupload",
-        document
-      );
-      this.makeRequest(
-        "uploadEnd",
-        [this.jobId, this.id],
-        () => {
-          this.$setActive(false);
-          this.onProgress(null, 1);
-          this.$bar().text("Upload complete");
-          (0, import_jquery11.default)(evt.el).val("");
-        },
-        (error) => {
-          this.onError(error);
-        },
-        void 0
-      );
-      this.$bar().text("Finishing upload");
-    }
-    onError(message) {
-      this.$setError(message || "");
-      this.$setActive(false);
-    }
-    onAbort() {
-      this.$setVisible(false);
-    }
-    onProgress(file, completed) {
-      this.$bar().width(Math.round(completed * 100) + "%");
-      this.$bar().text(file ? file.name : "");
-    }
-    $container() {
-      return (0, import_jquery11.default)("#" + $escape(this.id) + "_progress.shiny-file-input-progress");
-    }
-    $bar() {
-      return (0, import_jquery11.default)(
-        "#" + $escape(this.id) + "_progress.shiny-file-input-progress .progress-bar"
-      );
-    }
-    $setVisible(visible) {
-      this.$container().css("visibility", visible ? "visible" : "hidden");
-    }
-    $setError(error) {
-      this.$bar().toggleClass("progress-bar-danger", error !== null);
-      if (error !== null) {
-        this.onProgress(null, 1);
-        this.$bar().text(error);
-      }
-    }
-    $setActive(active) {
-      this.$container().toggleClass("active", !!active);
-    }
-  };
-
-  // srcts/src/bindings/input/fileinput.ts
-  var zoneActive = "shiny-file-input-active";
-  var zoneOver = "shiny-file-input-over";
-  function zoneOf(el) {
-    return (0, import_jquery12.default)(el).closest("div.input-group");
-  }
-  function enableDraghover(el) {
-    const $el = (0, import_jquery12.default)(el);
-    let childCounter = 0;
-    $el.on({
-      "dragenter.draghover": (e4) => {
-        if (childCounter++ === 0) {
-          $el.trigger("draghover:enter", e4);
-        }
-      },
-      "dragleave.draghover": (e4) => {
-        if (--childCounter === 0) {
-          $el.trigger("draghover:leave", e4);
-        }
-        if (childCounter < 0) {
-          console.error("draghover childCounter is negative somehow");
-        }
-      },
-      "dragover.draghover": (e4) => {
-        e4.preventDefault();
-      },
-      "drop.draghover": (e4) => {
-        childCounter = 0;
-        $el.trigger("draghover:drop", e4);
-        e4.preventDefault();
-      }
-    });
-    return $el;
-  }
-  function disableDraghover(el) {
-    return (0, import_jquery12.default)(el).off(".draghover");
-  }
-  function enableDocumentEvents() {
-    const $doc = (0, import_jquery12.default)("html");
-    enableDraghover($doc).on({
-      "draghover:enter.draghover": () => {
-        zoneOf($fileInputs).addClass(zoneActive);
-      },
-      "draghover:leave.draghover": () => {
-        zoneOf($fileInputs).removeClass(zoneActive);
-      },
-      "draghover:drop.draghover": () => {
-        zoneOf($fileInputs).removeClass(zoneOver).removeClass(zoneActive);
-      }
-    });
-  }
-  function disableDocumentEvents() {
-    const $doc = (0, import_jquery12.default)("html");
-    $doc.off(".draghover");
-    disableDraghover($doc);
-  }
-  function canSetFiles(fileList) {
-    const testEl = document.createElement("input");
-    testEl.type = "file";
-    try {
-      testEl.files = fileList;
-    } catch (e4) {
-      return false;
-    }
-    return true;
-  }
-  function handleDrop(e4, el) {
-    const files = e4.originalEvent?.dataTransfer?.files, $el = (0, import_jquery12.default)(el);
-    if (files === void 0 || files === null) {
-      console.log(
-        "Dropping files is not supported on this browser. (no FileList)"
-      );
-    } else if (!canSetFiles(files)) {
-      $el.val("");
-      uploadDroppedFilesIE10Plus(el, files);
-    } else {
-      $el.val("");
-      el.files = files;
-      $el.trigger("change");
-    }
-  }
-  function setFileText($el, files) {
-    const $fileText = $el.closest("div.input-group").find("input[type=text]");
-    if (files.length === 1) {
-      $fileText.val(files[0].name);
-    } else {
-      $fileText.val(files.length + " files");
-    }
-  }
-  function abortCurrentUpload($el) {
-    const uploader = $el.data("currentUploader");
-    if (uploader)
-      uploader.abort();
-    $el.removeAttr("data-restore");
-  }
-  function uploadDroppedFilesIE10Plus(el, files) {
-    const $el = (0, import_jquery12.default)(el);
-    abortCurrentUpload($el);
-    setFileText($el, files);
-    $el.data(
-      "currentUploader",
-      new FileUploader(shinyShinyApp(), fileInputBindingGetId(el), files, el)
-    );
-  }
-  function uploadFiles(evt) {
-    const $el = (0, import_jquery12.default)(evt.target);
-    abortCurrentUpload($el);
-    const files = evt.target.files;
-    const id = fileInputBindingGetId(evt.target);
-    if (files.length === 0)
-      return;
-    setFileText($el, files);
-    $el.data(
-      "currentUploader",
-      new FileUploader(shinyShinyApp(), id, files, evt.target)
-    );
-  }
-  var $fileInputs = (0, import_jquery12.default)();
-  function fileInputBindingGetId(el) {
-    return InputBinding.prototype.getId.call(this, el) || el.name;
-  }
-  var FileInputBinding = class extends InputBinding {
-    find(scope) {
-      return (0, import_jquery12.default)(scope).find('input[type="file"]');
-    }
-    getId(el) {
-      return fileInputBindingGetId(el);
-    }
-    getValue(el) {
-      const data = (0, import_jquery12.default)(el).attr("data-restore");
-      if (data) {
-        const dataParsed = JSON.parse(data);
-        const $fileText = (0, import_jquery12.default)(el).closest("div.input-group").find("input[type=text]");
-        if (dataParsed.name.length === 1) {
-          $fileText.val(dataParsed.name[0]);
-        } else {
-          $fileText.val(dataParsed.name.length + " files");
-        }
-        const $progress = (0, import_jquery12.default)(el).closest("div.form-group").find(".progress");
-        const $bar = $progress.find(".progress-bar");
-        $progress.removeClass("active");
-        $bar.width("100%");
-        $bar.css("visibility", "visible");
-        return dataParsed;
-      } else {
-        return null;
-      }
-    }
-    setValue(el, value) {
-      el;
-      value;
-    }
-    getType(el) {
-      return "shiny.file";
-      el;
-    }
-    subscribe(el, callback) {
-      callback;
-      (0, import_jquery12.default)(el).on("change.fileInputBinding", uploadFiles);
-      if ($fileInputs.length === 0)
-        enableDocumentEvents();
-      $fileInputs = $fileInputs.add(el);
-      const $zone = zoneOf(el);
-      enableDraghover($zone).on({
-        "draghover:enter.draghover": (e4) => {
-          e4;
-          $zone.addClass(zoneOver);
-        },
-        "draghover:leave.draghover": (e4) => {
-          $zone.removeClass(zoneOver);
-          e4.stopPropagation();
-        },
-        "draghover:drop.draghover": (e4, dropEvent) => {
-          e4;
-          handleDrop(dropEvent, el);
-        }
-      });
-    }
-    unsubscribe(el) {
-      const $el = (0, import_jquery12.default)(el), $zone = zoneOf(el);
-      $zone.removeClass(zoneOver).removeClass(zoneActive);
-      disableDraghover($zone);
-      $el.off(".fileInputBinding");
-      $zone.off(".draghover");
-      $fileInputs = $fileInputs.not(el);
-      if ($fileInputs.length === 0)
-        disableDocumentEvents();
-    }
-  };
-
-  // srcts/src/bindings/input/number.ts
-  var import_jquery14 = __toESM(require_jquery());
-
-  // srcts/src/bindings/input/text.ts
-  var import_jquery13 = __toESM(require_jquery());
-  function getLabelNode3(el) {
-    return (0, import_jquery13.default)(el).parent().find('label[for="' + $escape(el.id) + '"]');
-  }
-  var TextInputBindingBase = class extends InputBinding {
-    find(scope) {
-      const $inputs = (0, import_jquery13.default)(scope).find(
-        'input[type="text"], input[type="search"], input[type="url"], input[type="email"]'
-      );
-      return $inputs.not('input[type="text"][id$="-selectized"]');
-    }
-    getId(el) {
-      return super.getId(el) || el.name;
-    }
-    getValue(el) {
-      throw "not implemented";
-      el;
-    }
-    setValue(el, value) {
-      throw "not implemented";
-      el;
-      value;
-    }
-    subscribe(el, callback) {
-      const $el = (0, import_jquery13.default)(el);
-      const updateOn = $el.data("update-on") || "change";
-      if (updateOn === "change") {
-        $el.on(
-          "keyup.textInputBinding input.textInputBinding",
-          function() {
-            callback(true);
-          }
-        );
-      } else if (updateOn === "blur") {
-        $el.on("blur.textInputBinding", function() {
-          callback(false);
-        });
-        $el.on("keydown.textInputBinding", function(event) {
-          if (event.key !== "Enter")
-            return;
-          if ($el.is("textarea")) {
-            if (!(event.ctrlKey || event.metaKey))
-              return;
-          }
-          callback(false);
-        });
-      }
-      $el.on("change.textInputBinding", function() {
-        if (updateOn === "blur" && $el.is(":focus")) {
-          return;
-        }
-        callback(false);
-      });
-    }
-    unsubscribe(el) {
-      (0, import_jquery13.default)(el).off(".textInputBinding");
-    }
-    receiveMessage(el, data) {
-      throw "not implemented";
-      el;
-      data;
-    }
-    getState(el) {
-      throw "not implemented";
-      el;
-    }
-    getRatePolicy(el) {
-      return {
-        policy: "debounce",
-        delay: 250
-      };
-      el;
-    }
-  };
-  var TextInputBinding = class extends TextInputBindingBase {
-    setValue(el, value) {
-      el.value = value;
-    }
-    getValue(el) {
-      return el.value;
-    }
-    getState(el) {
-      return {
-        label: getLabelNode3(el).text(),
-        value: el.value,
-        placeholder: el.placeholder
-      };
-    }
-    receiveMessage(el, data) {
-      if (hasDefinedProperty(data, "value"))
-        this.setValue(el, data.value);
-      updateLabel(data.label, getLabelNode3(el));
-      if (hasDefinedProperty(data, "placeholder"))
-        el.placeholder = data.placeholder;
-      (0, import_jquery13.default)(el).trigger("change");
-    }
-  };
-
-  // srcts/src/bindings/input/number.ts
-  function getLabelNode4(el) {
-    return (0, import_jquery14.default)(el).parent().find('label[for="' + $escape(el.id) + '"]');
-  }
-  var NumberInputBinding = class extends TextInputBindingBase {
-    find(scope) {
-      return (0, import_jquery14.default)(scope).find('input[type="number"]');
-    }
-    getValue(el) {
-      const numberVal = (0, import_jquery14.default)(el).val();
-      if (typeof numberVal == "string") {
-        if (/^\s*$/.test(numberVal))
-          return null;
-      }
-      const numberValue = Number(numberVal);
-      if (!isNaN(numberValue)) {
-        return numberValue;
-      }
-      return numberVal;
-    }
-    setValue(el, value) {
-      el.value = "" + value;
-    }
-    getType(el) {
-      return "shiny.number";
-      el;
-    }
-    receiveMessage(el, data) {
-      if (hasDefinedProperty(data, "value"))
-        el.value = data.value ?? "";
-      if (hasDefinedProperty(data, "min"))
-        el.min = data.min ?? "";
-      if (hasDefinedProperty(data, "max"))
-        el.max = data.max ?? "";
-      if (hasDefinedProperty(data, "step"))
-        el.step = data.step ?? "";
-      updateLabel(data.label, getLabelNode4(el));
-      (0, import_jquery14.default)(el).trigger("change");
-    }
-    getState(el) {
-      return {
-        label: getLabelNode4(el).text(),
-        value: this.getValue(el),
-        min: Number(el.min),
-        max: Number(el.max),
-        step: Number(el.step)
-      };
-    }
-  };
-
-  // srcts/src/bindings/input/password.ts
-  var import_jquery15 = __toESM(require_jquery());
-  var PasswordInputBinding = class extends TextInputBinding {
-    find(scope) {
-      return (0, import_jquery15.default)(scope).find('input[type="password"]');
-    }
-    getType(el) {
-      return "shiny.password";
-      el;
-    }
-  };
-
-  // srcts/src/bindings/input/radio.ts
-  var import_jquery16 = __toESM(require_jquery());
-  function getLabelNode5(el) {
-    return (0, import_jquery16.default)(el).parent().find('label[for="' + $escape(el.id) + '"]');
-  }
-  function getLabel2(obj) {
-    const parentNode = obj.parentNode;
-    if (parentNode.tagName === "LABEL") {
-      return (0, import_jquery16.default)(parentNode).find("span").text().trim();
-    }
-    return null;
-  }
-  var RadioInputBinding = class extends InputBinding {
-    find(scope) {
-      return (0, import_jquery16.default)(scope).find(".shiny-input-radiogroup");
-    }
-    getValue(el) {
-      const checkedItems = (0, import_jquery16.default)(
-        'input:radio[name="' + $escape(el.id) + '"]:checked'
-      );
-      if (checkedItems.length === 0) {
-        return null;
-      }
-      return checkedItems.val();
-    }
-    setValue(el, value) {
-      if (Array.isArray(value) && value.length === 0) {
-        (0, import_jquery16.default)('input:radio[name="' + $escape(el.id) + '"]').prop("checked", false);
-      } else {
-        (0, import_jquery16.default)(
-          'input:radio[name="' + $escape(el.id) + '"][value="' + $escape(value) + '"]'
-        ).prop("checked", true);
-      }
-    }
-    getState(el) {
-      const $objs = (0, import_jquery16.default)(
-        'input:radio[name="' + $escape(el.id) + '"]'
-      );
-      const options = new Array($objs.length);
-      for (let i4 = 0; i4 < options.length; i4++) {
-        options[i4] = { value: $objs[i4].value, label: getLabel2($objs[i4]) };
-      }
-      return {
-        label: getLabelNode5(el).text(),
-        value: this.getValue(el),
-        options
-      };
-    }
-    receiveMessage(el, data) {
-      const $el = (0, import_jquery16.default)(el);
-      if (hasDefinedProperty(data, "options")) {
-        $el.find("div.shiny-options-group").remove();
-        $el.find("label.radio").remove();
-        $el.append(data.options);
-      }
-      if (hasDefinedProperty(data, "value")) {
-        this.setValue(el, data.value);
-      }
-      updateLabel(data.label, getLabelNode5(el));
-      (0, import_jquery16.default)(el).trigger("change");
-    }
-    subscribe(el, callback) {
-      (0, import_jquery16.default)(el).on("change.radioInputBinding", function() {
-        callback(false);
-      });
-    }
-    unsubscribe(el) {
-      (0, import_jquery16.default)(el).off(".radioInputBinding");
-    }
-  };
-
-  // srcts/src/bindings/input/selectInput.ts
-  var import_jquery17 = __toESM(require_jquery());
-
-  // srcts/src/utils/eval.ts
-  var indirectEval = eval;
-
-  // srcts/src/bindings/input/selectInput.ts
-  function getLabelNode6(el) {
-    let escapedId = $escape(el.id);
-    if (isSelectize(el)) {
-      escapedId += "-selectized";
-    }
-    return (0, import_jquery17.default)(el).parent().parent().find('label[for="' + escapedId + '"]');
-  }
-  function isSelectize(el) {
-    const config = (0, import_jquery17.default)(el).parent().find('script[data-for="' + $escape(el.id) + '"]');
-    return config.length > 0;
-  }
-  var SelectInputBinding = class extends InputBinding {
-    find(scope) {
-      return (0, import_jquery17.default)(scope).find("select");
-    }
-    getType(el) {
-      const $el = (0, import_jquery17.default)(el);
-      if (!$el.hasClass("symbol")) {
-        return null;
-      }
-      if ($el.attr("multiple") === "multiple") {
-        return "shiny.symbolList";
-      } else {
-        return "shiny.symbol";
-      }
-    }
-    getId(el) {
-      return InputBinding.prototype.getId.call(this, el) || el.name;
-    }
-    getValue(el) {
-      if (!isSelectize(el)) {
-        return (0, import_jquery17.default)(el).val();
-      } else {
-        const selectize = this._selectize(el);
-        return selectize?.getValue();
-      }
-    }
-    setValue(el, value) {
-      if (!isSelectize(el)) {
-        (0, import_jquery17.default)(el).val(value);
-      } else {
-        const selectize = this._selectize(el);
-        selectize?.setValue(value);
-      }
-    }
-    getState(el) {
-      const options = new Array(
-        el.length
-      );
-      for (let i4 = 0; i4 < el.length; i4++) {
-        options[i4] = {
-          value: el[i4].value,
-          label: el[i4].label
-        };
-      }
-      return {
-        label: getLabelNode6(el),
-        value: this.getValue(el),
-        options
-      };
-    }
-    receiveMessage(el, data) {
-      const $el = (0, import_jquery17.default)(el);
-      if (hasDefinedProperty(data, "options")) {
-        const selectize = this._selectize(el);
-        selectize?.destroy();
-        $el.empty().append(data.options);
-        this._selectize(el);
-      }
-      if (hasDefinedProperty(data, "config")) {
-        $el.parent().find('script[data-for="' + $escape(el.id) + '"]').replaceWith(data.config);
-        this._selectize(el, true);
-      }
-      if (hasDefinedProperty(data, "url")) {
-        const selectize = this._selectize(el);
-        selectize.clear();
-        selectize.clearOptions();
-        let loaded = false;
-        selectize.settings.load = function(query, callback) {
-          const settings = selectize.settings;
-          import_jquery17.default.ajax({
-            url: data.url,
-            data: {
-              query,
-              field: JSON.stringify([settings.searchField]),
-              value: settings.valueField,
-              conju: settings.searchConjunction,
-              maxop: settings.maxOptions
-            },
-            type: "GET",
-            error: function() {
-              callback();
-            },
-            success: function(res) {
-              import_jquery17.default.each(res, function(index, elem) {
-                const optgroupId = elem[settings.optgroupField || "optgroup"];
-                const optgroup = {};
-                optgroup[settings.optgroupLabelField || "label"] = optgroupId;
-                optgroup[settings.optgroupValueField || "value"] = optgroupId;
-                selectize.addOptionGroup(optgroupId, optgroup);
-              });
-              callback(res);
-              if (!loaded) {
-                if (hasDefinedProperty(data, "value")) {
-                  selectize.setValue(data.value);
-                } else if (settings.maxItems === 1) {
-                  selectize.setValue(res[0].value);
-                }
-              }
-              loaded = true;
-            }
-          });
-        };
-        selectize.load(function(callback) {
-          selectize.settings.load.apply(selectize, ["", callback]);
-        });
-      } else if (hasDefinedProperty(data, "value")) {
-        this.setValue(el, data.value);
-      }
-      updateLabel(data.label, getLabelNode6(el));
-      (0, import_jquery17.default)(el).trigger("change");
-    }
-    subscribe(el, callback) {
-      (0, import_jquery17.default)(el).on(
-        "change.selectInputBinding",
-        () => {
-          if (el.nonempty && this.getValue(el) === "") {
-            return;
-          }
-          callback(false);
-        }
-      );
-    }
-    unsubscribe(el) {
-      (0, import_jquery17.default)(el).off(".selectInputBinding");
-    }
-    initialize(el) {
-      this._selectize(el);
-    }
-    _selectize(el, update = false) {
-      if (!import_jquery17.default.fn.selectize)
-        return void 0;
-      const $el = (0, import_jquery17.default)(el);
-      const config = $el.parent().find('script[data-for="' + $escape(el.id) + '"]');
-      if (config.length === 0)
-        return void 0;
-      let options = import_jquery17.default.extend(
-        {
-          labelField: "label",
-          valueField: "value",
-          searchField: ["label"]
-        },
-        JSON.parse(config.html())
-      );
-      if (typeof config.data("nonempty") !== "undefined") {
-        el.nonempty = true;
-        options = import_jquery17.default.extend(options, {
-          onItemRemove: function(value) {
-            if (this.getValue() === "")
-              (0, import_jquery17.default)("select#" + $escape(el.id)).empty().append(
-                (0, import_jquery17.default)("<option/>", {
-                  value,
-                  selected: true
-                })
-              ).trigger("change");
-          },
-          onDropdownClose: function() {
-            if (this.getValue() === "") {
-              this.setValue((0, import_jquery17.default)("select#" + $escape(el.id)).val());
-            }
-          }
-        });
-      } else {
-        el.nonempty = false;
-      }
-      if (config.data("eval") instanceof Array)
-        import_jquery17.default.each(config.data("eval"), function(i4, x2) {
-          options[x2] = indirectEval("(" + options[x2] + ")");
-        });
-      let control = $el.selectize(options)[0].selectize;
-      if (update) {
-        const settings = import_jquery17.default.extend(control.settings, options);
-        control.destroy();
-        control = $el.selectize(settings)[0].selectize;
-      }
-      return control;
-    }
-  };
-
-  // srcts/src/bindings/input/slider.ts
-  var import_jquery18 = __toESM(require_jquery());
-  function forceIonSliderUpdate(slider) {
-    if (slider.$cache && slider.$cache.input)
-      slider.$cache.input.trigger("change");
-    else
-      console.log("Couldn't force ion slider to update");
-  }
-  function getTypePrettifyer(dataType, timeFormat, timezone) {
-    let timeFormatter;
-    let prettify;
-    if (dataType === "date") {
-      timeFormatter = window.strftime.utc();
-      prettify = function(num) {
-        return timeFormatter(timeFormat, new Date(num));
-      };
-    } else if (dataType === "datetime") {
-      if (timezone)
-        timeFormatter = window.strftime.timezone(timezone);
-      else
-        timeFormatter = window.strftime;
-      prettify = function(num) {
-        return timeFormatter(timeFormat, new Date(num));
-      };
-    } else {
-      prettify = function(num) {
-        return formatNumber(num, this.prettify_separator);
-      };
-    }
-    return prettify;
-  }
-  function getLabelNode7(el) {
-    return (0, import_jquery18.default)(el).parent().find('label[for="' + $escape(el.id) + '"]');
-  }
-  function numValues(el) {
-    if ((0, import_jquery18.default)(el).data("ionRangeSlider").options.type === "double")
-      return 2;
-    else
-      return 1;
-  }
-  var SliderInputBinding = class extends TextInputBindingBase {
-    find(scope) {
-      if (!import_jquery18.default.fn.ionRangeSlider) {
-        return (0, import_jquery18.default)();
-      }
-      return (0, import_jquery18.default)(scope).find("input.js-range-slider");
-    }
-    getType(el) {
-      const dataType = (0, import_jquery18.default)(el).data("data-type");
-      if (dataType === "date")
-        return "shiny.date";
-      else if (dataType === "datetime")
-        return "shiny.datetime";
-      else
-        return null;
-    }
-    getValue(el) {
-      const $el = (0, import_jquery18.default)(el);
-      const result = (0, import_jquery18.default)(el).data("ionRangeSlider").result;
-      let convert;
-      const dataType = $el.data("data-type");
-      if (dataType === "date") {
-        convert = function(val) {
-          return formatDateUTC(new Date(Number(val)));
-        };
-      } else if (dataType === "datetime") {
-        convert = function(val) {
-          return Number(val) / 1e3;
-        };
-      } else {
-        convert = function(val) {
-          return Number(val);
-        };
-      }
-      if (numValues(el) === 2) {
-        return [convert(result.from), convert(result.to)];
-      } else {
-        return convert(result.from);
-      }
-    }
-    setValue(el, value) {
-      const $el = (0, import_jquery18.default)(el);
-      const slider = $el.data("ionRangeSlider");
-      $el.data("immediate", true);
-      try {
-        if (numValues(el) === 2 && value instanceof Array) {
-          slider.update({ from: value[0], to: value[1] });
-        } else {
-          slider.update({ from: value });
-        }
-        forceIonSliderUpdate(slider);
-      } finally {
-        $el.data("immediate", false);
-      }
-    }
-    subscribe(el, callback) {
-      (0, import_jquery18.default)(el).on("change.sliderInputBinding", function() {
-        callback(!(0, import_jquery18.default)(el).data("immediate") && !(0, import_jquery18.default)(el).data("animating"));
-      });
-    }
-    unsubscribe(el) {
-      (0, import_jquery18.default)(el).off(".sliderInputBinding");
-    }
-    receiveMessage(el, data) {
-      const $el = (0, import_jquery18.default)(el);
-      const slider = $el.data("ionRangeSlider");
-      const msg = {};
-      if (hasDefinedProperty(data, "value")) {
-        if (numValues(el) === 2 && data.value instanceof Array) {
-          msg.from = data.value[0];
-          msg.to = data.value[1];
-        } else {
-          if (Array.isArray(data.value)) {
-            const errorReason = [
-              "an empty array.",
-              "a single-value array.",
-              "an array with more than two values."
-            ];
-            throw "Slider requires two values to update with an array, but message value was " + errorReason[Math.min(data.value.length, 2)];
-          }
-          msg.from = data.value;
-        }
-      }
-      const sliderFeatures = [
-        "min",
-        "max",
-        "step"
-      ];
-      for (let i4 = 0; i4 < sliderFeatures.length; i4++) {
-        const feats = sliderFeatures[i4];
-        if (hasDefinedProperty(data, feats)) {
-          msg[feats] = data[feats];
-        }
-      }
-      updateLabel(data.label, getLabelNode7(el));
-      const domElements = [
-        "data-type",
-        "time-format",
-        "timezone"
-      ];
-      for (let i4 = 0; i4 < domElements.length; i4++) {
-        const elem = domElements[i4];
-        if (hasDefinedProperty(data, elem)) {
-          $el.data(elem, data[elem]);
-        }
-      }
-      const dataType = $el.data("data-type");
-      const timeFormat = $el.data("time-format");
-      const timezone = $el.data("timezone");
-      msg.prettify = getTypePrettifyer(dataType, timeFormat, timezone);
-      $el.data("immediate", true);
-      try {
-        slider.update(msg);
-        forceIonSliderUpdate(slider);
-      } finally {
-        $el.data("immediate", false);
-      }
-    }
-    getRatePolicy(el) {
-      return {
-        policy: "debounce",
-        delay: 250
-      };
-      el;
-    }
-    getState(el) {
-      el;
-    }
-    initialize(el) {
-      const $el = (0, import_jquery18.default)(el);
-      const dataType = $el.data("data-type");
-      const timeFormat = $el.data("time-format");
-      const timezone = $el.data("timezone");
-      const opts = {
-        prettify: getTypePrettifyer(dataType, timeFormat, timezone)
-      };
-      $el.ionRangeSlider(opts);
-    }
-  };
-  function formatNumber(num, thousandSep = ",", decimalSep = ".") {
-    const parts = num.toString().split(".");
-    parts[0] = parts[0].replace(
-      /(\d{1,3}(?=(?:\d\d\d)+(?!\d)))/g,
-      "$1" + thousandSep
-    );
-    if (parts.length === 1)
-      return parts[0];
-    else if (parts.length === 2)
-      return parts[0] + decimalSep + parts[1];
-    else
-      return "";
-  }
-  (0, import_jquery18.default)(document).on("click", ".slider-animate-button", function(evt) {
-    evt.preventDefault();
-    const self = (0, import_jquery18.default)(this);
-    const target = (0, import_jquery18.default)("#" + $escape(self.attr("data-target-id")));
-    const startLabel = "Play";
-    const stopLabel = "Pause";
-    const loop = self.attr("data-loop") !== void 0 && !/^\s*false\s*$/i.test(self.attr("data-loop"));
-    let animInterval = self.attr("data-interval");
-    if (isNaN(animInterval))
-      animInterval = 1500;
-    else
-      animInterval = Number(animInterval);
-    if (!target.data("animTimer")) {
-      let timer;
-      if (target.hasClass("jslider")) {
-        const slider = target.slider();
-        if (!slider.canStepNext())
-          slider.resetToStart();
-        timer = setInterval(function() {
-          if (loop && !slider.canStepNext()) {
-            slider.resetToStart();
-          } else {
-            slider.stepNext();
-            if (!loop && !slider.canStepNext()) {
-              self.click();
-            }
-          }
-        }, animInterval);
-      } else {
-        const slider = target.data("ionRangeSlider");
-        const sliderCanStep = function() {
-          if (slider.options.type === "double")
-            return slider.result.to < slider.result.max;
-          else
-            return slider.result.from < slider.result.max;
-        };
-        const sliderReset = function() {
-          const val = { from: slider.result.min };
-          if (slider.options.type === "double")
-            val.to = val.from + (slider.result.to - slider.result.from);
-          slider.update(val);
-          forceIonSliderUpdate(slider);
-        };
-        const sliderStep = function() {
-          const val = {
-            from: Math.min(
-              slider.result.max,
-              slider.result.from + slider.options.step
-            )
-          };
-          if (slider.options.type === "double")
-            val.to = Math.min(
-              slider.result.max,
-              slider.result.to + slider.options.step
-            );
-          slider.update(val);
-          forceIonSliderUpdate(slider);
-        };
-        if (!sliderCanStep())
-          sliderReset();
-        timer = setInterval(function() {
-          if (loop && !sliderCanStep()) {
-            sliderReset();
-          } else {
-            sliderStep();
-            if (!loop && !sliderCanStep()) {
-              self.click();
-            }
-          }
-        }, animInterval);
-      }
-      target.data("animTimer", timer);
-      self.attr("title", stopLabel);
-      self.addClass("playing");
-      target.data("animating", true);
-    } else {
-      clearTimeout(target.data("animTimer"));
-      target.removeData("animTimer");
-      self.attr("title", startLabel);
-      self.removeClass("playing");
-      target.removeData("animating");
-    }
-  });
-
-  // srcts/src/bindings/input/tabinput.ts
-  var import_jquery19 = __toESM(require_jquery());
-  function getTabName(anchor) {
-    return anchor.attr("data-value") || anchor.text();
-  }
-  var BootstrapTabInputBinding = class extends InputBinding {
-    find(scope) {
-      return (0, import_jquery19.default)(scope).find("ul.nav.shiny-tab-input");
-    }
-    getValue(el) {
-      const anchor = isBS3() ? (0, import_jquery19.default)(el).find("li:not(.dropdown).active > a") : (0, import_jquery19.default)(el).find(
-        ".nav-link:not(.dropdown-toggle).active, .dropdown-menu .dropdown-item.active"
-      );
-      if (anchor.length === 1)
-        return getTabName(anchor);
-      return null;
-    }
-    setValue(el, value) {
-      let success = false;
-      if (value) {
-        const anchors = isBS3() ? (0, import_jquery19.default)(el).find("li:not(.dropdown) > a") : (0, import_jquery19.default)(el).find(
-          ".nav-link:not(.dropdown-toggle), .dropdown-menu .dropdown-item"
-        );
-        anchors.each(function() {
-          if (getTabName((0, import_jquery19.default)(this)) === value) {
-            (0, import_jquery19.default)(this).tab("show");
-            success = true;
-            return false;
-          }
-          return;
-        });
-      }
-      if (!success) {
-        (0, import_jquery19.default)(el).trigger("change");
-      }
-    }
-    getState(el) {
-      return { value: this.getValue(el) };
-    }
-    receiveMessage(el, data) {
-      if (hasDefinedProperty(data, "value"))
-        this.setValue(el, data.value);
-      (0, import_jquery19.default)(el).trigger("change");
-    }
-    subscribe(el, callback) {
-      (0, import_jquery19.default)(el).on(
-        "change shown.bootstrapTabInputBinding shown.bs.tab.bootstrapTabInputBinding",
-        function() {
-          callback(false);
-        }
-      );
-    }
-    unsubscribe(el) {
-      (0, import_jquery19.default)(el).off(".bootstrapTabInputBinding");
-    }
-  };
-
-  // srcts/src/bindings/input/textarea.ts
-  var import_jquery20 = __toESM(require_jquery());
-  var intersectObserver = new IntersectionObserver((entries) => {
-    entries.forEach((entry) => {
-      if (entry.isIntersecting) {
-        updateHeight(entry.target);
-      }
-    });
-  });
-  var _inputHandler;
-  var TextareaInputBinding = class extends TextInputBinding {
-    constructor() {
-      super(...arguments);
-      __privateAdd(this, _inputHandler, null);
-    }
-    find(scope) {
-      return (0, import_jquery20.default)(scope).find("textarea");
-    }
-    initialize(el) {
-      super.initialize(el);
-      updateHeight(el);
-    }
-    subscribe(el, callback) {
-      super.subscribe(el, callback);
-      __privateSet(this, _inputHandler, (e4) => updateHeight(e4.target));
-      el.addEventListener("input", __privateGet(this, _inputHandler));
-      intersectObserver.observe(el);
-    }
-    unsubscribe(el) {
-      super.unsubscribe(el);
-      if (__privateGet(this, _inputHandler))
-        el.removeEventListener("input", __privateGet(this, _inputHandler));
-      intersectObserver.unobserve(el);
-    }
-  };
-  _inputHandler = new WeakMap();
-  function updateHeight(el) {
-    if (!el.classList.contains("textarea-autoresize")) {
-      return;
-    }
-    if (el.scrollHeight == 0) {
-      return;
-    }
-    el.style.height = "auto";
-    el.style.height = el.scrollHeight + "px";
-  }
-
-  // srcts/src/bindings/input/index.ts
-  function initInputBindings() {
-    const inputBindings = new BindingRegistry();
-    inputBindings.register(new TextInputBinding(), "shiny.textInput");
-    inputBindings.register(new TextareaInputBinding(), "shiny.textareaInput");
-    inputBindings.register(new PasswordInputBinding(), "shiny.passwordInput");
-    inputBindings.register(new NumberInputBinding(), "shiny.numberInput");
-    inputBindings.register(new CheckboxInputBinding(), "shiny.checkboxInput");
-    inputBindings.register(
-      new CheckboxGroupInputBinding(),
-      "shiny.checkboxGroupInput"
-    );
-    inputBindings.register(new RadioInputBinding(), "shiny.radioInput");
-    inputBindings.register(new SliderInputBinding(), "shiny.sliderInput");
-    inputBindings.register(new DateInputBinding(), "shiny.dateInput");
-    inputBindings.register(new DateRangeInputBinding(), "shiny.dateRangeInput");
-    inputBindings.register(new SelectInputBinding(), "shiny.selectInput");
-    inputBindings.register(
-      new ActionButtonInputBinding(),
-      "shiny.actionButtonInput"
-    );
-    inputBindings.register(
-      new BootstrapTabInputBinding(),
-      "shiny.bootstrapTabInput"
-    );
-    const fileInputBinding2 = new FileInputBinding();
-    inputBindings.register(fileInputBinding2, "shiny.fileInputBinding");
-    return { inputBindings, fileInputBinding: fileInputBinding2 };
-  }
-
-  // srcts/src/bindings/output/datatable.ts
-  var import_jquery22 = __toESM(require_jquery());
 
   // srcts/src/time/debounce.ts
   var Debouncer = class {
@@ -2396,172 +318,6 @@
     }
   };
 
-  // srcts/src/bindings/output/outputBinding.ts
-  var import_jquery21 = __toESM(require_jquery());
-  var OutputBinding = class {
-    find(scope) {
-      throw "Not implemented";
-      scope;
-    }
-    renderValue(el, data) {
-      throw "Not implemented";
-      el;
-      data;
-    }
-    getId(el) {
-      return el.getAttribute("data-input-id") || el.id;
-    }
-    async onValueChange(el, data) {
-      this.clearError(el);
-      await this.renderValue(el, data);
-    }
-    onValueError(el, err) {
-      this.renderError(el, err);
-    }
-    renderError(el, err) {
-      this.clearError(el);
-      if (err.message === "") {
-        (0, import_jquery21.default)(el).empty();
-        return;
-      }
-      let errClass = "shiny-output-error";
-      if (err.type !== null) {
-        errClass = errClass + " " + import_jquery21.default.map(asArray(err.type), function(type) {
-          return errClass + "-" + type;
-        }).join(" ");
-      }
-      (0, import_jquery21.default)(el).addClass(errClass).text(err.message);
-    }
-    clearError(el) {
-      (0, import_jquery21.default)(el).attr("class", function(i4, c4) {
-        return c4.replace(/(^|\s)shiny-output-error\S*/g, "");
-      });
-    }
-    showProgress(el, show3) {
-      const recalcClass = "recalculating";
-      if (show3)
-        (0, import_jquery21.default)(el).addClass(recalcClass);
-      else
-        (0, import_jquery21.default)(el).removeClass(recalcClass);
-    }
-  };
-
-  // srcts/src/bindings/output/datatable.ts
-  var DatatableOutputBinding = class extends OutputBinding {
-    find(scope) {
-      return (0, import_jquery22.default)(scope).find(".shiny-datatable-output");
-    }
-    onValueError(el, err) {
-      shinyUnbindAll(el);
-      this.renderError(el, err);
-    }
-    renderValue(el, data) {
-      const $el = (0, import_jquery22.default)(el).empty();
-      if (!data || !data.colnames)
-        return;
-      const colnames = import_jquery22.default.makeArray(data.colnames);
-      let header = import_jquery22.default.map(colnames, function(x2) {
-        return "<th>" + x2 + "</th>";
-      }).join("");
-      header = "<thead><tr>" + header + "</tr></thead>";
-      let footer = "";
-      if (data.options?.searching ?? true) {
-        footer = import_jquery22.default.map(colnames, function(x2) {
-          return '<th><input type="text" placeholder="' + escapeHTML(x2.replace(/(<([^>]+)>)/gi, "")) + '" /></th>';
-        }).join("");
-        footer = "<tfoot>" + footer + "</tfoot>";
-      }
-      const content = '<table class="table table-striped table-hover">' + header + footer + "</table>";
-      $el.append(content);
-      if (data.evalOptions) {
-        import_jquery22.default.each(data.evalOptions, function(i4, x2) {
-          data.options[x2] = indirectEval("(" + data.options[x2] + ")");
-        });
-      }
-      const searchCI = data.options?.search?.caseInsensitive !== false;
-      const oTable = (0, import_jquery22.default)(el).children("table").DataTable(
-        import_jquery22.default.extend(
-          {
-            processing: true,
-            serverSide: true,
-            order: [],
-            orderClasses: false,
-            pageLength: 25,
-            ajax: {
-              url: data.action,
-              type: "POST",
-              data: function(d3) {
-                d3.search || (d3.search = {});
-                d3.search.caseInsensitive = searchCI;
-                d3.escape = data.escape;
-              }
-            }
-          },
-          data.options
-        )
-      );
-      if (typeof data.callback === "string") {
-        const callback = indirectEval("(" + data.callback + ")");
-        if (typeof callback === "function")
-          callback(oTable);
-      }
-      $el.find("label input").first().unbind("keyup").keyup(
-        debounce(data.searchDelay, function() {
-          oTable.search(this.value).draw();
-        })
-      );
-      const searchInputs = $el.find("tfoot input");
-      if (searchInputs.length > 0) {
-        import_jquery22.default.each(oTable.settings()[0].aoColumns, function(i4, x2) {
-          if (!x2.bSearchable)
-            searchInputs.eq(i4).hide();
-        });
-        searchInputs.keyup(
-          debounce(data.searchDelay, function() {
-            oTable.column(searchInputs.index(this)).search(this.value).draw();
-          })
-        );
-      }
-      $el.parents(".tab-content").css("overflow", "visible");
-    }
-  };
-
-  // srcts/src/bindings/output/downloadlink.ts
-  var import_jquery23 = __toESM(require_jquery());
-  var DownloadLinkOutputBinding = class extends OutputBinding {
-    find(scope) {
-      return (0, import_jquery23.default)(scope).find("a.shiny-download-link");
-    }
-    renderValue(el, data) {
-      el.setAttribute("href", data);
-      el.classList.remove("disabled");
-      el.removeAttribute("aria-disabled");
-      el.removeAttribute("tabindex");
-    }
-    showProgress(el, show3) {
-      return;
-      el;
-      show3;
-    }
-  };
-  (0, import_jquery23.default)(document).on(
-    "click.shinyDownloadLink",
-    "a.shiny-download-link",
-    function(e4) {
-      e4;
-      const evt = import_jquery23.default.Event("shiny:filedownload");
-      evt.name = this.id;
-      evt.href = this.href;
-      (0, import_jquery23.default)(document).trigger(evt);
-    }
-  );
-
-  // srcts/src/bindings/output/html.ts
-  var import_jquery26 = __toESM(require_jquery());
-
-  // srcts/src/shiny/render.ts
-  var import_jquery25 = __toESM(require_jquery());
-
   // srcts/src/shiny/sendImageSize.ts
   var SendImageSize = class {
     setImageSend(inputBatchSender, doSendImageSize) {
@@ -2580,7 +336,7 @@
   var sendImageSizeFns = new SendImageSize();
 
   // srcts/src/shiny/singletons.ts
-  var import_jquery24 = __toESM(require_jquery());
+  var import_jquery4 = __toESM(require_jquery());
   var reSingleton = /<!--(SHINY.SINGLETON\[([\w]+)\])-->([\s\S]*?)<!--\/\1-->/;
   var reHead = /<head(?:\s[^>]*)?>([\s\S]*?)<\/head>/;
   var knownSingletons = {};
@@ -2590,19 +346,19 @@
     register(processed.singletons);
     switch (where.toLowerCase()) {
       case "replace":
-        (0, import_jquery24.default)(el).html(processed.html);
+        (0, import_jquery4.default)(el).html(processed.html);
         break;
       case "beforebegin":
-        (0, import_jquery24.default)(el).before(processed.html);
+        (0, import_jquery4.default)(el).before(processed.html);
         break;
       case "afterbegin":
-        (0, import_jquery24.default)(el).prepend(processed.html);
+        (0, import_jquery4.default)(el).prepend(processed.html);
         break;
       case "beforeend":
-        (0, import_jquery24.default)(el).append(processed.html);
+        (0, import_jquery4.default)(el).append(processed.html);
         break;
       case "afterend":
-        (0, import_jquery24.default)(el).after(processed.html);
+        (0, import_jquery4.default)(el).after(processed.html);
         break;
       default:
         throw new Error("Unknown where position: " + where);
@@ -2610,7 +366,7 @@
     return processed;
   }
   function register(s4) {
-    import_jquery24.default.extend(knownSingletons, s4);
+    import_jquery4.default.extend(knownSingletons, s4);
   }
   function registerNames(s4) {
     if (typeof s4 === "string") {
@@ -2623,8 +379,8 @@
   }
   function addToHead(head) {
     if (head.length > 0) {
-      const tempDiv = (0, import_jquery24.default)("<div>" + head + "</div>").get(0);
-      const $head = (0, import_jquery24.default)("head");
+      const tempDiv = (0, import_jquery4.default)("<div>" + head + "</div>").get(0);
+      const $head = (0, import_jquery4.default)("head");
       while (tempDiv.hasChildNodes()) {
         $head.append(tempDiv.firstChild);
       }
@@ -2684,7 +440,7 @@
       shinyInitializeInputs(el);
       await shinyBindAll(el);
     } else {
-      const $parent = (0, import_jquery25.default)(el).parent();
+      const $parent = (0, import_jquery5.default)(el).parent();
       if ($parent.length > 0) {
         scope = $parent;
         if (where === "beforeBegin" || where === "afterEnd") {
@@ -2717,7 +473,7 @@
       shinyInitializeInputs(el);
       return shinyBindAll(el);
     } else {
-      const $parent = (0, import_jquery25.default)(el).parent();
+      const $parent = (0, import_jquery5.default)(el).parent();
       if ($parent.length > 0) {
         scope = $parent;
         if (where === "beforeBegin" || where === "afterEnd") {
@@ -2768,14 +524,14 @@
     return htmlDependencies[names[idx]] === dep.version;
   }
   function addStylesheetsAndRestyle(links) {
-    const $head = (0, import_jquery25.default)("head").first();
+    const $head = (0, import_jquery5.default)("head").first();
     const refreshStyle = function(href, oldSheet) {
       const xhr = new XMLHttpRequest();
       xhr.open("GET", href);
       xhr.onload = function() {
         const id = "shiny_restyle_" + href.split("?restyle")[0].replace(/\W/g, "_");
         const oldStyle = $head.find("style#" + id);
-        const newStyle = (0, import_jquery25.default)("<style>").attr("id", id).html(xhr.responseText);
+        const newStyle = (0, import_jquery5.default)("<style>").attr("id", id).html(xhr.responseText);
         $head.append(newStyle);
         oldStyle.remove();
         removeSheet(oldSheet);
@@ -2801,11 +557,11 @@
       if (isIE())
         sheet.cssText = "";
       if (sheet.ownerNode instanceof Element) {
-        (0, import_jquery25.default)(sheet.ownerNode).remove();
+        (0, import_jquery5.default)(sheet.ownerNode).remove();
       }
     };
     links.map((link) => {
-      const $link = (0, import_jquery25.default)(link);
+      const $link = (0, import_jquery5.default)(link);
       const oldSheet = findSheet($link.attr("href"));
       const href = $link.attr("href") + "?restyle=" + new Date().getTime();
       if (isIE()) {
@@ -2813,13 +569,13 @@
       } else {
         $link.attr("href", href);
         $link.attr("onload", () => {
-          const $dummyEl = (0, import_jquery25.default)("<div>").css("transition", "0.1s all").css("position", "absolute").css("top", "-1000px").css("left", "0");
+          const $dummyEl = (0, import_jquery5.default)("<div>").css("transition", "0.1s all").css("position", "absolute").css("top", "-1000px").css("left", "0");
           $dummyEl.one("transitionend", () => {
             $dummyEl.remove();
             removeSheet(oldSheet);
             sendImageSizeFns.transitioned();
           });
-          (0, import_jquery25.default)(document.body).append($dummyEl);
+          (0, import_jquery5.default)(document.body).append($dummyEl);
           const color = "#" + Math.floor(Math.random() * 16777215).toString(16);
           setTimeout(() => $dummyEl.css("color", color), 10);
         });
@@ -2898,13 +654,13 @@
   }
   function appendAttachmentLinkTags(dep, $head) {
     dep.attachment.forEach((x2) => {
-      const link = (0, import_jquery25.default)("<link rel='attachment'>").attr("id", dep.name + "-" + x2.key + "-attachment").attr("href", encodeURI(x2.href));
+      const link = (0, import_jquery5.default)("<link rel='attachment'>").attr("id", dep.name + "-" + x2.key + "-attachment").attr("href", encodeURI(x2.href));
       $head.append(link);
     });
   }
   function appendExtraHeadContent(dep, $head) {
     if (dep.head) {
-      const $newHead = (0, import_jquery25.default)("<head></head>");
+      const $newHead = (0, import_jquery5.default)("<head></head>");
       $newHead.html(dep.head);
       $head.append($newHead.children());
     }
@@ -2918,7 +674,7 @@
     if (hasDefinedProperty(htmlDependencies, dep.name))
       return false;
     registerDependency(dep.name, dep.version);
-    const $head = (0, import_jquery25.default)("head").first();
+    const $head = (0, import_jquery5.default)("head").first();
     appendMetaTags(dep, $head);
     appendStylesheetLinkTags(dep, $head);
     await appendScriptTagsAsync(dep);
@@ -2935,7 +691,7 @@
     if (hasDefinedProperty(htmlDependencies, dep.name))
       return false;
     registerDependency(dep.name, dep.version);
-    const $head = (0, import_jquery25.default)("head").first();
+    const $head = (0, import_jquery5.default)("head").first();
     appendMetaTags(dep, $head);
     appendStylesheetLinkTags(dep, $head);
     appendScriptTags(dep, $head);
@@ -3013,7 +769,2255 @@
     return result;
   }
 
+  // srcts/src/window/pixelRatio.ts
+  function windowDevicePixelRatio() {
+    return window.devicePixelRatio;
+  }
+
+  // srcts/src/utils/object.ts
+  function hasOwnProperty(obj, prop) {
+    return Object.prototype.hasOwnProperty.call(obj, prop);
+  }
+  function hasDefinedProperty(obj, prop) {
+    return Object.prototype.hasOwnProperty.call(obj, prop) && obj[prop] !== void 0;
+  }
+  function ifUndefined(value, alternate) {
+    if (value === void 0)
+      return alternate;
+    return value;
+  }
+
+  // srcts/src/utils/index.ts
+  function escapeHTML(str) {
+    const escaped = {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#039;",
+      "/": "&#x2F;"
+    };
+    return str.replace(/[&<>'"/]/g, function(m2) {
+      return escaped[m2];
+    });
+  }
+  function randomId() {
+    return Math.floor(4294967296 + Math.random() * 64424509440).toString(16);
+  }
+  function strToBool(str) {
+    if (!str || !str.toLowerCase)
+      return void 0;
+    switch (str.toLowerCase()) {
+      case "true":
+        return true;
+      case "false":
+        return false;
+      default:
+        return void 0;
+    }
+  }
+  function getStyle(el, styleProp) {
+    let x2 = void 0;
+    if ("currentStyle" in el) {
+      x2 = el.currentStyle[styleProp];
+    } else {
+      const style = document?.defaultView?.getComputedStyle(el, null);
+      if (style)
+        x2 = style.getPropertyValue(styleProp);
+    }
+    return x2;
+  }
+  function padZeros(n4, digits) {
+    let str = n4.toString();
+    while (str.length < digits)
+      str = "0" + str;
+    return str;
+  }
+  function roundSignif(x2, digits = 1) {
+    if (digits < 1)
+      throw "Significant digits must be at least 1.";
+    return parseFloat(x2.toPrecision(digits));
+  }
+  function parseDate(dateString) {
+    let date = new Date(dateString);
+    if (date.toString() === "Invalid Date") {
+      date = new Date(dateString.replace(/-/g, "/"));
+    }
+    return date;
+  }
+  function formatDateUTC(date) {
+    if (date instanceof Date) {
+      return date.getUTCFullYear().toString().padStart(4, "0") + "-" + padZeros(date.getUTCMonth() + 1, 2) + "-" + padZeros(date.getUTCDate(), 2);
+    } else {
+      return null;
+    }
+  }
+  function makeResizeFilter(el, func) {
+    let lastSize = {};
+    return function() {
+      const rect = el.getBoundingClientRect();
+      const size = { w: rect.width, h: rect.height };
+      if (size.w === 0 && size.h === 0)
+        return;
+      if (size.w === lastSize.w && size.h === lastSize.h)
+        return;
+      lastSize = size;
+      func(size.w, size.h);
+    };
+  }
+  function pixelRatio() {
+    if (windowDevicePixelRatio()) {
+      return Math.round(windowDevicePixelRatio() * 100) / 100;
+    } else {
+      return 1;
+    }
+  }
+  function getBoundingClientSizeBeforeZoom(el) {
+    const rect = el.getBoundingClientRect();
+    const zoom = el.currentCSSZoom || 1;
+    return {
+      width: rect.width / zoom,
+      height: rect.height / zoom
+    };
+  }
+  function scopeExprToFunc(expr) {
+    const exprEscaped = expr.replace(/[\\"']/g, "\\$&").replace(/\u0000/g, "\\0").replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/[\b]/g, "\\b");
+    let func;
+    try {
+      func = new Function(
+        `with (this) {
+        try {
+          return (${expr});
+        } catch (e) {
+          console.error('Error evaluating expression: ${exprEscaped}');
+          throw e;
+        }
+      }`
+      );
+    } catch (e4) {
+      console.error("Error parsing expression: " + expr);
+      throw e4;
+    }
+    return function(scope) {
+      return func.call(scope);
+    };
+  }
+  function asArray(value) {
+    if (value === null || value === void 0)
+      return [];
+    if (Array.isArray(value))
+      return value;
+    return [value];
+  }
+  function mergeSort(list, sortfunc) {
+    function merge(a3, b3) {
+      let ia = 0;
+      let ib = 0;
+      const sorted = [];
+      while (ia < a3.length && ib < b3.length) {
+        if (sortfunc(a3[ia], b3[ib]) <= 0) {
+          sorted.push(a3[ia++]);
+        } else {
+          sorted.push(b3[ib++]);
+        }
+      }
+      while (ia < a3.length)
+        sorted.push(a3[ia++]);
+      while (ib < b3.length)
+        sorted.push(b3[ib++]);
+      return sorted;
+    }
+    list = list.slice(0);
+    for (let chunkSize = 1; chunkSize < list.length; chunkSize *= 2) {
+      for (let i4 = 0; i4 < list.length; i4 += chunkSize * 2) {
+        const listA = list.slice(i4, i4 + chunkSize);
+        const listB = list.slice(i4 + chunkSize, i4 + chunkSize * 2);
+        const merged = merge(listA, listB);
+        const args = [i4, merged.length];
+        Array.prototype.push.apply(args, merged);
+        Array.prototype.splice.apply(list, args);
+      }
+    }
+    return list;
+  }
+  function $escape(val) {
+    if (typeof val === "undefined")
+      return val;
+    return val.replace(/([!"#$%&'()*+,./:;<=>?@[\\\]^`{|}~])/g, "\\$1");
+  }
+  function mapValues(obj, f3) {
+    const newObj = {};
+    Object.keys(obj).forEach((key) => {
+      newObj[key] = f3(obj[key], key, obj);
+    });
+    return newObj;
+  }
+  function isnan(x2) {
+    return typeof x2 === "number" && isNaN(x2);
+  }
+  function _equal(x2, y3) {
+    if (import_jquery6.default.type(x2) === "object" && import_jquery6.default.type(y3) === "object") {
+      const xo = x2;
+      const yo = y3;
+      if (Object.keys(xo).length !== Object.keys(yo).length)
+        return false;
+      for (const prop in xo) {
+        if (!hasOwnProperty(yo, prop) || !_equal(xo[prop], yo[prop]))
+          return false;
+      }
+      return true;
+    } else if (import_jquery6.default.type(x2) === "array" && import_jquery6.default.type(y3) === "array") {
+      const xa = x2;
+      const ya = y3;
+      if (xa.length !== ya.length)
+        return false;
+      for (let i4 = 0; i4 < xa.length; i4++)
+        if (!_equal(xa[i4], ya[i4]))
+          return false;
+      return true;
+    } else {
+      return x2 === y3;
+    }
+  }
+  function equal(...args) {
+    if (args.length < 2)
+      throw new Error("equal requires at least two arguments.");
+    for (let i4 = 0; i4 < args.length - 1; i4++) {
+      if (!_equal(args[i4], args[i4 + 1]))
+        return false;
+    }
+    return true;
+  }
+  var compareVersion = function(a3, op, b3) {
+    function versionParts(ver) {
+      return (ver + "").replace(/-/, ".").replace(/(\.0)+[^.]*$/, "").split(".");
+    }
+    function cmpVersion(a4, b4) {
+      const aParts = versionParts(a4);
+      const bParts = versionParts(b4);
+      const len = Math.min(aParts.length, bParts.length);
+      let cmp;
+      for (let i4 = 0; i4 < len; i4++) {
+        cmp = parseInt(aParts[i4], 10) - parseInt(bParts[i4], 10);
+        if (cmp !== 0) {
+          return cmp;
+        }
+      }
+      return aParts.length - bParts.length;
+    }
+    const diff = cmpVersion(a3, b3);
+    if (op === "==")
+      return diff === 0;
+    else if (op === ">=")
+      return diff >= 0;
+    else if (op === ">")
+      return diff > 0;
+    else if (op === "<=")
+      return diff <= 0;
+    else if (op === "<")
+      return diff < 0;
+    else
+      throw `Unknown operator: ${op}`;
+  };
+  async function updateLabel(labelContent, labelNode) {
+    if (typeof labelContent === "undefined")
+      return;
+    if (labelNode.length !== 1) {
+      throw new Error("labelNode must be of length 1");
+    }
+    if (typeof labelContent === "string") {
+      labelContent = {
+        html: labelContent,
+        deps: []
+      };
+    }
+    if (labelContent.html === "") {
+      labelNode.addClass("shiny-label-null");
+    } else {
+      await renderContent(labelNode, labelContent);
+      labelNode.removeClass("shiny-label-null");
+    }
+  }
+  function getComputedLinkColor(el) {
+    const a3 = document.createElement("a");
+    a3.href = "/";
+    const div = document.createElement("div");
+    div.style.setProperty("position", "absolute", "important");
+    div.style.setProperty("top", "-1000px", "important");
+    div.style.setProperty("left", "0", "important");
+    div.style.setProperty("width", "30px", "important");
+    div.style.setProperty("height", "10px", "important");
+    div.appendChild(a3);
+    el.appendChild(div);
+    const linkColor = window.getComputedStyle(a3).getPropertyValue("color");
+    el.removeChild(div);
+    return linkColor;
+  }
+  function isBS3() {
+    return !window.bootstrap;
+  }
+
+  // srcts/src/bindings/registry.ts
+  var BindingRegistry = class {
+    constructor() {
+      this.bindings = [];
+      this.bindingNames = {};
+    }
+    register(binding, bindingName, priority = 0) {
+      const bindingObj = { binding, priority };
+      this.bindings.unshift(bindingObj);
+      if (bindingName) {
+        this.bindingNames[bindingName] = bindingObj;
+        binding.name = bindingName;
+      }
+    }
+    setPriority(bindingName, priority) {
+      const bindingObj = this.bindingNames[bindingName];
+      if (!bindingObj)
+        throw "Tried to set priority on unknown binding " + bindingName;
+      bindingObj.priority = priority || 0;
+    }
+    getPriority(bindingName) {
+      const bindingObj = this.bindingNames[bindingName];
+      if (!bindingObj)
+        return false;
+      return bindingObj.priority;
+    }
+    getBindings() {
+      return mergeSort(this.bindings, function(a3, b3) {
+        return b3.priority - a3.priority;
+      });
+    }
+  };
+
+  // srcts/src/bindings/input/inputBinding.ts
+  var InputBinding = class {
+    find(scope) {
+      throw "Not implemented";
+      scope;
+    }
+    getId(el) {
+      return el.getAttribute("data-input-id") || el.id;
+    }
+    getType(el) {
+      return null;
+      el;
+    }
+    getValue(el) {
+      throw "Not implemented";
+      el;
+    }
+    subscribe(el, callback) {
+      el;
+      callback;
+    }
+    unsubscribe(el) {
+      el;
+    }
+    receiveMessage(el, data) {
+      throw "Not implemented";
+      el;
+      data;
+    }
+    getState(el) {
+      throw "Not implemented";
+      el;
+    }
+    getRatePolicy(el) {
+      return null;
+      el;
+    }
+    initialize(el) {
+      el;
+    }
+    dispose(el) {
+      el;
+    }
+  };
+
+  // srcts/src/bindings/input/actionbutton.ts
+  var import_jquery7 = __toESM(require_jquery());
+  var ActionButtonInputBinding = class extends InputBinding {
+    find(scope) {
+      return (0, import_jquery7.default)(scope).find(".action-button");
+    }
+    getValue(el) {
+      return (0, import_jquery7.default)(el).data("val") || 0;
+    }
+    setValue(el, value) {
+      (0, import_jquery7.default)(el).data("val", value);
+    }
+    getType(el) {
+      return "shiny.action";
+      el;
+    }
+    subscribe(el, callback) {
+      (0, import_jquery7.default)(el).on(
+        "click.actionButtonInputBinding",
+        function() {
+          const $el = (0, import_jquery7.default)(this);
+          const val = $el.data("val") || 0;
+          $el.data("val", val + 1);
+          callback(false);
+        }
+      );
+    }
+    getState(el) {
+      return { value: this.getValue(el) };
+    }
+    receiveMessage(el, data) {
+      const $el = (0, import_jquery7.default)(el);
+      if (hasDefinedProperty(data, "label") || hasDefinedProperty(data, "icon")) {
+        let label = $el.text();
+        let icon = "";
+        if ($el.find("i[class]").length > 0) {
+          const iconHtml = $el.find("i[class]")[0];
+          if (iconHtml === $el.children()[0]) {
+            icon = (0, import_jquery7.default)(iconHtml).prop("outerHTML");
+          }
+        }
+        if (hasDefinedProperty(data, "label")) {
+          label = data.label;
+        }
+        if (hasDefinedProperty(data, "icon")) {
+          icon = Array.isArray(data.icon) ? "" : data.icon ?? "";
+        }
+        $el.html(icon + " " + label);
+      }
+      if (hasDefinedProperty(data, "disabled")) {
+        if (data.disabled) {
+          $el.attr("disabled", "");
+        } else {
+          $el.attr("disabled", null);
+        }
+      }
+    }
+    unsubscribe(el) {
+      (0, import_jquery7.default)(el).off(".actionButtonInputBinding");
+    }
+  };
+  (0, import_jquery7.default)(document).on("click", "a.action-button", function(e4) {
+    e4.preventDefault();
+  });
+
+  // srcts/src/bindings/input/checkbox.ts
+  var import_jquery8 = __toESM(require_jquery());
+  var CheckboxInputBinding = class extends InputBinding {
+    find(scope) {
+      return (0, import_jquery8.default)(scope).find('input[type="checkbox"]');
+    }
+    getValue(el) {
+      return el.checked;
+    }
+    setValue(el, value) {
+      el.checked = value;
+    }
+    subscribe(el, callback) {
+      (0, import_jquery8.default)(el).on("change.checkboxInputBinding", function() {
+        callback(true);
+      });
+    }
+    unsubscribe(el) {
+      (0, import_jquery8.default)(el).off(".checkboxInputBinding");
+    }
+    getState(el) {
+      return {
+        label: (0, import_jquery8.default)(el).parent().find("span").text(),
+        value: el.checked
+      };
+    }
+    async receiveMessage(el, data) {
+      if (hasDefinedProperty(data, "value")) {
+        el.checked = data.value;
+      }
+      if (hasDefinedProperty(data, "label")) {
+        const labelSpan = (0, import_jquery8.default)(el).parent().find("span");
+        await renderContent(labelSpan, data.label);
+      }
+      (0, import_jquery8.default)(el).trigger("change");
+    }
+  };
+
+  // srcts/src/bindings/input/checkboxgroup.ts
+  var import_jquery9 = __toESM(require_jquery());
+  function getLabelNode(el) {
+    return (0, import_jquery9.default)(el).find('label[for="' + $escape(el.id) + '"]');
+  }
+  function getLabel(obj) {
+    const parentNode = obj.parentNode;
+    if (parentNode.tagName === "LABEL") {
+      return (0, import_jquery9.default)(parentNode).find("span").text().trim();
+    }
+    return null;
+  }
+  var CheckboxGroupInputBinding = class extends InputBinding {
+    find(scope) {
+      return (0, import_jquery9.default)(scope).find(".shiny-input-checkboxgroup");
+    }
+    getValue(el) {
+      const $objs = (0, import_jquery9.default)('input:checkbox[name="' + $escape(el.id) + '"]:checked');
+      const values = new Array($objs.length);
+      for (let i4 = 0; i4 < $objs.length; i4++) {
+        values[i4] = $objs[i4].value;
+      }
+      return values;
+    }
+    setValue(el, value) {
+      value = value ?? [];
+      (0, import_jquery9.default)('input:checkbox[name="' + $escape(el.id) + '"]').prop("checked", false);
+      if (value instanceof Array) {
+        for (let i4 = 0; i4 < value.length; i4++) {
+          (0, import_jquery9.default)(
+            'input:checkbox[name="' + $escape(el.id) + '"][value="' + $escape(value[i4]) + '"]'
+          ).prop("checked", true);
+        }
+      } else {
+        (0, import_jquery9.default)(
+          'input:checkbox[name="' + $escape(el.id) + '"][value="' + $escape(value) + '"]'
+        ).prop("checked", true);
+      }
+    }
+    getState(el) {
+      const $objs = (0, import_jquery9.default)(
+        'input:checkbox[name="' + $escape(el.id) + '"]'
+      );
+      const options = new Array($objs.length);
+      for (let i4 = 0; i4 < options.length; i4++) {
+        options[i4] = { value: $objs[i4].value, label: getLabel($objs[i4]) };
+      }
+      return {
+        label: getLabelNode(el).text(),
+        value: this.getValue(el),
+        options
+      };
+    }
+    async receiveMessage(el, data) {
+      const $el = (0, import_jquery9.default)(el);
+      if (hasDefinedProperty(data, "options")) {
+        $el.find("div.shiny-options-group").remove();
+        $el.find("label.checkbox").remove();
+        $el.append(data.options);
+      }
+      if (hasDefinedProperty(data, "value")) {
+        this.setValue(el, data.value);
+      }
+      await updateLabel(data.label, getLabelNode(el));
+      (0, import_jquery9.default)(el).trigger("change");
+    }
+    subscribe(el, callback) {
+      (0, import_jquery9.default)(el).on("change.checkboxGroupInputBinding", function() {
+        callback(false);
+      });
+    }
+    unsubscribe(el) {
+      (0, import_jquery9.default)(el).off(".checkboxGroupInputBinding");
+    }
+  };
+
+  // srcts/src/bindings/input/date.ts
+  var import_jquery10 = __toESM(require_jquery());
+  var DateInputBindingBase = class extends InputBinding {
+    find(scope) {
+      return (0, import_jquery10.default)(scope).find(".shiny-date-input");
+    }
+    getType(el) {
+      return "shiny.date";
+      el;
+    }
+    subscribe(el, callback) {
+      (0, import_jquery10.default)(el).on(
+        "changeDate.dateInputBinding change.dateInputBinding",
+        function() {
+          callback(false);
+        }
+      );
+    }
+    unsubscribe(el) {
+      (0, import_jquery10.default)(el).off(".dateInputBinding");
+    }
+    getRatePolicy() {
+      return {
+        policy: "debounce",
+        delay: 250
+      };
+    }
+    setValue(el, data) {
+      throw "not implemented";
+      el;
+      data;
+    }
+    initialize(el) {
+      const $input = (0, import_jquery10.default)(el).find("input");
+      let date = $input.data("initial-date");
+      if (date === void 0 || date === null) {
+        date = this._floorDateTime(this._dateAsUTC(new Date()));
+      }
+      this.setValue(el, date);
+      if ($input.data("min-date") !== void 0) {
+        this._setMin($input[0], $input.data("min-date"));
+      }
+      if ($input.data("max-date") !== void 0) {
+        this._setMax($input[0], $input.data("max-date"));
+      }
+    }
+    _getLabelNode(el) {
+      return (0, import_jquery10.default)(el).find('label[for="' + $escape(el.id) + '"]');
+    }
+    _formatToString(format) {
+      let str = "";
+      let i4;
+      for (i4 = 0; i4 < format.parts.length; i4++) {
+        str += format.separators[i4] + format.parts[i4];
+      }
+      str += format.separators[i4];
+      return str;
+    }
+    _setMin(el, date) {
+      if (date === null) {
+        (0, import_jquery10.default)(el).bsDatepicker("setStartDate", null);
+        return;
+      }
+      const parsedDate = this._newDate(date);
+      if (parsedDate === null)
+        return;
+      date = parsedDate;
+      if (isNaN(date.valueOf()))
+        return;
+      const curValue = (0, import_jquery10.default)(el).bsDatepicker("getUTCDate");
+      (0, import_jquery10.default)(el).bsDatepicker("setStartDate", this._utcDateAsLocal(date));
+      if (date && curValue && date.getTime() > curValue.getTime()) {
+        (0, import_jquery10.default)(el).bsDatepicker("clearDates");
+      } else {
+        (0, import_jquery10.default)(el).bsDatepicker("setUTCDate", curValue);
+      }
+    }
+    _setMax(el, date) {
+      if (date === null) {
+        (0, import_jquery10.default)(el).bsDatepicker("setEndDate", null);
+        return;
+      }
+      const parsedDate = this._newDate(date);
+      if (parsedDate === null)
+        return;
+      date = parsedDate;
+      if (isNaN(date.valueOf()))
+        return;
+      const curValue = (0, import_jquery10.default)(el).bsDatepicker("getUTCDate");
+      (0, import_jquery10.default)(el).bsDatepicker("setEndDate", this._utcDateAsLocal(date));
+      if (date && curValue && date.getTime() < curValue.getTime()) {
+        (0, import_jquery10.default)(el).bsDatepicker("clearDates");
+      } else {
+        (0, import_jquery10.default)(el).bsDatepicker("setUTCDate", curValue);
+      }
+    }
+    _newDate(date) {
+      if (date instanceof Date)
+        return date;
+      if (!date)
+        return null;
+      const d3 = parseDate(date);
+      if (isNaN(d3.valueOf()))
+        return null;
+      return d3;
+    }
+    _floorDateTime(date) {
+      date = new Date(date.getTime());
+      date.setUTCHours(0, 0, 0, 0);
+      return date;
+    }
+    _dateAsUTC(date) {
+      return new Date(date.getTime() - date.getTimezoneOffset() * 6e4);
+    }
+    _utcDateAsLocal(date) {
+      return new Date(date.getTime() + date.getTimezoneOffset() * 6e4);
+    }
+  };
+  var DateInputBinding = class extends DateInputBindingBase {
+    getValue(el) {
+      const date = (0, import_jquery10.default)(el).find("input").bsDatepicker("getUTCDate");
+      return formatDateUTC(date);
+    }
+    setValue(el, value) {
+      if (value === null) {
+        (0, import_jquery10.default)(el).find("input").val("").bsDatepicker("update");
+        return;
+      }
+      const date = this._newDate(value);
+      if (date === null) {
+        return;
+      }
+      if (isNaN(date.valueOf()))
+        return;
+      (0, import_jquery10.default)(el).find("input").bsDatepicker("setUTCDate", date);
+    }
+    getState(el) {
+      const $el = (0, import_jquery10.default)(el);
+      const $input = $el.find("input");
+      let min = $input.data("datepicker").startDate;
+      let max = $input.data("datepicker").endDate;
+      min = min === -Infinity ? null : formatDateUTC(min);
+      max = max === Infinity ? null : formatDateUTC(max);
+      let startview = $input.data("datepicker").startViewMode;
+      if (startview === 2)
+        startview = "decade";
+      else if (startview === 1)
+        startview = "year";
+      else if (startview === 0)
+        startview = "month";
+      return {
+        label: this._getLabelNode(el).text(),
+        value: this.getValue(el),
+        valueString: $input.val(),
+        min,
+        max,
+        language: $input.data("datepicker").language,
+        weekstart: $input.data("datepicker").weekStart,
+        format: this._formatToString($input.data("datepicker").format),
+        startview
+      };
+    }
+    async receiveMessage(el, data) {
+      const $input = (0, import_jquery10.default)(el).find("input");
+      await updateLabel(data.label, this._getLabelNode(el));
+      if (hasDefinedProperty(data, "min"))
+        this._setMin($input[0], data.min);
+      if (hasDefinedProperty(data, "max"))
+        this._setMax($input[0], data.max);
+      if (hasDefinedProperty(data, "value"))
+        this.setValue(el, data.value);
+      (0, import_jquery10.default)(el).trigger("change");
+    }
+  };
+
+  // srcts/src/bindings/input/daterange.ts
+  var import_jquery11 = __toESM(require_jquery());
+  function getLabelNode2(el) {
+    return (0, import_jquery11.default)(el).find('label[for="' + $escape(el.id) + '"]');
+  }
+  var DateRangeInputBinding = class extends DateInputBindingBase {
+    find(scope) {
+      return (0, import_jquery11.default)(scope).find(".shiny-date-range-input");
+    }
+    getValue(el) {
+      const $inputs = (0, import_jquery11.default)(el).find("input");
+      const start = $inputs.eq(0).bsDatepicker("getUTCDate");
+      const end = $inputs.eq(1).bsDatepicker("getUTCDate");
+      return [formatDateUTC(start), formatDateUTC(end)];
+    }
+    setValue(el, value) {
+      if (!(value instanceof Object)) {
+        return;
+      }
+      const $inputs = (0, import_jquery11.default)(el).find("input");
+      if (value.start !== void 0) {
+        if (value.start === null) {
+          $inputs.eq(0).val("").bsDatepicker("update");
+        } else {
+          const start = this._newDate(value.start);
+          $inputs.eq(0).bsDatepicker("setUTCDate", start);
+        }
+      }
+      if (value.end !== void 0) {
+        if (value.end === null) {
+          $inputs.eq(1).val("").bsDatepicker("update");
+        } else {
+          const end = this._newDate(value.end);
+          $inputs.eq(1).bsDatepicker("setUTCDate", end);
+        }
+      }
+    }
+    getState(el) {
+      const $el = (0, import_jquery11.default)(el);
+      const $inputs = $el.find("input");
+      const $startinput = $inputs.eq(0);
+      const $endinput = $inputs.eq(1);
+      const min = $startinput.bsDatepicker("getStartDate");
+      const max = $startinput.bsDatepicker("getEndDate");
+      const minStr = min === -Infinity ? null : formatDateUTC(min);
+      const maxStr = max === Infinity ? null : formatDateUTC(max);
+      let startview = $startinput.data("datepicker").startView;
+      if (startview === 2)
+        startview = "decade";
+      else if (startview === 1)
+        startview = "year";
+      else if (startview === 0)
+        startview = "month";
+      return {
+        label: getLabelNode2(el).text(),
+        value: this.getValue(el),
+        valueString: [$startinput.val(), $endinput.val()],
+        min: minStr,
+        max: maxStr,
+        weekstart: $startinput.data("datepicker").weekStart,
+        format: this._formatToString($startinput.data("datepicker").format),
+        language: $startinput.data("datepicker").language,
+        startview
+      };
+    }
+    async receiveMessage(el, data) {
+      const $el = (0, import_jquery11.default)(el);
+      const $inputs = $el.find("input");
+      const $startinput = $inputs.eq(0);
+      const $endinput = $inputs.eq(1);
+      await updateLabel(data.label, getLabelNode2(el));
+      if (hasDefinedProperty(data, "min")) {
+        this._setMin($startinput[0], data.min);
+        this._setMin($endinput[0], data.min);
+      }
+      if (hasDefinedProperty(data, "max")) {
+        this._setMax($startinput[0], data.max);
+        this._setMax($endinput[0], data.max);
+      }
+      if (hasDefinedProperty(data, "value")) {
+        this.setValue(el, data.value);
+      }
+      $el.trigger("change");
+    }
+    initialize(el) {
+      const $el = (0, import_jquery11.default)(el);
+      const $inputs = $el.find("input");
+      const $startinput = $inputs.eq(0);
+      const $endinput = $inputs.eq(1);
+      let start = $startinput.data("initial-date");
+      let end = $endinput.data("initial-date");
+      if (start === void 0 || start === null)
+        start = this._dateAsUTC(new Date());
+      if (end === void 0 || end === null)
+        end = this._dateAsUTC(new Date());
+      this.setValue(el, { start, end });
+      this._setMin($startinput[0], $startinput.data("min-date"));
+      this._setMin($endinput[0], $startinput.data("min-date"));
+      this._setMax($startinput[0], $endinput.data("max-date"));
+      this._setMax($endinput[0], $endinput.data("max-date"));
+    }
+    subscribe(el, callback) {
+      (0, import_jquery11.default)(el).on(
+        "changeDate.dateRangeInputBinding change.dateRangeInputBinding",
+        function() {
+          callback(false);
+        }
+      );
+    }
+    unsubscribe(el) {
+      (0, import_jquery11.default)(el).off(".dateRangeInputBinding");
+    }
+  };
+
+  // srcts/src/bindings/input/fileinput.ts
+  var import_jquery14 = __toESM(require_jquery());
+
+  // srcts/src/file/fileProcessor.ts
+  var import_jquery13 = __toESM(require_jquery());
+
+  // srcts/src/events/inputChanged.ts
+  var import_jquery12 = __toESM(require_jquery());
+  function triggerFileInputChanged(name, value, binding, el, inputType, onEl) {
+    const evt = import_jquery12.default.Event("shiny:inputchanged");
+    evt.name = name;
+    evt.value = value;
+    evt.binding = binding;
+    evt.el = el;
+    evt.inputType = inputType;
+    (0, import_jquery12.default)(onEl).trigger(evt);
+    return evt;
+  }
+
+  // srcts/src/file/fileProcessor.ts
+  var FileProcessor = class {
+    constructor(files, exec$run = true) {
+      this.fileIndex = -1;
+      this.aborted = false;
+      this.completed = false;
+      this.files = Array.from(files);
+      if (exec$run) {
+        this.$run();
+      }
+    }
+    onBegin(files, cont) {
+      files;
+      setTimeout(cont, 0);
+    }
+    onFile(file, cont) {
+      file;
+      setTimeout(cont, 0);
+    }
+    onComplete() {
+      return;
+    }
+    onAbort() {
+      return;
+    }
+    abort() {
+      if (this.completed || this.aborted)
+        return;
+      this.aborted = true;
+      this.onAbort();
+    }
+    $getRun() {
+      let called = false;
+      return () => {
+        if (called)
+          return;
+        called = true;
+        this.$run();
+      };
+    }
+    $run() {
+      if (this.aborted || this.completed)
+        return;
+      if (this.fileIndex < 0) {
+        this.fileIndex = 0;
+        this.onBegin(this.files, this.$getRun());
+        return;
+      }
+      if (this.fileIndex === this.files.length) {
+        this.completed = true;
+        this.onComplete();
+        return;
+      }
+      const file = this.files[this.fileIndex++];
+      this.onFile(file, this.$getRun());
+    }
+  };
+  var FileUploader = class extends FileProcessor {
+    constructor(shinyapp, id, files, el) {
+      super(files, false);
+      this.shinyapp = shinyapp;
+      this.id = id;
+      this.el = el;
+      this.$run();
+    }
+    makeRequest(method, args, onSuccess, onFailure, blobs) {
+      this.shinyapp.makeRequest(method, args, onSuccess, onFailure, blobs);
+    }
+    onBegin(files, cont) {
+      this.$setError(null);
+      this.$setActive(true);
+      this.$setVisible(true);
+      this.onProgress(null, 0);
+      this.totalBytes = 0;
+      this.progressBytes = 0;
+      import_jquery13.default.each(files, (i4, file) => {
+        this.totalBytes += file.size;
+      });
+      const fileInfo = import_jquery13.default.map(files, function(file) {
+        return {
+          name: file.name,
+          size: file.size,
+          type: file.type
+        };
+      });
+      this.makeRequest(
+        "uploadInit",
+        [fileInfo],
+        (response) => {
+          this.jobId = response.jobId;
+          this.uploadUrl = response.uploadUrl;
+          cont();
+        },
+        (error) => {
+          this.onError(error);
+        },
+        void 0
+      );
+    }
+    onFile(file, cont) {
+      this.onProgress(file, 0);
+      import_jquery13.default.ajax(this.uploadUrl, {
+        type: "POST",
+        cache: false,
+        xhr: () => {
+          if (typeof import_jquery13.default.ajaxSettings.xhr !== "function")
+            throw "jQuery's XHR is not a function";
+          const xhrVal = import_jquery13.default.ajaxSettings.xhr();
+          if (xhrVal.upload) {
+            xhrVal.upload.onprogress = (e4) => {
+              if (e4.lengthComputable) {
+                this.onProgress(
+                  file,
+                  (this.progressBytes + e4.loaded) / this.totalBytes
+                );
+              }
+            };
+          }
+          return xhrVal;
+        },
+        data: file,
+        contentType: "application/octet-stream",
+        processData: false,
+        success: () => {
+          this.progressBytes += file.size;
+          cont();
+        },
+        error: (jqXHR, textStatus, errorThrown) => {
+          errorThrown;
+          this.onError(jqXHR.responseText || textStatus);
+        }
+      });
+    }
+    onComplete() {
+      const fileInfo = import_jquery13.default.map(this.files, function(file, i4) {
+        return {
+          name: file.name,
+          size: file.size,
+          type: file.type
+        };
+        i4;
+      });
+      const evt = triggerFileInputChanged(
+        this.id,
+        fileInfo,
+        getFileInputBinding(),
+        this.el,
+        "shiny.fileupload",
+        document
+      );
+      this.makeRequest(
+        "uploadEnd",
+        [this.jobId, this.id],
+        () => {
+          this.$setActive(false);
+          this.onProgress(null, 1);
+          this.$bar().text("Upload complete");
+          (0, import_jquery13.default)(evt.el).val("");
+        },
+        (error) => {
+          this.onError(error);
+        },
+        void 0
+      );
+      this.$bar().text("Finishing upload");
+    }
+    onError(message) {
+      this.$setError(message || "");
+      this.$setActive(false);
+    }
+    onAbort() {
+      this.$setVisible(false);
+    }
+    onProgress(file, completed) {
+      this.$bar().width(Math.round(completed * 100) + "%");
+      this.$bar().text(file ? file.name : "");
+    }
+    $container() {
+      return (0, import_jquery13.default)("#" + $escape(this.id) + "_progress.shiny-file-input-progress");
+    }
+    $bar() {
+      return (0, import_jquery13.default)(
+        "#" + $escape(this.id) + "_progress.shiny-file-input-progress .progress-bar"
+      );
+    }
+    $setVisible(visible) {
+      this.$container().css("visibility", visible ? "visible" : "hidden");
+    }
+    $setError(error) {
+      this.$bar().toggleClass("progress-bar-danger", error !== null);
+      if (error !== null) {
+        this.onProgress(null, 1);
+        this.$bar().text(error);
+      }
+    }
+    $setActive(active) {
+      this.$container().toggleClass("active", !!active);
+    }
+  };
+
+  // srcts/src/bindings/input/fileinput.ts
+  var zoneActive = "shiny-file-input-active";
+  var zoneOver = "shiny-file-input-over";
+  function zoneOf(el) {
+    return (0, import_jquery14.default)(el).closest("div.input-group");
+  }
+  function enableDraghover(el) {
+    const $el = (0, import_jquery14.default)(el);
+    let childCounter = 0;
+    $el.on({
+      "dragenter.draghover": (e4) => {
+        if (childCounter++ === 0) {
+          $el.trigger("draghover:enter", e4);
+        }
+      },
+      "dragleave.draghover": (e4) => {
+        if (--childCounter === 0) {
+          $el.trigger("draghover:leave", e4);
+        }
+        if (childCounter < 0) {
+          console.error("draghover childCounter is negative somehow");
+        }
+      },
+      "dragover.draghover": (e4) => {
+        e4.preventDefault();
+      },
+      "drop.draghover": (e4) => {
+        childCounter = 0;
+        $el.trigger("draghover:drop", e4);
+        e4.preventDefault();
+      }
+    });
+    return $el;
+  }
+  function disableDraghover(el) {
+    return (0, import_jquery14.default)(el).off(".draghover");
+  }
+  function enableDocumentEvents() {
+    const $doc = (0, import_jquery14.default)("html");
+    enableDraghover($doc).on({
+      "draghover:enter.draghover": () => {
+        zoneOf($fileInputs).addClass(zoneActive);
+      },
+      "draghover:leave.draghover": () => {
+        zoneOf($fileInputs).removeClass(zoneActive);
+      },
+      "draghover:drop.draghover": () => {
+        zoneOf($fileInputs).removeClass(zoneOver).removeClass(zoneActive);
+      }
+    });
+  }
+  function disableDocumentEvents() {
+    const $doc = (0, import_jquery14.default)("html");
+    $doc.off(".draghover");
+    disableDraghover($doc);
+  }
+  function canSetFiles(fileList) {
+    const testEl = document.createElement("input");
+    testEl.type = "file";
+    try {
+      testEl.files = fileList;
+    } catch (e4) {
+      return false;
+    }
+    return true;
+  }
+  function handleDrop(e4, el) {
+    const files = e4.originalEvent?.dataTransfer?.files, $el = (0, import_jquery14.default)(el);
+    if (files === void 0 || files === null) {
+      console.log(
+        "Dropping files is not supported on this browser. (no FileList)"
+      );
+    } else if (!canSetFiles(files)) {
+      $el.val("");
+      uploadDroppedFilesIE10Plus(el, files);
+    } else {
+      $el.val("");
+      el.files = files;
+      $el.trigger("change");
+    }
+  }
+  function setFileText($el, files) {
+    const $fileText = $el.closest("div.input-group").find("input[type=text]");
+    if (files.length === 1) {
+      $fileText.val(files[0].name);
+    } else {
+      $fileText.val(files.length + " files");
+    }
+  }
+  function abortCurrentUpload($el) {
+    const uploader = $el.data("currentUploader");
+    if (uploader)
+      uploader.abort();
+    $el.removeAttr("data-restore");
+  }
+  function uploadDroppedFilesIE10Plus(el, files) {
+    const $el = (0, import_jquery14.default)(el);
+    abortCurrentUpload($el);
+    setFileText($el, files);
+    $el.data(
+      "currentUploader",
+      new FileUploader(shinyShinyApp(), fileInputBindingGetId(el), files, el)
+    );
+  }
+  function uploadFiles(evt) {
+    const $el = (0, import_jquery14.default)(evt.target);
+    abortCurrentUpload($el);
+    const files = evt.target.files;
+    const id = fileInputBindingGetId(evt.target);
+    if (files.length === 0)
+      return;
+    setFileText($el, files);
+    $el.data(
+      "currentUploader",
+      new FileUploader(shinyShinyApp(), id, files, evt.target)
+    );
+  }
+  var $fileInputs = (0, import_jquery14.default)();
+  function fileInputBindingGetId(el) {
+    return InputBinding.prototype.getId.call(this, el) || el.name;
+  }
+  var FileInputBinding = class extends InputBinding {
+    find(scope) {
+      return (0, import_jquery14.default)(scope).find('input[type="file"]');
+    }
+    getId(el) {
+      return fileInputBindingGetId(el);
+    }
+    getValue(el) {
+      const data = (0, import_jquery14.default)(el).attr("data-restore");
+      if (data) {
+        const dataParsed = JSON.parse(data);
+        const $fileText = (0, import_jquery14.default)(el).closest("div.input-group").find("input[type=text]");
+        if (dataParsed.name.length === 1) {
+          $fileText.val(dataParsed.name[0]);
+        } else {
+          $fileText.val(dataParsed.name.length + " files");
+        }
+        const $progress = (0, import_jquery14.default)(el).closest("div.form-group").find(".progress");
+        const $bar = $progress.find(".progress-bar");
+        $progress.removeClass("active");
+        $bar.width("100%");
+        $bar.css("visibility", "visible");
+        return dataParsed;
+      } else {
+        return null;
+      }
+    }
+    setValue(el, value) {
+      el;
+      value;
+    }
+    getType(el) {
+      return "shiny.file";
+      el;
+    }
+    subscribe(el, callback) {
+      callback;
+      (0, import_jquery14.default)(el).on("change.fileInputBinding", uploadFiles);
+      if ($fileInputs.length === 0)
+        enableDocumentEvents();
+      $fileInputs = $fileInputs.add(el);
+      const $zone = zoneOf(el);
+      enableDraghover($zone).on({
+        "draghover:enter.draghover": (e4) => {
+          e4;
+          $zone.addClass(zoneOver);
+        },
+        "draghover:leave.draghover": (e4) => {
+          $zone.removeClass(zoneOver);
+          e4.stopPropagation();
+        },
+        "draghover:drop.draghover": (e4, dropEvent) => {
+          e4;
+          handleDrop(dropEvent, el);
+        }
+      });
+    }
+    unsubscribe(el) {
+      const $el = (0, import_jquery14.default)(el), $zone = zoneOf(el);
+      $zone.removeClass(zoneOver).removeClass(zoneActive);
+      disableDraghover($zone);
+      $el.off(".fileInputBinding");
+      $zone.off(".draghover");
+      $fileInputs = $fileInputs.not(el);
+      if ($fileInputs.length === 0)
+        disableDocumentEvents();
+    }
+  };
+
+  // srcts/src/bindings/input/number.ts
+  var import_jquery16 = __toESM(require_jquery());
+
+  // srcts/src/bindings/input/text.ts
+  var import_jquery15 = __toESM(require_jquery());
+  function getLabelNode3(el) {
+    return (0, import_jquery15.default)(el).parent().find('label[for="' + $escape(el.id) + '"]');
+  }
+  var TextInputBindingBase = class extends InputBinding {
+    find(scope) {
+      const $inputs = (0, import_jquery15.default)(scope).find(
+        'input[type="text"], input[type="search"], input[type="url"], input[type="email"]'
+      );
+      return $inputs.not('input[type="text"][id$="-selectized"]');
+    }
+    getId(el) {
+      return super.getId(el) || el.name;
+    }
+    getValue(el) {
+      throw "not implemented";
+      el;
+    }
+    setValue(el, value) {
+      throw "not implemented";
+      el;
+      value;
+    }
+    subscribe(el, callback) {
+      const $el = (0, import_jquery15.default)(el);
+      const updateOn = $el.data("update-on") || "change";
+      if (updateOn === "change") {
+        $el.on(
+          "keyup.textInputBinding input.textInputBinding",
+          function() {
+            callback(true);
+          }
+        );
+      } else if (updateOn === "blur") {
+        $el.on("blur.textInputBinding", function() {
+          callback(false);
+        });
+        $el.on("keydown.textInputBinding", function(event) {
+          if (event.key !== "Enter")
+            return;
+          if ($el.is("textarea")) {
+            if (!(event.ctrlKey || event.metaKey))
+              return;
+          }
+          callback(false);
+        });
+      }
+      $el.on("change.textInputBinding", function() {
+        if (updateOn === "blur" && $el.is(":focus")) {
+          return;
+        }
+        callback(false);
+      });
+    }
+    unsubscribe(el) {
+      (0, import_jquery15.default)(el).off(".textInputBinding");
+    }
+    receiveMessage(el, data) {
+      throw "not implemented";
+      el;
+      data;
+    }
+    getState(el) {
+      throw "not implemented";
+      el;
+    }
+    getRatePolicy(el) {
+      return {
+        policy: "debounce",
+        delay: 250
+      };
+      el;
+    }
+  };
+  var TextInputBinding = class extends TextInputBindingBase {
+    setValue(el, value) {
+      el.value = value;
+    }
+    getValue(el) {
+      return el.value;
+    }
+    getState(el) {
+      return {
+        label: getLabelNode3(el).text(),
+        value: el.value,
+        placeholder: el.placeholder
+      };
+    }
+    async receiveMessage(el, data) {
+      if (hasDefinedProperty(data, "value"))
+        this.setValue(el, data.value);
+      await updateLabel(data.label, getLabelNode3(el));
+      if (hasDefinedProperty(data, "placeholder"))
+        el.placeholder = data.placeholder;
+      (0, import_jquery15.default)(el).trigger("change");
+    }
+  };
+
+  // srcts/src/bindings/input/number.ts
+  function getLabelNode4(el) {
+    return (0, import_jquery16.default)(el).parent().find('label[for="' + $escape(el.id) + '"]');
+  }
+  var NumberInputBinding = class extends TextInputBindingBase {
+    find(scope) {
+      return (0, import_jquery16.default)(scope).find('input[type="number"]');
+    }
+    getValue(el) {
+      const numberVal = (0, import_jquery16.default)(el).val();
+      if (typeof numberVal == "string") {
+        if (/^\s*$/.test(numberVal))
+          return null;
+      }
+      const numberValue = Number(numberVal);
+      if (!isNaN(numberValue)) {
+        return numberValue;
+      }
+      return numberVal;
+    }
+    setValue(el, value) {
+      el.value = "" + value;
+    }
+    getType(el) {
+      return "shiny.number";
+      el;
+    }
+    async receiveMessage(el, data) {
+      if (hasDefinedProperty(data, "value"))
+        el.value = data.value ?? "";
+      if (hasDefinedProperty(data, "min"))
+        el.min = data.min ?? "";
+      if (hasDefinedProperty(data, "max"))
+        el.max = data.max ?? "";
+      if (hasDefinedProperty(data, "step"))
+        el.step = data.step ?? "";
+      await updateLabel(data.label, getLabelNode4(el));
+      (0, import_jquery16.default)(el).trigger("change");
+    }
+    getState(el) {
+      return {
+        label: getLabelNode4(el).text(),
+        value: this.getValue(el),
+        min: Number(el.min),
+        max: Number(el.max),
+        step: Number(el.step)
+      };
+    }
+  };
+
+  // srcts/src/bindings/input/password.ts
+  var import_jquery17 = __toESM(require_jquery());
+  var PasswordInputBinding = class extends TextInputBinding {
+    find(scope) {
+      return (0, import_jquery17.default)(scope).find('input[type="password"]');
+    }
+    getType(el) {
+      return "shiny.password";
+      el;
+    }
+  };
+
+  // srcts/src/bindings/input/radio.ts
+  var import_jquery18 = __toESM(require_jquery());
+  function getLabelNode5(el) {
+    return (0, import_jquery18.default)(el).parent().find('label[for="' + $escape(el.id) + '"]');
+  }
+  function getLabel2(obj) {
+    const parentNode = obj.parentNode;
+    if (parentNode.tagName === "LABEL") {
+      return (0, import_jquery18.default)(parentNode).find("span").text().trim();
+    }
+    return null;
+  }
+  var RadioInputBinding = class extends InputBinding {
+    find(scope) {
+      return (0, import_jquery18.default)(scope).find(".shiny-input-radiogroup");
+    }
+    getValue(el) {
+      const checkedItems = (0, import_jquery18.default)(
+        'input:radio[name="' + $escape(el.id) + '"]:checked'
+      );
+      if (checkedItems.length === 0) {
+        return null;
+      }
+      return checkedItems.val();
+    }
+    setValue(el, value) {
+      if (Array.isArray(value) && value.length === 0) {
+        (0, import_jquery18.default)('input:radio[name="' + $escape(el.id) + '"]').prop("checked", false);
+      } else {
+        (0, import_jquery18.default)(
+          'input:radio[name="' + $escape(el.id) + '"][value="' + $escape(value) + '"]'
+        ).prop("checked", true);
+      }
+    }
+    getState(el) {
+      const $objs = (0, import_jquery18.default)(
+        'input:radio[name="' + $escape(el.id) + '"]'
+      );
+      const options = new Array($objs.length);
+      for (let i4 = 0; i4 < options.length; i4++) {
+        options[i4] = { value: $objs[i4].value, label: getLabel2($objs[i4]) };
+      }
+      return {
+        label: getLabelNode5(el).text(),
+        value: this.getValue(el),
+        options
+      };
+    }
+    async receiveMessage(el, data) {
+      const $el = (0, import_jquery18.default)(el);
+      if (hasDefinedProperty(data, "options")) {
+        $el.find("div.shiny-options-group").remove();
+        $el.find("label.radio").remove();
+        $el.append(data.options);
+      }
+      if (hasDefinedProperty(data, "value")) {
+        this.setValue(el, data.value);
+      }
+      await updateLabel(data.label, getLabelNode5(el));
+      (0, import_jquery18.default)(el).trigger("change");
+    }
+    subscribe(el, callback) {
+      (0, import_jquery18.default)(el).on("change.radioInputBinding", function() {
+        callback(false);
+      });
+    }
+    unsubscribe(el) {
+      (0, import_jquery18.default)(el).off(".radioInputBinding");
+    }
+  };
+
+  // srcts/src/bindings/input/selectInput.ts
+  var import_jquery19 = __toESM(require_jquery());
+
+  // srcts/src/utils/eval.ts
+  var indirectEval = eval;
+
+  // srcts/src/bindings/input/selectInput.ts
+  function getLabelNode6(el) {
+    let escapedId = $escape(el.id);
+    if (isSelectize(el)) {
+      escapedId += "-selectized";
+    }
+    return (0, import_jquery19.default)(el).parent().parent().find('label[for="' + escapedId + '"]');
+  }
+  function isSelectize(el) {
+    const config = (0, import_jquery19.default)(el).parent().find('script[data-for="' + $escape(el.id) + '"]');
+    return config.length > 0;
+  }
+  var SelectInputBinding = class extends InputBinding {
+    find(scope) {
+      return (0, import_jquery19.default)(scope).find("select");
+    }
+    getType(el) {
+      const $el = (0, import_jquery19.default)(el);
+      if (!$el.hasClass("symbol")) {
+        return null;
+      }
+      if ($el.attr("multiple") === "multiple") {
+        return "shiny.symbolList";
+      } else {
+        return "shiny.symbol";
+      }
+    }
+    getId(el) {
+      return InputBinding.prototype.getId.call(this, el) || el.name;
+    }
+    getValue(el) {
+      if (!isSelectize(el)) {
+        return (0, import_jquery19.default)(el).val();
+      } else {
+        const selectize = this._selectize(el);
+        return selectize?.getValue();
+      }
+    }
+    setValue(el, value) {
+      if (!isSelectize(el)) {
+        (0, import_jquery19.default)(el).val(value);
+      } else {
+        const selectize = this._selectize(el);
+        selectize?.setValue(value);
+      }
+    }
+    getState(el) {
+      const options = new Array(
+        el.length
+      );
+      for (let i4 = 0; i4 < el.length; i4++) {
+        options[i4] = {
+          value: el[i4].value,
+          label: el[i4].label
+        };
+      }
+      return {
+        label: getLabelNode6(el),
+        value: this.getValue(el),
+        options
+      };
+    }
+    async receiveMessage(el, data) {
+      const $el = (0, import_jquery19.default)(el);
+      if (hasDefinedProperty(data, "options")) {
+        const selectize = this._selectize(el);
+        selectize?.destroy();
+        $el.empty().append(data.options);
+        this._selectize(el);
+      }
+      if (hasDefinedProperty(data, "config")) {
+        $el.parent().find('script[data-for="' + $escape(el.id) + '"]').replaceWith(data.config);
+        this._selectize(el, true);
+      }
+      if (hasDefinedProperty(data, "url")) {
+        const selectize = this._selectize(el);
+        selectize.clear();
+        selectize.clearOptions();
+        let loaded = false;
+        selectize.settings.load = function(query, callback) {
+          const settings = selectize.settings;
+          import_jquery19.default.ajax({
+            url: data.url,
+            data: {
+              query,
+              field: JSON.stringify([settings.searchField]),
+              value: settings.valueField,
+              conju: settings.searchConjunction,
+              maxop: settings.maxOptions
+            },
+            type: "GET",
+            error: function() {
+              callback();
+            },
+            success: function(res) {
+              import_jquery19.default.each(res, function(index, elem) {
+                const optgroupId = elem[settings.optgroupField || "optgroup"];
+                const optgroup = {};
+                optgroup[settings.optgroupLabelField || "label"] = optgroupId;
+                optgroup[settings.optgroupValueField || "value"] = optgroupId;
+                selectize.addOptionGroup(optgroupId, optgroup);
+              });
+              callback(res);
+              if (!loaded) {
+                if (hasDefinedProperty(data, "value")) {
+                  selectize.setValue(data.value);
+                } else if (settings.maxItems === 1) {
+                  selectize.setValue(res[0].value);
+                }
+              }
+              loaded = true;
+            }
+          });
+        };
+        selectize.load(function(callback) {
+          selectize.settings.load.apply(selectize, ["", callback]);
+        });
+      } else if (hasDefinedProperty(data, "value")) {
+        this.setValue(el, data.value);
+      }
+      await updateLabel(data.label, getLabelNode6(el));
+      (0, import_jquery19.default)(el).trigger("change");
+    }
+    subscribe(el, callback) {
+      (0, import_jquery19.default)(el).on(
+        "change.selectInputBinding",
+        () => {
+          if (el.nonempty && this.getValue(el) === "") {
+            return;
+          }
+          callback(false);
+        }
+      );
+    }
+    unsubscribe(el) {
+      (0, import_jquery19.default)(el).off(".selectInputBinding");
+    }
+    initialize(el) {
+      this._selectize(el);
+    }
+    _selectize(el, update = false) {
+      if (!import_jquery19.default.fn.selectize)
+        return void 0;
+      const $el = (0, import_jquery19.default)(el);
+      const config = $el.parent().find('script[data-for="' + $escape(el.id) + '"]');
+      if (config.length === 0)
+        return void 0;
+      let options = import_jquery19.default.extend(
+        {
+          labelField: "label",
+          valueField: "value",
+          searchField: ["label"]
+        },
+        JSON.parse(config.html())
+      );
+      if (typeof config.data("nonempty") !== "undefined") {
+        el.nonempty = true;
+        options = import_jquery19.default.extend(options, {
+          onItemRemove: function(value) {
+            if (this.getValue() === "")
+              (0, import_jquery19.default)("select#" + $escape(el.id)).empty().append(
+                (0, import_jquery19.default)("<option/>", {
+                  value,
+                  selected: true
+                })
+              ).trigger("change");
+          },
+          onDropdownClose: function() {
+            if (this.getValue() === "") {
+              this.setValue((0, import_jquery19.default)("select#" + $escape(el.id)).val());
+            }
+          }
+        });
+      } else {
+        el.nonempty = false;
+      }
+      if (config.data("eval") instanceof Array)
+        import_jquery19.default.each(config.data("eval"), function(i4, x2) {
+          options[x2] = indirectEval("(" + options[x2] + ")");
+        });
+      let control = $el.selectize(options)[0].selectize;
+      if (update) {
+        const settings = import_jquery19.default.extend(control.settings, options);
+        control.destroy();
+        control = $el.selectize(settings)[0].selectize;
+      }
+      return control;
+    }
+  };
+
+  // srcts/src/bindings/input/slider.ts
+  var import_jquery20 = __toESM(require_jquery());
+  function forceIonSliderUpdate(slider) {
+    if (slider.$cache && slider.$cache.input)
+      slider.$cache.input.trigger("change");
+    else
+      console.log("Couldn't force ion slider to update");
+  }
+  function getTypePrettifyer(dataType, timeFormat, timezone) {
+    let timeFormatter;
+    let prettify;
+    if (dataType === "date") {
+      timeFormatter = window.strftime.utc();
+      prettify = function(num) {
+        return timeFormatter(timeFormat, new Date(num));
+      };
+    } else if (dataType === "datetime") {
+      if (timezone)
+        timeFormatter = window.strftime.timezone(timezone);
+      else
+        timeFormatter = window.strftime;
+      prettify = function(num) {
+        return timeFormatter(timeFormat, new Date(num));
+      };
+    } else {
+      prettify = function(num) {
+        return formatNumber(num, this.prettify_separator);
+      };
+    }
+    return prettify;
+  }
+  function getLabelNode7(el) {
+    return (0, import_jquery20.default)(el).parent().find('label[for="' + $escape(el.id) + '"]');
+  }
+  function numValues(el) {
+    if ((0, import_jquery20.default)(el).data("ionRangeSlider").options.type === "double")
+      return 2;
+    else
+      return 1;
+  }
+  var SliderInputBinding = class extends TextInputBindingBase {
+    find(scope) {
+      if (!import_jquery20.default.fn.ionRangeSlider) {
+        return (0, import_jquery20.default)();
+      }
+      return (0, import_jquery20.default)(scope).find("input.js-range-slider");
+    }
+    getType(el) {
+      const dataType = (0, import_jquery20.default)(el).data("data-type");
+      if (dataType === "date")
+        return "shiny.date";
+      else if (dataType === "datetime")
+        return "shiny.datetime";
+      else
+        return null;
+    }
+    getValue(el) {
+      const $el = (0, import_jquery20.default)(el);
+      const result = (0, import_jquery20.default)(el).data("ionRangeSlider").result;
+      let convert;
+      const dataType = $el.data("data-type");
+      if (dataType === "date") {
+        convert = function(val) {
+          return formatDateUTC(new Date(Number(val)));
+        };
+      } else if (dataType === "datetime") {
+        convert = function(val) {
+          return Number(val) / 1e3;
+        };
+      } else {
+        convert = function(val) {
+          return Number(val);
+        };
+      }
+      if (numValues(el) === 2) {
+        return [convert(result.from), convert(result.to)];
+      } else {
+        return convert(result.from);
+      }
+    }
+    setValue(el, value) {
+      const $el = (0, import_jquery20.default)(el);
+      const slider = $el.data("ionRangeSlider");
+      $el.data("immediate", true);
+      try {
+        if (numValues(el) === 2 && value instanceof Array) {
+          slider.update({ from: value[0], to: value[1] });
+        } else {
+          slider.update({ from: value });
+        }
+        forceIonSliderUpdate(slider);
+      } finally {
+        $el.data("immediate", false);
+      }
+    }
+    subscribe(el, callback) {
+      (0, import_jquery20.default)(el).on("change.sliderInputBinding", function() {
+        callback(!(0, import_jquery20.default)(el).data("immediate") && !(0, import_jquery20.default)(el).data("animating"));
+      });
+    }
+    unsubscribe(el) {
+      (0, import_jquery20.default)(el).off(".sliderInputBinding");
+    }
+    async receiveMessage(el, data) {
+      const $el = (0, import_jquery20.default)(el);
+      const slider = $el.data("ionRangeSlider");
+      const msg = {};
+      if (hasDefinedProperty(data, "value")) {
+        if (numValues(el) === 2 && data.value instanceof Array) {
+          msg.from = data.value[0];
+          msg.to = data.value[1];
+        } else {
+          if (Array.isArray(data.value)) {
+            const errorReason = [
+              "an empty array.",
+              "a single-value array.",
+              "an array with more than two values."
+            ];
+            throw "Slider requires two values to update with an array, but message value was " + errorReason[Math.min(data.value.length, 2)];
+          }
+          msg.from = data.value;
+        }
+      }
+      const sliderFeatures = [
+        "min",
+        "max",
+        "step"
+      ];
+      for (let i4 = 0; i4 < sliderFeatures.length; i4++) {
+        const feats = sliderFeatures[i4];
+        if (hasDefinedProperty(data, feats)) {
+          msg[feats] = data[feats];
+        }
+      }
+      await updateLabel(data.label, getLabelNode7(el));
+      const domElements = [
+        "data-type",
+        "time-format",
+        "timezone"
+      ];
+      for (let i4 = 0; i4 < domElements.length; i4++) {
+        const elem = domElements[i4];
+        if (hasDefinedProperty(data, elem)) {
+          $el.data(elem, data[elem]);
+        }
+      }
+      const dataType = $el.data("data-type");
+      const timeFormat = $el.data("time-format");
+      const timezone = $el.data("timezone");
+      msg.prettify = getTypePrettifyer(dataType, timeFormat, timezone);
+      $el.data("immediate", true);
+      try {
+        slider.update(msg);
+        forceIonSliderUpdate(slider);
+      } finally {
+        $el.data("immediate", false);
+      }
+    }
+    getRatePolicy(el) {
+      return {
+        policy: "debounce",
+        delay: 250
+      };
+      el;
+    }
+    getState(el) {
+      el;
+    }
+    initialize(el) {
+      const $el = (0, import_jquery20.default)(el);
+      const dataType = $el.data("data-type");
+      const timeFormat = $el.data("time-format");
+      const timezone = $el.data("timezone");
+      const opts = {
+        prettify: getTypePrettifyer(dataType, timeFormat, timezone)
+      };
+      $el.ionRangeSlider(opts);
+    }
+  };
+  function formatNumber(num, thousandSep = ",", decimalSep = ".") {
+    const parts = num.toString().split(".");
+    parts[0] = parts[0].replace(
+      /(\d{1,3}(?=(?:\d\d\d)+(?!\d)))/g,
+      "$1" + thousandSep
+    );
+    if (parts.length === 1)
+      return parts[0];
+    else if (parts.length === 2)
+      return parts[0] + decimalSep + parts[1];
+    else
+      return "";
+  }
+  (0, import_jquery20.default)(document).on("click", ".slider-animate-button", function(evt) {
+    evt.preventDefault();
+    const self = (0, import_jquery20.default)(this);
+    const target = (0, import_jquery20.default)("#" + $escape(self.attr("data-target-id")));
+    const startLabel = "Play";
+    const stopLabel = "Pause";
+    const loop = self.attr("data-loop") !== void 0 && !/^\s*false\s*$/i.test(self.attr("data-loop"));
+    let animInterval = self.attr("data-interval");
+    if (isNaN(animInterval))
+      animInterval = 1500;
+    else
+      animInterval = Number(animInterval);
+    if (!target.data("animTimer")) {
+      let timer;
+      if (target.hasClass("jslider")) {
+        const slider = target.slider();
+        if (!slider.canStepNext())
+          slider.resetToStart();
+        timer = setInterval(function() {
+          if (loop && !slider.canStepNext()) {
+            slider.resetToStart();
+          } else {
+            slider.stepNext();
+            if (!loop && !slider.canStepNext()) {
+              self.click();
+            }
+          }
+        }, animInterval);
+      } else {
+        const slider = target.data("ionRangeSlider");
+        const sliderCanStep = function() {
+          if (slider.options.type === "double")
+            return slider.result.to < slider.result.max;
+          else
+            return slider.result.from < slider.result.max;
+        };
+        const sliderReset = function() {
+          const val = { from: slider.result.min };
+          if (slider.options.type === "double")
+            val.to = val.from + (slider.result.to - slider.result.from);
+          slider.update(val);
+          forceIonSliderUpdate(slider);
+        };
+        const sliderStep = function() {
+          const val = {
+            from: Math.min(
+              slider.result.max,
+              slider.result.from + slider.options.step
+            )
+          };
+          if (slider.options.type === "double")
+            val.to = Math.min(
+              slider.result.max,
+              slider.result.to + slider.options.step
+            );
+          slider.update(val);
+          forceIonSliderUpdate(slider);
+        };
+        if (!sliderCanStep())
+          sliderReset();
+        timer = setInterval(function() {
+          if (loop && !sliderCanStep()) {
+            sliderReset();
+          } else {
+            sliderStep();
+            if (!loop && !sliderCanStep()) {
+              self.click();
+            }
+          }
+        }, animInterval);
+      }
+      target.data("animTimer", timer);
+      self.attr("title", stopLabel);
+      self.addClass("playing");
+      target.data("animating", true);
+    } else {
+      clearTimeout(target.data("animTimer"));
+      target.removeData("animTimer");
+      self.attr("title", startLabel);
+      self.removeClass("playing");
+      target.removeData("animating");
+    }
+  });
+
+  // srcts/src/bindings/input/tabinput.ts
+  var import_jquery21 = __toESM(require_jquery());
+  function getTabName(anchor) {
+    return anchor.attr("data-value") || anchor.text();
+  }
+  var BootstrapTabInputBinding = class extends InputBinding {
+    find(scope) {
+      return (0, import_jquery21.default)(scope).find("ul.nav.shiny-tab-input");
+    }
+    getValue(el) {
+      const anchor = isBS3() ? (0, import_jquery21.default)(el).find("li:not(.dropdown).active > a") : (0, import_jquery21.default)(el).find(
+        ".nav-link:not(.dropdown-toggle).active, .dropdown-menu .dropdown-item.active"
+      );
+      if (anchor.length === 1)
+        return getTabName(anchor);
+      return null;
+    }
+    setValue(el, value) {
+      let success = false;
+      if (value) {
+        const anchors = isBS3() ? (0, import_jquery21.default)(el).find("li:not(.dropdown) > a") : (0, import_jquery21.default)(el).find(
+          ".nav-link:not(.dropdown-toggle), .dropdown-menu .dropdown-item"
+        );
+        anchors.each(function() {
+          if (getTabName((0, import_jquery21.default)(this)) === value) {
+            (0, import_jquery21.default)(this).tab("show");
+            success = true;
+            return false;
+          }
+          return;
+        });
+      }
+      if (!success) {
+        (0, import_jquery21.default)(el).trigger("change");
+      }
+    }
+    getState(el) {
+      return { value: this.getValue(el) };
+    }
+    receiveMessage(el, data) {
+      if (hasDefinedProperty(data, "value"))
+        this.setValue(el, data.value);
+      (0, import_jquery21.default)(el).trigger("change");
+    }
+    subscribe(el, callback) {
+      (0, import_jquery21.default)(el).on(
+        "change shown.bootstrapTabInputBinding shown.bs.tab.bootstrapTabInputBinding",
+        function() {
+          callback(false);
+        }
+      );
+    }
+    unsubscribe(el) {
+      (0, import_jquery21.default)(el).off(".bootstrapTabInputBinding");
+    }
+  };
+
+  // srcts/src/bindings/input/textarea.ts
+  var import_jquery22 = __toESM(require_jquery());
+  var intersectObserver = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        updateHeight(entry.target);
+      }
+    });
+  });
+  var _inputHandler;
+  var TextareaInputBinding = class extends TextInputBinding {
+    constructor() {
+      super(...arguments);
+      __privateAdd(this, _inputHandler, null);
+    }
+    find(scope) {
+      return (0, import_jquery22.default)(scope).find("textarea");
+    }
+    initialize(el) {
+      super.initialize(el);
+      updateHeight(el);
+    }
+    subscribe(el, callback) {
+      super.subscribe(el, callback);
+      __privateSet(this, _inputHandler, (e4) => updateHeight(e4.target));
+      el.addEventListener("input", __privateGet(this, _inputHandler));
+      intersectObserver.observe(el);
+    }
+    unsubscribe(el) {
+      super.unsubscribe(el);
+      if (__privateGet(this, _inputHandler))
+        el.removeEventListener("input", __privateGet(this, _inputHandler));
+      intersectObserver.unobserve(el);
+    }
+  };
+  _inputHandler = new WeakMap();
+  function updateHeight(el) {
+    if (!el.classList.contains("textarea-autoresize")) {
+      return;
+    }
+    if (el.scrollHeight == 0) {
+      return;
+    }
+    el.style.height = "auto";
+    el.style.height = el.scrollHeight + "px";
+  }
+
+  // srcts/src/bindings/input/index.ts
+  function initInputBindings() {
+    const inputBindings = new BindingRegistry();
+    inputBindings.register(new TextInputBinding(), "shiny.textInput");
+    inputBindings.register(new TextareaInputBinding(), "shiny.textareaInput");
+    inputBindings.register(new PasswordInputBinding(), "shiny.passwordInput");
+    inputBindings.register(new NumberInputBinding(), "shiny.numberInput");
+    inputBindings.register(new CheckboxInputBinding(), "shiny.checkboxInput");
+    inputBindings.register(
+      new CheckboxGroupInputBinding(),
+      "shiny.checkboxGroupInput"
+    );
+    inputBindings.register(new RadioInputBinding(), "shiny.radioInput");
+    inputBindings.register(new SliderInputBinding(), "shiny.sliderInput");
+    inputBindings.register(new DateInputBinding(), "shiny.dateInput");
+    inputBindings.register(new DateRangeInputBinding(), "shiny.dateRangeInput");
+    inputBindings.register(new SelectInputBinding(), "shiny.selectInput");
+    inputBindings.register(
+      new ActionButtonInputBinding(),
+      "shiny.actionButtonInput"
+    );
+    inputBindings.register(
+      new BootstrapTabInputBinding(),
+      "shiny.bootstrapTabInput"
+    );
+    const fileInputBinding2 = new FileInputBinding();
+    inputBindings.register(fileInputBinding2, "shiny.fileInputBinding");
+    return { inputBindings, fileInputBinding: fileInputBinding2 };
+  }
+
+  // srcts/src/bindings/output/datatable.ts
+  var import_jquery24 = __toESM(require_jquery());
+
+  // srcts/src/bindings/output/outputBinding.ts
+  var import_jquery23 = __toESM(require_jquery());
+  var OutputBinding = class {
+    find(scope) {
+      throw "Not implemented";
+      scope;
+    }
+    renderValue(el, data) {
+      throw "Not implemented";
+      el;
+      data;
+    }
+    getId(el) {
+      return el.getAttribute("data-input-id") || el.id;
+    }
+    async onValueChange(el, data) {
+      this.clearError(el);
+      await this.renderValue(el, data);
+    }
+    onValueError(el, err) {
+      this.renderError(el, err);
+    }
+    renderError(el, err) {
+      this.clearError(el);
+      if (err.message === "") {
+        (0, import_jquery23.default)(el).empty();
+        return;
+      }
+      let errClass = "shiny-output-error";
+      if (err.type !== null) {
+        errClass = errClass + " " + import_jquery23.default.map(asArray(err.type), function(type) {
+          return errClass + "-" + type;
+        }).join(" ");
+      }
+      (0, import_jquery23.default)(el).addClass(errClass).text(err.message);
+    }
+    clearError(el) {
+      (0, import_jquery23.default)(el).attr("class", function(i4, c4) {
+        return c4.replace(/(^|\s)shiny-output-error\S*/g, "");
+      });
+    }
+    showProgress(el, show3) {
+      const recalcClass = "recalculating";
+      if (show3)
+        (0, import_jquery23.default)(el).addClass(recalcClass);
+      else
+        (0, import_jquery23.default)(el).removeClass(recalcClass);
+    }
+  };
+
+  // srcts/src/bindings/output/datatable.ts
+  var DatatableOutputBinding = class extends OutputBinding {
+    find(scope) {
+      return (0, import_jquery24.default)(scope).find(".shiny-datatable-output");
+    }
+    onValueError(el, err) {
+      shinyUnbindAll(el);
+      this.renderError(el, err);
+    }
+    renderValue(el, data) {
+      const $el = (0, import_jquery24.default)(el).empty();
+      if (!data || !data.colnames)
+        return;
+      const colnames = import_jquery24.default.makeArray(data.colnames);
+      let header = import_jquery24.default.map(colnames, function(x2) {
+        return "<th>" + x2 + "</th>";
+      }).join("");
+      header = "<thead><tr>" + header + "</tr></thead>";
+      let footer = "";
+      if (data.options?.searching ?? true) {
+        footer = import_jquery24.default.map(colnames, function(x2) {
+          return '<th><input type="text" placeholder="' + escapeHTML(x2.replace(/(<([^>]+)>)/gi, "")) + '" /></th>';
+        }).join("");
+        footer = "<tfoot>" + footer + "</tfoot>";
+      }
+      const content = '<table class="table table-striped table-hover">' + header + footer + "</table>";
+      $el.append(content);
+      if (data.evalOptions) {
+        import_jquery24.default.each(data.evalOptions, function(i4, x2) {
+          data.options[x2] = indirectEval("(" + data.options[x2] + ")");
+        });
+      }
+      const searchCI = data.options?.search?.caseInsensitive !== false;
+      const oTable = (0, import_jquery24.default)(el).children("table").DataTable(
+        import_jquery24.default.extend(
+          {
+            processing: true,
+            serverSide: true,
+            order: [],
+            orderClasses: false,
+            pageLength: 25,
+            ajax: {
+              url: data.action,
+              type: "POST",
+              data: function(d3) {
+                d3.search || (d3.search = {});
+                d3.search.caseInsensitive = searchCI;
+                d3.escape = data.escape;
+              }
+            }
+          },
+          data.options
+        )
+      );
+      if (typeof data.callback === "string") {
+        const callback = indirectEval("(" + data.callback + ")");
+        if (typeof callback === "function")
+          callback(oTable);
+      }
+      $el.find("label input").first().unbind("keyup").keyup(
+        debounce(data.searchDelay, function() {
+          oTable.search(this.value).draw();
+        })
+      );
+      const searchInputs = $el.find("tfoot input");
+      if (searchInputs.length > 0) {
+        import_jquery24.default.each(oTable.settings()[0].aoColumns, function(i4, x2) {
+          if (!x2.bSearchable)
+            searchInputs.eq(i4).hide();
+        });
+        searchInputs.keyup(
+          debounce(data.searchDelay, function() {
+            oTable.column(searchInputs.index(this)).search(this.value).draw();
+          })
+        );
+      }
+      $el.parents(".tab-content").css("overflow", "visible");
+    }
+  };
+
+  // srcts/src/bindings/output/downloadlink.ts
+  var import_jquery25 = __toESM(require_jquery());
+  var DownloadLinkOutputBinding = class extends OutputBinding {
+    find(scope) {
+      return (0, import_jquery25.default)(scope).find("a.shiny-download-link");
+    }
+    renderValue(el, data) {
+      el.setAttribute("href", data);
+      el.classList.remove("disabled");
+      el.removeAttribute("aria-disabled");
+      el.removeAttribute("tabindex");
+    }
+    showProgress(el, show3) {
+      return;
+      el;
+      show3;
+    }
+  };
+  (0, import_jquery25.default)(document).on(
+    "click.shinyDownloadLink",
+    "a.shiny-download-link",
+    function(e4) {
+      e4;
+      const evt = import_jquery25.default.Event("shiny:filedownload");
+      evt.name = this.id;
+      evt.href = this.href;
+      (0, import_jquery25.default)(document).trigger(evt);
+    }
+  );
+
   // srcts/src/bindings/output/html.ts
+  var import_jquery26 = __toESM(require_jquery());
   var HtmlOutputBinding = class extends OutputBinding {
     find(scope) {
       return (0, import_jquery26.default)(scope).find(".shiny-html-output");
@@ -5608,20 +5612,28 @@
   function isJQuery(value) {
     return Boolean(value && value.jquery);
   }
-  function valueChangeCallback(inputs, binding, el, allowDeferred) {
+  function valueChangeCallback(inputs, binding, el, priority) {
     let id = binding.getId(el);
     if (id) {
       const value = binding.getValue(el);
       const type = binding.getType(el);
       if (type)
         id = id + ":" + type;
-      const opts = {
-        priority: allowDeferred ? "deferred" : "immediate",
-        binding,
-        el
-      };
-      inputs.setInput(id, value, opts);
+      const normalizedPriority = normalizeEventPriority(priority);
+      inputs.setInput(id, value, { priority: normalizedPriority, binding, el });
     }
+  }
+  function normalizeEventPriority(priority) {
+    if (priority === false || priority === void 0) {
+      return "immediate";
+    }
+    if (priority === true) {
+      return "deferred";
+    }
+    if (typeof priority === "object" && "priority" in priority) {
+      return priority.priority;
+    }
+    return priority;
   }
   var bindingsRegistry = (() => {
     const bindings = /* @__PURE__ */ new Map();
@@ -5735,8 +5747,8 @@ ${duplicateIdMsg}`;
         const thisCallback = function() {
           const thisBinding = binding;
           const thisEl = el;
-          return function(allowDeferred) {
-            valueChangeCallback(inputs, thisBinding, thisEl, allowDeferred);
+          return function(priority) {
+            valueChangeCallback(inputs, thisBinding, thisEl, priority);
           };
         }();
         binding.subscribe(el, thisCallback);
@@ -7185,7 +7197,7 @@ ${duplicateIdMsg}`;
   // srcts/src/shiny/index.ts
   var ShinyClass = class {
     constructor() {
-      this.version = "1.10.0.9001";
+      this.version = "1.11.1.9000";
       const { inputBindings, fileInputBinding: fileInputBinding2 } = initInputBindings();
       const { outputBindings } = initOutputBindings();
       setFileInputBinding(fileInputBinding2);
