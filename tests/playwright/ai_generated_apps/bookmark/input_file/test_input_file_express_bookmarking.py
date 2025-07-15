@@ -44,9 +44,12 @@ def test_file_input_bookmarking(page: Page, app: ShinyAppProc) -> None:
 
     mod_file_output_txt.expect_value("File name(s): users.csv, users2.csv")
 
+    existing_url = page.url
+
     # click bookmark button
     bookmark_button = controller.InputBookmarkButton(page)
     bookmark_button.click()
+    page.wait_for_url(lambda url: url != existing_url, timeout=5 * 1000)
 
     page.reload()
 
