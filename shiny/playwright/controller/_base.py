@@ -451,8 +451,6 @@ class InputActionBase(UiBase):
         """
         Expect the label of the input button to have a specific value.
 
-        Note: This must include the icon if it is present!
-
         Parameters
         ----------
         value
@@ -461,7 +459,28 @@ class InputActionBase(UiBase):
             The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
 
-        self.expect.to_have_text(value, timeout=timeout)
+        loc_label = self.loc.locator(".action-label")
+        playwright_expect(loc_label).to_have_text(value, timeout=timeout)
+
+    def expect_icon(
+        self,
+        value: PatternOrStr,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expect the icon of the input button to have a specific value.
+
+        Parameters
+        ----------
+        value
+            The expected value of the icon.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+
+        loc_icon = self.loc.locator(".action-icon")
+        playwright_expect(loc_icon).to_have_text(value, timeout=timeout)
 
     def click(self, *, timeout: Timeout = None, **kwargs: object) -> None:
         """
