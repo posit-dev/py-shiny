@@ -89,7 +89,8 @@ app_allow_external_errors: typing.List[str] = [
     "FutureWarning: The default of observed=False is deprecated",
     # seaborn: https://github.com/mwaskom/seaborn/pull/3355
     "FutureWarning: use_inf_as_na option is deprecated",
-    "pd.option_context('mode.use_inf_as_na",  # continutation of line above
+    "pd.option_context('mode.use_inf_as_na",  # continutation of line above,
+    "RuntimeWarning: invalid value encountered in dot",  # some groups didn't have enough data points to create a meaningful line
 ]
 app_allow_js_errors: typing.Dict[str, typing.List[str]] = {
     "examples/brownian": ["Failed to acquire camera feed:"],
