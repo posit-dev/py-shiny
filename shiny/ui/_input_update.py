@@ -105,8 +105,8 @@ def update_action_button(
 
     session = require_active_session(session)
     msg = {
-        "label": session._process_ui(label) if label else None,
-        "icon": session._process_ui(icon) if icon else None,
+        "label": session._process_ui(label) if label is not None else None,
+        "icon": session._process_ui(icon) if icon is not None else None,
         "disabled": disabled,
     }
     session.send_input_message(id, drop_none(msg))
@@ -147,8 +147,8 @@ def update_action_link(
 
     session = require_active_session(session)
     msg = {
-        "label": session._process_ui(label) if label else None,
-        "icon": session._process_ui(icon) if icon else None,
+        "label": session._process_ui(label) if label is not None else None,
+        "icon": session._process_ui(icon) if icon is not None else None,
     }
     session.send_input_message(id, drop_none(msg))
 
@@ -255,7 +255,7 @@ def update_checkbox(
 
     session = require_active_session(session)
     msg = {
-        "label": session._process_ui(label) if label else None,
+        "label": session._process_ui(label) if label is not None else None,
         "value": value,
     }
     session.send_input_message(id, drop_none(msg))
@@ -296,7 +296,7 @@ def update_switch(
 
     session = require_active_session(session)
     msg = {
-        "label": session._process_ui(label) if label else None,
+        "label": session._process_ui(label) if label is not None else None,
         "value": value,
     }
     session.send_input_message(id, drop_none(msg))
@@ -432,7 +432,7 @@ def _update_choice_input(
         )
         options = session._process_ui(opts)["html"]
     msg = {
-        "label": session._process_ui(label) if label else None,
+        "label": session._process_ui(label) if label is not None else None,
         "options": options,
         "value": selected,
     }
@@ -484,7 +484,7 @@ def update_date(
 
     session = require_active_session(session)
     msg = {
-        "label": session._process_ui(label) if label else None,
+        "label": session._process_ui(label) if label is not None else None,
         "value": _as_date_attr(value),
         "min": _as_date_attr(min),
         "max": _as_date_attr(max),
@@ -541,7 +541,7 @@ def update_date_range(
     session = require_active_session(session)
     value = {"start": _as_date_attr(start), "end": _as_date_attr(end)}
     msg = {
-        "label": session._process_ui(label) if label else None,
+        "label": session._process_ui(label) if label is not None else None,
         "value": drop_none(value),
         "min": _as_date_attr(min),
         "max": _as_date_attr(max),
@@ -595,7 +595,7 @@ def update_numeric(
 
     session = require_active_session(session)
     msg = {
-        "label": session._process_ui(label) if label else None,
+        "label": session._process_ui(label) if label is not None else None,
         "value": value,
         "min": min,
         "max": max,
@@ -661,7 +661,7 @@ def update_select(
         options = session._process_ui(option_tags)["html"]
 
     msg = {
-        "label": session._process_ui(label) if label else None,
+        "label": session._process_ui(label) if label is not None else None,
         "options": options,
         "value": selected_values,
     }
@@ -932,7 +932,7 @@ def update_slider(
         value_num = None
 
     msg = {
-        "label": session._process_ui(label) if label else None,
+        "label": session._process_ui(label) if label is not None else None,
         "value": value_num,
         "min": min_num,
         "max": max_num,
@@ -985,7 +985,7 @@ def update_text(
 
     session = require_active_session(session)
     msg = {
-        "label": session._process_ui(label) if label else None,
+        "label": session._process_ui(label) if label is not None else None,
         "value": value,
         "placeholder": placeholder,
     }
