@@ -19,9 +19,12 @@ def test_accordion_bookmarking_demo(page: Page, app: ShinyAppProc) -> None:
     acc_mod.expect_open(["Section A"])
     acc_mod.set(["Section C"])
 
+    existing_url = page.url
     # click bookmark button
     bookmark_button = controller.InputBookmarkButton(page)
     bookmark_button.click()
+
+    page.wait_for_url(lambda url: url != existing_url, timeout=5 * 1000)
 
     # reload page
     page.reload()
@@ -32,7 +35,11 @@ def test_accordion_bookmarking_demo(page: Page, app: ShinyAppProc) -> None:
     acc_single.set([])
     acc_mod.set([])
 
+    existing_url = page.url
+
     bookmark_button.click()
+
+    page.wait_for_url(lambda url: url != existing_url, timeout=5 * 1000)
 
     # reload page
     page.reload()
