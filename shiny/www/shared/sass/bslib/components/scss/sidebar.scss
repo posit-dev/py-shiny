@@ -21,6 +21,11 @@ $bslib-sidebar-border: var(--bs-card-border-width, #{$card-border-width}) solid 
 $bslib-sidebar-column-sidebar: Min(calc(100% - var(--_padding-icon)), var(--_sidebar-width));
 
 .bslib-sidebar-layout {
+  // We use container queries to conditionally apply the `--bs-card-color`
+  // variable only when it has a non-space value, otherwise the empty
+  // `--bs-card-color` (from Bootstrap's Sass) unsets `--_main-fg`.
+  container-type: style;
+
   --_transition-duration: 0; // Transitions are enabled by .transitioning class
   --_transition-easing-x: var(--bslib-sidebar-transition-easing-x, cubic-bezier(0.8, 0.78, 0.22, 1.07));
   --_border: var(--bslib-sidebar-border, #{$bslib-sidebar-border});
@@ -29,7 +34,10 @@ $bslib-sidebar-column-sidebar: Min(calc(100% - var(--_padding-icon)), var(--_sid
   --_sidebar-width: var(--bslib-sidebar-width, 250px);
   --_sidebar-bg: var(--bslib-sidebar-bg, #{$bslib-sidebar-bg});
   --_sidebar-fg: var(--bslib-sidebar-fg, #{$bslib-sidebar-fg});
-  --_main-fg: var(--bslib-sidebar-main-fg, var(--bs-card-color, var(--bs-body-color)));
+  --_main-fg: var(--bslib-sidebar-main-fg, var(--bs-body-color));
+  @container style(--bs-card-color: not " ") {
+    --_main-fg: var(--bslib-sidebar-main-fg, var(--bs-card-color, var(--bs-body-color)));
+  }
   --_main-bg: var(--bslib-sidebar-main-bg, transparent);
   --_toggle-bg: var(--bslib-sidebar-toggle-bg, #{$bslib-sidebar-toggle-bg});
   --_padding: var(--bslib-sidebar-padding, var(--bslib-spacer, 1.5rem));
@@ -52,6 +60,11 @@ $bslib-sidebar-column-sidebar: Min(calc(100% - var(--_padding-icon)), var(--_sid
   --_column-main: minmax(0, 1fr);
   // Calculate the height of all toggle buttons in nested sidebar layouts
   --_toggle-collective-height: calc(calc(var(--_icon-button-size) + 0.5em) * var(--_js-toggle-count-max-side, 1));
+
+  // Resize handle variables
+  --_resize-handle-width: var(--bslib-sidebar-resize-handle-width, 12px);
+  --_resize-indicator-color: var(--_sidebar-fg, var(--bs-emphasis-color, black));
+  --_resize-indicator-color-active: var(--bslib-sidebar-resize-indicator-color-active, var(--bs-primary, #0d6efd));
 
   &.transitioning {
     --_transition-duration: max(var(--bslib-sidebar-transition-duration, 300ms), 5ms);
@@ -106,6 +119,7 @@ $bslib-sidebar-column-sidebar: Min(calc(100% - var(--_padding-icon)), var(--_sid
     border-bottom-right-radius: 0;
     color: var(--_sidebar-fg);
     background-color: var(--_sidebar-bg);
+    position: relative; // For resize handle positioning
 
     > .sidebar-content {
       display: flex;
@@ -286,6 +300,97 @@ $bslib-sidebar-column-sidebar: Min(calc(100% - var(--_padding-icon)), var(--_sid
       right: unset;
     }
   }
+
+  // Resize handle styles
+  .bslib-sidebar-resize-handle {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: var(--_resize-handle-width);
+    left: calc(calc(-1 * var(--_resize-handle-width)) - 2px);
+    grid-column: 2;
+    cursor: ew-resize;
+    user-select: none;
+    z-index: calc(#{$zindex-dropdown} + 1); // Above toggle button
+
+    // Make the handle easier to grab
+    &::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      // Invisible expanded hit area
+      left: 0;
+      right: calc(-1 * var(--_resize-handle-width) - 2px);
+      z-index: calc(#{$zindex-dropdown} + 1); // Above toggle button
+    }
+
+    .resize-indicator {
+      position: absolute;
+      top: 50%;
+      right: 2px;
+      width: 2px;
+      height: 30px;
+      transform: translate(-50%, -50%);
+      background-color: var(--_resize-indicator-color);
+      opacity: 0.1;
+      border-radius: 1px;
+      transition: all 0.15s ease;
+    }
+
+    &:hover, &:focus, &:active, &:focus {
+      .resize-indicator {
+        opacity: 1;
+      }
+    }
+
+    &:hover .resize-indicator,
+    &:focus .resize-indicator {
+      width: 3px;
+      height: 40px;
+    }
+
+    &:active .resize-indicator {
+      background-color: var(--_resize-indicator-color-active);
+      width: 4px;
+      height: 50px;
+    }
+
+    // Focus styles for accessibility
+    &:focus {
+      outline: none;
+
+      .resize-indicator {
+        outline: 2px solid var(--bs-focus-ring-color, rgba(13, 110, 253, 0.25));
+        outline-offset: 2px;
+      }
+    }
+  }
+
+  // Right sidebar resize handle positioning
+  &.sidebar-right > .bslib-sidebar-resize-handle {
+    left: 2px;
+  }
+
+  // Hide resize handle during transitions and when collapsed
+  &.transitioning,
+  &.sidebar-collapsed {
+    > .bslib-sidebar-resize-handle {
+      display: none;
+    }
+  }
+
+  // Visual feedback during resize
+  &.sidebar-resizing {
+    // Disable text selection during resize
+    user-select: none;
+
+    > .bslib-sidebar-resize-handle .resize-indicator {
+      background-color: var(--_resize-indicator-color-active);
+      width: 4px;
+      height: 50px;
+    }
+  }
 }
 
 .bslib-sidebar-layout {
@@ -296,6 +401,11 @@ $bslib-sidebar-column-sidebar: Min(calc(100% - var(--_padding-icon)), var(--_sid
 @include media-breakpoint-down(sm) {
   .bslib-sidebar-layout {
     --bslib-sidebar-js-window-size: mobile;
+
+    // Hide resize handle on mobile devices
+    .bslib-sidebar-resize-handle {
+      display: none !important;
+    }
   }
 }
 
@@ -361,7 +471,7 @@ $bslib-sidebar-column-sidebar: Min(calc(100% - var(--_padding-icon)), var(--_sid
         position: relative;
         align-self: center;
       }
-        
+
       // Keep toggle on sidebar side when expanded on mobile
       &:not(.sidebar-right) > .collapse-toggle {
         left: var(--_icon-size);
@@ -380,7 +490,7 @@ $bslib-sidebar-column-sidebar: Min(calc(100% - var(--_padding-icon)), var(--_sid
         max-width: var(--_sidebar-mobile-max-width, 100%);
         box-shadow: var(--_sidebar-mobile-box-shadow);
       }
-        
+
       // Move scrollable region to .sidebar-content to avoid scrolling sidebar
       // elements underneath the collapse toggle
       > .sidebar {
@@ -475,4 +585,10 @@ $bslib-sidebar-column-sidebar: Min(calc(100% - var(--_padding-icon)), var(--_sid
       display: none;
     }
   }
+}
+
+// During resizing, set cursor and don't allow selection
+html[data-bslib-sidebar-resizing="true"] {
+  cursor: ew-resize !important;
+  user-select: none !important;
 }
