@@ -36,12 +36,12 @@ def remove_shinylive_local(
 
 
 def get_default_shinylive_dir() -> Path:
-    import appdirs
+    import platformdirs
 
     return (
         Path(
-            appdirs.user_cache_dir(  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
-                "shiny"
+            platformdirs.user_cache_dir(  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
+                appname="shiny"
             )
         )
         / "shinylive"
