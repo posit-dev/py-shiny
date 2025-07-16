@@ -88,10 +88,7 @@ def nav_insert(
         "select": select,
     }
 
-    def callback() -> None:
-        run_coro_sync(session._send_message({"shiny-insert-tab": msg}))
-
-    session.on_flush(callback, once=True)
+    session._send_message_sync({"custom": {"shiny-insert-tab": msg}})
 
 
 def nav_remove(id: str, target: str, session: Optional[Session] = None) -> None:
@@ -118,12 +115,12 @@ def nav_remove(id: str, target: str, session: Optional[Session] = None) -> None:
 
     session = require_active_session(session)
 
-    msg = {"inputId": resolve_id(id), "target": target}
+    msg = {
+        "inputId": resolve_id(id),
+        "target": target,
+    }
 
-    def callback() -> None:
-        run_coro_sync(session._send_message({"shiny-remove-tab": msg}))
-
-    session.on_flush(callback, once=True)
+    session._send_message_sync({"custom": {"shiny-remove-tab": msg}})
 
 
 def nav_show(
@@ -163,12 +160,13 @@ def nav_show(
     if select:
         update_navs(id, selected=target)
 
-    msg = {"inputId": id, "target": target, "type": "show"}
+    msg = {
+        "inputId": id,
+        "target": target,
+        "type": "show",
+    }
 
-    def callback() -> None:
-        run_coro_sync(session._send_message({"shiny-change-tab-visibility": msg}))
-
-    session.on_flush(callback, once=True)
+    session._send_message_sync({"custom": {"shiny-change-tab-visibility": msg}})
 
 
 def nav_hide(id: str, target: str, session: Optional[Session] = None) -> None:
@@ -195,9 +193,10 @@ def nav_hide(id: str, target: str, session: Optional[Session] = None) -> None:
 
     session = require_active_session(session)
 
-    msg = {"inputId": resolve_id(id), "target": target, "type": "hide"}
+    msg = {
+        "inputId": resolve_id(id),
+        "target": target,
+        "type": "hide",
+    }
 
-    def callback() -> None:
-        run_coro_sync(session._send_message({"shiny-change-tab-visibility": msg}))
-
-    session.on_flush(callback, once=True)
+    session._send_message_sync({"custom": {"shiny-change-tab-visibility": msg}})
