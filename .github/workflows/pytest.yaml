@@ -200,6 +200,8 @@ jobs:
           path: py-shiny-templates
 
       - name: Install py-shiny-templates dependencies
+        if: matrix.python-version != '3.9'
+        # Scikit-learn 1.7.0+ requires Python 3.10+
         run: |
           make install-py-shiny-templates-deps
 
