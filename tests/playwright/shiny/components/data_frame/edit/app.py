@@ -262,14 +262,14 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
     #     print(summary_data._type_hints())
     from shinywidgets import render_widget
 
-    # from shiny import reactive
-
     @render_widget
-    def country_detail_pop() -> Any:
+    def country_detail_pop():  # pyright: ignore[reportUnknownParameterType]
+
         import plotly.express as px
 
+        # Create the figure explicitly
         return px.line(
-            px.data.gapminder(),
+            px.data.gapminder(),  # pyright: ignore[reportUnknownVariableType,reportAttributeAccessIssue]
             x="year",
             y="lifeExp",
             color="country",

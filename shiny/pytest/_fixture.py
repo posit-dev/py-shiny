@@ -36,6 +36,7 @@ Documentation taken from [https://docs.pytest.org/en/7.1.x/how-to/fixtures.html#
 def create_app_fixture(
     app: PurePath | str | list[PurePath | str],
     scope: ScopeName = "module",
+    timeout_secs: float = 30,
 ):
     """
     Create a fixture for a local Shiny app directory.
@@ -70,6 +71,8 @@ def create_app_fixture(
         will be created once per module. See [Pytest fixture
         scopes](https://docs.pytest.org/en/stable/how-to/fixtures.html#fixture-scopes)
         for more details.
+    timeout_secs
+        The maximum number of seconds to wait for the app to become ready.
 
     Returns
     -------
@@ -133,7 +136,7 @@ def create_app_fixture(
         @pytest.fixture(scope=scope, params=app)
         def fixture_func(request: pytest.FixtureRequest):
             app_path = get_app_path(request, request.param)
-            sa_gen = shiny_app_gen(app_path)
+            sa_gen = shiny_app_gen(app_path, timeout_secs=timeout_secs)
             yield next(sa_gen)
 
     else:
@@ -142,7 +145,7 @@ def create_app_fixture(
         @pytest.fixture(scope=scope)
         def fixture_func(request: pytest.FixtureRequest):
             app_path = get_app_path(request, app)
-            sa_gen = shiny_app_gen(app_path)
+            sa_gen = shiny_app_gen(app_path, timeout_secs=timeout_secs)
             yield next(sa_gen)
 
     return fixture_func

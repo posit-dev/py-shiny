@@ -33,10 +33,10 @@ htmlDep = (
     )
 )
 
-studyName = (
-    pd_penguins["studyName"]  # pyright: ignore[reportUnknownVariableType]
+studyName = (  # pyright: ignore[reportUnknownVariableType]
+    pd_penguins["studyName"]
     .copy()
-    .astype("object")
+    .astype("object")  # pyright: ignore[reportUnknownMemberType]
 )
 # Set the first value of the column to an html object so the column is treated as object by narwhals (not str)
 studyName[0] = htmlDep
