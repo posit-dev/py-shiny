@@ -15,7 +15,6 @@ else:
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
-from .._utils import run_coro_sync
 from ..session import Session, require_active_session
 from ..types import NavSetArg
 from ._input_update import update_navs
@@ -91,6 +90,7 @@ def nav_insert(
     session._send_message_sync({"custom": {"shiny-insert-tab": msg}})
 
 
+@add_example()
 def nav_remove(id: str, target: str, session: Optional[Session] = None) -> None:
     """
     Remove a nav item from a navigation container.
@@ -123,6 +123,7 @@ def nav_remove(id: str, target: str, session: Optional[Session] = None) -> None:
     session._send_message_sync({"custom": {"shiny-remove-tab": msg}})
 
 
+@add_example()
 def nav_show(
     id: str, target: str, select: bool = False, session: Optional[Session] = None
 ) -> None:
@@ -169,6 +170,7 @@ def nav_show(
     session._send_message_sync({"custom": {"shiny-change-tab-visibility": msg}})
 
 
+@add_example()
 def nav_hide(id: str, target: str, session: Optional[Session] = None) -> None:
     """
     Hide a navigation item
