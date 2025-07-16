@@ -1,0 +1,12 @@
+{
+  "type": "package",
+  "id": "js-input",
+  "title": "Input component",
+  "description": "A Python package template providing a custom Shiny input component.",
+  "follow_up": [
+    {
+      "type": "action",
+      "text": "Learn more about custom components for Shiny at https://shiny.posit.co/py/docs/custom-components-pkg.html"
+    }
+  ]
+}

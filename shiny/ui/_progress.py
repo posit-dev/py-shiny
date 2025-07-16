@@ -3,18 +3,27 @@ from __future__ import annotations
 __all__ = ("Progress",)
 
 from types import TracebackType
-from typing import Optional, Type
+from typing import TYPE_CHECKING, Optional, Type
 from warnings import warn
 
 from .._docstring import add_example
 from .._utils import rand_hex
-from ..session import Session, require_active_session
+from ..session import require_active_session
+from ..session._session import UpdateProgressMessage
+
+if TYPE_CHECKING:
+    from ..session import Session
 
 
 @add_example()
 class Progress:
     """
     Initialize a progress bar.
+
+    `Progress` creates a computation manager that can be used with `with` to
+    run a block of code. Shiny will display a progress bar while the code runs, which
+    you can update by calling the `set()` and `message()` methods of the computation
+    manager at strategic points in the code block.
 
     Parameters
     ----------
@@ -25,8 +34,8 @@ class Progress:
         The value that represents the end of the progress bar. Must be greater than
         ``min``.
     session
-        A :class:`~shiny.Session` instance. If not provided, it is inferred via
-        :func:`~shiny.session.get_current_session`.
+        The :class:`~shiny.Session` instance that the progress bar should appear in. If not
+        provided, the session is inferred via :func:`~shiny.session.get_current_session`.
     """
 
     _style = "notification"
@@ -41,12 +50,11 @@ class Progress:
         self.min = min
         self.max = max
         self.value = None
-        self._id = rand_hex(8)
         self._closed = False
         self._session = require_active_session(session)
+        self._id = self._session.ns(rand_hex(8))
 
-        msg = {"id": self._id, "style": self._style}
-        self._session._send_progress("open", msg)
+        self._session._send_progress("open", {"id": self._id, "style": self._style})
 
     def __enter__(self) -> "Progress":
         return self
@@ -66,8 +74,9 @@ class Progress:
         detail: Optional[str] = None,
     ) -> None:
         """
-        Updates the progress panel. When called the first time, the progress panel is
-        displayed.
+        Opens and updates the progress panel.
+
+        When called the first time, the progress panel is displayed.
 
         Parameters
         ----------
@@ -94,17 +103,18 @@ class Progress:
             # Normalize value to number between 0 and 1
             value = min(1, max(0, (value - self.min) / (self.max - self.min)))
 
-        msg = {
+        msg: UpdateProgressMessage = {
             "id": self._id,
-            "message": message,
-            "detail": detail,
-            "value": value,
             "style": self._style,
         }
+        if message is not None:
+            msg["message"] = message
+        if detail is not None:
+            msg["detail"] = detail
+        if value is not None:
+            msg["value"] = value
 
-        self._session._send_progress(
-            "update", {k: v for k, v in msg.items() if v is not None}
-        )
+        self._session._send_progress("update", msg)
 
     def inc(
         self,

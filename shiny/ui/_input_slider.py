@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from ..bookmark import restore_input
+
 __all__ = (
     "input_slider",
     "SliderValueArg",
@@ -14,9 +16,9 @@ from typing import Iterable, Optional, TypeVar, Union, cast
 from htmltools import HTML, Tag, TagAttrValue, TagChild, css, div, tags
 
 from .._docstring import add_example
-from .._namespaces import resolve_id
 from .._typing_extensions import NotRequired, TypedDict
-from ._html_dependencies import ionrangeslider_deps
+from ..module import resolve_id
+from ._html_deps_external import ionrangeslider_deps
 from ._utils import shiny_input_label
 
 # TODO: validate value(s) are within (min,max)?
@@ -47,7 +49,7 @@ class AnimationOptions(TypedDict):
 
     See Also
     --------
-    ~shiny.ui.input_slider
+    * :func:`~shiny.ui.input_slider`
     """
 
     interval: NotRequired[int]
@@ -65,7 +67,7 @@ def input_slider(
     value: SliderValueArg | Iterable[SliderValueArg],
     *,
     step: Optional[SliderStepArg] = None,
-    ticks: bool = True,
+    ticks: bool = False,
     animate: bool | AnimationOptions = False,
     width: Optional[str] = None,
     sep: str = ",",
@@ -98,7 +100,7 @@ def input_slider(
     animate
         ``True`` to show simple animation controls with default settings; ``False`` not
         to; or a custom settings list, such as those created using
-        :class:`AnimationOptions()`.
+        :class:`~AnimationOptions`.
     width
         The CSS width, e.g. '400px', or '100%'
     sep
@@ -130,19 +132,20 @@ def input_slider(
 
     Notes
     ------
-    .. admonition:: Server value
-
-       A number, date, or date-time (depending on the class of value), or in the case of
-       slider range, a list of two numbers/dates/date-times.
+    ::: {.callout-note title="Server value"}
+    A number, date, or date-time (depending on the class of value), or in the case of
+    slider range, a tuple of two numbers/dates/date-times.
+    :::
 
     See Also
-    -------
-    ~shiny.ui.update_slider
+    --------
+    * :func:`~shiny.ui.update_slider`
     """
 
+    resolved_id = resolve_id(id)
+    value = restore_input(resolved_id, value)
     # Thanks to generic typing, max, value, etc. should be of the same type
     data_type = _slider_type(min)
-
     # Make sure min, max, value, and step are all numeric
     # (converts dates/datetimes to milliseconds since epoch...this is the value JS wants)
     min_num = _as_numeric(min)
@@ -202,7 +205,7 @@ def input_slider(
     props = {k: str(v).lower() if isinstance(v, bool) else v for k, v in props.items()}
 
     slider_tag = div(
-        shiny_input_label(id, label),
+        shiny_input_label(resolved_id, label),
         tags.input(**props),
         *ionrangeslider_deps(),
         class_="form-group shiny-input-container",
@@ -221,7 +224,7 @@ def input_slider(
             tags.span(animate.get("pause_button", _pause_icon()), class_="pause"),
             href="#",
             class_="slider-animate-button link-secondary",
-            data_target_id=id,
+            data_target_id=resolved_id,
             data_interval=animate.get("interval", 500),
             data_loop=animate.get("loop", True),
         ),

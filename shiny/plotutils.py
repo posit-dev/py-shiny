@@ -1,15 +1,13 @@
 # pyright: reportUnknownArgumentType=false
 
-# Needed for types imported only during TYPE_CHECKING with Python 3.7 - 3.9
-# See https://www.python.org/dev/peps/pep-0655/#usage-in-python-3-11
 from __future__ import annotations
 
 __all__ = ("brushed_points", "near_points")
 
 
-from typing import TYPE_CHECKING, Optional, Union, cast
+from typing import TYPE_CHECKING, Literal, Optional, Union, cast
 
-from ._typing_extensions import Literal, TypedDict
+from ._typing_extensions import TypedDict
 from .types import BrushInfo, CoordInfo, CoordXY
 
 if TYPE_CHECKING:
@@ -104,7 +102,10 @@ def brushed_points(
     use_y = "y" in brush["direction"]
 
     # Filter out x and y values
-    keep_rows: pd.Series[bool] = pd.Series(True, index=new_df.index)
+    keep_rows: pd.Series[bool] = pd.Series(
+        True,
+        index=new_df.index,  # pyright: ignore[reportUnknownMemberType]
+    )
     if use_x:
         if xvar is None and "x" in brush["mapping"]:
             xvar = brush["mapping"]["x"]
@@ -224,7 +225,7 @@ def near_points(
     # For no current coordinfo
     if coordinfo is None:
         if add_dist:
-            new_df["dist"] = np.NaN
+            new_df["dist"] = np.nan
 
         if all_rows:
             new_df["selected_"] = False
@@ -309,7 +310,7 @@ def near_points(
     if all_rows:
         # Add selected_ column if needed
         new_df["selected_"] = False
-        new_df.iloc[
+        new_df.iloc[  # pyright: ignore[reportArgumentType]
             keep_idx,
             new_df.columns.get_loc(  # pyright: ignore[reportUnknownMemberType]
                 "selected_"
@@ -346,7 +347,7 @@ def to_float(x: DataFrameColumn) -> pd.Series[float]:
     """
     if ptypes.is_numeric_dtype(x):  # pyright: ignore[reportUnknownMemberType]
         return cast("pd.Series[float]", x)
-    elif ptypes.is_categorical_dtype(x):  # pyright: ignore[reportUnknownMemberType]
+    elif isinstance(x, ptypes.CategoricalDtype):
         return cast("pd.Series[float]", x.cat.codes + 1)  # pyright: ignore
     elif ptypes.is_string_dtype(x):  # pyright: ignore[reportUnknownMemberType]
         return cast(

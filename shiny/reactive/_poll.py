@@ -10,7 +10,7 @@ from .._docstring import add_example
 from ..types import MISSING, MISSING_TYPE
 
 if TYPE_CHECKING:
-    from ..session import Session
+    from .. import Session
 
 __all__ = ("poll", "file_reader")
 
@@ -29,9 +29,11 @@ def poll(
     """
     Create a reactive polling object.
 
-    Polling is a technique that approximates "real-time" or streaming updates, using a
-    data source that does not actually have push notifications but does have a quick way
-    to repeatedly check for changes on demand.
+    Polling is a technique that approximates "real-time" or streaming updates, as if a
+    data source were pushing notifications each time it is updated. The data source does
+    not actually push notifications; a polling object repeatedly checks for changes in an
+    efficient way at specified intervals. If a change is detected, the polling object runs
+    a function to re-read the data source.
 
     A reactive polling object is constructed using two functions: a polling function,
     which is a fast-running, inexpensive function that is used to determine whether some
@@ -48,7 +50,7 @@ def poll(
     object at the top level of app.py (outside of the server function).
 
     Both `poll_func` and the decorated (data reading) function can read reactive values
-    and ~shiny.reactive.Calc objects. Any invalidations triggered by reactive
+    and :func:`~shiny.reactive.calc` objects. Any invalidations triggered by reactive
     dependencies will apply to the reactive polling object immediately (not waiting for
     the `interval_secs` delay to expire).
 
@@ -57,7 +59,7 @@ def poll(
     poll_func
         A function to be called frequently to determine whether a data source has
         changed. The return value should be something that can be compared inexpensively
-        using `==`. Both regular functions and coroutine functions are allowed.
+        using `==`. Both regular functions and co-routine functions are allowed.
 
         Note that the `poll_func` should NOT return a bool that indicates whether the
         data source has changed. Rather, each `poll_func` return value will be checked
@@ -71,12 +73,12 @@ def poll(
         The function that will be used to compare each `poll_func` return value with its
         immediate predecessor.
     priority
-        Reactive polling is implemented using an ~shiny.reactive.Effect to call
+        Reactive polling is implemented using an :func:`~shiny.reactive.effect` to call
         `poll_func` on a timer; use the `priority` argument to control the order of this
-        Effect's execution versus other Effects in your app. See ~shiny.reactive.Effect
-        for more details.
+        Effect's execution versus other Effects in your app. See
+        :func:`~shiny.reactive.effect` for more details.
     session
-        A :class:`~shiny.Session` instance. If not provided, it is inferred via
+        A :class:`~shiny.Session` instance. If not provided, a session is inferred via
         :func:`~shiny.session.get_current_session`. If there is no current session (i.e.
         `poll` is being created outside of the server function), the lifetime of this
         reactive poll object will not be tied to any specific session.
@@ -85,21 +87,21 @@ def poll(
     -------
     :
         A decorator that should be applied to a no-argument function that (expensively)
-    reads whatever data is desired. (This function may be a regular function or a
-    coroutine function.) The result of the decorator is a reactive ~shiny.reactive.Calc
-    that always returns up-to-date data, and invalidates callers when changes are
-    detected via polling.
+        reads whatever data is desired. (This function may be a regular function or a
+        co-routine function.) The result of the decorator is a reactive
+        :func:`~shiny.reactive.calc` that always returns up-to-date data, and
+        invalidates callers when changes are detected via polling.
 
     See Also
     --------
-    ~shiny.reactive.file_reader
+    * :func:`~shiny.reactive.file_reader`
     """
 
     with reactive.isolate():
         last_value: reactive.Value[Any] = reactive.Value(poll_func())
         last_error: reactive.Value[Optional[Exception]] = reactive.Value(None)
 
-    @reactive.Effect(priority=priority, session=session)
+    @reactive.effect(priority=priority, session=session)
     async def _():
         try:
             if _utils.is_async_callable(poll_func):
@@ -159,7 +161,7 @@ def poll(
     def wrapper(fn: Callable[[], T]) -> Callable[[], T]:
         if _utils.is_async_callable(fn):
 
-            @reactive.Calc(session=session)
+            @reactive.calc(session=session)
             @functools.wraps(fn)
             async def result_async() -> T:
                 # If an error occurred, raise it
@@ -182,7 +184,7 @@ def poll(
 
         else:
 
-            @reactive.Calc(session=session)
+            @reactive.calc(session=session)
             @functools.wraps(fn)
             def result_sync() -> T:
                 # If an error occurred, raise it
@@ -203,10 +205,9 @@ def poll(
 
 @add_example()
 def file_reader(
-    filepath: str
-    | os.PathLike[str]
-    | Callable[[], str]
-    | Callable[[], os.PathLike[str]],
+    filepath: (
+        str | os.PathLike[str] | Callable[[], str] | Callable[[], os.PathLike[str]]
+    ),
     interval_secs: float = 1,
     *,
     priority: int = 1,
@@ -224,9 +225,9 @@ def file_reader(
     Note that `file_reader` works only on single files, not directories of files.
 
     Both the `filepath` function and the decorated (file reading) function can read
-    reactive values and ~shiny.reactive.Calc objects. Any invalidations triggered by
-    reactive dependencies will apply to the reactive file reader object immediately (not
-    waiting for the `interval_secs` delay to expire).
+    reactive values and :func:`~shiny.reactive.calc` objects. Any invalidations
+    triggered by reactive dependencies will apply to the reactive file reader object
+    immediately (not waiting for the `interval_secs` delay to expire).
 
     Parameters
     ----------
@@ -239,18 +240,18 @@ def file_reader(
         error and close the session.
 
         If a function is used, make sure it is high performance (or is cached, i.e. use
-        a ~shiny.reactive.Calc), as it will be called very frequently.
+        a :class:`~shiny.reactive.calc)`, as it will be called very frequently.
     interval_secs
         The number of seconds to wait after each time the file metadata is checked.
         Note: depending on what other tasks are executing, the actual wait time may far
         exceed this value.
     priority
-        Reactive polling is implemented using an ~shiny.reactive.Effect to call
+        Reactive polling is implemented using an :func:`~shiny.reactive.effect` to call
         `poll_func` on a timer; use the `priority` argument to control the order of this
-        Effect's execution versus other Effects in your app. See ~shiny.reactive.Effect
-        for more details.
+        Effect's execution versus other Effects in your app. See
+        :func:`~shiny.reactive.effect` for more details.
     session
-        A :class:`~shiny.Session` instance. If not provided, it is inferred via
+        A :class:`~shiny.Session` instance. If not provided, a session is inferred via
         :func:`~shiny.session.get_current_session`. If there is no current session (i.e.
         `poll` is being created outside of the server function), the lifetime of this
         reactive poll object will not be tied to any specific session.
@@ -260,13 +261,13 @@ def file_reader(
     :
         A decorator that should be applied to a no-argument function that (expensively)
     reads whatever data is desired. (This function may be a regular function or a
-    coroutine function.) The result of the decorator is a reactive ~shiny.reactive.Calc
-    that always returns up-to-date data, and invalidates callers when changes are
-    detected via polling.
+    co-routine function.) The result of the decorator is a reactive
+    :func:`~shiny.reactive.calc` that always returns up-to-date data, and invalidates
+    callers when changes are detected via polling.
 
     See Also
     --------
-    ~shiny.reactive.poll
+    * :func:`~shiny.reactive.poll`
     """
 
     if isinstance(filepath, str):

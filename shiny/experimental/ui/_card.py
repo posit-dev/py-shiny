@@ -1,109 +1,158 @@
 from __future__ import annotations
 
-from typing import Optional
+import base64
+import io
+import mimetypes
+from pathlib import Path, PurePath
+from typing import Literal, Optional, Protocol
 
-from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, div, tags
+from htmltools import Tag, TagAttrs, TagAttrValue, Tagifiable, css, tags
 
-from ...types import MISSING, MISSING_TYPE
-from ._card_full_screen import full_screen_toggle
-from ._card_item import CardItem, WrapperCallable, card_body, wrap_children_in_card
-from ._css import CssUnit, validate_css_unit
-from ._fill import bind_fill_role
-from ._htmldeps import card_dependency
-from ._utils import consolidate_attrs
+from ..._docstring import add_example
+from ...ui._card import CardItem, card_body
+from ...ui.css import CssUnit, as_css_unit
+from ...ui.fill import as_fill_item, as_fillable_container
+
+__all__ = ("card_image",)
+
+############################################################################
 
 
-# A Bootstrap card component
-#
-# A general purpose container for grouping related UI elements together with a
-# border and optional padding. To learn more about [card()]s, see [this
-# article](https://rstudio.github.io/bslib/articles/cards.html).
-#
-# @param ... Unnamed arguments can be any valid child of an [htmltools
-#   tag][htmltools::tags] (which includes card items such as [card_body()].
-#   Named arguments become HTML attributes on returned UI element.
-# @param full_screen If `TRUE`, an icon will appear when hovering over the card
-#   body. Clicking the icon expands the card to fit viewport size.
-# @param height Any valid [CSS unit][htmltools::validateCssUnit] (e.g.,
-#   `height="200px"`). Doesn't apply when a card is made `full_screen`
-#   (in this case, consider setting a `height` in [card_body()]).
-# @param max_height Any valid [CSS unit][htmltools::validateCssUnit] (e.g.,
-#   `max_height="200px"`). Doesn't apply when a card is made `full_screen`
-#   (in this case, consider setting a `max_height` in [card_body()]).
-# @param fill Whether or not to allow the card to grow/shrink to fit a
-#   fillable container with an opinionated height (e.g., `page_fillable()`).
-# @param class Additional CSS classes for the returned UI element.
-# @param wrapper A function (which returns a UI element) to call on unnamed
-#   arguments in `...` which are not already card item(s) (like
-#   [card_header()], [card_body()], etc.). Note that non-card items are grouped
-#   together into one `wrapper` call (e.g. given `card("a", "b",
-#   card_body("c"), "d")`, `wrapper` would be called twice, once with `"a"` and
-#   `"b"` and once with `"d"`).
-#
-# @return A [htmltools::div()] tag.
-#
-# @export
-# @seealso [card_body()] for putting stuff inside the card.
-# @seealso [navs_tab_card()] for cards with multiple tabs.
-# @seealso [layout_column_wrap()] for laying out multiple cards (or multiple
-#   columns inside a card).
-# @examples
-#
-# library(htmltools)
-#
-# if (interactive()) {
-#   card(
-#     full_screen = TRUE,
-#     card_header(
-#       "This is the header"
-#     ),
-#     card_body(
-#       p("This is the body."),
-#       p("This is still the body.")
-#     ),
-#     card_footer(
-#       "This is the footer"
-#     )
-#   )
-# }
-#
-def card(
-    *args: TagChild | TagAttrs | CardItem,
-    full_screen: bool = False,
-    height: Optional[CssUnit] = None,
-    max_height: Optional[CssUnit] = None,
-    fill: bool = True,
+class ImgContainer(Protocol):
+    """
+    A callable that wraps the return value of `card_image()`. To isolate your object in a card, return a :class:`~shiny.ui.CardItem`.
+    """
+
+    def __call__(self, *args: Tag) -> Tagifiable:
+        """
+        Wraps the return value of `card_image()`.
+
+        Parameters
+        ----------
+        *args
+            The return value of `card_image()`.
+
+        Returns
+        -------
+        :
+            A tagifiable object, such as a :class:`~htmltools.Tag` or
+            :class:`~shiny.ui.CardItem` object.
+        """
+        ...
+
+
+@add_example()
+def card_image(
+    file: str | Path | PurePath | io.BytesIO | None,
+    *args: TagAttrs,
+    href: Optional[str] = None,
+    border_radius: Literal["top", "bottom", "all", "none"] = "top",
+    mime_type: Optional[str] = None,
     class_: Optional[str] = None,
-    wrapper: WrapperCallable | None | MISSING_TYPE = MISSING,
+    height: Optional[CssUnit] = None,
+    fill: bool = True,
+    width: Optional[CssUnit] = None,
+    # Required so that multiple `card_images()` are not put in the same `card()`
+    container: ImgContainer = card_body,
     **kwargs: TagAttrValue,
-) -> Tag:
-    if isinstance(wrapper, MISSING_TYPE):
-        wrapper = card_body
+) -> Tagifiable:
+    # TODO-future: Must be updated to match rstudio/bslib#1076 before moving from exp.
+    """
+    A card image container
 
-    attrs, children = consolidate_attrs(*args, class_=class_, **kwargs)
-    children = wrap_children_in_card(*children, wrapper=wrapper)
+    :func:`~shiny.experimental.ui.card_image` creates a general container for an image within a
+    :func:`~shiny.ui.card`. This component is designed to be
+    provided as a direct child to :func:`~shiny.ui.card`.
 
-    tag = div(
+    Parameters
+    ----------
+    file
+        A file path pointing to an image. The image will be base64 encoded and provided to
+        the `src` attribute of the `<img>` tag. Alternatively, you may set this value to
+        `None` and provide the `src` yourself via `*args:TagAttrs` or
+        `**kwargs:TagAttrValue` (e.g., `{"src": "HOSTED_PATH_TO_IMAGE"}` or
+        `src="HOSTED_PATH_TO_IMAGE"`).
+    *args
+        A dictionary of tag attributes that are supplied to the resolved
+        :class:`~htmltools.Tag` object.
+    href
+        An optional URL to link to.
+    border_radius
+        Where to apply `border-radius` on the image.
+    mime_type
+        The mime type of the `file`.
+    class_
+        Additional CSS classes for the resolved :class:`~htmltools.Tag` object.
+    height
+        Any valid CSS unit (e.g., `height="200px"`). `height` will not apply when a card is made
+        `full_screen`. In this case, consider setting a `height` in
+        :func:`~shiny.experimental.ui.card_body`.
+    fill
+        Whether to allow this element to grow/shrink to fit its `card` container.
+    width
+        Any valid CSS unit (e.g., `width="100%"`).
+    container
+        Method to wrap the returned :class:`~htmltools.Tag` object. Defaults to
+        :func:`~shiny.experimental.ui.card_body`.
+        If :func:`~shiny.experimental.ui.card_body` is used, each image will be in separate cards. If
+        the `container` method does not return a :class:`~shiny.ui.CardItem`, it
+        allows for consecutive non-`CardItem` objects to be bundled into a single
+        :func:`~shiny.experimental.ui.card_body` within :func:`~shiny.ui.card`.
+    **kwargs
+        Additional HTML attributes for the resolved :class:`~htmltools.Tag`.
+    """
+    src = None
+    if file is not None:
+        if isinstance(file, io.BytesIO):
+            b64_str = base64.b64encode(file.read()).decode("utf-8")
+            if mime_type is None:
+                raise ValueError(
+                    "`mime_type` must be provided when passing an in-memory buffer"
+                )
+            src = f"data:{mime_type};base64,{b64_str}"
+
+        elif isinstance(file, (str, Path, PurePath)):
+            with open(file, "rb") as img_file:
+                b64_str = base64.b64encode(img_file.read()).decode("utf-8")
+                if mime_type is None:
+                    mime_type = mimetypes.guess_type(file)[0]
+                src = f"data:{mime_type};base64,{b64_str}"
+
+    card_class_map = {
+        "all": "card-img",
+        "top": "card-img-top",
+        "bottom": "card-img-bottom",
+    }
+
+    image = tags.img(
         {
-            "class": "card bslib-card",
+            "src": src,
+            "class": "img-fluid",
             "style": css(
-                height=validate_css_unit(height),
-                max_height=validate_css_unit(max_height),
+                height=as_css_unit(height),
+                width=as_css_unit(width),
             ),
-            "data-bslib-card-init": True,
         },
-        *children,
-        attrs,
-        full_screen_toggle() if full_screen else None,
-        card_dependency(),
-        card_js_init(),
+        {"class": card_class_map.get(border_radius, None)},
+        *args,
+        class_=class_,
+        **kwargs,
     )
 
-    return bind_fill_role(tag, container=True, item=fill)
+    if fill:
+        image = as_fill_item(image)
 
+    if href is not None:
+        image = as_fillable_container(
+            as_fill_item(
+                tags.a(
+                    image,
+                    href=href,
+                )
+            )
+        )
 
-def card_js_init() -> Tag:
-    return tags.script(
-        {"data-bslib-card-init": True},
-        "window.bslib.Card.initializeAllCards();",
-    )
+    if container:
+        return container(image)
+    else:
+        return CardItem(image)

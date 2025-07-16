@@ -1,1 +1,1 @@
-"""Unit test package for shiny."""
+"""Testing package for shiny. (Used by pytest)"""

@@ -1,0 +1,19 @@
+{
+  "type": "app",
+  "id": "basic-navigation",
+  "title": "Navigating multiple pages/panels",
+  "description": "An app with a top navigation bar and two pages.",
+  "next_steps": [
+    "Run the app with `shiny run app.py`."
+  ],
+  "follow_up": [
+    {
+      "type": "info",
+      "text": "Just getting started with Shiny?"
+    },
+    {
+      "type": "action",
+      "text": "Learn more at https://shiny.posit.co/py/docs/user-interfaces.html"
+    }
+  ]
+}

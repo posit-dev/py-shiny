@@ -1,0 +1,6 @@
+chatlas>=0.4
+openai
+anthropic
+google-genai
+python-dotenv
+shiny

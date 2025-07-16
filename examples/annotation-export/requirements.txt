@@ -1,0 +1,4 @@
+seaborn
+pandas
+shiny
+matplotlib

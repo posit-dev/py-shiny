@@ -1,0 +1,207 @@
+quartodoc:
+  style: pkgdown
+  dir: api/express
+  out_index: index.qmd
+  package: shiny
+  rewrite_all_pages: false
+  sidebar: api/express/_sidebar.yml
+  dynamic: true
+  renderer:
+    style: _renderer.py
+    show_signature_annotations: false
+    table_style: description-list
+  sections:
+    - title: Input components
+      desc: Gather user input.
+      contents:
+        - express.ui.input_select
+        - express.ui.input_selectize
+        - express.ui.input_slider
+        - express.ui.input_dark_mode
+        - express.ui.input_date
+        - express.ui.input_date_range
+        - express.ui.input_checkbox
+        - express.ui.input_checkbox_group
+        - express.ui.input_switch
+        - express.ui.input_radio_buttons
+        - express.ui.input_numeric
+        - express.ui.input_text
+        - express.ui.input_text_area
+        - express.ui.input_password
+        - express.ui.input_action_button
+        - express.ui.input_action_link
+        - express.ui.input_task_button
+    - title: Output components
+      desc: Reactively render output.
+      contents:
+        - express.render.plot
+        - express.render.table
+        - express.render.DataTable
+        - express.render.data_frame
+        - express.render.DataGrid
+        - express.render.text
+        - express.render.ui
+        - express.render.download
+        - express.render.image
+        - express.render.express
+    - title: Layouts and other UI tools
+      desc: Tools for creating, arranging, and styling UI components.
+      contents:
+        - express.ui.page_opts
+        - express.ui.sidebar
+        - express.ui.layout_columns
+        - express.ui.layout_column_wrap
+        - express.ui.card
+        - express.ui.card_header
+        - express.ui.card_footer
+        - express.ui.value_box
+        - express.ui.value_box_theme
+        - express.ui.popover
+        - express.ui.tooltip
+        - express.ui.accordion
+        - express.ui.accordion_panel
+        - express.ui.layout_sidebar
+    - title: Navigate multiple panels
+      desc: Create a set of panels that can be navigated between.
+      contents:
+        - express.ui.nav_panel
+        - express.ui.navset_card_underline
+        - express.ui.navset_card_tab
+        - express.ui.navset_card_pill
+        - express.ui.nav_spacer
+        - express.ui.nav_menu
+        - express.ui.nav_control
+        - express.ui.navset_bar
+        - express.ui.navset_tab
+        - express.ui.navset_pill
+        - express.ui.navset_underline
+        - express.ui.navset_pill_list
+        - express.ui.navset_hidden
+        - express.ui.navbar_options
+    - title: Chat interface
+      desc: Build a chatbot interface
+      contents:
+        - express.ui.Chat
+    - title: Streaming markdown
+      desc: Stream markdown content into the UI
+      contents:
+        - express.ui.MarkdownStream
+    - title: Reactive programming
+      desc: Create reactive functions and dependencies.
+      contents:
+        - reactive.calc
+        - reactive.effect
+        - reactive.value
+        - reactive.event
+        - reactive.isolate
+        - reactive.invalidate_later
+        - reactive.extended_task
+        - reactive.flush
+        - reactive.poll
+        - reactive.file_reader
+        - reactive.lock
+        - req
+    - title: Reusable Express code
+      desc: Create reusable Express code.
+      contents:
+        - express.ui.hold
+        - express.expressify
+    - title: Update inputs
+      desc: Programmatically update input values.
+      contents:
+        - express.ui.update_select
+        - express.ui.update_selectize
+        - express.ui.update_slider
+        - express.ui.update_dark_mode
+        - express.ui.update_date
+        - express.ui.update_date_range
+        - express.ui.update_checkbox
+        - express.ui.update_checkbox_group
+        - express.ui.update_switch
+        - express.ui.update_radio_buttons
+        - express.ui.update_numeric
+        - express.ui.update_text
+        - express.ui.update_text_area
+        - express.ui.update_navs
+        - express.ui.update_action_button
+        - express.ui.update_action_link
+        - express.ui.update_task_button
+    - title: Update UI Layouts
+      desc: ""
+      contents:
+        - express.ui.update_sidebar
+        - express.ui.update_tooltip
+        - express.ui.update_popover
+        - express.ui.update_accordion
+        - express.ui.update_accordion_panel
+        - express.ui.insert_accordion_panel
+        - express.ui.remove_accordion_panel
+    - title: Display messages
+      desc: Display messages to the user.
+      contents:
+        - express.ui.help_text
+        - express.ui.notification_show
+        - express.ui.notification_remove
+        - express.ui.modal
+        - express.ui.modal_show
+        - express.ui.modal_remove
+        - express.ui.modal_button
+        - express.ui.Progress          # uses class.rst
+    - title: Modules
+      desc: ""
+      contents:
+        - express.module
+    - title: UI panels
+      desc: Visually group together a section of UI components.
+      contents:
+        - express.ui.panel_absolute
+        - express.ui.panel_fixed
+        - express.ui.panel_title
+        - express.ui.panel_well
+    - title: Uploads & downloads
+      desc: Allow users to upload and download files.
+      contents:
+        - express.ui.input_file
+        - express.render.download
+    - title: Dynamic UI
+      desc: Dynamically show/hide UI elements.
+      contents:
+        - express.ui.panel_conditional
+        - express.ui.insert_ui
+        - express.ui.remove_ui
+    - title: User Session
+      desc: Tools for managing user sessions and accessing session-related information.
+      contents:
+        - session.Session
+    - title: Client Data
+      desc: Access (client-side) information about the user session (e.g., URL, output info, etc).
+      contents:
+        - session.ClientData
+    - title: UI as HTML
+      desc: Tools for creating HTML/CSS/JS
+      contents:
+        - express.ui.Theme
+        - express.ui.markdown
+        - express.ui.include_css
+        - express.ui.include_js
+        - express.ui.HTML       # uses justattributes.rst template
+        - name: express.ui.tags       # uses tags.rst template
+          children: embedded
+        - express.ui.TagList    # uses class.rst template
+        - express.ui.busy_indicators.use
+        - express.ui.busy_indicators.options
+        # TODO: should these be included?
+        # - express.ui.fill.as_fillable_container
+        # - express.ui.fill.as_fill_item
+        # - express.ui.fill.remove_all_fill
+        # - express.ui.css.as_css_unit
+        # - express.ui.css.as_css_padding
+    - title: Application-level settings
+      desc:
+      contents:
+        - express.app_opts
+    - title: Express developer tooling
+      desc:
+      contents:
+        - express.is_express_app
+        - express.wrap_express_app

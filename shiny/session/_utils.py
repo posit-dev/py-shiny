@@ -1,5 +1,3 @@
-# Needed for types imported only during TYPE_CHECKING with Python 3.7 - 3.9
-# See https://www.python.org/dev/peps/pep-0655/#usage-in-python-3-11
 from __future__ import annotations
 
 __all__ = (
@@ -15,8 +13,9 @@ from typing import TYPE_CHECKING, Any, Callable, Optional, TypeVar
 if TYPE_CHECKING:
     from ._session import Session
 
-from .._namespaces import namespace_context
+from .._docstring import no_example
 from .._typing_extensions import TypedDict
+from ..module import namespace_context
 
 
 class RenderedDeps(TypedDict):
@@ -30,8 +29,10 @@ class RenderedDeps(TypedDict):
 _current_session: ContextVar[Optional[Session]] = ContextVar(
     "current_session", default=None
 )
+_default_session: Optional[Session] = None
 
 
+@no_example()
 def get_current_session() -> Optional[Session]:
     """
     Get the current user session.
@@ -43,36 +44,38 @@ def get_current_session() -> Optional[Session]:
 
     Note
     ----
-    Shiny apps should not need to call this function directly. Instead, it's intended to
-    be used by Shiny developing who wish to create new functions that should only be
+    Shiny apps should not need to call this function directly. Instead, it is intended to
+    be used by Shiny developers who wish to create new functions that should only be
     called from within an active Shiny session.
 
     See Also
-    -------
-    ~require_active_session
+    --------
+    * :func:`~shiny.session.require_active_session`
     """
-    return _current_session.get()
+    session = _current_session.get()
+    return session if session is not None else _default_session
 
 
 @contextmanager
-def session_context(session: Optional[Session]):
+def session_context(session: Session | None):
     """
-    Context manager for current session.
+    A context manager for current session.
 
     Parameters
     ----------
     session
-        A :class:`~shiny.Session` instance. If not provided, it is inferred via
+        A :class:`~shiny.Session` instance. If not provided, the instance is inferred via
         :func:`~shiny.session.get_current_session`.
     """
     token: Token[Session | None] = _current_session.set(session)
     try:
-        with namespace_context(session.ns if session else None):
+        with namespace_context(session.ns if session is not None else None):
             yield
     finally:
         _current_session.reset(token)
 
 
+@no_example()
 def require_active_session(session: Optional[Session]) -> Session:
     """
     Raise an exception if no Shiny session is currently active.
@@ -80,7 +83,7 @@ def require_active_session(session: Optional[Session]) -> Session:
     Parameters
     ----------
     session
-        A :class:`~shiny.Session` instance. If not provided, it is inferred via
+        A :class:`~shiny.Session` instance. If not provided, the session is inferred via
         :func:`~shiny.session.get_current_session`.
 
     Returns
@@ -90,8 +93,8 @@ def require_active_session(session: Optional[Session]) -> Session:
 
     Note
     ----
-    Shiny apps should not need to call this function directly. Instead, it's intended to
-    be used by Shiny developing who wish to create new functions that should only be
+    Shiny apps should not need to call this function directly. Instead, it is intended to
+    be used by Shiny developers who wish to create new functions that should only be
     called from within an active Shiny session.
 
     Raises
@@ -100,8 +103,8 @@ def require_active_session(session: Optional[Session]) -> Session:
         If session is not active.
 
     See Also
-    -------
-    ~get_current_session
+    --------
+    * :func:`~shiny.session.get_current_session`
     """
 
     if session is None:

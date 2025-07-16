@@ -1,0 +1,11 @@
+{
+    "https://api.shinyapps.io": {
+        "server_url": "https://api.shinyapps.io",
+        "app_url": "https://testing-apps.shinyapps.io/shiny_express_page_default/",
+        "app_id": 10800233,
+        "app_guid": null,
+        "title": "shiny-express-folium",
+        "app_mode": "python-shiny",
+        "app_store_version": 1
+    }
+}

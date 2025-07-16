@@ -13,9 +13,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from shiny import App, Inputs, Outputs, Session
-from shiny import experimental as x
-from shiny import reactive, render, ui
+from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 
 # The agg matplotlib backend seems to be a little more efficient than the default when
 # running on macOS, and also gives more consistent results across operating systems
@@ -33,8 +31,8 @@ app_ui = ui.page_fluid(
     ui.tags.style(
         """
         /* Don't apply fade effect, it's constantly recalculating */
-        .recalculating {
-            opacity: 1;
+        .recalculating, .recalculating > * {
+            opacity: 1 !important;
         }
         tbody > tr:last-child {
             /*border: 3px solid var(--bs-dark);*/
@@ -52,11 +50,13 @@ app_ui = ui.page_fluid(
             text-align: center;
         }
         """
-        % f"{ncpu*4}em"
+        % f"{ncpu * 4}em"
     ),
+    # Disable busy indicators
+    ui.busy_indicators.use(spinners=False, pulse=False),
     ui.h3("CPU Usage %", class_="mt-2"),
-    x.ui.layout_sidebar(
-        x.ui.sidebar(
+    ui.layout_sidebar(
+        ui.sidebar(
             ui.input_select(
                 "cmap",
                 "Colormap",
@@ -102,16 +102,16 @@ app_ui = ui.page_fluid(
 )
 
 
-@reactive.Calc
+@reactive.calc
 def cpu_current():
     reactive.invalidate_later(SAMPLE_PERIOD)
     return cpu_percent(percpu=True)
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    cpu_history = reactive.Value(None)
+    cpu_history = reactive.value(None)
 
-    @reactive.Calc
+    @reactive.calc
     def cpu_history_with_hold():
         # If "hold" is on, grab an isolated snapshot of cpu_history; if not, then do a
         # regular read
@@ -123,7 +123,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             with reactive.isolate():
                 return cpu_history()
 
-    @reactive.Effect
+    @reactive.effect
     def collect_cpu_samples():
         """cpu_percent() reports just the current CPU usage sample; this Effect gathers
         them up and stores them in the cpu_history reactive value, in a numpy 2D array
@@ -140,12 +140,11 @@ def server(input: Inputs, output: Outputs, session: Session):
                     combined_data = combined_data[:, -MAX_SAMPLES:]
                 cpu_history.set(combined_data)
 
-    @reactive.Effect(priority=100)
+    @reactive.effect(priority=100)
     @reactive.event(input.reset)
     def reset_history():
         cpu_history.set(None)
 
-    @output
     @render.plot
     def plot():
         history = cpu_history_with_hold()
@@ -205,7 +204,6 @@ def server(input: Inputs, output: Outputs, session: Session):
 
         return fig
 
-    @output
     @render.table
     def table():
         history = cpu_history_with_hold()

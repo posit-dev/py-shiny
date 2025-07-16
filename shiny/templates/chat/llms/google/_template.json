@@ -1,0 +1,27 @@
+{
+  "type": "app",
+  "id": "chat-ai-gemini",
+  "title": "Chat AI using Google Gemini",
+  "next_steps": [
+    "Put your Google API key in the `template.env` file and rename it to `.env`.",
+    "Run the app with `shiny run app.py`."
+  ],
+  "follow_up": [
+    {
+      "type": "info",
+      "text": "Need help obtaining an API key?"
+    },
+    {
+      "type": "action",
+      "text": "Learn how to obtain one at https://posit-dev.github.io/chatlas/reference/ChatGoogle.html"
+    },
+    {
+      "type": "info",
+      "text": "Want to learn more about AI chatbots?"
+    },
+    {
+      "type": "action",
+      "text": "Visit https://shiny.posit.co/py/docs/genai-chatbots.html"
+    }
+  ]
+}

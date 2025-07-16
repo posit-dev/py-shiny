@@ -1,0 +1,28 @@
+{
+  "type": "app",
+  "id": "chat-ai-ollama",
+  "title": "Chat AI using Ollama",
+  "next_steps": [
+    "If you haven't already, download the Ollama executable from https://ollama.com/",
+    "Run the executable and download the relevant model (llama3.2)",
+    "Run the app with `shiny run app.py`."
+  ],
+  "follow_up": [
+    {
+      "type": "info",
+      "text": "Need help connecting to Ollama?"
+    },
+    {
+      "type": "action",
+      "text": "Learn more at https://posit-dev.github.io/chatlas/reference/ChatOllama.html"
+    },
+    {
+      "type": "info",
+      "text": "Want to learn more about AI chatbots?"
+    },
+    {
+      "type": "action",
+      "text": "Visit https://shiny.posit.co/py/docs/genai-chatbots.html"
+    }
+  ]
+}

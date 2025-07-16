@@ -1,0 +1,385 @@
+quartodoc:
+  style: pkgdown
+  dir: api/core
+  out_index: index.qmd
+  package: shiny
+  rewrite_all_pages: false
+  sidebar: api/core/_sidebar.yml
+  dynamic: true
+  renderer:
+    style: _renderer.py
+    show_signature_annotations: false
+    table_style: description-list
+  sections:
+    - title: Page containers
+      desc: Create a user interface page container.
+      contents:
+        - ui.page_sidebar
+        - ui.page_navbar
+        - ui.page_sidebar
+        - ui.page_fillable
+        - ui.page_fluid
+        - ui.page_fixed
+        - ui.page_bootstrap
+        - ui.page_auto
+        - ui.page_output
+    - title: UI Layouts
+      desc: Control the layout of multiple UI components.
+      contents:
+        - ui.sidebar
+        - ui.layout_sidebar
+        - ui.layout_columns
+        - ui.layout_column_wrap
+        - ui.card
+        - ui.card_header
+        - ui.card_footer
+        - ui.popover
+        - ui.tooltip
+        - ui.accordion
+        - ui.accordion_panel
+        - ui.column
+        - ui.row
+    - title: UI Inputs
+      desc: Create UI that prompts the user for input values or interaction.
+      contents:
+        - ui.input_select
+        - ui.input_selectize
+        - ui.input_slider
+        - ui.input_dark_mode
+        - ui.input_date
+        - ui.input_date_range
+        - ui.input_checkbox
+        - ui.input_checkbox_group
+        - ui.input_switch
+        - ui.input_radio_buttons
+        - ui.input_numeric
+        - ui.input_text
+        - ui.input_text_area
+        - ui.input_password
+        - ui.input_action_button
+        - ui.input_action_link
+        - ui.input_task_button
+    - title: Value boxes
+      desc: Prominently display a value and label in a box that can be expanded to show more information.
+      contents:
+        - ui.value_box
+        - ui.value_box_theme
+        - ui.showcase_bottom
+        - ui.showcase_left_center
+        - ui.showcase_top_right
+    - title: Navigation (tab) panels
+      desc: Create segments of UI content.
+      contents:
+        - ui.nav_panel
+        - ui.nav_spacer
+        - ui.nav_menu
+        - ui.nav_control
+        - ui.navset_bar
+        - ui.navset_tab
+        - ui.navset_pill
+        - ui.navset_underline
+        - ui.navset_card_tab
+        - ui.navset_card_pill
+        - ui.navset_card_underline
+        - ui.navset_pill_list
+        - ui.navset_hidden
+        - ui.navbar_options
+    - title: UI panels
+      desc: Visually group together a section of UI components.
+      contents:
+        - ui.panel_absolute
+        - ui.panel_fixed
+        - ui.panel_conditional
+        - ui.panel_title
+        - ui.panel_well
+    - title: Uploads & downloads
+      desc: Allow users to upload and download files.
+      contents:
+        - ui.input_file
+        - ui.download_button
+        - ui.download_link
+    - title: Bookmarking
+      desc: Saving and restoring app state
+      contents:
+        - ui.input_bookmark_button
+        - bookmark.restore_input
+        - bookmark.Bookmark
+        - bookmark.BookmarkState
+        - bookmark.RestoreState
+        - kind: page
+          path: bookmark_integration
+          summary:
+            name: "Integration"
+            desc: "Decorators to set save and restore directories."
+          flatten: true
+          contents:
+            - bookmark.set_global_save_dir_fn
+            - bookmark.set_global_restore_dir_fn
+    - title: Chat interface
+      desc: Build a chatbot interface
+      contents:
+        - ui.Chat
+        - ui.chat_ui
+    - title: Streaming markdown
+      desc: Stream markdown content into the UI
+      contents:
+        - ui.MarkdownStream
+        - ui.output_markdown_stream
+    - title: Custom UI
+      desc: Lower-level UI functions for creating custom HTML/CSS/JS
+      contents:
+        - ui.Theme
+        - ui.HTML       # uses justattributes.rst template
+        - ui.TagList    # uses class.rst template
+        - name: ui.tags       # uses tags.rst template
+          children: embedded
+        - ui.markdown
+        - ui.include_css
+        - ui.include_js
+        - ui.insert_ui
+        - ui.remove_ui
+        - ui.busy_indicators.use
+        - ui.busy_indicators.options
+        - ui.fill.as_fillable_container
+        - ui.fill.as_fill_item
+        - ui.fill.remove_all_fill
+        # - ui.fill.is_fillable_container
+        # - ui.fill.is_fill_item
+        - ui.css.as_css_unit
+        - ui.css.as_css_padding
+    - title: Update inputs
+      desc: Programmatically update input values.
+      contents:
+        - ui.update_select
+        - ui.update_selectize
+        - ui.update_slider
+        - ui.update_dark_mode
+        - ui.update_date
+        - ui.update_date_range
+        - ui.update_checkbox
+        - ui.update_checkbox_group
+        - ui.update_switch
+        - ui.update_radio_buttons
+        - ui.update_numeric
+        - ui.update_text
+        - name: ui.update_text_area
+          dynamic: "shiny.ui.update_text"
+        - ui.update_navs
+        - ui.update_action_button
+        - ui.update_action_link
+        - ui.update_task_button
+    - title: Update UI Layouts
+      desc: ""
+      contents:
+        - ui.update_sidebar
+        - ui.update_tooltip
+        - ui.update_popover
+        - ui.update_accordion
+        - ui.update_accordion_panel
+        - ui.insert_accordion_panel
+        - ui.remove_accordion_panel
+    - title: Rendering outputs
+      desc: "UI (output_*()) and server (render)ing functions for generating content server-side."
+      contents:
+        - ui.output_plot
+        - ui.output_image
+        - ui.output_table
+        - ui.output_data_frame
+        - ui.output_text
+        - ui.output_code
+        - ui.output_text_verbatim
+        - ui.output_ui
+        - render.plot
+        - render.image
+        - render.table
+        - render.text
+        - render.code
+        - render.ui
+        - render.express
+        - render.download
+        - render.data_frame
+        - render.DataGrid
+        - render.DataTable
+    - title: Reactive programming
+      desc: ""
+      contents:
+        - reactive.calc
+        - reactive.effect
+        - reactive.value
+        - reactive.Calc
+        - reactive.Effect
+        - reactive.Value
+        - reactive.event
+        - reactive.isolate
+        - reactive.invalidate_later
+        - reactive.extended_task
+        - reactive.flush
+        - reactive.poll
+        - reactive.file_reader
+        - reactive.lock
+        - req
+    - title: Create and run applications
+      desc: ""
+      contents:
+        - run_app
+        # uses class.rst template
+        - App
+        - Inputs
+        - Outputs
+        - Session
+    - title: Display messages
+      desc: ""
+      contents:
+        - ui.help_text
+        - ui.notification_show
+        - ui.notification_remove
+        - ui.modal
+        - ui.modal_show
+        - ui.modal_remove
+        - ui.modal_button
+        - ui.Progress          # uses class.rst
+    - title: Modules
+      desc: ""
+      contents:
+        # uses class.rst template
+        - module.ui
+        - module.server
+    - title: Developer facing tools
+      desc: ""
+      contents:
+        - kind: page
+          path: Session
+          summary:
+            name: "Session"
+            desc: "Tools for managing user sessions and accessing session-related information."
+          flatten: true
+          contents:
+            - session.get_current_session
+            - session.require_active_session
+            - session.session_context
+            - reactive.get_current_context
+            - session.ClientData
+            - session.Session.send_custom_message
+            - session.Session.send_input_message
+            - session.Session.on_flush
+            - session.Session.on_flushed
+            - session.Session.on_ended
+            - session.Session.dynamic_route
+            - session.Session.close
+            - input_handler.input_handlers
+        - kind: page
+          path: Renderer
+          flatten: true
+          summary:
+            name: "Create output renderers"
+            desc: "Package author methods for creating new output renderers."
+          contents:
+            - render.renderer.Renderer
+            - name: render.renderer.Jsonifiable
+              dynamic: false
+            - name: render.renderer.ValueFn
+              dynamic: false
+            - name: render.renderer.AsyncValueFn
+              dynamic: false
+            - name: render.renderer.RendererT
+              dynamic: false
+        - kind: page
+          path: Htmltools
+          flatten: true
+          package: null
+          summary:
+            name: "htmltools methods"
+            desc: ""
+          contents:
+            - name: htmltools.HTMLDependency
+              dynamic: false
+            - name: htmltools.css
+              dynamic: false
+        - kind: page
+          path: ExtendedTask
+          flatten: true
+          summary:
+            name: "ExtendedTask"
+            desc: "Supervise an extended, long-running task"
+          contents:
+            - reactive.ExtendedTask
+            - reactive.ExtendedTask.invoke
+            - reactive.ExtendedTask.result
+            - reactive.ExtendedTask.cancel
+    - title: Types
+      desc: ""
+      contents:
+        - kind: page
+          path: MiscTypes
+          flatten: true
+          summary:
+            name: "Miscellaneous types"
+            desc: ""
+          contents:
+            - types.MISSING_TYPE
+            - types.MISSING
+            - types.FileInfo
+            - types.ImgData
+            - types.NavSetArg
+            - ui.Sidebar
+            - ui.CardItem
+            - ui.AccordionPanel
+            - reactive.Context
+            - name: ui.css.CssUnit
+              dynamic: false
+            - ui._input_slider.SliderValueArg
+            - ui._input_slider.SliderStepArg
+        - kind: page
+          path: TagTypes
+          summary:
+            name: "Tag types"
+            desc: ""
+          flatten: true
+          package: null
+          contents:
+            - name: htmltools.Tag
+              dynamic: false
+            - name: htmltools.TagAttrs
+              dynamic: false
+            - name: htmltools.TagAttrValue
+              dynamic: false
+            - name: htmltools.TagChild
+              dynamic: false
+            - name: htmltools.TagList
+              dynamic: false
+            - name: htmltools.TagFunction
+              dynamic: false
+            - name: htmltools.Tagifiable
+              dynamic: false
+            - name: htmltools.MetadataNode
+              dynamic: false
+        - kind: page
+          path: ExceptionTypes
+          summary:
+            name: "Exception types"
+            desc: ""
+          flatten: true
+          contents:
+            - types.SilentException
+            - types.SilentCancelOutputException
+            - types.SafeException
+    - title: Deprecated
+      desc: ""
+      contents:
+        - render.transformer.output_transformer
+        - render.transformer.resolve_value_fn
+    - title: Experimental
+      desc: >
+        These methods are under consideration and are considered unstable.
+        However, if there is a method you are excited about, please let us know!
+      contents:
+        - kind: page
+          path: ExCard
+          summary:
+            name: "Card"
+            desc: >
+              Additional card components that compliment [ui.card](ui.card.qmd).
+          flatten: true
+          contents:
+            - name: experimental.ui.card_image
+              dynamic: false

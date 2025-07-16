@@ -2,8 +2,20 @@
 
 from __future__ import annotations
 
-__all__ = ("Value", "Calc", "Calc_", "CalcAsync_", "Effect", "Effect_", "event")
+__all__ = (
+    "value",
+    "Value",
+    "calc",
+    "Calc",
+    "Calc_",
+    "CalcAsync_",
+    "effect",
+    "Effect",
+    "Effect_",
+    "event",
+)
 
+import asyncio
 import functools
 import traceback
 import warnings
@@ -22,12 +34,17 @@ from .. import _utils
 from .._docstring import add_example
 from .._utils import is_async_callable, run_coro_sync
 from .._validation import req
-from ..render import RenderFunction
-from ..types import MISSING, MISSING_TYPE, ActionButtonValue, SilentException
+from ..types import (
+    MISSING,
+    MISSING_TYPE,
+    ActionButtonValue,
+    NotifyException,
+    SilentException,
+)
 from ._core import Context, Dependents, ReactiveWarning, isolate
 
 if TYPE_CHECKING:
-    from ..session import Session
+    from .. import Session
 
 T = TypeVar("T")
 
@@ -41,8 +58,8 @@ class Value(Generic[T]):
     Create a reactive value.
 
     Reactive values are the source of reactivity in Shiny. Changes to reactive values
-    invalidate downstream reactive functions (:func:`~shiny.reactive.Calc`,
-    :func:`~shiny.reactive.Effect`, and `render` functions decorated with `@output`).
+    invalidate downstream reactive functions (:func:`~shiny.reactive.calc`,
+    :func:`~shiny.reactive.effect`, and `render` functions decorated with `@output`).
     When these functions are invalidated, they get scheduled to re-execute.
 
     Shiny input values are read-only reactive values. For example, `input.x` is a
@@ -64,20 +81,22 @@ class Value(Generic[T]):
 
     Raises
     ------
-    ~shiny.types.SilentException
-        If :func:`~Value.get` is called before a value is provided/set.
+    :class:`~shiny.types.SilentException`
+        If :func:`~shiny.reactive.Value.get` is called before a value is provided/set.
 
     Note
     ----
     A reactive value may only be read from within a reactive function (e.g.,
-    :func:`~shiny.reactive.Calc`, :func:`~shiny.reactive.Effect`,
-    :func:`shiny.render.text`, etc.) and, when doing so, the function takes a reactive
+    :func:`~shiny.reactive.calc`, :func:`~shiny.reactive.effect`,
+    :class:`shiny.render.text`, etc.) and, when doing so, the function takes a reactive
     dependency on the value (i.e., when the value changes, the calling reactive function
     will re-execute).
 
     See Also
     --------
-    ~shiny.Inputs ~shiny.reactive.Calc ~shiny.reactive.Effect
+    * :class:`~shiny.Inputs`
+    * :func:`~shiny.reactive.calc`
+    * :func:`~shiny.reactive.effect`
     """
 
     # These overloads are necessary so that the following hold:
@@ -89,12 +108,10 @@ class Value(Generic[T]):
     @overload
     def __init__(
         self, value: MISSING_TYPE = MISSING, *, read_only: bool = False
-    ) -> None:
-        ...
+    ) -> None: ...
 
     @overload
-    def __init__(self, value: T, *, read_only: bool = False) -> None:
-        ...
+    def __init__(self, value: T, *, read_only: bool = False) -> None: ...
 
     # If `value` is MISSING, then `get()` will raise a SilentException, until a new
     # value is set. Calling `unset()` will set the value to MISSING.
@@ -120,7 +137,7 @@ class Value(Generic[T]):
 
         Raises
         ------
-        ~shiny.types.SilentException
+        :class:`~shiny.types.SilentException`
             If the value is not set.
         RuntimeError
             If called from outside a reactive function.
@@ -205,6 +222,8 @@ class Value(Generic[T]):
         self._value = MISSING
 
 
+value = Value
+
 # ==============================================================================
 # Calc
 # ==============================================================================
@@ -220,7 +239,7 @@ class Calc_(Generic[T]):
     Warning
     -------
     Most users shouldn't use this class directly to initialize a reactive calculation
-    (instead, use the :func:`~shiny.reactive.Calc` decorator).
+    (instead, use the :func:`~shiny.reactive.calc` decorator).
     """
 
     def __init__(
@@ -325,7 +344,7 @@ class CalcAsync_(Calc_[T]):
     Warning
     -------
     Most users shouldn't use this class directly to initialize a reactive calculation
-    (instead, use the :func:`~shiny.reactive.Calc` decorator).
+    (instead, use the :func:`~shiny.reactive.calc` decorator).
     """
 
     def __init__(
@@ -344,13 +363,11 @@ class CalcAsync_(Calc_[T]):
 
 
 @overload
-def Calc(fn: CalcFunctionAsync[T]) -> CalcAsync_[T]:
-    ...
+def calc(fn: CalcFunctionAsync[T]) -> CalcAsync_[T]: ...
 
 
 @overload
-def Calc(fn: CalcFunction[T]) -> Calc_[T]:
-    ...
+def calc(fn: CalcFunction[T]) -> Calc_[T]: ...
 
 
 # Note that the specified return type of this Calc() overload (with a `session`) isn't
@@ -374,14 +391,13 @@ def Calc(fn: CalcFunction[T]) -> Calc_[T]:
 # __call__ method) or CalcAsync object (which has an async __call__ method), and it
 # works out.
 @overload
-def Calc(
+def calc(
     *, session: "MISSING_TYPE | Session | None" = MISSING
-) -> Callable[[CalcFunction[T]], Calc_[T]]:
-    ...
+) -> Callable[[CalcFunction[T]], Calc_[T]]: ...
 
 
 @add_example()
-def Calc(
+def calc(
     fn: Optional[CalcFunction[T] | CalcFunctionAsync[T]] = None,
     *,
     session: "MISSING_TYPE | Session | None" = MISSING,
@@ -389,18 +405,17 @@ def Calc(
     """
     Mark a function as a reactive calculation.
 
-    A reactive calculation is a function whose return value depends solely on other
-    reactive value(s) (i.e., :class:`~shiny.Inputs`, :class:`~shiny.reactive.Value`,
+    A reactive calculation is a function whose return value depends on other
+    reactive value(s) (i.e., :class:`~shiny.Inputs`, :class:`~shiny.reactive.Value`s,
     and other reactive calculations). Whenever a reactive value changes, any reactive
-    calculations that depend on it are "invalidated" and automatically re-execute when
-    necessary. If a reactive calculation is marked as invalidated, any other reactive
+    calculations that depend on it are "invalidated" and automatically re-execute if called while invalid. If a reactive calculation is marked as invalidated, any other reactive
     calculations that recently called it are also marked as invalidated. In this way,
     invalidations ripple through reactive calculations that depend on each other.
 
     Parameters
     ----------
     session
-        A :class:`~shiny.Session` instance. If not provided, it is inferred via
+        A :class:`~shiny.Session` instance. If not provided, the session is inferred via
         :func:`~shiny.session.get_current_session`.
 
     Returns
@@ -411,15 +426,17 @@ def Calc(
     Tip
     ---
     Reactive calculations should not produce any side effects; to reactively produce
-    side effects, use :func:`~shiny.reactive.Effect` instead.
+    side effects, use :func:`~shiny.reactive.effect` instead.
+
+    Reactive calculations are analagous to reactive expressions in Shiny for R.
 
     See Also
     --------
-    ~shiny.Inputs
-    ~shiny.reactive.Value
-    ~shiny.reactive.Effect
-    ~shiny.reactive.invalidate_later
-    ~shiny.reactive.event
+    * :class:`~shiny.Inputs`
+    * :class:`~shiny.reactive.Value`
+    * :func:`~shiny.reactive.effect`
+    * :func:`~shiny.reactive.invalidate_later`
+    * :func:`~shiny.reactive.event`
     """
 
     def create_calc(fn: CalcFunction[T] | CalcFunctionAsync[T]) -> Calc_[T]:
@@ -434,6 +451,9 @@ def Calc(
     else:
         return create_calc(fn)
 
+
+# Alias for backward compatibility
+Calc = calc
 
 # ==============================================================================
 # Effect
@@ -464,6 +484,15 @@ class Effect_:
         self.__name__ = fn.__name__
         self.__doc__ = fn.__doc__
 
+        from ..render.renderer import Renderer
+        from ..session import Session
+
+        if isinstance(fn, Renderer):
+            raise TypeError(
+                "`@reactive.effect` can not be combined with `@render.xx`.\n"
+                + "Please remove your call of `@reactive.effect`."
+            )
+
         # The EffectAsync subclass will pass in an async function, but it tells the
         # static type checker that it's synchronous. wrap_async() is smart -- if is
         # passed an async function, it will not change it.
@@ -490,6 +519,12 @@ class Effect_:
             # If no session is provided, autodetect the current session (this
             # could be None if outside of a session).
             session = get_current_session()
+
+        if isinstance(session, Session) and session.is_stub_session():
+            # If we're in an ExpressStubSession or a SessionProxy of one, then don't
+            # actually set up this effect -- we don't want it to try to run later.
+            return
+
         self._session = session
 
         if self._session is not None:
@@ -519,7 +554,7 @@ class Effect_:
             def _continue() -> None:
                 ctx.add_pending_flush(self._priority)
                 if self._session:
-                    self._session._send_message_sync({"busy": "busy"})
+                    self._session._increment_busy_count()
 
             if self._suspended:
                 self._on_resume = _continue
@@ -530,7 +565,7 @@ class Effect_:
             if not self._destroyed:
                 await self._run()
             if self._session:
-                self._session._send_message_sync({"busy": "idle"})
+                self._session._decrement_busy_count()
 
         ctx.on_invalidate(on_invalidate_cb)
         ctx.on_flush(on_flush_cb)
@@ -547,9 +582,26 @@ class Effect_:
             try:
                 with ctx():
                     await self._fn()
+
+                    # Yield so that messages can be sent to the client if necessary.
+                    # https://github.com/posit-dev/py-shiny/issues/1381
+                    await asyncio.sleep(0)
             except SilentException:
                 # It's OK for SilentException to cause an Effect to stop running
                 pass
+            except NotifyException as e:
+                traceback.print_exc()
+
+                if self._session:
+                    from .._app import SANITIZE_ERROR_MSG
+                    from ..ui import notification_show
+
+                    msg = str(e)
+                    if e.sanitize:
+                        msg = SANITIZE_ERROR_MSG
+                    notification_show(msg, type="error", duration=5000)
+                    if e.close:
+                        await self._session._unhandled_error(e)
             except Exception as e:
                 traceback.print_exc()
 
@@ -631,22 +683,20 @@ class Effect_:
 
 
 @overload
-def Effect(fn: EffectFunction | EffectFunctionAsync) -> Effect_:
-    ...
+def effect(fn: EffectFunction | EffectFunctionAsync) -> Effect_: ...
 
 
 @overload
-def Effect(
+def effect(
     *,
     suspended: bool = False,
     priority: int = 0,
     session: "MISSING_TYPE | Session | None" = MISSING,
-) -> Callable[[EffectFunction | EffectFunctionAsync], Effect_]:
-    ...
+) -> Callable[[EffectFunction | EffectFunctionAsync], Effect_]: ...
 
 
 @add_example()
-def Effect(
+def effect(
     fn: Optional[EffectFunction | EffectFunctionAsync] = None,
     *,
     suspended: bool = False,
@@ -656,17 +706,17 @@ def Effect(
     """
     Mark a function as a reactive side effect.
 
-    A reactive effect is like a reactive calculation (:func:`~shiny.reactive.Calc`) in
+    A reactive effect is like a reactive calculation (:func:`~shiny.reactive.calc`) in
     that it can read reactive values and call reactive calculations, and will
     automatically re-execute when those dependencies change. But unlike reactive
     calculations, it doesn't return a result and can't be used as an input to other
-    reactive expressions. Thus, observers are only useful for their side effects (for
+    reactive expressions. Thus, reactive effects are only useful for their side effects (for
     example, performing I/O).
 
     Another contrast between reactive calculations and effects is their execution
     strategy. Reactive calculations use lazy evaluation; that is, when their
     dependencies change, they don't re-execute right away but rather wait until they are
-    called by someone else. Indeed, if they are not called then they will never
+    called by someone else. Indeed, if they are not called, then they will never
     re-execute. In contrast, effects use eager evaluation; as soon as their dependencies
     change, they schedule themselves to re-execute.
 
@@ -680,7 +730,7 @@ def Effect(
         priority value will execute before all effects with lower priority values.
         Positive, negative, and zero values are allowed.
     session
-        A :class:`~shiny.Session` instance. If not provided, it is inferred via
+        A :class:`~shiny.Session` instance. If not provided, the session is inferred via
         :func:`~shiny.session.get_current_session`.
 
     Returns
@@ -688,13 +738,17 @@ def Effect(
     :
         A decorator that marks a function as a reactive effect (:class:`Effect_`).
 
+    Tip
+    ---
+    Reactive effects are analagous to observers in Shiny for R.
+
     See Also
     --------
-    ~shiny.Inputs
-    ~shiny.reactive.Value
-    ~shiny.reactive.Effect
-    ~shiny.reactive.invalidate_later
-    ~shiny.reactive.event
+    * :class:`~shiny.Inputs`
+    * :class:`~shiny.reactive.Value`
+    * :func:`~shiny.reactive.effect`
+    * :func:`~shiny.reactive.invalidate_later`
+    * :func:`~shiny.reactive.event`
     """
 
     def create_effect(fn: EffectFunction | EffectFunctionAsync) -> Effect_:
@@ -705,6 +759,9 @@ def Effect(
         return create_effect
     else:
         return create_effect(fn)
+
+
+Effect = effect
 
 
 # ==============================================================================
@@ -720,22 +777,26 @@ def event(
     Mark a function to react only when an "event" occurs.
 
     Shiny's reactive programming framework is primarily designed for calculated values
-    (:func:`~shiny.reactive.Calc`) and side-effect-causing actions
-    (:func:`~shiny.reactive.Effect`) that respond to **any** of their inputs changing.
+    (:func:`~shiny.reactive.calc`) and side-effect-causing actions
+    (:func:`~shiny.reactive.effect`) that respond to **any** of their inputs changing.
     That's often what is desired in Shiny apps, but not always: sometimes you want to
     wait for a specific action to be taken from the user, like clicking an
-    :func:`~shiny.ui.input_action_button`, before calculating or taking an action. A
-    reactive value (or function) which triggers other calculation or action in this way
-    is called an event.
+    :func:`~shiny.ui.input_action_button`, before calculating or taking an action. You
+    do not want the calculation or action to be prematurely triggered if other reactive
+    values that it calls are invalidated. The reactive value (or function) which triggers
+    other calculations or actions in this way is called an event.
 
     These situations demand a more imperative, "event handling" style of programming,
     which ``@reactive.event()`` provides. It does this by using the
     :func:`~shiny.reactive.isolate` primitive under-the-hood to essentially "limit" the
-    set of reactive dependencies to those in ``args``.
+    set of reactive dependencies to those in ``args``. In other words, the event can call
+    as many reactive values as it likes in its code body without taking a reactive
+    dependency on them; it will be invalidated only when a dependency listed in args is
+    invalidated.
 
     Parameters
     ----------
-    args
+    *args
         One or more callables that represent the event; most likely this will be a
         reactive input value linked to a :func:`~shiny.ui.input_action_button` or
         similar (e.g., ``input.click``), but it can also be a (reactive or non-reactive)
@@ -743,7 +804,7 @@ def event(
     ignore_none
         Whether to ignore the event if the value is ``None`` or ``0``.
     ignore_init
-        If ``False``, the event trigger on the first run.
+        If ``False``, the event triggers on the first run.
 
     Returns
     -------
@@ -753,7 +814,7 @@ def event(
     Tip
     ----
     This decorator must be applied before the relevant reactivity decorator (i.e.,
-    ``@reactive.event`` must be applied before ``@reactive.Effect``, ``@reactive.Calc``,
+    ``@reactive.event`` must be applied before ``@reactive.effect``, ``@reactive.calc``,
     ``@render.ui``, etc).
     """
 
@@ -772,17 +833,21 @@ def event(
         if not callable(user_fn):
             raise TypeError(
                 "`@reactive.event()` must be applied to a function or Callable object.\n"
-                + "It should usually be applied before `@Calc`,` @Effect`, `@output`, or `@render.xx` function.\n"
+                + "It should usually be applied before `@Calc`,` @Effect`, or `@render.xx` function.\n"
                 + "In other words, `@reactive.event()` goes below the other decorators."
             )
 
         if isinstance(user_fn, Calc_):
             raise TypeError(
-                "`@reactive.event()` must be applied before `@reactive.Calc`.\n"
-                + "In other words, `@reactive.Calc` must be above `@reactive.event()`."
+                "`@reactive.event()` must be applied before `@reactive.calc`.\n"
+                + "In other words, `@reactive.calc` must be above `@reactive.event()`."
             )
 
-        if isinstance(user_fn, RenderFunction):
+        # This is here instead of at the top of the .py file in order to avoid a
+        # circular dependency.
+        from ..render.renderer import Renderer
+
+        if isinstance(user_fn, Renderer):
             # At some point in the future, we may allow this condition, if we find an
             # use case. For now we'll disallow it, for simplicity.
             raise TypeError(

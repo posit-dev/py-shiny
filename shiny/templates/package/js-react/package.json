@@ -1,0 +1,24 @@
+{
+  "name": "custom-component-pkg-template",
+  "version": "1.0.0",
+  "description": "Demo of custom JS components for Shiny for python",
+  "main": "index.js",
+  "scripts": {
+    "build": "esbuild srcts/index.tsx --bundle --outfile=custom_component/distjs/index.js",
+    "watch": "npm run build -- --watch"
+  },
+  "author": "Nick Strayer",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/react-color": "^3.0.10",
+    "@types/react-dom": "^18.2.15",
+    "esbuild": "0.19.5",
+    "typescript": "^5.2.2"
+  },
+  "dependencies": {
+    "@posit-dev/shiny-bindings-react": "^0.1.0",
+    "react": "^18.2.0",
+    "react-color": "^2.19.3",
+    "react-dom": "^18.2.0"
+  }
+}

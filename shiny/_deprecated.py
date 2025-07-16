@@ -23,8 +23,8 @@ class ShinyDeprecationWarning(RuntimeWarning):
 warnings.simplefilter("always", ShinyDeprecationWarning)
 
 
-def warn_deprecated(message: str):
-    warnings.warn(message, ShinyDeprecationWarning, stacklevel=3)
+def warn_deprecated(message: str, stacklevel: int = 3):
+    warnings.warn(message, ShinyDeprecationWarning, stacklevel=stacklevel)
 
 
 def render_text():
@@ -39,16 +39,16 @@ def render_ui():
     return render.ui()
 
 
-def render_plot(*args: Any, **kwargs: Any):
+def render_plot(*args: Any, **kwargs: Any):  # type: ignore
     """Deprecated. Please use render.plot() instead of render_plot()."""
     warn_deprecated("render_plot() is deprecated. Use render.plot() instead.")
-    return render.plot(*args, **kwargs)
+    return render.plot(*args, **kwargs)  # type: ignore
 
 
-def render_image(*args: Any, **kwargs: Any):
+def render_image(*args: Any, **kwargs: Any):  # type: ignore
     """Deprecated. Please use render.image() instead of render_image()."""
     warn_deprecated("render_image() is deprecated. Use render.image() instead.")
-    return render.image(*args, **kwargs)
+    return render.image(*args, **kwargs)  # type: ignore
 
 
 def event(*args: Any, **kwargs: Any):

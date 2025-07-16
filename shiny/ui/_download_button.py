@@ -5,8 +5,8 @@ from typing import Optional
 from htmltools import Tag, TagAttrValue, TagChild, css, tags
 
 from .._docstring import add_example
-from .._namespaces import resolve_id
 from .._shinyenv import is_pyodide
+from ..module import resolve_id
 
 
 @add_example()
@@ -31,7 +31,7 @@ def download_button(
         An icon to display on the button.
     width
         The width of the button.
-    kwargs
+    **kwargs
         Additional attributes for the button.
 
     Returns
@@ -41,25 +41,26 @@ def download_button(
 
     See Also
     --------
-    ~shiny.Session.download
-    ~shiny.ui.download_link
+    * :class:`~shiny.render.download`
+    * :func:`~shiny.ui.download_link`
     """
 
     return tags.a(
         icon,
         label,
-        {"class": "btn btn-default shiny-download-link", "style": css(width=width)},
+        {
+            "class": "btn btn-default shiny-download-link disabled",
+            "style": css(width=width),
+        },
         id=resolve_id(id),
-        # This is a fake link that just results in a 404. It will be replaced by a
-        # working link after the server side logic runs, so this link will only be
-        # visited in cases where the user clicks the button too fast, or if the server
-        # never defines a handler for this download button.
-        href="session/0/download/missing_download",
+        href="",
         target="_blank",
         # We can't use `download` in pyodide mode, because the browser chooses not to
         # route the download through the service worker in that case. (Observed by
         # jcheng on 1/7/2022, using Chrome Version 96.0.4664.110.)
         download=None if is_pyodide else True,
+        aria_disabled="true",
+        tabindex="-1",
         **kwargs,
     )
 
@@ -74,7 +75,7 @@ def download_link(
     **kwargs: TagAttrValue,
 ) -> Tag:
     """
-    Create a download button
+    Create a download button.
 
     Parameters
     ----------
@@ -86,7 +87,7 @@ def download_link(
         An icon to display on the button.
     width
         The width of the button.
-    kwargs
+    **kwargs
         Additional attributes for the button.
 
     Returns
@@ -96,17 +97,19 @@ def download_link(
 
     See Also
     --------
-    ~shiny.Session.download
-    ~shiny.ui.download_link
+    * :class:`~shiny.render.download`
+    * :func:`~shiny.ui.download_button`
     """
 
     return tags.a(
         icon,
         label,
-        {"class": "shiny-download-link", "style": css(width=width)},
+        {"class": "shiny-download-link disabled", "style": css(width=width)},
         id=resolve_id(id),
-        href="session/0/download/missing_download",
+        href="",
         target="_blank",
         download=None if is_pyodide else True,
+        aria_disabled="true",
+        tabindex="-1",
         **kwargs,
     )

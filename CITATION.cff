@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+title: "Shiny for Python"
+message: "If you use this software, please cite it as below."
+authors:
+  - name: "The Shiny development team"
+license: MIT
+license-url: "https://github.com/posit-dev/py-shiny/blob/main/LICENSE"
+repository-code: "https://github.com/posit-dev/py-shiny"
+type: software
+url: "https://shiny.posit.co/py/"

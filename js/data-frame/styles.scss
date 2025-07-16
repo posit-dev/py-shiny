@@ -1,0 +1,347 @@
+/*
+ *
+ * # Variables
+ *
+ */
+
+shiny-data-frame {
+  --shiny-datagrid-font-size: 0.9em;
+  --shiny-datagrid-padding-x: 0.5em;
+  --shiny-datagrid-padding-y: 0.3em;
+  --shiny-datagrid-padding: var(--shiny-datagrid-padding-y) var(--shiny-datagrid-padding-x);
+
+  --shiny-datagrid-grid-header-bgcolor: var(--bs-light, #eee);
+  --shiny-datagrid-grid-header-gridlines-color: var(--bs-border-color, #ccc);
+  --shiny-datagrid-grid-header-gridlines-style: solid;
+
+  --shiny-datagrid-grid-gridlines-color: var(--bs-border-color, #ccc);
+  --shiny-datagrid-grid-gridlines-style: solid;
+
+  --shiny-datagrid-table-header-bottom-border: 1px solid;
+  --shiny-datagrid-table-top-border: 1px solid;
+  --shiny-datagrid-table-bottom-border: 1px solid;
+
+  --shiny-datagrid-grid-body-hover-bgcolor: var(--shiny-datagrid-grid-header-bgcolor);
+  --shiny-datagrid-grid-body-selected-bgcolor: #b4d5fe;
+  --shiny-datagrid-grid-body-selected-color: var(--bs-dark);
+  --shiny-datagrid-grid-header-selected-bgcolor: color-mix(
+    in srgb,
+    var(--shiny-datagrid-grid-header-bgcolor) 30%,
+    var(--shiny-datagrid-grid-body-selected-bgcolor)
+  );
+
+  --shiny-datagrid-table-cell-edit-background-color: var(--bs-body-bg);
+
+  // 2024-03-01: Greg: Do not use warning or info bs colors! Their contrast on white is not enough
+  // Saved cells
+  --shiny-datagrid-table-cell-edit-success-border-color: color-mix(in srgb, var(--bs-success) 20%, transparent);
+  --shiny-datagrid-table-cell-edit-success-border-style: var(--shiny-datagrid-grid-gridlines-style);
+  --shiny-datagrid-table-cell-edit-success-bgcolor: color-mix(in srgb, var(--bs-success) 10%, transparent);
+  // Failed to save
+  --shiny-datagrid-table-cell-edit-failure-border-color: color-mix(in srgb, var(--bs-danger) 40%, transparent);
+  --shiny-datagrid-table-cell-edit-failure-border-style: var(--shiny-datagrid-grid-gridlines-style);
+  --shiny-datagrid-table-cell-edit-failure-bgcolor: color-mix(in srgb, var(--bs-danger) 10%, transparent);
+  // Saving cells
+  --shiny-datagrid-table-cell-edit-saving-color: var(--bs-gray-500);
+  // --shiny-datagrid-table-cell-edit-saving-font-style: italic;
+}
+
+/*
+ *
+ * # BASE STYLES
+ *
+ */
+
+shiny-data-frame {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+}
+
+// Arrows
+shiny-data-frame .shiny-data-grid svg.sort-arrow {
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  margin-bottom: 0.15em;
+}
+
+shiny-data-frame .shiny-data-grid {
+  max-width: 100%;
+  height: auto;
+
+  &.scrolling {
+    height: 500px;
+  }
+
+  > table {
+    border-collapse: separate;
+    border-spacing: 0;
+
+    > thead {
+      position: sticky;
+      top: 0;
+
+      > tr > th {
+        text-align: left;
+        white-space: nowrap;
+
+        &:focus-visible {
+          outline: 5px auto Highlight;
+          outline: 5px auto -webkit-focus-ring-color;
+        }
+      }
+    }
+
+    &.filtering > thead {
+      > tr:nth-last-child(2) > th {
+        border-bottom: none;
+      }
+
+      > tr.filters > th {
+        font-weight: unset;
+        padding-top: 0;
+        /* Slight boost to bottom padding */
+        padding-bottom: var(--shiny-datagrid-padding-x);
+
+        > input {
+          width: 100%;
+        }
+      }
+    }
+  }
+}
+
+// Summary row
+shiny-data-frame .shiny-data-grid > .shiny-data-grid-summary {
+  font-size: var(--shiny-datagrid-font-size);
+  padding-top: 0.3em;
+}
+
+/*
+ *
+ * # DATATABLE STYLES
+ *
+ */
+
+shiny-data-frame .shiny-data-grid.shiny-data-grid-table {
+  border-top: var(--shiny-datagrid-table-top-border);
+
+  &.scrolling {
+    border-bottom: var(--shiny-datagrid-table-bottom-border);
+  }
+
+  > table {
+    > thead > tr:last-child > th {
+      border-bottom: var(--shiny-datagrid-table-header-bottom-border);
+    }
+
+    > tbody > tr {
+      &[aria-selected="true"] {
+        // Turn background blue!
+        --shiny-datagrid-grid-gridlines-color: var(--shiny-datagrid-grid-body-selected-bgcolor);
+
+        // !!Duplicate any changes in the `td` below!!
+        background-color: var(--shiny-datagrid-grid-body-selected-bgcolor);
+        color: var(--shiny-datagrid-grid-body-selected-color);
+        // Needed to combat bootstrap's `.table>:not(caption)>*>*` selector
+        td {
+          background-color: var(--shiny-datagrid-grid-body-selected-bgcolor);
+          color: var(--shiny-datagrid-grid-body-selected-color);
+        }
+      }
+    }
+  }
+}
+
+/*
+ *
+ * # GRID STYLES
+ *
+ */
+
+shiny-data-frame .shiny-data-grid.shiny-data-grid-grid {
+  > table {
+    font-size: var(--shiny-datagrid-font-size);
+
+    > thead > tr > th,
+    > thead > tr > td {
+      background-color: var(--shiny-datagrid-grid-header-bgcolor);
+      padding: var(--shiny-datagrid-padding);
+    }
+
+    > tbody > tr {
+      &:focus-visible {
+        outline: 5px auto Highlight;
+        outline: 5px auto -webkit-focus-ring-color;
+      }
+
+      &:hover {
+        --shiny-datagrid-grid-gridlines-color: inherit;
+        background-color: var(--shiny-datagrid-grid-body-hover-bgcolor);
+      }
+
+      &[aria-selected="true"] {
+        // Setting this variable hides the cell borders for the selected row
+        // --shiny-datagrid-grid-gridlines-color: var(--shiny-datagrid-grid-body-selected-bgcolor);
+        background-color: var(--shiny-datagrid-grid-body-selected-bgcolor);
+        color: var(--shiny-datagrid-grid-body-selected-color);
+      }
+
+      > td {
+        padding: var(--shiny-datagrid-padding);
+      }
+
+      &:not([aria-selected="true"]) > td.row-number {
+        background-color: var(--shiny-datagrid-grid-header-bgcolor);
+      }
+      &[aria-selected="true"] > td.row-number {
+        background-color: var(--shiny-datagrid-grid-header-selected-bgcolor);
+      }
+    }
+  }
+}
+
+/* ## Grid borders */
+shiny-data-frame .shiny-data-grid.shiny-data-grid-grid {
+  > table {
+    border-collapse: separate;
+
+    > thead {
+      > tr {
+        &:first-child > th {
+          border-top-style: var(--shiny-datagrid-grid-gridlines-style);
+        }
+
+        > th {
+          border: 1px var(--shiny-datagrid-grid-gridlines-style) var(--shiny-datagrid-grid-header-gridlines-color);
+          border-top-style: none;
+          border-left-style: none;
+
+          &:first-child {
+            border-left-style: var(--shiny-datagrid-grid-gridlines-style);
+          }
+        }
+      }
+    }
+
+    > tbody > tr > td {
+      border: 1px var(--shiny-datagrid-grid-gridlines-style) var(--shiny-datagrid-grid-gridlines-color);
+      border-top-style: none;
+      border-left-style: none;
+
+      &:first-child {
+        border-left-style: var(--shiny-datagrid-grid-gridlines-style);
+      }
+    }
+  }
+
+  &.scrolling {
+    border: var(--shiny-datagrid-grid-gridlines-style) 1px var(--shiny-datagrid-grid-header-gridlines-color);
+
+    > table > thead > tr:first-child > th {
+      border-top-style: none;
+    }
+
+    > table > tbody > tr:last-child > td {
+      border-bottom-style: none;
+    }
+
+    > table > thead > tr > th:first-child,
+    > table > tbody > tr > td:first-child {
+      border-left-style: none;
+    }
+
+    > table > thead > tr > th:last-child,
+    > table > tbody > tr > td:last-child {
+      border-right-style: none;
+    }
+  }
+}
+
+/*
+ *
+ * # FILLING LAYOUT STYLES
+ *
+ */
+
+/* Center the table when inside of a card */
+.card-body shiny-data-frame .shiny-data-grid {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* When .shiny-data-grid is not scrolling, the containers shouldn't flex */
+shiny-data-frame {
+  &:has(> div > .shiny-data-grid:not(.scrolling)) {
+    flex: 0 0 auto;
+  }
+
+  > div:has(> .shiny-data-grid:not(.scrolling)) {
+    flex: 0 0 auto;
+  }
+}
+
+// When table corner is present, ensure it has a minimum width
+// but make sure it doesn't take up extra space
+shiny-data-frame .table-corner {
+  width: 0;
+  min-width: 25px;
+}
+
+/*
+ *
+ * # CELL EDITING STYLES
+ *
+ */
+shiny-data-frame .shiny-data-grid > table > tbody > tr > td.cell-edit-editing {
+  // padding: 0;
+  // margin: 0;
+
+  :not(textarea) {
+    visibility: hidden;
+  }
+
+  color: transparent;
+
+  // Position the textarea over the existing cell via absolute positioning and inset
+  // Use absolute positioning to ensure the textarea is using the full available space!
+  position: relative;
+  & > textarea {
+    position: absolute;
+    padding: var(--shiny-datagrid-padding);
+    // We could use `inset: 0px`, but firefox doesn't render it properly.
+    // Instead, use top, left, width, height
+    background-color: var(--shiny-datagrid-table-cell-edit-background-color);
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+
+    border: none;
+
+    // background-color: inherit;
+    // overflow: hidden;
+    resize: none;
+  }
+}
+
+shiny-data-frame .shiny-data-grid > table > tbody > tr > td {
+  &.cell-html {
+    cursor: default;
+  }
+  &.cell-editable {
+    cursor: text;
+  }
+  &.cell-edit-saving {
+    color: var(--shiny-datagrid-table-cell-edit-saving-color);
+    font-style: var(--shiny-datagrid-table-cell-edit-saving-font-style);
+  }
+
+  &.cell-edit-failure {
+    outline: 2px var(--shiny-datagrid-table-cell-edit-failure-border-style) var(--shiny-datagrid-table-cell-edit-failure-border-color);
+    background-color: var(--shiny-datagrid-table-cell-edit-failure-bgcolor);
+  }
+}

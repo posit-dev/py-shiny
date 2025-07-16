@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-__all__ = ("input_date", "input_date_range")
-
 import json
 from datetime import date
 from typing import Optional
@@ -9,9 +7,12 @@ from typing import Optional
 from htmltools import Tag, TagAttrValue, TagChild, css, div, span, tags
 
 from .._docstring import add_example
-from .._namespaces import resolve_id
-from ._html_dependencies import datepicker_deps
+from ..bookmark import restore_input
+from ..module import resolve_id
+from ._html_deps_external import datepicker_deps
 from ._utils import shiny_input_label
+
+__all__ = ("input_date", "input_date_range")
 
 
 @add_example()
@@ -100,21 +101,24 @@ def input_date(
 
     Notes
     ------
-    .. admonition:: Server value
-
-        A :class:`~datetime.date` object.
+    ::: {.callout-note title="Server value"}
+    A :class:`~datetime.date` object.
+    :::
 
     See Also
-    -------
-    ~shiny.ui.update_date
-    ~shiny.ui.input_date_range
+    --------
+    * :func:`~shiny.ui.update_date`
+    * :func:`~shiny.ui.input_date_range`
     """
 
+    resolved_id = resolve_id(id)
+    default_value = value if value is not None else date.today()
+
     return div(
-        shiny_input_label(id, label),
+        shiny_input_label(resolved_id, label),
         _date_input_tag(
-            id=resolve_id(id),
-            value=value,
+            id=resolved_id,
+            value=restore_input(resolved_id, default_value),
             min=min,
             max=max,
             format=format,
@@ -125,7 +129,7 @@ def input_date(
             data_date_dates_disabled=json.dumps(datesdisabled),
             data_date_days_of_week_disabled=json.dumps(daysofweekdisabled),
         ),
-        id=resolve_id(id),
+        id=resolved_id,
         class_="shiny-date-input form-group shiny-input-container",
         style=css(width=width),
     )
@@ -218,22 +222,26 @@ def input_date_range(
 
     Notes
     ------
-    .. admonition:: Server value
-
-        A tuple of :class:`~datetime.date` objects.
+    ::: {.callout-note title="Server value"}
+    A tuple of :class:`~datetime.date` objects.
+    :::
 
     See Also
-    -------
-    ~shiny.ui.update_date_range
-    ~shiny.ui.input_date
+    --------
+    * :func:`~shiny.ui.update_date_range`
+    * :func:`~shiny.ui.input_date`
     """
 
+    resolved_id = resolve_id(id)
+    default_start = start if start is not None else date.today()
+    default_end = end if end is not None else date.today()
+    restored_date_range = restore_input(resolved_id, [default_start, default_end])
     return div(
-        shiny_input_label(id, label),
+        shiny_input_label(resolved_id, label),
         div(
             _date_input_tag(
-                id=resolve_id(id),
-                value=start,
+                id=resolved_id,
+                value=restored_date_range[0],
                 min=min,
                 max=max,
                 format=format,
@@ -248,8 +256,8 @@ def input_date_range(
                 class_="input-group-addon input-group-prepend input-group-append",
             ),
             _date_input_tag(
-                id=resolve_id(id),
-                value=end,
+                id=resolved_id,
+                value=restored_date_range[1],
                 min=min,
                 max=max,
                 format=format,
@@ -261,7 +269,7 @@ def input_date_range(
             # input-daterange class is needed for dropdown behavior
             class_="input-daterange input-group input-group-sm",
         ),
-        id=resolve_id(id),
+        id=resolved_id,
         class_="shiny-date-range-input form-group shiny-input-container",
         style=css(width=width),
     )

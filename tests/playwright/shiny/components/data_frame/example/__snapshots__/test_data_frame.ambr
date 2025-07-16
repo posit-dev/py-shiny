@@ -1,0 +1,79 @@
+# serializer version: 1
+# name: test_multi_selection[chromium]
+  '''
+     subidr    attnr  num1  num2  num3
+  0       1  divided     2   4.0     7
+  '''
+# ---
+# name: test_multi_selection[chromium].1
+  '''
+     subidr    attnr  num1  num2  num3
+  0       1  divided     2   4.0     7
+  2       3  divided     3   5.0     6
+  3       4  divided     5   7.0     5
+  '''
+# ---
+# name: test_multi_selection[firefox]
+  '''
+     subidr    attnr  num1  num2  num3
+  0       1  divided     2   4.0     7
+  '''
+# ---
+# name: test_multi_selection[firefox].1
+  '''
+     subidr    attnr  num1  num2  num3
+  0       1  divided     2   4.0     7
+  2       3  divided     3   5.0     6
+  3       4  divided     5   7.0     5
+  '''
+# ---
+# name: test_multi_selection[webkit]
+  '''
+     subidr    attnr  num1  num2  num3
+  0       1  divided     2   4.0     7
+  '''
+# ---
+# name: test_multi_selection[webkit].1
+  '''
+     subidr    attnr  num1  num2  num3
+  0       1  divided     2   4.0     7
+  2       3  divided     3   5.0     6
+  3       4  divided     5   7.0     5
+  '''
+# ---
+# name: test_single_selection[chromium]
+  '''
+     subidr    attnr  num1  num2  num3
+  0       1  divided     2   4.0     7
+  '''
+# ---
+# name: test_single_selection[chromium].1
+  '''
+     subidr    attnr  num1  num2  num3
+  3       4  divided     5   7.0     5
+  '''
+# ---
+# name: test_single_selection[firefox]
+  '''
+     subidr    attnr  num1  num2  num3
+  0       1  divided     2   4.0     7
+  '''
+# ---
+# name: test_single_selection[firefox].1
+  '''
+     subidr    attnr  num1  num2  num3
+  3       4  divided     5   7.0     5
+  '''
+# ---
+# name: test_single_selection[webkit]
+  '''
+     subidr    attnr  num1  num2  num3
+  0       1  divided     2   4.0     7
+  '''
+# ---
+# name: test_single_selection[webkit].1
+  '''
+     subidr    attnr  num1  num2  num3
+  3       4  divided     5   7.0     5
+  '''
+# ---

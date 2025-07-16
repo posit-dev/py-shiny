@@ -9,6 +9,7 @@ app_ui = ui.page_fluid(
         ui.tags.h5("A plot should appear immediately below this text."),
     ),
     ui.output_plot("mpl"),
+    ui.tags.hr(),
     ui.panel_conditional(
         "input.render",
         ui.tags.h5("An error message should appear immediately below this text."),
@@ -18,13 +19,11 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @output
     @render.plot
     def mpl():
         if input.render():
             plt.hist([1, 1, 2, 3, 5])
 
-    @output
     @render.plot
     async def mpl_bad():
         if input.render():

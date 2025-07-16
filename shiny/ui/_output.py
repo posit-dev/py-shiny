@@ -4,6 +4,7 @@ __all__ = (
     "output_plot",
     "output_image",
     "output_text",
+    "output_code",
     "output_text_verbatim",
     "output_table",
     "output_ui",
@@ -13,8 +14,9 @@ from typing import Optional
 
 from htmltools import Tag, TagAttrValue, TagFunction, css, div, tags
 
-from .._docstring import add_example
-from .._namespaces import resolve_id
+from .._docstring import add_example, no_example
+from ..module import resolve_id
+from ..types import MISSING, MISSING_TYPE
 from ._plot_output_opts import (
     BrushOpts,
     ClickOpts,
@@ -26,30 +28,32 @@ from ._plot_output_opts import (
     format_opt_names,
     hover_opts,
 )
+from .fill import as_fill_item, as_fillable_container
 
 
 @add_example()
 def output_plot(
     id: str,
-    width: str = "100%",
-    height: str = "400px",
+    width: str | float | int = "100%",
+    height: str | float | int = "400px",
     *,
     inline: bool = False,
     click: bool | ClickOpts = False,
     dblclick: bool | DblClickOpts = False,
     hover: bool | HoverOpts = False,
     brush: bool | BrushOpts = False,
+    fill: bool | MISSING_TYPE = MISSING,
 ) -> Tag:
     """
     Create a output container for a static plot.
 
-    Place a :func:`~shiny.render.plot` result in the user interface. See
-    :func:`~shiny.render.plot` for more details on what types of plots are supported.
+    Place a :class:`~shiny.render.plot` result in the user interface. See
+    :class:`~shiny.render.plot` for more details on what types of plots are supported.
 
     Parameters
     ----------
     id
-        An input id.
+        An output id.
     width
         The CSS width, e.g. '400px', or '100%'.
     height
@@ -85,6 +89,10 @@ def output_plot(
         :func:`~shiny.ui.brush_opts`. Multiple `output_image`/`output_plot` calls may
         share the same `id` value; brushing one image or plot will cause any other
         brushes with the same `id` to disappear.
+    fill
+        Whether or not to allow the plot output to grow/shrink to fit a fillable
+        container with an opinionated height (e.g., :func:`~shiny.ui.page_fillable`). If
+        no `fill` value is provided, it will default to the inverse of `inline`.
 
     Returns
     -------
@@ -92,9 +100,12 @@ def output_plot(
         A UI element
 
     See Also
-    -------
-    ~shiny.render.plot ~shiny.ui.output_image
+    --------
+    * :class:`~shiny.render.plot`
+    * :func:`~shiny.ui.output_image`
     """
+    if isinstance(fill, MISSING_TYPE):
+        fill = not inline
     res = output_image(
         id=id,
         width=width,
@@ -104,6 +115,7 @@ def output_plot(
         dblclick=dblclick,
         hover=hover,
         brush=brush,
+        fill=fill,
     )
     res.add_class("shiny-plot-output")
     return res
@@ -112,14 +124,15 @@ def output_plot(
 @add_example()
 def output_image(
     id: str,
-    width: str = "100%",
-    height: str = "400px",
+    width: str | float | int = "100%",
+    height: str | float | int = "400px",
     *,
     inline: bool = False,
     click: bool | ClickOpts = False,
     dblclick: bool | DblClickOpts = False,
     hover: bool | HoverOpts = False,
     brush: bool | BrushOpts = False,
+    fill: bool = False,
 ) -> Tag:
     """
     Create a output container for a static image.
@@ -127,7 +140,7 @@ def output_image(
     Parameters
     ----------
     id
-        An input id.
+        An output id.
     width
         The CSS width, e.g. '400px', or '100%'.
     height
@@ -163,6 +176,9 @@ def output_image(
         :func:`~shiny.ui.brush_opts`. Multiple `output_image`/`output_plot` calls may
         share the same `id` value; brushing one image or plot will cause any other
         brushes with the same `id` to disappear.
+    fill
+        Whether or not to allow the image output to grow/shrink to fit a fillable
+        container with an opinionated height (e.g., :func:`~shiny.ui.page_fillable`).
 
     Returns
     -------
@@ -170,11 +186,13 @@ def output_image(
         A UI element
 
     See Also
-    -------
-    ~shiny.render.image
-    ~shiny.ui.output_plot
+    --------
+    * :class:`~shiny.render.image`
+    * :func:`~shiny.ui.output_plot`
     """
     func = tags.span if inline else div
+    width = f"{width}px" if isinstance(width, (float, int)) else width
+    height = f"{height}px" if isinstance(height, (float, int)) else height
     style = None if inline else css(width=width, height=height)
 
     args: dict[str, str] = dict()
@@ -205,12 +223,16 @@ def output_image(
         brush["id"] = id_resolved + "_brush"
         args.update(**format_opt_names(brush, "brush"))
 
-    return func(
+    container = func(
         id=id_resolved,
         class_="shiny-image-output",
         style=style,
         **args,
     )
+    if fill:
+        container = as_fill_item(container)
+
+    return container
 
 
 @add_example()
@@ -223,9 +245,9 @@ def output_text(
     Parameters
     ----------
     id
-        An input id.
+        An output id.
     inline
-        If ``True``, the result is displayed inline
+        If ``True``, the result is displayed inline.
     container
         A Callable that returns the output container.
 
@@ -239,9 +261,9 @@ def output_text(
     Text is HTML-escaped prior to rendering.
 
     See Also
-    -------
-    ~shiny.render.text
-    ~shiny.ui.output_text_verbatim
+    --------
+    * :class:`~shiny.render.text`
+    * :func:`~shiny.ui.output_text_verbatim`
     """
 
     if not container:
@@ -249,21 +271,65 @@ def output_text(
     return container(id=resolve_id(id), class_="shiny-text-output")
 
 
+@no_example()
+def output_code(id: str, placeholder: bool = True) -> Tag:
+    """
+    Create a output container for code (monospaced text).
+
+    This is similar to :func:`~shiny.ui.output_text`, except that it displays the text
+    in a fixed-width container with a gray-ish background color and border.
+
+    Parameters
+    ----------
+    id
+        An output id.
+    placeholder
+        If the output is empty or ``None``, should an empty rectangle be displayed to
+        serve as a placeholder? (This does not affect behavior when the output is
+        nonempty.)
+
+    Returns
+    -------
+    :
+        A UI element
+
+    Note
+    ----
+    This function is currently the same as :func:`~shiny.ui.output_text_verbatim`, but
+    this may change in future versions of Shiny.
+
+    See Also
+    --------
+    * :class:`~shiny.render.text`
+    * :func:`~shiny.ui.output_text`
+    * :func:`~shiny.ui.output_text_verbatim`
+
+    Example
+    -------
+    See :func:`~shiny.ui.output_text`
+    """
+
+    cls = "shiny-text-output" + (" noplaceholder" if not placeholder else "")
+    return tags.pre(id=resolve_id(id), class_=cls)
+
+
+@add_example(ex_dir="../api-examples/input_text")
 def output_text_verbatim(id: str, placeholder: bool = False) -> Tag:
     """
     Create a output container for some text.
 
-    Place a :func:`~shiny.render.text` result in the user interface.
+    Place a :class:`~shiny.render.text` result in the user interface.
     Differs from :func:`~shiny.ui.output_text` in that it wraps the text in a
     fixed-width container with a gray-ish background color and border.
 
     Parameters
     ----------
     id
-        An input id.
+        An output id.
     placeholder
         If the output is empty or ``None``, should an empty rectangle be displayed to
-        serve as a placeholder? (does not affect behavior when the output is nonempty)
+        serve as a placeholder? (This does not affect behavior when the output
+        is nonempty.)
 
     Returns
     -------
@@ -271,9 +337,9 @@ def output_text_verbatim(id: str, placeholder: bool = False) -> Tag:
         A UI element
 
     See Also
-    -------
-    ~shiny.render.text
-    ~shiny.ui.output_text
+    --------
+    * :class:`~shiny.render.text`
+    * :func:`~shiny.ui.output_text`
 
     Example
     -------
@@ -292,7 +358,7 @@ def output_table(id: str, **kwargs: TagAttrValue) -> Tag:
     Parameters
     ----------
     id
-        An input id.
+        An output id.
     **kwargs
         Additional attributes to add to the container.
 
@@ -301,8 +367,8 @@ def output_table(id: str, **kwargs: TagAttrValue) -> Tag:
     :
 
     See Also
-    -------
-    ~shiny.render.table
+    --------
+    * :class:`~shiny.render.table`
     """
     return tags.div({"class": "shiny-html-output"}, id=resolve_id(id), **kwargs)
 
@@ -312,6 +378,8 @@ def output_ui(
     id: str,
     inline: bool = False,
     container: Optional[TagFunction] = None,
+    fill: bool = False,
+    fillable: bool = False,
     **kwargs: TagAttrValue,
 ) -> Tag:
     """
@@ -320,12 +388,18 @@ def output_ui(
     Parameters
     ----------
     id
-        An input id.
+        An output id.
     inline
-        If ``True``, the result is displayed inline
+        If ``True``, the result is displayed inline.
     container
         A Callable that returns the output container.
-    kwargs
+    fill
+        Whether or not to allow the UI output to grow/shrink to fit a fillable container
+        with an opinionated height (e.g., :func:`~shiny.ui.page_fillable`).
+    fillable
+        Whether or not the UI output area should be considered a fillable (i.e.,
+        flexbox) container.
+    **kwargs
         Attributes to be applied to the output container.
 
     Returns
@@ -334,11 +408,16 @@ def output_ui(
         A UI element
 
     See Also
-    -------
-    ~shiny.render.ui
-    ~shiny.ui.output_text
+    --------
+    * :class:`~shiny.render.ui`
+    * :func:`~shiny.ui.output_text`
     """
 
     if not container:
         container = tags.span if inline else tags.div
-    return container({"class": "shiny-html-output"}, id=resolve_id(id), **kwargs)
+    res = container({"class": "shiny-html-output"}, id=resolve_id(id), **kwargs)
+    if fill:
+        res = as_fill_item(res)
+    if fillable:
+        res = as_fillable_container(res)
+    return res

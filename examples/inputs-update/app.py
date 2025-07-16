@@ -1,7 +1,6 @@
 from datetime import date
 
-from shiny import *
-from shiny.ui import h2, tags
+from shiny import App, Inputs, Outputs, Session, reactive, ui
 
 app_ui = ui.page_fluid(
     ui.panel_title("Changing the values of inputs from the server"),
@@ -9,7 +8,7 @@ app_ui = ui.page_fluid(
         ui.column(
             4,
             ui.panel_well(
-                tags.h4("These inputs control the other inputs on the page"),
+                ui.tags.h4("These inputs control the other inputs on the page"),
                 ui.input_text(
                     "control_label", "This controls some of the labels:", "LABEL TEXT"
                 ),
@@ -21,7 +20,7 @@ app_ui = ui.page_fluid(
         ui.column(
             4,
             ui.panel_well(
-                tags.h4("These inputs are controlled by the other inputs"),
+                ui.tags.h4("These inputs are controlled by the other inputs"),
                 ui.input_text("inText", "Text input:", value="start text"),
                 ui.input_numeric(
                     "inNumber", "Number input:", min=1, max=20, value=5, step=0.5
@@ -79,8 +78,8 @@ app_ui = ui.page_fluid(
                 ),
             ),
             ui.navset_tab(
-                ui.nav("panel1", h2("This is the first panel.")),
-                ui.nav("panel2", h2("This is the second panel.")),
+                ui.nav_panel("panel1", ui.h2("This is the first panel.")),
+                ui.nav_panel("panel2", ui.h2("This is the second panel.")),
                 id="inTabset",
             ),
         ),
@@ -89,7 +88,7 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @reactive.Effect
+    @reactive.effect
     def _():
         # We'll use these multiple times, so use short var names for
         # convenience.

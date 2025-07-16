@@ -5,6 +5,7 @@ from __future__ import annotations
 __all__ = (
     "MISSING",
     "MISSING_TYPE",
+    "Jsonifiable",
     "FileInfo",
     "ImgData",
     "SafeException",
@@ -12,15 +13,30 @@ __all__ = (
     "SilentCancelOutputException",
 )
 
-from typing import TYPE_CHECKING, Any, BinaryIO, Optional
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    BinaryIO,
+    Dict,
+    List,
+    Literal,
+    NamedTuple,
+    Optional,
+    Protocol,
+    Tuple,
+    TypeVar,
+    Union,
+)
 
 from htmltools import TagChild
 
 from ._docstring import add_example
-from ._typing_extensions import Literal, NotRequired, Protocol, TypedDict
+from ._typing_extensions import NotRequired, TypedDict
 
 if TYPE_CHECKING:
     from matplotlib.figure import Figure
+
+T = TypeVar("T")
 
 
 # Sentinel value - indicates a missing value in a function call.
@@ -29,27 +45,27 @@ class MISSING_TYPE:
 
 
 MISSING: MISSING_TYPE = MISSING_TYPE()
+DEPRECATED: MISSING_TYPE = MISSING_TYPE()  # A MISSING that communicates deprecation
+
+ListOrTuple = Union[List[T], Tuple[T, ...]]
 
 
 # Information about a single file, with a structure like:
 #   {'name': 'mtcars.csv', 'size': 1303, 'type': 'text/csv', 'datapath: '/...../mtcars.csv'}
 # The incoming data doesn't include 'datapath'; that field is added by the
 # FileUploadOperation class.
+@add_example(ex_dir="./api-examples/input_file")
 class FileInfo(TypedDict):
     """
-    Information about a file upload.
+    Class for information about a file upload.
 
     See Also
     --------
-    ~shiny.ui.input_file
-
-    Example
-    -------
-    See :func:`~shiny.ui.input_file`.
+    * :func:`~shiny.ui.input_file`
     """
 
     name: str
-    """The name of the file."""
+    """The name of the file being uploaded."""
     size: int
     """The size of the file in bytes."""
     type: str
@@ -58,17 +74,14 @@ class FileInfo(TypedDict):
     """The path to the file on the server."""
 
 
+@add_example(ex_dir="./api-examples/output_image")
 class ImgData(TypedDict):
     """
-    Return type for :func:`~shiny.render.image`.
+    Return type for :class:`~shiny.render.image`.
 
     See Also
     --------
-    ~shiny.render.image
-
-    Example
-    -------
-    See :func:`~shiny.render.image`.
+    * :class:`~shiny.render.image`
     """
 
     src: str
@@ -107,16 +120,16 @@ class SilentException(Exception):
     Normally, when an exception occurs inside a reactive context, it's either:
 
     - Displayed to the user (as a big red error message)
-        - This happens when the exception is raised from an output context (e.g., :func:`shiny.render.ui`)
+        - This happens when the exception is raised from an output context (e.g., :class:`shiny.render.ui`)
     - Crashes the application
-        - This happens when the exception is raised from an :func:`shiny.reactive.Effect`
+        - This happens when the exception is raised from an :func:`shiny.reactive.effect`
 
     This exception is used to silently throw inside a reactive context, meaning that
     execution is paused, and no output is shown to users (or the python console).
 
     See Also
     --------
-    ~SilentCancelOutputException
+    * :class:`~shiny.types.SilentCancelOutputException`
     """
 
     pass
@@ -127,15 +140,49 @@ class SilentCancelOutputException(Exception):
     """
     Throw a silent exception and don't clear output
 
-    Similar to :class:`~SilentException`, but if thrown in an output context,
+    Similar to :class:`~shiny.types.SilentException`, but if thrown in an output context,
     existing output isn't cleared.
 
     See Also
     --------
-    ~SilentException
+    * :class:`~shiny.types.SilentException`
     """
 
     pass
+
+
+class SilentOperationInProgressException(SilentException):
+    # Throw a silent exception to indicate that an operation is in progress
+
+    # Similar to :class:`~SilentException`, but if thrown in an output context, existing
+    # output isn't cleared and stays in recalculating mode until the next time it is
+    # invalidated.
+
+    pass
+
+
+class NotifyException(Exception):
+    """
+    This exception can be raised in a (non-output) reactive effect
+    to display a message to the user.
+
+    Parameters
+    ----------
+    message
+        The message to display to the user.
+    sanitize
+        If ``True``, the message is sanitized to prevent leaking sensitive information.
+    close
+        If ``True``, the session is closed after the message is displayed.
+    """
+
+    sanitize: bool
+    close: bool
+
+    def __init__(self, message: str, sanitize: bool = True, close: bool = False):
+        super().__init__(message)
+        self.sanitize = sanitize
+        self.close = close
 
 
 class ActionButtonValue(int):
@@ -144,7 +191,7 @@ class ActionButtonValue(int):
 
 class NavSetArg(Protocol):
     """
-    An value suitable for passing to a navigation container (e.g.,
+    A value suitable for passing to a navigation container (e.g.,
     :func:`~shiny.ui.navset_tab`).
     """
 
@@ -163,7 +210,7 @@ class NavSetArg(Protocol):
         """
         ...
 
-    def get_value(self) -> Optional[str]:
+    def get_value(self) -> str | None:
         """
         Get the value of this navigation item (if any).
 
@@ -187,6 +234,7 @@ class PlotnineFigure(Protocol):
     facet: Any
     layout: Any
     mapping: dict[str, str]
+    theme: PlotnineTheme
 
     def save(
         self,
@@ -198,11 +246,21 @@ class PlotnineFigure(Protocol):
         height: float,
         verbose: bool,
         bbox_inches: object = None,
-    ):
-        ...
+    ): ...
 
-    def draw(self, show: bool) -> Figure:
-        ...
+    def draw(self, show: bool) -> Figure: ...
+
+
+class PlotnineTheme(NamedTuple):
+    themeables: PlotnineThemeables
+
+
+class PlotnineThemeables(TypedDict):
+    figure_size: PlotnineThemeable | None
+
+
+class PlotnineThemeable(NamedTuple):
+    properties: dict[str, Any]
 
 
 class CoordmapDims(TypedDict):
@@ -295,3 +353,35 @@ class BrushInfo(TypedDict):
     log: CoordmapPanelLog
     direction: Literal["x", "y", "xy"]
     # .nonce: float
+
+
+# https://github.com/python/cpython/blob/df1eec3dae3b1eddff819fd70f58b03b3fbd0eda/Lib/json/encoder.py#L77-L95
+# +-------------------+---------------+
+# | Python            | JSON          |
+# +===================+===============+
+# | dict              | object        |
+# +-------------------+---------------+
+# | list, tuple       | array         |
+# +-------------------+---------------+
+# | str               | string        |
+# +-------------------+---------------+
+# | int, float        | number        |
+# +-------------------+---------------+
+# | True              | true          |
+# +-------------------+---------------+
+# | False             | false         |
+# +-------------------+---------------+
+# | None              | null          |
+# +-------------------+---------------+
+Jsonifiable = Union[
+    str,
+    int,
+    float,
+    bool,
+    None,
+    List["Jsonifiable"],
+    Tuple["Jsonifiable", ...],
+    "JsonifiableDict",
+]
+
+JsonifiableDict = Dict[str, Jsonifiable]

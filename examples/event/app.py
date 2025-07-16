@@ -1,10 +1,9 @@
 import asyncio
 
-from shiny import *
-from shiny.ui import tags
+from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 
 app_ui = ui.page_fluid(
-    tags.p(
+    ui.tags.p(
         """
       The first time you click the button, you should see a 1 appear below the button,
       as well as 2 messages in the python console (all reporting 1 click). After
@@ -12,13 +11,13 @@ app_ui = ui.page_fluid(
       print the number of clicks in the console twice.
       """
     ),
-    ui.navset_tab_card(
-        ui.nav(
+    ui.navset_card_tab(
+        ui.nav_panel(
             "Sync",
             ui.input_action_button("btn", "Click me"),
             ui.output_ui("btn_value"),
         ),
-        ui.nav(
+        ui.nav_panel(
             "Async",
             ui.input_action_button("btn_async", "Click me"),
             ui.output_ui("btn_async_value"),
@@ -28,21 +27,20 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @reactive.Effect
+    @reactive.effect
     @reactive.event(input.btn)
     def _():
         print("@effect() event: ", str(input.btn()))
 
-    @reactive.Calc
+    @reactive.calc
     @reactive.event(input.btn)
     def btn() -> int:
         return input.btn()
 
-    @reactive.Effect
+    @reactive.effect
     def _():
         print("@calc() event:   ", str(btn()))
 
-    @output
     @render.ui
     @reactive.event(input.btn)
     def btn_value():
@@ -51,24 +49,23 @@ def server(input: Inputs, output: Outputs, session: Session):
     # -----------------------------------------------------------------------------
     # Async
     # -----------------------------------------------------------------------------
-    @reactive.Effect
+    @reactive.effect
     @reactive.event(input.btn_async)
     async def _():
         await asyncio.sleep(0)
         print("async @effect() event: ", str(input.btn_async()))
 
-    @reactive.Calc
+    @reactive.calc
     @reactive.event(input.btn_async)
     async def btn_async_r() -> int:
         await asyncio.sleep(0)
         return input.btn_async()
 
-    @reactive.Effect
+    @reactive.effect
     async def _():
         val = await btn_async_r()
         print("async @calc() event:   ", str(val))
 
-    @output
     @render.ui
     @reactive.event(btn_async_r)
     async def btn_async_value():

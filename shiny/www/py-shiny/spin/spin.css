@@ -1,0 +1,2 @@
+@keyframes py-shiny-spin{0%{transform:rotate(0)}to{transform:rotate(360deg)}}@media (prefers-reduced-motion: no-preference){.py-shiny-spin{animation:py-shiny-spin 2s linear infinite}}
+/*# sourceMappingURL=spin.css.map */

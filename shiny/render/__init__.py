@@ -2,31 +2,52 @@
 Tools for reactively rendering output for the user interface.
 """
 
-from ._render import (  # noqa: F401
+from . import (  # noqa: F401
+    transformer,  # pyright: ignore[reportUnusedImport]
+)
+from ._data_frame import (
+    CellPatch,
+    CellValue,
+    DataGrid,
+    DataTable,
+    data_frame,
+)
+from ._data_frame_utils._selection import CellSelection
+from ._data_frame_utils._types import (  # noqa: F401
+    StyleInfo,
+)
+from ._deprecated import (  # noqa: F401
     RenderFunction,  # pyright: ignore[reportUnusedImport]
     RenderFunctionAsync,  # pyright: ignore[reportUnusedImport]
-    RenderText,  # pyright: ignore[reportUnusedImport]
-    RenderTextAsync,  # pyright: ignore[reportUnusedImport]
-    text,
-    RenderPlot,  # pyright: ignore[reportUnusedImport]
-    RenderPlotAsync,  # pyright: ignore[reportUnusedImport]
-    plot,
-    RenderImage,  # pyright: ignore[reportUnusedImport]
-    RenderImageAsync,  # pyright: ignore[reportUnusedImport]
+)
+from ._express import (
+    express,
+)
+from ._render import (
+    code,
+    download,
     image,
-    RenderTable,  # pyright: ignore[reportUnusedImport]
-    RenderTableAsync,  # pyright: ignore[reportUnusedImport]
+    plot,
     table,
-    RenderUI,  # pyright: ignore[reportUnusedImport]
-    RenderUIAsync,  # pyright: ignore[reportUnusedImport]
+    text,
     ui,
 )
 
-
 __all__ = (
+    # TODO-future: Document which variables are exposed via different import approaches
+    "data_frame",
+    "express",
     "text",
+    "code",
     "plot",
     "image",
     "table",
     "ui",
+    "download",
+    "DataGrid",
+    "DataTable",
+    "CellPatch",
+    "CellValue",
+    "CellSelection",
+    "StyleInfo",
 )

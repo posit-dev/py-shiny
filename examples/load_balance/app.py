@@ -1,6 +1,6 @@
 import starlette.responses
 
-from shiny import *
+from shiny import App, Inputs, Outputs, Session, render, ui
 
 app_ui = ui.page_fluid(
     ui.markdown(
@@ -30,7 +30,6 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @output
     @render.ui
     def out():
         # Register a dynamic route for the client to try to connect to.

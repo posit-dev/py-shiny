@@ -61,38 +61,39 @@ def server(input: Inputs, output: Outputs, session: Session):
     loc = location_server("location")
     time_padding = datetime.timedelta(hours=1.5)
 
-    @reactive.Calc
+    @reactive.calc
     def obj_names() -> List[str]:
         """Returns a split and *slightly* cleaned-up list of object names"""
         req(input.objects())
         return [x.strip() for x in input.objects().split(",") if x.strip() != ""]
 
-    @reactive.Calc
+    @reactive.calc
     def obj_coords() -> List[SkyCoord]:
         return [SkyCoord.from_name(name) for name in obj_names()]
 
-    @reactive.Calc
+    @reactive.calc
     def times_utc() -> Tuple[datetime.datetime, datetime.datetime]:
         req(input.date())
         lat, long = loc()
         sun = suntime.Sun(lat, long)
+        day = datetime.datetime.combine(input.date(), datetime.time())
         return (
-            sun.get_sunset_time(input.date()),
-            sun.get_sunrise_time(input.date() + datetime.timedelta(days=1)),
+            sun.get_sunset_time(day),
+            sun.get_sunrise_time(day + datetime.timedelta(days=1)),
         )
 
-    @reactive.Calc
+    @reactive.calc
     def timezone() -> Optional[str]:
         lat, long = loc()
         return timezonefinder.TimezoneFinder().timezone_at(lat=lat, lng=long)
 
-    @reactive.Calc
+    @reactive.calc
     def times_at_loc():
         start, end = times_utc()
         tz = pytz.timezone(timezone())
         return (start.astimezone(tz), end.astimezone(tz))
 
-    @reactive.Calc
+    @reactive.calc
     def df() -> Dict[str, pd.DataFrame]:
         start, end = times_at_loc()
         times = pd.date_range(
@@ -119,7 +120,6 @@ def server(input: Inputs, output: Outputs, session: Session):
             for (altaz, obj) in zip(altaz_list, obj_names())
         }
 
-    @output
     @render.plot
     def plot():
         fig, [ax1, ax2] = plt.subplots(nrows=2)
@@ -160,12 +160,10 @@ def server(input: Inputs, output: Outputs, session: Session):
 
         return fig
 
-    @output
     @render.table
     def table() -> pd.DataFrame:
         return pd.concat(df())
 
-    @output
     @render.ui
     def timeinfo():
         start_utc, end_utc = times_utc()

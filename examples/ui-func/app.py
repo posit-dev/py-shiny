@@ -2,7 +2,7 @@ from datetime import datetime
 
 from starlette.requests import Request
 
-from shiny import App, reactive, render, ui
+from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 
 
 def app_ui(request: Request):
@@ -12,8 +12,7 @@ def app_ui(request: Request):
     )
 
 
-def server(input, output, session):
-    @output
+def server(input: Inputs, output: Outputs, session: Session):
     @render.text
     def now():
         reactive.invalidate_later(0.1)

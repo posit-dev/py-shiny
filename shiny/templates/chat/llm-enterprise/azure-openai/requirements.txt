@@ -1,0 +1,4 @@
+shiny
+python-dotenv
+chatlas
+openai

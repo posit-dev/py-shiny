@@ -3,14 +3,23 @@ from __future__ import annotations
 import copy
 import os
 import secrets
-from typing import Any, Callable, Optional, cast
+from contextlib import AsyncExitStack, asynccontextmanager
+from inspect import signature
+from pathlib import Path
+from typing import Any, Callable, Literal, Mapping, Optional, TypeVar, cast
 
 import starlette.applications
-import starlette.exceptions
 import starlette.middleware
 import starlette.routing
 import starlette.websockets
-from htmltools import HTMLDependency, HTMLDocument, RenderedHTML, Tag, TagList
+from htmltools import (
+    HTMLDependency,
+    HTMLDocument,
+    HTMLTextDocument,
+    RenderedHTML,
+    Tag,
+    TagList,
+)
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, JSONResponse, Response
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
@@ -19,15 +28,28 @@ from ._autoreload import InjectAutoreloadMiddleware, autoreload_url
 from ._connection import Connection, StarletteConnection
 from ._error import ErrorMiddleware
 from ._shinyenv import is_pyodide
-from ._utils import is_async_callable
+from ._utils import guess_mime_type, is_async_callable, sort_keys_length
+from .bookmark._global import as_bookmark_dir_fn
+from .bookmark._restore_state import RestoreContext, restore_context
+from .bookmark._types import (
+    BookmarkDirFn,
+    BookmarkRestoreDirFn,
+    BookmarkSaveDirFn,
+    BookmarkStore,
+)
 from .html_dependencies import jquery_deps, require_deps, shiny_deps
-from .http_staticfiles import StaticFiles
-from .session import Inputs, Outputs, Session, session_context
+from .http_staticfiles import FileResponse, StaticFiles
+from .session._session import AppSession, Inputs, Outputs, Session, session_context
+from .types import MISSING, MISSING_TYPE
+
+T = TypeVar("T")
 
 # Default values for App options.
 LIB_PREFIX: str = "lib/"
 SANITIZE_ERRORS: bool = False
-SANITIZE_ERROR_MSG: str = "An error has occurred. Check your logs or contact the app author for clarification."
+SANITIZE_ERROR_MSG: str = (
+    "An error has occurred. Check your logs or contact the app author for clarification."
+)
 
 
 class App:
@@ -38,31 +60,35 @@ class App:
     ----------
     ui
         The UI definition for the app (e.g., a call to :func:`~shiny.ui.page_fluid` or
-        :func:`~shiny.ui.page_fixed`, with layouts and controls nested inside). You can
+        similar, with layouts and controls nested inside). You can
         also pass a function that takes a :class:`~starlette.requests.Request` and
         returns a UI definition, if you need the UI definition to be created dynamically
         for each pageview.
     server
-        A function which is called once for each session, ensuring that each app is
+        A function which is called once for each session, ensuring that each session is
         independent.
     static_assets
-        An absolute directory containing static files to be served by the app.
+        Static files to be served by the app. If this is a string or Path object, it
+        must be a directory, and it will be mounted at `/`. If this is a dictionary,
+        each key is a mount point and each value is a file or directory to be served at
+        that mount point.
     debug
         Whether to enable debug mode.
 
-    Example
-    -------
+    Examples
+    --------
 
-    .. code-block:: python
+    ```{python}
+    #| eval: false
+    from shiny import  App, Inputs, Outputs, Session, ui
 
-        from shiny import *
+    app_ui = ui.page_fluid("Hello Shiny!")
 
-        app_ui = ui.page_fluid("Hello Shiny!")
+    def server(input: Inputs, output: Outputs, session: Session):
+        pass
 
-        def server(input: Inputs, output: Outputs, session: Session):
-            pass
-
-        app = App(app_ui, server)
+    app = App(app_ui, server)
+    ```
     """
 
     lib_prefix: str = "lib/"
@@ -78,7 +104,9 @@ class App:
     may default to ``True`` in some production environments (e.g., Posit Connect).
     """
 
-    sanitize_error_msg: str = "An error has occurred. Check your logs or contact the app author for clarification."
+    sanitize_error_msg: str = (
+        "An error has occurred. Check your logs or contact the app author for clarification."
+    )
     """
     The message to show when an error occurs and ``SANITIZE_ERRORS=True``.
     """
@@ -86,22 +114,40 @@ class App:
     ui: RenderedHTML | Callable[[Request], Tag | TagList]
     server: Callable[[Inputs, Outputs, Session], None]
 
+    _bookmark_save_dir_fn: BookmarkSaveDirFn | None | MISSING_TYPE
+    _bookmark_restore_dir_fn: BookmarkRestoreDirFn | None | MISSING_TYPE
+    _bookmark_store: BookmarkStore
+
     def __init__(
         self,
-        ui: Tag | TagList | Callable[[Request], Tag | TagList],
-        server: Optional[Callable[[Inputs, Outputs, Session], None]],
+        ui: Tag | TagList | Callable[[Request], Tag | TagList] | Path,
+        server: (
+            Callable[[Inputs], None] | Callable[[Inputs, Outputs, Session], None] | None
+        ),
         *,
-        static_assets: Optional["str" | "os.PathLike[str]"] = None,
+        static_assets: Optional[str | Path | Mapping[str, str | Path]] = None,
+        # Document type as Literal to have clearer type hints to App author
+        bookmark_store: Literal["url", "server", "disable"] = "disable",
         debug: bool = False,
     ) -> None:
+        # Used to store callbacks to be called when the app is shutting down (according
+        # to the ASGI lifespan protocol)
+        self._exit_stack = AsyncExitStack()
+
         if server is None:
+            self.server = noop_server_fn
+        elif len(signature(server).parameters) == 1:
+            self.server = wrap_server_fn_with_output_session(
+                cast(Callable[[Inputs], None], server)
+            )
+        elif len(signature(server).parameters) == 3:
+            self.server = cast(Callable[[Inputs, Outputs, Session], None], server)
+        else:
+            raise ValueError(
+                "`server` must have 1 (Inputs) or 3 parameters (Inputs, Outputs, Session)"
+            )
 
-            def _server(inputs: Inputs, outputs: Outputs, session: Session):
-                pass
-
-            server = _server
-
-        self.server = server
+        self._init_bookmarking(bookmark_store=bookmark_store, ui=ui)
 
         self._debug: bool = debug
 
@@ -110,30 +156,41 @@ class App:
         self.sanitize_errors: bool = SANITIZE_ERRORS
         self.sanitize_error_msg: str = SANITIZE_ERROR_MSG
 
-        if static_assets is not None:
-            if not os.path.isdir(static_assets):
-                raise ValueError(f"static_assets must be a directory: {static_assets}")
-            if not os.path.isabs(static_assets):
+        if static_assets is None:
+            static_assets = {}
+
+        if isinstance(static_assets, Mapping):
+            static_assets_map = {k: Path(v) for k, v in static_assets.items()}
+        else:
+            static_assets_map = {"/": Path(static_assets)}
+
+        for _, static_asset_path in static_assets_map.items():
+            if not static_asset_path.is_absolute():
                 raise ValueError(
-                    f"static_assets must be an absolute path: {static_assets}"
+                    f'static_assets must be an absolute path: "{static_asset_path}".'
+                    " Consider using one of the following instead:\n"
+                    f'  os.path.join(os.path.dirname(__file__), "{static_asset_path}")  OR'
+                    f'  pathlib.Path(__file__).parent/"{static_asset_path}"'
                 )
 
-        self._static_assets: str | os.PathLike[str] | None = static_assets
+        # Sort the static assets keys by descending length, to ensure that the most
+        # specific paths are mounted first. Suppose there are mounts "/foo" and "/". If
+        # "/" is first in the dict, then requests to "/foo/file.html" will never reach
+        # the second mount. We need to put "/foo" first and "/" second so that it will
+        # actually look in the "/foo" mount.
+        static_assets_map = sort_keys_length(static_assets_map, descending=True)
+        self._static_assets: dict[str, Path] = static_assets_map
 
-        self._sessions: dict[str, Session] = {}
+        self._sessions: dict[str, AppSession] = {}
 
-        self._sessions_needing_flush: dict[int, Session] = {}
+        # self._sessions_needing_flush: dict[int, AppSession] = {}
 
         self._registered_dependencies: dict[str, HTMLDependency] = {}
         self._dependency_handler = starlette.routing.Router()
 
-        if self._static_assets is not None:
+        for mount_point, static_asset_path in self._static_assets.items():
             self._dependency_handler.routes.append(
-                starlette.routing.Mount(
-                    "/",
-                    StaticFiles(directory=self._static_assets),
-                    name="shiny-app-static-assets-directory",
-                )
+                create_static_asset_route(mount_point, static_asset_path)
             )
 
         starlette_app = self.init_starlette_app()
@@ -145,13 +202,19 @@ class App:
                 raise TypeError("App UI cannot be a coroutine function")
             # Dynamic UI: just store the function for later
             self.ui = cast("Callable[[Request], Tag | TagList]", ui)
+        elif isinstance(ui, Path):
+            if not ui.is_absolute():
+                raise ValueError("Path to UI must be absolute")
+
+            self.ui = self._render_page_from_file(ui, lib_prefix=self.lib_prefix)
+
         else:
             # Static UI: render the UI now and save the results
             self.ui = self._render_page(
                 cast("Tag | TagList", ui), lib_prefix=self.lib_prefix
             )
 
-    def init_starlette_app(self):
+    def init_starlette_app(self) -> starlette.applications.Starlette:
         routes: list[starlette.routing.BaseRoute] = [
             starlette.routing.WebSocketRoute("/websocket/", self._on_connect_cb),
             starlette.routing.Route("/", self._on_root_request_cb, methods=["GET"]),
@@ -186,18 +249,24 @@ class App:
         starlette_app = starlette.applications.Starlette(
             routes=routes,
             middleware=middleware,
+            lifespan=self._lifespan,
         )
 
         return starlette_app
 
-    def _create_session(self, conn: Connection) -> Session:
+    @asynccontextmanager
+    async def _lifespan(self, app: starlette.applications.Starlette):
+        async with self._exit_stack:
+            yield
+
+    def _create_session(self, conn: Connection) -> AppSession:
         id = secrets.token_hex(32)
-        session = Session(self, id, conn, debug=self._debug)
+        session = AppSession(self, id, conn, debug=self._debug)
         self._sessions[id] = session
         return session
 
-    def _remove_session(self, session: Session | str) -> None:
-        if isinstance(session, Session):
+    def _remove_session(self, session: AppSession | str) -> None:
+        if isinstance(session, AppSession):
             session = session.id
 
         if self._debug:
@@ -210,16 +279,37 @@ class App:
 
         Parameters
         ----------
-        kwargs
+        **kwargs
             Keyword arguments passed to :func:`~shiny.run_app`.
         """
         from ._main import run_app
 
-        run_app(self, **kwargs)
+        run_app(self, **kwargs)  # pyright: ignore[reportArgumentType]
 
     # ASGI entrypoint. Handles HTTP, WebSocket, and lifespan.
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         await self.starlette_app(scope, receive, send)
+
+    def on_shutdown(self, callback: Callable[[], None]) -> Callable[[], None]:
+        """
+        Register a callback to be called when the app is shutting down. This can be
+        useful for cleaning up app-wide resources, like connection pools, temporary
+        directories, worker threads/processes, etc.
+
+        Parameters
+        ----------
+        callback
+            The callback to call. It should take no arguments, and any return value will
+            be ignored. Try not to raise an exception in the callback, as exceptions
+            during cleanup can hide the original exception that caused the app to shut
+            down.
+
+        Returns
+        -------
+        :
+            The callback, to allow this method to be used as a decorator.
+        """
+        return self._exit_stack.callback(callback)
 
     async def call_pyodide(self, scope: Scope, receive: Receive, send: Send) -> None:
         """
@@ -263,7 +353,7 @@ class App:
 
         See Also
         --------
-        ~shiny.Session.close
+        * :func:`~shiny.Session.close`
         """
         # convert to list to avoid modifying the dict while iterating over it, which
         # throws an error
@@ -279,8 +369,18 @@ class App:
         request for / occurs.
         """
         ui: RenderedHTML
+        if self.bookmark_store == "disable":
+            restore_ctx = RestoreContext()
+        else:
+            restore_ctx = await RestoreContext.from_query_string(
+                request.url.query, app=self
+            )
+
         if callable(self.ui):
-            ui = self._render_page(self.ui(request), self.lib_prefix)
+            # At this point, if `app.bookmark_store != "disable"`, then we've already
+            # checked that `ui` is a function (in `App._init_bookmarking()`). No need to throw warning if `ui` is _not_ a function.
+            with restore_context(restore_ctx):
+                ui = self._render_page(self.ui(request), self.lib_prefix)
         else:
             ui = self.ui
         return HTMLResponse(content=ui["html"])
@@ -305,7 +405,7 @@ class App:
         subpath: str = request.path_params["subpath"]  # type: ignore
 
         if session_id in self._sessions:
-            session: Session = self._sessions[session_id]
+            session: AppSession = self._sessions[session_id]
             with session_context(session):
                 return await session._handle_request(request, action, subpath)
 
@@ -314,7 +414,7 @@ class App:
     # ==========================================================================
     # Flush
     # ==========================================================================
-    def _request_flush(self, session: Session) -> None:
+    def _request_flush(self, session: AppSession) -> None:
         # TODO: Until we have reactive domains, because we can't yet keep track
         # of which sessions need a flush.
         pass
@@ -362,16 +462,68 @@ class App:
 
     def _render_page(self, ui: Tag | TagList, lib_prefix: str) -> RenderedHTML:
         ui_res = copy.copy(ui)
+        # Use presence of the Bootstrap dependency as a signal that the UI uses a
+        # shiny.ui.page_*() function, in which case the Shiny CSS is already included.
+        has_bootstrap = any(
+            [dep.name == "bootstrap" for dep in ui_res.get_dependencies()]
+        )
         # Make sure requirejs, jQuery, and Shiny come before any other dependencies.
         # (see require_deps() for a comment about why we even include it)
-        ui_res.insert(0, [require_deps(), jquery_deps(), shiny_deps()])
+        ui_res.insert(
+            0,
+            [require_deps(), jquery_deps(), *shiny_deps(include_css=not has_bootstrap)],
+        )
         rendered = HTMLDocument(ui_res).render(lib_prefix=lib_prefix)
         self._ensure_web_dependencies(rendered["dependencies"])
         return rendered
 
+    def _render_page_from_file(self, file: Path, lib_prefix: str) -> RenderedHTML:
+        with open(file, "r") as f:
+            page_html = f.read()
 
-def is_uifunc(x: Tag | TagList | Callable[[Request], Tag | TagList]):
-    if isinstance(x, Tag) or isinstance(x, TagList) or not callable(x):
+        doc = HTMLTextDocument(
+            page_html,
+            deps=[require_deps(), jquery_deps(), *shiny_deps(include_css=True)],
+            deps_replace_pattern='<meta name="shiny-dependency-placeholder" content="">',
+        )
+
+        rendered = doc.render(lib_prefix=lib_prefix)
+        self._ensure_web_dependencies(rendered["dependencies"])
+
+        return rendered
+
+    # ==========================================================================
+    # Bookmarking
+    # ==========================================================================
+
+    def _init_bookmarking(self, *, bookmark_store: BookmarkStore, ui: Any) -> None:
+        self._bookmark_save_dir_fn = MISSING
+        self._bookmark_restore_dir_fn = MISSING
+        self._bookmark_store = bookmark_store
+
+        if bookmark_store != "disable" and not callable(ui):
+            raise TypeError(
+                "App(ui=) must be a function that accepts a request object to allow the UI to be properly reconstructed from a bookmarked state."
+            )
+
+    @property
+    def bookmark_store(self) -> BookmarkStore:
+        return self._bookmark_store
+
+    def set_bookmark_save_dir_fn(self, bookmark_save_dir_fn: BookmarkDirFn):
+        self._bookmark_save_dir_fn = as_bookmark_dir_fn(bookmark_save_dir_fn)
+
+    def set_bookmark_restore_dir_fn(self, bookmark_restore_dir_fn: BookmarkDirFn):
+        self._bookmark_restore_dir_fn = as_bookmark_dir_fn(bookmark_restore_dir_fn)
+
+
+def is_uifunc(x: Path | Tag | TagList | Callable[[Request], Tag | TagList]) -> bool:
+    if (
+        isinstance(x, Path)
+        or isinstance(x, Tag)
+        or isinstance(x, TagList)
+        or not callable(x)
+    ):
         return False
     else:
         return True
@@ -379,3 +531,49 @@ def is_uifunc(x: Tag | TagList | Callable[[Request], Tag | TagList]):
 
 def html_dep_name(dep: HTMLDependency) -> str:
     return dep.name + "-" + str(dep.version)
+
+
+def create_static_asset_route(
+    mount_point: str, static_asset_path: Path
+) -> starlette.routing.BaseRoute:
+    """
+    Create a Starlette route for serving static assets.
+
+    Parameters
+    ----------
+    mount_point
+        The mount point where the static assets will be served.
+    static_asset_path
+        The path on disk to the static assets.
+    """
+    if static_asset_path.is_dir():
+        return starlette.routing.Mount(
+            mount_point,
+            StaticFiles(directory=static_asset_path),
+            name="shiny-app-static-assets-" + mount_point,
+        )
+    else:
+        mime_type = guess_mime_type(static_asset_path, strict=False)
+
+        def file_response_handler(req: Request) -> FileResponse:
+            return FileResponse(static_asset_path, media_type=mime_type)
+
+        return starlette.routing.Route(
+            mount_point,
+            file_response_handler,
+            name="shiny-app-static-assets-" + mount_point,
+        )
+
+
+def noop_server_fn(input: Inputs, output: Outputs, session: Session) -> None:
+    pass
+
+
+def wrap_server_fn_with_output_session(
+    server: Callable[[Inputs], None],
+) -> Callable[[Inputs, Outputs, Session], None]:
+    def _server(input: Inputs, output: Outputs, session: Session):
+        # Only has 1 parameter, ignore output, session
+        server(input)
+
+    return _server

@@ -3,10 +3,7 @@ from __future__ import annotations
 __all__ = (
     "row",
     "column",
-    "layout_sidebar",
     "panel_well",
-    "panel_sidebar",
-    "panel_main",
     "panel_conditional",
     "panel_title",
     "panel_fixed",
@@ -14,7 +11,8 @@ __all__ = (
     "help_text",
 )
 
-from typing import Optional
+
+from typing import Literal, Optional
 
 from htmltools import (
     Tag,
@@ -29,11 +27,10 @@ from htmltools import (
     tags,
 )
 
-from .._docstring import add_example
-from .._typing_extensions import Literal
+from .._docstring import add_example, no_example
 from ..module import current_namespace
 from ..types import MISSING, MISSING_TYPE
-from ._html_dependencies import jqui_deps
+from ._html_deps_external import jqui_deps
 from ._utils import get_window_title
 
 
@@ -47,14 +44,15 @@ def row(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
     elements that should appear on the same line (if the browser has adequate width) and
     :func:`~shiny.ui.column` to define how much horizontal space within a 12-unit wide
     grid each on of these elements should occupy. See the [layout
-    guide](https://shiny.rstudio.com/articles/layout-guide.html>) for more context and
+    guide](https://shiny.posit.co/articles/layout-guide.html) for more context and
     examples.
+    (The article is about Shiny for R, but the general principles are the same.)
 
     Parameters
     ----------
-    args
+    *args
         Any number of child elements.
-    kwargs
+    **kwargs
         Attributes to place on the row tag.
 
     Returns
@@ -63,12 +61,13 @@ def row(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
         A UI element.
 
     See Also
-    -------
-    :func:`~shiny.ui.column`
+    --------
+    * :func:`~shiny.ui.column`
     """
     return div({"class": "row"}, *args, **kwargs)
 
 
+@add_example(ex_dir="../api-examples/row")
 def column(
     width: int, *args: TagChild | TagAttrs, offset: int = 0, **kwargs: TagAttrValue
 ) -> Tag:
@@ -81,11 +80,11 @@ def column(
     ----------
     width
         The width of the column (an integer between 1 and 12).
-    args
+    *args
         UI elements to place within the column.
     offset
         The number of columns to offset this column from the end of the previous column.
-    kwargs
+    **kwargs
         Attributes to place on the column tag.
 
     Returns
@@ -94,8 +93,8 @@ def column(
         A UI element.
 
     See Also
-    -------
-    :func:`~shiny.ui.row`
+    --------
+    * :func:`~shiny.ui.row`
     """
 
     if width < 1 or width > 12:
@@ -110,141 +109,27 @@ def column(
     return div({"class": cls}, *args, **kwargs)
 
 
-@add_example()
-def layout_sidebar(
-    # TODO: also accept a generic list (and wrap in panel in that case)?
-    sidebar: TagChild,
-    main: TagChild,
-    position: Literal["left", "right"] = "left",
-) -> Tag:
-    """
-    Layout a sidebar and main area
-
-    Create a layout with a sidebar (:func:`~shiny.ui.panel_sidebar`) and main area
-    (:func:`~shiny.ui.panel_main`). The sidebar is displayed with a distinct background
-    color and typically contains input controls. By default, the main area occupies 2/3
-    of the horizontal width and typically contains outputs.
-
-    Parameters
-    ----------
-    sidebar
-        A UI element to place in the sidebar (typically a
-        :func:`~shiny.ui.panel_sidebar`)
-    main
-        A UI element to place in the main area (typically a
-        :func:`~shiny.ui.panel_main`)
-    position
-        The position of the sidebar (left or right)
-
-    Returns
-    -------
-    :
-        A UI element
-
-    See Also
-    -------
-    :func:`~shiny.ui.panel_sidebar`
-    :func:`~shiny.ui.panel_main`
-    """
-    return row(sidebar, main) if position == "left" else row(main, sidebar)
-
-
+@no_example()
 def panel_well(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
     """
-    Create a well panel
+    Create a well panel.
 
-    Creates a panel with a slightly inset border and grey background. Equivalent to
+    Creates a panel with a slightly inset border and gray background. Equivalent to
     Bootstrap's ``well`` CSS class.
 
     Parameters
     ----------
-    args
+    *args
         UI elements to include inside the panel.
-    kwargs
+    **kwargs
         Attributes to place on the panel tag.
 
     Returns
     -------
     :
         A UI element.
-
-    See Also
-    -------
-    :func:`~shiny.ui.panel_sidebar`
-    :func:`~shiny.ui.panel_main`
     """
     return div({"class": "well"}, *args, **kwargs)
-
-
-def panel_sidebar(
-    *args: TagChild | TagAttrs, width: int = 4, **kwargs: TagAttrValue
-) -> Tag:
-    """
-    Create a sidebar panel
-
-    See :func:`~shiny.ui.layout_sidebar` for more information and an example.
-
-    Parameters
-    ----------
-
-    args
-        UI elements to include inside the sidebar.
-    width
-        The width of the sidebar (an integer between 1 and 12)
-    kwargs
-        Attributes to place on the sidebar tag.
-
-    Returns
-    -------
-    :
-        A UI element.
-
-    See Also
-    -------
-    :func:`~shiny.ui.panel_sidebar`
-    :func:`~shiny.ui.panel_main`
-    """
-    return div(
-        {"class": "col-sm-" + str(width)},
-        # A11y semantic landmark for sidebar
-        tags.form({"class": "well"}, *args, role="complementary", **kwargs),
-    )
-
-
-def panel_main(
-    *args: TagChild | TagAttrs, width: int = 8, **kwargs: TagAttrValue
-) -> Tag:
-    """
-    Create an main area panel
-
-    See :func:`~shiny.ui.layout_sidebar` for more information and an example.
-
-    Parameters
-    ----------
-    args
-        UI elements to include inside the main area.
-    width
-        The width of the main area (an integer between 1 and 12).
-    kwargs
-        Attributes to place on the main area tag.
-
-    Returns
-    -------
-    :
-        A UI element.
-
-    See Also
-    -------
-    :func:`~shiny.ui.panel_sidebar`
-    :func:`~shiny.ui.layout_sidebar`
-    """
-    return div(
-        {"class": "col-sm-" + str(width)},
-        # A11y semantic landmark for main region
-        *args,
-        role="main",
-        **kwargs,
-    )
 
 
 # TODO: replace `flowLayout()`/`splitLayout()` with a flexbox wrapper?
@@ -259,7 +144,7 @@ def panel_conditional(
     **kwargs: TagAttrValue,
 ) -> Tag:
     """
-    Create a conditional panel
+    Create a conditional panel.
 
     Show UI elements only if a ``JavaScript`` condition is ``true``.
 
@@ -268,9 +153,9 @@ def panel_conditional(
     condition
         A JavaScript expression that will be evaluated repeatedly to determine whether
         the panel should be displayed.
-    args
+    *args
         UI elements to include inside the panel.
-    kwargs
+    **kwargs
         Attributes to place on the panel tag.
 
     Returns
@@ -282,23 +167,24 @@ def panel_conditional(
     ----
     In the JS expression, you can refer to input and output JavaScript objects that
     contain the current values of input and output. For example, if you have an input
-    with an id of foo, then you can use input.foo to read its value. (Be sure not to
-    modify the input/output objects, as this may cause unpredictable behavior.)
+    with an ``id`` of ``foo``, then you can use ``input.foo`` to read its value.
+    (Be sure not to modify the input/output objects, as this may cause unpredictable
+    behavior.)
 
     You are not recommended to use special JavaScript characters such as a period . in
-    the input id's, but if you do use them anyway, for example, ``id = "foo.bar"``, you
-    will have to use ``input["foo.bar"]`` instead of ``input.foo.bar`` to read the input
+    the input id's, but if you do use them anyway, for example, `id = "foo.bar"`, you
+    will have to use `input["foo.bar"]` instead of ``input.foo.bar`` to read the input
     value.
 
     Tip
     ---
     A more powerful (but slower) way to conditionally show UI content is to use
-    :func:`~shiny.render.ui`.
+    :class:`~shiny.render.ui`.
 
     See Also
-    -------
-    ~shiny.render.ui
-    ~shiny.ui.output_ui
+    --------
+    * :class:`~shiny.render.ui`
+    * :func:`~shiny.ui.output_ui`
     """
 
     ns_prefix = current_namespace()
@@ -306,7 +192,13 @@ def panel_conditional(
     if ns_prefix != "":
         ns_prefix += "-"
 
-    return div(*args, data_display_if=condition, data_ns_prefix=ns_prefix, **kwargs)
+    return div(
+        *args,
+        {"class": "shiny-panel-conditional"},
+        data_display_if=condition,
+        data_ns_prefix=ns_prefix,
+        **kwargs,
+    )
 
 
 @add_example()
@@ -342,7 +234,19 @@ def panel_title(
     return TagList(get_window_title(title, window_title), title)
 
 
-def panel_fixed(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> TagList:
+@no_example()
+def panel_fixed(
+    *args: TagChild | TagAttrs,
+    top: Optional[str] = None,
+    left: Optional[str] = None,
+    right: Optional[str] = None,
+    bottom: Optional[str] = None,
+    width: Optional[str] = None,
+    height: Optional[str] = None,
+    draggable: bool = False,
+    cursor: Literal["auto", "move", "default", "inherit"] = "auto",
+    **kwargs: TagAttrValue,
+) -> TagList:
     """
     Create a panel of absolutely positioned content.
 
@@ -352,9 +256,9 @@ def panel_fixed(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> TagList:
 
     Parameters
     ----------
-    args
+    *args
         UI elements to include inside the panel.
-    kwargs
+    **kwargs
         Arguments passed along to :func:`~shiny.ui.panel_absolute`.
 
     Returns
@@ -363,10 +267,22 @@ def panel_fixed(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> TagList:
         A UI element.
 
     See Also
-    -------
-    :func:`~shiny.ui.panel_absolute`
+    --------
+    * :func:`~shiny.ui.panel_absolute`
     """
-    return panel_absolute(*args, fixed=True, **kwargs)
+    return panel_absolute(
+        *args,
+        top=top,
+        left=left,
+        right=right,
+        bottom=bottom,
+        width=width,
+        height=height,
+        draggable=draggable,
+        cursor=cursor,
+        fixed=True,
+        **kwargs,
+    )
 
 
 @add_example()
@@ -386,28 +302,28 @@ def panel_absolute(
     """
     Create a panel of absolutely positioned content.
 
-    Creates a ``<div>`` tag whose CSS position is set to absolute (or fixed if ``fixed =
-    True``). The way absolute positioning works in HTML is that absolute coordinates are
-    specified relative to its nearest parent element whose position is not set to static
-    (which is the default), and if no such parent is found, then relative to the page
-    borders. If you're not sure what that means, just keep in mind that you may get
+    Creates a `<div>` tag whose CSS position is set to absolute (or fixed if ``fixed =
+    True``). In HTML, absolute coordinates are specified relative to an element's
+    nearest parent element whose position is not set to static (the default).
+    If no such parent is found, the coordinates are relative to the page borders.
+    If you're not sure what that means, just keep in mind that you may get
     strange results if you use this function from inside of certain types of panels.
 
     Parameters
     ----------
-    args
+    *args
         UI elements to include inside the panel.
     top
-        Distance between the top of the panel, and the top of the page or parent
+        Distance between the top of the panel and the top of the page or parent
         container.
     left
-        Distance between the left side of the panel, and the left of the page or parent
+        Distance between the left side of the panel and the left of the page or parent
         container.
     right
-        Distance between the right side of the panel, and the right of the page or
+        Distance between the right side of the panel and the right of the page or
         parent container.
     bottom
-        Distance between the bottom of the panel, and the bottom of the page or parent
+        Distance between the bottom of the panel and the bottom of the page or parent
         container.
     width
         Width of the panel.
@@ -424,7 +340,7 @@ def panel_absolute(
         arrow, or ``"inherit"`` for the usual cursor behavior (including changing to an
         I-beam when the cursor is over text). The default is ``"auto"``, which is
         equivalent to ``"move" if draggable else "inherit"``.
-    kwargs
+    **kwargs
         Attributes added to the content's container tag.
 
     Returns
@@ -440,12 +356,12 @@ def panel_absolute(
     results.
 
     Like most other distance parameters in Shiny, the position and size parameters take
-    a number (interpreted as pixels) or a valid CSS size string, such as ``"100px"``
-    (100 pixels) or ``"25%"``.
+    a number (interpreted as pixels) or a valid CSS size string, such as `"100px"`
+    (100 pixels) or `"25%"`.
 
-    For arcane HTML reasons, to have the panel fill the page or parent you should
+    For arcane HTML reasons, to have the panel fill the page or parent,
     specify 0 for ``top``, ``left``, ``right``, and ``bottom`` rather than the more
-    obvious ``width = "100%"`` and ``height = "100%"``.
+    obvious `width = "100%"` and `height = "100%"`.
     """
 
     style = css(
@@ -464,18 +380,25 @@ def panel_absolute(
     divTag.add_class("draggable")
     deps = jqui_deps()
     deps.stylesheet = []
-    return TagList(deps, divTag, tags.script('$(".draggable").draggable();'))
+    # Add Shiny inputs and htmlwidgets to 'non-draggable' elements
+    # Cf. https://api.jqueryui.com/draggable/#option-cancel
+    dragOpts = '{cancel: ".shiny-input-container,.html-widget,input,textarea,button,select,option"}'
+    return TagList(deps, divTag, tags.script(f'$(".draggable").draggable({dragOpts});'))
 
 
+@no_example()
 def help_text(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
     """
     Create a help text element
 
+    Help text is stylized text which can be added to the user interface to provide additional explanation
+    or context. Text passed to :func:`~shiny.ui.help_text` receives the Bootstrap `help-block` class.
+
     Parameters
     ----------
-    args
+    *args
         UI elements to include inside the help text.
-    kwargs
+    **kwargs
         Attributes to add to the text container.
 
     Returns

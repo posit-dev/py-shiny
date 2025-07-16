@@ -2,10 +2,12 @@ include LICENSE
 
 recursive-include tests *
 recursive-exclude * __pycache__
+recursive-exclude * shiny_bookmarks
 recursive-exclude * *.py[co]
 
 recursive-include docs *.rst conf.py Makefile make.bat *.jpg *.png *.gif
 
 recursive-include shiny/www *
 recursive-include shiny/experimental/www *
-recursive-include shiny/examples *
+recursive-include shiny/api-examples *
+recursive-include shiny/templates *

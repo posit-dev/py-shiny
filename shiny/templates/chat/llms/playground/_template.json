@@ -1,0 +1,27 @@
+{
+  "type": "app",
+  "id": "chat-ai-playground",
+  "title": "Chat Playground w/ OpenAI, Anthropic, and Google",
+  "next_steps": [
+    "Put your OpenAI, Anthropic, and Google API key in the `template.env` file and rename it to `.env`.",
+    "Run the app with `shiny run app.py`."
+  ],
+  "follow_up": [
+    {
+      "type": "info",
+      "text": "Need help obtaining an API keys?"
+    },
+    {
+      "type": "action",
+      "text": "Learn how to obtain them at https://posit-dev.github.io/chatlas/reference/"
+    },
+    {
+      "type": "info",
+      "text": "Want to learn more about AI chatbots?"
+    },
+    {
+      "type": "action",
+      "text": "Visit https://shiny.posit.co/py/docs/genai-chatbots.html"
+    }
+  ]
+}

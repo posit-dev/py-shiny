@@ -1,0 +1,8 @@
+name: shinylive
+title: Embedded Shinylive applications
+author: Winston Chang
+version: 0.1.0
+quarto-required: ">=1.2.198"
+contributes:
+  filters:
+    - shinylive.lua

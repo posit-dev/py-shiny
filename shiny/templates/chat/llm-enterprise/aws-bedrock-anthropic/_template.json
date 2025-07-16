@@ -1,0 +1,27 @@
+{
+  "type": "app",
+  "id": "chat-ai-anthropic-aws",
+  "title": "Chat AI using Anthropic via AWS Bedrock",
+  "next_steps": [
+    "Put your Bedrock credentials in the `template.env` file and rename it to `.env`.",
+    "Run the app with `shiny run app.py`."
+  ],
+  "follow_up": [
+    {
+      "type": "info",
+      "text": "Need help connecting to Bedrock?"
+    },
+    {
+      "type": "action",
+      "text": "Learn more at https://posit-dev.github.io/chatlas/reference/ChatBedrockAnthropic.html"
+    },
+    {
+      "type": "info",
+      "text": "Want to learn more about AI chatbots?"
+    },
+    {
+      "type": "action",
+      "text": "Visit https://shiny.posit.co/py/docs/genai-chatbots.html"
+    }
+  ]
+}

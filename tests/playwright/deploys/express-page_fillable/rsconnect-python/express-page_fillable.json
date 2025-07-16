@@ -1,0 +1,11 @@
+{
+    "https://api.shinyapps.io": {
+        "server_url": "https://api.shinyapps.io",
+        "app_url": "https://testing-apps.shinyapps.io/express_page_fillable/",
+        "app_id": 10800242,
+        "app_guid": null,
+        "title": "express_page_fillable",
+        "app_mode": "python-shiny",
+        "app_store_version": 1
+    }
+}

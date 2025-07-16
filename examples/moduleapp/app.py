@@ -1,4 +1,4 @@
-from shiny import *
+from shiny import App, Inputs, Outputs, Session, module, reactive, render, ui
 
 
 # ============================================================
@@ -6,11 +6,10 @@ from shiny import *
 # ============================================================
 @module.ui
 def counter_ui(label: str = "Increment counter") -> ui.TagChild:
-    return ui.div(
-        {"style": "border: 1px solid #ccc; border-radius: 5px; margin: 5px 0;"},
+    return ui.card(
         ui.h2("This is " + label),
         ui.input_action_button(id="button", label=label),
-        ui.output_text_verbatim(id="out"),
+        ui.output_code(id="out"),
     )
 
 
@@ -18,15 +17,14 @@ def counter_ui(label: str = "Increment counter") -> ui.TagChild:
 def counter_server(
     input: Inputs, output: Outputs, session: Session, starting_value: int = 0
 ):
-    count: reactive.Value[int] = reactive.Value(starting_value)
+    count: reactive.value[int] = reactive.value(starting_value)
 
-    @reactive.Effect
+    @reactive.effect
     @reactive.event(input.button)
     def _():
         count.set(count() + 1)
 
-    @output
-    @render.text
+    @render.code
     def out() -> str:
         return f"Click count is {count()}"
 
@@ -44,7 +42,6 @@ def counter_wrapper_ui() -> ui.TagChild:
 def counter_wrapper_server(
     input: Inputs, output: Outputs, session: Session, label: str = "Increment counter"
 ):
-    @output()
     @render.ui()
     def dynamic_counter():
         return counter_ui("counter", label)
@@ -66,7 +63,6 @@ def server(input: Inputs, output: Outputs, session: Session):
     counter_server("counter1")
     counter_wrapper_server("counter2_wrapper", "Counter 2")
 
-    @output()
     @render.ui()
     def counter3_ui():
         counter_server("counter3")

@@ -8,12 +8,12 @@ import os
 import shutil
 import tempfile
 from pathlib import Path
+from typing import Literal
 
 # TODO: maybe these include_*() functions should actually live in htmltools?
 from htmltools import HTMLDependency, Tag, TagAttrValue, tags
 
 from .._docstring import add_example
-from .._typing_extensions import Literal
 
 # TODO: it's bummer that, when method="link_files" and path is in the same directory
 # as the app, the app's source will be included. Should we just not copy .py/.r files?
@@ -27,7 +27,7 @@ def include_js(
     **kwargs: TagAttrValue,
 ) -> Tag:
     """
-    Include a JavaScript file
+    Include a JavaScript file.
 
     Parameters
     ----------
@@ -35,52 +35,54 @@ def include_js(
         A path to a JS file.
     method
         One of the following:
-          * ``"link"``: Link to the JS file via a :func:`~ui.tags.script` tag. This
-            method is generally preferrable to ``"inline"`` since it allows the browser
-            to cache the file.
-          * ``"link_files"``: Same as ``"link"``, but also allow for the JS file to
-            request other files within ``path``'s immediate parent directory (e.g.,
-            ``import()` another file, if it is loaded with `type="module"`). Note that this isn't the default
-            behavior because you should **be careful not to include files in the same
-            directory as ``path`` that contain sensitive information**. A good general
-            rule of thumb to follow is to have ``path`` be located in a subdirectory of
-            the app directory. For example, if the app's source is located at
-            ``/app/app.py``, then ``path`` should be somewhere like
-            ``/app/js/custom.js`` (and all the other relevant accompanying 'safe' files
-            should be located under ``/app/js/``).
-          * ``"inline"``: Inline the JS file contents within a :func:`~ui.tags.script`
-            tag.
+
+        * ``"link"`` is the link to the CSS file via a :func:`~shiny.ui.tags.link` tag. This
+          method is generally preferable to ``"inline"`` since it allows the browser to
+          cache the file.
+        * ``"link_files"`` is the same as ``"link"``, but also allow for the CSS file to
+          request other files within ``path``'s immediate parent directory (e.g.,
+          ``@import()`` another file). Note that this isn't the default behavior because
+          you should **be careful not to include files in the same directory as ``path``
+          that contain sensitive information**. A good general rule of thumb to follow
+          is to have ``path`` be located in a subdirectory of the app directory. For
+          example, if the app's source is located at ``/app/app.py``, then ``path``
+          should be somewhere like ``/app/css/custom.css`` (and all the other relevant
+          accompanying 'safe' files should be located under ``/app/css/``).
+        * ``"inline"`` is the inline the CSS file contents within a
+          :func:`~shiny.ui.tags.style` tag.
     **kwargs
-        Attributes which are passed on to `~ui.tags.script`
+        Attributes which are passed on to `~shiny.ui.tags.script`.
 
 
     Returns
     -------
     :
-        A :func:`~ui.tags.script` tag.
+        A :func:`~shiny.ui.tags.script` tag.
 
     Note
     ----
-    This places a :func:`~ui.tags.script` tag in the :func:`~ui.tags.body` of the
-    document. If instead, you want to place the tag in the :func:`~ui.tags.head` of the
-    document, you can wrap it in ``head_content`` (in this case, just make sure you're
-    aware that the DOM probably won't be ready when the script is executed).
+    This places a :func:`~shiny.ui.tags.script` tag in the :func:`~shiny.ui.tags.body` of the
+    document. If you want to place the tag in the :func:`~shiny.ui.tags.head` of the
+    document instead, you can wrap it in ``head_content`` (in this case, just
+    make sure you're aware that the DOM probably won't be ready when the script
+    is executed).
 
-    .. code-block:: python
+    ```{python}
+    #| eval: false
+    ui.page_fluid(
+        ui.head_content(ui.include_js("custom.js")),
+    )
 
-        ui.fluidPage(
-            head_content(ui.include_js("custom.js")),
-        )
-
-        # Alternately you can inline Javscript by changing the method.
-        ui.fluidPage(
-            head_content(ui.include_js("custom.js", method = "inline")),
-        )
+    # Alternately you can inline Javscript by changing the method.
+    ui.page_fluid(
+        ui.head_content(ui.include_js("custom.js", method = "inline")),
+    )
+    ```
 
     See Also
     --------
-    ~ui.tags.script
-    ~include_css
+    * :func:`~shiny.ui.tags.script`
+    * :func:`~shiny.ui.include_css`
     """
     file_path = check_path(path)
 
@@ -97,10 +99,10 @@ def include_js(
 
 @add_example()
 def include_css(
-    path: str, *, method: Literal["link", "link_files", "inline"] = "link"
+    path: Path | str, *, method: Literal["link", "link_files", "inline"] = "link"
 ) -> Tag:
     """
-    Include a CSS file
+    Include a CSS file.
 
     Parameters
     ----------
@@ -108,56 +110,58 @@ def include_css(
         A path to a CSS file.
     method
         One of the following:
-          * ``"link"``: Link to the CSS file via a :func:`~ui.tags.link` tag. This
-            method is generally preferrable to ``"inline"`` since it allows the browser
-            to cache the file.
-          * ``"link_files"``: Same as ``"link"``, but also allow for the CSS file to
-            request other files within ``path``'s immediate parent directory (e.g.,
-            ``@import()`` another file). Note that this isn't the default behavior
-            because you should **be careful not to include files in the same directory
-            as ``path`` that contain sensitive information**. A good general rule of
-            thumb to follow is to have ``path`` be located in a subdirectory of the app
-            directory. For example, if the app's source is located at ``/app/app.py``,
-            then ``path`` should be somewhere like ``/app/css/custom.css`` (and all the
-            other relevant accompanying 'safe' files should be located under
-            ``/app/css/``).
-          * ``"inline"``: Inline the CSS file contents within a :func:`~ui.tags.style`
-            tag.
+
+        * ``"link"`` is the link to the CSS file via a :func:`~shiny.ui.tags.link` tag. This
+          method is generally preferable to ``"inline"`` since it allows the browser to
+          cache the file.
+        * ``"link_files"`` is the same as ``"link"``, but also allow for the CSS file to
+          request other files within ``path``'s immediate parent directory (e.g.,
+          ``@import()`` another file). Note that this isn't the default behavior because
+          you should **be careful not to include files in the same directory as ``path``
+          that contain sensitive information**. A good general rule of thumb to follow
+          is to have ``path`` be located in a subdirectory of the app directory. For
+          example, if the app's source is located at ``/app/app.py``, then ``path``
+          should be somewhere like ``/app/css/custom.css`` (and all the other relevant
+          accompanying 'safe' files should be located under ``/app/css/``).
+        * ``"inline"`` is the inline the CSS file contents within a
+          :func:`~shiny.ui.tags.style` tag.
 
 
     Returns
     -------
     :
 
-        If ``method="inline"``, returns a :func:`~ui.tags.style` tag; otherwise, returns a
-        :func:`~ui.tags.link` tag.
+        If ``method="inline"``, returns a :func:`~shiny.ui.tags.style` tag; otherwise, returns a
+        :func:`~shiny.ui.tags.link` tag.
 
     Note
     ----
-    By default this places a :func:`~ui.tags.link` (or :func:`~ui.tags.style`) tag in
-    the :func:`~ui.tags.body` of the document, which isn't optimal for performance, and
+    By default this places a :func:`~shiny.ui.tags.link` (or :func:`~shiny.ui.tags.style`) tag in
+    the :func:`~shiny.ui.tags.body` of the document, which isn't optimal for performance, and
     may result in a Flash of Unstyled Content (FOUC). To instead place the CSS in the
-    :func:`~ui.tags.head` of the document, you can wrap it in ``head_content``:
+    :func:`~shiny.ui.tags.head` of the document, you can wrap it in ``head_content``:
 
-    .. code-block:: python
+    ```{python}
+    #| eval: false
+    from htmltools import head_content
+    from shiny import ui
 
-        from htmltools import head_content from shiny import ui
+    ui.page_fluid(
+        ui.head_content(ui.include_css("custom.css")),
 
-        ui.fluidPage(
-            head_content(ui.include_css("custom.css")),
-
-            # You can also inline css by passing a dictionary with a `style` element.
-            ui.div(
-                {"style": "font-weight: bold;"},
-                ui.p("Some text!"),
-            )
+        # You can also inline css by passing a dictionary with a `style` element.
+        ui.div(
+            {"style": "font-weight: bold;"},
+            ui.p("Some text!"),
         )
+    )
+    ```
 
     See Also
     --------
-    ~ui.tags.style
-    ~ui.tags.link
-    ~include_js
+    * :func:`~shiny.ui.tags.style`
+    * :func:`~shiny.ui.tags.link`
+    * :func:`~shiny.ui.include_js`
     """
 
     file_path = check_path(path)

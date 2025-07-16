@@ -18,11 +18,11 @@ import traceback
 import typing
 import warnings
 from contextvars import ContextVar
-from typing import TYPE_CHECKING, Awaitable, Callable, Optional, TypeVar
+from typing import TYPE_CHECKING, Awaitable, Callable, Generator, Optional, TypeVar
 
 from .. import _utils
 from .._datastructures import PriorityQueueFIFO
-from .._docstring import add_example
+from .._docstring import add_example, no_example
 from ..types import MISSING, MISSING_TYPE
 
 if TYPE_CHECKING:
@@ -113,7 +113,7 @@ class Dependents:
         # Invalidate all dependents. This gets all the dependents as list, then iterates
         # over the list. It's done this way instead of iterating over keys because it's
         # possible that a dependent is removed from the dict while iterating over it.
-        # https://github.com/rstudio/py-shiny/issues/26
+        # https://github.com/posit-dev/py-shiny/issues/26
         ids = sorted(self._dependents.keys())
         for dep_ctx in [self._dependents[id] for id in ids]:
             dep_ctx.invalidate()
@@ -161,7 +161,7 @@ class ReactiveEnvironment:
             self._current_context.reset(old)
 
     def current_context(self) -> Context:
-        """Return the current Context object"""
+        """Return the current `Context` object"""
         ctx = self._current_context.get()
         if ctx is None:
             raise RuntimeError("No current reactive context")
@@ -188,7 +188,7 @@ class ReactiveEnvironment:
         self._pending_flush_queue.put(priority, ctx)
 
     @contextlib.contextmanager
-    def isolate(self):
+    def isolate(self) -> Generator[None, None, None]:
         token = self._current_context.set(Context())
         try:
             yield
@@ -201,19 +201,19 @@ _reactive_environment = ReactiveEnvironment()
 
 @add_example()
 @contextlib.contextmanager
-def isolate():
+def isolate() -> Generator[None, None, None]:
     """
     Create a non-reactive scope within a reactive scope.
 
     Ordinarily, the simple act of reading a reactive value causes a relationship to be
     established between the caller and the reactive value, where a change to the
     reactive value will cause the caller to re-execute. (The same applies for the act of
-    getting a reactive expression's value.) `with isolate()` lets you read a reactive
-    value or expression without establishing this relationship.
+    getting a reactive calculation's value.) `with isolate()` lets you read a reactive
+    value or calculation without establishing this relationship.
 
-    ``with isolate()`` can also be useful for calling reactive expression at the
+    ``with isolate()`` can also be useful for calling reactive calculations at the
     console, which can be useful for debugging. To do so, wrap the calls to the reactive
-    expression with ``with isolate()``.
+    calculation with ``with isolate()``.
 
     Returns
     -------
@@ -224,7 +224,7 @@ def isolate():
 
     See Also
     --------
-    ~shiny.reactive.event
+    * :func:`~shiny.reactive.event`
     """
     with _reactive_environment.isolate():
         yield
@@ -237,7 +237,7 @@ def get_current_context() -> Context:
     Returns
     -------
     :
-        A :class:`~Context`.
+        A `~shiny.reactive.Context` class.
 
     Raises
     ------
@@ -247,30 +247,33 @@ def get_current_context() -> Context:
     return _reactive_environment.current_context()
 
 
+@no_example()
 async def flush() -> None:
     """
     Run any pending invalidations (i.e., flush the reactive environment).
 
     Warning
     -------
-    This function shouldn't ever need to be called inside a Shiny app. It's only
+    You shouldn't ever need to call this function inside of a Shiny app. It's only
     useful for testing and running reactive code interactively in the console.
     """
     await _reactive_environment.flush()
 
 
+@no_example()
 def on_flushed(
     func: Callable[[], Awaitable[None]], once: bool = False
 ) -> Callable[[], None]:
     """
-    Register a function to be called when the reactive environment is flushed
+    Register a function to be called when the reactive environment is flushed.
 
     Parameters
     ----------
     func
         The function to be called when the reactive environment is flushed
     once
-        If True, the function will only be called once, and then removed from the
+        Should the function be run once, and then cleared, or should it
+        re-run each time the event occurs.
 
     Returns
     -------
@@ -279,19 +282,21 @@ def on_flushed(
 
     See Also
     --------
-    flush
+    * :func:`~shiny.reactive.flush`
     """
 
     return _reactive_environment.on_flushed(func, once)
 
 
+@no_example()
 def lock() -> asyncio.Lock:
     """
     A lock that should be held whenever manipulating the reactive graph.
 
-    For example, this makes it safe to set a :class:`~reactive.Value` and call
-    :func:`~reactive.flush()` from a different :class:`~asyncio.Task` than the one that
-    is running the Shiny :class:`~shiny.Session`.
+    For example, :func:`~shiny.reactive.lock` makes it safe to set a
+    :class:`~reactive.value` and call :func:`~shiny.reactive.flush` from a different
+    :class:`~asyncio.Task` than the one that is running the Shiny
+    :class:`~shiny.Session`.
     """
     return _reactive_environment.lock
 
@@ -303,8 +308,8 @@ def invalidate_later(
     """
     Scheduled Invalidation
 
-    Schedules the current reactive context to be invalidated in the given number of
-    seconds.
+    When called from within a reactive context, :func:`~shiny.reactive.invalidate_later`
+    schedules the reactive context to be invalidated in the given number of seconds.
 
     Parameters
     ----------
@@ -313,12 +318,13 @@ def invalidate_later(
 
     Note
     ----
-    When called within a reactive function (i.e., :func:`Effect`, :func:`Calc`,
-    :func:`render.ui`, etc.), that reactive context is invalidated (and re-executes)
-    after the interval has passed. The re-execution will reset the invalidation flag, so
-    in a typical use case, the object will keep re-executing and waiting for the
-    specified interval. It's possible to stop this cycle by adding conditional logic
-    that prevents the ``invalidate_later`` from being run.
+    When called within a reactive function (i.e., :func:`~shiny.reactive.effect`,
+    :func:`~shiny.reactive.calc`, :class:`shiny.render.ui`, etc.), that reactive context
+    is invalidated (and re-executes) after the interval has passed. The re-execution
+    will reset the invalidation flag, so in a typical use case, the object will keep
+    re-executing and waiting for the specified interval. It's possible to stop this
+    cycle by adding conditional logic that prevents the ``invalidate_later`` from being
+    run.
     """
 
     if isinstance(session, MISSING_TYPE):
@@ -340,7 +346,7 @@ def invalidate_later(
     # graphs from being gc'd.
     unsub: Optional[Callable[[], None]] = None
 
-    async def _task(ctx: Context, deadline: float):
+    async def _task(ctx: Context, deadline: float) -> None:
         nonlocal cancellable
         try:
             delay = deadline - time.monotonic()

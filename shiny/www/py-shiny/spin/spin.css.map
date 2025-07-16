@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../../../js/spin/spin.scss"],
+  "sourcesContent": ["@keyframes py-shiny-spin {\n  0% {\n    transform: rotate(0deg);\n  }\n  100% {\n    transform: rotate(360deg);\n  }\n}\n@media (prefers-reduced-motion: no-preference) {\n  .py-shiny-spin {\n    animation: py-shiny-spin 2s linear infinite;\n  }\n}"],
+  "mappings": "AAAA,4BAEI,uBAGA,0BAGJ,+CACE,eACE",
+  "names": []
+}

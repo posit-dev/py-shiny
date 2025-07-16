@@ -1,0 +1,6 @@
+@each $color, $value in $theme-colors {
+  .progress-bar-#{$color} {
+    background-color: $value;
+    color: color-contrast($value);
+  }
+}

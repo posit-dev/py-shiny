@@ -1,15 +1,17 @@
 from __future__ import annotations
 
-__all__ = ("input_file",)
-
-from typing import Optional
+import warnings
+from typing import Literal, Optional
 
 from htmltools import Tag, TagChild, css, div, span, tags
 
 from .._docstring import add_example
-from .._namespaces import resolve_id
-from .._typing_extensions import Literal
+from ..bookmark import restore_input
+from ..bookmark._utils import to_json_str
+from ..module import resolve_id
 from ._utils import shiny_input_label
+
+__all__ = ("input_file",)
 
 
 @add_example()
@@ -38,12 +40,10 @@ def input_file(
     accept
         Unique file type specifier(s) which give the browser a hint as to the type of
         file the server expects. Many browsers use this to prevent the user from
-        selecting an invalid file. Examples of valid values include:
-
-          * A case insensitive extension like ``.csv`` or ``.rds``.
-          * A valid MIME type, like ``text/plain`` or ``application/pdf``
-          * One of ``audio/*``, ``video/*``, or ``image/*`` meaning any audio, video,
-            or image type, respectively.
+        selecting an invalid file. Examples of valid values include a case insensitive
+        extension (e.g. ``.csv`` or ``.rds``), a valid MIME type (e.g. ``text/plain`` or
+        ``application/pdf``) or one of ``audio/*``, ``video/*``, or ``image/*`` meaning
+        any audio, video, or image type, respectively.
     width
         The CSS width, e.g. '400px', or '100%'
     button_label
@@ -65,42 +65,67 @@ def input_file(
     Notes
     -----
 
-    .. admonition:: Server value
+    ::: {.callout-note title="Server value"}
+    A list of dictionaries (one for each file upload) with the following keys:
 
-        A list of dictionaries (one for each file upload) with the following keys:
-
-        * name: The filename provided by the web browser. This is *not* the path to read
-          to get at the actual data that was uploaded (see 'datapath').
-        * size: The size of the uploaded data, in bytes.
-        * type: The MIME type reported by the browser (for example, 'text/plain'), or
-          empty string if the browser didn't know.
-        * datapath: The path to a temp file that contains the data that was uploaded.
-          This file may be deleted if the user performs another upload operation.
+    * ``name``: The filename provided by the web browser. This is *not* the path to read
+        to get at the actual data that was uploaded (see 'datapath').
+    * ``size``: The size of the uploaded data, in bytes.
+    * ``type``: The MIME type reported by the browser (for example, 'text/plain'), or
+        empty string if the browser didn't know.
+    * ``datapath``: The path to a temp file that contains the data that was uploaded.
+        This file may be deleted if the user performs another upload operation.
+    :::
 
     See Also
     --------
-    ~shiny.ui.download_button
+    * :func:`~shiny.ui.download_button`
     """
 
     if isinstance(accept, str):
         accept = [accept]
 
+    resolved_id = resolve_id(id)
+    restored_value = restore_input(resolved_id, default=None)
+
+    if restored_value is not None:
+        restored_obj: dict[str, list[str | int | None]] = {
+            "name": [],
+            "size": [],
+            "type": [],
+            "datapath": [],
+        }
+        try:
+            for file in restored_value:
+                restored_obj["name"].append(file.get("name", None))
+                restored_obj["size"].append(file.get("size", None))
+                restored_obj["type"].append(file.get("type", None))
+                restored_obj["datapath"].append(file.get("datapath", None))
+            restored_value = to_json_str(restored_obj)
+        except Exception:
+            warnings.warn(
+                f"Error while restoring file input value for `{resolved_id}`. Resetting to `None`.",
+                stacklevel=1,
+            )
+
     btn_file = span(
         button_label,
         tags.input(
-            id=resolve_id(id),
-            name=id,
+            id=resolved_id,
+            name=resolved_id,
             type="file",
             multiple="multiple" if multiple else None,
             accept=",".join(accept) if accept else None,
             capture=capture,
             # Don't use "display: none;" style, which causes keyboard accessibility issue; instead use the following workaround: https://css-tricks.com/places-its-tempting-to-use-display-none-but-dont/
             style="position: absolute !important; top: -99999px !important; left: -99999px !important;",
+            class_="shiny-input-file",
+            **({"data-restore": restored_value} if restored_value else {}),
         ),
         class_="btn btn-default btn-file",
     )
     return div(
-        shiny_input_label(id, label),
+        shiny_input_label(resolved_id, label),
         div(
             tags.label(btn_file, class_="input-group-btn input-group-prepend"),
             tags.input(
@@ -113,7 +138,7 @@ def input_file(
         ),
         div(
             div(class_="progress-bar"),
-            id=id + "_progress",
+            id=resolved_id + "_progress",
             class_="progress active shiny-file-input-progress",
         ),
         class_="form-group shiny-input-container",

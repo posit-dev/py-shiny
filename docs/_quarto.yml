@@ -1,0 +1,49 @@
+project:
+  type: website
+  output-dir: _site
+
+format:
+  html:
+    toc: true
+    css: shiny-docs.css
+
+website:
+  title: "Shiny for Python (dev version)"
+  description: "A Python package for writing interactive web applications."
+  repo-url: https://github.com/posit-dev/py-shiny
+  repo-actions: [issue]
+  page-navigation: true
+  navbar:
+    background: primary
+    pinned: true
+    search: true
+    left:
+      - text: "Express API"
+        file: api/express/index.qmd
+      - text: "Core API"
+        file: api/core/index.qmd
+      - text: "Testing API"
+        file: api/testing/index.qmd
+    right:
+      - icon: github
+        href: https://github.com/posit-dev/py-shiny
+        aria-label: Shiny for Python on GitHub
+
+metadata-files:
+  - api/_sidebar.yml
+
+filters:
+  - shinylive
+  - interlinks
+
+interlinks:
+  sources:
+    PIL:
+      url: https://pillow.readthedocs.io/en/stable/
+    matplotlib:
+      url: https://matplotlib.org/stable/
+    python:
+      url: https://docs.python.org/3/
+    brand-yml:
+      url: https://posit-dev.github.io/brand-yml/
+      inv: objects.txt

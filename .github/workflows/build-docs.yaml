@@ -1,0 +1,123 @@
+name: Build API docs and Shinylive for GitHub Pages
+
+# Allow for `main` branch to build full website and deploy
+# Allow branches that start with `docs-` to build full website, but not deploy
+# Allow for PRs to build quartodoc only. (No shinylive, no site build, no deploy)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main", "docs-**"]
+  pull_request:
+
+jobs:
+  build-docs:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup py-shiny
+        uses: ./.github/py-shiny/setup
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # =====================================================
+      # API docs
+      # =====================================================
+      - name: Install Quarto
+        uses: quarto-dev/quarto-actions/setup@v2
+        with:
+          version: 1.4.549
+
+      - name: Install dependencies
+        run: |
+          make ci-install-docs
+
+      - name: Run quartodoc
+        run: |
+          make docs-quartodoc
+
+      # =====================================================
+      # Shinylive
+      # =====================================================
+      - name: Check out shinylive
+        if: github.event_name != 'pull_request'
+        uses: actions/checkout@v4
+        with:
+          repository: rstudio/shinylive
+          ref: main
+          path: shinylive-repo
+
+      - name: Update shinylive's copy of shiny and htmltools
+        if: github.event_name != 'pull_request'
+        run: |
+          cd shinylive-repo
+          make submodules
+          make submodules-pull-shiny
+          make submodules-pull-htmltools
+
+      - name: Build shinylive
+        if: github.event_name != 'pull_request'
+        run: |
+          cd shinylive-repo
+          make all
+
+      - name: Use local build of shinylive for building docs
+        if: github.event_name != 'pull_request'
+        run: |
+          cd shinylive-repo && shinylive assets install-from-local ./build
+
+      # =====================================================
+      # Build site
+      # =====================================================
+
+      - name: Build site
+        if: github.event_name != 'pull_request'
+        run: |
+          cd docs
+          make site
+
+      # =====================================================
+      # Deploy
+      # =====================================================
+
+      - name: Move built API docs and shinylive to single directory
+        if: github.ref == 'refs/heads/main'
+        run: |
+          mkdir deploy
+          mv docs/_site deploy/docs
+          mv shinylive-repo/_shinylive deploy/shinylive
+
+      - name: Upload site artifact
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: "deploy"
+
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    needs: build-docs
+
+    # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
+    permissions:
+      pages: write # to deploy to Pages
+      id-token: write # to verify the deployment originates from an appropriate source
+
+    # Deploy to the github-pages environment
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    # Specify runner + deployment step
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
