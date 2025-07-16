@@ -4,9 +4,6 @@ import base64
 import os
 import sys
 import typing
-
-# `typing.Dict` sed for python 3.8 compatibility
-# Can use `dict` in python >= 3.9
 from typing import TYPE_CHECKING, Any, Callable, Literal, Optional, Union, cast
 
 from htmltools import Tag, TagAttrValue, TagChild
