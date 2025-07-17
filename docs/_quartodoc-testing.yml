@@ -26,6 +26,7 @@ quartodoc:
       contents:
         - playwright.controller.InputActionButton
         - playwright.controller.InputActionLink
+        - playwright.controller.InputBookmarkButton
         - playwright.controller.InputCheckbox
         - playwright.controller.InputCheckboxGroup
         - playwright.controller.InputDarkMode

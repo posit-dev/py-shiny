@@ -13,7 +13,17 @@ class ControllerDocumentationChecker:
     DOCS_CONFIG = Path("docs/_quartodoc-testing.yml")
 
     SKIP_PATTERNS = {"Base", "Container", "Label", "StyleM"}
-    CONTROLLER_BASE_PATTERNS = {"Base", "Container", "Label", "StyleM", "WidthLocM"}
+    CONTROLLER_BASE_PATTERNS = {
+        "Base",
+        "Container",
+        "Label",
+        "StyleM",
+        "WidthLocM",
+        "InputActionButton",
+        "UiBase",
+        "UiWithLabel",
+        "UiWithContainer",
+    }
 
     def get_controller_classes(self) -> Set[str]:
         """Extract public controller class names from the controller directory."""
