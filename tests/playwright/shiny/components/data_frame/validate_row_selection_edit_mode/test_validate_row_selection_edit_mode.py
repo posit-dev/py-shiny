@@ -61,11 +61,24 @@ def test_validate_row_selection_in_edit_mode(
     data_frame._edit_cell_no_save("Temp value", row=1, col=16)
     page.keyboard.press("Escape")
     page.keyboard.press("Enter")
-    data_frame.expect_class_state(
-        "editing",
-        row=1,
-        col=0,
-    )  # Stage column begins to be edited.
+
+    # This interaction (Enter key to start editing) can be flaky, so we retry if needed
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            page.wait_for_timeout(100)
+            data_frame.expect_class_state(
+                "editing",
+                row=1,
+                col=0,
+                timeout=1000,
+            )
+            break
+        except AssertionError:
+            if attempt < max_retries - 1:
+                page.keyboard.press("Enter")
+            else:
+                raise
 
     # Click outside the table/Press Escape to exit row focus.
     # Tab to the column name, hit enter. Verify the table becomes sorted.

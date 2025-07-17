@@ -1058,13 +1058,21 @@ class OutputDataFrame(UiWithContainer):
                 "cell-edit-editing", timeout=timeout
             )
         elif value == "editing":
-            self.expect_cell_class("cell-edit-editing", row=row, col=col)
+            self.expect_cell_class(
+                "cell-edit-editing", row=row, col=col, timeout=timeout
+            )
         elif value == "saving":
-            self.expect_cell_class("cell-edit-saving", row=row, col=col)
+            self.expect_cell_class(
+                "cell-edit-saving", row=row, col=col, timeout=timeout
+            )
         elif value == "failure":
-            self.expect_cell_class("cell-edit-failure", row=row, col=col)
+            self.expect_cell_class(
+                "cell-edit-failure", row=row, col=col, timeout=timeout
+            )
         elif value == "success":
-            self.expect_cell_class("cell-edit-success", row=row, col=col)
+            self.expect_cell_class(
+                "cell-edit-success", row=row, col=col, timeout=timeout
+            )
         else:
             raise ValueError(
                 "Invalid state. Select one of 'success', 'failure', 'saving', 'editing', 'ready'"
@@ -1096,6 +1104,9 @@ class OutputDataFrame(UiWithContainer):
 
         self._cell_scroll_if_needed(row=row, col=col, timeout=timeout)
         cell.dblclick(timeout=timeout)
+
+        # Wait for the cell to enter editing mode before filling the textarea
+        expect_to_have_class(cell, "cell-edit-editing", timeout=timeout)
         cell.locator("> textarea").fill(text)
 
     def set_sort(
