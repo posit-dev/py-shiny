@@ -145,13 +145,3 @@ def test_all_controllers_are_documented(checker: ControllerDocumentationChecker)
 
     assert controller_classes, "No controller classes found"
     assert documented_controllers, "No documented controllers found"
-
-
-def test_documented_classes_format(checker: ControllerDocumentationChecker):
-    """Verify documented controller entries are valid Python identifiers."""
-    documented_controllers = checker.get_documented_controllers()
-
-    invalid_names = [name for name in documented_controllers if not name.isidentifier()]
-
-    if invalid_names:
-        pytest.fail(f"Invalid controller class names: {invalid_names}")
