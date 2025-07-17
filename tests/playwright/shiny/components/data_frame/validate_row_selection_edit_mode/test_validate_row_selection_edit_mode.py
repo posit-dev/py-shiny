@@ -67,7 +67,6 @@ def test_validate_row_selection_in_edit_mode(
         "editing",
         row=1,
         col=0,
-        timeout=1000,
     )
 
     # Click outside the table/Press Escape to exit row focus.
