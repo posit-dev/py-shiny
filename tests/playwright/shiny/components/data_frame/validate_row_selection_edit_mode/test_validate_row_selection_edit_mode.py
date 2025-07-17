@@ -67,7 +67,7 @@ def test_validate_row_selection_in_edit_mode(
         "editing",
         row=1,
         col=0,
-    )
+    )  # Stage column begins to be edited.
 
     # Click outside the table/Press Escape to exit row focus.
     # Tab to the column name, hit enter. Verify the table becomes sorted.
