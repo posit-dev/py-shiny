@@ -59,6 +59,7 @@ quartodoc:
         - playwright.controller.NavsetTab
         - playwright.controller.NavsetUnderline
         - playwright.controller.NavPanel
+        - playwright.controller.PageNavbar
     - title: Upload and download
       desc: Methods for interacting with Shiny app uploading and downloading controller.
       contents:
