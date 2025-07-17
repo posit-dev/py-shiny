@@ -1105,8 +1105,6 @@ class OutputDataFrame(UiWithContainer):
         self._cell_scroll_if_needed(row=row, col=col, timeout=timeout)
         cell.dblclick(timeout=timeout)
 
-        # Wait for the cell to enter editing mode before filling the textarea
-        expect_to_have_class(cell, "cell-edit-editing", timeout=timeout)
         cell.locator("> textarea").fill(text)
 
     def set_sort(
