@@ -60,8 +60,10 @@ def test_validate_row_selection_in_edit_mode(
     page.keyboard.press("Escape")
     data_frame._edit_cell_no_save("Temp value", row=1, col=16)
     page.keyboard.press("Escape")
-    # Add a small delay
-    page.wait_for_timeout(100)
+    # Wait for the row to be focused again after escaping edit mode
+    data_frame._expect_row_focus_state(True, row=1)
+    # Also ensure the cell is no longer in editing state
+    data_frame.expect_class_state("ready", row=1, col=16)
     page.keyboard.press("Enter")
     data_frame.expect_class_state(
         "editing",
