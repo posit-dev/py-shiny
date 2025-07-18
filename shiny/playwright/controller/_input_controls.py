@@ -1198,16 +1198,32 @@ class InputSelectize(
             selected = [selected]
         self._loc_events.click()
 
-        while True:
-            remove_button = self._loc_events.locator("> .item > .remove").first
-            if remove_button.count() == 0:
-                break
-            remove_button.click()
+        currently_selected: list[str] = []
+        selected_items = self._loc_events.locator("> .item")
+        for i in range(selected_items.count()):
+            item = selected_items.nth(i)
+            data_value = item.get_attribute("data-value")
+            if data_value:
+                currently_selected.append(data_value)
+
+        current_set = set(currently_selected)
+        desired_set = set(selected)
+
+        for current_value in currently_selected:
+            if current_value not in desired_set:
+                item_to_remove = self._loc_events.locator(
+                    f"> .item[data-value='{current_value}']"
+                )
+                if item_to_remove.count() > 0:
+                    item_to_remove.click()
+                    self.page.keyboard.press("Delete")
 
         for value in selected:
-            self._loc_selectize.locator(f"[data-value='{value}']").click(
-                timeout=timeout
-            )
+            if value not in current_set:
+                self._loc_selectize.locator(f"[data-value='{value}']").click(
+                    timeout=timeout
+                )
+
         self._loc_events.press("Escape")
 
     def expect_choices(
