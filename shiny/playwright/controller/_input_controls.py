@@ -1189,16 +1189,14 @@ class InputSelectize(
 
         Selected items are altered as follows:
         1. Click on the selectize input to open the dropdown.
-        2. For items that are currently selected but are not in `selected`, remove them
-           (starting from the end) by selecting the item and pressing the `"Delete"` key.
-        3. For items that are not currently selected but are in `selected`, click on the
-           option in the dropdown (which adds it to the selected list).
+        2. Starting from the first selected item, each position in the currently selected list should match `selected`. If the item is not a match, remove it and try again.
+        3. Add any remaining items in `selected` that are not currently selected by clicking on them in the dropdown.
         4. Press the `"Escape"` key to close the dropdown.
 
         Parameters
         ----------
         selected
-            The value(s) of the selected option(s).
+            The [ordered] value(s) of the selected option(s).
         timeout
             The maximum time to wait for the selection to be set. Defaults to `None`.
         """
