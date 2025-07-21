@@ -1204,37 +1204,51 @@ class InputSelectize(
         """
         if isinstance(selected, str):
             selected = [selected]
+        # Open the dropdown
         self._loc_events.click()
-        desired_set = set(selected)
 
-        currently_selected: list[str] = []
-        selected_item_locs = self._loc_events.locator("> .item").all()
-        # Reverse to remove them starting from the end / make stable
-        selected_item_locs.reverse()
+        # Sift through the selected items
+        # From left to right, we will remove ordered items that are not in the ordered `selected`
+        # If any selected items are not in the current selection, we will add them at the end
+        i = 0
+        while i < self._loc_events.locator("> .item").count():
+            item_loc = self._loc_events.locator("> .item").nth(i)
+            item_data_value = item_loc.get_attribute("data-value")
 
-        # Remove items that are currently selected but not in the desired set
-        for selected_item_loc in selected_item_locs:
-            data_value = selected_item_loc.get_attribute("data-value")
-            if not data_value:
-                continue
-
-            if data_value not in desired_set:
-                selected_item_loc.click()
+            # If the item has no data-value, remove it
+            if item_data_value is None:
+                item_loc.click()
                 self.page.keyboard.press("Delete")
-            else:
-                currently_selected.append(data_value)
-
-        # Add items that are in the desired set but not currently selected
-        current_set = set(currently_selected)
-        # Use the `selected` list to preserve the order of items
-        for data_value in selected:
-            if data_value in current_set:
                 continue
 
-            self._loc_selectize.locator(f"[data-value='{data_value}']").click(
-                timeout=timeout
-            )
+            # If there are more items than selected, we need to remove the extra ones
+            if i >= len(selected):
+                # If we have more items than selected, remove the extra ones
+                item_loc.click()
+                self.page.keyboard.press("Delete")
+                continue
 
+            selected_data_value = selected[i]
+
+            # If the item is not selected, remove it
+            if item_data_value != selected_data_value:
+                item_loc.click()
+                self.page.keyboard.press("Delete")
+                continue
+
+            # The item is the next selected value
+            # Increment the index!
+            i += 1
+
+        # If we have less items than selected, add the remaining items
+        if i < len(selected):
+            for data_value in selected[i:]:
+                # Click on the item in the dropdown to select it
+                self._loc_selectize.locator(f"[data-value='{data_value}']").click(
+                    timeout=timeout
+                )
+
+        # Close the dropdown
         self._loc_events.press("Escape")
         return
 
