@@ -203,7 +203,7 @@ jobs:
         if: matrix.python-version != '3.9'
         # Scikit-learn 1.7.0+ requires Python 3.10+
         run: |
-          make install-py-shiny-templates-deps
+          make ci-install-py-shiny-templates-deps
 
       - name: Run example app tests
         timeout-minutes: 60

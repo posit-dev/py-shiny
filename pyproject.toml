@@ -91,7 +91,6 @@ test = [
     "dask[dataframe]",
     "pyarrow",
     "pyarrow-stubs",
-
 ]
 dev = [
     "black>=24.0",
