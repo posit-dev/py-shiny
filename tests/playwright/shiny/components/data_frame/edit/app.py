@@ -263,7 +263,6 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
 
     @render_widget
     def country_detail_pop():  # pyright: ignore[reportUnknownParameterType]
-
         import plotly.express as px
 
         # Create the figure explicitly
