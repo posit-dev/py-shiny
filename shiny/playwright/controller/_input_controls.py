@@ -1213,32 +1213,35 @@ class InputSelectize(
             item_loc = self._loc_events.locator("> .item").nth(i)
             item_data_value = item_loc.get_attribute("data-value")
 
-            # If the item has no data-value, remove it
-            if item_data_value is None:
+            def delete_item() -> None:
+                """
+                Deletes the item by clicking on it and pressing the Delete key.
+                """
                 item_loc.click()
                 self.page.keyboard.press("Delete")
+
+            # If the item has no data-value, remove it
+            if item_data_value is None:
+                delete_item()
                 continue
 
             # If there are more items than selected, we need to remove the extra ones
             if i >= len(selected):
-                # If we have more items than selected, remove the extra ones
-                item_loc.click()
-                self.page.keyboard.press("Delete")
+                delete_item()
                 continue
 
             selected_data_value = selected[i]
 
-            # If the item is not selected, remove it
+            # If the item is not the next `selected` value, remove it
             if item_data_value != selected_data_value:
-                item_loc.click()
-                self.page.keyboard.press("Delete")
+                delete_item()
                 continue
 
-            # The item is the next selected value
+            # The item is the next `selected` value
             # Increment the index!
             i += 1
 
-        # If we have less items than selected, add the remaining items
+        # Add the remaining items
         if i < len(selected):
             for data_value in selected[i:]:
                 # Click on the item in the dropdown to select it
