@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import ast
 from pathlib import Path
 from typing import Set
@@ -5,8 +7,10 @@ from typing import Set
 import pytest
 import yaml
 
-CONTROLLER_DIR = Path("shiny/playwright/controller")
-DOCS_CONFIG = Path("docs/_quartodoc-testing.yml")
+root = Path(__file__).parent.parent.parent
+
+CONTROLLER_DIR = root / "shiny/playwright/controller"
+DOCS_CONFIG = root / "docs/_quartodoc-testing.yml"
 SKIP_PATTERNS = {"Base", "Container", "Label", "StyleM"}
 CONTROLLER_BASE_PATTERNS = {
     "Base",
@@ -74,9 +78,7 @@ def test_all_controllers_are_documented():
     missing_from_docs = controller_classes - documented_controllers
     extra_in_docs = documented_controllers - controller_classes
 
-    from typing import List
-
-    error_messages: List[str] = []
+    error_messages: list[str] = []
     if missing_from_docs:
         missing_list = "\n".join(
             sorted(f"  - playwright.controller.{c}" for c in missing_from_docs)
