@@ -1059,19 +1059,31 @@ class OutputDataFrame(UiWithContainer):
             )
         elif value == "editing":
             self.expect_cell_class(
-                "cell-edit-editing", row=row, col=col, timeout=timeout
+                "cell-edit-editing",
+                row=row,
+                col=col,
+                timeout=timeout,
             )
         elif value == "saving":
             self.expect_cell_class(
-                "cell-edit-saving", row=row, col=col, timeout=timeout
+                "cell-edit-saving",
+                row=row,
+                col=col,
+                timeout=timeout,
             )
         elif value == "failure":
             self.expect_cell_class(
-                "cell-edit-failure", row=row, col=col, timeout=timeout
+                "cell-edit-failure",
+                row=row,
+                col=col,
+                timeout=timeout,
             )
         elif value == "success":
             self.expect_cell_class(
-                "cell-edit-success", row=row, col=col, timeout=timeout
+                "cell-edit-success",
+                row=row,
+                col=col,
+                timeout=timeout,
             )
         else:
             raise ValueError(
