@@ -1187,6 +1187,14 @@ class InputSelectize(
         """
         Sets the selected option(s) of the input selectize.
 
+        Selected items are altered as follows:
+        1. Click on the selectize input to open the dropdown.
+        2. For items that are currently selected but are not in `selected`, remove them
+           (starting from the end) by selecting the item and pressing the `"Delete"` key.
+        3. For items that are not currently selected but are in `selected`, click on the
+           option in the dropdown (which adds it to the selected list).
+        4. Press the `"Escape"` key to close the dropdown.
+
         Parameters
         ----------
         selected
@@ -1197,34 +1205,38 @@ class InputSelectize(
         if isinstance(selected, str):
             selected = [selected]
         self._loc_events.click()
-
-        currently_selected: list[str] = []
-        selected_items = self._loc_events.locator("> .item")
-        for i in range(selected_items.count()):
-            item = selected_items.nth(i)
-            data_value = item.get_attribute("data-value")
-            if data_value:
-                currently_selected.append(data_value)
-
-        current_set = set(currently_selected)
         desired_set = set(selected)
 
-        for current_value in currently_selected:
-            if current_value not in desired_set:
-                item_to_remove = self._loc_events.locator(
-                    f"> .item[data-value='{current_value}']"
-                )
-                if item_to_remove.count() > 0:
-                    item_to_remove.click()
-                    self.page.keyboard.press("Delete")
+        currently_selected: list[str] = []
+        selected_item_locs = self._loc_events.locator("> .item").all()
+        # Reverse to remove them starting from the end / make stable
+        selected_item_locs.reverse()
 
-        for value in selected:
-            if value not in current_set:
-                self._loc_selectize.locator(f"[data-value='{value}']").click(
-                    timeout=timeout
-                )
+        # Remove items that are currently selected but not in the desired set
+        for selected_item_loc in selected_item_locs:
+            data_value = selected_item_loc.get_attribute("data-value")
+            if not data_value:
+                continue
+
+            if data_value not in desired_set:
+                selected_item_loc.click()
+                self.page.keyboard.press("Delete")
+            else:
+                currently_selected.append(data_value)
+
+        # Add items that are in the desired set but not currently selected
+        current_set = set(currently_selected)
+        # Use the `selected` list to preserve the order of items
+        for data_value in selected:
+            if data_value in current_set:
+                continue
+
+            self._loc_selectize.locator(f"[data-value='{data_value}']").click(
+                timeout=timeout
+            )
 
         self._loc_events.press("Escape")
+        return
 
     def expect_choices(
         self,
