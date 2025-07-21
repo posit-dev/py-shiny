@@ -113,11 +113,7 @@ dev = [
     "anthropic",
     "google-generativeai;python_version>='3.9'",
     "langchain_core",
-    # langsmith (needed for langchain_core) versions >= 0.3
-    # (up to at least 0.3.2 as of 2025-01-29)
-    # cause an `argparse.ArgumentError` when running `pytest`.
-    # https://github.com/posit-dev/py-shiny/issues/1829
-    "langsmith<0.3",
+    "langsmith>=0.3.4",
     "openai",
     "ollama",
     "chatlas>=0.6.1",
