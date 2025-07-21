@@ -223,6 +223,8 @@ install-deps: FORCE ## install dependencies
 	pip install -e ".[dev,test]" --upgrade
 ci-install-deps: FORCE
 	uv pip install -e ".[dev,test]"
+ci-install-py-shiny-templates-deps: FORCE
+	uv pip install -r py-shiny-templates/requirements.txt
 
 install-docs: FORCE
 	pip install -e ".[dev,test,doc]"
