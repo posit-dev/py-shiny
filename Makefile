@@ -56,9 +56,6 @@ clean-test: FORCE
 	rm -fr .pytest_cache
 	rm -rf typings/
 
-typings/appdirs:
-	@echo "Creating appdirs stubs"
-	pyright --createstub appdirs
 typings/folium:
 	@echo "Creating folium stubs"
 	pyright --createstub folium
@@ -75,7 +72,7 @@ typings/matplotlib/__init__.pyi:
 	mv typings/python-type-stubs/stubs/matplotlib typings/
 	rm -rf typings/python-type-stubs
 
-pyright-typings: typings/appdirs typings/folium typings/uvicorn typings/seaborn typings/matplotlib/__init__.pyi
+pyright-typings: typings/folium typings/uvicorn typings/seaborn typings/matplotlib/__init__.pyi
 
 check: check-format check-lint check-types check-tests  ## check code, style, types, and test (basic CI)
 check-fix: format check-lint check-types check-tests ## check and format code, style, types, and test

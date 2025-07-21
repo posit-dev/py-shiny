@@ -37,7 +37,7 @@ dependencies = [
     "markdown-it-py>=1.1.0",
     "mdit-py-plugins>=0.3.0",
     "linkify-it-py>=1.0",
-    "appdirs>=1.4.4",
+    "platformdirs>=2.1.0",
     "asgiref>=3.5.2",
     "packaging>=20.9",
     "watchfiles>=0.18.0;platform_system!='Emscripten'",
