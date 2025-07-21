@@ -1213,7 +1213,7 @@ class InputSelectize(
             item_loc = self._loc_events.locator("> .item").nth(i)
             item_data_value = item_loc.get_attribute("data-value")
 
-            def delete_item() -> None:
+            def delete_item(item_loc: Locator) -> None:
                 """
                 Deletes the item by clicking on it and pressing the Delete key.
                 """
@@ -1222,19 +1222,19 @@ class InputSelectize(
 
             # If the item has no data-value, remove it
             if item_data_value is None:
-                delete_item()
+                delete_item(item_loc)
                 continue
 
             # If there are more items than selected, we need to remove the extra ones
             if i >= len(selected):
-                delete_item()
+                delete_item(item_loc)
                 continue
 
             selected_data_value = selected[i]
 
             # If the item is not the next `selected` value, remove it
             if item_data_value != selected_data_value:
-                delete_item()
+                delete_item(item_loc)
                 continue
 
             # The item is the next `selected` value
