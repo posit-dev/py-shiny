@@ -191,6 +191,17 @@ jobs:
         working-directory: examples/brownian/shinymediapipe
         run: |
           npm ci
+      - name: Checkout py-shiny-templates repository
+        uses: actions/checkout@v4
+        with:
+          repository: posit-dev/py-shiny-templates
+          path: py-shiny-templates
+
+      - name: Install py-shiny-templates dependencies
+        if: matrix.python-version != '3.9'
+        # Scikit-learn 1.7.0+ requires Python 3.10+
+        run: |
+          make ci-install-py-shiny-templates-deps
 
       - name: Run example app tests
         timeout-minutes: 60

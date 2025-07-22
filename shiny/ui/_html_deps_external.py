@@ -19,7 +19,7 @@ HTML dependencies for external dependencies Bootstrap, ionrangeslider, datepicke
 
 For...
 * External dependencies (e.g. jQuery, Bootstrap), see `shiny.ui._html_deps_external`
-* Internal dependencies (e.g. dataframe, autoresize), see `shiny.ui._html_deps_py_shiny`
+* Internal dependencies (e.g. dataframe), see `shiny.ui._html_deps_py_shiny`
 * shinyverse dependencies (e.g. bslib, htmltools), see `shiny.ui._html_deps_shinyverse`
 """
 

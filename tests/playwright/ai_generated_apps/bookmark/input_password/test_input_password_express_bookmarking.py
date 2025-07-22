@@ -46,7 +46,10 @@ def test_text_input_demo(page: Page, app: ShinyAppProc) -> None:
 
     # click bookmark button
     bookmark_button = controller.InputBookmarkButton(page)
+    existing_url = page.url
     bookmark_button.click()
+
+    page.wait_for_url(lambda url: url != existing_url, timeout=5 * 1000)
 
     page.reload()
 

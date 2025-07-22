@@ -39,7 +39,7 @@ def input_bookmark_button(
     disabled
         Whether the button is disabled.
     id
-        An ID for the bookmark button. The only time it is necessary to set the ID unless you have more than one bookmark button in your application. If you specify an input ID, it should be excluded from bookmarking with `session.bookmark.exclude.append(ID)`, and you must create a reactive effect that performs the bookmarking (`session.bookmark()`) when the button is pressed.
+        An ID for the bookmark button. This should only be provided when multiple buttons are needed (or used inside a module). See the note on multiple buttons.
     title
         A tooltip that is shown when the mouse cursor hovers over the button.
     kwargs
@@ -49,6 +49,30 @@ def input_bookmark_button(
     -------
     :
         A UI element.
+
+    Multiple (module) buttons
+    -------------------------
+
+    By default, Shiny will listen for the default `id` being used and call
+    `session.bookmark()` on button click. However, this will not work if the bookmark
+    button is used within a module or more than one bookmark button is being utilized.
+
+    For both situations, a custom `id` value is required.
+
+    There are two recommendations to maintain the expected bookmark behavior:
+    * The supplied `id` value should be excluded from bookmarking with
+      `session.bookmark.exclude.append(ID)`.
+    * A reactive effect should be added that performs the bookmarking
+      (`session.bookmark()`) when the button is pressed.
+
+    ```python
+    session.bookmark.exclude.append("CUSTOM_ID")
+
+    @reactive.effect
+    @reactive.event(input.CUSTOM_ID)
+    async def _():
+        await session.bookmark()
+    ```
 
     See Also
     --------

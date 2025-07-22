@@ -1,5 +1,5 @@
 list(
-  bslib = "rstudio/bslib@fix/page-main-container-fillable",
+  bslib = "rstudio/bslib@main",
   shiny = "rstudio/shiny@main",
   sass = "sass",
   htmltools = "rstudio/htmltools@main"

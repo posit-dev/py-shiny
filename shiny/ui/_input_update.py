@@ -71,7 +71,7 @@ _note = """
 def update_action_button(
     id: str,
     *,
-    label: Optional[str] = None,
+    label: Optional[TagChild] = None,
     icon: TagChild = None,
     disabled: Optional[bool] = None,
     session: Optional[Session] = None,
@@ -104,11 +104,9 @@ def update_action_button(
     """
 
     session = require_active_session(session)
-    # TODO: supporting a TagChild for label would require changes to shiny.js
-    # https://github.com/rstudio/shiny/issues/1140
     msg = {
-        "label": label,
-        "icon": session._process_ui(icon)["html"] if icon else None,
+        "label": session._process_ui(label) if label is not None else None,
+        "icon": session._process_ui(icon) if icon is not None else None,
         "disabled": disabled,
     }
     session.send_input_message(id, drop_none(msg))
@@ -119,7 +117,7 @@ def update_action_button(
 def update_action_link(
     id: str,
     *,
-    label: Optional[str] = None,
+    label: Optional[TagChild] = None,
     icon: TagChild = None,
     session: Optional[Session] = None,
 ) -> None:
@@ -148,11 +146,9 @@ def update_action_link(
     """
 
     session = require_active_session(session)
-    # TODO: supporting a TagChild for label would require changes to shiny.js
-    # https://github.com/rstudio/shiny/issues/1140
     msg = {
-        "label": label,
-        "icon": session._process_ui(icon)["html"] if icon else None,
+        "label": session._process_ui(label) if label is not None else None,
+        "icon": session._process_ui(icon) if icon is not None else None,
     }
     session.send_input_message(id, drop_none(msg))
 
@@ -229,7 +225,7 @@ def _(
 def update_checkbox(
     id: str,
     *,
-    label: Optional[str] = None,
+    label: Optional[TagChild] = None,
     value: Optional[bool] = None,
     session: Optional[Session] = None,
 ) -> None:
@@ -258,7 +254,10 @@ def update_checkbox(
     """
 
     session = require_active_session(session)
-    msg = {"label": label, "value": value}
+    msg = {
+        "label": session._process_ui(label) if label is not None else None,
+        "value": value,
+    }
     session.send_input_message(id, drop_none(msg))
 
 
@@ -267,7 +266,7 @@ def update_checkbox(
 def update_switch(
     id: str,
     *,
-    label: Optional[str] = None,
+    label: Optional[TagChild] = None,
     value: Optional[bool] = None,
     session: Optional[Session] = None,
 ) -> None:
@@ -296,7 +295,10 @@ def update_switch(
     """
 
     session = require_active_session(session)
-    msg = {"label": label, "value": value}
+    msg = {
+        "label": session._process_ui(label) if label is not None else None,
+        "value": value,
+    }
     session.send_input_message(id, drop_none(msg))
 
 
@@ -305,7 +307,7 @@ def update_switch(
 def update_checkbox_group(
     id: str,
     *,
-    label: Optional[str] = None,
+    label: Optional[TagChild] = None,
     choices: Optional[ChoicesArg] = None,
     selected: Optional[str | list[str] | tuple[str, ...]] = None,
     inline: bool = False,
@@ -357,7 +359,7 @@ def update_checkbox_group(
 def update_radio_buttons(
     id: str,
     *,
-    label: Optional[str] = None,
+    label: Optional[TagChild] = None,
     choices: Optional[ChoicesArg] = None,
     selected: Optional[str] = None,
     inline: bool = False,
@@ -408,7 +410,7 @@ def _update_choice_input(
     id: str,
     *,
     type: Literal["checkbox", "radio"],
-    label: Optional[str] = None,
+    label: Optional[TagChild] = None,
     choices: Optional[ChoicesArg] = None,
     selected: Optional[str | list[str] | tuple[str, ...]] = None,
     inline: bool = False,
@@ -429,7 +431,11 @@ def _update_choice_input(
             inline=inline,
         )
         options = session._process_ui(opts)["html"]
-    msg = {"label": label, "options": options, "value": selected}
+    msg = {
+        "label": session._process_ui(label) if label is not None else None,
+        "options": options,
+        "value": selected,
+    }
     session.send_input_message(id, drop_none(msg))
 
 
@@ -441,7 +447,7 @@ def _update_choice_input(
 def update_date(
     id: str,
     *,
-    label: Optional[str] = None,
+    label: Optional[TagChild] = None,
     value: Optional[date | str] = None,
     min: Optional[date | str] = None,
     max: Optional[date | str] = None,
@@ -478,7 +484,7 @@ def update_date(
 
     session = require_active_session(session)
     msg = {
-        "label": label,
+        "label": session._process_ui(label) if label is not None else None,
         "value": _as_date_attr(value),
         "min": _as_date_attr(min),
         "max": _as_date_attr(max),
@@ -491,7 +497,7 @@ def update_date(
 def update_date_range(
     id: str,
     *,
-    label: Optional[str] = None,
+    label: Optional[TagChild] = None,
     start: Optional[date | str] = None,
     end: Optional[date | str] = None,
     min: Optional[date | str] = None,
@@ -535,7 +541,7 @@ def update_date_range(
     session = require_active_session(session)
     value = {"start": _as_date_attr(start), "end": _as_date_attr(end)}
     msg = {
-        "label": label,
+        "label": session._process_ui(label) if label is not None else None,
         "value": drop_none(value),
         "min": _as_date_attr(min),
         "max": _as_date_attr(max),
@@ -551,7 +557,7 @@ def update_date_range(
 def update_numeric(
     id: str,
     *,
-    label: Optional[str] = None,
+    label: Optional[TagChild] = None,
     value: Optional[float] = None,
     min: Optional[float] = None,
     max: Optional[float] = None,
@@ -589,7 +595,7 @@ def update_numeric(
 
     session = require_active_session(session)
     msg = {
-        "label": label,
+        "label": session._process_ui(label) if label is not None else None,
         "value": value,
         "min": min,
         "max": max,
@@ -606,7 +612,7 @@ def update_numeric(
 def update_select(
     id: str,
     *,
-    label: Optional[str] = None,
+    label: Optional[TagChild] = None,
     choices: Optional[SelectChoicesArg] = None,
     selected: Optional[str | list[str]] = None,
     session: Optional[Session] = None,
@@ -652,12 +658,10 @@ def update_select(
         options = None
     else:
         option_tags = _render_choices(_normalize_choices(choices), selected)
-        # Typing problem due to a bug in pylance:
-        # https://github.com/microsoft/pylance-release/issues/2377
-        options = session._process_ui(option_tags)["html"]  # type: ignore
+        options = session._process_ui(option_tags)["html"]
 
     msg = {
-        "label": label,
+        "label": session._process_ui(label) if label is not None else None,
         "options": options,
         "value": selected_values,
     }
@@ -675,7 +679,7 @@ class FlatSelectChoice(TypedDict):
 def update_selectize(
     id: str,
     *,
-    label: Optional[str] = None,
+    label: Optional[TagChild] = None,
     choices: Optional[SelectChoicesArg] = None,
     selected: Optional[str | list[str]] = None,
     options: Optional[dict[str, str | float | JSEval]] = None,
@@ -854,7 +858,7 @@ def update_selectize(
 def update_slider(
     id: str,
     *,
-    label: Optional[str] = None,
+    label: Optional[TagChild] = None,
     value: Optional[SliderValueArg | tuple[SliderValueArg, SliderValueArg]] = None,
     min: Optional[SliderValueArg] = None,
     max: Optional[SliderValueArg] = None,
@@ -928,7 +932,7 @@ def update_slider(
         value_num = None
 
     msg = {
-        "label": label,
+        "label": session._process_ui(label) if label is not None else None,
         "value": value_num,
         "min": min_num,
         "max": max_num,
@@ -948,7 +952,7 @@ def update_slider(
 def update_text(
     id: str,
     *,
-    label: Optional[str] = None,
+    label: Optional[TagChild] = None,
     value: Optional[str] = None,
     placeholder: Optional[str] = None,
     session: Optional[Session] = None,
@@ -980,7 +984,11 @@ def update_text(
     """
 
     session = require_active_session(session)
-    msg = {"label": label, "value": value, "placeholder": placeholder}
+    msg = {
+        "label": session._process_ui(label) if label is not None else None,
+        "value": value,
+        "placeholder": placeholder,
+    }
     session.send_input_message(id, drop_none(msg))
 
 

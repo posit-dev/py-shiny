@@ -33,8 +33,11 @@ def test_checkbox_demo(page: Page, app: ShinyAppProc) -> None:
     module_checkbox.expect_checked(True)
     module_text.expect_value("Checkbox value: True")
 
+    existing_url = page.url
     bookmark_button = controller.InputBookmarkButton(page)
     bookmark_button.click()
+
+    page.wait_for_url(lambda url: url != existing_url, timeout=5 * 1000)
 
     # reload the page to test bookmark
     page.reload()

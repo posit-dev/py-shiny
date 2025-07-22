@@ -111,6 +111,9 @@ docs/source/reference/
 
 /.luarc.json
 
+# uv
+/uv.lock
+
 # Developer scratch area
 _dev/
 tests/playwright/deploys/**/requirements.txt
