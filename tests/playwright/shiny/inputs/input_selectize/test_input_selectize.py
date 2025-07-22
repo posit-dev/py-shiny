@@ -1,3 +1,4 @@
+import pytest
 from playwright.sync_api import Page, expect
 
 from shiny.playwright import controller
@@ -40,10 +41,18 @@ def test_input_selectize_kitchen(page: Page, local_app: ShinyAppProc) -> None:
 
     state1.expect_multiple(True)
 
+    state1.set("CA")
+    state1.expect_selected(["CA"])
+
+    with pytest.raises(TypeError) as err:
+        state1.set({"a": "1"})  # pyright: ignore[reportArgumentType]
+        assert "when setting a multiple-select input" in str(err.value)
+    with pytest.raises(TypeError) as err:
+        state1.set(45)  # pyright: ignore[reportArgumentType]
+        assert "value must be a" in str(err.value)
+
     state1.set(["IA", "CA"])
-
     state1.expect_selected(["IA", "CA"])
-
     value1.expect_value("('IA', 'CA')")
 
     # -------------------------
@@ -89,7 +98,17 @@ def test_input_selectize_kitchen(page: Page, local_app: ShinyAppProc) -> None:
 
     state3.expect_multiple(False)
 
-    state3.set(["NJ"])
+    state3.set("NJ")
+
+    with pytest.raises(ValueError) as err:
+        state3.set(["NJ", "NY"])
+        assert "when setting a single-select input" in str(err.value)
+    with pytest.raises(ValueError) as err:
+        state3.set([])
+        assert "when setting a single-select input" in str(err.value)
+    with pytest.raises(TypeError) as err:
+        state3.set(45)  # pyright: ignore[reportArgumentType]
+        assert "value must be a" in str(err.value)
 
     state3.expect_selected(["NJ"])
     value3.expect_value("NJ")
