@@ -1,13 +1,5 @@
 from __future__ import annotations
 
-import sys
-
-# Remove this conditional once modin is supported on Python 3.13
-if sys.version_info < (3, 13):
-    import modin.pandas as mpd  # pyright: ignore[reportMissingTypeStubs]
-else:
-    raise RuntimeError("This test is not supported on Python 3.13")
-
 import narwhals.stable.v1 as nw
 import palmerpenguins  # pyright: ignore[reportMissingTypeStubs]
 import polars as pl
@@ -19,7 +11,6 @@ pd_df = palmerpenguins.load_penguins_raw().iloc[0:2, 0:2]
 
 nw_df = nw.from_native(pd_df, eager_only=True)
 pa_df = pa.table(pd_df)  # pyright: ignore[reportUnknownMemberType]
-mpd_df = mpd.DataFrame(pd_df)
 pl_df = pl.DataFrame(pd_df)
 
 
@@ -144,46 +135,6 @@ with ui.layout_columns():
         @render.code
         def pa_data_view_selected():
             return str(type(pa_df_original.data_view(selected=True)))
-
-    with ui.card():
-        ui.h2("Modin Data")
-
-        @render.data_frame
-        def mpd_df_original():
-            return render.DataGrid(
-                data=mpd_df,
-                selection_mode="row",
-            )
-
-        "Selected row:"
-
-        @render.data_frame
-        def selected_mpd_row():
-            return mpd_df_original.data_view(selected=True)
-
-        "Data type:"
-
-        @render.code
-        def mpd_type():
-            return str(type(mpd_df))
-
-        ui.markdown("`.data()` type:")
-
-        @render.code
-        def mpd_data():
-            return str(type(mpd_df_original.data()))
-
-        ui.markdown("`.data_view()` type:")
-
-        @render.code
-        def mpd_data_view():
-            return str(type(mpd_df_original.data_view()))
-
-        ui.markdown("`.data_view(selected=True)` type:")
-
-        @render.code
-        def mpd_data_view_selected():
-            return str(type(mpd_df_original.data_view(selected=True)))
 
     with ui.card():
         ui.h2("Polars Data")
