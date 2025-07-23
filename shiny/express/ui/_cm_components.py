@@ -7,6 +7,7 @@ from typing import Literal, Optional
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, TagFunction, TagList
 
 from ... import ui
+from ..._deprecated import warn_deprecated
 from ..._docstring import add_example, no_example
 from ...types import DEPRECATED, MISSING, MISSING_TYPE
 from ...ui._accordion import AccordionPanel
@@ -1363,13 +1364,9 @@ def value_box(
 @no_example()
 def panel_well(**kwargs: TagAttrValue) -> RecallContextManager[Tag]:
     """
-    Context manager for a well panel
-
-    This function wraps :func:`~shiny.ui.panel_well`.
-
-    A well panel is a simple container with a border and some padding. It's useful for
-    grouping related content together.
+    Deprecated. Use :func:`~shiny.express.ui.card` instead.
     """
+    warn_deprecated("panel_well() is deprecated. Use shiny.express.ui.card() instead.")
     return RecallContextManager(
         ui.panel_well,
         kwargs=dict(
