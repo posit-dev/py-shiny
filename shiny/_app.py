@@ -25,7 +25,7 @@ from starlette.responses import HTMLResponse, JSONResponse, Response
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from ._autoreload import InjectAutoreloadMiddleware, autoreload_url
-from ._connection import Connection, StarletteConnection
+from ._connection import Connection, MockConnection, StarletteConnection
 from ._error import ErrorMiddleware
 from ._shinyenv import is_pyodide
 from ._utils import guess_mime_type, is_async_callable, sort_keys_length
@@ -217,6 +217,9 @@ class App:
     def init_starlette_app(self) -> starlette.applications.Starlette:
         routes: list[starlette.routing.BaseRoute] = [
             starlette.routing.WebSocketRoute("/websocket/", self._on_connect_cb),
+            starlette.routing.Route(
+                "/new_shiny_session/", self._on_new_session_request_cb, methods=["GET"]
+            ),
             starlette.routing.Route("/", self._on_root_request_cb, methods=["GET"]),
             starlette.routing.Route(
                 "/session/{session_id}/{action}/{subpath:path}",
@@ -390,10 +393,27 @@ class App:
         Callback which is invoked when a new WebSocket connection is established.
         """
         await ws.accept()
-        conn = StarletteConnection(ws)
-        session = self._create_session(conn)
-
+        session_id = ws.query_params.get("session_id", None)
+        if session_id is None:
+            print("Dropping WebSocket connection: no session_id")
+            return
+        if session_id not in self._sessions:
+            print(f"Dropping WebSocket connection: unknown session_id {session_id}")
+            return
+        session = self._sessions[session_id]
+        session._conn = StarletteConnection(ws)
         await session._run()
+
+    async def _on_new_session_request_cb(self, request: Request) -> JSONResponse:
+        """
+        Handle request to /new_shiny_session, which creates a new session.
+        """
+        if self._debug:
+            print("Creating new session", flush=True)
+
+        session = self._create_session(MockConnection())
+        self._sessions[session.id] = session
+        return JSONResponse({"session_id": session.id})
 
     async def _on_session_request_cb(self, request: Request) -> ASGIApp:
         """
