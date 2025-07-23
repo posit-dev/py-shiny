@@ -24,7 +24,7 @@ from ._navs import menu_string_as_nav
 @add_example()
 def nav_insert(
     id: str,
-    nav: Union[NavSetArg, str],
+    nav_panel: Union[NavSetArg, str],
     target: Optional[str] = None,
     position: Literal["after", "before"] = "after",
     select: bool = False,
@@ -37,8 +37,8 @@ def nav_insert(
     ----------
     id
         The ``id`` of the relevant navigation container (i.e., ``navset_*()`` object).
-    nav
-        The navigation item to insert (typically a :func:`~shiny.ui.nav` or
+    nav_panel
+        The navigation item to insert (typically a :func:`~shiny.ui.nav_panel` or
         :func:`~shiny.ui.nav_menu`). A :func:`~shiny.ui.nav_menu` isn't allowed when the
         ``target`` references an :func:`~shiny.ui.nav_menu` (or an item within it). A
         string is only allowed when the ``target`` references a
@@ -69,9 +69,11 @@ def nav_insert(
     # N.B. this is only sensible if the target is a menu, but we don't know that,
     # which could cause confusion of we decide to support top-level strings at some
     # in the future.
-    if isinstance(nav, str):
-        nav = menu_string_as_nav(nav)
-
+    # print("IS INSTANCE: ", isinstance(nav_panel, str))
+    # if isinstance(nav_panel, str):
+    # print("isnav")
+    nav = menu_string_as_nav(nav_panel)
+    print(nav)
     # N.B. shiny.js' is smart enough to know how to add active classes and href/id attrs
     li_tag, div_tag = nav.resolve(
         selected=None, context=dict(tabsetid="tsid", index="id")
