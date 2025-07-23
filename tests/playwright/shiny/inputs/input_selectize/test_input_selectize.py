@@ -44,13 +44,6 @@ def test_input_selectize_kitchen(page: Page, local_app: ShinyAppProc) -> None:
     state1.set("CA")
     state1.expect_selected(["CA"])
 
-    with pytest.raises(TypeError) as err:
-        state1.set({"a": "1"})  # pyright: ignore[reportArgumentType]
-        assert "when setting a multiple-select input" in str(err.value)
-    with pytest.raises(TypeError) as err:
-        state1.set(45)  # pyright: ignore[reportArgumentType]
-        assert "value must be a" in str(err.value)
-
     state1.set(["IA", "CA"])
     state1.expect_selected(["IA", "CA"])
     value1.expect_value("('IA', 'CA')")
@@ -100,16 +93,6 @@ def test_input_selectize_kitchen(page: Page, local_app: ShinyAppProc) -> None:
 
     state3.set("NJ")
 
-    with pytest.raises(ValueError) as err:
-        state3.set(["NJ", "NY"])
-        assert "when setting a single-select input" in str(err.value)
-    with pytest.raises(ValueError) as err:
-        state3.set([])
-        assert "when setting a single-select input" in str(err.value)
-    with pytest.raises(TypeError) as err:
-        state3.set(45)  # pyright: ignore[reportArgumentType]
-        assert "value must be a" in str(err.value)
-
     state3.expect_selected(["NJ"])
     value3.expect_value("NJ")
 
@@ -133,3 +116,40 @@ def test_input_selectize_kitchen(page: Page, local_app: ShinyAppProc) -> None:
 
     state4.expect_selected(["New York"])
     value4.expect_value("New York")
+
+    # -------------------------
+
+
+def test_input_selectize_kitchen_errors_single(
+    page: Page, local_app: ShinyAppProc
+) -> None:
+    page.goto(local_app.url)
+
+    state3 = controller.InputSelectize(page, "state3")
+
+    # Single
+    with pytest.raises(ValueError) as err:
+        state3.set(["NJ", "NY"])
+        assert "when setting a single-select input" in str(err.value)
+    with pytest.raises(ValueError) as err:
+        state3.set([])
+        assert "when setting a single-select input" in str(err.value)
+    with pytest.raises(TypeError) as err:
+        state3.set(45)  # pyright: ignore[reportArgumentType]
+        assert "value must be a" in str(err.value)
+
+
+def test_input_selectize_kitchen_errors_multiple(
+    page: Page, local_app: ShinyAppProc
+) -> None:
+    page.goto(local_app.url)
+
+    state1 = controller.InputSelectize(page, "state1")
+
+    # Multiple
+    with pytest.raises(TypeError) as err:
+        state1.set({"a": "1"})  # pyright: ignore[reportArgumentType]
+        assert "when setting a multiple-select input" in str(err.value)
+    with pytest.raises(TypeError) as err:
+        state1.set(45)  # pyright: ignore[reportArgumentType]
+        assert "value must be a" in str(err.value)
