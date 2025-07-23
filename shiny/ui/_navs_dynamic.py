@@ -24,7 +24,7 @@ from ._navs import menu_string_as_nav
 @add_example()
 def nav_insert(
     id: str,
-    nav: Union[NavSetArg, str],
+    nav_panel: Union[NavSetArg, str],
     target: Optional[str] = None,
     position: Literal["after", "before"] = "after",
     select: bool = False,
