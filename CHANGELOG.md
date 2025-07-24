@@ -27,6 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added `timeout_secs` parameter to `create_app_fixture` to allow testing apps with longer startup times. (#2033)
 
+* Added module support for `session.clientdata` methods. This allows you to access client data values in Shiny modules without needing to namespace the keys explicitly. (#1978)
+
 ### Bug fixes
 
 * Fixed an issue with `ui.Chat()` sometimes wanting to scroll a parent element. (#1996)

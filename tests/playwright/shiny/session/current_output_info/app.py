@@ -16,8 +16,6 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
 
 app_ui = ui.page_fluid(
     ui.input_dark_mode(mode="light", id="dark_mode"),
-    ui.output_text("text1"),
-    ui.output_text("text2"),
     ui.output_text("info").add_class("shiny-report-theme"),
     mod_ui("mod1"),
 )
