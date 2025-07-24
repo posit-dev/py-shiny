@@ -1507,15 +1507,6 @@ class ClientData:
         If a method is called outside of a reactive context.
     """
 
-    @contextlib.contextmanager
-    def _renderer_ctx(self, renderer: Renderer[Any]) -> Generator[None, None, None]:
-        old_renderer = self._current_renderer
-        try:
-            self._current_renderer = renderer
-            yield
-        finally:
-            self._current_renderer = old_renderer
-
     def __init__(self, session: Session) -> None:
         self._session: Session = session
         self._current_renderer: Renderer[Any] | None = None
@@ -1715,6 +1706,32 @@ class ClientData:
         else:
             return None
 
+    @contextlib.contextmanager
+    def _renderer_ctx(self, renderer: Renderer[Any]) -> Generator[None, None, None]:
+        """
+        Context manager to temporarily set the current renderer.
+
+        This is used to allow `session.clientdata.output_*()` methods to access the
+        current renderer's output id without needing to pass it explicitly.
+
+        Parameters
+        ----------
+        renderer
+            The renderer to set as the current renderer.
+
+        Yields
+        ------
+        None
+            The context manager does not return any value, but temporarily sets the
+            current renderer to the provided renderer.
+        """
+        old_renderer = self._current_renderer
+        try:
+            self._current_renderer = renderer
+            yield
+        finally:
+            self._current_renderer = old_renderer
+
     @staticmethod
     def _check_current_context(key: str) -> None:
         try:
@@ -1819,7 +1836,6 @@ class Outputs:
                 )
 
                 try:
-                    # Temporarily set the renderer so `clientdata.output_*()` can access it without an `id`
                     with session.clientdata._renderer_ctx(renderer):
                         # Call the app's renderer function
                         value = await renderer.render()
