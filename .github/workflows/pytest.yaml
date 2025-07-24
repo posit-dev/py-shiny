@@ -20,6 +20,7 @@ jobs:
         python-version: ["3.13", "3.12", "3.11", "3.10", "3.9"]
         os: [ubuntu-latest, windows-latest, macOS-latest]
         exclude:
+          - python-version: ${{ github.event.pull_request.draft && '3.12' }}
           - python-version: ${{ github.event.pull_request.draft && '3.11' }}
           - python-version: ${{ github.event.pull_request.draft && '3.10' }}
           - python-version: ${{ github.event.pull_request.draft && '3.9' }}
@@ -110,6 +111,7 @@ jobs:
         python-version: ["3.13", "3.12", "3.11", "3.10", "3.9"]
         browser: ["chromium", "firefox", "webkit"]
         exclude:
+          - python-version: ${{ github.event.pull_request.draft && '3.12' }}
           - python-version: ${{ github.event.pull_request.draft && '3.11' }}
           - python-version: ${{ github.event.pull_request.draft && '3.10' }}
           - python-version: ${{ github.event.pull_request.draft && '3.9' }}
@@ -158,6 +160,7 @@ jobs:
         python-version: ["3.13", "3.12", "3.11", "3.10", "3.9"]
         browser: ["chromium", "firefox", "webkit"]
         exclude:
+          - python-version: ${{ github.event.pull_request.draft && '3.12' }}
           - python-version: ${{ github.event.pull_request.draft && '3.11' }}
           - python-version: ${{ github.event.pull_request.draft && '3.10' }}
           - python-version: ${{ github.event.pull_request.draft && '3.9' }}
@@ -219,9 +222,10 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.12", "3.11", "3.10", "3.9"]
+        python-version: ["3.13", "3.12", "3.11", "3.10", "3.9"]
         browser: ["chromium", "firefox", "webkit"]
         exclude:
+          - python-version: ${{ github.event.pull_request.draft && '3.12' }}
           - python-version: ${{ github.event.pull_request.draft && '3.11' }}
           - python-version: ${{ github.event.pull_request.draft && '3.10' }}
           - python-version: ${{ github.event.pull_request.draft && '3.9' }}
