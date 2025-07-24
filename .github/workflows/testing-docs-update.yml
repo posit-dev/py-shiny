@@ -10,9 +10,14 @@ on:
       - 'docs/api/testing/**'
       - 'docs/_quartodoc-testing.yml'
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   update-testing-docs:
     runs-on: ubuntu-latest
+    if: github.event_name == 'push'
 
     steps:
       - name: Checkout repository
@@ -47,16 +52,42 @@ jobs:
           repomix docs/api/testing -o shiny/testing/utils/scripts/repomix-output-testing.xml
           python shiny/testing/utils/scripts/process_docs.py --input shiny/testing/utils/scripts/repomix-output-testing.xml --output shiny/testing/generator/data/docs/documentation_testing.json
 
-      - name: Check for changes
+      - name: Check for documentation changes
         id: git-check
         run: |
-          git diff --exit-code || echo "changes=true" >> $GITHUB_OUTPUT
+          # Check if documentation_testing.json has changes
+          if git diff --exit-code shiny/testing/generator/data/docs/documentation_testing.json; then
+            echo "changes=false" >> $GITHUB_OUTPUT
+            echo "No changes detected in documentation_testing.json"
+          else
+            echo "changes=true" >> $GITHUB_OUTPUT
+            echo "Changes detected in documentation_testing.json"
+          fi
 
-      - name: Commit and push changes
-        if: steps.git-check.outputs.changes == 'true'
+      - name: Clean up temporary files
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add .
-          git commit -m "Auto-update testing documentation" || exit 0
-          git push
+          # Remove temporary XML files
+          rm -f shiny/testing/utils/scripts/repomix-output-testing.xml
+
+      - name: Create Pull Request
+        if: steps.git-check.outputs.changes == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "Auto-update testing documentation"
+          title: "🤖 Auto-update testing documentation"
+          body: |
+            This PR was automatically generated to update the testing documentation.
+
+            **Changes:**
+            - Updated `shiny/testing/generator/data/docs/documentation_testing.json`
+
+            **Triggered by:**
+            - Changes to testing documentation in `docs/api/testing/`
+            - Changes to `docs/_quartodoc-testing.yml`
+
+            Please review the changes before merging.
+          branch: auto-update-testing-docs
+          delete-branch: true
+          add-paths: |
+            shiny/testing/generator/data/docs/documentation_testing.json
