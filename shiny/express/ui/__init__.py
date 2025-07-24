@@ -165,6 +165,10 @@ from ._hold import (
     hold,
 )
 
+from ._insert import (
+    nav_insert,
+)
+
 __all__ = (
     # Imports from htmltools
     "TagList",
@@ -294,7 +298,6 @@ __all__ = (
     "navset_pill",
     "navset_pill_list",
     "nav_hide",
-    "nav_insert",
     "nav_remove",
     "nav_show",
     "navset_tab",
