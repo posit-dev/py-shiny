@@ -10,7 +10,9 @@ def test_current_output_info(page: Page, local_app: ShinyAppProc) -> None:
 
     # Check that we can get background color from clientdata
     info = controller.OutputText(page, "info")
+    mod_info2 = controller.OutputText(page, "mod1-info2")
     info.expect_value("BG color: rgb(255, 255, 255)")
+    mod_info2.expect_value("BG color: rgb(255, 255, 255)")
 
     # Click the dark mode button to change the background color
     dark_mode = controller.InputDarkMode(page, "dark_mode")
@@ -20,3 +22,4 @@ def test_current_output_info(page: Page, local_app: ShinyAppProc) -> None:
 
     # Check that the background color has changed
     info.expect_value("BG color: rgb(29, 31, 33)")
+    mod_info2.expect_value("BG color: rgb(29, 31, 33)")

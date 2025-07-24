@@ -1220,6 +1220,7 @@ class SessionProxy(Session):
             ns=ns,
             outputs=root_session.output._outputs,
         )
+        self.clientdata = ClientData(self)
         self._outbound_message_queues = root_session._outbound_message_queues
         self._downloads = root_session._downloads
 
@@ -1509,7 +1510,7 @@ class ClientData:
 
     def __init__(self, session: Session) -> None:
         self._session: Session = session
-        self._current_renderer: Renderer[Any] | None = None
+        self._current_output_name: ResolvedId | None = None
 
     def url_hash(self) -> str:
         """
@@ -1559,7 +1560,7 @@ class ClientData:
         """
         return cast(int, self._read_input("pixelratio"))
 
-    def output_height(self, id: Optional[str] = None) -> float | None:
+    def output_height(self, id: Optional[Id] = None) -> float | None:
         """
         Reactively read the height of an output.
 
@@ -1576,7 +1577,7 @@ class ClientData:
         """
         return cast(float, self._read_output(id, "height"))
 
-    def output_width(self, id: Optional[str] = None) -> float | None:
+    def output_width(self, id: Optional[Id] = None) -> float | None:
         """
         Reactively read the width of an output.
 
@@ -1593,7 +1594,7 @@ class ClientData:
         """
         return cast(float, self._read_output(id, "width"))
 
-    def output_hidden(self, id: Optional[str] = None) -> bool | None:
+    def output_hidden(self, id: Optional[Id] = None) -> bool | None:
         """
         Reactively read whether an output is hidden.
 
@@ -1609,7 +1610,7 @@ class ClientData:
         """
         return cast(bool, self._read_output(id, "hidden"))
 
-    def output_bg_color(self, id: Optional[str] = None) -> str | None:
+    def output_bg_color(self, id: Optional[Id] = None) -> str | None:
         """
         Reactively read the background color of an output.
 
@@ -1626,7 +1627,7 @@ class ClientData:
         """
         return cast(str, self._read_output(id, "bg"))
 
-    def output_fg_color(self, id: Optional[str] = None) -> str | None:
+    def output_fg_color(self, id: Optional[Id] = None) -> str | None:
         """
         Reactively read the foreground color of an output.
 
@@ -1643,7 +1644,7 @@ class ClientData:
         """
         return cast(str, self._read_output(id, "fg"))
 
-    def output_accent_color(self, id: Optional[str] = None) -> str | None:
+    def output_accent_color(self, id: Optional[Id] = None) -> str | None:
         """
         Reactively read the accent color of an output.
 
@@ -1660,7 +1661,7 @@ class ClientData:
         """
         return cast(str, self._read_output(id, "accent"))
 
-    def output_font(self, id: Optional[str] = None) -> str | None:
+    def output_font(self, id: Optional[Id] = None) -> str | None:
         """
         Reactively read the font(s) of an output.
 
@@ -1681,18 +1682,19 @@ class ClientData:
         self._check_current_context(key)
 
         id = ResolvedId(f".clientdata_{key}")
-        if id not in self._session.input:
+        if id not in self._session.root_scope().input:
             raise ValueError(
                 f"ClientData value '{key}' not found. Please report this issue."
             )
 
-        return self._session.input[id]()
+        return self._session.root_scope().input[id]()
 
-    def _read_output(self, id: str | None, key: str) -> str | None:
+    def _read_output(self, id: Id | None, key: str) -> str | None:
         self._check_current_context(f"output_{key}")
 
-        if id is None and self._current_renderer is not None:
-            id = self._current_renderer.output_id
+        # No `id` provided support
+        if id is None and self._current_output_name is not None:
+            id = self._current_output_name
 
         if id is None:
             raise ValueError(
@@ -1700,37 +1702,30 @@ class ClientData:
                 "an output renderer."
             )
 
+        # Module support
+        if not isinstance(id, ResolvedId):
+            id = self._session.ns(id)
+
         input_id = ResolvedId(f".clientdata_output_{id}_{key}")
-        if input_id in self._session.input:
-            return self._session.input[input_id]()
+        if input_id in self._session.root_scope().input:
+            return self._session.root_scope().input[input_id]()
         else:
             return None
 
     @contextlib.contextmanager
-    def _renderer_ctx(self, renderer: Renderer[Any]) -> Generator[None, None, None]:
+    def _output_name_ctx(self, output_name: ResolvedId) -> Generator[None, None, None]:
         """
-        Context manager to temporarily set the current renderer.
+        Context manager to temporarily set the output name.
 
         This is used to allow `session.clientdata.output_*()` methods to access the
-        current renderer's output id without needing to pass it explicitly.
-
-        Parameters
-        ----------
-        renderer
-            The renderer to set as the current renderer.
-
-        Yields
-        ------
-        None
-            The context manager does not return any value, but temporarily sets the
-            current renderer to the provided renderer.
+        current output name without needing to pass it explicitly.
         """
-        old_renderer = self._current_renderer
+        old_output_name = self._current_output_name
         try:
-            self._current_renderer = renderer
+            self._current_output_name = output_name
             yield
         finally:
-            self._current_renderer = old_renderer
+            self._current_output_name = old_output_name
 
     @staticmethod
     def _check_current_context(key: str) -> None:
@@ -1836,7 +1831,7 @@ class Outputs:
                 )
 
                 try:
-                    with session.clientdata._renderer_ctx(renderer):
+                    with session.clientdata._output_name_ctx(output_name):
                         # Call the app's renderer function
                         value = await renderer.render()
 
