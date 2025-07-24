@@ -153,7 +153,7 @@ def nav_show(
     ~nav_hide
     ~nav_insert
     ~nav_remove
-    ~shiny.ui.nav
+    ~shiny.ui.nav_panel
     """
 
     session = require_active_session(session)
@@ -191,7 +191,7 @@ def nav_hide(id: str, target: str, session: Optional[Session] = None) -> None:
     ~nav_show
     ~nav_insert
     ~nav_remove
-    ~shiny.ui.nav
+    ~shiny.ui.nav_panel
     """
 
     session = require_active_session(session)
