@@ -18,7 +18,6 @@ def generate_test_file(
 ):
     """Generate AI-powered test file for a Shiny app."""
 
-    # Get app file path
     if app_file is None:
 
         def path_exists(x: str) -> bool | str:
@@ -37,18 +36,15 @@ def generate_test_file(
     else:
         app_file_val = app_file
 
-    # User quit early
     if app_file_val is None:
         sys.exit(1)
 
     app_path = Path(app_file_val)
 
-    # Make sure app file exists
     if not app_path.exists():
         click.echo(f"❌ Error: App file does not exist: {app_path}")
         sys.exit(1)
 
-    # Get output file path if not provided
     if output_file is None:
         suggested_output = app_path.parent / f"test_{app_path.stem}.py"
 
@@ -72,13 +68,11 @@ def generate_test_file(
     else:
         output_file_val = output_file
 
-    # User quit early
     if output_file_val is None:
         sys.exit(1)
 
     output_path = Path(output_file_val)
 
-    # Validate output file
     if output_path.exists():
         click.echo(f"❌ Error: Test file already exists: {output_path}")
         sys.exit(1)
@@ -87,21 +81,37 @@ def generate_test_file(
         click.echo("❌ Error: Test file must start with 'test_'")
         sys.exit(1)
 
-    # Import and use the test generator
     try:
-        # Import the test generator from the new testing module structure
         from .testing import ShinyTestGenerator
     except ImportError as e:
         click.echo(f"❌ Error: Could not import ShinyTestGenerator: {e}")
         click.echo("Make sure the shiny testing dependencies are installed.")
         sys.exit(1)
 
+    import os
+
+    if provider == "anthropic":
+        if not os.getenv("ANTHROPIC_API_KEY"):
+            click.echo("❌ Error: ANTHROPIC_API_KEY environment variable is not set.")
+            click.echo("Please set your Anthropic API key:")
+            click.echo("  export ANTHROPIC_API_KEY='your-api-key-here'")
+            click.echo()
+            click.echo("Get your API key from: https://console.anthropic.com/")
+            sys.exit(1)
+    elif provider == "openai":
+        if not os.getenv("OPENAI_API_KEY"):
+            click.echo("❌ Error: OPENAI_API_KEY environment variable is not set.")
+            click.echo("Please set your OpenAI API key:")
+            click.echo("  export OPENAI_API_KEY='your-api-key-here'")
+            click.echo()
+            click.echo("Get your API key from: https://platform.openai.com/api-keys")
+            sys.exit(1)
+
     click.echo(f"🤖 Generating test using {provider} provider...")
     if model:
         click.echo(f"📝 Using model: {model}")
 
     try:
-        # Create the generator
         generator = ShinyTestGenerator(provider=provider)  # type: ignore
 
         # Generate the test
