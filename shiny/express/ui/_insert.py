@@ -65,11 +65,17 @@ def insert_accordion_panel(
     * :func:`~shiny.ui.express.update_accordion`
     """
 
-    from ...ui import accordion_panel, insert_accordion_panel
+    from ...ui import AccordionPanel, accordion_panel, insert_accordion_panel
 
-    panel = accordion_panel(
-        panel_title, *panel_contents, value=panel_value, icon=panel_icon
-    )
+    if isinstance(panel_title, AccordionPanel):
+        # If the user passed an AccordionPanel, we can just use it as is.
+        # This isn't recommended, but we support it for backwards compatibility
+        # with the old API.
+        panel = panel_title
+    else:
+        panel = accordion_panel(
+            panel_title, *panel_contents, value=panel_value, icon=panel_icon
+        )
 
     insert_accordion_panel(
         id=id,
