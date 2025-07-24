@@ -61,7 +61,7 @@ def nav_insert(
     ~nav_remove
     ~nav_show
     ~nav_hide
-    ~shiny.ui.nav
+    ~shiny.ui.nav_panel
     """
 
     session = require_active_session(session)
@@ -69,11 +69,11 @@ def nav_insert(
     # N.B. this is only sensible if the target is a menu, but we don't know that,
     # which could cause confusion of we decide to support top-level strings at some
     # in the future.
-    # print("IS INSTANCE: ", isinstance(nav_panel, str))
-    # if isinstance(nav_panel, str):
-    # print("isnav")
-    nav = menu_string_as_nav(nav_panel)
-    print(nav)
+    if isinstance(nav_panel, str):
+        nav = menu_string_as_nav(nav_panel)
+    else:
+        nav = nav_panel
+
     # N.B. shiny.js' is smart enough to know how to add active classes and href/id attrs
     li_tag, div_tag = nav.resolve(
         selected=None, context=dict(tabsetid="tsid", index="id")
@@ -89,7 +89,7 @@ def nav_insert(
         "select": select,
     }
 
-    session._send_message_sync({"custom": {"shiny-insert-tab": msg}})
+    session._send_message_sync({"shiny-insert-tab": msg})
 
 
 @add_example()
@@ -102,7 +102,7 @@ def nav_remove(id: str, target: str, session: Optional[Session] = None) -> None:
     id
         The ``id`` of the relevant navigation container (i.e., ``navset_*()`` object).
     target
-        The ``value`` of an existing :func:`shiny.ui.nav` item to remove.
+        The ``value`` of an existing :func:`shiny.ui.nav_panel` item to remove.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
         :func:`~shiny.session.get_current_session`.
@@ -112,17 +112,16 @@ def nav_remove(id: str, target: str, session: Optional[Session] = None) -> None:
     ~nav_insert
     ~nav_show
     ~nav_hide
-    ~shiny.ui.nav
+    ~shiny.ui.nav_panel
     """
 
     session = require_active_session(session)
-
     msg = {
         "inputId": resolve_id(id),
         "target": target,
     }
 
-    session._send_message_sync({"custom": {"shiny-remove-tab": msg}})
+    session._send_message_sync({"shiny-remove-tab": msg})
 
 
 @add_example()
@@ -169,7 +168,7 @@ def nav_show(
         "type": "show",
     }
 
-    session._send_message_sync({"custom": {"shiny-change-tab-visibility": msg}})
+    session._send_message_sync({"shiny-change-tab-visibility": msg})
 
 
 @add_example()
@@ -203,4 +202,4 @@ def nav_hide(id: str, target: str, session: Optional[Session] = None) -> None:
         "type": "hide",
     }
 
-    session._send_message_sync({"custom": {"shiny-change-tab-visibility": msg}})
+    session._send_message_sync({"shiny-change-tab-visibility": msg})
