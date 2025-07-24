@@ -1,47 +1,45 @@
 from shiny import reactive
-from shiny.express import input, ui, expressify, render
+from shiny.express import input, ui
 
 with ui.layout_sidebar():
-    with ui.sidebar():
-        ui.input_action_button("add", "Add 'Dynamic' tab")
-        ui.input_action_button("removeFoo", "Remove 'Foo' tabs")
-        ui.input_action_button("addFoo", "Add New 'Foo' tab")
+    with ui.sidebar(title="Navbar page", id="sidebar"):
+        "Home"
+        ui.input_action_button("hideTab", "Hide 'Foo' tab")
+        ui.input_action_button("showTab", "Show 'Foo' tab")
+        ui.input_action_button("hideMenu", "Hide 'More' nav_menu")
+        ui.input_action_button("showMenu", "Show 'More' nav_menu")
 
     with ui.navset_tab(id="tabs"):
-        with ui.nav_panel("Hello"):
-            "This is the hello tab"
-        with ui.nav_panel("Foo", value="Foo"):
-            "This is the Foo tab"
-        with ui.nav_menu("Static", value="Menu"):
-            with ui.nav_panel("Static 1", value="s1"):
-                "Static 1"
-            with ui.nav_panel("Static 2", value="s2"):
-                "Static 2"
-
-    @expressify()
-    @reactive.event(input.add)
-    def _():
-        id = "Dynamic-" + str(input.add())
-        ui.nav_insert(
-            "tabs",
-            ui.nav_panel(id, id),
-            target="s2",
-            position="before",
-        )
+        with ui.nav_panel("Foo"):
+            "This is the foo tab"
+        with ui.nav_panel("Bar"):
+            "This is the bar tab"
+        with ui.nav_menu(title="More", value="More"):
+            with ui.nav_panel("Table"):
+                "Table page"
+            with ui.nav_panel("About"):
+                "About page"
+            "------"
+            "Even more!"
+            with ui.nav_panel("Email"):
+                "Email page"
 
     @reactive.effect()
-    @reactive.event(input.removeFoo)
+    @reactive.event(input.hideTab)
     def _():
-        ui.nav_remove("tabs", target="Foo")
+        ui.nav_hide("tabs", target="Foo")
 
     @reactive.effect()
-    @reactive.event(input.addFoo)
+    @reactive.event(input.showTab)
     def _():
-        n = str(input.addFoo())
-        ui.nav_insert(
-            "tabs",
-            ui.nav_panel("Foo-" + n, "This is the new Foo-" + n + " tab", value="Foo"),
-            target="Menu",
-            position="before",
-            select=True,
-        )
+        ui.nav_show("tabs", target="Foo")
+
+    @reactive.effect()
+    @reactive.event(input.hideMenu)
+    def _():
+        ui.nav_hide("tabs", target="More")
+
+    @reactive.effect()
+    @reactive.event(input.showMenu)
+    def _():
+        ui.nav_show("tabs", target="More")
