@@ -123,3 +123,4 @@ shiny_bookmarks/
 
 # setuptools_scm
 shiny/_version.py
+shiny/testing/evaluation/apps/*/test_*.py
