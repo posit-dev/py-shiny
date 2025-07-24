@@ -189,9 +189,6 @@ class Session(ABC):
     user: str | None
     groups: list[str] | None
 
-    # Internal state for current_output_id()
-    _current_renderer: Renderer[Any] | None = None
-
     # TODO: not sure these should be directly exposed
     _outbound_message_queues: OutBoundMessageQueues
     _downloads: dict[str, DownloadInfo]
@@ -382,13 +379,6 @@ class Session(ABC):
             A function that can be used to cancel the registration.
         """
 
-    def _current_output_id(self) -> str | None:
-        "Returns the id of the currently executing output renderer (if any)."
-        if self._current_renderer is None:
-            return None
-        else:
-            return self._current_renderer.output_id
-
     @abstractmethod
     async def _unhandled_error(self, e: Exception) -> None: ...
 
@@ -551,8 +541,6 @@ class AppSession(Session):
 
         self.user: str | None = None
         self.groups: list[str] | None = None
-
-        self._current_renderer = None
 
         credentials_json: str = ""
         if "shiny-server-credentials" in self.http_conn.headers:
@@ -1519,8 +1507,18 @@ class ClientData:
         If a method is called outside of a reactive context.
     """
 
+    @contextlib.contextmanager
+    def _renderer_ctx(self, renderer: Renderer[Any]) -> Generator[None, None, None]:
+        old_renderer = self._current_renderer
+        try:
+            self._current_renderer = renderer
+            yield
+        finally:
+            self._current_renderer = old_renderer
+
     def __init__(self, session: Session) -> None:
         self._session: Session = session
+        self._current_renderer: Renderer[Any] | None = None
 
     def url_hash(self) -> str:
         """
@@ -1702,8 +1700,8 @@ class ClientData:
     def _read_output(self, id: str | None, key: str) -> str | None:
         self._check_current_context(f"output_{key}")
 
-        if id is None:
-            id = self._session._current_output_id()
+        if id is None and self._current_renderer is not None:
+            id = self._current_renderer.output_id
 
         if id is None:
             raise ValueError(
@@ -1822,7 +1820,7 @@ class Outputs:
 
                 try:
                     # Temporarily set the renderer so `clientdata.output_*()` can access it without an `id`
-                    with self._session_renderer(session, renderer):
+                    with session.clientdata._renderer_ctx(renderer):
                         # Call the app's renderer function
                         value = await renderer.render()
 
@@ -1903,14 +1901,3 @@ class Outputs:
         return self._outputs[name].suspend_when_hidden and self._session._is_hidden(
             name
         )
-
-    @contextlib.contextmanager
-    def _session_renderer(
-        self, session: Session, renderer: Renderer[Any]
-    ) -> Generator[None, None, None]:
-        old_renderer = session._current_renderer
-        try:
-            session._current_renderer = renderer
-            yield
-        finally:
-            session._current_renderer = old_renderer
