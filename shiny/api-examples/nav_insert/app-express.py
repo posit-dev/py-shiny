@@ -1,5 +1,5 @@
 from shiny import reactive
-from shiny.express import expressify, input, render, ui
+from shiny.express import input, ui
 
 with ui.layout_sidebar():
     with ui.sidebar():
