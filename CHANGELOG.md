@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
+* Added support for python 3.13. (#1711)
+
 * `ui.sidebar()` is now interactively resizable. (#2020)
 
 * `ui.update_*()` functions now accept `ui.TagChild` (i.e., HTML) as input to the `label` and `icon` arguments. (#2020)
@@ -30,6 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Explicitly call out module usage in UI input bookmark button documentation. (#1983)
 
 * Fix missing session when trying to display an error duing bookmarking. (#1984)
+
+* Fixed `set()` method of `InputSelectize` controller so it clears existing selections before applying new values. (#2024)
 
 ### Deprecations
 

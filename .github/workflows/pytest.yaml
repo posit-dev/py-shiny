@@ -17,7 +17,7 @@ jobs:
     strategy:
       matrix:
         # "3.10" must be a string; otherwise it is interpreted as 3.1.
-        python-version: ["3.12", "3.11", "3.10", "3.9"]
+        python-version: ["3.13", "3.12", "3.11", "3.10", "3.9"]
         os: [ubuntu-latest, windows-latest, macOS-latest]
         exclude:
           - python-version: ${{ github.event.pull_request.draft && '3.11' }}
@@ -73,7 +73,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: "Set up Python 3.10"
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.10"
       - name: Install dependencies
@@ -107,7 +107,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.12", "3.11", "3.10", "3.9"]
+        python-version: ["3.13", "3.12", "3.11", "3.10", "3.9"]
         browser: ["chromium", "firefox", "webkit"]
         exclude:
           - python-version: ${{ github.event.pull_request.draft && '3.11' }}
@@ -117,8 +117,6 @@ jobs:
           - browser: ${{ github.event.pull_request.draft && 'webkit' }}
           # There are many unexplained tests that fail on webkit w/ python 3.8, 3.9
           # Given the more recent versions of python work, we will exclude this combination
-          - browser: "webkit"
-            python-version: "3.8"
           - browser: "webkit"
             python-version: "3.9"
       fail-fast: false
@@ -157,7 +155,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.12", "3.11", "3.10", "3.9"]
+        python-version: ["3.13", "3.12", "3.11", "3.10", "3.9"]
         browser: ["chromium", "firefox", "webkit"]
         exclude:
           - python-version: ${{ github.event.pull_request.draft && '3.11' }}
