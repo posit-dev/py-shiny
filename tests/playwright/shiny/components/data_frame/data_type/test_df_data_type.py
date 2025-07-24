@@ -30,12 +30,6 @@ backends = [
         "df_original": "pl_df_original",
         "selected_row": "selected_pl_row",
     },
-    {
-        "name": "modin",
-        "prefix": "mpd",
-        "df_original": "mpd_df_original",
-        "selected_row": "selected_mpd_row",
-    },
 ]
 
 

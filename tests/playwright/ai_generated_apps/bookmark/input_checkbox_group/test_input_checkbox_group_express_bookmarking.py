@@ -35,9 +35,11 @@ def test_checkbox_group_demo(page: Page, app: ShinyAppProc) -> None:
     module_group.expect_selected(["Choice A", "Choice C"])
     module_text.expect_value("Checkbox group values: ('Choice A', 'Choice C')")
 
+    existing_url = page.url
     # Bookmark the state
     bookmark_button = controller.InputBookmarkButton(page)
     bookmark_button.click()
+    page.wait_for_url(lambda url: url != existing_url, timeout=5 * 1000)
 
     # Reload the page to test bookmark
     page.reload()

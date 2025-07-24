@@ -9,19 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
-* The `.output_*()` methods of the `ClientData` class (e.g., `session.clientdata.output_height()`) can now be called without an `id` inside a output renderer. (#1978)
+* Added support for python 3.13. (#1711)
+
+* `ui.sidebar()` is now interactively resizable. (#2020)
+
+* `ui.update_*()` functions now accept `ui.TagChild` (i.e., HTML) as input to the `label` and `icon` arguments. (#2020)
+
+* The `.output_*()` methods of the `ClientData` class (e.g., `session.clientdata.output_height()`) can now be called without an `id` when called inside a `@render` function. (#1978)
+
+* `playwright.controller.InputActionButton` gains a `expect_icon()` method. As a result, the already existing `expect_label()` no longer includes the icon. (#2020)
 
 ### Improvements
 
-* `selectize`, `remove_button`, and `options` parameters of `ui.input_select()` have been deprecated; use `ui.input_selectize()` instead. (Thanks, @ErdaradunGaztea!) (#1947)
-
 * Improved the styling and readability of markdown tables rendered by `ui.Chat()` and `ui.MarkdownStream()`. (#1973)
 
+* `selectize`, `remove_button`, and `options` parameters of `ui.input_select()` have been deprecated; use `ui.input_selectize()` instead. (Thanks, @ErdaradunGaztea!) (#1947)
+
+* Added `timeout_secs` parameter to `create_app_fixture` to allow testing apps with longer startup times. (#2033)
+
 ### Bug fixes
+
+* Fixed an issue with `ui.Chat()` sometimes wanting to scroll a parent element. (#1996)
 
 * Explicitly call out module usage in UI input bookmark button documentation. (#1983)
 
 * Fix missing session when trying to display an error duing bookmarking. (#1984)
+
+* Fixed `set()` method of `InputSelectize` controller so it clears existing selections before applying new values. (#2024)
 
 
 ## [1.4.0] - 2025-04-08
@@ -49,6 +63,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * `ui.page_navbar()` and `ui.navset_bar()` now correctly apply `theme` and additional attributes from `navbar_options` created with `ui.navbar_options()`. (#1942)
 
 ### Bug fixes
+
+* Fixed issue where apps run in Workbench were unexpectedly crashing. Apps running in Workbench will now have `ws_per_message_deflate=False` enforced. (#2005)
 
 * Fixed an issue where the `<main>` areas of `ui.page_sidebar()` and `ui.page_navbar()` (with a `sidebar`) were made to be a fillable containers even when `fillable=False`. (#1816)
 

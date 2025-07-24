@@ -61,10 +61,15 @@ def input_action_button(
     if "_add_ws" not in kwargs:
         kwargs["_add_ws"] = True
 
+    if icon is not None:
+        icon = tags.span(icon, class_="action-icon")
+
+    if label is not None:
+        label = tags.span(label, class_="action-label")
+
     return tags.button(
         {"class": "btn btn-default action-button", "style": css(width=width)},
         icon,
-        None if icon is None else " ",
         label,
         id=resolve_id(id),
         type="button",
@@ -114,8 +119,14 @@ def input_action_link(
     * :func:`~shiny.reactive.event`
     """
 
+    if icon is not None:
+        icon = tags.span(icon, class_="action-icon")
+
+    if label is not None:
+        label = tags.span(label, class_="action-label")
+
     return tags.a(
-        {"class": "action-button"},
+        {"class": "action-button action-link"},
         icon,
         label,
         id=resolve_id(id),

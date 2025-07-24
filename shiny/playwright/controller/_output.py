@@ -1058,13 +1058,33 @@ class OutputDataFrame(UiWithContainer):
                 "cell-edit-editing", timeout=timeout
             )
         elif value == "editing":
-            self.expect_cell_class("cell-edit-editing", row=row, col=col)
+            self.expect_cell_class(
+                "cell-edit-editing",
+                row=row,
+                col=col,
+                timeout=timeout,
+            )
         elif value == "saving":
-            self.expect_cell_class("cell-edit-saving", row=row, col=col)
+            self.expect_cell_class(
+                "cell-edit-saving",
+                row=row,
+                col=col,
+                timeout=timeout,
+            )
         elif value == "failure":
-            self.expect_cell_class("cell-edit-failure", row=row, col=col)
+            self.expect_cell_class(
+                "cell-edit-failure",
+                row=row,
+                col=col,
+                timeout=timeout,
+            )
         elif value == "success":
-            self.expect_cell_class("cell-edit-success", row=row, col=col)
+            self.expect_cell_class(
+                "cell-edit-success",
+                row=row,
+                col=col,
+                timeout=timeout,
+            )
         else:
             raise ValueError(
                 "Invalid state. Select one of 'success', 'failure', 'saving', 'editing', 'ready'"

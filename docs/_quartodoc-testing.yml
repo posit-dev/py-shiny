@@ -26,6 +26,7 @@ quartodoc:
       contents:
         - playwright.controller.InputActionButton
         - playwright.controller.InputActionLink
+        - playwright.controller.InputBookmarkButton
         - playwright.controller.InputCheckbox
         - playwright.controller.InputCheckboxGroup
         - playwright.controller.InputDarkMode
@@ -59,6 +60,7 @@ quartodoc:
         - playwright.controller.NavsetTab
         - playwright.controller.NavsetUnderline
         - playwright.controller.NavPanel
+        - playwright.controller.PageNavbar
     - title: Upload and download
       desc: Methods for interacting with Shiny app uploading and downloading controller.
       contents:

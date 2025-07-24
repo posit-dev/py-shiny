@@ -73,28 +73,10 @@ def add_test_file(
     if not test_file.name.startswith("test_"):
         return "Test file must start with 'test_'"
 
-    # if app path directory is the same as the test file directory, use `local_app`
-    # otherwise, use `create_app_fixture`
-    is_same_dir = app_file.parent == test_file.parent
-
     test_name = test_file.name.replace(".py", "")
     rel_path = os.path.relpath(app_file, test_file.parent)
 
-    template = (
-        f"""\
-from playwright.sync_api import Page
-
-from shiny.playwright import controller
-from shiny.run import ShinyAppProc
-
-
-def {test_name}(page: Page, local_app: ShinyAppProc):
-
-    page.goto(local_app.url)
-    # Add test code here
-"""
-        if is_same_dir
-        else f"""\
+    template = f"""\
 from playwright.sync_api import Page
 
 from shiny.playwright import controller
@@ -109,7 +91,6 @@ def {test_name}(page: Page, app: ShinyAppProc):
     page.goto(app.url)
     # Add test code here
 """
-    )
     # Make sure test file directory exists
     test_file.parent.mkdir(parents=True, exist_ok=True)
 
