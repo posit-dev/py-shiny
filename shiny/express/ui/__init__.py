@@ -74,7 +74,6 @@ from ...ui import (
     input_text,
     input_text_area,
     panel_title,
-    insert_accordion_panel,
     remove_accordion_panel,
     update_accordion,
     update_accordion_panel,
@@ -159,6 +158,10 @@ from ._page import (
 
 from ._hold import (
     hold,
+)
+
+from ._insert import (
+    insert_accordion_panel,
 )
 
 __all__ = (
