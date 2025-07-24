@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from contextlib import contextmanager
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -163,7 +162,7 @@ class Renderer(Generic[IT]):
             raise TypeError("Value function must be callable")
 
         # Set value function with extra meta information
-        self.fn = AsyncValueFn(_fn, self)
+        self.fn = AsyncValueFn(_fn)
 
         # Copy over function name as it is consistent with how Session and Output
         # retrieve function names
@@ -348,7 +347,6 @@ class AsyncValueFn(Generic[IT]):
     def __init__(
         self,
         fn: Callable[[], IT | None] | Callable[[], Awaitable[IT | None]],
-        renderer: Renderer[Any],
     ):
         if isinstance(fn, AsyncValueFn):
             raise TypeError(
@@ -357,14 +355,12 @@ class AsyncValueFn(Generic[IT]):
         self._is_async = is_async_callable(fn)
         self._fn = wrap_async(fn)
         self._orig_fn = fn
-        self._renderer = renderer
 
     async def __call__(self) -> IT | None:
         """
         Call the asynchronous function.
         """
-        with self._current_renderer():
-            return await self._fn()
+        return await self._fn()
 
     def is_async(self) -> bool:
         """
@@ -405,19 +401,3 @@ class AsyncValueFn(Generic[IT]):
             )
         sync_fn = cast(Callable[[], IT], self._orig_fn)
         return sync_fn
-
-    @contextmanager
-    def _current_renderer(self):
-        from ...session import get_current_session
-
-        session = get_current_session()
-        if session is None:
-            yield
-            return
-
-        old_renderer = session._current_renderer
-        try:
-            session._current_renderer = self._renderer
-            yield
-        finally:
-            session._current_renderer = old_renderer

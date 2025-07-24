@@ -22,6 +22,7 @@ from typing import (
     AsyncIterable,
     Awaitable,
     Callable,
+    Generator,
     Iterable,
     Literal,
     Optional,
@@ -550,6 +551,9 @@ class AppSession(Session):
 
         self.user: str | None = None
         self.groups: list[str] | None = None
+
+        self._current_renderer = None
+
         credentials_json: str = ""
         if "shiny-server-credentials" in self.http_conn.headers:
             credentials_json = self.http_conn.headers["shiny-server-credentials"]
@@ -1817,8 +1821,13 @@ class Outputs:
                 )
 
                 try:
-                    value = await renderer.render()
+                    # Temporarily set the renderer so `clientdata.output_*()` can access it without an `id`
+                    with self._session_renderer(session, renderer):
+                        # Call the app's renderer function
+                        value = await renderer.render()
+
                     session._outbound_message_queues.set_value(output_name, value)
+
                 except SilentOperationInProgressException:
                     session._send_progress(
                         "binding", {"id": output_name, "persistent": True}
@@ -1894,3 +1903,14 @@ class Outputs:
         return self._outputs[name].suspend_when_hidden and self._session._is_hidden(
             name
         )
+
+    @contextlib.contextmanager
+    def _session_renderer(
+        self, session: Session, renderer: Renderer[Any]
+    ) -> Generator[None, None, None]:
+        old_renderer = session._current_renderer
+        try:
+            session._current_renderer = renderer
+            yield
+        finally:
+            session._current_renderer = old_renderer

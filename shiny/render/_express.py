@@ -67,7 +67,7 @@ class express(Renderer[None]):
         if fn is None:  # pyright: ignore[reportUnnecessaryComparison]
             raise TypeError("@render.express requires a function when called")
 
-        async_fn = AsyncValueFn(fn, self)
+        async_fn = AsyncValueFn(fn)
         if async_fn.is_async():
             raise TypeError(
                 "@render.express does not support async functions. Use @render.ui instead."
