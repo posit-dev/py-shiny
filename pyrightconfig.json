@@ -11,6 +11,8 @@
     "tests/playwright/deploys/*/app.py",
     "shiny/templates",
     "tests/playwright/ai_generated_apps",
+    "tests/inspect-ai",
+    "shiny/pytest/generate",
   ],
   "typeCheckingMode": "strict",
   "reportImportCycles": "none",
