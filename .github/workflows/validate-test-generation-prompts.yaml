@@ -44,6 +44,7 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install -e ".[dev,test]"
+          pip install inspect-ai
 
       - name: Cache Playwright browsers
         uses: actions/cache@v4
