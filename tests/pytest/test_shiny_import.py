@@ -33,7 +33,6 @@ def test_shiny_import_itself():
         for path in shiny_files
         if "/api-examples/" not in path
         and "/templates/" not in path
-        and "/testing/evaluation/apps/" not in path
         and Path(path).is_file()
     ]
 

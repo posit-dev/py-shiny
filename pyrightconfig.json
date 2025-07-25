@@ -11,7 +11,7 @@
     "tests/playwright/deploys/*/app.py",
     "shiny/templates",
     "tests/playwright/ai_generated_apps",
-    "shiny/testing/evaluation",
+    "tests/inspect-ai",
     "shiny/testing/generator",
     "shiny/testing/utils",
   ],
