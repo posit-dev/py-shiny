@@ -1,4 +1,4 @@
-name: Validate Testing Documentation
+name: Validate Testing Documentation for changes
 
 on:
   pull_request:
@@ -43,19 +43,22 @@ jobs:
 
             We detected changes in the `shiny/playwright/controller` directory. These changes may affect the testing documentation used by the `shiny add test` command.
 
-            **Please run the following commands to update the testing documentation:**
+            **Please run the following command to update the testing documentation:**
 
             ```bash
-            # Install repomix if not already installed
-            npm install -g repomix
-
-            # Generate updated testing documentation
-            repomix docs/api/testing -o tests/inspect-ai/utils/scripts/repomix-output-testing.xml
-            python tests/inspect-ai/utils/scripts/process_docs.py --input tests/inspect-ai/utils/scripts/repomix-output-testing.xml --output shiny/pytest/generate/data/docs/documentation_testing.json
-
-            # Clean up temporary files
-            rm -f tests/inspect-ai/utils/scripts/repomix-output-testing.xml
+            make update-testing-docs
             ```
+
+            <details><summary>Additional details</summary>
+
+            This command will:
+            1. Install repomix if not already installed
+            2. Build the latest documentation with quartodoc
+            3. Generate repomix output for testing docs
+            4. Process the output to update the AI test generator documentation
+            5. Clean up temporary files
+
+            </details>
 
             This will ensure that the AI test generator has access to the latest controller API documentation.
 
