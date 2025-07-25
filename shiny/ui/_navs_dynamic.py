@@ -60,7 +60,7 @@ def insert_nav_panel(
     --------
     ~remove_nav_panel
     ~show_nav_panel
-    ~nav_hide
+    ~hide_nav_panel
     ~shiny.ui.nav_panel
     """
 
@@ -110,7 +110,7 @@ def remove_nav_panel(id: str, target: str, session: Optional[Session] = None) ->
     --------
     ~insert_nav_panel
     ~show_nav_panel
-    ~nav_hide
+    ~hide_nav_panel
     ~shiny.ui.nav_panel
     """
 
@@ -145,11 +145,11 @@ def show_nav_panel(
     Note
     ----
     For `show_nav_panel()` to be relevant/useful, a :func:`shiny.ui.nav` item must
-    have been hidden using :func:`~nav_hide`.
+    have been hidden using :func:`~hide_nav_panel`.
 
     See Also
     --------
-    ~nav_hide
+    ~hide_nav_panel
     ~insert_nav_panel
     ~remove_nav_panel
     ~shiny.ui.nav_panel
