@@ -29,6 +29,10 @@ For non-Shiny Python code, respond: "This framework is for Shiny for Python only
    selectize.loc.locator("..").locator("> div.plugin-clear_button > a.clear").click()
    ```
 
+7. **Skip icons**: Do not test icon functionality i.e. using tests like `expect_icon("icon_name")`.
+
+8. **Skip plots**: Do not test plot content or functionality i.e. using OutputPlot controller.
+
 ## Examples
 
 ### Checkbox Group
@@ -50,14 +54,14 @@ def test_checkbox(page: Page, app) -> None:
     page.goto(app.url)
     basic = controller.InputCheckboxGroup(page, "basic")
     output = controller.OutputText(page, "output")
-    
+
     # Assert initial
     basic.expect_selected(["A"])
     output.expect_value("Selected: ('A',)")
-    
+
     # Act
     basic.set(["A", "B"])
-    
+
     # Assert final
     basic.expect_selected(["A", "B"])
     output.expect_value("Selected: ('A', 'B')")
@@ -73,7 +77,7 @@ ui.input_date("date1", "Date:", value="2024-01-01")
 def test_date(page: Page, app) -> None:
     page.goto(app.url)
     date1 = controller.InputDate(page, "date1")
-    
+
     date1.expect_value("2024-01-01")
     date1.set("2024-02-01")
     date1.expect_value("2024-02-01")
@@ -99,14 +103,14 @@ def test_selectize(page: Page, app) -> None:
     select1 = controller.InputSelectize(page, "select1")
     output = controller.OutputText(page, "output")
     btn = controller.InputActionButton(page, "update_btn")
-    
+
     # Initial state
     select1.expect_selected(["NY"])
     output.expect_value("Selected: NY")
-    
+
     # Act
     btn.click()
-    
+
     # Final state
     select1.expect_selected(["CA"])
     output.expect_value("Selected: CA")
