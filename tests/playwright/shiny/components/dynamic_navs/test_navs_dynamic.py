@@ -17,61 +17,76 @@ def test_dynamic_navs(page: Page, local_app: ShinyAppProc) -> None:
     addfoo = controller.InputActionButton(page, "addFoo")
     addfoo.click()
     controller.NavsetTab(page, "tabs").expect_nav_titles(
-        ["Hello", "Foo", "Foo-1", "Static 1", "Static 2"]
+        ["Hello", "Foo", "Foo-1", "Static1", "Static2"]
     )
+    # Test Foo-1 tab is added
+    navpanel = controller.NavPanel(page, "tabs", "Foo").loc.filter(has_text="Foo-1")
+    expect(navpanel).to_have_text("Foo-1")
 
     # Click hide-tab to hide the Foo tabs
     hidetab = controller.InputActionButton(page, "hideTab")
     hidetab.click()
 
     # Expect the Foo tabs to be hidden
-    expect(
-        page.get_by_role("presentation").filter(has_text="This is the Foo tab")
-    ).to_be_hidden()
-    expect(page.get_by_role("presentation").filter(has_text="Foo-")).to_be_hidden()
+    navpanel = controller.NavPanel(page, "tabs", "Foo").loc.filter(has_text="Foo-1")
+    expect(navpanel).to_be_hidden()
+    navpanel = controller.NavPanel(page, "tabs", "Foo").loc.filter(
+        has_text="This is the Foo tab"
+    )
+    expect(navpanel).to_be_hidden()
 
     # Click show-tab to show the Foo tabs again
     showtab = controller.InputActionButton(page, "showTab")
     showtab.click()
 
     # Expect the Foo tabs to be visible again
-    expect(
-        page.get_by_role("presentation").filter(has_text="This is the Foo tab")
-    ).not_to_be_hidden()
-    expect(page.get_by_role("presentation").filter(has_text="Foo-")).not_to_be_hidden()
+    navpanel2 = controller.NavPanel(page, "tabs", "Foo").loc.first
+    expect(navpanel2).to_be_visible(timeout=10000)
+    navpanel3 = controller.NavPanel(page, "tabs", "Foo").loc.last
+    expect(navpanel3).to_be_visible(timeout=10000)
 
     # Click remove-foo to remove the Foo tabs
     removefoo = controller.InputActionButton(page, "removeFoo")
     removefoo.click()
     controller.NavsetTab(page, "tabs").expect_nav_titles(
-        ["Hello", "Static 1", "Static 2"]
+        ["Hello", "Static1", "Static2"]
     )
 
     # Click add to add a dynamic tab
     add = controller.InputActionButton(page, "add")
     add.click()
     controller.NavsetTab(page, "tabs").expect_nav_titles(
-        ["Hello", "Static 1", "Dynamic-1", "Static 2"]
+        ["Hello", "Static1", "Dynamic-1", "Static2"]
     )
 
     # Click add again to add another dynamic tab
     add.click()
     controller.NavsetTab(page, "tabs").expect_nav_titles(
-        ["Hello", "Static 1", "Dynamic-1", "Dynamic-2", "Static 2"]
+        ["Hello", "Static1", "Dynamic-1", "Dynamic-2", "Static2"]
     )
+
+    page.get_by_role("button", name="Menu", exact=True).click()
+
+    navpanel3 = controller.NavPanel(page, "tabs", "s1").loc
+    expect(navpanel3).to_be_visible(timeout=20000)
 
     # Click hide-menu to hide the static menu
     hidemenu = controller.InputActionButton(page, "hideMenu")
     hidemenu.click()
 
     # Expect the Menu to be hidden
-    expect(page.get_by_role("presentation").filter(has_text="Static")).to_be_hidden()
+    navpanel3 = controller.NavPanel(page, "tabs", "s1").loc
+    expect(navpanel3).to_be_hidden()
 
     # Click show-menu to show the static menu again
     showmenu = controller.InputActionButton(page, "showMenu")
     showmenu.click()
 
     # Expect the Menu to be visible again
-    expect(
-        page.get_by_role("presentation").filter(has_text="Static")
-    ).not_to_be_hidden()
+    expect(page.get_by_role("button", name="Menu", exact=True)).to_be_visible(
+        timeout=10000
+    )
+    # Click the Menu button to show the static menu
+    page.get_by_role("button", name="Menu", exact=True).click()
+    navpanel3 = controller.NavPanel(page, "tabs", "s1").loc
+    expect(navpanel3).to_be_visible(timeout=20000)

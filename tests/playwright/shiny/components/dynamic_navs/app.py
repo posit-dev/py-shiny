@@ -12,11 +12,11 @@ app_ui = ui.page_sidebar(
     ),
     ui.navset_tab(
         ui.nav_panel("Hello", "This is the hello tab", value="Hello"),
-        ui.nav_panel("Foo", "Foo", value="Foo"),
+        ui.nav_panel("Foo", "This is the Foo tab", value="Foo"),
         ui.nav_menu(
-            "Static",
-            ui.nav_panel("Static 1", "Static 1", value="s1"),
-            ui.nav_panel("Static 2", "Static 2", value="s2"),
+            "Menu",
+            ui.nav_panel("Static1", "Static1", value="s1"),
+            ui.nav_panel("Static2", "Static2", value="s2"),
             value="Menu",
         ),
         id="tabs",
