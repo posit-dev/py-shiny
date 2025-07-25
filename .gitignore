@@ -124,3 +124,6 @@ shiny_bookmarks/
 # setuptools_scm
 shiny/_version.py
 tests/inspect-ai/apps/*/test_*.py
+test-results.xml
+/results
+tests/inspect-ai/scripts/test_metadata.json

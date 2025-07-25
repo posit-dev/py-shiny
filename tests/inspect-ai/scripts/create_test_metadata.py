@@ -2,11 +2,11 @@ import json
 from itertools import islice
 from pathlib import Path
 
-from ....shiny.pytest.generate import ShinyTestGenerator
+from shiny.pytest.generate import ShinyTestGenerator
 
 
 def generate_shiny_test_metadata(
-    apps_dir: str | Path = "apps", max_tests: int = 10
+    apps_dir: str | Path = "tests/inspect-ai/apps", max_tests: int = 10
 ) -> dict:
     """
     Generate Shiny tests and metadata for apps in the specified directory.
@@ -20,6 +20,12 @@ def generate_shiny_test_metadata(
     """
     generator = ShinyTestGenerator()
     apps_dir = Path(apps_dir)
+
+    if not apps_dir.exists() and apps_dir.is_relative_to("."):
+        script_dir = Path(__file__).parent
+        apps_dir = script_dir.parent / "apps"
+        if not apps_dir.exists():
+            apps_dir = script_dir.parent.parent.parent / "tests" / "inspect-ai" / "apps"
 
     app_files = islice(apps_dir.glob("*/app*.py"), max_tests)
 

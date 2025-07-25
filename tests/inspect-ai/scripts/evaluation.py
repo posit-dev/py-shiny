@@ -168,8 +168,8 @@ def shiny_test_evaluation() -> Task:
     Inspect AI task for evaluating generated Shiny tests.
     """
     # Load test data from the JSON file
-    repo_root = Path(__file__).parent.parent  # Go up from evals/ to repo root
-    metadata_file = repo_root / "evals" / "test_metadata.json"
+    script_dir = Path(__file__).parent  # Current script directory
+    metadata_file = script_dir / "test_metadata.json"
     with open(metadata_file, "r") as f:
         test_data = json.load(f)
 
