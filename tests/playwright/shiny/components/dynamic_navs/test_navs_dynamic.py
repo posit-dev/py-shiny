@@ -41,9 +41,9 @@ def test_dynamic_navs(page: Page, local_app: ShinyAppProc) -> None:
 
     # Expect the Foo tabs to be visible again
     navpanel2 = controller.NavPanel(page, "tabs", "Foo").loc.first
-    expect(navpanel2).to_be_visible(timeout=10000)
+    expect(navpanel2).to_be_visible()
     navpanel3 = controller.NavPanel(page, "tabs", "Foo").loc.last
-    expect(navpanel3).to_be_visible(timeout=10000)
+    expect(navpanel3).to_be_visible()
 
     # Click remove-foo to remove the Foo tabs
     removefoo = controller.InputActionButton(page, "removeFoo")
@@ -68,7 +68,7 @@ def test_dynamic_navs(page: Page, local_app: ShinyAppProc) -> None:
     page.get_by_role("button", name="Menu", exact=True).click()
 
     navpanel3 = controller.NavPanel(page, "tabs", "s1").loc
-    expect(navpanel3).to_be_visible(timeout=20000)
+    expect(navpanel3).to_be_visible()
 
     # Click hide-menu to hide the static menu
     hidemenu = controller.InputActionButton(page, "hideMenu")
@@ -83,10 +83,8 @@ def test_dynamic_navs(page: Page, local_app: ShinyAppProc) -> None:
     showmenu.click()
 
     # Expect the Menu to be visible again
-    expect(page.get_by_role("button", name="Menu", exact=True)).to_be_visible(
-        timeout=10000
-    )
+    expect(page.get_by_role("button", name="Menu", exact=True)).to_be_visible()
     # Click the Menu button to show the static menu
     page.get_by_role("button", name="Menu", exact=True).click()
     navpanel3 = controller.NavPanel(page, "tabs", "s1").loc
-    expect(navpanel3).to_be_visible(timeout=20000)
+    expect(navpanel3).to_be_visible()
