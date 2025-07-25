@@ -25,6 +25,10 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Setup py-shiny
+        id: install
+        uses: ./.github/py-shiny/setup
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
