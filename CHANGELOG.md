@@ -39,6 +39,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Fixed `set()` method of `InputSelectize` controller so it clears existing selections before applying new values. (#2024)
 
+### Deprecations
+
+* `ui.panel_well()` is deprecated in favor of `ui.card()`. (#2038)
+
 
 ## [1.4.0] - 2025-04-08
 

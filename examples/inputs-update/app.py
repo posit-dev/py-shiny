@@ -4,78 +4,70 @@ from shiny import App, Inputs, Outputs, Session, reactive, ui
 
 app_ui = ui.page_fluid(
     ui.panel_title("Changing the values of inputs from the server"),
-    ui.row(
-        ui.column(
-            4,
-            ui.panel_well(
-                ui.tags.h4("These inputs control the other inputs on the page"),
-                ui.input_text(
-                    "control_label", "This controls some of the labels:", "LABEL TEXT"
-                ),
-                ui.input_slider(
-                    "control_num", "This controls values:", min=1, max=20, value=15
-                ),
+    ui.layout_columns(
+        ui.card(
+            ui.card_header("These inputs control the other inputs on the page"),
+            ui.input_text(
+                "control_label", "This controls some of the labels:", "LABEL TEXT"
+            ),
+            ui.input_slider(
+                "control_num", "This controls values:", min=1, max=20, value=15
             ),
         ),
-        ui.column(
-            4,
-            ui.panel_well(
-                ui.tags.h4("These inputs are controlled by the other inputs"),
-                ui.input_text("inText", "Text input:", value="start text"),
-                ui.input_numeric(
-                    "inNumber", "Number input:", min=1, max=20, value=5, step=0.5
-                ),
-                ui.input_numeric(
-                    "inNumber2", "Number input 2:", min=1, max=20, value=5, step=0.5
-                ),
-                ui.input_slider("inSlider", "Slider input:", min=1, max=20, value=15),
-                ui.input_slider(
-                    "inSlider2", "Slider input 2:", min=1, max=20, value=(5, 15)
-                ),
-                ui.input_slider(
-                    "inSlider3", "Slider input 3:", min=1, max=20, value=(5, 15)
-                ),
-                ui.input_date("inDate", "Date input:"),
-                ui.input_date_range("inDateRange", "Date range input:"),
+        ui.card(
+            ui.card_header("These inputs are controlled by the other inputs"),
+            ui.input_text("inText", "Text input:", value="start text"),
+            ui.input_numeric(
+                "inNumber", "Number input:", min=1, max=20, value=5, step=0.5
             ),
+            ui.input_numeric(
+                "inNumber2", "Number input 2:", min=1, max=20, value=5, step=0.5
+            ),
+            ui.input_slider("inSlider", "Slider input:", min=1, max=20, value=15),
+            ui.input_slider(
+                "inSlider2", "Slider input 2:", min=1, max=20, value=(5, 15)
+            ),
+            ui.input_slider(
+                "inSlider3", "Slider input 3:", min=1, max=20, value=(5, 15)
+            ),
+            ui.input_date("inDate", "Date input:"),
+            ui.input_date_range("inDateRange", "Date range input:"),
         ),
-        ui.column(
-            4,
-            ui.panel_well(
-                ui.input_checkbox("inCheckbox", "Checkbox input", value=False),
-                ui.input_checkbox_group(
-                    "inCheckboxGroup",
-                    "Checkbox group input:",
-                    {
-                        "option1": "label 1",
-                        "option2": "label 2",
-                    },
-                ),
-                ui.input_radio_buttons(
-                    "inRadio",
-                    "Radio buttons:",
-                    {
-                        "option1": "label 1",
-                        "option2": "label 2",
-                    },
-                ),
-                ui.input_select(
-                    "inSelect",
-                    "Select input:",
-                    {
-                        "option1": "label 1",
-                        "option2": "label 2",
-                    },
-                ),
-                ui.input_select(
-                    "inSelect2",
-                    "Select input 2:",
-                    {
-                        "option1": "label 1",
-                        "option2": "label 2",
-                    },
-                    multiple=True,
-                ),
+        ui.card(
+            ui.card_header("These inputs are updated by the server"),
+            ui.input_checkbox("inCheckbox", "Checkbox input", value=False),
+            ui.input_checkbox_group(
+                "inCheckboxGroup",
+                "Checkbox group input:",
+                {
+                    "option1": "label 1",
+                    "option2": "label 2",
+                },
+            ),
+            ui.input_radio_buttons(
+                "inRadio",
+                "Radio buttons:",
+                {
+                    "option1": "label 1",
+                    "option2": "label 2",
+                },
+            ),
+            ui.input_select(
+                "inSelect",
+                "Select input:",
+                {
+                    "option1": "label 1",
+                    "option2": "label 2",
+                },
+            ),
+            ui.input_select(
+                "inSelect2",
+                "Select input 2:",
+                {
+                    "option1": "label 1",
+                    "option2": "label 2",
+                },
+                multiple=True,
             ),
             ui.navset_tab(
                 ui.nav_panel("panel1", ui.h2("This is the first panel.")),
