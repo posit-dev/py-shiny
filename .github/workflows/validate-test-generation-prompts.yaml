@@ -19,6 +19,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -27,8 +29,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[test]"
+          pip install -e ".[dev,test]"
 
       - name: Install Playwright browsers
         run: |
@@ -133,9 +134,9 @@ jobs:
             } catch (error) {
               console.error('Error reading summary file:', error);
               const comment = \`## Inspect AI Evaluation Results
-              
+
               ❌ **Error**: Could not read evaluation results summary file.
-              
+
               Please check the workflow logs for details.\`;
 
               github.rest.issues.createComment({
