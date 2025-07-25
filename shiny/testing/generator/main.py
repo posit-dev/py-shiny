@@ -34,7 +34,7 @@ class Config:
     DEFAULT_OPENAI_MODEL = "gpt-4.1-nano"
     DEFAULT_PROVIDER = "anthropic"
 
-    MAX_TOKENS = 64000
+    MAX_TOKENS = 8092
     LOG_FILE = "llm_test_generator.log"
     COMMON_APP_PATTERNS = ["app.py", "app_*.py"]
 
