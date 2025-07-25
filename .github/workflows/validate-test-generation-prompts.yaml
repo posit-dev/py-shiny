@@ -12,6 +12,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  PYTHON_VERSION: '3.12'
+  ATTEMPTS: 3
+
 jobs:
   validate-prompts:
     runs-on: ubuntu-latest
@@ -25,15 +29,38 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Cache Python dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt', 'setup.py', 'pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
 
       - name: Install dependencies
         run: |
+          pip install --upgrade pip
           pip install -e ".[dev,test]"
 
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('**/requirements*.txt', 'setup.py') }}
+
       - name: Install Playwright browsers
-        run: |
-          playwright install
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: playwright install --with-deps
+
+      - name: Install Playwright dependencies only
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: playwright install-deps
+
+
 
       - name: Run Evaluation and Tests 3 Times
         env:
@@ -105,6 +132,8 @@ jobs:
             ls -la results/
             exit 1
           fi
+
+
 
       - name: Prepare Comment Body
         if: github.event_name == 'pull_request'
