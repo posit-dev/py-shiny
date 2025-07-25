@@ -27,7 +27,9 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -e ".[test]"
+          python -m pip install --upgrade pip
+          make install-deps
+          make install
 
       - name: Install Playwright browsers
         run: |
