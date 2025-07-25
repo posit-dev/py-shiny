@@ -2,7 +2,7 @@ import json
 from itertools import islice
 from pathlib import Path
 
-from ...generator import ShinyTestGenerator
+from ....shiny.pytest.generate import ShinyTestGenerator
 
 
 def generate_shiny_test_metadata(

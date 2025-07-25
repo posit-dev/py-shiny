@@ -123,7 +123,7 @@ class ShinyTestGenerator:
         """Load documentation from package resources"""
         try:
             doc_path = (
-                importlib.resources.files("shiny.testing.generator")
+                importlib.resources.files("shiny.pytest.generate")
                 / "data"
                 / "docs"
                 / "documentation_testing.json"
@@ -139,7 +139,7 @@ class ShinyTestGenerator:
         """Read and combine system prompt with documentation"""
         try:
             prompt_path = (
-                importlib.resources.files("shiny.testing.generator")
+                importlib.resources.files("shiny.pytest.generate")
                 / "data"
                 / "prompts"
                 / "SYSTEM_PROMPT_testing.md"

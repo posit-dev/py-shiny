@@ -50,11 +50,11 @@ jobs:
             npm install -g repomix
 
             # Generate updated testing documentation
-            repomix docs/api/testing -o shiny/testing/utils/scripts/repomix-output-testing.xml
-            python shiny/testing/utils/scripts/process_docs.py --input shiny/testing/utils/scripts/repomix-output-testing.xml --output shiny/testing/generator/data/docs/documentation_testing.json
+            repomix docs/api/testing -o shiny/pytest/generate/utils/scripts/repomix-output-testing.xml
+            python shiny/pytest/generate/utils/scripts/process_docs.py --input shiny/pytest/generate/utils/scripts/repomix-output-testing.xml --output shiny/pytest/generate/data/docs/documentation_testing.json
 
             # Clean up temporary files
-            rm -f shiny/testing/utils/scripts/repomix-output-testing.xml
+            rm -f shiny/pytest/generate/utils/scripts/repomix-output-testing.xml
             ```
 
             This will ensure that the AI test generator has access to the latest controller API documentation.
