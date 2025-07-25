@@ -25,7 +25,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     @reactive.event(input.add)
     def _():
         id = "Dynamic-" + str(input.add())
-        ui.nav_insert(
+        ui.insert_nav_panel(
             "tabs",
             ui.nav_panel(id, id),
             target="s2",
@@ -35,13 +35,13 @@ def server(input: Inputs, output: Outputs, session: Session):
     @reactive.effect()
     @reactive.event(input.removeFoo)
     def _():
-        ui.nav_remove("tabs", target="Foo")
+        ui.remove_nav_panel("tabs", target="Foo")
 
     @reactive.effect()
     @reactive.event(input.addFoo)
     def _():
         n = str(input.addFoo())
-        ui.nav_insert(
+        ui.insert_nav_panel(
             "tabs",
             ui.nav_panel("Foo-" + n, "This is the new Foo-" + n + " tab", value="Foo"),
             target="Menu",

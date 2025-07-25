@@ -29,7 +29,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     @reactive.event(input.add)
     def _():
         id = "Dynamic-" + str(input.add())
-        ui.nav_insert(
+        ui.insert_nav_panel(
             "tabs",
             ui.nav_panel(id, id),
             target="s2",
@@ -39,13 +39,13 @@ def server(input: Inputs, output: Outputs, session: Session):
     @reactive.effect()
     @reactive.event(input.removeFoo)
     def _():
-        ui.nav_remove("tabs", target="Foo")
+        ui.remove_nav_panel("tabs", target="Foo")
 
     @reactive.effect()
     @reactive.event(input.addFoo)
     def _():
         n = str(input.addFoo())
-        ui.nav_insert(
+        ui.insert_nav_panel(
             "tabs",
             ui.nav_panel("Foo-" + n, "Foo-" + n, value="Foo"),
             target="Menu",
@@ -56,22 +56,22 @@ def server(input: Inputs, output: Outputs, session: Session):
     @reactive.effect()
     @reactive.event(input.hideTab)
     def _():
-        ui.nav_hide("tabs", target="Foo")
+        ui.hide_nav_panel("tabs", target="Foo")
 
     @reactive.effect()
     @reactive.event(input.showTab)
     def _():
-        ui.nav_show("tabs", target="Foo")
+        ui.show_nav_panel("tabs", target="Foo")
 
     @reactive.effect()
     @reactive.event(input.hideMenu)
     def _():
-        ui.nav_hide("tabs", target="Menu")
+        ui.hide_nav_panel("tabs", target="Menu")
 
     @reactive.effect()
     @reactive.event(input.showMenu)
     def _():
-        ui.nav_show("tabs", target="Menu")
+        ui.show_nav_panel("tabs", target="Menu")
 
 
 app = App(app_ui, server)

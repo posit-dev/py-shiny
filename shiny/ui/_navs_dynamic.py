@@ -1,8 +1,8 @@
 __all__ = (
-    "nav_insert",
-    "nav_remove",
-    "nav_hide",
-    "nav_show",
+    "insert_nav_panel",
+    "remove_nav_panel",
+    "hide_nav_panel",
+    "show_nav_panel",
 )
 
 import sys
@@ -22,7 +22,7 @@ from ._navs import menu_string_as_nav
 
 
 @add_example()
-def nav_insert(
+def insert_nav_panel(
     id: str,
     nav_panel: Union[NavSetArg, str],
     target: Optional[str] = None,
@@ -58,8 +58,8 @@ def nav_insert(
 
     See Also
     --------
-    ~nav_remove
-    ~nav_show
+    ~remove_nav_panel
+    ~show_nav_panel
     ~nav_hide
     ~shiny.ui.nav_panel
     """
@@ -92,7 +92,7 @@ def nav_insert(
     session._send_message_sync({"shiny-insert-tab": msg})
 
 
-def nav_remove(id: str, target: str, session: Optional[Session] = None) -> None:
+def remove_nav_panel(id: str, target: str, session: Optional[Session] = None) -> None:
     """
     Remove a nav item from a navigation container.
 
@@ -108,8 +108,8 @@ def nav_remove(id: str, target: str, session: Optional[Session] = None) -> None:
 
     See Also
     --------
-    ~nav_insert
-    ~nav_show
+    ~insert_nav_panel
+    ~show_nav_panel
     ~nav_hide
     ~shiny.ui.nav_panel
     """
@@ -124,7 +124,7 @@ def nav_remove(id: str, target: str, session: Optional[Session] = None) -> None:
 
 
 @add_example()
-def nav_show(
+def show_nav_panel(
     id: str, target: str, select: bool = False, session: Optional[Session] = None
 ) -> None:
     """
@@ -133,9 +133,9 @@ def nav_show(
     Parameters
     ----------
     id
-        The ``id`` of the relevant navigation container (i.e., ``navset_*()`` object).
+        The `id` of the relevant navigation container (i.e., `navset_*()` object).
     target
-        The ``value`` of an existing :func:`shiny.ui.nav` item to show.
+        The `value` of an existing :func:`shiny.ui.nav` item to show.
     select
         Whether the nav item's content should also be shown.
     session
@@ -144,14 +144,14 @@ def nav_show(
 
     Note
     ----
-    For ``nav_show()`` to be relevant/useful, a :func:`shiny.ui.nav` item must
+    For `show_nav_panel()` to be relevant/useful, a :func:`shiny.ui.nav` item must
     have been hidden using :func:`~nav_hide`.
 
     See Also
     --------
     ~nav_hide
-    ~nav_insert
-    ~nav_remove
+    ~insert_nav_panel
+    ~remove_nav_panel
     ~shiny.ui.nav_panel
     """
 
@@ -170,7 +170,7 @@ def nav_show(
     session._send_message_sync({"shiny-change-tab-visibility": msg})
 
 
-def nav_hide(id: str, target: str, session: Optional[Session] = None) -> None:
+def hide_nav_panel(id: str, target: str, session: Optional[Session] = None) -> None:
     """
     Hide a navigation item
 
@@ -186,9 +186,9 @@ def nav_hide(id: str, target: str, session: Optional[Session] = None) -> None:
 
     See Also
     --------
-    ~nav_show
-    ~nav_insert
-    ~nav_remove
+    ~show_nav_panel
+    ~insert_nav_panel
+    ~remove_nav_panel
     ~shiny.ui.nav_panel
     """
 

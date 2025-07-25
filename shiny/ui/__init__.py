@@ -129,10 +129,10 @@ from ._navs import (
     navset_underline,
 )
 from ._navs_dynamic import (
-    nav_hide,
-    nav_insert,
-    nav_remove,
-    nav_show,
+    hide_nav_panel,
+    insert_nav_panel,
+    remove_nav_panel,
+    show_nav_panel,
 )
 from ._notification import notification_remove, notification_show
 from ._output import (
@@ -303,10 +303,10 @@ __all__ = (
     "navset_pill_list",
     "navset_hidden",
     "navset_bar",
-    "nav_hide",
-    "nav_insert",
-    "nav_remove",
-    "nav_show",
+    "hide_nav_panel",
+    "insert_nav_panel",
+    "remove_nav_panel",
+    "show_nav_panel",
     "navbar_options",
     # _notification
     "notification_show",

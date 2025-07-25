@@ -16,7 +16,7 @@ from ...session import Session
 
 
 @add_example()
-def nav_insert(
+def insert_nav_panel(
     id: str,
     title: str,
     *args: TagChild,
@@ -60,7 +60,7 @@ def nav_insert(
         :func:`~shiny.session.get_current_session`.
     """
 
-    from ...ui import nav_insert, nav_panel
+    from ...ui import insert_nav_panel, nav_panel
 
     panel = nav_panel(
         title,
@@ -69,7 +69,7 @@ def nav_insert(
         icon=icon,
     )
 
-    nav_insert(
+    insert_nav_panel(
         id=id,
         nav_panel=panel,
         target=target,

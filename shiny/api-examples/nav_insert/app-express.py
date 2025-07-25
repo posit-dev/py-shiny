@@ -25,7 +25,7 @@ with ui.layout_sidebar():
         with ui.hold() as new_panel:
             with ui.nav_panel(id, value=id):
                 pass
-        ui.nav_insert(
+        ui.insert_nav_panel(
             "tabs",
             new_panel,
             target="s2",
@@ -35,7 +35,7 @@ with ui.layout_sidebar():
     @reactive.effect()
     @reactive.event(input.removeFoo)
     def _():
-        ui.nav_remove("set", target="Foo")
+        ui.remove_nav_panel("set", target="Foo")
 
     @reactive.effect()
     @reactive.event(input.addFoo)
@@ -44,7 +44,7 @@ with ui.layout_sidebar():
         with ui.hold() as new_panel:
             with ui.nav_panel("Foo-" + n, value="Foo"):
                 "This is the new Foo-" + n + " tab"
-        ui.nav_insert(
+        ui.insert_nav_panel(
             "tabs",
             new_panel[0],
             target="Menu",
