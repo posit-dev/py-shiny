@@ -22,6 +22,7 @@ from typing import (
     AsyncIterable,
     Awaitable,
     Callable,
+    Generator,
     Iterable,
     Literal,
     Optional,
@@ -540,6 +541,7 @@ class AppSession(Session):
 
         self.user: str | None = None
         self.groups: list[str] | None = None
+
         credentials_json: str = ""
         if "shiny-server-credentials" in self.http_conn.headers:
             credentials_json = self.http_conn.headers["shiny-server-credentials"]
@@ -1218,6 +1220,7 @@ class SessionProxy(Session):
             ns=ns,
             outputs=root_session.output._outputs,
         )
+        self.clientdata = ClientData(self)
         self._outbound_message_queues = root_session._outbound_message_queues
         self._downloads = root_session._downloads
 
@@ -1507,6 +1510,7 @@ class ClientData:
 
     def __init__(self, session: Session) -> None:
         self._session: Session = session
+        self._current_output_name: ResolvedId | None = None
 
     def url_hash(self) -> str:
         """
@@ -1556,7 +1560,7 @@ class ClientData:
         """
         return cast(int, self._read_input("pixelratio"))
 
-    def output_height(self, id: str) -> float | None:
+    def output_height(self, id: Optional[Id] = None) -> float | None:
         """
         Reactively read the height of an output.
 
@@ -1573,7 +1577,7 @@ class ClientData:
         """
         return cast(float, self._read_output(id, "height"))
 
-    def output_width(self, id: str) -> float | None:
+    def output_width(self, id: Optional[Id] = None) -> float | None:
         """
         Reactively read the width of an output.
 
@@ -1590,7 +1594,7 @@ class ClientData:
         """
         return cast(float, self._read_output(id, "width"))
 
-    def output_hidden(self, id: str) -> bool | None:
+    def output_hidden(self, id: Optional[Id] = None) -> bool | None:
         """
         Reactively read whether an output is hidden.
 
@@ -1606,7 +1610,7 @@ class ClientData:
         """
         return cast(bool, self._read_output(id, "hidden"))
 
-    def output_bg_color(self, id: str) -> str | None:
+    def output_bg_color(self, id: Optional[Id] = None) -> str | None:
         """
         Reactively read the background color of an output.
 
@@ -1623,7 +1627,7 @@ class ClientData:
         """
         return cast(str, self._read_output(id, "bg"))
 
-    def output_fg_color(self, id: str) -> str | None:
+    def output_fg_color(self, id: Optional[Id] = None) -> str | None:
         """
         Reactively read the foreground color of an output.
 
@@ -1640,7 +1644,7 @@ class ClientData:
         """
         return cast(str, self._read_output(id, "fg"))
 
-    def output_accent_color(self, id: str) -> str | None:
+    def output_accent_color(self, id: Optional[Id] = None) -> str | None:
         """
         Reactively read the accent color of an output.
 
@@ -1657,7 +1661,7 @@ class ClientData:
         """
         return cast(str, self._read_output(id, "accent"))
 
-    def output_font(self, id: str) -> str | None:
+    def output_font(self, id: Optional[Id] = None) -> str | None:
         """
         Reactively read the font(s) of an output.
 
@@ -1678,21 +1682,50 @@ class ClientData:
         self._check_current_context(key)
 
         id = ResolvedId(f".clientdata_{key}")
-        if id not in self._session.input:
+        if id not in self._session.root_scope().input:
             raise ValueError(
                 f"ClientData value '{key}' not found. Please report this issue."
             )
 
-        return self._session.input[id]()
+        return self._session.root_scope().input[id]()
 
-    def _read_output(self, id: str, key: str) -> str | None:
+    def _read_output(self, id: Id | None, key: str) -> str | None:
         self._check_current_context(f"output_{key}")
 
+        # No `id` provided support
+        if id is None and self._current_output_name is not None:
+            id = self._current_output_name
+
+        if id is None:
+            raise ValueError(
+                "session.clientdata.output_*() requires an id when not called within "
+                "an output renderer."
+            )
+
+        # Module support
+        if not isinstance(id, ResolvedId):
+            id = self._session.ns(id)
+
         input_id = ResolvedId(f".clientdata_output_{id}_{key}")
-        if input_id in self._session.input:
-            return self._session.input[input_id]()
+        if input_id in self._session.root_scope().input:
+            return self._session.root_scope().input[input_id]()
         else:
             return None
+
+    @contextlib.contextmanager
+    def _output_name_ctx(self, output_name: ResolvedId) -> Generator[None, None, None]:
+        """
+        Context manager to temporarily set the output name.
+
+        This is used to allow `session.clientdata.output_*()` methods to access the
+        current output name without needing to pass it explicitly.
+        """
+        old_output_name = self._current_output_name
+        try:
+            self._current_output_name = output_name
+            yield
+        finally:
+            self._current_output_name = old_output_name
 
     @staticmethod
     def _check_current_context(key: str) -> None:
@@ -1798,8 +1831,12 @@ class Outputs:
                 )
 
                 try:
-                    value = await renderer.render()
+                    with session.clientdata._output_name_ctx(output_name):
+                        # Call the app's renderer function
+                        value = await renderer.render()
+
                     session._outbound_message_queues.set_value(output_name, value)
+
                 except SilentOperationInProgressException:
                     session._send_progress(
                         "binding", {"id": output_name, "persistent": True}
