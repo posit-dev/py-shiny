@@ -3,13 +3,6 @@ import random
 from shiny import reactive
 from shiny.express import input, ui
 
-
-def make_panel(letter):
-    return ui.accordion_panel(
-        f"Section {letter}", f"Some narrative for section {letter}"
-    )
-
-
 ui.input_action_button("add_panel", "Add random panel", class_="mt-3 mb-3")
 
 with ui.accordion(id="acc", multiple=True):
