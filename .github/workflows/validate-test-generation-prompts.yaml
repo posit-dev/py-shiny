@@ -106,43 +106,51 @@ jobs:
             exit 1
           fi
 
+      - name: Prepare Comment Body
+        if: github.event_name == 'pull_request'
+        run: |
+          if [ -f "results/summary.json" ]; then
+            python -c "
+          import json
+          import os
+
+          try:
+              with open('results/summary.json', 'r') as f:
+                  results = json.load(f)
+
+              comment = f'''## Inspect AI Evaluation Results
+
+          - **Tests Passed**: {results['passed']}/{results['total']}
+          - **Quality Gate**: {'✅ PASSED' if results['quality_gate_passed'] else '❌ FAILED'}
+
+          ### Details
+          {results['details']}
+          '''
+
+              with open('comment_body.txt', 'w') as f:
+                  f.write(comment)
+          except Exception as e:
+              print(f'Error reading summary file: {e}')
+              comment = '''## Inspect AI Evaluation Results
+
+          ❌ **Error**: Could not read evaluation results summary file.
+
+          Please check the workflow logs for details.'''
+
+              with open('comment_body.txt', 'w') as f:
+                  f.write(comment)
+          "
+          else
+            echo "## Inspect AI Evaluation Results
+
+          ❌ **Error**: Could not read evaluation results summary file.
+
+          Please check the workflow logs for details." > comment_body.txt
+          fi
+
       - name: Comment PR Results
         if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
+        uses: marocchino/sticky-pull-request-comment@v2
         with:
-          script: |
-            const fs = require('fs');
-
-            try {
-              const results = JSON.parse(fs.readFileSync('results/summary.json', 'utf8'));
-
-              const comment = \`## Inspect AI Evaluation Results
-
-              - **Tests Passed**: \${results.passed}/\${results.total}
-              - **Quality Gate**: \${results.quality_gate_passed ? '✅ PASSED' : '❌ FAILED'}
-
-              ### Details
-              \${results.details}
-              \`;
-
-              github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: comment
-              });
-            } catch (error) {
-              console.error('Error reading summary file:', error);
-              const comment = \`## Inspect AI Evaluation Results
-
-              ❌ **Error**: Could not read evaluation results summary file.
-
-              Please check the workflow logs for details.\`;
-
-              github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: comment
-              });
-            }
+          header: inspect-ai-results
+          path: comment_body.txt
