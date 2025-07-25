@@ -109,6 +109,10 @@ from ...ui import (
     notification_remove,
     nav_spacer,
     navbar_options,
+    hide_nav_panel,
+    insert_nav_panel,
+    remove_nav_panel,
+    show_nav_panel,
     Progress,
     Theme,
     value_box_theme,
@@ -159,6 +163,10 @@ from ._page import (
 
 from ._hold import (
     hold,
+)
+
+from ._insert import (
+    insert_nav_panel,
 )
 
 __all__ = (
@@ -289,6 +297,9 @@ __all__ = (
     "navset_hidden",
     "navset_pill",
     "navset_pill_list",
+    "hide_nav_panel",
+    "remove_nav_panel",
+    "show_nav_panel",
     "navset_tab",
     "navset_underline",
     "navbar_options",
