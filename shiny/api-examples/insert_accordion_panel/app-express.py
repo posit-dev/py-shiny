@@ -1,7 +1,7 @@
 import random
 
-from shiny import reactive, ui
-from shiny.express import input
+from shiny import reactive
+from shiny.express import input, ui
 
 
 def make_panel(letter):
@@ -11,10 +11,18 @@ def make_panel(letter):
 
 
 ui.input_action_button("add_panel", "Add random panel", class_="mt-3 mb-3")
-ui.accordion(*[make_panel(letter) for letter in "ABCDE"], id="acc", multiple=True)
+
+with ui.accordion(id="acc", multiple=True):
+    for letter in "ABCDE":
+        with ui.accordion_panel(f"Section {letter}"):
+            f"Some narrative for section {letter}"
 
 
 @reactive.effect
 @reactive.event(input.add_panel)
 def _():
-    ui.insert_accordion_panel("acc", make_panel(str(random.randint(0, 10000))))
+    ui.insert_accordion_panel(
+        "acc",
+        f"Section {random.randint(0, 10000)}",
+        f"Some narrative for section {random.randint(0, 10000)}",
+    )
