@@ -4,7 +4,7 @@
     "methods": [
       {
         "name": "accordion_panel",
-        "description": "Returns the accordion panel with the specified data value.",
+        "description": "Returns the accordion panel ([](:class:`~shiny.playwright.controls.AccordionPanel`)) with the specified data value.",
         "parameters": "data_value (str)"
       },
       {
@@ -25,7 +25,7 @@
       {
         "name": "expect_panels",
         "description": "Expects the accordion to have the specified panels.",
-        "parameters": "value (list[PatternOrStr]), timeout (Timeout)"
+        "parameters": "value (list\\[PatternOrStr\\]), timeout (Timeout)"
       },
       {
         "name": "expect_width",
@@ -35,7 +35,7 @@
       {
         "name": "set",
         "description": "Sets the state of the accordion panel.",
-        "parameters": "open (str | list[str]), timeout (Timeout)"
+        "parameters": "open (str \\), timeout (Timeout)"
       }
     ]
   },
@@ -80,12 +80,12 @@
       {
         "name": "expect_body",
         "description": "Expect the card body element to have the specified text.",
-        "parameters": "value (PatternOrStr | list[PatternOrStr]), timeout (Timeout)"
+        "parameters": "value (PatternOrStr \\), timeout (Timeout)"
       },
       {
         "name": "expect_footer",
         "description": "Expects the card footer to have a specific text.",
-        "parameters": "value (PatternOrStr | None), timeout (Timeout)"
+        "parameters": "value (PatternOrStr \\), timeout (Timeout)"
       },
       {
         "name": "expect_full_screen",
@@ -100,7 +100,7 @@
       {
         "name": "expect_header",
         "description": "Expects the card header to have a specific text.",
-        "parameters": "value (PatternOrStr | None), timeout (Timeout)"
+        "parameters": "value (PatternOrStr \\), timeout (Timeout)"
       },
       {
         "name": "expect_height",
@@ -150,7 +150,7 @@
       {
         "name": "send_user_input",
         "description": "Sends the user message in the chat.",
-        "parameters": "method (Literal['enter', 'click']), timeout (Timeout)"
+        "parameters": "method (Literal\\['enter', 'click'\\]), timeout (Timeout)"
       },
       {
         "name": "set_user_input",
@@ -165,11 +165,16 @@
       {
         "name": "click",
         "description": "Clicks the input action.",
-        "parameters": "timeout (Timeout), **kwargs"
+        "parameters": "timeout (Timeout)"
+      },
+      {
+        "name": "expect_icon",
+        "description": "Expect the icon of the input button to have a specific value.",
+        "parameters": "value (PatternOrStr), timeout (Timeout)"
       },
       {
         "name": "expect_label",
-        "description": "Expect the label of the input button to have a specific value. Note: This must include the icon if it is present!",
+        "description": "Expect the label of the input button to have a specific value.",
         "parameters": "value (PatternOrStr), timeout (Timeout)"
       },
       {
@@ -185,12 +190,47 @@
       {
         "name": "click",
         "description": "Clicks the input action.",
-        "parameters": "timeout (Timeout), **kwargs"
+        "parameters": "timeout (Timeout)"
+      },
+      {
+        "name": "expect_icon",
+        "description": "Expect the icon of the input button to have a specific value.",
+        "parameters": "value (PatternOrStr), timeout (Timeout)"
       },
       {
         "name": "expect_label",
-        "description": "Expect the label of the input button to have a specific value. Note: This must include the icon if it is present!",
+        "description": "Expect the label of the input button to have a specific value.",
         "parameters": "value (PatternOrStr), timeout (Timeout)"
+      }
+    ]
+  },
+  {
+    "controller_name": "playwright.controller.InputActionButton",
+    "methods": [
+      {
+        "name": "click",
+        "description": "Clicks the input action.",
+        "parameters": "timeout (Timeout)"
+      },
+      {
+        "name": "expect_disabled",
+        "description": "Expect the input action button to be disabled.",
+        "parameters": "value (bool), timeout (Timeout)"
+      },
+      {
+        "name": "expect_icon",
+        "description": "Expect the icon of the input button to have a specific value.",
+        "parameters": "value (PatternOrStr), timeout (Timeout)"
+      },
+      {
+        "name": "expect_label",
+        "description": "Expect the label of the input button to have a specific value.",
+        "parameters": "value (PatternOrStr), timeout (Timeout)"
+      },
+      {
+        "name": "expect_width",
+        "description": "Expect the `width` attribute of a DOM element to have a specific value.",
+        "parameters": "value (AttrValue), timeout (Timeout)"
       }
     ]
   },
@@ -200,12 +240,47 @@
       {
         "name": "click",
         "description": "Clicks the input action.",
-        "parameters": "timeout (Timeout), **kwargs"
+        "parameters": "timeout (Timeout)"
+      },
+      {
+        "name": "expect_icon",
+        "description": "Expect the icon of the input button to have a specific value.",
+        "parameters": "value (PatternOrStr), timeout (Timeout)"
       },
       {
         "name": "expect_label",
-        "description": "Expect the label of the input button to have a specific value. Note: This must include the icon if it is present!",
+        "description": "Expect the label of the input button to have a specific value.",
         "parameters": "value (PatternOrStr), timeout (Timeout)"
+      }
+    ]
+  },
+  {
+    "controller_name": "playwright.controller.InputBookmarkButton",
+    "methods": [
+      {
+        "name": "click",
+        "description": "Clicks the input action.",
+        "parameters": "timeout (Timeout)"
+      },
+      {
+        "name": "expect_disabled",
+        "description": "Expect the input bookmark button to be disabled.",
+        "parameters": "value (bool), timeout (Timeout)"
+      },
+      {
+        "name": "expect_icon",
+        "description": "Expect the icon of the input button to have a specific value.",
+        "parameters": "value (PatternOrStr), timeout (Timeout)"
+      },
+      {
+        "name": "expect_label",
+        "description": "Expect the label of the input button to have a specific value.",
+        "parameters": "value (PatternOrStr), timeout (Timeout)"
+      },
+      {
+        "name": "expect_width",
+        "description": "Expect the `width` attribute of a DOM element to have a specific value.",
+        "parameters": "value (AttrValue), timeout (Timeout)"
       }
     ]
   },
@@ -230,7 +305,7 @@
       {
         "name": "set",
         "description": "Sets the input checkbox.",
-        "parameters": "value (bool), timeout (Timeout), **kwargs"
+        "parameters": "value (bool), timeout (Timeout)"
       }
     ]
   },
@@ -270,7 +345,7 @@
       {
         "name": "set",
         "description": "Set the selected checkboxes.",
-        "parameters": "selected (ListOrTuple[str]), timeout (Timeout), **kwargs"
+        "parameters": "selected (ListOrTuple\\[str\\]), timeout (Timeout)"
       }
     ]
   },
@@ -305,17 +380,17 @@
       {
         "name": "expect_autoclose",
         "description": "Asserts that the input element has the expected `data-date-autoclose` attribute value.",
-        "parameters": "value (Literal['true', 'false']), timeout (Timeout)"
+        "parameters": "value (Literal\\['true', 'false'\\]), timeout (Timeout)"
       },
       {
         "name": "expect_datesdisabled",
         "description": "Asserts that the input element has the expected `data-date-dates-disabled` attribute value.",
-        "parameters": "value (list[str] | None), timeout (Timeout)"
+        "parameters": "value (list\\[str\\] \\), timeout (Timeout)"
       },
       {
         "name": "expect_daysofweekdisabled",
         "description": "Asserts that the input element has the expected `data-date-days-of-week-disabled` attribute value.",
-        "parameters": "value (list[int] | None), timeout (Timeout)"
+        "parameters": "value (list\\[int\\] \\), timeout (Timeout)"
       },
       {
         "name": "expect_format",
@@ -355,7 +430,7 @@
       {
         "name": "expect_weekstart",
         "description": "Asserts that the input element has the expected `data-date-week-start` attribute value.",
-        "parameters": "value (int | AttrValue), timeout (Timeout)"
+        "parameters": "value (int \\), timeout (Timeout)"
       },
       {
         "name": "expect_width",
@@ -364,7 +439,7 @@
       },
       {
         "name": "set",
-        "description": "Sets the text value.",
+        "description": "Sets the text value",
         "parameters": "value (str), timeout (Timeout)"
       }
     ]
@@ -375,7 +450,7 @@
       {
         "name": "expect_autoclose",
         "description": "Asserts that the input element has the expected autoclose value.",
-        "parameters": "value (Literal['true', 'false']), timeout (Timeout)"
+        "parameters": "value (Literal\\['true', 'false'\\]), timeout (Timeout)"
       },
       {
         "name": "expect_format",
@@ -415,12 +490,12 @@
       {
         "name": "expect_value",
         "description": "Asserts that the input element has the expected value.",
-        "parameters": "value (Tuple[PatternOrStr, PatternOrStr] | Tuple[PatternOrStr, MISSING_TYPE] | Tuple[MISSING_TYPE, PatternOrStr]), timeout (Timeout)"
+        "parameters": "value (typing.Tuple\\[PatternOrStr, PatternOrStr\\] \\), timeout (Timeout)"
       },
       {
         "name": "expect_weekstart",
         "description": "Asserts that the input element has the expected week start.",
-        "parameters": "value (int | AttrValue), timeout (Timeout)"
+        "parameters": "value (int \\), timeout (Timeout)"
       },
       {
         "name": "expect_width",
@@ -430,7 +505,7 @@
       {
         "name": "set",
         "description": "Sets the value of the input element.",
-        "parameters": "value (Tuple[str | None, str | None]), timeout (Timeout)"
+        "parameters": "value (typing.Tuple\\[str \\), timeout (Timeout)"
       }
     ]
   },
@@ -440,7 +515,7 @@
       {
         "name": "expect_accept",
         "description": "Expect the `accept` attribute to have a specific value.",
-        "parameters": "value (list[str] | AttrValue), timeout (Timeout)"
+        "parameters": "value (list\\[str\\] \\), timeout (Timeout)"
       },
       {
         "name": "expect_button_label",
@@ -450,7 +525,7 @@
       {
         "name": "expect_capture",
         "description": "Expect the `capture` attribute to have a specific value.",
-        "parameters": "value (Literal['environment', 'user'] | None), timeout (Timeout)"
+        "parameters": "value (Literal\\['environment', 'user'\\] \\), timeout (Timeout)"
       },
       {
         "name": "expect_complete",
@@ -475,7 +550,7 @@
       {
         "name": "set",
         "description": "Set the file upload.",
-        "parameters": "file_path (str | Path | FilePayload | list[str | Path] | list[FilePayload]), timeout (Timeout), expect_complete_timeout (Timeout)"
+        "parameters": "file_path (str \\), timeout (Timeout), expect_complete_timeout (Timeout)"
       }
     ]
   },
@@ -514,7 +589,7 @@
       },
       {
         "name": "set",
-        "description": "Sets the text value.",
+        "description": "Sets the text value",
         "parameters": "value (str), timeout (Timeout)"
       }
     ]
@@ -544,7 +619,7 @@
       },
       {
         "name": "set",
-        "description": "Sets the text value.",
+        "description": "Sets the text value",
         "parameters": "value (str), timeout (Timeout)"
       }
     ]
@@ -575,7 +650,7 @@
       {
         "name": "expect_selected",
         "description": "Expect the selected radio button.",
-        "parameters": "value (PatternOrStr | None), timeout (Timeout)"
+        "parameters": "value (PatternOrStr \\), timeout (Timeout)"
       },
       {
         "name": "expect_width",
@@ -585,7 +660,7 @@
       {
         "name": "set",
         "description": "Set the selected radio button.",
-        "parameters": "selected (str), timeout (Timeout), **kwargs"
+        "parameters": "selected (str), timeout (Timeout)"
       }
     ]
   },
@@ -620,7 +695,7 @@
       {
         "name": "expect_selected",
         "description": "Expect the selected option(s) of the input select to be an exact match.",
-        "parameters": "value (PatternOrStr | ListPatternOrStr), timeout (Timeout)"
+        "parameters": "value (PatternOrStr \\), timeout (Timeout)"
       },
       {
         "name": "expect_size",
@@ -635,7 +710,7 @@
       {
         "name": "set",
         "description": "Sets the selected option(s) of the input select.",
-        "parameters": "selected (str | ListOrTuple[str]), timeout (Timeout)"
+        "parameters": "selected (str \\), timeout (Timeout)"
       }
     ]
   },
@@ -680,7 +755,7 @@
       {
         "name": "set",
         "description": "Sets the selected option(s) of the input selectize.",
-        "parameters": "selected (str | list[str]), timeout (Timeout)"
+        "parameters": "selected (str \\), timeout (Timeout)"
       }
     ]
   },
@@ -745,7 +820,7 @@
       {
         "name": "expect_tick_labels",
         "description": "Expect the tick labels of the input slider.",
-        "parameters": "value (ListPatternOrStr | None), timeout (Timeout)"
+        "parameters": "value (ListPatternOrStr \\), timeout (Timeout)"
       },
       {
         "name": "expect_ticks",
@@ -840,7 +915,7 @@
       {
         "name": "expect_tick_labels",
         "description": "Expect the tick labels of the input slider.",
-        "parameters": "value (ListPatternOrStr | None), timeout (Timeout)"
+        "parameters": "value (ListPatternOrStr \\), timeout (Timeout)"
       },
       {
         "name": "expect_ticks",
@@ -860,7 +935,7 @@
       {
         "name": "expect_value",
         "description": "Asserts that the input element has the expected value.",
-        "parameters": "value (Tuple[PatternOrStr, PatternOrStr] | Tuple[PatternOrStr, MISSING_TYPE] | Tuple[MISSING_TYPE, PatternOrStr]), timeout (Timeout)"
+        "parameters": "value (typing.Tuple\\[PatternOrStr, PatternOrStr\\] \\), timeout (Timeout)"
       },
       {
         "name": "expect_width",
@@ -870,7 +945,7 @@
       {
         "name": "set",
         "description": "Set the value of the slider.",
-        "parameters": "value (Tuple[str, str] | Tuple[str, MISSING_TYPE] | Tuple[MISSING_TYPE, str]), max_err_values (int), timeout (Timeout)"
+        "parameters": "value (typing.Tuple\\[str, str\\] \\), max_err_values (int), timeout (Timeout)"
       }
     ]
   },
@@ -895,7 +970,7 @@
       {
         "name": "set",
         "description": "Sets the input checkbox.",
-        "parameters": "value (bool), timeout (Timeout), **kwargs"
+        "parameters": "value (bool), timeout (Timeout)"
       }
     ]
   },
@@ -905,12 +980,17 @@
       {
         "name": "click",
         "description": "Clicks the input action.",
-        "parameters": "timeout (Timeout), **kwargs"
+        "parameters": "timeout (Timeout)"
       },
       {
         "name": "expect_auto_reset",
         "description": "Expect the `auto-reset` attribute of the input task button to have a specific value.",
         "parameters": "value (bool), timeout (Timeout)"
+      },
+      {
+        "name": "expect_icon",
+        "description": "Expect the icon of the input button to have a specific value.",
+        "parameters": "value (PatternOrStr), timeout (Timeout)"
       },
       {
         "name": "expect_label",
@@ -935,7 +1015,7 @@
       {
         "name": "expect_state",
         "description": "Expect the state of the input task button to have a specific value.",
-        "parameters": "value (Literal['ready', 'busy'] | str), timeout (Timeout)"
+        "parameters": "value (Literal\\['ready', 'busy'\\] \\), timeout (Timeout)"
       },
       {
         "name": "expect_width",
@@ -965,7 +1045,7 @@
       {
         "name": "expect_spellcheck",
         "description": "Expect the `spellcheck` attribute of the input to have a specific value.",
-        "parameters": "value (Literal['true', 'false'] | None), timeout (Timeout)"
+        "parameters": "value (Literal\\['true', 'false'\\] \\), timeout (Timeout)"
       },
       {
         "name": "expect_value",
@@ -979,7 +1059,7 @@
       },
       {
         "name": "set",
-        "description": "Sets the text value.",
+        "description": "Sets the text value",
         "parameters": "value (str), timeout (Timeout)"
       }
     ]
@@ -1020,7 +1100,7 @@
       {
         "name": "expect_resize",
         "description": "Expect the `resize` attribute of the input text area to have a specific value.",
-        "parameters": "value (Resize | None), timeout (Timeout)"
+        "parameters": "value (Resize \\), timeout (Timeout)"
       },
       {
         "name": "expect_rows",
@@ -1030,7 +1110,7 @@
       {
         "name": "expect_spellcheck",
         "description": "Expect the `spellcheck` attribute of the input to have a specific value.",
-        "parameters": "value (Literal['true', 'false'] | None), timeout (Timeout)"
+        "parameters": "value (Literal\\['true', 'false'\\] \\), timeout (Timeout)"
       },
       {
         "name": "expect_value",
@@ -1044,7 +1124,7 @@
       },
       {
         "name": "set",
-        "description": "Sets the text value.",
+        "description": "Sets the text value",
         "parameters": "value (str), timeout (Timeout)"
       }
     ]
@@ -1055,12 +1135,12 @@
       {
         "name": "click",
         "description": "Clicks the nav item.",
-        "parameters": "timeout (Timeout)"
+        "parameters": "timeout"
       },
       {
         "name": "expect_active",
         "description": "Expects the nav item to be active or inactive.",
-        "parameters": "active (bool), timeout (Timeout)"
+        "parameters": "active"
       }
     ]
   },
@@ -1099,23 +1179,23 @@
       },
       {
         "name": "expect_inverse",
-        "description": "Expects the navset bar to be light text color if inverse is True.",
+        "description": "Expects the navset bar to be light text color if inverse is True",
         "parameters": "value (bool), timeout (Timeout)"
       },
       {
         "name": "expect_nav_titles",
         "description": "Expects the control to have the specified nav titles.",
-        "parameters": "value (list[PatternOrStr]), timeout (Timeout)"
+        "parameters": "value (list\\[PatternOrStr\\]), timeout (Timeout)"
       },
       {
         "name": "expect_nav_values",
         "description": "Expects the control to have the specified nav values.",
-        "parameters": "value (list[PatternOrStr]), timeout (Timeout)"
+        "parameters": "value (list\\[PatternOrStr\\]), timeout (Timeout)"
       },
       {
         "name": "expect_position",
         "description": "Expects the navset bar to have the specified position.",
-        "parameters": "position (Literal['fixed-top', 'fixed-bottom', 'static-top', 'sticky-top']), timeout (Timeout)"
+        "parameters": "position (Literal\\['fixed-top', 'fixed-bottom', 'static-top', 'sticky-top'\\]), timeout (Timeout)"
       },
       {
         "name": "expect_sidebar",
@@ -1139,13 +1219,13 @@
       },
       {
         "name": "nav_panel",
-        "description": "Returns the nav panel with the specified value.",
+        "description": "Returns the nav panel ([](:class:`~shiny.playwright.controls.NavPanel`)) with the specified value.",
         "parameters": "value (str)"
       },
       {
         "name": "set",
         "description": "Sets the state of the control to open or closed.",
-        "parameters": "value (str), timeout (Timeout)"
+        "parameters": "value (str)"
       }
     ]
   },
@@ -1155,17 +1235,17 @@
       {
         "name": "expect_nav_titles",
         "description": "Expects the control to have the specified nav titles.",
-        "parameters": "value (list[PatternOrStr]), timeout (Timeout)"
+        "parameters": "value (list\\[PatternOrStr\\]), timeout (Timeout)"
       },
       {
         "name": "expect_nav_values",
         "description": "Expects the control to have the specified nav values.",
-        "parameters": "value (list[PatternOrStr]), timeout (Timeout)"
+        "parameters": "value (list\\[PatternOrStr\\]), timeout (Timeout)"
       },
       {
         "name": "expect_placement",
         "description": "Expects the navset to have the specified placement.",
-        "parameters": "location (Literal['above', 'below']), timeout (Timeout)"
+        "parameters": "location (Literal\\['above', 'below'\\]), timeout (Timeout)"
       },
       {
         "name": "expect_sidebar",
@@ -1189,13 +1269,13 @@
       },
       {
         "name": "nav_panel",
-        "description": "Returns the nav panel with the specified value.",
+        "description": "Returns the nav panel ([](:class:`~shiny.playwright.controls.NavPanel`)) with the specified value.",
         "parameters": "value (str)"
       },
       {
         "name": "set",
         "description": "Sets the state of the control to open or closed.",
-        "parameters": "value (str), timeout (Timeout)"
+        "parameters": "value (str)"
       }
     ]
   },
@@ -1205,12 +1285,12 @@
       {
         "name": "expect_nav_titles",
         "description": "Expects the control to have the specified nav titles.",
-        "parameters": "value (list[PatternOrStr]), timeout (Timeout)"
+        "parameters": "value (list\\[PatternOrStr\\]), timeout (Timeout)"
       },
       {
         "name": "expect_nav_values",
         "description": "Expects the control to have the specified nav values.",
-        "parameters": "value (list[PatternOrStr]), timeout (Timeout)"
+        "parameters": "value (list\\[PatternOrStr\\]), timeout (Timeout)"
       },
       {
         "name": "expect_sidebar",
@@ -1234,13 +1314,13 @@
       },
       {
         "name": "nav_panel",
-        "description": "Returns the nav panel with the specified value.",
+        "description": "Returns the nav panel ([](:class:`~shiny.playwright.controls.NavPanel`)) with the specified value.",
         "parameters": "value (str)"
       },
       {
         "name": "set",
         "description": "Sets the state of the control to open or closed.",
-        "parameters": "value (str), timeout (Timeout)"
+        "parameters": "value (str)"
       }
     ]
   },
@@ -1250,17 +1330,17 @@
       {
         "name": "expect_nav_titles",
         "description": "Expects the control to have the specified nav titles.",
-        "parameters": "value (list[PatternOrStr]), timeout (Timeout)"
+        "parameters": "value (list\\[PatternOrStr\\]), timeout (Timeout)"
       },
       {
         "name": "expect_nav_values",
         "description": "Expects the control to have the specified nav values.",
-        "parameters": "value (list[PatternOrStr]), timeout (Timeout)"
+        "parameters": "value (list\\[PatternOrStr\\]), timeout (Timeout)"
       },
       {
         "name": "expect_placement",
         "description": "Expects the navset to have the specified placement.",
-        "parameters": "location (Literal['above', 'below']), timeout (Timeout)"
+        "parameters": "location (Literal\\['above', 'below'\\]), timeout (Timeout)"
       },
       {
         "name": "expect_sidebar",
@@ -1284,13 +1364,13 @@
       },
       {
         "name": "nav_panel",
-        "description": "Returns the nav panel with the specified value.",
+        "description": "Returns the nav panel ([](:class:`~shiny.playwright.controls.NavPanel`)) with the specified value.",
         "parameters": "value (str)"
       },
       {
         "name": "set",
         "description": "Sets the state of the control to open or closed.",
-        "parameters": "value (str), timeout (Timeout)"
+        "parameters": "value (str)"
       }
     ]
   },
@@ -1300,12 +1380,12 @@
       {
         "name": "expect_nav_titles",
         "description": "Expects the control to have the specified nav titles.",
-        "parameters": "value (list[PatternOrStr]), timeout (Timeout)"
+        "parameters": "value (list\\[PatternOrStr\\]), timeout (Timeout)"
       },
       {
         "name": "expect_nav_values",
         "description": "Expects the control to have the specified nav values.",
-        "parameters": "value (list[PatternOrStr]), timeout (Timeout)"
+        "parameters": "value (list\\[PatternOrStr\\]), timeout (Timeout)"
       },
       {
         "name": "expect_value",
@@ -1319,13 +1399,13 @@
       },
       {
         "name": "nav_panel",
-        "description": "Returns the nav panel with the specified value.",
+        "description": "Returns the nav panel ([](:class:`~shiny.playwright.controls.NavPanel`)) with the specified value.",
         "parameters": "value (str)"
       },
       {
         "name": "set",
         "description": "Sets the state of the control to open or closed.",
-        "parameters": "value (str), timeout (Timeout)"
+        "parameters": "value (str)"
       }
     ]
   },
@@ -1335,12 +1415,12 @@
       {
         "name": "expect_nav_titles",
         "description": "Expects the control to have the specified nav titles.",
-        "parameters": "value (list[PatternOrStr]), timeout (Timeout)"
+        "parameters": "value (list\\[PatternOrStr\\]), timeout (Timeout)"
       },
       {
         "name": "expect_nav_values",
         "description": "Expects the control to have the specified nav values.",
-        "parameters": "value (list[PatternOrStr]), timeout (Timeout)"
+        "parameters": "value (list\\[PatternOrStr\\]), timeout (Timeout)"
       },
       {
         "name": "expect_value",
@@ -1354,13 +1434,13 @@
       },
       {
         "name": "nav_panel",
-        "description": "Returns the nav panel with the specified value.",
+        "description": "Returns the nav panel ([](:class:`~shiny.playwright.controls.NavPanel`)) with the specified value.",
         "parameters": "value (str)"
       },
       {
         "name": "set",
         "description": "Sets the state of the control to open or closed.",
-        "parameters": "value (str), timeout (Timeout)"
+        "parameters": "value (str)"
       }
     ]
   },
@@ -1370,12 +1450,12 @@
       {
         "name": "expect_nav_titles",
         "description": "Expects the control to have the specified nav titles.",
-        "parameters": "value (list[PatternOrStr]), timeout (Timeout)"
+        "parameters": "value (list\\[PatternOrStr\\]), timeout (Timeout)"
       },
       {
         "name": "expect_nav_values",
         "description": "Expects the control to have the specified nav values.",
-        "parameters": "value (list[PatternOrStr]), timeout (Timeout)"
+        "parameters": "value (list\\[PatternOrStr\\]), timeout (Timeout)"
       },
       {
         "name": "expect_value",
@@ -1390,7 +1470,7 @@
       {
         "name": "expect_widths",
         "description": "Expects the navset pill list to have the specified widths.",
-        "parameters": "value (ListOrTuple[int]), timeout (Timeout)"
+        "parameters": "value (ListOrTuple\\[int\\]), timeout (Timeout)"
       },
       {
         "name": "get_loc_active_content",
@@ -1399,13 +1479,13 @@
       },
       {
         "name": "nav_panel",
-        "description": "Returns the nav panel with the specified value.",
+        "description": "Returns the nav panel ([](:class:`~shiny.playwright.controls.NavPanel`)) with the specified value.",
         "parameters": "value (str)"
       },
       {
         "name": "set",
         "description": "Sets the state of the control to open or closed.",
-        "parameters": "value (str), timeout (Timeout)"
+        "parameters": "value (str)"
       }
     ]
   },
@@ -1415,12 +1495,12 @@
       {
         "name": "expect_nav_titles",
         "description": "Expects the control to have the specified nav titles.",
-        "parameters": "value (list[PatternOrStr]), timeout (Timeout)"
+        "parameters": "value (list\\[PatternOrStr\\]), timeout (Timeout)"
       },
       {
         "name": "expect_nav_values",
         "description": "Expects the control to have the specified nav values.",
-        "parameters": "value (list[PatternOrStr]), timeout (Timeout)"
+        "parameters": "value (list\\[PatternOrStr\\]), timeout (Timeout)"
       },
       {
         "name": "expect_value",
@@ -1434,13 +1514,13 @@
       },
       {
         "name": "nav_panel",
-        "description": "Returns the nav panel with the specified value.",
+        "description": "Returns the nav panel ([](:class:`~shiny.playwright.controls.NavPanel`)) with the specified value.",
         "parameters": "value (str)"
       },
       {
         "name": "set",
         "description": "Sets the state of the control to open or closed.",
-        "parameters": "value (str), timeout (Timeout)"
+        "parameters": "value (str)"
       }
     ]
   },
@@ -1450,12 +1530,12 @@
       {
         "name": "expect_nav_titles",
         "description": "Expects the control to have the specified nav titles.",
-        "parameters": "value (list[PatternOrStr]), timeout (Timeout)"
+        "parameters": "value (list\\[PatternOrStr\\]), timeout (Timeout)"
       },
       {
         "name": "expect_nav_values",
         "description": "Expects the control to have the specified nav values.",
-        "parameters": "value (list[PatternOrStr]), timeout (Timeout)"
+        "parameters": "value (list\\[PatternOrStr\\]), timeout (Timeout)"
       },
       {
         "name": "expect_value",
@@ -1469,13 +1549,13 @@
       },
       {
         "name": "nav_panel",
-        "description": "Returns the nav panel with the specified value.",
+        "description": "Returns the nav panel ([](:class:`~shiny.playwright.controls.NavPanel`)) with the specified value.",
         "parameters": "value (str)"
       },
       {
         "name": "set",
         "description": "Sets the state of the control to open or closed.",
-        "parameters": "value (str), timeout (Timeout)"
+        "parameters": "value (str)"
       }
     ]
   },
@@ -1509,7 +1589,7 @@
       },
       {
         "name": "expect_cell_class",
-        "description": "Expects the class of the cell.",
+        "description": "Expects the class of the cell",
         "parameters": "value (str), row (int), col (int), timeout (Timeout)"
       },
       {
@@ -1525,7 +1605,7 @@
       {
         "name": "expect_column_labels",
         "description": "Expects the column labels in the data frame.",
-        "parameters": "value (ListPatternOrStr | None), timeout (Timeout)"
+        "parameters": "value (ListPatternOrStr \\), timeout (Timeout)"
       },
       {
         "name": "expect_ncol",
@@ -1545,27 +1625,27 @@
       {
         "name": "expect_selected_rows",
         "description": "Expects the specified rows to be selected.",
-        "parameters": "rows (list[int]), timeout (Timeout)"
+        "parameters": "rows (list\\[int\\]), timeout (Timeout)"
       },
       {
         "name": "select_rows",
         "description": "Selects the rows in the data frame.",
-        "parameters": "value (list[int]), timeout (Timeout)"
+        "parameters": "value (list\\[int\\]), timeout (Timeout)"
       },
       {
         "name": "set_cell",
         "description": "Saves the value of the cell in the data frame.",
-        "parameters": "text (str), row (int), col (int), finish_key (Literal['Enter', 'Shift+Enter', 'Tab', 'Shift+Tab', 'Escape'] | None), timeout (Timeout)"
+        "parameters": "text (str), row (int), col (int), finish_key (Literal\\['Enter', 'Shift+Enter', 'Tab', 'Shift+Tab', 'Escape'\\] \\), timeout (Timeout)"
       },
       {
         "name": "set_filter",
-        "description": "Set or reset filters for columns in a table or grid component.",
-        "parameters": "filter (ColumnFilter | list[ColumnFilter] | None), timeout (Timeout)"
+        "description": "Set or reset filters for columns in a table or grid component. This method allows setting string filters, numeric range filters, or clearing all filters.",
+        "parameters": "filter (ColumnFilter \\), timeout (Timeout)"
       },
       {
         "name": "set_sort",
-        "description": "Set or modify the sorting of columns in a table or grid component.",
-        "parameters": "sort (int | ColumnSort | list[int | ColumnSort] | None), timeout (Timeout)"
+        "description": "Set or modify the sorting of columns in a table or grid component. This method allows setting single or multiple column sorts, or resetting the sort order.",
+        "parameters": "sort (int \\), timeout (Timeout)"
       }
     ]
   },
@@ -1575,7 +1655,52 @@
       {
         "name": "expect_container_tag",
         "description": "Asserts that the output has the expected container tag.",
-        "parameters": "value (Literal['span', 'div'] | str), timeout (Timeout)"
+        "parameters": "value (Literal\\['span', 'div'\\] \\), timeout (Timeout)"
+      },
+      {
+        "name": "expect_height",
+        "description": "Asserts that the image has the expected height.",
+        "parameters": "value (StyleValue), timeout (Timeout)"
+      },
+      {
+        "name": "expect_img_alt",
+        "description": "Asserts that the image has the expected alt text.",
+        "parameters": "value (AttrValue), timeout (Timeout)"
+      },
+      {
+        "name": "expect_img_height",
+        "description": "Asserts that the image has the expected height.",
+        "parameters": "value (AttrValue), timeout (Timeout)"
+      },
+      {
+        "name": "expect_img_src",
+        "description": "Asserts that the image has the expected src.",
+        "parameters": "value (AttrValue), timeout (Timeout)"
+      },
+      {
+        "name": "expect_img_width",
+        "description": "Asserts that the image has the expected width.",
+        "parameters": "value (AttrValue), timeout (Timeout)"
+      },
+      {
+        "name": "expect_inline",
+        "description": "Asserts that the output is inline.",
+        "parameters": "value (bool), timeout (Timeout)"
+      },
+      {
+        "name": "expect_width",
+        "description": "Asserts that the image has the expected width.",
+        "parameters": "value (StyleValue), timeout (Timeout)"
+      }
+    ]
+  },
+  {
+    "controller_name": "playwright.controller.OutputPlot",
+    "methods": [
+      {
+        "name": "expect_container_tag",
+        "description": "Asserts that the output has the expected container tag.",
+        "parameters": "value (Literal\\['span', 'div'\\] \\), timeout (Timeout)"
       },
       {
         "name": "expect_height",
@@ -1625,7 +1750,7 @@
       {
         "name": "expect_column_labels",
         "description": "Asserts that the table has the expected column labels.",
-        "parameters": "value (ListPatternOrStr | None), timeout (Timeout)"
+        "parameters": "value (ListPatternOrStr \\), timeout (Timeout)"
       },
       {
         "name": "expect_column_text",
@@ -1650,7 +1775,7 @@
       {
         "name": "expect_container_tag",
         "description": "Asserts that the output has the expected container tag.",
-        "parameters": "value (Literal['span', 'div'] | str), timeout (Timeout)"
+        "parameters": "value (Literal\\['span', 'div'\\] \\), timeout (Timeout)"
       },
       {
         "name": "expect_inline",
@@ -1690,7 +1815,7 @@
       {
         "name": "expect_container_tag",
         "description": "Asserts that the output has the expected container tag.",
-        "parameters": "value (Literal['span', 'div'] | str), timeout (Timeout)"
+        "parameters": "value (Literal\\['span', 'div'\\] \\), timeout (Timeout)"
       },
       {
         "name": "expect_empty",
@@ -1701,6 +1826,96 @@
         "name": "expect_inline",
         "description": "Asserts that the output is inline.",
         "parameters": "value (bool), timeout (Timeout)"
+      }
+    ]
+  },
+  {
+    "controller_name": "playwright.controller.PageNavbar",
+    "methods": [
+      {
+        "name": "expect_bg",
+        "description": "Expects the navset bar to have the specified background color.",
+        "parameters": "bg (PatternOrStr), timeout (Timeout)"
+      },
+      {
+        "name": "expect_fillable",
+        "description": "Expects the main content area to be considered a fillable (i.e., flexbox) container",
+        "parameters": "value (bool), timeout (Timeout)"
+      },
+      {
+        "name": "expect_fillable_mobile",
+        "description": "Expects the main content area to be considered a fillable (i.e., flexbox) container on mobile This method will always call `.expect_fillable(True)` first to ensure the fillable property is set",
+        "parameters": "value (bool), timeout (Timeout)"
+      },
+      {
+        "name": "expect_fluid",
+        "description": "Expects the navset bar to have a fluid or fixed layout.",
+        "parameters": "value (bool), timeout (Timeout)"
+      },
+      {
+        "name": "expect_gap",
+        "description": "Expects the navset bar to have the specified gap.",
+        "parameters": "gap (PatternOrStr), timeout (Timeout)"
+      },
+      {
+        "name": "expect_inverse",
+        "description": "Expects the navset bar to be light text color if inverse is True",
+        "parameters": "value (bool), timeout (Timeout)"
+      },
+      {
+        "name": "expect_lang",
+        "description": "Expects the HTML tag to have the specified language.",
+        "parameters": "lang (PatternOrStr), timeout (Timeout)"
+      },
+      {
+        "name": "expect_nav_titles",
+        "description": "Expects the control to have the specified nav titles.",
+        "parameters": "value (list\\[PatternOrStr\\]), timeout (Timeout)"
+      },
+      {
+        "name": "expect_nav_values",
+        "description": "Expects the control to have the specified nav values.",
+        "parameters": "value (list\\[PatternOrStr\\]), timeout (Timeout)"
+      },
+      {
+        "name": "expect_position",
+        "description": "Expects the navset bar to have the specified position.",
+        "parameters": "position (Literal\\['fixed-top', 'fixed-bottom', 'static-top', 'sticky-top'\\]), timeout (Timeout)"
+      },
+      {
+        "name": "expect_sidebar",
+        "description": "Assert whether or not the sidebar exists within the navset.",
+        "parameters": "exists (bool), timeout (Timeout)"
+      },
+      {
+        "name": "expect_title",
+        "description": "Expects the navset title to have the specified text.",
+        "parameters": "value (PatternOrStr), timeout (Timeout)"
+      },
+      {
+        "name": "expect_value",
+        "description": "Expects the control to have the specified value.",
+        "parameters": "value (PatternOrStr), timeout (Timeout)"
+      },
+      {
+        "name": "expect_window_title",
+        "description": "Expects the window title to have the specified text.",
+        "parameters": "title (PatternOrStr), timeout (Timeout)"
+      },
+      {
+        "name": "get_loc_active_content",
+        "description": "Returns the locator for the active content.",
+        "parameters": "timeout (Timeout)"
+      },
+      {
+        "name": "nav_panel",
+        "description": "Returns the nav panel ([](:class:`~shiny.playwright.controls.NavPanel`)) with the specified value.",
+        "parameters": "value (str)"
+      },
+      {
+        "name": "set",
+        "description": "Sets the state of the control to open or closed.",
+        "parameters": "value (str)"
       }
     ]
   },
@@ -1755,7 +1970,7 @@
       {
         "name": "expect_desktop_state",
         "description": "Asserts that the sidebar has the expected state on desktop.",
-        "parameters": "value (Literal['open', 'closed', 'always']), timeout (Timeout)"
+        "parameters": "value (Literal\\['open', 'closed', 'always'\\]), timeout (Timeout)"
       },
       {
         "name": "expect_gap",
@@ -1775,7 +1990,7 @@
       {
         "name": "expect_mobile_state",
         "description": "Asserts that the sidebar has the expected state on mobile.",
-        "parameters": "value (Literal['open', 'closed', 'always']), timeout (Timeout)"
+        "parameters": "value (Literal\\['open', 'closed', 'always'\\]), timeout (Timeout)"
       },
       {
         "name": "expect_open",
@@ -1785,12 +2000,12 @@
       {
         "name": "expect_padding",
         "description": "Asserts that the sidebar has the expected padding.",
-        "parameters": "value (str | list[str]), timeout (Timeout)"
+        "parameters": "value (str \\), timeout (Timeout)"
       },
       {
         "name": "expect_position",
         "description": "Asserts that the sidebar is in the expected position.",
-        "parameters": "value (Literal['left', 'right']), timeout (Timeout)"
+        "parameters": "value (Literal\\['left', 'right'\\]), timeout (Timeout)"
       },
       {
         "name": "expect_text",
@@ -1850,7 +2065,7 @@
       {
         "name": "expect_body",
         "description": "Expects the value box body to have specific text.",
-        "parameters": "value (PatternOrStr | list[PatternOrStr]), timeout (Timeout)"
+        "parameters": "value (PatternOrStr \\), timeout (Timeout)"
       },
       {
         "name": "expect_full_screen",
@@ -1865,6 +2080,11 @@
       {
         "name": "expect_height",
         "description": "Expects the value box to have a specific height.",
+        "parameters": "value (StyleValue), timeout (Timeout)"
+      },
+      {
+        "name": "expect_max_height",
+        "description": "Expects the value box to have a specific maximum height.",
         "parameters": "value (StyleValue), timeout (Timeout)"
       },
       {

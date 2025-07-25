@@ -125,7 +125,7 @@ docs-quartodoc: FORCE
 
 install-repomix: install-npm ## Install repomix if not already installed
 	@echo "-------- Installing repomix if needed --------"
-	@if ! npm list -g repomix > /dev/null 2>&1; then \
+	@if ! command -v repomix > /dev/null 2>&1; then \
 		echo "Installing repomix..."; \
 		npm install -g repomix; \
 	else \
