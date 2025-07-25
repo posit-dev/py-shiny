@@ -15,6 +15,7 @@ custom_sidebar(
     label="Dynamic Sidebar",
 )
 
+
 add_to_counter_content(
     "buttonAdder",
     _on_click=increment_tabs_counter,
