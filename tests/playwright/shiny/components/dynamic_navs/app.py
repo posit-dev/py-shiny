@@ -11,8 +11,8 @@ app_ui = ui.page_sidebar(
         ui.input_action_button("showMenu", "Show 'Static' nav_menu"),
     ),
     ui.navset_tab(
-        ui.nav_panel("Hello", "This is the hello tab"),
-        ui.nav_panel("Foo", "This is the Foo tab", value="Foo"),
+        ui.nav_panel("Hello", "This is the hello tab", value="Hello"),
+        ui.nav_panel("Foo", "Foo", value="Foo"),
         ui.nav_menu(
             "Static",
             ui.nav_panel("Static 1", "Static 1", value="s1"),
@@ -47,7 +47,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         n = str(input.addFoo())
         ui.nav_insert(
             "tabs",
-            ui.nav_panel("Foo-" + n, "This is the new Foo-" + n + " tab", value="Foo"),
+            ui.nav_panel("Foo-" + n, "Foo-" + n, value="Foo"),
             target="Menu",
             position="before",
             select=True,

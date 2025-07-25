@@ -8,7 +8,7 @@ with ui.layout_sidebar():
         ui.input_action_button("addFoo", "Add New 'Foo' tab")
 
     with ui.navset_tab(id="set"):
-        with ui.nav_panel("Hello"):
+        with ui.nav_panel("Hello", value="Hello"):
             "This is the hello tab"
         with ui.nav_panel("Foo", value="Foo"):
             "This is the Foo tab"
@@ -22,9 +22,12 @@ with ui.layout_sidebar():
     @reactive.event(input.add)
     def _():
         id = "Dynamic-" + str(input.add())
+        with ui.hold() as new_panel:
+            with ui.nav_panel(id, value=id):
+                pass
         ui.nav_insert(
             "tabs",
-            ui.nav_panel(id, value=id),
+            new_panel,
             target="s2",
             position="before",
         )
@@ -38,9 +41,12 @@ with ui.layout_sidebar():
     @reactive.event(input.addFoo)
     def _():
         n = str(input.addFoo())
+        with ui.hold() as new_panel:
+            with ui.nav_panel("Foo-" + n, value="Foo"):
+                "This is the new Foo-" + n + " tab"
         ui.nav_insert(
             "tabs",
-            ui.nav_panel("Foo-" + n, "This is the new Foo-" + n + " tab", value="Foo"),
+            new_panel[0],
             target="Menu",
             position="before",
             select=True,

@@ -36,20 +36,20 @@ def nav_insert(
     Parameters
     ----------
     id
-        The ``id`` of the relevant navigation container (i.e., ``navset_*()`` object).
+        The `id` of the relevant navigation container (i.e., `navset_*()` object).
     nav_panel
         The navigation item to insert (typically a :func:`~shiny.ui.nav_panel` or
         :func:`~shiny.ui.nav_menu`). A :func:`~shiny.ui.nav_menu` isn't allowed when the
-        ``target`` references an :func:`~shiny.ui.nav_menu` (or an item within it). A
-        string is only allowed when the ``target`` references a
+        `target` references an :func:`~shiny.ui.nav_menu` (or an item within it). A
+        string is only allowed when the `target` references a
         :func:`~shiny.ui.nav_menu`.
     target
-        The ``value`` of an existing :func:`shiny.ui.nav` item, next to which tab will
-        be added. Can also be ``None``; see ``position``.
+        The `value` of an existing :func:`shiny.ui.nav` item, next to which tab will
+        be added. Can also be `None`; see `position`.
     position
         The position of the new nav item relative to the target nav item. If
-        ``target=None``, then ``"before"`` means the new nav item should be inserted at
-        the head of the navlist, and ``"after"`` is the end.
+        `target=None`, then `"before"` means the new nav item should be inserted at
+        the head of the navlist, and `"after"` is the end.
     select
         Whether the nav item should be selected upon insertion.
     session
@@ -92,7 +92,6 @@ def nav_insert(
     session._send_message_sync({"shiny-insert-tab": msg})
 
 
-@add_example()
 def nav_remove(id: str, target: str, session: Optional[Session] = None) -> None:
     """
     Remove a nav item from a navigation container.
@@ -100,9 +99,9 @@ def nav_remove(id: str, target: str, session: Optional[Session] = None) -> None:
     Parameters
     ----------
     id
-        The ``id`` of the relevant navigation container (i.e., ``navset_*()`` object).
+        The `id` of the relevant navigation container (i.e., `navset_*()` object).
     target
-        The ``value`` of an existing :func:`shiny.ui.nav_panel` item to remove.
+        The `value` of an existing :func:`shiny.ui.nav_panel` item to remove.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
         :func:`~shiny.session.get_current_session`.
@@ -171,7 +170,6 @@ def nav_show(
     session._send_message_sync({"shiny-change-tab-visibility": msg})
 
 
-@add_example()
 def nav_hide(id: str, target: str, session: Optional[Session] = None) -> None:
     """
     Hide a navigation item
@@ -179,9 +177,9 @@ def nav_hide(id: str, target: str, session: Optional[Session] = None) -> None:
     Parameters
     ----------
     id
-        The ``id`` of the relevant navigation container (i.e., ``navset_*()`` object).
+        The `id` of the relevant navigation container (i.e., `navset_*()` object).
     target
-        The ``value`` of an existing :func:`shiny.ui.nav` item to hide.
+        The `value` of an existing :func:`shiny.ui.nav` item to hide.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
         :func:`~shiny.session.get_current_session`.
