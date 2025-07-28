@@ -315,17 +315,17 @@ def accordion_panel(
     Parameters
     ----------
     title
-        A title to appear in the :func:`~shiny.ui.accordion_panel`'s header.
+        A title to appear in the panel's header.
     *args
-        Contents to the accordion panel body. Or tag attributes that are supplied to the
-        returned :class:`~htmltools.Tag` object.
+        UI elements for the panel's body. Can also be a dict of tag attributes for the
+        body's HTML container.
     value
         A character string that uniquely identifies this panel. If `MISSING`, the
         `title` will be used.
     icon
-        A :class:`~htmltools.Tag` which is positioned just before the `title`.
+        A :class:`~htmltools.TagChild` which is positioned just before the `title`.
     **kwargs
-        Tag attributes to the `accordion-body` div Tag.
+        Tag attributes for the body's HTML container.
 
     Returns
     -------

@@ -12,7 +12,7 @@ def test_accordion(page: Page, local_app: ShinyAppProc) -> None:
 
     acc = controller.Accordion(page, "acc")
     acc_panel_A = acc.accordion_panel("Section A")
-    output_txt_verbatim = controller.OutputTextVerbatim(page, "acc_txt")
+    output_txt_verbatim = controller.OutputText(page, "acc_txt")
     alternate_button = controller.InputActionButton(page, "alternate")
     open_all_button = controller.InputActionButton(page, "open_all")
     close_all_button = controller.InputActionButton(page, "close_all")
