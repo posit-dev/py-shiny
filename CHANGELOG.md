@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
+* Added AI-powered test generator for Shiny applications. Use `shiny add test` to automatically generate comprehensive Playwright tests for your apps using AI models from Anthropic or OpenAI. (#2041)
+
 * Added support for python 3.13. (#1711)
 
 * `ui.sidebar()` is now interactively resizable. (#2020)

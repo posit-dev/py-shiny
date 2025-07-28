@@ -1,0 +1,231 @@
+name: Validate Test Generation Prompts
+
+on:
+  pull_request:
+    paths:
+      - "shiny/pytest/generate/**"
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.12"
+  ATTEMPTS: 3
+  PYTHONUNBUFFERED: 1
+
+jobs:
+  validate-prompts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Cache uv dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
+
+      - name: Install dependencies
+        run: |
+          uv pip install --system --upgrade pip
+          uv pip install --system -e ".[dev,test]"
+          uv pip install --system inspect-ai
+          uv pip install --system pytest-timeout
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('pyproject.toml') }}
+
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: playwright install --with-deps chromium
+
+      - name: Install Playwright dependencies only
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: playwright install-deps chromium
+
+      - name: Run Evaluation and Tests 3 Times
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PYTHONUNBUFFERED: 1
+        timeout-minutes: 25
+        run: |
+          set -e # Exit immediately if a command fails
+
+          # Function to log with timestamp
+          log_with_timestamp() {
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
+          }
+
+          # Function to cleanup hanging processes
+          cleanup_processes() {
+            log_with_timestamp "Cleaning up any hanging processes..."
+            pkill -f "playwright" || true
+            pkill -f "chromium" || true
+            pkill -f "pytest" || true
+          }
+
+          # Set up trap to cleanup on exit
+          trap cleanup_processes EXIT
+
+          for i in {1..3}
+          do
+            log_with_timestamp "Starting Attempt $i of 3"
+
+            # Clean up results from previous attempt to ensure a clean slate
+            rm -rf results/
+            mkdir -p results/
+            rm -f test-results.xml
+
+            log_with_timestamp "[Attempt $i] Creating test metadata..."
+            python tests/inspect-ai/scripts/create_test_metadata.py
+
+            log_with_timestamp "[Attempt $i] Running Inspect AI evaluation..."
+            inspect eval tests/inspect-ai/scripts/evaluation.py@shiny_test_evaluation \
+              --log-dir results/ \
+              --log-format json
+
+            log_with_timestamp "[Attempt $i] Running Tests..."
+            test_exit_code=0
+            # Disable exit on error just for the pytest command to check the exit code
+            set +e
+            timeout 15m pytest tests/inspect-ai/apps \
+              --tb=short \
+              --disable-warnings \
+              --maxfail=2 \
+              --junit-xml=test-results.xml \
+              --durations=10 \
+              --timeout=300 \
+              --timeout-method=thread \
+              -v || test_exit_code=$?
+            # Re-enable exit on error immediately
+            set -e
+
+            # Check if timeout occurred
+            if [ "${test_exit_code:-0}" -eq 124 ]; then
+              log_with_timestamp "Tests timed out on attempt $i - this may indicate hanging tests"
+              cleanup_processes
+              exit 1
+            fi
+
+            # Check if tests failed and how many failures occurred
+            if [ "${test_exit_code:-0}" -ne 0 ]; then
+              failure_count=$(grep -o 'failures="[0-9]*"' test-results.xml | grep -o '[0-9]*' || echo "0")
+              log_with_timestamp "Found $failure_count test failures on attempt $i"
+
+              # Fail the workflow if more than 1 test failed
+              if [ "$failure_count" -gt 1 ]; then
+                log_with_timestamp "More than 1 test failed on attempt $i - failing CI"
+                exit 1
+              fi
+            fi
+            log_with_timestamp "Attempt $i of 3 Succeeded"
+          done
+
+          log_with_timestamp "All 3 evaluation and test runs passed successfully."
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ github.run_id }}
+          path: |
+            test-results.xml
+            results/
+          retention-days: 7
+
+      - name: Process Results
+        timeout-minutes: 2
+        run: |
+          # Find the latest evaluation result file and process it
+          latest_result=$(ls -t results/*.json | head -1)
+          if [ -f "$latest_result" ]; then
+            echo "Processing results from: $latest_result"
+            python tests/inspect-ai/utils/scripts/process_results.py "$latest_result"
+          else
+            echo "No result files found in results/ directory"
+            exit 1
+          fi
+
+      - name: Check Quality Gate
+        timeout-minutes: 2
+        run: |
+          if [ -f "results/summary.json" ]; then
+            echo "Found summary file, checking quality gate..."
+            python tests/inspect-ai/utils/scripts/quality_gate.py results/
+          else
+            echo "Summary file not found at results/summary.json"
+            ls -la results/
+            exit 1
+          fi
+
+      - name: Prepare Comment Body
+        if: github.event_name == 'pull_request'
+        timeout-minutes: 1
+        run: |
+          if [ -f "results/summary.json" ]; then
+            python -c "
+          import json
+          import os
+
+          try:
+              with open('results/summary.json', 'r') as f:
+                  results = json.load(f)
+
+              comment = f'''## Inspect AI Evaluation Results
+
+          - **Tests Passed**: {results['passed']}/{results['total']}
+          - **Quality Gate**: {'✅ PASSED' if results['quality_gate_passed'] else '❌ FAILED'}
+
+          ### Details
+          {results['details']}
+          '''
+
+              with open('comment_body.txt', 'w') as f:
+                  f.write(comment)
+          except Exception as e:
+              print(f'Error reading summary file: {e}')
+              comment = '''## Inspect AI Evaluation Results
+
+          ❌ **Error**: Could not read evaluation results summary file.
+
+          Please check the workflow logs for details.'''
+
+              with open('comment_body.txt', 'w') as f:
+                  f.write(comment)
+          "
+          else
+            echo "## Inspect AI Evaluation Results
+
+          ❌ **Error**: Could not read evaluation results summary file.
+
+          Please check the workflow logs for details." > comment_body.txt
+          fi
+
+      - name: Comment PR Results
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: inspect-ai-results
+          path: comment_body.txt
