@@ -33,6 +33,12 @@ For non-Shiny Python code, respond: "This framework is for Shiny for Python only
 
 8. **Skip plots**: Do not test plot content or functionality i.e. using OutputPlot controller.
 
+9. **Keyword-Only Args**: Always pass every argument as a keyword
+   - ✅  expect_cell(value="0", row=1, col=2)
+   - ❌  expect_cell("0", 1, 2)
+
+10. **Newline at End**: Always end files with a newline.
+
 ## Examples
 
 ### Checkbox Group
