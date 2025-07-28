@@ -8,7 +8,7 @@ to a somewhat awkward API. That's because, you'd have to know to use something l
 @ui.hold() pass the UI as a value without displaying it.
 """
 
-from typing import Literal, Optional
+from typing import Literal, Optional, Union
 
 from htmltools import TagAttrs, TagChild
 
@@ -21,8 +21,8 @@ from ...types import MISSING, MISSING_TYPE
 def insert_accordion_panel(
     id: str,
     panel_title: str,
-    *panel_contents: TagChild | TagAttrs,
-    panel_value: str | MISSING_TYPE | None = MISSING,
+    *panel_contents: Union[TagChild, TagAttrs],
+    panel_value: Union[str, MISSING_TYPE, None] = MISSING,
     panel_icon: TagChild = None,
     target: Optional[str] = None,
     position: Literal["after", "before"] = "after",
