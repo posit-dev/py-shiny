@@ -47,7 +47,7 @@ jobs:
         id: playwright-cache
         with:
           path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('pyproject.toml', 'uv.lock') }}
+          key: ${{ runner.os }}-playwright-${{ hashFiles('pyproject.toml') }}
 
       - name: Install Playwright browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
