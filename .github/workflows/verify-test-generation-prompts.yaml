@@ -113,7 +113,6 @@ jobs:
             timeout 15m pytest tests/inspect-ai/apps \
               --tb=short \
               --disable-warnings \
-              -n auto \
               --maxfail=2 \
               --junit-xml=test-results.xml \
               --durations=10 \
