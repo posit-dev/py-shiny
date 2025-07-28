@@ -47,6 +47,7 @@ jobs:
           uv pip install --system --upgrade pip
           uv pip install --system -e ".[dev,test]"
           uv pip install --system inspect-ai
+          uv pip install --system pytest-timeout
 
       - name: Cache Playwright browsers
         uses: actions/cache@v4
@@ -77,6 +78,17 @@ jobs:
             echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
           }
 
+          # Function to cleanup hanging processes
+          cleanup_processes() {
+            log_with_timestamp "Cleaning up any hanging processes..."
+            pkill -f "playwright" || true
+            pkill -f "chromium" || true
+            pkill -f "pytest" || true
+          }
+
+          # Set up trap to cleanup on exit
+          trap cleanup_processes EXIT
+
           for i in {1..3}
           do
             log_with_timestamp "Starting Attempt $i of 3"
@@ -98,9 +110,25 @@ jobs:
             test_exit_code=0
             # Disable exit on error just for the pytest command to check the exit code
             set +e
-            pytest tests/inspect-ai/apps --tb=short --disable-warnings -n auto --maxfail=2 --junit-xml=test-results.xml --durations=10 || test_exit_code=$?
+            timeout 15m pytest tests/inspect-ai/apps \
+              --tb=short \
+              --disable-warnings \
+              -n auto \
+              --maxfail=2 \
+              --junit-xml=test-results.xml \
+              --durations=10 \
+              --timeout=300 \
+              --timeout-method=thread \
+              -v || test_exit_code=$?
             # Re-enable exit on error immediately
             set -e
+
+            # Check if timeout occurred
+            if [ "${test_exit_code:-0}" -eq 124 ]; then
+              log_with_timestamp "Tests timed out on attempt $i - this may indicate hanging tests"
+              cleanup_processes
+              exit 1
+            fi
 
             # Check if tests failed and how many failures occurred
             if [ "${test_exit_code:-0}" -ne 0 ]; then
