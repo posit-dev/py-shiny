@@ -1,24 +1,23 @@
 name: Validate Test Generation Prompts
 
 on:
-  push:
-    paths:
-      - "shiny/pytest/generate/**"
   pull_request:
     paths:
       - "shiny/pytest/generate/**"
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}
   cancel-in-progress: true
 
 env:
   PYTHON_VERSION: "3.12"
   ATTEMPTS: 3
+  PYTHONUNBUFFERED: 1
 
 jobs:
   validate-prompts:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout repository
@@ -32,84 +31,99 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: "pip"
 
-      - name: Cache Python dependencies
-        uses: actions/cache@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
         with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
+          enable-cache: true
 
       - name: Install dependencies
         run: |
-          pip install --upgrade pip
-          pip install -e ".[dev,test]"
-          pip install inspect-ai
+          uv pip install --system --upgrade pip
+          uv pip install --system -e ".[dev,test]"
+          uv pip install --system inspect-ai
 
       - name: Cache Playwright browsers
         uses: actions/cache@v4
         id: playwright-cache
         with:
           path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('**/requirements*.txt', 'setup.py') }}
+          key: ${{ runner.os }}-playwright-${{ hashFiles('pyproject.toml', 'uv.lock') }}
 
       - name: Install Playwright browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: playwright install --with-deps
+        run: playwright install --with-deps chromium
 
       - name: Install Playwright dependencies only
         if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: playwright install-deps
+        run: playwright install-deps chromium
 
       - name: Run Evaluation and Tests 3 Times
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PYTHONUNBUFFERED: 1
+        timeout-minutes: 25
         run: |
           set -e # Exit immediately if a command fails
 
+          # Function to log with timestamp
+          log_with_timestamp() {
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
+          }
+
           for i in {1..3}
           do
-            echo "--- Starting Attempt $i of 3 ---"
+            log_with_timestamp "Starting Attempt $i of 3"
 
             # Clean up results from previous attempt to ensure a clean slate
             rm -rf results/
             mkdir -p results/
             rm -f test-results.xml
 
-            echo "[Attempt $i] Creating test metadata..."
+            log_with_timestamp "[Attempt $i] Creating test metadata..."
             python tests/inspect-ai/scripts/create_test_metadata.py
 
-            echo "[Attempt $i] Running Inspect AI evaluation..."
+            log_with_timestamp "[Attempt $i] Running Inspect AI evaluation..."
             inspect eval tests/inspect-ai/scripts/evaluation.py@shiny_test_evaluation \
               --log-dir results/ \
               --log-format json
 
-            echo "[Attempt $i] Running Tests..."
+            log_with_timestamp "[Attempt $i] Running Tests..."
             test_exit_code=0
             # Disable exit on error just for the pytest command to check the exit code
             set +e
-            pytest tests/inspect-ai/apps --tb=short --disable-warnings -n auto --maxfail=2 --junit-xml=test-results.xml || test_exit_code=$?
+            pytest tests/inspect-ai/apps --tb=short --disable-warnings -n auto --maxfail=2 --junit-xml=test-results.xml --durations=10 || test_exit_code=$?
             # Re-enable exit on error immediately
             set -e
 
             # Check if tests failed and how many failures occurred
             if [ "${test_exit_code:-0}" -ne 0 ]; then
               failure_count=$(grep -o 'failures="[0-9]*"' test-results.xml | grep -o '[0-9]*' || echo "0")
-              echo "Found $failure_count test failures on attempt $i"
+              log_with_timestamp "Found $failure_count test failures on attempt $i"
 
               # Fail the workflow if more than 1 test failed
               if [ "$failure_count" -gt 1 ]; then
-                echo "More than 1 test failed on attempt $i - failing CI"
+                log_with_timestamp "More than 1 test failed on attempt $i - failing CI"
                 exit 1
               fi
             fi
-            echo "--- Attempt $i of 3 Succeeded ---"
+            log_with_timestamp "Attempt $i of 3 Succeeded"
           done
 
-          echo "All 3 evaluation and test runs passed successfully."
+          log_with_timestamp "All 3 evaluation and test runs passed successfully."
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ github.run_id }}
+          path: |
+            test-results.xml
+            results/
+          retention-days: 7
 
       - name: Process Results
+        timeout-minutes: 2
         run: |
           # Find the latest evaluation result file and process it
           latest_result=$(ls -t results/*.json | head -1)
@@ -122,6 +136,7 @@ jobs:
           fi
 
       - name: Check Quality Gate
+        timeout-minutes: 2
         run: |
           if [ -f "results/summary.json" ]; then
             echo "Found summary file, checking quality gate..."
@@ -134,6 +149,7 @@ jobs:
 
       - name: Prepare Comment Body
         if: github.event_name == 'pull_request'
+        timeout-minutes: 1
         run: |
           if [ -f "results/summary.json" ]; then
             python -c "
