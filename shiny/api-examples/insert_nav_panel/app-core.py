@@ -34,7 +34,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             position="before",
         )
 
-    @reactive.effect()
+    @reactive.effect
     @reactive.event(input.remove_foo)
     def _():
         ui.remove_nav_panel("tabs", target="Foo")
