@@ -64,7 +64,6 @@ def server(input: Inputs, output: Outputs, session: Session):
     @reactive.effect()
     @reactive.event(input.addTextPanel)
     def _():
-        n = str(input.addFoo())
         ui.insert_nav_panel(
             "tabs",
             "Placeholder Text Panel",
