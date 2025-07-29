@@ -5,7 +5,6 @@ app_ui = ui.page_sidebar(
         ui.input_action_button("add", "Add 'Dynamic' tab"),
         ui.input_action_button("remove_foo", "Remove 'Foo' tabs"),
         ui.input_action_button("add_foo", "Add New 'Foo' tab"),
-        # Add text panels adds both a text panel in the main navset as well as one in the menu dropdown
         ui.input_action_button("add_text_panel", "Add Text Panels"),
     ),
     ui.navset_tab(
@@ -51,8 +50,6 @@ def server(input: Inputs, output: Outputs, session: Session):
             select=True,
         )
 
-    # Button push for add_text_panel adds two panels
-
     @reactive.effect
     @reactive.event(input.add_text_panel)
     def _():
@@ -62,17 +59,6 @@ def server(input: Inputs, output: Outputs, session: Session):
             id,
             target="s2",
             position="before",
-        )
-
-    @reactive.effect
-    @reactive.event(input.add_text_panel)
-    def _():
-        ui.insert_nav_panel(
-            "tabs",
-            "Placeholder Text Panel",
-            target="Menu",
-            position="before",
-            select=True,
         )
 
 
