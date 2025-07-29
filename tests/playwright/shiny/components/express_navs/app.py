@@ -1,29 +1,39 @@
 from shiny import reactive
-from shiny.express import render
-from .modules import custom_sidebar, add_to_counter_content
-
-tabs_added = reactive.value(0)
+from shiny.express import ui, module
 
 
-def increment_tabs_counter():
-    tabs_added.set(tabs_added() + 1)
+@module
+def my_nav(input, output, session):
+    with ui.navset_card_tab(id="navset"):
+        with ui.nav_panel("Panel 1"):
+            "This is the first panel"
+            ui.input_action_button("hideTab", "Hide panel 2")
+            ui.input_action_button("showTab", "Show panel 2")
+            ui.input_action_button("deleteTabs", "Delete panel 2")
+
+    @reactive.effect
+    def _():
+        ui.insert_nav_panel(
+            "navset",
+            "Panel 2",
+            "This is the second panel",
+        )
+
+        @reactive.effect()
+        @reactive.event(input.showTab)
+        def _():
+            ui.show_nav_panel("navset", target="Panel 2")
+
+        @reactive.effect()
+        @reactive.event(input.hideTab)
+        def _():
+            ui.hide_nav_panel("navset", target="Panel 2")
+
+        @reactive.effect()
+        @reactive.event(input.deleteTabs)
+        def _():
+            ui.remove_nav_panel("navset", "Panel 2")
 
 
-custom_sidebar(
-    "nav",
-    _on_click=increment_tabs_counter,
-    label="Dynamic Sidebar",
-)
-
-
-add_to_counter_content(
-    "buttonAdder",
-    _on_click=increment_tabs_counter,
-    starting_value=0,
-    label="Add to Counter",
-)
-
-
-@render.code
-def out():
-    return f"Tabs added: {tabs_added()}"
+my_nav("foo")
+my_nav("bar")

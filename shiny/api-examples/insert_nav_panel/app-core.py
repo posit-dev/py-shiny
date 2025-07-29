@@ -5,6 +5,7 @@ app_ui = ui.page_sidebar(
         ui.input_action_button("add", "Add 'Dynamic' tab"),
         ui.input_action_button("removeFoo", "Remove 'Foo' tabs"),
         ui.input_action_button("addFoo", "Add New 'Foo' tab"),
+        ui.input_action_button("addTextPanel", "Add Text Panel"),
     ),
     ui.navset_tab(
         ui.nav_panel("Hello", "This is the hello tab"),
@@ -33,6 +34,17 @@ def server(input: Inputs, output: Outputs, session: Session):
         )
 
     @reactive.effect()
+    @reactive.event(input.addTextPanel)
+    def _():
+        id = "Text-" + str(input.addTextPanel())
+        ui.insert_nav_panel(
+            "tabs",
+            id,
+            target="s2",
+            position="before",
+        )
+
+    @reactive.effect()
     @reactive.event(input.removeFoo)
     def _():
         ui.remove_nav_panel("tabs", target="Foo")
@@ -44,6 +56,18 @@ def server(input: Inputs, output: Outputs, session: Session):
         ui.insert_nav_panel(
             "tabs",
             ui.nav_panel("Foo-" + n, "This is the new Foo-" + n + " tab", value="Foo"),
+            target="Menu",
+            position="before",
+            select=True,
+        )
+
+    @reactive.effect()
+    @reactive.event(input.addTextPanel)
+    def _():
+        n = str(input.addFoo())
+        ui.insert_nav_panel(
+            "tabs",
+            "Placeholder Text Panel",
             target="Menu",
             position="before",
             select=True,

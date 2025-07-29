@@ -5,6 +5,8 @@ with ui.sidebar():
     ui.input_action_button("add", "Add 'Dynamic' tab")
     ui.input_action_button("removeFoo", "Remove 'Foo' tabs")
     ui.input_action_button("addFoo", "Add New 'Foo' tab")
+    ui.input_action_button("addTextPanel", "Add Text Panel"),
+
 
 with ui.navset_tab(id="tabs"):
     with ui.nav_panel("Hello", value="Hello"):
@@ -29,6 +31,13 @@ def _():
 @reactive.event(input.removeFoo)
 def _():
     ui.remove_nav_panel("tabs", target="Foo")
+
+
+@reactive.effect()
+@reactive.event(input.add)
+def _():
+    id = "Dynamic-" + str(input.add())
+    ui.insert_nav_panel("tabs", title=id, value=id, target="s2", position="before")
 
 
 @reactive.effect()
