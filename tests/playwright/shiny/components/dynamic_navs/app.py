@@ -56,22 +56,22 @@ def server(input: Inputs, output: Outputs, session: Session):
     @reactive.effect()
     @reactive.event(input.hideTab)
     def _():
-        ui.hide_nav_panel("tabs", target="Foo")
+        ui.update_nav_panel("tabs", target="Foo", method="hide")
 
     @reactive.effect()
     @reactive.event(input.showTab)
     def _():
-        ui.show_nav_panel("tabs", target="Foo")
+        ui.update_nav_panel("tabs", target="Foo", method="show")
 
     @reactive.effect()
     @reactive.event(input.hideMenu)
     def _():
-        ui.hide_nav_panel("tabs", target="Menu")
+        ui.update_nav_panel("tabs", target="Menu", method="hide")
 
     @reactive.effect()
     @reactive.event(input.showMenu)
     def _():
-        ui.show_nav_panel("tabs", target="Menu")
+        ui.update_nav_panel("tabs", target="Menu", method="show")
 
 
 app = App(app_ui, server)

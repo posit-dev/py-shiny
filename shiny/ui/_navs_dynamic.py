@@ -1,9 +1,4 @@
-__all__ = (
-    "insert_nav_panel",
-    "remove_nav_panel",
-    "hide_nav_panel",
-    "show_nav_panel",
-)
+__all__ = ("insert_nav_panel", "remove_nav_panel", "update_nav_panel")
 
 import sys
 from typing import Optional, Union
@@ -59,8 +54,7 @@ def insert_nav_panel(
     See Also
     --------
     ~remove_nav_panel
-    ~show_nav_panel
-    ~hide_nav_panel
+    ~update_nav_panel
     ~shiny.ui.nav_panel
     """
 
@@ -109,8 +103,7 @@ def remove_nav_panel(id: str, target: str, session: Optional[Session] = None) ->
     See Also
     --------
     ~insert_nav_panel
-    ~show_nav_panel
-    ~hide_nav_panel
+    ~update_nav_panel
     ~shiny.ui.nav_panel
     """
 
@@ -124,11 +117,14 @@ def remove_nav_panel(id: str, target: str, session: Optional[Session] = None) ->
 
 
 @add_example()
-def show_nav_panel(
-    id: str, target: str, select: bool = False, session: Optional[Session] = None
+def update_nav_panel(
+    id: str,
+    target: str,
+    method: Literal["show", "hide"],
+    session: Optional[Session] = None,
 ) -> None:
     """
-    Show a navigation item
+    Show/hide a navigation item
 
     Parameters
     ----------
@@ -136,68 +132,32 @@ def show_nav_panel(
         The `id` of the relevant navigation container (i.e., `navset_*()` object).
     target
         The `value` of an existing :func:`shiny.ui.nav` item to show.
-    select
-        Whether the nav item's content should also be shown.
+    method
+        The action to perform on the nav_panel (`"show"` or `"hide"`).
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
         :func:`~shiny.session.get_current_session`.
 
     Note
     ----
-    For `show_nav_panel()` to be relevant/useful, a :func:`shiny.ui.nav` item must
-    have been hidden using :func:`~hide_nav_panel`.
+    On reveal, the `nav_panel` will not be the active tab. To change the active tab, use `~update_navs()`
 
     See Also
     --------
-    ~hide_nav_panel
     ~insert_nav_panel
     ~remove_nav_panel
     ~shiny.ui.nav_panel
+    ~update_navs
     """
 
     session = require_active_session(session)
 
     id = resolve_id(id)
-    if select:
-        update_navs(id, selected=target)
 
     msg = {
         "inputId": id,
         "target": target,
-        "type": "show",
-    }
-
-    session._send_message_sync({"shiny-change-tab-visibility": msg})
-
-
-def hide_nav_panel(id: str, target: str, session: Optional[Session] = None) -> None:
-    """
-    Hide a navigation item
-
-    Parameters
-    ----------
-    id
-        The `id` of the relevant navigation container (i.e., `navset_*()` object).
-    target
-        The `value` of an existing :func:`shiny.ui.nav` item to hide.
-    session
-        A :class:`~shiny.Session` instance. If not provided, it is inferred via
-        :func:`~shiny.session.get_current_session`.
-
-    See Also
-    --------
-    ~show_nav_panel
-    ~insert_nav_panel
-    ~remove_nav_panel
-    ~shiny.ui.nav_panel
-    """
-
-    session = require_active_session(session)
-
-    msg = {
-        "inputId": resolve_id(id),
-        "target": target,
-        "type": "hide",
+        "type": method,
     }
 
     session._send_message_sync({"shiny-change-tab-visibility": msg})

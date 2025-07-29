@@ -27,19 +27,19 @@ with ui.layout_sidebar():
     @reactive.effect()
     @reactive.event(input.hideTab)
     def _():
-        ui.hide_nav_panel("tabs", target="Foo")
+        ui.update_nav_panel("tabs", target="Foo", method="hide")
 
     @reactive.effect()
     @reactive.event(input.showTab)
     def _():
-        ui.show_nav_panel("tabs", target="Foo")
+        ui.update_nav_panel("tabs", target="Foo", method="show")
 
     @reactive.effect()
     @reactive.event(input.hideMenu)
     def _():
-        ui.hide_nav_panel("tabs", target="More")
+        ui.update_nav_panel("tabs", target="More", method="hide")
 
     @reactive.effect()
     @reactive.event(input.showMenu)
     def _():
-        ui.show_nav_panel("tabs", target="More")
+        ui.update_nav_panel("tabs", target="More", method="show")

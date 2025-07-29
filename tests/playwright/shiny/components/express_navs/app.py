@@ -22,12 +22,12 @@ def my_nav(input, output, session):
         @reactive.effect()
         @reactive.event(input.showTab)
         def _():
-            ui.show_nav_panel("navset", target="Panel 2")
+            ui.update_nav_panel("navset", target="Panel 2", method="show")
 
         @reactive.effect()
         @reactive.event(input.hideTab)
         def _():
-            ui.hide_nav_panel("navset", target="Panel 2")
+            ui.update_nav_panel("navset", target="Panel 2", method="hide")
 
         @reactive.effect()
         @reactive.event(input.deleteTabs)
