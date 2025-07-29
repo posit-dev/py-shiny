@@ -140,6 +140,14 @@ def update_nav_panel(
     Note
     ----
     On reveal, the `nav_panel` will not be the active tab. To change the active tab, use `~update_navs()`
+    For example:
+    ```
+    @reactive.effect
+    @reactive.event(input.showTab)
+    def _():
+        ui.update_nav_panel("tabset_id", target="Foo", method="show")
+        ui.update_navs("tabset_id", selected="Foo")
+    ```
 
     See Also
     --------
