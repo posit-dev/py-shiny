@@ -55,7 +55,6 @@ def _():
     )
 
 
-# Button push for add_text_panel adds two panels
 @reactive.effect
 @reactive.event(input.add_text_panel)
 def _():
