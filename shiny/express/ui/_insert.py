@@ -50,9 +50,9 @@ def insert_nav_panel(
         The `value` of an existing :func:`shiny.ui.nav_panel`, next to which tab will
         be added. Can also be `None`; see `position`.
     position
-        The position of the new nav item relative to the target nav panel. If
-        `target=None`, then `"before"` means the new nav item should be inserted at
-        the head of the navset, and `"after"` is the end.
+        The position of the new nav panel relative to the target. If
+        `target=None`, then `"before"` means the new panel should be inserted at
+        the head of the navlist, and `"after"` is the end.
     select
         Whether the nav panel should be selected upon insertion.
     session
