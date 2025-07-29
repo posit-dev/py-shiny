@@ -1,9 +1,9 @@
-from shiny import reactive
-from shiny.express import ui, module
+from shiny import Inputs, Outputs, Session, reactive
+from shiny.express import module, ui
 
 
 @module
-def my_nav(input, output, session):
+def my_nav(input: Inputs, output: Outputs, session: Session):
     with ui.navset_card_tab(id="navset"):
         with ui.nav_panel("Panel 1"):
             "This is the first panel"

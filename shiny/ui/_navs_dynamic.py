@@ -12,7 +12,6 @@ from .._docstring import add_example
 from .._namespaces import resolve_id
 from ..session import Session, require_active_session
 from ..types import NavSetArg
-from ._input_update import update_navs
 from ._navs import menu_string_as_nav
 
 

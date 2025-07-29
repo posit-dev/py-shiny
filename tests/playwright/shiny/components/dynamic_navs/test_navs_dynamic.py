@@ -17,8 +17,9 @@ def test_dynamic_navs(page: Page, local_app: ShinyAppProc) -> None:
     page.get_by_role("button", name="Menu", exact=True).click()
 
     # Page begins with 2 tabs: "Hello" and "Foo" and a nav menu with 2 static items.
-    navset_tab = controller.NavsetTab(page, "tabs")
-
+    controller.NavsetTab(page, "tabs").expect_nav_titles(
+        ["Hello", "Foo", "Static1", "Static2"]
+    )
     # Click add-foo to add a new Foo tab
     addfoo = controller.InputActionButton(page, "addFoo")
     addfoo.click()
