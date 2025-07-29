@@ -9,27 +9,27 @@ from shiny.run import ShinyAppProc
 def test_dynamic_navs(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 
-    # Page begins with 2 tabs: "Hello" and "Foo" and a nav menu with 2 static items.
+    # Page begins with 2 tabs: "Panel 1" and "Panel 2"
     controller.NavsetTab(page, "foo-navset").expect_nav_titles(["Panel 1", "Panel 2"])
     controller.NavsetTab(page, "bar-navset").expect_nav_titles(["Panel 1", "Panel 2"])
 
-    # Click hide-tab to hide the Foo tabs
+    # Click hide-tab to hide Panel 2 in the foo navset
     hidetab = controller.InputActionButton(page, "foo-hideTab")
     hidetab.click()
 
-    # Expect the Foo tabs to be hidden
+    # Expect the Foo's Panel 2 to be hidden
     navpanel = controller.NavPanel(page, "foo-navset", "Panel 2").loc
     expect(navpanel).to_be_hidden()
 
-    # Expect the bar tabs to not be affected
+    # Expect the bar Panel 2 tab to not be affected
     navpanel2 = controller.NavPanel(page, "bar-navset", "Panel 2").loc
     expect(navpanel2).to_be_visible()
 
-    # Click show-tab to show the Foo tabs again
+    # Click show-tab to show the foo Panel 2 tab again
     showtab = controller.InputActionButton(page, "foo-showTab")
     showtab.click()
 
-    # Expect the Foo tabs to be visible again
+    # Expect the Foo Panel 2 tab to be visible again as well as the bar Panel 2
     navpanel2 = controller.NavPanel(page, "foo-navset", "Panel 2").loc
     expect(navpanel2).to_be_visible()
     navpanel3 = controller.NavPanel(page, "bar-navset", "Panel 2").loc
@@ -38,5 +38,7 @@ def test_dynamic_navs(page: Page, local_app: ShinyAppProc) -> None:
     # Click the remove button to remove the panel 2 in bar
     removeTab = controller.InputActionButton(page, "bar-deleteTabs")
     removeTab.click()
+
+    # Check that bar's Panel 2 is gone, but foo's Panel 2 is unaffected
     controller.NavsetTab(page, "bar-navset").expect_nav_titles(["Panel 1"])
     controller.NavsetTab(page, "foo-navset").expect_nav_titles(["Panel 1", "Panel 2"])

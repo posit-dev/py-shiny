@@ -19,7 +19,7 @@ def test_dynamic_navs(page: Page, local_app: ShinyAppProc) -> None:
     controller.NavsetTab(page, "tabs").expect_nav_titles(
         ["Hello", "Foo", "Foo-1", "Static1", "Static2"]
     )
-    # Test Foo-1 tab is added
+    # Check that Foo-1 tab is added
     navpanel = controller.NavPanel(page, "tabs", "Foo").loc.filter(has_text="Foo-1")
     expect(navpanel).to_have_text("Foo-1")
 
@@ -67,6 +67,7 @@ def test_dynamic_navs(page: Page, local_app: ShinyAppProc) -> None:
 
     page.get_by_role("button", name="Menu", exact=True).click()
 
+    # Expect static tabs to be visible
     navpanel3 = controller.NavPanel(page, "tabs", "s1").loc
     expect(navpanel3).to_be_visible()
 
@@ -84,7 +85,8 @@ def test_dynamic_navs(page: Page, local_app: ShinyAppProc) -> None:
 
     # Expect the Menu to be visible again
     expect(page.get_by_role("button", name="Menu", exact=True)).to_be_visible()
-    # Click the Menu button to show the static menu
+
+    # Click the Menu button to show the static menu and expect the panels to be visible again
     page.get_by_role("button", name="Menu", exact=True).click()
     navpanel3 = controller.NavPanel(page, "tabs", "s1").loc
     expect(navpanel3).to_be_visible()
