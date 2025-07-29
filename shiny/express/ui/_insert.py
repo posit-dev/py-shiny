@@ -39,7 +39,7 @@ def insert_nav_panel(
     *args
         UI elements for the inserted nav panel.
     value
-        The value of the nav panel. Use this value to determine whether the item is active
+        The value of the panel. Use this value to determine whether the panel is active
         (when an `id` is provided to the nav container) or to programmatically
         select the item (e.g., :func:`~shiny.ui.update_navs`). You can also
         provide the value to the `selected` argument of the navigation container
