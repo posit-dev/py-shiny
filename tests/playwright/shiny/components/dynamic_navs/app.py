@@ -3,12 +3,12 @@ from shiny import App, Inputs, Outputs, Session, reactive, ui
 app_ui = ui.page_sidebar(
     ui.sidebar(
         ui.input_action_button("add", "Add 'Dynamic' tab"),
-        ui.input_action_button("removeFoo", "Remove 'Foo' tabs"),
-        ui.input_action_button("addFoo", "Add New 'Foo' tab"),
-        ui.input_action_button("hideTab", "Hide 'Foo' tab"),
-        ui.input_action_button("showTab", "Show 'Foo' tab"),
-        ui.input_action_button("hideMenu", "Hide 'Static' nav_menu"),
-        ui.input_action_button("showMenu", "Show 'Static' nav_menu"),
+        ui.input_action_button("remove_foo", "Remove 'Foo' tabs"),
+        ui.input_action_button("add_foo", "Add New 'Foo' tab"),
+        ui.input_action_button("hide_tab", "Hide 'Foo' tab"),
+        ui.input_action_button("show_tab", "Show 'Foo' tab"),
+        ui.input_action_button("hide_menu", "Hide 'Static' nav_menu"),
+        ui.input_action_button("show_menu", "Show 'Static' nav_menu"),
     ),
     ui.navset_tab(
         ui.nav_panel("Hello", "This is the hello tab", value="Hello"),
@@ -53,14 +53,14 @@ def server(input: Inputs, output: Outputs, session: Session):
         )
 
     @reactive.effect
-    @reactive.event(input.removeFoo)
+    @reactive.event(input.remove_foo)
     def _():
         ui.remove_nav_panel("tabs", target="Foo")
 
     @reactive.effect
-    @reactive.event(input.addFoo)
+    @reactive.event(input.add_foo)
     def _():
-        n = str(input.addFoo())
+        n = str(input.add_foo())
         ui.insert_nav_panel(
             "tabs",
             ui.nav_panel("Foo-" + n, "Foo-" + n, value="Foo"),
@@ -70,22 +70,22 @@ def server(input: Inputs, output: Outputs, session: Session):
         )
 
     @reactive.effect
-    @reactive.event(input.hideTab)
+    @reactive.event(input.hide_tab)
     def _():
         ui.update_nav_panel("tabs", target="Foo", method="hide")
 
     @reactive.effect
-    @reactive.event(input.showTab)
+    @reactive.event(input.show_tab)
     def _():
         ui.update_nav_panel("tabs", target="Foo", method="show")
 
     @reactive.effect
-    @reactive.event(input.hideMenu)
+    @reactive.event(input.hide_menu)
     def _():
         ui.update_nav_panel("tabs", target="Menu", method="hide")
 
     @reactive.effect
-    @reactive.event(input.showMenu)
+    @reactive.event(input.show_menu)
     def _():
         ui.update_nav_panel("tabs", target="Menu", method="show")
 

@@ -7,9 +7,9 @@ def my_nav(input: Inputs, output: Outputs, session: Session):
     with ui.navset_card_tab(id="navset"):
         with ui.nav_panel("Panel 1"):
             "This is the first panel"
-            ui.input_action_button("hideTab", "Hide panel 2")
-            ui.input_action_button("showTab", "Show panel 2")
-            ui.input_action_button("deleteTabs", "Delete panel 2")
+            ui.input_action_button("hide_tab", "Hide panel 2")
+            ui.input_action_button("show_tab", "Show panel 2")
+            ui.input_action_button("delete_tabs", "Delete panel 2")
 
     @reactive.effect
     def _():
@@ -20,17 +20,17 @@ def my_nav(input: Inputs, output: Outputs, session: Session):
         )
 
         @reactive.effect
-        @reactive.event(input.showTab)
+        @reactive.event(input.show_tab)
         def _():
             ui.update_nav_panel("navset", target="Panel 2", method="show")
 
         @reactive.effect
-        @reactive.event(input.hideTab)
+        @reactive.event(input.hide_tab)
         def _():
             ui.update_nav_panel("navset", target="Panel 2", method="hide")
 
         @reactive.effect
-        @reactive.event(input.deleteTabs)
+        @reactive.event(input.delete_tabs)
         def _():
             ui.remove_nav_panel("navset", "Panel 2")
 

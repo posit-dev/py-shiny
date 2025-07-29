@@ -5,7 +5,6 @@ from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
 
-@pytest.mark.flaky(reruns=3, reruns_delay=2)
 def test_dynamic_navs(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 
@@ -14,7 +13,7 @@ def test_dynamic_navs(page: Page, local_app: ShinyAppProc) -> None:
     controller.NavsetTab(page, "bar-navset").expect_nav_titles(["Panel 1", "Panel 2"])
 
     # Click hide-tab to hide Panel 2 in the foo navset
-    hidetab = controller.InputActionButton(page, "foo-hideTab")
+    hidetab = controller.InputActionButton(page, "foo-hide_tab")
     hidetab.click()
 
     # Expect the Foo's Panel 2 to be hidden
@@ -26,7 +25,7 @@ def test_dynamic_navs(page: Page, local_app: ShinyAppProc) -> None:
     expect(navpanel2).to_be_visible()
 
     # Click show-tab to show the foo Panel 2 tab again
-    showtab = controller.InputActionButton(page, "foo-showTab")
+    showtab = controller.InputActionButton(page, "foo-show_tab")
     showtab.click()
 
     # Expect the Foo Panel 2 tab to be visible again as well as the bar Panel 2
@@ -36,7 +35,7 @@ def test_dynamic_navs(page: Page, local_app: ShinyAppProc) -> None:
     expect(navpanel3).to_be_visible()
 
     # Click the remove button to remove the panel 2 in bar
-    removeTab = controller.InputActionButton(page, "bar-deleteTabs")
+    removeTab = controller.InputActionButton(page, "bar-delete_tabs")
     removeTab.click()
 
     # Check that bar's Panel 2 is gone, but foo's Panel 2 is unaffected
