@@ -143,7 +143,7 @@ def update_nav_panel(
     For example:
     ```
     @reactive.effect
-    @reactive.event(input.showTab)
+    @reactive.event(input.show_tab)
     def _():
         ui.update_nav_panel("tabset_id", target="Foo", method="show")
         ui.update_navs("tabset_id", selected="Foo")
