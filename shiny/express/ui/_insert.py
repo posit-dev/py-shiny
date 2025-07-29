@@ -28,7 +28,7 @@ def insert_nav_panel(
     session: Optional[Session] = None,
 ) -> None:
     """
-    Create a nav item pointing to some internal content.
+    Create a new nav panel in an existing navset.
 
     Parameters
     ----------
