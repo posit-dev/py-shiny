@@ -38,7 +38,7 @@ def insert_nav_panel(
         string is only allowed when the `target` references a
         :func:`~shiny.ui.nav_menu`.
     target
-        The `value` of an existing :func:`shiny.ui.nav` item, next to which tab will
+        The `value` of an existing :func:`shiny.ui.nav_panel`, next to which tab will
         be added. Can also be `None`; see `position`.
     position
         The position of the new nav item relative to the target nav item. If

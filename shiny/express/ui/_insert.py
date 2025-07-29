@@ -33,28 +33,28 @@ def insert_nav_panel(
     Parameters
     ----------
     id
-        The id of the navset container to insert the item into.
+        The id of the navset container to insert into.
     title
-        A title to display. Can be a character string or UI elements (i.e., tags).
+        A title for the inserted nav panel. Can be a character string or UI elements (i.e., tags).
     *args
-        UI elements to display when the item is active.
+        UI elements for the inserted nav panel.
     value
-        The value of the item. Use this value to determine whether the item is active
+        The value of the nav panel. Use this value to determine whether the item is active
         (when an `id` is provided to the nav container) or to programmatically
         select the item (e.g., :func:`~shiny.ui.update_navs`). You can also
         provide the value to the `selected` argument of the navigation container
         (e.g., :func:`~shiny.ui.navset_tab`).
     icon
-        An icon to appear inline with the button/link.
+        An icon to appear inline with the title.
     target
-        The `value` of an existing :func:`shiny.ui.nav` item, next to which tab will
+        The `value` of an existing :func:`shiny.ui.nav_panel`, next to which tab will
         be added. Can also be `None`; see `position`.
     position
-        The position of the new nav item relative to the target nav item. If
+        The position of the new nav item relative to the target nav panel. If
         `target=None`, then `"before"` means the new nav item should be inserted at
-        the head of the navlist, and `"after"` is the end.
+        the head of the navset, and `"after"` is the end.
     select
-        Whether the nav item should be selected upon insertion.
+        Whether the nav panel should be selected upon insertion.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
         :func:`~shiny.session.get_current_session`.
