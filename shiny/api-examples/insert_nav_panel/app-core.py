@@ -56,23 +56,23 @@ def server(input: Inputs, output: Outputs, session: Session):
     @reactive.effect
     @reactive.event(input.add_text_panel)
     def _():
-        ui.insert_nav_panel(
-            "tabs",
-            "Placeholder Text Panel",
-            target="Menu",
-            position="before",
-            select=True,
-        )
-
-    @reactive.effect
-    @reactive.event(input.add_text_panel)
-    def _():
         id = "Text-" + str(input.add_text_panel())
         ui.insert_nav_panel(
             "tabs",
             id,
             target="s2",
             position="before",
+        )
+
+    @reactive.effect
+    @reactive.event(input.add_text_panel)
+    def _():
+        ui.insert_nav_panel(
+            "tabs",
+            "Placeholder Text Panel",
+            target="Menu",
+            position="before",
+            select=True,
         )
 
 
