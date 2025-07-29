@@ -18,7 +18,7 @@ from ...session import Session
 @add_example()
 def insert_nav_panel(
     id: str,
-    title: str,
+    title: TagChild,
     *args: TagChild,
     value: Optional[str] = None,
     icon: TagChild = None,
@@ -58,6 +58,13 @@ def insert_nav_panel(
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
         :func:`~shiny.session.get_current_session`.
+
+    Note
+    ----
+    Unlike :func:`~shiny.ui.insert_nav_panel`, this function does not support inserting
+    of a heading/divider into an existing :func:`~shiny.ui.nav_menu`. To do so, use
+    :func:`~shiny.ui.insert_nav_panel` instead of this Express variant (i.e.,
+    `shiny.ui.insert_nav_panel("id", "Header")`).
     """
 
     from ...ui import insert_nav_panel, nav_panel
