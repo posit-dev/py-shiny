@@ -10,6 +10,12 @@ from shiny.run import ShinyAppProc
 def test_dynamic_navs(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 
+    # String insertion as panels worked correctly
+    expect(page.get_by_text("Stringy Panel")).to_be_visible()
+    page.get_by_role("button", name="Menu", exact=True).click()
+    expect(page.get_by_text("Stringier Panel")).to_be_visible()
+    page.get_by_role("button", name="Menu", exact=True).click()
+
     # Page begins with 2 tabs: "Hello" and "Foo" and a nav menu with 2 static items.
     navset_tab = controller.NavsetTab(page, "tabs")
 

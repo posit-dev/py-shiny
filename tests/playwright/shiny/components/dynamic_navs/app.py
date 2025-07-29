@@ -25,6 +25,22 @@ app_ui = ui.page_sidebar(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
+
+    @reactive.effect
+    def _():
+        ui.insert_nav_panel(
+            "tabs",
+            "Stringy Panel",
+            target="Foo",
+            position="before",
+        )
+        ui.insert_nav_panel(
+            "tabs",
+            "Stringier Panel",
+            target="s2",
+            position="before",
+        )
+
     @reactive.effect()
     @reactive.event(input.add)
     def _():
