@@ -19,17 +19,17 @@ def my_nav(input: Inputs, output: Outputs, session: Session):
             "This is the second panel",
         )
 
-        @reactive.effect()
+        @reactive.effect
         @reactive.event(input.showTab)
         def _():
             ui.update_nav_panel("navset", target="Panel 2", method="show")
 
-        @reactive.effect()
+        @reactive.effect
         @reactive.event(input.hideTab)
         def _():
             ui.update_nav_panel("navset", target="Panel 2", method="hide")
 
-        @reactive.effect()
+        @reactive.effect
         @reactive.event(input.deleteTabs)
         def _():
             ui.remove_nav_panel("navset", "Panel 2")

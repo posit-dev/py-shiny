@@ -24,22 +24,22 @@ with ui.layout_sidebar():
             with ui.nav_panel("Email"):
                 "Email page"
 
-    @reactive.effect()
+    @reactive.effect
     @reactive.event(input.hideTab)
     def _():
         ui.update_nav_panel("tabs", target="Foo", method="hide")
 
-    @reactive.effect()
+    @reactive.effect
     @reactive.event(input.showTab)
     def _():
         ui.update_nav_panel("tabs", target="Foo", method="show")
 
-    @reactive.effect()
+    @reactive.effect
     @reactive.event(input.hideMenu)
     def _():
         ui.update_nav_panel("tabs", target="More", method="hide")
 
-    @reactive.effect()
+    @reactive.effect
     @reactive.event(input.showMenu)
     def _():
         ui.update_nav_panel("tabs", target="More", method="show")
