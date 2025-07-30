@@ -130,7 +130,7 @@ def update_nav_panel(
     id
         The `id` of the relevant navigation container (i.e., `navset_*()` object).
     target
-        The `value` of an existing :func:`shiny.ui.nav` item to show.
+        The `value` of an existing :func:`shiny.ui.nav_panel` item to show.
     method
         The action to perform on the nav_panel (`"show"` or `"hide"`).
     session
@@ -139,7 +139,7 @@ def update_nav_panel(
 
     Note
     ----
-    On reveal, the `nav_panel` will not be the active tab. To change the active tab, use `~update_navs()`
+    On reveal, the `nav_panel` will not be the active tab. To change the active tab, use :func:`~shiny.ui.update_navs()`
     For example:
     ```
     @reactive.effect
