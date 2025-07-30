@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
+* Added `ui.insert_nav_panel()`, `ui.remove_nav_panel()`, and `ui.update_nav_panel` to support dynamic navigation. (#90)
+
 * `ui.sidebar()` is now interactively resizable. (#2020)
 
 * `ui.update_*()` functions now accept `ui.TagChild` (i.e., HTML) as input to the `label` and `icon` arguments. (#2020)
