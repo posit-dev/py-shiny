@@ -579,7 +579,7 @@ class InputRadioButtons(
             The timeout for the action. Defaults to `None`.
         """
         if not isinstance(selected, str):
-            raise TypeError("`selected` must be a string")
+            raise TypeError("`selected=` must be a string")
 
         # Only need to set.
         # The Browser will _unset_ the previously selected radio button
@@ -778,10 +778,10 @@ class InputCheckboxGroup(
         """
         # Having an arr of size 0 is allowed. Will uncheck everything
         if not isinstance(selected, list):
-            raise TypeError("`selected` must be a list or tuple")
+            raise TypeError("`selected=` must be a list or tuple")
         for item in selected:
             if not isinstance(item, str):
-                raise TypeError("`selected` must be a list of strings")
+                raise TypeError("`selected=` must be a list of strings")
 
         # Make sure the selected items exist
         # Similar to `self.expect_choices(choices = selected)`, but with
@@ -1187,25 +1187,139 @@ class InputSelectize(
         """
         Sets the selected option(s) of the input selectize.
 
+        Selected items are altered as follows:
+        1. Click on the selectize input to open the dropdown.
+        2. Starting from the first selected item, each position in the currently selected list should match `selected`. If the item is not a match, remove it and try again.
+        3. Add any remaining items in `selected` that are not currently selected by clicking on them in the dropdown.
+        4. Press the `"Escape"` key to close the dropdown.
+
         Parameters
         ----------
         selected
-            The value(s) of the selected option(s).
+            The [ordered] value(s) of the selected option(s).
         timeout
             The maximum time to wait for the selection to be set. Defaults to `None`.
         """
-        if isinstance(selected, str):
-            selected = [selected]
-        self._loc_events.click()
-        for value in selected:
-            self._loc_selectize.locator(f"[data-value='{value}']").click(
+
+        def click_item(data_value: str, error_str: str) -> None:
+            """
+            Clicks the item in the dropdown by its `data-value` attribute.
+            """
+            if not isinstance(data_value, str):
+                raise TypeError(error_str)
+
+            # Wait for the item to exist
+            playwright_expect(
+                self._loc_selectize.locator(f"[data-value='{data_value}']")
+            ).to_have_count(1, timeout=timeout)
+            # Click the item
+            self._loc_selectize.locator(f"[data-value='{data_value}']").click(
                 timeout=timeout
             )
-        self._loc_events.press("Escape")
+
+        # Make sure the selectize exists
+        playwright_expect(self._loc_events).to_have_count(1, timeout=timeout)
+
+        if self.loc.get_attribute("multiple") is None:
+            # Single element selectize
+            if isinstance(selected, list):
+                if len(selected) != 1:
+                    raise ValueError(
+                        "Expected a `str` value (or a list of a single `str` value) when setting a single-select input."
+                    )
+                selected = selected[0]
+
+            # Open the dropdown
+            self._loc_events.click(timeout=timeout)
+
+            try:
+                # Click the item (which closes the dropdown)
+                click_item(selected, "`selected=` value must be a `str`")
+            finally:
+                # Be sure to close the dropdown
+                # (While this is not necessary on a sucessful `set()`, it is cleaner
+                # than a catch all except)
+                self._loc_events.press("Escape", timeout=timeout)
+
+        else:
+            # Multiple element selectize
+
+            def delete_item(item_loc: Locator) -> None:
+                """
+                Deletes the item by clicking on it and pressing the Delete key.
+                """
+
+                item_loc.click()
+                self.page.keyboard.press("Delete")
+
+            if isinstance(selected, str):
+                selected = [selected]
+            if not isinstance(selected, list):
+                raise TypeError(
+                    "`selected=` must be a single `str` value or a list of `str` values when setting a multiple-select input"
+                )
+
+            # Open the dropdown
+            self._loc_events.click()
+
+            try:
+                # Sift through the selected items
+                # From left to right, we will remove ordered items that are not in the
+                # ordered `selected`
+                # If any selected items are not in the current selection, we will add
+                # them at the end
+
+                # All state transitions examples have an end goal of
+                # A,B,C,D,E
+                #
+                # Items wrapped in `[]` are the item of interest at position `i`
+                # Ex: `Z`,i=3 in A,B,C,[Z],E
+
+                i = 0
+                while i < self._loc_events.locator("> .item").count():
+                    item_loc = self._loc_events.locator("> .item").nth(i)
+                    item_data_value = item_loc.get_attribute("data-value")
+
+                    # If the item has no data-value, remove it
+                    # Transition: A,B,C,[?],D,E -> A,B,C,[D],E
+                    if item_data_value is None:
+                        delete_item(item_loc)
+                        continue
+
+                    # If there are more items than selected, remove the extras
+                    # Transition: A,B,C,D,E,[Z] -> A,B,C,D,E,[]
+                    if i >= len(selected):
+                        delete_item(item_loc)
+                        continue
+
+                    selected_data_value = selected[i]
+
+                    # If the item is not the next `selected` value, remove it
+                    # Transition: A,B,[Z],C,D,E -> A,B,[C],D,E
+                    if item_data_value != selected_data_value:
+                        delete_item(item_loc)
+                        continue
+
+                    # The item is the next `selected` value
+                    # Increment the index! (No need to remove it and add it back)
+                    # A,B,[C],D,E -> A,B,C,[D],E
+                    i += 1
+
+                # Add the remaining items
+                # A,B,[] -> A,B,C,D,E
+                if i < len(selected):
+                    for data_value in selected[i:]:
+                        click_item(
+                            data_value, f"`selected[{i}]=` value must be a `str`"
+                        )
+
+            finally:
+                # Be sure to close the dropdown
+                self._loc_events.press("Escape", timeout=timeout)
+        return
 
     def expect_choices(
         self,
-        # TODO-future; support patterns?
         choices: ListPatternOrStr,
         *,
         timeout: Timeout = None,

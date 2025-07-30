@@ -15,8 +15,6 @@ class PriorityQueueFIFO(Generic[T]):
     """
 
     def __init__(self) -> None:
-        # Using Tuple instead of tuple because in Python 3.8 and earlier, tuple isn't
-        # generic
         self._pq: PriorityQueue[tuple[int, int, T]] = PriorityQueue()
         self._counter: int = 0
 

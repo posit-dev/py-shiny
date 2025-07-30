@@ -11,9 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added `ui.insert_nav_panel()`, `ui.remove_nav_panel()`, and `ui.update_nav_panel` to support dynamic navigation. (#90)
 
+* Added support for python 3.13. (#1711)
+
 * `ui.sidebar()` is now interactively resizable. (#2020)
 
 * `ui.update_*()` functions now accept `ui.TagChild` (i.e., HTML) as input to the `label` and `icon` arguments. (#2020)
+
+* The `.output_*()` methods of the `ClientData` class (e.g., `session.clientdata.output_height()`) can now be called without an `id` when called inside a `@render` function. (#1978)
 
 * `playwright.controller.InputActionButton` gains a `expect_icon()` method. As a result, the already existing `expect_label()` no longer includes the icon. (#2020)
 
@@ -25,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added `timeout_secs` parameter to `create_app_fixture` to allow testing apps with longer startup times. (#2033)
 
+* Added module support for `session.clientdata` methods. This allows you to access client data values in Shiny modules without needing to namespace the keys explicitly. (#1978)
+
 ### Bug fixes
 
 * Fixed an issue with `ui.Chat()` sometimes wanting to scroll a parent element. (#1996)
@@ -33,10 +39,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Fix missing session when trying to display an error duing bookmarking. (#1984)
 
+* Fixed `set()` method of `InputSelectize` controller so it clears existing selections before applying new values. (#2024)
+
 
 ## [1.4.0] - 2025-04-08
 
-## New features
+### New features
 
 * Added support for bookmarking Shiny applications. Bookmarking allows users to save the current state of an application and return to it later. This feature is available in both Shiny Core and Shiny Express. (#1870, #1915, #1919, #1920, #1922, #1934, #1938, #1945, #1955)
   * To enable bookmarking in Express mode, set `shiny.express.app_opts(bookmark_store=)` during the app's initial construction.

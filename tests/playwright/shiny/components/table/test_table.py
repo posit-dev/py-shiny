@@ -12,5 +12,5 @@ def test_table_data_support(page: Page, local_app: ShinyAppProc) -> None:
     controller.OutputTable(page, "nw_table").expect_nrow(2)
     controller.OutputCode(page, "nw_df_type").expect_value(re.compile("narwhals"))
 
-    controller.OutputTable(page, "md_table").expect_nrow(2)
-    controller.OutputCode(page, "md_df_type").expect_value(re.compile("modin"))
+    controller.OutputTable(page, "pd_table").expect_nrow(2)
+    controller.OutputCode(page, "pd_df_type").expect_value(re.compile("pandas"))
