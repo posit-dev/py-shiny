@@ -34,13 +34,6 @@ def _():
 
 
 @reactive.effect
-@reactive.event(input.add)
-def _():
-    id = "Dynamic-" + str(input.add())
-    ui.insert_nav_panel("tabs", title=id, value=id, target="s2", position="before")
-
-
-@reactive.effect
 @reactive.event(input.add_foo)
 def _():
     n = str(input.add_foo())
