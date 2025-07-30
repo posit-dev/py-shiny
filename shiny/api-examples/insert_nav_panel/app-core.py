@@ -46,5 +46,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             position="before",
         )
 
+        ui.notification_show(f"Added tab to menu: {id}")
+
 
 app = App(app_ui, server)

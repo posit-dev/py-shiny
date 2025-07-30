@@ -30,12 +30,6 @@ def server(input: Inputs, output: Outputs, session: Session):
     def _():
         ui.insert_nav_panel(
             "tabs",
-            "Stringy Panel",
-            target="Foo",
-            position="before",
-        )
-        ui.insert_nav_panel(
-            "tabs",
             "Stringier Panel",
             target="s2",
             position="before",

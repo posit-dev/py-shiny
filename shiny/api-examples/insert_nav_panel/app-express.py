@@ -40,3 +40,4 @@ def _():
 def _():
     id = "Dynamic-" + str(input.add())
     ui.insert_nav_panel("tabs", title=id, value=id, target="s2", position="before")
+    ui.notification_show(f"Added tab to menu: {id}")
