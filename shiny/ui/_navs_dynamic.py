@@ -141,7 +141,7 @@ def update_nav_panel(
     ----
     On reveal, the `nav_panel` will not be the active tab. To change the active tab, use :func:`~shiny.ui.update_navs()`
     For example:
-    ```
+    ```python
     @reactive.effect
     @reactive.event(input.show_tab)
     def _():
