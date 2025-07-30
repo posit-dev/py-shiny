@@ -8,7 +8,7 @@ if sys.version_info >= (3, 8):
 else:
     from typing_extensions import Literal
 
-from .._docstring import add_example
+from .._docstring import add_example, no_example
 from .._namespaces import resolve_id
 from ..session import Session, require_active_session
 from ..types import NavSetArg
@@ -85,6 +85,7 @@ def insert_nav_panel(
     session._send_message_sync({"shiny-insert-tab": msg})
 
 
+@no_example()
 def remove_nav_panel(id: str, target: str, session: Optional[Session] = None) -> None:
     """
     Remove a nav item from a navigation container.
@@ -98,6 +99,10 @@ def remove_nav_panel(id: str, target: str, session: Optional[Session] = None) ->
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
         :func:`~shiny.session.get_current_session`.
+
+    Note
+    ----
+    See :func:`~shiny.ui.insert_nav_panel` for an example.
 
     See Also
     --------
