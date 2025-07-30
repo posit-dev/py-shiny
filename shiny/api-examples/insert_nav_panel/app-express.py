@@ -3,7 +3,7 @@ from shiny.express import input, ui
 
 with ui.sidebar():
     ui.input_action_button("add", "Add 'Dynamic' tab")
-    ui.input_action_button("update_foo", "Add/Remove 'Foo' tab"),
+    ui.input_action_button("update_foo", "Add/Remove 'Foo' tab")
 
 
 with ui.navset_tab(id="tabs"):
