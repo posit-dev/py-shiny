@@ -52,8 +52,8 @@ def insert_nav_panel(
 
     See Also
     --------
-    ~remove_nav_panel
-    ~update_nav_panel
+    ~shiny.ui.remove_nav_panel
+    ~shiny.ui.update_nav_panel
     ~shiny.ui.nav_panel
     """
 
@@ -106,8 +106,8 @@ def remove_nav_panel(id: str, target: str, session: Optional[Session] = None) ->
 
     See Also
     --------
-    ~insert_nav_panel
-    ~update_nav_panel
+    ~shiny.ui.insert_nav_panel
+    ~shiny.ui.update_nav_panel
     ~shiny.ui.nav_panel
     """
 
@@ -156,10 +156,10 @@ def update_nav_panel(
 
     See Also
     --------
-    ~insert_nav_panel
-    ~remove_nav_panel
+    ~shiny.ui.insert_nav_panel
+    ~shiny.ui.remove_nav_panel
     ~shiny.ui.nav_panel
-    ~update_navs
+    ~shiny.ui.update_navs
     """
 
     session = require_active_session(session)
