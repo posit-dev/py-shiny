@@ -9,8 +9,8 @@ app_ui = ui.page_sidebar(
         ui.input_action_button("showMenu", "Show 'More' nav_menu"),
     ),
     ui.navset_tab(
-        ui.nav_panel("Foo", "This is the foo tab"),
-        ui.nav_panel("Bar", "This is the bar tab"),
+        ui.nav_panel("Foo", "This is the foo tab", value="Foo"),
+        ui.nav_panel("Bar", "This is the bar tab", value="Bar"),
         ui.nav_menu(
             "More",
             ui.nav_panel("Table", "Table page"),

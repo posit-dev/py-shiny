@@ -63,7 +63,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         n = str(input.add_foo())
         ui.insert_nav_panel(
             "tabs",
-            ui.nav_panel("Foo-" + n, "Foo-" + n, value="Foo"),
+            ui.nav_panel("Foo-" + n, "Foo-" + n, value="Foo-" + n),
             target="Menu",
             position="before",
             select=True,

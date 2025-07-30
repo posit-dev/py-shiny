@@ -10,9 +10,9 @@ with ui.layout_sidebar():
         ui.input_action_button("showMenu", "Show 'More' nav_menu")
 
     with ui.navset_tab(id="tabs"):
-        with ui.nav_panel("Foo"):
+        with ui.nav_panel("Foo", value="Foo"):
             "This is the foo tab"
-        with ui.nav_panel("Bar"):
+        with ui.nav_panel("Bar", value="Bar"):
             "This is the bar tab"
         with ui.nav_menu(title="More", value="More"):
             with ui.nav_panel("Table"):
