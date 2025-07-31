@@ -164,10 +164,8 @@ def update_nav_panel(
 
     session = require_active_session(session)
 
-    id = resolve_id(id)
-
     msg = {
-        "inputId": id,
+        "inputId": resolve_id(id),
         "target": target,
         "type": method,
     }
