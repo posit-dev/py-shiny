@@ -728,7 +728,14 @@ def update_selectize(
         return update_select(
             id, label=label, choices=choices, selected=selected, session=session
         )
-
+    print(
+        "Update Selectize s1: label:",
+        label,
+        " choices: ",
+        choices[0:10],
+        " selected: ",
+        selected,
+    )
     if options is not None:
         cfg = TagList(
             tags.script(
@@ -742,14 +749,20 @@ def update_selectize(
 
     # Transform choices to a list of dicts (this is the form the client wants)
     # [{"label": "Foo", "value": "foo", "optgroup": "foo"}, ...]
+
+    # TODO: This is where the choices are getting too escaped
+
     flat_choices: list[FlatSelectChoice] = []
     if choices is not None:
         for k, v in _normalize_choices(choices).items():
             if not isinstance(v, Mapping):
+                print("in if: ", k, v)
+                print(session._process_ui(v))
                 flat_choices.append(
                     FlatSelectChoice(value=k, label=session._process_ui(v)["html"])
                 )
             else:  # The optgroup case
+                print("in else: ", k, v)
                 flat_choices.extend(
                     [
                         FlatSelectChoice(

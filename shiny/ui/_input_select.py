@@ -220,7 +220,9 @@ def input_select(
         )
 
     resolved_id = resolve_id(id)
-
+    print(
+        "input_select, label: ", label, " choices: ", choices, " selected: ", selected
+    )
     x = _input_select_impl(
         id=resolved_id,
         label=label,
