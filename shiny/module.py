@@ -29,9 +29,23 @@ def ui(fn: Callable[P, R]) -> Callable[Concatenate[str, P], R]:
     """
     Decorator for defining a Shiny module UI function.
 
-    This decorator allows you to write the UI portion of a Shiny module.
-    When your decorated `ui` function is called with an `id`,
-    the UI elements defined within will automatically be namespaced using that `id`.
+    A Shiny module is a reusable component that can be embedded within Shiny apps or
+    other Shiny modules. Each module consists of a UI function and a server function.
+    Use this decorator to mark the UI function for a module.
+
+    The UI function can take whatever parameters are required to create the UI; for
+    example, a label or a default value. It can also take no parameters, if none are
+    required.
+
+    Whatever parameters the UI function takes, the `ui` decorator will prepend the
+    signature with a new `id` argument. This argument will be an id string passed by the
+    caller, that uniquely identifies the module instance within the calling scope.
+
+    When the decorated function is called, any Shiny input or output elements created
+    within the function will automatically have their `id` values prefixed with the
+    module instance's `id`. This ensures that the input and output elements are uniquely
+    namespaced and won't conflict with other elements in the same app.
+
     This enables reuse of UI components and consistent input/output handling
     when paired with a :func:`shiny.module.server` function.
 
@@ -44,8 +58,9 @@ def ui(fn: Callable[P, R]) -> Callable[Concatenate[str, P], R]:
     Returns
     -------
     :
-        A function that takes a `str` `id` as its first argument, followed by any additional
-        parameters accepted by `fn`. When called, it returns UI elements with input/output
+        The decorated UI function. The function takes a `str` `id` as its first argument,
+        followed by any additional parameters accepted by `fn`.
+        When called, it returns UI elements with input/output
         IDs automatically namespaced using the provided module `id`.
 
     See Also
@@ -68,6 +83,21 @@ def server(
     """
     Decorator for defining a Shiny module server function.
 
+    A Shiny module is a reusable component that can be embedded within Shiny apps or
+    other Shiny modules. Each module consists of a UI function and a server function.
+    This decorator is used to encapsulate the server logic for a Shiny module.
+
+    Every Shiny module server function must always begin with the same three arguments:
+    `input`, `output`, and `session`, just like a Shiny app's server function.
+
+    After `input`, `output`, and `session`, the server function may include additional
+    parameters to be used in the server logic; for example, reactive data sources or
+    file paths that need to be provided by the caller.
+
+    This decorator modifies the signature of the decorated server function. The `input`,
+    `output`, and `session` parameters are removed, and a new `id` parameter is
+    prepended to the signature.
+
     This decorator is used to encapsulate the server logic for a Shiny module.
     It automatically creates a namespaced child `Session` using the provided module `id`,
     and passes the appropriate `input`, `output`, and `session` objects to your server function.
@@ -84,9 +114,13 @@ def server(
     Returns
     -------
     :
+        The decorated server function.
         A function that takes a module `id` (as a string) as its first argument,
         followed by any arguments expected by `fn`. When called, it will register
         the module's server logic in a namespaced context.
+        The function signature of `fn` will have been
+        modified to remove `input`, `output`, and `session`, and to prepend a new `id`
+        parameter.
 
     See Also
     --------
