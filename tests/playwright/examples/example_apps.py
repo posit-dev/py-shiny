@@ -91,9 +91,6 @@ app_allow_external_errors: typing.List[str] = [
     "FutureWarning: use_inf_as_na option is deprecated",
     "pd.option_context('mode.use_inf_as_na",  # continutation of line above,
     "RuntimeWarning: invalid value encountered in dot",  # some groups didn't have enough data points to create a meaningful line
-    "DatetimeIndex.format is deprecated and will be removed in a future version. Convert using index.astype(str) or index.map(formatter) instead.",  # cufflinks package is using this method
-    "Series.__getitem__ treating keys as positions is deprecated. In a future version, integer keys will always be treated as labels (consistent with DataFrame behavior). To access a value by position, use `ser.iloc[pos]`",  # cufflinks package is using this method
-    # ignore known false-positive warning https://github.com/posit-dev/py-shiny/issues/1704
     "UserWarning: More column widths than children at breakpoint",
 ]
 app_allow_js_errors: typing.Dict[str, typing.List[str]] = {
