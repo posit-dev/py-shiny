@@ -531,7 +531,7 @@ class table(Renderer[IntoDataFrame]):
                 except Exception as e:
                     raise TypeError(
                         "@render.table doesn't know how to render objects of type "
-                        f"'{str(type(value))}'. Return eagar data frames that can "
+                        f"'{str(type(value))}'. Return eager data frames that can "
                         "be handled by `narwhals`."
                     ) from e
                 value = nw_data.to_pandas()
