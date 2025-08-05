@@ -91,7 +91,7 @@ test = [
     "dask[dataframe]",
     "pyarrow",
     "pyarrow-stubs",
-    "chatlas[anthropic]",
+    "chatlas[anthropic,openai]",
     "chatlas[openai]",
 ]
 dev = [
