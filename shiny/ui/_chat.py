@@ -157,7 +157,7 @@ class Chat:
         A unique identifier for the chat session. In Shiny Core, make sure this id
         matches a corresponding :func:`~shiny.ui.chat_ui` call in the UI.
     messages
-        Deprecated. Use `.ui(messages=...)` instead.
+        Deprecated. Use `chat.ui(messages=...)` instead.
     on_error
         How to handle errors that occur in response to user input. When `"unhandled"`,
         the app will stop running when an error occurs. Otherwise, a notification
