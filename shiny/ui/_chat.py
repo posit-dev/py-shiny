@@ -157,21 +157,7 @@ class Chat:
         A unique identifier for the chat session. In Shiny Core, make sure this id
         matches a corresponding :func:`~shiny.ui.chat_ui` call in the UI.
     messages
-        A sequence of messages to display in the chat. A given message can be one of the
-        following:
-
-        * A string, which is interpreted as markdown and rendered to HTML on the client.
-            * To prevent interpreting as markdown, mark the string as
-              :class:`~shiny.ui.HTML`.
-        * A UI element (specifically, a :class:`~shiny.ui.TagChild`).
-            * This includes :class:`~shiny.ui.TagList`, which take UI elements
-              (including strings) as children. In this case, strings are still
-              interpreted as markdown as long as they're not inside HTML.
-        * A dictionary with `content` and `role` keys. The `content` key can contain a
-          content as described above, and the `role` key can be "assistant" or "user".
-
-        **NOTE:** content may include specially formatted **input suggestion** links
-        (see `.append_message()` for more information).
+        Deprecated. Use `.ui(messages=...)` instead.
     on_error
         How to handle errors that occur in response to user input. When `"unhandled"`,
         the app will stop running when an error occurs. Otherwise, a notification
@@ -183,11 +169,8 @@ class Chat:
         * `"sanitize"`: Sanitize the error message before displaying it to the user.
         * `"unhandled"`: Do not display any error message to the user.
     tokenizer
-        The tokenizer to use for calculating token counts, which is required to impose
-        `token_limits` in `.messages()`. If not provided, a default generic tokenizer
-        is attempted to be loaded from the tokenizers library. A specific tokenizer
-        may also be provided by following the `TokenEncoding` (tiktoken or tozenizers)
-        protocol (e.g., `tiktoken.encoding_for_model("gpt-4o")`).
+        Deprecated. Token counting and message trimming features will be removed in a
+        future version.
     """
 
     def __init__(
@@ -200,6 +183,18 @@ class Chat:
     ):
         if not isinstance(id, str):
             raise TypeError("`id` must be a string.")
+
+        if messages:
+            warn_deprecated(
+                "The `messages` parameter in Chat() is deprecated. "
+                "Use `.ui(messages=...)` instead for starting messages."
+            )
+
+        if tokenizer is not None:
+            warn_deprecated(
+                "The `tokenizer` parameter in Chat() is deprecated. "
+                "Token counting and message trimming features will be removed in a future version."
+            )
 
         self.id = resolve_id(id)
         self.user_input_id = ResolvedId(f"{self.id}_user_input")
@@ -459,48 +454,22 @@ class Chat:
         """
         Reactively read chat messages
 
-        Obtain chat messages within a reactive context. The default behavior is
-        intended for passing messages along to a model for response generation where
-        you typically want to:
-
-        1. Cap the number of tokens sent in a single request (i.e., `token_limits`).
-        2. Apply user input transformations (i.e., `transform_user`), if any.
-        3. Not apply assistant response transformations (i.e., `transform_assistant`)
-           since these are predominantly for display purposes (i.e., the model shouldn't
-           concern itself with how the responses are displayed).
+        Obtain chat messages within a reactive context.
 
         Parameters
         ----------
         format
-            The message format to return. The default value of `MISSING` means
-            chat messages are returned as :class:`ChatMessage` objects (a dictionary
-            with `content` and `role` keys). Other supported formats include:
-
-            * `"anthropic"`: Anthropic message format.
-            * `"google"`: Google message (aka content) format.
-            * `"langchain"`: LangChain message format.
-            * `"openai"`: OpenAI message format.
-            * `"ollama"`: Ollama message format.
+            Deprecated. Provider-specific message formatting will be removed in a future
+            version.
         token_limits
-            Limit the conversation history based on token limits. If specified, only
-            the most recent messages that fit within the token limits are returned. This
-            is useful for avoiding "exceeded token limit" errors when sending messages
-            to the relevant model, while still providing the most recent context available.
-            A specified value must be a tuple of two integers. The first integer is the
-            maximum number of tokens that can be sent to the model in a single request.
-            The second integer is the amount of tokens to reserve for the model's response.
-            Note that token counts based on the `tokenizer` provided to the `Chat`
-            constructor.
+            Deprecated. Token counting and message trimming features will be removed in
+            a future version.
         transform_user
-            Whether to return user input messages with transformation applied. This only
-            matters if a `transform_user_input` was provided to the chat constructor.
-            The default value of `"all"` means all user input messages are transformed.
-            The value of `"last"` means only the last user input message is transformed.
-            The value of `"none"` means no user input messages are transformed.
+            Deprecated. Message transformation features will be removed in a future
+            version.
         transform_assistant
-            Whether to return assistant messages with transformation applied. This only
-            matters if an `transform_assistant_response` was provided to the chat
-            constructor.
+            Deprecated. Message transformation features will be removed in a future
+            version.
 
         Note
         ----
@@ -513,6 +482,30 @@ class Chat:
         tuple[ChatMessage, ...]
             A tuple of chat messages.
         """
+
+        if not isinstance(format, MISSING_TYPE):
+            warn_deprecated(
+                "The `format` parameter in messages() is deprecated. "
+                "Provider-specific message formatting will be removed in a future version."
+            )
+
+        if token_limits is not None:
+            warn_deprecated(
+                "The `token_limits` parameter in messages() is deprecated. "
+                "Token counting and message trimming features will be removed in a future version."
+            )
+
+        if transform_user != "all":
+            warn_deprecated(
+                "The `transform_user` parameter in messages() is deprecated. "
+                "Message transformation features will be removed in a future version."
+            )
+
+        if transform_assistant:
+            warn_deprecated(
+                "The `transform_assistant` parameter in messages() is deprecated. "
+                "Message transformation features will be removed in a future version."
+            )
 
         messages = self._messages()
 
@@ -982,24 +975,13 @@ class Chat:
         self, fn: TransformUserInput | TransformUserInputAsync | None = None
     ) -> None | Callable[[TransformUserInput | TransformUserInputAsync], None]:
         """
-        Transform user input.
-
-        Use this method as a decorator on a function (`fn`) that transforms user input
-        before storing it in the chat messages returned by `.messages()`. This is
-        useful for implementing RAG workflows, like taking a URL and scraping it for
-        text before sending it to the model.
-
-        Parameters
-        ----------
-        fn
-            A function to transform user input before storing it in the chat
-            `.messages()`. If `fn` returns `None`, the user input is effectively
-            ignored, and `.on_user_submit()` callbacks are suspended until more input is
-            submitted. This behavior is often useful to catch and handle errors that
-            occur during transformation. In this case, the transform function should
-            append an error message to the chat (via `.append_message()`) to inform the
-            user of the error.
+        Deprecated. User input transformation features will be removed in a future version.
         """
+
+        warn_deprecated(
+            "The transform_user_input() method is deprecated. "
+            "User input transformation features will be removed in a future version."
+        )
 
         def _set_transform(fn: TransformUserInput | TransformUserInputAsync):
             self._transform_user = _utils.wrap_async(fn)
@@ -1024,30 +1006,13 @@ class Chat:
         fn: TransformAssistantResponseFunction | None = None,
     ) -> None | Callable[[TransformAssistantResponseFunction], None]:
         """
-        Transform assistant responses.
-
-        Use this method as a decorator on a function (`fn`) that transforms assistant
-        responses before displaying them in the chat. This is useful for post-processing
-        model responses before displaying them to the user.
-
-        Parameters
-        ----------
-        fn
-            A function that takes a string and returns either a string,
-            :class:`shiny.ui.HTML`, or `None`. If `fn` returns a string, it gets
-            interpreted and parsed as a markdown on the client (and the resulting HTML
-            is then sanitized). If `fn` returns :class:`shiny.ui.HTML`, it will be
-            displayed as-is. If `fn` returns `None`, the response is effectively ignored.
-
-        Note
-        ----
-        When doing an `.append_message_stream()`, `fn` gets called on every chunk of the
-        response (thus, it should be performant), and can optionally access more
-        information (i.e., arguments) about the stream. The 1st argument (required)
-        contains the accumulated content, the 2nd argument (optional) contains the
-        current chunk, and the 3rd argument (optional) is a boolean indicating whether
-        this chunk is the last one in the stream.
+        Deprecated. Assistant response transformation features will be removed in a future version.
         """
+
+        warn_deprecated(
+            "The transform_assistant_response() method is deprecated. "
+            "Assistant response transformation features will be removed in a future version."
+        )
 
         def _set_transform(
             fn: TransformAssistantResponseFunction,
@@ -1255,6 +1220,12 @@ class Chat:
           2. Maintaining message state separately from `.messages()`.
 
         """
+        if transform:
+            warn_deprecated(
+                "The `transform` parameter in user_input() is deprecated. "
+                "User input transformation features will be removed in a future version."
+            )
+
         msg = self._latest_user_input()
         if msg is None:
             return None

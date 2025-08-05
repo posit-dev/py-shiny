@@ -51,6 +51,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `ui.panel_well()` is deprecated in favor of `ui.card()`. (#2038)
 
+* Numerous `ui.Chat()` features have been deprecated in preparation for future removal to simplify the API (#2050)
+  * The `messages` parameter in the `Chat()` constructor is deprecated. Pass initial messages to the `.ui(messages=...)` method instead.
+  * The `tokenizer` parameter in the `Chat()` constructor is deprecated. Token counting and message trimming features will eventually be removed.
+  * The `format`, `token_limits`, `transform_user`, and `transform_assistant` parameters in the `.messages()` method are deprecated. Provider-specific formatting and message transformation features will eventually be removed.
+  * The `.transform_user_input()` and `.transform_assistant_response()` methods are deprecated. Message transformation features will eventually be removed.
+  * The `transform` parameter in the `.user_input()` method is deprecated. User input transformation features will eventually be removed.
+
 
 ## [1.4.0] - 2025-04-08
 
