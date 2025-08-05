@@ -742,7 +742,6 @@ def update_selectize(
 
     # Transform choices to a list of dicts (this is the form the client wants)
     # [{"label": "Foo", "value": "foo", "optgroup": "foo"}, ...]
-
     flat_choices: list[FlatSelectChoice] = []
     if choices is not None:
         for k, v in _normalize_choices(choices).items():
