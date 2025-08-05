@@ -92,6 +92,7 @@ app_allow_external_errors: typing.List[str] = [
     "pd.option_context('mode.use_inf_as_na",  # continutation of line above,
     "RuntimeWarning: invalid value encountered in dot",  # some groups didn't have enough data points to create a meaningful line
     "UserWarning: More column widths than children at breakpoint",
+    "warn(",  # Airmass example has this warning without any message
 ]
 app_allow_js_errors: typing.Dict[str, typing.List[str]] = {
     "examples/brownian": ["Failed to acquire camera feed:"],
