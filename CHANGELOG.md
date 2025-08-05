@@ -52,11 +52,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * `ui.panel_well()` was deprecated in favor of `ui.card()`. (#2038)
 
 * Numerous `ui.Chat()` features have been deprecated in preparation for future removal to simplify the API (#2050)
-  * `Chat(messages=)` was deprecated. Use `chat.ui(messages=)` instead.
-  * `Chat(tokenizer=)` was deprecated. This was only relevant for `.messages(token_limits=[])` which is also now deprecated.
+  * `Chat(messages=...)` was deprecated. Use `chat.ui(messages=...)` instead.
+  * `Chat(tokenizer=...)` was deprecated. This is only relevant for `.messages(token_limits=...)` which is also now deprecated.
   * All parameters to `.messages()` were deprecated. This reflects an overall change philosophy for maintaining the conversation history sent to the LLM -- `Chat` should no longer be responsible for maintaining it -- another stateful object (perhaps the one provided by chatlas, LangChain, etc.) should be used instead. That said, `.messages()` is still useful if you want to access UI message state.
-  * The `.transform_user_input` and `.transform_assistant_response` decorators were deprecated. Instead, transformations should be done manually.
-  * As a result of the previous deprecations, the `transform` parameter in the `.user_input()` method was also deprecated.
+  * The `.transform_user_input` and `.transform_assistant_response` decorators were deprecated. Instead, transformation of input/responses should be done manually and independently of `Chat`.
+  * As a result of the previous deprecations, `.user_input(transform=...)` was also deprecated.
 
 
 ## [1.4.0] - 2025-04-08

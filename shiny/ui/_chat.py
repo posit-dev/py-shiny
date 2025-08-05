@@ -186,14 +186,13 @@ class Chat:
 
         if messages:
             warn_deprecated(
-                "The `messages` parameter in Chat() is deprecated. "
-                "Use `.ui(messages=...)` instead for starting messages."
+                "`Chat(messages=...)` is deprecated. Use `.ui(messages=...)` instead."
             )
 
         if tokenizer is not None:
             warn_deprecated(
-                "The `tokenizer` parameter in Chat() is deprecated. "
-                "Token counting and message trimming features will be removed in a future version."
+                "`Chat(tokenizer=...)` is deprecated. "
+                "This is only relevant for `.messages(token_limits=...)` which is also now deprecated."
             )
 
         self.id = resolve_id(id)
@@ -485,26 +484,30 @@ class Chat:
 
         if not isinstance(format, MISSING_TYPE):
             warn_deprecated(
-                "The `format` parameter in messages() is deprecated. "
-                "Provider-specific message formatting will be removed in a future version."
+                "`.messages(format=...)` is deprecated. "
+                "Provider-specific message formatting will be removed in a future version. "
+                "See this issue for more details: https://github.com/posit-dev/py-shiny/pull/2050"
             )
 
         if token_limits is not None:
             warn_deprecated(
-                "The `token_limits` parameter in messages() is deprecated. "
-                "Token counting and message trimming features will be removed in a future version."
+                "`.messages(token_limits=...)` is deprecated. "
+                "Token counting and message trimming features will be removed in a future version. "
+                "See this issue for more details: https://github.com/posit-dev/py-shiny/pull/2050"
             )
 
         if transform_user != "all":
             warn_deprecated(
-                "The `transform_user` parameter in messages() is deprecated. "
-                "Message transformation features will be removed in a future version."
+                "`.messages(transform_user=...)` is deprecated. "
+                "Message transformation features will be removed in a future version. "
+                "See this issue for more details: https://github.com/posit-dev/py-shiny/pull/2050"
             )
 
         if transform_assistant:
             warn_deprecated(
-                "The `transform_assistant` parameter in messages() is deprecated. "
-                "Message transformation features will be removed in a future version."
+                "`.messages(transform_assistant=...)` is deprecated. "
+                "Message transformation features will be removed in a future version. "
+                "See this issue for more details: https://github.com/posit-dev/py-shiny/pull/2050"
             )
 
         messages = self._messages()
@@ -979,8 +982,9 @@ class Chat:
         """
 
         warn_deprecated(
-            "The transform_user_input() method is deprecated. "
-            "User input transformation features will be removed in a future version."
+            "The `.transform_user_input` decorator is deprecated. "
+            "User input transformation features will be removed in a future version. "
+            "See this issue for more details: https://github.com/posit-dev/py-shiny/pull/2050"
         )
 
         def _set_transform(fn: TransformUserInput | TransformUserInputAsync):
@@ -1010,8 +1014,9 @@ class Chat:
         """
 
         warn_deprecated(
-            "The transform_assistant_response() method is deprecated. "
-            "Assistant response transformation features will be removed in a future version."
+            "The `.transform_assistant_response` decorator is deprecated. "
+            "Assistant response transformation features will be removed in a future version. "
+            "See this issue for more details: https://github.com/posit-dev/py-shiny/pull/2050"
         )
 
         def _set_transform(
@@ -1220,10 +1225,12 @@ class Chat:
           2. Maintaining message state separately from `.messages()`.
 
         """
+
         if transform:
             warn_deprecated(
-                "The `transform` parameter in user_input() is deprecated. "
-                "User input transformation features will be removed in a future version."
+                "`.user_input(transform=...)` is deprecated. "
+                "User input transformation features will be removed in a future version. "
+                "See this issue for more details: https://github.com/posit-dev/py-shiny/pull/2050"
             )
 
         msg = self._latest_user_input()
