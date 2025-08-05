@@ -49,14 +49,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Deprecations
 
-* `ui.panel_well()` is deprecated in favor of `ui.card()`. (#2038)
+* `ui.panel_well()` was deprecated in favor of `ui.card()`. (#2038)
 
 * Numerous `ui.Chat()` features have been deprecated in preparation for future removal to simplify the API (#2050)
-  * The `messages` parameter in the `Chat()` constructor is deprecated. Pass initial messages to the `.ui(messages=...)` method instead.
-  * The `tokenizer` parameter in the `Chat()` constructor is deprecated. Token counting and message trimming features will eventually be removed.
-  * The `format`, `token_limits`, `transform_user`, and `transform_assistant` parameters in the `.messages()` method are deprecated. Provider-specific formatting and message transformation features will eventually be removed.
-  * The `.transform_user_input()` and `.transform_assistant_response()` methods are deprecated. Message transformation features will eventually be removed.
-  * The `transform` parameter in the `.user_input()` method is deprecated. User input transformation features will eventually be removed.
+  * `Chat(messages=)` was deprecated. Use `chat.ui(messages=)` instead.
+  * `Chat(tokenizer=)` was deprecated. This was only relevant for `.messages(token_limits=[])` which is also now deprecated.
+  * All parameters to `.messages()` were deprecated. This reflects an overall change philosophy for maintaining the conversation history sent to the LLM -- `Chat` should no longer be responsible for maintaining it -- another stateful object (perhaps the one provided by chatlas, LangChain, etc.) should be used instead. That said, `.messages()` is still useful if you want to access UI message state.
+  * The `.transform_user_input` and `.transform_assistant_response` decorators were deprecated. Instead, transformations should be done manually.
+  * As a result of the previous deprecations, the `transform` parameter in the `.user_input()` method was also deprecated.
 
 
 ## [1.4.0] - 2025-04-08
