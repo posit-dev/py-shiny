@@ -84,6 +84,9 @@ quartodoc:
         - ui.navset_pill_list
         - ui.navset_hidden
         - ui.navbar_options
+        - ui.insert_nav_panel
+        - ui.remove_nav_panel
+        - ui.update_nav_panel
     - title: UI panels
       desc: Visually group together a section of UI components.
       contents:
@@ -91,7 +94,6 @@ quartodoc:
         - ui.panel_fixed
         - ui.panel_conditional
         - ui.panel_title
-        - ui.panel_well
     - title: Uploads & downloads
       desc: Allow users to upload and download files.
       contents:

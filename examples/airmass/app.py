@@ -14,45 +14,37 @@ from location import location_server, location_ui
 
 from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
 
-app_ui = ui.page_fixed(
-    ui.tags.h3("Air mass calculator"),
-    ui.div(
+app_ui = ui.page_fillable(
+    ui.tags.h2("Air mass calculator", {"class": "lead display-6 text-center"}),
+    ui.layout_columns(
         ui.markdown(
             """This Shiny app uses [Astropy](https://www.astropy.org/) to calculate the
-            altitude (degrees above the horizon) and airmass (the amount of atmospheric
-            air along your line of sight to an object) of one or more astronomical
-            objects, over a given evening, at a given geographic location.
-            """
+        altitude (degrees above the horizon) and airmass (the amount of atmospheric
+        air along your line of sight to an object) of one or more astronomical
+        objects, over a given evening, at a given geographic location.
+        """
         ),
-        class_="mb-5",
-    ),
-    ui.row(
-        ui.column(
-            8,
+        ui.card(
             ui.output_ui("timeinfo"),
-            ui.output_plot("plot", height="800px"),
+            ui.output_plot("plot", height="600px"),
             # For debugging
             # ui.output_table("table"),
-            class_="order-2 order-sm-1",
         ),
-        ui.column(
-            4,
-            ui.panel_well(
-                ui.input_date("date", "Date"),
-                class_="pb-1 mb-3",
-            ),
-            ui.panel_well(
+        ui.TagList(
+            ui.card(ui.input_date("date", "Date"), fill=False),
+            ui.card(
                 ui.input_text_area(
-                    "objects", "Target object(s)", "M1, NGC35, PLX299", rows=3
+                    "objects",
+                    "Target object(s)",
+                    "M1, NGC35, PLX299",
+                    rows=2,
                 ),
-                class_="pb-1 mb-3",
+                fill=False,
             ),
-            ui.panel_well(
-                location_ui("location"),
-                class_="mb-3",
-            ),
-            class_="order-1 order-sm-2",
+            ui.card(location_ui("location")),
         ),
+        col_widths=[-2, 8, -2, -1, 7, 3, -1],
+        min_height="600px",
     ),
 )
 

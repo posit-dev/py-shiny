@@ -11,7 +11,6 @@ __all__ = (
     "help_text",
 )
 
-
 from typing import Literal, Optional
 
 from htmltools import (
@@ -27,6 +26,7 @@ from htmltools import (
     tags,
 )
 
+from .._deprecated import warn_deprecated
 from .._docstring import add_example, no_example
 from ..module import current_namespace
 from ..types import MISSING, MISSING_TYPE
@@ -112,23 +112,9 @@ def column(
 @no_example()
 def panel_well(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
     """
-    Create a well panel.
-
-    Creates a panel with a slightly inset border and gray background. Equivalent to
-    Bootstrap's ``well`` CSS class.
-
-    Parameters
-    ----------
-    *args
-        UI elements to include inside the panel.
-    **kwargs
-        Attributes to place on the panel tag.
-
-    Returns
-    -------
-    :
-        A UI element.
+    Deprecated. Use :func:`~shiny.ui.card` instead.
     """
+    warn_deprecated("panel_well() is deprecated. Use shiny.ui.card() instead.")
     return div({"class": "well"}, *args, **kwargs)
 
 
