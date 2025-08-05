@@ -94,7 +94,6 @@ quartodoc:
         - ui.panel_fixed
         - ui.panel_conditional
         - ui.panel_title
-        - ui.panel_well
     - title: Uploads & downloads
       desc: Allow users to upload and download files.
       contents:

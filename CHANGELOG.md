@@ -35,6 +35,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added module support for `session.clientdata` methods. This allows you to access client data values in Shiny modules without needing to namespace the keys explicitly. (#1978)
 
+* Fixed false positive warning in `layout_columns()` about number of widths vs elements. (#1704)
+
 ### Bug fixes
 
 * Fixed an issue with `ui.Chat()` sometimes wanting to scroll a parent element. (#1996)
@@ -44,6 +46,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Fix missing session when trying to display an error duing bookmarking. (#1984)
 
 * Fixed `set()` method of `InputSelectize` controller so it clears existing selections before applying new values. (#2024)
+
+### Deprecations
+
+* `ui.panel_well()` is deprecated in favor of `ui.card()`. (#2038)
 
 
 ## [1.4.0] - 2025-04-08

@@ -160,7 +160,6 @@ quartodoc:
         - express.ui.panel_absolute
         - express.ui.panel_fixed
         - express.ui.panel_title
-        - express.ui.panel_well
     - title: Uploads & downloads
       desc: Allow users to upload and download files.
       contents:
