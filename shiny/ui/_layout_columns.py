@@ -186,31 +186,35 @@ def validate_col_width(
     x: Iterable[int] | int, n_kids: int, break_name: Breakpoint
 ) -> Iterable[int]:
     if isinstance(x, int):
-        y = [x]
+        widths = [x]
     else:
-        y = x
+        widths = list(x)
 
-    if not all(isinstance(i, int) for i in y):
+    positive_widths: list[int] = []
+    for w in widths:
+        if not isinstance(w, int):
+            raise TypeError(
+                f"Column widths at breakpoint '{break_name}' must be integers. Got {type(w).__name__}."
+            )
+        if w == 0:
+            raise ValueError(
+                f"Column widths at breakpoint '{break_name}' must be greater than 0 to indicate width, or negative to indicate a column offset."
+            )
+        if w > 0:
+            positive_widths.append(w)
+
+    if not positive_widths:
         raise ValueError(
-            f"Column values at breakpoint '{break_name}' must be integers. Values greater than 0 indicate width, and negative values indicate a column offset."
+            f"Column widths at breakpoint '{break_name}' must include at least one positive integer width."
         )
 
-    if any(i == 0 for i in y):
-        raise ValueError(
-            f"Column values at breakpoint '{break_name}' must be greater than 0 to indicate width, or negative to indicate a column offset."
-        )
-
-    if not any(b > 0 for b in y):
-        raise ValueError(
-            f"Column values at breakpoint '{break_name}' must include at least one positive integer width."
-        )
-
-    if len(list(y)) > n_kids:
+    if len(positive_widths) > n_kids:
         warn(
-            f"More column widths than children at breakpoint '{break_name}', extra widths will be ignored."
+            f"More column widths than children at breakpoint '{break_name}', extra widths will be ignored.",
+            stacklevel=2,
         )
 
-    return y
+    return widths
 
 
 def col_widths_attrs(col_widths: BreakpointsOptional[int] | None) -> TagAttrs:
