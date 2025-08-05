@@ -128,6 +128,11 @@ from ._navs import (
     navset_tab,
     navset_underline,
 )
+from ._navs_dynamic import (
+    update_nav_panel,
+    insert_nav_panel,
+    remove_nav_panel,
+)
 from ._notification import notification_remove, notification_show
 from ._output import (
     output_code,
@@ -297,6 +302,9 @@ __all__ = (
     "navset_pill_list",
     "navset_hidden",
     "navset_bar",
+    "insert_nav_panel",
+    "remove_nav_panel",
+    "update_nav_panel",
     "navbar_options",
     # _notification
     "notification_show",
