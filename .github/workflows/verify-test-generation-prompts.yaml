@@ -29,18 +29,9 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-          cache: "pip"
 
       - name: Install uv
         uses: astral-sh/setup-uv@v4
-
-      - name: Cache uv dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/uv
-          key: ${{ runner.os }}-uv-${{ hashFiles('pyproject.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-uv-
 
       - name: Install dependencies
         run: |
@@ -49,20 +40,8 @@ jobs:
           uv pip install --system inspect-ai
           uv pip install --system pytest-timeout
 
-      - name: Cache Playwright browsers
-        uses: actions/cache@v4
-        id: playwright-cache
-        with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('pyproject.toml') }}
-
       - name: Install Playwright browsers
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: playwright install --with-deps chromium
-
-      - name: Install Playwright dependencies only
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: playwright install-deps chromium
 
       - name: Run Evaluation and Tests 3 Times
         env:
