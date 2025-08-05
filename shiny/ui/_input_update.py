@@ -26,6 +26,8 @@ from typing import TYPE_CHECKING, Literal, Mapping, Optional, cast, overload
 from htmltools import TagChild, TagList, tags
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
+from .._deprecated import warn_deprecated
+
 
 from .._docstring import add_example, doc_format, no_example
 from .._typing_extensions import NotRequired, TypedDict
@@ -36,7 +38,12 @@ from ..session import require_active_session, session_context
 from ..types import ActionButtonValue
 from ._input_check_radio import ChoicesArg, _generate_options
 from ._input_date import _as_date_attr
-from ._input_select import SelectChoicesArg, _normalize_choices, _render_choices
+from ._input_select import (
+    SelectChoicesArg,
+    _normalize_choices,
+    _render_choices,
+    _contains_html,
+)
 from ._input_slider import SliderStepArg, SliderValueArg, _as_numeric, _slider_type
 from ._utils import JSEval, _session_on_flush_send_msg, extract_js_keys
 
@@ -675,7 +682,6 @@ class FlatSelectChoice(TypedDict):
 
 
 @add_example()
-@doc_format(note=_note)
 def update_selectize(
     id: str,
     *,
@@ -697,10 +703,10 @@ def update_selectize(
         An input label.
     choices
         Either a list of choices or a dictionary mapping choice values to labels. Note
-        that if a dictionary is provided, the keys are used as the (input) values so
-        that the dictionary values can hold HTML labels. A dictionary of dictionaries is
+        that if a dictionary is provided, the keys are used as the (input) values. A dictionary of dictionaries is
         also supported, and in that case, the top-level keys are treated as
-        ``<optgroup>`` labels.
+        ``<optgroup>`` labels. Support for passing HTML in the choices parameter is deprecated.
+        Please use the `options` parameter to pass HTML formatting options.
     selected
         The values that should be initially selected, if any.
     options
@@ -715,7 +721,18 @@ def update_selectize(
 
     Note
     ----
-    {note}
+    The `choices` parameter should only contain strings or dictionaries with string fields.
+    To pass additional HTML for formatting, use the `options` parameter.
+    For example:
+    ```python
+    options={
+        "placeholder": "Enter text",
+        "render": ui.js_eval(
+            '{option: function(item, escape) {return "<div><strong>Select " + escape(item.label) + "</strong></div>";}}'
+        ),
+        "create": True,
+    }
+    ```
 
     See Also
     --------
@@ -744,7 +761,16 @@ def update_selectize(
     # [{"label": "Foo", "value": "foo", "optgroup": "foo"}, ...]
     flat_choices: list[FlatSelectChoice] = []
     if choices is not None:
-        for k, v in _normalize_choices(choices).items():
+        normalized_choices = _normalize_choices(choices)
+
+        if _contains_html(normalized_choices):
+            warn_deprecated(
+                "Passing anything other than a string to `choices` parameter of "
+                "`update_selectize()` is deprecated. Please utilize the `options` "
+                "parameter for additional HTML formatting."
+            )
+
+        for k, v in normalized_choices.items():
             if not isinstance(v, Mapping):
                 flat_choices.append(
                     FlatSelectChoice(value=k, label=session._process_ui(v)["html"])
