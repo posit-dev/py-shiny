@@ -1,4 +1,4 @@
-from shinychat import output_markdown_stream, MarkdownStream
+from shinychat import MarkdownStream, output_markdown_stream
 from shinychat.express import MarkdownStream as ExpressMarkdownStream
 
 __all__ = (
