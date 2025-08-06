@@ -730,15 +730,13 @@ def update_selectize(
         )
 
     if options is not None:
-        cfg = TagList(
-            tags.script(
-                json.dumps(options),
-                type="application/json",
-                data_for=id,
-                data_eval=json.dumps(extract_js_keys(options)),
-            )
+        cfg = tags.script(
+            json.dumps(options),
+            type="application/json",
+            data_for=resolve_id(id),
+            data_eval=json.dumps(extract_js_keys(options)),
         )
-        session.send_input_message(id, drop_none({"config": cfg.get_html_string()}))
+        session.send_input_message(id, {"config": cfg.get_html_string()})
 
     # Transform choices to a list of dicts (this is the form the client wants)
     # [{"label": "Foo", "value": "foo", "optgroup": "foo"}, ...]
@@ -762,7 +760,6 @@ def update_selectize(
     selected_values = selected
     if isinstance(selected, str):
         selected_values = [selected]
-
     # Find any selected choices now so we have them ready to send to the client
     if selected_values is None:
         selected_choices = []
