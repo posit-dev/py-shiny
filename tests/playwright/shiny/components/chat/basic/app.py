@@ -23,4 +23,4 @@ async def handle_user_input(user_input: str):
 
 @render.code
 def message_state():
-    return str(chat.messages())
+    return str(chat.messages())  # type: ignore[reportUnknownMemberType]
