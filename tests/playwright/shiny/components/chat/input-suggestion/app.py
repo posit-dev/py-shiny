@@ -1,6 +1,6 @@
 from shinychat.express import Chat
 
-import shiny.express  # noqa: F401
+import shiny.express  # type: ignore[reportUnusedImport] # noqa: F401
 
 suggestions1 = """
 <p>Here is the <span id="first" class='suggestion'>1st input suggestion</span>.
