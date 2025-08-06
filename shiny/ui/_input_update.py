@@ -696,8 +696,7 @@ def update_selectize(
         An input label.
     choices
         Either a list of choices or a dictionary mapping choice values to labels. Note
-        that if a dictionary is provided, the keys are used as the (input) values so
-        that the dictionary values can hold HTML labels. A dictionary of dictionaries is
+        that if a dictionary is provided, the keys are used as the (input) values. A dictionary of dictionaries is
         also supported, and in that case, the top-level keys are treated as
         ``<optgroup>`` labels.
     selected

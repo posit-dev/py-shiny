@@ -75,8 +75,7 @@ def input_selectize(
     choices
         Either a list of choices or a dictionary mapping choice values to labels. Note
         that if a dictionary is provided, the keys are used as the (input) values and
-        the values are labels displayed to the user. It is not recommended to use
-        anything other than a string for these labels. A dictionary of dictionaries is
+        the values are labels displayed to the user. A dictionary of dictionaries is
         also supported, and in that case, the top-level keys are treated as
         ``<optgroup>`` labels.
     selected
@@ -157,8 +156,7 @@ def input_select(
     choices
         Either a list of choices or a dictionary mapping choice values to labels. Note
         that if a dictionary is provided, the keys are used as the (input) values and
-        the values are labels displayed to the user. It is not recommended to use
-        anything other than a string for these labels. A dictionary of dictionaries is
+        the values are labels displayed to the user. A dictionary of dictionaries is
         also supported, and in that case, the top-level keys are treated as
         ``<optgroup>`` labels.
     selected
