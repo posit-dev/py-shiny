@@ -48,7 +48,7 @@ dependencies = [
     "setuptools;python_version>='3.12'",
     "narwhals>=1.10.0",
     "orjson>=3.10.7",
-    "shinychat>=0.1.0"
+    "shinychat@git+https://github.com/posit-dev/shinychat",
 ]
 
 [project.optional-dependencies]
