@@ -1,3 +1,5 @@
+from shinychat.express import Chat
+
 from shiny import reactive
 from shiny.express import input, ui
 
@@ -16,11 +18,11 @@ welcome = ui.TagList(
     ),
 )
 
-chat = ui.Chat(
-    id="chat",
+chat = Chat(id="chat")
+chat.ui(
+    class_="mb-5",
     messages=[welcome],
 )
-chat.ui(class_="mb-5")
 
 
 @reactive.effect

@@ -2,6 +2,7 @@ import asyncio
 from pathlib import Path
 
 import faicons
+from shinychat.express import Chat
 
 from shiny.express import app_opts, input, ui
 
@@ -11,19 +12,14 @@ app_opts(static_assets={"/img": Path(__file__).parent / "img"})
 
 with ui.layout_columns():
     # Default Bot ---------------------------------------------------------------------
-    chat_default = ui.Chat(
-        id="chat_default",
-        messages=[
-            {
-                "content": "Hello! I'm Default Bot. How can I help you today?",
-                "role": "assistant",
-            },
-        ],
-    )
+    chat_default = Chat(id="chat_default")
 
     with ui.div():
         ui.h2("Default Bot")
-        chat_default.ui(icon_assistant=None)
+        chat_default.ui(
+            messages=["Hello! I'm Default Bot. How can I help you today?"],
+            icon_assistant=None,
+        )
 
     @chat_default.on_user_submit
     async def handle_user_input_default(user_input: str):
@@ -31,7 +27,7 @@ with ui.layout_columns():
         await chat_default.append_message(f"You said: {user_input}")
 
     # Animal Bot ----------------------------------------------------------------------
-    chat_animal = ui.Chat(id="chat_animal")
+    chat_animal = Chat(id="chat_animal")
 
     with ui.div():
         ui.h2("Animal Bot")
@@ -63,7 +59,7 @@ with ui.layout_columns():
     </svg>
     """
 
-    chat_svg = ui.Chat(id="chat_svg")
+    chat_svg = Chat(id="chat_svg")
 
     with ui.div():
         ui.h2("SVG Bot")
@@ -77,7 +73,7 @@ with ui.layout_columns():
         await chat_svg.append_message(f"You said: {user_input}")
 
     # Image Bot -----------------------------------------------------------------------
-    chat_image = ui.Chat(id="chat_image")
+    chat_image = Chat(id="chat_image")
 
     with ui.div():
         ui.h2("Image Bot")

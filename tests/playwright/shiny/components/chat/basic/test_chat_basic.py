@@ -1,15 +1,14 @@
 from playwright.sync_api import Page, expect
-from utils.deploy_utils import skip_on_webkit
+from shinychat.playwright import ChatController
 
 from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
 
-@skip_on_webkit
 def test_validate_chat_basic(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 
-    chat = controller.Chat(page, "chat")
+    chat = ChatController(page, "chat")
 
     # Verify starting state
     expect(chat.loc).to_be_visible(timeout=30 * 1000)
@@ -44,7 +43,6 @@ def test_validate_chat_basic(page: Page, local_app: ShinyAppProc) -> None:
     message_state = controller.OutputCode(page, "message_state")
     message_state_expected = tuple(
         [
-            {"content": initial_message, "role": "assistant"},
             {"content": f"\n{user_message}", "role": "user"},
             {"content": f"You said: \n{user_message}", "role": "assistant"},
             {"content": f"{user_message2}", "role": "user"},
