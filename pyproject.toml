@@ -111,6 +111,7 @@ dev = [
     "numpy",
     "shinyswatch>=0.7.0",
     "python-dotenv",
+    "chatlas>=0.6.1",
     "aiohttp",
     "beautifulsoup4",
 ]
