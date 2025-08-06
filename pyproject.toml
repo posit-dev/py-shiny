@@ -48,6 +48,7 @@ dependencies = [
     "setuptools;python_version>='3.12'",
     "narwhals>=1.10.0",
     "orjson>=3.10.7",
+    "shinychat>=0.1.0"
 ]
 
 [project.optional-dependencies]
@@ -110,14 +111,6 @@ dev = [
     "numpy",
     "shinyswatch>=0.7.0",
     "python-dotenv",
-    "anthropic",
-    "google-generativeai;python_version>='3.9'",
-    "langchain_core",
-    "langsmith>=0.3.4",
-    "openai",
-    "ollama",
-    "chatlas>=0.6.1",
-    "tokenizers",
     "aiohttp",
     "beautifulsoup4",
 ]
