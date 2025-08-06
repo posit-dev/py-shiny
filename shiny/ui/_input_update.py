@@ -628,8 +628,7 @@ def update_select(
         An input label.
     choices
         Either a list of choices or a dictionary mapping choice values to labels. Note
-        that if a dictionary is provided, the keys are used as the (input) values.It is not recommended to use
-        anything other than a string for these labels. A dictionary of dictionaries is
+        that if a dictionary is provided, the keys are used as the (input) values. A dictionary of dictionaries is
         also supported, and in that case, the top-level keys are treated as
         ``<optgroup>`` labels.
     selected
