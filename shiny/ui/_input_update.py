@@ -760,6 +760,7 @@ def update_selectize(
     selected_values = selected
     if isinstance(selected, str):
         selected_values = [selected]
+
     # Find any selected choices now so we have them ready to send to the client
     if selected_values is None:
         selected_choices = []
