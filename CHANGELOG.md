@@ -27,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Improvements
 
-* Removed statement that you could pass HTML into `update_selectize` choices. This never worked. Please use `options.render` (see example under `input_selectize`). (#2048)
+* Restricted the allowable types of the `choices` parameter of `input_select()`, `input_selectize()`, `update_select()`, and `update_selectize()` to actual set of allowable types (previously, the type was suggesting HTML-like values were supported). (#2048)
 
 * Improved the styling and readability of markdown tables rendered by `ui.Chat()` and `ui.MarkdownStream()`. (#1973)
 
@@ -40,6 +40,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Fixed false positive warning in `layout_columns()` about number of widths vs elements. (#1704)
 
 ### Bug fixes
+
+* Fixed an issue with `update_selectize()` to properly display labels with HTML reserved characters like "&" (#1330)
 
 * Fixed an issue with `ui.Chat()` sometimes wanting to scroll a parent element. (#1996)
 
