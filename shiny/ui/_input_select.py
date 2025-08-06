@@ -21,7 +21,7 @@ from ..module import resolve_id
 from ._html_deps_external import selectize_deps
 from ._utils import JSEval, extract_js_keys, shiny_input_label
 
-_Choices = Mapping[str, TagChild]
+_Choices = Mapping[str, str]
 _OptGrpChoices = Mapping[str, _Choices]
 
 # Canonical format for representing select options.
@@ -75,8 +75,7 @@ def input_selectize(
     choices
         Either a list of choices or a dictionary mapping choice values to labels. Note
         that if a dictionary is provided, the keys are used as the (input) values and
-        the values are labels displayed to the user. It is not recommended to use
-        anything other than a string for these labels. A dictionary of dictionaries is
+        the values are labels displayed to the user. A dictionary of dictionaries is
         also supported, and in that case, the top-level keys are treated as
         ``<optgroup>`` labels.
     selected
@@ -157,8 +156,7 @@ def input_select(
     choices
         Either a list of choices or a dictionary mapping choice values to labels. Note
         that if a dictionary is provided, the keys are used as the (input) values and
-        the values are labels displayed to the user. It is not recommended to use
-        anything other than a string for these labels. A dictionary of dictionaries is
+        the values are labels displayed to the user. A dictionary of dictionaries is
         also supported, and in that case, the top-level keys are treated as
         ``<optgroup>`` labels.
     selected
@@ -258,12 +256,6 @@ def _input_select_impl(
     resolved_id = resolve_id(id)
 
     choices_ = _normalize_choices(choices)
-
-    if _contains_html(choices_):
-        warn_deprecated(
-            "Passing anything other than a string to `choices` parameter of "
-            "`input_select()` and `input_selectize()` is deprecated."
-        )
 
     selected = restore_input(resolved_id, selected)
     if selected is None and not multiple:
