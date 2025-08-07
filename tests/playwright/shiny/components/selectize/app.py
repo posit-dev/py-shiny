@@ -1,4 +1,4 @@
-from shiny import App, module, reactive, ui
+from shiny import App, Inputs, Outputs, Session, module, reactive, ui
 
 
 @module.ui
@@ -7,7 +7,9 @@ def reprex_selectize_ui():
 
 
 @module.server
-def reprex_selectize_server(input, output, session, starting_value=0):
+def reprex_selectize_server(
+    input: Inputs, output: Outputs, session: Session, starting_value: int = 0
+):
     @reactive.effect
     def _():
         ui.update_selectize(
@@ -21,7 +23,7 @@ def reprex_selectize_server(input, output, session, starting_value=0):
 app_ui = ui.page_fluid(reprex_selectize_ui("reprex_selectize"))
 
 
-def server(input, output, session):
+def server(input: Inputs, output: Outputs, session: Session):
     reprex_selectize_server("reprex_selectize")
 
 
