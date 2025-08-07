@@ -39,6 +39,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
+* Fixed missing selectize options when using a module and specifying `options`. (#1703)
+
 * Fixed an issue with `ui.Chat()` sometimes wanting to scroll a parent element. (#1996)
 
 * Explicitly call out module usage in UI input bookmark button documentation. (#1983)
