@@ -8,7 +8,7 @@ def reprex_selectize_ui():
 
 @module.server
 def reprex_selectize_server(
-    input: Inputs, output: Outputs, session: Session, starting_value: int = 0
+    input: Inputs, output: Outputs, session: Session
 ):
     @reactive.effect
     def _():
