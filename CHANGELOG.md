@@ -27,6 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Improvements
 
+* Restricted the allowable types of the `choices` parameter of `input_select()`, `input_selectize()`, `update_select()`, and `update_selectize()` to actual set of allowable types (previously, the type was suggesting HTML-like values were supported). (#2048)
+
 * Improved the styling and readability of markdown tables rendered by `ui.Chat()` and `ui.MarkdownStream()`. (#1973)
 
 * `selectize`, `remove_button`, and `options` parameters of `ui.input_select()` have been deprecated; use `ui.input_selectize()` instead. (Thanks, @ErdaradunGaztea!) (#1947)
@@ -40,6 +42,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Bug fixes
 
 * Fixed missing selectize options when using a module and specifying `options`. (#1703)
+
+* Fixed an issue with `update_selectize()` to properly display labels with HTML reserved characters like "&" (#1330)
 
 * Fixed an issue with `ui.Chat()` sometimes wanting to scroll a parent element. (#1996)
 

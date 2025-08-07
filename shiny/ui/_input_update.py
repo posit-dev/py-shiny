@@ -628,8 +628,7 @@ def update_select(
         An input label.
     choices
         Either a list of choices or a dictionary mapping choice values to labels. Note
-        that if a dictionary is provided, the keys are used as the (input) values so
-        that the dictionary values can hold HTML labels. A dictionary of dictionaries is
+        that if a dictionary is provided, the keys are used as the (input) values. A dictionary of dictionaries is
         also supported, and in that case, the top-level keys are treated as
         ``<optgroup>`` labels.
     selected
@@ -697,8 +696,7 @@ def update_selectize(
         An input label.
     choices
         Either a list of choices or a dictionary mapping choice values to labels. Note
-        that if a dictionary is provided, the keys are used as the (input) values so
-        that the dictionary values can hold HTML labels. A dictionary of dictionaries is
+        that if a dictionary is provided, the keys are used as the (input) values. A dictionary of dictionaries is
         also supported, and in that case, the top-level keys are treated as
         ``<optgroup>`` labels.
     selected
@@ -744,15 +742,11 @@ def update_selectize(
     if choices is not None:
         for k, v in _normalize_choices(choices).items():
             if not isinstance(v, Mapping):
-                flat_choices.append(
-                    FlatSelectChoice(value=k, label=session._process_ui(v)["html"])
-                )
+                flat_choices.append(FlatSelectChoice(value=k, label=v))
             else:  # The optgroup case
                 flat_choices.extend(
                     [
-                        FlatSelectChoice(
-                            optgroup=k, value=k2, label=session._process_ui(v2)["html"]
-                        )
+                        FlatSelectChoice(optgroup=k, value=k2, label=v2)
                         for (k2, v2) in v.items()
                     ]
                 )
