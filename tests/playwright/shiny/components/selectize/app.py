@@ -2,8 +2,8 @@ from shiny import App, Inputs, Outputs, Session, module, reactive, ui
 
 
 @module.ui
-def reprex_selectize_ui():
-    return ui.input_selectize("x", "Selectize", choices=[], multiple=True)
+def reprex_selectize_ui(label: str):
+    return ui.input_selectize("x", label, choices=[], multiple=True)
 
 
 @module.server
@@ -21,7 +21,8 @@ def reprex_selectize_server(
 
 
 app_ui = ui.page_fluid(
-    reprex_selectize_ui("serverside"), reprex_selectize_ui("clientside")
+    reprex_selectize_ui("serverside", "Server"),
+    reprex_selectize_ui("clientside", "Client"),
 )
 
 
