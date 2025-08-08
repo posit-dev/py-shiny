@@ -58,7 +58,7 @@ with ui.layout_columns():
     </svg>
     """
 
-    chat_svg = Chat(id="chat_svg")
+    chat_svg = ui.Chat(id="chat_svg")
 
     with ui.div():
         ui.h2("SVG Bot")
@@ -72,7 +72,7 @@ with ui.layout_columns():
         await chat_svg.append_message(f"You said: {user_input}")
 
     # Image Bot -----------------------------------------------------------------------
-    chat_image = Chat(id="chat_image")
+    chat_image = ui.Chat(id="chat_image")
 
     with ui.div():
         ui.h2("Image Bot")
