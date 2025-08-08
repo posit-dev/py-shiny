@@ -41,7 +41,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
-* Fixed missing selectize options when using a module and specifying `options`. (#1703)
+* Fixed numerous issues related to programmatically updating selectize options. (#2053)
+   * `update_selectize(options=...)` no longer gets ignored when `server=False` (the default).
+   * `update_selectize(options=...)` now works as expected in a module.
 
 * Fixed an issue with `update_selectize()` to properly display labels with HTML reserved characters like "&" (#1330)
 
