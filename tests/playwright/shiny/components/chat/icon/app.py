@@ -2,7 +2,6 @@ import asyncio
 from pathlib import Path
 
 import faicons
-from shinychat.express import Chat
 
 from shiny.express import app_opts, input, ui
 
@@ -12,7 +11,7 @@ app_opts(static_assets={"/img": Path(__file__).parent / "img"})
 
 with ui.layout_columns():
     # Default Bot ---------------------------------------------------------------------
-    chat_default = Chat(id="chat_default")
+    chat_default = ui.Chat(id="chat_default")
 
     with ui.div():
         ui.h2("Default Bot")
@@ -27,7 +26,7 @@ with ui.layout_columns():
         await chat_default.append_message(f"You said: {user_input}")
 
     # Animal Bot ----------------------------------------------------------------------
-    chat_animal = Chat(id="chat_animal")
+    chat_animal = ui.Chat(id="chat_animal")
 
     with ui.div():
         ui.h2("Animal Bot")

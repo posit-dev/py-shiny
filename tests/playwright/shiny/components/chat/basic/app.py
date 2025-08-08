@@ -1,12 +1,10 @@
-from shinychat.express import Chat
-
 from shiny.express import render, ui
 
 # Set some Shiny page options
 ui.page_opts(title="Hello Chat")
 
 # Create a chat instance, with an initial message
-chat = Chat(id="chat")
+chat = ui.Chat(id="chat")
 
 # Display the chat
 chat.ui(messages=["Hello! How can I help you today?"])

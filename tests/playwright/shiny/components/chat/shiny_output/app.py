@@ -1,7 +1,6 @@
 import ipyleaflet as ipyl  # pyright: ignore[reportMissingTypeStubs]
 import pandas as pd
 import plotly.express as px  # pyright: ignore[reportMissingTypeStubs]
-from shinychat.express import Chat
 from shinywidgets import render_plotly, render_widget
 
 from shiny import reactive, render
@@ -20,7 +19,7 @@ with ui.hold() as map_ui:
         return ipyl.Map(center=(52, 10), zoom=8)
 
 
-chat = Chat(id="chat")
+chat = ui.Chat(id="chat")
 
 chat.ui(messages=[map_ui])
 

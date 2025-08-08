@@ -1,6 +1,4 @@
-from shinychat.express import Chat
-
-import shiny.express  # type: ignore[reportUnusedImport] # noqa: F401
+from shiny.express import ui  # type: ignore[reportUnusedImport] # noqa: F401
 
 suggestions1 = """
 <p>Here is the <span id="first" class='suggestion'>1st input suggestion</span>.
@@ -13,7 +11,7 @@ suggestion2 = """
 And <span id="fifth" data-suggestion="another suggestion" data-suggestion-submit="true">this suggestion will also auto-submit</span>.</p>
 """
 
-chat = Chat("chat")
+chat = ui.Chat("chat")
 
 chat.ui(messages=[suggestions1, suggestion2])
 
