@@ -1,5 +1,6 @@
 import importlib.resources
 import logging
+import os
 import re
 import sys
 from dataclasses import dataclass
@@ -219,6 +220,44 @@ class ShinyTestGenerator:
         match = self.CODE_PATTERN.search(response)
         return match.group(1).strip() if match else ""
 
+    def _compute_relative_app_path(
+        self, app_file_path: Path, test_file_path: Path
+    ) -> str:
+        """Compute POSIX-style relative path from the test file directory to the app file."""
+        rel = os.path.relpath(str(app_file_path), start=str(test_file_path.parent))
+        return Path(rel).as_posix()
+
+    def _rewrite_fixture_path(self, test_code: str, relative_app_path: str) -> str:
+        """Rewrite create_app_fixture path to be relative to the test file directory.
+
+        Handles common patterns like:
+        - create_app_fixture(["app.py"]) -> create_app_fixture(["../app.py"]) (or appropriate)
+        - create_app_fixture("app.py") -> create_app_fixture("../app.py")
+        Keeps other arguments intact if present.
+        """
+        # Pattern for list form: create_app_fixture(["app.py"]) or with spaces
+        pattern_list = re.compile(
+            r"(create_app_fixture\(\s*\[\s*)(['\"])([^'\"]+)(\2)(\s*)([,\]])",
+            re.DOTALL,
+        )
+
+        def repl_list(m: re.Match) -> str:
+            return f"{m.group(1)}{m.group(2)}{relative_app_path}{m.group(2)}{m.group(5)}{m.group(6)}"
+
+        new_code, _ = pattern_list.subn(repl_list, test_code)
+
+        # Pattern for direct string form: create_app_fixture("app.py")
+        pattern_str = re.compile(
+            r"(create_app_fixture\(\s*)(['\"])([^'\"]+)(\2)(\s*)([,\)])",
+            re.DOTALL,
+        )
+
+        def repl_str(m: re.Match) -> str:
+            return f"{m.group(1)}{m.group(2)}{relative_app_path}{m.group(2)}{m.group(5)}{m.group(6)}"
+
+        new_code2, _ = pattern_str.subn(repl_str, new_code)
+        return new_code2
+
     def _create_test_prompt(self, app_text: str, app_file_name: str) -> str:
         """Create test generation prompt with app file name"""
         return (
@@ -227,8 +266,10 @@ class ShinyTestGenerator:
             "Do not add tests for ones that do not have an existing ids since controllers need IDs to locate elements.\n"
             "and server functionality of this app. Include appropriate assertions \n"
             "and test cases to verify the app's behavior.\n"
-            f"IMPORTANT: Use the exact app file name '{app_file_name}' in the create_app_fixture call like this:\n"
-            f'app = create_app_fixture(["{app_file_name}"])\n'
+            "IMPORTANT: In the create_app_fixture call, pass a RELATIVE path from the test file's directory to the app file.\n"
+            "For example, if the test lives under a 'tests/' subfolder next to the app file, use '../"
+            + app_file_name
+            + "'. Do not use absolute paths.\n"
             "IMPORTANT: Only output the Python test code in a single code block. Do not include any explanation, justification, or extra text."
         )
 
@@ -314,6 +355,14 @@ class ShinyTestGenerator:
             test_file_path = self._generate_test_file_path(
                 inferred_app_path, output_dir_path
             )
+
+        try:
+            relative_app_path = self._compute_relative_app_path(
+                inferred_app_path, test_file_path
+            )
+            test_code = self._rewrite_fixture_path(test_code, relative_app_path)
+        except Exception:
+            pass
 
         test_file_path.parent.mkdir(parents=True, exist_ok=True)
         test_file_path.write_text(test_code, encoding="utf-8")

@@ -7,7 +7,14 @@ For non-Shiny Python code, respond: "This framework is for Shiny for Python only
 
 ## Core Rules
 
-1. **Dynamic App File**: Use exact filename from prompt in `create_app_fixture(["filename.py"])`
+1. **Dynamic App File**: When generating code that uses `create_app_fixture`, follow these rules:
+   - Use the exact filename provided in the prompt.
+   - If the test file is under `app_dir/tests`, make the app path relative to the tests directory.
+
+   - ✅ `app = create_app_fixture(["../app.py"])`
+   - ❌ `app = create_app_fixture(["app.py"])`
+
+   - If the provided filename is in a different path, adjust the path accordingly while keeping it relative.
 
 2. **Controller Classes Only**: Always use official controllers, never `page.locator()`
    - ✅ `controller.InputSlider(page, "my_slider")`
@@ -33,11 +40,11 @@ For non-Shiny Python code, respond: "This framework is for Shiny for Python only
 
 8. **Skip plots**: Do not test plot content or functionality i.e. using OutputPlot controller.
 
-9. **Keyword-Only Args**: Always pass every argument as a keyword for every controller method.
+9.  **Keyword-Only Args**: Always pass every argument as a keyword for every controller method.
    - ✅  `expect_cell(value="0", row=1, col=2)`
    - ❌  `expect_cell("0", 1, 2)`
 
-10. **Newline at End**: Always end files with a newline.
+10.  **Newline at End**: Always end files with a newline.
 
 ## Examples
 
