@@ -722,21 +722,19 @@ def update_selectize(
 
     session = require_active_session(session)
 
+    if options is not None:
+        cfg = tags.script(
+            json.dumps(options),
+            type="application/json",
+            data_for=resolve_id(id),
+            data_eval=json.dumps(extract_js_keys(options)),
+        )
+        session.send_input_message(id, {"config": cfg.get_html_string()})
+
     if not server:
         return update_select(
             id, label=label, choices=choices, selected=selected, session=session
         )
-
-    if options is not None:
-        cfg = TagList(
-            tags.script(
-                json.dumps(options),
-                type="application/json",
-                data_for=id,
-                data_eval=json.dumps(extract_js_keys(options)),
-            )
-        )
-        session.send_input_message(id, drop_none({"config": cfg.get_html_string()}))
 
     # Transform choices to a list of dicts (this is the form the client wants)
     # [{"label": "Foo", "value": "foo", "optgroup": "foo"}, ...]
