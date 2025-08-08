@@ -295,7 +295,11 @@ def app_choose_core_or_express(
 
 def get_decorated_source_directory(func: FuncType) -> str:
     if hasattr(func, "__module__"):
-        path = os.path.abspath(str(sys.modules[func.__module__].__file__))
+        m = func.__module__
+        # If function/object is defined in shiny, we use the module's file path.
+        # Otherwise, we use the file path of the main shiny module.
+        m2 = m if m.startswith("shiny.") else "shiny"
+        path = os.path.abspath(str(sys.modules[m2].__file__))
     else:
         path = os.path.abspath(func.__code__.co_filename)
 

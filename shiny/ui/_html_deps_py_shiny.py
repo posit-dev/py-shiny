@@ -27,33 +27,6 @@ def data_frame_deps() -> HTMLDependency:
     )
 
 
-def chat_deps() -> list[HTMLDependency]:
-    dep = HTMLDependency(
-        name="shiny-chat-output",
-        version=__version__,
-        source={
-            "package": "shiny",
-            "subdir": "www/py-shiny/chat",
-        },
-        script={"src": "chat.js", "type": "module"},
-        stylesheet={"href": "chat.css"},
-    )
-    return [dep, markdown_stream_dependency()]
-
-
-def markdown_stream_dependency() -> HTMLDependency:
-    return HTMLDependency(
-        name="shiny-markdown-stream",
-        version=__version__,
-        source={
-            "package": "shiny",
-            "subdir": "www/py-shiny/markdown-stream",
-        },
-        script={"src": "markdown-stream.js", "type": "module"},
-        stylesheet={"href": "markdown-stream.css"},
-    )
-
-
 def page_output_dependency() -> HTMLDependency:
     return HTMLDependency(
         "shiny-page-output",

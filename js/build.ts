@@ -102,26 +102,6 @@ const opts: Array<BuildOptions> = [
     entryPoints: { "spin/spin": "spin/spin.scss" },
     plugins: [sassPlugin({ type: "css", sourceMap: false })],
   },
-  {
-    entryPoints: {
-      "markdown-stream/markdown-stream": "markdown-stream/markdown-stream.ts",
-    },
-  },
-  {
-    entryPoints: {
-      "markdown-stream/markdown-stream": "markdown-stream/markdown-stream.scss",
-    },
-    plugins: [sassPlugin({ type: "css", sourceMap: false })],
-  },
-  {
-    entryPoints: {
-      "chat/chat": "chat/chat.ts",
-    },
-  },
-  {
-    entryPoints: { "chat/chat": "chat/chat.scss" },
-    plugins: [sassPlugin({ type: "css", sourceMap: false })],
-  },
 ];
 
 (async () => {

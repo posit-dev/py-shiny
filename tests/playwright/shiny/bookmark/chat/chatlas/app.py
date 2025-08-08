@@ -10,14 +10,10 @@ ui.page_opts(
 )
 
 # Create a chat instance
-init_messages = ["""Welcome!"""]
-chat = ui.Chat(
-    id="chat",
-    messages=init_messages,
-)
+chat = ui.Chat(id="chat")
 
 # Display it
-chat.ui()
+chat.ui(messages=["""Welcome!"""])
 
 # Goal: Test that chatlas is serializied and deserialized correctly.
 #
