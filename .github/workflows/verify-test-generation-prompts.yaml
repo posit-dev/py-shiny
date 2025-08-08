@@ -1,0 +1,137 @@
+name: Validate Test Generation Prompts
+
+on:
+  pull_request:
+    paths:
+      - "shiny/pytest/generate/**"
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.13"
+  ATTEMPTS: 3
+  PYTHONUNBUFFERED: 1
+
+jobs:
+  validate-prompts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        run: |
+          uv pip install --system --upgrade pip
+          uv pip install --system -e ".[dev,test]"
+          uv pip install --system inspect-ai
+          uv pip install --system pytest-timeout
+
+      - name: Install Playwright browsers
+        run: playwright install --with-deps chromium
+
+      - name: Run Evaluation and Tests 3 Times
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PYTHONUNBUFFERED: 1
+        timeout-minutes: 25
+        run: ./tests/inspect-ai/scripts/run-test-evaluation.sh
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ github.run_id }}
+          path: |
+            test-results.xml
+            results/
+          retention-days: 7
+
+      - name: Process Results
+        timeout-minutes: 2
+        run: |
+          # Find the latest evaluation result file and process it
+          latest_result=$(ls -t results/*.json | head -1)
+          if [ -f "$latest_result" ]; then
+            echo "Processing results from: $latest_result"
+            python tests/inspect-ai/utils/scripts/process_results.py "$latest_result"
+          else
+            echo "No result files found in results/ directory"
+            exit 1
+          fi
+
+      - name: Check Quality Gate
+        timeout-minutes: 2
+        run: |
+          if [ -f "results/summary.json" ]; then
+            echo "Found summary file, checking quality gate..."
+            python tests/inspect-ai/utils/scripts/quality_gate.py results/
+          else
+            echo "Summary file not found at results/summary.json"
+            ls -la results/
+            exit 1
+          fi
+
+      - name: Prepare Comment Body
+        if: github.event_name == 'pull_request'
+        timeout-minutes: 1
+        run: |
+          if [ -f "results/summary.json" ]; then
+            python -c "
+          import json
+          import os
+
+          try:
+              with open('results/summary.json', 'r') as f:
+                  results = json.load(f)
+
+              comment = f'''## Inspect AI Evaluation Results
+
+          - **Tests Passed**: {results['passed']}/{results['total']}
+          - **Quality Gate**: {'✅ PASSED' if results['quality_gate_passed'] else '❌ FAILED'}
+
+          ### Details
+          {results['details']}
+          '''
+
+              with open('comment_body.txt', 'w') as f:
+                  f.write(comment)
+          except Exception as e:
+              print(f'Error reading summary file: {e}')
+              comment = '''## Inspect AI Evaluation Results
+
+          ❌ **Error**: Could not read evaluation results summary file.
+
+          Please check the workflow logs for details.'''
+
+              with open('comment_body.txt', 'w') as f:
+                  f.write(comment)
+          "
+          else
+            echo "## Inspect AI Evaluation Results
+
+          ❌ **Error**: Could not read evaluation results summary file.
+
+          Please check the workflow logs for details." > comment_body.txt
+          fi
+
+      - name: Comment PR Results
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: inspect-ai-results
+          path: comment_body.txt

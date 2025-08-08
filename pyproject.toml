@@ -91,6 +91,8 @@ test = [
     "dask[dataframe]",
     "pyarrow",
     "pyarrow-stubs",
+    "chatlas[anthropic,openai]",
+    "chatlas[openai]",
 ]
 dev = [
     "black>=24.0",
