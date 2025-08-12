@@ -311,7 +311,7 @@ def _as_date_attr(x: Optional[date | str]) -> Optional[str]:
     if x is None:
         return None
     if isinstance(x, str):
-        if x == "":
+        if len(x) == 0:
             return x
         x = date.fromisoformat(x)
 
