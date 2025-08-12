@@ -2,7 +2,7 @@ from datetime import datetime
 
 from dateutil.relativedelta import relativedelta
 
-from shiny import App, Inputs, Outputs, Session, ui
+from shiny import App, Inputs, Outputs, Session, render, ui
 
 min_date = datetime.now()
 max_date = min_date + relativedelta(days=10)
@@ -21,6 +21,7 @@ ui = ui.page_fluid(
         format="dd.mm.yyyy",
         language="en",
     ),
+    ui.output_text("start"),
     ui.input_date(
         "str_date_picker",
         "String Type Input:",
@@ -30,6 +31,7 @@ ui = ui.page_fluid(
         format="dd-mm-yyyy",
         language="en",
     ),
+    ui.output_text("str_format"),
     ui.input_date(
         "none_date_picker",
         "None Type Input:",
@@ -39,11 +41,36 @@ ui = ui.page_fluid(
         format="dd-mm-yyyy",
         language="en",
     ),
+    ui.output_text("none_format"),
+    ui.input_date(
+        "empty_date_picker",
+        "empty Type Input:",
+        value="",
+        min=None,
+        max=None,
+        format="dd-mm-yyyy",
+        language="en",
+    ),
+    ui.output_text("empty_format"),
 )
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    pass
+    @render.text
+    def start():
+        return "Start Date Picker Value: " + str(input.start_date_picker())
+
+    @render.text
+    def str_format():
+        return "String Date Picker Value: " + str(input.str_date_picker())
+
+    @render.text
+    def none_format():
+        return "None Date Picker Value: " + str(input.none_date_picker())
+
+    @render.text
+    def empty_format():
+        return "Empty Date Picker Value: " + str(input.empty_date_picker())
 
 
 app = App(ui, server, debug=True)
