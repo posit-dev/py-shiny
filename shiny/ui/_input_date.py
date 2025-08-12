@@ -113,14 +113,25 @@ def input_date(
 
     resolved_id = resolve_id(id)
 
-    default_value = value.strftime("%Y-%m-%d") if value is not None else date.today()
+    def process_date(d: Optional[date | str]) -> Optional[str]:
+        if d is None:
+            return None
+        if isinstance(d, date):
+            return d.strftime("%Y-%m-%d")
+        if isinstance(d, str):
+            return d
+
+    min_dt = process_date(min)
+    max_dt = process_date(max)
+    default_value = process_date(value)
+
     return div(
         shiny_input_label(resolved_id, label),
         _date_input_tag(
             id=resolved_id,
             value=restore_input(resolved_id, default_value),
-            min=min.strftime("%Y-%m-%d") if min else None,
-            max=max.strftime("%Y-%m-%d") if max else None,
+            min=min_dt,
+            max=max_dt,
             format=format,
             startview=startview,
             weekstart=weekstart,
