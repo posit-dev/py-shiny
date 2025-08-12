@@ -310,8 +310,9 @@ def _date_input_tag(
 def _as_date_attr(x: Optional[date | str]) -> Optional[str]:
     if x is None:
         return None
-    if isinstance(x, str) and x == "":
-        return x
-    if isinstance(x, date):
-        return x.strftime("%Y-%m-%d")
-    return str(date.fromisoformat(x))
+    if isinstance(x, str):
+        if x == "":
+            return x
+        x = date.fromisoformat(x)
+
+    return x.isoformat()
