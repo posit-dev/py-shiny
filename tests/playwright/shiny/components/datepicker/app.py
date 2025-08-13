@@ -4,7 +4,7 @@ from dateutil.relativedelta import relativedelta
 
 from shiny import App, Inputs, Outputs, Session, render, ui
 
-min_date = datetime.now()
+min_date = datetime.fromisoformat("2011-11-04T00:05:23")
 max_date = min_date + relativedelta(days=10)
 
 # Our input requires strings to be in the format "YYYY-MM-DD"
