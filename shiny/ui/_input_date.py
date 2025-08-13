@@ -8,6 +8,7 @@ from htmltools import Tag, TagAttrValue, TagChild, css, div, span, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
+from ..bookmark import restore_input
 from ._html_deps_external import datepicker_deps
 from ._utils import shiny_input_label
 
@@ -115,7 +116,7 @@ def input_date(
         shiny_input_label(resolved_id, label),
         _date_input_tag(
             id=resolved_id,
-            value=value,
+            value=restore_input(resolved_id, value),
             min=min,
             max=max,
             format=format,
@@ -230,6 +231,8 @@ def input_date_range(
     """
 
     resolved_id = resolve_id(id)
+    start, end = tuple(restore_input(resolved_id, [start, end]))
+
     return div(
         shiny_input_label(resolved_id, label),
         div(
