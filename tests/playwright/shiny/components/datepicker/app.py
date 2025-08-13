@@ -48,7 +48,7 @@ ui = ui.page_fluid(
         value=None,
         min=None,
         max=None,
-        format="dd-mm-yyyy",
+        format="yyyy-mm-dd",
         language="en",
     ),
     ui.output_text("none_format"),
@@ -68,23 +68,23 @@ ui = ui.page_fluid(
 def server(input: Inputs, output: Outputs, session: Session):
     @render.text
     def start():
-        return "Start Date Picker Value: " + str(input.start_date_picker())
+        return "Date Picker Value: " + str(input.start_date_picker())
 
     @render.text
     def min():
-        return "Min Date Picker Value: " + str(input.min_date_picker())
+        return "Date Picker Value: " + str(input.min_date_picker())
 
     @render.text
     def str_format():
-        return "String Date Picker Value: " + str(input.str_date_picker())
+        return "Date Picker Value: " + str(input.str_date_picker())
 
     @render.text
     def none_format():
-        return "None Date Picker Value: " + str(input.none_date_picker())
+        return "Date Picker Value: " + str(input.none_date_picker())
 
     @render.text
     def empty_format():
-        return "Empty Date Picker Value: " + str(input.empty_date_picker())
+        return "Date Picker Value: " + str(input.empty_date_picker())
 
 
 app = App(ui, server, debug=True)
