@@ -23,11 +23,21 @@ ui = ui.page_fluid(
     ),
     ui.output_text("start"),
     ui.input_date(
+        "min_date_picker",
+        "Date Type Input:",
+        value=min_date,
+        min=min_date,
+        max=max_date,
+        format="dd.mm.yyyy",
+        language="en",
+    ),
+    ui.output_text("min"),
+    ui.input_date(
         "str_date_picker",
         "String Type Input:",
-        value=str_max,
-        min=str_min,
-        max=str_max,
+        value="2023-10-01",
+        min="2000-01-01",
+        max="2023-10-01",
         format="dd-mm-yyyy",
         language="en",
     ),
@@ -59,6 +69,10 @@ def server(input: Inputs, output: Outputs, session: Session):
     @render.text
     def start():
         return "Start Date Picker Value: " + str(input.start_date_picker())
+
+    @render.text
+    def min():
+        return "Min Date Picker Value: " + str(input.min_date_picker())
 
     @render.text
     def str_format():
