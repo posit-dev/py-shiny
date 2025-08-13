@@ -474,7 +474,8 @@ def update_date(
 
     Note
     ----
-    You cannot update the value of a date input to `None` or an empty string.
+    A special value of `""` (an empty string) can be used to clear the value, min, and
+    max.
 
     See Also
     --------
@@ -489,7 +490,19 @@ def update_date(
         "min": _as_date_attr(min),
         "max": _as_date_attr(max),
     }
-    session.send_input_message(id, drop_none(msg))
+
+    msg = drop_none(msg)
+
+    # Handle the special case of "", which means the value should be cleared
+    # (i.e., go from a specified date to no specified date)
+    if value == "":
+        msg["value"] = None
+    if min == "":
+        msg["min"] = None
+    if max == "":
+        msg["max"] = None
+
+    session.send_input_message(id, msg)
 
 
 @add_example()
