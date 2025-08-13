@@ -1,17 +1,17 @@
-from datetime import datetime
+from datetime import date
 
 from dateutil.relativedelta import relativedelta
 
-from shiny import App, Inputs, Outputs, Session, render, ui
+from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 
-min_date = datetime.fromisoformat("2011-11-04T00:05:23")
+min_date = date.fromisoformat("2011-11-04")
 max_date = min_date + relativedelta(days=10)
 
 # Our input requires strings to be in the format "YYYY-MM-DD"
 str_min = min_date.strftime("%Y-%m-%d")
 str_max = max_date.strftime("%Y-%m-%d")
 
-ui = ui.page_fluid(
+app_ui = ui.page_fluid(
     ui.input_date(
         "start_date_picker",
         "Date Type Input:",
@@ -42,15 +42,7 @@ ui = ui.page_fluid(
         language="en",
     ),
     ui.output_text("str_format"),
-    ui.input_date(
-        "none_date_picker",
-        "None Type Input:",
-        value=None,
-        min=None,
-        max=None,
-        format="yyyy-mm-dd",
-        language="en",
-    ),
+    ui.input_date("none_date_picker", "None Type Input:"),
     ui.output_text("none_format"),
     ui.input_date(
         "empty_date_picker",
@@ -62,6 +54,7 @@ ui = ui.page_fluid(
         language="en",
     ),
     ui.output_text("empty_format"),
+    ui.input_action_button("update", "Update Dates"),
 )
 
 
@@ -86,5 +79,15 @@ def server(input: Inputs, output: Outputs, session: Session):
     def empty_format():
         return "Date Picker Value: " + str(input.empty_date_picker())
 
+    @reactive.effect
+    @reactive.event(input.update, ignore_none=True, ignore_init=True)
+    def _():
+        d = date.fromisoformat("2011-11-05")
+        ui.update_date("start_date_picker", value=d)
+        ui.update_date("str_date_picker", value="2020-01-01")
 
-app = App(ui, server, debug=True)
+    # Note: You cannot update the value of a date input to None (it will be dropped).
+    # Note: You cannot update the value of a date input to an empty string. This is a Bootstrap Datepicker limitation.
+
+
+app = App(app_ui, server, debug=True)

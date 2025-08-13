@@ -1,8 +1,9 @@
-from playwright.sync_api import Page, expect
+import datetime
+
+from playwright.sync_api import Page
 
 from shiny.playwright import controller
 from shiny.run import ShinyAppProc
-import datetime
 
 
 def test_dynamic_navs(page: Page, local_app: ShinyAppProc) -> None:
@@ -48,3 +49,11 @@ def test_dynamic_navs(page: Page, local_app: ShinyAppProc) -> None:
 
     date_output5 = controller.OutputText(page, "empty_format")
     date_output5.expect_value("Date Picker Value: None")
+
+    controller.InputActionButton(page, "update").click()
+
+    date1.expect_value("05.11.2011")
+    date_output.expect_value("Date Picker Value: 2011-11-05")
+
+    date3.expect_value("01-01-2020")
+    date_output3.expect_value("Date Picker Value: 2020-01-01")

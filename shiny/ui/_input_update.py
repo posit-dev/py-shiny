@@ -464,7 +464,6 @@ def update_date(
         An input label.
     value
         The starting date. Either a `date()` object, or a string in yyyy-mm-dd format.
-        If ``None`` (the default), will use the current date in the client's time zone.
     min
         The minimum allowed value.
     max
@@ -475,7 +474,7 @@ def update_date(
 
     Note
     ----
-    {note}
+    You cannot update the value of a date input to `None` or an empty string.
 
     See Also
     --------
@@ -483,6 +482,7 @@ def update_date(
     """
 
     session = require_active_session(session)
+
     msg = {
         "label": session._process_ui(label) if label is not None else None,
         "value": _as_date_attr(value),

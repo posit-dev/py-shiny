@@ -45,7 +45,7 @@ def input_date(
     value
         The starting date. Either a :class:`~datetime.date` object, or a string in
         `yyyy-mm-dd` format. If None (the default), will use the current date in the
-        client's time zone.
+        client's time zone. If an empty string is passed, the date picker will be blank.
     min
         The minimum allowed date. Either a :class:`~datetime.date` object, or a string in
         yyyy-mm-dd format.
