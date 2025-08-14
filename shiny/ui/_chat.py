@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import inspect
+import textwrap
 from contextlib import asynccontextmanager
 from typing import (
     TYPE_CHECKING,
@@ -19,13 +20,26 @@ from typing import (
 )
 from weakref import WeakValueDictionary
 
-from htmltools import HTML, RenderedHTML, Tag, TagAttrValue, TagChild, TagList, css
+from htmltools import (
+    HTML,
+    RenderedHTML,
+    Tag,
+    TagAttrValue,
+    TagChild,
+    TagList,
+    css,
+    tags,
+)
 
 from .. import _utils, reactive
 from .._deprecated import warn_deprecated
 from .._docstring import add_example
 from .._utils import CancelCallback, wrap_async
 from ..bookmark import BookmarkState, RestoreState
+from ..bookmark._restore_state import (
+    get_current_restore_context,
+    has_current_restore_context,
+)
 from ..bookmark._types import BookmarkStore
 from ..module import ResolvedId, resolve_id
 from ..session import get_current_session, require_active_session, session_context
@@ -1754,6 +1768,76 @@ def chat_ui(
             )
         )
 
+    shiny_input_dep: Tag | None = None
+    if has_current_restore_context():
+        restore_ctx = get_current_restore_context()
+        if restore_ctx is None:
+            raise RuntimeError("This should not occur.")
+        input_dict = restore_ctx.input.as_dict()
+        import json
+
+        # If we're restoring a bookmark, we need to try to set all inner shiny input values.
+        shiny_input_dep = tags.script(
+            textwrap.dedent(
+                """
+                (function() {
+                    const chatId = "#%s";
+                    const chatEl = document.querySelector(chatId);
+                    const inputs = %s;
+                    console.log("chatEl", chatEl);
+                    console.log("inputs", inputs);
+                    console.log(chatEl.querySelectorAll(".shiny-bound-input"));
+
+                    function restoreShinyInput(el) {
+                        console.log("setValue - start");
+                        const inputId = el.getAttribute("id");
+                        console.log("inputId", inputId);
+                        if (!(inputId in inputs)) return;
+
+                        const inputVal = inputs[inputId];
+                        console.log("inputVal", inputVal);
+
+                        const inputBinding = $(el).data("shinyInputBinding")
+                        console.log("inputBinding", inputBinding);
+                        if (!inputBinding) return;
+
+                        inputBinding.setValue(el, inputVal);
+                        console.log("setValue - done");
+                    }
+
+                    if (chatEl) {
+                        chatEl.querySelectorAll(".shiny-bound-input").forEach(restoreShinyInput);
+                    }
+
+                    console.log("shiny:bound - added");
+                    $(document).on("shiny:bound", function(evt) {
+                        const targetEl = evt.target;
+                        if (!targetEl) return;
+                        if (!(targetEl.id in inputs)) return;
+
+                        // If target not within the chat, ignore
+                        const chatEl = targetEl.closest(chatId);
+                        console.log("chatEl", chatEl);
+                        console.log("targetEl", targetEl);
+                        if (!chatEl) return;
+
+                        console.log("restoreShinyInput - start");
+                        try {
+                            restoreShinyInput(targetEl);
+                        } finally {
+                            // Remove the input value
+                            console.log("delete input:", targetEl.id);
+                            delete inputs[targetEl.id];
+
+                            console.log("restoreShinyInput - done");
+                        }
+                    });
+                })();
+                """
+                % (id, json.dumps(input_dict))
+            )
+        )
+
     res = Tag(
         "shiny-chat-container",
         Tag("shiny-chat-messages", *message_tags),
@@ -1764,6 +1848,7 @@ def chat_ui(
         ),
         chat_deps(),
         icon_deps,
+        shiny_input_dep,
         {
             "style": css(
                 width=as_css_unit(width),
