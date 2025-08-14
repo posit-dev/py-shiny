@@ -128,7 +128,7 @@ def generate_test_file(
         output_path = get_output_file_path(output_file, app_path)
 
         try:
-            from .pytest.generate import ShinyTestGenerator
+            from .pytest._generate import ShinyTestGenerator
         except ImportError as e:
             raise ValidationError(
                 f"Could not import ShinyTestGenerator: {e}\n"

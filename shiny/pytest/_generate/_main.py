@@ -52,12 +52,6 @@ class ShinyTestGenerator:
     ):
         """
         Initialize the ShinyTestGenerator.
-
-        Args:
-            provider: LLM provider to use ("anthropic" or "openai")
-            api_key: API key for the provider (optional, can use env vars)
-            log_file: Path to log file
-            setup_logging: Whether to setup logging
         """
         self.provider = provider
         self._client = None
@@ -124,9 +118,9 @@ class ShinyTestGenerator:
         """Load documentation from package resources"""
         try:
             doc_path = (
-                importlib.resources.files("shiny.pytest.generate")
-                / "data"
-                / "docs"
+                importlib.resources.files("shiny.pytest._generate")
+                / "_data"
+                / "_docs"
                 / "documentation_testing.json"
             )
             with doc_path.open("r") as f:
@@ -140,9 +134,9 @@ class ShinyTestGenerator:
         """Read and combine system prompt with documentation"""
         try:
             prompt_path = (
-                importlib.resources.files("shiny.pytest.generate")
-                / "data"
-                / "prompts"
+                importlib.resources.files("shiny.pytest._generate")
+                / "_data"
+                / "_prompts"
                 / "SYSTEM_PROMPT_testing.md"
             )
             with prompt_path.open("r") as f:
@@ -237,7 +231,7 @@ class ShinyTestGenerator:
         """
         # Pattern for list form: create_app_fixture(["app.py"]) or with spaces
         pattern_list = re.compile(
-            r"(create_app_fixture\(\s*\[\s*)(['\"])([^'\"]+)(\2)(\s*)([,\]])",
+            r"(create_app_fixture\(\s*\[\s*)(['\"])([^'\"]+)(\\2)(\\s*)([,\\]])",
             re.DOTALL,
         )
 
@@ -248,7 +242,7 @@ class ShinyTestGenerator:
 
         # Pattern for direct string form: create_app_fixture("app.py")
         pattern_str = re.compile(
-            r"(create_app_fixture\(\s*)(['\"])([^'\"]+)(\2)(\s*)([,\)])",
+            r"(create_app_fixture\(\s*)(['\"])([^'\"]+)(\\2)(\\s*)([,\\)])",
             re.DOTALL,
         )
 
@@ -264,7 +258,7 @@ class ShinyTestGenerator:
             f"Given this Shiny for Python app code from file '{app_file_name}':\n{app_text}\n"
             "Please only add controllers for components that already have an ID in the shiny app.\n"
             "Do not add tests for ones that do not have an existing ids since controllers need IDs to locate elements.\n"
-            "and server functionality of this app. Include appropriate assertions \n"
+            "and server functionality of this app. Include appropriate assertions \\n"
             "and test cases to verify the app's behavior.\n"
             "IMPORTANT: In the create_app_fixture call, pass a RELATIVE path from the test file's directory to the app file.\n"
             "For example, if the test lives under a 'tests/' subfolder next to the app file, use '../"
@@ -276,10 +270,6 @@ class ShinyTestGenerator:
     def _infer_app_file_path(
         self, app_code: Optional[str] = None, app_file_path: Optional[str] = None
     ) -> Path:
-        """
-        Infer the app file path from various sources.
-        Priority: explicit path > code analysis > current directory search
-        """
         if app_file_path:
             return Path(app_file_path)
 
@@ -302,10 +292,6 @@ class ShinyTestGenerator:
     def _generate_test_file_path(
         self, app_file_path: Path, output_dir: Optional[Path] = None
     ) -> Path:
-        """
-        Generate test file path following the test_*.py naming convention.
-        Uses pathlib consistently.
-        """
         output_dir = output_dir or app_file_path.parent
         test_file_name = f"test_{app_file_path.stem}.py"
         return output_dir / test_file_name
@@ -319,21 +305,6 @@ class ShinyTestGenerator:
         output_file: Optional[str] = None,
         output_dir: Optional[str] = None,
     ) -> Tuple[str, Path]:
-        """
-        Consolidated method to generate test code for a Shiny app.
-        Handles all scenarios: from file, from code, or auto-detection.
-
-        Args:
-            app_code: The app code as a string. If None, will be read from app_file_path
-            app_file_path: Path to the app file
-            app_name: Name for the app (used in test file naming when generating from code)
-            model: The model to use for generation (uses default if None)
-            output_file: Explicit output file path (overrides automatic naming)
-            output_dir: Directory to save the test file (defaults to app file directory)
-
-        Returns:
-            tuple: (test_code, test_file_path)
-        """
         if app_code and not app_file_path:
             inferred_app_path = Path(f"{app_name}.py")
         else:
@@ -376,7 +347,6 @@ class ShinyTestGenerator:
         output_file: Optional[str] = None,
         output_dir: Optional[str] = None,
     ) -> Tuple[str, Path]:
-        """Generate test code from an app file."""
         return self.generate_test(
             app_file_path=app_file_path,
             model=model,
@@ -392,7 +362,6 @@ class ShinyTestGenerator:
         output_file: Optional[str] = None,
         output_dir: Optional[str] = None,
     ) -> Tuple[str, Path]:
-        """Generate test code from app code string."""
         return self.generate_test(
             app_code=app_code,
             app_name=app_name,
@@ -404,13 +373,6 @@ class ShinyTestGenerator:
     def switch_provider(
         self, provider: Literal["anthropic", "openai"], api_key: Optional[str] = None
     ):
-        """
-        Switch to a different provider and reset the client.
-
-        Args:
-            provider: New provider to use
-            api_key: Optional API key for the new provider
-        """
         self.provider = provider
         if api_key:
             self.api_key = api_key
@@ -420,18 +382,15 @@ class ShinyTestGenerator:
     def create_anthropic_generator(
         cls, api_key: Optional[str] = None, **kwargs
     ) -> "ShinyTestGenerator":
-        """Factory method to create an Anthropic-based generator"""
         return cls(provider="anthropic", api_key=api_key, **kwargs)
 
     @classmethod
     def create_openai_generator(
         cls, api_key: Optional[str] = None, **kwargs
     ) -> "ShinyTestGenerator":
-        """Factory method to create an OpenAI-based generator"""
         return cls(provider="openai", api_key=api_key, **kwargs)
 
     def get_available_models(self) -> list[str]:
-        """Get list of available models for the current provider"""
         if self.provider == "anthropic":
             return [
                 model
@@ -449,7 +408,6 @@ class ShinyTestGenerator:
 
 
 def cli():
-    """Command line interface with provider support"""
     import argparse
 
     parser = argparse.ArgumentParser(description="Generate Shiny tests using LLM")

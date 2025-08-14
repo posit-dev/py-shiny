@@ -12,7 +12,7 @@
     "shiny/templates",
     "tests/playwright/ai_generated_apps/*/*/app*.py",
     "tests/inspect-ai/apps/*/app*.py",
-    "shiny/pytest/generate/_main.py",
+    "shiny/pytest/_generate/_main.py",
   ],
   "typeCheckingMode": "strict",
   "reportImportCycles": "none",

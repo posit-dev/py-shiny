@@ -3,7 +3,7 @@ name: Validate Test Generation Prompts
 on:
   pull_request:
     paths:
-      - "shiny/pytest/generate/**"
+      - "shiny/pytest/_generate/**"
 
 concurrency:
   group: ${{ github.workflow }}
