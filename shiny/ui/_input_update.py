@@ -494,7 +494,8 @@ def update_date(
     msg = drop_none(msg)
 
     # Handle the special case of "", which means the value should be cleared
-    # (i.e., go from a specified date to no specified date)
+    # (i.e., go from a specified date to no specified date).
+    # This is equivalent to the NA case in R
     if value == "":
         msg["value"] = None
     if min == "":
@@ -550,25 +551,39 @@ def update_date_range(
     """
 
     session = require_active_session(session)
-    value = {"start": _as_date_attr(start), "end": _as_date_attr(end)}
+
     msg = {
         "label": session._process_ui(label) if label is not None else None,
-        "value": drop_none(value),
         "min": _as_date_attr(min),
         "max": _as_date_attr(max),
     }
+
     msg = drop_none(msg)
 
     # Handle the special case of "", which means the value should be cleared
-    # (i.e., go from a specified date to no specified date)
-    if start == "":
-        msg["value"]["start"] = None
-    if end == "":
-        msg["value"]["end"] = None
+    # (i.e., go from a specified date to no specified date).
+    # This is equivalent to the NA case in R
     if min == "":
         msg["min"] = None
     if max == "":
         msg["max"] = None
+
+    value = {
+        "start": _as_date_attr(start),
+        "end": _as_date_attr(end),
+    }
+
+    value = drop_none(value)
+
+    # Handle the special case of "", which means the value should be cleared
+    # (i.e., go from a specified date to no specified date)
+    # This is equivalent to the NA case in R
+    if start == "":
+        value["start"] = None
+    if end == "":
+        value["end"] = None
+
+    msg["value"] = value
 
     session.send_input_message(id, msg)
 
