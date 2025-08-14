@@ -85,44 +85,7 @@ jobs:
         if: github.event_name == 'pull_request'
         timeout-minutes: 1
         run: |
-          if [ -f "results/summary.json" ]; then
-            python -c "
-          import json
-          import os
-
-          try:
-              with open('results/summary.json', 'r') as f:
-                  results = json.load(f)
-
-              comment = f'''## Inspect AI Evaluation Results
-
-          - **Tests Passed**: {results['passed']}/{results['total']}
-          - **Quality Gate**: {'✅ PASSED' if results['quality_gate_passed'] else '❌ FAILED'}
-
-          ### Details
-          {results['details']}
-          '''
-
-              with open('comment_body.txt', 'w') as f:
-                  f.write(comment)
-          except Exception as e:
-              print(f'Error reading summary file: {e}')
-              comment = '''## Inspect AI Evaluation Results
-
-          ❌ **Error**: Could not read evaluation results summary file.
-
-          Please check the workflow logs for details.'''
-
-              with open('comment_body.txt', 'w') as f:
-                  f.write(comment)
-          "
-          else
-            echo "## Inspect AI Evaluation Results
-
-          ❌ **Error**: Could not read evaluation results summary file.
-
-          Please check the workflow logs for details." > comment_body.txt
-          fi
+          python tests/inspect-ai/scripts/prepare_comment.py results/summary.json
 
       - name: Comment PR Results
         if: github.event_name == 'pull_request'
