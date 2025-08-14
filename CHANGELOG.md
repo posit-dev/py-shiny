@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### Breaking changes
+
+* The `ui.Chat` and `ui.MarkdownStream` components are now imported from the new `shinychat` library. Future versions of `shinychat` will likely deprecate and remove some features from `Chat`. If you still want to use those features with the latest Shiny, we suggest pinning `shinychat` to it's initial release (v0.1.0). (#2051)
+
 ### New features
 
 * Added `ui.insert_nav_panel()`, `ui.remove_nav_panel()`, and `ui.update_nav_panel()` to support dynamic navigation. (#90)
