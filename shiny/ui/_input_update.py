@@ -527,17 +527,15 @@ def update_date_range(
     label
         An input label.
     start
-        The initial start date. Either a :class:`~datetime.date` object, or a string in
-        yyyy-mm-dd format. If ``None`` (the default), will use the current date in the
-        client's time zone.
+        The starting date. Either a `date()` object, or a string in yyyy-mm-dd format.
+        If an empty string is provided, the value will be cleared.
     end
-        The initial end date. Either a :class:`~datetime.date` object, or a string in
-        yyyy-mm-dd format. If ``None`` (the default), will use the current date in the
-        client's time zone.
+        The ending date. Either a `date()` object, or a string in yyyy-mm-dd format.
+        If an empty string is provided, the value will be cleared.
     min
-        The minimum allowed value.
+        The minimum allowed value. If an empty string is passed there will be no minimum date.
     max
-        The maximum allowed value.
+        The maximum allowed value. If an empty string is passed there will be no maximum date.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
         :func:`~shiny.session.get_current_session`.
@@ -559,7 +557,20 @@ def update_date_range(
         "min": _as_date_attr(min),
         "max": _as_date_attr(max),
     }
-    session.send_input_message(id, drop_none(msg))
+    msg = drop_none(msg)
+
+    # Handle the special case of "", which means the value should be cleared
+    # (i.e., go from a specified date to no specified date)
+    if start == "":
+        msg["value"]["start"] = None
+    if end == "":
+        msg["value"]["end"] = None
+    if min == "":
+        msg["min"] = None
+    if max == "":
+        msg["max"] = None
+
+    session.send_input_message(id, msg)
 
 
 # -----------------------------------------------------------------------------
