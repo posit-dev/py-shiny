@@ -61,24 +61,24 @@ jobs:
         run: |
           # Find the latest evaluation result file and process it
           latest_result=$(ls -t results/*.json | head -1)
-          if [ -f "$latest_result" ]; then
-            echo "Processing results from: $latest_result"
-            python tests/inspect-ai/utils/scripts/process_results.py "$latest_result"
-          else
+          if [ ! -f "$latest_result" ]; then
             echo "No result files found in results/ directory"
             exit 1
+          else
+            echo "Processing results from: $latest_result"
+            python tests/inspect-ai/utils/scripts/process_results.py "$latest_result"
           fi
 
       - name: Check Quality Gate
         timeout-minutes: 2
         run: |
-          if [ -f "results/summary.json" ]; then
-            echo "Found summary file, checking quality gate..."
-            python tests/inspect-ai/utils/scripts/quality_gate.py results/
-          else
+          if [ ! -f "results/summary.json" ]; then
             echo "Summary file not found at results/summary.json"
             ls -la results/
             exit 1
+          else
+            echo "Found summary file, checking quality gate..."
+            python tests/inspect-ai/utils/scripts/quality_gate.py results/
           fi
 
       - name: Prepare Comment Body
