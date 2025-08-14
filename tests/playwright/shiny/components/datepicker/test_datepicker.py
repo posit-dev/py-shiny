@@ -55,5 +55,8 @@ def test_dynamic_navs(page: Page, local_app: ShinyAppProc) -> None:
     date1.expect_value("05.11.2011")
     date_output.expect_value("Date Picker Value: 2011-11-05")
 
+    date2.expect_value("")
+    date_output2.expect_value("Date Picker Value: None")
+
     date3.expect_value("01-01-2020")
     date_output3.expect_value("Date Picker Value: 2020-01-01")

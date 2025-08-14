@@ -84,10 +84,8 @@ def server(input: Inputs, output: Outputs, session: Session):
     def _():
         d = date.fromisoformat("2011-11-05")
         ui.update_date("start_date_picker", value=d)
+        ui.update_date("min_date_picker", value="")
         ui.update_date("str_date_picker", value="2020-01-01")
-
-    # Note: You cannot update the value of a date input to None (it will be dropped).
-    # Note: You cannot update the value of a date input to an empty string. This is a Bootstrap Datepicker limitation.
 
 
 app = App(app_ui, server, debug=True)
