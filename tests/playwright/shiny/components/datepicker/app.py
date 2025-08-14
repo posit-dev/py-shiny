@@ -7,10 +7,6 @@ from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 min_date = date.fromisoformat("2011-11-04")
 max_date = min_date + relativedelta(days=10)
 
-# Our input requires strings to be in the format "YYYY-MM-DD"
-str_min = min_date.strftime("%Y-%m-%d")
-str_max = max_date.strftime("%Y-%m-%d")
-
 app_ui = ui.page_fluid(
     ui.input_date(
         "start_date_picker",
