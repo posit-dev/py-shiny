@@ -123,7 +123,7 @@ docs-quartodoc: FORCE
 	@echo "-------- Making quartodoc docs --------"
 	@cd docs && make quartodoc
 
-install-repomix: install-npm ## Install repomix if not already installed
+install-repomix: install-npm FORCE ## Install repomix if not already installed
 	@echo "-------- Installing repomix if needed --------"
 	@if ! command -v repomix > /dev/null 2>&1; then \
 		echo "Installing repomix..."; \
@@ -132,17 +132,17 @@ install-repomix: install-npm ## Install repomix if not already installed
 		echo "repomix is already installed"; \
 	fi
 
-update-testing-docs-repomix: install-repomix ## Generate repomix output for testing docs
+update-testing-docs-repomix: install-repomix FORCE ## Generate repomix output for testing docs
 	@echo "-------- Generating repomix output for testing docs --------"
 	repomix docs/api/testing -o tests/inspect-ai/utils/scripts/repomix-output-testing.xml
 
-update-testing-docs-process: ## Process repomix output to generate testing documentation JSON
+update-testing-docs-process: FORCE ## Process repomix output to generate testing documentation JSON
 	@echo "-------- Processing testing documentation --------"
 	python tests/inspect-ai/utils/scripts/process_docs.py --input tests/inspect-ai/utils/scripts/repomix-output-testing.xml --output shiny/pytest/generate/data/docs/documentation_testing.json
 	@echo "-------- Cleaning up temporary files --------"
 	rm -f tests/inspect-ai/utils/scripts/repomix-output-testing.xml
 
-update-testing-docs: docs update-testing-docs-repomix update-testing-docs-process ## Update testing documentation (full pipeline)
+update-testing-docs: docs update-testing-docs-repomix update-testing-docs-process FORCE ## Update testing documentation (full pipeline)
 	@echo "-------- Testing documentation update complete --------"
 
 

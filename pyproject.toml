@@ -91,7 +91,6 @@ test = [
     "dask[dataframe]",
     "pyarrow",
     "pyarrow-stubs",
-    "chatlas[anthropic,openai]",
 ]
 dev = [
     "black>=24.0",
@@ -130,6 +129,11 @@ doc = [
     "pydantic>=2.7.4",
     "quartodoc>=0.8.1",
     "griffe>=1.3.2",
+]
+testgen = [
+    "chatlas[anthropic,openai]",
+    "inspect-ai",
+    "pytest-timeout"
 ]
 
 
