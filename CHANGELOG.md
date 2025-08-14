@@ -53,6 +53,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Fix missing session when trying to display an error duing bookmarking. (#1984)
 
+* `input_date()` and `input_date_range()` once again use the client's (not the server) current date as the default `value`. (#2060)
+
 * Fixed `set()` method of `InputSelectize` controller so it clears existing selections before applying new values. (#2024)
 
 ### Deprecations
