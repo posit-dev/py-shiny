@@ -1,40 +1,11 @@
 import json
 from pathlib import Path
-from typing import Any, Callable, Dict, List
 
-
-# Type stubs for inspect_ai imports
-class Task:
-    def __init__(
-        self, dataset: List[Any], solver: Any, scorer: Any, model: Any
-    ) -> None:
-        self.dataset = dataset
-        self.solver = solver
-        self.scorer = scorer
-        self.model = model
-
-
-def task(func: Callable[[], Task]) -> Callable[[], Task]:
-    return func
-
-
-class Sample:
-    def __init__(self, input: str, target: str, metadata: Dict[str, Any]) -> None:
-        self.input = input
-        self.target = target
-        self.metadata = metadata
-
-
-def get_model(model_name: str) -> Any:
-    pass
-
-
-def model_graded_qa(instructions: str, grade_pattern: str, model: Any) -> Any:
-    pass
-
-
-def generate() -> Any:
-    pass
+from inspect_ai import Task, task
+from inspect_ai.dataset import Sample
+from inspect_ai.model import get_model
+from inspect_ai.scorer import model_graded_qa
+from inspect_ai.solver import generate
 
 
 def get_app_specific_instructions(app_name: str) -> str:
@@ -142,7 +113,7 @@ def get_app_specific_instructions(app_name: str) -> str:
     return app_instructions.get(app_name, "")
 
 
-def create_inspect_ai_samples(test_data: Dict[str, Dict[str, Any]]) -> List[Sample]:
+def create_inspect_ai_samples(test_data: dict) -> list[Sample]:
     """
     Create Inspect AI samples from the generated test data.
 
@@ -152,7 +123,7 @@ def create_inspect_ai_samples(test_data: Dict[str, Dict[str, Any]]) -> List[Samp
     Returns:
         List of Sample objects for Inspect AI evaluation
     """
-    samples: List[Sample] = []
+    samples = []
 
     for test_name, data in test_data.items():
         app_specific_guidance = get_app_specific_instructions(data["app_name"])
@@ -202,7 +173,7 @@ def shiny_test_evaluation() -> Task:
     with open(metadata_file, "r") as f:
         test_data = json.load(f)
 
-    samples: List[Sample] = create_inspect_ai_samples(test_data)
+    samples = create_inspect_ai_samples(test_data)
 
     scorer = model_graded_qa(
         instructions="""
