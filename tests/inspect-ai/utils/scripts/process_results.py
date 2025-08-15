@@ -1,9 +1,10 @@
 import json
 import sys
 from pathlib import Path
+from typing import Any, Dict, List, Union
 
 
-def process_inspect_results(result_file_path):
+def process_inspect_results(result_file_path: Union[str, Path]) -> None:
     """Process a single Inspect AI result file and generate a summary."""
     input_path = Path(result_file_path)
 
@@ -17,13 +18,13 @@ def process_inspect_results(result_file_path):
     # 2. Load the JSON data with error handling
     with open(input_path, "r", encoding="utf-8") as f:
         try:
-            data = json.load(f)
+            data: Dict[str, Any] = json.load(f)
         except json.JSONDecodeError as e:
             print(f"Error decoding JSON from file {input_path}: {e}")
             sys.exit(1)
 
     # 3. Extract the list of samples from the top-level 'samples' key
-    samples = data.get("samples", [])
+    samples: List[Dict[str, Any]] = data.get("samples", [])
     if not isinstance(samples, list):
         print(f"Error: 'samples' key in {input_path} is not a list.")
         sys.exit(1)
