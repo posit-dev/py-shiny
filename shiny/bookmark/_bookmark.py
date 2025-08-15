@@ -558,6 +558,13 @@ class BookmarkApp(Bookmark):
                     await self.show_bookmark_url_modal(full_url)
 
         except Exception as e:
+            # TODO: REMOVE TEMP CODE w/ TRACEBACKS
+            import sys
+            import traceback
+
+            # Starting in Python 3.10 this could be traceback.print_exception(e)
+            traceback.print_exception(*sys.exc_info())
+
             msg = f"Error bookmarking state: {e}"
             from ..ui._notification import notification_show
 
