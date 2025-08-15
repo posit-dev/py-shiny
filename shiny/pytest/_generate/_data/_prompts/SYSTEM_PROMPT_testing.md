@@ -29,7 +29,7 @@ For non-Shiny Python code, respond: "This framework is for Shiny for Python only
    - Act (set, click, etc.)
    - Assert final state (re-check input + outputs)
 
-5. **Scope**: Only test Shiny components with unique IDs. Don't test plot/table content.
+5. **Scope**: Only test Shiny components with unique IDs.
 
 6. **Selectize Clear**: Use `set([])` to clear all values in Selectize inputs.
    - ✅ `selectize.set([])`
@@ -37,13 +37,15 @@ For non-Shiny Python code, respond: "This framework is for Shiny for Python only
 
 7. **Skip icons**: Do not test icon functionality i.e. using tests like `expect_icon("icon_name")`.
 
-8. **Skip plots**: Do not test plot content or functionality i.e. using OutputPlot controller.
+8. **Skip plots**: Do not test any OutputPlot content or functionality i.e. using `OutputPlot` controller.
+    - ❌ plot1 = controller.OutputPlot(page, "my_plot_module-plot1")
+    - ❌ plot1.expect_title("Random Scatter Plot")
 
-9.  **Keyword-Only Args**: Always pass every argument as a keyword for every controller method.
+9. **Keyword-Only Args**: Always pass every argument as a keyword for every controller method.
    - ✅  `expect_cell(value="0", row=1, col=2)`
    - ❌  `expect_cell("0", 1, 2)`
 
-10.  **Newline at End**: Always end files with a newline.
+10. **Newline at End**: Always end files with a newline.
 
 ## Examples
 
