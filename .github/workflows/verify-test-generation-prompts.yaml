@@ -34,7 +34,11 @@ jobs:
         id: install
         uses: ./.github/py-shiny/setup
 
-      - name: Install Test Generation Dependencies
+      - name: Install Playwright Browsers
+        run: |
+          make install-playwright
+
+      - name: Install Test Generator Dependencies
         run: |
           uv pip install -e ".[testgen]"
 
