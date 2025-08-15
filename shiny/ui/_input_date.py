@@ -314,5 +314,5 @@ def _as_date_attr(x: Optional[date | str]) -> Optional[str]:
         if len(x) == 0:
             return x
         x = date.fromisoformat(x)
-    # Using strftime here to ensure we just just a date, regardless of if H:M:S are included
+    # Ensure we return a date (not datetime) string
     return x.strftime("%Y-%m-%d")
