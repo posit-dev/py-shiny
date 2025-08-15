@@ -31,9 +31,9 @@ app_ui = ui.page_fluid(
     ui.input_date(
         "str_date_picker",
         "String Type Input:",
-        value="2023-10-01",
-        min="2000-01-01",
-        max="2023-10-01",
+        value="2023-10-05",
+        min="2023-10-01",
+        max="2023-10-07",
         format="dd-mm-yyyy",
         language="en",
     ),
@@ -80,8 +80,8 @@ def server(input: Inputs, output: Outputs, session: Session):
     def _():
         d = date.fromisoformat("2011-11-05")
         ui.update_date("start_date_picker", value=d)
-        ui.update_date("min_date_picker", value="")
-        ui.update_date("str_date_picker", value="2020-01-01")
+        ui.update_date("min_date_picker", value="", min="")
+        ui.update_date("str_date_picker", value="2023-10-03", max="2023-10-20")
 
 
 app = App(app_ui, server, debug=True)

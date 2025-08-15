@@ -463,19 +463,18 @@ def update_date(
     label
         An input label.
     value
-        The starting date. Either a `date()` object, or a string in yyyy-mm-dd format.
+        The starting date. Either a `date()` object, or a string in yyyy-mm-dd format. If an empty string is provided, the value will be cleared.
     min
-        The minimum allowed value.
+        The minimum allowed value. Either a `date()` object, or a string in yyyy-mm-dd format. An empty string will clear the minimum constraint.
     max
-        The maximum allowed value.
+        The maximum allowed value. Either a `date()` object, or a string in yyyy-mm-dd format. An empty string will clear the maximum constraint.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
         :func:`~shiny.session.get_current_session`.
 
     Note
     ----
-    A special value of `""` (an empty string) can be used to clear the value, min, and
-    max.
+    {note}
 
     See Also
     --------
