@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
+* Added AI-powered test generator for Shiny applications. Use `shiny add test` to automatically generate comprehensive Playwright tests for your apps using AI models from Anthropic or OpenAI. (#2041)
+
 * Added `ui.insert_nav_panel()`, `ui.remove_nav_panel()`, and `ui.update_nav_panel()` to support dynamic navigation. (#90)
 
 * Added support for python 3.13. (#1711)

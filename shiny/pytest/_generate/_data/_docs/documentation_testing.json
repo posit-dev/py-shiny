@@ -1,0 +1,418 @@
+[
+  {
+    "controller_name": "playwright.controller.Accordion",
+    "methods": [
+      {
+        "name": "accordion_panel",
+        "description": "Returns the accordion panel ([](:class:`~shiny.playwright.controls.AccordionPanel`)) with the specified data value.",
+        "parameters": "data_value (str)"
+      },
+      {
+        "name": "expect_class",
+        "description": "Expects the accordion to have the specified class.",
+        "parameters": "class_name (str), timeout (Timeout)"
+      },
+      {
+        "name": "expect_height",
+        "description": "Expects the accordion to have the specified height.",
+        "parameters": "value (StyleValue), timeout (Timeout)"
+      },
+      {
+        "name": "expect_multiple",
+        "description": "Expects the accordion to be multiple or not.",
+        "parameters": "value (bool), timeout (Timeout)"
+      },
+      {
+        "name": "expect_panels",
+        "description": "Expects the accordion to have the specified panels.",
+        "parameters": "value (list\\[PatternOrStr\\]), timeout (Timeout)"
+      },
+      {
+        "name": "expect_width",
+        "description": "Expects the accordion to have the specified width.",
+        "parameters": "value (StyleValue), timeout (Timeout)"
+      },
+      {
+        "name": "set",
+        "description": "Sets the state of the accordion panel.",
+        "parameters": "open (str \\\), timeout (Timeout)"
+      }
+    ]
+  },
+  {
+    "controller_name": "playwright.controller.AccordionPanel",
+    "methods": [
+      {
+        "name": "expect_body",
+        "description": "Expects the accordion panel body to have the specified text.",
+        "parameters": "value (PatternOrStr), timeout (Timeout)"
+      },
+      {
+        "name": "expect_icon",
+        "description": "Expects the accordion panel icon to exist or not.",
+        "parameters": "exists (bool), timeout (Timeout)"
+      },
+      {
+        "name": "expect_label",
+        "description": "Expects the accordion panel label to have the specified text.",
+        "parameters": "value (PatternOrStr), timeout (Timeout)"
+      },
+      {
+        "name": "expect_open",
+        "description": "Expects the accordion panel to be open or closed.",
+        "parameters": "value (bool), timeout (Timeout)"
+      },
+      {
+        "name": "expect_width",
+        "description": "Expect the `width` attribute of a DOM element to have a specific value.",
+        "parameters": "value (AttrValue), timeout (Timeout)"
+      },
+      {
+        "name": "set",
+        "description": "Sets the state of the control to open or closed.",
+        "parameters": "open (bool), timeout (Timeout)"
+      }
+    ]
+  },
+  {
+    "controller_name": "playwright.controller.Card",
+    "methods": [
+      {
+        "name": "expect_body",
+        "description": "Expect the card body element to have the specified text.",
+        "parameters": "value (PatternOrStr \\\), timeout (Timeout)"
+      },
+      {
+        "name": "expect_footer",
+        "description": "Expects the card footer to have a specific text.",
+        "parameters": "value (PatternOrStr \\\), timeout (Timeout)"
+      },
+      {
+        "name": "expect_full_screen",
+        "description": "Verifies if the full screen mode is currently open.",
+        "parameters": "value (bool), timeout (Timeout)"
+      },
+      {
+        "name": "expect_full_screen_available",
+        "description": "Expects whether full screen mode is available for the element.",
+        "parameters": "value (bool), timeout (Timeout)"
+      },
+      {
+        "name": "expect_header",
+        "description": "Expects the card header to have a specific text.",
+        "parameters": "value (PatternOrStr \\\), timeout (Timeout)"
+      },
+      {
+        "name": "expect_height",
+        "description": "Expects the card to have a specific height.",
+        "parameters": "value (StyleValue), timeout (Timeout)"
+      },
+      {
+        "name": "expect_max_height",
+        "description": "Expects the card to have a specific maximum height.",
+        "parameters": "value (StyleValue), timeout (Timeout)"
+      },
+      {
+        "name": "expect_min_height",
+        "description": "Expects the card to have a specific minimum height.",
+        "parameters": "value (StyleValue), timeout (Timeout)"
+      },
+      {
+        "name": "expect_width",
+        "description": "Expect the `width` attribute of a DOM element to have a specific value.",
+        "parameters": "value (AttrValue), timeout (Timeout)"
+      },
+      {
+        "name": "set_full_screen",
+        "description": "Sets the element to full screen mode or exits full screen mode.",
+        "parameters": "open (bool), timeout (Timeout)"
+      }
+    ]
+  },
+  {
+    "controller_name": "playwright.controller.Chat",
+    "methods": [
+      {
+        "name": "expect_latest_message",
+        "description": "Expects the last message in the chat.",
+        "parameters": "value (PatternOrStr), timeout (Timeout)"
+      },
+      {
+        "name": "expect_messages",
+        "description": "Expects the chat messages.",
+        "parameters": "value (PatternOrStr), timeout (Timeout)"
+      },
+      {
+        "name": "expect_user_input",
+        "description": "Expects the user message in the chat.",
+        "parameters": "value (PatternOrStr), timeout (Timeout)"
+      },
+      {
+        "name": "send_user_input",
+        "description": "Sends the user message in the chat.",
+        "parameters": "method (Literal\\['enter', 'click'\\]), timeout (Timeout)"
+      },
+      {
+        "name": "set_user_input",
+        "description": "Sets the user message in the chat.",
+        "parameters": "value (str), timeout (Timeout)"
+      }
+    ]
+  },
+  {
+    "controller_name": "playwright.controller.DownloadButton",
+    "methods": [
+      {
+        "name": "click",
+        "description": "Clicks the input action.",
+        "parameters": "timeout (Timeout)"
+      },
+      {
+        "name": "expect_icon",
+        "description": "Expect the icon of the input button to have a specific value.",
+        "parameters": "value (PatternOrStr), timeout (Timeout)"
+      },
+      {
+        "name": "expect_label",
+        "description": "Expect the label of the input button to have a specific value.",
+        "parameters": "value (PatternOrStr), timeout (Timeout)"
+      },
+      {
+        "name": "expect_width",
+        "description": "Expect the `width` attribute of a DOM element to have a specific value.",
+        "parameters": "value (AttrValue), timeout (Timeout)"
+      }
+    ]
+  },
+  {
+    "controller_name": "playwright.controller.DownloadLink",
+    "methods": [
+      {
+        "name": "click",
+        "description": "Clicks the input action.",
+        "parameters": "timeout (Timeout)"
+      },
+      {
+        "name": "expect_icon",
+        "description": "Expect the icon of the input button to have a specific value.",
+        "parameters": "value (PatternOrStr), timeout (Timeout)"
+      },
+      {
+        "name": "expect_label",
+        "description": "Expect the label of the input button to have a specific value.",
+        "parameters": "value (PatternOrStr), timeout (Timeout)"
+      }
+    ]
+  },
+  {
+    "controller_name": "playwright.controller.InputActionButton",
+    "methods": [
+      {
+        "name": "click",
+        "description": "Clicks the input action.",
+        "parameters": "timeout (Timeout)"
+      },
+      {
+        "name": "expect_disabled",
+        "description": "Expect the input action button to be disabled.",
+        "parameters": "value (bool), timeout (Timeout)"
+      },
+      {
+        "name": "expect_icon",
+        "description": "Expect the icon of the input button to have a specific value.",
+        "parameters": "value (PatternOrStr), timeout (Timeout)"
+      },
+      {
+        "name": "expect_label",
+        "description": "Expect the label of the input button to have a specific value.",
+        "parameters": "value (PatternOrStr), timeout (Timeout)"
+      },
+      {
+        "name": "expect_width",
+        "description": "Expect the `width` attribute of a DOM element to have a specific value.",
+        "parameters": "value (AttrValue), timeout (Timeout)"
+      }
+    ]
+  },
+  {
+    "controller_name": "playwright.controller.InputActionLink",
+    "methods": [
+      {
+        "name": "click",
+        "description": "Clicks the input action.",
+        "parameters": "timeout (Timeout)"
+      },
+      {
+        "name": "expect_icon",
+        "description": "Expect the icon of the input button to have a specific value.",
+        "parameters": "value (PatternOrStr), timeout (Timeout)"
+      },
+      {
+        "name": "expect_label",
+        "description": "Expect the label of the input button to have a specific value.",
+        "parameters": "value (PatternOrStr), timeout (Timeout)"
+      }
+    ]
+  },
+  {
+    "controller_name": "playwright.controller.InputBookmarkButton",
+    "methods": [
+      {
+        "name": "click",
+        "description": "Clicks the input action.",
+        "parameters": "timeout (Timeout)"
+      },
+      {
+        "name": "expect_disabled",
+        "description": "Expect the input bookmark button to be disabled.",
+        "parameters": "value (bool), timeout (Timeout)"
+      },
+      {
+        "name": "expect_icon",
+        "description": "Expect the icon of the input button to have a specific value.",
+        "parameters": "value (PatternOrStr), timeout (Timeout)"
+      },
+      {
+        "name": "expect_label",
+        "description": "Expect the label of the input button to have a specific value.",
+        "parameters": "value (PatternOrStr), timeout (Timeout)"
+      }
+    ]
+  },
+  {
+    "controller_name": "playwright.controller.Markdown",
+    "methods": [
+      {
+        "name": "expect_content",
+        "description": "Expects the markdown content to contain the specified text.",
+        "parameters": "value (PatternOrStr), timeout (Timeout)"
+      }
+    ]
+  },
+  {
+    "controller_name": "playwright.controller.Navbar",
+    "methods": [
+      {
+        "name": "expect_active",
+        "description": "Expects the navbar item to be active.",
+        "parameters": "value (bool), timeout (Timeout)"
+      },
+      {
+        "name": "expect_label",
+        "description": "Expects the navbar item to have the specified label.",
+        "parameters": "value (PatternOrStr), timeout (Timeout)"
+      },
+      {
+        "name": "expect_url",
+        "description": "Expects the navbar item to have the specified URL.",
+        "parameters": "value (str), timeout (Timeout)"
+      }
+    ]
+  },
+  {
+    "controller_name": "playwright.controller.Notification",
+    "methods": [
+      {
+        "name": "expect_message",
+        "description": "Expects the notification message to be as specified.",
+        "parameters": "value (PatternOrStr), timeout (Timeout)"
+      },
+      {
+        "name": "expect_type",
+        "description": "Expects the notification type to be as specified.",
+        "parameters": "value (str), timeout (Timeout)"
+      }
+    ]
+  },
+  {
+    "controller_name": "playwright.controller.Plot",
+    "methods": [
+      {
+        "name": "expect_legend",
+        "description": "Expects the plot legend to be visible or hidden.",
+        "parameters": "visible (bool), timeout (Timeout)"
+      },
+      {
+        "name": "expect_title",
+        "description": "Expects the plot title to have the specified text.",
+        "parameters": "value (PatternOrStr), timeout (Timeout)"
+      }
+    ]
+  },
+  {
+    "controller_name": "playwright.controller.Slider",
+    "methods": [
+      {
+        "name": "expect_value",
+        "description": "Expects the slider to have the specified value.",
+        "parameters": "value (Union\\[float, int\\]), timeout (Timeout)"
+      }
+    ]
+  },
+  {
+    "controller_name": "playwright.controller.Switch",
+    "methods": [
+      {
+        "name": "expect_value",
+        "description": "Expects the switch to be on or off.",
+        "parameters": "value (bool), timeout (Timeout)"
+      }
+    ]
+  },
+  {
+    "controller_name": "playwright.controller.Tab",
+    "methods": [
+      {
+        "name": "expect_active",
+        "description": "Expects the tab to be active.",
+        "parameters": "value (bool), timeout (Timeout)"
+      },
+      {
+        "name": "expect_label",
+        "description": "Expects the tab to have the specified label.",
+        "parameters": "value (PatternOrStr), timeout (Timeout)"
+      },
+      {
+        "name": "expect_panel",
+        "description": "Expects the tab panel to have the specified content.",
+        "parameters": "value (PatternOrStr), timeout (Timeout)"
+      }
+    ]
+  },
+  {
+    "controller_name": "playwright.controller.TextArea",
+    "methods": [
+      {
+        "name": "expect_value",
+        "description": "Expects the text area to have the specified value.",
+        "parameters": "value (str), timeout (Timeout)"
+      }
+    ]
+  },
+  {
+    "controller_name": "playwright.controller.TextInput",
+    "methods": [
+      {
+        "name": "expect_value",
+        "description": "Expects the text input to have the specified value.",
+        "parameters": "value (str), timeout (Timeout)"
+      }
+    ]
+  },
+  {
+    "controller_name": "playwright.controller.UploadButton",
+    "methods": [
+      {
+        "name": "click",
+        "description": "Clicks the upload button.",
+        "parameters": "timeout (Timeout)"
+      },
+      {
+        "name": "expect_icon",
+        "description": "Expect the icon of the upload button to have a specific value.",
+        "parameters": "value (PatternOrStr), timeout (Timeout)"
+      },
+      {
+        "name": "expect_label",
+        "description": "Expect the label of the upload button to have a specific value.",
+        "parameters": "value (PatternOrStr), timeout
