@@ -45,7 +45,7 @@ def input_date(
     value
         The starting date. Either a :class:`~datetime.date` object, or a string in
         `yyyy-mm-dd` format. If None (the default), will use the current date in the
-        client's time zone.
+        client's time zone. If an empty string is passed, the date picker will be blank.
     min
         The minimum allowed date. Either a :class:`~datetime.date` object, or a string in
         yyyy-mm-dd format.
@@ -307,6 +307,9 @@ def _date_input_tag(
 def _as_date_attr(x: Optional[date | str]) -> Optional[str]:
     if x is None:
         return None
-    if isinstance(x, date):
-        return str(x)
-    return str(date.fromisoformat(x))
+    if isinstance(x, str):
+        if len(x) == 0:
+            return x
+        x = date.fromisoformat(x)
+    # Ensure we return a date (not datetime) string
+    return x.strftime("%Y-%m-%d")
