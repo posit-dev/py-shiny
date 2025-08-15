@@ -25,14 +25,14 @@ class Config:
         "haiku3.5": "claude-3-5-haiku-20241022",
         "sonnet": "claude-sonnet-4-20250514",
         # OpenAI models
-        "gpt-4.1": "gpt-4.1-2025-04-14",
-        "o3-mini": "o3-mini-2025-01-31",
+        "gpt-5": "gpt-5-2025-08-07",
+        "gpt-5-mini": "gpt-5-mini-2025-08-07",
         "o4-mini": "o4-mini-2025-04-16",
-        "gpt-4.1-nano": "gpt-4.1-nano-2025-04-14",
+        "gpt-5-nano": "gpt-5-nano-2025-08-07",
     }
 
     DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-4-20250514"
-    DEFAULT_OPENAI_MODEL = "gpt-4.1-nano"
+    DEFAULT_OPENAI_MODEL = "gpt-5-mini-2025-08-07"
     DEFAULT_PROVIDER = "anthropic"
 
     MAX_TOKENS = 8092

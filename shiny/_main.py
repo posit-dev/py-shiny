@@ -562,7 +562,7 @@ After creating the test file, you can use `pytest` to run the tests:
 @click.option(
     "--model",
     type=str,
-    help="Specific model to use (optional). Examples: haiku3.5, sonnet, gpt-4.1, o3-mini",
+    help="Specific model to use (optional). Examples: haiku3.5, sonnet, gpt-5-nano, gpt-5",
 )
 # Param for app.py, param for test_name
 def test(
