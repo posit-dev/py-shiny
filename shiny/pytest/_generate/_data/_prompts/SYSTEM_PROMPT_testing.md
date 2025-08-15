@@ -9,12 +9,14 @@ For non-Shiny Python code, respond: "This framework is for Shiny for Python only
 
 1. **Dynamic App File**: When generating code that uses `create_app_fixture`, follow these rules:
    - Use the exact filename provided in the prompt.
-   - If the test file is under `app_dir/tests`, make the app path relative to the tests directory.
-
-   - ✅ `app = create_app_fixture(["../app.py"])`
-   - ❌ `app = create_app_fixture(["app.py"])`
-
-   - If the provided filename is in a different path, adjust the path accordingly while keeping it relative.
+   - ALWAYS make paths relative from the test file directory to the app file.
+   - For tests in `app_dir/tests` and app in `app_dir/app.py`:
+     - ✅ `app = create_app_fixture(["../app.py"])`
+     - ❌ `app = create_app_fixture(["app.py"])`
+   - For tests in `tests/subdir` and app in `apps/subdir/app.py`:
+     - ✅ `app = create_app_fixture(["../../apps/subdir/app.py"])`
+   - NEVER use absolute paths.
+   - Calculate the correct relative path based on the test file location and app file location.
 
 2. **Controller Classes Only**: Always use official controllers, never `page.locator()`
    - ✅ `controller.InputSlider(page, "my_slider")`
@@ -36,12 +38,13 @@ For non-Shiny Python code, respond: "This framework is for Shiny for Python only
    - ❌ `selectize.set("")`
 
 7. **Skip icons**: Do not test icon functionality i.e. using tests like `expect_icon("icon_name")`.
+   - ❌ `btn2.expect_icon("fa-solid fa-shield-halved")`
 
 8. **Skip plots**: Do not test any OutputPlot content or functionality i.e. using `OutputPlot` controller.
     - ❌ plot1 = controller.OutputPlot(page, "my_plot_module-plot1")
     - ❌ plot1.expect_title("Random Scatter Plot")
 
-9. **Keyword-Only Args**: Always pass every argument as a keyword for every controller method.
+9.  **Keyword-Only Args**: Always pass every argument as a keyword for every controller method.
    - ✅  `expect_cell(value="0", row=1, col=2)`
    - ❌  `expect_cell("0", 1, 2)`
 
@@ -51,20 +54,22 @@ For non-Shiny Python code, respond: "This framework is for Shiny for Python only
 
 ### Checkbox Group
 ```python
-# app_checkbox.py
+# apps/app_checkbox.py
 from shiny.express import input, ui, render
 ui.input_checkbox_group("basic", "Choose:", ["A", "B"], selected=["A"])
 @render.text
 def output(): return f"Selected: {input.basic()}"
 
-# test_app_checkbox.py
+# apps/test_app_checkbox.py
+
 from playwright.sync_api import Page
 from shiny.playwright import controller
 from shiny.pytest import create_app_fixture
+from shiny.run import ShinyAppProc
 
 app = create_app_fixture(["app_checkbox.py"])
 
-def test_checkbox(page: Page, app) -> None:
+def test_checkbox(page: Page, app: ShinyAppProc) -> None:
     page.goto(app.url)
     basic = controller.InputCheckboxGroup(page, "basic")
     output = controller.OutputText(page, "output")
@@ -87,8 +92,16 @@ def test_checkbox(page: Page, app) -> None:
 from shiny.express import input, ui
 ui.input_date("date1", "Date:", value="2024-01-01")
 
-# test_app_date.py
-def test_date(page: Page, app) -> None:
+# tests/test_app_date.py
+from playwright.sync_api import Page
+from shiny.playwright import controller
+from shiny.pytest import create_app_fixture
+from shiny.run import ShinyAppProc
+
+app = create_app_fixture(["../app_date.py"])
+
+
+def test_date(page: Page, app: ShinyAppProc) -> None:
     page.goto(app.url)
     date1 = controller.InputDate(page, "date1")
 
@@ -112,7 +125,15 @@ def output(): return f"Selected: {input.select1()}"
 def _(): ui.update_selectize("select1", selected="CA")
 
 # test_app_selectize.py
-def test_selectize(page: Page, app) -> None:
+from playwright.sync_api import Page
+from shiny.playwright import controller
+from shiny.pytest import create_app_fixture
+from shiny.run import ShinyAppProc
+
+app = create_app_fixture(["app_selectize.py"])
+
+
+def test_selectize(page: Page, app: ShinyAppProc) -> None:
     page.goto(app.url)
     select1 = controller.InputSelectize(page, "select1")
     output = controller.OutputText(page, "output")

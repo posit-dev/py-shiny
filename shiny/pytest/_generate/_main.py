@@ -218,7 +218,12 @@ class ShinyTestGenerator:
         self, app_file_path: Path, test_file_path: Path
     ) -> str:
         """Compute POSIX-style relative path from the test file directory to the app file."""
-        rel = os.path.relpath(str(app_file_path), start=str(test_file_path.parent))
+        # Make sure both paths are absolute
+        app_file_abs = app_file_path.resolve()
+        test_file_abs = test_file_path.resolve()
+
+        # Compute relative path from test file directory to app file
+        rel = os.path.relpath(str(app_file_abs), start=str(test_file_abs.parent))
         return Path(rel).as_posix()
 
     def _rewrite_fixture_path(self, test_code: str, relative_app_path: str) -> str:
@@ -229,27 +234,70 @@ class ShinyTestGenerator:
         - create_app_fixture("app.py") -> create_app_fixture("../app.py")
         Keeps other arguments intact if present.
         """
+        logging.debug(f"Rewriting fixture path to: {relative_app_path}")
+
+        # First check if create_app_fixture exists in the code
+        if "create_app_fixture" not in test_code:
+            logging.warning("No create_app_fixture found in generated test code")
+            return test_code
+
         # Pattern for list form: create_app_fixture(["app.py"]) or with spaces
         pattern_list = re.compile(
-            r"(create_app_fixture\(\s*\[\s*)(['\"])([^'\"]+)(\\2)(\\s*)([,\\]])",
+            r"(create_app_fixture\(\s*\[\s*)(['\"])([^'\"]+)(\\2)(\\s*)([,\]])",
             re.DOTALL,
         )
 
         def repl_list(m: re.Match) -> str:
+            logging.debug(
+                f"Replacing list form: '{m.group(3)}' with '{relative_app_path}'"
+            )
             return f"{m.group(1)}{m.group(2)}{relative_app_path}{m.group(2)}{m.group(5)}{m.group(6)}"
 
-        new_code, _ = pattern_list.subn(repl_list, test_code)
+        new_code, list_count = pattern_list.subn(repl_list, test_code)
+
+        if list_count > 0:
+            logging.debug(f"Replaced {list_count} list-form fixture path(s)")
 
         # Pattern for direct string form: create_app_fixture("app.py")
         pattern_str = re.compile(
-            r"(create_app_fixture\(\s*)(['\"])([^'\"]+)(\\2)(\\s*)([,\\)])",
+            r"(create_app_fixture\(\s*)(['\"])([^'\"]+)(\\2)(\\s*)([,\)])",
             re.DOTALL,
         )
 
         def repl_str(m: re.Match) -> str:
+            logging.debug(
+                f"Replacing string form: '{m.group(3)}' with '{relative_app_path}'"
+            )
             return f"{m.group(1)}{m.group(2)}{relative_app_path}{m.group(2)}{m.group(5)}{m.group(6)}"
 
-        new_code2, _ = pattern_str.subn(repl_str, new_code)
+        new_code2, str_count = pattern_str.subn(repl_str, new_code)
+
+        if str_count > 0:
+            logging.debug(f"Replaced {str_count} string-form fixture path(s)")
+
+        # If no replacements were made, there might be a pattern we're not catching
+        if list_count == 0 and str_count == 0:
+            logging.warning(
+                f"Found create_app_fixture but couldn't replace path. Code snippet: {test_code[:200]}..."
+            )
+
+            # Fallback regex with more generous pattern matching
+            fallback_pattern = re.compile(
+                r"(create_app_fixture\([^\)]*?['\"])([^'\"]+)(['\"][^\)]*?\))",
+                re.DOTALL,
+            )
+
+            def fallback_repl(m: re.Match) -> str:
+                logging.debug(
+                    f"Fallback replacement: '{m.group(2)}' with '{relative_app_path}'"
+                )
+                return f"{m.group(1)}{relative_app_path}{m.group(3)}"
+
+            new_code2, fallback_count = fallback_pattern.subn(fallback_repl, new_code)
+
+            if fallback_count > 0:
+                logging.debug(f"Fallback replaced {fallback_count} fixture path(s)")
+
         return new_code2
 
     def _create_test_prompt(self, app_text: str, app_file_name: str) -> str:
@@ -259,11 +307,13 @@ class ShinyTestGenerator:
             "Please only add controllers for components that already have an ID in the shiny app.\n"
             "Do not add tests for ones that do not have an existing ids since controllers need IDs to locate elements.\n"
             "and server functionality of this app. Include appropriate assertions \\n"
-            "and test cases to verify the app's behavior.\n"
-            "IMPORTANT: In the create_app_fixture call, pass a RELATIVE path from the test file's directory to the app file.\n"
-            "For example, if the test lives under a 'tests/' subfolder next to the app file, use '../"
-            + app_file_name
-            + "'. Do not use absolute paths.\n"
+            "and test cases to verify the app's behavior.\n\n"
+            "CRITICAL: In the create_app_fixture call, you MUST pass a RELATIVE path from the test file's directory to the app file.\n"
+            "For example:\n"
+            "- If test is in 'tests/test_app.py' and app is in 'app.py', use: '../app.py'\n"
+            "- If test is in 'tests/subdir/test_app.py' and app is in 'apps/subdir/app.py', use: '../../apps/subdir/app.py'\n"
+            "- Always compute the correct relative path from the test file to the app file\n"
+            "- NEVER use absolute paths or paths that aren't relative from the test location\n\n"
             "IMPORTANT: Only output the Python test code in a single code block. Do not include any explanation, justification, or extra text."
         )
 
@@ -271,7 +321,8 @@ class ShinyTestGenerator:
         self, app_code: Optional[str] = None, app_file_path: Optional[str] = None
     ) -> Path:
         if app_file_path:
-            return Path(app_file_path)
+            # Return absolute path to avoid any ambiguity
+            return Path(app_file_path).resolve()
 
         current_dir = Path.cwd()
 
@@ -280,10 +331,12 @@ class ShinyTestGenerator:
             found_files.extend(current_dir.glob(pattern))
 
         if found_files:
-            return found_files[0]
+            # Return absolute path of found file
+            return found_files[0].resolve()
 
         if app_code:
-            return Path("inferred_app.py")
+            # For inferred app paths, use absolute path in current directory
+            return Path("inferred_app.py").resolve()
 
         raise FileNotFoundError(
             "Could not infer app file path. Please provide app_file_path parameter."
@@ -294,7 +347,8 @@ class ShinyTestGenerator:
     ) -> Path:
         output_dir = output_dir or app_file_path.parent
         test_file_name = f"test_{app_file_path.stem}.py"
-        return output_dir / test_file_name
+        # Return absolute path for test file
+        return (output_dir / test_file_name).resolve()
 
     def generate_test(
         self,
@@ -328,12 +382,41 @@ class ShinyTestGenerator:
             )
 
         try:
+            # Log the paths for debugging
+            logging.info(f"App file path: {inferred_app_path}")
+            logging.info(f"Test file path: {test_file_path}")
+
             relative_app_path = self._compute_relative_app_path(
                 inferred_app_path, test_file_path
             )
+
+            logging.info(f"Computed relative path: {relative_app_path}")
+
+            # Explicitly check for app.py - this is a common problematic case
+            if relative_app_path == "app.py" and "../" not in relative_app_path:
+                logging.warning(
+                    f"Detected possibly incorrect relative path: {relative_app_path}"
+                )
+                # Force a proper relative path if needed
+                if test_file_path.parent != inferred_app_path.parent:
+                    logging.info(
+                        "Test and app are in different directories, adjusting relative path"
+                    )
+                    relative_app_path = f"../{relative_app_path}"
+                    logging.info(f"Adjusted relative path: {relative_app_path}")
+
             test_code = self._rewrite_fixture_path(test_code, relative_app_path)
-        except Exception:
-            pass
+        except Exception as e:
+            logging.error(f"Error computing relative path: {e}")
+            # Don't silently ignore - use the best path we can
+            try:
+                # Fallback: just use the absolute path as string if we can't compute relative
+                logging.warning("Falling back to using absolute path in test file")
+                test_code = self._rewrite_fixture_path(
+                    test_code, str(inferred_app_path.resolve())
+                )
+            except Exception as e2:
+                logging.error(f"Error in fallback path handling: {e2}")
 
         test_file_path.parent.mkdir(parents=True, exist_ok=True)
         test_file_path.write_text(test_code, encoding="utf-8")
