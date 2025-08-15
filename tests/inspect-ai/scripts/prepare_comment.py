@@ -2,9 +2,10 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from typing import Union
 
 
-def prepare_comment(summary_path: str | Path) -> int:
+def prepare_comment(summary_path: Union[str, Path]) -> int:
     """
     Reads summary.json and creates a formatted comment for GitHub PR.
 
