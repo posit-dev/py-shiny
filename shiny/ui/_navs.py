@@ -131,7 +131,7 @@ def nav_panel(
     value
         The value of the item. Use this value to determine whether the item is active
         (when an ``id`` is provided to the nav container) or to programmatically
-        select the item (e.g., :func:`~shiny.ui.update_navs`). You can also
+        select the item (e.g., :func:`~shiny.ui.update_navset`). You can also
         provide the value to the ``selected`` argument of the navigation container
         (e.g., :func:`~shiny.ui.navset_tab`).
     icon
@@ -334,7 +334,7 @@ def nav_menu(
     value
         The value of the item. Use this value to determine whether the item is active
         (when an ``id`` is provided to the nav container) or to programmatically
-        select the item (e.g., :func:`~shiny.ui.update_navs`). You can also
+        select the item (e.g., :func:`~shiny.ui.update_navset`). You can also
         provide the value to the ``selected`` argument of the navigation container
         (e.g., :func:`~shiny.ui.navset_tab`).
     icon
