@@ -652,10 +652,10 @@ class NavSetCard(NavSet):
         selected: Optional[str],
         title: Optional[TagChild] = None,
         sidebar: Optional[Sidebar] = None,
-        full_screen: bool = False,
         header: TagChild = None,
         footer: TagChild = None,
         placement: Literal["above", "below"] = "above",
+        full_screen: bool = False,
     ) -> None:
         super().__init__(
             *args,
@@ -778,8 +778,8 @@ def navset_card_pill(
     sidebar: Optional[Sidebar] = None,
     header: TagChild = None,
     footer: TagChild = None,
-    full_screen: bool = False,
     placement: Literal["above", "below"] = "above",
+    full_screen: bool = False,
 ) -> NavSetCard:
     """
     Render nav items as a pillset inside a card container.
@@ -800,11 +800,11 @@ def navset_card_pill(
         UI to display above the selected content.
     footer
         UI to display below the selected content.
+    placement
+        Placement of the nav items relative to the content.
     full_screen
         If `True`, an icon will appear when hovering over the card body. Clicking the
         icon expands the card to fit viewport size.
-    placement
-        Placement of the nav items relative to the content.
 
     See Also
     --------
@@ -834,8 +834,8 @@ def navset_card_pill(
         sidebar=sidebar,
         header=header,
         footer=footer,
-        full_screen=full_screen,
         placement=placement,
+        full_screen=full_screen,
     )
 
 
@@ -848,8 +848,8 @@ def navset_card_underline(
     sidebar: Optional[Sidebar] = None,
     header: TagChild = None,
     footer: TagChild = None,
-    full_screen: bool = False,
     placement: Literal["above", "below"] = "above",
+    full_screen: bool = False,
 ) -> NavSetCard:
     """
     Render nav items inside a card container. Active/focused navigation links are styled with an underline.
@@ -870,11 +870,11 @@ def navset_card_underline(
         UI to display above the selected content.
     footer
         UI to display below the selected content.
+    placement
+        Placement of the nav items relative to the content.
     full_screen
         If `True`, an icon will appear when hovering over the card body. Clicking the
         icon expands the card to fit viewport size.
-    placement
-        Placement of the nav items relative to the content.
 
     See Also
     --------
@@ -904,8 +904,8 @@ def navset_card_underline(
         sidebar=sidebar,
         header=header,
         footer=footer,
-        full_screen=full_screen,
         placement=placement,
+        full_screen=full_screen,
     )
 
 
