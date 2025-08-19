@@ -652,6 +652,7 @@ class NavSetCard(NavSet):
         selected: Optional[str],
         title: Optional[TagChild] = None,
         sidebar: Optional[Sidebar] = None,
+        full_screen: bool = False,
         header: TagChild = None,
         footer: TagChild = None,
         placement: Literal["above", "below"] = "above",
@@ -667,6 +668,7 @@ class NavSetCard(NavSet):
         self.title = title
         self.sidebar = sidebar
         self.placement = placement
+        self.full_screen = full_screen
 
     def layout(self, nav: Tag, content: Tag) -> Tag:
         content = _make_tabs_fillable(content, fillable=True, gap=0, padding=0)
@@ -696,6 +698,7 @@ class NavSetCard(NavSet):
             card_header(*nav_items) if self.placement == "above" else None,
             *contents,
             card_footer(*nav_items) if self.placement == "below" else None,
+            full_screen=self.full_screen,
         )
 
 
@@ -708,6 +711,7 @@ def navset_card_tab(
     sidebar: Optional[Sidebar] = None,
     header: TagChild = None,
     footer: TagChild = None,
+    full_screen: bool = False,
 ) -> NavSetCard:
     """
     Render nav items as a tabset inside a card container.
@@ -728,6 +732,9 @@ def navset_card_tab(
         UI to display above the selected content.
     footer
         UI to display below the selected content.
+    full_screen
+        If `True`, an icon will appear when hovering over the card body. Clicking the
+        icon expands the card to fit viewport size.
 
     See Also
     --------
@@ -757,6 +764,7 @@ def navset_card_tab(
         sidebar=sidebar,
         header=header,
         footer=footer,
+        full_screen=full_screen,
         placement="above",
     )
 
@@ -770,6 +778,7 @@ def navset_card_pill(
     sidebar: Optional[Sidebar] = None,
     header: TagChild = None,
     footer: TagChild = None,
+    full_screen: bool = False,
     placement: Literal["above", "below"] = "above",
 ) -> NavSetCard:
     """
@@ -791,6 +800,9 @@ def navset_card_pill(
         UI to display above the selected content.
     footer
         UI to display below the selected content.
+    full_screen
+        If `True`, an icon will appear when hovering over the card body. Clicking the
+        icon expands the card to fit viewport size.
     placement
         Placement of the nav items relative to the content.
 
@@ -822,6 +834,7 @@ def navset_card_pill(
         sidebar=sidebar,
         header=header,
         footer=footer,
+        full_screen=full_screen,
         placement=placement,
     )
 
@@ -835,6 +848,7 @@ def navset_card_underline(
     sidebar: Optional[Sidebar] = None,
     header: TagChild = None,
     footer: TagChild = None,
+    full_screen: bool = False,
     placement: Literal["above", "below"] = "above",
 ) -> NavSetCard:
     """
@@ -856,6 +870,9 @@ def navset_card_underline(
         UI to display above the selected content.
     footer
         UI to display below the selected content.
+    full_screen
+        If `True`, an icon will appear when hovering over the card body. Clicking the
+        icon expands the card to fit viewport size.
     placement
         Placement of the nav items relative to the content.
 
@@ -887,6 +904,7 @@ def navset_card_underline(
         sidebar=sidebar,
         header=header,
         footer=footer,
+        full_screen=full_screen,
         placement=placement,
     )
 
