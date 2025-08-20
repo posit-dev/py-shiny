@@ -251,8 +251,6 @@ def _input_select_impl(
     if options is not None and selectize is False:
         raise Exception("Options can only be set when selectize is `True`.")
 
-    remove_button = _resolve_remove_button(remove_button, multiple)
-
     resolved_id = resolve_id(id)
 
     choices_ = _normalize_choices(choices)
@@ -264,7 +262,8 @@ def _input_select_impl(
     if options is None:
         options = {}
 
-    opts = _update_options(options, remove_button, multiple)
+    plugins = _get_default_plugins(remove_button, multiple, choices_)
+    options = _add_default_plugins(options, plugins)
 
     choices_tags = _render_choices(choices_, selected)
 
@@ -282,10 +281,10 @@ def _input_select_impl(
             (
                 TagList(
                     tags.script(
-                        dumps(opts),
+                        dumps(options),
                         type="application/json",
                         data_for=resolved_id,
-                        data_eval=dumps(extract_js_keys(opts)),
+                        data_eval=dumps(extract_js_keys(options)),
                     ),
                     selectize_deps(),
                 )
@@ -298,34 +297,35 @@ def _input_select_impl(
     )
 
 
-def _resolve_remove_button(remove_button: Optional[bool], multiple: bool) -> bool:
+def _get_default_plugins(
+    remove_button: bool | None,
+    multiple: bool,
+    choices_: _SelectChoices,
+) -> tuple[str, ...]:
+    if remove_button:
+        # remove_button: remove _each_ item when multiple=True
+        # clear_button: clear _all_ items when multiple=True
+        return ("remove_button", "clear_button")
+
     if remove_button is None:
         if multiple:
-            return True
-        else:
-            return False
-    return remove_button
+            return ("remove_button", "clear_button")
+        if "" in choices_:
+            # Only show clear button if there is an empty choice
+            return ("clear_button",)
+
+    return ()
 
 
-def _update_options(
-    options: dict[str, Any], remove_button: bool, multiple: bool
+def _add_default_plugins(
+    options: dict[str, Any], default_plugins: tuple[str, ...]
 ) -> dict[str, Any]:
     opts = copy.deepcopy(options)
-    plugins = opts.get("plugins", [])
-
-    if remove_button:
-        if multiple:
-            to_add = "remove_button"
-        else:
-            to_add = "clear_button"
-
-        if to_add not in plugins:
-            plugins.append(to_add)
-
-    if not plugins:
-        return options
-
-    opts["plugins"] = plugins
+    p: list[str] = opts.get("plugins", [])
+    if not isinstance(p, list):
+        raise TypeError("`options['plugins']` must be a list.")
+    p.extend(default_plugins)
+    opts["plugins"] = p
     return opts
 
 
