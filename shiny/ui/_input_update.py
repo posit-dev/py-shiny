@@ -36,7 +36,12 @@ from ..session import require_active_session, session_context
 from ..types import ActionButtonValue
 from ._input_check_radio import ChoicesArg, _generate_options
 from ._input_date import _as_date_attr
-from ._input_select import SelectChoicesArg, _normalize_choices, _render_choices
+from ._input_select import (
+    SelectChoicesArg,
+    _normalize_choices,
+    _render_choices,
+    _add_default_plugin,
+)
 from ._input_slider import SliderStepArg, SliderValueArg, _as_numeric, _slider_type
 from ._utils import JSEval, _session_on_flush_send_msg, extract_js_keys
 
@@ -761,6 +766,8 @@ def update_selectize(
     session = require_active_session(session)
 
     if options is not None:
+        options = _add_default_plugin(options, "remove_button")
+
         cfg = tags.script(
             json.dumps(options),
             type="application/json",

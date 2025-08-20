@@ -251,8 +251,6 @@ def _input_select_impl(
     if options is not None and selectize is False:
         raise Exception("Options can only be set when selectize is `True`.")
 
-    remove_button = _resolve_remove_button(remove_button, multiple)
-
     resolved_id = resolve_id(id)
 
     choices_ = _normalize_choices(choices)
@@ -264,7 +262,12 @@ def _input_select_impl(
     if options is None:
         options = {}
 
-    opts = _update_options(options, remove_button, multiple)
+    if remove_button is None:
+        remove_button = multiple
+
+    if remove_button:
+        plugin = "remove_button" if multiple else "clear_button"
+        options = _add_default_plugin(options, plugin)
 
     choices_tags = _render_choices(choices_, selected)
 
@@ -282,10 +285,10 @@ def _input_select_impl(
             (
                 TagList(
                     tags.script(
-                        dumps(opts),
+                        dumps(options),
                         type="application/json",
                         data_for=resolved_id,
-                        data_eval=dumps(extract_js_keys(opts)),
+                        data_eval=dumps(extract_js_keys(options)),
                     ),
                     selectize_deps(),
                 )
@@ -298,35 +301,15 @@ def _input_select_impl(
     )
 
 
-def _resolve_remove_button(remove_button: Optional[bool], multiple: bool) -> bool:
-    if remove_button is None:
-        if multiple:
-            return True
-        else:
-            return False
-    return remove_button
-
-
-def _update_options(
-    options: dict[str, Any], remove_button: bool, multiple: bool
-) -> dict[str, Any]:
-    opts = copy.deepcopy(options)
-    plugins = opts.get("plugins", [])
-
-    if remove_button:
-        if multiple:
-            to_add = "remove_button"
-        else:
-            to_add = "clear_button"
-
-        if to_add not in plugins:
-            plugins.append(to_add)
-
-    if not plugins:
-        return options
-
-    opts["plugins"] = plugins
-    return opts
+def _add_default_plugin(options: dict[str, Any], plugin: str) -> dict[str, Any]:
+    options = copy.deepcopy(options)
+    plugins: list[str] = options.get("plugins", [])
+    if not isinstance(plugins, list):
+        raise TypeError("`options['plugins']` must be a list.")
+    if plugin not in plugins:
+        plugins.append(plugin)
+    options["plugins"] = plugins
+    return options
 
 
 def _normalize_choices(x: SelectChoicesArg) -> _SelectChoices:
