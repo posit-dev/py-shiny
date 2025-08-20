@@ -151,7 +151,7 @@ def test_selectize(page: Page, app: ShinyAppProc) -> None:
     output.expect_value("Selected: CA")
 ```
 
-### Navset menu
+### Navset Card Pill Navigation
 ```python
 # app_express.py
 from shiny.express import input, render, ui
