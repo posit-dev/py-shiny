@@ -48,12 +48,6 @@ output_transformer_errors = [
     "shiny.render.transformer.output_transformer()",
 ]
 
-nav_panel_errors = [
-    "ShinyDeprecationWarning:",
-    "ShinyDeprecationWarning: `ShinyDeprecationWarning: `shiny.ui.update_navs()` has been superseded by `shiny.ui.update_navset()` and will be removed in the near future.",
-    '  ui.update_navs("inTabset", selected="panel2" if c_num % 2 else "panel1")',
-    '  ui.update_navs("inTabset", selected="panel" + str(input.controller()))',
-]
 express_warnings = ["Detected Shiny Express app. "]
 app_allow_shiny_errors: typing.Dict[
     str, typing.Union[Literal[True], typing.List[str]]
@@ -75,7 +69,6 @@ app_allow_shiny_errors: typing.Dict[
     "examples/brownian": [*output_transformer_errors],
     "examples/model-score": [*output_transformer_errors],
     "deploys/plotly": [*output_transformer_errors],
-    "api-examples/update_navs": [*nav_panel_errors],
 }
 app_allow_external_errors: typing.List[str] = [
     # TODO-garrick-future: Remove after fixing sidebar max_height_mobile warning
@@ -243,9 +236,8 @@ def validate_example(page: Page, ex_app_path: str) -> None:
                 print("\nshort_app_path: " + short_app_path)
                 print("\napp_allowable_errors :")
                 print("\n".join(app_allowable_errors))
-                print("\nError lines remaining:")
-                print("\n".join(error_lines))
-                print("Error lines: ", error_lines)
+                # The below can be used to get the exact lines needed to update the `app_allow_*_errors()` objects above
+                print("Unignored remaining lines in raw format: ", error_lines)
             assert len(error_lines) == 0
 
         # Check for JavaScript errors
