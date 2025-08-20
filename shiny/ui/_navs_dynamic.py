@@ -151,7 +151,7 @@ def update_nav_panel(
     @reactive.event(input.show_tab)
     def _():
         ui.update_nav_panel("tabset_id", target="Foo", method="show")
-        ui.update_navs("tabset_id", selected="Foo")
+        ui.update_navset("tabset_id", selected="Foo")
     ```
 
     See Also
