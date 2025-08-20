@@ -150,3 +150,58 @@ def test_selectize(page: Page, app: ShinyAppProc) -> None:
     select1.expect_selected(["CA"])
     output.expect_value("Selected: CA")
 ```
+
+### Navset menu
+```python
+# app_express.py
+from shiny.express import input, render, ui
+
+with ui.navset_card_pill(id="selected_navset_card_pill"):
+    with ui.nav_panel("A"):
+        "Panel A content"
+
+    with ui.nav_panel("B"):
+        "Panel B content"
+
+    with ui.nav_panel("C"):
+        "Panel C content"
+
+ui.h5("Selected:")
+
+
+@render.text
+def _():
+    return input.selected_navset_card_pill()
+
+# test_app_express.py
+from playwright.sync_api import Page
+from shiny.playwright import controller
+from shiny.pytest import create_app_fixture
+from shiny.run import ShinyAppProc
+
+app = create_app_fixture(["app-express.py"])
+
+
+def test_navset_card_pill(page: Page, app: ShinyAppProc) -> None:
+    page.goto(app.url)
+    navset = controller.NavsetCardPill(page, "selected_navset_card_pill")
+    output_text = controller.OutputText(page, "_")
+
+    # Assert initial state - first panel should be active
+    navset.expect_value("A")
+    output_text.expect_value("A")
+
+    # Act - navigate to panel B
+    navset.set("B")
+
+    # Assert final state
+    navset.expect_value("B")
+    output_text.expect_value("B")
+
+    # Act - navigate to panel C
+    navset.set("C")
+
+    # Assert final state
+    navset.expect_value("C")
+    output_text.expect_value("C")
+```
