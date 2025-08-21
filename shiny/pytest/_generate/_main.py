@@ -344,8 +344,6 @@ class ShinyTestGenerator:
             "- If test is in 'tests/subdir/test_app.py' and app is in 'apps/subdir/app.py', use: '../../apps/subdir/app.py'\n"
             "- Always compute the correct relative path from the test file to the app file\n"
             "- NEVER use absolute paths or paths that aren't relative from the test location\n\n"
-            "CRITICAL: Generate only ONE comprehensive test function (e.g., 'test_app_functionality') that tests ALL components sequentially within the same test. "
-            "Do NOT create multiple separate test functions. Exercise all inputs and outputs in a single test flow.\n\n"
             "IMPORTANT: Only output the Python test code in a single code block. Do not include any explanation, justification, or extra text."
         )
 
