@@ -7,9 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### Breaking changes
+
+* The `ui.Chat` and `ui.MarkdownStream` components are now imported from the new `shinychat` library. Future versions of `shinychat` will likely deprecate and remove some features from `Chat`. If you still want to use those features with the latest Shiny, we suggest pinning `shinychat` to it's initial release (v0.1.0). (#2051)
+
 ### New features
 
 * Added AI-powered test generator for Shiny applications. Use `shiny add test` to automatically generate comprehensive Playwright tests for your apps using AI models from Anthropic or OpenAI. (#2041)
+
+* `navset_card_*()` now has a `full_screen` option to support `card()`'s existing full-screen functionality. (#1451)
 
 * Added `ui.insert_nav_panel()`, `ui.remove_nav_panel()`, and `ui.update_nav_panel()` to support dynamic navigation. (#90)
 
@@ -28,6 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * `express.ui.insert_accordion_panel()`'s function signature has changed to be more ergonomic. Now you can pass the `panel_title` and `panel_contents` directly instead of `ui.hold()`ing the `ui.accordion_panel()` context manager. (#2042)
 
 ### Improvements
+
+* `input_date()`, `input_date_range()`, `update_date()`, and `update_date_range()` now supports `""` for values, mins, and maxes. In this case, no date will be specified on the client. (#1713) (#1689)
 
 * Restricted the allowable types of the `choices` parameter of `input_select()`, `input_selectize()`, `update_select()`, and `update_selectize()` to actual set of allowable types (previously, the type was suggesting HTML-like values were supported). (#2048)
 
@@ -54,6 +62,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Explicitly call out module usage in UI input bookmark button documentation. (#1983)
 
 * Fix missing session when trying to display an error duing bookmarking. (#1984)
+
+* `input_date()` and `input_date_range()` once again use the client's (not the server) current date as the default `value`. (#2060)
 
 * Fixed `set()` method of `InputSelectize` controller so it clears existing selections before applying new values. (#2024)
 

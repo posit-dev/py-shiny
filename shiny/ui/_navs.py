@@ -652,6 +652,7 @@ class NavSetCard(NavSet):
         selected: Optional[str],
         title: Optional[TagChild] = None,
         sidebar: Optional[Sidebar] = None,
+        full_screen: bool = False,
         header: TagChild = None,
         footer: TagChild = None,
         placement: Literal["above", "below"] = "above",
@@ -666,6 +667,7 @@ class NavSetCard(NavSet):
         )
         self.title = title
         self.sidebar = sidebar
+        self.full_screen = full_screen
         self.placement = placement
 
     def layout(self, nav: Tag, content: Tag) -> Tag:
@@ -696,6 +698,7 @@ class NavSetCard(NavSet):
             card_header(*nav_items) if self.placement == "above" else None,
             *contents,
             card_footer(*nav_items) if self.placement == "below" else None,
+            full_screen=self.full_screen,
         )
 
 
@@ -706,6 +709,7 @@ def navset_card_tab(
     selected: Optional[str] = None,
     title: Optional[TagChild] = None,
     sidebar: Optional[Sidebar] = None,
+    full_screen: bool = False,
     header: TagChild = None,
     footer: TagChild = None,
 ) -> NavSetCard:
@@ -724,6 +728,9 @@ def navset_card_tab(
         ``value``).
     sidebar
         A `Sidebar` component to display on every `nav()` page.
+    full_screen
+        If `True`, an icon will appear when hovering over the card body. Clicking the
+        icon expands the card to fit viewport size.
     header
         UI to display above the selected content.
     footer
@@ -755,6 +762,7 @@ def navset_card_tab(
         selected=selected,
         title=title,
         sidebar=sidebar,
+        full_screen=full_screen,
         header=header,
         footer=footer,
         placement="above",
@@ -768,6 +776,7 @@ def navset_card_pill(
     selected: Optional[str] = None,
     title: Optional[TagChild] = None,
     sidebar: Optional[Sidebar] = None,
+    full_screen: bool = False,
     header: TagChild = None,
     footer: TagChild = None,
     placement: Literal["above", "below"] = "above",
@@ -787,6 +796,9 @@ def navset_card_pill(
         ``value``).
     sidebar
         A :class:`shiny.ui.Sidebar` component to display on every :func:`~shiny.ui.nav_panel` page.
+    full_screen
+        If `True`, an icon will appear when hovering over the card body. Clicking the
+        icon expands the card to fit viewport size.
     header
         UI to display above the selected content.
     footer
@@ -820,6 +832,7 @@ def navset_card_pill(
         selected=selected,
         title=title,
         sidebar=sidebar,
+        full_screen=full_screen,
         header=header,
         footer=footer,
         placement=placement,
@@ -833,6 +846,7 @@ def navset_card_underline(
     selected: Optional[str] = None,
     title: Optional[TagChild] = None,
     sidebar: Optional[Sidebar] = None,
+    full_screen: bool = False,
     header: TagChild = None,
     footer: TagChild = None,
     placement: Literal["above", "below"] = "above",
@@ -852,6 +866,9 @@ def navset_card_underline(
         ``value``).
     sidebar
         A :class:`shiny.ui.Sidebar` component to display on every :func:`~shiny.ui.nav_panel` page.
+    full_screen
+        If `True`, an icon will appear when hovering over the card body. Clicking the
+        icon expands the card to fit viewport size.
     header
         UI to display above the selected content.
     footer
@@ -885,6 +902,7 @@ def navset_card_underline(
         selected=selected,
         title=title,
         sidebar=sidebar,
+        full_screen=full_screen,
         header=header,
         footer=footer,
         placement=placement,

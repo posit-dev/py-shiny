@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import ast
+import importlib
 from pathlib import Path
 from typing import Set
 
@@ -11,50 +11,18 @@ root = Path(__file__).parent.parent.parent
 
 CONTROLLER_DIR = root / "shiny/playwright/controller"
 DOCS_CONFIG = root / "docs/_quartodoc-testing.yml"
-SKIP_PATTERNS = {"Base", "Container", "Label", "StyleM"}
-CONTROLLER_BASE_PATTERNS = {
-    "Base",
-    "Container",
-    "Label",
-    "StyleM",
-    "WidthLocM",
-    "InputActionButton",
-    "UiBase",
-    "UiWithLabel",
-    "UiWithContainer",
-}
-
-
-def _is_valid_controller_class(node: ast.ClassDef) -> bool:
-    class_name = node.name
-    base_names = {ast.unparse(base) for base in node.bases}
-
-    return (
-        not class_name.startswith("_")
-        and not any(pattern in class_name for pattern in SKIP_PATTERNS)
-        and not any(base.endswith("P") for base in base_names if isinstance(base, str))
-        and any(
-            base.startswith("_") or any(p in base for p in CONTROLLER_BASE_PATTERNS)
-            for base in base_names
-        )
-    )
 
 
 def get_controller_classes() -> Set[str]:
-    classes: Set[str] = set()
-    for py_file in CONTROLLER_DIR.glob("*.py"):
-        if py_file.name == "__init__.py":
+    controller_module = importlib.import_module("shiny.playwright.controller")
+
+    res: Set[str] = set()
+    for x in dir(controller_module):
+        if x.startswith("_") or x.startswith("@"):
             continue
-        try:
-            tree = ast.parse(py_file.read_text(encoding="utf-8"))
-            classes.update(
-                node.name
-                for node in ast.walk(tree)
-                if isinstance(node, ast.ClassDef) and _is_valid_controller_class(node)
-            )
-        except Exception as e:
-            pytest.fail(f"Failed to parse {py_file}: {e}")
-    return classes
+        res.add(x)
+
+    return res
 
 
 def get_documented_controllers() -> Set[str]:

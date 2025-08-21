@@ -463,12 +463,11 @@ def update_date(
     label
         An input label.
     value
-        The starting date. Either a `date()` object, or a string in yyyy-mm-dd format.
-        If ``None`` (the default), will use the current date in the client's time zone.
+        The starting date. Either a `date()` object, or a string in yyyy-mm-dd format. If an empty string is provided, the value will be cleared.
     min
-        The minimum allowed value.
+        The minimum allowed value. Either a `date()` object, or a string in yyyy-mm-dd format. An empty string will clear the minimum constraint.
     max
-        The maximum allowed value.
+        The maximum allowed value. Either a `date()` object, or a string in yyyy-mm-dd format. An empty string will clear the maximum constraint.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
         :func:`~shiny.session.get_current_session`.
@@ -483,13 +482,27 @@ def update_date(
     """
 
     session = require_active_session(session)
+
     msg = {
         "label": session._process_ui(label) if label is not None else None,
         "value": _as_date_attr(value),
         "min": _as_date_attr(min),
         "max": _as_date_attr(max),
     }
-    session.send_input_message(id, drop_none(msg))
+
+    msg = drop_none(msg)
+
+    # Handle the special case of "", which means the value should be cleared
+    # (i.e., go from a specified date to no specified date).
+    # This is equivalent to the NA case in R
+    if value == "":
+        msg["value"] = None
+    if min == "":
+        msg["min"] = None
+    if max == "":
+        msg["max"] = None
+
+    session.send_input_message(id, msg)
 
 
 @add_example()
@@ -514,17 +527,15 @@ def update_date_range(
     label
         An input label.
     start
-        The initial start date. Either a :class:`~datetime.date` object, or a string in
-        yyyy-mm-dd format. If ``None`` (the default), will use the current date in the
-        client's time zone.
+        The starting date. Either a `date()` object, or a string in yyyy-mm-dd format.
+        If an empty string is provided, the value will be cleared.
     end
-        The initial end date. Either a :class:`~datetime.date` object, or a string in
-        yyyy-mm-dd format. If ``None`` (the default), will use the current date in the
-        client's time zone.
+        The ending date. Either a `date()` object, or a string in yyyy-mm-dd format.
+        If an empty string is provided, the value will be cleared.
     min
-        The minimum allowed value.
+        The minimum allowed value. If an empty string is passed there will be no minimum date.
     max
-        The maximum allowed value.
+        The maximum allowed value. If an empty string is passed there will be no maximum date.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
         :func:`~shiny.session.get_current_session`.
@@ -539,14 +550,41 @@ def update_date_range(
     """
 
     session = require_active_session(session)
-    value = {"start": _as_date_attr(start), "end": _as_date_attr(end)}
+
     msg = {
         "label": session._process_ui(label) if label is not None else None,
-        "value": drop_none(value),
         "min": _as_date_attr(min),
         "max": _as_date_attr(max),
     }
-    session.send_input_message(id, drop_none(msg))
+
+    msg = drop_none(msg)
+
+    # Handle the special case of "", which means the value should be cleared
+    # (i.e., go from a specified date to no specified date).
+    # This is equivalent to the NA case in R
+    if min == "":
+        msg["min"] = None
+    if max == "":
+        msg["max"] = None
+
+    value = {
+        "start": _as_date_attr(start),
+        "end": _as_date_attr(end),
+    }
+
+    value = drop_none(value)
+
+    # Handle the special case of "", which means the value should be cleared
+    # (i.e., go from a specified date to no specified date)
+    # This is equivalent to the NA case in R
+    if start == "":
+        value["start"] = None
+    if end == "":
+        value["end"] = None
+
+    msg["value"] = value
+
+    session.send_input_message(id, msg)
 
 
 # -----------------------------------------------------------------------------
