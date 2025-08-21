@@ -146,7 +146,17 @@ class ShinyTestGenerator:
                 "System prompt file not found for app type: testing"
             )
 
-        return f"{system_prompt_file}\n\nHere is the function reference documentation for Shiny for Python: {self.documentation}"
+        # Add an explicit instruction to the system prompt to prefer documented
+        # parameter names and to always pass arguments as keyword arguments.
+        extra_instruction = (
+            "\n\nIMPORTANT: When generating test code, use the exact parameter names shown in the provided function reference documentation and pass all arguments as keyword arguments using those documented names. "
+            "Do not invent, rename, or reorder parameter names."
+        )
+
+        return (
+            f"{system_prompt_file}\n\nHere is the function reference documentation for Shiny for Python: {self.documentation}"
+            + extra_instruction
+        )
 
     def _resolve_model(self, model: str) -> str:
         """Resolve model alias to actual model name"""
