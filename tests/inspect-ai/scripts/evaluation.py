@@ -89,7 +89,7 @@ def get_app_specific_instructions(app_name: str) -> str:
         """,
         "app_04_custom_app_name": """
         For this app, focus on:
-        - Ensure that the create_app_ficture is called with the correct app file. In this case, it should be "app_input_checkbox_group.py"
+        - Ensure that the create_app_fixture is called with the correct app file. In this case, it should be "app_input_checkbox_group.py"
         - Ensure that the test creates an instance of the InputCheckboxGroup controller with id "colors"
         - Ensure that the checkbox group component is verified for its label, choices, selected values, inline state, and width.
         - Ensure that the test checks the checkbox group state changes and verifies the output text accordingly.

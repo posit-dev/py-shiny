@@ -50,6 +50,10 @@ For non-Shiny Python code, respond: "This framework is for Shiny for Python only
 
 10. **Newline at End**: Always end files with a newline.
 
+**11. DataFrames:** OutputDataFrame tests use **zero-based indexing**, so
+`data_grid.expect_cell(value="Action Button", row=0, col=0)`
+verifies the cell in the first row and first column, not the headers.
+
 ## Examples
 
 ### Checkbox Group
