@@ -225,9 +225,9 @@ class ShinyTestGenerator:
                         model_name = e.get("model", "N/A")
                         input_tokens = int(e.get("input", 0) or 0)
                         output_tokens = int(e.get("output", 0) or 0)
-                        cost = float(e.get("cost", 0.0) or 0.0)
+                        cost = round(float(e.get("cost", 0.0) or 0.0), 4)
                         print(
-                            f"{name} ({model_name}): {_fmt_tokens(input_tokens)} input, {_fmt_tokens(output_tokens)} output | Cost ${cost:.2f} | Time taken: {elapsed:.2f}s\n"
+                            f"{name} ({model_name}): {_fmt_tokens(input_tokens)} input, {_fmt_tokens(output_tokens)} output | Cost ${cost:.4f} | Time taken: {elapsed:.2f}s\n"
                         )
                 else:
                     print(f"Token usage: {usage}\n")
