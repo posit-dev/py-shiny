@@ -766,8 +766,7 @@ def update_selectize(
 
     session = require_active_session(session)
 
-    # Unless specified otherwise, the default plugins are retained
-    # across updates (by the client)
+    # Don't change default plugins unless explicitly specified
     default_plugins = None
     if remove_button is True:
         default_plugins = json.dumps(["remove_button", "clear_button"])

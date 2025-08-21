@@ -58,7 +58,7 @@ def input_selectize(
     selected: Optional[str | list[str]] = None,
     multiple: bool = False,
     width: Optional[str] = None,
-    remove_button: Optional[bool] = None,
+    remove_button: bool = True,
     options: Optional[dict[str, Jsonifiable | JSEval]] = None,
 ) -> Tag:
     """
@@ -84,9 +84,10 @@ def input_selectize(
     width
         The CSS width, e.g. '400px', or '100%'
     remove_button
-        Whether to add a remove button. This uses the `clear_button` and `remove_button`
-        selectize plugins which can also be supplied as options. By default it will apply a
-        remove button to multiple selections, but not single selections.
+        Whether to add a remove button. When `True` (the default), both the
+        'clear_button' and 'remove_button' plugins are included. If you want just one
+        plugin, set this to `False` and specify the desired plugin in the `options`
+        argument (i.e., `options = {"plugins": ["remove_button"]}`).
     options
         A dictionary of options. See the documentation of selectize.js for possible options.
         If you want to pass a JavaScript function, wrap the string in `ui.JS`.
@@ -200,8 +201,8 @@ def input_select(
             "Use `input_selectize()` instead of passing `selectize=True`."
         )
 
-    if isinstance(remove_button, MISSING_TYPE):
-        remove_button = None
+    if isinstance(remove_button, MISSING_TYPE) or remove_button is None:
+        remove_button = True
     else:
         warn_deprecated(
             "`remove_button` parameter of `input_select()` is deprecated. "
@@ -244,7 +245,7 @@ def _input_select_impl(
     selectize: bool = False,
     width: Optional[str] = None,
     size: Optional[str] = None,
-    remove_button: Optional[bool] = None,
+    remove_button: bool = True,
     options: Optional[dict[str, Jsonifiable | JSEval]] = None,
 ) -> Tag:
     if options is not None and selectize is False:
@@ -261,7 +262,15 @@ def _input_select_impl(
     if options is None:
         options = {}
 
-    plugins = _get_default_plugins(remove_button, multiple, choices_)
+    # Although 'remove_button' is primarily for multiple=True and 'clear_button' is for
+    # multiple=False, we include both in either case since:
+    #   1. When multiple=True, 'clear_button' can be used to clear _all_ selected items.
+    #   2. When multiple=False, 'remove_button' is effectively a no-op.
+    #   3. By including both, we can simplify the client-side logic needed to retain
+    #     these plugins across update_selectize(options=...) calls
+    default_plugins = None
+    if remove_button or remove_button is None:
+        default_plugins = json.dumps(["remove_button", "clear_button"])
 
     choices_tags = _render_choices(choices_, selected)
 
@@ -283,33 +292,13 @@ def _input_select_impl(
                 # Which option values should be interpreted as JS?
                 data_eval=json.dumps(extract_js_keys(options)),
                 # Supply and retain these plugins across updates (on the client)
-                data_default_plugins=json.dumps(plugins),
+                data_default_plugins=default_plugins,
             ),
             selectize_deps() if selectize else None,
         ),
         class_="form-group shiny-input-container",
         style=css(width=width),
     )
-
-
-def _get_default_plugins(
-    remove_button: bool | None,
-    multiple: bool,
-    choices_: _SelectChoices,
-) -> tuple[str, ...]:
-    if remove_button:
-        # remove_button: remove _each_ item when multiple=True
-        # clear_button: clear _all_ items when multiple=True
-        return ("remove_button", "clear_button")
-
-    if remove_button is None:
-        if multiple:
-            return ("remove_button", "clear_button")
-        if "" in choices_:
-            # Only show clear button if there is an empty choice
-            return ("clear_button",)
-
-    return ()
 
 
 def _normalize_choices(x: SelectChoicesArg) -> _SelectChoices:
