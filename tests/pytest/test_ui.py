@@ -3,7 +3,6 @@ import textwrap
 from htmltools import HTMLDocument, TagList, tags
 
 from shiny import ui
-from shiny.ui._input_select import _add_remove_button
 
 
 def test_panel_title():
