@@ -1,5 +1,6 @@
 import pytest
 from playwright.sync_api import Page
+from typing import Union
 
 from shiny.playwright import controller
 from shiny.pytest import create_app_fixture
@@ -19,7 +20,7 @@ app = create_app_fixture(["app-express.py"])
 def test_navset_menu(
     page: Page,
     app: ShinyAppProc,
-    nav_factory: type[controller.NavsetPill] | type[controller.NavsetUnderline],
+    nav_factory: Union[type[controller.NavsetPill], type[controller.NavsetUnderline]],
     nav_id: str,
     out_id: str,
 ):
