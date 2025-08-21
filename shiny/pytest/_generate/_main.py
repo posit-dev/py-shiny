@@ -146,17 +146,7 @@ class ShinyTestGenerator:
                 "System prompt file not found for app type: testing"
             )
 
-        # Add an explicit instruction to the system prompt to prefer documented
-        # parameter names and to always pass arguments as keyword arguments.
-        extra_instruction = (
-            "\n\nIMPORTANT: When generating test code, use the exact parameter names shown in the provided function reference documentation and pass all arguments as keyword arguments using those documented names. "
-            "Do not invent, rename, or reorder parameter names."
-        )
-
-        return (
-            f"{system_prompt_file}\n\nHere is the function reference documentation for Shiny for Python: {self.documentation}"
-            + extra_instruction
-        )
+        return f"{system_prompt_file}\n\nHere is the function reference documentation for Shiny for Python: {self.documentation}"
 
     def _resolve_model(self, model: str) -> str:
         """Resolve model alias to actual model name"""
@@ -324,6 +314,8 @@ class ShinyTestGenerator:
             "- If test is in 'tests/subdir/test_app.py' and app is in 'apps/subdir/app.py', use: '../../apps/subdir/app.py'\n"
             "- Always compute the correct relative path from the test file to the app file\n"
             "- NEVER use absolute paths or paths that aren't relative from the test location\n\n"
+            "CRITICAL: Generate only ONE comprehensive test function (e.g., 'test_app_functionality') that tests ALL components sequentially within the same test. "
+            "Do NOT create multiple separate test functions. Exercise all inputs and outputs in a single test flow.\n\n"
             "IMPORTANT: Only output the Python test code in a single code block. Do not include any explanation, justification, or extra text."
         )
 
