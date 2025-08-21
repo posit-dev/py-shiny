@@ -36,12 +36,7 @@ from ..session import require_active_session, session_context
 from ..types import ActionButtonValue
 from ._input_check_radio import ChoicesArg, _generate_options
 from ._input_date import _as_date_attr
-from ._input_select import (
-    SelectChoicesArg,
-    _add_default_plugins,
-    _normalize_choices,
-    _render_choices,
-)
+from ._input_select import SelectChoicesArg, _normalize_choices, _render_choices
 from ._input_slider import SliderStepArg, SliderValueArg, _as_numeric, _slider_type
 from ._utils import JSEval, _session_on_flush_send_msg, extract_js_keys
 
@@ -769,20 +764,22 @@ def update_selectize(
 
     session = require_active_session(session)
 
-    if remove_button:
-        options = _add_default_plugins(options or {}, ("remove_button", "clear_button"))
+    # Unless specified otherwise, the default plugins are retained
+    # across updates (by the client)
+    default_plugins = None
+    if remove_button is True:
+        default_plugins = json.dumps(["remove_button", "clear_button"])
+    if remove_button is False:
+        default_plugins = json.dumps([])
 
-    if options is not None:
-        if remove_button is None:
-            # clear_button is problematic when multiple=False
-            # and there is no empty choice
-            options = _add_default_plugins(options, ("remove_button",))
-
+    if options is not None or default_plugins is not None:
+        options = options or {}
         cfg = tags.script(
             json.dumps(options),
             type="application/json",
             data_for=resolve_id(id),
             data_eval=json.dumps(extract_js_keys(options)),
+            data_default_plugins=default_plugins,
         )
         session.send_input_message(id, {"config": cfg.get_html_string()})
 

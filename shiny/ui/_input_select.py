@@ -9,9 +9,8 @@ __all__ = (
     "input_select",
     "input_selectize",
 )
-import copy
-from json import dumps
-from typing import Any, Mapping, Optional, Union, cast
+import json
+from typing import Mapping, Optional, Union, cast
 
 from htmltools import Tag, TagChild, TagList, css, div, tags
 
@@ -263,7 +262,6 @@ def _input_select_impl(
         options = {}
 
     plugins = _get_default_plugins(remove_button, multiple, choices_)
-    options = _add_default_plugins(options, plugins)
 
     choices_tags = _render_choices(choices_, selected)
 
@@ -278,19 +276,16 @@ def _input_select_impl(
                 multiple=multiple,
                 size=size,
             ),
-            (
-                TagList(
-                    tags.script(
-                        dumps(options),
-                        type="application/json",
-                        data_for=resolved_id,
-                        data_eval=dumps(extract_js_keys(options)),
-                    ),
-                    selectize_deps(),
-                )
-                if selectize
-                else None
+            tags.script(
+                json.dumps(options),
+                type="application/json",
+                data_for=resolved_id,
+                # Which option values should be interpreted as JS?
+                data_eval=json.dumps(extract_js_keys(options)),
+                # Supply and retain these plugins across updates (on the client)
+                data_default_plugins=json.dumps(plugins),
             ),
+            selectize_deps() if selectize else None,
         ),
         class_="form-group shiny-input-container",
         style=css(width=width),
@@ -315,18 +310,6 @@ def _get_default_plugins(
             return ("clear_button",)
 
     return ()
-
-
-def _add_default_plugins(
-    options: dict[str, Any], default_plugins: tuple[str, ...]
-) -> dict[str, Any]:
-    opts = copy.deepcopy(options)
-    p: list[str] = opts.get("plugins", [])
-    if not isinstance(p, list):
-        raise TypeError("`options['plugins']` must be a list.")
-    p.extend(default_plugins)
-    opts["plugins"] = p
-    return opts
 
 
 def _normalize_choices(x: SelectChoicesArg) -> _SelectChoices:
