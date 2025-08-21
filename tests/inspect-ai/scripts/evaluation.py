@@ -25,7 +25,7 @@ def get_app_specific_instructions(app_name: str) -> str:
         - Whether the test creates an instance of the InputSlider controller with id "my_plot_module-n_points"
         - Ensure that the slider component is verified for its label, min, max, and value attributes.
         - Ensure that the test checks by moving the slider to different values and verify the slider values accordingly
-        
+
         IMPORTANT: Only evaluate based on components and IDs that actually exist in the app code.
         """,
         "app_07_modules": """
@@ -35,7 +35,7 @@ def get_app_specific_instructions(app_name: str) -> str:
         - Ensure that the text inputs are verified for their labels and initial values.
         - Ensure that the test checks the text output for correct concatenation of input values.
         - Check that the test verifies the module's reactivity by changing input values and checking output
-        
+
         IMPORTANT: Only evaluate based on components and IDs that actually exist in the app code.
         """,
         "app_03_slider": """
@@ -43,7 +43,7 @@ def get_app_specific_instructions(app_name: str) -> str:
         - Whether the test creates an instance of the InputSlider controller with id "slider1"
         - Ensure that the slider component is verified for its label, min, max, and value attributes.
         - Ensure that the test checks by moving the slider to different values and verify the slider values accordingly.
-        
+
         IMPORTANT: Only evaluate based on components and IDs that actually exist in the app code.
         """,
         "app_06_R_shiny": """
@@ -73,7 +73,7 @@ def get_app_specific_instructions(app_name: str) -> str:
         - Ensure that the output text components are verified for their initial values and updated values based on user interactions.
         - Whether the test creates an instance of the OutputDataFrame controller with id "data_grid"
         - Ensure that the data grid component is verified for its initial state and updates correctly based on user interactions.
-        
+
         IMPORTANT: Only evaluate based on components and IDs that actually exist in the app code. The test should only test functionality that is actually present in the app.
         """,
         "app_02_express_basic": """
@@ -218,7 +218,7 @@ def create_inspect_ai_samples(test_data: dict) -> list[Sample]:
 
         question = f"""Evaluate the quality of this Shiny test code for app {data['app_name']}.
 
-IMPORTANT: First carefully analyze the App Code below to understand what components and IDs actually exist in the app. 
+IMPORTANT: First carefully analyze the App Code below to understand what components and IDs actually exist in the app.
 Then evaluate the test code ONLY against components and IDs that actually exist in the app code.
 
 Actual Component IDs automatically detected in App:
@@ -276,37 +276,37 @@ def shiny_test_evaluation() -> Task:
 
     scorer = model_graded_qa(
         instructions="""
-        You are an expert evaluator for Shiny application testing. Your task is to evaluate test code quality based ONLY on the provided app code and specific criteria.
+You are an expert evaluator for Shiny application testing. Your task is to evaluate test code quality based ONLY on the provided app code and specific criteria.
 
-        CRITICAL INSTRUCTIONS:
-        1. FIRST, carefully analyze the app code to understand what components ACTUALLY exist in the app
-        2. Extract a precise list of all component IDs present in the app code
-        3. IGNORE any criteria that reference UI components or IDs that don't exist in the actual app code
-        4. ONLY evaluate based on specific criteria that match components in the actual app
-        5. DO NOT add your own criteria or suggestions beyond what is explicitly stated
-        6. DO NOT penalize for missing features that are not mentioned in the criteria OR don't exist in the app
-        7. For non-Shiny frameworks (R Shiny, Streamlit, etc.), the test code should be empty - grade as Complete if empty
-        8. If test_code tests components that are actually in the app, it should get a 'C' grade even if it doesn't test components mentioned in the criteria that don't exist in the app
+CRITICAL INSTRUCTIONS:
+1. FIRST, carefully analyze the app code to understand what components ACTUALLY exist in the app
+2. Extract a precise list of all component IDs present in the app code
+3. IGNORE any criteria that reference UI components or IDs that don't exist in the actual app code
+4. ONLY evaluate based on specific criteria that match components in the actual app
+5. DO NOT add your own criteria or suggestions beyond what is explicitly stated
+6. DO NOT penalize for missing features that are not mentioned in the criteria OR don't exist in the app
+7. For non-Shiny frameworks (R Shiny, Streamlit, etc.), the test code should be empty - grade as Complete if empty
+8. If test_code tests components that are actually in the app, it should get a 'C' grade even if it doesn't test components mentioned in the criteria that don't exist in the app
 
-        EVALUATION PROCESS:
-        - First carefully extract all component IDs from the app code (e.g., "action_button", "checkbox", etc.)
-        - Compare these IDs with those mentioned in the criteria
-        - ONLY evaluate criteria for components that actually exist in the app code
-        - COMPLETELY IGNORE criteria about components that don't exist in the app
-        - Grade based ONLY on how well the test code tests the components that actually exist
-        
-        MOST IMPORTANT: 
-        - If the app does not contain a component mentioned in the criteria, IGNORE that part of the criteria completely
-        - If the app uses a different ID than what's in the criteria (e.g., "data_grid" instead of "data_table"), use the actual ID from the app
+EVALUATION PROCESS:
+- First carefully extract all component IDs from the app code (e.g., "action_button", "checkbox", etc.)
+- Compare these IDs with those mentioned in the criteria
+- ONLY evaluate criteria for components that actually exist in the app code
+- COMPLETELY IGNORE criteria about components that don't exist in the app
+- Grade based ONLY on how well the test code tests the components that actually exist
 
-        GRADING SCALE:
-        - C (Complete): ALL criteria for EXISTING components are met
-        - P (Partial): MOST criteria for EXISTING components are met, with minor gaps
-        - I (Incomplete): MAJOR criteria for EXISTING components are missing or incorrectly implemented
+MOST IMPORTANT:
+- If the app does not contain a component mentioned in the criteria, IGNORE that part of the criteria completely
+- If the app uses a different ID than what's in the criteria (e.g., "data_grid" instead of "data_table"), use the actual ID from the app
 
-        Provide your evaluation in the following format:
-        GRADE: [C/P/I]
-        Explanation: [Brief explanation focusing ONLY on how well the specified criteria were met for EXISTING components]
+GRADING SCALE:
+- C (Complete): ALL criteria for EXISTING components are met
+- P (Partial): MOST criteria for EXISTING components are met, with minor gaps
+- I (Incomplete): MAJOR criteria for EXISTING components are missing or incorrectly implemented
+
+Provide your evaluation in the following format:
+GRADE: [C/P/I]
+Explanation: [Brief explanation focusing ONLY on how well the specified criteria were met for EXISTING components]
         """,
         grade_pattern=r"GRADE:\s*([CPI])",
         model=get_model("openai/gpt-5-nano-2025-08-07"),
