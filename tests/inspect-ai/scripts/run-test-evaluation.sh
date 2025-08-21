@@ -2,6 +2,14 @@
 
 set -e # Exit immediately if a command fails
 
+# CI fast-fail defaults (override via env)
+: "${SHINY_TEST_TIMEOUT_SECS:=10}"          # App startup fast-fail (seconds)
+: "${PYTEST_PER_TEST_TIMEOUT:=60}"          # Per-test timeout (seconds)
+: "${PYTEST_SUITE_TIMEOUT:=6m}"             # Whole pytest run timeout
+: "${PYTEST_MAXFAIL:=1}"                     # Fail fast on first failure
+: "${PYTEST_XDIST_WORKERS:=auto}"           # Parallel workers for pytest-xdist
+export SHINY_TEST_TIMEOUT_SECS
+
 # Function to log with timestamp
 log_with_timestamp() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
@@ -39,14 +47,15 @@ do
   test_exit_code=0
   # Disable exit on error just for the pytest command to check the exit code
   set +e
-  timeout 15m pytest tests/inspect-ai/apps \
+  timeout "$PYTEST_SUITE_TIMEOUT" pytest tests/inspect-ai/apps \
+    -n "$PYTEST_XDIST_WORKERS" --dist loadfile \
     --tb=short \
     --disable-warnings \
-    --maxfail=2 \
+    --maxfail="$PYTEST_MAXFAIL" \
     --junit-xml=test-results.xml \
     --durations=10 \
-    --timeout=300 \
-    --timeout-method=thread \
+    --timeout="$PYTEST_PER_TEST_TIMEOUT" \
+    --timeout-method=signal \
     -v || test_exit_code=$?
   # Re-enable exit on error immediately
   set -e
