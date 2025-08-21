@@ -3,11 +3,12 @@ import logging
 import os
 import re
 import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, Optional, Tuple, Union
 
-from chatlas import ChatAnthropic, ChatOpenAI
+from chatlas import ChatAnthropic, ChatOpenAI, token_usage
 from dotenv import load_dotenv
 
 __all__ = [
@@ -196,7 +197,44 @@ class ShinyTestGenerator:
             else:
                 raise ValueError(f"Unsupported provider: {self.provider}")
 
+            start_time = time.perf_counter()
             response = chat.chat(prompt)
+            elapsed = time.perf_counter() - start_time
+            usage = token_usage()
+            try:
+
+                def _fmt_tokens(n):
+                    try:
+                        n_int = int(n)
+                    except Exception:
+                        return str(n)
+                    if n_int >= 1_000_000:
+                        return f"{n_int / 1_000_000:.1f}M"
+                    if n_int >= 1_000:
+                        return f"{n_int / 1_000:.1f}k"
+                    return str(n_int)
+
+                entries = usage
+                if isinstance(entries, dict):
+                    entries = [entries]
+
+                if isinstance(entries, (list, tuple)) and entries:
+                    print("LLM token usage and cost:")
+                    for e in entries:
+                        name = e.get("name", "N/A")
+                        model_name = e.get("model", "N/A")
+                        input_tokens = int(e.get("input", 0) or 0)
+                        output_tokens = int(e.get("output", 0) or 0)
+                        cost = float(e.get("cost", 0.0) or 0.0)
+                        print(
+                            f"{name} ({model_name}): {_fmt_tokens(input_tokens)} input, {_fmt_tokens(output_tokens)} output | Cost ${cost:.2f} | Time taken: {elapsed:.2f}s\n"
+                        )
+                else:
+                    print(f"Token usage: {usage}\n")
+                    print(f"Time taken: {elapsed:.2f}s")
+            except Exception:
+                print(f"Token usage: {usage}")
+                print(f"Time taken: {elapsed:.2f}s")
 
             if hasattr(response, "content"):
                 return response.content

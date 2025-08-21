@@ -1,21 +1,20 @@
 #!/bin/bash
 
-set -e # Exit immediately if a command fails
+set -e
 
-# CI fast-fail defaults (override via env)
-: "${SHINY_TEST_TIMEOUT_SECS:=10}"          # App startup fast-fail (seconds)
-: "${PYTEST_PER_TEST_TIMEOUT:=60}"          # Per-test timeout (seconds)
-: "${PYTEST_SUITE_TIMEOUT:=6m}"             # Whole pytest run timeout
-: "${PYTEST_MAXFAIL:=1}"                     # Fail fast on first failure
-: "${PYTEST_XDIST_WORKERS:=auto}"           # Parallel workers for pytest-xdist
+# Defaults (override via env)
+: "${SHINY_TEST_TIMEOUT_SECS:=10}"
+: "${PYTEST_PER_TEST_TIMEOUT:=60}"
+: "${PYTEST_SUITE_TIMEOUT:=6m}"
+: "${PYTEST_MAXFAIL:=1}"
+: "${PYTEST_XDIST_WORKERS:=auto}"
+: "${ATTEMPTS:=3}"
 export SHINY_TEST_TIMEOUT_SECS
 
-# Function to log with timestamp
 log_with_timestamp() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
 }
 
-# Function to cleanup hanging processes
 cleanup_processes() {
   log_with_timestamp "Cleaning up any hanging processes..."
   pkill -f "playwright" || true
@@ -23,14 +22,11 @@ cleanup_processes() {
   pkill -f "pytest" || true
 }
 
-# Set up trap to cleanup on exit
 trap cleanup_processes EXIT
 
-for i in {1..3}
-do
-  log_with_timestamp "Starting Attempt $i of 3"
+for i in $(seq 1 "$ATTEMPTS"); do
+  log_with_timestamp "Starting attempt $i of $ATTEMPTS"
 
-  # Clean up results from previous attempt to ensure a clean slate
   rm -rf results/
   mkdir -p results/
   rm -f test-results.xml
@@ -43,9 +39,8 @@ do
     --log-dir results/ \
     --log-format json
 
-  log_with_timestamp "[Attempt $i] Running Tests..."
+  log_with_timestamp "[Attempt $i] Running tests..."
   test_exit_code=0
-  # Disable exit on error just for the pytest command to check the exit code
   set +e
   timeout "$PYTEST_SUITE_TIMEOUT" pytest tests/inspect-ai/apps \
     -n "$PYTEST_XDIST_WORKERS" --dist loadfile \
@@ -57,28 +52,29 @@ do
     --timeout="$PYTEST_PER_TEST_TIMEOUT" \
     --timeout-method=signal \
     -v || test_exit_code=$?
-  # Re-enable exit on error immediately
   set -e
 
-  # Check if timeout occurred
   if [ "${test_exit_code:-0}" -eq 124 ]; then
-    log_with_timestamp "Tests timed out on attempt $i - this may indicate hanging tests"
+    log_with_timestamp "Tests timed out on attempt $i (possible hang)"
     cleanup_processes
     exit 1
   fi
 
-  # Check if tests failed and how many failures occurred
   if [ "${test_exit_code:-0}" -ne 0 ]; then
-    failure_count=$(grep -o 'failures="[0-9]*"' test-results.xml | grep -o '[0-9]*' || echo "0")
+    if [ -f test-results.xml ]; then
+      failure_count=$(grep -o 'failures="[0-9]*"' test-results.xml | grep -o '[0-9]*' || echo "0")
+    else
+      failure_count=0
+    fi
     log_with_timestamp "Found $failure_count test failures on attempt $i"
 
-    # Fail the workflow if more than 1 test failed
     if [ "$failure_count" -gt 1 ]; then
       log_with_timestamp "More than 1 test failed on attempt $i - failing CI"
       exit 1
     fi
   fi
-  log_with_timestamp "Attempt $i of 3 Succeeded"
+
+  log_with_timestamp "Attempt $i of $ATTEMPTS succeeded"
 done
 
-log_with_timestamp "All 3 evaluation and test runs passed successfully."
+log_with_timestamp "All $ATTEMPTS evaluation and test runs passed successfully."
