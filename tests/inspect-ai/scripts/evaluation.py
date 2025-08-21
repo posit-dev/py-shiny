@@ -202,12 +202,12 @@ def shiny_test_evaluation() -> Task:
         Explanation: [Brief explanation focusing ONLY on how well the specified criteria were met]
         """,
         grade_pattern=r"GRADE:\s*([CPI])",
-        model=get_model("openai/gpt-4.1-nano-2025-04-14"),
+        model=get_model("openai/gpt-5-nano-2025-08-07"),
     )
 
     return Task(
         dataset=samples,
         solver=generate(),
         scorer=scorer,
-        model=get_model("openai/gpt-4.1-nano-2025-04-14"),
+        model=get_model("openai/gpt-5-nano-2025-08-07"),
     )

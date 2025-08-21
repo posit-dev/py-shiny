@@ -28,8 +28,6 @@ class Config:
         # OpenAI models
         "gpt-5": "gpt-5-2025-08-07",
         "gpt-5-mini": "gpt-5-mini-2025-08-07",
-        "o4-mini": "o4-mini-2025-04-16",
-        "gpt-5-nano": "gpt-5-nano-2025-08-07",
     }
 
     DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-4-20250514"
@@ -44,8 +42,6 @@ class Config:
     OPENAI_PRICING = {
         "gpt-5-2025-08-07": (1.250, 10.000, 0.125),
         "gpt-5-mini-2025-08-07": (0.250, 2.000, 0.025),
-        "o4-mini-2025-04-16": (1.100, 4.400, 0.280),
-        "gpt-5-nano-2025-08-07": (0.050, 0.400, 0.005),
     }
 
 
