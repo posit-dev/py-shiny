@@ -33,6 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Improvements
 
+* Add support for selecting menu items in `Navset` controllers to improve dropdown navigation test coverage. (#2066)
+
 * `input_date()`, `input_date_range()`, `update_date()`, and `update_date_range()` now supports `""` for values, mins, and maxes. In this case, no date will be specified on the client. (#1713) (#1689)
 
 * Restricted the allowable types of the `choices` parameter of `input_select()`, `input_selectize()`, `update_select()`, and `update_selectize()` to actual set of allowable types (previously, the type was suggesting HTML-like values were supported). (#2048)
