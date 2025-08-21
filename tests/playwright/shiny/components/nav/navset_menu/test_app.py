@@ -1,6 +1,7 @@
+from typing import Union
+
 import pytest
 from playwright.sync_api import Page
-from typing import Union
 
 from shiny.playwright import controller
 from shiny.pytest import create_app_fixture
@@ -24,7 +25,7 @@ def test_navset_menu(
     nav_id: str,
     out_id: str,
 ):
-    """Test navigation between panels for different navset types."""
+
     page.goto(app.url)
     navset = nav_factory(page, nav_id)
     output: controller.OutputText = controller.OutputText(page, out_id)
