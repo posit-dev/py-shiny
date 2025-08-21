@@ -47,7 +47,6 @@ output_transformer_errors = [
     "ShinyDeprecationWarning:",
     "shiny.render.transformer.output_transformer()",
 ]
-
 express_warnings = ["Detected Shiny Express app. "]
 app_allow_shiny_errors: typing.Dict[
     str, typing.Union[Literal[True], typing.List[str]]
