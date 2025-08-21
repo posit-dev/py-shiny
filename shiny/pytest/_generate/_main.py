@@ -156,7 +156,6 @@ class ShinyTestGenerator:
         """Validate that the model is compatible with the current provider"""
         resolved_model = self._resolve_model(model)
 
-        # Check if model is appropriate for provider
         if self.provider == "anthropic":
             if resolved_model.startswith("gpt-") or resolved_model.startswith("o1-"):
                 raise ValueError(
@@ -218,11 +217,9 @@ class ShinyTestGenerator:
         self, app_file_path: Path, test_file_path: Path
     ) -> str:
         """Compute POSIX-style relative path from the test file directory to the app file."""
-        # Make sure both paths are absolute
         app_file_abs = app_file_path.resolve()
         test_file_abs = test_file_path.resolve()
 
-        # Compute relative path from test file directory to app file
         rel = os.path.relpath(str(app_file_abs), start=str(test_file_abs.parent))
         return Path(rel).as_posix()
 
@@ -236,14 +233,12 @@ class ShinyTestGenerator:
         """
         logging.debug(f"Rewriting fixture path to: {relative_app_path}")
 
-        # First check if create_app_fixture exists in the code
         if "create_app_fixture" not in test_code:
             logging.warning("No create_app_fixture found in generated test code")
             return test_code
 
-        # Pattern for list form: create_app_fixture(["app.py"]) or with spaces
         pattern_list = re.compile(
-            r"(create_app_fixture\(\s*\[\s*)(['\"])([^'\"]+)(\\2)(\\s*)([,\]])",
+            r"(create_app_fixture\(\s*\[\s*)(['\"])([^'\"]+)(\2)(\s*)([,\]])",
             re.DOTALL,
         )
 
@@ -258,9 +253,8 @@ class ShinyTestGenerator:
         if list_count > 0:
             logging.debug(f"Replaced {list_count} list-form fixture path(s)")
 
-        # Pattern for direct string form: create_app_fixture("app.py")
         pattern_str = re.compile(
-            r"(create_app_fixture\(\s*)(['\"])([^'\"]+)(\\2)(\\s*)([,\)])",
+            r"(create_app_fixture\(\s*)(['\"])([^'\"]+)(\2)(\s*)([,\)])",
             re.DOTALL,
         )
 
@@ -275,13 +269,11 @@ class ShinyTestGenerator:
         if str_count > 0:
             logging.debug(f"Replaced {str_count} string-form fixture path(s)")
 
-        # If no replacements were made, there might be a pattern we're not catching
         if list_count == 0 and str_count == 0:
             logging.warning(
                 f"Found create_app_fixture but couldn't replace path. Code snippet: {test_code[:200]}..."
             )
 
-            # Fallback regex with more generous pattern matching
             fallback_pattern = re.compile(
                 r"(create_app_fixture\([^\)]*?['\"])([^'\"]+)(['\"][^\)]*?\))",
                 re.DOTALL,
@@ -323,7 +315,6 @@ class ShinyTestGenerator:
         self, app_code: Optional[str] = None, app_file_path: Optional[str] = None
     ) -> Path:
         if app_file_path:
-            # Return absolute path to avoid any ambiguity
             return Path(app_file_path).resolve()
 
         current_dir = Path.cwd()
@@ -333,11 +324,9 @@ class ShinyTestGenerator:
             found_files.extend(current_dir.glob(pattern))
 
         if found_files:
-            # Return absolute path of found file
             return found_files[0].resolve()
 
         if app_code:
-            # For inferred app paths, use absolute path in current directory
             return Path("inferred_app.py").resolve()
 
         raise FileNotFoundError(
@@ -349,7 +338,6 @@ class ShinyTestGenerator:
     ) -> Path:
         output_dir = output_dir or app_file_path.parent
         test_file_name = f"test_{app_file_path.stem}.py"
-        # Return absolute path for test file
         return (output_dir / test_file_name).resolve()
 
     def generate_test(
@@ -376,7 +364,7 @@ class ShinyTestGenerator:
         test_code = self.extract_test(response)
 
         if output_file:
-            test_file_path = Path(output_file)
+            test_file_path = Path(output_file).resolve()
         else:
             output_dir_path = Path(output_dir) if output_dir else None
             test_file_path = self._generate_test_file_path(
@@ -384,7 +372,6 @@ class ShinyTestGenerator:
             )
 
         try:
-            # Log the paths for debugging
             logging.info(f"App file path: {inferred_app_path}")
             logging.info(f"Test file path: {test_file_path}")
 
@@ -394,25 +381,10 @@ class ShinyTestGenerator:
 
             logging.info(f"Computed relative path: {relative_app_path}")
 
-            # Explicitly check for app.py - this is a common problematic case
-            if relative_app_path == "app.py" and "../" not in relative_app_path:
-                logging.warning(
-                    f"Detected possibly incorrect relative path: {relative_app_path}"
-                )
-                # Force a proper relative path if needed
-                if test_file_path.parent != inferred_app_path.parent:
-                    logging.info(
-                        "Test and app are in different directories, adjusting relative path"
-                    )
-                    relative_app_path = f"../{relative_app_path}"
-                    logging.info(f"Adjusted relative path: {relative_app_path}")
-
             test_code = self._rewrite_fixture_path(test_code, relative_app_path)
         except Exception as e:
             logging.error(f"Error computing relative path: {e}")
-            # Don't silently ignore - use the best path we can
             try:
-                # Fallback: just use the absolute path as string if we can't compute relative
                 logging.warning("Falling back to using absolute path in test file")
                 test_code = self._rewrite_fixture_path(
                     test_code, str(inferred_app_path.resolve())
@@ -461,7 +433,7 @@ class ShinyTestGenerator:
         self.provider = provider
         if api_key:
             self.api_key = api_key
-        self._client = None  # Reset client to force recreation with new provider
+        self._client = None
 
     @classmethod
     def create_anthropic_generator(
