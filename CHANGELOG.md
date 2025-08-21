@@ -67,6 +67,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Deprecations
 
+* `ui.update_navs()` has been deprecated in favor of `ui.update_navset()`. (#2047)
+
 * `ui.panel_well()` is deprecated in favor of `ui.card()`. (#2038)
 
 
