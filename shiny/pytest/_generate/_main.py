@@ -40,6 +40,14 @@ class Config:
     LOG_FILE = "llm_test_generator.log"
     COMMON_APP_PATTERNS = ["app.py", "app_*.py"]
 
+    # OpenAI pricing per million tokens: (input, output, cached)
+    OPENAI_PRICING = {
+        "gpt-5-2025-08-07": (1.250, 10.000, 0.125),
+        "gpt-5-mini-2025-08-07": (0.250, 2.000, 0.025),
+        "o4-mini-2025-04-16": (1.100, 4.400, 0.280),
+        "gpt-5-nano-2025-08-07": (0.050, 0.400, 0.005),
+    }
+
 
 class ShinyTestGenerator:
     CODE_PATTERN = re.compile(r"```python(.*?)```", re.DOTALL)
@@ -201,6 +209,17 @@ class ShinyTestGenerator:
             response = chat.chat(prompt)
             elapsed = time.perf_counter() - start_time
             usage = token_usage()
+            # For Anthropic, token_usage() includes costs. For OpenAI, use chat.get_cost with model pricing.
+            token_price = None
+            if self.provider == "openai":
+                token_price = Config.OPENAI_PRICING.get(model)
+                try:
+                    # Call to compute and cache costs internally; per-entry cost is computed below
+                    _ = chat.get_cost(options="all", token_price=token_price)
+                except Exception:
+                    # If cost computation fails, continue without it
+                    pass
+
             try:
 
                 def _fmt_tokens(n):
@@ -225,10 +244,40 @@ class ShinyTestGenerator:
                         model_name = e.get("model", "N/A")
                         input_tokens = int(e.get("input", 0) or 0)
                         output_tokens = int(e.get("output", 0) or 0)
-                        cost = round(float(e.get("cost", 0.0) or 0.0), 4)
-                        print(
-                            f"{name} ({model_name}): {_fmt_tokens(input_tokens)} input, {_fmt_tokens(output_tokens)} output | Cost ${cost:.4f} | Time taken: {elapsed:.2f}s\n"
-                        )
+                        if self.provider == "openai":
+                            cached_tokens = 0
+                            for ck in ("cached", "cache", "cache_read", "cached_read"):
+                                if ck in e and e.get(ck) is not None:
+                                    try:
+                                        cached_tokens = int(e.get(ck) or 0)
+                                    except Exception:
+                                        cached_tokens = 0
+                                    break
+                            entry_cost = None
+                            if token_price is not None:
+                                try:
+                                    in_p, out_p, cached_p = token_price
+                                    entry_cost = (
+                                        (input_tokens * in_p)
+                                        + (output_tokens * out_p)
+                                        + (cached_tokens * cached_p)
+                                    ) / 1_000_000.0
+                                except Exception:
+                                    entry_cost = None
+                            cost_str = (
+                                f"${entry_cost:.4f}"
+                                if isinstance(entry_cost, (int, float))
+                                else "$0.0000"
+                            )
+                            print(
+                                f"OpenAI ({model_name}): {_fmt_tokens(input_tokens)} input, {_fmt_tokens(output_tokens)} output | Cost {cost_str} | Time taken: {elapsed:.2f}s\n"
+                            )
+                        else:
+                            cost = round(float(e.get("cost", 0.0) or 0.0), 4)
+                            print(
+                                f"{name} ({model_name}): {_fmt_tokens(input_tokens)} input, {_fmt_tokens(output_tokens)} output | Cost ${cost:.4f} | Time taken: {elapsed:.2f}s\n"
+                            )
+
                 else:
                     print(f"Token usage: {usage}\n")
                     print(f"Time taken: {elapsed:.2f}s")
