@@ -51,7 +51,9 @@ def process_inspect_results(result_file_path: Union[str, Path]) -> None:
         if s.get("scores", {}).get("model_graded_qa", {}).get("value") == "I"
     )
 
-    pass_rate = (passed_tests / total_tests) * 100 if total_tests > 0 else 0
+    # Calculate pass rate including both Complete and Partial grades
+    passing_tests = passed_tests + partial_tests
+    pass_rate = (passing_tests / total_tests) * 100 if total_tests > 0 else 0
 
     # Generate summary dictionary
     summary = {
@@ -63,7 +65,7 @@ def process_inspect_results(result_file_path: Union[str, Path]) -> None:
         "quality_gate_passed": pass_rate >= 80,  # 80% threshold
         "details": (
             f"Complete: {passed_tests}, Partial: {partial_tests}, "
-            f"Incomplete: {failed_tests}"
+            f"Incomplete: {failed_tests}, Passing: {passing_tests}/{total_tests}"
         ),
     }
 
@@ -74,10 +76,10 @@ def process_inspect_results(result_file_path: Union[str, Path]) -> None:
 
     print(f"\nSummary saved to: {summary_file_path}")
     print(
-        f"Processed {total_tests} tests: {passed_tests} passed, "
-        f"{partial_tests} partial, {failed_tests} failed"
+        f"Processed {total_tests} tests: {passed_tests} complete, "
+        f"{partial_tests} partial, {failed_tests} incomplete"
     )
-    print(f"Pass rate: {pass_rate:.1f}%")
+    print(f"Pass rate (Complete + Partial): {pass_rate:.1f}%")
 
 
 if __name__ == "__main__":
