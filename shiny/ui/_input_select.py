@@ -274,6 +274,19 @@ def _input_select_impl(
 
     choices_tags = _render_choices(choices_, selected)
 
+    selectize_config = None
+    if selectize:
+        selectize_config = tags.script(
+            json.dumps(options),
+            selectize_deps(),
+            type="application/json",
+            data_for=resolved_id,
+            # Which option values should be interpreted as JS?
+            data_eval=json.dumps(extract_js_keys(options)),
+            # Supply and retain these plugins across updates (on the client)
+            data_default_plugins=default_plugins,
+        )
+
     return div(
         shiny_input_label(resolved_id, label),
         div(
@@ -285,16 +298,7 @@ def _input_select_impl(
                 multiple=multiple,
                 size=size,
             ),
-            tags.script(
-                json.dumps(options),
-                type="application/json",
-                data_for=resolved_id,
-                # Which option values should be interpreted as JS?
-                data_eval=json.dumps(extract_js_keys(options)),
-                # Supply and retain these plugins across updates (on the client)
-                data_default_plugins=default_plugins,
-            ),
-            selectize_deps() if selectize else None,
+            selectize_config,
         ),
         class_="form-group shiny-input-container",
         style=css(width=width),
