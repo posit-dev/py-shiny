@@ -16,6 +16,7 @@ __all__ = (
     "update_text",
     "update_text_area",
     "update_navs",
+    "update_navset",
 )
 
 import json
@@ -27,6 +28,7 @@ from htmltools import TagChild, TagList, tags
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
+from .._deprecated import warn_deprecated
 from .._docstring import add_example, doc_format, no_example
 from .._typing_extensions import NotRequired, TypedDict
 from .._utils import drop_none
@@ -1049,6 +1051,45 @@ update_text_area.__doc__ = update_text.__doc__
 @add_example()
 @doc_format(note=_note)
 def update_navs(
+    id: str, selected: Optional[str] = None, session: Optional[Session] = None
+) -> None:
+    """
+    Change the value of a navs container on the client.
+
+    Parameters
+    ----------
+    id
+        An input id.
+    selected
+        The values that should be initially selected, if any.
+    session
+        A :class:`~shiny.Session` instance. If not provided, it is inferred via
+        :func:`~shiny.session.get_current_session`.
+
+    Note
+    ----
+    {note}
+
+    See Also
+    --------
+    * :func:`~shiny.ui.navset_tab`
+    * :func:`~shiny.ui.navset_pill`
+    * :func:`~shiny.ui.page_navbar`
+    """
+    warn_deprecated(
+        "`shiny.ui.update_navs()` has been superseded by `shiny.ui.update_navset()` and will be removed in the near future."
+    )
+
+    update_navset(
+        id=id,
+        selected=selected,
+        session=session,
+    )
+
+
+@add_example()
+@doc_format(note=_note)
+def update_navset(
     id: str, selected: Optional[str] = None, session: Optional[Session] = None
 ) -> None:
     """

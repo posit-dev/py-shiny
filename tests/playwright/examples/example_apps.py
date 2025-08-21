@@ -235,8 +235,8 @@ def validate_example(page: Page, ex_app_path: str) -> None:
                 print("\nshort_app_path: " + short_app_path)
                 print("\napp_allowable_errors :")
                 print("\n".join(app_allowable_errors))
-                print("\nError lines remaining:")
-                print("\n".join(error_lines))
+                # The below can be used to get the exact lines needed to update the `app_allow_*_errors()` objects above
+                print("Non-allowed error lines (in raw format): ", error_lines)
             assert len(error_lines) == 0
 
         # Check for JavaScript errors
