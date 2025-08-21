@@ -19,7 +19,7 @@ with ui.sidebar(style="height:100%"):
 
     @render.code
     def message_state():
-        return str(chat.messages())
+        return str(chat.messages())  # type: ignore[reportUnknownMemberType]
 
 
 chat = ui.Chat(id="chat")

@@ -11,19 +11,14 @@ app_opts(static_assets={"/img": Path(__file__).parent / "img"})
 
 with ui.layout_columns():
     # Default Bot ---------------------------------------------------------------------
-    chat_default = ui.Chat(
-        id="chat_default",
-        messages=[
-            {
-                "content": "Hello! I'm Default Bot. How can I help you today?",
-                "role": "assistant",
-            },
-        ],
-    )
+    chat_default = ui.Chat(id="chat_default")
 
     with ui.div():
         ui.h2("Default Bot")
-        chat_default.ui(icon_assistant=None)
+        chat_default.ui(
+            messages=["Hello! I'm Default Bot. How can I help you today?"],
+            icon_assistant=None,
+        )
 
     @chat_default.on_user_submit
     async def handle_user_input_default(user_input: str):
