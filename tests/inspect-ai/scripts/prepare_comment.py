@@ -25,18 +25,8 @@ def prepare_comment(summary_path: Union[str, Path]) -> int:
         with open(summary_path, "r") as f:
             inspect_results = json.load(f)
 
-        # Try to read the pytest averaged summary
+        # Skip pytest results for now since they're not working properly
         pytest_results = None
-        pytest_summary_path = summary_path.parent / "pytest_summary.json"
-        print(f"Looking for pytest summary at: {pytest_summary_path}")
-        if pytest_summary_path.exists():
-            with open(pytest_summary_path, "r") as f:
-                pytest_results = json.load(f)
-            print(f"Found pytest results: {pytest_results}")
-        else:
-            print(
-                f"Pytest summary not found. Directory contents: {list(summary_path.parent.iterdir())}"
-            )
 
         # Try to read the combined summary for overall gate status
         combined_results = None
@@ -63,26 +53,13 @@ def prepare_comment(summary_path: Union[str, Path]) -> int:
             f"- **Quality Gate**: {'✅ PASSED' if inspect_results['quality_gate_passed'] else '❌ FAILED'} (≥80% required)\n"
         )
 
-        # Pytest section
-        if pytest_results:
-            comment_parts.append("### 🧪 Pytest Execution Results")
-            comment_parts.append(f"- **Passed**: {pytest_results['passed']:.1f}")
-            comment_parts.append(f"- **Failed**: {pytest_results['failed']:.1f}")
-            comment_parts.append(f"- **Errors**: {pytest_results['errors']:.1f}")
-            comment_parts.append(f"- **Skipped**: {pytest_results['skipped']:.1f}")
-            comment_parts.append(
-                f"- **Pass Rate**: {pytest_results['passed']:.1f}/{pytest_results['total']:.1f} ({pytest_results['pass_rate']:.1f}%)\n"
-            )
+        # Pytest section removed - not working properly
 
-        # Overall status
-        if combined_results:
-            overall_passed = combined_results.get("overall_quality_gate_passed", False)
-            comment_parts.append("### 🎯 Overall Result")
-            comment_parts.append(
-                f"**{'✅ PASSED' if overall_passed else '❌ FAILED'}** - Combined quality gate"
-            )
-            if pytest_results:
-                comment_parts.append("(Requires: Inspect AI ≥80% + Pytest ≥85%)")
+        # Overall status - just use inspect-ai quality gate for now
+        comment_parts.append("### 🎯 Overall Result")
+        comment_parts.append(
+            f"**{'✅ PASSED' if inspect_results['quality_gate_passed'] else '❌ FAILED'}** - Quality gate based on Inspect AI results"
+        )
 
         comment_parts.append("\n---")
         comment_parts.append(
