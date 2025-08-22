@@ -15,4 +15,4 @@ with ui.navset_card_tab(id="inTabset"):
 
 @reactive.effect
 def _():
-    ui.update_navs("inTabset", selected="panel" + str(input.controller()))
+    ui.update_navset("inTabset", selected="panel" + str(input.controller()))

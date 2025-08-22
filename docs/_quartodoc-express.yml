@@ -126,7 +126,7 @@ quartodoc:
         - express.ui.update_numeric
         - express.ui.update_text
         - express.ui.update_text_area
-        - express.ui.update_navs
+        - express.ui.update_navset
         - express.ui.update_action_button
         - express.ui.update_action_link
         - express.ui.update_task_button
