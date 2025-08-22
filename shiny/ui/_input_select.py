@@ -10,7 +10,7 @@ __all__ = (
     "input_selectize",
 )
 import json
-from typing import Mapping, Optional, Union, cast
+from typing import Literal, Mapping, Optional, Union, cast
 
 from htmltools import Tag, TagChild, TagList, css, div, tags
 
@@ -58,7 +58,7 @@ def input_selectize(
     selected: Optional[str | list[str]] = None,
     multiple: bool = False,
     width: Optional[str] = None,
-    remove_button: bool = True,
+    remove_button: Optional[Literal[True, False, "both"]] = None,
     options: Optional[dict[str, Jsonifiable | JSEval]] = None,
 ) -> Tag:
     """
@@ -84,10 +84,16 @@ def input_selectize(
     width
         The CSS width, e.g. '400px', or '100%'
     remove_button
-        Whether to add a remove button. When `True` (the default), both the
-        'clear_button' and 'remove_button' plugins are included. If you want just one
-        plugin, set this to `False` and specify the desired plugin in the `options`
-        argument (i.e., `options = {"plugins": ["remove_button"]}`).
+        Whether to include remove button(s). The following values are supported:
+
+        - `None` (the default): The 'remove_button' selection plugin is included when
+          `multiple=True`.
+        - `True`: Same as `None` in the `multiple=True` case, but when `multiple=False`,
+          the 'clear_button' plugin is included.
+        - `False`: No plugins are included.
+        - `"both"`: Both 'remove_button' and 'clear_button' plugins are included. This
+          is useful for being able to clear each and all selected items when
+          `multiple=True`.
     options
         A dictionary of options. See the documentation of selectize.js for possible options.
         If you want to pass a JavaScript function, wrap the string in `ui.JS`.
@@ -201,8 +207,8 @@ def input_select(
             "Use `input_selectize()` instead of passing `selectize=True`."
         )
 
-    if isinstance(remove_button, MISSING_TYPE) or remove_button is None:
-        remove_button = True
+    if isinstance(remove_button, MISSING_TYPE):
+        remove_button = None
     else:
         warn_deprecated(
             "`remove_button` parameter of `input_select()` is deprecated. "
@@ -245,7 +251,7 @@ def _input_select_impl(
     selectize: bool = False,
     width: Optional[str] = None,
     size: Optional[str] = None,
-    remove_button: bool = True,
+    remove_button: Literal[True, False, "both", None] = None,
     options: Optional[dict[str, Jsonifiable | JSEval]] = None,
 ) -> Tag:
     if options is not None and selectize is False:
@@ -262,15 +268,18 @@ def _input_select_impl(
     if options is None:
         options = {}
 
-    # Although 'remove_button' is primarily for multiple=True and 'clear_button' is for
-    # multiple=False, we include both in either case since:
-    #   1. When multiple=True, 'clear_button' can be used to clear _all_ selected items.
-    #   2. When multiple=False, 'remove_button' is effectively a no-op.
-    #   3. By including both, we can simplify the client-side logic needed to retain
-    #     these plugins across update_selectize(options=...) calls
+    if remove_button is None:
+        remove_button = multiple
+
+    # Translate remove_button into default selectize plugins
+    # N.B. remove_button is primarily for multiple=True and clear_button is for
+    # multiple=False, but both can also be useful in the multiple=True case (i.e., clear
+    # _all_ selected items)
     default_plugins = None
-    if remove_button or remove_button is None:
+    if remove_button == "both":
         default_plugins = json.dumps(["remove_button", "clear_button"])
+    elif remove_button:
+        default_plugins = json.dumps(["remove_button" if multiple else "clear_button"])
 
     choices_tags = _render_choices(choices_, selected)
 

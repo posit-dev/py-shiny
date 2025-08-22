@@ -27,9 +27,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `playwright.controller.InputActionButton` gains a `expect_icon()` method. As a result, the already existing `expect_label()` no longer includes the icon. (#2020)
 
-### Changes
+* `ui.input_selectize()`'s `remove_button` parameter gains a supported value of `"both"`, which adds both of the `"remove_button"` and `"clear_button"` selectize plugins. This is most useful when `multiple=True`, allowing for clearing of individual as well as _all_ selected items. (#2064)
 
-* `ui.input_selectize()` now defaults to `remove_button=True`, which includes both the `"remove_button"` and `"clear_button"` selectize plugins. This means, it's now easier for the user to clear the selection (when `multiple=False`) as well as _all_ selections (when `multiple=True`). (#2064)
+### Changes
 
 * `express.ui.insert_accordion_panel()`'s function signature has changed to be more ergonomic. Now you can pass the `panel_title` and `panel_contents` directly instead of `ui.hold()`ing the `ui.accordion_panel()` context manager. (#2042)
 
