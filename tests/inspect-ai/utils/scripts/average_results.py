@@ -32,9 +32,15 @@ def process_inspect_ai_results(attempts_dir: Path) -> Dict[str, Any]:
 
     if not attempt_dirs:
         print("No attempt directories found")
+        print(f"Looking in: {attempts_dir}")
+        print(
+            f"Directory contents: {list(attempts_dir.iterdir()) if attempts_dir.exists() else 'Directory does not exist'}"
+        )
         return {}
 
-    print(f"Found {len(attempt_dirs)} attempts to average")
+    print(
+        f"Found {len(attempt_dirs)} attempts to average: {[d.name for d in attempt_dirs]}"
+    )
 
     all_summaries: List[Dict[str, Union[int, float, bool]]] = []
 
@@ -146,14 +152,22 @@ def process_pytest_results(attempts_dir: Path) -> Dict[str, Any]:
 
     if not attempt_dirs:
         print("No attempt directories found for pytest results")
+        print(f"Looking in: {attempts_dir}")
+        print(
+            f"Directory contents: {list(attempts_dir.iterdir()) if attempts_dir.exists() else 'Directory does not exist'}"
+        )
         return {}
 
     all_pytest_summaries: List[Dict[str, Union[int, float]]] = []
 
     for attempt_dir in attempt_dirs:
         xml_file = attempt_dir / "test-results.xml"
+        print(f"Looking for XML file: {xml_file}")
         if not xml_file.exists():
             print(f"Warning: No test-results.xml found in {attempt_dir}")
+            print(
+                f"Directory contents: {list(attempt_dir.iterdir()) if attempt_dir.exists() else 'Directory does not exist'}"
+            )
             continue
 
         try:

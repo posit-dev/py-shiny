@@ -28,9 +28,15 @@ def prepare_comment(summary_path: Union[str, Path]) -> int:
         # Try to read the pytest averaged summary
         pytest_results = None
         pytest_summary_path = summary_path.parent / "pytest_summary.json"
+        print(f"Looking for pytest summary at: {pytest_summary_path}")
         if pytest_summary_path.exists():
             with open(pytest_summary_path, "r") as f:
                 pytest_results = json.load(f)
+            print(f"Found pytest results: {pytest_results}")
+        else:
+            print(
+                f"Pytest summary not found. Directory contents: {list(summary_path.parent.iterdir())}"
+            )
 
         # Try to read the combined summary for overall gate status
         combined_results = None

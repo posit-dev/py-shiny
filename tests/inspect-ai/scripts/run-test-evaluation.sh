@@ -24,11 +24,13 @@ cleanup_processes() {
 
 trap cleanup_processes EXIT
 
+# Initialize results directory structure once
+rm -rf results/
+mkdir -p results/
+
 for i in $(seq 1 "$ATTEMPTS"); do
   log_with_timestamp "Starting attempt $i of $ATTEMPTS"
 
-  rm -rf results/
-  mkdir -p results/
   mkdir -p results/attempts/attempt_$i/
   rm -f test-results.xml
 
