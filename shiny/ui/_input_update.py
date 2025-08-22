@@ -771,17 +771,14 @@ def update_selectize(
 
     session = require_active_session(session)
 
-    # TODO: we don't know if multiple is True or False!
-    default_plugins = _get_default_plugins(remove_button, multiple=True)
-
-    if options is not None or default_plugins is not None:
+    if options is not None or remove_button is not None:
         options = options or {}
         cfg = tags.script(
             json.dumps(options),
             type="application/json",
             data_for=resolve_id(id),
             data_eval=json.dumps(extract_js_keys(options)),
-            data_default_plugins=default_plugins,
+            data_remove_button=None if remove_button is None else str(remove_button),
         )
         session.send_input_message(id, {"config": cfg.get_html_string()})
 

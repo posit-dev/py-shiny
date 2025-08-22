@@ -270,6 +270,9 @@ def _input_select_impl(
 
     choices_tags = _render_choices(choices_, selected)
 
+    if remove_button is None:
+        remove_button = multiple
+
     selectize_config = None
     if selectize:
         selectize_config = tags.script(
@@ -279,8 +282,8 @@ def _input_select_impl(
             data_for=resolved_id,
             # Which option values should be interpreted as JS?
             data_eval=json.dumps(extract_js_keys(options)),
-            # Supply and retain these plugins across updates (on the client)
-            data_default_plugins=_get_default_plugins(remove_button, multiple),
+            # Can be "both", "true", or "false"
+            data_remove_button=str(remove_button).lower(),
         )
 
     return div(
