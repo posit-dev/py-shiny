@@ -25,15 +25,7 @@ def prepare_comment(summary_path: Union[str, Path]) -> int:
         with open(summary_path, "r") as f:
             inspect_results = json.load(f)
 
-        # Skip pytest results for now since they're not working properly
-        pytest_results = None
-
-        # Try to read the combined summary for overall gate status
-        combined_results = None
-        combined_summary_path = summary_path.parent / "combined_summary.json"
-        if combined_summary_path.exists():
-            with open(combined_summary_path, "r") as f:
-                combined_results = json.load(f)
+        # Skip pytest and combined results for now since they're not working properly
 
         # Build the comment
         comment_parts = [
