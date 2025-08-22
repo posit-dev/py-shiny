@@ -29,6 +29,7 @@ for i in $(seq 1 "$ATTEMPTS"); do
 
   rm -rf results/
   mkdir -p results/
+  mkdir -p results/attempts/attempt_$i/
   rm -f test-results.xml
 
   log_with_timestamp "[Attempt $i] Creating test metadata..."
@@ -36,7 +37,7 @@ for i in $(seq 1 "$ATTEMPTS"); do
 
   log_with_timestamp "[Attempt $i] Running Inspect AI evaluation..."
   inspect eval tests/inspect-ai/scripts/evaluation.py@shiny_test_evaluation \
-    --log-dir results/ \
+    --log-dir results/attempts/attempt_$i/ \
     --log-format json
 
   log_with_timestamp "[Attempt $i] Running tests..."
@@ -47,7 +48,7 @@ for i in $(seq 1 "$ATTEMPTS"); do
     --tb=short \
     --disable-warnings \
     --maxfail="$PYTEST_MAXFAIL" \
-    --junit-xml=test-results.xml \
+    --junit-xml=results/attempts/attempt_$i/test-results.xml \
     --durations=10 \
     --timeout="$PYTEST_PER_TEST_TIMEOUT" \
     --timeout-method=signal \
@@ -61,8 +62,8 @@ for i in $(seq 1 "$ATTEMPTS"); do
   fi
 
   if [ "${test_exit_code:-0}" -ne 0 ]; then
-    if [ -f test-results.xml ]; then
-      failure_count=$(grep -o 'failures="[0-9]*"' test-results.xml | grep -o '[0-9]*' || echo "0")
+    if [ -f results/attempts/attempt_$i/test-results.xml ]; then
+      failure_count=$(grep -o 'failures="[0-9]*"' results/attempts/attempt_$i/test-results.xml | grep -o '[0-9]*' || echo "0")
     else
       failure_count=0
     fi
@@ -78,3 +79,6 @@ for i in $(seq 1 "$ATTEMPTS"); do
 done
 
 log_with_timestamp "All $ATTEMPTS evaluation and test runs passed successfully."
+
+log_with_timestamp "Averaging results across all attempts..."
+python tests/inspect-ai/utils/scripts/average_results.py results/attempts/ results/
