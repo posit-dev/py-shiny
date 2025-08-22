@@ -268,19 +268,6 @@ def _input_select_impl(
     if options is None:
         options = {}
 
-    if remove_button is None:
-        remove_button = multiple
-
-    # Translate remove_button into default selectize plugins
-    # N.B. remove_button is primarily for multiple=True and clear_button is for
-    # multiple=False, but both can also be useful in the multiple=True case (i.e., clear
-    # _all_ selected items)
-    default_plugins = None
-    if remove_button == "both":
-        default_plugins = json.dumps(["remove_button", "clear_button"])
-    elif remove_button:
-        default_plugins = json.dumps(["remove_button" if multiple else "clear_button"])
-
     choices_tags = _render_choices(choices_, selected)
 
     selectize_config = None
@@ -293,7 +280,7 @@ def _input_select_impl(
             # Which option values should be interpreted as JS?
             data_eval=json.dumps(extract_js_keys(options)),
             # Supply and retain these plugins across updates (on the client)
-            data_default_plugins=default_plugins,
+            data_default_plugins=_get_default_plugins(remove_button, multiple),
         )
 
     return div(
@@ -323,17 +310,27 @@ def _normalize_choices(x: SelectChoicesArg) -> _SelectChoices:
         return x
 
 
-def _contains_html(x: _SelectChoices) -> bool:
-    for v in x.values():
-        if isinstance(v, Mapping):
-            # Check the `_Choices` values of `_OptGrpChoices`
-            for vv in v.values():
-                if not isinstance(vv, str):
-                    return True
-        else:
-            if not isinstance(v, str):
-                return True
-    return False
+# Translate remove_button into default selectize plugins
+# N.B. remove_button is primarily for multiple=True and clear_button is for
+# multiple=False, but both can also be useful in the multiple=True case (i.e., clear
+# _all_ selected items)
+def _get_default_plugins(
+    remove_button: Optional[Literal[True, False, "both"]],
+    multiple: bool,
+) -> Optional[str]:
+    if remove_button is None:
+        remove_button = multiple
+
+    if remove_button is False:
+        return None
+
+    if remove_button is True:
+        return json.dumps(["remove_button" if multiple else "clear_button"])
+
+    if remove_button == "both":
+        return json.dumps(["remove_button", "clear_button"])
+
+    raise ValueError(f"Invalid value for `remove_button`: {remove_button}")
 
 
 def _render_choices(

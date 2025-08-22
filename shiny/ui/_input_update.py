@@ -38,7 +38,12 @@ from ..session import require_active_session, session_context
 from ..types import ActionButtonValue
 from ._input_check_radio import ChoicesArg, _generate_options
 from ._input_date import _as_date_attr
-from ._input_select import SelectChoicesArg, _normalize_choices, _render_choices
+from ._input_select import (
+    SelectChoicesArg,
+    _normalize_choices,
+    _render_choices,
+    _get_default_plugins,
+)
 from ._input_slider import SliderStepArg, SliderValueArg, _as_numeric, _slider_type
 from ._utils import JSEval, _session_on_flush_send_msg, extract_js_keys
 
@@ -721,7 +726,7 @@ def update_selectize(
     label: Optional[TagChild] = None,
     choices: Optional[SelectChoicesArg] = None,
     selected: Optional[str | list[str]] = None,
-    remove_button: Optional[bool] = None,
+    remove_button: Optional[Literal[True, False, "both"]] = None,
     options: Optional[dict[str, str | float | JSEval]] = None,
     server: bool = False,
     session: Optional[Session] = None,
@@ -766,12 +771,8 @@ def update_selectize(
 
     session = require_active_session(session)
 
-    # Don't change default plugins unless explicitly specified
-    default_plugins = None
-    if remove_button is True:
-        default_plugins = json.dumps(["remove_button", "clear_button"])
-    if remove_button is False:
-        default_plugins = json.dumps([])
+    # TODO: we don't know if multiple is True or False!
+    default_plugins = _get_default_plugins(remove_button, multiple=True)
 
     if options is not None or default_plugins is not None:
         options = options or {}
