@@ -2414,6 +2414,7 @@
         },
         JSON.parse(config.html())
       );
+      this._addShinyRemoveButton(options, el.hasAttribute("multiple"));
       if (typeof config.data("nonempty") !== "undefined") {
         el.nonempty = true;
         options = import_jquery19.default.extend(options, {
@@ -2449,6 +2450,33 @@
         control = $el.selectize(settings)[0].selectize;
       }
       return control;
+    }
+    // Translate shinyRemoveButton option into selectize plugins
+    _addShinyRemoveButton(options, multiple) {
+      let removeButton = options.shinyRemoveButton;
+      if (removeButton === void 0) {
+        return;
+      }
+      if (removeButton === "none") {
+        removeButton = multiple ? "true" : "false";
+      }
+      if (removeButton === "false") {
+        return;
+      }
+      const plugins = [];
+      if (removeButton === "both") {
+        plugins.push("remove_button", "clear_button");
+      } else if (removeButton === "true") {
+        plugins.push(multiple ? "remove_button" : "clear_button");
+      }
+      const optionPlugins = options.plugins || [];
+      plugins.forEach((plugin) => {
+        if (!optionPlugins.includes(plugin)) {
+          optionPlugins.push(plugin);
+        }
+      });
+      options.plugins = optionPlugins;
+      delete options.shinyRemoveButton;
     }
   };
 

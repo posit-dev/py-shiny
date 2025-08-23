@@ -721,6 +721,7 @@ def update_selectize(
     label: Optional[TagChild] = None,
     choices: Optional[SelectChoicesArg] = None,
     selected: Optional[str | list[str]] = None,
+    remove_button: Optional[Literal[True, False, "both"]] = None,
     options: Optional[dict[str, str | float | JSEval]] = None,
     server: bool = False,
     session: Optional[Session] = None,
@@ -741,8 +742,11 @@ def update_selectize(
         ``<optgroup>`` labels.
     selected
         The values that should be initially selected, if any.
+    remove_button
+        Whether to show a remove button for the select input.
     options
-        Options to send to update, see `input_selectize` for details.
+        Selectize.js options to customize the behavior of the select input.
+        See <https://selectize.dev/docs/usage> for more details.
     server
         Whether to store choices on the server side, and load the select options
         dynamically on searching, instead of writing all choices into the page at once
@@ -762,7 +766,9 @@ def update_selectize(
 
     session = require_active_session(session)
 
-    if options is not None:
+    if options is not None or remove_button is not None:
+        options = options or {}
+        options["shinyRemoveButton"] = str(remove_button).lower()
         cfg = tags.script(
             json.dumps(options),
             type="application/json",
