@@ -270,9 +270,6 @@ def _input_select_impl(
 
     choices_tags = _render_choices(choices_, selected)
 
-    if remove_button is None:
-        remove_button = multiple
-
     # Add our own special remove_button option
     options["shinyRemoveButton"] = str(remove_button).lower()
 

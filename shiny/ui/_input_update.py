@@ -766,11 +766,9 @@ def update_selectize(
 
     session = require_active_session(session)
 
-    if remove_button is not None:
+    if options is not None or remove_button is not None:
         options = options or {}
         options["shinyRemoveButton"] = str(remove_button).lower()
-
-    if options is not None:
         cfg = tags.script(
             json.dumps(options),
             type="application/json",
