@@ -273,6 +273,9 @@ def _input_select_impl(
     if remove_button is None:
         remove_button = multiple
 
+    # Add our own special remove_button option
+    options["shinyRemoveButton"] = str(remove_button).lower()
+
     selectize_config = None
     if selectize:
         selectize_config = tags.script(
@@ -282,8 +285,6 @@ def _input_select_impl(
             data_for=resolved_id,
             # Which option values should be interpreted as JS?
             data_eval=json.dumps(extract_js_keys(options)),
-            # Can be "both", "true", or "false"
-            data_remove_button=str(remove_button).lower(),
         )
 
     return div(
@@ -311,29 +312,6 @@ def _normalize_choices(x: SelectChoicesArg) -> _SelectChoices:
         return {k: k for k in x}
     else:
         return x
-
-
-# Translate remove_button into default selectize plugins
-# N.B. remove_button is primarily for multiple=True and clear_button is for
-# multiple=False, but both can also be useful in the multiple=True case (i.e., clear
-# _all_ selected items)
-def _get_default_plugins(
-    remove_button: Optional[Literal[True, False, "both"]],
-    multiple: bool,
-) -> Optional[str]:
-    if remove_button is None:
-        remove_button = multiple
-
-    if remove_button is False:
-        return None
-
-    if remove_button is True:
-        return json.dumps(["remove_button" if multiple else "clear_button"])
-
-    if remove_button == "both":
-        return json.dumps(["remove_button", "clear_button"])
-
-    raise ValueError(f"Invalid value for `remove_button`: {remove_button}")
 
 
 def _render_choices(
