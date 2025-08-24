@@ -47,6 +47,7 @@ app = App(
         sidebar=my_sidebar,
         title="page_navbar()",
         bg="#0062cc",
+        id="page_navbar",
         header=ui.markdown(
             "Testing app for `bslib::nav_spacer()` and `bslib::nav_item()` [#319](https://github.com/rstudio/bslib/pull/319)."
         ),
@@ -55,17 +56,20 @@ app = App(
             ui.h4("navset_card_tab()"),
             ui.navset_card_tab(
                 *nav_items("navset_card_tab()"),
+                id="navset_card_tab",
                 sidebar=my_sidebar,
             ),
             ui.h4("navset_card_pill()"),
             ui.navset_card_pill(
                 *nav_items("navset_card_pill()"),
+                id="navset_card_pill",
                 sidebar=my_sidebar,
             ),
             # Do not include `navset_bar()` in example. Ok for testing only
             ui.h4("navset_bar()"),
             ui.navset_bar(
                 *nav_items("navset_bar()"),
+                id="navset_bar",
                 title="Test!",
                 sidebar=my_sidebar,
             ),
