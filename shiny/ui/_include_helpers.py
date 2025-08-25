@@ -240,11 +240,12 @@ def maybe_copy_files(path: Path | str, include_files: bool) -> tuple[str, str]:
 
 def get_hash(path: Path | str, include_files: bool) -> str:
     if include_files:
-        key = get_file_key(path)
-    else:
         dir = os.path.dirname(path)
         files = glob.iglob(os.path.join(dir, "**"), recursive=True)
         key = "\n".join([get_file_key(x) for x in files])
+    else:
+        key = get_file_key(path)
+
     return hash_deterministic(key)
 
 
