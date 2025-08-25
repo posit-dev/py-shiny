@@ -215,9 +215,10 @@ def create_include_dependency(
 def maybe_copy_files(path: Path | str, include_files: bool) -> tuple[str, str]:
     hash = get_hash(path, include_files)
 
+    # To avoid unnecessary work when the same file is included multiple times,
+    # use a directory scoped by a hash of the file.
     tmpdir = os.path.join(tempfile.gettempdir(), "shiny_include_files", hash)
     path_dest = os.path.join(tmpdir, os.path.basename(path))
-    print("tmpdir, path_dest: ", tmpdir, path_dest)
 
     # Since the hash/tmpdir should represent all the files in the path's directory,
     # we can simply return here
