@@ -89,6 +89,10 @@ def include_js(
     if method == "inline":
         return tags.script(read_utf8(file_path), **kwargs)
 
+    # QUESTION: Do we have access to the session or user at this point? Can write based on that and then give them full perms?
+    # Where does cleanup happen?! Seems like maybe that needs to be included before we make new folders? Check the date? Tell if active
+    # session using them?!
+
     include_files = method == "link_files"
     path_dest, hash = maybe_copy_files(file_path, include_files)
 
@@ -217,21 +221,35 @@ def maybe_copy_files(path: Path | str, include_files: bool) -> tuple[str, str]:
 
     # To avoid unnecessary work when the same file is included multiple times,
     # use a directory scoped by a hash of the file.
+    # We need to make tempdir deterministic if we use the pythong TemporaryDirectory class so we can still tell if the hash has changed
+    # We want the temp dir unique to the process, hash should be the only thing that is dynamic based on the file contents.
+    # Cleanup done using __del__?
+    # Also make perms so that others can read it
+    # Double check clean-up based on process ending
     tmpdir = os.path.join(tempfile.gettempdir(), "shiny_include_files", hash)
     path_dest = os.path.join(tmpdir, os.path.basename(path))
+    print("tmpdir, path_dest: ", tmpdir, path_dest)
 
     # Since the hash/tmpdir should represent all the files in the path's directory,
     # we can simply return here
     if os.path.exists(path_dest):
+        print("path exists: ", path_dest, hash)
         return path_dest, hash
 
     # Otherwise, make sure we have a clean slate
+    # We only hit this if tempdir/ exists but not the file (i.e. style.css)
     if os.path.exists(tmpdir):
+        print("clean the slate, tmpdir", tmpdir)
         shutil.rmtree(tmpdir)
 
     if include_files:
+        print("include files true")
+        # TODO: Switch this to tempfile.mkdtmp? This will scope perms to the userID
+        # QUESTION what is the user id? The system user? How does that work in Connect?
         shutil.copytree(os.path.dirname(path), tmpdir)
     else:
+        print("include files false")
+        # This should probably use the temp file syntax
         os.makedirs(tmpdir, exist_ok=True)
         shutil.copy(path, path_dest)
 
@@ -240,11 +258,14 @@ def maybe_copy_files(path: Path | str, include_files: bool) -> tuple[str, str]:
 
 def get_hash(path: Path | str, include_files: bool) -> str:
     if include_files:
-        key = get_file_key(path)
-    else:
         dir = os.path.dirname(path)
+        # This is recursively listing everything in the dir and making that part of the hash even though we're not pulling it over
+        # Ex. we make a hash, we copy over one file, then we jsut don't keep going
         files = glob.iglob(os.path.join(dir, "**"), recursive=True)
         key = "\n".join([get_file_key(x) for x in files])
+    else:
+        key = get_file_key(path)
+
     return hash_deterministic(key)
 
 
