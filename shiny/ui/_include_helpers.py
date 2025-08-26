@@ -214,37 +214,61 @@ def create_include_dependency(
 
 def maybe_copy_files(path: Path | str, include_files: bool) -> tuple[str, str]:
     hash = get_hash(path, include_files)
+    print("path: ", path, "Hash: ", hash)
 
     # To avoid unnecessary work when the same file is included multiple times,
     # use a directory scoped by a hash of the file.
     tmpdir = os.path.join(tempfile.gettempdir(), "shiny_include_files", hash)
     path_dest = os.path.join(tmpdir, os.path.basename(path))
+    print("path_dest:", path_dest)
 
     # Since the hash/tmpdir should represent all the files in the path's directory,
-    # we can simply return here
+    # we can check if it exists to determine if we have a cache hit
     if os.path.exists(path_dest):
+        print("Already exists", path_dest)
         return path_dest, hash
+
+    permissions = (
+        0o755  # Store permissions var set to -rwxr-xr-x (owner rwx, others rx)
+    )
 
     # Otherwise, make sure we have a clean slate
     if os.path.exists(tmpdir):
+        print("folder exists, not contents:", os.stat(tmpdir))
         shutil.rmtree(tmpdir)
 
+    # Looks like this is copying twice? puts stuff in diff folders?
     if include_files:
         shutil.copytree(os.path.dirname(path), tmpdir)
-    else:
-        os.makedirs(tmpdir, exist_ok=True)
-        shutil.copy(path, path_dest)
+        print("new folder, perms: ", oct(os.stat(tmpdir).st_mode))
+        for root, dirs, files in os.walk(tmpdir):
+            # set perms on sub-directories
+            for dir in dirs:
+                os.chmod(os.path.join(root, dir), permissions)
+                print("Dir: ", dir)
+                print("dir perms: ", oct(os.stat(os.path.join(root, dir)).st_mode))
 
+            # set perms on files
+            for file in files:
+                print("File: ", file)
+                os.chmod(os.path.join(root, file), permissions)
+                print("file perms: ", oct(os.stat(os.path.join(root, file)).st_mode))
+
+        shutil.copy(path, path_dest)
+    print("PATH_DEST: ", path_dest)
     return path_dest, hash
 
 
 def get_hash(path: Path | str, include_files: bool) -> str:
     if include_files:
+        print("get_hash, include_files is true")
         dir = os.path.dirname(path)
         files = glob.iglob(os.path.join(dir, "**"), recursive=True)
         key = "\n".join([get_file_key(x) for x in files])
+        print("KEY: ", key)
     else:
         key = get_file_key(path)
+        print("not include key: ", key)
 
     return hash_deterministic(key)
 

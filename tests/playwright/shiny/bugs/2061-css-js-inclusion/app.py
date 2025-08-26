@@ -2,7 +2,9 @@ from shiny import App, ui
 
 # Define the UI
 app_ui = ui.page_fluid(
-    ui.include_css("./www/style.css"),  # Reference the external CSS file
+    ui.include_css(
+        "./www/style.css", method="link_files"
+    ),  # Reference the external CSS file
     ui.include_js("./www/customjs.js"),
     ui.h1("Simple Shiny App with External CSS"),
     ui.div(
