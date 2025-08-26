@@ -144,14 +144,14 @@ def update_nav_panel(
 
     Note
     ----
-    On reveal, the `nav_panel` will not be the active tab. To change the active tab, use :func:`~shiny.ui.update_navs()`
+    On reveal, the `nav_panel` will not be the active tab. To change the active tab, use :func:`~shiny.ui.update_navset()`
     For example:
     ```python
     @reactive.effect
     @reactive.event(input.show_tab)
     def _():
         ui.update_nav_panel("tabset_id", target="Foo", method="show")
-        ui.update_navs("tabset_id", selected="Foo")
+        ui.update_navset("tabset_id", selected="Foo")
     ```
 
     See Also
@@ -159,7 +159,7 @@ def update_nav_panel(
     ~shiny.ui.insert_nav_panel
     ~shiny.ui.remove_nav_panel
     ~shiny.ui.nav_panel
-    ~shiny.ui.update_navs
+    ~shiny.ui.update_navset
     """
 
     session = require_active_session(session)

@@ -458,12 +458,12 @@ def server(input: Inputs, output: Outputs, session: Session):
                 if session.input.tooltip() != on_off:
                     ui.update_tooltip("tooltip", show=on_off)
 
-            ui.update_navs("navset_bar", selected=letter)
-            ui.update_navs("navset_card_pill", selected=letter)
-            ui.update_navs("navset_card_tab", selected=letter)
-            ui.update_navs("navset_hidden", selected=letter)
-            ui.update_navs("navset_pill", selected=letter)
-            ui.update_navs("navset_tab", selected=letter)
+            ui.update_navset("navset_bar", selected=letter)
+            ui.update_navset("navset_card_pill", selected=letter)
+            ui.update_navset("navset_card_tab", selected=letter)
+            ui.update_navset("navset_hidden", selected=letter)
+            ui.update_navset("navset_pill", selected=letter)
+            ui.update_navset("navset_tab", selected=letter)
 
     module_keys = (
         ("update_global", ""),

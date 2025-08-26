@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
+* `navset_card_*()` now has a `full_screen` option to support `card()`'s existing full-screen functionality. (#1451)
+
 * Added `ui.insert_nav_panel()`, `ui.remove_nav_panel()`, and `ui.update_nav_panel()` to support dynamic navigation. (#90)
 
 * Added support for python 3.13. (#1711)
@@ -64,6 +66,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Fixed `set()` method of `InputSelectize` controller so it clears existing selections before applying new values. (#2024)
 
 ### Deprecations
+
+* `ui.update_navs()` has been deprecated in favor of `ui.update_navset()`. (#2047)
 
 * `ui.panel_well()` is deprecated in favor of `ui.card()`. (#2038)
 

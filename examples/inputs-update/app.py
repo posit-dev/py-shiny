@@ -185,7 +185,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         # Tabset input =============================================
         # Change the selected tab.
         # The tabsetPanel must have been created with an 'id' argument
-        ui.update_navs("inTabset", selected="panel2" if c_num % 2 else "panel1")
+        ui.update_navset("inTabset", selected="panel2" if c_num % 2 else "panel1")
 
 
 app = App(app_ui, server, debug=True)

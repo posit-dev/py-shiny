@@ -166,7 +166,7 @@ quartodoc:
         - ui.update_text
         - name: ui.update_text_area
           dynamic: "shiny.ui.update_text"
-        - ui.update_navs
+        - ui.update_navset
         - ui.update_action_button
         - ui.update_action_link
         - ui.update_task_button
