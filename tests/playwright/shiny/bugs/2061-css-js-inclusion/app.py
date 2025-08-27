@@ -1,9 +1,13 @@
 from shiny import App, Inputs, Outputs, Session, ui
+from pathlib import Path
+
+js_file = Path(__file__).parent / "js" / "customjs.js"
+css_file = Path(__file__).parent / "css" / "style.css"
 
 # Define the UI
 app_ui = ui.page_fluid(
-    ui.include_css("./css/style.css", method="link_files"),
-    ui.include_js("./js/customjs.js", method="link_files"),
+    ui.include_css(css_file, method="link_files"),
+    ui.include_js(js_file, method="link_files"),
     ui.h1("Simple Shiny App with External CSS"),
     ui.div(
         ui.p("This is a simple Shiny app that demonstrates ui.include_css()"),
