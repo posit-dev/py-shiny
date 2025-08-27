@@ -94,6 +94,7 @@ from ._input_update import (
     update_date,
     update_date_range,
     update_navs,
+    update_navset,
     update_numeric,
     update_popover,
     update_radio_buttons,
@@ -273,6 +274,7 @@ __all__ = (
     "update_text",
     "update_text_area",
     "update_navs",
+    "update_navset",
     "update_tooltip",
     "update_popover",
     # _insert

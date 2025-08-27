@@ -14,7 +14,7 @@ app_ui = ui.page_sidebar(
 def server(input: Inputs, output: Outputs, session: Session):
     @reactive.effect
     def _():
-        ui.update_navs("inTabset", selected="panel" + str(input.controller()))
+        ui.update_navset("inTabset", selected="panel" + str(input.controller()))
 
 
 app = App(app_ui, server)

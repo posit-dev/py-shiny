@@ -16,4 +16,4 @@ with ui.navset_hidden(id="hidden_tabs"):
 @reactive.effect
 @reactive.event(input.controller)
 def _():
-    ui.update_navs("hidden_tabs", selected="panel" + str(input.controller()))
+    ui.update_navset("hidden_tabs", selected="panel" + str(input.controller()))

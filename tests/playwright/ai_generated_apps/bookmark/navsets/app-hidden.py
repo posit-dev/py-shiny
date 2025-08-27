@@ -42,7 +42,7 @@ def create_navset(navset_name: str, input: Inputs) -> None:
             next_letter = letters[current_idx % len(letters)]
             next_id = f"{navset_fn_id}_{next_letter}"
 
-            ui.update_navs(navset_fn_id, selected=next_id)
+            ui.update_navset(navset_fn_id, selected=next_id)
 
     for navset_variant, params in navset_configs[navset_name].items():
         make_navset(navset_variant, **params.copy())
