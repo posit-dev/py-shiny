@@ -1,5 +1,6 @@
-from shiny import App, Inputs, Outputs, Session, ui
 from pathlib import Path
+
+from shiny import App, Inputs, Outputs, Session, ui
 
 js_file = Path(__file__).parent / "js" / "customjs.js"
 css_file = Path(__file__).parent / "css" / "style.css"
