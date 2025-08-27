@@ -1,11 +1,11 @@
+@import url("more.css");
 
 body {
-  background-color: #f0f8ff;
   font-family: Arial, sans-serif;
 }
 
 h1 {
-  color: #4682b4;
+  color: black;
   border-bottom: 2px solid #4682b4;
   padding-bottom: 10px;
 }
