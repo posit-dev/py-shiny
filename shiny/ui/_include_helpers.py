@@ -249,7 +249,13 @@ def maybe_copy_files(path: Path | str, include_files: bool) -> tuple[str, str]:
                     oct(os.stat(os.path.join(dirpath, file)).st_mode),
                 )
     else:
-        os.mkdir(tmpdir, mode=0o755)
+        os.makedirs(tmpdir, mode=0o755, exist_ok=True)
+        print(
+            "Copying files from: ",
+            path,
+            " with perms: ",
+            oct(os.stat(path).st_mode),
+        )
         shutil.copy(path, path_dest)
         os.chmod(path_dest, 0o755)
         print("File: ", path_dest, "perms", oct(os.stat(path_dest).st_mode))
