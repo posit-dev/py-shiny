@@ -226,50 +226,45 @@ def maybe_copy_files(path: Path | str, include_files: bool) -> tuple[str, str]:
     # Since the hash/tmpdir should represent all the files in the path's directory,
     # we can check if it exists to determine if we have a cache hit
     if os.path.exists(path_dest):
-        print("Already exists", path_dest)
+        print("Path already exists:", path_dest)
         return path_dest, hash
-
-    permissions = (
-        0o755  # Store permissions var set to -rwxr-xr-x (owner rwx, others rx)
-    )
 
     # Otherwise, make sure we have a clean slate
     if os.path.exists(tmpdir):
-        print("folder exists, not contents:", os.stat(tmpdir))
+        print("Folder already exists, but not files, removing.")
         shutil.rmtree(tmpdir)
 
-    # Looks like this is copying twice? puts stuff in diff folders?
+    # This recursively changes permissions to 755 (owner rwx, other rx) for all files
+    # under `tmp/unique_hash` so that the app can be run by other collaborators
+    # on a multi-tenant system. See #2061
     if include_files:
         shutil.copytree(os.path.dirname(path), tmpdir)
-        print("new folder, perms: ", oct(os.stat(tmpdir).st_mode))
-        for root, dirs, files in os.walk(tmpdir):
-            # set perms on sub-directories
-            for dir in dirs:
-                os.chmod(os.path.join(root, dir), permissions)
-                print("Dir: ", dir)
-                print("dir perms: ", oct(os.stat(os.path.join(root, dir)).st_mode))
-
+        for dirpath, dirs, filenames in os.walk(tmpdir):
             # set perms on files
-            for file in files:
-                print("File: ", file)
-                os.chmod(os.path.join(root, file), permissions)
-                print("file perms: ", oct(os.stat(os.path.join(root, file)).st_mode))
-
+            for file in filenames:
+                os.chmod(os.path.join(dirpath, file), 0o755)
+                print(
+                    "File: ",
+                    file,
+                    "File perms: ",
+                    oct(os.stat(os.path.join(dirpath, file)).st_mode),
+                )
+    else:
+        os.mkdir(tmpdir, mode=0o755)
         shutil.copy(path, path_dest)
-    print("PATH_DEST: ", path_dest)
+        os.chmod(path_dest, 0o755)
+        print("File: ", path_dest, "perms", oct(os.stat(path_dest).st_mode))
+
     return path_dest, hash
 
 
 def get_hash(path: Path | str, include_files: bool) -> str:
     if include_files:
-        print("get_hash, include_files is true")
         dir = os.path.dirname(path)
         files = glob.iglob(os.path.join(dir, "**"), recursive=True)
         key = "\n".join([get_file_key(x) for x in files])
-        print("KEY: ", key)
     else:
         key = get_file_key(path)
-        print("not include key: ", key)
 
     return hash_deterministic(key)
 
