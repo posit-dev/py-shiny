@@ -19,7 +19,6 @@ from .._docstring import add_example
 # as the app, the app's source will be included. Should we just not copy .py/.r files?
 
 
-# TODO: This does throw js errors if you're loading in other stuff depending on your config
 @add_example()
 def include_js(
     path: Path | str,
