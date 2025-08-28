@@ -1,6 +1,6 @@
 list(
   bslib = "rstudio/bslib@main",
-  shiny = "rstudio/shiny@fix/update-selectize-default-plugins",
+  shiny = "rstudio/shiny@main",
   sass = "sass",
   htmltools = "rstudio/htmltools@main"
 )
