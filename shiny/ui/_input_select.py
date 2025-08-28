@@ -251,7 +251,7 @@ def _input_select_impl(
     selectize: bool = False,
     width: Optional[str] = None,
     size: Optional[str] = None,
-    remove_button: Literal[True, False, "both", None] = None,
+    remove_button: Optional[Literal[True, False, "both", None]] = None,
     options: Optional[dict[str, Jsonifiable | JSEval]] = None,
 ) -> Tag:
     if options is not None and selectize is False:

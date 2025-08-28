@@ -743,7 +743,14 @@ def update_selectize(
     selected
         The values that should be initially selected, if any.
     remove_button
-        Whether to show a remove button for the select input.
+        Whether to include remove button(s). The following values are supported:
+
+        - `None` (the default): do nothing.
+        - `True`: Adds the 'remove_button'/'clear_button' plugin (depending on `multiple`).
+        - `False`: Previously added remove_button plugins are removed.
+        - `"both"`: Both 'remove_button' and 'clear_button' plugins are added. This
+          is useful for being able to clear each and all selected items when
+          `multiple=True`.
     options
         Selectize.js options to customize the behavior of the select input.
         See <https://selectize.dev/docs/usage> for more details.
