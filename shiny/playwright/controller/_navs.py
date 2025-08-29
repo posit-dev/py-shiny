@@ -145,11 +145,35 @@ class NavPanel(UiWithContainer):
         """
         Clicks the nav panel.
 
+        If the nav panel is inside a dropdown, playwright will first open the dropdown before selecting the nav panel.
+
         Parameters
         ----------
         timeout
             The maximum time to wait for the nav panel to be visible and interactable. Defaults to `None`.
         """
+
+        parent_ul_loc = self.loc.locator("..").locator("..")
+
+        parent_ul_cls = parent_ul_loc.element_handle().get_attribute("class")
+        cls_menu_regex = re.compile(rf"(^|\s+){re.escape('dropdown-menu')}(\s+|$)")
+        cls_show_regex = re.compile(rf"(^|\s+){re.escape('show')}(\s+|$)")
+        cls_dropdown_regex = re.compile(rf"(^|\s+){re.escape('dropdown')}(\s+|$)")
+
+        # If the item is in a dropdown and the dropdown is closed
+        if (
+            parent_ul_cls
+            and cls_menu_regex.search(parent_ul_cls)
+            and not cls_show_regex.search(parent_ul_cls)
+        ):
+            grandparent_li_loc = parent_ul_loc.locator("..")
+            gnd_li_cls = grandparent_li_loc.element_handle().get_attribute("class")
+
+            # Confirm it is a dropdown
+            if gnd_li_cls and cls_dropdown_regex.search(gnd_li_cls):
+                # click the grandparent list item to open it before clicking the target item
+                grandparent_li_loc.click()
+
         self.loc.click(timeout=timeout)
 
     def expect_active(self, value: bool, *, timeout: Timeout = None) -> None:
