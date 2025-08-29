@@ -218,9 +218,14 @@ def maybe_copy_files(path: Path | str, include_files: bool) -> tuple[str, str]:
 
     # To avoid unnecessary work when the same file is included multiple times,
     # use a directory scoped by a hash of the file.
-    tmpdir = os.path.join(tempfile.gettempdir(), "shiny_include_files", hash)
+    tmp_folder = os.path.join(
+        os.path.basename(path), tempfile.gettempdir(), "shiny_include_files"
+    )
+    tmpdir = os.path.join(tmp_folder, hash)
     path_dest = os.path.join(tmpdir, os.path.basename(path))
     print("path_dest:", path_dest)
+    print(tmp_folder)
+    os.chmod(tmp_folder, 0o755)
 
     # Since the hash/tmpdir should represent all the files in the path's directory,
     # we can check if it exists to determine if we have a cache hit
