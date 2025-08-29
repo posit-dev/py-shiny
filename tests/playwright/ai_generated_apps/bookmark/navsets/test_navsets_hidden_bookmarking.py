@@ -29,7 +29,7 @@ def test_navset_hidden_bookmarking(
     navset_collection = controller.NavsetTab(page, "navsets_collection")
     navset_collection.set(navset_name)
     navset_id = f"{navset_name}_{navset_variant}"
-    navset_cont = navset_controller(page, navset_id)
+    navset_cont = navset_controller(page, navset_id)  # pyright: ignore[reportCallIssue]
     navset_btn = controller.InputActionButton(page, f"{navset_id}_button")
     navset_btn.click()
     navset_btn.click()
@@ -37,7 +37,9 @@ def test_navset_hidden_bookmarking(
     # Module navsets
     mod_navset_collection = controller.NavsetTab(page, "first-navsets_collection")
     mod_navset_collection.set(navset_name)
-    mod_navset_cont = navset_controller(page, f"first-{navset_id}")
+    mod_navset_cont = navset_controller(
+        page, f"first-{navset_id}"  # pyright: ignore[reportCallIssue]
+    )
     mod_navset_btn = controller.InputActionButton(page, f"first-{navset_id}_button")
     mod_navset_btn.click()
 

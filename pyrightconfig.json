@@ -10,7 +10,10 @@
     "docs",
     "tests/playwright/deploys/*/app.py",
     "shiny/templates",
-    "tests/playwright/ai_generated_apps",
+    "tests/playwright/ai_generated_apps/*/*/app*.py",
+    "tests/inspect-ai/apps/*/app*.py",
+    "shiny/pytest/_generate/_main.py",
+    "tests/inspect-ai/scripts/evaluation.py"
   ],
   "typeCheckingMode": "strict",
   "reportImportCycles": "none",
