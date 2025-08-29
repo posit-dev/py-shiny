@@ -9,9 +9,8 @@ __all__ = (
     "input_select",
     "input_selectize",
 )
-import copy
-from json import dumps
-from typing import Any, Mapping, Optional, Union, cast
+import json
+from typing import Literal, Mapping, Optional, Union, cast
 
 from htmltools import Tag, TagChild, TagList, css, div, tags
 
@@ -59,7 +58,7 @@ def input_selectize(
     selected: Optional[str | list[str]] = None,
     multiple: bool = False,
     width: Optional[str] = None,
-    remove_button: Optional[bool] = None,
+    remove_button: Optional[Literal[True, False, "both"]] = None,
     options: Optional[dict[str, Jsonifiable | JSEval]] = None,
 ) -> Tag:
     """
@@ -85,9 +84,16 @@ def input_selectize(
     width
         The CSS width, e.g. '400px', or '100%'
     remove_button
-        Whether to add a remove button. This uses the `clear_button` and `remove_button`
-        selectize plugins which can also be supplied as options. By default it will apply a
-        remove button to multiple selections, but not single selections.
+        Whether to include remove button(s). The following values are supported:
+
+        - `None` (the default): The 'remove_button' selection plugin is included when
+          `multiple=True`.
+        - `True`: Same as `None` in the `multiple=True` case, but when `multiple=False`,
+          the 'clear_button' plugin is included.
+        - `False`: No plugins are included.
+        - `"both"`: Both 'remove_button' and 'clear_button' plugins are included. This
+          is useful for being able to clear each and all selected items when
+          `multiple=True`.
     options
         A dictionary of options. See the documentation of selectize.js for possible options.
         If you want to pass a JavaScript function, wrap the string in `ui.JS`.
@@ -245,13 +251,11 @@ def _input_select_impl(
     selectize: bool = False,
     width: Optional[str] = None,
     size: Optional[str] = None,
-    remove_button: Optional[bool] = None,
+    remove_button: Optional[Literal[True, False, "both", None]] = None,
     options: Optional[dict[str, Jsonifiable | JSEval]] = None,
 ) -> Tag:
     if options is not None and selectize is False:
         raise Exception("Options can only be set when selectize is `True`.")
-
-    remove_button = _resolve_remove_button(remove_button, multiple)
 
     resolved_id = resolve_id(id)
 
@@ -264,9 +268,21 @@ def _input_select_impl(
     if options is None:
         options = {}
 
-    opts = _update_options(options, remove_button, multiple)
-
     choices_tags = _render_choices(choices_, selected)
+
+    # Add our own special remove_button option
+    options["shinyRemoveButton"] = str(remove_button).lower()
+
+    selectize_config = None
+    if selectize:
+        selectize_config = tags.script(
+            json.dumps(options),
+            selectize_deps(),
+            type="application/json",
+            data_for=resolved_id,
+            # Which option values should be interpreted as JS?
+            data_eval=json.dumps(extract_js_keys(options)),
+        )
 
     return div(
         shiny_input_label(resolved_id, label),
@@ -279,54 +295,11 @@ def _input_select_impl(
                 multiple=multiple,
                 size=size,
             ),
-            (
-                TagList(
-                    tags.script(
-                        dumps(opts),
-                        type="application/json",
-                        data_for=resolved_id,
-                        data_eval=dumps(extract_js_keys(opts)),
-                    ),
-                    selectize_deps(),
-                )
-                if selectize
-                else None
-            ),
+            selectize_config,
         ),
         class_="form-group shiny-input-container",
         style=css(width=width),
     )
-
-
-def _resolve_remove_button(remove_button: Optional[bool], multiple: bool) -> bool:
-    if remove_button is None:
-        if multiple:
-            return True
-        else:
-            return False
-    return remove_button
-
-
-def _update_options(
-    options: dict[str, Any], remove_button: bool, multiple: bool
-) -> dict[str, Any]:
-    opts = copy.deepcopy(options)
-    plugins = opts.get("plugins", [])
-
-    if remove_button:
-        if multiple:
-            to_add = "remove_button"
-        else:
-            to_add = "clear_button"
-
-        if to_add not in plugins:
-            plugins.append(to_add)
-
-    if not plugins:
-        return options
-
-    opts["plugins"] = plugins
-    return opts
 
 
 def _normalize_choices(x: SelectChoicesArg) -> _SelectChoices:
@@ -336,19 +309,6 @@ def _normalize_choices(x: SelectChoicesArg) -> _SelectChoices:
         return {k: k for k in x}
     else:
         return x
-
-
-def _contains_html(x: _SelectChoices) -> bool:
-    for v in x.values():
-        if isinstance(v, Mapping):
-            # Check the `_Choices` values of `_OptGrpChoices`
-            for vv in v.values():
-                if not isinstance(vv, str):
-                    return True
-        else:
-            if not isinstance(v, str):
-                return True
-    return False
 
 
 def _render_choices(
