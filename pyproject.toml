@@ -13,7 +13,7 @@ local_scheme = "no-local-version"
 name = "shiny"
 dynamic = ["version"]
 authors = [{ name = "Winston Chang", email = "winston@posit.co" }]
-description = "A web development framework for Python."
+description = "Reactive data & AI web apps in pure Python."
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
