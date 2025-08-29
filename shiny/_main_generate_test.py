@@ -139,7 +139,7 @@ def generate_test_file(
         if model:
             click.echo(f"📝 Using model: {model}")
 
-        generator = ShinyTestGenerator(provider=provider)  # type: ignore
+        generator = ShinyTestGenerator(provider=provider, setup_logging=False)  # type: ignore
         _, test_file_path = generator.generate_test_from_file(
             app_file_path=str(app_path),
             model=model,

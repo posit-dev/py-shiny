@@ -65,6 +65,11 @@ class ShinyTestGenerator:
         self.api_key = api_key
         self.log_file = log_file
 
+        try:
+            load_dotenv(override=False)
+        except Exception:
+            pass
+
         if setup_logging:
             self.setup_logging()
 
@@ -72,16 +77,22 @@ class ShinyTestGenerator:
     def client(self) -> Union[ChatAnthropic, ChatOpenAI]:
         """Lazy-loaded chat client based on provider"""
         if self._client is None:
+            if not self.api_key:
+                env_var = (
+                    "ANTHROPIC_API_KEY"
+                    if self.provider == "anthropic"
+                    else "OPENAI_API_KEY"
+                )
+                self.api_key = os.getenv(env_var)
+            if not self.api_key:
+                raise ValueError(
+                    f"Missing API key for provider '{self.provider}'. Set the environment variable "
+                    f"{'ANTHROPIC_API_KEY' if self.provider == 'anthropic' else 'OPENAI_API_KEY'} or pass api_key explicitly."
+                )
             if self.provider == "anthropic":
-                self._client = (
-                    ChatAnthropic(api_key=self.api_key)
-                    if self.api_key
-                    else ChatAnthropic()
-                )
+                self._client = ChatAnthropic(api_key=self.api_key)
             elif self.provider == "openai":
-                self._client = (
-                    ChatOpenAI(api_key=self.api_key) if self.api_key else ChatOpenAI()
-                )
+                self._client = ChatOpenAI(api_key=self.api_key)
             else:
                 raise ValueError(f"Unsupported provider: {self.provider}")
         return self._client
@@ -184,6 +195,18 @@ class ShinyTestGenerator:
             model = self._validate_model_for_provider(model)
 
         try:
+            if not self.api_key:
+                env_var = (
+                    "ANTHROPIC_API_KEY"
+                    if self.provider == "anthropic"
+                    else "OPENAI_API_KEY"
+                )
+                self.api_key = os.getenv(env_var)
+            if not self.api_key:
+                raise ValueError(
+                    f"Missing API key for provider '{self.provider}'. Set the environment variable "
+                    f"{'ANTHROPIC_API_KEY' if self.provider == 'anthropic' else 'OPENAI_API_KEY'} or pass api_key."
+                )
             # Create chat client with the specified model
             if self.provider == "anthropic":
                 chat = ChatAnthropic(
@@ -568,7 +591,9 @@ def cli():
         sys.exit(1)
 
     try:
-        generator = ShinyTestGenerator(provider=args.provider, api_key=args.api_key)
+        generator = ShinyTestGenerator(
+            provider=args.provider, api_key=args.api_key, setup_logging=False
+        )
 
         test_code, test_file_path = generator.generate_test_from_file(
             str(app_file_path),
