@@ -216,17 +216,12 @@ def maybe_copy_files(path: Path | str, include_files: bool) -> tuple[str, str]:
     hash = get_hash(path, include_files)
     print("path: ", path, "Hash: ", hash)
 
+    tmpdir = os.path.join(tempfile.gettempdir(), f"shiny_include_files_{hash}")
+    path_dest = os.path.join(tmpdir, os.path.basename(path))
+    print("tmpdir: ", tmpdir, "path_dest: ", path_dest)
+
     # To avoid unnecessary work when the same file is included multiple times,
     # use a directory scoped by a hash of the file.
-    tmp_folder = os.path.join(
-        os.path.basename(path), tempfile.gettempdir(), "shiny_include_files"
-    )
-    tmpdir = os.path.join(tmp_folder, hash)
-    path_dest = os.path.join(tmpdir, os.path.basename(path))
-    print("path_dest:", path_dest)
-    print(tmp_folder)
-    os.chmod(tmp_folder, 0o755)
-
     # Since the hash/tmpdir should represent all the files in the path's directory,
     # we can check if it exists to determine if we have a cache hit
     if os.path.exists(path_dest):
@@ -234,27 +229,21 @@ def maybe_copy_files(path: Path | str, include_files: bool) -> tuple[str, str]:
         return path_dest, hash
 
     # Otherwise, make sure we have a clean slate
-    if os.path.exists(tmpdir):
+    if os.path.exists(path_dest):
         print("Folder already exists, but not files, removing.")
-        shutil.rmtree(tmpdir)
+        shutil.rmtree(path_dest)
 
-    # This recursively changes permissions to 755 (owner rwx, other rx) for all files
-    # under `tmp/unique_hash` so that the app can be run by other collaborators
-    # on a multi-tenant system. See #2061
     if include_files:
+        print(
+            "Copying all included files from: ",
+            path,
+            " with perms: ",
+            oct(os.stat(path).st_mode),
+        )
         shutil.copytree(os.path.dirname(path), tmpdir)
-        for dirpath, dirs, filenames in os.walk(tmpdir):
-            # set perms on files
-            for file in filenames:
-                os.chmod(os.path.join(dirpath, file), 0o755)
-                print(
-                    "File: ",
-                    file,
-                    "File perms: ",
-                    oct(os.stat(os.path.join(dirpath, file)).st_mode),
-                )
+
     else:
-        os.makedirs(tmpdir, mode=0o755, exist_ok=True)
+        os.makedirs(path_dest, mode=0o755, exist_ok=True)
         print(
             "Copying files from: ",
             path,
@@ -262,9 +251,6 @@ def maybe_copy_files(path: Path | str, include_files: bool) -> tuple[str, str]:
             oct(os.stat(path).st_mode),
         )
         shutil.copy(path, path_dest)
-        os.chmod(path_dest, 0o755)
-        print("File: ", path_dest, "perms", oct(os.stat(path_dest).st_mode))
-
     return path_dest, hash
 
 
