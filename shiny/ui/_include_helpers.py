@@ -36,7 +36,7 @@ def include_js(
     method
         One of the following:
 
-        * ``"link"`` is the link to the JS file via a :func:`~shiny.ui.tags.link` tag. This
+        * ``"link"`` is the link to the JS file via a :func:`~shiny.ui.tags.script` tag. This
           method is generally preferable to ``"inline"`` since it allows the browser to
           cache the file.
         * ``"link_files"`` is the same as ``"link"``, but also allow for the JS file to
