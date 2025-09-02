@@ -46,7 +46,7 @@ def include_js(
           that contain sensitive information**. A good general rule of thumb to follow
           is to have ``path`` be located in a subdirectory of the app directory. For
           example, if the app's source is located at ``/app/app.py``, then ``path``
-          should be somewhere like ``/app/css/custom.css`` (and all the other relevant
+          should be somewhere like ``/app/js/custom.js`` (and all the other relevant
           accompanying 'safe' files should be located under ``/app/css/``).
         * ``"inline"`` is the inline the JS file contents within a
           :func:`~shiny.ui.tags.script` tag.
