@@ -49,7 +49,7 @@ def include_js(
           should be somewhere like ``/app/css/custom.css`` (and all the other relevant
           accompanying 'safe' files should be located under ``/app/css/``).
         * ``"inline"`` is the inline the JS file contents within a
-          :func:`~shiny.ui.tags.style` tag.
+          :func:`~shiny.ui.tags.script` tag.
     **kwargs
         Attributes which are passed on to `~shiny.ui.tags.script`.
 
