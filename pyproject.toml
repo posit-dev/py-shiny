@@ -60,7 +60,7 @@ test = [
     "playwright>=1.48.0",
     "pytest-xdist",
     "pytest-timeout",
-    "pytest-rerunfailures",
+    "pytest-rerunfailures<16",
     "pytest-cov",
     "coverage",
     "syrupy>=4.7.1",
