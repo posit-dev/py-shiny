@@ -49,6 +49,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Fixed false positive warning in `layout_columns()` about number of widths vs elements. (#1704)
 
+* When errors occur in a bookmarking context, they are now reported in the Python console. (#2076)
+
 ### Bug fixes
 
 * Fixed numerous issues related to programmatically updating selectize options. (#2053)
