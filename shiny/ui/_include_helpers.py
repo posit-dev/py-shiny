@@ -41,7 +41,7 @@ def include_js(
           cache the file.
         * ``"link_files"`` is the same as ``"link"``, but also allow for the JS file to
           request other files within ``path``'s immediate parent directory (e.g.,
-          ``@import()`` another file). Note that this isn't the default behavior because
+          ``import`` another file). Note that this isn't the default behavior because
           you should **be careful not to include files in the same directory as ``path``
           that contain sensitive information**. A good general rule of thumb to follow
           is to have ``path`` be located in a subdirectory of the app directory. For
