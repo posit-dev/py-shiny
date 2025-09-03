@@ -597,9 +597,10 @@ class Effect_:
                     from ..ui import notification_show
 
                     msg = str(e)
+                    warnings.warn(msg, ReactiveWarning, stacklevel=2)
                     if e.sanitize:
                         msg = SANITIZE_ERROR_MSG
-                    notification_show(msg, type="error", duration=5000)
+                    notification_show(msg, type="error", duration=None)
                     if e.close:
                         await self._session._unhandled_error(e)
             except Exception as e:
