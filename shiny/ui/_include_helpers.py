@@ -197,7 +197,6 @@ def check_path(path: Path | str) -> Path:
 def create_include_dependency(
     name: str, path: str, include_files: bool
 ) -> tuple[HTMLDependency, str]:
-    print("create include: ", name, os.path.dirname(path))
     dep = HTMLDependency(
         name,
         DEFAULT_VERSION,

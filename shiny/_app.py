@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import os
+import shutil
 import secrets
 from contextlib import AsyncExitStack, asynccontextmanager
 from inspect import signature
@@ -213,6 +214,18 @@ class App:
             self.ui = self._render_page(
                 cast("Tag | TagList", ui), lib_prefix=self.lib_prefix
             )
+
+    def __del__(self):
+        user_dependencies = [
+            v.source["subdir"]
+            for k, v in self._registered_dependencies.items()
+            if k.startswith("include-")
+        ]
+
+        for item in user_dependencies:
+            if os.path.exists(item):
+                print("Removing dependency: ", item)
+                shutil.rmtree(item)
 
     def init_starlette_app(self) -> starlette.applications.Starlette:
         routes: list[starlette.routing.BaseRoute] = [
