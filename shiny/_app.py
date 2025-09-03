@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import copy
 import os
+import shutil
+import tempfile
 import secrets
 from contextlib import AsyncExitStack, asynccontextmanager
 from inspect import signature
@@ -213,6 +215,24 @@ class App:
             self.ui = self._render_page(
                 cast("Tag | TagList", ui), lib_prefix=self.lib_prefix
             )
+
+    def __del__(self):
+        current_temp_dir = os.path.realpath(tempfile.gettempdir())
+
+        user_dependencies = [
+            v.source["subdir"]
+            for k, v in self._registered_dependencies.items()
+            if k.startswith("include-")
+        ]
+
+        for item in user_dependencies:
+            # Only remove the item if it exists and it is in the current temp directory
+            if (
+                os.path.exists(item)
+                and os.path.commonprefix([os.path.realpath(item), current_temp_dir])
+                == current_temp_dir
+            ):
+                shutil.rmtree(item)
 
     def init_starlette_app(self) -> starlette.applications.Starlette:
         routes: list[starlette.routing.BaseRoute] = [
