@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import os
 import shutil
+import tempfile
 import secrets
 from contextlib import AsyncExitStack, asynccontextmanager
 from inspect import signature
@@ -216,6 +217,8 @@ class App:
             )
 
     def __del__(self):
+        current_temp_dir = os.path.realpath(tempfile.gettempdir())
+
         user_dependencies = [
             v.source["subdir"]
             for k, v in self._registered_dependencies.items()
@@ -223,7 +226,12 @@ class App:
         ]
 
         for item in user_dependencies:
-            if os.path.exists(item):
+            # Only remove the item if it exists and it is in the current temp directory
+            if (
+                os.path.exists(item)
+                and os.path.commonprefix([os.path.realpath(item), current_temp_dir])
+                == current_temp_dir
+            ):
                 print("Removing dependency: ", item)
                 shutil.rmtree(item)
 
