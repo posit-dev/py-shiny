@@ -124,8 +124,8 @@ def sidebar(
         * If four, then the values will be interpreted as top, right, bottom, and left
           respectively.
     fillable
-        Whether or not the sidebar should be considered a fillable container. 
-        When `True`, the sidebar and its content can use `fill` to consume 
+        Whether or not the sidebar should be considered a fillable container.
+        When `True`, the sidebar and its content can use `fill` to consume
         available vertical space.
     **kwargs
         Named attributes are supplied to the sidebar content container.
