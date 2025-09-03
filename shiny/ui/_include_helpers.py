@@ -197,6 +197,7 @@ def check_path(path: Path | str) -> Path:
 def create_include_dependency(
     name: str, path: str, include_files: bool
 ) -> tuple[HTMLDependency, str]:
+    print("create include: ", name, os.path.dirname(path))
     dep = HTMLDependency(
         name,
         DEFAULT_VERSION,
@@ -216,7 +217,7 @@ def maybe_copy_files(path: Path | str, include_files: bool) -> tuple[str, str]:
     hash = get_hash(path, include_files)
     print("path: ", path, "Hash: ", hash)
 
-    tmpdir = os.path.join(tempfile.gettempdir(), f"shiny_include_files_{hash}")
+    tmpdir = os.path.join(tempfile.gettempdir(), f"shiny_include_{hash}")
     path_dest = os.path.join(tmpdir, os.path.basename(path))
     print("tmpdir: ", tmpdir, "path_dest: ", path_dest)
 
@@ -229,7 +230,7 @@ def maybe_copy_files(path: Path | str, include_files: bool) -> tuple[str, str]:
         return path_dest, hash
 
     # Otherwise, make sure we have a clean slate
-    if os.path.exists(path_dest):
+    if os.path.exists(tmpdir):
         print("Folder already exists, but not files, removing.")
         shutil.rmtree(path_dest)
 
@@ -243,7 +244,7 @@ def maybe_copy_files(path: Path | str, include_files: bool) -> tuple[str, str]:
         shutil.copytree(os.path.dirname(path), tmpdir)
 
     else:
-        os.makedirs(path_dest, mode=0o755, exist_ok=True)
+        os.makedirs(tmpdir, exist_ok=True)
         print(
             "Copying files from: ",
             path,
@@ -251,6 +252,7 @@ def maybe_copy_files(path: Path | str, include_files: bool) -> tuple[str, str]:
             oct(os.stat(path).st_mode),
         )
         shutil.copy(path, path_dest)
+
     return path_dest, hash
 
 
