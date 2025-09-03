@@ -232,7 +232,7 @@ def maybe_copy_files(path: Path | str, include_files: bool) -> tuple[str, str]:
     # Otherwise, make sure we have a clean slate
     if os.path.exists(tmpdir):
         print("Folder already exists, but not files, removing.")
-        shutil.rmtree(path_dest)
+        shutil.rmtree(tmpdir)
 
     if include_files:
         print(
