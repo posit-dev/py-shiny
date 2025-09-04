@@ -217,24 +217,33 @@ class App:
             )
 
     def __del__(self) -> None:
+        deps = self._registered_dependencies.values()
+        self._cleanup_temp_source_dirs(list(deps))
+
+    @staticmethod
+    def _cleanup_temp_source_dirs(deps: list[HTMLDependency]) -> None:
+        # include_css()/include_js() create temporary directories to hold files that
+        # persist across user sessions, but also need to be cleaned up at some point,
+        # and Python (unlike R) does not cleanup tempdirs on process exit. So, our next
+        # best option is to clean them up when the App object is deleted. It's not
+        # perfect (the App object might be deleted while the process is still running,
+        # and there might be multiple App objects using the same UI). However, it still
+        # seems worth doing since that is such a hypothetical edge case. More generally,
+        # if _any_ HTMLDependency with a source directory that is a _subdirectory_ of
+        # the (system-wide) temp directory, we should remove it.
         current_temp_dir = os.path.realpath(tempfile.gettempdir())
-
-        # Ignoring a type hint on source["subdir"] because all of our user-created dependencies
-        # must have a "subdir" source, but the HTMLDependency type allows for other variations.
-        user_dependencies: list[str] = [
-            v.source["subdir"]  # type: ignore
-            for k, v in self._registered_dependencies.items()
-            if k.startswith("include-")
-        ]
-
-        for item in user_dependencies:
-            # Only remove the item if it exists and it is in the current temp directory
-            if (
-                os.path.exists(item)
-                and os.path.commonprefix([os.path.realpath(item), current_temp_dir])
-                == current_temp_dir
-            ):
-                shutil.rmtree(item)
+        for dep in deps:
+            src = dep.source_path_map()["source"]
+            if not src:
+                continue
+            src = os.path.realpath(src)
+            if not os.path.exists(src):
+                continue
+            if src == current_temp_dir:
+                continue
+            common = os.path.commonprefix([src, current_temp_dir])
+            if common == current_temp_dir:
+                shutil.rmtree(src)
 
     def init_starlette_app(self) -> starlette.applications.Starlette:
         routes: list[starlette.routing.BaseRoute] = [
