@@ -33,6 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Improvements
 
+* Add support for selecting menu items in `Navset` controllers to improve dropdown navigation test coverage. (#2066)
+
 * `input_date()`, `input_date_range()`, `update_date()`, and `update_date_range()` now supports `""` for values, mins, and maxes. In this case, no date will be specified on the client. (#1713) (#1689)
 
 * Restricted the allowable types of the `choices` parameter of `input_select()`, `input_selectize()`, `update_select()`, and `update_selectize()` to actual set of allowable types (previously, the type was suggesting HTML-like values were supported). (#2048)
@@ -46,6 +48,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Added module support for `session.clientdata` methods. This allows you to access client data values in Shiny modules without needing to namespace the keys explicitly. (#1978)
 
 * Fixed false positive warning in `layout_columns()` about number of widths vs elements. (#1704)
+
+* When errors occur in a bookmarking context, they are now reported in the Python console. (#2076)
 
 ### Bug fixes
 
@@ -68,6 +72,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * `input_date()` and `input_date_range()` once again use the client's (not the server) current date as the default `value`. (#2060)
 
 * Fixed `set()` method of `InputSelectize` controller so it clears existing selections before applying new values. (#2024)
+
+* `include_js()` and `include_css()` now work as expected when trying to include multiple files from the same directory. (#2069)
 
 ### Deprecations
 

@@ -36,20 +36,20 @@ def include_js(
     method
         One of the following:
 
-        * ``"link"`` is the link to the CSS file via a :func:`~shiny.ui.tags.link` tag. This
+        * ``"link"`` is the link to the JS file via a :func:`~shiny.ui.tags.script` tag. This
           method is generally preferable to ``"inline"`` since it allows the browser to
           cache the file.
-        * ``"link_files"`` is the same as ``"link"``, but also allow for the CSS file to
+        * ``"link_files"`` is the same as ``"link"``, but also allow for the JS file to
           request other files within ``path``'s immediate parent directory (e.g.,
-          ``@import()`` another file). Note that this isn't the default behavior because
+          ``import`` another file). Note that this isn't the default behavior because
           you should **be careful not to include files in the same directory as ``path``
           that contain sensitive information**. A good general rule of thumb to follow
           is to have ``path`` be located in a subdirectory of the app directory. For
           example, if the app's source is located at ``/app/app.py``, then ``path``
-          should be somewhere like ``/app/css/custom.css`` (and all the other relevant
+          should be somewhere like ``/app/js/custom.js`` (and all the other relevant
           accompanying 'safe' files should be located under ``/app/css/``).
-        * ``"inline"`` is the inline the CSS file contents within a
-          :func:`~shiny.ui.tags.style` tag.
+        * ``"inline"`` is the inline the JS file contents within a
+          :func:`~shiny.ui.tags.script` tag.
     **kwargs
         Attributes which are passed on to `~shiny.ui.tags.script`.
 
@@ -234,7 +234,6 @@ def maybe_copy_files(path: Path | str, include_files: bool) -> tuple[str, str]:
     else:
         os.makedirs(tmpdir, exist_ok=True)
         shutil.copy(path, path_dest)
-
     return path_dest, hash
 
 
