@@ -2,13 +2,24 @@ from pathlib import Path
 
 from shiny import App, Inputs, Outputs, Session, ui
 
-js_file = Path(__file__).parent / "js" / "customjs.js"
-css_file = Path(__file__).parent / "css" / "style.css"
+custom_css = ui.include_css(
+    Path(__file__).parent / "css" / "style.css",
+    method="link_files",
+)
+
+custom_js = ui.include_js(
+    Path(__file__).parent / "js" / "customjs.js",
+    method="link_files",
+)
+
+# path where the JS file's parent directory is mounted
+href = custom_js.get_dependencies()[0].source_path_map()["href"]
 
 # Define the UI
 app_ui = ui.page_fluid(
-    ui.include_css(css_file, method="link_files"),
-    ui.include_js(js_file, method="link_files"),
+    custom_css,
+    custom_js,
+    ui.tags.script(src=href + "/customjs2.js"),
     ui.h1("Simple Shiny App with External CSS"),
     ui.div(
         ui.p("This is a simple Shiny app that demonstrates ui.include_css()"),
