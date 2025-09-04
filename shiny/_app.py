@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import copy
 import os
+import secrets
 import shutil
 import tempfile
-import secrets
 from contextlib import AsyncExitStack, asynccontextmanager
 from inspect import signature
 from pathlib import Path
@@ -216,11 +216,13 @@ class App:
                 cast("Tag | TagList", ui), lib_prefix=self.lib_prefix
             )
 
-    def __del__(self):
+    def __del__(self) -> None:
         current_temp_dir = os.path.realpath(tempfile.gettempdir())
 
-        user_dependencies = [
-            v.source["subdir"]
+        # Ignoring a type hint on source["subdir"] because all of our user-created dependencies
+        # must have a "subdir" source, but the HTMLDependency type allows for other variations.
+        user_dependencies: list[str] = [
+            v.source["subdir"]  # type: ignore
             for k, v in self._registered_dependencies.items()
             if k.startswith("include-")
         ]
