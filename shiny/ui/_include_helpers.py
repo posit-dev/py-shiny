@@ -215,11 +215,11 @@ def create_include_dependency(
 def maybe_copy_files(path: Path | str, include_files: bool) -> tuple[str, str]:
     hash = get_hash(path, include_files)
 
+    # To avoid unnecessary work when the same file is included multiple times,
+    # use a directory scoped by a hash of the file.
     tmpdir = os.path.join(tempfile.gettempdir(), f"shiny_include_{hash}")
     path_dest = os.path.join(tmpdir, os.path.basename(path))
 
-    # To avoid unnecessary work when the same file is included multiple times,
-    # use a directory scoped by a hash of the file.
     # Since the hash/tmpdir should represent all the files in the path's directory,
     # we can check if it exists to determine if we have a cache hit
     if os.path.exists(path_dest):
