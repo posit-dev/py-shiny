@@ -3,7 +3,6 @@ import textwrap
 from htmltools import HTMLDocument, TagList, tags
 
 from shiny import ui
-from shiny.ui._input_select import _update_options
 
 
 def test_panel_title():
@@ -136,56 +135,3 @@ def test_modal_footer():
         }</script>
         </div>"""
     )
-
-
-def test__update_options():
-    # User does not supply options
-    assert _update_options({}, remove_button=False, multiple=True) == {}
-    assert _update_options({}, remove_button=True, multiple=True) == {
-        "plugins": ["remove_button"]
-    }
-    assert _update_options({}, remove_button=True, multiple=False) == {
-        "plugins": ["clear_button"]
-    }
-
-    # User supplies other plugins
-    d1 = {"plugins": ["foo", "bar"]}
-    assert _update_options(d1, remove_button=True, multiple=True) == {
-        "plugins": ["foo", "bar", "remove_button"]
-    }
-    assert _update_options(d1, remove_button=True, multiple=False) == {
-        "plugins": ["foo", "bar", "clear_button"]
-    }
-    assert _update_options(d1, remove_button=False, multiple=False) == {
-        "plugins": ["foo", "bar"]
-    }
-
-    # User supplies non-plugin options
-    d2 = {"other_key": "foo"}
-
-    assert _update_options(d2, remove_button=True, multiple=True) == {
-        "other_key": "foo",
-        "plugins": ["remove_button"],
-    }
-    assert _update_options(d2, remove_button=True, multiple=True) == {
-        "other_key": "foo",
-        "plugins": ["remove_button"],
-    }
-    assert _update_options(d2, remove_button=False, multiple=False) == d2
-
-    # User supplies clear button plugin
-    d3 = {"plugins": ["clear_button"]}
-
-    assert _update_options(d3, remove_button=True, multiple=True) == {
-        "plugins": ["clear_button", "remove_button"]
-    }
-
-    assert _update_options(d3, remove_button=False, multiple=True) == d3
-    assert _update_options(d3, remove_button=True, multiple=False) == d3
-
-    # User supplies both clear and remove button plugins
-    d4 = {"plugins": ["clear_button", "remove_button"]}
-
-    assert _update_options(d4, remove_button=True, multiple=True) == d4
-    assert _update_options(d4, remove_button=True, multiple=False) == d4
-    assert _update_options(d4, remove_button=False, multiple=False) == d4
