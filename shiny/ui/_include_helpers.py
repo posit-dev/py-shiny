@@ -231,7 +231,6 @@ def maybe_copy_files(path: Path | str, include_files: bool) -> tuple[str, str]:
 
     if include_files:
         shutil.copytree(os.path.dirname(path), tmpdir)
-
     else:
         os.makedirs(tmpdir, exist_ok=True)
         shutil.copy(path, path_dest)
