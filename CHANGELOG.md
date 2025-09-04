@@ -49,6 +49,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
+* Fixed several issues related to including custom js and css fil
+    * JS and CSS file loaded with `include_js()` or `include_css()` will be loaded into a new temporary directory. (#2061)
+    * JS and CSS files in the same directory will be loaded correctly. (#729)
+
 * Fixed numerous issues related to programmatically updating selectize options. (#2053)
    * `update_selectize(options=...)` no longer gets ignored when `server=False` (the default).
    * `update_selectize(options=...)` now works as expected in a module.
