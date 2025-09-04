@@ -233,7 +233,7 @@ class App:
         # the (system-wide) temp directory, we should remove it.
         current_temp_dir = os.path.realpath(tempfile.gettempdir())
         for dep in deps:
-            src = dep.source_path_map()["source"]
+            src = dep.source.get("subdir") if dep.source else None
             if not src:
                 continue
             src = os.path.realpath(src)

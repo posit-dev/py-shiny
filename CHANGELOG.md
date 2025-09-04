@@ -53,10 +53,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
-* Fixed several issues related to including custom js and css files
-    * JS and CSS file loaded with `include_js()` or `include_css()` will be loaded into a new temporary directory and cleaned up properly on program exit. (#2061)
-    * JS and CSS files in the same directory will be loaded correctly. (#729)
-
 * Fixed numerous issues related to programmatically updating selectize options. (#2053)
    * `update_selectize(options=...)` no longer gets ignored when `server=False` (the default).
    * `update_selectize(options=...)` now works as expected in a module.
@@ -76,6 +72,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * `include_js()` and `include_css()` now work as expected when trying to include multiple files from the same directory. (#2069)
 
 * `include_js()` and `include_css()` now correctly handle file permissions in multi-user settings. (#2061)
+
+* Temporary directories/files created for HTML dependencies will be cleaned up on App object deletion (#2079)
 
 ### Deprecations
 
