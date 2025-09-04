@@ -197,7 +197,6 @@ def check_path(path: Path | str) -> Path:
 def create_include_dependency(
     name: str, path: str, include_files: bool
 ) -> tuple[HTMLDependency, str]:
-    print("create include: ", name, os.path.dirname(path))
     dep = HTMLDependency(
         name,
         DEFAULT_VERSION,
@@ -215,42 +214,26 @@ def create_include_dependency(
 
 def maybe_copy_files(path: Path | str, include_files: bool) -> tuple[str, str]:
     hash = get_hash(path, include_files)
-    print("path: ", path, "Hash: ", hash)
 
     tmpdir = os.path.join(tempfile.gettempdir(), f"shiny_include_{hash}")
     path_dest = os.path.join(tmpdir, os.path.basename(path))
-    print("tmpdir: ", tmpdir, "path_dest: ", path_dest)
 
     # To avoid unnecessary work when the same file is included multiple times,
     # use a directory scoped by a hash of the file.
     # Since the hash/tmpdir should represent all the files in the path's directory,
     # we can check if it exists to determine if we have a cache hit
     if os.path.exists(path_dest):
-        print("Path already exists:", path_dest)
         return path_dest, hash
 
     # Otherwise, make sure we have a clean slate
     if os.path.exists(tmpdir):
-        print("Folder already exists, but not files, removing.")
         shutil.rmtree(tmpdir)
 
     if include_files:
-        print(
-            "Copying all included files from: ",
-            path,
-            " with perms: ",
-            oct(os.stat(path).st_mode),
-        )
         shutil.copytree(os.path.dirname(path), tmpdir)
 
     else:
         os.makedirs(tmpdir, exist_ok=True)
-        print(
-            "Copying files from: ",
-            path,
-            " with perms: ",
-            oct(os.stat(path).st_mode),
-        )
         shutil.copy(path, path_dest)
 
     return path_dest, hash
