@@ -75,6 +75,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `include_js()` and `include_css()` now work as expected when trying to include multiple files from the same directory. (#2069)
 
+* `include_js()` and `include_css()` now correctly handle file permissions in multi-user settings. (#2061)
+
 ### Deprecations
 
 * `ui.update_navs()` has been deprecated in favor of `ui.update_navset()`. (#2047)
