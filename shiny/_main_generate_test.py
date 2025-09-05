@@ -146,11 +146,13 @@ def generate_test_file(
             output_file=str(output_path),
         )
 
-        click.echo(f"✅ Test file generated successfully: {test_file_path}")
+        relative_test_file_path = test_file_path.relative_to(Path.cwd())
+
+        click.echo(f"✅ Test file generated successfully: {relative_test_file_path}")
         click.echo()
         click.echo(cli_action(cli_bold("Next steps:")))
         click.echo(
-            f"- Run {cli_code('pytest ' + str(test_file_path))} to run the generated test"
+            f"- Run {cli_code('pytest ' + str(relative_test_file_path))} to run the generated test"
         )
         click.echo("- Review and customize the test as needed")
 
