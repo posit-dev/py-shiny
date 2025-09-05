@@ -4,9 +4,10 @@ on:
   pull_request:
     paths:
       - "shiny/pytest/_generate/**"
+  workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}
+  group: "prompt-test-generation-${{ github.event.pull_request.number || 'dispatch' }}"
   cancel-in-progress: true
 
 env:
