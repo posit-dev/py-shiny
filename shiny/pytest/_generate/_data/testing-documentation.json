@@ -1140,7 +1140,7 @@
       {
         "name": "expect_active",
         "description": "Expects the nav item to be active or inactive.",
-        "parameters": "active"
+        "parameters": "value"
       }
     ]
   },
