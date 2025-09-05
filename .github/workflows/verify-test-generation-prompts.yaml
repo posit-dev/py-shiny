@@ -17,7 +17,7 @@ env:
   PYTHONUNBUFFERED: 1
 
 jobs:
-  validate-prompts:
+  verify-test-generation-prompts:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
