@@ -3,6 +3,7 @@ name: Validate Test Generation Prompts
 on:
   pull_request:
     paths:
+      - ".github/workflows/verify-test-generation-prompts.yml"
       - "shiny/pytest/_generate/**"
   workflow_dispatch:
 
