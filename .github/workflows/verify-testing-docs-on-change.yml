@@ -1,4 +1,4 @@
-name: Validate Testing Documentation for changes
+name: Verify testing documentation for changes
 
 on:
   pull_request:
