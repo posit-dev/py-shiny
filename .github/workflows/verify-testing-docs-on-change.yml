@@ -49,7 +49,7 @@ jobs:
             echo "docs_changed=true" >> $GITHUB_OUTPUT
             echo "The generated documentation is out of sync with the current controller changes."
             echo "\n\n"
-            diff -q testing-documentation-before.json shiny/pytest/_generate/_data/testing-documentation.json
+            diff -q testing-documentation-before.json shiny/pytest/_generate/_data/testing-documentation.json || true
             echo "\n\n"
           else
             echo "docs_changed=false" >> $GITHUB_OUTPUT
