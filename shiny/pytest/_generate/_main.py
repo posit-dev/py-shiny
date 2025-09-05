@@ -444,7 +444,7 @@ class ShinyTestGenerator:
         test_file_name = f"test_{app_file_path.stem}.py"
         return (output_dir / test_file_name).resolve()
 
-    def generate_test(
+    def _generate_test(
         self,
         app_code: Optional[str] = None,
         app_file_path: Optional[str] = None,
@@ -508,7 +508,7 @@ class ShinyTestGenerator:
         output_file: Optional[str] = None,
         output_dir: Optional[str] = None,
     ) -> Tuple[str, Path]:
-        return self.generate_test(
+        return self._generate_test(
             app_file_path=app_file_path,
             model=model,
             output_file=output_file,
@@ -523,7 +523,7 @@ class ShinyTestGenerator:
         output_file: Optional[str] = None,
         output_dir: Optional[str] = None,
     ) -> Tuple[str, Path]:
-        return self.generate_test(
+        return self._generate_test(
             app_code=app_code,
             app_name=app_name,
             model=model,
