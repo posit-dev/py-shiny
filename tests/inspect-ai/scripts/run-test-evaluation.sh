@@ -24,22 +24,24 @@ cleanup_processes() {
 
 trap cleanup_processes EXIT
 
+RESULTS_FOLDER="test-results-inspect-ai/"
+
 # Initialize results directory structure once
-rm -rf results/
-mkdir -p results/
+rm -rf "$RESULTS_FOLDER"
+mkdir -p "$RESULTS_FOLDER"
 
 for i in $(seq 1 "$ATTEMPTS"); do
   log_with_timestamp "Starting attempt $i of $ATTEMPTS"
 
-  mkdir -p results/attempts/attempt_$i/
-  rm -f test-results.xml
+  mkdir -p "$RESULTS_FOLDER/attempts/attempt_$i/"
+  rm -f "$RESULTS_FOLDER/attempts/attempt_$i/test-results.xml"
 
   log_with_timestamp "[Attempt $i] Creating test metadata..."
   python tests/inspect-ai/scripts/create_test_metadata.py
 
   log_with_timestamp "[Attempt $i] Running Inspect AI evaluation..."
   inspect eval tests/inspect-ai/scripts/evaluation.py@shiny_test_evaluation \
-    --log-dir results/attempts/attempt_$i/ \
+    --log-dir "$RESULTS_FOLDER/attempts/attempt_$i/" \
     --log-format json
 
   log_with_timestamp "[Attempt $i] Running tests..."
@@ -50,7 +52,7 @@ for i in $(seq 1 "$ATTEMPTS"); do
     --tb=short \
     --disable-warnings \
     --maxfail="$PYTEST_MAXFAIL" \
-    --junit-xml=results/attempts/attempt_$i/test-results.xml \
+    --junit-xml="$RESULTS_FOLDER/attempts/attempt_$i/test-results.xml" \
     --durations=10 \
     --timeout="$PYTEST_PER_TEST_TIMEOUT" \
     --timeout-method=signal \
@@ -58,14 +60,14 @@ for i in $(seq 1 "$ATTEMPTS"); do
   set -e
 
   if [ "${test_exit_code:-0}" -eq 124 ]; then
-    log_with_timestamp "Tests timed out on attempt $i (possible hang)"
+    log_with_timestamp "Tests timed out on attempt $i \(possible hang\)"
     cleanup_processes
     exit 1
   fi
 
   if [ "${test_exit_code:-0}" -ne 0 ]; then
-    if [ -f results/attempts/attempt_$i/test-results.xml ]; then
-      failure_count=$(grep -o 'failures="[0-9]*"' results/attempts/attempt_$i/test-results.xml | grep -o '[0-9]*' || echo "0")
+    if [ -f "$RESULTS_FOLDER/attempts/attempt_$i/test-results.xml" ]; then
+      failure_count=$(grep -o 'failures="[0-9]*"' "$RESULTS_FOLDER/attempts/attempt_$i/test-results.xml" | grep -o '[0-9]*' || echo "0")
     else
       failure_count=0
     fi
@@ -83,4 +85,4 @@ done
 log_with_timestamp "All $ATTEMPTS evaluation and test runs passed successfully."
 
 log_with_timestamp "Averaging results across all attempts..."
-python tests/inspect-ai/utils/scripts/average_results.py results/attempts/ results/
+python tests/inspect-ai/utils/scripts/average_results.py "$RESULTS_FOLDER/attempts/" "$RESULTS_FOLDER/"

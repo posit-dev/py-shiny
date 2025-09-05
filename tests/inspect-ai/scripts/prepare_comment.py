@@ -87,8 +87,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "summary_path",
         nargs="?",
-        default="results/summary.json",
-        help="Path to the summary.json file (default: results/summary.json)",
+        default="test-results-inspect-ai/summary.json",
+        help="Path to the summary.json file (default: test-results-inspect-ai/summary.json)",
     )
     parser.add_argument(
         "--help-custom", action="store_true", help="Show help message and exit"

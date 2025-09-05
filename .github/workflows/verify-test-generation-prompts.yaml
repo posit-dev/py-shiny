@@ -56,39 +56,39 @@ jobs:
         with:
           name: test-results-${{ github.run_id }}
           path: |
-            results/
+            test-results-inspect-ai/
           retention-days: 7
 
       - name: Process Results
         timeout-minutes: 2
         run: |
           # Results are already averaged by the bash script, just verify they exist
-          if [ ! -f "results/summary.json" ]; then
-            echo "No averaged summary found at results/summary.json"
-            ls -la results/
+          if [ ! -f "test-results-inspect-ai/summary.json" ]; then
+            echo "No averaged summary found at test-results-inspect-ai/summary.json"
+            ls -la test-results-inspect-ai/
             exit 1
           else
             echo "Using averaged results from all attempts"
-            cat results/summary.json
+            cat test-results-inspect-ai/summary.json
           fi
 
       - name: Check Quality Gate
         timeout-minutes: 2
         run: |
-          if [ ! -f "results/summary.json" ]; then
-            echo "Summary file not found at results/summary.json"
-            ls -la results/
+          if [ ! -f "test-results-inspect-ai/summary.json" ]; then
+            echo "Summary file not found at test-results-inspect-ai/summary.json"
+            ls -la test-results-inspect-ai/
             exit 1
           else
             echo "Found summary file, checking quality gate..."
-            python tests/inspect-ai/utils/scripts/quality_gate.py results/
+            python tests/inspect-ai/utils/scripts/quality_gate.py test-results-inspect-ai/
           fi
 
       - name: Prepare Comment Body
         if: github.event_name == 'pull_request'
         timeout-minutes: 1
         run: |
-          python tests/inspect-ai/scripts/prepare_comment.py results/summary.json
+          python tests/inspect-ai/scripts/prepare_comment.py test-results-inspect-ai/summary.json
 
       - name: Comment PR Results
         if: github.event_name == 'pull_request'
