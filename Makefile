@@ -138,7 +138,7 @@ update-testing-docs-repomix: install-repomix FORCE ## Generate repomix output fo
 
 update-testing-docs-process: FORCE ## Process repomix output to generate testing documentation JSON
 	@echo "-------- Processing testing documentation --------"
-	python tests/inspect-ai/utils/scripts/process_docs.py --input tests/inspect-ai/utils/scripts/repomix-output-testing.xml --output shiny/pytest/_generate/_data/_docs/documentation_testing.json
+	python tests/inspect-ai/utils/scripts/process_docs.py --input tests/inspect-ai/utils/scripts/repomix-output-testing.xml --output shiny/pytest/_generate/_data/testing-documentation.json
 	@echo "-------- Cleaning up temporary files --------"
 	rm -f tests/inspect-ai/utils/scripts/repomix-output-testing.xml
 

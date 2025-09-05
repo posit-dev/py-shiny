@@ -38,18 +38,18 @@ jobs:
         id: check-docs-changes
         run: |
           # Store the current state of the documentation file
-          cp shiny/pytest/_generate/_data/_docs/documentation_testing.json documentation_testing_before.json
+          cp shiny/pytest/_generate/_data/testing-documentation.json testing-documentation-before.json
 
           # Run the make command to update testing docs
           make update-testing-docs
 
-          if [[ ! -f documentation_testing_before.json || ! -f shiny/pytest/_generate/_data/_docs/documentation_testing.json ]]; then
+          if [[ ! -f testing-documentation-before.json || ! -f shiny/pytest/_generate/_data/testing-documentation.json ]]; then
           echo "One or both documentation files are missing."
           exit 1
           fi
 
           # Check if the documentation file has changed
-          if ! diff -q documentation_testing_before.json shiny/pytest/_generate/_data/_docs/documentation_testing.json > /dev/null 2>&1; then
+          if ! diff -q testing-documentation-before.json shiny/pytest/_generate/_data/testing-documentation.json > /dev/null 2>&1; then
             echo "docs_changed=true" >> $GITHUB_OUTPUT
             echo "The generated documentation is out of sync with the current controller changes."
           else
@@ -73,7 +73,7 @@ jobs:
             make update-testing-docs
             ```
 
-            **Then commit the updated `shiny/pytest/_generate/_data/_docs/documentation_testing.json` file.**
+            **Then commit the updated `shiny/pytest/_generate/_data/testing-documentation.json` file.**
 
             <details><summary>Additional details</summary>
 

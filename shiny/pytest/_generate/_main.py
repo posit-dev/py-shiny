@@ -136,8 +136,7 @@ class ShinyTestGenerator:
             doc_path = (
                 importlib.resources.files("shiny.pytest._generate")
                 / "_data"
-                / "_docs"
-                / "documentation_testing.json"
+                / "testing-documentation.json"
             )
             with doc_path.open("r") as f:
                 return f.read()
@@ -152,8 +151,7 @@ class ShinyTestGenerator:
             prompt_path = (
                 importlib.resources.files("shiny.pytest._generate")
                 / "_data"
-                / "_prompts"
-                / "SYSTEM_PROMPT_testing.md"
+                / "testing-SYSTEM_PROMPT.md"
             )
             with prompt_path.open("r") as f:
                 system_prompt_file = f.read()
