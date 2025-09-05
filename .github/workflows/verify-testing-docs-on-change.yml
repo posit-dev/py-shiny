@@ -12,7 +12,7 @@ permissions:
   pull-requests: write
 
 jobs:
-  validate-controller-changes:
+  verify-testing-docs:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
 
@@ -28,7 +28,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          ci-install-docs
+          make ci-install-docs
 
       - name: Update testing docs and check for changes
         id: check-docs-changes
