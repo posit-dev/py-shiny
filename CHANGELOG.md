@@ -5,7 +5,7 @@ All notable changes to Shiny for Python will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [UNRELEASED]
+## [1.5.0] - 2025-09-08
 
 ### Breaking changes
 
@@ -13,15 +13,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
-* `navset_card_*()` now has a `full_screen` option to support `card()`'s existing full-screen functionality. (#1451)
-
 * Added `ui.insert_nav_panel()`, `ui.remove_nav_panel()`, and `ui.update_nav_panel()` to support dynamic navigation. (#90)
-
-* Added support for python 3.13. (#1711)
 
 * `ui.sidebar()` is now interactively resizable. (#2020)
 
+* `navset_card_*()` now has a `full_screen` option to support `card()`'s existing full-screen functionality. (#1451)
+
 * `ui.update_*()` functions now accept `ui.TagChild` (i.e., HTML) as input to the `label` and `icon` arguments. (#2020)
+
+* Added support for python 3.13. (#1711)
 
 * The `.output_*()` methods of the `ClientData` class (e.g., `session.clientdata.output_height()`) can now be called without an `id` when called inside a `@render` function. (#1978)
 
@@ -32,8 +32,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * `express.ui.insert_accordion_panel()`'s function signature has changed to be more ergonomic. Now you can pass the `panel_title` and `panel_contents` directly instead of `ui.hold()`ing the `ui.accordion_panel()` context manager. (#2042)
 
 ### Improvements
-
-* Add support for selecting menu items in `Navset` controllers to improve dropdown navigation test coverage. (#2066)
 
 * `input_date()`, `input_date_range()`, `update_date()`, and `update_date_range()` now supports `""` for values, mins, and maxes. In this case, no date will be specified on the client. (#1713) (#1689)
 
@@ -46,6 +44,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Added `timeout_secs` parameter to `create_app_fixture` to allow testing apps with longer startup times. (#2033)
 
 * Added module support for `session.clientdata` methods. This allows you to access client data values in Shiny modules without needing to namespace the keys explicitly. (#1978)
+
+* Add support for selecting menu items in `Navset` controllers to improve dropdown navigation test coverage. (#2066)
 
 * Fixed false positive warning in `layout_columns()` about number of widths vs elements. (#1704)
 
