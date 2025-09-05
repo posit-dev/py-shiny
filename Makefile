@@ -145,6 +145,13 @@ update-testing-docs-process: FORCE ## Process repomix output to generate testing
 update-testing-docs: docs update-testing-docs-repomix update-testing-docs-process FORCE ## Update testing documentation (full pipeline)
 	@echo "-------- Testing documentation update complete --------"
 
+ci-install-ai-deps: FORCE
+	uv pip install -e ".[dev,test,testgen]"
+	$(MAKE) install-playwright
+
+run-test-ai-evaluation: FORCE ## Run the AI evaluation script for tests
+	@echo "-------- Running AI evaluation for tests --------"
+	bash ./tests/inspect-ai/scripts/run-test-evaluation.sh
 
 install-npm: FORCE
 	$(if $(shell which npm), @echo -n, $(error Please install node.js and npm first. See https://nodejs.org/en/download/ for instructions.))

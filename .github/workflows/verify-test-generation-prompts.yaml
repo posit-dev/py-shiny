@@ -34,13 +34,9 @@ jobs:
         id: install
         uses: ./.github/py-shiny/setup
 
-      - name: Install Playwright Browsers
-        run: |
-          make install-playwright
-
       - name: Install Test Generator Dependencies
         run: |
-          uv pip install -e ".[testgen]"
+          make ci-install-ai-deps
 
       - name: Run Evaluation and Tests 3 Times
         env:
@@ -48,7 +44,8 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           PYTHONUNBUFFERED: 1
         timeout-minutes: 25
-        run: ./tests/inspect-ai/scripts/run-test-evaluation.sh
+        run: |
+          make run-test-ai-evaluation
 
       - name: Upload test results
         if: always()
