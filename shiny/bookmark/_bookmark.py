@@ -558,15 +558,10 @@ class BookmarkApp(Bookmark):
                     await self.show_bookmark_url_modal(full_url)
 
         except Exception as e:
-            msg = f"Error bookmarking state: {e}"
-            from ..ui._notification import notification_show
+            from ..types import NotifyException
 
-            notification_show(
-                msg,
-                duration=None,
-                type="error",
-                session=self._root_session,
-            )
+            msg = f"Error bookmarking state: {str(e)}"
+            raise NotifyException(msg) from e
 
 
 class BookmarkProxy(Bookmark):

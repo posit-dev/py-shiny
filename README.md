@@ -16,7 +16,7 @@ To learn more about Shiny see the [Shiny for Python website](https://shiny.posit
 
 - How to [use modules](https://shiny.posit.co/py/docs/workflow-modules.html) to efficiently develop large applications.
 
-- Hosting applications for free on [shinyapps.io](https://shiny.posit.co/py/docs/deploy.html#deploy-to-shinyapps.io-cloud-hosting), [Hugging Face](https://shiny.posit.co/blog/posts/shiny-on-hugging-face/), or [Shinylive](https://shiny.posit.co/py/docs/shinylive.html).
+- Hosting applications for free on [Connect Cloud](https://docs.posit.co/connect-cloud/how-to/python/shiny-python.html), [shinyapps.io](https://shiny.posit.co/py/docs/deploy.html#deploy-to-shinyapps.io-cloud-hosting), [Hugging Face](https://shiny.posit.co/blog/posts/shiny-on-hugging-face/), or [Shinylive](https://shiny.posit.co/py/docs/shinylive.html).
 
 ## Join the conversation
 

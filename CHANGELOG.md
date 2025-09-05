@@ -51,6 +51,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Fixed false positive warning in `layout_columns()` about number of widths vs elements. (#1704)
 
+* When errors occur in a bookmarking context, they are now reported in the Python console. (#2076)
+
 ### Bug fixes
 
 * Fixed numerous issues related to programmatically updating selectize options. (#2053)
@@ -68,6 +70,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * `input_date()` and `input_date_range()` once again use the client's (not the server) current date as the default `value`. (#2060)
 
 * Fixed `set()` method of `InputSelectize` controller so it clears existing selections before applying new values. (#2024)
+
+* `include_js()` and `include_css()` now work as expected when trying to include multiple files from the same directory. (#2069)
+
+* `include_js()` and `include_css()` now correctly handle file permissions in multi-user settings. (#2061)
 
 ### Deprecations
 
