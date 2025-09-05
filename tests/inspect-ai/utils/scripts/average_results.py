@@ -173,12 +173,15 @@ def process_pytest_results(attempts_dir: Path) -> Dict[str, Any]:
         try:
             tree = ET.parse(xml_file)
             root = tree.getroot()
+            node = root.find("testsuite")
+
+            assert node is not None, "No `testsuite` element found in XML"
 
             # Extract test metrics from XML
-            total_tests = int(root.get("tests", 0))
-            failures = int(root.get("failures", 0))
-            errors = int(root.get("errors", 0))
-            skipped = int(root.get("skipped", 0))
+            total_tests = int(node.get("tests", 0))
+            failures = int(node.get("failures", 0))
+            errors = int(node.get("errors", 0))
+            skipped = int(node.get("skipped", 0))
 
             passed_tests = total_tests - failures - errors - skipped
             pass_rate = (passed_tests / total_tests) * 100 if total_tests > 0 else 0
