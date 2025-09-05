@@ -45,7 +45,7 @@ jobs:
           fi
 
           # Check if the documentation file has changed
-          if ! diff -q testing-documentation-before.json shiny/pytest/_generate/_data/testing-documentation.json > /dev/null 2>&1; then
+          if diff -q testing-documentation-before.json shiny/pytest/_generate/_data/testing-documentation.json > /dev/null 2>&1; then
             echo "docs_changed=true" >> $GITHUB_OUTPUT
             echo "The generated documentation is out of sync with the current controller changes."
             echo "\n\n"
