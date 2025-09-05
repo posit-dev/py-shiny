@@ -125,5 +125,6 @@ shiny_bookmarks/
 shiny/_version.py
 tests/inspect-ai/apps/*/test_*.py
 test-results.xml
-/results
+results-inspect-ai/
+test-results-inspect-ai/
 tests/inspect-ai/scripts/test_metadata.json

@@ -126,8 +126,10 @@ doc = [
 ]
 testgen = [
     "chatlas[anthropic,openai]",
-    "inspect-ai",
-    "pytest-timeout"
+    "openai>=1.104.1",
+    "anthropic>=0.62.0",
+    "inspect-ai>=0.3.129",
+    "pytest-timeout",
 ]
 
 
