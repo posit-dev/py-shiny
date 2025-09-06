@@ -35,13 +35,18 @@ def test_navsets_bookmarking_demo(
     # Non-module navsets
     navset_collection = controller.NavsetTab(page, "navsets_collection")
     navset_collection.set(navset_name)
-    navset_cont = navset_controller(page, f"{navset_name}_{navset_variant}")
+    navset_cont = navset_controller(
+        page, f"{navset_name}_{navset_variant}"  # pyright: ignore[reportCallIssue]
+    )
     navset_cont.set(f"{navset_name}_c")
 
     # Module navsets
     mod_navset_collection = controller.NavsetTab(page, "first-navsets_collection")
     mod_navset_collection.set(navset_name)
-    mod_navset_cont = navset_controller(page, f"first-{navset_name}_{navset_variant}")
+    mod_navset_cont = navset_controller(
+        page,
+        f"first-{navset_name}_{navset_variant}",  # pyright: ignore[reportCallIssue]
+    )  # pyright: ignore[reportCallIssue]
     mod_navset_cont.set(f"{navset_name}_b")
 
     existing_url = page.url
