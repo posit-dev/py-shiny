@@ -123,6 +123,35 @@ docs-quartodoc: FORCE
 	@echo "-------- Making quartodoc docs --------"
 	@cd docs && make quartodoc
 
+install-repomix: install-npm FORCE ## Install repomix if not already installed
+	@echo "-------- Installing repomix if needed --------"
+	@if ! command -v repomix > /dev/null 2>&1; then \
+		echo "Installing repomix..."; \
+		npm install -g repomix; \
+	else \
+		echo "repomix is already installed"; \
+	fi
+
+update-testing-docs-repomix: install-repomix FORCE ## Generate repomix output for testing docs
+	@echo "-------- Generating repomix output for testing docs --------"
+	repomix docs/api/testing -o tests/inspect-ai/utils/scripts/repomix-output-testing.xml
+
+update-testing-docs-process: FORCE ## Process repomix output to generate testing documentation JSON
+	@echo "-------- Processing testing documentation --------"
+	python tests/inspect-ai/utils/scripts/process_docs.py --input tests/inspect-ai/utils/scripts/repomix-output-testing.xml --output shiny/pytest/_generate/_data/testing-documentation.json
+	@echo "-------- Cleaning up temporary files --------"
+	rm -f tests/inspect-ai/utils/scripts/repomix-output-testing.xml
+
+update-testing-docs: docs update-testing-docs-repomix update-testing-docs-process FORCE ## Update testing documentation (full pipeline)
+	@echo "-------- Testing documentation update complete --------"
+
+ci-install-ai-deps: FORCE
+	uv pip install -e ".[dev,test,testgen]"
+	$(MAKE) install-playwright
+
+run-test-ai-evaluation: FORCE ## Run the AI evaluation script for tests
+	@echo "-------- Running AI evaluation for tests --------"
+	bash ./tests/inspect-ai/scripts/run-test-evaluation.sh
 
 install-npm: FORCE
 	$(if $(shell which npm), @echo -n, $(error Please install node.js and npm first. See https://nodejs.org/en/download/ for instructions.))

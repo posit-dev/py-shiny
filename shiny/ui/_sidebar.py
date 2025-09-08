@@ -206,6 +206,10 @@ class Sidebar:
           and right, and the third will be bottom.
         * If four, then the values will be interpreted as top, right, bottom, and left
           respectively.
+    fillable
+        Whether or not the sidebar should be considered a fillable container.
+        When `True`, the sidebar and its content can use `fill` to consume
+        available vertical space.
 
     Parameters
     ----------
@@ -283,6 +287,7 @@ class Sidebar:
         max_height_mobile: Optional[str | float] = None,
         gap: Optional[CssUnit] = None,
         padding: Optional[CssUnit | list[CssUnit]] = None,
+        fillable: bool = False,
     ):
         if isinstance(title, (str, int, float)):
             title = tags.header(str(title), class_="sidebar-title")
@@ -292,6 +297,7 @@ class Sidebar:
         self.class_ = class_
         self.gap = as_css_unit(gap)
         self.padding = as_css_padding(padding)
+        self.fillable = fillable
         # User-provided initial open state
         self._open: SidebarOpen | None = self._as_open(open)
         # Shiny or consumer-provided default open state, change with `_set_default_open()`
@@ -403,7 +409,27 @@ class Sidebar:
             self.open().desktop == "closed" or self.open().mobile == "closed"
         )
 
-        return tags.aside(
+        # Create the sidebar content div
+        sidebar_content = div(
+            {
+                "class": "sidebar-content bslib-gap-spacing",
+                "style": css(
+                    gap=self.gap,
+                    padding=self.padding,
+                ),
+            },
+            self.title,
+            *self.children,
+            self.attrs,
+        )
+
+        # Apply fill_item to the content div if fillable
+        if self.fillable:
+            sidebar_content = as_fill_item(sidebar_content)
+            sidebar_content = as_fillable_container(sidebar_content)
+
+        # Create the sidebar tag
+        sidebar_tag = tags.aside(
             {
                 "id": id,
                 "class": "sidebar",
@@ -411,20 +437,15 @@ class Sidebar:
             },
             # If the user provided an id, we make the sidebar an input to report state
             {"class": "bslib-sidebar-input"} if self.id is not None else None,
-            div(
-                {
-                    "class": "sidebar-content bslib-gap-spacing",
-                    "style": css(
-                        gap=self.gap,
-                        padding=self.padding,
-                    ),
-                },
-                self.title,
-                *self.children,
-                self.attrs,
-            ),
+            sidebar_content,
             class_=self.class_,
         )
+
+        # Apply fillable container to the sidebar if needed
+        if self.fillable:
+            sidebar_tag = as_fillable_container(sidebar_tag)
+
+        return sidebar_tag
 
     def tagify(self) -> TagList:
         id = self._get_sidebar_id()
@@ -446,6 +467,7 @@ def sidebar(
     max_height_mobile: Optional[str | float] = None,
     gap: Optional[CssUnit] = None,
     padding: Optional[CssUnit | list[CssUnit]] = None,
+    fillable: bool = False,
     **kwargs: TagAttrValue,
 ) -> Sidebar:
     # See [this article](https://rstudio.github.io/bslib/articles/sidebars.html)
@@ -521,6 +543,10 @@ def sidebar(
           and right, and the third will be bottom.
         * If four, then the values will be interpreted as top, right, bottom, and left
           respectively.
+    fillable
+        Whether or not the sidebar should be considered a fillable container.
+        When `True`, the sidebar and its content can use `fill` to consume
+        available vertical space.
     **kwargs
         Named attributes are supplied to the sidebar content container.
 
@@ -567,6 +593,7 @@ def sidebar(
         max_height_mobile=max_height_mobile,
         gap=gap,
         padding=padding,
+        fillable=fillable,
     )
 
 
