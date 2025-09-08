@@ -60,6 +60,16 @@ def test_input_selectize_kitchensink(page: Page, local_app: ShinyAppProc) -> Non
     multiple_selectize_txt.expect_value("")
     multiple_selectize.expect_multiple(True)
 
+    # Clear again, but now through the clear_button
+    multiple_selectize.set(multiple_options)
+    multiple_selectize.expect_selected(["Banana", "Cherry"])
+    multiple_selectize_txt.expect_value("Banana, Cherry")
+    multiple_selectize.loc.locator("..").locator(
+        "> div.plugin-clear_button > a.clear"
+    ).click()
+    multiple_selectize_txt.expect_value("")
+    multiple_selectize.expect_multiple(True)
+
     selectize_with_selected = controller.InputSelectize(page, "selectize_with_selected")
     selectize_with_selected_txt = controller.OutputText(page, "selected_result_txt")
     selectize_with_selected.expect_selected(["Cherry"])

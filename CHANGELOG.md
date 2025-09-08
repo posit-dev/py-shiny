@@ -29,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `playwright.controller.InputActionButton` gains a `expect_icon()` method. As a result, the already existing `expect_label()` no longer includes the icon. (#2020)
 
+* `ui.input_selectize()`'s `remove_button` parameter gains a supported value of `"both"`, which adds both of the `"remove_button"` and `"clear_button"` selectize plugins. This is most useful when `multiple=True`, allowing for clearing of individual as well as _all_ selected items. (#2064)
+
 ### Changes
 
 * `express.ui.insert_accordion_panel()`'s function signature has changed to be more ergonomic. Now you can pass the `panel_title` and `panel_contents` directly instead of `ui.hold()`ing the `ui.accordion_panel()` context manager. (#2042)
@@ -55,11 +57,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
-* Fixed numerous issues related to programmatically updating selectize options. (#2053)
-   * `update_selectize(options=...)` no longer gets ignored when `server=False` (the default).
-   * `update_selectize(options=...)` now works as expected in a module.
-
-* Fixed an issue with `update_selectize()` to properly display labels with HTML reserved characters like "&" (#1330)
+* Fixed numerous issues with `update_selectize()`:
+   * `options` now works when `server=False`. (#2053)
+   * `options` now works when used in a module. (#2053)
+   * `options` now correctly preserves `remove_button` on update. (#2064)
+   * HTML reserved characters (i.e., `&`, `<`, `>`) inside `choices` labels no longer get incorrectly escaped (when `server=True`). (#1330)
 
 * Fixed an issue with `ui.Chat()` sometimes wanting to scroll a parent element. (#1996)
 
