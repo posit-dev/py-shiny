@@ -1,0 +1,97 @@
+name: Verify test generation prompts
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/verify-test-generation-prompts.yml"
+      - "shiny/pytest/_generate/**"
+  workflow_dispatch:
+
+concurrency:
+  group: "prompt-test-generation-${{ github.event.pull_request.number || 'dispatch' }}"
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.13"
+  ATTEMPTS: 3
+  PYTHONUNBUFFERED: 1
+
+jobs:
+  verify-test-generation-prompts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Setup py-shiny
+        id: install
+        uses: ./.github/py-shiny/setup
+
+      - name: Install Test Generator Dependencies
+        run: |
+          make ci-install-ai-deps
+
+      - name: Run Evaluation and Tests 3 Times
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PYTHONUNBUFFERED: 1
+        timeout-minutes: 25
+        run: |
+          make run-test-ai-evaluation
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ github.run_id }}
+          path: |
+            test-results-inspect-ai/
+          retention-days: 7
+
+      - name: Process Results
+        timeout-minutes: 2
+        run: |
+          # Results are already averaged by the bash script, just verify they exist
+          if [ ! -f "test-results-inspect-ai/summary.json" ]; then
+            echo "No averaged summary found at test-results-inspect-ai/summary.json"
+            ls -la test-results-inspect-ai/
+            exit 1
+          else
+            echo "Using averaged results from all attempts"
+            cat test-results-inspect-ai/summary.json
+          fi
+
+      - name: Check Quality Gate
+        timeout-minutes: 2
+        run: |
+          if [ ! -f "test-results-inspect-ai/summary.json" ]; then
+            echo "Summary file not found at test-results-inspect-ai/summary.json"
+            ls -la test-results-inspect-ai/
+            exit 1
+          else
+            echo "Found summary file, checking quality gate..."
+            python tests/inspect-ai/utils/scripts/quality_gate.py test-results-inspect-ai/
+          fi
+
+      - name: Prepare Comment Body
+        if: github.event_name == 'pull_request'
+        timeout-minutes: 1
+        run: |
+          python tests/inspect-ai/scripts/prepare_comment.py test-results-inspect-ai/summary.json
+
+      - name: Comment PR Results
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: inspect-ai-results
+          path: comment_body.txt
