@@ -146,7 +146,7 @@ update-testing-docs: docs update-testing-docs-repomix update-testing-docs-proces
 	@echo "-------- Testing documentation update complete --------"
 
 ci-install-ai-deps: FORCE
-	uv pip install -e ".[dev,test,testgen]"
+	uv pip install -e ".[dev,test,add-test]"
 	$(MAKE) install-playwright
 
 run-test-ai-evaluation: FORCE ## Run the AI evaluation script for tests

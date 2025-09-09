@@ -31,8 +31,7 @@ class Config:
     }
 
     DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-4-20250514"
-    DEFAULT_OPENAI_MODEL = "gpt-5-mini-2025-08-07"
-    DEFAULT_BEDROCK_ANTHROPIC_MODEL = "us.anthropic.claude-3-7-sonnet-20250219-v1:0"
+    DEFAULT_OPENAI_MODEL = "gpt-5-2025-08-07"
     DEFAULT_PROVIDER = "anthropic"
 
     MAX_TOKENS = 8092
