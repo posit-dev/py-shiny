@@ -3,7 +3,7 @@ name: Run deploy tests
 on:
   workflow_dispatch:
   push:
-    branches: ["main", "rc-*", "deploy-**", "use-latest-version"]
+    branches: ["main", "rc-*", "deploy-**"]
 
 jobs:
   playwright-deploys:
