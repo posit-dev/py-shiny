@@ -7,19 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
-### Breaking changes
-
-* The `ui.Chat` and `ui.MarkdownStream` components are now imported from the new `shinychat` library. Future versions of `shinychat` will likely deprecate and remove some features from `Chat`. If you still want to use those features with the latest Shiny, we suggest pinning `shinychat` to it's initial release (v0.1.0). (#2051)
-
 ### New features
 
-* `navset_card_*()` now has a `full_screen` option to support `card()`'s existing full-screen functionality. (#1451)
+* Added AI-powered test generator for Shiny applications. Use `shiny add test` to automatically generate comprehensive Playwright tests for your apps using AI models from Anthropic or OpenAI. (#2041)
+
+* `ui.sidebar()` is now interactively resizable. (#2020)
+
+* `ui.sidebar()` gains a `fillable` argument to support vertical fill behavior in sidebars. (#2077)
 
 * Added `ui.insert_nav_panel()`, `ui.remove_nav_panel()`, and `ui.update_nav_panel()` to support dynamic navigation. (#90)
 
-* Added support for python 3.13. (#1711)
-
-* `ui.sidebar()` is now interactively resizable. (#2020)
+* `navset_card_*()` now gains a `full_screen` option. (#1451)
 
 * `ui.update_*()` functions now accept `ui.TagChild` (i.e., HTML) as input to the `label` and `icon` arguments. (#2020)
 
@@ -27,52 +25,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `playwright.controller.InputActionButton` gains a `expect_icon()` method. As a result, the already existing `expect_label()` no longer includes the icon. (#2020)
 
-### Changes
+### Breaking changes
+
+* The `ui.Chat` and `ui.MarkdownStream` components are now imported from the new `shinychat` library. Future versions of `shinychat` will likely deprecate and remove some features from `Chat`. If you still want to use those features with the latest Shiny, we suggest pinning `shinychat` to it's initial release (v0.1.0). (#2051)
 
 * `express.ui.insert_accordion_panel()`'s function signature has changed to be more ergonomic. Now you can pass the `panel_title` and `panel_contents` directly instead of `ui.hold()`ing the `ui.accordion_panel()` context manager. (#2042)
 
 ### Improvements
 
-* Add support for selecting menu items in `Navset` controllers to improve dropdown navigation test coverage. (#2066)
+* Improved the styling and readability of markdown tables rendered by `ui.Chat()` and `ui.MarkdownStream()`. (#1973)
 
-* `input_date()`, `input_date_range()`, `update_date()`, and `update_date_range()` now supports `""` for values, mins, and maxes. In this case, no date will be specified on the client. (#1713) (#1689)
+* `input_date()`, `input_date_range()`, `update_date()`, and `update_date_range()` now support `""` for values, mins, and maxes. In this case, no date will be specified on the client. (#1713) (#1689)
 
 * Restricted the allowable types of the `choices` parameter of `input_select()`, `input_selectize()`, `update_select()`, and `update_selectize()` to actual set of allowable types (previously, the type was suggesting HTML-like values were supported). (#2048)
 
-* Improved the styling and readability of markdown tables rendered by `ui.Chat()` and `ui.MarkdownStream()`. (#1973)
-
-* `selectize`, `remove_button`, and `options` parameters of `ui.input_select()` have been deprecated; use `ui.input_selectize()` instead. (Thanks, @ErdaradunGaztea!) (#1947)
+* Added module support for `session.clientdata` methods. This allows you to access client data values in Shiny modules without needing to namespace the keys explicitly. (#1978)
 
 * Added `timeout_secs` parameter to `create_app_fixture` to allow testing apps with longer startup times. (#2033)
 
-* Added module support for `session.clientdata` methods. This allows you to access client data values in Shiny modules without needing to namespace the keys explicitly. (#1978)
+* Add support for selecting menu items in `Navset` controllers to improve dropdown navigation test coverage. (#2066)
 
-* Fixed false positive warning in `layout_columns()` about number of widths vs elements. (#1704)
+* Python 3.13 is now offically supported and tested. (#1711)
 
 ### Bug fixes
+
+* `include_js()` and `include_css()` now work as expected in multi-user settings and also when multiple files from the same directory are included. (#2061, #2069)
 
 * Fixed numerous issues related to programmatically updating selectize options. (#2053)
    * `update_selectize(options=...)` no longer gets ignored when `server=False` (the default).
    * `update_selectize(options=...)` now works as expected in a module.
 
-* Fixed an issue with `update_selectize()` to properly display labels with HTML reserved characters like "&" (#1330)
+* Fixed an issue with `update_selectize(server=True)` not properly displaying labels with HTML reserved characters like "&" (#1330)
 
 * Fixed an issue with `ui.Chat()` sometimes wanting to scroll a parent element. (#1996)
 
-* Explicitly call out module usage in UI input bookmark button documentation. (#1983)
-
-* Fix missing session when trying to display an error duing bookmarking. (#1984)
+* Fix several issues with bookmarking error reporting and documentation. (#2076, #1984, #1983)
 
 * `input_date()` and `input_date_range()` once again use the client's (not the server) current date as the default `value`. (#2060)
 
-* Fixed `set()` method of `InputSelectize` controller so it clears existing selections before applying new values. (#2024)
+* Fixed false positive warning in `layout_columns()` about number of widths vs elements. (#1704)
+
+* Fixed `set()` method of the `InputSelectize` test controller so it clears existing selections before applying new values. (#2024)
 
 ### Deprecations
 
-* `ui.update_navs()` has been deprecated in favor of `ui.update_navset()`. (#2047)
+* `ui.update_navs()` is deprecated in favor of `ui.update_navset()`. (#2047)
 
 * `ui.panel_well()` is deprecated in favor of `ui.card()`. (#2038)
 
+* `selectize`, `remove_button`, and `options` parameters of `ui.input_select()` have been deprecated; use `ui.input_selectize()` instead. (Thanks, @ErdaradunGaztea!) (#1947)
 
 ## [1.4.0] - 2025-04-08
 

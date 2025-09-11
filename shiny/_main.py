@@ -533,11 +533,10 @@ def add() -> None:
 @add.command(
     help="""Add a test file for a specified Shiny app.
 
-Add an empty test file for a specified app. You will be prompted with a destination
-folder. If you don't provide a destination folder, it will be added in the current
-working directory based on the app name.
+Generate a comprehensive test file for a specified app using AI. The generator
+will analyze your app code and create appropriate test cases with assertions.
 
-After creating the shiny app file, you can use `pytest` to run the tests:
+After creating the test file, you can use `pytest` to run the tests:
 
         pytest TEST_FILE
 """
@@ -546,22 +545,37 @@ After creating the shiny app file, you can use `pytest` to run the tests:
     "--app",
     "-a",
     type=str,
-    help="Please provide the path to the app file for which you want to create a test file.",
+    help="Path to the app file for which you want to generate a test file.",
 )
 @click.option(
     "--test-file",
     "-t",
     type=str,
-    help="Please provide the name of the test file you want to create. The basename of the test file should start with `test_` and be unique across all test files.",
+    help="Path for the generated test file. If not provided, will be auto-generated.",
+)
+@click.option(
+    "--provider",
+    type=click.Choice(["anthropic", "openai"]),
+    default="anthropic",
+    help="AI provider to use for test generation.",
+)
+@click.option(
+    "--model",
+    type=str,
+    help="Specific model to use (optional). Examples: haiku3.5, sonnet,  gpt-5, gpt-5-mini",
 )
 # Param for app.py, param for test_name
 def test(
-    app: Path | None,
-    test_file: Path | None,
+    app: str | None,
+    test_file: str | None,
+    provider: str,
+    model: str | None,
 ) -> None:
-    from ._main_add_test import add_test_file
+    from ._main_generate_test import generate_test_file
 
-    add_test_file(app_file=app, test_file=test_file)
+    generate_test_file(
+        app_file=app, output_file=test_file, provider=provider, model=model
+    )
 
 
 @main.command(
