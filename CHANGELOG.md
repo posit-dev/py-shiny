@@ -49,6 +49,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
+* Fixed issue where apps run in Workbench were unexpectedly crashing. Apps running in Workbench will now have `ws_per_message_deflate=False` enforced. (#2005)
+
 * `include_js()` and `include_css()` now work as expected in multi-user settings and also when multiple files from the same directory are included. (#2061, #2069)
 
 * Fixed numerous issues related to programmatically updating selectize options. (#2053)
@@ -100,8 +102,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * `ui.page_navbar()` and `ui.navset_bar()` now correctly apply `theme` and additional attributes from `navbar_options` created with `ui.navbar_options()`. (#1942)
 
 ### Bug fixes
-
-* Fixed issue where apps run in Workbench were unexpectedly crashing. Apps running in Workbench will now have `ws_per_message_deflate=False` enforced. (#2005)
 
 * Fixed an issue where the `<main>` areas of `ui.page_sidebar()` and `ui.page_navbar()` (with a `sidebar`) were made to be a fillable containers even when `fillable=False`. (#1816)
 
