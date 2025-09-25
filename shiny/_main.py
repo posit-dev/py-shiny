@@ -555,14 +555,23 @@ After creating the test file, you can use `pytest` to run the tests:
 )
 @click.option(
     "--provider",
-    type=click.Choice(["anthropic", "openai"]),
+    type=click.Choice(["anthropic", "openai", "bedrock-anthropic"]),
     default="anthropic",
-    help="AI provider to use for test generation.",
+    help=(
+        "AI provider to use for test generation. For 'bedrock-anthropic', "
+        "make sure your AWS credentials are configured (env vars, profile, or role) "
+        "and provide a Bedrock Anthropic model ID (e.g., "
+        "us.anthropic.claude-3-7-sonnet-20250219-v1:0)."
+    ),
 )
 @click.option(
     "--model",
     type=str,
-    help="Specific model to use (optional). Examples: haiku3.5, sonnet,  gpt-5, gpt-5-mini",
+    help=(
+        "Specific model to use (optional). Examples: haiku3.5, sonnet, gpt-5, gpt-5-mini; "
+        "or a Bedrock Anthropic model ID when using provider=bedrock-anthropic, e.g. "
+        "us.anthropic.claude-3-7-sonnet-20250219-v1:0"
+    ),
 )
 # Param for app.py, param for test_name
 def test(
