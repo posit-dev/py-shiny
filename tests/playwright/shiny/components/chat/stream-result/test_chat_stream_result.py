@@ -16,6 +16,8 @@ def test_validate_chat_stream_result(page: Page, local_app: ShinyAppProc) -> Non
 
     expect(chat.loc).to_be_visible(timeout=10 * 1000)
 
+    chat.expect_user_input("Press Enter to start the stream", timeout=30 * 1000)
+
     chat.send_user_input()
 
     messages = [
@@ -34,4 +36,4 @@ def test_validate_chat_stream_result(page: Page, local_app: ShinyAppProc) -> Non
     chat.expect_messages(re.compile(r"\s*".join(messages)), timeout=30 * 1000)
 
     # Verify that the stream result is as expected
-    stream_result.expect.to_contain_text("Message 9")
+    stream_result.expect.to_contain_text("Message 9", timeout=30 * 1000)
