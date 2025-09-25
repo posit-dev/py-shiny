@@ -180,7 +180,7 @@ class ShinyTestGenerator:
             if resolved_model.startswith("gpt-") or resolved_model.startswith("o1-"):
                 raise ValueError(
                     f"Model '{model}' is an OpenAI model but provider is set to 'bedrock-anthropic'. "
-                    f"Use an Anthropic Bedrock model ID (e.g., 'anthropic.claude-3-5-sonnet-20240620-v1:0')."
+                    f"Use an Anthropic Bedrock model ID (e.g., 'us.anthropic.claude-3-7-sonnet-20250219-v1:0')."
                 )
             return resolved_model
 

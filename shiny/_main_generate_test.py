@@ -56,7 +56,7 @@ def validate_api_key(provider: str) -> None:
         },
         "bedrock-anthropic": {
             "env_var": None,
-            "url": "https://docs.aws.amazon.com/bedrock/latest/userguide/setting-up.html",
+            "url": "https://docs.aws.amazon.com/bedrock/latest/userguide/getting-started.html",
         },
     }
 
