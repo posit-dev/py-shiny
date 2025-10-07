@@ -1241,6 +1241,7 @@ class OutputDataFrame(UiWithContainer):
         if filter is None:
             return
 
+        filter_items: Sequence[ColumnFilter | dict[str, Any]]
         if isinstance(filter, dict):
             filter_items = [filter]
         elif isinstance(filter, (list, tuple)):
