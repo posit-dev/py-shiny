@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from playwright.sync_api import Page
+from playwright.sync_api import expect as playwright_expect
 
-from ._base import InputActionBase, WidthLocM
+from .._types import PatternOrStr, Timeout
+from ._base import InputActionBase, WidthLocStlyeM
 
 
-class _DownloadMixin(WidthLocM, InputActionBase):
+class _DownloadMixin(WidthLocStlyeM, InputActionBase):
     """Mixin for download controls."""
 
     def __init__(self, page: Page, id: str, *, loc_suffix: str) -> None:
@@ -14,6 +16,16 @@ class _DownloadMixin(WidthLocM, InputActionBase):
             id=id,
             loc=f"#{id}.shiny-download-link{loc_suffix}",
         )
+
+    def expect_label(
+        self,
+        value: PatternOrStr,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """Expect the anchor itself to contain the provided label text."""
+
+        playwright_expect(self.loc).to_have_text(value, timeout=timeout)
 
 
 class DownloadLink(_DownloadMixin):
