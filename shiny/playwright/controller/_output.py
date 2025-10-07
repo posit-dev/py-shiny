@@ -1213,7 +1213,6 @@ class OutputDataFrame(UiWithContainer):
 
     def set_filter(
         self,
-        # TODO-barret support array of filters
         filter: ColumnFilter | list[ColumnFilter] | None,
         *,
         timeout: Timeout = None,
