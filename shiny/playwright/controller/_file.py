@@ -5,8 +5,18 @@ from playwright.sync_api import Page
 from ._base import InputActionBase, WidthLocM
 
 
-# TODO: Use mixin for dowloadlink and download button
-class DownloadLink(InputActionBase):
+class _DownloadMixin(WidthLocM, InputActionBase):
+    """Mixin for download controls."""
+
+    def __init__(self, page: Page, id: str, *, loc_suffix: str) -> None:
+        super().__init__(
+            page,
+            id=id,
+            loc=f"#{id}.shiny-download-link{loc_suffix}",
+        )
+
+
+class DownloadLink(_DownloadMixin):
     """
     Controller for :func:`shiny.ui.download_link`.
     """
@@ -22,17 +32,10 @@ class DownloadLink(InputActionBase):
         id
             The ID of the download link.
         """
-        super().__init__(
-            page,
-            id=id,
-            loc=f"#{id}.shiny-download-link:not(.btn)",
-        )
+        super().__init__(page, id=id, loc_suffix=":not(.btn)")
 
 
-class DownloadButton(
-    WidthLocM,
-    InputActionBase,
-):
+class DownloadButton(_DownloadMixin):
     """
     Controller for :func:`shiny.ui.download_button`
     """
@@ -48,8 +51,4 @@ class DownloadButton(
         id
             The ID of the download button.
         """
-        super().__init__(
-            page,
-            id=id,
-            loc=f"#{id}.btn.shiny-download-link",
-        )
+        super().__init__(page, id=id, loc_suffix=".btn")
