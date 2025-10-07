@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import platform
-from typing import Literal, Protocol
+from typing import Any, Literal, Protocol, Sequence, cast
 
 from playwright.sync_api import Locator, Page
 from playwright.sync_api import expect as playwright_expect
@@ -1211,7 +1211,6 @@ class OutputDataFrame(UiWithContainer):
                         break
                 click_loc(sort_col, shift=shift)
 
-    # TODO-karan-test: Add support for a list of columns ? If so, all other columns should be reset
     def set_filter(
         self,
         # TODO-barret support array of filters
@@ -1243,39 +1242,97 @@ class OutputDataFrame(UiWithContainer):
             return
 
         if isinstance(filter, dict):
-            filter = [filter]
-
-        if not isinstance(filter, list):
+            filter_items = [filter]
+        elif isinstance(filter, (list, tuple)):
+            filter_items = cast(Sequence[ColumnFilter | dict[str, Any]], filter)
+        else:
             raise ValueError(
-                "Invalid filter value. Must be a ColumnFilter, list[ColumnFilter], or None."
+                "Invalid filter value. Must be a ColumnFilter, "
+                "list[ColumnFilter], or None."
             )
 
-        for filterInfo in filter:
+        for filterInfo in filter_items:
             if "col" not in filterInfo:
                 raise ValueError("Column index (`col`) is required for filtering.")
 
             if "value" not in filterInfo:
                 raise ValueError("Filter value (`value`) is required for filtering.")
 
-            filterColumn = self.loc_column_filter.nth(filterInfo["col"])
-
-            if isinstance(filterInfo["value"], str):
-                filterColumn.locator("> input").fill(filterInfo["value"])
-            elif isinstance(filterInfo["value"], (tuple, list)):
-                header_inputs = filterColumn.locator("> div > input")
-                if filterInfo["value"][0] is not None:
-                    header_inputs.nth(0).fill(
-                        str(filterInfo["value"][0]),
-                        timeout=timeout,
+            raw_cols = filterInfo["col"]
+            if isinstance(raw_cols, int):
+                column_indices: list[int] = [raw_cols]
+            elif isinstance(raw_cols, (list, tuple)):
+                cols_iter = cast(Sequence[Any], raw_cols)
+                if len(cols_iter) == 0:
+                    raise ValueError(
+                        "Column index list (`col`) must contain at least one " "entry."
                     )
-                if filterInfo["value"][1] is not None:
-                    header_inputs.nth(1).fill(
-                        str(filterInfo["value"][1]),
-                        timeout=timeout,
-                    )
+                column_indices = []
+                for col_idx in cols_iter:
+                    if not isinstance(col_idx, int):
+                        raise ValueError(
+                            "Column index (`col`) values must be integers "
+                            "when specifying multiple columns."
+                        )
+                    column_indices.append(col_idx)
             else:
                 raise ValueError(
-                    "Invalid filter value. Must be a string or a tuple/list of two numbers."
+                    "Column index (`col`) must be an int or a list/tuple of " "ints."
+                )
+
+            raw_value = filterInfo["value"]
+
+            if len(column_indices) > 1:
+                if not isinstance(raw_value, (list, tuple)):
+                    raise ValueError(
+                        "When filtering multiple columns, `value` must be a "
+                        "list or tuple with one entry per column."
+                    )
+                value_sequence = cast(Sequence[Any], raw_value)
+                if len(value_sequence) != len(column_indices):
+                    raise ValueError(
+                        "The number of filter values must match the number of "
+                        "target columns."
+                    )
+                value_iter = list(value_sequence)
+            else:
+                value_iter = [raw_value]
+
+            for col_idx, value in zip(column_indices, value_iter):
+                filterColumn = self.loc_column_filter.nth(col_idx)
+
+                if value is None:
+                    continue
+
+                if isinstance(value, (str, int, float)):
+                    filterColumn.locator("> input").fill(str(value), timeout=timeout)
+                    continue
+
+                if isinstance(value, (list, tuple)):
+                    range_values = cast(Sequence[Any], value)
+                    if len(range_values) != 2:
+                        raise ValueError(
+                            "Numeric range filters must provide exactly two "
+                            "values (min, max)."
+                        )
+
+                    header_inputs = filterColumn.locator("> div > input")
+                    lower = range_values[0]
+                    upper = range_values[1]
+                    if lower is not None:
+                        header_inputs.nth(0).fill(str(lower), timeout=timeout)
+                    else:
+                        header_inputs.nth(0).fill("", timeout=timeout)
+
+                    if upper is not None:
+                        header_inputs.nth(1).fill(str(upper), timeout=timeout)
+                    else:
+                        header_inputs.nth(1).fill("", timeout=timeout)
+                    continue
+
+                raise ValueError(
+                    "Invalid filter value. Must be a string/number, a "
+                    "tuple/list of two numbers, or None."
                 )
 
     def set_cell(
