@@ -1,4 +1,4 @@
-from shiny.express import input, output_args, render, ui
+from shiny.express import input, render, ui
 
 ui.input_text_area(
     "source",
