@@ -5,8 +5,8 @@ import sys
 from types import ModuleType
 from typing import Union, cast
 
-if sys.version_info < (3, 9):
-    raise RuntimeError("This script requires Python 3.9 or later")
+if sys.version_info < (3, 10):
+    raise RuntimeError("This script requires Python 3.10 or later")
 
 
 def gen_init_py(package_name: str) -> None:
