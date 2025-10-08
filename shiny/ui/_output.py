@@ -14,7 +14,7 @@ from typing import Optional
 
 from htmltools import Tag, TagAttrValue, TagFunction, css, div, tags
 
-from .._docstring import add_example, no_example
+from .._docstring import add_example
 from ..module import resolve_id
 from ..types import MISSING, MISSING_TYPE
 from ._plot_output_opts import (
@@ -271,7 +271,7 @@ def output_text(
     return container(id=resolve_id(id), class_="shiny-text-output")
 
 
-@no_example()
+@add_example()
 def output_code(id: str, placeholder: bool = True) -> Tag:
     """
     Create a output container for code (monospaced text).
@@ -304,9 +304,6 @@ def output_code(id: str, placeholder: bool = True) -> Tag:
     * :func:`~shiny.ui.output_text`
     * :func:`~shiny.ui.output_text_verbatim`
 
-    Example
-    -------
-    See :func:`~shiny.ui.output_text`
     """
 
     cls = "shiny-text-output" + (" noplaceholder" if not placeholder else "")
