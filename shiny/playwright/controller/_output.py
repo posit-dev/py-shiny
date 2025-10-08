@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import platform
-from typing import Any, Literal, Protocol, Sequence, cast
+from typing import Any, Literal, Protocol, Sequence, Union, cast
 
 from playwright.sync_api import Locator, Page
 from playwright.sync_api import expect as playwright_expect
@@ -1240,11 +1240,11 @@ class OutputDataFrame(UiWithContainer):
         if filter is None:
             return
 
-        filter_items: Sequence[ColumnFilter | dict[str, Any]]
+        filter_items: Sequence[Union[ColumnFilter, dict[str, Any]]]
         if isinstance(filter, dict):
             filter_items = [filter]
         elif isinstance(filter, (list, tuple)):
-            filter_items = cast(Sequence[ColumnFilter | dict[str, Any]], filter)
+            filter_items = cast(Sequence[Union[ColumnFilter, dict[str, Any]]], filter)
         else:
             raise ValueError(
                 "Invalid filter value. Must be a ColumnFilter, "
