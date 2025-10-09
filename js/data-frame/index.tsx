@@ -732,6 +732,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
         value: filterObj.value as FilterValue,
       });
     });
+    shinyFilter.sort((a, b) => a.col - b.col);
     window.Shiny.setInputValue!(`${id}_filter`, shinyFilter);
 
     // Deprecated as of 2024-05-21

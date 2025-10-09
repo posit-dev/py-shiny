@@ -89,8 +89,8 @@ def test_set_filter_accepts_tuple(page: Page, local_app: ShinyAppProc) -> None:
 
     penguin_df.set_filter(
         (
-            {"col": 0, "value": "Adelie"},
             {"col": 3, "value": (None, 17)},
+            {"col": 0, "value": "Adelie"},
         )  # type: ignore[arg-type]
     )
 
