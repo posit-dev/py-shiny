@@ -4,10 +4,13 @@ from playwright.sync_api import Page
 from playwright.sync_api import expect as playwright_expect
 
 from .._types import PatternOrStr, Timeout
-from ._base import InputActionBase, WidthLocStlyeM
+from ._base import InputActionBase, WidthLocStyleM
 
 
-class _DownloadMixin(WidthLocStlyeM, InputActionBase):
+class _DownloadBase(
+    WidthLocStyleM,
+    InputActionBase,
+):
     """Mixin for download controls."""
 
     def __init__(self, page: Page, id: str, *, loc_suffix: str) -> None:
@@ -28,7 +31,7 @@ class _DownloadMixin(WidthLocStlyeM, InputActionBase):
         playwright_expect(self.loc).to_have_text(value, timeout=timeout)
 
 
-class DownloadLink(_DownloadMixin):
+class DownloadLink(_DownloadBase):
     """
     Controller for :func:`shiny.ui.download_link`.
     """
@@ -47,7 +50,7 @@ class DownloadLink(_DownloadMixin):
         super().__init__(page, id=id, loc_suffix=":not(.btn)")
 
 
-class DownloadButton(_DownloadMixin):
+class DownloadButton(_DownloadBase):
     """
     Controller for :func:`shiny.ui.download_button`
     """
