@@ -79,7 +79,7 @@ const FilterNumericImpl: React.FC<FilterNumericImplProps> = (props) => {
         style={{ flex: "1 1 0", width: "0" }}
         type="number"
         placeholder={createPlaceholder(editing, "Min", rangeMin)}
-        defaultValue={min}
+        value={min ?? ""}
         // min={rangeMin}
         // max={rangeMax}
         step="any"
@@ -101,7 +101,7 @@ const FilterNumericImpl: React.FC<FilterNumericImplProps> = (props) => {
         style={{ flex: "1 1 0", width: "0" }}
         type="number"
         placeholder={createPlaceholder(editing, "Max", rangeMax)}
-        defaultValue={max}
+        value={max ?? ""}
         // min={rangeMin}
         // max={rangeMax}
         step="any"

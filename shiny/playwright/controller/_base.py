@@ -337,7 +337,7 @@ class UiWithLabel(UiWithContainer):
         playwright_expect(self.loc_label).to_have_text(value, timeout=timeout)
 
 
-class WidthLocStlyeM:
+class WidthLocStyleM:
     """
     A mixin class that provides methods to control the width of input action buttons and action links.
 
