@@ -1,4 +1,4 @@
-/*! shiny 1.11.1.9000 | (c) 2012-2025 Posit Software, PBC. | License: GPL-3 | file LICENSE */
+/*! shiny 1.11.1.9001 | (c) 2012-2025 Posit Software, PBC. | License: GPL-3 | file LICENSE */
 "use strict";
 (() => {
   var __create = Object.create;
@@ -2414,6 +2414,7 @@
         },
         JSON.parse(config.html())
       );
+      options = this._addShinyRemoveButton(options, el.hasAttribute("multiple"));
       if (typeof config.data("nonempty") !== "undefined") {
         el.nonempty = true;
         options = import_jquery19.default.extend(options, {
@@ -2449,6 +2450,34 @@
         control = $el.selectize(settings)[0].selectize;
       }
       return control;
+    }
+    // Translate shinyRemoveButton option into selectize plugins
+    _addShinyRemoveButton(options, multiple) {
+      let removeButton = options.shinyRemoveButton;
+      if (removeButton === void 0) {
+        return options;
+      }
+      if (removeButton === "none") {
+        removeButton = multiple ? "true" : "false";
+      }
+      if (removeButton === "false") {
+        return options;
+      }
+      const plugins = [];
+      if (removeButton === "both") {
+        plugins.push("remove_button", "clear_button");
+      } else if (removeButton === "true") {
+        plugins.push(multiple ? "remove_button" : "clear_button");
+      }
+      return {
+        ...options,
+        plugins: Array.from(
+          /* @__PURE__ */ new Set([
+            ...Array.isArray(options.plugins) ? options.plugins : [],
+            ...plugins
+          ])
+        )
+      };
     }
   };
 
@@ -7177,7 +7206,7 @@ ${duplicateIdMsg}`;
   // srcts/src/shiny/index.ts
   var ShinyClass = class {
     constructor() {
-      this.version = "1.11.1.9000";
+      this.version = "1.11.1.9001";
       const { inputBindings, fileInputBinding: fileInputBinding2 } = initInputBindings();
       const { outputBindings } = initOutputBindings();
       setFileInputBinding(fileInputBinding2);
