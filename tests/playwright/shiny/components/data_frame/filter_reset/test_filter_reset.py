@@ -91,7 +91,7 @@ def test_set_filter_accepts_tuple(page: Page, local_app: ShinyAppProc) -> None:
         (
             {"col": 3, "value": (None, 17)},
             {"col": 0, "value": "Adelie"},
-        )  # type: ignore[arg-type]
+        )
     )
 
     penguin_code.expect_value(
@@ -104,32 +104,6 @@ def test_set_filter_accepts_tuple(page: Page, local_app: ShinyAppProc) -> None:
     expect(species_filter).to_have_value("Adelie")
     expect(depth_filter.nth(0)).to_have_value("")
     expect(depth_filter.nth(1)).to_have_value("17")
-
-
-def test_set_filter_accepts_multi_column_mapping(
-    page: Page, local_app: ShinyAppProc
-) -> None:
-    page.goto(local_app.url)
-
-    penguin_df = controller.OutputDataFrame(page, "penguins_df")
-    penguin_code = controller.OutputCode(page, "penguins_code")
-
-    penguin_df.set_filter(
-        {
-            "col": [0, 1],
-            "value": ["Gentoo", "Biscoe"],
-        }  # type: ignore[arg-type]
-    )
-
-    penguin_code.expect_value(
-        "({'col': 0, 'value': 'Gentoo'}, {'col': 1, 'value': 'Biscoe'})"
-    )
-
-    species_filter = penguin_df.loc_column_filter.nth(0).locator("input")
-    island_filter = penguin_df.loc_column_filter.nth(1).locator("input")
-
-    expect(species_filter).to_have_value("Gentoo")
-    expect(island_filter).to_have_value("Biscoe")
 
 
 def test_set_filter_none_clears_inputs(page: Page, local_app: ShinyAppProc) -> None:

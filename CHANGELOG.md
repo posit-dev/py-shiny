@@ -10,6 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Improvements
 
 * Playwright's `OutputDataFrame.set_filter()` controller now supports multi-column filters (#2093)
+* Add api-example for `ui.output_code` (#2093)
+* Update controllers for `DownloadLink` and `DownloadButton` (#2093)
+
+### Bug fixes
+
+* `ui.output_data_frame` will now consistently order the filtered columns in ascending column order. (#2093)
+* When resetting a `ui.output_data_frame` filter, numeric range filters will now reset both values. (#2093)
 
 ## [1.5.0] - 2025-09-11
 

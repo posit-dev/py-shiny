@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import platform
-from typing import Any, Literal, Protocol, Sequence, Union, cast
+from typing import Any, Literal, Protocol, Sequence, cast
 
 from playwright.sync_api import Locator, Page
 from playwright.sync_api import expect as playwright_expect
