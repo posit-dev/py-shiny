@@ -84,6 +84,7 @@ from ._input_numeric import input_numeric
 from ._input_password import input_password
 from ._input_select import input_select, input_selectize
 from ._input_slider import AnimationOptions, SliderStepArg, SliderValueArg, input_slider
+from ._input_submit_textarea import input_submit_textarea, update_submit_textarea
 from ._input_task_button import bind_task_button, input_task_button
 from ._input_text import input_text, input_text_area
 from ._input_update import (
@@ -251,6 +252,9 @@ __all__ = (
     "SliderValueArg",
     "SliderStepArg",
     "AnimationOptions",
+    # _input_submit_textarea
+    "input_submit_textarea",
+    "update_submit_textarea",
     # _input_task_button
     "bind_task_button",
     "input_task_button",
