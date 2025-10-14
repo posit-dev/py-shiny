@@ -10,10 +10,12 @@ __all__ = (
     "output_ui",
 )
 
+import warnings
 from typing import Optional
 
 from htmltools import Tag, TagAttrValue, TagFunction, css, div, tags
 
+from .._deprecated import ShinyDeprecationWarning
 from .._docstring import add_example, no_example
 from ..module import resolve_id
 from ..types import MISSING, MISSING_TYPE
@@ -345,6 +347,14 @@ def output_text_verbatim(id: str, placeholder: bool = False) -> Tag:
     -------
     See :func:`~shiny.ui.output_text`
     """
+
+    warnings.warn(
+        "`ui.output_text_verbatim()` is deprecated. "
+        "Please use `ui.output_text()` if you want to create an output container for some text, "
+        "or `ui.output_code()` if you want to create an output container for code (monospaced text).",
+        category=ShinyDeprecationWarning,
+        stacklevel=2,
+    )
 
     cls = "shiny-text-output" + (" noplaceholder" if not placeholder else "")
     return tags.pre(id=resolve_id(id), class_=cls)
