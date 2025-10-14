@@ -67,7 +67,7 @@ pd_penguins.iloc[0, 5] = ui.div(  # pyright: ignore[reportArgumentType]
 )
 pd_penguins.iloc[1, 5] = ui.p(  # pyright: ignore[reportArgumentType]
     ui.input_action_button("pandas_test_cell_button", "Test button"),
-    ui.output_text_verbatim("pandas_test_cell_text", placeholder=True),
+    ui.output_code("pandas_test_cell_text", placeholder=True),
 )
 
 
@@ -116,9 +116,7 @@ pl_penguins = (
                         ui.input_action_button(
                             "polars_test_cell_button", "Test button"
                         ),
-                        ui.output_text_verbatim(
-                            "polars_test_cell_text", placeholder=True
-                        ),
+                        ui.output_code("polars_test_cell_text", placeholder=True),
                     )
                     if i == 1
                     else ui.div(val)

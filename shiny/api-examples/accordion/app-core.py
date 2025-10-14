@@ -25,11 +25,11 @@ app_ui = ui.page_fluid(
     ui.markdown("#### Accordion: (`multiple=False`)"),
     # Provide an id to create a shiny input binding
     ui.accordion(*make_items(), id="acc_single", multiple=False),
-    ui.output_text_verbatim("acc_single_val", placeholder=True),
+    ui.output_code("acc_single_val", placeholder=True),
     ui.tags.br(),
     ui.markdown("#### Accordion: (`multiple=True`)"),
     ui.accordion(*make_items(), id="acc_multiple"),
-    ui.output_text_verbatim("acc_multiple_val", placeholder=True),
+    ui.output_code("acc_multiple_val", placeholder=True),
 )
 
 

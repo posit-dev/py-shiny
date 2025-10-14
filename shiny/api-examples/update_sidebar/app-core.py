@@ -6,7 +6,7 @@ app_ui = ui.page_sidebar(
     ui.input_action_button("close_sidebar", label="Close sidebar", class_="me-3"),
     ui.br(),
     ui.br(),
-    ui.output_text_verbatim("state"),
+    ui.output_code("state"),
     fillable=False,
 )
 

@@ -19,7 +19,7 @@ The following methods are available from the `session.clientdata` object and all
 to reactively read the client data values from the browser.
 """
     ),
-    ui.output_text_verbatim("clientdatatext"),
+    ui.output_code("clientdatatext"),
     ui.output_plot("myplot"),
 )
 

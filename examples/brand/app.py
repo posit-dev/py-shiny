@@ -52,7 +52,7 @@ app_ui = ui.page_navbar(
             ),
             ui.card(
                 ui.card_header("Text Output"),
-                ui.output_text_verbatim("out_text1"),
+                ui.output_code("out_text1"),
             ),
         ),
     ),

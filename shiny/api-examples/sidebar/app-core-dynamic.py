@@ -58,7 +58,7 @@ def server(input: Inputs, output: Outputs, session: Session):
                 position=input.position(),
             ),
             ui.h2("Dynamic sidebar"),
-            ui.output_text_verbatim("state_dynamic"),
+            ui.output_code("state_dynamic"),
         )
 
     @render.text

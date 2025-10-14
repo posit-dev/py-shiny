@@ -10,7 +10,7 @@ app_ui = ui.page_sidebar(
         title="Parameters",
     ),
     ui.h2("Output"),
-    ui.output_text_verbatim("txt"),
+    ui.output_code("txt"),
     ui.markdown(filler_text),
     title="Theme Example",
     theme=Path(__file__).parent / "css" / "shiny-theme-demo.css",

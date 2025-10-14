@@ -9,7 +9,7 @@ app_ui = ui.page_fluid(
             ui.input_action_button("first", "Invalidate first (slow) computation"),
             ui.input_action_button("second", "Invalidate second (fast) computation"),
         ),
-        ui.output_text_verbatim("result"),
+        ui.output_code("result"),
     )
 )
 

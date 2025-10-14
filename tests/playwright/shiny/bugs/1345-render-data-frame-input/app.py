@@ -4,8 +4,8 @@ from shiny import App, Inputs, reactive, render, ui
 
 app_ui = ui.page_fluid(
     ui.output_data_frame("df1"),
-    ui.output_text_verbatim("selected_rows", placeholder=True),
-    ui.output_text_verbatim("cell_selection", placeholder=True),
+    ui.output_code("selected_rows", placeholder=True),
+    ui.output_code("cell_selection", placeholder=True),
 )
 
 

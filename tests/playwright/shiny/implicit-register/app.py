@@ -9,7 +9,7 @@ scenarios = dict(
 
 app_ui = ui.page_fluid(
     [
-        ui.p(ui.div(desc), ui.output_text_verbatim(id, placeholder=True))
+        ui.p(ui.div(desc), ui.output_code(id, placeholder=True))
         for id, desc in scenarios.items()
     ]
 )

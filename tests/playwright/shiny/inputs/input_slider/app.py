@@ -25,7 +25,7 @@ def slider_row(
         ),
         ui.column(
             6,
-            ui.output_text_verbatim(f"txt{id_num}", placeholder=True),
+            ui.output_code(f"txt{id_num}", placeholder=True),
         ),
     )
 

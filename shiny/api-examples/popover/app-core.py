@@ -25,7 +25,7 @@ app_ui = ui.page_fluid(
                 id="card_popover",
             ),
         ),
-        ui.output_text_verbatim("plot_txt", placeholder=True),
+        ui.output_code("plot_txt", placeholder=True),
     ),
 )
 

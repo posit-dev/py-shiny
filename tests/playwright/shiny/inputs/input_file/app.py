@@ -15,7 +15,7 @@ app_ui = ui.page_fluid(
     ),
     ui.output_table("summary"),
     ui.input_file("file2", "Multiple files", multiple=True),
-    ui.output_text_verbatim("file2_info", placeholder=True),
+    ui.output_code("file2_info", placeholder=True),
 )
 
 

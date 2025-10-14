@@ -3,7 +3,7 @@ from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 app_ui = ui.page_fluid(
     ui.input_password("password", "Password:"),
     ui.input_action_button("go", "Go"),
-    ui.output_text_verbatim("value"),
+    ui.output_code("value"),
 )
 
 

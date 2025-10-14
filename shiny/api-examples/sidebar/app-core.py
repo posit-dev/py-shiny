@@ -4,25 +4,25 @@ app_ui = ui.page_fluid(
     ui.card(
         ui.layout_sidebar(
             ui.sidebar("Left sidebar content", id="sidebar_left"),
-            ui.output_text_verbatim("state_left"),
+            ui.output_code("state_left"),
         )
     ),
     ui.card(
         ui.layout_sidebar(
             ui.sidebar("Right sidebar content", id="sidebar_right", position="right"),
-            ui.output_text_verbatim("state_right"),
+            ui.output_code("state_right"),
         ),
     ),
     ui.card(
         ui.layout_sidebar(
             ui.sidebar("Closed sidebar content", id="sidebar_closed", open="closed"),
-            ui.output_text_verbatim("state_closed"),
+            ui.output_code("state_closed"),
         )
     ),
     ui.card(
         ui.layout_sidebar(
             ui.sidebar("Always sidebar content", id="sidebar_always", open="always"),
-            ui.output_text_verbatim("state_always"),
+            ui.output_code("state_always"),
         )
     ),
 )

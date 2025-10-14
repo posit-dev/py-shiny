@@ -18,7 +18,7 @@ app_ui = ui.page_fluid(
         "value", "Value to sha256sum", value="The quick brown fox", rows=5, width="100%"
     ),
     ui.p(ui.input_action_button("go", "Calculate"), class_="mb-3"),
-    ui.output_text_verbatim("hash_output"),
+    ui.output_code("hash_output"),
 )
 
 

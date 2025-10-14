@@ -33,15 +33,15 @@ app_ui = ui.page_fluid(
     ui.input_action_button("btn", "Click me!"),
     ui.tags.br(),
     ui.tags.span("Counter: "),
-    ui.output_text_verbatim("btn_txt", placeholder=True),
+    ui.output_code("btn_txt", placeholder=True),
     ui.tags.span("All events: "),
-    ui.output_text_verbatim("all_txt", placeholder=True),
+    ui.output_code("all_txt", placeholder=True),
     ui.tags.span("Flush events: "),
-    ui.output_text_verbatim("flush_txt", placeholder=True),
+    ui.output_code("flush_txt", placeholder=True),
     ui.tags.span("Flushed events: "),
-    ui.output_text_verbatim("flushed_txt", placeholder=True),
+    ui.output_code("flushed_txt", placeholder=True),
     ui.tags.span("Session end events (refresh App to add events): "),
-    ui.output_text_verbatim("session_end_txt", placeholder=True),
+    ui.output_code("session_end_txt", placeholder=True),
     ui.tags.script(
         """
         $(document).on('shiny:connected', function(event) {

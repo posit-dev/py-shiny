@@ -7,13 +7,13 @@ app_ui = ui.page_fluid(
     ui.input_action_button("btn_count", "Immediate Count"),
     ui.tags.br(),
     ui.tags.label("Rendered on click:"),
-    ui.output_text_verbatim("txt_immediate", placeholder=True),
+    ui.output_code("txt_immediate", placeholder=True),
     ui.input_action_button("btn_trigger", "Update Count"),
     ui.tags.br(),
     ui.tags.label("Reactive event on renderer:"),
-    ui.output_text_verbatim("txt_render_delayed", placeholder=True),
+    ui.output_code("txt_render_delayed", placeholder=True),
     ui.tags.label("Reactive event on reactive calc:"),
-    ui.output_text_verbatim("txt_reactive_delayed", placeholder=True),
+    ui.output_code("txt_reactive_delayed", placeholder=True),
 )
 
 

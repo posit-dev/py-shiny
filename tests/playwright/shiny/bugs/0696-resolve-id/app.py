@@ -99,11 +99,11 @@ def mod_x_ui(label: str) -> ui.TagChild:
         ),
         ui.layout_column_wrap(
             *[
-                ui.output_text_verbatim(f"status_x_{x_input_key}", placeholder=True)
+                ui.output_code(f"status_x_{x_input_key}", placeholder=True)
                 for x_input_key in x_input_keys
             ],
             *[
-                ui.output_text_verbatim(f"status_{input_key}", placeholder=True)
+                ui.output_code(f"status_{input_key}", placeholder=True)
                 for input_key in input_keys
             ],
             width=1 / 2,
@@ -200,7 +200,7 @@ def mod_x_ui(label: str) -> ui.TagChild:
                     "Image (Changes w/ `input.radio_buttons()`)",
                     ui.output_image("out_image", height="180px"),
                 ),
-                ("Text Verbatim", ui.output_text_verbatim("out_text_verbatim")),
+                ("Text Verbatim", ui.output_code("out_text_verbatim")),
                 ("Text", ui.output_text("out_text")),
                 ("UI", ui.output_ui("out_ui")),
             )
@@ -371,7 +371,7 @@ app_ui = ui.page_fluid(
         width=1 / 3,
     ),
     # ui.h3("Inputs that are not in a module:"),
-    # ui.output_text_verbatim("not_modules", placeholder=True),
+    # ui.output_code("not_modules", placeholder=True),
 )
 
 

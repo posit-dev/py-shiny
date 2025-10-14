@@ -21,11 +21,11 @@ def mod_ui():
         ui.card(
             ui.layout_column_wrap(
                 ui.TagList(
-                    ui.div("Sort: ", ui.output_text_verbatim("sort")),
-                    ui.div("Filter: ", ui.output_text_verbatim("filter")),
-                    ui.div("Rows: ", ui.output_text_verbatim("rows")),
-                    ui.div("Selected Rows: ", ui.output_text_verbatim("selected_rows")),
-                    ui.div("Type: ", ui.output_text_verbatim("df_type")),
+                    ui.div("Sort: ", ui.output_code("sort")),
+                    ui.div("Filter: ", ui.output_code("filter")),
+                    ui.div("Rows: ", ui.output_code("rows")),
+                    ui.div("Selected Rows: ", ui.output_code("selected_rows")),
+                    ui.div("Type: ", ui.output_code("df_type")),
                 ),
                 ui.output_data_frame("penguins_df"),
                 width=1 / 2,
