@@ -966,3 +966,110 @@ class InputDateRange(WidthContainerStyleM, UiWithLabel):
         # TODO-future; Composable expectations
         self.date_start.expect_autoclose(value, timeout=timeout)
         self.date_end.expect_autoclose(value, timeout=timeout)
+
+
+class InputSubmitTextarea(
+    _SetTextM,
+    WidthContainerStyleM,
+    _ExpectTextInputValueM,
+    _ExpectPlaceholderAttrM,
+    UiWithLabel,
+):
+    """Controller for :func:`shiny.ui.input_submit_textarea`."""
+
+    loc_button: Locator
+    """Playwright `Locator` for the submit button."""
+
+    def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes the input submit textarea.
+
+        Parameters
+        ----------
+        page
+            The page where the input submit textarea is located.
+        id
+            The id of the input submit textarea.
+        """
+        super().__init__(
+            page,
+            id=id,
+            loc=f"textarea#{id}.form-control",
+        )
+        self.loc_button = self.loc_container.locator(".bslib-submit-textarea-btn")
+
+    def set(self, value: str, *, submit: bool = False, timeout: Timeout = None) -> None:
+        """
+        Sets the text value in the textarea.
+
+        Parameters
+        ----------
+        value
+            The text to set.
+        submit
+            Whether to click the submit button after setting the text. Defaults to `False`.
+        timeout
+            The maximum time to wait for the text to be set. Defaults to `None`.
+        """
+        set_text(self.loc, value, timeout=timeout)
+        if submit:
+            self.loc_button.click(timeout=timeout)
+
+    def submit(self, *, timeout: Timeout = None) -> None:
+        """
+        Clicks the submit button.
+
+        Parameters
+        ----------
+        timeout
+            The maximum time to wait for the click. Defaults to `None`.
+        """
+        self.loc_button.click(timeout=timeout)
+
+    def expect_rows(self, value: AttrValue, *, timeout: Timeout = None) -> None:
+        """
+        Expect the `rows` attribute of the input submit textarea to have a specific value.
+
+        Parameters
+        ----------
+        value
+            The expected value of the `rows` attribute.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        _expect_attribute_to_have_value(self.loc, "rows", value=value, timeout=timeout)
+
+    def expect_data_needs_modifier(
+        self, value: bool, *, timeout: Timeout = None
+    ) -> None:
+        """
+        Expect the `data-needs-modifier` attribute to be present or absent.
+
+        Parameters
+        ----------
+        value
+            If `True`, expects the attribute to be present. If `False`, expects it to be absent.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        _expect_attribute_to_have_value(
+            self.loc,
+            "data-needs-modifier",
+            value="" if value else None,
+            timeout=timeout,
+        )
+
+    def expect_button_label(
+        self, value: PatternOrStr, *, timeout: Timeout = None
+    ) -> None:
+        """
+        Expect the submit button to have a specific label.
+
+        Parameters
+        ----------
+        value
+            The expected label text.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        playwright_expect(self.loc_button).to_contain_text(value, timeout=timeout)
