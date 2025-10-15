@@ -4,6 +4,7 @@ import copy
 import importlib
 import importlib.util
 import inspect
+import logging
 import os
 import platform
 import re
@@ -333,6 +334,8 @@ def run_app(
 
     log_config: dict[str, Any] = copy.deepcopy(uvicorn.config.LOGGING_CONFIG)
 
+    setup_shiny_logger(log_config)
+
     if reload_dirs is None:
         reload_dirs = []
         if app_dir is not None:
@@ -419,6 +422,17 @@ def run_app(
         **reload_args,  # pyright: ignore[reportArgumentType]
         **kwargs,
     )
+
+
+def setup_shiny_logger(log_config: dict[str, Any]) -> None:
+    log_config["loggers"]["shiny"] = {
+        "level": "INFO",
+        "handlers": ["default"],
+    }
+
+
+def get_shiny_logger():
+    return logging.getLogger("shiny")
 
 
 def setup_hot_reload(

@@ -1388,7 +1388,7 @@ class Inputs:
         # dependencies on input values that haven't been received from client
         # yet.
         if key not in self._map:
-            self._map[key] = Value[Any](read_only=True)
+            self._map[key] = Value[Any](read_only=key)
 
         return self._map[key]
 
