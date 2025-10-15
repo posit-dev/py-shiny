@@ -134,41 +134,43 @@ class Value(Generic[T]):
 
     @overload
     def __call__(
-        self, *, default: MISSING_TYPE = MISSING, log_if_missing: bool = True
+        self, *, default: MISSING_TYPE = MISSING, warn_if_missing: bool = True
     ) -> T: ...
 
     @overload
     def __call__(
-        self, *, default: None = None, log_if_missing: bool = True
+        self, *, default: None = None, warn_if_missing: bool = True
     ) -> T | None: ...
 
     @overload
-    def __call__(self, *, default: T, log_if_missing: bool = True) -> T: ...
+    def __call__(self, *, default: T, warn_if_missing: bool = True) -> T: ...
 
     def __call__(
         self,
         *,
         default: MISSING_TYPE | T | None = MISSING,
-        log_if_missing: bool = True,
+        warn_if_missing: bool = True,
     ) -> T | None:
-        return self.get(default=default, log_if_missing=log_if_missing)
+        return self.get(default=default, warn_if_missing=warn_if_missing)
 
     @overload
     def get(
-        self, *, default: MISSING_TYPE = MISSING, log_if_missing: bool = True
+        self, *, default: MISSING_TYPE = MISSING, warn_if_missing: bool = True
     ) -> T: ...
 
     @overload
-    def get(self, *, default: None = None, log_if_missing: bool = True) -> T | None: ...
+    def get(
+        self, *, default: None = None, warn_if_missing: bool = True
+    ) -> T | None: ...
 
     @overload
-    def get(self, *, default: T, log_if_missing: bool = True) -> T: ...
+    def get(self, *, default: T, warn_if_missing: bool = True) -> T: ...
 
     def get(
         self,
         *,
         default: MISSING_TYPE | T | None = MISSING,
-        log_if_missing: bool = True,
+        warn_if_missing: bool = True,
     ) -> T | None:
         """
         Read the reactive value.
@@ -179,7 +181,7 @@ class Value(Generic[T]):
             A default value to return if the reactive value is not set. If no default is
             provided and the value is not set, then a
             :class:`~shiny.types.SilentException` is raised.
-        log_if_missing
+        warn_if_missing
             If ``True`` (the default), log an INFO message when a
             :class:`~shiny.types.SilentException` is raised because the value is not
             set. Set to ``False`` to suppress this logging.
@@ -204,8 +206,8 @@ class Value(Generic[T]):
         if not isinstance(default, MISSING_TYPE):
             return default
 
-        if log_if_missing:
-            self._log_missing_value_access(self._id)
+        if warn_if_missing:
+            self._throw_missing_value_warning(self._id)
         raise SilentException
 
     def set(self, value: T) -> bool:
@@ -280,11 +282,8 @@ class Value(Generic[T]):
         self._value = MISSING
 
     @staticmethod
-    def _log_missing_value_access(id: str | None):
-        from .._main import get_shiny_logger
+    def _throw_missing_value_warning(id: str | None):
         from ..session import get_current_session
-
-        logger = get_shiny_logger()
 
         # Try to provide some context about where the missing value access occurred.
         output_ctx = ""
@@ -295,15 +294,16 @@ class Value(Generic[T]):
                 output_ctx = f"inside of the '{name}' render function"
 
         if id is None:
-            logger.warning(
+            warnings.warn(
                 f"Attempted to read a `reactive.value` {output_ctx}, but it is not "
                 "currently set to a value. As a result, a SilentException occurred. "
-                "To avoid the SilentException, either: 1. check if the value `.is_set()` "
-                "before reading, or 2. provide a default value when reading "
-                "e.g., `.get(default=0)`."
+                "To avoid this warning, provide a default value when creating (or reading)"
+                "a reactive value, e.g., `val = reactive.value(None)` ",
+                ReactiveWarning,
+                stacklevel=4,
             )
         else:
-            logger.warning(
+            warnings.warn(
                 f"Attempted to read `input.{id}()` {output_ctx}, before an input value "
                 "was actually available. As a result, a SilentException occurred. "
                 "This may be desirable behavior, but if not, consider the following:\n"
@@ -311,7 +311,9 @@ class Value(Generic[T]):
                 "2. To change logic depending on whether or not an input is available, "
                 f"use `if '{id}' in input:` before reading the value.\n"
                 f"3. If a default value makes sense, try `input.{id}(default=...)`.\n"
-                f"To silence this message, do `input.{id}(log_if_missing=False)`."
+                f"To silence this message, set `input.{id}(warn_if_missing=False)`.",
+                ReactiveWarning,
+                stacklevel=4,
             )
 
 
