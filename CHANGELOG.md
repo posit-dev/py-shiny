@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
-* Fixed `ui.tooltip()`'s `options` parameter to properly pass Bootstrap tooltip options to the underlying web component. The parameter now correctly uses the `bsOptions` attribute expected by the bslib-tooltip component. (#2096)
+* Fixed `ui.tooltip()`'s `options` parameter to properly pass Bootstrap tooltip options to the underlying web component. (#2101)
 
 ## [1.5.0] - 2025-09-11
 
