@@ -6,9 +6,8 @@ from typing import Any, Literal, Protocol, Sequence, cast
 from playwright.sync_api import Locator, Page
 from playwright.sync_api import expect as playwright_expect
 
-from ...types import ListOrTuple
-
 from ...render._data_frame import ColumnFilter, ColumnSort, assert_column_filters
+from ...types import ListOrTuple
 from .._types import AttrValue, ListPatternOrStr, PatternOrStr, StyleValue, Timeout
 from ..expect import expect_not_to_have_class, expect_to_have_class
 from ..expect._internal import (
