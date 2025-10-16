@@ -72,7 +72,8 @@ class Value(Generic[T]):
     value
         An optional initial value.
     read_only
-        If ``True``, then the reactive value cannot be `set()`.
+        If ``True``, then the reactive value cannot be `set()`. For internal purposes,
+        a string containing an input ID can also be provided.
 
     Returns
     -------
@@ -107,28 +108,83 @@ class Value(Generic[T]):
     # - Value(1) works, with T is inferred to be int.
     @overload
     def __init__(
-        self, value: MISSING_TYPE = MISSING, *, read_only: bool = False
+        self, value: MISSING_TYPE = MISSING, *, read_only: bool | str = False
     ) -> None: ...
 
     @overload
-    def __init__(self, value: T, *, read_only: bool = False) -> None: ...
+    def __init__(self, value: T, *, read_only: bool | str = False) -> None: ...
 
     # If `value` is MISSING, then `get()` will raise a SilentException, until a new
     # value is set. Calling `unset()` will set the value to MISSING.
     def __init__(
-        self, value: T | MISSING_TYPE = MISSING, *, read_only: bool = False
+        self,
+        value: T | MISSING_TYPE = MISSING,
+        *,
+        read_only: bool | str = False,
     ) -> None:
         self._value: T | MISSING_TYPE = value
-        self._read_only: bool = read_only
         self._value_dependents: Dependents = Dependents()
         self._is_set_dependents: Dependents = Dependents()
+        if isinstance(read_only, str):
+            self._read_only = True
+            self._id = read_only
+        else:
+            self._read_only = read_only
+            self._id = None
 
-    def __call__(self) -> T:
-        return self.get()
+    @overload
+    def __call__(
+        self, *, default: MISSING_TYPE = MISSING, warn_if_missing: bool = True
+    ) -> T: ...
 
-    def get(self) -> T:
+    @overload
+    def __call__(
+        self, *, default: None = None, warn_if_missing: bool = True
+    ) -> T | None: ...
+
+    @overload
+    def __call__(self, *, default: T, warn_if_missing: bool = True) -> T: ...
+
+    def __call__(
+        self,
+        *,
+        default: MISSING_TYPE | T | None = MISSING,
+        warn_if_missing: bool = True,
+    ) -> T | None:
+        return self.get(default=default, warn_if_missing=warn_if_missing)
+
+    @overload
+    def get(
+        self, *, default: MISSING_TYPE = MISSING, warn_if_missing: bool = True
+    ) -> T: ...
+
+    @overload
+    def get(
+        self, *, default: None = None, warn_if_missing: bool = True
+    ) -> T | None: ...
+
+    @overload
+    def get(self, *, default: T, warn_if_missing: bool = True) -> T: ...
+
+    def get(
+        self,
+        *,
+        default: MISSING_TYPE | T | None = MISSING,
+        warn_if_missing: bool = True,
+    ) -> T | None:
         """
         Read the reactive value.
+
+        Parameters
+        ----------
+        default
+            A default value to return if the reactive value is not set. If no default is
+            provided and the value is not set, then a
+            :class:`~shiny.types.SilentException` is raised.
+        warn_if_missing
+            If ``True`` (the default), log an INFO message when a
+            :class:`~shiny.types.SilentException` is raised because the value is not
+            set. Set to ``False`` to suppress this logging.
 
         Returns
         -------
@@ -138,17 +194,21 @@ class Value(Generic[T]):
         Raises
         ------
         :class:`~shiny.types.SilentException`
-            If the value is not set.
+            If the value is not set and no default is provided.
         RuntimeError
             If called from outside a reactive function.
         """
 
         self._value_dependents.register()
 
-        if isinstance(self._value, MISSING_TYPE):
-            raise SilentException
+        if not isinstance(self._value, MISSING_TYPE):
+            return self._value
+        if not isinstance(default, MISSING_TYPE):
+            return default
 
-        return self._value
+        if warn_if_missing:
+            self._throw_missing_value_warning(self._id)
+        raise SilentException
 
     def set(self, value: T) -> bool:
         """
@@ -220,6 +280,41 @@ class Value(Generic[T]):
         dependents.
         """
         self._value = MISSING
+
+    @staticmethod
+    def _throw_missing_value_warning(id: str | None):
+        from ..session import get_current_session
+
+        # Try to provide some context about where the missing value access occurred.
+        output_ctx = ""
+        session = get_current_session()
+        if session and not session.is_stub_session():
+            name = session.clientdata._current_output_name
+            if name:
+                output_ctx = f"inside of the '{name}' render function"
+
+        if id is None:
+            warnings.warn(
+                f"Attempted to read a `reactive.value` {output_ctx}, but it is not "
+                "currently set to a value. As a result, a SilentException occurred. "
+                "To avoid this warning, provide a default value when creating (or reading)"
+                "a reactive value, e.g., `val = reactive.value(None)` ",
+                ReactiveWarning,
+                stacklevel=4,
+            )
+        else:
+            warnings.warn(
+                f"Attempted to read `input.{id}()` {output_ctx}, before an input value "
+                "was actually available. As a result, a SilentException occurred. "
+                "This may be desirable behavior, but if not, consider the following:\n"
+                "1. Check that the input ID is correct and matches the ID used in the UI.\n"
+                "2. To change logic depending on whether or not an input is available, "
+                f"use `if '{id}' in input:` before reading the value.\n"
+                f"3. If a default value makes sense, try `input.{id}(default=...)`.\n"
+                f"To silence this message, set `input.{id}(warn_if_missing=False)`.",
+                ReactiveWarning,
+                stacklevel=4,
+            )
 
 
 value = Value
