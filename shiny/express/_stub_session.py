@@ -114,6 +114,9 @@ class ExpressStubSession(Session):
     def _decrement_busy_count(self) -> None:
         return
 
+    def allow_reconnect(self, value: Literal[True, False, "force"]) -> None:
+        return
+
     def on_flush(
         self,
         fn: Callable[[], None] | Callable[[], Awaitable[None]],

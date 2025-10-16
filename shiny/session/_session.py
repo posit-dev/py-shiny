@@ -492,6 +492,39 @@ class Session(ABC):
     @abstractmethod
     def _decrement_busy_count(self) -> None: ...
 
+    @add_example("session_allow_reconnect")
+    @abstractmethod
+    def allow_reconnect(self, value: Literal[True, False, "force"]) -> None:
+        """
+        Allow or disallow reconnection of the session.
+
+        If `value` is `True` and the app is run in a hosting environment (such as
+        Posit Connect or Shiny Server) with reconnections enabled, then when the
+        session ends due to the network connection closing, the client will attempt
+        to reconnect to the server. If a reconnection is successful, the browser
+        will send all the current input values to the new session on the server, and
+        the server will recalculate any outputs and send them back to the client.
+
+        If `value` is `False`, reconnections will be disabled (this is the default
+        state).
+
+        If `value` is `"force"`, then the client browser will always attempt to
+        reconnect. The only reason to use `"force"` is for testing on a local
+        connection (without Shiny Server or Connect).
+
+        Parameters
+        ----------
+        value
+            One of the following:
+
+            - `True`: Allow the client to reconnect to the session after a
+              disconnection (only if running in a hosting environment with
+              reconnections enabled).
+            - `False`: Do not allow the client to reconnect to the session (default).
+            - `"force"`: Force the client to always attempt to reconnect, even on
+              local connections. This is primarily useful for testing purposes.
+        """
+
 
 # ======================================================================================
 # AppSession
@@ -1085,6 +1118,11 @@ class AppSession(Session):
         if self._busy_count == 0:
             self._send_message_sync({"busy": "idle"})
 
+    def allow_reconnect(self, value: Literal[True, False, "force"]) -> None:
+        if value not in (True, False, "force"):
+            raise ValueError('value must be True, False, or "force"')
+        self._send_message_sync({"allowReconnect": value})
+
     # ==========================================================================
     # On session ended
     # ==========================================================================
@@ -1272,6 +1310,9 @@ class SessionProxy(Session):
 
     def _decrement_busy_count(self) -> None:
         self._root_session._decrement_busy_count()
+
+    def allow_reconnect(self, value: Literal[True, False, "force"]) -> None:
+        self._root_session.allow_reconnect(value)
 
     def set_message_handler(
         self,
