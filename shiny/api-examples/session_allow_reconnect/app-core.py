@@ -4,9 +4,9 @@ app_ui = ui.page_fluid(
     ui.h2("Session Reconnection Control"),
     ui.p(
         """
-        This example demonstrates the session.allow_reconnect() method. 
-        Click a button to set the reconnection behavior, then you can test it 
-        by simulating a disconnect (e.g., close the browser tab and reopen it, 
+        This example demonstrates the session.allow_reconnect() method.
+        Click a button to set the reconnection behavior, then you can test it
+        by simulating a disconnect (e.g., close the browser tab and reopen it,
         or use browser developer tools to close the WebSocket connection).
         """
     ),
