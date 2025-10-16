@@ -492,6 +492,7 @@ class Session(ABC):
     @abstractmethod
     def _decrement_busy_count(self) -> None: ...
 
+    @add_example("session_allow_reconnect")
     @abstractmethod
     def allow_reconnect(self, value: Literal[True, False, "force"]) -> None:
         """
