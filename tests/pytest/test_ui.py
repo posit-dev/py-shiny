@@ -195,7 +195,7 @@ def test__update_options():
 def test_tooltip_options():
     """Test that tooltip renders options as bsOptions attribute."""
     # Test with options parameter
-    options_dict = {"offset": [0, 100]}
+    options_dict: dict[str, object] = {"offset": [0, 100]}
     t = ui.tooltip(
         ui.input_action_button("btn", "Test"),
         "A message",
