@@ -1,3 +1,4 @@
+import json
 import textwrap
 
 from htmltools import HTMLDocument, TagList, tags
@@ -189,3 +190,33 @@ def test__update_options():
     assert _update_options(d4, remove_button=True, multiple=True) == d4
     assert _update_options(d4, remove_button=True, multiple=False) == d4
     assert _update_options(d4, remove_button=False, multiple=False) == d4
+
+
+def test_tooltip_options():
+    """Test that tooltip renders options as bsOptions attribute."""
+    # Test with options parameter
+    options_dict = {"offset": [0, 100]}
+    t = ui.tooltip(
+        ui.input_action_button("btn", "Test"),
+        "A message",
+        id="test_tooltip",
+        placement="right",
+        options=options_dict,
+    )
+
+    t_str = str(t)
+
+    # Should contain bsOptions attribute with JSON-encoded options
+    assert "bsoptions" in t_str.lower(), "bsOptions attribute should be present"
+    assert json.dumps(options_dict) in t_str, "Options should be JSON-encoded"
+
+    # Test without options parameter
+    t2 = ui.tooltip(
+        ui.input_action_button("btn2", "Test2"),
+        "Another message",
+        id="test_tooltip2",
+    )
+
+    t2_str = str(t2)
+    # Should still render properly
+    assert "bslib-tooltip" in t2_str, "Tooltip should render without options"
