@@ -5,6 +5,16 @@ All notable changes to Shiny for Python will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [UNRELEASED]
+
+### New features
+
+* A `default` parameter is now available to reactive reads (e.g., `input.val(default=None)`). When provided, and the read results in a `MISSING` value, the `default` value is returned instead of raising a `SilentException` (#2100)
+
+### Improvements
+
+* A warning now occurs when a reactive read (e.g., `input.val()`) results in a `SilentException`. This most commonly occurs when attempting to read an input that doesn't exist in the UI. Since this behavior is sometimes desirable (mainly for dynamic UI reasons), the warning can be suppressed via `input.val(warn_if_missing=False)`. (#2100)
+
 ## [1.5.0] - 2025-09-11
 
 ### New features

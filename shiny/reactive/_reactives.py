@@ -72,8 +72,8 @@ class Value(Generic[T]):
     value
         An optional initial value.
     read_only
-        If ``True``, then the reactive value cannot be `set()`. For internal use,
-        this value may also be a string (of the input ID).
+        If ``True``, then the reactive value cannot be `set()`. For internal purposes,
+        a string containing an input ID can also be provided.
 
     Returns
     -------

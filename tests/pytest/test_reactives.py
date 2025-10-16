@@ -101,14 +101,14 @@ async def test_reactive_value_unset():
     with isolate():
         assert v.is_set() is False
         with pytest.raises(SilentException):
-            v()
+            v(warn_if_missing=False)
 
     val: int = 0
 
     @effect()
     def o():
         nonlocal val
-        val = v()
+        val = v(warn_if_missing=False)
 
     await flush()
     assert o._exec_count == 1
@@ -128,7 +128,7 @@ async def test_reactive_value_unset():
     with isolate():
         assert v.is_set() is False
         with pytest.raises(SilentException):
-            v()
+            v(warn_if_missing=False)
 
 
 # ======================================================================
@@ -1021,7 +1021,7 @@ async def test_event_silent_exception():
     x = Value[bool]()
 
     @effect()
-    @event(x)
+    @event(lambda: x(warn_if_missing=False))
     def _():
         nonlocal n_times
         n_times += 1
@@ -1052,7 +1052,7 @@ async def test_event_silent_exception_async():
 
     async def req_fn() -> int:
         await asyncio.sleep(0)
-        x()
+        x(warn_if_missing=False)
         return 1234
 
     @effect()
@@ -1365,3 +1365,170 @@ async def test_observer_async_suspended_resumed_observers_run_at_most_once():
     a.set(4)
     await flush()
     assert obs._exec_count == 2
+
+
+# ======================================================================
+# reactive.Value.get() with default parameter
+# ======================================================================
+@pytest.mark.asyncio
+async def test_reactive_value_get_with_default():
+    # Test with unset value - should return default
+    v = Value[int]()
+
+    with isolate():
+        assert v.get(default=42) == 42
+        assert v.get(default=0) == 0
+        assert v.get(default=None) is None
+
+    # Test after setting value - should return value, not default
+    v.set(100)
+    with isolate():
+        assert v.get(default=42) == 100
+        assert v.get(default=0) == 100
+
+    # Test after unsetting - should return default again
+    v.unset()
+    with isolate():
+        assert v.get(default=99) == 99
+
+
+@pytest.mark.asyncio
+async def test_reactive_value_call_with_default():
+    # Test that __call__ also supports default parameter
+    v = Value[str]()
+
+    with isolate():
+        assert v(default="hello") == "hello"
+        assert v(default=None) is None
+
+    v.set("world")
+    with isolate():
+        assert v(default="hello") == "world"
+
+    v.unset()
+    with isolate():
+        assert v(default="fallback") == "fallback"
+
+
+@pytest.mark.asyncio
+async def test_reactive_value_default_in_reactive_context():
+    # Test using default parameter within reactive contexts
+    v = Value[int]()
+    result = None
+
+    @effect()
+    def obs():
+        nonlocal result
+        result = v.get(default=10)
+
+    await flush()
+    assert result == 10
+    assert obs._exec_count == 1
+
+    # Setting the value should invalidate and return new value
+    v.set(50)
+    await flush()
+    assert result == 50
+    assert obs._exec_count == 2
+
+    # Unsetting should use default again
+    v.unset()
+    await flush()
+    assert result == 10
+    assert obs._exec_count == 3
+
+
+@pytest.mark.asyncio
+async def test_reactive_value_no_default_raises_silent_exception():
+    # Test that without default, unset value still raises SilentException
+    v = Value[int]()
+
+    with isolate():
+        with pytest.raises(SilentException):
+            v.get()
+        with pytest.raises(SilentException):
+            v()
+
+
+# ======================================================================
+# reactive.Value warning behavior
+# ======================================================================
+@pytest.mark.asyncio
+async def test_reactive_value_missing_warning():
+    # Test that reading unset value with warn_if_missing=True logs warning
+    v = Value[int]()
+
+    with isolate():
+        with pytest.warns(
+            ReactiveWarning, match="Attempted to read a `reactive.value`"
+        ):
+            try:
+                v.get()
+            except SilentException:
+                pass
+
+
+@pytest.mark.asyncio
+async def test_reactive_value_suppress_warning():
+    # Test that warn_if_missing=False suppresses the warning
+    v = Value[int]()
+
+    with isolate():
+        # Should not produce a warning
+        with pytest.raises(SilentException):
+            v.get(warn_if_missing=False)
+
+
+@pytest.mark.asyncio
+async def test_reactive_value_default_no_warning():
+    # Test that providing a default doesn't generate warning
+    v = Value[int]()
+
+    with isolate():
+        # Should not raise or warn when default is provided
+        result = v.get(default=42)
+        assert result == 42
+
+
+@pytest.mark.asyncio
+async def test_input_value_missing_warning():
+    # Test that reading unset input value shows input-specific warning
+    conn = MockConnection()
+    session = App(ui.TagList(), None)._create_session(conn)
+    input = session.input
+
+    # Access an input that doesn't exist yet
+    with isolate():
+        with pytest.warns(
+            ReactiveWarning, match=r"Attempted to read `input\.test_input\(\)`"
+        ):
+            try:
+                input.test_input()
+            except SilentException:
+                pass
+
+
+@pytest.mark.asyncio
+async def test_input_value_with_default():
+    # Test that input values can use default parameter
+    conn = MockConnection()
+    session = App(ui.TagList(), None)._create_session(conn)
+    input = session.input
+
+    with isolate():
+        # Should return default without warning or exception
+        result = input.test_input(default="fallback")
+        assert result == "fallback"
+
+
+@pytest.mark.asyncio
+async def test_input_value_suppress_warning():
+    # Test that warn_if_missing=False suppresses input warning
+    conn = MockConnection()
+    session = App(ui.TagList(), None)._create_session(conn)
+    input = session.input
+
+    with isolate():
+        # Should not produce a warning
+        with pytest.raises(SilentException):
+            input.test_input(warn_if_missing=False)
