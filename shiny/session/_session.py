@@ -498,15 +498,31 @@ class Session(ABC):
         """
         Allow or disallow reconnection of the session.
 
+        If `value` is `True` and the app is run in a hosting environment (such as
+        Posit Connect or Shiny Server) with reconnections enabled, then when the
+        session ends due to the network connection closing, the client will attempt
+        to reconnect to the server. If a reconnection is successful, the browser
+        will send all the current input values to the new session on the server, and
+        the server will recalculate any outputs and send them back to the client.
+
+        If `value` is `False`, reconnections will be disabled (this is the default
+        state).
+
+        If `value` is `"force"`, then the client browser will always attempt to
+        reconnect. The only reason to use `"force"` is for testing on a local
+        connection (without Shiny Server or Connect).
+
         Parameters
         ----------
         value
             One of the following:
+
             - `True`: Allow the client to reconnect to the session after a
-              disconnection.
-            - `False`: Do not allow the client to reconnect to the session.
-            - `"force"`: Force the client to reconnect, even if it was originally
-              configured not to reconnect.
+              disconnection (only if running in a hosting environment with
+              reconnections enabled).
+            - `False`: Do not allow the client to reconnect to the session (default).
+            - `"force"`: Force the client to always attempt to reconnect, even on
+              local connections. This is primarily useful for testing purposes.
         """
 
 
