@@ -492,6 +492,22 @@ class Session(ABC):
     @abstractmethod
     def _decrement_busy_count(self) -> None: ...
 
+    @abstractmethod
+    def allow_reconnect(self, value: Literal[True, False, "force"]) -> None:
+        """
+        Allow or disallow reconnection of the session.
+
+        Parameters
+        ----------
+        value
+            One of the following:
+            - `True`: Allow the client to reconnect to the session after a
+              disconnection.
+            - `False`: Do not allow the client to reconnect to the session.
+            - `"force"`: Force the client to reconnect, even if it was originally
+              configured not to reconnect.
+        """
+
 
 # ======================================================================================
 # AppSession
@@ -1085,6 +1101,11 @@ class AppSession(Session):
         if self._busy_count == 0:
             self._send_message_sync({"busy": "idle"})
 
+    def allow_reconnect(self, value: Literal[True, False, "force"]) -> None:
+        if value not in (True, False, "force"):
+            raise ValueError('value must be True, False, or "force"')
+        self._send_message_sync({"allowReconnect": value})
+
     # ==========================================================================
     # On session ended
     # ==========================================================================
@@ -1272,6 +1293,9 @@ class SessionProxy(Session):
 
     def _decrement_busy_count(self) -> None:
         self._root_session._decrement_busy_count()
+
+    def allow_reconnect(self, value: Literal[True, False, "force"]) -> None:
+        self._root_session.allow_reconnect(value)
 
     def set_message_handler(
         self,
