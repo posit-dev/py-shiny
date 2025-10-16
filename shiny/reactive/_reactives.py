@@ -297,8 +297,8 @@ class Value(Generic[T]):
             warnings.warn(
                 f"Attempted to read a `reactive.value` {output_ctx}, but it is not "
                 "currently set to a value. As a result, a SilentException occurred. "
-                "To avoid this warning, provide a default value when creating (or reading)"
-                "a reactive value, e.g., `val = reactive.value(None)` ",
+                "To avoid this warning, provide a default value when creating (or "
+                "reading) a reactive value, e.g., `val = reactive.value(None)` ",
                 ReactiveWarning,
                 stacklevel=4,
             )
