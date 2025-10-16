@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
-* Added `session.allow_reconnect()` method to enable or disable client reconnection behavior after disconnection, similar to Shiny for R's `session$allowReconnect()`.
+* Added `session.allow_reconnect()` method to enable, disable, or _force_ client reconnection behavior after disconnection. (#2102)
 
 ## [1.5.0] - 2025-09-11
 
