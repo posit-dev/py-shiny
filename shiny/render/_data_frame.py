@@ -498,7 +498,9 @@ class data_frame(
         """
         browser_cell_selection = cast(
             BrowserCellSelection,
-            self._get_session().input[f"{self.output_id}_cell_selection"](),
+            self._get_session().input[f"{self.output_id}_cell_selection"](
+                warn_if_missing=False
+            ),
         )
 
         cell_selection = as_cell_selection(
@@ -527,7 +529,7 @@ class data_frame(
         """
         input_data_view_rows = self._get_session().input[
             f"{self.output_id}_data_view_rows"
-        ]()
+        ](warn_if_missing=False)
         return tuple(input_data_view_rows)
 
     # @reactive_calc_method
@@ -540,7 +542,9 @@ class data_frame(
         :
             An array of `col`umn number and _is `desc`ending_ information.
         """
-        column_sort = self._get_session().input[f"{self.output_id}_column_sort"]()
+        column_sort = self._get_session().input[f"{self.output_id}_column_sort"](
+            warn_if_missing=False
+        )
         return tuple(column_sort)
 
     # @reactive_calc_method
@@ -553,7 +557,9 @@ class data_frame(
         :
             An array of `col`umn number and `value` information. If the column type is a number, a tuple of `(min, max)` is used for `value`. If no min (or max) value is set, `None` is used in its place. If the column type is a string, the string value is used for `value`.
         """
-        column_filter = self._get_session().input[f"{self.output_id}_column_filter"]()
+        column_filter = self._get_session().input[f"{self.output_id}_column_filter"](
+            warn_if_missing=False
+        )
         return tuple(column_filter)
 
     def _reset_reactives(self) -> None:
