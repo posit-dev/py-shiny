@@ -57,6 +57,19 @@ const FilterNumericImpl: React.FC<FilterNumericImplProps> = (props) => {
   const minInputRef = useRef<HTMLInputElement>(null);
   const maxInputRef = useRef<HTMLInputElement>(null);
 
+  // Local state to track the string value while typing
+  const [minInputValue, setMinInputValue] = useState<string>("");
+  const [maxInputValue, setMaxInputValue] = useState<string>("");
+
+  // Update local string state when prop values change
+  useEffect(() => {
+    setMinInputValue(min !== undefined ? String(min) : "");
+  }, [min]);
+
+  useEffect(() => {
+    setMaxInputValue(max !== undefined ? String(max) : "");
+  }, [max]);
+
   return (
     <div
       onBlur={(e) => {
@@ -79,12 +92,14 @@ const FilterNumericImpl: React.FC<FilterNumericImplProps> = (props) => {
         style={{ flex: "1 1 0", width: "0" }}
         type="number"
         placeholder={createPlaceholder(editing, "Min", rangeMin)}
-        value={min ?? ""}
+        value={minInputValue}
         // min={rangeMin}
         // max={rangeMax}
         step="any"
         onChange={(e) => {
-          const value = coerceToNum(e.target.value);
+          const inputValue = e.target.value;
+          setMinInputValue(inputValue);
+          const value = coerceToNum(inputValue);
           if (!minInputRef.current) return;
           minInputRef.current.classList.toggle(
             "is-invalid",
@@ -101,12 +116,14 @@ const FilterNumericImpl: React.FC<FilterNumericImplProps> = (props) => {
         style={{ flex: "1 1 0", width: "0" }}
         type="number"
         placeholder={createPlaceholder(editing, "Max", rangeMax)}
-        value={max ?? ""}
+        value={maxInputValue}
         // min={rangeMin}
         // max={rangeMax}
         step="any"
         onChange={(e) => {
-          const value = coerceToNum(e.target.value);
+          const inputValue = e.target.value;
+          setMaxInputValue(inputValue);
+          const value = coerceToNum(inputValue);
           if (!maxInputRef.current) return;
           maxInputRef.current.classList.toggle(
             "is-invalid",
