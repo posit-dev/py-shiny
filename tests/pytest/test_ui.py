@@ -208,7 +208,10 @@ def test_tooltip_options():
 
     # Should contain bsOptions attribute with JSON-encoded options
     assert "bsoptions" in t_str.lower(), "bsOptions attribute should be present"
-    assert json.dumps(options_dict) in t_str, "Options should be JSON-encoded"
+    # Check that the JSON content is present (with or without spaces after separators)
+    assert (
+        '"offset"' in t_str and ("[0, 100]" in t_str or "[0,100]" in t_str)
+    ), "Options should be JSON-encoded with offset value"
 
     # Test without options parameter
     t2 = ui.tooltip(
