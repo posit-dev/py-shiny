@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `ui.output_text_verbatim()` is deprecated. Please use `ui.output_text()` if you want to create an output container for some text, or `ui.output_code()` if you want to create an output container for code (monospaced text). (#2097)
 
+### Bug fixes
+
+* Fixed `ui.tooltip()`'s `options` parameter to properly pass Bootstrap tooltip options to the underlying web component. (#2101)
+
 ## [1.5.0] - 2025-09-11
 
 ### New features
