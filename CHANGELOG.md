@@ -5,6 +5,12 @@ All notable changes to Shiny for Python will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [UNRELEASED]
+
+### Bug fixes
+
+* Fixed `ui.tooltip()`'s `options` parameter to properly pass Bootstrap tooltip options to the underlying web component. (#2101)
+
 ## [1.5.0] - 2025-09-11
 
 ### New features
