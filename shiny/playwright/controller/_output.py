@@ -1253,6 +1253,7 @@ class OutputDataFrame(UiWithContainer):
                 "list[ColumnFilter], or None."
             )
 
+        playwright_expect(self.loc_column_label.first).to_be_visible(timeout=timeout)
         assert_column_filters(filter_items, self.loc_column_label.count())
 
         for filter_item in filter_items:
