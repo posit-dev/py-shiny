@@ -1,12 +1,37 @@
 from __future__ import annotations
 
 from playwright.sync_api import Page
+from playwright.sync_api import expect as playwright_expect
 
-from ._base import InputActionBase, WidthLocM
+from .._types import PatternOrStr, Timeout
+from ._base import InputActionBase, WidthLocStyleM
 
 
-# TODO: Use mixin for dowloadlink and download button
-class DownloadLink(InputActionBase):
+class _DownloadBase(
+    WidthLocStyleM,
+    InputActionBase,
+):
+    """Mixin for download controls."""
+
+    def __init__(self, page: Page, id: str, *, loc_suffix: str) -> None:
+        super().__init__(
+            page,
+            id=id,
+            loc=f"#{id}.shiny-download-link{loc_suffix}",
+        )
+
+    def expect_label(
+        self,
+        value: PatternOrStr,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """Expect the anchor itself to contain the provided label text."""
+
+        playwright_expect(self.loc).to_have_text(value, timeout=timeout)
+
+
+class DownloadLink(_DownloadBase):
     """
     Controller for :func:`shiny.ui.download_link`.
     """
@@ -22,17 +47,10 @@ class DownloadLink(InputActionBase):
         id
             The ID of the download link.
         """
-        super().__init__(
-            page,
-            id=id,
-            loc=f"#{id}.shiny-download-link:not(.btn)",
-        )
+        super().__init__(page, id=id, loc_suffix=":not(.btn)")
 
 
-class DownloadButton(
-    WidthLocM,
-    InputActionBase,
-):
+class DownloadButton(_DownloadBase):
     """
     Controller for :func:`shiny.ui.download_button`
     """
@@ -48,8 +66,4 @@ class DownloadButton(
         id
             The ID of the download button.
         """
-        super().__init__(
-            page,
-            id=id,
-            loc=f"#{id}.btn.shiny-download-link",
-        )
+        super().__init__(page, id=id, loc_suffix=".btn")

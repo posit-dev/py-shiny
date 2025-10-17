@@ -130,3 +130,4 @@ test-results.xml
 results-inspect-ai/
 test-results-inspect-ai/
 tests/inspect-ai/scripts/test_metadata.json
+.claude/
