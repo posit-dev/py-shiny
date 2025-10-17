@@ -246,7 +246,7 @@ def mod_x_server(
 
     @render.code
     def out_code():
-        return f"Output text verbatim content. `input.radio_buttons()`: `{input.input_radio_buttons()}`"
+        return f"Output Code content. `input.radio_buttons()`: `{input.input_radio_buttons()}`"
 
     @render.ui
     def out_ui():
