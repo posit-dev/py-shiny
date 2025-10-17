@@ -1,4 +1,3 @@
-import json
 import textwrap
 
 from htmltools import HTMLDocument, TagList, tags
@@ -208,9 +207,9 @@ def test_tooltip_options():
 
     # Should contain bsOptions attribute with JSON-encoded options
     assert "bsoptions" in t_str.lower(), "bsOptions attribute should be present"
-    # Check that the JSON content is present (with or without spaces after separators)
-    assert (
-        '"offset"' in t_str and ("[0, 100]" in t_str or "[0,100]" in t_str)
+    # Check that the JSON content is present (HTML entities are encoded, so " becomes &quot;)
+    assert "&quot;offset&quot;" in t_str and (
+        "[0, 100]" in t_str or "[0,100]" in t_str
     ), "Options should be JSON-encoded with offset value"
 
     # Test without options parameter
