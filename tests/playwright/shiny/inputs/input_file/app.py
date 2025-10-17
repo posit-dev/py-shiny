@@ -57,7 +57,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         # checkboxes
         return info_df.loc[:, input.stats()]
 
-    @render.text
+    @render.code
     def file2_info():
         file2: typing.Union[typing.List["FileInfo"], None] = input.file2()
         if not file2:

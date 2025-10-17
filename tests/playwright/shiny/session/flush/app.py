@@ -170,23 +170,23 @@ def server(input: Inputs, output: Outputs, session: Session):
         cancel_on_ended_sync()
         cancel_on_ended_async()
 
-    @render.text
+    @render.code
     def btn_txt():
         return str(input.btn())
 
-    @render.text
+    @render.code
     def all_txt():
         return str(all_vals.get())
 
-    @render.text
+    @render.code
     def flush_txt():
         return str(flush_vals.get())
 
-    @render.text
+    @render.code
     def flushed_txt():
         return str(flushed_vals.get())
 
-    @render.text
+    @render.code
     def session_end_txt():
         return str(session_ended_messages)
 

@@ -7,7 +7,7 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @render.text
+    @render.code
     def value():
         return input.caption()
 

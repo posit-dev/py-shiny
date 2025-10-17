@@ -200,7 +200,7 @@ def mod_x_ui(label: str) -> ui.TagChild:
                     "Image (Changes w/ `input.radio_buttons()`)",
                     ui.output_image("out_image", height="180px"),
                 ),
-                ("Text Verbatim", ui.output_code("out_text_verbatim")),
+                ("Code", ui.output_code("out_code")),
                 ("Text", ui.output_text("out_text")),
                 ("UI", ui.output_ui("out_ui")),
             )
@@ -244,8 +244,8 @@ def mod_x_server(
     def out_text():
         return f"Output text content. `input.radio_buttons()`: `{input.input_radio_buttons()}`"
 
-    @render.text
-    def out_text_verbatim():
+    @render.code
+    def out_code():
         return f"Output text verbatim content. `input.radio_buttons()`: `{input.input_radio_buttons()}`"
 
     @render.ui

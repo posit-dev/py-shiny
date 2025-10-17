@@ -279,7 +279,7 @@ def server(input, output, session):
             spine.set_alpha(0.25)
         return fig
 
-    @render.text
+    @render.code
     def out_text1():
         return "\n".join(
             ["def example_function():", '    return "Function output text"']

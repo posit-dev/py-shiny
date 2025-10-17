@@ -151,11 +151,11 @@ app_ui = ui.page_fluid(
 
 def server(input: Inputs, output: Outputs, session: Session) -> None:
 
-    @render.text
+    @render.code
     def pandas_test_cell_text():
         return f"pandas_test_cell_value {input.pandas_test_cell_button()}"
 
-    @render.text
+    @render.code
     def polars_test_cell_text():
         return f"polars_test_cell_value {input.polars_test_cell_button()}"
 

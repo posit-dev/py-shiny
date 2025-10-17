@@ -16,11 +16,11 @@ def server(input: Inputs):
     def df1():
         return render.DataGrid(df(), selection_mode="rows")
 
-    @render.text
+    @render.code
     def selected_rows():
         return f"Input selected rows: {input.df1_selected_rows()}"
 
-    @render.text
+    @render.code
     def cell_selection():
         return f"Cell selection rows: {df1.cell_selection()['rows']}"
 

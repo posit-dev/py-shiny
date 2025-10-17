@@ -30,7 +30,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         input.second()
         return random.randint(1, 1000)
 
-    @render.text
+    @render.code
     def result():
         return first() + second()
 

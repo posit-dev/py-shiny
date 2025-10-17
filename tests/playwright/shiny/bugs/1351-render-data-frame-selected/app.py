@@ -35,7 +35,7 @@ def server(input: Inputs):
         )
         df.set(new_df)
 
-    @render.text
+    @render.code
     def number_of_selected_rows():
         df_selected = df1.data_view(selected=True)
         return f"Selected rows: {len(df_selected)}"

@@ -77,7 +77,7 @@ def server(input, output, session):
             pulse=(selected_busy_indicator_type != "spinners"),
         )
 
-    @render.text
+    @render.code
     def counter():
         return str(rerender())
 

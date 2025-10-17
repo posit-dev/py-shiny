@@ -29,19 +29,19 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @render.text
+    @render.code
     def state_left():
         return f"input.sidebar_left(): {input.sidebar_left()}"
 
-    @render.text
+    @render.code
     def state_right():
         return f"input.sidebar_right(): {input.sidebar_right()}"
 
-    @render.text
+    @render.code
     def state_closed():
         return f"input.sidebar_closed(): {input.sidebar_closed()}"
 
-    @render.text
+    @render.code
     def state_always():
         return f"input.sidebar_always(): {input.sidebar_always()}"
 

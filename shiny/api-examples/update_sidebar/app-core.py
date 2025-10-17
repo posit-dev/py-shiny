@@ -22,7 +22,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     def _():
         ui.update_sidebar("sidebar", show=False)
 
-    @render.text
+    @render.code
     def state():
         return f"input.sidebar(): {input.sidebar()}"
 

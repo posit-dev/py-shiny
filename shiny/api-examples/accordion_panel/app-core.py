@@ -18,7 +18,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     def _():
         print(input.acc())
 
-    @render.text
+    @render.code
     def acc_val():
         return "input.acc(): " + str(input.acc())
 

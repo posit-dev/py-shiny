@@ -91,19 +91,19 @@ def text_input_ui(update_on: Literal["change", "blur"] = "change"):
 
 @module.server
 def text_input_server(input: Inputs, output: Outputs, session: Session):
-    @render.text
+    @render.code
     def value_txt() -> str:
         return input.txt()
 
-    @render.text
+    @render.code
     def value_txtarea() -> str:
         return input.txtarea()
 
-    @render.text
+    @render.code
     def value_num() -> str:
         return str(input.num())
 
-    @render.text
+    @render.code
     def value_pwd() -> str:
         return input.pwd()
 

@@ -26,11 +26,11 @@ def server(input: Inputs, output: Outputs, session: Session):
     def text():
         return input.txt()
 
-    @render.text
+    @render.code
     def verb():
         return input.txt()
 
-    @render.text
+    @render.code
     def verb_no_placeholder():
         return input.txt()
 

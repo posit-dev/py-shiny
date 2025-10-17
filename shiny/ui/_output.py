@@ -10,12 +10,11 @@ __all__ = (
     "output_ui",
 )
 
-import warnings
 from typing import Optional
 
 from htmltools import Tag, TagAttrValue, TagFunction, css, div, tags
 
-from .._deprecated import ShinyDeprecationWarning
+from .._deprecated import warn_deprecated
 from .._docstring import add_example, no_example
 from ..module import resolve_id
 from ..types import MISSING, MISSING_TYPE
@@ -304,7 +303,7 @@ def output_code(id: str, placeholder: bool = True) -> Tag:
     --------
     * :class:`~shiny.render.text`
     * :func:`~shiny.ui.output_text`
-    * :func:`~shiny.ui.output_text_verbatim`
+    * :func:`~shiny.ui.output_code`
 
     Example
     -------
@@ -318,7 +317,7 @@ def output_code(id: str, placeholder: bool = True) -> Tag:
 @add_example(ex_dir="../api-examples/input_text")
 def output_text_verbatim(id: str, placeholder: bool = False) -> Tag:
     """
-    Create a output container for some text.
+    Deprecated. Create a output container for some text.
 
     Place a :class:`~shiny.render.text` result in the user interface.
     Differs from :func:`~shiny.ui.output_text` in that it wraps the text in a
@@ -341,6 +340,7 @@ def output_text_verbatim(id: str, placeholder: bool = False) -> Tag:
     See Also
     --------
     * :class:`~shiny.render.text`
+    * :class:`~shiny.render.code`
     * :func:`~shiny.ui.output_text`
 
     Example
@@ -348,12 +348,10 @@ def output_text_verbatim(id: str, placeholder: bool = False) -> Tag:
     See :func:`~shiny.ui.output_text`
     """
 
-    warnings.warn(
-        "`ui.output_text_verbatim()` is deprecated. "
-        "Please use `ui.output_text()` if you want to create an output container for some text, "
-        "or `ui.output_code()` if you want to create an output container for code (monospaced text).",
-        category=ShinyDeprecationWarning,
-        stacklevel=2,
+    warn_deprecated(
+        "`ui.output_text_verbatim()` was deprecated in v1.6.0."
+        "Please use `ui.output_text()` / `@render.text` to create an output container for plain text "
+        "or `ui.output_code()` / `@render.code` to create an output container for monospaced text."
     )
 
     cls = "shiny-text-output" + (" noplaceholder" if not placeholder else "")

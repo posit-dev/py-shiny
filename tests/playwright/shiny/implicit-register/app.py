@@ -21,11 +21,11 @@ def server(input: Inputs, output: Outputs, session: Session):
     # does internally.
 
     @output(id="out2")
-    @render.text
+    @render.code
     def out1():
         return "One"
 
-    @render.text
+    @render.code
     def out3():
         return "Two"
 

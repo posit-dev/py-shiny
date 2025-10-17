@@ -61,7 +61,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             ui.output_code("state_dynamic"),
         )
 
-    @render.text
+    @render.code
     def state_dynamic():
         return f"input.sidebar_dynamic(): {input.sidebar_dynamic()}"
 

@@ -18,11 +18,11 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @render.text
+    @render.code
     def txt_immediate():
         return input.btn_count()
 
-    @render.text
+    @render.code
     @reactive.event(input.btn_trigger)
     def txt_render_delayed():
         return input.btn_count()
@@ -32,7 +32,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     def delayed_btn_count() -> int:
         return input.btn_count()
 
-    @render.text
+    @render.code
     def txt_reactive_delayed():
         return str(delayed_btn_count())
 

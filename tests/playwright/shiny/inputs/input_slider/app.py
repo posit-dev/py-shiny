@@ -103,7 +103,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         name = f"txt{id_num}"
 
         @output(id=name)
-        @render.text
+        @render.code
         def _():
             return input[f"s{id_num}"]()
 
