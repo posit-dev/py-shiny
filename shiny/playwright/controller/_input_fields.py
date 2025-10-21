@@ -213,6 +213,28 @@ class _ExpectAutocompleteAttrM:
         )
 
 
+class _ExpectRowsAttrM:
+    """A mixin class for the rows attribute."""
+
+    def expect_rows(
+        self: UiBaseP,
+        value: AttrValue,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expect the `rows` attribute to have a specific value.
+
+        Parameters
+        ----------
+        value
+            The expected value of the `rows` attribute.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        _expect_attribute_to_have_value(self.loc, "rows", value=value, timeout=timeout)
+
+
 class InputText(
     _SetTextM,
     _ExpectTextInputValueM,
@@ -296,6 +318,7 @@ class InputTextArea(
     _ExpectPlaceholderAttrM,
     _ExpectAutocompleteAttrM,
     _ExpectSpellcheckAttrM,
+    _ExpectRowsAttrM,
     UiWithLabel,
 ):
     """Controller for :func:`shiny.ui.input_text_area`."""
@@ -367,19 +390,6 @@ class InputTextArea(
             The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
         _expect_attribute_to_have_value(self.loc, "cols", value=value, timeout=timeout)
-
-    def expect_rows(self, value: AttrValue, *, timeout: Timeout = None) -> None:
-        """
-        Expect the `rows` attribute of the input text area to have a specific value.
-
-        Parameters
-        ----------
-        value
-            The expected value of the `rows` attribute.
-        timeout
-            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
-        """
-        _expect_attribute_to_have_value(self.loc, "rows", value=value, timeout=timeout)
 
     def expect_resize(
         self,
@@ -973,6 +983,7 @@ class InputSubmitTextarea(
     WidthContainerStyleM,
     _ExpectTextInputValueM,
     _ExpectPlaceholderAttrM,
+    _ExpectRowsAttrM,
     UiWithLabel,
 ):
     """Controller for :func:`shiny.ui.input_submit_textarea`."""
@@ -1025,19 +1036,6 @@ class InputSubmitTextarea(
             The maximum time to wait for the click. Defaults to `None`.
         """
         self.loc_button.click(timeout=timeout)
-
-    def expect_rows(self, value: AttrValue, *, timeout: Timeout = None) -> None:
-        """
-        Expect the `rows` attribute of the input submit textarea to have a specific value.
-
-        Parameters
-        ----------
-        value
-            The expected value of the `rows` attribute.
-        timeout
-            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
-        """
-        _expect_attribute_to_have_value(self.loc, "rows", value=value, timeout=timeout)
 
     def expect_data_needs_modifier(
         self, value: bool, *, timeout: Timeout = None
