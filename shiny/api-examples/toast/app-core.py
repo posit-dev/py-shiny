@@ -1,6 +1,7 @@
 import time
 
 from faicons import icon_svg
+
 from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 
 app_ui = ui.page_fillable(

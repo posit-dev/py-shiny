@@ -10,6 +10,7 @@ from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, TagList, div, tags
 from .._docstring import add_example, no_example
 from .._utils import rand_hex
 from ..session import require_active_session
+from ._html_deps_shinyverse import components_dependencies
 from ._tag import consolidate_attrs
 
 if TYPE_CHECKING:
@@ -217,6 +218,7 @@ class Toast:
         return div(
             {"class": " ".join(classes), "id": self.id},
             *contents,
+            components_dependencies(),
             role=role,
             aria_live=aria_live,
             aria_atomic="true",
@@ -429,18 +431,20 @@ def show_toast(
     # Convert duration from seconds to milliseconds
     delay_ms = int(toast_obj.duration * 1000) if toast_obj.duration else None
 
+    options = {"autohide": toast_obj.autohide, "delay": delay_ms}
+    options = {k: v for k, v in options.items() if v is not None}
+
     # Build payload
     payload: dict[str, Any] = {
         "html": processed["html"],
         "deps": processed["deps"],
         "id": toast_obj.id,
         "position": toast_obj.position,
-        "autohide": toast_obj.autohide,
-        "delay": delay_ms,
+        "options": options,
     }
 
-    # Send message to client
-    session._send_message_sync({"bslib-toast": {"method": "show", "message": payload}})
+    # Send message to client (as a custom message)
+    session._send_message_sync({"custom": {"bslib.show-toast": payload}})
 
     return toast_obj.id
 
@@ -483,8 +487,6 @@ def hide_toast(
         id = id.id
 
     # Send message to client
-    session._send_message_sync(
-        {"bslib-toast": {"method": "hide", "message": {"id": id}}}
-    )
+    session._send_message_sync({"custom": {"bslib.hide-toast": {"id": id}}})
 
     return id
