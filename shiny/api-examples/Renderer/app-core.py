@@ -9,13 +9,13 @@ app_ui = ui.page_fluid(
     ui.h1("Capitalization renderer"),
     ui.input_text("caption", "Caption:", "Data summary"),
     "@render_upper: ",
-    ui.output_text_verbatim("upper", placeholder=True),
+    ui.output_code("upper", placeholder=True),
     "@render_upper(): ",
-    ui.output_text_verbatim("upper_with_paren", placeholder=True),
+    ui.output_code("upper_with_paren", placeholder=True),
     "@render_capitalize: ",
-    ui.output_text_verbatim("cap_upper", placeholder=True),
+    ui.output_code("cap_upper", placeholder=True),
     "@render_capitalize(to='lower'): ",
-    ui.output_text_verbatim("cap_lower", placeholder=True),
+    ui.output_code("cap_lower", placeholder=True),
 )
 
 

@@ -5,7 +5,11 @@ All notable changes to Shiny for Python will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [UNRELEASED]
+## [Unreleased]
+
+### Deprecations
+
+* `ui.output_text_verbatim()` is deprecated. Please use `ui.output_text()` if you want to create an output container for some text, or `ui.output_code()` if you want to create an output container for code (monospaced text). (#2097)
 
 ### New features
 
