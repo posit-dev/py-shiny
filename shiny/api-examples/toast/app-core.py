@@ -417,7 +417,10 @@ def server(input: Inputs, output: Outputs, session: Session):
         ui.show_toast(
             ui.toast(
                 ui.div(
-                    ui.p("Current time:", ui.strong(ui.output_text("toast_time"))),
+                    ui.p(
+                        "Current time: ",
+                        ui.strong(ui.output_text("toast_time", inline=True)),
+                    ),
                     ui.output_plot("toast_plot", height="200px"),
                     ui.input_slider(
                         "toast_bins",
