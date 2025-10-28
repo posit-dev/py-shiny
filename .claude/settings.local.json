@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__github__get_pull_request",
+      "mcp__github__pull_request_read",
+      "Bash(gh pr view:*)",
+      "Bash(gh api:*)",
+      "Read(//tmp/bslib_toast/R/**)",
+      "Read(//tmp/bslib_toast/srcts/src/components/**)",
+      "Read(//tmp/bslib_toast/inst/components/scss/**)",
+      "Read(//tmp/bslib_toast/tests/testthat/**)",
+      "Read(//tmp/bslib_toast/inst/examples-shiny/toast/**)",
+      "Read(//tmp/bslib_toast/inst/builtin/bs5/shiny/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -136,6 +136,7 @@ from ._navs_dynamic import (
     remove_nav_panel,
 )
 from ._notification import notification_remove, notification_show
+from ._toast import hide_toast, show_toast, toast, toast_header
 from ._output import (
     output_code,
     output_image,
@@ -315,6 +316,11 @@ __all__ = (
     # _notification
     "notification_show",
     "notification_remove",
+    # _toast
+    "toast",
+    "toast_header",
+    "show_toast",
+    "hide_toast",
     # _output
     "output_data_frame",  # dataframe
     "output_plot",
