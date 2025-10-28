@@ -110,8 +110,14 @@ class ToastHeader:
         self.status = status
         self.attribs = attribs
 
-    def tagify(self) -> Tag:
-        """Convert to HTML Tag object."""
+    def tagify(self, closable: bool = False) -> Tag:
+        """Convert to HTML Tag object.
+
+        Parameters
+        ----------
+        closable
+            Whether to include a close button in the header.
+        """
         # Build header contents
         contents: list[TagChild] = []
 
@@ -120,11 +126,23 @@ class ToastHeader:
             contents.append(tags.span(self.icon, class_="toast-header-icon"))
 
         # Add title (always present, with margin)
-        contents.append(tags.strong(self.title, class_="me-auto ms-2"))
+        title_classes = "me-auto ms-2" if self.icon is not None else "me-auto"
+        contents.append(tags.strong(self.title, class_=title_classes))
 
         # Add status if present
         if self.status is not None:
             contents.append(tags.small(self.status, class_="text-muted text-end"))
+
+        # Add close button if closable
+        if closable:
+            contents.append(
+                tags.button(
+                    type="button",
+                    class_="btn-close",
+                    data_bs_dismiss="toast",
+                    aria_label="Close",
+                )
+            )
 
         return div({"class": "toast-header"}, *contents, **self.attribs)
 
@@ -182,37 +200,58 @@ class Toast:
         # Build toast contents
         contents: list[TagChild] = []
 
-        # Add header if present
+        # Close button for header (if needed)
+        close_button = tags.button(
+            type="button",
+            class_="btn-close",
+            data_bs_dismiss="toast",
+            aria_label="Close",
+        )
+
+        # Build header if present
         if self.header is not None:
-            if isinstance(self.header, ToastHeader):
-                header_tag: TagChild = self.header.tagify()
+            # Check if header is already a ToastHeader or just text/tags
+            if isinstance(self.header, str):
+                # String header: convert to strong.me-auto
+                header_content = tags.strong(self.header, class_="me-auto")
+            elif isinstance(self.header, ToastHeader):
+                # ToastHeader: use tagify with closable flag
+                header_tag = self.header.tagify(closable=self.closable)
+                contents.append(header_tag)
+                header_content = None  # Already added
             else:
-                header_tag = self.header
-            contents.append(header_tag)
+                # Otherwise pass through directly (assume user knows what they're doing)
+                header_content = self.header
 
-        # Build toast body
-        body_contents: list[TagChild] = [self.body]
+            # If we have header_content (not already added as ToastHeader), wrap it
+            if header_content is not None:
+                header_tag = div(
+                    {"class": "toast-header"},
+                    header_content,
+                    close_button if self.closable else None,
+                )
+                contents.append(header_tag)
 
-        # Add close button to body if closable and no header
-        # (if there's a header, the close button goes in the header via Bootstrap)
-        if self.closable and self.header is None:
-            close_btn = tags.button(
-                type="button",
-                class_="btn-close",
-                data_bs_dismiss="toast",
-                aria_label="Close",
-            )
-            body_contents.append(close_btn)
+        # Build body
+        # * If header exists, close button goes in header
+        # * If no header, close button goes in body (if closable)
+        if self.header is not None:
+            # Header exists: simple body
+            body_tag = div({"class": "toast-body"}, self.body)
+        else:
+            # No header
+            if self.closable:
+                # Closable without header: use d-flex layout
+                body_tag = div(
+                    {"class": "toast-body d-flex"},
+                    div({"class": "flex-grow-1"}, self.body),
+                    close_button,
+                )
+            else:
+                # No close button needed
+                body_tag = div({"class": "toast-body"}, self.body)
 
-        # Determine if we need the close button in header instead
-        if self.closable and self.header is not None:
-            # Bootstrap automatically adds close button to header, but we need to ensure it's styled correctly
-            # We'll add it explicitly to the header tag if it's a ToastHeader
-            if isinstance(self.header, ToastHeader):
-                # The close button will be added by Bootstrap's default behavior
-                pass
-
-        contents.append(div({"class": "toast-body"}, *body_contents))
+        contents.append(body_tag)
 
         # Build final toast tag
         return div(
