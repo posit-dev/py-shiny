@@ -1,9 +1,9 @@
-import pytest
 import re
+
+import pytest
 
 from shiny import ui
 from shiny.ui._toast import Toast, ToastHeader, _normalize_toast_position
-
 
 # ==============================================================================
 # Position normalization tests
@@ -181,7 +181,7 @@ def test_toast_position_formats():
 
 def test_toast_additional_attributes():
     """toast() stores additional attributes"""
-    t = ui.toast("Test", **{"data-test": "value", "class": "extra-class"})
+    t = ui.toast("Test", data_test="value", class_="extra-class")
 
     assert t.attribs["data-test"] == "value"
     assert t.attribs["class"] == "extra-class"
