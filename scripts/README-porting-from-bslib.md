@@ -55,7 +55,7 @@ Study the bslib implementation to understand:
 5. **Dependencies**: What other components or utilities it relies on
 
 **Key patterns to note:**
-- How does the component register its input binding?
+- Is the component an input binding? If so, how does the binding register (typically via a CSS class)?
 - What markup structure does it generate on the server side?
 - How does the component integrate with Bootstrap classes?
 - How are configuration options passed from R to JavaScript -- data attributes, embedded JSON, etc.?
@@ -87,7 +87,7 @@ Create a new file in `shiny/ui/` for the component implementation.
 
 **Common translations:**
 - R `tags$div()` → Python `div()` or `tags.div()`
-- R `!!!args` (splicing) → Python `**kwargs`
+- R `!!!args` (splicing) → Python `*args`+`**kwargs`
 - R `NULL` → Python `None`
 - R lists → Python dicts or lists as appropriate
 - R `paste0()` → Python f-strings or `.format()`
@@ -517,14 +517,14 @@ The component should work with all Bootstrap themes. The `make upgrade-html-deps
 Python style guide preferences:
 - Use `snake_case` for parameter names
 - Match bslib's parameter names when possible
-- Use `Optional[T]` for parameters that can be `None`
+- Use `Optional[T]` for user-facing parameters that can be `None`
 - Use `Literal` rather than `Enum` for parameters with specific allowed values
 
 ### Working with htmltools
 
 Key patterns:
-- `Tag` objects are immutable by default, use `copy.copy()` if you need to modify
-- Use `tagAppendAttributes()` to add classes/attributes
+- `Tag` objects are mutable by default, use `copy.copy()` if you need to modify
+- Use `.add_class()`, `.add_style()`, `.attrs` to add CSS classes, styles, and HTML attributes
 - Use `css()` helper for inline styles
 - Tag children can be strings, Tags, TagLists, or None
 
