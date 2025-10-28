@@ -39,6 +39,7 @@ quartodoc:
         - playwright.controller.InputSelectize
         - playwright.controller.InputSlider
         - playwright.controller.InputSliderRange
+        - playwright.controller.InputSubmitTextarea
         - playwright.controller.InputSwitch
         - playwright.controller.InputTaskButton
         - playwright.controller.InputText

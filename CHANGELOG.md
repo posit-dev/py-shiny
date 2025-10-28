@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### New features
+
+* Added a new `input_submit_textarea()` input element, which is similar to `input_text_area()`, but includes a submit button to only submit the text changes to the server on click. This is especially useful when the input text change triggers a long-running operation and/or the user wants to type longer-form input and review it before submitting it. (#2099)
+
 ### Bug fixes
 
 * Fixed `ui.tooltip()`'s `options` parameter to properly pass Bootstrap tooltip options to the underlying web component. (#2101)

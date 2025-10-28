@@ -32,6 +32,7 @@ from ._input_fields import (
     InputDateRange,
     InputNumeric,
     InputPassword,
+    InputSubmitTextarea,
     InputText,
     InputTextArea,
 )
@@ -83,6 +84,7 @@ __all__ = [
     "InputSelectize",
     "InputSlider",
     "InputSliderRange",
+    "InputSubmitTextarea",
     "InputSwitch",
     "InputTaskButton",
     "InputText",
