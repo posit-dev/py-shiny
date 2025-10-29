@@ -1,17 +1,21 @@
 import time
 
 from faicons import icon_svg
+
 from shiny import reactive
 from shiny.express import input, ui
 from shiny.ui import toast, toast_header
 
-ui.page_opts(title="Toast Notifications Demo", fillable=True)
+ui.page_opts(
+    title=ui.tags.h2("Toast Notifications Demo", class_="h3 ps-3 pt-3 mb-0"),
+    fillable=True,
+    padding=0,
+)
 
-ui.h2("Toast Notifications Demo (Express)", class_="p-3 border-bottom mb-0")
 ui.input_dark_mode(class_="position-absolute top-0 end-0 p-3")
 
 with ui.layout_column_wrap(
-    1 / 2,
+    width=1 / 2,
     class_="bslib-page-dashboard",
     style="background: var(--bslib-dashboard-main-bg); padding: 15px; gap: 15px",
 ):
@@ -140,7 +144,7 @@ with ui.layout_column_wrap(
                 "hide_toast", "Hide Last Toast", class_="btn-secondary"
             )
 
-    with ui.layout_column_wrap(1):
+    with ui.layout_column_wrap(width=1):
         # Advanced Features
         with ui.card():
             ui.card_header("Advanced Features")
@@ -204,7 +208,7 @@ def _():
     # Build body content
     body_content = []
     if not input.use_header() and input.icon_body():
-        body_content.append(icon_svg(input.icon_body(), class_="me-2"))
+        body_content.append(ui.tags.span(icon_svg(input.icon_body()), class_="me-2"))
     body_content.append(input.body())
 
     # Build toast

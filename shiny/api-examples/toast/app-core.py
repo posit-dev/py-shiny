@@ -8,7 +8,6 @@ app_ui = ui.page_fillable(
     ui.h2("Toast Notifications Demo", class_="p-3 border-bottom mb-0"),
     ui.input_dark_mode(class_="position-absolute top-0 end-0 p-3"),
     ui.layout_column_wrap(
-        1 / 2,
         # Toast Builder Card
         ui.card(
             ui.card_header("Toast Builder"),
@@ -154,7 +153,6 @@ app_ui = ui.page_fillable(
             ),
         ),
         ui.layout_column_wrap(
-            1,
             # Advanced Features
             ui.card(
                 ui.card_header("Advanced Features"),
@@ -206,7 +204,9 @@ app_ui = ui.page_fillable(
                     ),
                 ),
             ),
+            width=1,
         ),
+        width=1 / 2,
         class_="bslib-page-dashboard",
         style="background: var(--bslib-dashboard-main-bg); padding: 15px; gap: 15px",
     ),
@@ -242,7 +242,9 @@ def server(input: Inputs, output: Outputs, session: Session):
         # Build body content
         body_content = []
         if not input.use_header() and input.icon_body():
-            body_content.append(icon_svg(input.icon_body(), class_="me-2"))
+            body_content.append(
+                ui.tags.span(icon_svg(input.icon_body()), class_="me-2")
+            )
         body_content.append(input.body())
 
         # Build toast
