@@ -159,6 +159,7 @@ class Toast:
         self,
         body: TagList,
         header: Optional[ToastHeader | TagChild],
+        icon: Optional[TagChild],
         id: Optional[str],
         type: Optional[str],
         duration: Optional[float],
@@ -168,6 +169,7 @@ class Toast:
     ):
         self.body = body
         self.header = header
+        self.icon = icon
         self.id = id if id else _toast_random_id()
         self.type = self._normalize_type(type)
         self.duration = duration
@@ -232,24 +234,32 @@ class Toast:
                 )
                 contents.append(header_tag)
 
-        # Build body
+        # Build body with optional close button
         # * If header exists, close button goes in header
         # * If no header, close button goes in body (if closable)
-        if self.header is not None:
-            # Header exists: simple body
+        body_has_close_btn = self.header is None and self.closable
+
+        if not body_has_close_btn and self.icon is None:
+            # Simple body: no close button, no icon
             body_tag = div({"class": "toast-body"}, self.body)
         else:
-            # No header
-            if self.closable:
-                # Closable without header: use d-flex layout
-                body_tag = div(
-                    {"class": "toast-body d-flex"},
-                    div({"class": "flex-grow-1"}, self.body),
-                    close_button,
-                )
-            else:
-                # No close button needed
-                body_tag = div({"class": "toast-body"}, self.body)
+            # Complex body: has close button and/or icon
+            body_contents: list[TagChild] = []
+
+            # Add icon if present
+            if self.icon is not None:
+                body_contents.append(tags.span(self.icon, class_="toast-body-icon"))
+
+            # Add body content
+            body_contents.append(
+                div({"class": "toast-body-content flex-grow-1"}, self.body)
+            )
+
+            # Add close button if needed
+            if body_has_close_btn:
+                body_contents.append(close_button)
+
+            body_tag = div({"class": "toast-body d-flex gap-2"}, *body_contents)
 
         contents.append(body_tag)
 
@@ -323,6 +333,7 @@ def toast_header(
 def toast(
     *args: TagChild | TagAttrs,
     header: Optional[str | ToastHeader | TagChild] = None,
+    icon: Optional[TagChild] = None,
     id: Optional[str] = None,
     type: Optional[
         Literal[
@@ -356,6 +367,10 @@ def toast(
     header
         Optional header content. Can be a string (auto-converted to header), a
         ToastHeader object from :func:`~shiny.ui.toast_header`, or any TagChild.
+    icon
+        Optional icon element to display in the toast body (e.g., from ui.tags.i()
+        or icon library). The icon appears in the body regardless of whether a header
+        is present.
     id
         Optional unique identifier. Auto-generated if None.
     type
@@ -402,6 +417,7 @@ def toast(
     return Toast(
         body=body,
         header=header,
+        icon=icon,
         id=id,
         type=type,
         duration=duration,

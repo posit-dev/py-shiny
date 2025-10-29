@@ -113,6 +113,7 @@ def test_toast_defaults():
     assert t.duration == 5
     assert t.closable is True
     assert t.header is None
+    assert t.icon is None
     assert t.position == "top-right"
     assert t.type is None
 
@@ -185,6 +186,28 @@ def test_toast_additional_attributes():
 
     assert t.attribs["data-test"] == "value"
     assert t.attribs["class"] == "extra-class"
+
+
+def test_toast_stores_icon_argument():
+    """toast() stores icon argument"""
+    from htmltools import span
+
+    icon_elem = span("★", class_="test-icon")
+
+    t = ui.toast("Test message", icon=icon_elem)
+
+    assert isinstance(t, Toast)
+    assert t.icon is not None
+    # Verify it's the icon we passed in (check class attribute)
+    assert hasattr(t.icon, "attrs")
+    assert "test-icon" in str(t.icon)
+    assert "★" in str(t.icon)
+
+
+def test_toast_icon_is_none_by_default():
+    """toast() icon is None by default"""
+    t = ui.toast("Test message")
+    assert t.icon is None
 
 
 # ==============================================================================
@@ -270,6 +293,88 @@ def test_toast_tagify_autohide_attribute():
     assert 'data-bs-autohide="false"' in html_no_autohide
 
 
+def test_toast_icon_renders_in_body_without_header():
+    """toast() icon renders in body without header"""
+    from htmltools import span
+
+    icon_elem = span("★", class_="my-icon")
+    t = ui.toast("You have new messages", icon=icon_elem, id="icon-toast")
+
+    tag = t.tagify()
+    html = str(tag)
+
+    # Icon should be in toast-body with special wrapper
+    assert 'class="toast-body d-flex gap-2"' in html
+    assert "toast-body-icon" in html
+    assert "my-icon" in html
+    assert "★" in html
+    assert "toast-body-content flex-grow-1" in html
+
+
+def test_toast_icon_renders_in_body_with_header():
+    """toast() icon renders in body with header"""
+    from htmltools import span
+
+    icon_elem = span("★", class_="header-icon")
+    t = ui.toast(
+        "Message content",
+        header="New Mail",
+        icon=icon_elem,
+        id="icon-header-toast",
+    )
+
+    tag = t.tagify()
+    html = str(tag)
+
+    # Icon should still be in body when header is present
+    assert 'class="toast-body d-flex gap-2"' in html
+    assert "toast-body-icon" in html
+    assert "header-icon" in html
+    assert "★" in html
+
+
+def test_toast_icon_works_with_closable_button_in_body():
+    """toast() icon works with closable button in body"""
+    from htmltools import span
+
+    icon_elem = span("★", class_="alert-icon")
+    t = ui.toast(
+        "Warning message",
+        icon=icon_elem,
+        closable=True,
+        id="icon-closable-toast",
+    )
+
+    tag = t.tagify()
+    html = str(tag)
+
+    # Should have both icon and close button in body
+    assert 'class="toast-body d-flex gap-2"' in html
+    assert "toast-body-icon" in html
+    assert "alert-icon" in html
+    assert "★" in html
+    assert "btn-close" in html
+
+
+def test_toast_without_icon_or_close_button_has_simple_body():
+    """toast() without icon or close button has simple body"""
+    t = ui.toast(
+        "Simple message",
+        header="Header",
+        closable=False,
+        id="simple-body-toast",
+    )
+
+    tag = t.tagify()
+    html = str(tag)
+
+    # Should have simple toast-body (no d-flex gap-2)
+    assert 'class="toast-body"' in html
+    assert 'class="toast-body d-flex gap-2"' not in html
+    assert "toast-body-icon" not in html
+    assert "toast-body-content" not in html
+
+
 # ==============================================================================
 # ToastHeader tests
 # ==============================================================================
@@ -317,6 +422,44 @@ def test_toast_header_tagify():
     assert "just now" in html
     assert "me-auto" in html  # Title class
     assert "text-muted" in html  # Status class
+
+
+def test_toast_header_icon_renders_in_header():
+    """toast_header() icon renders in header"""
+    from htmltools import span
+
+    icon_elem = span("★", class_="header-test-icon")
+    h = ui.toast_header("Notification", icon=icon_elem, status="now")
+
+    t = ui.toast("Body content", header=h, id="header-icon-toast")
+    tag = t.tagify()
+    html = str(tag)
+
+    # Icon should be in toast-header with wrapper
+    assert "toast-header" in html
+    assert "toast-header-icon" in html
+    assert "header-test-icon" in html
+    assert "★" in html
+
+
+def test_toast_header_icon_with_status_and_title():
+    """toast_header() icon with status and title"""
+    from htmltools import span
+
+    icon_elem = span("✓", class_="success-icon")
+    h = ui.toast_header("Success", icon=icon_elem, status="just now")
+
+    t = ui.toast("Operation completed", header=h, id="full-header-toast")
+    tag = t.tagify()
+    html = str(tag)
+
+    # Should have all three elements: icon, title, status
+    assert "toast-header-icon" in html
+    assert "success-icon" in html
+    assert "✓" in html
+    assert "Success" in html
+    assert "just now" in html
+    assert "text-muted text-end" in html
 
 
 # ==============================================================================
@@ -393,3 +536,28 @@ def test_toast_body_and_header_structure():
     assert "toast-body" in html
     assert "Test body" in html
     assert "Test header" in html
+
+
+def test_toast_with_both_header_icon_and_body_icon():
+    """toast() with both header icon and body icon"""
+    from htmltools import span
+
+    # Both header and body can have their own icons
+    header_icon = span("H", class_="h-icon")
+    body_icon = span("B", class_="b-icon")
+
+    t = ui.toast(
+        "Message content",
+        header=ui.toast_header("Title", icon=header_icon),
+        icon=body_icon,
+        id="dual-icon-toast",
+    )
+
+    tag = t.tagify()
+    html = str(tag)
+
+    # Both icons should be present in different locations
+    assert "toast-header-icon" in html
+    assert "h-icon" in html
+    assert "toast-body-icon" in html
+    assert "b-icon" in html

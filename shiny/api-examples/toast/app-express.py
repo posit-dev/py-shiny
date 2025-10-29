@@ -205,16 +205,16 @@ def _():
             status=None,
         )
 
-    # Build body content
-    body_content = []
+    # Build body icon if not using header
+    body_icon = None
     if not input.use_header() and input.icon_body():
-        body_content.append(ui.tags.span(icon_svg(input.icon_body()), class_="me-2"))
-    body_content.append(input.body())
+        body_icon = icon_svg(input.icon_body())
 
     # Build toast
     toast_obj = toast(
-        *body_content,
+        input.body(),
         header=header,
+        icon=body_icon,
         type=input.type() if input.type() else None,
         duration=input.duration() if input.duration() > 0 else None,
         position=input.position(),
