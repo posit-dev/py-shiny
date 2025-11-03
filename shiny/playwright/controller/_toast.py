@@ -104,11 +104,14 @@ class Toast(UiBase):
         timeout
             The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
-        _expect_attribute_to_have_value(
-            loc=self.loc,
-            timeout=timeout,
+        # Check if the class attribute contains the expected type class
+        # Use regex pattern to match the class within the space-separated list
+        import re
+        pattern = re.compile(rf"(^|\s)text-bg-{re.escape(value)}(\s|$)")
+        playwright_expect(self.loc).to_have_attribute(
             name="class",
-            value=f"text-bg-{value}",
+            value=pattern,
+            timeout=timeout,
         )
 
     def expect_position(self, value: str, *, timeout: Timeout = None) -> None:
