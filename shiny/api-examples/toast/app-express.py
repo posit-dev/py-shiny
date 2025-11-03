@@ -4,7 +4,6 @@ from faicons import icon_svg
 
 from shiny import reactive
 from shiny.express import input, ui
-from shiny.ui import toast, toast_header
 
 ui.page_opts(
     title=ui.tags.h2("Toast Notifications Demo", class_="h3 ps-3 pt-3 mb-0"),
@@ -199,7 +198,7 @@ def _():
         if input.header_icon():
             header_icon = icon_svg(input.header_icon())
 
-        header = toast_header(
+        header = ui.toast_header(
             title=input.header_title(),
             icon=header_icon,
             status=None,
@@ -211,7 +210,7 @@ def _():
         body_icon = icon_svg(input.icon_body())
 
     # Build toast
-    toast_obj = toast(
+    toast_obj = ui.toast(
         input.body(),
         header=header,
         icon=body_icon,
@@ -240,7 +239,7 @@ def _():
 @reactive.event(input.show_persistent)
 def _():
     id = ui.show_toast(
-        toast(
+        ui.toast(
             "This toast won't disappear automatically. Use the 'Hide' button to dismiss it.",
             header="Persistent Toast",
             type="info",
@@ -262,7 +261,7 @@ def _():
 @reactive.event(input.show_long_duration)
 def _():
     ui.show_toast(
-        toast(
+        ui.toast(
             "This toast will stay visible for 10 seconds.",
             header="Long Duration",
             type="primary",
@@ -275,7 +274,7 @@ def _():
 @reactive.event(input.show_no_close)
 def _():
     ui.show_toast(
-        toast(
+        ui.toast(
             "This toast has no close button but will auto-hide in 3 seconds.",
             type="secondary",
             closable=False,
@@ -288,9 +287,9 @@ def _():
 @reactive.event(input.show_custom_header)
 def _():
     ui.show_toast(
-        toast(
+        ui.toast(
             "Your profile has been updated successfully.",
-            header=toast_header(
+            header=ui.toast_header(
                 title="Profile Updated",
                 icon=icon_svg("check"),
                 status="just now",
@@ -305,7 +304,7 @@ def _():
 @reactive.event(input.show_action_buttons)
 def _():
     ui.show_toast(
-        toast(
+        ui.toast(
             ui.p("Would you like to save your changes?"),
             ui.div(
                 ui.input_action_button(
@@ -329,24 +328,24 @@ def _():
 @reactive.event(input.save_yes)
 def _():
     ui.hide_toast("unsaved_changes_toast")
-    ui.show_toast(toast("Saved changes", type="success"))
+    ui.show_toast(ui.toast("Saved changes", type="success"))
 
 
 @reactive.effect
 @reactive.event(input.save_no)
 def _():
     ui.hide_toast("unsaved_changes_toast")
-    ui.show_toast(toast("Changes were not saved", type="danger"))
+    ui.show_toast(ui.toast("Changes were not saved", type="danger"))
 
 
 @reactive.effect
 @reactive.event(input.show_multiple)
 def _():
-    ui.show_toast(toast("First notification", type="primary"))
+    ui.show_toast(ui.toast("First notification", type="primary"))
     time.sleep(0.2)
-    ui.show_toast(toast("Second notification", type="success"))
+    ui.show_toast(ui.toast("Second notification", type="success"))
     time.sleep(0.2)
-    ui.show_toast(toast("Third notification", type="info"))
+    ui.show_toast(ui.toast("Third notification", type="info"))
 
 
 @reactive.effect
@@ -378,7 +377,7 @@ def _():
 
     for i, pos in enumerate(positions):
         ui.show_toast(
-            toast(
+            ui.toast(
                 f"Toast at {pos}",
                 type=types[i],
                 duration_s=4,

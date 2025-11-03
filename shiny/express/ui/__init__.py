@@ -46,6 +46,7 @@ from ...ui import (
     dblclick_opts,
     fill,
     help_text,
+    hide_toast,
     hover_opts,
     include_css,
     include_js,
@@ -80,12 +81,13 @@ from ...ui import (
     navbar_options,
     notification_remove,
     notification_show,
-    show_toast,
-    hide_toast,
     panel_title,
     remove_accordion_panel,
     remove_nav_panel,
     remove_ui,
+    show_toast,
+    toast,
+    toast_header,
     update_accordion,
     update_accordion_panel,
     update_action_button,
@@ -265,6 +267,8 @@ __all__ = (
     "modal_remove",
     "notification_show",
     "notification_remove",
+    "toast",
+    "toast_header",
     "show_toast",
     "hide_toast",
     "nav_spacer",
@@ -345,9 +349,6 @@ _known_missing = {
         "output_markdown_stream",
         # Chat knows how to render itself in express
         "chat_ui",
-        # Toast constructors (show_toast and hide_toast are exported)
-        "toast",
-        "toast_header",
     ),
     # Items from shiny.express.ui that don't have a counterpart in shiny.ui
     "shiny.express.ui": (
