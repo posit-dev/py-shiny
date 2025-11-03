@@ -18,137 +18,7 @@ if TYPE_CHECKING:
 
 
 # ==============================================================================
-# Helper Functions
-# ==============================================================================
-
-
-def _normalize_toast_position(
-    position: str | list[str] | tuple[str, ...] | None,
-) -> str:
-    """
-    Normalize position to kebab-case format.
-
-    Accepts: "top-left", "top left", ["top", "left"], ["left", "top"], etc.
-    Returns: "top-left" (always kebab-case)
-    Validates: Must have one vertical (top/middle/bottom) and one horizontal (left/center/right)
-    """
-    # Default position
-    if position is None or position == "":
-        return "bottom-right"
-
-    # Convert list/tuple to space-separated string
-    if isinstance(position, (list, tuple)):
-        position = " ".join(str(p) for p in position)
-
-    # Split by hyphens or spaces and normalize case
-    parts = position.replace("-", " ").lower().split()
-
-    # Valid components
-    vertical_options = {"top", "middle", "bottom"}
-    horizontal_options = {"left", "center", "right"}
-
-    # Extract vertical and horizontal components
-    vertical = None
-    horizontal = None
-
-    for part in parts:
-        if part in vertical_options:
-            if vertical is not None:
-                raise ValueError(
-                    f"Position cannot have multiple vertical components: {position}"
-                )
-            vertical = part
-        elif part in horizontal_options:
-            if horizontal is not None:
-                raise ValueError(
-                    f"Position cannot have multiple horizontal components: {position}"
-                )
-            horizontal = part
-        else:
-            raise ValueError(
-                f"Invalid position component '{part}'. "
-                f"Valid vertical: {', '.join(sorted(vertical_options))}. "
-                f"Valid horizontal: {', '.join(sorted(horizontal_options))}."
-            )
-
-    # Validate we have both components
-    if vertical is None:
-        raise ValueError(
-            f"Position must include a vertical component (top, middle, or bottom): {position}"
-        )
-    if horizontal is None:
-        raise ValueError(
-            f"Position must include a horizontal component (left, center, or right): {position}"
-        )
-
-    # Return in kebab-case format: vertical-horizontal
-    return f"{vertical}-{horizontal}"
-
-
-def _toast_random_id() -> str:
-    """Generate random toast ID: bslib-toast-{random_hex}"""
-    return f"bslib-toast-{rand_hex(8)}"
-
-
-# ==============================================================================
-# ToastHeader Class
-# ==============================================================================
-
-
-class ToastHeader:
-    """Internal class representing a toast header."""
-
-    def __init__(
-        self,
-        title: TagChild,
-        icon: Optional[TagChild],
-        status: Optional[str],
-        attribs: dict[str, Any],
-    ):
-        self.title = title
-        self.icon = icon
-        self.status = status
-        self.attribs = attribs
-
-    def tagify(self, closable: bool = False) -> Tag:
-        """Convert to HTML Tag object.
-
-        Parameters
-        ----------
-        closable
-            Whether to include a close button in the header.
-        """
-        # Build header contents
-        contents: list[TagChild] = []
-
-        # Add icon if present
-        if self.icon is not None:
-            contents.append(tags.span(self.icon, class_="toast-header-icon"))
-
-        # Add title (always present, with margin)
-        title_classes = "me-auto ms-2" if self.icon is not None else "me-auto"
-        contents.append(tags.strong(self.title, class_=title_classes))
-
-        # Add status if present
-        if self.status is not None:
-            contents.append(tags.small(self.status, class_="text-muted text-end"))
-
-        # Add close button if closable
-        if closable:
-            contents.append(
-                tags.button(
-                    type="button",
-                    class_="btn-close",
-                    data_bs_dismiss="toast",
-                    aria_label="Close",
-                )
-            )
-
-        return div({"class": "toast-header"}, *contents, **self.attribs)
-
-
-# ==============================================================================
-# Toast Class
+# Toast
 # ==============================================================================
 
 
@@ -158,25 +28,25 @@ class Toast:
     def __init__(
         self,
         body: TagList,
-        header: Optional[ToastHeader | TagChild],
-        icon: Optional[TagChild],
-        id: Optional[str],
-        type: Optional[str],
-        duration: Optional[float],
-        position: str,
-        closable: bool,
-        attribs: dict[str, Any],
+        header: Optional[ToastHeader | TagChild] = None,
+        icon: Optional[TagChild] = None,
+        id: Optional[str] = None,
+        type: Optional[str] = None,
+        duration: Optional[float] = 5000,
+        position: str = "top-right",
+        closable: bool = True,
+        attribs: Optional[dict[str, Any]] = None,
     ):
         self.body = body
         self.header = header
         self.icon = icon
-        self.id = id if id else _toast_random_id()
+        self.id = id
         self.type = self._normalize_type(type)
         self.duration = duration
         self.autohide = duration is not None and duration > 0
         self.position = _normalize_toast_position(position)
         self.closable = closable
-        self.attribs = attribs
+        self.attribs = attribs if attribs is not None else {}
 
     def _normalize_type(self, type: Optional[str]) -> Optional[str]:
         """Normalize type, handling 'error' -> 'danger' alias."""
@@ -184,7 +54,7 @@ class Toast:
             return "danger"
         return type
 
-    def tagify(self) -> Tag:
+    def tagify(self, id: Optional[str]) -> Tag:
         """Convert to HTML Tag object."""
         # Determine accessibility attributes based on type
         if self.type == "danger":
@@ -265,7 +135,10 @@ class Toast:
 
         # Build final toast tag
         return div(
-            {"class": " ".join(classes), "id": self.id},
+            {
+                "class": " ".join(classes),
+                "id": id or self.id,  # Override id if provided to tagify
+            },
             *contents,
             components_dependencies(),
             role=role,
@@ -274,59 +147,6 @@ class Toast:
             data_bs_autohide="true" if self.autohide else "false",
             **self.attribs,
         )
-
-
-# ==============================================================================
-# Public Constructor Functions
-# ==============================================================================
-
-
-def toast_header(
-    title: TagChild,
-    *args: TagChild | TagAttrs,
-    icon: Optional[TagChild] = None,
-    status: Optional[str] = None,
-    **kwargs: TagAttrValue,
-) -> ToastHeader:
-    """
-    Create a structured toast header.
-
-    Parameters
-    ----------
-    title
-        Header title text or HTML element.
-    *args
-        Additional content to append to title.
-    icon
-        Optional icon element (e.g., from ui.tags.i() or icon library).
-    status
-        Optional status text (appears muted/right-aligned, e.g., "just now").
-    **kwargs
-        Additional HTML attributes for the header element.
-
-    Returns
-    -------
-    :
-        A toast header object.
-
-    See Also
-    --------
-    * :func:`~shiny.ui.toast`
-    * :func:`~shiny.ui.show_toast`
-    """
-    # Use consolidate_attrs to properly handle TagChild | TagAttrs
-    attrs, children = consolidate_attrs(*args, **kwargs)
-
-    # Combine title with additional children
-    if children:
-        title = TagList(title, *children)
-
-    return ToastHeader(
-        title=title,
-        icon=icon,
-        status=status,
-        attribs=attrs,
-    )
 
 
 @add_example()
@@ -428,6 +248,111 @@ def toast(
 
 
 # ==============================================================================
+# Toast Header
+# ==============================================================================
+
+
+class ToastHeader:
+    """Internal class representing a toast header."""
+
+    def __init__(
+        self,
+        title: TagChild,
+        icon: Optional[TagChild],
+        status: Optional[str],
+        attribs: dict[str, Any],
+    ):
+        self.title = title
+        self.icon = icon
+        self.status = status
+        self.attribs = attribs
+
+    def tagify(self, closable: bool = False) -> Tag:
+        """Convert to HTML Tag object.
+
+        Parameters
+        ----------
+        closable
+            Whether to include a close button in the header.
+        """
+        # Build header contents
+        contents: list[TagChild] = []
+
+        # Add icon if present
+        if self.icon is not None:
+            contents.append(tags.span(self.icon, class_="toast-header-icon"))
+
+        # Add title (always present, with margin)
+        title_classes = "me-auto ms-2" if self.icon is not None else "me-auto"
+        contents.append(tags.strong(self.title, class_=title_classes))
+
+        # Add status if present
+        if self.status is not None:
+            contents.append(tags.small(self.status, class_="text-muted text-end"))
+
+        # Add close button if closable
+        if closable:
+            contents.append(
+                tags.button(
+                    type="button",
+                    class_="btn-close",
+                    data_bs_dismiss="toast",
+                    aria_label="Close",
+                )
+            )
+
+        return div({"class": "toast-header"}, *contents, **self.attribs)
+
+
+def toast_header(
+    title: TagChild,
+    *args: TagChild | TagAttrs,
+    icon: Optional[TagChild] = None,
+    status: Optional[str] = None,
+    **kwargs: TagAttrValue,
+) -> ToastHeader:
+    """
+    Create a structured toast header.
+
+    Parameters
+    ----------
+    title
+        Header title text or HTML element.
+    *args
+        Additional content to append to title.
+    icon
+        Optional icon element (e.g., from ui.tags.i() or icon library).
+    status
+        Optional status text (appears muted/right-aligned, e.g., "just now").
+    **kwargs
+        Additional HTML attributes for the header element.
+
+    Returns
+    -------
+    :
+        A toast header object.
+
+    See Also
+    --------
+    * :func:`~shiny.ui.toast`
+    * :func:`~shiny.ui.show_toast`
+    """
+    # Use consolidate_attrs to properly handle TagChild | TagAttrs
+    attrs, children = consolidate_attrs(*args, **kwargs)
+
+    # Combine title with additional children
+    if children:
+        title = TagList(title, *children)
+
+    return ToastHeader(
+        title=title,
+        icon=icon,
+        status=status,
+        attribs=attrs,
+    )
+
+
+# ==============================================================================
 # Show/Hide Functions
 # ==============================================================================
 
@@ -467,39 +392,39 @@ def show_toast(
     session = require_active_session(session)
 
     # Convert string to toast if needed
-    toast_obj: Toast
-    if isinstance(toast, str):
-        toast_obj = globals()["toast"](toast)
+    the_toast: Toast
+    if isinstance(toast, Toast):
+        the_toast = toast
     else:
-        toast_obj = toast
+        the_toast = Toast(TagList(*toast))
 
     # Warn if toast has no content
-    if not toast_obj.body and toast_obj.header is None:
+    if not the_toast.body and the_toast.header is None:
         warnings.warn("Toast has no content (empty body and no header)")
 
-    # Generate toast HTML
-    toast_tag = toast_obj.tagify()
+    # Generate ID if not provided, outside of `the_toast` to avoid modifying it
+    id = the_toast.id or _toast_random_id()
 
     # Process UI to get HTML and dependencies
-    processed = session._process_ui(toast_tag)
+    toasted = session._process_ui(the_toast.tagify(id=id))
 
     # Build payload with flattened structure (no nested options)
     payload: dict[str, Any] = {
-        "html": processed["html"],
-        "deps": processed["deps"],
-        "id": toast_obj.id,
-        "position": toast_obj.position,
-        "autohide": toast_obj.autohide,
+        "html": toasted["html"],
+        "deps": toasted["deps"],
+        "id": id,
+        "position": the_toast.position,
+        "autohide": the_toast.autohide,
     }
 
     # Add delay only if present
-    if toast_obj.duration is not None:
-        payload["duration"] = toast_obj.duration
+    if the_toast.duration is not None:
+        payload["duration"] = the_toast.duration
 
     # Send message to client (as a custom message)
     session._send_message_sync({"custom": {"bslib.show-toast": payload}})
 
-    return toast_obj.id
+    return id
 
 
 @no_example()
@@ -543,3 +468,76 @@ def hide_toast(
     session._send_message_sync({"custom": {"bslib.hide-toast": {"id": id}}})
 
     return id
+
+
+# ==============================================================================
+# Helper Functions
+# ==============================================================================
+
+
+def _normalize_toast_position(
+    position: str | list[str] | tuple[str, ...] | None,
+) -> str:
+    """
+    Normalize position to kebab-case format.
+
+    Accepts: "top-left", "top left", ["top", "left"], ["left", "top"], etc.
+    Returns: "top-left" (always kebab-case)
+    Validates: Must have one vertical (top/middle/bottom) and one horizontal (left/center/right)
+    """
+    # Default position
+    if position is None or position == "":
+        return "bottom-right"
+
+    # Convert list/tuple to space-separated string
+    if isinstance(position, (list, tuple)):
+        position = " ".join(str(p) for p in position)
+
+    # Split by hyphens or spaces and normalize case
+    parts = position.replace("-", " ").lower().split()
+
+    # Valid components
+    vertical_options = {"top", "middle", "bottom"}
+    horizontal_options = {"left", "center", "right"}
+
+    # Extract vertical and horizontal components
+    vertical = None
+    horizontal = None
+
+    for part in parts:
+        if part in vertical_options:
+            if vertical is not None:
+                raise ValueError(
+                    f"Position cannot have multiple vertical components: {position}"
+                )
+            vertical = part
+        elif part in horizontal_options:
+            if horizontal is not None:
+                raise ValueError(
+                    f"Position cannot have multiple horizontal components: {position}"
+                )
+            horizontal = part
+        else:
+            raise ValueError(
+                f"Invalid position component '{part}'. "
+                f"Valid vertical: {', '.join(sorted(vertical_options))}. "
+                f"Valid horizontal: {', '.join(sorted(horizontal_options))}."
+            )
+
+    # Validate we have both components
+    if vertical is None:
+        raise ValueError(
+            f"Position must include a vertical component (top, middle, or bottom): {position}"
+        )
+    if horizontal is None:
+        raise ValueError(
+            f"Position must include a horizontal component (left, center, or right): {position}"
+        )
+
+    # Return in kebab-case format: vertical-horizontal
+    return f"{vertical}-{horizontal}"
+
+
+def _toast_random_id() -> str:
+    """Generate random toast ID: bslib-toast-{random_hex}"""
+    return f"bslib-toast-{rand_hex(8)}"
