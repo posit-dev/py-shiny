@@ -228,6 +228,7 @@ class ExampleNotFoundException(FileNotFoundError):
         dir: str,
         type: Optional[Literal["core", "express"]] = None,
     ) -> None:
+        super().__init__(type, file_names, dir)
         self.type = type or os.environ.get("SHINY_MODE", "core")
         self.file_names = [file_names] if isinstance(file_names, str) else file_names
         self.dir = dir
@@ -250,8 +251,9 @@ class ExpressExampleNotFoundException(ExampleNotFoundException):
         self,
         file_names: list[str] | str,
         dir: str,
+        type: Literal["express"] = "express",
     ) -> None:
-        super().__init__(file_names, dir, "express")
+        super().__init__(file_names, dir, type)
 
 
 def app_choose_core_or_express(
