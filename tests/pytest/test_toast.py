@@ -110,7 +110,7 @@ def test_toast_defaults():
     assert t.id is not None
     assert t.id.startswith("bslib-toast-")
     assert t.autohide is True
-    assert t.duration == 5
+    assert t.duration == 5000
     assert t.closable is True
     assert t.header is None
     assert t.icon is None
@@ -138,30 +138,30 @@ def test_toast_type_error_alias():
 
 def test_toast_autohide_disabled():
     """toast() autohide disabled (0, None)"""
-    t1 = ui.toast("Test", duration=0, closable=False)
+    t1 = ui.toast("Test", duration_s=0, closable=False)
     assert t1.autohide is False
     assert t1.closable is False
 
-    t2 = ui.toast("Test", duration=None, closable=False)
+    t2 = ui.toast("Test", duration_s=None, closable=False)
     assert t2.autohide is False
     assert t2.closable is False
 
     # closable can also be True when autohide is disabled
-    t3 = ui.toast("Test", duration=None, closable=True)
+    t3 = ui.toast("Test", duration_s=None, closable=True)
     assert t3.autohide is False
     assert t3.closable is True
 
 
 def test_toast_closable_with_autohide():
     """toast() closable when autohide enabled"""
-    t_closable = ui.toast("Test", duration=10, closable=True)
+    t_closable = ui.toast("Test", duration_s=10, closable=True)
     assert t_closable.autohide is True
-    assert t_closable.duration == 10
+    assert t_closable.duration == 10000
     assert t_closable.closable is True
 
-    t_not_closable = ui.toast("Test", duration=5, closable=False)
+    t_not_closable = ui.toast("Test", duration_s=5, closable=False)
     assert t_not_closable.autohide is True
-    assert t_not_closable.duration == 5
+    assert t_not_closable.duration == 5000
     assert t_not_closable.closable is False
 
 
@@ -275,7 +275,7 @@ def test_toast_tagify_close_button_placement():
 
     # Non-closable with autohide
     t_non_closable = ui.toast(
-        "Message", closable=False, duration=5, id="non-closable-toast"
+        "Message", closable=False, duration_s=5, id="non-closable-toast"
     )
     html_non_closable = str(t_non_closable.tagify())
     # Should not have close button
@@ -284,11 +284,11 @@ def test_toast_tagify_close_button_placement():
 
 def test_toast_tagify_autohide_attribute():
     """Toast.tagify() sets data-bs-autohide attribute"""
-    t_autohide = ui.toast("Test", duration=5)
+    t_autohide = ui.toast("Test", duration_s=5)
     html_autohide = str(t_autohide.tagify())
     assert 'data-bs-autohide="true"' in html_autohide
 
-    t_no_autohide = ui.toast("Test", duration=None)
+    t_no_autohide = ui.toast("Test", duration_s=None)
     html_no_autohide = str(t_no_autohide.tagify())
     assert 'data-bs-autohide="false"' in html_no_autohide
 

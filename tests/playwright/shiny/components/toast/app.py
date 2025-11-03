@@ -21,7 +21,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     @reactive.effect
     @reactive.event(input.show_basic)
     def _():
-        id = ui.show_toast("This is a basic toast notification", id="basic-toast")
+        id = ui.show_toast("This is a basic toast notification")
         current_toast_id.set(id)
 
     @reactive.effect
@@ -107,7 +107,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         id = ui.show_toast(
             ui.toast(
                 "This toast will not auto-hide.",
-                duration=None,
+                duration_s=None,
                 header="Persistent",
                 id="persistent-toast",
             )

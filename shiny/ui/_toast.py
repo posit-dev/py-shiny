@@ -348,7 +348,7 @@ def toast(
             "dark",
         ]
     ] = None,
-    duration: Optional[int | float] = 5,
+    duration_s: Optional[int | float] = 5,
     position: str | list[str] | tuple[str, ...] = "top-right",
     closable: bool = True,
     **kwargs: TagAttrValue,
@@ -376,7 +376,7 @@ def toast(
     type
         Semantic type for styling. Options are "primary", "secondary", "success",
         "info", "warning", "danger", "error" (alias for "danger"), "light", "dark".
-    duration
+    duration_s
         Auto-hide duration in seconds. Use None or 0 to disable auto-hide.
     position
         Screen position. Accepts "top-left", "top left", ["top", "left"], etc.
@@ -420,7 +420,7 @@ def toast(
         icon=icon,
         id=id,
         type=type,
-        duration=duration,
+        duration=duration_s * 1000 if duration_s is not None else None,
         position=normalized_position,
         closable=closable,
         attribs=attrs,
@@ -483,20 +483,18 @@ def show_toast(
     # Process UI to get HTML and dependencies
     processed = session._process_ui(toast_tag)
 
-    # Convert duration from seconds to milliseconds
-    delay_ms = int(toast_obj.duration * 1000) if toast_obj.duration else None
-
-    options = {"autohide": toast_obj.autohide, "delay": delay_ms}
-    options = {k: v for k, v in options.items() if v is not None}
-
-    # Build payload
+    # Build payload with flattened structure (no nested options)
     payload: dict[str, Any] = {
         "html": processed["html"],
         "deps": processed["deps"],
         "id": toast_obj.id,
         "position": toast_obj.position,
-        "options": options,
+        "autohide": toast_obj.autohide,
     }
+
+    # Add delay only if present
+    if toast_obj.duration is not None:
+        payload["duration"] = toast_obj.duration
 
     # Send message to client (as a custom message)
     session._send_message_sync({"custom": {"bslib.show-toast": payload}})

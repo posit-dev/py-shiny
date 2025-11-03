@@ -216,7 +216,7 @@ def _():
         header=header,
         icon=body_icon,
         type=input.type() if input.type() else None,
-        duration=input.duration() if input.duration() > 0 else None,
+        duration_s=input.duration() if input.duration() > 0 else None,
         position=input.position(),
         closable=input.closable(),
     )
@@ -244,7 +244,7 @@ def _():
             "This toast won't disappear automatically. Use the 'Hide' button to dismiss it.",
             header="Persistent Toast",
             type="info",
-            duration=None,
+            duration_s=None,
         )
     )
     persistent_toast_id.set(id)
@@ -266,7 +266,7 @@ def _():
             "This toast will stay visible for 10 seconds.",
             header="Long Duration",
             type="primary",
-            duration=10,
+            duration_s=10,
         )
     )
 
@@ -279,7 +279,7 @@ def _():
             "This toast has no close button but will auto-hide in 3 seconds.",
             type="secondary",
             closable=False,
-            duration=3,
+            duration_s=3,
         )
     )
 
@@ -319,7 +319,7 @@ def _():
             id="unsaved_changes_toast",
             header="Unsaved Changes",
             type="warning",
-            duration=None,
+            duration_s=None,
             closable=False,
         )
     )
@@ -381,7 +381,7 @@ def _():
             toast(
                 f"Toast at {pos}",
                 type=types[i],
-                duration=4,
+                duration_s=4,
                 position=pos,
             )
         )

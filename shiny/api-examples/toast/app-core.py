@@ -251,7 +251,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             icon=body_icon,
             id=input.custom_id() if input.custom_id() else None,
             type=input.type() if input.type() else None,
-            duration=input.duration() if input.duration() > 0 else None,
+            duration_s=input.duration() if input.duration() > 0 else None,
             position=input.position(),
             closable=input.closable(),
         )
@@ -277,7 +277,7 @@ def server(input: Inputs, output: Outputs, session: Session):
                 "This toast won't disappear automatically. Use the 'Hide' button to dismiss it.",
                 header="Persistent Toast",
                 type="info",
-                duration=None,
+                duration_s=None,
             )
         )
         persistent_toast_id.set(id)
@@ -297,7 +297,7 @@ def server(input: Inputs, output: Outputs, session: Session):
                 "This toast will stay visible for 10 seconds.",
                 header="Long Duration",
                 type="primary",
-                duration=10,
+                duration_s=10,
             )
         )
 
@@ -309,7 +309,7 @@ def server(input: Inputs, output: Outputs, session: Session):
                 "This toast has no close button but will auto-hide in 3 seconds.",
                 type="secondary",
                 closable=False,
-                duration=3,
+                duration_s=3,
             )
         )
 
@@ -347,7 +347,7 @@ def server(input: Inputs, output: Outputs, session: Session):
                 id="unsaved_changes_toast",
                 header="Unsaved Changes",
                 type="warning",
-                duration=None,
+                duration_s=None,
                 closable=False,
             )
         )
@@ -405,7 +405,7 @@ def server(input: Inputs, output: Outputs, session: Session):
                 ui.toast(
                     f"Toast at {pos}",
                     type=types[i],
-                    duration=4,
+                    duration_s=4,
                     position=pos,
                 )
             )
@@ -437,7 +437,7 @@ def server(input: Inputs, output: Outputs, session: Session):
                     status=ui.output_text("toast_status"),
                 ),
                 type="light",
-                duration=None,
+                duration_s=None,
             )
         )
         inserted_time.set(time.time())
