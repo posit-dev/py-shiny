@@ -3,18 +3,26 @@ from __future__ import annotations
 __all__ = ("toast", "toast_header", "show_toast", "hide_toast")
 
 import warnings
-from typing import TYPE_CHECKING, Any, Literal, Optional
+from typing import TYPE_CHECKING, Any, Literal, NotRequired, Optional
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, TagList, div, tags
 
 from .._docstring import add_example, no_example
 from .._utils import rand_hex
 from ..session import require_active_session
+from ..session._utils import RenderedDeps
 from ._html_deps_shinyverse import components_dependencies
 from ._tag import consolidate_attrs
 
 if TYPE_CHECKING:
     from ..session import Session
+
+
+class ToastPayload(RenderedDeps):
+    id: str
+    position: str
+    autohide: bool
+    duration: NotRequired[float]
 
 
 # ==============================================================================
@@ -53,6 +61,32 @@ class Toast:
         if type == "error":
             return "danger"
         return type
+
+    def as_payload(self, session: Session) -> ToastPayload | None:
+        # Return None if toast has no content
+        if not self.body and self.header is None:
+            return None
+
+        # Generate ID if not provided
+        id = self.id or _toast_random_id()
+
+        # Process UI to get HTML and dependencies
+        toasted = session._process_ui(self.tagify(id=id))
+
+        # Build payload with flattened structure (no nested options)
+        payload: ToastPayload = {
+            "html": toasted["html"],
+            "deps": toasted["deps"],
+            "id": id,
+            "position": self.position,
+            "autohide": self.autohide,
+        }
+
+        # Add delay only if present
+        if self.duration is not None:
+            payload["duration"] = self.duration
+
+        return payload
 
     def tagify(self, id: Optional[str]) -> Tag:
         """Convert to HTML Tag object."""
@@ -381,7 +415,8 @@ def show_toast(
     Returns
     -------
     :
-        The toast ID (for use with :func:`~shiny.ui.hide_toast`).
+        The toast ID (for use with :func:`~shiny.ui.hide_toast`), or an empty string if
+        the toast has no content (and no action is taken).
 
     See Also
     --------
@@ -398,33 +433,15 @@ def show_toast(
     else:
         the_toast = Toast(TagList(*toast))
 
-    # Warn if toast has no content
-    if not the_toast.body and the_toast.header is None:
-        warnings.warn("Toast has no content (empty body and no header)")
-
-    # Generate ID if not provided, outside of `the_toast` to avoid modifying it
-    id = the_toast.id or _toast_random_id()
-
-    # Process UI to get HTML and dependencies
-    toasted = session._process_ui(the_toast.tagify(id=id))
-
-    # Build payload with flattened structure (no nested options)
-    payload: dict[str, Any] = {
-        "html": toasted["html"],
-        "deps": toasted["deps"],
-        "id": id,
-        "position": the_toast.position,
-        "autohide": the_toast.autohide,
-    }
-
-    # Add delay only if present
-    if the_toast.duration is not None:
-        payload["duration"] = the_toast.duration
+    payload = the_toast.as_payload(session)
+    if payload is None:
+        warnings.warn("Toast has no content (empty body and no header)", stacklevel=2)
+        return ""
 
     # Send message to client (as a custom message)
     session._send_message_sync({"custom": {"bslib.show-toast": payload}})
 
-    return id
+    return payload["id"]
 
 
 @no_example()
@@ -460,14 +477,21 @@ def hide_toast(
     """
     session = require_active_session(session)
 
+    the_id: str | None
+
     # Extract ID from Toast object if needed
     if isinstance(id, Toast):
-        id = id.id
+        the_id = id.id
+    else:
+        the_id = id
+
+    if the_id is None:
+        raise ValueError("Cannot hide toast without an ID")
 
     # Send message to client
-    session._send_message_sync({"custom": {"bslib.hide-toast": {"id": id}}})
+    session._send_message_sync({"custom": {"bslib.hide-toast": {"id": the_id}}})
 
-    return id
+    return the_id
 
 
 # ==============================================================================
