@@ -88,7 +88,7 @@ class Toast:
 
         return payload
 
-    def tagify(self, id: Optional[str]) -> Tag:
+    def tagify(self, id: Optional[str] = None) -> Tag:
         """Convert to HTML Tag object."""
         # Determine accessibility attributes based on type
         if self.type == "danger":

@@ -107,8 +107,7 @@ def test_toast_defaults():
     t = ui.toast("Test message")
 
     assert isinstance(t, Toast)
-    assert t.id is not None
-    assert t.id.startswith("bslib-toast-")
+    assert t.id is None  # ID is not generated until as_payload() is called
     assert t.autohide is True
     assert t.duration == 5000
     assert t.closable is True
@@ -216,13 +215,71 @@ def test_toast_icon_is_none_by_default():
 
 
 def test_toast_tagify_generates_id():
-    """Toast.tagify() generates ID if not provided"""
+    """Toast.tagify() uses None ID if not provided (ID generated in as_payload())"""
     t = ui.toast("Test message", id=None)
-    tag = t.tagify()
+    assert t.id is None
 
+    # When tagify() is called directly without an ID, it will use None
+    # (The ID generation only happens in as_payload())
+    tag = t.tagify()
     html_str = str(tag)
-    # Verify an auto-generated ID is present
-    assert re.search(r'id="bslib-toast-[0-9a-f]+"', html_str)
+
+    # When tagify() is called with an explicit ID parameter, it should use it
+    tag_with_id = t.tagify(id="test-id")
+    html_with_id = str(tag_with_id)
+    assert 'id="test-id"' in html_with_id
+
+
+def test_toast_id_generated_in_as_payload():
+    """Toast ID is generated only when as_payload() is called, ensuring uniqueness"""
+    from unittest.mock import MagicMock
+
+    # Create toasts without IDs - they should store None
+    t1 = ui.toast("Message 1")
+    t2 = ui.toast("Message 2")
+
+    assert t1.id is None
+    assert t2.id is None
+
+    # Create mock session
+    mock_session = MagicMock()
+    mock_session._process_ui = MagicMock(
+        return_value={"html": "<div>test</div>", "deps": []}
+    )
+
+    # Generate payloads - IDs should be generated and different
+    payload1 = t1.as_payload(mock_session)
+    payload2 = t2.as_payload(mock_session)
+
+    assert payload1 is not None
+    assert payload2 is not None
+    assert payload1["id"].startswith("bslib-toast-")
+    assert payload2["id"].startswith("bslib-toast-")
+    assert payload1["id"] != payload2["id"]  # Different IDs
+
+    # Original toast objects should still have None as ID
+    assert t1.id is None
+    assert t2.id is None
+
+
+def test_toast_with_user_provided_id_stable():
+    """Toast with user-provided ID uses that ID consistently"""
+    from unittest.mock import MagicMock
+
+    t = ui.toast("Message", id="my-stable-id")
+    assert t.id == "my-stable-id"
+
+    # Create mock session
+    mock_session = MagicMock()
+    mock_session._process_ui = MagicMock(
+        return_value={"html": "<div>test</div>", "deps": []}
+    )
+
+    # Payload should use the stable ID
+    payload = t.as_payload(mock_session)
+    assert payload is not None
+    assert payload["id"] == "my-stable-id"
+    assert t.id == "my-stable-id"  # Should remain unchanged
 
 
 def test_toast_tagify_accessibility_danger():
