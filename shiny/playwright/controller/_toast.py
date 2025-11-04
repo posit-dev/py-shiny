@@ -111,7 +111,7 @@ class Toast(UiBase):
         # Use regex pattern to match the class within the space-separated list
         import re
 
-        value = ToastUI(TagList(), type = value).type or value
+        value = ToastUI(TagList(), type=value).type or value
 
         pattern = re.compile(rf"(^|\s)text-bg-{re.escape(value)}(\s|$)")
         playwright_expect(self.loc).to_have_attribute(
