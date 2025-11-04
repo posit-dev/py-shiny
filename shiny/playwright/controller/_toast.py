@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from htmltools import TagList
 from playwright.sync_api import Locator, Page
 from playwright.sync_api import expect as playwright_expect
 
+from ...ui._toast import Toast as ToastUI
+from ...ui._toast import _normalize_toast_position
 from .._types import PatternOrStr, Timeout
 from ..expect._internal import (
     expect_attribute_to_have_value as _expect_attribute_to_have_value,
@@ -107,6 +110,9 @@ class Toast(UiBase):
         # Check if the class attribute contains the expected type class
         # Use regex pattern to match the class within the space-separated list
         import re
+
+        value = ToastUI(TagList(), type = value).type or value
+
         pattern = re.compile(rf"(^|\s)text-bg-{re.escape(value)}(\s|$)")
         playwright_expect(self.loc).to_have_attribute(
             name="class",
@@ -125,9 +131,12 @@ class Toast(UiBase):
         timeout
             The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
+        value = _normalize_toast_position(value)
+
         # Toast container has the position in data attribute
         container = self.page.locator(f"[data-bslib-toast-container='{value}']")
         playwright_expect(container).to_be_attached(timeout=timeout)
+
         # Verify the toast is within this container
         toast_in_container = container.locator(f"#{self.id}")
         playwright_expect(toast_in_container).to_be_attached(timeout=timeout)
