@@ -1,4 +1,5 @@
 import re
+from typing import Any
 
 import pytest
 
@@ -325,7 +326,8 @@ def test_toast_tagify_close_button_placement():
     # With header, closable
     t_header = ui.toast("Message", header="Title", closable=True, id="header-toast")
     html_header = str(t_header.tagify())
-    assert "btn-close" in html_header or "toast-header" in html_header
+    assert "btn-close" in html_header
+    assert "toast-header" in html_header
 
     # Without header, closable
     t_no_header = ui.toast("Message", closable=True, id="no-header-toast")
@@ -352,7 +354,7 @@ def test_toast_tagify_autohide_attribute():
     assert 'data-bs-autohide="false"' in html_no_autohide
 
 
-def test_toast_icon_renders_in_body_without_header():
+def test_toast_icon_renders_in_body_without_header(snapshot: Any):
     """toast() icon renders in body without header"""
     from htmltools import span
 
@@ -368,9 +370,10 @@ def test_toast_icon_renders_in_body_without_header():
     assert "my-icon" in html
     assert "★" in html
     assert "toast-body-content" in html
+    assert html == snapshot
 
 
-def test_toast_icon_renders_in_body_with_header():
+def test_toast_icon_renders_in_body_with_header(snapshot: Any):
     """toast() icon renders in body with header"""
     from htmltools import span
 
@@ -390,9 +393,10 @@ def test_toast_icon_renders_in_body_with_header():
     assert "toast-body-icon" in html
     assert "header-icon" in html
     assert "★" in html
+    assert html == snapshot
 
 
-def test_toast_icon_works_with_closable_button_in_body():
+def test_toast_icon_works_with_closable_button_in_body(snapshot: Any):
     """toast() icon works with closable button in body"""
     from htmltools import span
 
@@ -413,6 +417,7 @@ def test_toast_icon_works_with_closable_button_in_body():
     assert "alert-icon" in html
     assert "★" in html
     assert "btn-close" in html
+    assert html == snapshot
 
 
 def test_toast_without_icon_or_close_button_has_simple_body():
@@ -480,7 +485,7 @@ def test_toast_header_tagify():
     assert "just now" in html
 
 
-def test_toast_header_icon_renders_in_header():
+def test_toast_header_icon_renders_in_header(snapshot: Any):
     """toast_header() icon renders in header"""
     from htmltools import span
 
@@ -496,9 +501,10 @@ def test_toast_header_icon_renders_in_header():
     assert "toast-header-icon" in html
     assert "header-test-icon" in html
     assert "★" in html
+    assert html == snapshot
 
 
-def test_toast_header_icon_with_status_and_title():
+def test_toast_header_icon_with_status_and_title(snapshot: Any):
     """toast_header() icon with status and title"""
     from htmltools import span
 
@@ -515,6 +521,7 @@ def test_toast_header_icon_with_status_and_title():
     assert "✓" in html
     assert "Success" in html
     assert "just now" in html
+    assert html == snapshot
 
 
 # ==============================================================================
@@ -543,11 +550,13 @@ def test_toast_with_toast_header_object():
     assert "just now" in html
 
 
-def test_toast_with_custom_tag_header():
+def test_toast_with_custom_tag_header(snapshot: Any):
     """toast() with custom tag as header"""
     from htmltools import div
 
-    t = ui.toast("Body", header=div("My Header", class_="custom-header"))
+    t = ui.toast(
+        "Body", header=div("My Header", class_="custom-header"), id="custom-header-toast"
+    )
 
     tag = t.tagify()
     html = str(tag)
@@ -555,6 +564,7 @@ def test_toast_with_custom_tag_header():
     # The custom header should be rendered
     assert "custom-header" in html
     assert "My Header" in html
+    assert html == snapshot
 
 
 # ==============================================================================
@@ -591,7 +601,7 @@ def test_toast_body_and_header_structure():
     assert "Test header" in html
 
 
-def test_toast_with_both_header_icon_and_body_icon():
+def test_toast_with_both_header_icon_and_body_icon(snapshot: Any):
     """toast() with both header icon and body icon"""
     from htmltools import span
 
@@ -614,3 +624,4 @@ def test_toast_with_both_header_icon_and_body_icon():
     assert "h-icon" in html
     assert "toast-body-icon" in html
     assert "b-icon" in html
+    assert html == snapshot
