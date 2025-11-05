@@ -343,7 +343,6 @@ class ToastHeader:
         return div({"class": "toast-header"}, *contents, **self.attribs)
 
 
-@add_example("toast")
 def toast_header(
     title: TagChild,
     *args: TagChild | TagAttrs,
@@ -371,6 +370,12 @@ def toast_header(
     -------
     :
         A toast header object.
+
+		Examples
+		--------
+
+		See :func:`~shiny.ui.show_toast` for a complete example, including a toast with a
+		header.
 
     See Also
     --------
