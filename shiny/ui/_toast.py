@@ -340,6 +340,7 @@ class ToastHeader:
 
         return div({"class": "toast-header"}, *contents, **self.attribs)
 
+
 @add_example("toast")
 def toast_header(
     title: TagChild,
