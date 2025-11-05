@@ -31,7 +31,7 @@ class ToastPayload(RenderedDeps):
 
 
 class Toast:
-    """Internal class representing a toast notification."""
+    """A toast notification (internal class)."""
 
     def __init__(
         self,
@@ -63,6 +63,7 @@ class Toast:
         return type
 
     def as_payload(self, session: Session) -> ToastPayload | None:
+        """Create the Shiny custom message payload for this toast."""
         # Return None if toast has no content
         if not self.body and self.header is None:
             return None
@@ -211,32 +212,34 @@ def toast(
     Create a toast notification object.
 
     Toast notifications are temporary, non-intrusive messages that appear on screen to
-    provide feedback to users. They support multiple semantic types, flexible positioning,
-    auto-hide with progress bars, and optional headers with icons.
+    provide feedback to users. They support multiple semantic types, flexible
+    positioning, auto-hide with progress bars, and optional headers with icons.
 
     Parameters
     ----------
     *args
         Body content (HTML elements or strings). Named arguments become HTML attributes.
     header
-        Optional header content. Can be a string (auto-converted to header), a
-        ToastHeader object from :func:`~shiny.ui.toast_header`, or any TagChild.
+        Optional header content. Can be a string (auto-converted to header), or a
+        toast header object from :func:`~shiny.ui.toast_header`.
     icon
-        Optional icon element to display in the toast body (e.g., from ui.tags.i()
-        or icon library). The icon appears in the body regardless of whether a header
-        is present.
+        Optional icon element to display in the toast body.
     id
         Optional unique identifier. Auto-generated if None.
     type
-        Semantic type for styling. Options are "primary", "secondary", "success",
-        "info", "warning", "danger", "error" (alias for "danger"), "light", "dark".
+        Semantic type for styling. Options are `"primary"`, `"secondary"`, `"success"`,
+        `"info"`, `"warning"`, `"danger"`, `"error"` (alias for `"danger"`), `"light"`,
+        `"dark"`.
     duration_s
-        Auto-hide duration in seconds. Use None or 0 to disable auto-hide.
+        Auto-hide duration in seconds. Use `None` or `0` to disable auto-hide.
     position
-        Screen position. Accepts "top-left", "top left", ["top", "left"], etc.
+        Screen position. Accepts `"top-left"`, `"top left"`, `["top", "left"]`, etc.
         Valid positions are combinations of (top/middle/bottom) × (left/center/right).
     closable
-        Whether to show close button.
+        Whether to add a close button, allowing the user to close the toast. Defaults to
+        `True`. When `False` and auto-hide is disabled, the toast cannot be dismissed by
+        the user; use only when appropriate and be certain to close the toast
+        programmatically with :func:`~shiny.ui.hide_toast`.
     **kwargs
         Additional HTML attributes for the toast element.
 
@@ -355,7 +358,7 @@ def toast_header(
     *args
         Additional content to append to title.
     icon
-        Optional icon element (e.g., from ui.tags.i() or icon library).
+        Optional icon element.
     status
         Optional status text (appears muted/right-aligned, e.g., "just now").
     **kwargs
