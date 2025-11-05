@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, Iterable, Optional, TypeVar
+from typing import TYPE_CHECKING, Literal, Optional, TypeVar
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, tags
 
@@ -9,7 +9,7 @@ from .._namespaces import resolve_id_or_none
 from .._utils import drop_none, private_random_id
 from ..bookmark import restore_input
 from ..session import require_active_session
-from ..types import MISSING, MISSING_TYPE
+from ..types import ListOrTuple, MISSING, MISSING_TYPE
 from ._html_deps_shinyverse import components_dependencies
 from ._tag import consolidate_attrs
 from .css._css_unit import CssUnit, as_css_unit
@@ -176,7 +176,7 @@ class AccordionPanel:
 def accordion(
     *args: AccordionPanel | TagAttrs,
     id: Optional[str] = None,
-    open: Optional[bool | str | Iterable[str]] = None,
+    open: Optional[bool | str | ListOrTuple[str]] = None,
     multiple: bool = True,
     class_: Optional[str] = None,
     width: Optional[CssUnit] = None,
@@ -264,9 +264,9 @@ def accordion(
     elif isinstance(open, bool):
         is_open = [open] * len(panels)
     else:
-        # str | Iterable[str] -> set
-        open = {open} if isinstance(open, str) else set(open)
-        is_open = [panel._data_value in open for panel in panels]
+        # str | ListOrTuple[str] -> set
+        open_set = {open} if isinstance(open, str) else set(open)
+        is_open = [panel._data_value in open_set for panel in panels]
 
     if (not multiple) and sum(is_open) > 1:
         raise ValueError("Can't select more than one panel when `multiple = False`")

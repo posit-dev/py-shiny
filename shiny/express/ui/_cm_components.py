@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from typing import Iterable, Literal, Optional
+from typing import Literal, Optional
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, TagFunction, TagList
 
 from ... import ui
 from ..._deprecated import warn_deprecated
 from ..._docstring import add_example, no_example
-from ...types import DEPRECATED, MISSING, MISSING_TYPE
+from ...types import DEPRECATED, ListOrTuple, MISSING, MISSING_TYPE
 from ...ui._accordion import AccordionPanel
 from ...ui._card import CardItem
 from ...ui._layout_columns import BreakpointsUser
@@ -649,7 +649,7 @@ def card_footer(
 def accordion(
     *,
     id: Optional[str] = None,
-    open: Optional[bool | str | Iterable[str]] = None,
+    open: Optional[bool | str | ListOrTuple[str]] = None,
     multiple: bool = True,
     class_: Optional[str] = None,
     width: Optional[CssUnit] = None,
