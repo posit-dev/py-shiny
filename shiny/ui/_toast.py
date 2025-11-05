@@ -8,8 +8,8 @@ from typing import TYPE_CHECKING, Any, Literal, Optional
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, TagList, div, tags
 
 from .._docstring import add_example, no_example
-from .._utils import rand_hex
 from .._typing_extensions import NotRequired
+from .._utils import rand_hex
 from ..session import require_active_session
 from ..session._utils import RenderedDeps
 from ._html_deps_shinyverse import components_dependencies
