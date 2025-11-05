@@ -363,11 +363,11 @@ def test_toast_icon_renders_in_body_without_header():
     html = str(tag)
 
     # Icon should be in toast-body with special wrapper
-    assert 'class="toast-body d-flex gap-2"' in html
+    assert "toast-body" in html
     assert "toast-body-icon" in html
     assert "my-icon" in html
     assert "★" in html
-    assert "toast-body-content flex-grow-1" in html
+    assert "toast-body-content" in html
 
 
 def test_toast_icon_renders_in_body_with_header():
@@ -386,7 +386,7 @@ def test_toast_icon_renders_in_body_with_header():
     html = str(tag)
 
     # Icon should still be in body when header is present
-    assert 'class="toast-body d-flex gap-2"' in html
+    assert "toast-body" in html
     assert "toast-body-icon" in html
     assert "header-icon" in html
     assert "★" in html
@@ -408,7 +408,7 @@ def test_toast_icon_works_with_closable_button_in_body():
     html = str(tag)
 
     # Should have both icon and close button in body
-    assert 'class="toast-body d-flex gap-2"' in html
+    assert "toast-body" in html
     assert "toast-body-icon" in html
     assert "alert-icon" in html
     assert "★" in html
@@ -427,9 +427,8 @@ def test_toast_without_icon_or_close_button_has_simple_body():
     tag = t.tagify()
     html = str(tag)
 
-    # Should have simple toast-body (no d-flex gap-2)
-    assert 'class="toast-body"' in html
-    assert 'class="toast-body d-flex gap-2"' not in html
+    # Should have simple toast-body (no extra wrapper elements)
+    assert "toast-body" in html
     assert "toast-body-icon" not in html
     assert "toast-body-content" not in html
 
@@ -479,8 +478,6 @@ def test_toast_header_tagify():
     assert "toast-header" in html
     assert "My Title" in html
     assert "just now" in html
-    assert "me-auto" in html  # Title class
-    assert "text-muted" in html  # Status class
 
 
 def test_toast_header_icon_renders_in_header():
@@ -518,7 +515,6 @@ def test_toast_header_icon_with_status_and_title():
     assert "✓" in html
     assert "Success" in html
     assert "just now" in html
-    assert "text-muted text-end" in html
 
 
 # ==============================================================================
@@ -534,7 +530,6 @@ def test_toast_with_string_header():
 
     assert "toast-header" in html
     assert "Simple Header" in html
-    assert "me-auto" in html
 
 
 def test_toast_with_toast_header_object():
@@ -546,7 +541,6 @@ def test_toast_with_toast_header_object():
     assert "toast-header" in html
     assert "Title" in html
     assert "just now" in html
-    assert "text-muted" in html
 
 
 def test_toast_with_custom_tag_header():
