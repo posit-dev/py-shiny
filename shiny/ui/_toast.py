@@ -172,7 +172,8 @@ class Toast:
         return div(
             {
                 "class": " ".join(classes),
-                "id": id or self.id,  # Override id if provided to tagify
+                # Override id if provided, or generate a random ID if missing
+                "id": id or self.id or _toast_random_id(),
             },
             *contents,
             components_dependencies(),
