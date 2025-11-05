@@ -371,11 +371,11 @@ def toast_header(
     :
         A toast header object.
 
-		Examples
-		--------
+    Examples
+    --------
 
-		See :func:`~shiny.ui.show_toast` for a complete example, including a toast with a
-		header.
+    See :func:`~shiny.ui.show_toast` for a complete example, including a toast with a
+    header.
 
     See Also
     --------
