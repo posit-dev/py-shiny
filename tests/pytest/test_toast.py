@@ -555,7 +555,9 @@ def test_toast_with_custom_tag_header(snapshot: Any):
     from htmltools import div
 
     t = ui.toast(
-        "Body", header=div("My Header", class_="custom-header"), id="custom-header-toast"
+        "Body",
+        header=div("My Header", class_="custom-header"),
+        id="custom-header-toast",
     )
 
     tag = t.tagify()
