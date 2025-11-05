@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, Optional, TypeVar
+from typing import TYPE_CHECKING, Literal, Iterable, Optional, TypeVar
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, tags
 
@@ -176,7 +176,7 @@ class AccordionPanel:
 def accordion(
     *args: AccordionPanel | TagAttrs,
     id: Optional[str] = None,
-    open: Optional[bool | str | list[str]] = None,
+    open: Optional[bool | str | Iterable[str]] = None,
     multiple: bool = True,
     class_: Optional[str] = None,
     width: Optional[CssUnit] = None,
@@ -198,11 +198,12 @@ def accordion(
         value will correspond to the :func:`~shiny.ui.accordion_panel`'s
         `value` argument.
     open
-        A list of :func:`~shiny.ui.accordion_panel` values to open (i.e.,
-        show) by default. The default value of `None` will open the first
-        :func:`~shiny.ui.accordion_panel`. Use a value of `True` to open
-        all (or `False` to open none) of the items. It's only possible to open more than
-        one panel when `multiple=True`.
+        A `str` or iterable of `str` naming the :func:`~shiny.ui.accordion_panel`
+        value(s) to open (i.e., show) by default. (An empty iterable closes all panels.)
+        The default value of `None` will open the first
+        :func:`~shiny.ui.accordion_panel`. Use a value of `True` to open all (or `False`
+        to open none) of the items. It's only possible to open more than one panel when
+        `multiple=True`.
     multiple
         Whether multiple :func:`~shiny.ui.accordion_panel` can be open at
         once.
@@ -254,26 +255,18 @@ def accordion(
         binding_class_value = {"class": "bslib-accordion-input"}
 
     accordion_id = resolve_id_or_none(id)
-    has_restored_input = not isinstance(
-        restore_input(accordion_id, MISSING), MISSING_TYPE
-    )
     open = restore_input(accordion_id, open)
 
-    is_open: list[bool] = []
+    is_open: list[bool]
     if open is None:
-        is_open = [False for _ in panels]
-    elif isinstance(open, bool):
-        is_open = [open for _ in panels]
-    else:
-        if not isinstance(open, list):
-            open = [open]
-        #
-        is_open = [panel._data_value in open for panel in panels]
-
-    if not has_restored_input:
         # Open the first panel by default
-        if open is not False and len(is_open) > 0 and not any(is_open):
-            is_open[0] = True
+        is_open = [i == 0 for i in range(len(panels))]
+    elif isinstance(open, bool):
+        is_open = [open] * len(panels)
+    else:
+        # str | Iterable[str] -> set
+        open = {open} if isinstance(open, str) else set(open)
+        is_open = [panel._data_value in open for panel in panels]
 
     if (not multiple) and sum(is_open) > 1:
         raise ValueError("Can't select more than one panel when `multiple = False`")

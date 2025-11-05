@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import Iterable, Literal, Optional
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, TagFunction, TagList
 
@@ -649,7 +649,7 @@ def card_footer(
 def accordion(
     *,
     id: Optional[str] = None,
-    open: Optional[bool | str | list[str]] = None,
+    open: Optional[bool | str | Iterable[str]] = None,
     multiple: bool = True,
     class_: Optional[str] = None,
     width: Optional[CssUnit] = None,
@@ -669,11 +669,12 @@ def accordion(
         value will correspond to the :func:`~shiny.ui.accordion_panel`'s
         `value` argument.
     open
-        A list of :func:`~shiny.ui.accordion_panel` values to open (i.e.,
-        show) by default. The default value of `None` will open the first
-        :func:`~shiny.ui.accordion_panel`. Use a value of `True` to open
-        all (or `False` to open none) of the items. It's only possible to open more than
-        one panel when `multiple=True`.
+        A `str` or iterable of `str` naming the :func:`~shiny.ui.accordion_panel`
+        value(s) to open (i.e., show) by default. (An empty iterable closes all panels.)
+        The default value of `None` will open the first
+        :func:`~shiny.ui.accordion_panel`. Use a value of `True` to open all (or `False`
+        to open none) of the items. It's only possible to open more than one panel when
+        `multiple=True`.
     multiple
         Whether multiple :func:`~shiny.ui.accordion_panel` can be open at
         once.
