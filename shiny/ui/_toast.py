@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, Literal, Optional
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, TagList, div, tags
 
-from .._docstring import add_example, no_example
+from .._docstring import add_example
 from .._typing_extensions import NotRequired
 from .._utils import rand_hex
 from ..session import require_active_session
@@ -374,7 +374,7 @@ def toast_header(
     Examples
     --------
 
-    See :func:`~shiny.ui.show_toast` for a complete example, including a toast with a
+    See :func:`~shiny.ui.toast` for a complete example, including a toast with a
     header.
 
     See Also
@@ -402,7 +402,6 @@ def toast_header(
 # ==============================================================================
 
 
-@add_example()
 def show_toast(
     toast: str | Toast,
     *,
@@ -428,6 +427,12 @@ def show_toast(
     :
         The toast ID (for use with :func:`~shiny.ui.hide_toast`), or an empty string if
         the toast has no content (and no action is taken).
+
+    Examples
+    --------
+
+    See :func:`~shiny.ui.toast` for a complete example, including showing and hiding
+    toast notifications.
 
     See Also
     --------
@@ -455,7 +460,6 @@ def show_toast(
     return payload["id"]
 
 
-@no_example()
 def hide_toast(
     id: str | Toast,
     *,
@@ -482,9 +486,12 @@ def hide_toast(
     * :func:`~shiny.ui.show_toast`
     * :func:`~shiny.ui.toast`
 
-    Example
-    -------
-    See :func:`~shiny.ui.show_toast`.
+
+    Examples
+    --------
+
+    See :func:`~shiny.ui.toast` for a complete example, including showing and hiding
+    toast notifications.
     """
     session = require_active_session(session)
 
