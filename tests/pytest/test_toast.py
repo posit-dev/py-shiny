@@ -223,6 +223,8 @@ def test_toast_tagify_generates_id():
     # (The ID generation only happens in as_payload())
     tag = t.tagify()
     html_str = str(tag)
+    # Verify an auto-generated ID is present
+    assert re.search(r'id="bslib-toast-[0-9a-f]+"', html_str)
 
     # When tagify() is called with an explicit ID parameter, it should use it
     tag_with_id = t.tagify(id="test-id")
