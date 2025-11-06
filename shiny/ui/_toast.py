@@ -403,7 +403,7 @@ def toast_header(
 
 
 def show_toast(
-    toast: str | Toast,
+    toast: str | Toast | Tag | TagList,
     *,
     session: Optional[Session] = None,
 ) -> str:
@@ -442,12 +442,14 @@ def show_toast(
     """
     session = require_active_session(session)
 
-    # Convert string to toast if needed
+    # Convert to toast if needed
     the_toast: Toast
     if isinstance(toast, Toast):
         the_toast = toast
+    elif isinstance(toast, TagList):
+        the_toast = Toast(toast)
     else:
-        the_toast = Toast(TagList(*toast))
+        the_toast = Toast(TagList(toast))
 
     payload = the_toast.as_payload(session)
     if payload is None:

@@ -1,10 +1,18 @@
 import re
 from typing import Any
+from unittest.mock import MagicMock
 
 import pytest
+from htmltools import TagList, div, span
 
 from shiny import ui
-from shiny.ui._toast import Toast, ToastHeader, _normalize_toast_position
+from shiny.ui._toast import (
+    Toast,
+    ToastHeader,
+    ToastPayload,
+    _normalize_toast_position,
+    show_toast,
+)
 
 # ==============================================================================
 # Position normalization tests
@@ -190,8 +198,6 @@ def test_toast_additional_attributes():
 
 def test_toast_stores_icon_argument():
     """toast() stores icon argument"""
-    from htmltools import span
-
     icon_elem = span("★", class_="test-icon")
 
     t = ui.toast("Test message", icon=icon_elem)
@@ -356,8 +362,6 @@ def test_toast_tagify_autohide_attribute():
 
 def test_toast_icon_renders_in_body_without_header(snapshot: Any):
     """toast() icon renders in body without header"""
-    from htmltools import span
-
     icon_elem = span("★", class_="my-icon")
     t = ui.toast("You have new messages", icon=icon_elem, id="icon-toast")
 
@@ -375,8 +379,6 @@ def test_toast_icon_renders_in_body_without_header(snapshot: Any):
 
 def test_toast_icon_renders_in_body_with_header(snapshot: Any):
     """toast() icon renders in body with header"""
-    from htmltools import span
-
     icon_elem = span("★", class_="header-icon")
     t = ui.toast(
         "Message content",
@@ -398,8 +400,6 @@ def test_toast_icon_renders_in_body_with_header(snapshot: Any):
 
 def test_toast_icon_works_with_closable_button_in_body(snapshot: Any):
     """toast() icon works with closable button in body"""
-    from htmltools import span
-
     icon_elem = span("★", class_="alert-icon")
     t = ui.toast(
         "Warning message",
@@ -464,8 +464,6 @@ def test_toast_header_with_status():
 
 def test_toast_header_with_icon():
     """toast_header() works with icons"""
-    from htmltools import span
-
     icon = span(class_="test-icon")
     h = ui.toast_header("Title", icon=icon)
 
@@ -487,8 +485,6 @@ def test_toast_header_tagify():
 
 def test_toast_header_icon_renders_in_header(snapshot: Any):
     """toast_header() icon renders in header"""
-    from htmltools import span
-
     icon_elem = span("★", class_="header-test-icon")
     h = ui.toast_header("Notification", icon=icon_elem, status="now")
 
@@ -506,8 +502,6 @@ def test_toast_header_icon_renders_in_header(snapshot: Any):
 
 def test_toast_header_icon_with_status_and_title(snapshot: Any):
     """toast_header() icon with status and title"""
-    from htmltools import span
-
     icon_elem = span("✓", class_="success-icon")
     h = ui.toast_header("Success", icon=icon_elem, status="just now")
 
@@ -552,7 +546,6 @@ def test_toast_with_toast_header_object():
 
 def test_toast_with_custom_tag_header(snapshot: Any):
     """toast() with custom tag as header"""
-    from htmltools import div
 
     t = ui.toast(
         "Body",
@@ -605,8 +598,6 @@ def test_toast_body_and_header_structure():
 
 def test_toast_with_both_header_icon_and_body_icon(snapshot: Any):
     """toast() with both header icon and body icon"""
-    from htmltools import span
-
     # Both header and body can have their own icons
     header_icon = span("H", class_="h-icon")
     body_icon = span("B", class_="b-icon")
@@ -627,3 +618,146 @@ def test_toast_with_both_header_icon_and_body_icon(snapshot: Any):
     assert "toast-body-icon" in html
     assert "b-icon" in html
     assert html == snapshot
+
+
+# ==============================================================================
+# show_toast() tests
+# ==============================================================================
+
+
+def test_show_toast_with_toast_object():
+    """show_toast() accepts a Toast object"""
+
+    from unittest.mock import MagicMock
+
+    # Create mock session
+    mock_session = MagicMock()
+    mock_session._process_ui = MagicMock(
+        return_value={"html": "<div>test</div>", "deps": []}
+    )
+    messages_sent: list[dict[str, Any]] = []
+    mock_session._send_message_sync = MagicMock(
+        side_effect=lambda msg: messages_sent.append(msg)  # type: ignore[arg-type]
+    )
+
+    # Create a Toast object
+    t = ui.toast("Test message", id="test-id")
+
+    # Show the toast
+    result_id = show_toast(t, session=mock_session)
+
+    # Verify the ID is returned
+    assert result_id == "test-id"
+
+    # Verify _send_message_sync was called once
+    assert mock_session._send_message_sync.call_count == 1
+
+    # Verify the message structure
+    assert len(messages_sent) == 1
+    message = messages_sent[0]
+    assert "custom" in message
+    assert "bslib.show-toast" in message["custom"]
+    payload: ToastPayload = message["custom"]["bslib.show-toast"]
+    assert payload["id"] == "test-id"
+    assert "html" in payload
+
+
+def test_show_toast_with_string():
+    """show_toast() accepts a string and wraps it in TagList then Toast"""
+
+    from unittest.mock import MagicMock
+
+    # Create mock session
+    mock_session = MagicMock()
+    mock_session._process_ui = MagicMock(
+        return_value={"html": "<div>Hello World</div>", "deps": []}
+    )
+    messages_sent: list[dict[str, Any]] = []
+    mock_session._send_message_sync = MagicMock(
+        side_effect=lambda msg: messages_sent.append(msg)  # type: ignore[arg-type]
+    )
+
+    # Show toast with a string
+    result_id = show_toast("Hello World", session=mock_session)
+
+    # Verify an ID is returned (auto-generated)
+    assert result_id.startswith("bslib-toast-")
+
+    # Verify _send_message_sync was called once
+    assert mock_session._send_message_sync.call_count == 1
+
+    # Verify the message structure
+    assert len(messages_sent) == 1
+    message = messages_sent[0]
+    assert "custom" in message
+    assert "bslib.show-toast" in message["custom"]
+    payload: ToastPayload = message["custom"]["bslib.show-toast"]
+    assert payload["id"].startswith("bslib-toast-")
+    assert "html" in payload
+
+
+def test_show_toast_with_taglist():
+    """show_toast() accepts a TagList and wraps it in Toast"""
+    # Create mock session
+    mock_session = MagicMock()
+    mock_session._process_ui = MagicMock(
+        return_value={"html": "<div>custom</div>", "deps": []}
+    )
+    messages_sent: list[dict[str, Any]] = []
+    mock_session._send_message_sync = MagicMock(
+        side_effect=lambda msg: messages_sent.append(msg)  # type: ignore[arg-type]
+    )
+
+    # Create a TagList with custom content
+    content = TagList(div("Part 1"), span("Part 2"))
+
+    # Show toast with TagList
+    result_id = show_toast(content, session=mock_session)
+
+    # Verify an ID is returned (auto-generated)
+    assert result_id.startswith("bslib-toast-")
+
+    # Verify _send_message_sync was called once
+    assert mock_session._send_message_sync.call_count == 1
+
+    # Verify the message structure
+    assert len(messages_sent) == 1
+    message = messages_sent[0]
+    assert "custom" in message
+    assert "bslib.show-toast" in message["custom"]
+    payload: ToastPayload = message["custom"]["bslib.show-toast"]
+    assert payload["id"].startswith("bslib-toast-")
+    assert "html" in payload
+
+
+def test_show_toast_with_tag():
+    """show_toast() accepts individual tag objects"""
+    mock_session = MagicMock()
+    mock_session._process_ui = MagicMock(
+        return_value={"html": "<div>tag content</div>", "deps": []}
+    )
+    messages_sent: list[dict[str, Any]] = []
+    mock_session._send_message_sync = MagicMock(
+        side_effect=lambda msg: messages_sent.append(msg)  # type: ignore[arg-type]
+    )
+
+    # Create a single tag
+    content = div("Single tag content")
+
+    # Show toast with tag
+    result_id = show_toast(content, session=mock_session)
+
+    # Verify an ID is returned (auto-generated)
+    assert result_id.startswith("bslib-toast-")
+
+    # Verify _send_message_sync was called once
+    assert mock_session._send_message_sync.call_count == 1
+
+    # Verify the message structure
+    assert len(messages_sent) == 1
+    message = messages_sent[0]
+    assert "custom" in message
+    assert "bslib.show-toast" in message["custom"]
+    payload: ToastPayload = message["custom"]["bslib.show-toast"]
+    assert payload["id"].startswith("bslib-toast-")
+    assert "html" in payload
