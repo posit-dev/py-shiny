@@ -5,7 +5,17 @@ __all__ = ("toast", "toast_header", "show_toast", "hide_toast")
 import warnings
 from typing import TYPE_CHECKING, Any, Literal, Optional
 
-from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, TagList, TagNode, div, tags
+from htmltools import (
+    Tag,
+    TagAttrs,
+    TagAttrValue,
+    TagChild,
+    TagList,
+    TagNode,
+    div,
+    is_tag_node,
+    tags,
+)
 
 from .._docstring import add_example
 from .._typing_extensions import NotRequired
@@ -103,7 +113,7 @@ class Toast:
         )
 
         if self.header is not None:
-            if isinstance(self.header, (ToastHeader, TagNode)):
+            if isinstance(self.header, ToastHeader) or is_tag_node(self.header):
                 header = self.header
             else:
                 header = toast_header(title=self.header)
