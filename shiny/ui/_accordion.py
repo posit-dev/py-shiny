@@ -255,11 +255,17 @@ def accordion(
         binding_class_value = {"class": "bslib-accordion-input"}
 
     accordion_id = resolve_id_or_none(id)
+    has_restored_input = not isinstance(
+        restore_input(accordion_id, MISSING), MISSING_TYPE
+    )
     open = restore_input(accordion_id, open)
 
     is_open: list[bool]
-    if open is None:
-        # Open the first panel by default
+    if has_restored_input and open is None:
+        # None from restore_input indicates all panels closed
+        is_open = [False] * len(panels)
+    elif open is None:
+        # otherwise None indicates default behavior (open first panel)
         is_open = [i == 0 for i in range(len(panels))]
     elif isinstance(open, bool):
         is_open = [open] * len(panels)
