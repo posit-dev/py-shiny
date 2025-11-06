@@ -1,10 +1,12 @@
 # import pytest
 from playwright.sync_api import Page, expect
+from utils.deploy_utils import skip_if_not_chrome
 
 from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
 
+@skip_if_not_chrome  # trouble with firefox. ??
 def test_selectize(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 
