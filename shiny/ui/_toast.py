@@ -5,7 +5,7 @@ __all__ = ("toast", "toast_header", "show_toast", "hide_toast")
 import warnings
 from typing import TYPE_CHECKING, Any, Literal, Optional
 
-from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, TagList, div, tags
+from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, TagList, TagNode, div, tags
 
 from .._docstring import add_example
 from .._typing_extensions import NotRequired
@@ -37,8 +37,8 @@ class Toast:
     def __init__(
         self,
         body: TagList,
-        header: Optional[ToastHeader | TagChild] = None,
-        icon: Optional[TagChild] = None,
+        header: Optional[ToastHeader | TagNode] = None,
+        icon: Optional[TagNode] = None,
         id: Optional[str] = None,
         type: Optional[str] = None,
         duration: Optional[float] = 5000,
@@ -109,7 +109,7 @@ class Toast:
         )
 
         if self.header is not None:
-            if isinstance(self.header, (ToastHeader, Tag, TagList)):
+            if isinstance(self.header, (ToastHeader, TagNode)):
                 header = self.header
             else:
                 header = toast_header(title=self.header)
@@ -167,8 +167,8 @@ class Toast:
 @add_example()
 def toast(
     *args: TagChild | TagAttrs,
-    header: Optional[str | ToastHeader | TagChild] = None,
-    icon: Optional[TagChild] = None,
+    header: Optional[str | ToastHeader | TagNode] = None,
+    icon: Optional[TagNode] = None,
     id: Optional[str] = None,
     type: Optional[
         Literal[
@@ -269,8 +269,8 @@ class ToastHeader:
 
     def __init__(
         self,
-        title: TagChild,
-        icon: Optional[TagChild] = None,
+        title: TagNode,
+        icon: Optional[TagNode] = None,
         status: Optional[str] = None,
         attribs: Optional[dict[str, Any]] = None,
     ):
@@ -305,9 +305,9 @@ class ToastHeader:
 
 
 def toast_header(
-    title: TagChild,
+    title: TagNode,
     *args: TagChild | TagAttrs,
-    icon: Optional[TagChild] = None,
+    icon: Optional[TagNode] = None,
     status: Optional[str] = None,
     **kwargs: TagAttrValue,
 ) -> ToastHeader:
