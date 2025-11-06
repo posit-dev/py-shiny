@@ -1,9 +1,9 @@
 # import pytest
 from playwright.sync_api import Page, expect
+from utils.deploy_utils import skip_if_not_chrome
 
 from shiny.playwright import controller
 from shiny.run import ShinyAppProc
-from tests.playwright.utils.deploy_utils import skip_if_not_chrome
 
 
 @skip_if_not_chrome  # trouble with firefox. ??
