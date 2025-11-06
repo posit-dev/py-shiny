@@ -69,13 +69,9 @@ class Toast:
         if not self.body and self.header is None:
             return None
 
-        # Generate ID if not provided
         id = self.id or _toast_random_id()
-
-        # Process UI to get HTML and dependencies
         toasted = session._process_ui(self.tagify(id=id))
 
-        # Build payload with flattened structure (no nested options)
         payload: ToastPayload = {
             "html": toasted["html"],
             "deps": toasted["deps"],
@@ -84,7 +80,6 @@ class Toast:
             "autohide": self.autohide,
         }
 
-        # Add delay only if present
         if self.duration is not None:
             payload["duration"] = self.duration
 
@@ -92,7 +87,7 @@ class Toast:
 
     def tagify(self, id: Optional[str] = None) -> Tag:
         """Convert to HTML Tag object."""
-        # Determine accessibility attributes based on type
+        # Danger type requires more assertive accessibility attributes
         if self.type == "danger":
             role = "alert"
             aria_live = "assertive"
@@ -100,15 +95,12 @@ class Toast:
             role = "status"
             aria_live = "polite"
 
-        # Start building classes
         classes = ["toast"]
         if self.type:
             classes.append(f"text-bg-{self.type}")
 
-        # Build toast contents
         contents: list[TagChild] = []
 
-        # Close button for header (if needed)
         close_button = tags.button(
             type="button",
             class_="btn-close",
@@ -116,22 +108,17 @@ class Toast:
             aria_label="Close",
         )
 
-        # Build header if present
         if self.header is not None:
-            # Check if header is already a ToastHeader or just text/tags
             if isinstance(self.header, str):
-                # String header: convert to strong.me-auto
                 header_content = tags.strong(self.header, class_="me-auto")
             elif isinstance(self.header, ToastHeader):
-                # ToastHeader: use tagify with closable flag
                 header_tag = self.header.tagify(closable=self.closable)
                 contents.append(header_tag)
-                header_content = None  # Already added
+                header_content = None
             else:
-                # Otherwise pass through directly (assume user knows what they're doing)
+                # Pass through custom tags directly
                 header_content = self.header
 
-            # If we have header_content (not already added as ToastHeader), wrap it
             if header_content is not None:
                 header_tag = div(
                     {"class": "toast-header"},
@@ -140,28 +127,21 @@ class Toast:
                 )
                 contents.append(header_tag)
 
-        # Build body with optional close button
-        # * If header exists, close button goes in header
-        # * If no header, close button goes in body (if closable)
+        # Close button placement: header if present, otherwise body
         body_has_close_btn = self.header is None and self.closable
 
         if not body_has_close_btn and self.icon is None:
-            # Simple body: no close button, no icon
             body_tag = div({"class": "toast-body"}, self.body)
         else:
-            # Complex body: has close button and/or icon
             body_contents: list[TagChild] = []
 
-            # Add icon if present
             if self.icon is not None:
                 body_contents.append(tags.span(self.icon, class_="toast-body-icon"))
 
-            # Add body content
             body_contents.append(
                 div({"class": "toast-body-content flex-grow-1"}, self.body)
             )
 
-            # Add close button if needed
             if body_has_close_btn:
                 body_contents.append(close_button)
 
@@ -169,11 +149,9 @@ class Toast:
 
         contents.append(body_tag)
 
-        # Build final toast tag
         return div(
             {
                 "class": " ".join(classes),
-                # Override id if provided, or generate a random ID if missing
                 "id": id or self.id or _toast_random_id(),
             },
             *contents,
@@ -260,17 +238,12 @@ def toast(
     -------
     See :func:`~shiny.ui.show_toast`.
     """
-    # Use consolidate_attrs to properly handle TagChild | TagAttrs
     attrs, children = consolidate_attrs(*args, **kwargs)
-
-    # Process body content
     body = TagList(*children)
 
-    # Convert string header to ToastHeader if needed
     if isinstance(header, str):
         header = toast_header(header)
 
-    # Normalize position
     normalized_position = _normalize_toast_position(position)
 
     return Toast(
@@ -314,22 +287,17 @@ class ToastHeader:
         closable
             Whether to include a close button in the header.
         """
-        # Build header contents
         contents: list[TagChild] = []
 
-        # Add icon if present
         if self.icon is not None:
             contents.append(tags.span(self.icon, class_="toast-header-icon"))
 
-        # Add title (always present, with margin)
         title_classes = "me-auto ms-2" if self.icon is not None else "me-auto"
         contents.append(tags.strong(self.title, class_=title_classes))
 
-        # Add status if present
         if self.status is not None:
             contents.append(tags.small(self.status, class_="text-muted text-end"))
 
-        # Add close button if closable
         if closable:
             contents.append(
                 tags.button(
@@ -382,10 +350,8 @@ def toast_header(
     * :func:`~shiny.ui.toast`
     * :func:`~shiny.ui.show_toast`
     """
-    # Use consolidate_attrs to properly handle TagChild | TagAttrs
     attrs, children = consolidate_attrs(*args, **kwargs)
 
-    # Combine title with additional children
     if children:
         title = TagList(title, *children)
 
@@ -442,7 +408,6 @@ def show_toast(
     """
     session = require_active_session(session)
 
-    # Convert to toast if needed
     the_toast: Toast
     if isinstance(toast, Toast):
         the_toast = toast
@@ -456,7 +421,6 @@ def show_toast(
         warnings.warn("Toast has no content (empty body and no header)", stacklevel=2)
         return ""
 
-    # Send message to client (as a custom message)
     session._send_message_sync({"custom": {"bslib.show-toast": payload}})
 
     return payload["id"]
@@ -499,7 +463,6 @@ def hide_toast(
 
     the_id: str | None
 
-    # Extract ID from Toast object if needed
     if isinstance(id, Toast):
         the_id = id.id
     else:
@@ -508,7 +471,6 @@ def hide_toast(
     if the_id is None:
         raise ValueError("Cannot hide toast without an ID")
 
-    # Send message to client
     session._send_message_sync({"custom": {"bslib.hide-toast": {"id": the_id}}})
 
     return the_id
@@ -529,22 +491,17 @@ def _normalize_toast_position(
     Returns: "top-left" (always kebab-case)
     Validates: Must have one vertical (top/middle/bottom) and one horizontal (left/center/right)
     """
-    # Default position
     if position is None or position == "":
         return "bottom-right"
 
-    # Convert list/tuple to space-separated string
     if isinstance(position, (list, tuple)):
         position = " ".join(str(p) for p in position)
 
-    # Split by hyphens or spaces and normalize case
     parts = position.replace("-", " ").lower().split()
 
-    # Valid components
     vertical_options = {"top", "middle", "bottom"}
     horizontal_options = {"left", "center", "right"}
 
-    # Extract vertical and horizontal components
     vertical = None
     horizontal = None
 
@@ -568,7 +525,6 @@ def _normalize_toast_position(
                 f"Valid horizontal: {', '.join(sorted(horizontal_options))}."
             )
 
-    # Validate we have both components
     if vertical is None:
         raise ValueError(
             f"Position must include a vertical component (top, middle, or bottom): {position}"
@@ -578,7 +534,6 @@ def _normalize_toast_position(
             f"Position must include a horizontal component (left, center, or right): {position}"
         )
 
-    # Return in kebab-case format: vertical-horizontal
     return f"{vertical}-{horizontal}"
 
 

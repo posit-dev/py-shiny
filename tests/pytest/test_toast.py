@@ -175,15 +175,12 @@ def test_toast_closable_with_autohide():
 
 def test_toast_position_formats():
     """toast() works with flexible position formats"""
-    # Space-separated
     t1 = ui.toast("Test", position="top left")
     assert t1.position == "top-left"
 
-    # Reversed order
     t2 = ui.toast("Test", position="right bottom")
     assert t2.position == "bottom-right"
 
-    # List
     t3 = ui.toast("Test", position=["middle", "center"])
     assert t3.position == "middle-center"
 
@@ -204,7 +201,6 @@ def test_toast_stores_icon_argument():
 
     assert isinstance(t, Toast)
     assert t.icon is not None
-    # Verify it's the icon we passed in (check class attribute)
     assert hasattr(t.icon, "attrs")
     assert "test-icon" in str(t.icon)
     assert "★" in str(t.icon)
@@ -222,18 +218,14 @@ def test_toast_icon_is_none_by_default():
 
 
 def test_toast_tagify_generates_id():
-    """Toast.tagify() uses None ID if not provided (ID generated in as_payload())"""
+    """Toast.tagify() generates ID when none provided"""
     t = ui.toast("Test message", id=None)
     assert t.id is None
 
-    # When tagify() is called directly without an ID, it will use None
-    # (The ID generation only happens in as_payload())
     tag = t.tagify()
     html_str = str(tag)
-    # Verify an auto-generated ID is present
     assert re.search(r'id="bslib-toast-[0-9a-f]+"', html_str)
 
-    # When tagify() is called with an explicit ID parameter, it should use it
     tag_with_id = t.tagify(id="test-id")
     html_with_id = str(tag_with_id)
     assert 'id="test-id"' in html_with_id
@@ -243,20 +235,17 @@ def test_toast_id_generated_in_as_payload():
     """Toast ID is generated only when as_payload() is called, ensuring uniqueness"""
     from unittest.mock import MagicMock
 
-    # Create toasts without IDs - they should store None
     t1 = ui.toast("Message 1")
     t2 = ui.toast("Message 2")
 
     assert t1.id is None
     assert t2.id is None
 
-    # Create mock session
     mock_session = MagicMock()
     mock_session._process_ui = MagicMock(
         return_value={"html": "<div>test</div>", "deps": []}
     )
 
-    # Generate payloads - IDs should be generated and different
     payload1 = t1.as_payload(mock_session)
     payload2 = t2.as_payload(mock_session)
 
@@ -264,9 +253,8 @@ def test_toast_id_generated_in_as_payload():
     assert payload2 is not None
     assert payload1["id"].startswith("bslib-toast-")
     assert payload2["id"].startswith("bslib-toast-")
-    assert payload1["id"] != payload2["id"]  # Different IDs
+    assert payload1["id"] != payload2["id"]
 
-    # Original toast objects should still have None as ID
     assert t1.id is None
     assert t2.id is None
 
@@ -278,17 +266,15 @@ def test_toast_with_user_provided_id_stable():
     t = ui.toast("Message", id="my-stable-id")
     assert t.id == "my-stable-id"
 
-    # Create mock session
     mock_session = MagicMock()
     mock_session._process_ui = MagicMock(
         return_value={"html": "<div>test</div>", "deps": []}
     )
 
-    # Payload should use the stable ID
     payload = t.as_payload(mock_session)
     assert payload is not None
     assert payload["id"] == "my-stable-id"
-    assert t.id == "my-stable-id"  # Should remain unchanged
+    assert t.id == "my-stable-id"
 
 
 def test_toast_tagify_accessibility_danger():
@@ -303,13 +289,11 @@ def test_toast_tagify_accessibility_danger():
 
 def test_toast_tagify_accessibility_other():
     """Toast.tagify() respects accessibility attributes for non-danger types"""
-    # Info type gets polite role
     t_info = ui.toast("Info message", type="info", id="info-toast")
     html_info = str(t_info.tagify())
     assert 'role="status"' in html_info
     assert 'aria-live="polite"' in html_info
 
-    # Default (no type) gets polite role
     t_default = ui.toast("Default message", id="default-toast")
     html_default = str(t_default.tagify())
     assert 'role="status"' in html_default
@@ -329,23 +313,19 @@ def test_toast_tagify_type_classes():
 
 def test_toast_tagify_close_button_placement():
     """Toast.tagify() includes close button appropriately"""
-    # With header, closable
     t_header = ui.toast("Message", header="Title", closable=True, id="header-toast")
     html_header = str(t_header.tagify())
     assert "btn-close" in html_header
     assert "toast-header" in html_header
 
-    # Without header, closable
     t_no_header = ui.toast("Message", closable=True, id="no-header-toast")
     html_no_header = str(t_no_header.tagify())
     assert "btn-close" in html_no_header
 
-    # Non-closable with autohide
     t_non_closable = ui.toast(
         "Message", closable=False, duration_s=5, id="non-closable-toast"
     )
     html_non_closable = str(t_non_closable.tagify())
-    # Should not have close button
     assert "btn-close" not in html_non_closable
 
 
@@ -368,7 +348,6 @@ def test_toast_icon_renders_in_body_without_header(snapshot: Any):
     tag = t.tagify()
     html = str(tag)
 
-    # Icon should be in toast-body with special wrapper
     assert "toast-body" in html
     assert "toast-body-icon" in html
     assert "my-icon" in html
@@ -390,7 +369,6 @@ def test_toast_icon_renders_in_body_with_header(snapshot: Any):
     tag = t.tagify()
     html = str(tag)
 
-    # Icon should still be in body when header is present
     assert "toast-body" in html
     assert "toast-body-icon" in html
     assert "header-icon" in html
@@ -411,7 +389,6 @@ def test_toast_icon_works_with_closable_button_in_body(snapshot: Any):
     tag = t.tagify()
     html = str(tag)
 
-    # Should have both icon and close button in body
     assert "toast-body" in html
     assert "toast-body-icon" in html
     assert "alert-icon" in html
@@ -432,7 +409,6 @@ def test_toast_without_icon_or_close_button_has_simple_body():
     tag = t.tagify()
     html = str(tag)
 
-    # Should have simple toast-body (no extra wrapper elements)
     assert "toast-body" in html
     assert "toast-body-icon" not in html
     assert "toast-body-content" not in html
@@ -492,7 +468,6 @@ def test_toast_header_icon_renders_in_header(snapshot: Any):
     tag = t.tagify()
     html = str(tag)
 
-    # Icon should be in toast-header with wrapper
     assert "toast-header" in html
     assert "toast-header-icon" in html
     assert "header-test-icon" in html
@@ -509,7 +484,6 @@ def test_toast_header_icon_with_status_and_title(snapshot: Any):
     tag = t.tagify()
     html = str(tag)
 
-    # Should have all three elements: icon, title, status
     assert "toast-header-icon" in html
     assert "success-icon" in html
     assert "✓" in html
@@ -556,7 +530,6 @@ def test_toast_with_custom_tag_header(snapshot: Any):
     tag = t.tagify()
     html = str(tag)
 
-    # The custom header should be rendered
     assert "custom-header" in html
     assert "My Header" in html
     assert html == snapshot
@@ -586,7 +559,6 @@ def test_toast_body_and_header_structure():
     tag = t.tagify()
     html = str(tag)
 
-    # Check basic structure
     assert 'id="test-toast"' in html
     assert 'class="toast' in html
     assert "text-bg-success" in html
@@ -598,7 +570,6 @@ def test_toast_body_and_header_structure():
 
 def test_toast_with_both_header_icon_and_body_icon(snapshot: Any):
     """toast() with both header icon and body icon"""
-    # Both header and body can have their own icons
     header_icon = span("H", class_="h-icon")
     body_icon = span("B", class_="b-icon")
 
@@ -612,7 +583,6 @@ def test_toast_with_both_header_icon_and_body_icon(snapshot: Any):
     tag = t.tagify()
     html = str(tag)
 
-    # Both icons should be present in different locations
     assert "toast-header-icon" in html
     assert "h-icon" in html
     assert "toast-body-icon" in html
@@ -630,7 +600,6 @@ def test_show_toast_with_toast_object():
 
     from unittest.mock import MagicMock
 
-    # Create mock session
     mock_session = MagicMock()
     mock_session._process_ui = MagicMock(
         return_value={"html": "<div>test</div>", "deps": []}
@@ -640,19 +609,12 @@ def test_show_toast_with_toast_object():
         side_effect=lambda msg: messages_sent.append(msg)  # type: ignore[arg-type]
     )
 
-    # Create a Toast object
     t = ui.toast("Test message", id="test-id")
-
-    # Show the toast
     result_id = show_toast(t, session=mock_session)
 
-    # Verify the ID is returned
     assert result_id == "test-id"
-
-    # Verify _send_message_sync was called once
     assert mock_session._send_message_sync.call_count == 1
 
-    # Verify the message structure
     assert len(messages_sent) == 1
     message = messages_sent[0]
     assert "custom" in message
@@ -667,7 +629,6 @@ def test_show_toast_with_string():
 
     from unittest.mock import MagicMock
 
-    # Create mock session
     mock_session = MagicMock()
     mock_session._process_ui = MagicMock(
         return_value={"html": "<div>Hello World</div>", "deps": []}
@@ -677,16 +638,11 @@ def test_show_toast_with_string():
         side_effect=lambda msg: messages_sent.append(msg)  # type: ignore[arg-type]
     )
 
-    # Show toast with a string
     result_id = show_toast("Hello World", session=mock_session)
 
-    # Verify an ID is returned (auto-generated)
     assert result_id.startswith("bslib-toast-")
-
-    # Verify _send_message_sync was called once
     assert mock_session._send_message_sync.call_count == 1
 
-    # Verify the message structure
     assert len(messages_sent) == 1
     message = messages_sent[0]
     assert "custom" in message
@@ -698,7 +654,6 @@ def test_show_toast_with_string():
 
 def test_show_toast_with_taglist():
     """show_toast() accepts a TagList and wraps it in Toast"""
-    # Create mock session
     mock_session = MagicMock()
     mock_session._process_ui = MagicMock(
         return_value={"html": "<div>custom</div>", "deps": []}
@@ -708,19 +663,12 @@ def test_show_toast_with_taglist():
         side_effect=lambda msg: messages_sent.append(msg)  # type: ignore[arg-type]
     )
 
-    # Create a TagList with custom content
     content = TagList(div("Part 1"), span("Part 2"))
-
-    # Show toast with TagList
     result_id = show_toast(content, session=mock_session)
 
-    # Verify an ID is returned (auto-generated)
     assert result_id.startswith("bslib-toast-")
-
-    # Verify _send_message_sync was called once
     assert mock_session._send_message_sync.call_count == 1
 
-    # Verify the message structure
     assert len(messages_sent) == 1
     message = messages_sent[0]
     assert "custom" in message
@@ -741,19 +689,12 @@ def test_show_toast_with_tag():
         side_effect=lambda msg: messages_sent.append(msg)  # type: ignore[arg-type]
     )
 
-    # Create a single tag
     content = div("Single tag content")
-
-    # Show toast with tag
     result_id = show_toast(content, session=mock_session)
 
-    # Verify an ID is returned (auto-generated)
     assert result_id.startswith("bslib-toast-")
-
-    # Verify _send_message_sync was called once
     assert mock_session._send_message_sync.call_count == 1
 
-    # Verify the message structure
     assert len(messages_sent) == 1
     message = messages_sent[0]
     assert "custom" in message
