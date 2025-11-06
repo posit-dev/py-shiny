@@ -9,7 +9,7 @@ from .._namespaces import resolve_id_or_none
 from .._utils import drop_none, private_random_id
 from ..bookmark import restore_input
 from ..session import require_active_session
-from ..types import ListOrTuple, MISSING, MISSING_TYPE
+from ..types import MISSING, MISSING_TYPE, ListOrTuple
 from ._html_deps_shinyverse import components_dependencies
 from ._tag import consolidate_attrs
 from .css._css_unit import CssUnit, as_css_unit

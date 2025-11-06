@@ -9,7 +9,7 @@ from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, TagFunction, TagLis
 from ... import ui
 from ..._deprecated import warn_deprecated
 from ..._docstring import add_example, no_example
-from ...types import DEPRECATED, ListOrTuple, MISSING, MISSING_TYPE
+from ...types import DEPRECATED, MISSING, MISSING_TYPE, ListOrTuple
 from ...ui._accordion import AccordionPanel
 from ...ui._card import CardItem
 from ...ui._layout_columns import BreakpointsUser
