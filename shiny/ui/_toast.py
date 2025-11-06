@@ -109,23 +109,23 @@ class Toast:
         )
 
         if self.header is not None:
-            if isinstance(self.header, str):
-                header_content = tags.strong(self.header, class_="me-auto")
-            elif isinstance(self.header, ToastHeader):
-                header_tag = self.header.tagify(closable=self.closable)
-                contents.append(header_tag)
-                header_content = None
+            if isinstance(self.header, (ToastHeader, Tag, TagList)):
+                header = self.header
             else:
-                # Pass through custom tags directly
-                header_content = self.header
+                header = toast_header(title=self.header)
 
-            if header_content is not None:
-                header_tag = div(
-                    {"class": "toast-header"},
-                    header_content,
-                    close_button if self.closable else None,
+            if isinstance(header, ToastHeader):
+                header_tag = header.tagify(
+                    close_button=close_button if self.closable else None
                 )
-                contents.append(header_tag)
+            else:
+                header_tag = div(
+                    header,
+                    close_button if self.closable else None,
+                    class_="toast-header",
+                )
+
+            contents.append(header_tag)
 
         # Close button placement: header if present, otherwise body
         body_has_close_btn = self.header is None and self.closable
@@ -270,16 +270,16 @@ class ToastHeader:
     def __init__(
         self,
         title: TagChild,
-        icon: Optional[TagChild],
-        status: Optional[str],
-        attribs: dict[str, Any],
+        icon: Optional[TagChild] = None,
+        status: Optional[str] = None,
+        attribs: Optional[dict[str, Any]] = None,
     ):
         self.title = title
         self.icon = icon
         self.status = status
-        self.attribs = attribs
+        self.attribs = attribs or {}
 
-    def tagify(self, closable: bool = False) -> Tag:
+    def tagify(self, close_button: Optional[Tag] = None) -> Tag:
         """Convert to HTML Tag object.
 
         Parameters
@@ -298,15 +298,8 @@ class ToastHeader:
         if self.status is not None:
             contents.append(tags.small(self.status, class_="text-muted text-end"))
 
-        if closable:
-            contents.append(
-                tags.button(
-                    type="button",
-                    class_="btn-close",
-                    data_bs_dismiss="toast",
-                    aria_label="Close",
-                )
-            )
+        if close_button is not None:
+            contents.append(close_button)
 
         return div({"class": "toast-header"}, *contents, **self.attribs)
 
