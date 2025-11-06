@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Fixed `ui.tooltip()`'s `options` parameter to properly pass Bootstrap tooltip options to the underlying web component. (#2101)
 
+* Revised `accordion()`'s `open` logic to close all panels when an empty list is passed. (#2109)
+
 ## [1.5.0] - 2025-09-11
 
 ### New features

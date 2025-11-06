@@ -9,7 +9,7 @@ from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, TagFunction, TagLis
 from ... import ui
 from ..._deprecated import warn_deprecated
 from ..._docstring import add_example, no_example
-from ...types import DEPRECATED, MISSING, MISSING_TYPE
+from ...types import DEPRECATED, MISSING, MISSING_TYPE, ListOrTuple
 from ...ui._accordion import AccordionPanel
 from ...ui._card import CardItem
 from ...ui._layout_columns import BreakpointsUser
@@ -649,7 +649,7 @@ def card_footer(
 def accordion(
     *,
     id: Optional[str] = None,
-    open: Optional[bool | str | list[str]] = None,
+    open: Optional[bool | str | ListOrTuple[str]] = None,
     multiple: bool = True,
     class_: Optional[str] = None,
     width: Optional[CssUnit] = None,
@@ -669,11 +669,12 @@ def accordion(
         value will correspond to the :func:`~shiny.ui.accordion_panel`'s
         `value` argument.
     open
-        A list of :func:`~shiny.ui.accordion_panel` values to open (i.e.,
-        show) by default. The default value of `None` will open the first
-        :func:`~shiny.ui.accordion_panel`. Use a value of `True` to open
-        all (or `False` to open none) of the items. It's only possible to open more than
-        one panel when `multiple=True`.
+        A `str` or list of `str` naming the :func:`~shiny.ui.accordion_panel`
+        value(s) to open (i.e., show) by default. (An empty list closes all panels.)
+        The default value of `None` will open the first
+        :func:`~shiny.ui.accordion_panel`. Use a value of `True` to open all (or `False`
+        to open none) of the items. It's only possible to open more than one panel when
+        `multiple=True`.
     multiple
         Whether multiple :func:`~shiny.ui.accordion_panel` can be open at
         once.
