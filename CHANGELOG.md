@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
-* Added toast notification system with `ui.toast()`, `ui.toast_header()`, `ui.show_toast()`, and `ui.hide_toast()`. Toast notifications are temporary, non-intrusive messages that support multiple semantic types (success, warning, error, etc.), flexible positioning (9 positions: top/middle/bottom × left/center/right), auto-hide with configurable duration, optional headers with icons, and programmatic control. (#XXXX)
+* Added toast notification system with `ui.toast()`, `ui.toast_header()`, `ui.show_toast()`, and `ui.hide_toast()`. Toast notifications are temporary, non-intrusive messages that support multiple semantic types (success, warning, error, etc.), flexible positioning (9 positions: top/middle/bottom × left/center/right), auto-hide with configurable duration, optional headers with icons, and programmatic control. (#2111)
 
 * Added a new `input_submit_textarea()` input element, which is similar to `input_text_area()`, but includes a submit button to only submit the text changes to the server on click. This is especially useful when the input text change triggers a long-running operation and/or the user wants to type longer-form input and review it before submitting it. (#2099)
 

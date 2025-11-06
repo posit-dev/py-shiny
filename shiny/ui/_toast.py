@@ -220,7 +220,7 @@ def toast(
     Parameters
     ----------
     *args
-        Body content (HTML elements or strings). Named arguments become HTML attributes.
+        Body content (HTML elements or strings).
     header
         Optional header content. Can be a string (auto-converted to header), or a
         toast header object from :func:`~shiny.ui.toast_header`.
