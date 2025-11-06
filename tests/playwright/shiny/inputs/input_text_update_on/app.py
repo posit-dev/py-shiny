@@ -73,13 +73,13 @@ def text_input_ui(update_on: Literal["change", "blur"] = "change"):
         ui.h2(f'updateOn="{update_on}"'),
         ui.layout_columns(
             ui.input_text("txt", "Text", value="Hello", update_on=update_on),
-            ui.div("Text", ui.output_text_verbatim("value_txt")),
+            ui.div("Text", ui.output_code("value_txt")),
             ui.input_text_area("txtarea", "Text Area", update_on=update_on),
-            ui.div("Text Area", ui.output_text_verbatim("value_txtarea")),
+            ui.div("Text Area", ui.output_code("value_txtarea")),
             ui.input_numeric("num", "Numeric", value=1, update_on=update_on),
-            ui.div("Numeric", ui.output_text_verbatim("value_num")),
+            ui.div("Numeric", ui.output_code("value_num")),
             ui.input_password("pwd", "Password", update_on=update_on),
-            ui.div("Password", ui.output_text_verbatim("value_pwd")),
+            ui.div("Password", ui.output_code("value_pwd")),
             col_widths=6,
         ),
         ui.input_action_button("update_text", "Update Text"),
@@ -91,19 +91,19 @@ def text_input_ui(update_on: Literal["change", "blur"] = "change"):
 
 @module.server
 def text_input_server(input: Inputs, output: Outputs, session: Session):
-    @render.text
+    @render.code
     def value_txt() -> str:
         return input.txt()
 
-    @render.text
+    @render.code
     def value_txtarea() -> str:
         return input.txtarea()
 
-    @render.text
+    @render.code
     def value_num() -> str:
         return str(input.num())
 
-    @render.text
+    @render.code
     def value_pwd() -> str:
         return input.pwd()
 

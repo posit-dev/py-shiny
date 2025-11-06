@@ -29,15 +29,15 @@ def mod_ui():
         ui.br(),
         ui.output_data_frame("iris_df"),
         ui.h2("Data view indices"),
-        ui.output_text_verbatim("data_view_rows"),
+        ui.output_code("data_view_rows"),
         ui.h2("Indices when view_selected=True"),
-        ui.output_text_verbatim("data_view_selected_true"),
+        ui.output_code("data_view_selected_true"),
         ui.h2("Indices when view_selected=False"),
-        ui.output_text_verbatim("data_view_selected_false"),
+        ui.output_code("data_view_selected_false"),
         ui.h2("Show selected cell"),
-        ui.output_text_verbatim("cell_selection"),
+        ui.output_code("cell_selection"),
         ui.h2("Type:"),
-        ui.output_text_verbatim("df_type"),
+        ui.output_code("df_type"),
     )
 
 
