@@ -669,8 +669,8 @@ def accordion(
         value will correspond to the :func:`~shiny.ui.accordion_panel`'s
         `value` argument.
     open
-        A `str` or iterable of `str` naming the :func:`~shiny.ui.accordion_panel`
-        value(s) to open (i.e., show) by default. (An empty iterable closes all panels.)
+        A `str` or list of `str` naming the :func:`~shiny.ui.accordion_panel`
+        value(s) to open (i.e., show) by default. (An empty list closes all panels.)
         The default value of `None` will open the first
         :func:`~shiny.ui.accordion_panel`. Use a value of `True` to open all (or `False`
         to open none) of the items. It's only possible to open more than one panel when
