@@ -383,11 +383,11 @@ def _accordion_panel_action(
     *,
     id: str,
     method: str,
-    values: bool | str | list[str],
+    values: bool | str | ListOrTuple[str],
     session: Session | None,
 ) -> None:
     if not isinstance(values, bool):
-        if not isinstance(values, list):
+        if not isinstance(values, (list, tuple)):
             values = [values]
         _assert_list_str(values)
 
@@ -403,7 +403,7 @@ def _accordion_panel_action(
 def update_accordion(
     id: str,
     *,
-    show: bool | str | list[str],
+    show: bool | str | ListOrTuple[str],
     session: Optional[Session] = None,
 ) -> None:
     """
@@ -501,7 +501,7 @@ def insert_accordion_panel(
 @add_example()
 def remove_accordion_panel(
     id: str,
-    target: str | list[str],
+    target: str | ListOrTuple[str],
     session: Optional[Session] = None,
 ) -> None:
     """
@@ -512,7 +512,8 @@ def remove_accordion_panel(
     id
         A string that matches an existing :func:`~shiny.ui.accordion`'s `id`.
     target
-        The `value` of an existing panel to remove.
+        A string or list of strings used to identify particular
+        :func:`~shiny.ui.accordion_panel`(s) by their `value`.
     session
         A Shiny session object (the default should almost always be used).
 
@@ -528,7 +529,7 @@ def remove_accordion_panel(
     * :func:`~shiny.ui.insert_accordion_panel`
     * :func:`~shiny.ui.update_accordion_panel`
     """
-    if not isinstance(target, list):
+    if not isinstance(target, (list, tuple)):
         target = [target]
 
     _send_panel_message(
@@ -631,8 +632,8 @@ def _assert_str(x: str) -> str:
     return x
 
 
-def _assert_list_str(x: list[str]) -> list[str]:
-    if not isinstance(x, list):
+def _assert_list_str(x: ListOrTuple[str]) -> ListOrTuple[str]:
+    if not isinstance(x, (list, tuple)):
         raise TypeError(f"Expected list, got {type(x)}")
     for i, x_i in enumerate(x):
         if not isinstance(x_i, str):
