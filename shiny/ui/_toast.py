@@ -3,7 +3,7 @@ from __future__ import annotations
 __all__ = ("toast", "toast_header", "show_toast", "hide_toast")
 
 import warnings
-from typing import TYPE_CHECKING, Any, Literal, Optional
+from typing import TYPE_CHECKING, Any, Literal, Optional, overload
 
 from htmltools import (
     Tag,
@@ -60,7 +60,7 @@ class Toast:
         self.header = header
         self.icon = icon
         self.id = id
-        self.type = type if type != "error" else "danger"
+        self.type = _normalize_toast_type(type)
         self.duration = duration
         self.autohide = duration is not None and duration > 0
         self.position = _normalize_toast_position(position)
@@ -476,6 +476,21 @@ def hide_toast(
 # ==============================================================================
 # Helper Functions
 # ==============================================================================
+
+
+@overload
+def _normalize_toast_type(type: str) -> str: ...
+
+
+@overload
+def _normalize_toast_type(type: None) -> None: ...
+
+
+def _normalize_toast_type(type: Optional[str]) -> Optional[str]:
+    """Normalize toast type, converting "error" to "danger"."""
+    if type == "error":
+        return "danger"
+    return type
 
 
 def _normalize_toast_position(

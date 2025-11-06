@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-from htmltools import TagList
 from playwright.sync_api import Locator, Page
 from playwright.sync_api import expect as playwright_expect
 
-from ...ui._toast import Toast as ToastUI
-from ...ui._toast import _normalize_toast_position
+from ...ui._toast import _normalize_toast_position, _normalize_toast_type
 from .._types import PatternOrStr, Timeout
 from ..expect._internal import (
     expect_attribute_to_have_value as _expect_attribute_to_have_value,
@@ -111,7 +109,7 @@ class Toast(UiBase):
         # Use regex pattern to match the class within the space-separated list
         import re
 
-        value = ToastUI(TagList(), type=value).type or value
+        value = _normalize_toast_type(value)
 
         pattern = re.compile(rf"(^|\s)text-bg-{re.escape(value)}(\s|$)")
         playwright_expect(self.loc).to_have_attribute(
