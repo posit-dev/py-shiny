@@ -50,18 +50,12 @@ class Toast:
         self.header = header
         self.icon = icon
         self.id = id
-        self.type = self._normalize_type(type)
+        self.type = type if type != "error" else "danger"
         self.duration = duration
         self.autohide = duration is not None and duration > 0
         self.position = _normalize_toast_position(position)
         self.closable = closable
         self.attribs = attribs if attribs is not None else {}
-
-    def _normalize_type(self, type: Optional[str]) -> Optional[str]:
-        """Normalize type, handling 'error' -> 'danger' alias."""
-        if type == "error":
-            return "danger"
-        return type
 
     def as_payload(self, session: Session) -> ToastPayload | None:
         """Create the Shiny custom message payload for this toast."""
