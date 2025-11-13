@@ -3,7 +3,7 @@ from __future__ import annotations
 from playwright.sync_api import Locator, Page
 from playwright.sync_api import expect as playwright_expect
 
-from ...ui._toast import _normalize_toast_position, _normalize_toast_type
+from ...ui._toast import ToastType, _normalize_toast_position, _normalize_toast_type
 from .._types import PatternOrStr, Timeout
 from ..expect._internal import (
     expect_attribute_to_have_value as _expect_attribute_to_have_value,
@@ -94,7 +94,7 @@ class Toast(UiBase):
         """
         playwright_expect(self.loc_header).to_have_text(value, timeout=timeout)
 
-    def expect_type(self, value: str, *, timeout: Timeout = None) -> None:
+    def expect_type(self, value: ToastType, *, timeout: Timeout = None) -> None:
         """
         Expects the toast to have the specified type class.
 

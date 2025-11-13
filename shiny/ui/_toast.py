@@ -28,6 +28,19 @@ from ._tag import consolidate_attrs
 if TYPE_CHECKING:
     from ..session import Session
 
+# Valid toast types
+ToastType = Literal[
+    "primary",
+    "secondary",
+    "success",
+    "info",
+    "warning",
+    "danger",
+    "error",  # alias for "danger", handled in normalization
+    "light",
+    "dark",
+]
+
 
 class ToastPayload(RenderedDeps):
     id: str
@@ -50,7 +63,7 @@ class Toast:
         header: Optional[ToastHeader | TagNode] = None,
         icon: Optional[TagNode] = None,
         id: Optional[str] = None,
-        type: Optional[str] = None,
+        type: Optional[ToastType] = None,
         duration: Optional[float] = 5000,
         position: str = "top-right",
         closable: bool = True,
@@ -174,19 +187,7 @@ def toast(
     header: Optional[str | ToastHeader | TagNode] = None,
     icon: Optional[TagNode] = None,
     id: Optional[str] = None,
-    type: Optional[
-        Literal[
-            "primary",
-            "secondary",
-            "success",
-            "info",
-            "warning",
-            "danger",
-            "error",
-            "light",
-            "dark",
-        ]
-    ] = None,
+    type: Optional[ToastType] = None,
     duration_s: Optional[int | float] = 5,
     position: str | list[str] | tuple[str, ...] = "top-right",
     closable: bool = True,
@@ -479,14 +480,14 @@ def hide_toast(
 
 
 @overload
-def _normalize_toast_type(type: str) -> str: ...
+def _normalize_toast_type(type: ToastType) -> ToastType: ...
 
 
 @overload
 def _normalize_toast_type(type: None) -> None: ...
 
 
-def _normalize_toast_type(type: Optional[str]) -> Optional[str]:
+def _normalize_toast_type(type: Optional[ToastType]) -> Optional[ToastType]:
     """Normalize toast type, converting "error" to "danger"."""
     if type == "error":
         return "danger"
