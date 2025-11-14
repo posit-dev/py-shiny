@@ -66,6 +66,7 @@ from ._overlay import (
     Popover,
     Tooltip,
 )
+from ._toast import Toast
 
 __all__ = [
     "InputActionButton",
@@ -104,6 +105,7 @@ __all__ = [
     "AccordionPanel",
     "Sidebar",
     "Popover",
+    "Toast",
     "Tooltip",
     "NavPanel",
     "NavsetBar",

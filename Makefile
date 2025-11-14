@@ -112,6 +112,10 @@ format-isort: FORCE
 	@echo "-------- Sorting imports with isort --------"
 	isort .
 
+test-update-snapshots: FORCE ## Update test snapshots
+	@echo "-------- Updating test snapshots ----------"
+	pytest --snapshot-update
+
 docs: FORCE ## docs: build docs with quartodoc
 	@echo "-------- Building docs with quartodoc ------"
 	@cd docs && make quartodoc

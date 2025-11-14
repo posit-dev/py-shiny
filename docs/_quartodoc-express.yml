@@ -148,6 +148,10 @@ quartodoc:
         - express.ui.help_text
         - express.ui.notification_show
         - express.ui.notification_remove
+        - express.ui.toast
+        - express.ui.toast_header
+        - express.ui.show_toast
+        - express.ui.hide_toast
         - express.ui.modal
         - express.ui.modal_show
         - express.ui.modal_remove
