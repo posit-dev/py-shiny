@@ -525,6 +525,7 @@ Python style guide preferences:
 Key patterns:
 - `Tag` objects are mutable by default, use `copy.copy()` if you need to modify
 - Use `.add_class()`, `.add_style()`, `.attrs` to add CSS classes, styles, and HTML attributes
+- Create new tags with `ui.tags` and add attributes and children directly, e.g. `ui.tags.div(class_="fw-bold", ...)`
 - Use `css()` helper for inline styles
 - Tag children can be strings, Tags, TagLists, or None
 
