@@ -237,6 +237,10 @@ quartodoc:
         - ui.help_text
         - ui.notification_show
         - ui.notification_remove
+        - ui.toast
+        - ui.toast_header
+        - ui.show_toast
+        - ui.hide_toast
         - ui.modal
         - ui.modal_show
         - ui.modal_remove
