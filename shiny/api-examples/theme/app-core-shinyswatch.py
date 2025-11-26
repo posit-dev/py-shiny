@@ -9,7 +9,7 @@ app_ui = ui.page_sidebar(
         title="Parameters",
     ),
     ui.h2("Output"),
-    ui.output_text_verbatim("txt"),
+    ui.output_code("txt"),
     ui.markdown(filler_text),
     title="Theme Example",
     theme=shinyswatch.theme.slate(),
@@ -17,7 +17,7 @@ app_ui = ui.page_sidebar(
 
 
 def server(input, output, session):
-    @render.text
+    @render.code
     def txt():
         return f"n*2 is {input.n() * 2}"
 
