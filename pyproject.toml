@@ -128,7 +128,7 @@ add-test = [
     "chatlas[anthropic,openai]",
     "openai>=1.104.1",
     "anthropic>=0.62.0",
-    "inspect-ai>=0.3.129",
+    "inspect-ai>=0.3.129;python_version>='3.10'",
     "pytest-timeout",
     "pytest>=6.2.4",
     "pytest-playwright>=0.5.2",

@@ -9,7 +9,7 @@ from .._namespaces import resolve_id_or_none
 from .._utils import drop_none, private_random_id
 from ..bookmark import restore_input
 from ..session import require_active_session
-from ..types import MISSING, MISSING_TYPE
+from ..types import MISSING, MISSING_TYPE, ListOrTuple
 from ._html_deps_shinyverse import components_dependencies
 from ._tag import consolidate_attrs
 from .css._css_unit import CssUnit, as_css_unit
@@ -176,7 +176,7 @@ class AccordionPanel:
 def accordion(
     *args: AccordionPanel | TagAttrs,
     id: Optional[str] = None,
-    open: Optional[bool | str | list[str]] = None,
+    open: Optional[bool | str | ListOrTuple[str]] = None,
     multiple: bool = True,
     class_: Optional[str] = None,
     width: Optional[CssUnit] = None,
@@ -198,11 +198,12 @@ def accordion(
         value will correspond to the :func:`~shiny.ui.accordion_panel`'s
         `value` argument.
     open
-        A list of :func:`~shiny.ui.accordion_panel` values to open (i.e.,
-        show) by default. The default value of `None` will open the first
-        :func:`~shiny.ui.accordion_panel`. Use a value of `True` to open
-        all (or `False` to open none) of the items. It's only possible to open more than
-        one panel when `multiple=True`.
+        A `str` or list of `str` naming the :func:`~shiny.ui.accordion_panel`
+        value(s) to open (i.e., show) by default. (An empty list closes all panels.)
+        The default value of `None` will open the first
+        :func:`~shiny.ui.accordion_panel`. Use a value of `True` to open all (or `False`
+        to open none) of the items. It's only possible to open more than one panel when
+        `multiple=True`.
     multiple
         Whether multiple :func:`~shiny.ui.accordion_panel` can be open at
         once.
@@ -259,21 +260,19 @@ def accordion(
     )
     open = restore_input(accordion_id, open)
 
-    is_open: list[bool] = []
-    if open is None:
-        is_open = [False for _ in panels]
+    is_open: list[bool]
+    if has_restored_input and open is None:
+        # None from restore_input indicates all panels closed
+        is_open = [False] * len(panels)
+    elif open is None:
+        # otherwise None indicates default behavior (open first panel)
+        is_open = [i == 0 for i in range(len(panels))]
     elif isinstance(open, bool):
-        is_open = [open for _ in panels]
+        is_open = [open] * len(panels)
     else:
-        if not isinstance(open, list):
-            open = [open]
-        #
-        is_open = [panel._data_value in open for panel in panels]
-
-    if not has_restored_input:
-        # Open the first panel by default
-        if open is not False and len(is_open) > 0 and not any(is_open):
-            is_open[0] = True
+        # str | ListOrTuple[str] -> set
+        open_set = {open} if isinstance(open, str) else set(open)
+        is_open = [panel._data_value in open_set for panel in panels]
 
     if (not multiple) and sum(is_open) > 1:
         raise ValueError("Can't select more than one panel when `multiple = False`")
@@ -384,11 +383,11 @@ def _accordion_panel_action(
     *,
     id: str,
     method: str,
-    values: bool | str | list[str],
+    values: bool | str | ListOrTuple[str],
     session: Session | None,
 ) -> None:
     if not isinstance(values, bool):
-        if not isinstance(values, list):
+        if not isinstance(values, (list, tuple)):
             values = [values]
         _assert_list_str(values)
 
@@ -404,7 +403,7 @@ def _accordion_panel_action(
 def update_accordion(
     id: str,
     *,
-    show: bool | str | list[str],
+    show: bool | str | ListOrTuple[str],
     session: Optional[Session] = None,
 ) -> None:
     """
@@ -502,7 +501,7 @@ def insert_accordion_panel(
 @add_example()
 def remove_accordion_panel(
     id: str,
-    target: str | list[str],
+    target: str | ListOrTuple[str],
     session: Optional[Session] = None,
 ) -> None:
     """
@@ -513,7 +512,8 @@ def remove_accordion_panel(
     id
         A string that matches an existing :func:`~shiny.ui.accordion`'s `id`.
     target
-        The `value` of an existing panel to remove.
+        A string or list of strings used to identify particular
+        :func:`~shiny.ui.accordion_panel`(s) by their `value`.
     session
         A Shiny session object (the default should almost always be used).
 
@@ -529,7 +529,7 @@ def remove_accordion_panel(
     * :func:`~shiny.ui.insert_accordion_panel`
     * :func:`~shiny.ui.update_accordion_panel`
     """
-    if not isinstance(target, list):
+    if not isinstance(target, (list, tuple)):
         target = [target]
 
     _send_panel_message(
@@ -632,8 +632,8 @@ def _assert_str(x: str) -> str:
     return x
 
 
-def _assert_list_str(x: list[str]) -> list[str]:
-    if not isinstance(x, list):
+def _assert_list_str(x: ListOrTuple[str]) -> ListOrTuple[str]:
+    if not isinstance(x, (list, tuple)):
         raise TypeError(f"Expected list, got {type(x)}")
     for i, x_i in enumerate(x):
         if not isinstance(x_i, str):

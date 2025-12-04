@@ -84,6 +84,7 @@ from ._input_numeric import input_numeric
 from ._input_password import input_password
 from ._input_select import input_select, input_selectize
 from ._input_slider import AnimationOptions, SliderStepArg, SliderValueArg, input_slider
+from ._input_submit_textarea import input_submit_textarea, update_submit_textarea
 from ._input_task_button import bind_task_button, input_task_button
 from ._input_text import input_text, input_text_area
 from ._input_update import (
@@ -135,6 +136,7 @@ from ._navs_dynamic import (
     remove_nav_panel,
 )
 from ._notification import notification_remove, notification_show
+from ._toast import hide_toast, show_toast, toast, toast_header
 from ._output import (
     output_code,
     output_image,
@@ -251,6 +253,9 @@ __all__ = (
     "SliderValueArg",
     "SliderStepArg",
     "AnimationOptions",
+    # _input_submit_textarea
+    "input_submit_textarea",
+    "update_submit_textarea",
     # _input_task_button
     "bind_task_button",
     "input_task_button",
@@ -311,6 +316,11 @@ __all__ = (
     # _notification
     "notification_show",
     "notification_remove",
+    # _toast
+    "toast",
+    "toast_header",
+    "show_toast",
+    "hide_toast",
     # _output
     "output_data_frame",  # dataframe
     "output_plot",

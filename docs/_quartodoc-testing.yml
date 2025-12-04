@@ -20,6 +20,7 @@ quartodoc:
         - playwright.controller.Card
         - playwright.controller.Popover
         - playwright.controller.Sidebar
+        - playwright.controller.Toast
         - playwright.controller.Tooltip
     - title: UI Inputs
       desc: Methods for interacting with Shiny app input value controller.
@@ -39,6 +40,7 @@ quartodoc:
         - playwright.controller.InputSelectize
         - playwright.controller.InputSlider
         - playwright.controller.InputSliderRange
+        - playwright.controller.InputSubmitTextarea
         - playwright.controller.InputSwitch
         - playwright.controller.InputTaskButton
         - playwright.controller.InputText

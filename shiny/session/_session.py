@@ -1477,7 +1477,11 @@ class Inputs:
                     continue
                 if key in exclude_set:
                     continue
-                val = value()
+
+                try:
+                    val = value()
+                except SilentException:
+                    continue
 
                 # Possibly apply custom serialization given the input id
                 serializer = self._serializers.get(key, serializer_default)
