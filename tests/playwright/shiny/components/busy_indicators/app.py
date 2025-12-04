@@ -45,7 +45,7 @@ app_ui = ui.page_fillable(
         inline=True,
     ),
     ui.input_task_button("rerender", "Re-render"),
-    ui.output_text_verbatim("counter", placeholder=True),
+    ui.output_code("counter", placeholder=True),
     ui.layout_columns(
         card_ui("ring", "ring", "red", "10px"),
         card_ui("bars", "bars", "green", "20px"),
@@ -77,7 +77,7 @@ def server(input, output, session):
             pulse=(selected_busy_indicator_type != "spinners"),
         )
 
-    @render.text
+    @render.code
     def counter():
         return str(rerender())
 

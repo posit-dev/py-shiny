@@ -14,7 +14,7 @@ app_ui = ui.page_fluid(
     ),
     ui.input_action_button("add_row", "Add row"),
     ui.input_action_button("clear_table", "Clear table"),
-    ui.output_text_verbatim("number_of_selected_rows"),
+    ui.output_code("number_of_selected_rows"),
     ui.output_data_frame("df1"),
 )
 
@@ -35,7 +35,7 @@ def server(input: Inputs):
         )
         df.set(new_df)
 
-    @render.text
+    @render.code
     def number_of_selected_rows():
         df_selected = df1.data_view(selected=True)
         return f"Selected rows: {len(df_selected)}"

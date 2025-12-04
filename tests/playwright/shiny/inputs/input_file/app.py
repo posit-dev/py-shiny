@@ -15,7 +15,7 @@ app_ui = ui.page_fluid(
     ),
     ui.output_table("summary"),
     ui.input_file("file2", "Multiple files", multiple=True),
-    ui.output_text_verbatim("file2_info", placeholder=True),
+    ui.output_code("file2_info", placeholder=True),
 )
 
 
@@ -58,7 +58,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         stats_cols: list[str] = input.stats()
         return info_df.loc[:, stats_cols]
 
-    @render.text
+    @render.code
     def file2_info():
         file2: typing.Union[typing.List["FileInfo"], None] = input.file2()
         if not file2:

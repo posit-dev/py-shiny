@@ -9,7 +9,7 @@ app_ui = ui.page_fluid(
             ui.input_action_button("first", "Invalidate first (slow) computation"),
             ui.input_action_button("second", "Invalidate second (fast) computation"),
         ),
-        ui.output_text_verbatim("result"),
+        ui.output_code("result"),
     )
 )
 
@@ -30,7 +30,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         input.second()
         return random.randint(1, 1000)
 
-    @render.text
+    @render.code
     def result():
         return first() + second()
 
