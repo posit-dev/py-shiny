@@ -8,28 +8,32 @@ creation of, say, an asyncio.Lock during the course of shiny module startup will
 in race conditions if the lock is used during the app's operation."""
 
 if __name__ == "__main__":
-    import asyncio
     import importlib
     import sys
-    from typing import Optional
 
     if "shiny" in sys.modules:
         raise RuntimeError(
-            "Bad test: shiny was already loaded, it's important that SpyEventLoopPolicy"
-            " is installed before shiny loads"
+            "Bad test: shiny was already loaded, it's important that asyncio functions"
+            " are patched before shiny loads"
         )
 
-    class SpyEventLoopPolicy(asyncio.DefaultEventLoopPolicy):
-        def get_event_loop(self):
-            raise RuntimeError("get_event_loop called")
+    # Patch the low-level function that all asyncio operations use to access the event loop
+    # This catches all ways of accessing the event loop, not just specific functions
+    from asyncio import events
 
-        def set_event_loop(self, loop: Optional[asyncio.AbstractEventLoop]):
-            raise RuntimeError("set_event_loop called")
+    if not hasattr(events, "_get_running_loop"):
+        raise RuntimeError(
+            "asyncio.events._get_running_loop does not exist in this Python version. "
+            "This test needs to be updated for this Python version."
+        )
 
-        def new_event_loop(self):
-            raise RuntimeError("new_event_loop called")
+    def _spy_get_running_loop():
+        raise RuntimeError(
+            "Attempt to access asyncio event loop during module import. "
+            "Asyncio objects should not be created at module level."
+        )
 
-    asyncio.set_event_loop_policy(SpyEventLoopPolicy())
+    events._get_running_loop = _spy_get_running_loop  # type: ignore
 
     # Doing this instead of "import shiny" so no linter is tempted to remove it
     importlib.import_module("shiny")
