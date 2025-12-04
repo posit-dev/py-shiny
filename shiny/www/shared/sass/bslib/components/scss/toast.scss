@@ -1,0 +1,56 @@
+// Toast customizations for bslib
+// These extend Bootstrap's base toast styles with bslib-specific theming
+
+.toast {
+  // Use CSS variables for runtime theming
+  --bslib-toast-shadow: var(--bs-box-shadow);
+  box-shadow: var(--bslib-toast-shadow);
+
+  // Position relative for progress bar
+  position: relative;
+  overflow: hidden;
+}
+
+.toast-body:empty {
+  display: none;
+}
+
+// Ensure close button is visible on colored backgrounds
+.text-bg-primary,
+.text-bg-secondary,
+.text-bg-success,
+.text-bg-info,
+.text-bg-warning,
+.text-bg-danger,
+.text-bg-dark,
+.text-white,
+.text-light {
+  &.toast .toast-body .btn-close {
+    filter: var(--bs-btn-close-white-filter);
+  }
+}
+
+
+// Progress bar animation for autohiding toasts
+@keyframes bslib-toast-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.bslib-toast-progress-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 2px;
+  width: 100%;
+  pointer-events: none;
+  z-index: 1;
+  transform-origin: left;
+  border-radius: inherit;
+  pointer-events: none;
+  background-color: currentColor;
+}

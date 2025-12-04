@@ -55,6 +55,7 @@ quartodoc:
         - ui.input_numeric
         - ui.input_text
         - ui.input_text_area
+        - ui.input_submit_textarea
         - ui.input_password
         - ui.input_action_button
         - ui.input_action_link
@@ -166,6 +167,7 @@ quartodoc:
         - ui.update_text
         - name: ui.update_text_area
           dynamic: "shiny.ui.update_text"
+        - ui.update_submit_textarea
         - ui.update_navset
         - ui.update_action_button
         - ui.update_action_link
@@ -235,6 +237,10 @@ quartodoc:
         - ui.help_text
         - ui.notification_show
         - ui.notification_remove
+        - ui.toast
+        - ui.toast_header
+        - ui.show_toast
+        - ui.hide_toast
         - ui.modal
         - ui.modal_show
         - ui.modal_remove
