@@ -106,9 +106,12 @@ def reactive_calc_method(fn: Callable[[S], R]) -> Callable[[S], R]:
             # be garbage collected until `self` is garbage collected.
             if not hasattr(self.__dict__, "_reactive_calc_method"):
                 self.__dict__["_reactive_calc_method"] = {}
-            self_reactive_calc_cache: dict[str, reactive.Calc_[R]] = self.__dict__[
-                "_reactive_calc_method"
-            ]
+
+            # Can't use `# pyright: ignore[reportUnknownVariableType]` on the line below
+            # as Black can't format it properly
+            self_reactive_calc_cache: dict[str, reactive.Calc_[R]] = (  # type: ignore
+                self.__dict__["_reactive_calc_method"]
+            )
             if hasattr(self_reactive_calc_cache, fn.__name__):
                 raise AttributeError(
                     f"Reactive calc method `{fn.__name__}` has already be cached on self: {self}"

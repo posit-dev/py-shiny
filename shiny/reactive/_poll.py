@@ -273,22 +273,31 @@ def file_reader(
     if isinstance(filepath, str):
         # Normalize filepath so it's always a function
 
-        filepath_value = filepath
+        filepath_str_value: str = filepath
 
         def filepath_func_str() -> str:
-            return filepath_value
+            return filepath_str_value
 
-        filepath = filepath_func_str
+        filepath_fn = filepath_func_str
     elif isinstance(filepath, os.PathLike):
-        filepath_value = filepath
+        # Can't use `# pyright: ignore[reportUnknownVariableType]` on the line below as
+        # Black can't format it properly
+        filepath_path_value: os.PathLike[str] = filepath  # pyright: ignore
 
         def filepath_func_pathlike() -> os.PathLike[str]:
-            return filepath_value
+            return filepath_path_value
 
-        filepath = filepath_func_pathlike
+        filepath_fn = filepath_func_pathlike
+    elif callable(filepath):
+        filepath_fn = filepath
+    else:
+        raise TypeError(
+            "`filepath` argument to reactive.file_reader() must be a str, "
+            "os.PathLike, or a no-argument function that returns one of those types."
+        )
 
     def check_timestamp():
-        path = filepath()
+        path = filepath_fn()
         return (path, os.path.getmtime(path), os.path.getsize(path))
 
     def wrapper(fn: Callable[[], T]) -> Callable[[], T]:

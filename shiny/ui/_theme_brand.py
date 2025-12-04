@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, Optional, Union
 
 if TYPE_CHECKING:
     from brand_yml import Brand
+
 from htmltools import HTMLDependency
 
 from .._versions import bootstrap as v_bootstrap
@@ -80,7 +81,7 @@ class BrandBootstrapConfigFromYaml:
                 f"Invalid brand `{self._path}.defaults`, must be a dictionary."
             )
 
-        y: dict[Any, Any] = x
+        y: dict[Any, Any] = x  # pyright: ignore[reportUnknownVariableType]
 
         if not all([isinstance(k, str) for k in y.keys()]):
             raise ValueError(

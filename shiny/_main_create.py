@@ -87,8 +87,15 @@ class ShinyTemplate:
     type: str = "app"
     title: str | None = None
     description: str | None = None
-    next_steps: list[str] = field(default_factory=list)
-    follow_up: list[ShinyTemplateFollowUp] = field(default_factory=list)
+    next_steps: list[str] = field(  # pyright: ignore[reportUnknownVariableType]
+        default_factory=list
+    )
+    # Black can't handle this line properly
+    # It should have `# pyright: ignore[reportUnknownVariableType]` but
+    # pyright gets confused with the comment in the middle of an expression
+    follow_up: list[ShinyTemplateFollowUp] = field(  # pyright: ignore
+        default_factory=list
+    )
     _express_available: bool | None = None
 
     @property
