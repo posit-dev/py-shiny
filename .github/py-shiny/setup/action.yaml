@@ -27,7 +27,7 @@ runs:
       - name: Allow uv to use the system Python by default
         shell: bash
         run: |
-          echo "UV_SYSTEM_PYTHON=1" >> $GITHUB_ENV
+          echo "UV_SYSTEM_PYTHON=true" >> $GITHUB_ENV
 
       - name: Install dependencies
         shell: bash
