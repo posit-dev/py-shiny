@@ -8,9 +8,6 @@ where = ["."]
 include = ["shiny*"]
 namespaces = false
 
-[tool.setuptools.package-data]
-"*" = ["www/**", "templates/**"]
-
 [tool.setuptools.exclude-package-data]
 "*" = ["api-examples/**"]
 
