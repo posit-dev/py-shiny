@@ -9,10 +9,10 @@ include = ["shiny*"]
 namespaces = false
 
 [tool.setuptools.package-data]
-"*" = ["www/**/*", "templates/**/*"]
+"*" = ["www/**", "templates/**"]
 
 [tool.setuptools.exclude-package-data]
-"*" = ["api-examples/**", "api-examples/**/*"]
+"*" = ["api-examples/**"]
 
 [tool.setuptools_scm]
 write_to = "shiny/_version.py"
