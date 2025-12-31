@@ -435,7 +435,6 @@ write_code_editor_bundle_py <- function(www_shared) {
   )
   themes <- sort(path_ext_remove(path_file(theme_files)))
 
-
   # Read version from _version.json
   # Extract just the version number (before any space/parenthesis) for HTML dependency
   version_json <- jsonlite::read_json(path(prism_dir, "_version.json"))
@@ -455,8 +454,7 @@ CodeEditorBundledLanguage = Literal[
 
 CodeEditorTheme = Literal[
 %s
-]
-)"
+])"
 
   py_lines <- function(x) {
     x <- paste(sprintf('"%s"', x), collapse = ",\n    ")

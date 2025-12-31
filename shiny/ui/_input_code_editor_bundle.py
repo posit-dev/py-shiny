@@ -47,4 +47,3 @@ CodeEditorTheme = Literal[
     "vs-code-dark",
     "vs-code-light",
 ]
-

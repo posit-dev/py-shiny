@@ -1,20 +1,23 @@
 import asyncio
 from dataclasses import dataclass
-from typing import Optional
 from functools import wraps
+from typing import Optional
 
 
 def cache_result(func):
     """Decorator to cache function results."""
+
     @wraps(func)
     def wrapper(*args, **kwargs):
         return func(*args, **kwargs)
+
     return wrapper
 
 
 @dataclass
 class DataProcessor:
     """Process and analyze data with async support."""
+
     name: str
     threshold: float = 0.75
 
@@ -26,7 +29,7 @@ class DataProcessor:
         return {
             "count": len(filtered),
             "mean": sum(filtered) / len(filtered) if filtered else 0,
-            "message": f"Processed {len(values)} items: {100 * 0.85:.1f}%"
+            "message": f"Processed {len(values)} items: {100 * 0.85:.1f}%",
         }
 
 
