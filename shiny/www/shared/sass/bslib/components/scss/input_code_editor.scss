@@ -1,0 +1,103 @@
+/**
+ * Code Editor Base Styling
+ *
+ * Provides Bootstrap 5 integration styling for the Prism Code Editor component.
+ * This CSS handles the "chrome" around the editor (borders, focus states, etc.)
+ * while theme CSS files handle syntax highlighting colors.
+ */
+
+bslib-code-editor {
+  // Outer container just handles sizing and spacing
+  width: 100%;
+
+  // Label styling - outside the border
+  > label {
+    display: inline-block;
+    margin-bottom: 0.5rem;
+  }
+
+  // Inner container holds the actual editor with border/focus styling
+  .code-editor {
+    // Required by Prism Code Editor
+    display: grid !important;
+
+    // Match Bootstrap form control styling
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    border-radius: var(--bs-border-radius, 0.375rem);
+    background-color: var(--bs-body-bg, #fff);
+    color: var(--bs-body-color, #212529);
+
+    // Position and overflow for editor content
+    position: relative;
+    overflow: hidden;
+
+    // Smooth transitions
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+
+    // Focus state - matches Bootstrap input focus
+    &:focus-within {
+      border-color: var(--bs-primary, #0d6efd);
+      outline: 0;
+      box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb, 13, 110, 253), 0.25);
+    }
+
+    // Copy button appears above code but below modals
+    .pce-copy-button {
+      z-index: 10;
+    }
+
+    // Ensure textarea fills container properly
+    textarea {
+      min-height: 100%;
+    }
+  }
+
+  // Ensure proper font rendering
+  .code-editor,
+  .code-editor textarea,
+  .code-editor pre,
+  .code-editor code {
+    font-family: var(--bs-font-monospace, ui-monospace, "SFMono-Regular", "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", monospace);
+    font-size: 0.875rem;
+  }
+
+  // Read-only state styling
+  &[data-read-only="true"] .code-editor {
+    background-color: var(--bs-secondary-bg, #e9ecef);
+    cursor: not-allowed;
+  }
+}
+
+// Dark mode adjustments
+[data-bs-theme="dark"] bslib-code-editor {
+  .code-editor {
+    border-color: var(--bs-border-color, #495057);
+    background-color: var(--bs-body-bg, #212529);
+    color: var(--bs-body-color, #dee2e6);
+
+    &:focus-within {
+      border-color: var(--bs-primary, #0d6efd);
+      box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb, 13, 110, 253), 0.25);
+    }
+  }
+
+  &[data-read-only="true"] .code-editor {
+    background-color: var(--bs-secondary-bg, #343a40);
+  }
+}
+
+// Submit flash animation (Ctrl/Cmd+Enter feedback)
+.code-editor-submit-flash {
+  animation: code-editor-flash 400ms ease-out;
+}
+
+@keyframes code-editor-flash {
+  0% {
+    border-color: var(--bs-success, #198754);
+    box-shadow: 0 0 0 0.25rem rgba(var(--bs-success-rgb, 25, 135, 84), 0.25);
+  }
+  100% {
+    border-color: var(--bs-primary, #0d6efd);
+    box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb, 13, 110, 253), 0.25);
+  }
+}
