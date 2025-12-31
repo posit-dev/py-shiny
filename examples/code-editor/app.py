@@ -1,8 +1,9 @@
 from pathlib import Path
+from typing import get_args
 
 from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 from shiny.ui._input_code_editor import _SUPPORTED_LANGUAGES as languages
-from shiny.ui._input_code_editor import code_editor_themes
+from shiny.ui._input_code_editor_bundle import CodeEditorTheme
 
 # Load sample code snippets into a dictionary
 examples_dir = Path(__file__).parent / "examples"
@@ -15,7 +16,7 @@ for file_path in examples_dir.iterdir():
 
 
 # Available themes
-themes = list(code_editor_themes())
+themes = list(get_args(CodeEditorTheme))
 
 app_ui = ui.page_sidebar(
     ui.sidebar(

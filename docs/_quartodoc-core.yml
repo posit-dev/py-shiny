@@ -57,7 +57,6 @@ quartodoc:
         - ui.input_text_area
         - ui.input_submit_textarea
         - ui.input_code_editor
-        - ui.code_editor_themes
         - ui.input_password
         - ui.input_action_button
         - ui.input_action_link

@@ -29,7 +29,6 @@ quartodoc:
         - express.ui.input_text_area
         - express.ui.input_submit_textarea
         - express.ui.input_code_editor
-        - express.ui.code_editor_themes
         - express.ui.input_password
         - express.ui.input_action_button
         - express.ui.input_action_link

@@ -1,21 +1,23 @@
 import warnings
+from typing import get_args
 
 import pytest
 from htmltools import Tag
 
-from shiny.ui import code_editor_themes, input_code_editor, update_code_editor
+from shiny.ui import input_code_editor, update_code_editor
+from shiny.ui._input_code_editor_bundle import CodeEditorTheme
 
 
 class TestCodeEditorThemes:
-    def test_returns_tuple_of_themes(self):
-        themes = code_editor_themes()
+    def test_themes_type_is_populated(self):
+        themes = get_args(CodeEditorTheme)
 
         assert isinstance(themes, tuple)
         assert len(themes) > 0
         assert all(isinstance(t, str) for t in themes)
 
     def test_contains_expected_default_themes(self):
-        themes = code_editor_themes()
+        themes = get_args(CodeEditorTheme)
 
         assert "github-light" in themes
         assert "github-dark" in themes

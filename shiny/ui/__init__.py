@@ -78,7 +78,6 @@ from ._input_check_radio import (
     input_switch,
 )
 from ._input_code_editor import (
-    code_editor_themes,
     input_code_editor,
     update_code_editor,
 )
@@ -239,7 +238,6 @@ __all__ = (
     "input_switch",
     "input_radio_buttons",
     # _input_code_editor
-    "code_editor_themes",
     "input_code_editor",
     "update_code_editor",
     # _input_dark_mode

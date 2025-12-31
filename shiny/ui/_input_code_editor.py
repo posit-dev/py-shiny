@@ -3,55 +3,50 @@ from __future__ import annotations
 __all__ = (
     "input_code_editor",
     "update_code_editor",
-    "code_editor_themes",
 )
 
 import warnings
-from typing import TYPE_CHECKING, Literal, Optional, Sequence
+from typing import TYPE_CHECKING, Literal, Optional, Sequence, get_args
 
 from htmltools import HTMLDependency, Tag, TagChild, css, tags
 
-from .._docstring import add_example
+from .._docstring import add_example, doc_format
 from .._utils import drop_none
 from .._versions import bslib as bslib_version
 from ..bookmark import restore_input
 from ..module import resolve_id
 from ..session import Session, require_active_session
 from ._html_deps_shinyverse import components_dependencies
+from ._input_code_editor_bundle import (
+    VERSION_PRISM_CODE_EDITOR,
+    CodeEditorBundledLanguage,
+    CodeEditorTheme,
+)
 from ._utils import shiny_input_label
+from .fill._fill import FILL_CONTAINER_CLASS, FILL_ITEM_CLASS
 
 if TYPE_CHECKING:
     from htmltools import TagAttrValue
 
 
-# Bundled languages from prism-code-editor (from bslib's R/versions.R)
-_CODE_EDITOR_BUNDLED_LANGUAGES: tuple[str, ...] = (
-    "r",
-    "python",
-    "julia",
-    "sql",
-    "javascript",
-    "typescript",
-    "markup",
-    "css",
-    "scss",
-    "sass",
-    "json",
-    "markdown",
-    "yaml",
-    "xml",
-    "toml",
-    "ini",
-    "bash",
-    "docker",
-    "latex",
-    "cpp",
-    "rust",
-    "diff",
+# Language aliases (user-friendly names -> prism grammar names)
+LanguageAlias = Literal["md", "html", "plain", "plaintext", "text", "txt"]
+
+CodeEditorLanguage = CodeEditorBundledLanguage | LanguageAlias
+
+CodeEditorIndentation = Literal["space", "tab"]
+
+# Runtime tuples derived from types
+_CODE_EDITOR_BUNDLED_LANGUAGES: tuple[str, ...] = get_args(CodeEditorBundledLanguage)
+_CODE_EDITOR_THEMES: tuple[str, ...] = get_args(CodeEditorTheme)
+_LANGUAGE_ALIASES: tuple[str, ...] = get_args(LanguageAlias)
+_SUPPORTED_LANGUAGES: tuple[str, ...] = (
+    *_CODE_EDITOR_BUNDLED_LANGUAGES,
+    *_LANGUAGE_ALIASES,
 )
 
-# Language aliases (user-friendly names -> prism grammar names)
-_LANGUAGE_ALIASES: dict[str, str] = {
+# Alias mapping (user-friendly names -> prism grammar names)
+_LANGUAGE_ALIAS_MAP: dict[str, str] = {
     "md": "markdown",
     "html": "markup",
     "plain": "plain",
@@ -59,51 +54,6 @@ _LANGUAGE_ALIASES: dict[str, str] = {
     "text": "plain",
     "txt": "plain",
 }
-
-# All supported languages: bundled prism grammars + aliases
-_SUPPORTED_LANGUAGES: tuple[str, ...] = (
-    *_CODE_EDITOR_BUNDLED_LANGUAGES,
-    *_LANGUAGE_ALIASES.keys(),
-)
-
-# Type for language parameter
-CodeEditorLanguage = Literal[
-    "r",
-    "python",
-    "julia",
-    "sql",
-    "javascript",
-    "typescript",
-    "markup",
-    "css",
-    "scss",
-    "sass",
-    "json",
-    "markdown",
-    "yaml",
-    "xml",
-    "toml",
-    "ini",
-    "bash",
-    "docker",
-    "latex",
-    "cpp",
-    "rust",
-    "diff",
-    # Aliases
-    "md",
-    "html",
-    "plain",
-    "plaintext",
-    "text",
-    "txt",
-]
-
-# Indentation type
-CodeEditorIndentation = Literal["space", "tab"]
-
-# Version of prism-code-editor vendored from bslib
-_VERSION_PRISM_CODE_EDITOR = "4.2.0"
 
 
 def _resolve_language(language: str) -> str:
@@ -113,7 +63,7 @@ def _resolve_language(language: str) -> str:
             f"Invalid language: {language!r}. "
             f"Supported languages are: {', '.join(_SUPPORTED_LANGUAGES)}"
         )
-    return _LANGUAGE_ALIASES.get(language, language)
+    return _LANGUAGE_ALIAS_MAP.get(language, language)
 
 
 def _check_value_line_count(value: str) -> None:
@@ -131,48 +81,12 @@ def _check_value_line_count(value: str) -> None:
         )
 
 
-def code_editor_themes() -> tuple[str, ...]:
-    """
-    List available code editor themes.
-
-    Returns a tuple of available theme names that can be used with
-    :func:`~shiny.ui.input_code_editor`.
-
-    Returns
-    -------
-    :
-        A tuple of available theme names.
-
-    See Also
-    --------
-    * :func:`~shiny.ui.input_code_editor`
-    """
-    # These themes are bundled with prism-code-editor
-    return (
-        "atom-one-dark",
-        "dracula",
-        "github-dark",
-        "github-dark-dimmed",
-        "github-light",
-        "night-owl",
-        "night-owl-light",
-        "prism",
-        "prism-okaidia",
-        "prism-solarized-light",
-        "prism-tomorrow",
-        "prism-twilight",
-        "vs-code-dark",
-        "vs-code-light",
-    )
-
-
 def _validate_theme(theme: str, param_name: str) -> str:
     """Validate that a theme name is available."""
-    available_themes = code_editor_themes()
-    if theme not in available_themes:
+    if theme not in _CODE_EDITOR_THEMES:
         raise ValueError(
             f"Invalid {param_name}: {theme!r}. "
-            f"Available themes are: {', '.join(available_themes)}"
+            f"Available themes are: {', '.join(_CODE_EDITOR_THEMES)}"
         )
     return theme
 
@@ -181,7 +95,7 @@ def _code_editor_dependency_prism() -> HTMLDependency:
     """HTML dependency for prism-code-editor library."""
     return HTMLDependency(
         name="prism-code-editor",
-        version=_VERSION_PRISM_CODE_EDITOR,
+        version=VERSION_PRISM_CODE_EDITOR,
         source={
             "package": "shiny",
             "subdir": "www/shared/prism-code-editor",
@@ -217,7 +131,12 @@ def _code_editor_dependencies() -> list[HTMLDependency]:
     ]
 
 
+_doc_languages = ", ".join(f'`"{lang}"`' for lang in _SUPPORTED_LANGUAGES)
+_doc_themes = ", ".join(f'"`{theme}`"' for theme in _CODE_EDITOR_THEMES)
+
+
 @add_example()
+@doc_format(languages=_doc_languages, themes=_doc_themes)
 def input_code_editor(
     id: str,
     label: TagChild = None,
@@ -255,19 +174,14 @@ def input_code_editor(
     value
         Initial code content. Can be a string or a sequence of strings (lines).
     language
-        Programming language for syntax highlighting. Supported languages include
-        ``"r"``, ``"python"``, ``"julia"``, ``"sql"``, ``"javascript"``,
-        ``"typescript"``, ``"html"``, ``"css"``, ``"scss"``, ``"sass"``, ``"json"``,
-        ``"markdown"``, ``"yaml"``, ``"xml"``, ``"toml"``, ``"ini"``, ``"bash"``,
-        ``"docker"``, ``"latex"``, ``"cpp"``, ``"rust"``, ``"diff"``, and ``"plain"``.
+        Programming language for syntax highlighting. Supported languages include: {languages}.
     height
         CSS height of the editor. Set to a specific value like ``"300px"`` for a
         fixed height, or ``"auto"`` to grow with content.
     width
         CSS width of the editor.
     theme_light
-        Theme to use in light mode. Use :func:`~shiny.ui.code_editor_themes` to see
-        available themes.
+        Theme to use in light mode. Available themes include: {themes}.
     theme_dark
         Theme to use in dark mode. The editor automatically switches between
         ``theme_light`` and ``theme_dark`` based on the current Bootstrap theme.
@@ -296,7 +210,7 @@ def input_code_editor(
 
     Notes
     -----
-    ::: {.callout-note title="Server value"}
+    ::: {{.callout-note title="Server value"}}
     A string containing the current editor content.
 
     Unlike text inputs that update on every keystroke, the code editor only sends
@@ -317,13 +231,11 @@ def input_code_editor(
     **Themes**
 
     The editor automatically switches between ``theme_light`` and ``theme_dark`` when
-    used with :func:`~shiny.ui.input_dark_mode`. Use
-    :func:`~shiny.ui.code_editor_themes` to see all available themes.
+    used with :func:`~shiny.ui.input_dark_mode`.
 
     See Also
     --------
     * :func:`~shiny.ui.update_code_editor`
-    * :func:`~shiny.ui.code_editor_themes`
     * :func:`~shiny.ui.input_text_area`
     """
     resolved_id = resolve_id(id)
@@ -350,26 +262,22 @@ def input_code_editor(
     if tab_size < 1:
         raise ValueError("`tab_size` must be a positive integer")
 
-    # Default line_numbers based on language
     if line_numbers is None:
         line_numbers = resolved_language not in ("markdown", "plain")
 
-    # Default word_wrap based on line_numbers
     if word_wrap is None:
         word_wrap = not line_numbers
 
     insert_spaces = indentation == "space"
 
-    # Create the label element
     label_tag = shiny_input_label(resolved_id, label)
 
-    # Create inner container that will hold the actual editor
     editor_inner = tags.div(
+        FILL_ITEM_CLASS,
         class_="code-editor",
         style=css(display="grid"),
     )
 
-    # Build the custom element
     tag = Tag(
         "bslib-code-editor",
         {
@@ -387,18 +295,12 @@ def input_code_editor(
             "insert-spaces": str(insert_spaces).lower(),
             **kwargs,
         },
+        FILL_CONTAINER_CLASS,
+        FILL_ITEM_CLASS if fill else {},
         label_tag,
         editor_inner,
         *_code_editor_dependencies(),
     )
-
-    # Internal layout (always needed for editor sizing)
-    tag.add_class("html-fill-container")
-    editor_inner.add_class("html-fill-item")
-
-    # External fill behavior (editor expands to fill parent container)
-    if fill:
-        tag.add_class("html-fill-item")
 
     return tag
 
@@ -466,7 +368,6 @@ def update_code_editor(
     See Also
     --------
     * :func:`~shiny.ui.input_code_editor`
-    * :func:`~shiny.ui.code_editor_themes`
     """
     # Validate inputs first (before requiring session)
     if value is not None:
@@ -488,7 +389,6 @@ def update_code_editor(
 
     session = require_active_session(session)
 
-    # Build message with snake_case keys (matches TypeScript receiveMessage)
     msg = {
         "label": session._process_ui(label) if label is not None else None,
         "value": value,
