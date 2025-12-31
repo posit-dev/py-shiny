@@ -20,15 +20,24 @@ write_json <- function(
   )
 }
 
-copy_from_pkg <- function(pkg_name, pkg_dir, local_dir, version_dir = path_dir(local_dir)) {
+copy_from_pkg <- function(
+  pkg_name,
+  pkg_dir,
+  local_dir,
+  version_dir = path_dir(local_dir)
+) {
   # `version_dir` is "equal to" or "contains" `local_dir`
   stopifnot(path_has_parent(local_dir, version_dir))
-  if (dir_exists(version_dir)) dir_delete(version_dir)
+  if (dir_exists(version_dir)) {
+    dir_delete(version_dir)
+  }
   dir_create(local_dir)
 
   stopifnot(local_dir != ".")
 
-  cli::cli_progress_step("Copy {.strong {pkg_dir}} from {.pkg {pkg_name}} to {.path {path_rel(local_dir)}}")
+  cli::cli_progress_step(
+    "Copy {.strong {pkg_dir}} from {.pkg {pkg_name}} to {.path {path_rel(local_dir)}}"
+  )
 
   # Copy other folder into local parent folder
   dir_copy(
@@ -54,7 +63,9 @@ copy_from_pkg <- function(pkg_name, pkg_dir, local_dir, version_dir = path_dir(l
   invisible(local_dir)
 }
 
-local_sass_options <- withr::local_(function(x) rlang::exec(sass::sass_options_set, !!!x))
+local_sass_options <- withr::local_(function(x) {
+  rlang::exec(sass::sass_options_set, !!!x)
+})
 
 local_sass_compressed <- function(.envir = parent.frame()) {
   local_sass_options(
@@ -79,7 +90,11 @@ delete_non_minified <- function(dir) {
   )
 }
 
-cli_progress_with_bs_theme <- function(message, theme, .envir = parent.frame()) {
+cli_progress_with_bs_theme <- function(
+  message,
+  theme,
+  .envir = parent.frame()
+) {
   info <- bslib:::theme_preset_info(theme)
   suffix <- sprintf(
     "with BS%s (preset: %s)",
@@ -103,8 +118,14 @@ write_deps_ionrangeslider <- function(theme, www_shared) {
 
   # Preset="shiny" additional ionRangeSlider rules
   if (identical(preset, "shiny")) {
-    ion_preset_rules <- system.file("builtin", "bs5", "shiny", "ionrangeslider", "_rules.scss", package = "bslib")
-
+    ion_preset_rules <- system.file(
+      "builtin",
+      "bs5",
+      "shiny",
+      "ionrangeslider",
+      "_rules.scss",
+      package = "bslib"
+    )
 
     ion_preset_compiled <-
       sass::sass_partial(
@@ -139,6 +160,7 @@ write_deps_ionrangeslider <- function(theme, www_shared) {
   ion_dep_dir <- path(www_shared, "ionrangeslider")
   ion_dep_css <- path(ion_dep_dir, "css", "ion.rangeSlider.css")
 
+  dir_create(path_dir(ion_dep_css))
   file_move(
     path(temp_ion_dep_dir, "ionRangeSlider", "ionRangeSlider.min.css"),
     ion_dep_css
@@ -208,6 +230,7 @@ write_shiny_css <- function(theme, www_shared) {
   shiny_css_dep <- shiny:::shinyDependencyCSS(theme)
   shiny_css_bslib <- extract_css_path(shiny_css_dep)
   shiny_css_shared <- path(www_shared, "shiny.min.css")
+
   writeLines(
     c(
       readLines(shiny_css_shared, n = 1), # keep header of original minified css
@@ -229,6 +252,7 @@ write_selectize_css <- function(theme, www_shared) {
 
   file_delete(path(selectize_shared, "selectize.bootstrap3.css"))
 
+  dir_create(selectize_shared)
   file_copy(
     selectize_css_bslib,
     path(selectize_shared, "selectize.min.css"),
@@ -246,6 +270,7 @@ write_datepicker_css <- function(theme, www_shared) {
   datepicker_css_bslib <- extract_css_path(datepicker_css_dep)
   datepicker_shared <- path(www_shared, "datepicker", "css")
 
+  dir_create(datepicker_shared)
   file_copy(
     datepicker_css_bslib,
     path(datepicker_shared, "bootstrap-datepicker3.min.css"),
@@ -267,12 +292,18 @@ delete_from_www_shared <- function(www_shared, ...) {
 
 write_require_js <- function(requirejs_version, www_shared) {
   requirejs <- path(www_shared, "requirejs")
-  cli::cli_progress_step("Download {.field require.js} to {.path {path_rel(requirejs)}}")
+  cli::cli_progress_step(
+    "Download {.field require.js} to {.path {path_rel(requirejs)}}"
+  )
 
   dir_create(requirejs)
 
   download.file(
-    paste0("https://cdnjs.cloudflare.com/ajax/libs/require.js/", requirejs_version, "/require.min.js"),
+    paste0(
+      "https://cdnjs.cloudflare.com/ajax/libs/require.js/",
+      requirejs_version,
+      "/require.min.js"
+    ),
     path(requirejs, "require.min.js"),
     quiet = TRUE
   )
@@ -291,7 +322,9 @@ write_require_js <- function(requirejs_version, www_shared) {
 
 write_versions_py <- function(bootstrap, requirejs) {
   path_versions_py <- path_root("shiny", "_versions.py")
-  cli::cli_progress_step("Write versions to {.path {path_rel(path_versions_py)}}")
+  cli::cli_progress_step(
+    "Write versions to {.path {path_rel(path_versions_py)}}"
+  )
 
   versions <- list(
     shiny_html_deps = as.character(packageVersion("shiny")),
@@ -301,8 +334,14 @@ write_versions_py <- function(bootstrap, requirejs) {
     requirejs = requirejs
   )
 
-
-  version_vars <- paste0(names(versions), " = ", "\"", versions, "\"\n", collapse = "")
+  version_vars <- paste0(
+    names(versions),
+    " = ",
+    "\"",
+    versions,
+    "\"\n",
+    collapse = ""
+  )
   version_all <- paste0(
     collapse = "",
     "__all__ = (\n",
@@ -324,12 +363,22 @@ write_versions_py <- function(bootstrap, requirejs) {
 npm_install_dependencies <- function() {
   cli::cli_progress_step("Install npm dependencies")
   withr::local_dir(path_root("js"))
-  invisible(system("npm install && npm run build", intern = TRUE, ignore.stderr = TRUE))
+  invisible(system(
+    "npm install && npm run build",
+    intern = TRUE,
+    ignore.stderr = TRUE
+  ))
 }
 
 write_spinners_py <- function(www_shared) {
-  path_busy_spinner_types_py <- path_root("shiny", "ui", "_busy_spinner_types.py")
-  cli::cli_progress_step("Write spinner types to {.path {path_rel(path_busy_spinner_types_py)}}")
+  path_busy_spinner_types_py <- path_root(
+    "shiny",
+    "ui",
+    "_busy_spinner_types.py"
+  )
+  cli::cli_progress_step(
+    "Write spinner types to {.path {path_rel(path_busy_spinner_types_py)}}"
+  )
 
   spinner_types <- dir_ls(
     path(www_shared, "busy-indicators", "spinners"),
@@ -351,7 +400,6 @@ BusySpinnerType = Literal[
     x <- paste(sprintf('"%s"', x), collapse = ",\n    ")
     paste0("    ", x, ",")
   }
-
 
   writeLines(
     sprintf(template, py_lines(spinner_types)),

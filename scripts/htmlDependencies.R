@@ -90,7 +90,7 @@ copy_from_pkg("htmltools", "fill", path(WWW_SHARED, "htmltools", "fill"))
 
 # Copy prism-code-editor library for input_code_editor()
 www_prism <- path(WWW_SHARED, "prism-code-editor")
-copy_from_pkg("bslib", "lib/prism-code-editor", www_prism)
+copy_from_pkg("bslib", "lib/prism-code-editor", www_prism, www_prism)
 
 
 # Pre-rendering Component CSS --------------------------------------------------------
