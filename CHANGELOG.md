@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### New features
 
+* Added `input_code_editor()`, a lightweight code editor input with syntax highlighting powered by Prism Code Editor. Features include support for 20+ programming languages (Python, R, SQL, JavaScript, etc.), automatic light/dark theme switching, line numbers, word wrap, customizable themes, and keyboard shortcuts including Ctrl/Cmd+Enter to submit. Use `update_code_editor()` to dynamically update the editor content and settings. The editor value is sent to the server on blur or Ctrl/Cmd+Enter (not every keystroke). Also added `code_editor_themes()` to list available themes. (#XXXX)
 
 ## [1.5.1] - 2025-12-08
 

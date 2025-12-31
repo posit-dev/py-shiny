@@ -335,13 +335,15 @@ def input_code_editor(
         raise TypeError("`value` must be a string or sequence of strings")
 
     # Restore input for bookmarking support
-    value = restore_input(resolved_id, default=value)
-    if not isinstance(value, str):
-        value = str(value) if value is not None else ""
+    restored_value = restore_input(resolved_id, default=value)
+    if isinstance(restored_value, str):
+        value = restored_value
+    elif restored_value is not None:
+        value = str(restored_value)
 
     # Validate inputs
     _check_value_line_count(value)
-    language = _resolve_language(language)
+    resolved_language = _resolve_language(language)
     _validate_theme(theme_light, "theme_light")
     _validate_theme(theme_dark, "theme_dark")
 
@@ -350,7 +352,7 @@ def input_code_editor(
 
     # Default line_numbers based on language
     if line_numbers is None:
-        line_numbers = language not in ("markdown", "plain")
+        line_numbers = resolved_language not in ("markdown", "plain")
 
     # Default word_wrap based on line_numbers
     if word_wrap is None:
@@ -374,7 +376,7 @@ def input_code_editor(
             "id": resolved_id,
             "class": "bslib-mb-spacing",
             "style": css(height=height, width=width),
-            "language": language,
+            "language": resolved_language,
             "value": value,
             "theme-light": theme_light,
             "theme-dark": theme_dark,
@@ -451,9 +453,7 @@ def update_code_editor(
     * :func:`~shiny.ui.input_code_editor`
     * :func:`~shiny.ui.code_editor_themes`
     """
-    session = require_active_session(session)
-
-    # Validate and process value
+    # Validate inputs first (before requiring session)
     if value is not None:
         if isinstance(value, (list, tuple)):
             value = "\n".join(str(v) for v in value)
@@ -461,7 +461,6 @@ def update_code_editor(
             raise TypeError("`value` must be a string or sequence of strings")
         _check_value_line_count(value)
 
-    # Validate other inputs if provided
     if language is not None:
         language = _resolve_language(language)  # type: ignore[assignment]
     if theme_light is not None:
@@ -470,6 +469,8 @@ def update_code_editor(
         _validate_theme(theme_dark, "theme_dark")
     if tab_size is not None and tab_size < 1:
         raise ValueError("`tab_size` must be a positive integer")
+
+    session = require_active_session(session)
 
     # Build message with snake_case keys (matches TypeScript receiveMessage)
     msg = {
