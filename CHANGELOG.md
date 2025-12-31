@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
-* Added `input_code_editor()`, a lightweight code editor input with syntax highlighting powered by Prism Code Editor. Features include support for 20+ programming languages (Python, R, SQL, JavaScript, etc.), automatic light/dark theme switching, line numbers, word wrap, customizable themes, and keyboard shortcuts including Ctrl/Cmd+Enter to submit. Use `update_code_editor()` to dynamically update the editor content and settings. The editor value is sent to the server on blur or Ctrl/Cmd+Enter (not every keystroke). (#XXXX)
+* Added a new `ui.input_code_editor()` element that allows for light-weight code editing with syntax highlighting, using the [prism-code-editor](https://prism-code-editor.netlify.app/) library. The editor supports 20+ languages, more than a dozen themes, and automatic light/dark mode switching. (#2128)
 
 ## [1.5.1] - 2025-12-08
 
