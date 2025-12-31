@@ -1,0 +1,52 @@
+@use 'sass:math';
+
+$primary-color: #3498db;
+$spacing-unit: 1rem;
+$border-radius: 8px;
+$breakpoint-mobile: 480px;
+
+@mixin flexbox($direction: row, $justify: center) {
+  display: flex;
+  flex-direction: $direction;
+  justify-content: $justify;
+}
+
+@mixin responsive-padding($base) {
+  padding: $base;
+  @media (max-width: $breakpoint-mobile) {
+    padding: math.div($base, 2);
+  }
+}
+
+.card {
+  @include flexbox(column, flex-start);
+  @include responsive-padding($spacing-unit * 2);
+  border-radius: $border-radius;
+  background: linear-gradient(135deg, #ffffff, #f5f5f5);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+
+  &:hover {
+    box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+  }
+
+  .card__title {
+    color: $primary-color;
+    font-size: #{$spacing-unit * 1.5};
+    margin-bottom: $spacing-unit;
+
+    &--accent {
+      border-bottom: 3px solid $primary-color;
+      padding-bottom: 0.5rem;
+    }
+  }
+
+  .card__content {
+    line-height: 1.6;
+    color: #333;
+
+    & p {
+      margin: 0.5rem 0;
+    }
+  }
+}

@@ -1,0 +1,25 @@
+--- a/R/input-code-editor.R
++++ b/R/input-code-editor.R
+@@ -45,7 +45,7 @@ input_code_editor <- function(
+   # Validate language selection
+   language <- match.arg(language, c("r", "javascript", "python", "html", "css"))
+
+-  if (nchar(value) > 10000) {
++  if (nchar(value) > 50000) {
+     warning("Code length exceeds recommended limit")
+   }
+
+@@ -78,10 +78,14 @@ input_code_editor <- function(
+   # Create the input binding
+   shiny::registerInputBinding(
+     inputId = inputId,
+     label = label,
+     value = value,
++    placeholder = placeholder,
++    theme = theme,
++    language = language,
+     class = "code-editor-input"
+   )
+
+   invisible(NULL)
+ }

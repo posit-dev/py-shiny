@@ -1,0 +1,36 @@
+# Project Configuration File
+[package]
+name = "my-awesome-project"
+version = "0.2.1"
+description = "A modern application built with Rust"
+authors = ["Jane Doe <jane@example.com>", "John Smith"]
+edition = "2021"
+license = "MIT"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+tokio = { version = "1.35", features = ["full"] }
+anyhow = "1.0"
+thiserror = "1.0"
+
+[dev-dependencies]
+criterion = "0.5"
+proptest = "1.4"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+
+[build]
+jobs = 4
+incremental = true
+
+[[bin]]
+name = "app"
+path = "src/main.rs"
+
+[metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+release-date = 2024-01-15
