@@ -119,7 +119,7 @@ class TestInputCodeEditorParameters:
         assert 'readonly="false"' in html
         assert 'line-numbers="true"' in html
         assert 'word-wrap="false"' in html
-        assert 'tab-size="2"' in html
+        assert 'tab-size="4"' in html
         assert 'insert-spaces="true"' in html
 
     def test_line_numbers_default_for_markdown(self):

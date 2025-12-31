@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
 
 # Bundled languages from prism-code-editor (from bslib's R/versions.R)
-CODE_EDITOR_BUNDLED_LANGUAGES: tuple[str, ...] = (
+_CODE_EDITOR_BUNDLED_LANGUAGES: tuple[str, ...] = (
     "r",
     "python",
     "julia",
@@ -62,7 +62,7 @@ _LANGUAGE_ALIASES: dict[str, str] = {
 
 # All supported languages: bundled prism grammars + aliases
 _SUPPORTED_LANGUAGES: tuple[str, ...] = (
-    *CODE_EDITOR_BUNDLED_LANGUAGES,
+    *_CODE_EDITOR_BUNDLED_LANGUAGES,
     *_LANGUAGE_ALIASES.keys(),
 )
 
@@ -220,8 +220,8 @@ def _code_editor_dependencies() -> list[HTMLDependency]:
 @add_example()
 def input_code_editor(
     id: str,
-    value: str | Sequence[str] = "",
     label: TagChild = None,
+    value: str | Sequence[str] = "",
     *,
     language: CodeEditorLanguage = "plain",
     height: str = "auto",
@@ -231,7 +231,7 @@ def input_code_editor(
     read_only: bool = False,
     line_numbers: Optional[bool] = None,
     word_wrap: Optional[bool] = None,
-    tab_size: int = 2,
+    tab_size: int = 4,
     indentation: CodeEditorIndentation = "space",
     fill: bool = True,
     **kwargs: TagAttrValue,
@@ -239,21 +239,21 @@ def input_code_editor(
     """
     Create a code editor input.
 
-    Creates an interactive lightweight code editor input with syntax highlighting,
-    line numbers, and other basic code editing features powered by Prism Code Editor.
+    Creates an interactive lightweight code editor input with syntax highlighting, line
+    numbers, and other basic code editing features powered by Prism Code Editor.
 
-    The editor value is not sent to the server on every keystroke. Instead, updates
-    are reflected on the server when the user moves away from the editor (blur) or
-    when they press ``Ctrl/Cmd + Enter``.
+    The editor value is not sent to the server on every keystroke. Instead, updates are
+    reflected on the server when the user moves away from the editor (blur) or when they
+    press `Ctrl/Cmd + Enter`.
 
     Parameters
     ----------
     id
         An input ID.
-    value
-        Initial code content. Can be a string or a sequence of strings (lines).
     label
         An optional label for the code editor.
+    value
+        Initial code content. Can be a string or a sequence of strings (lines).
     language
         Programming language for syntax highlighting. Supported languages include
         ``"r"``, ``"python"``, ``"julia"``, ``"sql"``, ``"javascript"``,
@@ -280,7 +280,7 @@ def input_code_editor(
         Whether to wrap long lines. Defaults to ``True`` when ``line_numbers`` is
         ``False``, otherwise ``False``.
     tab_size
-        Number of spaces per tab.
+        Number of spaces per tab, defaults to `4`.
     indentation
         Type of indentation: ``"space"`` or ``"tab"``.
     fill
@@ -304,8 +304,8 @@ def input_code_editor(
     the editor loses focus (blur event).
     :::
 
-    Keyboard Shortcuts
-    ------------------
+    **Keyboard Shortcuts**
+
     The editor supports the following keyboard shortcuts:
 
     * ``Ctrl/Cmd + Enter``: Submit the current code to the server
@@ -314,10 +314,10 @@ def input_code_editor(
     * ``Tab``: Indent selection
     * ``Shift + Tab``: Dedent selection
 
-    Themes
-    ------
-    The editor automatically switches between ``theme_light`` and ``theme_dark``
-    when used with :func:`~shiny.ui.input_dark_mode`. Use
+    **Themes**
+
+    The editor automatically switches between ``theme_light`` and ``theme_dark`` when
+    used with :func:`~shiny.ui.input_dark_mode`. Use
     :func:`~shiny.ui.code_editor_themes` to see all available themes.
 
     See Also
@@ -392,14 +392,13 @@ def input_code_editor(
         *_code_editor_dependencies(),
     )
 
-    # Add fillable classes
+    # Internal layout (always needed for editor sizing)
+    tag.add_class("html-fill-container")
+    editor_inner.add_class("html-fill-item")
+
+    # External fill behavior (editor expands to fill parent container)
     if fill:
-        tag.add_class("html-fill-container")
         tag.add_class("html-fill-item")
-        editor_inner.add_class("html-fill-item")
-    else:
-        tag.add_class("html-fill-container")
-        editor_inner.add_class("html-fill-item")
 
     return tag
 
@@ -408,6 +407,7 @@ def input_code_editor(
 def update_code_editor(
     id: str,
     *,
+    label: Optional[TagChild] = None,
     value: Optional[str | Sequence[str]] = None,
     language: Optional[CodeEditorLanguage] = None,
     theme_light: Optional[str] = None,
@@ -426,6 +426,8 @@ def update_code_editor(
     ----------
     id
         The input ID.
+    label
+        An input label.
     value
         New code content. Can be a string or sequence of strings (lines).
     language
@@ -448,6 +450,19 @@ def update_code_editor(
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
         :func:`~shiny.session.get_current_session`.
 
+    Note
+    ----
+    The input updater functions send a message to the client, telling it to change the
+    settings of an input object. The messages are collected and sent after all the
+    observers (including outputs) have finished running.
+
+    The syntax of these functions is similar to the functions that created the inputs in
+    the first place. For example, :func:`~shiny.ui.input_code_editor` and
+    :func:`~shiny.ui.update_code_editor` take a similar set of arguments.
+
+    Any arguments with `None` values will be ignored; they will not result in any
+    changes to the input object on the client.
+
     See Also
     --------
     * :func:`~shiny.ui.input_code_editor`
@@ -461,8 +476,9 @@ def update_code_editor(
             raise TypeError("`value` must be a string or sequence of strings")
         _check_value_line_count(value)
 
+    resolved_language: Optional[str] = None
     if language is not None:
-        language = _resolve_language(language)  # type: ignore[assignment]
+        resolved_language = _resolve_language(language)
     if theme_light is not None:
         _validate_theme(theme_light, "theme_light")
     if theme_dark is not None:
@@ -474,8 +490,9 @@ def update_code_editor(
 
     # Build message with snake_case keys (matches TypeScript receiveMessage)
     msg = {
+        "label": session._process_ui(label) if label is not None else None,
         "value": value,
-        "language": language,
+        "language": resolved_language,
         "theme_light": theme_light,
         "theme_dark": theme_dark,
         "read_only": read_only,

@@ -1105,6 +1105,14 @@ class InputCodeEditor(
         self.loc_editor = self.loc.locator(".code-editor")
         self.loc_textarea = self.loc_editor.locator("textarea")
 
+    def _get_submit_modifier(self) -> str:
+        """Get the appropriate modifier key for submit (Meta on Mac, Control elsewhere)."""
+        return (
+            "Meta"
+            if self.page.evaluate("() => navigator.platform.includes('Mac')")
+            else "Control"
+        )
+
     def set(self, value: str, *, submit: bool = False, timeout: Timeout = None) -> None:
         """
         Sets the code value in the editor.
@@ -1121,12 +1129,7 @@ class InputCodeEditor(
         """
         set_text(self.loc_textarea, value, timeout=timeout)
         if submit:
-            # Trigger Ctrl/Cmd+Enter to submit
-            modifier = (
-                "Meta"
-                if self.page.evaluate("() => navigator.platform.includes('Mac')")
-                else "Control"
-            )
+            modifier = self._get_submit_modifier()
             self.loc_textarea.press(f"{modifier}+Enter", timeout=timeout)
 
     def submit(self, *, timeout: Timeout = None) -> None:
@@ -1138,11 +1141,7 @@ class InputCodeEditor(
         timeout
             The maximum time to wait for the submit. Defaults to `None`.
         """
-        modifier = (
-            "Meta"
-            if self.page.evaluate("() => navigator.platform.includes('Mac')")
-            else "Control"
-        )
+        modifier = self._get_submit_modifier()
         self.loc_textarea.press(f"{modifier}+Enter", timeout=timeout)
 
     def expect_value(
