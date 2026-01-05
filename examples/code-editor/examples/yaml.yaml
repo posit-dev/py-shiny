@@ -9,7 +9,6 @@ database:
   port: 5432
   credentials: &db_creds
     username: admin
-    password: "secret123"
     timeout: 30
 
 servers:

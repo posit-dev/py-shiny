@@ -1,7 +1,6 @@
 import asyncio
 from dataclasses import dataclass
 from functools import wraps
-from typing import Optional
 
 
 def cache_result(func):
