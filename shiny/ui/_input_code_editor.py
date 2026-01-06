@@ -174,31 +174,33 @@ def input_code_editor(
     value
         Initial code content. Can be a string or a sequence of strings (lines).
     language
-        Programming language for syntax highlighting. Supported languages include: {languages}.
+        Programming language for syntax highlighting. Supported languages include:
+        {languages}.
     height
-        CSS height of the editor. Set to a specific value like ``"300px"`` for a
-        fixed height, or ``"auto"`` to grow with content.
+        CSS height of the editor. Set to a specific value like `"300px"` for a
+        fixed height, or `"auto"` to grow with content.
     width
         CSS width of the editor.
     theme_light
         Theme to use in light mode. Available themes include: {themes}.
     theme_dark
         Theme to use in dark mode. The editor automatically switches between
-        ``theme_light`` and ``theme_dark`` based on the current Bootstrap theme.
+        `theme_light` and `theme_dark` when used with
+        :func:`~shiny.ui.input_dark_mode`.
     read_only
         Whether the editor should be read-only.
     line_numbers
-        Whether to show line numbers. Defaults to ``True``, except for ``"markdown"``
-        and ``"plain"`` languages where it defaults to ``False``.
+        Whether to show line numbers. Defaults to `True`, except for `"markdown"`
+        and `"plain"` languages where it defaults to `False`.
     word_wrap
-        Whether to wrap long lines. Defaults to ``True`` when ``line_numbers`` is
-        ``False``, otherwise ``False``.
+        Whether to wrap long lines. Defaults to `True` when `line_numbers` is
+        `False`, otherwise `False`.
     tab_size
         Number of spaces per tab, defaults to `4`.
     indentation
-        Type of indentation: ``"space"`` or ``"tab"``.
+        Type of indentation: `"space"` or `"tab"`.
     fill
-        Whether the code editor should fill its container. When ``True`` (the
+        Whether the code editor should fill its container. When `True` (the
         default), the editor participates in the fillable layout system.
     **kwargs
         Additional HTML attributes for the outer container element.
@@ -214,7 +216,7 @@ def input_code_editor(
     A string containing the current editor content.
 
     Unlike text inputs that update on every keystroke, the code editor only sends
-    its value to the server when the user presses ``Ctrl/Cmd + Enter`` or when
+    its value to the server when the user presses `Ctrl/Cmd + Enter` or when
     the editor loses focus (blur event).
     :::
 
@@ -222,15 +224,15 @@ def input_code_editor(
 
     The editor supports the following keyboard shortcuts:
 
-    * ``Ctrl/Cmd + Enter``: Submit the current code to the server
-    * ``Ctrl/Cmd + Z``: Undo
-    * ``Ctrl/Cmd + Shift + Z``: Redo
-    * ``Tab``: Indent selection
-    * ``Shift + Tab``: Dedent selection
+    * `Ctrl/Cmd + Enter`: Submit the current code to the server
+    * `Ctrl/Cmd + Z`: Undo
+    * `Ctrl/Cmd + Shift + Z`: Redo
+    * `Tab`: Indent selection
+    * `Shift + Tab`: Dedent selection
 
     **Themes**
 
-    The editor automatically switches between ``theme_light`` and ``theme_dark`` when
+    The editor automatically switches between `theme_light` and `theme_dark` when
     used with :func:`~shiny.ui.input_dark_mode`.
 
     See Also
@@ -347,7 +349,7 @@ def update_code_editor(
     tab_size
         Number of spaces per tab.
     indentation
-        Type of indentation: ``"space"`` or ``"tab"``.
+        Type of indentation: `"space"` or `"tab"`.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
         :func:`~shiny.session.get_current_session`.
