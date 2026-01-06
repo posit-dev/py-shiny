@@ -37,16 +37,16 @@ CodeEditorLanguage = CodeEditorBundledLanguage | LanguageAlias
 CodeEditorIndentation = Literal["space", "tab"]
 
 # Runtime tuples derived from types
-_CODE_EDITOR_BUNDLED_LANGUAGES: tuple[str, ...] = get_args(CodeEditorBundledLanguage)
-_CODE_EDITOR_THEMES: tuple[str, ...] = get_args(CodeEditorTheme)
-_LANGUAGE_ALIASES: tuple[str, ...] = get_args(LanguageAlias)
-_SUPPORTED_LANGUAGES: tuple[str, ...] = (
-    *_CODE_EDITOR_BUNDLED_LANGUAGES,
-    *_LANGUAGE_ALIASES,
+CODE_EDITOR_BUNDLED_LANGUAGES: tuple[str, ...] = get_args(CodeEditorBundledLanguage)
+CODE_EDITOR_THEMES: tuple[str, ...] = get_args(CodeEditorTheme)
+LANGUAGE_ALIASES: tuple[str, ...] = get_args(LanguageAlias)
+SUPPORTED_LANGUAGES: tuple[str, ...] = (
+    *CODE_EDITOR_BUNDLED_LANGUAGES,
+    *LANGUAGE_ALIASES,
 )
 
 # Alias mapping (user-friendly names -> prism grammar names)
-_LANGUAGE_ALIAS_MAP: dict[str, str] = {
+LANGUAGE_ALIAS_MAP: dict[str, str] = {
     "md": "markdown",
     "html": "markup",
     "plain": "plain",
@@ -56,87 +56,12 @@ _LANGUAGE_ALIAS_MAP: dict[str, str] = {
 }
 
 
-def _resolve_language(language: str) -> str:
-    """Resolve language aliases to their actual grammar names."""
-    if language not in _SUPPORTED_LANGUAGES:
-        raise ValueError(
-            f"Invalid language: {language!r}. "
-            f"Supported languages are: {', '.join(_SUPPORTED_LANGUAGES)}"
-        )
-    return _LANGUAGE_ALIAS_MAP.get(language, language)
-
-
-def _check_value_line_count(value: str) -> None:
-    """Warn if value has 1000 or more lines."""
-    if not value:
-        return
-
-    line_count = value.count("\n") + 1
-    if line_count >= 1000:
-        warnings.warn(
-            f"Code editor value contains {line_count} lines. "
-            "The editor may experience performance issues with 1,000 or more lines.",
-            UserWarning,
-            stacklevel=3,
-        )
-
-
-def _validate_theme(theme: str, param_name: str) -> str:
-    """Validate that a theme name is available."""
-    if theme not in _CODE_EDITOR_THEMES:
-        raise ValueError(
-            f"Invalid {param_name}: {theme!r}. "
-            f"Available themes are: {', '.join(_CODE_EDITOR_THEMES)}"
-        )
-    return theme
-
-
-def _code_editor_dependency_prism() -> HTMLDependency:
-    """HTML dependency for prism-code-editor library."""
-    return HTMLDependency(
-        name="prism-code-editor",
-        version=VERSION_PRISM_CODE_EDITOR,
-        source={
-            "package": "shiny",
-            "subdir": "www/shared/prism-code-editor",
-        },
-        script={"src": "index.js", "type": "module"},
-        stylesheet=[
-            {"href": "layout.css"},
-            {"href": "copy.css"},
-        ],
-        all_files=True,
-    )
-
-
-def _code_editor_dependency_js() -> HTMLDependency:
-    """HTML dependency for bslib code editor binding."""
-    return HTMLDependency(
-        name="bslib-code-editor-js",
-        version=bslib_version,
-        source={
-            "package": "shiny",
-            "subdir": "www/shared/bslib/components",
-        },
-        script={"src": "code-editor.min.js", "type": "module"},
-    )
-
-
-def _code_editor_dependencies() -> list[HTMLDependency]:
-    """Returns all HTML dependencies for code editor."""
-    return [
-        _code_editor_dependency_prism(),
-        _code_editor_dependency_js(),
-        components_dependencies(),
-    ]
-
-
-_doc_languages = ", ".join(f'`"{lang}"`' for lang in _SUPPORTED_LANGUAGES)
-_doc_themes = ", ".join(f'"`{theme}`"' for theme in _CODE_EDITOR_THEMES)
+doc_languages = ", ".join(f'`"{lang}"`' for lang in SUPPORTED_LANGUAGES)
+doc_themes = ", ".join(f'"`{theme}`"' for theme in CODE_EDITOR_THEMES)
 
 
 @add_example()
-@doc_format(languages=_doc_languages, themes=_doc_themes)
+@doc_format(languages=doc_languages, themes=doc_themes)
 def input_code_editor(
     id: str,
     label: TagChild = None,
@@ -256,10 +181,10 @@ def input_code_editor(
         value = str(restored_value)
 
     # Validate inputs
-    _check_value_line_count(value)
-    resolved_language = _resolve_language(language)
-    _validate_theme(theme_light, "theme_light")
-    _validate_theme(theme_dark, "theme_dark")
+    check_value_line_count(value)
+    resolved_language = resolve_language(language)
+    validate_theme(theme_light, "theme_light")
+    validate_theme(theme_dark, "theme_dark")
 
     if tab_size < 1:
         raise ValueError("`tab_size` must be a positive integer")
@@ -284,7 +209,6 @@ def input_code_editor(
         "bslib-code-editor",
         {
             "id": resolved_id,
-            "class": "bslib-mb-spacing",
             "style": css(height=height, width=width),
             "language": resolved_language,
             "value": value,
@@ -301,7 +225,7 @@ def input_code_editor(
         FILL_ITEM_ATTRS if fill else {},
         label_tag,
         editor_inner,
-        *_code_editor_dependencies(),
+        *code_editor_dependencies(),
     )
 
     return tag
@@ -377,15 +301,15 @@ def update_code_editor(
             value = "\n".join(str(v) for v in value)
         if not isinstance(value, str):
             raise TypeError("`value` must be a string or sequence of strings")
-        _check_value_line_count(value)
+        check_value_line_count(value)
 
     resolved_language: Optional[str] = None
     if language is not None:
-        resolved_language = _resolve_language(language)
+        resolved_language = resolve_language(language)
     if theme_light is not None:
-        _validate_theme(theme_light, "theme_light")
+        validate_theme(theme_light, "theme_light")
     if theme_dark is not None:
-        _validate_theme(theme_dark, "theme_dark")
+        validate_theme(theme_dark, "theme_dark")
     if tab_size is not None and tab_size < 1:
         raise ValueError("`tab_size` must be a positive integer")
 
@@ -405,3 +329,78 @@ def update_code_editor(
     }
 
     session.send_input_message(id, drop_none(msg))
+
+
+def resolve_language(language: str) -> str:
+    """Resolve language aliases to their actual grammar names."""
+    if language not in SUPPORTED_LANGUAGES:
+        raise ValueError(
+            f"Invalid language: {language!r}. "
+            f"Supported languages are: {', '.join(SUPPORTED_LANGUAGES)}"
+        )
+    return LANGUAGE_ALIAS_MAP.get(language, language)
+
+
+def check_value_line_count(value: str) -> None:
+    """Warn if value has 1000 or more lines."""
+    if not value:
+        return
+
+    line_count = value.count("\n") + 1
+    if line_count >= 1000:
+        warnings.warn(
+            f"Code editor value contains {line_count} lines. "
+            "The editor may experience performance issues with 1,000 or more lines.",
+            UserWarning,
+            stacklevel=3,
+        )
+
+
+def validate_theme(theme: str, param_name: str) -> str:
+    """Validate that a theme name is available."""
+    if theme not in CODE_EDITOR_THEMES:
+        raise ValueError(
+            f"Invalid {param_name}: {theme!r}. "
+            f"Available themes are: {', '.join(CODE_EDITOR_THEMES)}"
+        )
+    return theme
+
+
+def code_editor_dependency_prism() -> HTMLDependency:
+    """HTML dependency for prism-code-editor library."""
+    return HTMLDependency(
+        name="prism-code-editor",
+        version=VERSION_PRISM_CODE_EDITOR,
+        source={
+            "package": "shiny",
+            "subdir": "www/shared/prism-code-editor",
+        },
+        script={"src": "index.js", "type": "module"},
+        stylesheet=[
+            {"href": "layout.css"},
+            {"href": "copy.css"},
+        ],
+        all_files=True,
+    )
+
+
+def code_editor_dependency_js() -> HTMLDependency:
+    """HTML dependency for bslib code editor binding."""
+    return HTMLDependency(
+        name="bslib-code-editor-js",
+        version=bslib_version,
+        source={
+            "package": "shiny",
+            "subdir": "www/shared/bslib/components",
+        },
+        script={"src": "code-editor.min.js", "type": "module"},
+    )
+
+
+def code_editor_dependencies() -> list[HTMLDependency]:
+    """Returns all HTML dependencies for code editor."""
+    return [
+        code_editor_dependency_prism(),
+        code_editor_dependency_js(),
+        components_dependencies(),
+    ]
