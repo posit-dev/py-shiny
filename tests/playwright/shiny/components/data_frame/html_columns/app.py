@@ -50,7 +50,7 @@ pd_penguins["Region"] = pd_penguins["Region"].apply(  # type: ignore
 pd_penguins["Island"] = pd_penguins[
     "Island"
 ].apply(  # pyright: ignore[reportUnknownMemberType]
-    lambda z: ui.TagList(  # pyright: ignore[reportUnknownLambdaType]
+    lambda z: ui.TagList(  # pyright: ignore[reportUnknownLambdaType,reportUnknownArgumentType]
         ui.input_checkbox(f"checkbox_{z}_{random_generator()}", f"{z}"),
         ui.tags.img(
             src="https://dka575ofm4ao0.cloudfront.net/pages-transactional_logos/retina/276517/posit-logo-fullcolor-TM.png",
@@ -62,10 +62,10 @@ pd_penguins["Island"] = pd_penguins[
 # Set the first value of the column to an html object.
 # Narwhals does not inspect the types beyond the first row.
 # Theforefore, we should not either and need to set the type to object.
-pd_penguins.iloc[0, 5] = ui.div(  # pyright: ignore[reportArgumentType]
+pd_penguins.iloc[0, 5] = ui.div(  # pyright: ignore[reportArgumentType,reportCallIssue]
     pd_penguins.iloc[0, 5]  # pyright: ignore[reportArgumentType]
 )
-pd_penguins.iloc[1, 5] = ui.p(  # pyright: ignore[reportArgumentType]
+pd_penguins.iloc[1, 5] = ui.p(  # pyright: ignore[reportArgumentType,reportCallIssue]
     ui.input_action_button("pandas_test_cell_button", "Test button"),
     ui.output_text_verbatim("pandas_test_cell_text", placeholder=True),
 )

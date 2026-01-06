@@ -44,7 +44,7 @@ df = df.astype({"Sample Number": "object"})
 df.loc[:, "Sample Number"] = df.loc[
     :, "Sample Number"
 ].apply(  # pyright: ignore[reportCallIssue]
-    lambda x: ui.HTML(  # pyright: ignore[reportUnknownLambdaType]
+    lambda x: ui.HTML(  # pyright: ignore[reportUnknownLambdaType,reportUnknownArgumentType]
         str(
             ui.tags.strong(
                 ui.tags.em(str(x))  # pyright: ignore[reportUnknownArgumentType]
