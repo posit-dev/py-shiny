@@ -80,7 +80,7 @@ class TestInputCodeEditorHtmlStructure:
         dep_names = [d.name for d in deps]
 
         assert "prism-code-editor" in dep_names
-        assert "bslib-code-editor-js" in dep_names
+        assert "bslib-code-editor" in dep_names
 
 
 class TestInputCodeEditorParameters:

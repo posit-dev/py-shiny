@@ -16,7 +16,6 @@ from .._versions import bslib as bslib_version
 from ..bookmark import restore_input
 from ..module import resolve_id
 from ..session import Session, require_active_session
-from ._html_deps_shinyverse import components_dependencies
 from ._input_code_editor_bundle import (
     VERSION_PRISM_CODE_EDITOR,
     CodeEditorBundledLanguage,
@@ -384,23 +383,21 @@ def code_editor_dependency_prism() -> HTMLDependency:
     )
 
 
-def code_editor_dependency_js() -> HTMLDependency:
+def code_editor_dependency() -> HTMLDependency:
     """HTML dependency for bslib code editor binding."""
     return HTMLDependency(
-        name="bslib-code-editor-js",
+        name="bslib-code-editor",
         version=bslib_version,
         source={
             "package": "shiny",
             "subdir": "www/shared/bslib/components",
         },
         script={"src": "code-editor.min.js", "type": "module"},
+        stylesheet={"href": "code-editor.css"},
+        all_files=False,
     )
 
 
 def code_editor_dependencies() -> list[HTMLDependency]:
     """Returns all HTML dependencies for code editor."""
-    return [
-        code_editor_dependency_prism(),
-        code_editor_dependency_js(),
-        components_dependencies(),
-    ]
+    return [code_editor_dependency_prism(), code_editor_dependency()]
