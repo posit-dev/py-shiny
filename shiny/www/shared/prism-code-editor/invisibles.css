@@ -1,1 +1,0 @@
-.pce-invisibles :before,.token.tab:before,.token.space:before{content:"·";position:absolute;color:var(--pce-invisibles, #e3e4e229)}.pce-tab:before,.token.tab:before{content:"→"}

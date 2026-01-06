@@ -63,25 +63,25 @@ bslib-code-editor .code-editor code {
 }
 
 /* Read-only state styling */
-bslib-code-editor[data-read-only="true"] .code-editor {
-  background-color: var(--bs-secondary-bg, #e9ecef);
-  cursor: not-allowed;
+bslib-code-editor.is-invalid .code-editor,
+bslib-code-editor.is-invalid[data-bs-theme="dark"] .code-editor,
+[data-bs-theme="dark"] bslib-code-editor.is-invalid .code-editor {
+  border-color: var(--bs-danger, #c10000);
+  box-shadow: 0 0 0 0.25rem rgba(var(--bs-danger-rgb, 193,0,0), 0.25);
 }
 
-/* Dark mode adjustments */
-[data-bs-theme="dark"] bslib-code-editor .code-editor {
-  border-color: var(--bs-border-color, #495057);
-  background-color: var(--bs-body-bg, #212529);
-  color: var(--bs-body-color, #dee2e6);
-}
-
-[data-bs-theme="dark"] bslib-code-editor .code-editor:focus-within {
-  border-color: var(--bs-primary, #0d6efd);
-  box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb, 13, 110, 253), 0.25);
-}
-
-[data-bs-theme="dark"] bslib-code-editor[data-read-only="true"] .code-editor {
-  background-color: var(--bs-secondary-bg, #343a40);
+/* Read-only editor tooltip styling */
+.code-editor-readonly-tooltip {
+  position: sticky;
+  left: 0.5em;
+  right: 0.5em;
+  padding: 0.4em;
+  /* background: var(--widget__bg);
+  border: 1px solid var(--widget__border);
+  border-radius: 0.3em; */
+  font-family: Arial, Helvetica, sans-serif;
+  white-space: normal;
+  word-break: normal;
 }
 
 /* Submit flash animation (Ctrl/Cmd+Enter feedback) */
