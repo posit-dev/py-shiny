@@ -23,7 +23,7 @@ from ._input_code_editor_bundle import (
     CodeEditorTheme,
 )
 from ._utils import shiny_input_label
-from .fill._fill import FILL_CONTAINER_CLASS, FILL_ITEM_CLASS
+from .fill._fill import FILL_ITEM_ATTRS, FILLABLE_CONTAINTER_ATTRS
 
 if TYPE_CHECKING:
     from htmltools import TagAttrValue
@@ -273,7 +273,7 @@ def input_code_editor(
     label_tag = shiny_input_label(resolved_id, label)
 
     editor_inner = tags.div(
-        FILL_ITEM_CLASS,
+        FILL_ITEM_ATTRS,
         class_="code-editor",
         style=css(display="grid"),
     )
@@ -295,8 +295,8 @@ def input_code_editor(
             "insert-spaces": str(insert_spaces).lower(),
             **kwargs,
         },
-        FILL_CONTAINER_CLASS,
-        FILL_ITEM_CLASS if fill else {},
+        FILLABLE_CONTAINTER_ATTRS,
+        FILL_ITEM_ATTRS if fill else {},
         label_tag,
         editor_inner,
         *_code_editor_dependencies(),
