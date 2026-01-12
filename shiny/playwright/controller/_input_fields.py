@@ -1071,3 +1071,249 @@ class InputSubmitTextarea(
             The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
         playwright_expect(self.loc_button).to_contain_text(value, timeout=timeout)
+
+
+class InputCodeEditor(
+    WidthContainerStyleM,
+    UiWithLabel,
+):
+    """Controller for :func:`shiny.ui.input_code_editor`."""
+
+    loc_editor: Locator
+    """Playwright `Locator` for the inner code editor container."""
+    loc_textarea: Locator
+    """Playwright `Locator` for the textarea element."""
+
+    def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes the input code editor.
+
+        Parameters
+        ----------
+        page
+            The page where the input code editor is located.
+        id
+            The id of the input code editor.
+        """
+        # The bslib-code-editor element itself is the container (no wrapper div)
+        super().__init__(
+            page,
+            id=id,
+            loc="xpath=.",
+            loc_container=f"bslib-code-editor#{id}",
+        )
+        self.loc_editor = self.loc.locator(".code-editor")
+        self.loc_textarea = self.loc_editor.locator("textarea")
+
+    def _get_submit_modifier(self) -> str:
+        """Get the appropriate modifier key for submit (Meta on Mac, Control elsewhere)."""
+        return (
+            "Meta"
+            if self.page.evaluate("() => navigator.platform.includes('Mac')")
+            else "Control"
+        )
+
+    def set(self, value: str, *, submit: bool = False, timeout: Timeout = None) -> None:
+        """
+        Sets the code value in the editor.
+
+        Parameters
+        ----------
+        value
+            The code to set.
+        submit
+            Whether to trigger a submit (Ctrl/Cmd+Enter) after setting the text.
+            Defaults to `False`.
+        timeout
+            The maximum time to wait for the text to be set. Defaults to `None`.
+        """
+        set_text(self.loc_textarea, value, timeout=timeout)
+        if submit:
+            modifier = self._get_submit_modifier()
+            self.loc_textarea.press(f"{modifier}+Enter", timeout=timeout)
+
+    def submit(self, *, timeout: Timeout = None) -> None:
+        """
+        Triggers a submit by pressing Ctrl/Cmd+Enter.
+
+        Parameters
+        ----------
+        timeout
+            The maximum time to wait for the submit. Defaults to `None`.
+        """
+        modifier = self._get_submit_modifier()
+        self.loc_textarea.press(f"{modifier}+Enter", timeout=timeout)
+
+    def expect_value(
+        self,
+        value: PatternOrStr,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expect the value of the code editor to have a specific value.
+
+        Parameters
+        ----------
+        value
+            The expected value of the code editor.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        playwright_expect(self.loc_textarea).to_have_value(value, timeout=timeout)
+
+    def expect_language(
+        self,
+        value: PatternOrStr,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expect the language attribute to have a specific value.
+
+        Parameters
+        ----------
+        value
+            The expected language (e.g., "python", "r", "javascript").
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        _expect_attribute_to_have_value(
+            self.loc, "language", value=value, timeout=timeout
+        )
+
+    def expect_theme_light(
+        self,
+        value: PatternOrStr,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expect the light theme attribute to have a specific value.
+
+        Parameters
+        ----------
+        value
+            The expected light theme name.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        _expect_attribute_to_have_value(
+            self.loc, "theme-light", value=value, timeout=timeout
+        )
+
+    def expect_theme_dark(
+        self,
+        value: PatternOrStr,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expect the dark theme attribute to have a specific value.
+
+        Parameters
+        ----------
+        value
+            The expected dark theme name.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        _expect_attribute_to_have_value(
+            self.loc, "theme-dark", value=value, timeout=timeout
+        )
+
+    def expect_read_only(
+        self,
+        value: bool,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expect the read-only state to have a specific value.
+
+        Parameters
+        ----------
+        value
+            Whether the editor should be read-only.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        _expect_attribute_to_have_value(
+            self.loc, "readonly", value="true" if value else "false", timeout=timeout
+        )
+
+    def expect_line_numbers(
+        self,
+        value: bool,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expect the line numbers visibility to have a specific value.
+
+        Parameters
+        ----------
+        value
+            Whether line numbers should be shown.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        _expect_attribute_to_have_value(
+            self.loc,
+            "line-numbers",
+            value="true" if value else "false",
+            timeout=timeout,
+        )
+
+    def expect_word_wrap(
+        self,
+        value: bool,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expect the word wrap state to have a specific value.
+
+        Parameters
+        ----------
+        value
+            Whether word wrap should be enabled.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        _expect_attribute_to_have_value(
+            self.loc, "word-wrap", value="true" if value else "false", timeout=timeout
+        )
+
+    def expect_tab_size(
+        self,
+        value: int | str,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expect the tab size to have a specific value.
+
+        Parameters
+        ----------
+        value
+            The expected tab size.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        _expect_attribute_to_have_value(
+            self.loc, "tab-size", value=str(value), timeout=timeout
+        )
+
+    def expect_height(self, value: StyleValue, *, timeout: Timeout = None) -> None:
+        """
+        Expect the height style to have a specific value.
+
+        Parameters
+        ----------
+        value
+            The expected height value.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        _expect_style_to_have_value(self.loc, "height", value, timeout=timeout)

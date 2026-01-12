@@ -88,6 +88,10 @@ www_bslib_components <- path(WWW_SHARED, "bslib", "components")
 copy_from_pkg("bslib", "components/dist", www_bslib_components)
 copy_from_pkg("htmltools", "fill", path(WWW_SHARED, "htmltools", "fill"))
 
+# Copy prism-code-editor library for input_code_editor()
+www_prism <- path(WWW_SHARED, "prism-code-editor")
+copy_from_pkg("bslib", "lib/prism-code-editor", www_prism, www_prism)
+
 
 # Pre-rendering Component CSS --------------------------------------------------------
 cli::cli_h2("Pre-render Component CSS")
@@ -174,3 +178,4 @@ cli::cli_h2("Generate Python files")
 write_python_preset_choices(VERSION_BOOTSTRAP, PRESETS, BUNDLED_PRESETS)
 write_versions_py(bootstrap = VERSION_BOOTSTRAP, requirejs = VERSION_REQUIREJS)
 write_spinners_py(WWW_SHARED)
+write_code_editor_bundle_py(WWW_SHARED)

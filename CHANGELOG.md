@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### New features
 
+* Added a new `ui.input_code_editor()` element that allows for light-weight code editing with syntax highlighting, using the [prism-code-editor](https://prism-code-editor.netlify.app/) library. The editor supports 20+ languages, more than a dozen themes, and automatic light/dark mode switching. (#2128)
 
 ## [1.5.1] - 2025-12-08
 

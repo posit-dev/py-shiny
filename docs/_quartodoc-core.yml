@@ -56,6 +56,7 @@ quartodoc:
         - ui.input_text
         - ui.input_text_area
         - ui.input_submit_textarea
+        - ui.input_code_editor
         - ui.input_password
         - ui.input_action_button
         - ui.input_action_link
@@ -168,6 +169,7 @@ quartodoc:
         - name: ui.update_text_area
           dynamic: "shiny.ui.update_text"
         - ui.update_submit_textarea
+        - ui.update_code_editor
         - ui.update_navset
         - ui.update_action_button
         - ui.update_action_link
