@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, Callable, Literal, Optional, TypeVar
 
 def find_api_examples_dir(start_dir: str) -> Optional[str]:
     current_dir = os.path.abspath(start_dir)
+    search_start = current_dir
     while True:
         api_examples_dir = os.path.join(current_dir, "api-examples")
         if os.path.isdir(api_examples_dir):
@@ -19,6 +20,15 @@ def find_api_examples_dir(start_dir: str) -> Optional[str]:
         if current_dir == os.path.dirname(current_dir):
             break  # Reached the global root directory
         current_dir = os.path.dirname(current_dir)
+
+    # Not found - provide helpful error for documentation builders
+    if os.getenv("SHINY_ADD_EXAMPLES") == "true":
+        raise FileNotFoundError(
+            "Could not find 'api-examples/' directory. "
+            "Documentation must be built from the source repository, "
+            "not from an installed package. "
+            f"Searched from: {search_start}"
+        )
     return None
 
 
