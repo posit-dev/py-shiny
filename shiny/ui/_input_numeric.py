@@ -55,7 +55,7 @@ def input_numeric(
     Notes
     ------
     ::: {.callout-note title="Server value"}
-    A numeric value.
+    An `int`, `float` or `None` (if the user deletes the input field).
     :::
 
     See Also
