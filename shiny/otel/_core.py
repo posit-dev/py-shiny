@@ -8,7 +8,7 @@ from opentelemetry import trace
 from opentelemetry._logs import get_logger_provider
 from opentelemetry.trace import Tracer
 
-__all__ = ("get_tracer", "get_logger", "is_tracing_enabled")
+__all__ = ("get_otel_tracer", "get_otel_logger", "is_otel_tracing_enabled")
 
 # Global state for lazy initialization
 _tracer: Optional[Tracer] = None
@@ -19,7 +19,7 @@ _tracing_enabled: Optional[bool] = None
 TRACER_NAME = "co.posit.python-package.shiny"
 
 
-def get_tracer() -> Tracer:
+def get_otel_tracer() -> Tracer:
     """
     Get the OpenTelemetry tracer for Shiny, lazily initialized.
 
@@ -45,7 +45,7 @@ def get_tracer() -> Tracer:
     return _tracer
 
 
-def get_logger() -> Any:  # type: ignore
+def get_otel_logger() -> Any:  # type: ignore
     """
     Get the OpenTelemetry logger for Shiny, lazily initialized.
 
@@ -61,7 +61,7 @@ def get_logger() -> Any:  # type: ignore
     return _logger
 
 
-def is_tracing_enabled() -> bool:
+def is_otel_tracing_enabled() -> bool:
     """
     Check if OpenTelemetry tracing is enabled.
 
@@ -76,7 +76,7 @@ def is_tracing_enabled() -> bool:
     """
     global _tracing_enabled
     if _tracing_enabled is None:
-        tracer = get_tracer()
+        tracer = get_otel_tracer()
         # Check if spans are actually being recorded
         # When no SDK is configured, spans will be NonRecordingSpan instances
         with tracer.start_as_current_span("_otel_check") as span:

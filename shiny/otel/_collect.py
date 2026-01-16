@@ -7,10 +7,10 @@ from contextvars import ContextVar
 from enum import IntEnum
 from typing import Optional
 
-__all__ = ("CollectLevel", "get_collect_level", "should_collect")
+__all__ = ("OtelCollectLevel", "get_otel_collect_level", "should_otel_collect")
 
 
-class CollectLevel(IntEnum):
+class OtelCollectLevel(IntEnum):
     """
     OpenTelemetry collection levels for Shiny instrumentation.
 
@@ -48,12 +48,12 @@ class CollectLevel(IntEnum):
 
 
 # Context variable to track current collection level
-_current_collect_level: ContextVar[Optional[CollectLevel]] = ContextVar(
+_current_collect_level: ContextVar[Optional[OtelCollectLevel]] = ContextVar(
     "otel_collect_level", default=None
 )
 
 
-def get_collect_level() -> CollectLevel:
+def get_otel_collect_level() -> OtelCollectLevel:
     """
     Get the current OpenTelemetry collection level.
 
@@ -64,7 +64,7 @@ def get_collect_level() -> CollectLevel:
 
     Returns
     -------
-    CollectLevel
+    OtelCollectLevel
         The current collection level.
     """
     # Check context variable first (set by otel_collect context manager)
@@ -80,27 +80,27 @@ def get_collect_level() -> CollectLevel:
         env_level = "REACTIVITY"
 
     try:
-        return CollectLevel[env_level]
+        return OtelCollectLevel[env_level]
     except KeyError:
         # Invalid level, default to ALL
         import warnings
 
         warnings.warn(
             f"Invalid SHINY_OTEL_COLLECT value: {env_level}. "
-            f"Valid values are: {', '.join(level.name.lower() for level in CollectLevel)}. "
+            f"Valid values are: {', '.join(level.name.lower() for level in OtelCollectLevel)}. "
             f"Defaulting to 'all'.",
             UserWarning,
             stacklevel=2,
         )
-        return CollectLevel.ALL
+        return OtelCollectLevel.ALL
 
 
-def should_collect(required_level: CollectLevel) -> bool:
+def should_otel_collect(required_level: OtelCollectLevel) -> bool:
     """
     Check if telemetry should be collected for the given level.
 
     This combines two checks:
-    1. Is OpenTelemetry SDK configured? (via is_tracing_enabled)
+    1. Is OpenTelemetry SDK configured? (via is_otel_tracing_enabled)
     2. Is the current collection level >= required level?
 
     Parameters
@@ -116,16 +116,16 @@ def should_collect(required_level: CollectLevel) -> bool:
     Examples
     --------
     ```python
-    from shiny.otel import should_collect, CollectLevel
+    from shiny.otel import should_otel_collect, OtelCollectLevel
 
-    if should_collect(CollectLevel.SESSION):
+    if should_otel_collect(OtelCollectLevel.SESSION):
         # Create session span
         pass
     ```
     """
-    from ._core import is_tracing_enabled
+    from ._core import is_otel_tracing_enabled
 
-    if not is_tracing_enabled():
+    if not is_otel_tracing_enabled():
         return False
 
-    return get_collect_level() >= required_level
+    return get_otel_collect_level() >= required_level

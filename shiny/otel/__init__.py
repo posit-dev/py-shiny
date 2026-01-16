@@ -65,25 +65,25 @@ def my_calc():
 ## API Reference
 
 Main exports:
-- `CollectLevel`: Enum defining collection levels
-- `should_collect`: Check if telemetry should be collected for a given level
+- `OtelCollectLevel`: Enum defining collection levels
+- `should_otel_collect`: Check if telemetry should be collected for a given level
 - `otel_collect`: Context manager to temporarily change collection level (Phase 7)
 """
 
 from __future__ import annotations
 
-from ._collect import CollectLevel, get_collect_level, should_collect
-from ._core import get_logger, get_tracer, is_tracing_enabled
+from ._collect import OtelCollectLevel, get_otel_collect_level, should_otel_collect
+from ._core import get_otel_logger, get_otel_tracer, is_otel_tracing_enabled
 
 __all__ = (
     # Collection level management
-    "CollectLevel",
-    "get_collect_level",
-    "should_collect",
+    "OtelCollectLevel",
+    "get_otel_collect_level",
+    "should_otel_collect",
     # Core functionality
-    "get_tracer",
-    "get_logger",
-    "is_tracing_enabled",
+    "get_otel_tracer",
+    "get_otel_logger",
+    "is_otel_tracing_enabled",
     # User-facing API (will be added in Phase 7)
     # "otel_collect",
 )
