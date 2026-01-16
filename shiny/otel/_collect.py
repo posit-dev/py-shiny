@@ -99,9 +99,10 @@ def should_otel_collect(required_level: OtelCollectLevel) -> bool:
     """
     Check if telemetry should be collected for the given level.
 
-    This combines two checks:
-    1. Is OpenTelemetry SDK configured? (via is_otel_tracing_enabled)
-    2. Is the current collection level >= required level?
+    This combines three checks:
+    1. Is the required level NONE? (always returns False - no telemetry)
+    2. Is OpenTelemetry SDK configured? (via is_otel_tracing_enabled)
+    3. Is the current collection level >= required level?
 
     Parameters
     ----------
@@ -124,6 +125,10 @@ def should_otel_collect(required_level: OtelCollectLevel) -> bool:
     ```
     """
     from ._core import is_otel_tracing_enabled
+
+    # NONE means no telemetry at all
+    if required_level == OtelCollectLevel.NONE:
+        return False
 
     if not is_otel_tracing_enabled():
         return False
