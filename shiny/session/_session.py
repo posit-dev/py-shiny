@@ -607,20 +607,17 @@ class AppSession(Session):
 
     async def _run(self) -> None:
         from ..otel import OtelCollectLevel
+        from ..otel._attributes import extract_http_attributes
         from ..otel._span_wrappers import with_otel_span_async
 
-        # Lazy attribute extraction - only computed if collecting
-        def get_session_attributes():
-            from ..otel._attributes import extract_http_attributes
-
-            attrs = extract_http_attributes(self.http_conn)
-            attrs["session.id"] = self.id
-            return attrs
-
         # Wrap entire session execution in session.start span (or no-op if not collecting)
+        # Attributes are lazily extracted only if collecting
         async with with_otel_span_async(
             "session.start",
-            get_session_attributes,
+            lambda: {
+                "session.id": self.id,
+                **extract_http_attributes(self.http_conn),
+            },
             level=OtelCollectLevel.SESSION,
         ):
             await self._run_impl()

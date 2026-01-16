@@ -1,5 +1,5 @@
 """
-Tests for Phase 2: OpenTelemetry Session Lifecycle Instrumentation
+OpenTelemetry Session Lifecycle Instrumentation
 
 Tests cover:
 - Session start span creation
@@ -17,7 +17,7 @@ from shiny.otel import OtelCollectLevel
 
 
 class TestHttpAttributes:
-    """Tests for HTTP attribute extraction"""
+    """HTTP attribute extraction tests"""
 
     def test_extract_http_attributes_from_url(self):
         """Test extracting HTTP attributes from http_conn.url"""
@@ -98,7 +98,7 @@ class TestHttpAttributes:
 
 
 class TestSessionSpans:
-    """Tests for session lifecycle span creation"""
+    """OpenTelemetry Session Lifecycle Instrumentation Tests"""
 
     def test_session_spans_created_at_session_level(self):
         """Test that session.start and session.end spans are created at SESSION level"""
@@ -140,7 +140,7 @@ class TestSessionSpans:
 
 
 class TestSessionInstrumentation:
-    """Tests for session instrumentation implementation"""
+    """OpenTelemetry Session Lifecycle Instrumentation Tests"""
 
     def test_session_start_wraps_execution(self):
         """Test that _run() wraps _run_impl() in session.start span"""

@@ -1,5 +1,5 @@
 """
-Tests for Phase 1: OpenTelemetry Foundation (Core Infrastructure)
+OpenTelemetry Foundation (Core Infrastructure)
 
 Tests cover:
 - Lazy tracer/logger initialization
@@ -52,7 +52,7 @@ class TestCore:
 
 
 class TestOtelCollectLevel:
-    """Tests for shiny/otel/_collect.py - OtelCollectLevel enum"""
+    """OtelCollectLevel enum tests"""
 
     def test_otel_collect_level_values(self):
         """Test that OtelCollectLevel enum has correct values."""
@@ -71,7 +71,7 @@ class TestOtelCollectLevel:
 
 
 class TestGetOtelCollectLevel:
-    """Tests for get_otel_collect_level() function"""
+    """get_otel_collect_level() function tests"""
 
     def test_default_level(self):
         """Test that default collection level is ALL when no env var set."""
@@ -117,7 +117,7 @@ class TestGetOtelCollectLevel:
 
 
 class TestShouldOtelCollect:
-    """Tests for should_otel_collect() function"""
+    """should_otel_collect() function tests"""
 
     def test_should_otel_collect_without_sdk(self):
         """Test that should_otel_collect returns False when SDK not configured."""
@@ -181,7 +181,7 @@ class TestShouldOtelCollect:
 
 
 class TestSpanWrappers:
-    """Tests for span wrapper utilities"""
+    """Span wrapper utilities tests"""
 
     def test_with_otel_span_import(self):
         """Test that span wrapper functions can be imported."""
