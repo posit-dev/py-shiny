@@ -127,31 +127,34 @@ class TestShouldOtelCollect:
         shiny.otel._core._tracing_enabled = None
 
         # Without SDK, should_otel_collect should always return False
-        assert should_otel_collect(OtelCollectLevel.NONE) is False
+        # (except for NONE which should raise ValueError)
         assert should_otel_collect(OtelCollectLevel.SESSION) is False
         assert should_otel_collect(OtelCollectLevel.REACTIVE_UPDATE) is False
         assert should_otel_collect(OtelCollectLevel.REACTIVITY) is False
         assert should_otel_collect(OtelCollectLevel.ALL) is False
 
+    def test_should_otel_collect_raises_on_none(self):
+        """Test that should_otel_collect raises ValueError when called with NONE."""
+        with pytest.raises(
+            ValueError, match="should_otel_collect\\(\\) cannot be called with OtelCollectLevel.NONE"
+        ):
+            should_otel_collect(OtelCollectLevel.NONE)
+
     @pytest.mark.parametrize(
         "current_level,required_level,expected",
         [
-            # NONE collects nothing
-            (OtelCollectLevel.NONE, OtelCollectLevel.NONE, False),
+            # NONE collects nothing (current_level can be NONE, but required_level cannot)
             (OtelCollectLevel.NONE, OtelCollectLevel.SESSION, False),
             (OtelCollectLevel.NONE, OtelCollectLevel.ALL, False),
-            # SESSION collects SESSION and below
-            (OtelCollectLevel.SESSION, OtelCollectLevel.NONE, True),
+            # SESSION collects SESSION only
             (OtelCollectLevel.SESSION, OtelCollectLevel.SESSION, True),
             (OtelCollectLevel.SESSION, OtelCollectLevel.REACTIVE_UPDATE, False),
             (OtelCollectLevel.SESSION, OtelCollectLevel.ALL, False),
-            # REACTIVE_UPDATE collects REACTIVE_UPDATE, SESSION and below
-            (OtelCollectLevel.REACTIVE_UPDATE, OtelCollectLevel.NONE, True),
+            # REACTIVE_UPDATE collects REACTIVE_UPDATE and SESSION
             (OtelCollectLevel.REACTIVE_UPDATE, OtelCollectLevel.SESSION, True),
             (OtelCollectLevel.REACTIVE_UPDATE, OtelCollectLevel.REACTIVE_UPDATE, True),
             (OtelCollectLevel.REACTIVE_UPDATE, OtelCollectLevel.REACTIVITY, False),
             # ALL collects everything
-            (OtelCollectLevel.ALL, OtelCollectLevel.NONE, True),
             (OtelCollectLevel.ALL, OtelCollectLevel.SESSION, True),
             (OtelCollectLevel.ALL, OtelCollectLevel.REACTIVE_UPDATE, True),
             (OtelCollectLevel.ALL, OtelCollectLevel.REACTIVITY, True),

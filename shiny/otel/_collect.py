@@ -99,20 +99,26 @@ def should_otel_collect(required_level: OtelCollectLevel) -> bool:
     """
     Check if telemetry should be collected for the given level.
 
-    This combines three checks:
-    1. Is the required level NONE? (always returns False - no telemetry)
-    2. Is OpenTelemetry SDK configured? (via is_otel_tracing_enabled)
-    3. Is the current collection level >= required level?
+    This combines two checks:
+    1. Is OpenTelemetry SDK configured? (via is_otel_tracing_enabled)
+    2. Is the current collection level >= required level?
 
     Parameters
     ----------
     required_level
         The minimum collection level required for this telemetry.
+        Must be one of: SESSION, REACTIVE_UPDATE, REACTIVITY, or ALL.
+        NONE is not a valid required level.
 
     Returns
     -------
     bool
         True if telemetry should be collected, False otherwise.
+
+    Raises
+    ------
+    ValueError
+        If required_level is NONE (NONE is not a valid telemetry level).
 
     Examples
     --------
@@ -126,9 +132,13 @@ def should_otel_collect(required_level: OtelCollectLevel) -> bool:
     """
     from ._core import is_otel_tracing_enabled
 
-    # NONE means no telemetry at all
+    # NONE is not a valid required level - it means "no telemetry"
     if required_level == OtelCollectLevel.NONE:
-        return False
+        raise ValueError(
+            "should_otel_collect() cannot be called with OtelCollectLevel.NONE. "
+            "NONE means no telemetry should be collected. "
+            "Use SESSION, REACTIVE_UPDATE, REACTIVITY, or ALL instead."
+        )
 
     if not is_otel_tracing_enabled():
         return False
