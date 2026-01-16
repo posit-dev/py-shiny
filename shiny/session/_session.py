@@ -580,22 +580,17 @@ class AppSession(Session):
         self.on_ended(self._file_upload_manager.rm_upload_dir)
 
     async def _run_session_ended_tasks(self) -> None:
-        from ..otel import OtelCollectLevel, should_otel_collect
+        from ..otel import OtelCollectLevel
         from ..otel._span_wrappers import with_otel_span_async
 
         if self._has_run_session_ended_tasks:
             return
         self._has_run_session_ended_tasks = True
 
-        # Check if we should collect session-level telemetry
-        if should_otel_collect(OtelCollectLevel.SESSION):
-            # Wrap session cleanup in session.end span
-            async with with_otel_span_async("session.end", {"session.id": self.id}):
-                try:
-                    await self._on_ended_callbacks.invoke()
-                finally:
-                    self.app._remove_session(self)
-        else:
+        # Wrap session cleanup in session.end span (or no-op if not collecting)
+        async with with_otel_span_async(
+            "session.end", {"session.id": self.id}, level=OtelCollectLevel.SESSION
+        ):
             try:
                 await self._on_ended_callbacks.invoke()
             finally:
@@ -610,19 +605,20 @@ class AppSession(Session):
 
     async def _run(self) -> None:
         from ..otel import OtelCollectLevel, should_otel_collect
-        from ..otel._attributes import extract_http_attributes
         from ..otel._span_wrappers import with_otel_span_async
 
-        # Check if we should collect session-level telemetry
+        # Only extract attributes if we're collecting
+        span_attributes = None
         if should_otel_collect(OtelCollectLevel.SESSION):
-            # Extract HTTP attributes for the span
+            from ..otel._attributes import extract_http_attributes
+
             span_attributes = extract_http_attributes(self.http_conn)
             span_attributes["session.id"] = self.id
 
-            # Wrap entire session execution in session.start span
-            async with with_otel_span_async("session.start", span_attributes):
-                await self._run_impl()
-        else:
+        # Wrap entire session execution in session.start span (or no-op if not collecting)
+        async with with_otel_span_async(
+            "session.start", span_attributes, level=OtelCollectLevel.SESSION
+        ):
             await self._run_impl()
 
     async def _run_impl(self) -> None:
