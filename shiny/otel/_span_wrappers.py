@@ -81,7 +81,7 @@ def with_otel_span(
     resolved_attrs: Dict[str, Any] = {}
     if attributes is not None:
         if callable(attributes):
-            resolved_attrs = attributes()
+            resolved_attrs = attributes() or {}
         else:
             resolved_attrs = attributes
 
@@ -170,7 +170,7 @@ async def with_otel_span_async(
     resolved_attrs: Dict[str, Any] = {}
     if attributes is not None:
         if callable(attributes):
-            resolved_attrs = attributes()
+            resolved_attrs = attributes() or {}
         else:
             resolved_attrs = attributes
 
