@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Literal, Optional
 
 from shiny.render.renderer import Renderer, ValueFn
-from shiny.ui import output_text_verbatim
+from shiny.ui import output_code
 
 
 class render_capitalize(Renderer[str]):
@@ -28,7 +28,7 @@ class render_capitalize(Renderer[str]):
         """
         Express UI for the renderer
         """
-        return output_text_verbatim(self.output_id, placeholder=True)
+        return output_code(self.output_id, placeholder=True)
 
     def __init__(
         self,
@@ -94,7 +94,7 @@ class render_upper(Renderer[str]):
         """
         Express UI for the renderer
         """
-        return output_text_verbatim(self.output_id, placeholder=True)
+        return output_code(self.output_id, placeholder=True)
 
     async def transform(self, value: str) -> str:
         """

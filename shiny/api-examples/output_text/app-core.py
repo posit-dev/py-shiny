@@ -6,16 +6,16 @@ app_ui = ui.page_fluid(
         ui.column(6, ui.code("ui.output_text()"), ui.output_text("text")),
         ui.column(
             6,
-            ui.code("ui.output_text_verbatim(placeholder=True)"),
-            ui.output_text_verbatim("verb", placeholder=True),
+            ui.code("ui.output_code(placeholder=True)"),
+            ui.output_code("verb", placeholder=True),
         ),
     ),
     ui.row(
         ui.column(6),
         ui.column(
             6,
-            ui.code("ui.output_text_verbatim(placeholder=False)"),
-            ui.output_text_verbatim("verb_no_placeholder", placeholder=False),
+            ui.code("ui.output_code(placeholder=False)"),
+            ui.output_code("verb_no_placeholder", placeholder=False),
         ),
     ),
 )
@@ -26,11 +26,11 @@ def server(input: Inputs, output: Outputs, session: Session):
     def text():
         return input.txt()
 
-    @render.text
+    @render.code
     def verb():
         return input.txt()
 
-    @render.text
+    @render.code
     def verb_no_placeholder():
         return input.txt()
 

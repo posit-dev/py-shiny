@@ -15,7 +15,7 @@ app_ui = ui.page_fluid(
                     "c": HTML("<span style='color:green;'>C</span>"),
                 },
             ),
-            ui.output_text_verbatim("radio1_out", placeholder=True),
+            ui.output_code("radio1_out", placeholder=True),
         ),
         ui.column(
             6,
@@ -29,7 +29,7 @@ app_ui = ui.page_fluid(
                 },
                 inline=True,
             ),
-            ui.output_text_verbatim("radio2_out", placeholder=True),
+            ui.output_code("radio2_out", placeholder=True),
         ),
     ),
     ui.row(
@@ -44,7 +44,7 @@ app_ui = ui.page_fluid(
                     "blue": ui.span("BLUE", style="color: #0000AA;"),
                 },
             ),
-            ui.output_text_verbatim("check1_out", placeholder=True),
+            ui.output_code("check1_out", placeholder=True),
         ),
         ui.column(
             6,
@@ -58,26 +58,26 @@ app_ui = ui.page_fluid(
                 },
                 inline=True,
             ),
-            ui.output_text_verbatim("check2_out", placeholder=True),
+            ui.output_code("check2_out", placeholder=True),
         ),
     ),
 )
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @render.text
+    @render.code
     def radio1_out():
         return input.radio1()
 
-    @render.text
+    @render.code
     def radio2_out():
         return input.radio2()
 
-    @render.text
+    @render.code
     def check1_out():
         return input.check1()
 
-    @render.text
+    @render.code
     def check2_out():
         return input.check2()
 

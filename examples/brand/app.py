@@ -52,7 +52,7 @@ app_ui = ui.page_navbar(
             ),
             ui.card(
                 ui.card_header("Text Output"),
-                ui.output_text_verbatim("out_text1"),
+                ui.output_code("out_text1"),
             ),
         ),
     ),
@@ -279,7 +279,7 @@ def server(input, output, session):
             spine.set_alpha(0.25)
         return fig
 
-    @render.text
+    @render.code
     def out_text1():
         return "\n".join(
             ["def example_function():", '    return "Function output text"']

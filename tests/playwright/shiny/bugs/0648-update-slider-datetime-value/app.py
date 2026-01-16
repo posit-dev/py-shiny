@@ -28,7 +28,7 @@ def slider_with_reset_ui(
             timezone="UTC",
             time_format="%H:%M:%S",
         ),
-        ui.output_text_verbatim("txt"),
+        ui.output_code("txt"),
         ui.div(ui.input_action_button("reset", label)),
     )
 
@@ -43,7 +43,7 @@ def slider_with_reset_server(
     max: Optional[datetime.datetime] = None,
     value: Any = None,
 ):
-    @render.text
+    @render.code
     def txt():
         if isinstance(input.times(), (tuple, list)):
             return " - ".join([str(x) for x in input.times()])

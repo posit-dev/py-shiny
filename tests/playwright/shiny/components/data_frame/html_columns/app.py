@@ -67,7 +67,7 @@ pd_penguins.iloc[0, 5] = ui.div(  # pyright: ignore[reportArgumentType,reportCal
 )
 pd_penguins.iloc[1, 5] = ui.p(  # pyright: ignore[reportArgumentType,reportCallIssue]
     ui.input_action_button("pandas_test_cell_button", "Test button"),
-    ui.output_text_verbatim("pandas_test_cell_text", placeholder=True),
+    ui.output_code("pandas_test_cell_text", placeholder=True),
 )
 
 
@@ -116,9 +116,7 @@ pl_penguins = (
                         ui.input_action_button(
                             "polars_test_cell_button", "Test button"
                         ),
-                        ui.output_text_verbatim(
-                            "polars_test_cell_text", placeholder=True
-                        ),
+                        ui.output_code("polars_test_cell_text", placeholder=True),
                     )
                     if i == 1
                     else ui.div(val)
@@ -153,11 +151,11 @@ app_ui = ui.page_fluid(
 
 def server(input: Inputs, output: Outputs, session: Session) -> None:
 
-    @render.text
+    @render.code
     def pandas_test_cell_text():
         return f"pandas_test_cell_value {input.pandas_test_cell_button()}"
 
-    @render.text
+    @render.code
     def polars_test_cell_text():
         return f"polars_test_cell_value {input.polars_test_cell_button()}"
 

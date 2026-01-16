@@ -33,15 +33,15 @@ app_ui = ui.page_fluid(
     ui.input_action_button("btn", "Click me!"),
     ui.tags.br(),
     ui.tags.span("Counter: "),
-    ui.output_text_verbatim("btn_txt", placeholder=True),
+    ui.output_code("btn_txt", placeholder=True),
     ui.tags.span("All events: "),
-    ui.output_text_verbatim("all_txt", placeholder=True),
+    ui.output_code("all_txt", placeholder=True),
     ui.tags.span("Flush events: "),
-    ui.output_text_verbatim("flush_txt", placeholder=True),
+    ui.output_code("flush_txt", placeholder=True),
     ui.tags.span("Flushed events: "),
-    ui.output_text_verbatim("flushed_txt", placeholder=True),
+    ui.output_code("flushed_txt", placeholder=True),
     ui.tags.span("Session end events (refresh App to add events): "),
-    ui.output_text_verbatim("session_end_txt", placeholder=True),
+    ui.output_code("session_end_txt", placeholder=True),
     ui.tags.script(
         """
         $(document).on('shiny:connected', function(event) {
@@ -170,23 +170,23 @@ def server(input: Inputs, output: Outputs, session: Session):
         cancel_on_ended_sync()
         cancel_on_ended_async()
 
-    @render.text
+    @render.code
     def btn_txt():
         return str(input.btn())
 
-    @render.text
+    @render.code
     def all_txt():
         return str(all_vals.get())
 
-    @render.text
+    @render.code
     def flush_txt():
         return str(flush_vals.get())
 
-    @render.text
+    @render.code
     def flushed_txt():
         return str(flushed_vals.get())
 
-    @render.text
+    @render.code
     def session_end_txt():
         return str(session_ended_messages)
 
