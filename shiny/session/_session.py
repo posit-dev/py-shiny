@@ -589,7 +589,9 @@ class AppSession(Session):
 
         # Wrap session cleanup in session.end span (or no-op if not collecting)
         async with with_otel_span_async(
-            "session.end", {"session.id": self.id}, level=OtelCollectLevel.SESSION
+            "session.end",
+            {"session.id": self.id},
+            level=OtelCollectLevel.SESSION,
         ):
             try:
                 await self._on_ended_callbacks.invoke()
@@ -604,20 +606,22 @@ class AppSession(Session):
         await self._run_session_ended_tasks()
 
     async def _run(self) -> None:
-        from ..otel import OtelCollectLevel, should_otel_collect
+        from ..otel import OtelCollectLevel
         from ..otel._span_wrappers import with_otel_span_async
 
-        # Only extract attributes if we're collecting
-        span_attributes = None
-        if should_otel_collect(OtelCollectLevel.SESSION):
+        # Lazy attribute extraction - only computed if collecting
+        def get_session_attributes():
             from ..otel._attributes import extract_http_attributes
 
-            span_attributes = extract_http_attributes(self.http_conn)
-            span_attributes["session.id"] = self.id
+            attrs = extract_http_attributes(self.http_conn)
+            attrs["session.id"] = self.id
+            return attrs
 
         # Wrap entire session execution in session.start span (or no-op if not collecting)
         async with with_otel_span_async(
-            "session.start", span_attributes, level=OtelCollectLevel.SESSION
+            "session.start",
+            get_session_attributes,
+            level=OtelCollectLevel.SESSION,
         ):
             await self._run_impl()
 
