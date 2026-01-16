@@ -136,7 +136,8 @@ class TestShouldOtelCollect:
     def test_should_otel_collect_raises_on_none(self):
         """Test that should_otel_collect raises ValueError when called with NONE."""
         with pytest.raises(
-            ValueError, match="should_otel_collect\\(\\) cannot be called with OtelCollectLevel.NONE"
+            ValueError,
+            match="should_otel_collect\\(\\) cannot be called with OtelCollectLevel.NONE",
         ):
             should_otel_collect(OtelCollectLevel.NONE)
 
