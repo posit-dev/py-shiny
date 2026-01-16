@@ -1,5 +1,5 @@
 """
-Tests for Phase 1: OpenTelemetry Foundation (Core Infrastructure)
+OpenTelemetry Foundation (Core Infrastructure)
 
 Tests cover:
 - Lazy tracer/logger initialization
@@ -52,7 +52,7 @@ class TestCore:
 
 
 class TestOtelCollectLevel:
-    """Tests for shiny/otel/_collect.py - OtelCollectLevel enum"""
+    """OtelCollectLevel enum tests"""
 
     def test_otel_collect_level_values(self):
         """Test that OtelCollectLevel enum has correct values."""
@@ -71,7 +71,7 @@ class TestOtelCollectLevel:
 
 
 class TestGetOtelCollectLevel:
-    """Tests for get_otel_collect_level() function"""
+    """get_otel_collect_level() function tests"""
 
     def test_default_level(self):
         """Test that default collection level is ALL when no env var set."""
@@ -117,7 +117,7 @@ class TestGetOtelCollectLevel:
 
 
 class TestShouldOtelCollect:
-    """Tests for should_otel_collect() function"""
+    """should_otel_collect() function tests"""
 
     def test_should_otel_collect_without_sdk(self):
         """Test that should_otel_collect returns False when SDK not configured."""
@@ -181,7 +181,7 @@ class TestShouldOtelCollect:
 
 
 class TestSpanWrappers:
-    """Tests for span wrapper utilities"""
+    """Span wrapper utilities tests"""
 
     def test_with_otel_span_import(self):
         """Test that span wrapper functions can be imported."""
@@ -191,20 +191,57 @@ class TestSpanWrappers:
         assert callable(with_otel_span_async)
 
     def test_with_otel_span_creates_span(self):
-        """Test that with_otel_span creates a span (even if non-recording)."""
+        """Test that with_otel_span creates a span when collection is enabled."""
+        from shiny.otel import OtelCollectLevel
         from shiny.otel._span_wrappers import with_otel_span
 
-        with with_otel_span("test_span", {"key": "value"}) as span:
-            assert span is not None
-            # Without SDK, span won't be recording
-            assert span.is_recording() is False
+        # Force collection by mocking should_otel_collect at its source
+        with patch("shiny.otel._collect.should_otel_collect", return_value=True):
+            with with_otel_span(
+                "test_span", {"key": "value"}, level=OtelCollectLevel.SESSION
+            ) as span:
+                assert span is not None
+                # Without SDK, span won't be recording
+                assert span.is_recording() is False
 
     @pytest.mark.asyncio
     async def test_with_otel_span_async_creates_span(self):
-        """Test that with_otel_span_async creates a span (even if non-recording)."""
+        """Test that with_otel_span_async creates a span when collection is enabled."""
+        from shiny.otel import OtelCollectLevel
         from shiny.otel._span_wrappers import with_otel_span_async
 
-        async with with_otel_span_async("test_span_async", {"key": "value"}) as span:
-            assert span is not None
-            # Without SDK, span won't be recording
-            assert span.is_recording() is False
+        # Force collection by mocking should_otel_collect at its source
+        with patch("shiny.otel._collect.should_otel_collect", return_value=True):
+            async with with_otel_span_async(
+                "test_span_async", {"key": "value"}, level=OtelCollectLevel.SESSION
+            ) as span:
+                assert span is not None
+                # Without SDK, span won't be recording
+                assert span.is_recording() is False
+
+    def test_with_otel_span_no_op_when_not_collecting(self):
+        """Test that with_otel_span returns None when collection disabled."""
+        from shiny.otel import OtelCollectLevel
+        from shiny.otel._span_wrappers import with_otel_span
+
+        # Without SDK configured, should return None (no-op)
+        with patch("shiny.otel._core._tracing_enabled", None):
+            with with_otel_span(
+                "test_span", {"key": "value"}, level=OtelCollectLevel.SESSION
+            ) as span:
+                # yields None when not collecting
+                assert span is None
+
+    @pytest.mark.asyncio
+    async def test_with_otel_span_async_no_op_when_not_collecting(self):
+        """Test that with_otel_span_async returns None when collection disabled."""
+        from shiny.otel import OtelCollectLevel
+        from shiny.otel._span_wrappers import with_otel_span_async
+
+        # Without SDK configured, should return None (no-op)
+        with patch("shiny.otel._core._tracing_enabled", None):
+            async with with_otel_span_async(
+                "test_span_async", {"key": "value"}, level=OtelCollectLevel.SESSION
+            ) as span:
+                # yields None when not collecting
+                assert span is None
