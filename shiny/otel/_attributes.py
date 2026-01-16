@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict
+from typing import TYPE_CHECKING, Any, Dict, cast
 
 if TYPE_CHECKING:
     from starlette.requests import HTTPConnection
@@ -67,11 +67,15 @@ def extract_http_attributes(http_conn: HTTPConnection) -> Dict[str, Any]:
     if not attributes and hasattr(http_conn, "scope"):
         scope = http_conn.scope
         if "server" in scope and scope["server"]:
-            server_host, server_port = scope["server"]
-            if server_host:
-                attributes["server.address"] = server_host
-            if server_port:
-                attributes["server.port"] = server_port
+            server_tuple = scope["server"]
+            if isinstance(server_tuple, (list, tuple)) and len(server_tuple) >= 2:  # type: ignore[arg-type]
+                # ASGI scope server is tuple[str, int | None]
+                server_host = cast(str, server_tuple[0])
+                server_port = cast(int, server_tuple[1])
+                if server_host:
+                    attributes["server.address"] = server_host
+                if server_port:
+                    attributes["server.port"] = server_port
         if "path" in scope:
             attributes["url.path"] = scope["path"]
         if "scheme" in scope:

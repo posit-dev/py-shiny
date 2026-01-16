@@ -10,7 +10,6 @@ Tests cover:
 """
 
 import os
-from typing import Any, Dict
 from unittest.mock import Mock, patch
 
 from shiny.otel import OtelCollectLevel
@@ -100,10 +99,8 @@ class TestHttpAttributes:
 class TestSessionSpans:
     """OpenTelemetry Session Lifecycle Instrumentation Tests"""
 
-    def test_session_spans_created_at_session_level(self):
-        """Test that session.start and session.end spans are created at SESSION level"""
-        # This is an integration test that would require spinning up a real session
-        # For now, we'll test the logic in isolation
+    def test_session_level_collection_enabled(self):
+        """Test that collection is enabled for SESSION level when SHINY_OTEL_COLLECT=session"""
         from shiny.otel import should_otel_collect
 
         # Mock the tracing enabled check
@@ -112,52 +109,31 @@ class TestSessionSpans:
                 assert should_otel_collect(OtelCollectLevel.SESSION) is True
                 assert should_otel_collect(OtelCollectLevel.REACTIVE_UPDATE) is False
 
-    def test_session_spans_not_created_at_none_level(self):
-        """Test that no session spans are created at NONE level"""
+    def test_collection_disabled_at_none_level(self):
+        """Test that collection is disabled when SHINY_OTEL_COLLECT=none"""
         from shiny.otel import should_otel_collect
 
         with patch("shiny.otel._core._tracing_enabled", True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "none"}):
                 assert should_otel_collect(OtelCollectLevel.SESSION) is False
 
-    def test_session_spans_created_at_all_level(self):
-        """Test that session spans are created at ALL level"""
+    def test_session_level_collection_enabled_at_all_level(self):
+        """Test that SESSION level collection is enabled when SHINY_OTEL_COLLECT=all"""
         from shiny.otel import should_otel_collect
 
         with patch("shiny.otel._core._tracing_enabled", True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "all"}):
                 assert should_otel_collect(OtelCollectLevel.SESSION) is True
 
-    def test_session_id_in_span_attributes(self):
-        """Test that session ID is included in span attributes"""
-        # This would be an integration test
-        # For now we verify the attribute extraction logic
-        session_id = "test_session_123"
-        attributes: Dict[str, Any] = {"session.id": session_id}
-
-        assert "session.id" in attributes
-        assert attributes["session.id"] == session_id
-
 
 class TestSessionInstrumentation:
     """OpenTelemetry Session Lifecycle Instrumentation Tests"""
 
-    def test_session_start_wraps_execution(self):
-        """Test that _run() wraps _run_impl() in session.start span"""
-        # This tests the structure of the code, not execution
-        # Real execution would require a full session setup
+    def test_session_collection_enabled_for_instrumentation(self):
+        """Test that collection is enabled for session instrumentation when configured"""
         from shiny.otel import should_otel_collect
 
-        # Verify the should_otel_collect function works correctly
-        with patch("shiny.otel._core._tracing_enabled", True):
-            with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "session"}):
-                result = should_otel_collect(OtelCollectLevel.SESSION)
-                assert result is True
-
-    def test_session_end_wraps_cleanup(self):
-        """Test that _run_session_ended_tasks() wraps cleanup in session.end span"""
-        from shiny.otel import should_otel_collect
-
+        # Verify the should_otel_collect function works correctly for session instrumentation
         with patch("shiny.otel._core._tracing_enabled", True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "session"}):
                 result = should_otel_collect(OtelCollectLevel.SESSION)
