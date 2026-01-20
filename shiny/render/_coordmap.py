@@ -219,7 +219,7 @@ def _get_mappings(p: PlotnineFigure) -> CoordmapPanelMapping:
         mapping["y"] = p.mapping["y"]
 
     if type(p.layout.coord).__name__ == "coord_flip":
-        (mapping["x"], mapping["y"]) = (mapping["y"], mapping["x"])
+        mapping["x"], mapping["y"] = (mapping["y"], mapping["x"])
 
     # The names (not values) of panel vars are the same across all panels.
     if type(p.layout.facet).__name__ == "facet_grid":

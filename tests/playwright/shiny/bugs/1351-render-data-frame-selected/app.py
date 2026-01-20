@@ -3,15 +3,13 @@ import pandas as pd
 from shiny import App, Inputs, reactive, render, ui
 
 app_ui = ui.page_fluid(
-    ui.markdown(
-        """
+    ui.markdown("""
     ## Description
 
     When you add a row, click on it and click the clear button you get:
 
 
-    """
-    ),
+    """),
     ui.input_action_button("add_row", "Add row"),
     ui.input_action_button("clear_table", "Clear table"),
     ui.output_text_verbatim("number_of_selected_rows"),
