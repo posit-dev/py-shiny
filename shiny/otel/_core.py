@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any, Union
 
 from opentelemetry import trace
 from opentelemetry._logs import get_logger_provider
@@ -11,9 +11,9 @@ from opentelemetry.trace import Tracer
 __all__ = ("get_otel_tracer", "get_otel_logger", "is_otel_tracing_enabled")
 
 # Global state for lazy initialization
-_tracer: Optional[Tracer] = None
-_logger: Optional[Any] = None
-_tracing_enabled: Optional[bool] = None
+_tracer: Union[Tracer, None] = None
+_logger: Union[Any, None] = None
+_tracing_enabled: Union[bool, None] = None
 
 # Tracer configuration
 TRACER_NAME = "co.posit.python-package.shiny"
