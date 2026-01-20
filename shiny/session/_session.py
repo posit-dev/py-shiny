@@ -698,10 +698,9 @@ class AppSession(Session):
                                 with session_context(self):
                                     self.app.server(self.input, self.output, self)
 
-                            # TODO: Remove this call to reactive_flush() once https://github.com/posit-dev/py-shiny/issues/1889 is fixed
-                            # Workaround: Any `on_flushed()` calls from bookmark's `on_restored()` will be flushed here
-                            if self.bookmark.store != "disable":
-                                await reactive_flush()
+                                    # Flush here to attempt a reactive.update within `session.start` otel span.
+                                    # Might also fixe https://github.com/posit-dev/py-shiny/issues/1889
+                                    await reactive_flush()
 
                         elif message_obj["method"] == "update":
                             verify_state(ConnectionState.Running)
