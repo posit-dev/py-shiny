@@ -312,52 +312,60 @@ class TestSpanHierarchy:
         from shiny.otel._span_wrappers import with_otel_span_async
         from shiny.reactive import Calc_
 
-        memory_exporter = InMemorySpanExporter()
-        provider = TracerProvider()
-        provider.add_span_processor(SimpleSpanProcessor(memory_exporter))
-        trace.set_tracer_provider(provider)
+        # Save the current tracer provider to restore later
+        old_provider = trace.get_tracer_provider()
 
-        with patch("shiny.otel._core._tracing_enabled", True):
-            with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "all"}):
+        try:
+            memory_exporter = InMemorySpanExporter()
+            provider = TracerProvider()
+            provider.add_span_processor(SimpleSpanProcessor(memory_exporter))
+            # Use internal API to force override for testing
+            trace._set_tracer_provider(provider, log=False)
 
-                # Create a calc
-                def my_calc():
-                    return 42
+            with patch("shiny.otel._core._tracing_enabled", True):
+                with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "all"}):
 
-                calc = Calc_(my_calc)
+                    # Create a calc
+                    def my_calc():
+                        return 42
 
-                # Manually create flush span and execute calc inside it
-                async with with_otel_span_async(
-                    "reactive.update",
-                    level=OtelCollectLevel.REACTIVE_UPDATE,
-                ):
-                    await calc.update_value()
+                    calc = Calc_(my_calc)
 
-        # Get exported spans
-        spans = memory_exporter.get_finished_spans()
+                    # Manually create flush span and execute calc inside it
+                    async with with_otel_span_async(
+                        "reactive.update",
+                        level=OtelCollectLevel.REACTIVE_UPDATE,
+                    ):
+                        await calc.update_value()
 
-        # Filter out internal OTel spans
-        app_spans = [s for s in spans if not s.name.startswith("_otel")]
+            # Get exported spans
+            spans = memory_exporter.get_finished_spans()
 
-        # Should have 2 spans: reactive.update and reactive my_calc
-        assert len(app_spans) >= 2
+            # Filter out internal OTel spans
+            app_spans = [s for s in spans if not s.name.startswith("_otel")]
 
-        # Find the spans
-        update_span = next((s for s in app_spans if s.name == "reactive.update"), None)
-        calc_span = next((s for s in app_spans if s.name == "reactive my_calc"), None)
+            # Should have 2 spans: reactive.update and reactive my_calc
+            assert len(app_spans) >= 2
 
-        assert update_span is not None, "reactive.update span should exist"
-        assert calc_span is not None, "reactive my_calc span should exist"
+            # Find the spans
+            update_span = next((s for s in app_spans if s.name == "reactive.update"), None)
+            calc_span = next((s for s in app_spans if s.name == "reactive my_calc"), None)
 
-        # Verify parent-child relationship
-        calc_parent = calc_span.parent
-        assert calc_parent is not None, "calc span should have a parent"
-        # Note: pyright doesn't understand that context is always present on ReadableSpan
-        assert (
-            calc_parent.span_id == update_span.context.span_id  # type: ignore[union-attr]
-        ), "calc parent should be reactive.update"
+            assert update_span is not None, "reactive.update span should exist"
+            assert calc_span is not None, "reactive my_calc span should exist"
 
-        # Verify they're in the same trace
-        assert (
-            calc_span.context.trace_id == update_span.context.trace_id  # type: ignore[union-attr]
-        ), "Spans should be in same trace"
+            # Verify parent-child relationship
+            calc_parent = calc_span.parent
+            assert calc_parent is not None, "calc span should have a parent"
+            # Note: pyright doesn't understand that context is always present on ReadableSpan
+            assert (
+                calc_parent.span_id == update_span.context.span_id  # type: ignore[union-attr]
+            ), "calc parent should be reactive.update"
+
+            # Verify they're in the same trace
+            assert (
+                calc_span.context.trace_id == update_span.context.trace_id  # type: ignore[union-attr]
+            ), "Spans should be in same trace"
+        finally:
+            # Restore the original tracer provider
+            trace._set_tracer_provider(old_provider, log=False)
