@@ -79,6 +79,6 @@ def is_otel_tracing_enabled() -> bool:
         tracer = get_otel_tracer()
         # Check if spans are actually being recorded
         # When no SDK is configured, spans will be NonRecordingSpan instances
-        with tracer.start_as_current_span("_otel_check") as span:
+        with tracer.start_as_current_span("_otel_is_recording") as span:
             _tracing_enabled = span.is_recording()
     return _tracing_enabled
