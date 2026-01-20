@@ -51,6 +51,9 @@ from ..bookmark._serializers import serializer_file_input
 from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
 from ..module import ResolvedId
+from ..otel import OtelCollectLevel, should_otel_collect
+from ..otel._attributes import extract_source_ref
+from ..otel._span_wrappers import with_otel_span_async
 from ..reactive import Effect_, Value, effect
 from ..reactive import flush as reactive_flush
 from ..reactive import isolate
@@ -1860,9 +1863,29 @@ class Outputs:
                 )
 
                 try:
-                    with session.clientdata._output_name_ctx(output_name):
-                        # Call the app's renderer function
-                        value = await renderer.render()
+                    # Determine if we should create an OTel span for output rendering
+                    if should_otel_collect(OtelCollectLevel.REACTIVITY):
+                        # Extract source attributes from renderer's original function
+                        # Renderers wrap the original function, so we need to get it
+                        renderer_func = getattr(renderer, "_fn", renderer)
+                        otel_attrs = extract_source_ref(renderer_func)
+
+                        # Generate span name with output name
+                        span_name = f"output {output_id}"
+
+                        # Wrap rendering in OTel span
+                        async with with_otel_span_async(
+                            span_name,
+                            attributes=otel_attrs,
+                            level=OtelCollectLevel.REACTIVITY,
+                        ):
+                            with session.clientdata._output_name_ctx(output_name):
+                                # Call the app's renderer function
+                                value = await renderer.render()
+                    else:
+                        with session.clientdata._output_name_ctx(output_name):
+                            # Call the app's renderer function
+                            value = await renderer.render()
 
                     session._outbound_message_queues.set_value(output_name, value)
 

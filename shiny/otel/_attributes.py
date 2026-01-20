@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, cast
+import inspect
+from typing import TYPE_CHECKING, Any, Callable, Dict, cast
 
 if TYPE_CHECKING:
     from starlette.requests import HTTPConnection
 
-__all__ = ("extract_http_attributes",)
+__all__ = ("extract_http_attributes", "extract_source_ref")
 
 
 def extract_http_attributes(http_conn: HTTPConnection) -> Dict[str, Any]:
@@ -80,5 +81,80 @@ def extract_http_attributes(http_conn: HTTPConnection) -> Dict[str, Any]:
             attributes["url.path"] = scope["path"]
         if "scheme" in scope:
             attributes["url.scheme"] = scope["scheme"]
+
+    return attributes
+
+
+def extract_source_ref(func: Callable[..., Any]) -> Dict[str, Any]:
+    """
+    Extract source code location attributes from a function for OTel spans.
+
+    This extracts source file path, line number, and function name following
+    OpenTelemetry semantic conventions for code attributes.
+
+    Parameters
+    ----------
+    func
+        The function to extract source information from.
+
+    Returns
+    -------
+    Dict[str, Any]
+        Dictionary of source code attributes suitable for span attributes.
+        Returns empty dict if source information is unavailable.
+
+    Examples
+    --------
+    ```python
+    from shiny.otel._attributes import extract_source_ref
+
+    def my_calc():
+        return 42
+
+    attrs = extract_source_ref(my_calc)
+    # Returns: {
+    #     "code.filepath": "/path/to/file.py",
+    #     "code.lineno": 42,
+    #     "code.function": "my_calc"
+    # }
+    ```
+
+    Notes
+    -----
+    Following OTel semantic conventions:
+    - `code.filepath`: Full path to source file
+    - `code.lineno`: Line number where function is defined
+    - `code.function`: Function name
+
+    Source information may not be available for:
+    - Built-in functions
+    - Functions defined in C extensions
+    - Dynamically generated functions
+    - Lambda functions (will have name "<lambda>")
+    """
+    attributes: Dict[str, Any] = {}
+
+    try:
+        # Get source file path
+        source_file = inspect.getsourcefile(func)
+        if source_file:
+            attributes["code.filepath"] = source_file
+
+        # Get line number where function is defined
+        source_lines = inspect.getsourcelines(func)
+        if source_lines:
+            # getsourcelines returns (lines, starting_line_number)
+            line_number = source_lines[1]
+            attributes["code.lineno"] = line_number
+
+        # Get function name
+        func_name = getattr(func, "__name__", None)
+        if func_name:
+            attributes["code.function"] = func_name
+
+    except (TypeError, OSError):
+        # TypeError: built-in functions, C extensions
+        # OSError: source file not found
+        pass
 
     return attributes
