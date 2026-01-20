@@ -606,21 +606,7 @@ class AppSession(Session):
         await self._run_session_ended_tasks()
 
     async def _run(self) -> None:
-        from ..otel import OtelCollectLevel
-        from ..otel._attributes import extract_http_attributes
-        from ..otel._span_wrappers import with_otel_span_async
-
-        # Wrap entire session execution in session.start span (or no-op if not collecting)
-        # Attributes are lazily extracted only if collecting
-        async with with_otel_span_async(
-            "session.start",
-            lambda: {
-                "session.id": self.id,
-                **extract_http_attributes(self.http_conn),
-            },
-            level=OtelCollectLevel.SESSION,
-        ):
-            await self._run_impl()
+        await self._run_impl()
 
     async def _run_impl(self) -> None:
         """Implementation of session execution loop."""
@@ -696,13 +682,25 @@ class AppSession(Session):
                             message_obj = typing.cast(ClientMessageInit, message_obj)
                             self._manage_inputs(message_obj["data"])
 
-                            with session_context(self):
-                                self.app.server(self.input, self.output, self)
+                            # Wrap server function initialization in session.start span
+                            from ..otel import OtelCollectLevel
+                            from ..otel._attributes import extract_http_attributes
+                            from ..otel._span_wrappers import with_otel_span_async
 
-                            # TODO: Remove this call to reactive_flush() once https://github.com/posit-dev/py-shiny/issues/1889 is fixed
-                            # Workaround: Any `on_flushed()` calls from bookmark's `on_restored()` will be flushed here
-                            if self.bookmark.store != "disable":
-                                await reactive_flush()
+                            async with with_otel_span_async(
+                                "session.start",
+                                lambda: {
+                                    "session.id": self.id,
+                                    **extract_http_attributes(self.http_conn),
+                                },
+                                level=OtelCollectLevel.SESSION,
+                            ):
+                                with session_context(self):
+                                    self.app.server(self.input, self.output, self)
+
+                                    # Flush here to attempt a reactive.update within `session.start` otel span.
+                                    # Might also fix https://github.com/posit-dev/py-shiny/issues/1889
+                                    await reactive_flush()
 
                         elif message_obj["method"] == "update":
                             verify_state(ConnectionState.Running)

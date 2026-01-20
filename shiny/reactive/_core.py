@@ -26,6 +26,8 @@ from .._docstring import add_example, no_example
 from ..types import MISSING, MISSING_TYPE
 
 if TYPE_CHECKING:
+    from opentelemetry.trace import Span
+
     from ..session import Session
 
 T = TypeVar("T")
@@ -130,6 +132,8 @@ class ReactiveEnvironment:
         self._pending_flush_queue: PriorityQueueFIFO[Context] = PriorityQueueFIFO()
         self._lock: Optional[asyncio.Lock] = None
         self._flushed_callbacks = _utils.AsyncCallbacks()
+        # Current OpenTelemetry span (e.g., reactive.update) for child spans to reference
+        self._current_otel_span: Optional[Span] = None
 
     @property
     def lock(self) -> asyncio.Lock:
@@ -174,8 +178,22 @@ class ReactiveEnvironment:
 
     async def flush(self) -> None:
         """Flush all pending operations"""
-        await self._flush_sequential()
-        await self._flushed_callbacks.invoke()
+        from ..otel import OtelCollectLevel
+        from ..otel._span_wrappers import with_otel_span_async
+
+        # Wrap entire flush cycle in reactive.update span (or no-op if not collecting)
+        async with with_otel_span_async(
+            "reactive.update",
+            level=OtelCollectLevel.REACTIVE_UPDATE,
+        ) as span:
+            # Store span on instance so child reactive spans can reference it
+            old_span = self._current_otel_span
+            self._current_otel_span = span
+            try:
+                await self._flush_sequential()
+                await self._flushed_callbacks.invoke()
+            finally:
+                self._current_otel_span = old_span
 
     async def _flush_sequential(self) -> None:
         # Sequential flush: instead of storing the tasks in a list and calling gather()

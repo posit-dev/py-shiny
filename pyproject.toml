@@ -93,6 +93,7 @@ test = [
     "dask[dataframe]",
     "pyarrow",
     "pyarrow-stubs",
+    "opentelemetry-sdk>=1.20.0",
 ]
 dev = [
     "black>=26.1.0",
