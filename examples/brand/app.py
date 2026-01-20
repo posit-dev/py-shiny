@@ -141,8 +141,7 @@ app_ui = ui.page_navbar(
         ui.fill.as_fill_item(
             ui.div(
                 ui.div(
-                    ui.markdown(
-                        """
+                    ui.markdown("""
                 _Just in case it isn't obvious, this text was written by an LLM._
 
                 # Component Documentation
@@ -234,8 +233,7 @@ app_ui = ui.page_navbar(
                 Remember that brand guidelines should serve as a framework for consistency while
                 remaining flexible enough to accommodate future updates and modifications to the
                 application interface.
-                """
-                    ),
+                """),
                     class_="container-sm ",
                 ),
                 class_="overflow-y-auto",
