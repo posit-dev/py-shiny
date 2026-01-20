@@ -134,27 +134,31 @@ def extract_source_ref(func: Callable[..., Any]) -> Dict[str, Any]:
     """
     attributes: Dict[str, Any] = {}
 
+    # Get source file path
     try:
-        # Get source file path
         source_file = inspect.getsourcefile(func)
         if source_file:
             attributes["code.filepath"] = source_file
+    except (TypeError, OSError):
+        # TypeError: built-in functions, C extensions
+        # OSError: source file not found
+        pass
 
-        # Get line number where function is defined
+    # Get line number where function is defined
+    try:
         source_lines = inspect.getsourcelines(func)
         if source_lines:
             # getsourcelines returns (lines, starting_line_number)
             line_number = source_lines[1]
             attributes["code.lineno"] = line_number
-
-        # Get function name
-        func_name = getattr(func, "__name__", None)
-        if func_name:
-            attributes["code.function"] = func_name
-
     except (TypeError, OSError):
         # TypeError: built-in functions, C extensions
         # OSError: source file not found
         pass
+
+    # Get function name (this rarely fails)
+    func_name = getattr(func, "__name__", None)
+    if func_name:
+        attributes["code.function"] = func_name
 
     return attributes
