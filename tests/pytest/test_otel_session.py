@@ -143,8 +143,8 @@ class TestSessionInstrumentation:
         """Test that no OTel operations occur when SDK not configured"""
         from shiny.otel import should_otel_collect
 
-        # Reset tracing enabled check
-        with patch("shiny.otel._core._tracing_enabled", None):
+        # Simulate SDK not configured by setting tracing_enabled to False
+        with patch("shiny.otel._core._tracing_enabled", False):
             # Without SDK configured, should always return False
             result = should_otel_collect(OtelCollectLevel.SESSION)
             assert result is False
