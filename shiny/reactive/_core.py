@@ -26,9 +26,16 @@ from .._docstring import add_example, no_example
 from ..types import MISSING, MISSING_TYPE
 
 if TYPE_CHECKING:
+    from opentelemetry.trace import Span
+
     from ..session import Session
 
 T = TypeVar("T")
+
+# ContextVar to store the current reactive.update span for child reactive spans to reference
+_current_reactive_update_span: ContextVar[Optional[Span]] = ContextVar(
+    "_current_reactive_update_span", default=None
+)
 
 
 class ReactiveWarning(RuntimeWarning):
@@ -174,8 +181,21 @@ class ReactiveEnvironment:
 
     async def flush(self) -> None:
         """Flush all pending operations"""
-        await self._flush_sequential()
-        await self._flushed_callbacks.invoke()
+        from ..otel import OtelCollectLevel
+        from ..otel._span_wrappers import with_otel_span_async
+
+        # Wrap entire flush cycle in reactive.update span (or no-op if not collecting)
+        async with with_otel_span_async(
+            "reactive.update",
+            level=OtelCollectLevel.REACTIVE_UPDATE,
+        ) as span:
+            # Store span in contextvar so child reactive spans can reference it
+            token = _current_reactive_update_span.set(span)
+            try:
+                await self._flush_sequential()
+                await self._flushed_callbacks.invoke()
+            finally:
+                _current_reactive_update_span.reset(token)
 
     async def _flush_sequential(self) -> None:
         # Sequential flush: instead of storing the tasks in a list and calling gather()
