@@ -35,6 +35,9 @@ from .. import _utils
 from .._docstring import add_example
 from .._utils import is_async_callable, run_coro_sync
 from .._validation import req
+from ..otel import OtelCollectLevel
+from ..otel._labels import generate_reactive_label
+from ..otel._span_wrappers import with_otel_span_async
 from ..types import (
     MISSING,
     MISSING_TYPE,
@@ -307,10 +310,6 @@ class Calc_(Generic[T]):
 
     # TODO: should this be private?
     async def update_value(self) -> None:
-        from ..otel import OtelCollectLevel, should_otel_collect
-        from ..otel._labels import generate_reactive_label
-        from ..otel._span_wrappers import with_otel_span_async
-
         self._ctx = Context()
         self._most_recent_ctx_id = self._ctx.id
 
@@ -324,23 +323,12 @@ class Calc_(Generic[T]):
 
         from ..session import session_context
 
-        # Determine if we should create an OTel span
-        if should_otel_collect(OtelCollectLevel.REACTIVITY):
-            # Generate descriptive label for this calc
-            label = generate_reactive_label(self._fn, "reactive")
-
-            # Wrap execution in OTel span with source attributes
-            async with with_otel_span_async(
-                label, attributes=self._otel_attrs, level=OtelCollectLevel.REACTIVITY
-            ):
-                with session_context(self._session):
-                    try:
-                        with self._ctx():
-                            await self._run_func()
-                    finally:
-                        self._running = was_running
-        else:
-            # No OTel span, execute directly
+        # Wrap execution in OTel span with lazy label generation
+        async with with_otel_span_async(
+            lambda: generate_reactive_label(self._fn, "reactive"),
+            attributes=self._otel_attrs,
+            level=OtelCollectLevel.REACTIVITY,
+        ):
             with session_context(self._session):
                 try:
                     with self._ctx():
@@ -607,59 +595,17 @@ class Effect_:
         return ctx
 
     async def _run(self) -> None:
-        from ..otel import OtelCollectLevel, should_otel_collect
-        from ..otel._labels import generate_reactive_label
-        from ..otel._span_wrappers import with_otel_span_async
-
         ctx = self._create_context()
         self._exec_count += 1
 
         from ..session import session_context
 
-        # Determine if we should create an OTel span
-        if should_otel_collect(OtelCollectLevel.REACTIVITY):
-            # Generate descriptive label for this effect
-            label = generate_reactive_label(self._fn, "observe")
-
-            # Wrap execution in OTel span with source attributes
-            async with with_otel_span_async(
-                label, attributes=self._otel_attrs, level=OtelCollectLevel.REACTIVITY
-            ):
-                with session_context(self._session):
-                    try:
-                        with ctx():
-                            await self._fn()
-
-                            # Yield so that messages can be sent to the client if necessary.
-                            # https://github.com/posit-dev/py-shiny/issues/1381
-                            await asyncio.sleep(0)
-                    except SilentException:
-                        # It's OK for SilentException to cause an Effect to stop running
-                        pass
-                    except NotifyException as e:
-                        traceback.print_exc()
-
-                        if self._session:
-                            from .._app import SANITIZE_ERROR_MSG
-                            from ..ui import notification_show
-
-                            msg = str(e)
-                            warnings.warn(msg, ReactiveWarning, stacklevel=2)
-                            if e.sanitize:
-                                msg = SANITIZE_ERROR_MSG
-                            notification_show(msg, type="error", duration=None)
-                            if e.close:
-                                await self._session._unhandled_error(e)
-                    except Exception as e:
-                        traceback.print_exc()
-
-                        warnings.warn(
-                            "Error in Effect: " + str(e), ReactiveWarning, stacklevel=2
-                        )
-                        if self._session:
-                            await self._session._unhandled_error(e)
-        else:
-            # No OTel span, execute directly
+        # Wrap execution in OTel span with lazy label generation
+        async with with_otel_span_async(
+            lambda: generate_reactive_label(self._fn, "observe"),
+            attributes=self._otel_attrs,
+            level=OtelCollectLevel.REACTIVITY,
+        ):
             with session_context(self._session):
                 try:
                     with ctx():

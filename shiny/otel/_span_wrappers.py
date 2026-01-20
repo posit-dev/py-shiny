@@ -11,14 +11,15 @@ from ._collect import OtelCollectLevel
 
 __all__ = ("with_otel_span", "with_otel_span_async")
 
-# Type alias for attributes parameter
+# Type aliases for parameters
 AttributesValue = Dict[str, Any] | None
 AttributesType = Union[AttributesValue, Callable[[], AttributesValue]]
+NameType = Union[str, Callable[[], str]]
 
 
 @contextmanager
 def with_otel_span(
-    name: str,
+    name: NameType,
     attributes: AttributesType = None,
     level: OtelCollectLevel = OtelCollectLevel.SESSION,
 ) -> Iterator[Span | None]:
@@ -38,7 +39,9 @@ def with_otel_span(
     Parameters
     ----------
     name
-        The name of the span.
+        The name of the span, or a callable that returns the span name. If a
+        callable is provided, it will only be called if collection is enabled,
+        allowing for lazy evaluation of expensive name generation.
     attributes
         Optional dictionary of attributes to attach to the span, or a callable
         that returns a dictionary. If a callable is provided, it will only be
@@ -77,6 +80,9 @@ def with_otel_span(
         yield None
         return
 
+    # Resolve name if callable
+    resolved_name = name() if callable(name) else name
+
     # Resolve attributes if callable
     resolved_attrs: Dict[str, Any] = {}
     if attributes is not None:
@@ -86,7 +92,7 @@ def with_otel_span(
             resolved_attrs = attributes
 
     tracer = get_otel_tracer()
-    with tracer.start_as_current_span(name, attributes=resolved_attrs) as span:
+    with tracer.start_as_current_span(resolved_name, attributes=resolved_attrs) as span:
         try:
             yield span
             # If we reach here without exception, mark as OK
@@ -100,7 +106,7 @@ def with_otel_span(
 
 @asynccontextmanager
 async def with_otel_span_async(
-    name: str,
+    name: NameType,
     attributes: AttributesType = None,
     level: OtelCollectLevel = OtelCollectLevel.SESSION,
 ) -> AsyncIterator[Span | None]:
@@ -123,7 +129,9 @@ async def with_otel_span_async(
     Parameters
     ----------
     name
-        The name of the span.
+        The name of the span, or a callable that returns the span name. If a
+        callable is provided, it will only be called if collection is enabled,
+        allowing for lazy evaluation of expensive name generation.
     attributes
         Optional dictionary of attributes to attach to the span, or a callable
         that returns a dictionary. If a callable is provided, it will only be
@@ -166,6 +174,9 @@ async def with_otel_span_async(
         yield None
         return
 
+    # Resolve name if callable
+    resolved_name = name() if callable(name) else name
+
     # Resolve attributes if callable
     resolved_attrs: Dict[str, Any] = {}
     if attributes is not None:
@@ -175,7 +186,7 @@ async def with_otel_span_async(
             resolved_attrs = attributes
 
     tracer = get_otel_tracer()
-    with tracer.start_as_current_span(name, attributes=resolved_attrs) as span:
+    with tracer.start_as_current_span(resolved_name, attributes=resolved_attrs) as span:
         try:
             yield span
             # If we reach here without exception, mark as OK

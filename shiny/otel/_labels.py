@@ -39,7 +39,8 @@ def generate_reactive_label(
         A descriptive span label in the format:
         - "reactive myValue" (for simple calc)
         - "reactive cache myValue" (with modifier)
-        - "my-module:reactive myValue" (with namespace)
+        - "reactive my-module:myValue" (with namespace)
+        - "reactive cache my-module:myValue" (with namespace and modifier)
         - "observe <anonymous>" (for lambda function)
 
     Examples
@@ -53,7 +54,7 @@ def generate_reactive_label(
     'observe <anonymous>'
 
     >>> generate_reactive_label(my_calc, "reactive", namespace="mod", modifier="cache")
-    'mod:reactive cache my_calc'
+    'reactive cache mod:my_calc'
     """
     # Extract function name
     name = getattr(func, "__name__", "<anonymous>")
