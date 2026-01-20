@@ -336,12 +336,14 @@ class TestSpanHierarchy:
         assert calc_span is not None, "reactive my_calc span should exist"
 
         # Verify parent-child relationship
-        assert calc_span.parent is not None, "calc span should have a parent"
+        calc_parent = calc_span.parent
+        assert calc_parent is not None, "calc span should have a parent"
+        # Note: pyright doesn't understand that context is always present on ReadableSpan
         assert (
-            calc_span.parent.span_id == update_span.context.span_id
+            calc_parent.span_id == update_span.context.span_id  # type: ignore[union-attr]
         ), "calc parent should be reactive.update"
 
         # Verify they're in the same trace
         assert (
-            calc_span.context.trace_id == update_span.context.trace_id
+            calc_span.context.trace_id == update_span.context.trace_id  # type: ignore[union-attr]
         ), "Spans should be in same trace"
