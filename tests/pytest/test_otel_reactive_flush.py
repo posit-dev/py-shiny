@@ -95,9 +95,7 @@ class TestReactiveFlushInstrumentation:
                 env = ReactiveEnvironment()
 
                 # Mock the tracer to verify it's not called at span creation level
-                with patch(
-                    "shiny.otel._core.get_otel_tracer"
-                ) as mock_get_tracer:
+                with patch("shiny.otel._core.get_otel_tracer") as mock_get_tracer:
                     await env.flush()
 
                     # Tracer should not be retrieved since collection level is too low
@@ -171,17 +169,17 @@ class TestReactiveFlushInstrumentation:
     @pytest.mark.asyncio
     async def test_span_parent_child_relationship(self):
         """Test that reactive.update span is child of parent span when nested"""
+        # Set up in-memory exporter to capture spans
+        from opentelemetry import trace
         from opentelemetry.sdk.trace import TracerProvider
         from opentelemetry.sdk.trace.export import SimpleSpanProcessor
         from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
             InMemorySpanExporter,
         )
-        from shiny.otel._span_wrappers import with_otel_span_async
-        from shiny.otel import OtelCollectLevel
-        from shiny.reactive._core import ReactiveEnvironment
 
-        # Set up in-memory exporter to capture spans
-        from opentelemetry import trace
+        from shiny.otel import OtelCollectLevel
+        from shiny.otel._span_wrappers import with_otel_span_async
+        from shiny.reactive._core import ReactiveEnvironment
 
         memory_exporter = InMemorySpanExporter()
         provider = TracerProvider()
@@ -219,9 +217,9 @@ class TestReactiveFlushInstrumentation:
         assert reactive_span is not None, "reactive.update span should exist"
 
         # Verify parent-child relationship
-        assert (
-            reactive_span.parent is not None
-        ), "reactive.update should have a parent"
+        assert reactive_span.parent is not None, "reactive.update should have a parent"
+        assert reactive_span.context is not None, "reactive.update should have context"
+        assert session_span.context is not None, "session.start should have context"
         assert (
             reactive_span.parent.span_id == session_span.context.span_id
         ), "reactive.update parent should be session.start"
