@@ -11,14 +11,12 @@ app_ui = ui.page_sidebar(
         ui.input_slider("obs", "Number of observations:", min=0, max=1000, value=500),
         open="closed",
     ),
-    ui.markdown(
-        """
+    ui.markdown("""
 #### `session.clientdata` values
 
 The following methods are available from the `session.clientdata` object and allow you
 to reactively read the client data values from the browser.
-"""
-    ),
+"""),
     ui.output_text_verbatim("clientdatatext"),
     ui.output_plot("myplot"),
 )
@@ -28,8 +26,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @render.code
     def clientdatatext():
-        return textwrap.dedent(
-            f"""
+        return textwrap.dedent(f"""
         .url_hash()         -> {session.clientdata.url_hash()}
         .url_hash_initial() -> {session.clientdata.url_hash_initial()}
         .url_hostname()     -> {session.clientdata.url_hostname()}
@@ -47,8 +44,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         .output_accent_color("myplot") -> {session.clientdata.output_accent_color("myplot")}
         .output_font("myplot")         -> {session.clientdata.output_font("myplot")}
 
-        """
-        )
+        """)
 
     @render.plot
     def myplot():
