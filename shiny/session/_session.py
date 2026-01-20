@@ -699,7 +699,7 @@ class AppSession(Session):
                                     self.app.server(self.input, self.output, self)
 
                                     # Flush here to attempt a reactive.update within `session.start` otel span.
-                                    # Might also fixe https://github.com/posit-dev/py-shiny/issues/1889
+                                    # Might also fix https://github.com/posit-dev/py-shiny/issues/1889
                                     await reactive_flush()
 
                         elif message_obj["method"] == "update":
