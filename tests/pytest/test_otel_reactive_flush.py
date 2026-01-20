@@ -167,3 +167,66 @@ class TestReactiveFlushInstrumentation:
 
                 # Verify contextvar is reset to None after flush
                 assert _current_reactive_update_span.get() is None
+
+    @pytest.mark.asyncio
+    async def test_span_parent_child_relationship(self):
+        """Test that reactive.update span is child of parent span when nested"""
+        from opentelemetry.sdk.trace import TracerProvider
+        from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+        from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+            InMemorySpanExporter,
+        )
+        from shiny.otel._span_wrappers import with_otel_span_async
+        from shiny.otel import OtelCollectLevel
+        from shiny.reactive._core import ReactiveEnvironment
+
+        # Set up in-memory exporter to capture spans
+        from opentelemetry import trace
+
+        memory_exporter = InMemorySpanExporter()
+        provider = TracerProvider()
+        provider.add_span_processor(SimpleSpanProcessor(memory_exporter))
+        trace.set_tracer_provider(provider)
+
+        with patch("shiny.otel._core._tracing_enabled", True):
+            with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "all"}):
+                # Simulate session.start with reactive_flush inside
+                async with with_otel_span_async(
+                    "session.start",
+                    {"session.id": "test123"},
+                    level=OtelCollectLevel.SESSION,
+                ):
+                    # Create reactive environment and flush
+                    env = ReactiveEnvironment()
+                    await env.flush()
+
+        # Get exported spans
+        spans = memory_exporter.get_finished_spans()
+
+        # Filter out the _otel_is_recording span
+        app_spans = [s for s in spans if not s.name.startswith("_otel")]
+
+        # Should have 2 spans: session.start and reactive.update
+        assert len(app_spans) >= 2
+
+        # Find session.start and reactive.update spans
+        session_span = next((s for s in app_spans if s.name == "session.start"), None)
+        reactive_span = next(
+            (s for s in app_spans if s.name == "reactive.update"), None
+        )
+
+        assert session_span is not None, "session.start span should exist"
+        assert reactive_span is not None, "reactive.update span should exist"
+
+        # Verify parent-child relationship
+        assert (
+            reactive_span.parent is not None
+        ), "reactive.update should have a parent"
+        assert (
+            reactive_span.parent.span_id == session_span.context.span_id
+        ), "reactive.update parent should be session.start"
+
+        # Verify they're in the same trace
+        assert (
+            reactive_span.context.trace_id == session_span.context.trace_id
+        ), "Spans should be in same trace"
