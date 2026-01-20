@@ -120,7 +120,7 @@ class TestReactiveFlushInstrumentation:
 
                 async def capture_span():
                     nonlocal captured_span
-                    captured_span = env._current_flush_span
+                    captured_span = env._current_otel_span
 
                 # Register callback to capture span during flush
                 env.on_flushed(capture_span, once=True)
@@ -149,7 +149,7 @@ class TestReactiveFlushInstrumentation:
                 mock_span.__aexit__ = AsyncMock(return_value=None)
 
                 # Verify instance span is None before flush
-                assert env._current_flush_span is None
+                assert env._current_otel_span is None
 
                 with patch(
                     "shiny.otel._span_wrappers.with_otel_span_async",
@@ -158,7 +158,7 @@ class TestReactiveFlushInstrumentation:
                     await env.flush()
 
                 # Verify instance span is reset to None after flush
-                assert env._current_flush_span is None
+                assert env._current_otel_span is None
 
     @pytest.mark.asyncio
     async def test_span_parent_child_relationship(self):
