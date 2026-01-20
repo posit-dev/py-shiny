@@ -28,8 +28,7 @@ SAMPLE_PERIOD = 1
 ncpu = cpu_count(logical=True)
 
 app_ui = ui.page_fluid(
-    ui.tags.style(
-        """
+    ui.tags.style("""
         /* Don't apply fade effect, it's constantly recalculating */
         .recalculating, .recalculating > * {
             opacity: 1 !important;
@@ -49,9 +48,7 @@ app_ui = ui.page_fluid(
         th, td {
             text-align: center;
         }
-        """
-        % f"{ncpu * 4}em"
-    ),
+        """ % f"{ncpu * 4}em"),
     # Disable busy indicators
     ui.busy_indicators.use(spinners=False, pulse=False),
     ui.h3("CPU Usage %", class_="mt-2"),

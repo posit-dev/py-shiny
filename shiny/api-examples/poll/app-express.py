@@ -26,12 +26,10 @@ def rand_price() -> float:
 def init_db(con: sqlite3.Connection) -> None:
     cur = con.cursor()
     try:
-        cur.executescript(
-            """
+        cur.executescript("""
             CREATE TABLE stock_quotes (timestamp text, symbol text, price real);
             CREATE INDEX idx_timestamp ON stock_quotes (timestamp);
-            """
-        )
+            """)
         cur.executemany(
             "INSERT INTO stock_quotes (timestamp, symbol, price) VALUES (?, ?, ?)",
             [(timestamp(), symbol, rand_price()) for symbol in SYMBOLS],
@@ -88,14 +86,12 @@ def stock_quotes() -> pd.DataFrame:
 
 
 with ui.card():
-    ui.markdown(
-        """
+    ui.markdown("""
         # `shiny.reactive.poll` demo
 
         This example app shows how to stream results from a database (in this
         case, an in-memory sqlite3) with the help of `shiny.reactive.poll`.
-        """
-    )
+        """)
     ui.input_selectize("symbols", "Filter by symbol", [""] + SYMBOLS, multiple=True)
 
     @render.data_frame
