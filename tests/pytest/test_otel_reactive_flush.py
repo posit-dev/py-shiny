@@ -103,11 +103,8 @@ class TestReactiveFlushInstrumentation:
 
     @pytest.mark.asyncio
     async def test_contextvar_stores_span_during_flush(self):
-        """Test that the current span is stored in contextvar during flush"""
-        from shiny.reactive._core import (
-            ReactiveEnvironment,
-            _current_reactive_update_span,
-        )
+        """Test that the current span is stored on instance during flush"""
+        from shiny.reactive._core import ReactiveEnvironment
 
         with patch("shiny.otel._core._tracing_enabled", True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactive_update"}):
@@ -118,12 +115,12 @@ class TestReactiveFlushInstrumentation:
                 mock_span.__aenter__ = AsyncMock(return_value=mock_span)
                 mock_span.__aexit__ = AsyncMock(return_value=None)
 
-                # Track what span is set in contextvar
+                # Track what span is set on instance
                 captured_span = None
 
                 async def capture_span():
                     nonlocal captured_span
-                    captured_span = _current_reactive_update_span.get()
+                    captured_span = env._current_flush_span
 
                 # Register callback to capture span during flush
                 env.on_flushed(capture_span, once=True)
@@ -134,16 +131,13 @@ class TestReactiveFlushInstrumentation:
                 ):
                     await env.flush()
 
-                # Verify span was set in contextvar during flush
+                # Verify span was set on instance during flush
                 assert captured_span is mock_span
 
     @pytest.mark.asyncio
     async def test_contextvar_reset_after_flush(self):
-        """Test that contextvar is reset after flush completes"""
-        from shiny.reactive._core import (
-            ReactiveEnvironment,
-            _current_reactive_update_span,
-        )
+        """Test that instance span is reset after flush completes"""
+        from shiny.reactive._core import ReactiveEnvironment
 
         with patch("shiny.otel._core._tracing_enabled", True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactive_update"}):
@@ -154,8 +148,8 @@ class TestReactiveFlushInstrumentation:
                 mock_span.__aenter__ = AsyncMock(return_value=mock_span)
                 mock_span.__aexit__ = AsyncMock(return_value=None)
 
-                # Verify contextvar is None before flush
-                assert _current_reactive_update_span.get() is None
+                # Verify instance span is None before flush
+                assert env._current_flush_span is None
 
                 with patch(
                     "shiny.otel._span_wrappers.with_otel_span_async",
@@ -163,8 +157,8 @@ class TestReactiveFlushInstrumentation:
                 ):
                     await env.flush()
 
-                # Verify contextvar is reset to None after flush
-                assert _current_reactive_update_span.get() is None
+                # Verify instance span is reset to None after flush
+                assert env._current_flush_span is None
 
     @pytest.mark.asyncio
     async def test_span_parent_child_relationship(self):

@@ -32,11 +32,6 @@ if TYPE_CHECKING:
 
 T = TypeVar("T")
 
-# ContextVar to store the current reactive.update span for child reactive spans to reference
-_current_reactive_update_span: ContextVar[Optional[Span]] = ContextVar(
-    "_current_reactive_update_span", default=None
-)
-
 
 class ReactiveWarning(RuntimeWarning):
     pass
@@ -137,6 +132,8 @@ class ReactiveEnvironment:
         self._pending_flush_queue: PriorityQueueFIFO[Context] = PriorityQueueFIFO()
         self._lock: Optional[asyncio.Lock] = None
         self._flushed_callbacks = _utils.AsyncCallbacks()
+        # Current reactive.update span for this flush cycle (for child spans to reference)
+        self._current_flush_span: Optional[Span] = None
 
     @property
     def lock(self) -> asyncio.Lock:
@@ -189,13 +186,14 @@ class ReactiveEnvironment:
             "reactive.update",
             level=OtelCollectLevel.REACTIVE_UPDATE,
         ) as span:
-            # Store span in contextvar so child reactive spans can reference it
-            token = _current_reactive_update_span.set(span)
+            # Store span on instance so child reactive spans can reference it
+            old_span = self._current_flush_span
+            self._current_flush_span = span
             try:
                 await self._flush_sequential()
                 await self._flushed_callbacks.invoke()
             finally:
-                _current_reactive_update_span.reset(token)
+                self._current_flush_span = old_span
 
     async def _flush_sequential(self) -> None:
         # Sequential flush: instead of storing the tasks in a list and calling gather()
