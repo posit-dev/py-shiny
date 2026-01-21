@@ -158,53 +158,64 @@ class TestReactiveFlushInstrumentation:
             InMemorySpanExporter,
         )
 
+        # Save the current tracer provider to restore later
+        old_provider = trace.get_tracer_provider()
+
         memory_exporter = InMemorySpanExporter()
         provider = TracerProvider()
         provider.add_span_processor(SimpleSpanProcessor(memory_exporter))
-        trace.set_tracer_provider(provider)
+
+        # Use internal API to force override for testing (needed for CI with pytest-xdist)
+        trace._set_tracer_provider(provider, log=False)
 
         # Reset tracing state to force re-evaluation with new provider
         reset_otel_tracing_state()
 
-        with patch_otel_tracing_state(tracing_enabled=True):
-            with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "all"}):
-                # Simulate session.start with reactive_flush inside
-                async with with_otel_span_async(
-                    "session.start",
-                    {"session.id": "test123"},
-                    level=OtelCollectLevel.SESSION,
-                ):
-                    # Create reactive environment and flush
-                    env = ReactiveEnvironment()
-                    await env.flush()
+        try:
+            with patch_otel_tracing_state(tracing_enabled=True):
+                with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "all"}):
+                    # Simulate session.start with reactive_flush inside
+                    async with with_otel_span_async(
+                        "session.start",
+                        {"session.id": "test123"},
+                        level=OtelCollectLevel.SESSION,
+                    ):
+                        # Create reactive environment and flush
+                        env = ReactiveEnvironment()
+                        await env.flush()
 
-        # Get exported spans
-        spans = memory_exporter.get_finished_spans()
+            # Get exported spans
+            spans = memory_exporter.get_finished_spans()
 
-        # Filter out the _otel_is_recording span
-        app_spans = [s for s in spans if not s.name.startswith("_otel")]
+            # Filter out the _otel_is_recording span
+            app_spans = [s for s in spans if not s.name.startswith("_otel")]
 
-        # Should have 2 spans: session.start and reactive.update
-        assert len(app_spans) >= 2
+            # Should have 2 spans: session.start and reactive.update
+            assert len(app_spans) >= 2
 
-        # Find session.start and reactive.update spans
-        session_span = next((s for s in app_spans if s.name == "session.start"), None)
-        reactive_span = next(
-            (s for s in app_spans if s.name == "reactive.update"), None
-        )
+            # Find session.start and reactive.update spans
+            session_span = next((s for s in app_spans if s.name == "session.start"), None)
+            reactive_span = next(
+                (s for s in app_spans if s.name == "reactive.update"), None
+            )
 
-        assert session_span is not None, "session.start span should exist"
-        assert reactive_span is not None, "reactive.update span should exist"
+            assert session_span is not None, "session.start span should exist"
+            assert reactive_span is not None, "reactive.update span should exist"
 
-        # Verify parent-child relationship
-        assert reactive_span.parent is not None, "reactive.update should have a parent"
-        assert reactive_span.context is not None, "reactive.update should have context"
-        assert session_span.context is not None, "session.start should have context"
-        assert (
-            reactive_span.parent.span_id == session_span.context.span_id
-        ), "reactive.update parent should be session.start"
+            # Verify parent-child relationship
+            assert reactive_span.parent is not None, "reactive.update should have a parent"
+            assert reactive_span.context is not None, "reactive.update should have context"
+            assert session_span.context is not None, "session.start should have context"
+            assert (
+                reactive_span.parent.span_id == session_span.context.span_id
+            ), "reactive.update parent should be session.start"
 
-        # Verify they're in the same trace
-        assert (
-            reactive_span.context.trace_id == session_span.context.trace_id
-        ), "Spans should be in same trace"
+            # Verify they're in the same trace
+            assert (
+                reactive_span.context.trace_id == session_span.context.trace_id
+            ), "Spans should be in same trace"
+        finally:
+            # Restore the original tracer provider
+            trace._set_tracer_provider(old_provider, log=False)
+            # Reset again to ensure clean state for next test
+            reset_otel_tracing_state()
