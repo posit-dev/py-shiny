@@ -1867,7 +1867,7 @@ class Outputs:
                     async with with_otel_span_async(
                         lambda: f"output {output_id}",
                         attributes=lambda: extract_source_ref(
-                            getattr(renderer, "_fn", renderer)
+                            getattr(renderer.fn, "_orig_fn", renderer.fn)
                         ),
                         level=OtelCollectLevel.REACTIVITY,
                     ):
