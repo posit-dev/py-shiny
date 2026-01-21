@@ -12,9 +12,7 @@ from shiny.run import ShinyAppProc
 @skip_if_not_chrome
 @pytest.mark.parametrize("df_type", ["pandas", "polars"])
 def test_validate_html_columns(
-    page: Page,
-    local_app: ShinyAppProc,
-    df_type: str
+    page: Page, local_app: ShinyAppProc, df_type: str
 ) -> None:
     page.goto(local_app.url)
 
