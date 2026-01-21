@@ -5,7 +5,10 @@ Generates descriptive span names for reactive computations (calcs, effects, outp
 that include function names, namespaces, and modifiers.
 """
 
-from typing import Any, Callable, Optional
+from typing import TYPE_CHECKING, Any, Callable, Optional
+
+if TYPE_CHECKING:
+    from ..session import Session
 
 __all__ = ["generate_reactive_label"]
 
@@ -13,7 +16,7 @@ __all__ = ["generate_reactive_label"]
 def generate_reactive_label(
     func: Callable[..., Any],
     label_type: str,
-    namespace: Optional[str] = None,
+    session: "Session | None" = None,
     modifier: Optional[str] = None,
 ) -> str:
     """
@@ -28,8 +31,9 @@ def generate_reactive_label(
         - "reactive" for Calc
         - "observe" for Effect
         - "output" for Output rendering
-    namespace
-        Optional module namespace prefix (e.g., "my-module")
+    session
+        Optional session to extract namespace from. If provided and the session
+        has a namespace, it will be included in the label.
     modifier
         Optional modifier to include (e.g., "cache", "event")
 
@@ -53,7 +57,7 @@ def generate_reactive_label(
     >>> generate_reactive_label(lambda: 42, "observe")
     'observe <anonymous>'
 
-    >>> generate_reactive_label(my_calc, "reactive", namespace="mod", modifier="cache")
+    >>> generate_reactive_label(my_calc, "reactive", session=mock_session, modifier="cache")
     'reactive cache mod:my_calc'
     """
     # Extract function name
@@ -64,7 +68,16 @@ def generate_reactive_label(
     # Build label parts
     parts: list[str] = []
 
-    # Add namespace prefix to name if provided
+    # Extract namespace from session if provided
+    namespace: str | None = None
+    if session is not None:
+        # session.ns is a ResolvedId (subclass of str)
+        # It will be an empty string ("") for Root namespace
+        ns_str = str(session.ns)
+        if ns_str:  # Only use non-empty namespaces
+            namespace = ns_str
+
+    # Add namespace prefix to name if present
     if namespace:
         name = f"{namespace}:{name}"
 

@@ -47,11 +47,18 @@ class TestLabelGeneration:
 
     def test_generate_reactive_label_with_namespace(self):
         """Test generating label with namespace prefix"""
+        from unittest.mock import Mock
+
+        from shiny._namespaces import ResolvedId
 
         def my_calc():
             return 42
 
-        label = generate_reactive_label(my_calc, "reactive", namespace="mod")
+        # Create a mock session with a namespace
+        mock_session = Mock()
+        mock_session.ns = ResolvedId("mod")
+
+        label = generate_reactive_label(my_calc, "reactive", session=mock_session)
         assert label == "reactive mod:my_calc"
 
     def test_generate_reactive_label_with_modifier(self):
