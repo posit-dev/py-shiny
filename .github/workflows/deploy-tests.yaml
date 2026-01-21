@@ -19,13 +19,15 @@ jobs:
         os: [ubuntu-latest]
         config:
           # Released server, shiny, and rsconnect
-          - name: "pypi-shiny-rsconnect-connect"
-            released_connect_server: true
-            pypi_shiny: true
-            pypi_rsconnect: true
-            base_test_dir: "./tests/playwright/deploys/express-page_sidebar"
-            app_name: "pypi-shiny-rsconnect"
-            test_shinyappsio: false
+          # TEMPORARILY DISABLED: Connect server missing uv binary at /opt/rstudio-connect/mnt/python-environments/_bootstrap/3.10.15/uv/bin/uv
+          # TODO: Re-enable once the Connect server is fixed
+          # - name: "pypi-shiny-rsconnect-connect"
+          #   released_connect_server: true
+          #   pypi_shiny: true
+          #   pypi_rsconnect: true
+          #   base_test_dir: "./tests/playwright/deploys/express-page_sidebar"
+          #   app_name: "pypi-shiny-rsconnect"
+          #   test_shinyappsio: false
 
           # Released shiny and rsconnect
           # Dev server
