@@ -12,61 +12,18 @@ Tests cover:
 """
 
 import os
-from contextlib import contextmanager
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from opentelemetry import trace
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import SimpleSpanProcessor
-from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
-    InMemorySpanExporter,
-)
 
 from shiny.otel import OtelCollectLevel
 from shiny.otel._attributes import extract_source_ref
-from shiny.otel._core import patch_otel_tracing_state, reset_otel_tracing_state
+from shiny.otel._core import patch_otel_tracing_state
 from shiny.otel._labels import generate_reactive_label
 from shiny.otel._span_wrappers import with_otel_span_async
 from shiny.reactive import Calc_, Effect_
 
-
-@contextmanager
-def otel_tracer_provider_context():
-    """
-    Context manager for test isolation when using TracerProvider.
-
-    Sets up an InMemorySpanExporter and TracerProvider, then restores
-    the original provider on exit. This ensures tests don't interfere
-    with each other when setting up their own tracing infrastructure.
-
-    Yields
-    ------
-    tuple[TracerProvider, InMemorySpanExporter]
-        The provider and exporter for use in tests.
-    """
-
-    # Save the current tracer provider to restore later
-    old_provider = trace.get_tracer_provider()
-
-    try:
-        # Set up new provider with in-memory exporter
-        memory_exporter = InMemorySpanExporter()
-        provider = TracerProvider()
-        provider.add_span_processor(SimpleSpanProcessor(memory_exporter))
-
-        # Use internal API to force override for testing
-        trace._set_tracer_provider(provider, log=False)
-
-        # Reset tracing state to force re-evaluation with new provider
-        reset_otel_tracing_state()
-
-        yield provider, memory_exporter
-    finally:
-        # Restore the original tracer provider
-        trace._set_tracer_provider(old_provider, log=False)
-        # Reset again to ensure clean state for next test
-        reset_otel_tracing_state()
+from .test_otel_helpers import otel_tracer_provider_context
 
 
 class TestLabelGeneration:

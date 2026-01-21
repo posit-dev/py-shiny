@@ -12,17 +12,13 @@ import os
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-from opentelemetry import trace
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import SimpleSpanProcessor
-from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
-    InMemorySpanExporter,
-)
 
 from shiny.otel import OtelCollectLevel, should_otel_collect
-from shiny.otel._core import patch_otel_tracing_state, reset_otel_tracing_state
+from shiny.otel._core import patch_otel_tracing_state
 from shiny.otel._span_wrappers import with_otel_span_async
 from shiny.reactive._core import ReactiveEnvironment
+
+from .test_otel_helpers import otel_tracer_provider_context
 
 
 class TestReactiveFlushSpans:
@@ -156,20 +152,7 @@ class TestReactiveFlushInstrumentation:
     @pytest.mark.asyncio
     async def test_span_parent_child_relationship(self):
         """Test that reactive.update span is child of parent span when nested"""
-        # Save the current tracer provider to restore later
-        old_provider = trace.get_tracer_provider()
-
-        memory_exporter = InMemorySpanExporter()
-        provider = TracerProvider()
-        provider.add_span_processor(SimpleSpanProcessor(memory_exporter))
-
-        # Use internal API to force override for testing (needed for CI with pytest-xdist)
-        trace._set_tracer_provider(provider, log=False)
-
-        # Reset tracing state to force re-evaluation with new provider
-        reset_otel_tracing_state()
-
-        try:
+        with otel_tracer_provider_context() as (_, memory_exporter):
             with patch_otel_tracing_state(tracing_enabled=True):
                 with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "all"}):
                     # Simulate session.start with reactive_flush inside
@@ -212,8 +195,3 @@ class TestReactiveFlushInstrumentation:
             assert (
                 reactive_span.context.trace_id == session_span.context.trace_id
             ), "Spans should be in same trace"
-        finally:
-            # Restore the original tracer provider
-            trace._set_tracer_provider(old_provider, log=False)
-            # Reset again to ensure clean state for next test
-            reset_otel_tracing_state()
