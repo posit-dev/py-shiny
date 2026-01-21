@@ -324,13 +324,14 @@ class Calc_(Generic[T]):
 
         from ..session import session_context
 
-        # Wrap execution in OTel span with lazy label generation
-        async with with_otel_span_async(
-            lambda: generate_reactive_label(self._fn, "reactive"),
-            attributes=self._otel_attrs,
-            level=OtelCollectLevel.REACTIVITY,
-        ):
-            with session_context(self._session):
+        with session_context(self._session):
+            async with with_otel_span_async(
+                lambda: generate_reactive_label(
+                    self._fn, "reactive", session=self._session
+                ),
+                attributes=self._otel_attrs,
+                level=OtelCollectLevel.REACTIVITY,
+            ):
                 try:
                     with self._ctx():
                         await self._run_func()
@@ -599,13 +600,14 @@ class Effect_:
 
         from ..session import session_context
 
-        # Wrap execution in OTel span with lazy label generation
-        async with with_otel_span_async(
-            lambda: generate_reactive_label(self._fn, "observe"),
-            attributes=self._otel_attrs,
-            level=OtelCollectLevel.REACTIVITY,
-        ):
-            with session_context(self._session):
+        with session_context(self._session):
+            async with with_otel_span_async(
+                lambda: generate_reactive_label(
+                    self._fn, "observe", session=self._session
+                ),
+                attributes=self._otel_attrs,
+                level=OtelCollectLevel.REACTIVITY,
+            ):
                 try:
                     with ctx():
                         await self._fn()

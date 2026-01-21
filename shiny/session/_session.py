@@ -1863,7 +1863,6 @@ class Outputs:
                 )
 
                 try:
-                    # Wrap rendering in OTel span with lazy name and attribute generation
                     async with with_otel_span_async(
                         lambda: f"output {output_id}",
                         attributes=lambda: extract_source_ref(
