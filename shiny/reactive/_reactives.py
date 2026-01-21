@@ -36,6 +36,7 @@ from .._docstring import add_example
 from .._utils import is_async_callable, run_coro_sync
 from .._validation import req
 from ..otel import OtelCollectLevel
+from ..otel._attributes import extract_source_ref
 from ..otel._labels import generate_reactive_label
 from ..otel._span_wrappers import with_otel_span_async
 from ..types import (
@@ -351,8 +352,6 @@ class Calc_(Generic[T]):
 
     def _extract_otel_attrs(self, fn: Callable[..., Any]) -> dict[str, Any]:
         """Extract OpenTelemetry attributes from the reactive function."""
-        from ..otel._attributes import extract_source_ref
-
         return extract_source_ref(fn)
 
 
@@ -712,8 +711,6 @@ class Effect_:
 
     def _extract_otel_attrs(self, fn: Callable[..., Any]) -> dict[str, Any]:
         """Extract OpenTelemetry attributes from the reactive function."""
-        from ..otel._attributes import extract_source_ref
-
         return extract_source_ref(fn)
 
 
