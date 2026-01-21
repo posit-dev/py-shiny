@@ -8,13 +8,10 @@ OpenTelemetry TracerProvider in tests.
 from contextlib import contextmanager
 from typing import Iterator, Tuple, Union
 
-import pytest
 from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
-from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
-    InMemorySpanExporter,
-)
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
 # Import internal globals for test manipulation
 # These are imported directly to allow test isolation without going through public API
@@ -161,10 +158,11 @@ def get_exported_spans(provider: TracerProvider, exporter: InMemorySpanExporter)
     return exporter.get_finished_spans()
 
 
-@pytest.fixture(scope="session")
-def otel_tracer_provider() -> Iterator[Tuple[TracerProvider, InMemorySpanExporter]]:
+def otel_tracer_provider_impl() -> (
+    Iterator[Tuple[TracerProvider, InMemorySpanExporter]]
+):
     """
-    Session-scoped pytest fixture for OpenTelemetry TracerProvider.
+    Implementation for OpenTelemetry TracerProvider fixture.
 
     Sets up a single InMemorySpanExporter and TracerProvider for all tests in the
     session. This avoids the complexity of manipulating OpenTelemetry internals

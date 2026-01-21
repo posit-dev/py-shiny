@@ -17,9 +17,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
-    InMemorySpanExporter,
-)
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
 from shiny.otel import OtelCollectLevel
 from shiny.otel._attributes import extract_source_ref
@@ -27,13 +25,7 @@ from shiny.otel._labels import generate_reactive_label
 from shiny.otel._span_wrappers import with_otel_span_async
 from shiny.reactive import Calc_, Effect_
 
-from .otel_helpers import (
-    get_exported_spans,
-    patch_otel_tracing_state,
-)
-
-# Import fixture - pytest will discover it via module import
-pytest_plugins = ["tests.pytest.otel_helpers"]
+from .otel_helpers import get_exported_spans, patch_otel_tracing_state
 
 
 class TestLabelGeneration:

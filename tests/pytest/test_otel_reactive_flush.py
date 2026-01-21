@@ -27,9 +27,6 @@ from .otel_helpers import (
     patch_otel_tracing_state,
 )
 
-# Import fixture - pytest will discover it via module import
-pytest_plugins = ["tests.pytest.otel_helpers"]
-
 
 class TestReactiveFlushSpans:
     """Tests for reactive.update span creation during flush cycles"""
