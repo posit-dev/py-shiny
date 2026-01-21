@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any, Union
+from contextlib import contextmanager
+from typing import Any, Iterator, Union
 
 from opentelemetry import trace
 from opentelemetry._logs import get_logger_provider
@@ -13,6 +14,7 @@ __all__ = (
     "get_otel_logger",
     "is_otel_tracing_enabled",
     "reset_tracing_state",
+    "patch_tracing_state",
 )
 
 # Global state for lazy initialization
@@ -124,3 +126,54 @@ def reset_tracing_state(tracing_enabled: Union[bool, None] = None) -> None:
     """
     global _tracing_enabled
     _tracing_enabled = tracing_enabled
+
+
+@contextmanager
+def patch_tracing_state(tracing_enabled: Union[bool, None]) -> Iterator[None]:
+    """
+    Context manager to temporarily patch the tracing state for testing.
+
+    This provides a cleaner alternative to using `unittest.mock.patch` on
+    the internal `_tracing_enabled` variable. It automatically saves and
+    restores the original state.
+
+    Parameters
+    ----------
+    tracing_enabled
+        The temporary value to set for tracing state. Can be True (enabled),
+        False (disabled), or None (uninitialized).
+
+    Yields
+    ------
+    None
+
+    Examples
+    --------
+    ```python
+    from shiny.otel._core import patch_tracing_state
+    from shiny.otel import should_otel_collect, OtelCollectLevel
+
+    # Test with tracing enabled
+    with patch_tracing_state(True):
+        assert should_otel_collect(OtelCollectLevel.SESSION) is True
+
+    # Test with tracing disabled
+    with patch_tracing_state(False):
+        assert should_otel_collect(OtelCollectLevel.SESSION) is False
+    ```
+
+    Notes
+    -----
+    This is a test utility and should not be used in production code.
+    The state is automatically restored when exiting the context.
+    """
+    global _tracing_enabled
+    # Save original state
+    original = _tracing_enabled
+    try:
+        # Set temporary state
+        _tracing_enabled = tracing_enabled
+        yield
+    finally:
+        # Restore original state
+        _tracing_enabled = original
