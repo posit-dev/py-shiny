@@ -73,7 +73,12 @@ Main exports:
 from __future__ import annotations
 
 from ._collect import OtelCollectLevel, get_otel_collect_level, should_otel_collect
-from ._core import get_otel_logger, get_otel_tracer, is_otel_tracing_enabled
+from ._core import (
+    get_otel_logger,
+    get_otel_tracer,
+    is_otel_tracing_enabled,
+    reset_tracing_state,
+)
 
 __all__ = (
     # Collection level management
@@ -84,6 +89,8 @@ __all__ = (
     "get_otel_tracer",
     "get_otel_logger",
     "is_otel_tracing_enabled",
+    # Test utilities
+    "reset_tracing_state",
     # User-facing API (will be added in Phase 7)
     # "otel_collect",
 )

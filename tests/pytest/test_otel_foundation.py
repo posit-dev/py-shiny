@@ -13,13 +13,13 @@ from unittest.mock import patch
 
 import pytest
 
-import shiny.otel._core
 from shiny.otel import (
     OtelCollectLevel,
     get_otel_collect_level,
     get_otel_logger,
     get_otel_tracer,
     is_otel_tracing_enabled,
+    reset_tracing_state,
     should_otel_collect,
 )
 from shiny.otel._span_wrappers import with_otel_span, with_otel_span_async
@@ -45,7 +45,7 @@ class TestCore:
     def test_is_otel_tracing_enabled_without_sdk(self):
         """Test that is_otel_tracing_enabled() returns False when SDK not configured."""
         # Reset cached value
-        shiny.otel._core._tracing_enabled = None
+        reset_tracing_state()
 
         # Without SDK, tracing should be disabled
         assert is_otel_tracing_enabled() is False
@@ -122,7 +122,7 @@ class TestShouldOtelCollect:
     def test_should_otel_collect_without_sdk(self):
         """Test that should_otel_collect returns False when SDK not configured."""
         # Reset cached tracing status
-        shiny.otel._core._tracing_enabled = None
+        reset_tracing_state()
 
         # Without SDK, should_otel_collect should always return False
         # (except for NONE which should raise ValueError)
@@ -168,7 +168,7 @@ class TestShouldOtelCollect:
     ) -> None:
         """Test should_otel_collect logic based on level comparison (when tracing disabled)."""
         # Reset tracing status to ensure it's disabled
-        shiny.otel._core._tracing_enabled = None
+        reset_tracing_state()
 
         with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": current_level.name.lower()}):
             # Without SDK, should always be False regardless of levels

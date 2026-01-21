@@ -8,7 +8,12 @@ from opentelemetry import trace
 from opentelemetry._logs import get_logger_provider
 from opentelemetry.trace import Tracer
 
-__all__ = ("get_otel_tracer", "get_otel_logger", "is_otel_tracing_enabled")
+__all__ = (
+    "get_otel_tracer",
+    "get_otel_logger",
+    "is_otel_tracing_enabled",
+    "reset_tracing_state",
+)
 
 # Global state for lazy initialization
 _tracer: Union[Tracer, None] = None
@@ -82,3 +87,40 @@ def is_otel_tracing_enabled() -> bool:
         with tracer.start_as_current_span("_otel_is_recording") as span:
             _tracing_enabled = span.is_recording()
     return _tracing_enabled
+
+
+def reset_tracing_state(tracing_enabled: Union[bool, None] = None) -> None:
+    """
+    Reset the cached tracing state.
+
+    This function is primarily intended for testing purposes to allow tests to
+    reset the global tracing state between test runs.
+
+    Parameters
+    ----------
+    tracing_enabled
+        Optional value to set for the tracing enabled state. If None (default),
+        the state will be reset and will be re-evaluated on the next call to
+        `is_otel_tracing_enabled()`. If True or False, sets an explicit value.
+
+    Examples
+    --------
+    ```python
+    # Reset to force re-evaluation
+    reset_tracing_state()
+
+    # Explicitly set to disabled for testing
+    reset_tracing_state(False)
+
+    # Explicitly set to enabled for testing
+    reset_tracing_state(True)
+    ```
+
+    Notes
+    -----
+    This function is designed for test isolation and should generally not be
+    used in production code. Tests should call this function to ensure a clean
+    state between test runs.
+    """
+    global _tracing_enabled
+    _tracing_enabled = tracing_enabled
