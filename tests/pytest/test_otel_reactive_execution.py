@@ -18,12 +18,11 @@ import pytest
 
 from shiny.otel import OtelCollectLevel
 from shiny.otel._attributes import extract_source_ref
-from shiny.otel._core import patch_otel_tracing_state
 from shiny.otel._labels import generate_reactive_label
 from shiny.otel._span_wrappers import with_otel_span_async
 from shiny.reactive import Calc_, Effect_
 
-from .test_otel_helpers import otel_tracer_provider_context
+from .test_otel_helpers import otel_tracer_provider_context, patch_otel_tracing_state
 
 
 class TestLabelGeneration:

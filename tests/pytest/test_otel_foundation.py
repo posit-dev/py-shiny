@@ -21,8 +21,9 @@ from shiny.otel import (
     is_otel_tracing_enabled,
     should_otel_collect,
 )
-from shiny.otel._core import patch_otel_tracing_state, reset_otel_tracing_state
 from shiny.otel._span_wrappers import with_otel_span, with_otel_span_async
+
+from .test_otel_helpers import patch_otel_tracing_state, reset_otel_tracing_state
 
 
 class TestCore:
