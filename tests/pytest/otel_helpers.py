@@ -191,8 +191,11 @@ def otel_tracer_provider_context():
             assert len(spans) > 0
     ```
     """
-    # Save the current tracer provider to restore later
-    old_provider = trace.get_tracer_provider()
+    import opentelemetry.trace as trace_module
+
+    # Save the current tracer provider and set-once flag to restore later
+    old_provider = getattr(trace_module, "_TRACER_PROVIDER", None)
+    old_set_once = getattr(trace_module, "_TRACER_PROVIDER_SET_ONCE", None)
 
     try:
         # Set up new provider with in-memory exporter
@@ -200,15 +203,18 @@ def otel_tracer_provider_context():
         provider = TracerProvider()
         provider.add_span_processor(SimpleSpanProcessor(memory_exporter))
 
-        # Use internal API to force override for testing (needed for CI with pytest-xdist)
-        trace._set_tracer_provider(provider, log=False)
+        # Directly set the global provider and clear the set-once flag
+        # This is more reliable than using trace._set_tracer_provider across platforms
+        trace_module._TRACER_PROVIDER = provider
+        trace_module._TRACER_PROVIDER_SET_ONCE = None
 
         # Reset tracing state to force re-evaluation with new provider
         reset_otel_tracing_state()
 
         yield provider, memory_exporter
     finally:
-        # Restore the original tracer provider
-        trace._set_tracer_provider(old_provider, log=False)
+        # Restore the original tracer provider and set-once flag
+        trace_module._TRACER_PROVIDER = old_provider
+        trace_module._TRACER_PROVIDER_SET_ONCE = old_set_once
         # Reset again to ensure clean state for next test
         reset_otel_tracing_state()
