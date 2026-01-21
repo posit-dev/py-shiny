@@ -24,26 +24,26 @@ class TestReactiveFlushSpans:
 
     def test_reactive_update_collection_enabled_at_reactive_update_level(self):
         """Test that collection is enabled for REACTIVE_UPDATE level when SHINY_OTEL_COLLECT=reactive_update"""
-        with patch_tracing_state(True):
+        with patch_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactive_update"}):
                 assert should_otel_collect(OtelCollectLevel.REACTIVE_UPDATE) is True
                 assert should_otel_collect(OtelCollectLevel.REACTIVITY) is False
 
     def test_reactive_update_collection_enabled_at_all_level(self):
         """Test that REACTIVE_UPDATE level collection is enabled when SHINY_OTEL_COLLECT=all"""
-        with patch_tracing_state(True):
+        with patch_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "all"}):
                 assert should_otel_collect(OtelCollectLevel.REACTIVE_UPDATE) is True
 
     def test_reactive_update_collection_disabled_at_session_level(self):
         """Test that REACTIVE_UPDATE level collection is disabled when SHINY_OTEL_COLLECT=session"""
-        with patch_tracing_state(True):
+        with patch_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "session"}):
                 assert should_otel_collect(OtelCollectLevel.REACTIVE_UPDATE) is False
 
     def test_collection_disabled_at_none_level(self):
         """Test that collection is disabled when SHINY_OTEL_COLLECT=none"""
-        with patch_tracing_state(True):
+        with patch_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "none"}):
                 assert should_otel_collect(OtelCollectLevel.SESSION) is False
                 assert should_otel_collect(OtelCollectLevel.REACTIVE_UPDATE) is False
@@ -55,7 +55,7 @@ class TestReactiveFlushInstrumentation:
     @pytest.mark.asyncio
     async def test_flush_creates_span_when_collecting(self):
         """Test that flush() wraps execution in reactive.update span when collecting"""
-        with patch_tracing_state(True):
+        with patch_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactive_update"}):
                 # Create a reactive environment
                 env = ReactiveEnvironment()
@@ -80,7 +80,7 @@ class TestReactiveFlushInstrumentation:
     @pytest.mark.asyncio
     async def test_flush_no_span_when_not_collecting(self):
         """Test that flush() does not create span when not collecting"""
-        with patch_tracing_state(True):
+        with patch_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "session"}):
                 # Create a reactive environment
                 env = ReactiveEnvironment()
@@ -95,7 +95,7 @@ class TestReactiveFlushInstrumentation:
     @pytest.mark.asyncio
     async def test_contextvar_stores_span_during_flush(self):
         """Test that the current span is stored on instance during flush"""
-        with patch_tracing_state(True):
+        with patch_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactive_update"}):
                 env = ReactiveEnvironment()
 
@@ -126,7 +126,7 @@ class TestReactiveFlushInstrumentation:
     @pytest.mark.asyncio
     async def test_contextvar_reset_after_flush(self):
         """Test that instance span is reset after flush completes"""
-        with patch_tracing_state(True):
+        with patch_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactive_update"}):
                 env = ReactiveEnvironment()
 
@@ -163,7 +163,7 @@ class TestReactiveFlushInstrumentation:
         provider.add_span_processor(SimpleSpanProcessor(memory_exporter))
         trace.set_tracer_provider(provider)
 
-        with patch_tracing_state(True):
+        with patch_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "all"}):
                 # Simulate session.start with reactive_flush inside
                 async with with_otel_span_async(

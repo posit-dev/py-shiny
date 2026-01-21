@@ -154,7 +154,7 @@ class TestCalcSpans:
     @pytest.mark.asyncio
     async def test_calc_creates_span_when_enabled(self):
         """Test that Calc execution creates a span when collection level is REACTIVITY"""
-        with patch_tracing_state(True):
+        with patch_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
                 # Create a calc
                 def my_calc():
@@ -186,7 +186,7 @@ class TestCalcSpans:
     @pytest.mark.asyncio
     async def test_calc_no_span_when_disabled(self):
         """Test that Calc execution doesn't create span when collection level is too low"""
-        with patch_tracing_state(True):
+        with patch_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "session"}):
                 # Create a calc
                 def my_calc():
@@ -209,7 +209,7 @@ class TestCalcSpans:
     @pytest.mark.asyncio
     async def test_calc_span_includes_source_attrs(self):
         """Test that Calc span includes source code attributes"""
-        with patch_tracing_state(True):
+        with patch_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
                 # Create a calc with known source
                 def my_calc():
@@ -245,7 +245,7 @@ class TestEffectSpans:
     @pytest.mark.asyncio
     async def test_effect_creates_span_when_enabled(self):
         """Test that Effect execution creates a span when collection level is REACTIVITY"""
-        with patch_tracing_state(True):
+        with patch_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
 
                 # Create an effect
@@ -278,7 +278,7 @@ class TestEffectSpans:
     @pytest.mark.asyncio
     async def test_effect_no_span_when_disabled(self):
         """Test that Effect execution doesn't create span when collection level is too low"""
-        with patch_tracing_state(True):
+        with patch_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "session"}):
 
                 # Create an effect
@@ -318,7 +318,7 @@ class TestSpanHierarchy:
     async def test_calc_span_nested_under_reactive_update(self):
         """Test that calc spans are children of reactive.update span"""
         with otel_tracer_provider_context() as (_, memory_exporter):
-            with patch_tracing_state(True):
+            with patch_tracing_state(tracing_enabled=True):
                 with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "all"}):
 
                     # Create a calc

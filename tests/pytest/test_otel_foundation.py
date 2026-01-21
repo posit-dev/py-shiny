@@ -210,7 +210,7 @@ class TestSpanWrappers:
     def test_with_otel_span_no_op_when_not_collecting(self):
         """Test that with_otel_span returns None when collection disabled."""
         # Without SDK configured, should return None (no-op)
-        with patch_tracing_state(None):
+        with patch_tracing_state(tracing_enabled=None):
             with with_otel_span(
                 "test_span", {"key": "value"}, level=OtelCollectLevel.SESSION
             ) as span:
@@ -221,7 +221,7 @@ class TestSpanWrappers:
     async def test_with_otel_span_async_no_op_when_not_collecting(self):
         """Test that with_otel_span_async returns None when collection disabled."""
         # Without SDK configured, should return None (no-op)
-        with patch_tracing_state(None):
+        with patch_tracing_state(tracing_enabled=None):
             async with with_otel_span_async(
                 "test_span_async", {"key": "value"}, level=OtelCollectLevel.SESSION
             ) as span:

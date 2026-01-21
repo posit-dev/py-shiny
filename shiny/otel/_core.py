@@ -91,7 +91,7 @@ def is_otel_tracing_enabled() -> bool:
     return _tracing_enabled
 
 
-def reset_tracing_state(tracing_enabled: Union[bool, None] = None) -> None:
+def reset_tracing_state(*, tracing_enabled: Union[bool, None] = None) -> None:
     """
     Reset the cached tracing state.
 
@@ -112,10 +112,10 @@ def reset_tracing_state(tracing_enabled: Union[bool, None] = None) -> None:
     reset_tracing_state()
 
     # Explicitly set to disabled for testing
-    reset_tracing_state(False)
+    reset_tracing_state(tracing_enabled=False)
 
     # Explicitly set to enabled for testing
-    reset_tracing_state(True)
+    reset_tracing_state(tracing_enabled=True)
     ```
 
     Notes
@@ -129,7 +129,7 @@ def reset_tracing_state(tracing_enabled: Union[bool, None] = None) -> None:
 
 
 @contextmanager
-def patch_tracing_state(tracing_enabled: Union[bool, None]) -> Iterator[None]:
+def patch_tracing_state(*, tracing_enabled: Union[bool, None]) -> Iterator[None]:
     """
     Context manager to temporarily patch the tracing state for testing.
 
@@ -154,11 +154,11 @@ def patch_tracing_state(tracing_enabled: Union[bool, None]) -> Iterator[None]:
     from shiny.otel import should_otel_collect, OtelCollectLevel
 
     # Test with tracing enabled
-    with patch_tracing_state(True):
+    with patch_tracing_state(tracing_enabled=True):
         assert should_otel_collect(OtelCollectLevel.SESSION) is True
 
     # Test with tracing disabled
-    with patch_tracing_state(False):
+    with patch_tracing_state(tracing_enabled=False):
         assert should_otel_collect(OtelCollectLevel.SESSION) is False
     ```
 
