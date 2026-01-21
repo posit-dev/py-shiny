@@ -25,8 +25,7 @@ with ui.accordion(id="acc_demo", open=["Panel B", "Panel D"], multiple=True):
 
     # Panel with longer content
     with ui.accordion_panel("Panel D"):
-        ui.markdown(
-            """
+        ui.markdown("""
         This panel contains longer content to demonstrate scrolling:
 
         - Item 1
@@ -35,8 +34,7 @@ with ui.accordion(id="acc_demo", open=["Panel B", "Panel D"], multiple=True):
 
         Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do
         eiusmod tempor incididunt ut labore et dolore magna aliqua.
-        """
-        )
+        """)
 
 
 # Show which panels are currently open

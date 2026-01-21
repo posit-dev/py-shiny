@@ -43,15 +43,13 @@ def server(input: Inputs, output: Outputs, session: Session):
     def sidebar_dynamic_container():
         return ui.layout_sidebar(
             ui.sidebar(
-                ui.markdown(
-                    f"""
+                ui.markdown(f"""
                     **Desktop**: {input.desktop()}
 
                     **Mobile**: {input.mobile()}
 
                     **Position**: {input.position()}
-                    """
-                ),
+                    """),
                 title="Settings",
                 id="sidebar_dynamic",
                 open={"desktop": input.desktop(), "mobile": input.mobile()},

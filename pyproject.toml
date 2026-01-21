@@ -94,7 +94,7 @@ test = [
     "pyarrow-stubs",
 ]
 dev = [
-    "black>=24.0",
+    "black>=26.1.0",
     "flake8>=6.0.0",
     "flake8-bugbear>=23.2.13",
     "Flake8-pyproject>=1.2.3",

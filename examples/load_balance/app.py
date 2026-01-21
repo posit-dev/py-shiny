@@ -3,8 +3,7 @@ import starlette.responses
 from shiny import App, Inputs, Outputs, Session, render, ui
 
 app_ui = ui.page_fluid(
-    ui.markdown(
-        """
+    ui.markdown("""
         ## Sticky load balancing test
 
         The purpose of this app is to determine if HTTP requests made by the client are
@@ -15,8 +14,7 @@ app_ui = ui.page_fluid(
         If this test fails, it means that sticky load balancing is not working, and
         certain Shiny functionality (like file upload/download or server-side selectize)
         are likely to randomly fail.
-        """
-    ),
+        """),
     ui.tags.div(
         {"class": "card"},
         ui.tags.div(
@@ -45,8 +43,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         # Send JS code to the client to repeatedly hit the dynamic route.
         # It will succeed if and only if we reach the correct Python
         # process.
-        return ui.tags.script(
-            f"""
+        return ui.tags.script(f"""
             const url = "{url}";
             const count_el = document.getElementById("count");
             const status_el = document.getElementById("status");
@@ -74,8 +71,7 @@ def server(input: Inputs, output: Outputs, session: Session):
                 setTimeout(check_url, 10);
             }}
             check_url();
-            """
-        )
+            """)
 
 
 app = App(app_ui, server)

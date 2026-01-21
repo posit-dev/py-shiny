@@ -58,8 +58,7 @@ RELOAD_EXCLUDES_DEFAULT = (
 )
 
 
-@main.command(
-    help=f"""Run a Shiny app (press {stop_shortcut} to stop).
+@main.command(help=f"""Run a Shiny app (press {stop_shortcut} to stop).
 
 The APP argument indicates the Python file (or module) and attribute where the
 shiny.App object can be found. For example, if the current directory contains
@@ -72,8 +71,7 @@ any of the following will work:
   * shiny run app.py      # :app is assumed
   * shiny run app:app
   * shiny run app.py:app
-"""
-)
+""")
 @click.argument("app", default="app.py:app")
 @click.option(
     "-h",
@@ -530,8 +528,7 @@ def add() -> None:
     pass
 
 
-@add.command(
-    help="""Add a test file for a specified Shiny app.
+@add.command(help="""Add a test file for a specified Shiny app.
 
 Generate a comprehensive test file for a specified app using AI. The generator
 will analyze your app code and create appropriate test cases with assertions.
@@ -539,8 +536,7 @@ will analyze your app code and create appropriate test cases with assertions.
 After creating the test file, you can use `pytest` to run the tests:
 
         pytest TEST_FILE
-"""
-)
+""")
 @click.option(
     "--app",
     "-a",
@@ -578,8 +574,7 @@ def test(
     )
 
 
-@main.command(
-    help="""Create a Shiny application from a template.
+@main.command(help="""Create a Shiny application from a template.
 
 Create an app based on a template. You will be prompted with
 a number of application types, as well as the destination folder.
@@ -589,8 +584,7 @@ directory based on the template name.
 After creating the application, you use `shiny run`:
 
     shiny run APPDIR/app.py --reload
-"""
-)
+""")
 @click.option(
     "--template",
     "-t",
