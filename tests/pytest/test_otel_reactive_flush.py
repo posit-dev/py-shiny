@@ -19,9 +19,11 @@ from shiny.reactive._core import ReactiveEnvironment
 
 from .otel_helpers import (
     get_exported_spans,
-    otel_tracer_provider,
     patch_otel_tracing_state,
 )
+
+# Import fixture - pytest will discover it via module import
+pytest_plugins = ["tests.pytest.otel_helpers"]
 
 
 class TestReactiveFlushSpans:
