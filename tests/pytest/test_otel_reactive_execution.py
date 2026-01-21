@@ -18,6 +18,10 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from shiny.otel import OtelCollectLevel
+from shiny.otel._attributes import extract_source_ref
+from shiny.otel._labels import generate_reactive_label
+from shiny.otel._span_wrappers import with_otel_span_async
+from shiny.reactive import Calc_, Effect_
 
 
 @contextmanager
@@ -64,8 +68,6 @@ class TestLabelGeneration:
 
     def test_generate_reactive_label_for_calc(self):
         """Test generating label for a calc with function name"""
-        from shiny.otel._labels import generate_reactive_label
-
         def my_calc():
             return 42
 
@@ -74,15 +76,11 @@ class TestLabelGeneration:
 
     def test_generate_reactive_label_for_lambda(self):
         """Test generating label for anonymous/lambda function"""
-        from shiny.otel._labels import generate_reactive_label
-
         label = generate_reactive_label(lambda: 42, "reactive")
         assert label == "reactive <anonymous>"
 
     def test_generate_reactive_label_with_namespace(self):
         """Test generating label with namespace prefix"""
-        from shiny.otel._labels import generate_reactive_label
-
         def my_calc():
             return 42
 
@@ -91,8 +89,6 @@ class TestLabelGeneration:
 
     def test_generate_reactive_label_with_modifier(self):
         """Test generating label with modifier (e.g., cache)"""
-        from shiny.otel._labels import generate_reactive_label
-
         def my_calc():
             return 42
 
@@ -101,8 +97,6 @@ class TestLabelGeneration:
 
     def test_generate_observe_label(self):
         """Test generating label for effect (observe)"""
-        from shiny.otel._labels import generate_reactive_label
-
         def my_effect():
             pass
 
@@ -111,8 +105,6 @@ class TestLabelGeneration:
 
     def test_generate_output_label(self):
         """Test generating label for output rendering"""
-        from shiny.otel._labels import generate_reactive_label
-
         def my_output():
             return "text"
 
@@ -125,8 +117,6 @@ class TestSourceReferenceExtraction:
 
     def test_extract_source_ref_from_function(self):
         """Test extracting source reference from a regular function"""
-        from shiny.otel._attributes import extract_source_ref
-
         def my_func():
             return 42
 
@@ -140,8 +130,6 @@ class TestSourceReferenceExtraction:
 
     def test_extract_source_ref_from_lambda(self):
         """Test extracting source reference from lambda"""
-        from shiny.otel._attributes import extract_source_ref
-
         attrs = extract_source_ref(lambda: 42)
 
         # Lambda should still have source info
@@ -152,8 +140,6 @@ class TestSourceReferenceExtraction:
 
     def test_extract_source_ref_from_builtin(self):
         """Test extracting source reference from built-in function"""
-        from shiny.otel._attributes import extract_source_ref
-
         attrs = extract_source_ref(len)
 
         # Built-in functions won't have source info
@@ -167,8 +153,6 @@ class TestCalcSpans:
     @pytest.mark.asyncio
     async def test_calc_creates_span_when_enabled(self):
         """Test that Calc execution creates a span when collection level is REACTIVITY"""
-        from shiny.reactive import Calc_
-
         with patch("shiny.otel._core._tracing_enabled", True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
                 # Create a calc
@@ -201,8 +185,6 @@ class TestCalcSpans:
     @pytest.mark.asyncio
     async def test_calc_no_span_when_disabled(self):
         """Test that Calc execution doesn't create span when collection level is too low"""
-        from shiny.reactive import Calc_
-
         with patch("shiny.otel._core._tracing_enabled", True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "session"}):
                 # Create a calc
@@ -226,8 +208,6 @@ class TestCalcSpans:
     @pytest.mark.asyncio
     async def test_calc_span_includes_source_attrs(self):
         """Test that Calc span includes source code attributes"""
-        from shiny.reactive import Calc_
-
         with patch("shiny.otel._core._tracing_enabled", True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
                 # Create a calc with known source
@@ -264,8 +244,6 @@ class TestEffectSpans:
     @pytest.mark.asyncio
     async def test_effect_creates_span_when_enabled(self):
         """Test that Effect execution creates a span when collection level is REACTIVITY"""
-        from shiny.reactive import Effect_
-
         with patch("shiny.otel._core._tracing_enabled", True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
 
@@ -299,8 +277,6 @@ class TestEffectSpans:
     @pytest.mark.asyncio
     async def test_effect_no_span_when_disabled(self):
         """Test that Effect execution doesn't create span when collection level is too low"""
-        from shiny.reactive import Effect_
-
         with patch("shiny.otel._core._tracing_enabled", True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "session"}):
 
@@ -340,10 +316,6 @@ class TestSpanHierarchy:
     @pytest.mark.asyncio
     async def test_calc_span_nested_under_reactive_update(self):
         """Test that calc spans are children of reactive.update span"""
-        from shiny.otel import OtelCollectLevel
-        from shiny.otel._span_wrappers import with_otel_span_async
-        from shiny.reactive import Calc_
-
         with otel_tracer_provider_context() as (_, memory_exporter):
             with patch("shiny.otel._core._tracing_enabled", True):
                 with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "all"}):

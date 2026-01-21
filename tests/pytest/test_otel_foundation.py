@@ -13,6 +13,7 @@ from unittest.mock import patch
 
 import pytest
 
+import shiny.otel._core
 from shiny.otel import (
     OtelCollectLevel,
     get_otel_collect_level,
@@ -21,6 +22,7 @@ from shiny.otel import (
     is_otel_tracing_enabled,
     should_otel_collect,
 )
+from shiny.otel._span_wrappers import with_otel_span, with_otel_span_async
 
 
 class TestCore:
@@ -43,8 +45,6 @@ class TestCore:
     def test_is_otel_tracing_enabled_without_sdk(self):
         """Test that is_otel_tracing_enabled() returns False when SDK not configured."""
         # Reset cached value
-        import shiny.otel._core
-
         shiny.otel._core._tracing_enabled = None
 
         # Without SDK, tracing should be disabled
@@ -122,8 +122,6 @@ class TestShouldOtelCollect:
     def test_should_otel_collect_without_sdk(self):
         """Test that should_otel_collect returns False when SDK not configured."""
         # Reset cached tracing status
-        import shiny.otel._core
-
         shiny.otel._core._tracing_enabled = None
 
         # Without SDK, should_otel_collect should always return False
@@ -170,8 +168,6 @@ class TestShouldOtelCollect:
     ) -> None:
         """Test should_otel_collect logic based on level comparison (when tracing disabled)."""
         # Reset tracing status to ensure it's disabled
-        import shiny.otel._core
-
         shiny.otel._core._tracing_enabled = None
 
         with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": current_level.name.lower()}):
@@ -185,16 +181,11 @@ class TestSpanWrappers:
 
     def test_with_otel_span_import(self):
         """Test that span wrapper functions can be imported."""
-        from shiny.otel._span_wrappers import with_otel_span, with_otel_span_async
-
         assert callable(with_otel_span)
         assert callable(with_otel_span_async)
 
     def test_with_otel_span_creates_span(self):
         """Test that with_otel_span creates a span when collection is enabled."""
-        from shiny.otel import OtelCollectLevel
-        from shiny.otel._span_wrappers import with_otel_span
-
         # Force collection by mocking should_otel_collect at its source
         with patch("shiny.otel._collect.should_otel_collect", return_value=True):
             with with_otel_span(
@@ -207,9 +198,6 @@ class TestSpanWrappers:
     @pytest.mark.asyncio
     async def test_with_otel_span_async_creates_span(self):
         """Test that with_otel_span_async creates a span when collection is enabled."""
-        from shiny.otel import OtelCollectLevel
-        from shiny.otel._span_wrappers import with_otel_span_async
-
         # Force collection by mocking should_otel_collect at its source
         with patch("shiny.otel._collect.should_otel_collect", return_value=True):
             async with with_otel_span_async(
@@ -221,9 +209,6 @@ class TestSpanWrappers:
 
     def test_with_otel_span_no_op_when_not_collecting(self):
         """Test that with_otel_span returns None when collection disabled."""
-        from shiny.otel import OtelCollectLevel
-        from shiny.otel._span_wrappers import with_otel_span
-
         # Without SDK configured, should return None (no-op)
         with patch("shiny.otel._core._tracing_enabled", None):
             with with_otel_span(
@@ -235,9 +220,6 @@ class TestSpanWrappers:
     @pytest.mark.asyncio
     async def test_with_otel_span_async_no_op_when_not_collecting(self):
         """Test that with_otel_span_async returns None when collection disabled."""
-        from shiny.otel import OtelCollectLevel
-        from shiny.otel._span_wrappers import with_otel_span_async
-
         # Without SDK configured, should return None (no-op)
         with patch("shiny.otel._core._tracing_enabled", None):
             async with with_otel_span_async(
