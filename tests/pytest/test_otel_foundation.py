@@ -19,9 +19,9 @@ from shiny.otel import (
     get_otel_logger,
     get_otel_tracer,
     is_otel_tracing_enabled,
-    reset_tracing_state,
     should_otel_collect,
 )
+from shiny.otel._core import reset_tracing_state
 from shiny.otel._span_wrappers import with_otel_span, with_otel_span_async
 
 
