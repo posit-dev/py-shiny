@@ -12,6 +12,12 @@ import os
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+    InMemorySpanExporter,
+)
 
 from shiny.otel import OtelCollectLevel, should_otel_collect
 from shiny.otel._core import patch_otel_tracing_state, reset_otel_tracing_state
@@ -150,14 +156,6 @@ class TestReactiveFlushInstrumentation:
     @pytest.mark.asyncio
     async def test_span_parent_child_relationship(self):
         """Test that reactive.update span is child of parent span when nested"""
-        # Set up in-memory exporter to capture spans
-        from opentelemetry import trace
-        from opentelemetry.sdk.trace import TracerProvider
-        from opentelemetry.sdk.trace.export import SimpleSpanProcessor
-        from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
-            InMemorySpanExporter,
-        )
-
         # Save the current tracer provider to restore later
         old_provider = trace.get_tracer_provider()
 
