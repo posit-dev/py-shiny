@@ -59,9 +59,8 @@ pd_penguins["Island"] = pd_penguins[
         ),
     )
 )
-# Set the first value of the column to an html object.
-# Narwhals does not inspect the types beyond the first row.
-# Theforefore, we should not either and need to set the type to object.
+# Convert column 5 (Stage) to object dtype before assigning HTML objects (required for pandas 3.0+)
+pd_penguins["Stage"] = pd_penguins["Stage"].astype("object")  # pyright: ignore[reportUnknownMemberType]
 pd_penguins.iloc[0, 5] = ui.div(  # pyright: ignore[reportArgumentType,reportCallIssue]
     pd_penguins.iloc[0, 5]  # pyright: ignore[reportArgumentType]
 )
