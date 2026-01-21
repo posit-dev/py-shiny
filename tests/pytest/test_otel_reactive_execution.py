@@ -12,9 +12,14 @@ Tests cover:
 """
 
 import os
+from typing import Tuple
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+    InMemorySpanExporter,
+)
 
 from shiny.otel import OtelCollectLevel
 from shiny.otel._attributes import extract_source_ref
@@ -288,7 +293,9 @@ class TestSpanHierarchy:
     """Test span parent-child relationships"""
 
     @pytest.mark.asyncio
-    async def test_calc_span_nested_under_reactive_update(self, otel_tracer_provider):
+    async def test_calc_span_nested_under_reactive_update(
+        self, otel_tracer_provider: Tuple[TracerProvider, InMemorySpanExporter]
+    ):
         """Test that calc spans are children of reactive.update span"""
         provider, memory_exporter = otel_tracer_provider
 
@@ -321,12 +328,8 @@ class TestSpanHierarchy:
         assert len(app_spans) >= 2
 
         # Find the spans
-        update_span = next(
-            (s for s in app_spans if s.name == "reactive.update"), None
-        )
-        calc_span = next(
-            (s for s in app_spans if s.name == "reactive my_calc"), None
-        )
+        update_span = next((s for s in app_spans if s.name == "reactive.update"), None)
+        calc_span = next((s for s in app_spans if s.name == "reactive my_calc"), None)
 
         assert update_span is not None, "reactive.update span should exist"
         assert calc_span is not None, "reactive my_calc span should exist"

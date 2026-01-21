@@ -9,9 +9,14 @@ Tests cover:
 """
 
 import os
+from typing import Tuple
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+    InMemorySpanExporter,
+)
 
 from shiny.otel import OtelCollectLevel, should_otel_collect
 from shiny.otel._span_wrappers import with_otel_span_async
@@ -155,7 +160,9 @@ class TestReactiveFlushInstrumentation:
                 assert env._current_otel_span is None
 
     @pytest.mark.asyncio
-    async def test_span_parent_child_relationship(self, otel_tracer_provider):
+    async def test_span_parent_child_relationship(
+        self, otel_tracer_provider: Tuple[TracerProvider, InMemorySpanExporter]
+    ):
         """Test that reactive.update span is child of parent span when nested"""
         provider, memory_exporter = otel_tracer_provider
 
@@ -184,9 +191,7 @@ class TestReactiveFlushInstrumentation:
         assert len(app_spans) >= 2
 
         # Find session.start and reactive.update spans
-        session_span = next(
-            (s for s in app_spans if s.name == "session.start"), None
-        )
+        session_span = next((s for s in app_spans if s.name == "session.start"), None)
         reactive_span = next(
             (s for s in app_spans if s.name == "reactive.update"), None
         )
@@ -195,12 +200,8 @@ class TestReactiveFlushInstrumentation:
         assert reactive_span is not None, "reactive.update span should exist"
 
         # Verify parent-child relationship
-        assert (
-            reactive_span.parent is not None
-        ), "reactive.update should have a parent"
-        assert (
-            reactive_span.context is not None
-        ), "reactive.update should have context"
+        assert reactive_span.parent is not None, "reactive.update should have a parent"
+        assert reactive_span.context is not None, "reactive.update should have context"
         assert session_span.context is not None, "session.start should have context"
         assert (
             reactive_span.parent.span_id == session_span.context.span_id
