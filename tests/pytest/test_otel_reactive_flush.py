@@ -19,6 +19,7 @@ from shiny.reactive._core import ReactiveEnvironment
 
 from .otel_helpers import (
     get_exported_spans,
+    otel_tracer_provider,
     patch_otel_tracing_state,
 )
 
@@ -155,10 +156,10 @@ class TestReactiveFlushInstrumentation:
     async def test_span_parent_child_relationship(self, otel_tracer_provider):
         """Test that reactive.update span is child of parent span when nested"""
         provider, memory_exporter = otel_tracer_provider
-        
+
         # Clear any previous spans
         memory_exporter.clear()
-        
+
         with patch_otel_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "all"}):
                 # Simulate session.start with reactive_flush inside

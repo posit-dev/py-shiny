@@ -24,6 +24,7 @@ from shiny.reactive import Calc_, Effect_
 
 from .otel_helpers import (
     get_exported_spans,
+    otel_tracer_provider,
     patch_otel_tracing_state,
 )
 
@@ -288,10 +289,10 @@ class TestSpanHierarchy:
     async def test_calc_span_nested_under_reactive_update(self, otel_tracer_provider):
         """Test that calc spans are children of reactive.update span"""
         provider, memory_exporter = otel_tracer_provider
-        
+
         # Clear any previous spans
         memory_exporter.clear()
-        
+
         with patch_otel_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "all"}):
 

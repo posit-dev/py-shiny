@@ -6,7 +6,7 @@ OpenTelemetry TracerProvider in tests.
 """
 
 from contextlib import contextmanager
-from typing import Iterator, Union
+from typing import Iterator, Tuple, Union
 
 import pytest
 from opentelemetry import trace
@@ -162,7 +162,7 @@ def get_exported_spans(provider: TracerProvider, exporter: InMemorySpanExporter)
 
 
 @pytest.fixture(scope="session")
-def otel_tracer_provider():
+def otel_tracer_provider() -> Iterator[Tuple[TracerProvider, InMemorySpanExporter]]:
     """
     Session-scoped pytest fixture for OpenTelemetry TracerProvider.
 
