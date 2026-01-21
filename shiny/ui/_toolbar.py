@@ -293,8 +293,8 @@ def toolbar_input_button(
 
     # Create button
     button = tags.button(
-        label_elem,
         icon_elem,
+        label_elem,
         {
             "id": resolved_id,
             "type": "button",

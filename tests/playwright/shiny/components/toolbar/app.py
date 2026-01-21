@@ -1,3 +1,5 @@
+from faicons import icon_svg
+
 from shiny import App, reactive, render, ui
 
 app_ui = ui.page_fluid(
@@ -10,20 +12,20 @@ app_ui = ui.page_fluid(
                 ui.toolbar_input_button(
                     "btn_save",
                     label="Save",
-                    icon="💾",
+                    icon=icon_svg("floppy-disk"),
                     tooltip="Save your work",
                 ),
                 ui.toolbar_input_button(
                     "btn_edit",
                     label="Edit",
-                    icon="✏️",
+                    icon=icon_svg("pencil"),
                     show_label=True,
                 ),
                 ui.toolbar_divider(),
                 ui.toolbar_input_button(
                     "btn_delete",
                     label="Delete",
-                    icon="🗑️",
+                    icon=icon_svg("trash"),
                     border=True,
                 ),
                 align="right",
@@ -45,7 +47,7 @@ app_ui = ui.page_fluid(
                     "sel_filter",
                     label="Filter",
                     choices=["All", "Active", "Archived"],
-                    icon="🔍",
+                    icon=icon_svg("filter"),
                 ),
                 ui.toolbar_input_select(
                     "sel_sort",
