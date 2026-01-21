@@ -91,12 +91,18 @@ def is_otel_tracing_enabled() -> bool:
     return _tracing_enabled
 
 
-def reset_tracing_state(*, tracing_enabled: Union[bool, None] = None) -> None:
+def reset_tracing_state(
+    *,
+    tracing_enabled: Union[bool, None] = None,
+    tracer: Union[Tracer, None, type[None]] = None,
+    logger: Union[Any, None, type[None]] = None,
+) -> None:
     """
-    Reset the cached tracing state.
+    Reset the cached OTel state (tracer, logger, and tracing enabled flag).
 
     This function is primarily intended for testing purposes to allow tests to
-    reset the global tracing state between test runs.
+    reset the global OTel state between test runs or when setting up a new
+    TracerProvider.
 
     Parameters
     ----------
@@ -104,18 +110,31 @@ def reset_tracing_state(*, tracing_enabled: Union[bool, None] = None) -> None:
         Optional value to set for the tracing enabled state. If None (default),
         the state will be reset and will be re-evaluated on the next call to
         `is_otel_tracing_enabled()`. If True or False, sets an explicit value.
+    tracer
+        Optional tracer to set. If None (default), clears the cached tracer so it
+        will be re-fetched from the current TracerProvider on next use. If a Tracer
+        instance, sets that as the cached tracer. Use None to force re-evaluation.
+    logger
+        Optional logger to set. If None (default), clears the cached logger so it
+        will be re-fetched from the current LoggerProvider on next use. If a Logger
+        instance, sets that as the cached logger. Use None to force re-evaluation.
 
     Examples
     --------
     ```python
-    # Reset to force re-evaluation
+    # Reset all cached state to force re-evaluation
     reset_tracing_state()
 
-    # Explicitly set to disabled for testing
+    # Explicitly set tracing to disabled for testing
     reset_tracing_state(tracing_enabled=False)
 
-    # Explicitly set to enabled for testing
+    # Explicitly set tracing to enabled for testing
     reset_tracing_state(tracing_enabled=True)
+
+    # Reset after setting up a new TracerProvider in tests
+    # (clears cached tracer so new provider's tracer is used)
+    trace.set_tracer_provider(new_provider)
+    reset_tracing_state()
     ```
 
     Notes
@@ -123,9 +142,16 @@ def reset_tracing_state(*, tracing_enabled: Union[bool, None] = None) -> None:
     This function is designed for test isolation and should generally not be
     used in production code. Tests should call this function to ensure a clean
     state between test runs.
+
+    When setting up a new TracerProvider in tests, always call this function
+    afterward to clear the cached tracer and force it to be re-fetched from
+    the new provider. Otherwise, the old tracer from the previous provider
+    will continue to be used.
     """
-    global _tracing_enabled
+    global _tracing_enabled, _tracer, _logger
     _tracing_enabled = tracing_enabled
+    _tracer = tracer
+    _logger = logger
 
 
 @contextmanager

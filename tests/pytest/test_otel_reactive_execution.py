@@ -16,10 +16,16 @@ from contextlib import contextmanager
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+    InMemorySpanExporter,
+)
 
 from shiny.otel import OtelCollectLevel
 from shiny.otel._attributes import extract_source_ref
-from shiny.otel._core import patch_tracing_state
+from shiny.otel._core import patch_tracing_state, reset_tracing_state
 from shiny.otel._labels import generate_reactive_label
 from shiny.otel._span_wrappers import with_otel_span_async
 from shiny.reactive import Calc_, Effect_
@@ -39,14 +45,6 @@ def otel_tracer_provider_context():
     tuple[TracerProvider, InMemorySpanExporter]
         The provider and exporter for use in tests.
     """
-    from opentelemetry import trace
-    from opentelemetry.sdk.trace import TracerProvider
-    from opentelemetry.sdk.trace.export import SimpleSpanProcessor
-    from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
-        InMemorySpanExporter,
-    )
-
-    from shiny.otel._core import reset_tracing_state
 
     # Save the current tracer provider to restore later
     old_provider = trace.get_tracer_provider()
