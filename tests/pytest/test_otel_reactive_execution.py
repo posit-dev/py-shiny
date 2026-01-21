@@ -46,6 +46,8 @@ def otel_tracer_provider_context():
         InMemorySpanExporter,
     )
 
+    from shiny.otel._core import reset_tracing_state
+
     # Save the current tracer provider to restore later
     old_provider = trace.get_tracer_provider()
 
@@ -58,10 +60,15 @@ def otel_tracer_provider_context():
         # Use internal API to force override for testing
         trace._set_tracer_provider(provider, log=False)
 
+        # Reset tracing state to force re-evaluation with new provider
+        reset_tracing_state()
+
         yield provider, memory_exporter
     finally:
         # Restore the original tracer provider
         trace._set_tracer_provider(old_provider, log=False)
+        # Reset again to ensure clean state for next test
+        reset_tracing_state()
 
 
 class TestLabelGeneration:
