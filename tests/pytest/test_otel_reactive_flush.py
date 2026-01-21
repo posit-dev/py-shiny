@@ -18,6 +18,7 @@ from shiny.otel._span_wrappers import with_otel_span_async
 from shiny.reactive._core import ReactiveEnvironment
 
 from .otel_helpers import (
+    get_exported_spans,
     otel_tracer_provider_context,
     patch_otel_tracing_state,
 )
@@ -154,7 +155,7 @@ class TestReactiveFlushInstrumentation:
     @pytest.mark.asyncio
     async def test_span_parent_child_relationship(self):
         """Test that reactive.update span is child of parent span when nested"""
-        with otel_tracer_provider_context() as (_, memory_exporter):
+        with otel_tracer_provider_context() as (provider, memory_exporter):
             with patch_otel_tracing_state(tracing_enabled=True):
                 with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "all"}):
                     # Simulate session.start with reactive_flush inside
@@ -167,8 +168,8 @@ class TestReactiveFlushInstrumentation:
                         env = ReactiveEnvironment()
                         await env.flush()
 
-            # Get exported spans
-            spans = memory_exporter.get_finished_spans()
+            # Get exported spans with proper flushing
+            spans = get_exported_spans(provider, memory_exporter)
 
             # Filter out the _otel_is_recording span
             app_spans = [s for s in spans if not s.name.startswith("_otel")]
@@ -177,7 +178,9 @@ class TestReactiveFlushInstrumentation:
             assert len(app_spans) >= 2
 
             # Find session.start and reactive.update spans
-            session_span = next((s for s in app_spans if s.name == "session.start"), None)
+            session_span = next(
+                (s for s in app_spans if s.name == "session.start"), None
+            )
             reactive_span = next(
                 (s for s in app_spans if s.name == "reactive.update"), None
             )
@@ -186,8 +189,12 @@ class TestReactiveFlushInstrumentation:
             assert reactive_span is not None, "reactive.update span should exist"
 
             # Verify parent-child relationship
-            assert reactive_span.parent is not None, "reactive.update should have a parent"
-            assert reactive_span.context is not None, "reactive.update should have context"
+            assert (
+                reactive_span.parent is not None
+            ), "reactive.update should have a parent"
+            assert (
+                reactive_span.context is not None
+            ), "reactive.update should have context"
             assert session_span.context is not None, "session.start should have context"
             assert (
                 reactive_span.parent.span_id == session_span.context.span_id

@@ -22,7 +22,11 @@ from shiny.otel._labels import generate_reactive_label
 from shiny.otel._span_wrappers import with_otel_span_async
 from shiny.reactive import Calc_, Effect_
 
-from .otel_helpers import otel_tracer_provider_context, patch_otel_tracing_state
+from .otel_helpers import (
+    get_exported_spans,
+    otel_tracer_provider_context,
+    patch_otel_tracing_state,
+)
 
 
 class TestLabelGeneration:
@@ -284,7 +288,7 @@ class TestSpanHierarchy:
     @pytest.mark.asyncio
     async def test_calc_span_nested_under_reactive_update(self):
         """Test that calc spans are children of reactive.update span"""
-        with otel_tracer_provider_context() as (_, memory_exporter):
+        with otel_tracer_provider_context() as (provider, memory_exporter):
             with patch_otel_tracing_state(tracing_enabled=True):
                 with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "all"}):
 
@@ -301,8 +305,8 @@ class TestSpanHierarchy:
                     ):
                         await calc.update_value()
 
-            # Get exported spans
-            spans = memory_exporter.get_finished_spans()
+            # Get exported spans with proper flushing
+            spans = get_exported_spans(provider, memory_exporter)
 
             # Filter out internal OTel spans
             app_spans = [s for s in spans if not s.name.startswith("_otel")]

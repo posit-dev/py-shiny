@@ -112,6 +112,54 @@ def patch_otel_tracing_state(*, tracing_enabled: Union[bool, None]) -> Iterator[
         _core._tracing_enabled = original
 
 
+def get_exported_spans(provider: TracerProvider, exporter: InMemorySpanExporter):
+    """
+    Get exported spans from an InMemorySpanExporter with proper flushing.
+
+    This helper ensures all spans are fully exported before returning them,
+    which prevents race conditions in parallel test execution (pytest-xdist).
+
+    Parameters
+    ----------
+    provider
+        The TracerProvider that needs to be flushed.
+    exporter
+        The InMemorySpanExporter to get spans from.
+
+    Returns
+    -------
+    list[ReadableSpan]
+        List of exported spans, with internal OTel spans included.
+
+    Examples
+    --------
+    ```python
+    async def test_span_hierarchy():
+        with otel_tracer_provider_context() as (provider, exporter):
+            with patch_otel_tracing_state(tracing_enabled=True):
+                # Create spans...
+                pass
+
+            # Get all exported spans with proper flushing
+            spans = get_exported_spans(provider, exporter)
+            app_spans = [s for s in spans if not s.name.startswith("_otel")]
+            assert len(app_spans) > 0
+    ```
+
+    Notes
+    -----
+    Always call this helper instead of directly calling
+    `exporter.get_finished_spans()` to ensure proper span flushing in
+    parallel test execution environments.
+    """
+    # Force flush to ensure all spans are exported before checking
+    # This prevents race conditions in parallel test execution
+    provider.force_flush()
+
+    # Get exported spans
+    return exporter.get_finished_spans()
+
+
 @contextmanager
 def otel_tracer_provider_context():
     """
@@ -138,8 +186,8 @@ def otel_tracer_provider_context():
                 # Create spans...
                 pass
 
-            # Check exported spans
-            spans = exporter.get_finished_spans()
+            # Get exported spans with proper flushing
+            spans = get_exported_spans(provider, exporter)
             assert len(spans) > 0
     ```
     """
