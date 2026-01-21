@@ -14,7 +14,7 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 
 from shiny.otel import OtelCollectLevel, should_otel_collect
-from shiny.otel._core import patch_tracing_state
+from shiny.otel._core import patch_tracing_state, reset_tracing_state
 from shiny.otel._span_wrappers import with_otel_span_async
 from shiny.reactive._core import ReactiveEnvironment
 
@@ -162,6 +162,9 @@ class TestReactiveFlushInstrumentation:
         provider = TracerProvider()
         provider.add_span_processor(SimpleSpanProcessor(memory_exporter))
         trace.set_tracer_provider(provider)
+
+        # Reset tracing state to force re-evaluation with new provider
+        reset_tracing_state()
 
         with patch_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "all"}):
