@@ -19,7 +19,7 @@ def init_db():
         con.execute("PRAGMA journal_mode=WAL")
         con.execute("drop table if exists accuracy_scores")
 
-        now = datetime.datetime.now(datetime.UTC)
+        now = datetime.datetime.now(datetime.timezone.utc)
         position = now.minute * 60 + now.second + 1
 
         # Simulate 100 seconds of historical data
@@ -47,7 +47,7 @@ async def update_db(position):
         while True:
             new_data = accuracy_scores.loc[position].copy()
             # del new_data["second"]
-            new_data["timestamp"] = datetime.datetime.now(datetime.UTC)
+            new_data["timestamp"] = datetime.datetime.now(datetime.timezone.utc)
             new_data.to_sql("accuracy_scores", con, index=False, if_exists="append")
             position = (position % (60 * 60)) + 1
             await asyncio.sleep(1)
