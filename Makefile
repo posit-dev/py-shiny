@@ -227,6 +227,13 @@ coverage: FORCE ## check combined code coverage (must run e2e last)
 	coverage html
 	$(BROWSER) htmlcov/index.html
 
+coverage-unit: FORCE ## check unit test coverage only
+	pytest tests/pytest/ --cov=shiny --cov-report=term-missing --cov-report=html
+	@echo "Coverage report: htmlcov/index.html"
+
+coverage-check: FORCE ## check coverage meets minimum threshold (25%)
+	pytest tests/pytest/ --cov=shiny --cov-fail-under=25
+
 release: dist ## package and upload a release
 	twine upload dist/*
 

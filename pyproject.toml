@@ -174,3 +174,30 @@ skip = [
 # Note: This setting can not be done via CLI and must be set within a config
 ignore_errors = true
 exclude = ["shiny/api-examples", "shiny/templates"]
+
+[tool.coverage.run]
+source = ["shiny"]
+branch = true
+omit = [
+    "shiny/api-examples/*",
+    "shiny/templates/*",
+    "shiny/www/*",
+    "shiny/_version.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "if typing.TYPE_CHECKING:",
+    "@overload",
+    "@typing.overload",
+    "\\.\\.\\.",  # Ellipsis in stub files
+]
+show_missing = true
+precision = 2
+
+[tool.coverage.html]
+directory = "htmlcov"
