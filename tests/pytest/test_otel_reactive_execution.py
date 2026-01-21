@@ -69,6 +69,7 @@ class TestLabelGeneration:
 
     def test_generate_reactive_label_for_calc(self):
         """Test generating label for a calc with function name"""
+
         def my_calc():
             return 42
 
@@ -82,6 +83,7 @@ class TestLabelGeneration:
 
     def test_generate_reactive_label_with_namespace(self):
         """Test generating label with namespace prefix"""
+
         def my_calc():
             return 42
 
@@ -90,6 +92,7 @@ class TestLabelGeneration:
 
     def test_generate_reactive_label_with_modifier(self):
         """Test generating label with modifier (e.g., cache)"""
+
         def my_calc():
             return 42
 
@@ -98,6 +101,7 @@ class TestLabelGeneration:
 
     def test_generate_observe_label(self):
         """Test generating label for effect (observe)"""
+
         def my_effect():
             pass
 
@@ -106,6 +110,7 @@ class TestLabelGeneration:
 
     def test_generate_output_label(self):
         """Test generating label for output rendering"""
+
         def my_output():
             return "text"
 
@@ -118,6 +123,7 @@ class TestSourceReferenceExtraction:
 
     def test_extract_source_ref_from_function(self):
         """Test extracting source reference from a regular function"""
+
         def my_func():
             return 42
 
@@ -344,8 +350,12 @@ class TestSpanHierarchy:
             assert len(app_spans) >= 2
 
             # Find the spans
-            update_span = next((s for s in app_spans if s.name == "reactive.update"), None)
-            calc_span = next((s for s in app_spans if s.name == "reactive my_calc"), None)
+            update_span = next(
+                (s for s in app_spans if s.name == "reactive.update"), None
+            )
+            calc_span = next(
+                (s for s in app_spans if s.name == "reactive my_calc"), None
+            )
 
             assert update_span is not None, "reactive.update span should exist"
             assert calc_span is not None, "reactive my_calc span should exist"
