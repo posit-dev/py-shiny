@@ -15,7 +15,7 @@ from unittest.mock import Mock, patch
 from shiny.otel import OtelCollectLevel, should_otel_collect
 from shiny.otel._attributes import extract_http_attributes
 
-from .test_otel_helpers import patch_otel_tracing_state
+from .otel_helpers import patch_otel_tracing_state
 
 
 class TestHttpAttributes:

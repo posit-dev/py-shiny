@@ -23,7 +23,7 @@ from shiny.otel import (
 )
 from shiny.otel._span_wrappers import with_otel_span, with_otel_span_async
 
-from .test_otel_helpers import patch_otel_tracing_state, reset_otel_tracing_state
+from .otel_helpers import patch_otel_tracing_state, reset_otel_tracing_state
 
 
 class TestCore:

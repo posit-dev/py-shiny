@@ -17,7 +17,7 @@ from shiny.otel import OtelCollectLevel, should_otel_collect
 from shiny.otel._span_wrappers import with_otel_span_async
 from shiny.reactive._core import ReactiveEnvironment
 
-from .test_otel_helpers import (
+from .otel_helpers import (
     otel_tracer_provider_context,
     patch_otel_tracing_state,
 )
