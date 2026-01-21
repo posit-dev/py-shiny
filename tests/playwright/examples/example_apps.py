@@ -91,9 +91,6 @@ app_allow_external_errors: typing.List[str] = [
     "FutureWarning: use_inf_as_na option is deprecated",
     "pd.option_context('mode.use_inf_as_na",  # continutation of line above,
     "RuntimeWarning: invalid value encountered in dot",  # some groups didn't have enough data points to create a meaningful line
-    # yfinance deprecation warning (Pandas 4.0 compatibility)
-    "Pandas4Warning: Timestamp.utcnow is deprecated",
-    "dt_now = pd.Timestamp.utcnow()",  # continuation of line above
 ]
 app_allow_js_errors: typing.Dict[str, typing.List[str]] = {
     "examples/brownian": ["Failed to acquire camera feed:"],
