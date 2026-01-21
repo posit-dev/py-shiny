@@ -8,6 +8,7 @@ OpenTelemetry TracerProvider in tests.
 from contextlib import contextmanager
 from typing import Iterator, Union
 
+import pytest
 from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
@@ -134,16 +135,16 @@ def get_exported_spans(provider: TracerProvider, exporter: InMemorySpanExporter)
     Examples
     --------
     ```python
-    async def test_span_hierarchy():
-        with otel_tracer_provider_context() as (provider, exporter):
-            with patch_otel_tracing_state(tracing_enabled=True):
-                # Create spans...
-                pass
+    async def test_span_hierarchy(otel_tracer_provider):
+        provider, exporter = otel_tracer_provider
+        with patch_otel_tracing_state(tracing_enabled=True):
+            # Create spans...
+            pass
 
-            # Get all exported spans with proper flushing
-            spans = get_exported_spans(provider, exporter)
-            app_spans = [s for s in spans if not s.name.startswith("_otel")]
-            assert len(app_spans) > 0
+        # Get all exported spans with proper flushing
+        spans = get_exported_spans(provider, exporter)
+        app_spans = [s for s in spans if not s.name.startswith("_otel")]
+        assert len(app_spans) > 0
     ```
 
     Notes
@@ -160,17 +161,17 @@ def get_exported_spans(provider: TracerProvider, exporter: InMemorySpanExporter)
     return exporter.get_finished_spans()
 
 
-@contextmanager
-def otel_tracer_provider_context():
+@pytest.fixture(scope="session")
+def otel_tracer_provider():
     """
-    Context manager for test isolation when using TracerProvider.
+    Session-scoped pytest fixture for OpenTelemetry TracerProvider.
 
-    Sets up an InMemorySpanExporter and TracerProvider, then restores
-    the original provider on exit. This ensures tests don't interfere
-    with each other when setting up their own tracing infrastructure.
+    Sets up a single InMemorySpanExporter and TracerProvider for all tests in the
+    session. This avoids the complexity of manipulating OpenTelemetry internals
+    and provides a reliable testing environment.
 
-    This is especially critical in CI environments with pytest-xdist where
-    tests run in parallel and may have a global TracerProvider already set.
+    The fixture is session-scoped to provide a single provider for all tests,
+    which is more efficient and avoids issues with parallel test execution.
 
     Yields
     ------
@@ -180,41 +181,32 @@ def otel_tracer_provider_context():
     Examples
     --------
     ```python
-    async def test_span_hierarchy():
-        with otel_tracer_provider_context() as (provider, exporter):
-            with patch_otel_tracing_state(tracing_enabled=True):
-                # Create spans...
-                pass
+    async def test_span_hierarchy(otel_tracer_provider):
+        provider, exporter = otel_tracer_provider
+        with patch_otel_tracing_state(tracing_enabled=True):
+            # Create spans...
+            pass
 
-            # Get exported spans with proper flushing
-            spans = get_exported_spans(provider, exporter)
-            assert len(spans) > 0
+        # Get exported spans with proper flushing
+        spans = get_exported_spans(provider, exporter)
+        assert len(spans) > 0
     ```
+
+    Notes
+    -----
+    Tests should call exporter.clear() to clear spans between tests if needed.
     """
-    import opentelemetry.trace as trace_module
+    # Set up provider with in-memory exporter for testing
+    memory_exporter = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(SimpleSpanProcessor(memory_exporter))
 
-    # Save the current tracer provider and set-once flag to restore later
-    old_provider = getattr(trace_module, "_TRACER_PROVIDER", None)
-    old_set_once = getattr(trace_module, "_TRACER_PROVIDER_SET_ONCE", None)
+    # Set this as the global tracer provider
+    trace.set_tracer_provider(provider)
 
-    try:
-        # Set up new provider with in-memory exporter
-        memory_exporter = InMemorySpanExporter()
-        provider = TracerProvider()
-        provider.add_span_processor(SimpleSpanProcessor(memory_exporter))
+    # Reset tracing state to force re-evaluation with new provider
+    reset_otel_tracing_state()
 
-        # Directly set the global provider and clear the set-once flag
-        # This is more reliable than using trace._set_tracer_provider across platforms
-        trace_module._TRACER_PROVIDER = provider
-        trace_module._TRACER_PROVIDER_SET_ONCE = None
+    yield provider, memory_exporter
 
-        # Reset tracing state to force re-evaluation with new provider
-        reset_otel_tracing_state()
-
-        yield provider, memory_exporter
-    finally:
-        # Restore the original tracer provider and set-once flag
-        trace_module._TRACER_PROVIDER = old_provider
-        trace_module._TRACER_PROVIDER_SET_ONCE = old_set_once
-        # Reset again to ensure clean state for next test
-        reset_otel_tracing_state()
+    # Cleanup is handled by pytest - no need to restore

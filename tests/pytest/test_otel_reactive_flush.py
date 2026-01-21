@@ -19,7 +19,6 @@ from shiny.reactive._core import ReactiveEnvironment
 
 from .otel_helpers import (
     get_exported_spans,
-    otel_tracer_provider_context,
     patch_otel_tracing_state,
 )
 
@@ -153,54 +152,58 @@ class TestReactiveFlushInstrumentation:
                 assert env._current_otel_span is None
 
     @pytest.mark.asyncio
-    async def test_span_parent_child_relationship(self):
+    async def test_span_parent_child_relationship(self, otel_tracer_provider):
         """Test that reactive.update span is child of parent span when nested"""
-        with otel_tracer_provider_context() as (provider, memory_exporter):
-            with patch_otel_tracing_state(tracing_enabled=True):
-                with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "all"}):
-                    # Simulate session.start with reactive_flush inside
-                    async with with_otel_span_async(
-                        "session.start",
-                        {"session.id": "test123"},
-                        level=OtelCollectLevel.SESSION,
-                    ):
-                        # Create reactive environment and flush
-                        env = ReactiveEnvironment()
-                        await env.flush()
+        provider, memory_exporter = otel_tracer_provider
+        
+        # Clear any previous spans
+        memory_exporter.clear()
+        
+        with patch_otel_tracing_state(tracing_enabled=True):
+            with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "all"}):
+                # Simulate session.start with reactive_flush inside
+                async with with_otel_span_async(
+                    "session.start",
+                    {"session.id": "test123"},
+                    level=OtelCollectLevel.SESSION,
+                ):
+                    # Create reactive environment and flush
+                    env = ReactiveEnvironment()
+                    await env.flush()
 
-            # Get exported spans with proper flushing
-            spans = get_exported_spans(provider, memory_exporter)
+        # Get exported spans with proper flushing
+        spans = get_exported_spans(provider, memory_exporter)
 
-            # Filter out the _otel_is_recording span
-            app_spans = [s for s in spans if not s.name.startswith("_otel")]
+        # Filter out the _otel_is_recording span
+        app_spans = [s for s in spans if not s.name.startswith("_otel")]
 
-            # Should have 2 spans: session.start and reactive.update
-            assert len(app_spans) >= 2
+        # Should have 2 spans: session.start and reactive.update
+        assert len(app_spans) >= 2
 
-            # Find session.start and reactive.update spans
-            session_span = next(
-                (s for s in app_spans if s.name == "session.start"), None
-            )
-            reactive_span = next(
-                (s for s in app_spans if s.name == "reactive.update"), None
-            )
+        # Find session.start and reactive.update spans
+        session_span = next(
+            (s for s in app_spans if s.name == "session.start"), None
+        )
+        reactive_span = next(
+            (s for s in app_spans if s.name == "reactive.update"), None
+        )
 
-            assert session_span is not None, "session.start span should exist"
-            assert reactive_span is not None, "reactive.update span should exist"
+        assert session_span is not None, "session.start span should exist"
+        assert reactive_span is not None, "reactive.update span should exist"
 
-            # Verify parent-child relationship
-            assert (
-                reactive_span.parent is not None
-            ), "reactive.update should have a parent"
-            assert (
-                reactive_span.context is not None
-            ), "reactive.update should have context"
-            assert session_span.context is not None, "session.start should have context"
-            assert (
-                reactive_span.parent.span_id == session_span.context.span_id
-            ), "reactive.update parent should be session.start"
+        # Verify parent-child relationship
+        assert (
+            reactive_span.parent is not None
+        ), "reactive.update should have a parent"
+        assert (
+            reactive_span.context is not None
+        ), "reactive.update should have context"
+        assert session_span.context is not None, "session.start should have context"
+        assert (
+            reactive_span.parent.span_id == session_span.context.span_id
+        ), "reactive.update parent should be session.start"
 
-            # Verify they're in the same trace
-            assert (
-                reactive_span.context.trace_id == session_span.context.trace_id
-            ), "Spans should be in same trace"
+        # Verify they're in the same trace
+        assert (
+            reactive_span.context.trace_id == session_span.context.trace_id
+        ), "Spans should be in same trace"
