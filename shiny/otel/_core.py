@@ -13,8 +13,8 @@ __all__ = (
     "get_otel_tracer",
     "get_otel_logger",
     "is_otel_tracing_enabled",
-    "reset_tracing_state",
-    "patch_tracing_state",
+    "reset_otel_tracing_state",
+    "patch_otel_tracing_state",
 )
 
 # Global state for lazy initialization
@@ -91,50 +91,23 @@ def is_otel_tracing_enabled() -> bool:
     return _tracing_enabled
 
 
-def reset_tracing_state(
-    *,
-    tracing_enabled: Union[bool, None] = None,
-    tracer: Union[Tracer, None, type[None]] = None,
-    logger: Union[Any, None, type[None]] = None,
-) -> None:
+def reset_otel_tracing_state() -> None:
     """
-    Reset the cached OTel state (tracer, logger, and tracing enabled flag).
+    Reset all cached OTel state to force re-evaluation.
 
-    This function is primarily intended for testing purposes to allow tests to
-    reset the global OTel state between test runs or when setting up a new
-    TracerProvider.
-
-    Parameters
-    ----------
-    tracing_enabled
-        Optional value to set for the tracing enabled state. If None (default),
-        the state will be reset and will be re-evaluated on the next call to
-        `is_otel_tracing_enabled()`. If True or False, sets an explicit value.
-    tracer
-        Optional tracer to set. If None (default), clears the cached tracer so it
-        will be re-fetched from the current TracerProvider on next use. If a Tracer
-        instance, sets that as the cached tracer. Use None to force re-evaluation.
-    logger
-        Optional logger to set. If None (default), clears the cached logger so it
-        will be re-fetched from the current LoggerProvider on next use. If a Logger
-        instance, sets that as the cached logger. Use None to force re-evaluation.
+    This clears the cached tracer, logger, and tracing enabled flag, forcing them
+    to be re-evaluated on the next use. This is essential for test isolation,
+    especially when setting up a new TracerProvider.
 
     Examples
     --------
     ```python
-    # Reset all cached state to force re-evaluation
-    reset_tracing_state()
-
-    # Explicitly set tracing to disabled for testing
-    reset_tracing_state(tracing_enabled=False)
-
-    # Explicitly set tracing to enabled for testing
-    reset_tracing_state(tracing_enabled=True)
+    # Reset all cached state between tests
+    reset_otel_tracing_state()
 
     # Reset after setting up a new TracerProvider in tests
-    # (clears cached tracer so new provider's tracer is used)
     trace.set_tracer_provider(new_provider)
-    reset_tracing_state()
+    reset_otel_tracing_state()  # Force tracer to be re-fetched from new provider
     ```
 
     Notes
@@ -147,15 +120,22 @@ def reset_tracing_state(
     afterward to clear the cached tracer and force it to be re-fetched from
     the new provider. Otherwise, the old tracer from the previous provider
     will continue to be used.
+
+    If you need to temporarily set specific values for testing, use the
+    `patch_otel_tracing_state()` context manager instead.
+
+    See Also
+    --------
+    patch_otel_tracing_state : Context manager to temporarily set tracing state
     """
     global _tracing_enabled, _tracer, _logger
-    _tracing_enabled = tracing_enabled
-    _tracer = tracer
-    _logger = logger
+    _tracing_enabled = None
+    _tracer = None
+    _logger = None
 
 
 @contextmanager
-def patch_tracing_state(*, tracing_enabled: Union[bool, None]) -> Iterator[None]:
+def patch_otel_tracing_state(*, tracing_enabled: Union[bool, None]) -> Iterator[None]:
     """
     Context manager to temporarily patch the tracing state for testing.
 
@@ -176,15 +156,15 @@ def patch_tracing_state(*, tracing_enabled: Union[bool, None]) -> Iterator[None]
     Examples
     --------
     ```python
-    from shiny.otel._core import patch_tracing_state
+    from shiny.otel._core import patch_otel_tracing_state
     from shiny.otel import should_otel_collect, OtelCollectLevel
 
     # Test with tracing enabled
-    with patch_tracing_state(tracing_enabled=True):
+    with patch_otel_tracing_state(tracing_enabled=True):
         assert should_otel_collect(OtelCollectLevel.SESSION) is True
 
     # Test with tracing disabled
-    with patch_tracing_state(tracing_enabled=False):
+    with patch_otel_tracing_state(tracing_enabled=False):
         assert should_otel_collect(OtelCollectLevel.SESSION) is False
     ```
 

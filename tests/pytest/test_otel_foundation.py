@@ -21,7 +21,7 @@ from shiny.otel import (
     is_otel_tracing_enabled,
     should_otel_collect,
 )
-from shiny.otel._core import patch_tracing_state, reset_tracing_state
+from shiny.otel._core import patch_otel_tracing_state, reset_otel_tracing_state
 from shiny.otel._span_wrappers import with_otel_span, with_otel_span_async
 
 
@@ -45,7 +45,7 @@ class TestCore:
     def test_is_otel_tracing_enabled_without_sdk(self):
         """Test that is_otel_tracing_enabled() returns False when SDK not configured."""
         # Reset cached value
-        reset_tracing_state()
+        reset_otel_tracing_state()
 
         # Without SDK, tracing should be disabled
         assert is_otel_tracing_enabled() is False
@@ -122,7 +122,7 @@ class TestShouldOtelCollect:
     def test_should_otel_collect_without_sdk(self):
         """Test that should_otel_collect returns False when SDK not configured."""
         # Reset cached tracing status
-        reset_tracing_state()
+        reset_otel_tracing_state()
 
         # Without SDK, should_otel_collect should always return False
         # (except for NONE which should raise ValueError)
@@ -168,7 +168,7 @@ class TestShouldOtelCollect:
     ) -> None:
         """Test should_otel_collect logic based on level comparison (when tracing disabled)."""
         # Reset tracing status to ensure it's disabled
-        reset_tracing_state()
+        reset_otel_tracing_state()
 
         with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": current_level.name.lower()}):
             # Without SDK, should always be False regardless of levels
@@ -210,7 +210,7 @@ class TestSpanWrappers:
     def test_with_otel_span_no_op_when_not_collecting(self):
         """Test that with_otel_span returns None when collection disabled."""
         # Without SDK configured, should return None (no-op)
-        with patch_tracing_state(tracing_enabled=None):
+        with patch_otel_tracing_state(tracing_enabled=None):
             with with_otel_span(
                 "test_span", {"key": "value"}, level=OtelCollectLevel.SESSION
             ) as span:
@@ -221,7 +221,7 @@ class TestSpanWrappers:
     async def test_with_otel_span_async_no_op_when_not_collecting(self):
         """Test that with_otel_span_async returns None when collection disabled."""
         # Without SDK configured, should return None (no-op)
-        with patch_tracing_state(tracing_enabled=None):
+        with patch_otel_tracing_state(tracing_enabled=None):
             async with with_otel_span_async(
                 "test_span_async", {"key": "value"}, level=OtelCollectLevel.SESSION
             ) as span:
