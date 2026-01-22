@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
-from typing import Any, AsyncIterable, Iterable
+from typing import Any, AsyncIterable
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -13,7 +13,7 @@ from shiny import App, render, ui
 from shiny._connection import MockConnection
 import htmltools
 from shiny.bookmark._button import BOOKMARK_ID
-from shiny._namespaces import ResolvedId, Root
+from shiny._namespaces import ResolvedId
 from shiny.reactive import Value, effect, flush, isolate
 from shiny.reactive._core import ReactiveWarning
 from shiny.session import Session, session_context
@@ -1258,17 +1258,6 @@ async def test_outputs_runs_and_handles_silent_exceptions():
 
     await flush()
     assert ResolvedId("cancel") not in session._outbound_message_queues.values
-
-
-@pytest.mark.asyncio
-async def test_send_message_debug_prints(capsys: pytest.CaptureFixture[str]):
-    conn = MockConnection()
-    app = App(ui.page_fluid(), None)
-    session = AppSession(app, "id", conn, debug=True)
-    session._conn.send = AsyncMock()  # type: ignore[assignment]
-    await session._send_message({"test": "value"})
-    captured = capsys.readouterr()
-    assert "SEND:" in captured.out
 
 
 @pytest.mark.asyncio

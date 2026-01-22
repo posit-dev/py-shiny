@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
 from htmltools import Tag, TagList, div, span
 
 from shiny.ui import card, card_body, card_footer, card_header

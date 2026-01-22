@@ -2,8 +2,6 @@
 
 from typing import get_args
 
-import pytest
-
 from shiny.ui._busy_spinner_types import BusySpinnerType
 
 

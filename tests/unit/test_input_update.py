@@ -3,8 +3,7 @@
 from datetime import date
 from unittest.mock import MagicMock, patch
 
-import pytest
-from htmltools import TagList, tags
+from htmltools import tags
 
 from shiny.ui._input_update import (
     _normalize_show_value,

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
 from htmltools import Tag, TagList, span
 
 from shiny.ui import popover
