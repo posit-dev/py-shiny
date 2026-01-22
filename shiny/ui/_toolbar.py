@@ -55,14 +55,17 @@ def toolbar(
         A CSS length unit defining the gap (i.e., spacing) between elements in the
         toolbar. Defaults to `0` (no gap).
     width
-        CSS width of the toolbar. When using :func:`~shiny.ui.toolbar_spacer`, the
-        toolbar needs `width="100%"` for the spacer to push elements effectively.
-        Defaults to `None`.
+        CSS width of the toolbar. Defaults to None, which will automatically set
+        `width: 100%` when the toolbar is a direct child of a label element (e.g., when
+        used in input labels).
+        For :func:`~shiny.ui.toolbar_spacer`, to push elements
+        effectively, the toolbar needs `width="100%"` to expand and create space. Set
+        this explicitly if you need to control the width in other contexts.
 
     Returns
     -------
     :
-        A toolbar element.
+        A UI element
 
     See Also
     --------
@@ -87,17 +90,11 @@ def toolbar(
     gap_css = as_css_unit(gap) if gap is not None else None
     width_css = as_css_unit(width) if width is not None else None
 
-    style_dict = {}
-    if gap_css:
-        style_dict["gap"] = gap_css
-    if width_css:
-        style_dict["width"] = width_css
-
     tag = div(
         {"class": "bslib-toolbar bslib-gap-spacing", "data-align": align},
         *args,
         components_dependencies(),
-        style=css(**style_dict) if style_dict else None,
+        style=css(gap=gap_css, width=width_css),
     )
 
     return tag
@@ -126,7 +123,7 @@ def toolbar_divider(
     Returns
     -------
     :
-        A divider element.
+        A UI element
 
     See Also
     --------
@@ -159,7 +156,7 @@ def toolbar_divider(
     gap_css = as_css_unit(gap) if gap is not None else None
 
     # Build style string manually to preserve CSS custom property names with underscores
-    style_parts = []
+    style_parts: list[str] = []
     if gap_css is not None:
         style_parts.append(f"--_divider-gap: {gap_css}")
     if width_css is not None:
@@ -188,12 +185,14 @@ def toolbar_spacer() -> Tag:
     Note
     ----
     For the spacer to push elements effectively, the parent toolbar needs `width="100%"`.
-    Set this using the `width` parameter on :func:`~shiny.ui.toolbar`.
+    Set this using the `width` parameter on :func:`~shiny.ui.toolbar`. When the toolbar
+    is a direct child of a label element (e.g., when used in input labels), this is
+    set automatically.
 
     Returns
     -------
     :
-        A spacer element.
+        A UI element
 
     See Also
     --------
@@ -284,7 +283,7 @@ def toolbar_input_button(
     Returns
     -------
     :
-        A button suitable for use in a toolbar.
+        A UI element
 
     Notes
     ------
@@ -577,7 +576,7 @@ def toolbar_input_select(
     Returns
     -------
     :
-        A select input control suitable for use in a toolbar.
+        A UI element
 
     Notes
     ------

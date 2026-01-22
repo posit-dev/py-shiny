@@ -277,6 +277,7 @@ app_ui = ui.page_fluid(
                     icon=icon_svg("3"),
                 ),
                 align="left",
+                width="100%",
             ),
         ),
         ui.card_body(
@@ -337,31 +338,11 @@ app_ui = ui.page_fluid(
                     icon=icon_svg("align-right"),
                 ),
                 align="right",
+                width="100%",
             ),
         ),
         ui.card_body(
             ui.p("Tests toolbar_spacer() with align='right' on toolbar"),
-        ),
-    ),
-    # Test 13: Spacer with explicit width parameter
-    ui.card(
-        ui.card_header("Test 13: Spacer with Explicit Width Parameter"),
-        ui.card_body(
-            ui.p("Toolbars with spacers need width='100%' parameter:"),
-            ui.toolbar(
-                ui.toolbar_input_button(
-                    "btn_explicit_left",
-                    label="Start",
-                    icon=icon_svg("play"),
-                ),
-                ui.toolbar_spacer(),
-                ui.toolbar_input_button(
-                    "btn_explicit_right",
-                    label="Stop",
-                    icon=icon_svg("stop"),
-                ),
-                width="100%",
-            ),
         ),
     ),
 )
