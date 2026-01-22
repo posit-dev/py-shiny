@@ -224,15 +224,26 @@ playwright-ai: FORCE
 
 coverage: FORCE ## check combined code coverage (must run e2e last)
 	pytest --cov-report term-missing --cov=shiny tests/pytest/ $(SHINY_TEST_FILE) $(PYTEST_BROWSERS)
+	coverage combine
 	coverage html
 	$(BROWSER) htmlcov/index.html
 
 coverage-unit: FORCE ## check unit test coverage only
 	pytest tests/pytest/ --cov=shiny --cov-report=term-missing --cov-report=html
+	coverage combine
 	@echo "Coverage report: htmlcov/index.html"
 
-coverage-check: FORCE ## check coverage meets minimum threshold (25%)
+coverage-check: FORCE ## check coverage meets minimum threshold
 	pytest tests/pytest/ --cov=shiny --cov-fail-under=25
+
+# CI coverage report: generates both HTML and term reports for CI environments
+coverage-ci: FORCE ## generate coverage reports for CI (HTML + term)
+	@echo "-------- Running tests with coverage --------"
+	pytest tests/pytest/ --cov=shiny --cov-report=html --cov-report=term
+	coverage combine
+	@echo "Coverage HTML report: htmlcov/index.html"
+	@echo "-------- Coverage Report Summary --------"
+	coverage report
 
 release: dist ## package and upload a release
 	twine upload dist/*

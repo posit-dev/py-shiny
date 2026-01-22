@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-# pyright: reportUnknownMemberType=false
-
 import sys
 import types
 from typing import TYPE_CHECKING, Any, cast
@@ -19,6 +17,9 @@ from shiny.render._try_render_plot import (
     try_render_matplotlib,
     try_render_pil,
 )
+
+# pyright: reportUnknownMemberType=false
+
 
 if TYPE_CHECKING:
     from matplotlib.figure import Figure

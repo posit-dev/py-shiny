@@ -48,7 +48,7 @@ def test_bookmark_app_get_bookmark_url(monkeypatch: pytest.MonkeyPatch) -> None:
     session.clientdata.url_pathname = lambda: "/app"
 
     url = asyncio.run(bookmark.get_bookmark_url())
-    assert url == "http://example.com/app?qs"
+    assert url == "http://example.com:0/app?qs"
 
 
 def test_bookmark_app_update_query_string_invalid_mode() -> None:

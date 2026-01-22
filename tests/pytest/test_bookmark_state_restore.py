@@ -9,6 +9,7 @@ from typing import Any, Coroutine, cast
 
 import pytest
 
+from shiny._app import App
 from shiny.bookmark._global import (
     as_bookmark_dir_fn,
     get_bookmark_restore_dir_fn,
@@ -21,7 +22,6 @@ from shiny.bookmark._save_state import BookmarkState
 from shiny.module import ResolvedId
 from shiny.session import Inputs
 from shiny.types import MISSING_TYPE
-from shiny._app import App
 
 
 def test_as_bookmark_dir_fn_wraps_sync() -> None:

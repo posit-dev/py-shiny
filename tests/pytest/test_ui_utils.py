@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from typing import Callable
 
 from htmltools import Tag, TagList, tags
 
@@ -10,6 +11,7 @@ from shiny.types import MISSING
 from shiny.ui._utils import (
     JSEval,
     _find_child_strings,
+    _session_on_flush_send_msg,
     css_no_sub,
     extract_js_keys,
     get_window_title,
@@ -274,3 +276,33 @@ class TestPathPkgWww:
         """Test with multiple path arguments."""
         result = path_pkg_www("folder", "file.js")
         assert os.path.join("folder", "file.js") in result
+
+
+class TestSessionOnFlushSendMsg:
+    """Tests for the _session_on_flush_send_msg function."""
+
+    def test_sends_message(self) -> None:
+        """Test that it registers an on_flush callback that sends the message."""
+        from unittest.mock import MagicMock
+
+        mock_session = MagicMock()
+        msg: dict[str, object] = {"action": "update"}
+
+        # Capture the callback passed to on_flush
+        on_flush_cb: Callable[[], None] | None = None
+
+        def side_effect(fn: Callable[[], None], once: bool = False) -> None:
+            nonlocal on_flush_cb
+            on_flush_cb = fn
+
+        mock_session.on_flush.side_effect = side_effect
+
+        _session_on_flush_send_msg("my_id", mock_session, msg)
+
+        assert mock_session.on_flush.called
+        assert mock_session.on_flush.call_args[1]["once"] is True
+        assert on_flush_cb is not None
+
+        # Execute the callback
+        on_flush_cb()
+        mock_session.send_input_message.assert_called_with("my_id", msg)
