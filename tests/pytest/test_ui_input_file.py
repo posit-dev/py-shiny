@@ -102,3 +102,85 @@ class TestInputFileAll:
         from shiny.ui._input_file import __all__
 
         assert "input_file" in __all__
+
+
+class TestInputFileAcceptConversion:
+    """Tests for accept parameter conversion."""
+
+    def test_accept_string_converted_to_list(self):
+        """Test that string accept is converted to list internally."""
+        result = input_file("file_id", "Upload", accept=".csv")
+        html = str(result)
+        assert ".csv" in html
+
+    def test_accept_none_no_accept_attr(self):
+        """Test that None accept doesn't add accept attribute."""
+        result = input_file("file_id", "Upload", accept=None)
+        html = str(result)
+        assert 'accept=""' not in html
+
+
+class TestInputFileBookmarkRestore:
+    """Tests for bookmark restore functionality."""
+
+    def test_input_file_with_restored_value(self):
+        """Test input_file with valid restored bookmark value."""
+        from unittest.mock import patch
+
+        restored_data = [
+            {
+                "name": "test.csv",
+                "size": 1024,
+                "type": "text/csv",
+                "datapath": "/tmp/test.csv",
+            }
+        ]
+
+        with patch("shiny.ui._input_file.restore_input", return_value=restored_data):
+            result = input_file("file_id", "Upload")
+            html = str(result)
+            assert "data-restore" in html
+
+    def test_input_file_with_no_restored_value(self):
+        """Test input_file with no restored value."""
+        from unittest.mock import patch
+
+        with patch("shiny.ui._input_file.restore_input", return_value=None):
+            result = input_file("file_id", "Upload")
+            html = str(result)
+            assert "data-restore" not in html
+
+    def test_input_file_restore_with_multiple_files(self):
+        """Test input_file with multiple restored files."""
+        from unittest.mock import patch
+
+        restored_data = [
+            {
+                "name": "file1.csv",
+                "size": 100,
+                "type": "text/csv",
+                "datapath": "/tmp/f1",
+            },
+            {
+                "name": "file2.txt",
+                "size": 200,
+                "type": "text/plain",
+                "datapath": "/tmp/f2",
+            },
+        ]
+
+        with patch("shiny.ui._input_file.restore_input", return_value=restored_data):
+            result = input_file("file_id", "Upload", multiple=True)
+            html = str(result)
+            assert "data-restore" in html
+
+    def test_input_file_restore_with_missing_fields(self):
+        """Test input_file restore with missing optional fields."""
+        from unittest.mock import patch
+
+        restored_data = [{"name": "test.csv"}]
+
+        with patch("shiny.ui._input_file.restore_input", return_value=restored_data):
+            result = input_file("file_id", "Upload")
+            html = str(result)
+            assert "data-restore" in html
