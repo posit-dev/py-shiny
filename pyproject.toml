@@ -196,7 +196,10 @@ exclude_lines = [
     "@typing.overload",
     "\\.\\.\\.",  # Ellipsis in stub files
 ]
-show_missing = true
+# Note: show_missing is intentionally not set to true by default.
+# Using `--cov-report=term-missing` with the full shiny source causes
+# coverage report generation to be extremely slow. Use HTML reports
+# or targeted term-missing reports on specific modules instead.
 precision = 2
 
 [tool.coverage.html]

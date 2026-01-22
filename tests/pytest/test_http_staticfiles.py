@@ -1,17 +1,60 @@
-"""Tests for shiny/http_staticfiles.py module."""
+"""Tests for shiny.http_staticfiles module."""
+
+from __future__ import annotations
+
+import importlib
+import sys
+from pathlib import Path
+from types import ModuleType
+
+import pytest
+from starlette.responses import Response
 
 
-class TestHttpStaticFiles:
-    """Tests for http_staticfiles module."""
+def test_staticfiles_native_branch(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    if "pyodide" in sys.modules:
+        monkeypatch.delitem(sys.modules, "pyodide", raising=False)
 
-    def test_module_exists(self):
-        """Test http_staticfiles module can be imported."""
-        from shiny import http_staticfiles
+    mod = importlib.reload(importlib.import_module("shiny.http_staticfiles"))
 
-        assert http_staticfiles is not None
+    class FakeResponse(Response):
+        def __init__(self):
+            super().__init__("ok")
+            self.headers["content-type"] = "text/plain"
+            self.media_type = "text/plain"
 
-    def test_staticfileshandler_class_exists(self):
-        """Test StaticFilesHandler class exists."""
-        from shiny.http_staticfiles import StaticFiles
+    def fake_file_response(self, full_path, *args, **kwargs):
+        return FakeResponse()
 
-        assert StaticFiles is not None
+    monkeypatch.setattr(
+        mod.starlette.staticfiles.StaticFiles,
+        "file_response",
+        fake_file_response,
+    )
+    monkeypatch.setattr("shiny.http_staticfiles._utils.guess_mime_type", lambda *_: "text/javascript")
+
+    sf = mod.StaticFiles(directory=tmp_path)
+    resp = sf.file_response(tmp_path / "file.js")
+    assert resp.headers["content-type"].startswith("text/javascript")
+
+
+def test_staticfiles_wasm_branch(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    sys.modules["pyodide"] = ModuleType("pyodide")
+    mod = importlib.reload(importlib.import_module("shiny.http_staticfiles"))
+
+    file_path = tmp_path / "test.txt"
+    file_path.write_text("data")
+
+    final, trailing = mod._traverse_url_path(tmp_path, ["test.txt"])  # type: ignore[attr-defined]
+    assert final == file_path
+    assert trailing is False
+
+    bad_final, _ = mod._traverse_url_path(tmp_path, [".."])
+    assert bad_final is None
+
+    headers = mod._convert_headers({"X": "Y"}, "text/plain")
+    assert (b"X", b"Y") in headers
+
+    # Cleanup
+    monkeypatch.delitem(sys.modules, "pyodide", raising=False)
+    importlib.reload(importlib.import_module("shiny.http_staticfiles"))
