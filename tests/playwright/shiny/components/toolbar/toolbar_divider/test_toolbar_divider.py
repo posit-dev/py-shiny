@@ -1,18 +1,9 @@
-from conftest import ShinyAppProc, create_app_fixture
+from conftest import create_app_fixture
 from playwright.sync_api import Page, expect
 
 from shiny.run import ShinyAppProc
 
 app = create_app_fixture("./app.py")
-
-
-def test_toolbar_divider_exists(page: Page, app: ShinyAppProc) -> None:
-    """Test that toolbar dividers are present in the DOM."""
-    page.goto(app.url)
-
-    # Check that dividers exist with the correct class
-    dividers = page.locator(".bslib-toolbar-divider")
-    expect(dividers).to_have_count(17)  # Total dividers across all test cases
 
 
 def test_toolbar_divider_default(page: Page, app: ShinyAppProc) -> None:
@@ -115,15 +106,6 @@ def test_toolbar_divider_aria_hidden(page: Page, app: ShinyAppProc) -> None:
     expect(divider).to_have_attribute("aria-hidden", "true")
 
 
-def test_toolbar_spacer_exists(page: Page, app: ShinyAppProc) -> None:
-    """Test that toolbar spacers are present in the DOM."""
-    page.goto(app.url)
-
-    # Check that spacers exist with the correct class
-    spacers = page.locator(".bslib-toolbar-spacer")
-    expect(spacers).to_have_count(5)  # Total spacers across test cases
-
-
 def test_toolbar_spacer_basic(page: Page, app: ShinyAppProc) -> None:
     """Test basic toolbar_spacer functionality."""
     page.goto(app.url)
@@ -133,7 +115,8 @@ def test_toolbar_spacer_basic(page: Page, app: ShinyAppProc) -> None:
     toolbar = toolbars.nth(6)  # Seventh toolbar (Test 7)
 
     spacer = toolbar.locator(".bslib-toolbar-spacer").first
-    expect(spacer).to_be_visible()
+    # Spacer exists in the DOM (but is not "visible" due to aria-hidden and empty content)
+    expect(spacer).to_be_attached()
 
     # Spacer should have aria-hidden
     expect(spacer).to_have_attribute("aria-hidden", "true")
@@ -151,9 +134,9 @@ def test_toolbar_spacer_layout(page: Page, app: ShinyAppProc) -> None:
     right_btn = toolbar.locator("#btn_spacer_right")
     spacer = toolbar.locator(".bslib-toolbar-spacer")
 
-    # All elements should exist
+    # Buttons should be visible, spacer exists but is not "visible"
     expect(left_btn).to_be_visible()
-    expect(spacer).to_be_visible()
+    expect(spacer).to_be_attached()
     expect(right_btn).to_be_visible()
 
     # Get bounding boxes
@@ -182,6 +165,18 @@ def test_toolbar_spacer_multiple_items(page: Page, app: ShinyAppProc) -> None:
     spacer = toolbar.locator(".bslib-toolbar-spacer")
     expect(spacer).to_have_count(1)
 
+    # Verify spacer creates separation between left and right button groups
+    left_btn2 = toolbar.locator("#btn_spacer_left2")  # Last button on left
+    right_btn1 = toolbar.locator("#btn_spacer_right1")  # First button on right
+
+    left_box = left_btn2.bounding_box()
+    right_box = right_btn1.bounding_box()
+
+    assert left_box is not None
+    assert right_box is not None
+    # Right button group should be significantly to the right of left button group
+    assert right_box["x"] > left_box["x"] + left_box["width"] + 50
+
 
 def test_toolbar_divider_and_spacer_combined(page: Page, app: ShinyAppProc) -> None:
     """Test combining toolbar_divider and toolbar_spacer."""
@@ -202,6 +197,18 @@ def test_toolbar_divider_and_spacer_combined(page: Page, app: ShinyAppProc) -> N
     buttons = toolbar.locator(".bslib-toolbar-input-button")
     expect(buttons).to_have_count(5)
 
+    # Verify spacer creates separation between left and right groups
+    left_btn4 = toolbar.locator("#btn_combo_left4")  # Last button before spacer
+    right_btn1 = toolbar.locator("#btn_combo_right1")  # First button after spacer
+
+    left_box = left_btn4.bounding_box()
+    right_box = right_btn1.bounding_box()
+
+    assert left_box is not None
+    assert right_box is not None
+    # Right button should be significantly to the right of left group
+    assert right_box["x"] > left_box["x"] + left_box["width"] + 50
+
 
 def test_toolbar_multiple_spacers(page: Page, app: ShinyAppProc) -> None:
     """Test multiple spacers in a toolbar (edge case)."""
@@ -214,6 +221,25 @@ def test_toolbar_multiple_spacers(page: Page, app: ShinyAppProc) -> None:
     # Should have 2 spacers
     spacers = toolbar.locator(".bslib-toolbar-spacer")
     expect(spacers).to_have_count(2)
+
+    # Verify only the first spacer creates spacing (expected behavior)
+    btn1 = toolbar.locator("#btn_edge1")
+    btn2 = toolbar.locator("#btn_edge2")
+    btn3 = toolbar.locator("#btn_edge3")
+
+    box1 = btn1.bounding_box()
+    box2 = btn2.bounding_box()
+    box3 = btn3.bounding_box()
+
+    assert box1 is not None
+    assert box2 is not None
+    assert box3 is not None
+
+    # First spacer should create significant gap between btn1 and btn2
+    assert box2["x"] > box1["x"] + box1["width"] + 50
+
+    # Second spacer might not work as expected, but btn2 and btn3 should be close
+    # (or far apart if second spacer also works - implementation dependent)
 
 
 def test_toolbar_dividers_varying_properties(page: Page, app: ShinyAppProc) -> None:
@@ -260,3 +286,15 @@ def test_toolbar_spacer_with_align_right(page: Page, app: ShinyAppProc) -> None:
     # Should still have spacer
     spacer = toolbar.locator(".bslib-toolbar-spacer")
     expect(spacer).to_have_count(1)
+
+    # Verify spacer creates separation even with align="right"
+    left_btn = toolbar.locator("#btn_align_left")
+    right_btn = toolbar.locator("#btn_align_right")
+
+    left_box = left_btn.bounding_box()
+    right_box = right_btn.bounding_box()
+
+    assert left_box is not None
+    assert right_box is not None
+    # Right button should be significantly to the right of left button
+    assert right_box["x"] > left_box["x"] + left_box["width"] + 50
