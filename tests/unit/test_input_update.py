@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 
 from htmltools import tags
 
+from shiny._namespaces import ResolvedId
 from shiny.ui._input_update import (
     _normalize_show_value,
     _update_choice_input,
@@ -29,7 +30,6 @@ from shiny.ui._input_update import (
     update_text_area,
     update_tooltip,
 )
-from shiny._namespaces import ResolvedId
 
 
 # =============================================================================

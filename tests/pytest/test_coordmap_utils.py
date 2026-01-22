@@ -7,7 +7,12 @@ from typing import Any
 
 import pytest
 
-from shiny.render._coordmap import _get_mappings, _is_log_trans, _is_reverse_trans, _simplify_type
+from shiny.render._coordmap import (
+    _get_mappings,
+    _is_log_trans,
+    _is_reverse_trans,
+    _simplify_type,
+)
 
 
 def test_is_log_trans_and_reverse() -> None:

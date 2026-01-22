@@ -52,7 +52,9 @@ def test_run_app_uses_uvicorn(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -
 
     monkeypatch.setattr("uvicorn.run", fake_run)
     monkeypatch.setattr("shiny._main.is_express_app", lambda *_: False)
-    monkeypatch.setattr("shiny._main.resolve_app", lambda app, app_dir: ("app:app", str(tmp_path)))
+    monkeypatch.setattr(
+        "shiny._main.resolve_app", lambda app, app_dir: ("app:app", str(tmp_path))
+    )
 
     _main.run_app("app.py:app", port=1234, reload=False)
 

@@ -26,7 +26,9 @@ def test_create_file_validator() -> None:
     validator2 = create_file_validator("app", must_exist=True)
     assert "not found" in str(validator2("/tmp/missing.txt"))
 
-    validator3 = create_file_validator("test", must_exist=False, prefix_required="test_")
+    validator3 = create_file_validator(
+        "test", must_exist=False, prefix_required="test_"
+    )
     assert "must start" in str(validator3("foo.py"))
 
 
@@ -75,7 +77,9 @@ def test_get_output_file_path_validations(tmp_path: Path) -> None:
     assert out.name == "test_new.py"
 
 
-def test_generate_test_file_success(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_generate_test_file_success(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     app_file = tmp_path / "app.py"
     app_file.write_text("print('x')")
     output_file = tmp_path / "test_app.py"
@@ -84,7 +88,9 @@ def test_generate_test_file_success(tmp_path: Path, monkeypatch: pytest.MonkeyPa
         def __init__(self, provider: str, setup_logging: bool = False):
             self.provider = provider
 
-        def generate_test_from_file(self, app_file_path: str, model: str | None, output_file: str):
+        def generate_test_from_file(
+            self, app_file_path: str, model: str | None, output_file: str
+        ):
             Path(output_file).write_text("# test")
             return None, Path(output_file)
 
@@ -116,7 +122,10 @@ def test_generate_test_file_success(tmp_path: Path, monkeypatch: pytest.MonkeyPa
 
 
 def test_generate_test_file_validation_error(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("shiny._main_generate_test.validate_api_key", lambda _: (_ for _ in ()).throw(ValidationError("bad")))
+    monkeypatch.setattr(
+        "shiny._main_generate_test.validate_api_key",
+        lambda _: (_ for _ in ()).throw(ValidationError("bad")),
+    )
 
     with pytest.raises(SystemExit):
         generate_test_file(

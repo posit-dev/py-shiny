@@ -105,12 +105,16 @@ def test_restore_context_load_state_qs(tmp_path: Path) -> None:
     assert ctx.values == {"y": 2}
 
 
-def test_bookmark_state_encode_and_save(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_bookmark_state_encode_and_save(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     inputs = FakeInputs({"x": 1})
     state = BookmarkState(inputs, exclude=[], on_save=None)
     state.values["y"] = 2
 
-    monkeypatch.setattr("shiny.bookmark._save_state.private_random_id", lambda **_: "id")
+    monkeypatch.setattr(
+        "shiny.bookmark._save_state.private_random_id", lambda **_: "id"
+    )
 
     async def save_dir_fn(bookmark_id: str) -> Path:
         assert bookmark_id == "id"

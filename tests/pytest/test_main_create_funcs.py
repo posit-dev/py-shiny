@@ -66,7 +66,9 @@ def test_find_templates_missing_id(tmp_path: Path) -> None:
         _main_create.find_templates(tmp_path)
 
 
-def test_find_templates_duplicate_ids_warns(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_find_templates_duplicate_ids_warns(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     _write_template(tmp_path / "app1", {"id": "dup"})
     _write_template(tmp_path / "app2", {"id": "dup"})
 
@@ -143,7 +145,9 @@ def test_github_zip_url_order() -> None:
     assert urls[2].endswith("/v1.zip")
 
 
-def test_download_and_extract_zip_single_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_download_and_extract_zip_single_dir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     in_memory = io.BytesIO()
     with zipfile.ZipFile(in_memory, "w") as zf:
         zf.writestr("repo-root/file.txt", "data")

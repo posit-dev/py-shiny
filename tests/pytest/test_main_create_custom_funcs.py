@@ -29,7 +29,9 @@ def test_is_existing_module(monkeypatch: pytest.MonkeyPatch) -> None:
     def fake_find_spec_error(name: str):
         raise ImportError("boom")
 
-    monkeypatch.setattr("shiny._main_create_custom.util.find_spec", fake_find_spec_error)
+    monkeypatch.setattr(
+        "shiny._main_create_custom.util.find_spec", fake_find_spec_error
+    )
     assert is_existing_module("anything") is False
 
 
@@ -39,7 +41,9 @@ def test_is_pep508_identifier() -> None:
     assert is_pep508_identifier("bad name") is False
 
 
-def test_component_name_validator_rejects_cases(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_component_name_validator_rejects_cases(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     validator = ComponentNameValidator()
 
     with pytest.raises(ValidationError):

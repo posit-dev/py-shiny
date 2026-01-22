@@ -11,7 +11,9 @@ import pytest
 from starlette.responses import Response
 
 
-def test_staticfiles_native_branch(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_staticfiles_native_branch(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     if "pyodide" in sys.modules:
         monkeypatch.delitem(sys.modules, "pyodide", raising=False)
 
@@ -31,14 +33,18 @@ def test_staticfiles_native_branch(monkeypatch: pytest.MonkeyPatch, tmp_path: Pa
         "file_response",
         fake_file_response,
     )
-    monkeypatch.setattr("shiny.http_staticfiles._utils.guess_mime_type", lambda *_: "text/javascript")
+    monkeypatch.setattr(
+        "shiny.http_staticfiles._utils.guess_mime_type", lambda *_: "text/javascript"
+    )
 
     sf = mod.StaticFiles(directory=tmp_path)
     resp = sf.file_response(tmp_path / "file.js")
     assert resp.headers["content-type"].startswith("text/javascript")
 
 
-def test_staticfiles_wasm_branch(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_staticfiles_wasm_branch(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     sys.modules["pyodide"] = ModuleType("pyodide")
     mod = importlib.reload(importlib.import_module("shiny.http_staticfiles"))
 

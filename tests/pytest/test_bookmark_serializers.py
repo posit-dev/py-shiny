@@ -33,7 +33,9 @@ def test_serializer_default() -> None:
 
 def test_serializer_file_input_warns_when_no_state_dir() -> None:
     with pytest.warns(UserWarning):
-        result = serializer_file_input([{"datapath": "x", "name": "a", "size": 1, "type": "t"}], None)
+        result = serializer_file_input(
+            [{"datapath": "x", "name": "a", "size": 1, "type": "t"}], None
+        )
     assert isinstance(result, Unserializable)
 
 
@@ -48,9 +50,9 @@ def test_serializer_file_input_type_errors(tmp_path: Path) -> None:
         serializer_file_input([{"name": "x"}], tmp_path)  # type: ignore[list-item]
 
     with pytest.raises(TypeError, match="Expected str"):
-        serializer_file_input([
-            {"datapath": 1, "name": "x", "size": 1, "type": "t"}
-        ], tmp_path)
+        serializer_file_input(
+            [{"datapath": 1, "name": "x", "size": 1, "type": "t"}], tmp_path
+        )
 
 
 def test_serializer_file_input_copies_file(tmp_path: Path) -> None:
