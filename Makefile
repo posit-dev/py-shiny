@@ -179,6 +179,7 @@ clean-js: FORCE
 SUB_FILE:=
 PYTEST_BROWSERS:= --browser webkit --browser firefox --browser chromium
 PYTEST_DEPLOYS_BROWSERS:= --browser chromium
+PYTEST_XDIST?= -n auto
 
 
 # Full test path to playwright tests
@@ -229,7 +230,7 @@ coverage: FORCE ## check combined code coverage (must run e2e last)
 	$(BROWSER) htmlcov/index.html
 
 coverage-unit: FORCE ## check unit test coverage only
-	pytest tests/pytest/ --cov=shiny --cov-report=term-missing --cov-report=html
+	pytest tests/pytest/ $(PYTEST_XDIST) --cov=shiny --cov-report=term-missing --cov-report=html
 	coverage combine
 	@echo "Coverage report: htmlcov/index.html"
 
@@ -239,7 +240,7 @@ coverage-check: FORCE ## check coverage meets minimum threshold
 # CI coverage report: generates both HTML and term reports for CI environments
 coverage-ci: FORCE ## generate coverage reports for CI (HTML + term)
 	@echo "-------- Running tests with coverage --------"
-	pytest tests/pytest/ --cov=shiny --cov-report=html --cov-report=term
+	pytest tests/pytest/ $(PYTEST_XDIST) --cov=shiny --cov-report=html --cov-report=term
 	coverage combine
 	@echo "Coverage HTML report: htmlcov/index.html"
 	@echo "-------- Coverage Report Summary --------"
