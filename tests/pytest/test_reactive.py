@@ -1,10 +1,11 @@
 """Tests for shiny.reactive module."""
 
 import pytest
+
 from shiny.reactive import (
+    Context,
     Value,
     isolate,
-    Context,
 )
 from shiny.reactive._core import Dependents, ReactiveEnvironment, ReactiveWarning
 

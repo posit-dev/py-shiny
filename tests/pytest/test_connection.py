@@ -1,7 +1,8 @@
 """Tests for shiny._connection module."""
 
 import pytest
-from shiny._connection import MockConnection, ConnectionClosed
+
+from shiny._connection import ConnectionClosed, MockConnection
 
 
 class TestMockConnection:

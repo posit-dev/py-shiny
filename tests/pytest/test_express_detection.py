@@ -1,10 +1,11 @@
 """Tests for shiny.express module placeholders and helpers."""
 
+import ast
 import os
 import tempfile
+
 from shiny.express import is_express_app
-from shiny.express._is_express import find_magic_comment_mode, DetectShinyExpressVisitor
-import ast
+from shiny.express._is_express import DetectShinyExpressVisitor, find_magic_comment_mode
 
 
 class TestIsExpressApp:

@@ -2,7 +2,7 @@
 
 from htmltools import HTMLDependency
 
-from shiny.html_dependencies import shiny_deps, jquery_deps, require_deps
+from shiny.html_dependencies import jquery_deps, require_deps, shiny_deps
 
 
 class TestShinyDeps:

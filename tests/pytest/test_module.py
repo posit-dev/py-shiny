@@ -1,7 +1,7 @@
 """Tests for shiny.module module."""
 
-from shiny.module import ui, server, current_namespace, resolve_id, ResolvedId
 from shiny._namespaces import namespace_context
+from shiny.module import ResolvedId, current_namespace, resolve_id, server, ui
 
 
 class TestModuleUI:

@@ -1,8 +1,9 @@
 """Tests for shiny.ui._markdown module."""
 
+from htmltools import HTML
+
 from shiny.ui import markdown
 from shiny.ui._markdown import default_md_renderer
-from htmltools import HTML
 
 
 class TestMarkdown:

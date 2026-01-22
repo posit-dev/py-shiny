@@ -4,14 +4,14 @@ from htmltools import HTMLDependency
 
 from shiny.ui._html_deps_external import (
     bootstrap_deps,
-    ionrangeslider_deps,
     datepicker_deps,
-    selectize_deps,
+    ionrangeslider_deps,
     jqui_deps,
+    selectize_deps,
 )
 from shiny.ui._html_deps_shinyverse import (
-    fill_dependency,
     components_dependencies,
+    fill_dependency,
 )
 
 

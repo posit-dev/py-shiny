@@ -1,11 +1,11 @@
 """Tests for shiny._versions module."""
 
 from shiny._versions import (
-    shiny_html_deps,
+    bootstrap,
     bslib,
     htmltools,
-    bootstrap,
     requirejs,
+    shiny_html_deps,
 )
 
 
