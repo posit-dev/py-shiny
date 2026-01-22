@@ -90,13 +90,13 @@ class TestCheckPath:
 
     def test_check_path_existing_file(self):
         """Test check_path with existing file."""
-        with tempfile.NamedTemporaryFile(delete=False) as f:
-            try:
-                result = check_path(f.name)
-                assert isinstance(result, Path)
-                assert result.exists()
-            finally:
-                os.unlink(f.name)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            file_path = os.path.join(tmpdir, "test.txt")
+            with open(file_path, "w") as f:
+                f.write("test")
+            result = check_path(file_path)
+            assert isinstance(result, Path)
+            assert result.exists()
 
     def test_check_path_nonexistent_raises(self):
         """Test check_path raises for nonexistent file."""
@@ -105,21 +105,21 @@ class TestCheckPath:
 
     def test_check_path_string(self):
         """Test check_path accepts string path."""
-        with tempfile.NamedTemporaryFile(delete=False) as f:
-            try:
-                result = check_path(f.name)
-                assert isinstance(result, Path)
-            finally:
-                os.unlink(f.name)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            file_path = os.path.join(tmpdir, "test.txt")
+            with open(file_path, "w") as f:
+                f.write("test")
+            result = check_path(file_path)
+            assert isinstance(result, Path)
 
     def test_check_path_pathlib(self):
         """Test check_path accepts Path object."""
-        with tempfile.NamedTemporaryFile(delete=False) as f:
-            try:
-                result = check_path(Path(f.name))
-                assert isinstance(result, Path)
-            finally:
-                os.unlink(f.name)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            file_path = os.path.join(tmpdir, "test.txt")
+            with open(file_path, "w") as f:
+                f.write("test")
+            result = check_path(Path(file_path))
+            assert isinstance(result, Path)
 
 
 class TestReadUtf8:
@@ -190,43 +190,43 @@ class TestGetFileKey:
 
     def test_get_file_key_includes_path(self):
         """Test file key includes path."""
-        with tempfile.NamedTemporaryFile(delete=False) as f:
-            try:
-                key = get_file_key(f.name)
-                assert f.name in key
-            finally:
-                os.unlink(f.name)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            file_path = os.path.join(tmpdir, "test.txt")
+            with open(file_path, "w") as f:
+                f.write("test")
+            key = get_file_key(file_path)
+            assert file_path in key
 
     def test_get_file_key_includes_mtime(self):
         """Test file key includes modification time."""
-        with tempfile.NamedTemporaryFile(delete=False) as f:
-            try:
-                key = get_file_key(f.name)
-                # Key should contain a dash separator
-                assert "-" in key
-                # The part after the dash should be a number (mtime)
-                parts = key.rsplit("-", 1)
-                assert len(parts) == 2
-            finally:
-                os.unlink(f.name)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            file_path = os.path.join(tmpdir, "test.txt")
+            with open(file_path, "w") as f:
+                f.write("test")
+            key = get_file_key(file_path)
+            # Key should contain a dash separator
+            assert "-" in key
+            # The part after the dash should be a number (mtime)
+            parts = key.rsplit("-", 1)
+            assert len(parts) == 2
 
     def test_get_file_key_string_path(self):
         """Test file key works with string path."""
-        with tempfile.NamedTemporaryFile(delete=False) as f:
-            try:
-                key = get_file_key(f.name)
-                assert isinstance(key, str)
-            finally:
-                os.unlink(f.name)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            file_path = os.path.join(tmpdir, "test.txt")
+            with open(file_path, "w") as f:
+                f.write("test")
+            key = get_file_key(file_path)
+            assert isinstance(key, str)
 
     def test_get_file_key_path_object(self):
         """Test file key works with Path object."""
-        with tempfile.NamedTemporaryFile(delete=False) as f:
-            try:
-                key = get_file_key(Path(f.name))
-                assert isinstance(key, str)
-            finally:
-                os.unlink(f.name)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            file_path = os.path.join(tmpdir, "test.txt")
+            with open(file_path, "w") as f:
+                f.write("test")
+            key = get_file_key(Path(file_path))
+            assert isinstance(key, str)
 
 
 class TestGetHash:
@@ -234,15 +234,13 @@ class TestGetHash:
 
     def test_get_hash_single_file(self):
         """Test get_hash with single file."""
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".txt") as f:
-            try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            file_path = os.path.join(tmpdir, "test.txt")
+            with open(file_path, "wb") as f:
                 f.write(b"test content")
-                f.flush()
-                hash_val = get_hash(f.name, include_files=False)
-                assert isinstance(hash_val, str)
-                assert len(hash_val) == 40
-            finally:
-                os.unlink(f.name)
+            hash_val = get_hash(file_path, include_files=False)
+            assert isinstance(hash_val, str)
+            assert len(hash_val) == 40
 
     def test_get_hash_with_include_files(self):
         """Test get_hash with include_files=True."""

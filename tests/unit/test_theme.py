@@ -1,5 +1,6 @@
 """Tests for shiny/ui/_theme.py - Theme class and related functions."""
 
+import os
 import tempfile
 from pathlib import Path
 
@@ -349,12 +350,13 @@ class TestThemeAddSassLayerFile:
         """Test adding Sass layer file with rules."""
         theme = Theme()
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".scss", delete=False) as f:
-            f.write("/*-- scss:rules --*/\n")
-            f.write(".my-rule { color: red; }\n")
-            f.flush()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            file_path = os.path.join(tmpdir, "test.scss")
+            with open(file_path, "w") as f:
+                f.write("/*-- scss:rules --*/\n")
+                f.write(".my-rule { color: red; }\n")
 
-            theme.add_sass_layer_file(f.name)
+            theme.add_sass_layer_file(file_path)
 
         assert any(".my-rule { color: red; }" in r for r in theme._rules)
 
@@ -362,12 +364,13 @@ class TestThemeAddSassLayerFile:
         """Test adding Sass layer file with defaults."""
         theme = Theme()
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".scss", delete=False) as f:
-            f.write("/*-- scss:defaults --*/\n")
-            f.write("$my-var: red;\n")
-            f.flush()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            file_path = os.path.join(tmpdir, "test.scss")
+            with open(file_path, "w") as f:
+                f.write("/*-- scss:defaults --*/\n")
+                f.write("$my-var: red;\n")
 
-            theme.add_sass_layer_file(f.name)
+            theme.add_sass_layer_file(file_path)
 
         assert any("$my-var: red;" in d for d in theme._defaults)
 
@@ -375,12 +378,13 @@ class TestThemeAddSassLayerFile:
         """Test adding Sass layer file with functions."""
         theme = Theme()
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".scss", delete=False) as f:
-            f.write("/*-- scss:functions --*/\n")
-            f.write("@function my-func() { @return 1; }\n")
-            f.flush()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            file_path = os.path.join(tmpdir, "test.scss")
+            with open(file_path, "w") as f:
+                f.write("/*-- scss:functions --*/\n")
+                f.write("@function my-func() { @return 1; }\n")
 
-            theme.add_sass_layer_file(f.name)
+            theme.add_sass_layer_file(file_path)
 
         assert any("@function my-func()" in fn for fn in theme._functions)
 
@@ -388,12 +392,13 @@ class TestThemeAddSassLayerFile:
         """Test adding Sass layer file with mixins."""
         theme = Theme()
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".scss", delete=False) as f:
-            f.write("/*-- scss:mixins --*/\n")
-            f.write("@mixin my-mixin { color: blue; }\n")
-            f.flush()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            file_path = os.path.join(tmpdir, "test.scss")
+            with open(file_path, "w") as f:
+                f.write("/*-- scss:mixins --*/\n")
+                f.write("@mixin my-mixin { color: blue; }\n")
 
-            theme.add_sass_layer_file(f.name)
+            theme.add_sass_layer_file(file_path)
 
         assert any("@mixin my-mixin" in m for m in theme._mixins)
 
@@ -401,12 +406,13 @@ class TestThemeAddSassLayerFile:
         """Test adding Sass layer file with uses."""
         theme = Theme()
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".scss", delete=False) as f:
-            f.write("/*-- scss:uses --*/\n")
-            f.write("@use 'sass:math';\n")
-            f.flush()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            file_path = os.path.join(tmpdir, "test.scss")
+            with open(file_path, "w") as f:
+                f.write("/*-- scss:uses --*/\n")
+                f.write("@use 'sass:math';\n")
 
-            theme.add_sass_layer_file(f.name)
+            theme.add_sass_layer_file(file_path)
 
         assert any("@use 'sass:math';" in u for u in theme._uses)
 
@@ -414,13 +420,14 @@ class TestThemeAddSassLayerFile:
         """Test adding Sass file without boundary raises error."""
         theme = Theme()
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".scss", delete=False) as f:
-            f.write("/* No boundary comments */\n")
-            f.write(".some-rule { color: red; }\n")
-            f.flush()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            file_path = os.path.join(tmpdir, "test.scss")
+            with open(file_path, "w") as f:
+                f.write("/* No boundary comments */\n")
+                f.write(".some-rule { color: red; }\n")
 
             with pytest.raises(ValueError, match="doesn't contain at least one layer"):
-                theme.add_sass_layer_file(f.name)
+                theme.add_sass_layer_file(file_path)
 
 
 # =============================================================================

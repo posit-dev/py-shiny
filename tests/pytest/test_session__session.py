@@ -525,7 +525,8 @@ async def test_unhandled_error_prints_and_closes(capsys: pytest.CaptureFixture[s
     assert "Unhandled error: boom" in captured.err
 
 
-def test_make_scope_and_session_proxy_methods():
+@pytest.mark.asyncio
+async def test_make_scope_and_session_proxy_methods():
     conn = MockConnection()
     app = App(ui.page_fluid(), None)
     session = AppSession(app, "id", conn)
