@@ -1,66 +1,55 @@
-"""Tests for shiny/ui/_input_password.py - Password input."""
+"""Tests for shiny/ui/_input_password.py"""
+
+from __future__ import annotations
 
 from htmltools import Tag
 
-from shiny.ui import input_password
+from shiny.ui._input_password import input_password
 
 
 class TestInputPassword:
     """Tests for input_password function."""
 
-    def test_input_password_returns_tag(self):
-        """Test input_password returns a Tag."""
-        result = input_password("pwd_id", "Password")
+    def test_input_password_basic(self) -> None:
+        """Test basic password input creation."""
+        result = input_password("pwd", "Password")
         assert isinstance(result, Tag)
-
-    def test_input_password_has_correct_id(self):
-        """Test input_password has correct id."""
-        result = input_password("pwd_id", "Password")
         html = str(result)
-        assert "pwd_id" in html
+        assert "pwd" in html
+        assert "Password" in html
 
-    def test_input_password_has_label(self):
-        """Test input_password has label."""
-        result = input_password("pwd_id", "Enter password")
-        html = str(result)
-        assert "Enter password" in html
-
-    def test_input_password_has_type_password(self):
-        """Test input_password has type=password."""
-        result = input_password("pwd_id", "Password")
-        html = str(result)
-        assert 'type="password"' in html
-
-    def test_input_password_empty_value_by_default(self):
-        """Test input_password has empty value by default."""
-        result = input_password("pwd_id", "Password")
-        html = str(result)
-        assert 'value=""' in html
-
-    def test_input_password_with_value(self):
-        """Test input_password with initial value."""
-        result = input_password("pwd_id", "Password", value="secret")
+    def test_input_password_with_value(self) -> None:
+        """Test password input with initial value."""
+        result = input_password("pwd", "Password", value="secret")
         html = str(result)
         assert 'value="secret"' in html
 
-    def test_input_password_with_width(self):
-        """Test input_password with width."""
-        result = input_password("pwd_id", "Password", width="300px")
+    def test_input_password_with_width(self) -> None:
+        """Test password input with width."""
+        result = input_password("pwd", "Password", width="250px")
         html = str(result)
-        assert "300px" in html
+        assert "250px" in html
 
-    def test_input_password_with_placeholder(self):
-        """Test input_password with placeholder."""
-        result = input_password("pwd_id", "Password", placeholder="Enter your password")
+    def test_input_password_with_placeholder(self) -> None:
+        """Test password input with placeholder."""
+        result = input_password("pwd", "Password", placeholder="Enter password...")
         html = str(result)
-        assert "Enter your password" in html
+        assert "Enter password..." in html
 
+    def test_input_password_update_on_blur(self) -> None:
+        """Test password input with update_on='blur'."""
+        result = input_password("pwd", "Password", update_on="blur")
+        html = str(result)
+        assert "blur" in html
 
-class TestInputPasswordAll:
-    """Tests for __all__ exports."""
+    def test_input_password_has_correct_type(self) -> None:
+        """Test password input has type='password'."""
+        result = input_password("pwd", "Password")
+        html = str(result)
+        assert 'type="password"' in html
 
-    def test_input_password_in_all(self):
-        """Test input_password is in __all__."""
-        from shiny.ui._input_password import __all__
-
-        assert "input_password" in __all__
+    def test_input_password_has_form_control_class(self) -> None:
+        """Test password input has form-control class."""
+        result = input_password("pwd", "Password")
+        html = str(result)
+        assert "form-control" in html

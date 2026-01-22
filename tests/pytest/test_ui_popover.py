@@ -2,136 +2,89 @@
 
 from __future__ import annotations
 
-from htmltools import Tag, TagList, span
+import pytest
+from htmltools import Tag
 
-from shiny.ui import popover
+from shiny.ui._popover import popover
 
 
 class TestPopover:
-    """Tests for the popover function."""
+    """Tests for popover function."""
 
-    def test_basic_popover(self) -> None:
-        """Test creating a basic popover."""
-        result = popover(
-            span("Trigger"),
-            "Popover content",
-        )
-        assert isinstance(result, (Tag, TagList))
+    def test_popover_basic(self) -> None:
+        """Test basic popover creation."""
+        result = popover("Click me", "Popover content")
+        assert isinstance(result, Tag)
+        html = str(result)
+        assert "bslib-popover" in html
+        assert "Click me" in html
 
     def test_popover_with_title(self) -> None:
-        """Test popover with a title."""
-        result = popover(
-            span("Trigger"),
-            "Content",
-            title="My Title",
-        )
-        rendered = str(result)
-        assert "My Title" in rendered or "popover" in rendered.lower()
+        """Test popover with title."""
+        result = popover("Click", "Content", title="Title")
+        html = str(result)
+        assert "Title" in html
 
     def test_popover_with_id(self) -> None:
-        """Test popover with custom id."""
-        result = popover(
-            span("Trigger"),
-            "Content",
-            id="my_popover",  # Use underscore for valid Shiny ID
-        )
-        assert isinstance(result, (Tag, TagList))
+        """Test popover with id."""
+        result = popover("Click", "Content", id="pop1")
+        html = str(result)
+        assert "pop1" in html
 
     def test_popover_placement_top(self) -> None:
-        """Test popover with top placement."""
-        result = popover(
-            span("Trigger"),
-            "Content",
-            placement="top",
-        )
-        assert isinstance(result, (Tag, TagList))
+        """Test popover with placement='top'."""
+        result = popover("Click", "Content", placement="top")
+        html = str(result)
+        assert 'placement="top"' in html
 
     def test_popover_placement_bottom(self) -> None:
-        """Test popover with bottom placement."""
-        result = popover(
-            span("Trigger"),
-            "Content",
-            placement="bottom",
-        )
-        assert isinstance(result, (Tag, TagList))
+        """Test popover with placement='bottom'."""
+        result = popover("Click", "Content", placement="bottom")
+        html = str(result)
+        assert 'placement="bottom"' in html
 
     def test_popover_placement_left(self) -> None:
-        """Test popover with left placement."""
-        result = popover(
-            span("Trigger"),
-            "Content",
-            placement="left",
-        )
-        assert isinstance(result, (Tag, TagList))
+        """Test popover with placement='left'."""
+        result = popover("Click", "Content", placement="left")
+        html = str(result)
+        assert 'placement="left"' in html
 
     def test_popover_placement_right(self) -> None:
-        """Test popover with right placement."""
-        result = popover(
-            span("Trigger"),
-            "Content",
-            placement="right",
-        )
-        assert isinstance(result, (Tag, TagList))
-
-    def test_popover_multiple_content(self) -> None:
-        """Test popover with multiple content elements."""
-        result = popover(
-            span("Trigger"),
-            "Para 1",
-            "Para 2",
-            "Para 3",
-        )
-        assert isinstance(result, (Tag, TagList))
-
-    def test_popover_complex_trigger(self) -> None:
-        """Test popover with complex trigger element."""
-        from htmltools import div
-
-        trigger = div(
-            span("Click"),
-            span("me"),
-            class_="trigger-element",
-        )
-        result = popover(trigger, "Content")
-        assert isinstance(result, (Tag, TagList))
-
-
-class TestPopoverOptions:
-    """Tests for popover configuration options."""
+        """Test popover with placement='right'."""
+        result = popover("Click", "Content", placement="right")
+        html = str(result)
+        assert 'placement="right"' in html
 
     def test_popover_with_options(self) -> None:
-        """Test popover with additional options."""
-        result = popover(
-            span("Trigger"),
-            "Content",
-            title="Title",
-            placement="top",
-        )
-        assert isinstance(result, (Tag, TagList))
+        """Test popover with custom options."""
+        result = popover("Click", "Content", options={"trigger": "hover"})
+        html = str(result)
+        assert "bsOptions" in html
 
+    def test_popover_no_content_raises(self) -> None:
+        """Test that popover raises error with no content."""
+        with pytest.raises(RuntimeError):
+            popover("Click")
 
-class TestPopoverRendering:
-    """Tests for popover HTML rendering."""
+    def test_popover_reserved_option_content_raises(self) -> None:
+        """Test that reserved option 'content' raises error."""
+        with pytest.raises(RuntimeError):
+            popover("Click", "Content", options={"content": "invalid"})
 
-    def test_popover_renders_trigger(self) -> None:
-        """Test that popover renders the trigger element."""
-        result = popover(
-            span("My Trigger Text"),
-            "Content",
-        )
-        rendered = str(result)
-        assert "My Trigger Text" in rendered
+    def test_popover_reserved_option_title_raises(self) -> None:
+        """Test that reserved option 'title' raises error."""
+        with pytest.raises(RuntimeError):
+            popover("Click", "Content", options={"title": "invalid"})
 
-    def test_popover_has_data_attrs(self) -> None:
-        """Test that popover has necessary data attributes."""
-        result = popover(
-            span("Trigger"),
-            "Content",
-        )
-        rendered = str(result)
-        # Should have some Bootstrap/bslib related attributes
-        assert (
-            "data-" in rendered
-            or "popover" in rendered.lower()
-            or isinstance(result, (Tag, TagList))
-        )
+    def test_popover_reserved_option_placement_raises(self) -> None:
+        """Test that reserved option 'placement' raises error."""
+        with pytest.raises(RuntimeError):
+            popover("Click", "Content", options={"placement": "invalid"})
+
+    def test_popover_multiple_content(self) -> None:
+        """Test popover with multiple content items."""
+        result = popover("Click", "Item 1", "Item 2", "Item 3")
+        html = str(result)
+        assert "Item 1" in html
+        assert "Item 2" in html
+        assert "Item 3" in html

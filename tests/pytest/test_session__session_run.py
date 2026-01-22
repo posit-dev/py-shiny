@@ -83,7 +83,7 @@ async def test_run_handles_init_and_update_messages(monkeypatch: pytest.MonkeyPa
     session.bookmark._create_effects = lambda: None  # type: ignore[assignment]
 
     def _set_restore_context(ctx: object) -> None:
-        setattr(session.bookmark, "_restore_context_value", ctx)
+        session.bookmark._restore_context_value = ctx  # type: ignore[attr-defined]
 
     session.bookmark._set_restore_context = _set_restore_context  # type: ignore[assignment, attr-defined]
 
@@ -173,7 +173,7 @@ async def test_run_dispatches_request_messages(monkeypatch: pytest.MonkeyPatch):
     session.bookmark._create_effects = lambda: None  # type: ignore[assignment]
 
     def _set_restore_context(ctx: object) -> None:
-        setattr(session.bookmark, "_restore_context_value", ctx)
+        session.bookmark._restore_context_value = ctx  # type: ignore[attr-defined]
 
     session.bookmark._set_restore_context = _set_restore_context  # type: ignore[assignment, attr-defined]
 
@@ -208,7 +208,7 @@ async def test_run_sends_protocol_error_on_invalid_state(
     session.bookmark._create_effects = lambda: None  # type: ignore[assignment]
 
     def _set_restore_context(ctx: object) -> None:
-        setattr(session.bookmark, "_restore_context_value", ctx)
+        session.bookmark._restore_context_value = ctx  # type: ignore[attr-defined]
 
     session.bookmark._set_restore_context = _set_restore_context  # type: ignore[assignment, attr-defined]
 
@@ -238,7 +238,7 @@ async def test_run_handles_unrecognized_method(monkeypatch: pytest.MonkeyPatch):
     session.bookmark._create_effects = lambda: None  # type: ignore[assignment]
 
     def _set_restore_context(ctx: object) -> None:
-        setattr(session.bookmark, "_restore_context_value", ctx)
+        session.bookmark._restore_context_value = ctx  # type: ignore[attr-defined]
 
     session.bookmark._set_restore_context = _set_restore_context  # type: ignore[assignment, attr-defined]
 
@@ -264,7 +264,7 @@ async def test_run_handles_dispatch_errors(monkeypatch: pytest.MonkeyPatch):
     session.bookmark._create_effects = lambda: None  # type: ignore[assignment]
 
     def _set_restore_context(ctx: object) -> None:
-        setattr(session.bookmark, "_restore_context_value", ctx)
+        session.bookmark._restore_context_value = ctx  # type: ignore[attr-defined]
 
     session.bookmark._set_restore_context = _set_restore_context  # type: ignore[assignment, attr-defined]
 
