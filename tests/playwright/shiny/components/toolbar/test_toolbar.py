@@ -172,3 +172,96 @@ def test_toolbar_integration(page: Page, app: ShinyAppProc) -> None:
 
     btn_delete.click()
     controller.OutputText(page, "btn_delete_value").expect_value("Delete clicked: 1")
+
+
+def test_toolbar_spacer_exists(page: Page, app: ShinyAppProc) -> None:
+    """Test that toolbar spacer is present in the DOM."""
+    page.goto(app.url)
+
+    # Check that spacer exists with the correct class
+    from playwright.sync_api import expect
+
+    spacers = page.locator(".bslib-toolbar-spacer")
+    expect(spacers).to_have_count(2)  # Two spacers in the app
+
+
+def test_toolbar_spacer_basic(page: Page, app: ShinyAppProc) -> None:
+    """Test basic toolbar spacer functionality."""
+    page.goto(app.url)
+
+    from playwright.sync_api import expect
+
+    # Find the spacer toolbar
+    toolbars = page.locator(".bslib-toolbar")
+    spacer_toolbar = toolbars.nth(5)  # Sixth toolbar (Spacer Example)
+
+    # Check spacer exists
+    spacer = spacer_toolbar.locator(".bslib-toolbar-spacer")
+    expect(spacer).to_have_count(1)
+    expect(spacer).to_have_attribute("aria-hidden", "true")
+
+    # Click buttons and verify they work
+    btn_left = controller.ToolbarInputButton(page, "btn_spacer_left")
+    btn_left.click()
+    controller.OutputText(page, "btn_spacer_left_value").expect_value(
+        "Left Side clicked: 1"
+    )
+
+    btn_right = controller.ToolbarInputButton(page, "btn_spacer_right")
+    btn_right.click()
+    controller.OutputText(page, "btn_spacer_right_value").expect_value(
+        "Right Side clicked: 1"
+    )
+
+
+def test_toolbar_spacer_layout(page: Page, app: ShinyAppProc) -> None:
+    """Test that spacer creates proper layout spacing."""
+    page.goto(app.url)
+
+    # Find the spacer toolbar
+    toolbars = page.locator(".bslib-toolbar")
+    spacer_toolbar = toolbars.nth(5)  # Sixth toolbar (Spacer Example)
+
+    left_btn = spacer_toolbar.locator("#btn_spacer_left")
+    right_btn = spacer_toolbar.locator("#btn_spacer_right")
+
+    # Get bounding boxes
+    left_box = left_btn.bounding_box()
+    right_box = right_btn.bounding_box()
+
+    # Buttons should be far apart (spacer pushes them to opposite ends)
+    assert left_box is not None
+    assert right_box is not None
+    # Right button should be significantly to the right of left button
+    assert right_box["x"] > left_box["x"] + 100
+
+
+def test_toolbar_divider_and_spacer_combined(page: Page, app: ShinyAppProc) -> None:
+    """Test combining toolbar_divider and toolbar_spacer."""
+    page.goto(app.url)
+
+    from playwright.sync_api import expect
+
+    # Find the combination toolbar
+    toolbars = page.locator(".bslib-toolbar")
+    combo_toolbar = toolbars.nth(6)  # Seventh toolbar (Spacer + Divider)
+
+    # Should have both divider and spacer
+    divider = combo_toolbar.locator(".bslib-toolbar-divider")
+    expect(divider).to_have_count(1)
+
+    spacer = combo_toolbar.locator(".bslib-toolbar-spacer")
+    expect(spacer).to_have_count(1)
+
+    # Should have 4 buttons
+    buttons = combo_toolbar.locator(".bslib-toolbar-input-button")
+    expect(buttons).to_have_count(4)
+
+    # Click buttons and verify they work
+    btn1 = controller.ToolbarInputButton(page, "btn_combo_1")
+    btn1.click()
+    controller.OutputText(page, "btn_combo_1_value").expect_value("Undo clicked: 1")
+
+    btn4 = controller.ToolbarInputButton(page, "btn_combo_4")
+    btn4.click()
+    controller.OutputText(page, "btn_combo_4_value").expect_value("Help clicked: 1")

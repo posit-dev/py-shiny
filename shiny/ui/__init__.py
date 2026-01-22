@@ -169,6 +169,7 @@ from ._theme import Theme
 from ._toolbar import (
     toolbar,
     toolbar_divider,
+    toolbar_spacer,
     toolbar_input_button,
     toolbar_input_select,
     update_toolbar_input_button,
@@ -366,6 +367,7 @@ __all__ = (
     "toolbar_input_button",
     "toolbar_input_select",
     "toolbar_divider",
+    "toolbar_spacer",
     "update_toolbar_input_button",
     "update_toolbar_input_select",
     # _progress

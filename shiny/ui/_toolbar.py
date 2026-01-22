@@ -5,6 +5,7 @@ __all__ = (
     "toolbar_input_button",
     "toolbar_input_select",
     "toolbar_divider",
+    "toolbar_spacer",
     "update_toolbar_input_button",
     "update_toolbar_input_select",
 )
@@ -36,6 +37,7 @@ def toolbar(
     *args: TagChild,
     align: Literal["right", "left"] = "right",
     gap: Optional[CssUnit] = None,
+    width: Optional[CssUnit] = None,
 ) -> Tag:
     """
     Create a toolbar container.
@@ -52,6 +54,10 @@ def toolbar(
     gap
         A CSS length unit defining the gap (i.e., spacing) between elements in the
         toolbar. Defaults to `0` (no gap).
+    width
+        CSS width of the toolbar. When using :func:`~shiny.ui.toolbar_spacer`, the
+        toolbar needs `width="100%"` for the spacer to push elements effectively.
+        Defaults to `None`.
 
     Returns
     -------
@@ -63,6 +69,7 @@ def toolbar(
     * :func:`~shiny.ui.toolbar_input_button`
     * :func:`~shiny.ui.toolbar_input_select`
     * :func:`~shiny.ui.toolbar_divider`
+    * :func:`~shiny.ui.toolbar_spacer`
 
     Examples
     --------
@@ -78,12 +85,19 @@ def toolbar(
     ```
     """
     gap_css = as_css_unit(gap) if gap is not None else None
+    width_css = as_css_unit(width) if width is not None else None
+
+    style_dict = {}
+    if gap_css:
+        style_dict["gap"] = gap_css
+    if width_css:
+        style_dict["width"] = width_css
 
     tag = div(
         {"class": "bslib-toolbar bslib-gap-spacing", "data-align": align},
         *args,
         components_dependencies(),
-        style=css(gap=gap_css) if gap_css else None,
+        style=css(**style_dict) if style_dict else None,
     )
 
     return tag
@@ -117,6 +131,7 @@ def toolbar_divider(
     See Also
     --------
     * :func:`~shiny.ui.toolbar`
+    * :func:`~shiny.ui.toolbar_spacer`
 
     Examples
     --------
@@ -143,13 +158,81 @@ def toolbar_divider(
     width_css = as_css_unit(width) if width is not None else None
     gap_css = as_css_unit(gap) if gap is not None else None
 
+    # Build style string manually to preserve CSS custom property names with underscores
+    style_parts = []
+    if gap_css is not None:
+        style_parts.append(f"--_divider-gap: {gap_css}")
+    if width_css is not None:
+        style_parts.append(f"--_divider-width: {width_css}")
+
+    style_str = "; ".join(style_parts) if style_parts else None
+
     return div(
         {
             "class": "bslib-toolbar-divider",
             "aria-hidden": "true",
-            "style": css(**{"--_divider-gap": gap_css, "--_divider-width": width_css}),
+            "style": style_str,
         },
     )
+
+
+@add_example()
+def toolbar_spacer() -> Tag:
+    """
+    Create a spacer for toolbars.
+
+    Creates a flexible spacer that pushes subsequent toolbar elements to the opposite
+    end of the toolbar. This is useful for creating split toolbars with items on both
+    the left and right sides.
+
+    Note
+    ----
+    For the spacer to push elements effectively, the parent toolbar needs `width="100%"`.
+    Set this using the `width` parameter on :func:`~shiny.ui.toolbar`.
+
+    Returns
+    -------
+    :
+        A spacer element.
+
+    See Also
+    --------
+    * :func:`~shiny.ui.toolbar`
+    * :func:`~shiny.ui.toolbar_divider`
+
+    Examples
+    --------
+    ```python
+    from shiny import ui
+
+    # Items on both left and right - set width="100%"
+    ui.card(
+        ui.card_header(
+            "My Card",
+            ui.toolbar(
+                ui.toolbar_input_button(id="save", label="Save"),
+                ui.toolbar_spacer(),
+                ui.toolbar_input_button(id="settings", label="Settings"),
+                width="100%"
+            )
+        )
+    )
+    ```
+
+    ```python
+    from shiny import ui
+
+    # Multiple items on each side with spacer
+    ui.toolbar(
+        ui.toolbar_input_button(id="undo", label="Undo"),
+        ui.toolbar_input_button(id="redo", label="Redo"),
+        ui.toolbar_spacer(),
+        ui.toolbar_input_button(id="help", label="Help"),
+        width="100%"
+    )
+    ```
+    """
+    return div({"class": "bslib-toolbar-spacer", "aria-hidden": "true"})
 
 
 @add_example()
@@ -298,7 +381,7 @@ def toolbar_input_button(
         {
             "id": resolved_id,
             "type": "button",
-            "class": "bslib-toolbar-input-button btn btn-sm action-button",
+            "class": "bslib-toolbar-input-button btn btn-default btn-sm action-button",
             "data-type": btn_type,
             "aria-labelledby": label_id,
         },
