@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any
+from typing import Any, cast
 
 import pytest
 
@@ -44,7 +44,7 @@ def test_bookmark_app_get_bookmark_url(monkeypatch: pytest.MonkeyPatch) -> None:
 
     session.clientdata.url_protocol = lambda: "http:"
     session.clientdata.url_hostname = lambda: "example.com"
-    session.clientdata.url_port = lambda: ""
+    session.clientdata.url_port = lambda: 0
     session.clientdata.url_pathname = lambda: "/app"
 
     url = asyncio.run(bookmark.get_bookmark_url())
@@ -60,4 +60,4 @@ def test_bookmark_app_update_query_string_invalid_mode() -> None:
     bookmark = BookmarkApp(session)
 
     with pytest.raises(ValueError, match="Invalid mode"):
-        asyncio.run(bookmark.update_query_string("qs", mode="bad"))
+        asyncio.run(bookmark.update_query_string("qs", mode=cast(Any, "bad")))

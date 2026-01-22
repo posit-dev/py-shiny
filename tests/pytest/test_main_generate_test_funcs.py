@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 import types
 from pathlib import Path
 
@@ -54,7 +53,10 @@ def test_get_app_file_path_interactive_cancel(monkeypatch: pytest.MonkeyPatch) -
         def ask(self):
             return None
 
-    monkeypatch.setattr("questionary.path", lambda *args, **kwargs: DummyQuestion())
+    def fake_questionary_path(*args: object, **kwargs: object) -> DummyQuestion:
+        return DummyQuestion()
+
+    monkeypatch.setattr("questionary.path", fake_questionary_path)
 
     with pytest.raises(SystemExit):
         get_app_file_path(None)
@@ -108,7 +110,7 @@ def test_generate_test_file_success(
 
     monkeypatch.setattr(click, "echo", fake_echo)
     monkeypatch.setenv("OPENAI_API_KEY", "x")
-    monkeypatch.setattr(Path, "cwd", classmethod(lambda cls: tmp_path))
+    monkeypatch.chdir(tmp_path)
 
     generate_test_file(
         app_file=str(app_file),
@@ -122,9 +124,11 @@ def test_generate_test_file_success(
 
 
 def test_generate_test_file_validation_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fake_validate_api_key(_: str) -> None:
+        raise ValidationError("bad")
+
     monkeypatch.setattr(
-        "shiny._main_generate_test.validate_api_key",
-        lambda _: (_ for _ in ()).throw(ValidationError("bad")),
+        "shiny._main_generate_test.validate_api_key", fake_validate_api_key
     )
 
     with pytest.raises(SystemExit):

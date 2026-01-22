@@ -64,14 +64,26 @@ def test_component_name_validator_rejects_cases(
     with pytest.raises(ValidationError):
         validator.validate(Document("bad name"))
 
-    monkeypatch.setattr("shiny._main_create_custom.is_existing_module", lambda _: True)
+    # Nested validator stub for module lookup.
+    def fake_is_existing_module(_: str) -> bool:
+        return True
+
+    monkeypatch.setattr(
+        "shiny._main_create_custom.is_existing_module", fake_is_existing_module
+    )
     with pytest.raises(ValidationError):
         validator.validate(Document("existing"))
 
 
 def test_component_name_validator_accepts(monkeypatch: pytest.MonkeyPatch) -> None:
     validator = ComponentNameValidator()
-    monkeypatch.setattr("shiny._main_create_custom.is_existing_module", lambda _: False)
+
+    def fake_is_existing_module(_: str) -> bool:
+        return False
+
+    monkeypatch.setattr(
+        "shiny._main_create_custom.is_existing_module", fake_is_existing_module
+    )
     validator.validate(Document("good-name"))
 
 

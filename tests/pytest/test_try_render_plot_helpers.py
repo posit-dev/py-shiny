@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+# pyright: reportUnknownMemberType=false
+
 import sys
 import types
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 
@@ -17,6 +19,9 @@ from shiny.render._try_render_plot import (
     try_render_matplotlib,
     try_render_pil,
 )
+
+if TYPE_CHECKING:
+    from matplotlib.figure import Figure
 
 
 def test_plot_size_info_user_specified_zero() -> None:
@@ -68,7 +73,7 @@ def test_get_desired_dpi_from_fig_uses_original() -> None:
         def get_dpi(self) -> float:
             return 100
 
-    assert get_desired_dpi_from_fig(DummyFig()) == 50
+    assert get_desired_dpi_from_fig(cast("Figure", DummyFig())) == 50
 
 
 def test_get_matplotlib_figure_global_not_allowed() -> None:
@@ -99,7 +104,10 @@ def test_try_render_matplotlib_basic(monkeypatch: pytest.MonkeyPatch) -> None:
     fig, ax = plt.subplots()
     ax.plot([0, 1], [1, 0])
 
-    monkeypatch.setattr(_try_render_plot, "get_coordmap", lambda _fig: {"ok": True})
+    def fake_get_coordmap(_fig: object) -> dict[str, bool]:
+        return {"ok": True}
+
+    monkeypatch.setattr(_try_render_plot, "get_coordmap", fake_get_coordmap)
 
     info = PlotSizeInfo((lambda: 200.0, lambda: 150.0), (None, None), pixelratio=1)
     ok, res = try_render_matplotlib(
@@ -112,10 +120,10 @@ def test_try_render_matplotlib_basic(monkeypatch: pytest.MonkeyPatch) -> None:
     assert ok is True
     assert res is not None
     assert res["src"].startswith("data:image/png;base64,")
-    assert res["width"] == "100%"
-    assert res["height"] == "100%"
-    assert res["alt"] == "Alt text"
-    assert res["coordmap"] == {"ok": True}
+    assert res.get("width") == "100%"
+    assert res.get("height") == "100%"
+    assert res.get("alt") == "Alt text"
+    assert res.get("coordmap") == {"ok": True}
 
 
 def test_try_render_pil_with_fake_module(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -126,8 +134,8 @@ def test_try_render_pil_with_fake_module(monkeypatch: pytest.MonkeyPatch) -> Non
         def save(self, buf: Any, format: str = "PNG", **kwargs: object) -> None:
             buf.write(b"fake")
 
-    fake_pil_image.Image = FakeImage
-    fake_pil.Image = fake_pil_image
+    fake_pil_image.__dict__["Image"] = FakeImage
+    fake_pil.__dict__["Image"] = fake_pil_image
 
     monkeypatch.setitem(sys.modules, "PIL", fake_pil)
     monkeypatch.setitem(sys.modules, "PIL.Image", fake_pil_image)
@@ -139,7 +147,7 @@ def test_try_render_pil_with_fake_module(monkeypatch: pytest.MonkeyPatch) -> Non
     assert ok is True
     assert res is not None
     assert res["src"].startswith("data:image/png;base64,")
-    assert res["width"] == "100%"
-    assert res["height"] == "100%"
-    assert res["style"] == "object-fit:contain"
-    assert res["alt"] == "Alt"
+    assert res.get("width") == "100%"
+    assert res.get("height") == "100%"
+    assert res.get("style") == "object-fit:contain"
+    assert res.get("alt") == "Alt"

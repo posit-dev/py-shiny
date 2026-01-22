@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 from pathlib import Path
-from typing import Any, Awaitable
+from typing import Any, Coroutine, cast
 
 import pytest
 
@@ -18,7 +18,10 @@ from shiny.bookmark._global import (
 )
 from shiny.bookmark._restore_state import RestoreContext, RestoreInputSet, RestoreState
 from shiny.bookmark._save_state import BookmarkState
+from shiny.module import ResolvedId
+from shiny.session import Inputs
 from shiny.types import MISSING_TYPE
+from shiny._app import App
 
 
 def test_as_bookmark_dir_fn_wraps_sync() -> None:
@@ -27,7 +30,7 @@ def test_as_bookmark_dir_fn_wraps_sync() -> None:
 
     async_fn = as_bookmark_dir_fn(sync_fn)
     assert async_fn is not None
-    result = asyncio.run(async_fn("abc"))
+    result = asyncio.run(cast(Coroutine[Any, Any, Path], async_fn("abc")))
     assert result == Path("/tmp/abc")
 
 
@@ -48,8 +51,12 @@ def test_global_save_restore_dir_fns(monkeypatch: pytest.MonkeyPatch) -> None:
     restore_dir = get_bookmark_restore_dir_fn(MISSING_TYPE())
     assert save_dir is not None
     assert restore_dir is not None
-    assert asyncio.run(save_dir("x")) == Path("/save/x")
-    assert asyncio.run(restore_dir("y")) == Path("/restore/y")
+    assert asyncio.run(cast(Coroutine[Any, Any, Path], save_dir("x"))) == Path(
+        "/save/x"
+    )
+    assert asyncio.run(cast(Coroutine[Any, Any, Path], restore_dir("y"))) == Path(
+        "/restore/y"
+    )
 
 
 def test_restore_state_namespace_scoping(tmp_path: Path) -> None:
@@ -66,22 +73,25 @@ def test_restore_state_namespace_scoping(tmp_path: Path) -> None:
 
 def test_restore_input_set_lifecycle() -> None:
     rset = RestoreInputSet({"x": 1, "y": 2})
-    assert rset.exists("x")
-    assert rset.available("x")
-    assert rset.get("x") == 1
-    assert rset.is_pending("x")
+    resolved = ResolvedId("x")
+    assert rset.exists(resolved)
+    assert rset.available(resolved)
+    assert rset.get(resolved) == 1
+    assert rset.is_pending(resolved)
     rset.flush_pending()
-    assert rset.is_used("x")
-    assert rset.get("x") is None
-    assert rset.get("x", force=True) == 1
+    assert rset.is_used(resolved)
+    assert rset.get(resolved) is None
+    assert rset.get(resolved, force=True) == 1
 
 
 def test_restore_context_from_query_string_inputs_values() -> None:
     ctx = asyncio.run(
-        RestoreContext.from_query_string("_inputs_&x=1&_values_&y=2", app=FakeApp())
+        RestoreContext.from_query_string(
+            "_inputs_&x=1&_values_&y=2", app=cast(App, FakeApp())
+        )
     )
     assert ctx.active is True
-    assert ctx.input.get("x", force=True) == 1
+    assert ctx.input.get(ResolvedId("x"), force=True) == 1
     assert ctx.values == {"y": 2}
 
 
@@ -95,13 +105,13 @@ def test_restore_context_load_state_qs(tmp_path: Path) -> None:
         assert bookmark_id == "abc"
         return state_dir
 
-    app = FakeApp()
+    app = cast(App, FakeApp())
     app._bookmark_restore_dir_fn = restore_dir_fn
 
     ctx = asyncio.run(RestoreContext.from_query_string("_state_id_=abc", app=app))
     assert ctx.active is True
     assert ctx.dir == state_dir
-    assert ctx.input.get("x", force=True) == 1
+    assert ctx.input.get(ResolvedId("x"), force=True) == 1
     assert ctx.values == {"y": 2}
 
 
@@ -109,18 +119,22 @@ def test_bookmark_state_encode_and_save(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     inputs = FakeInputs({"x": 1})
-    state = BookmarkState(inputs, exclude=[], on_save=None)
+    state = BookmarkState(cast(Inputs, inputs), exclude=[], on_save=None)
     state.values["y"] = 2
 
+    def fake_private_random_id(**_: object) -> str:
+        return "id"
+
     monkeypatch.setattr(
-        "shiny.bookmark._save_state.private_random_id", lambda **_: "id"
+        "shiny.bookmark._save_state.private_random_id",
+        fake_private_random_id,
     )
 
     async def save_dir_fn(bookmark_id: str) -> Path:
         assert bookmark_id == "id"
         return tmp_path
 
-    app = FakeApp()
+    app = cast(App, FakeApp())
     app._bookmark_save_dir_fn = save_dir_fn
 
     query_string = asyncio.run(state._save_state(app=app))

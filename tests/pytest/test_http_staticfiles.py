@@ -25,7 +25,9 @@ def test_staticfiles_native_branch(
             self.headers["content-type"] = "text/plain"
             self.media_type = "text/plain"
 
-    def fake_file_response(self, full_path, *args, **kwargs):
+    def fake_file_response(
+        self: object, full_path: Path, *args: object, **kwargs: object
+    ) -> Response:
         return FakeResponse()
 
     monkeypatch.setattr(
@@ -33,8 +35,12 @@ def test_staticfiles_native_branch(
         "file_response",
         fake_file_response,
     )
+
+    def fake_guess_mime_type(*_: object) -> str:
+        return "text/javascript"
+
     monkeypatch.setattr(
-        "shiny.http_staticfiles._utils.guess_mime_type", lambda *_: "text/javascript"
+        "shiny.http_staticfiles._utils.guess_mime_type", fake_guess_mime_type
     )
 
     sf = mod.StaticFiles(directory=tmp_path)

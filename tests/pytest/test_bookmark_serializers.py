@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
+from typing import cast
 
 import pytest
 
@@ -15,6 +16,7 @@ from shiny.bookmark._serializers import (
     serializer_file_input,
     serializer_unserializable,
 )
+from shiny.session import Session
 
 
 def test_is_unserializable() -> None:
@@ -79,7 +81,7 @@ def test_can_serialize_input_file() -> None:
     class FakeSession:
         bookmark = FakeBookmark()
 
-    assert can_serialize_input_file(FakeSession()) is True
+    assert can_serialize_input_file(cast(Session, FakeSession())) is True
 
     FakeBookmark.store = "url"
-    assert can_serialize_input_file(FakeSession()) is False
+    assert can_serialize_input_file(cast(Session, FakeSession())) is False

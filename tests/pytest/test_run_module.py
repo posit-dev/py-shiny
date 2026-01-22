@@ -3,26 +3,21 @@
 from __future__ import annotations
 
 import io
-from typing import Callable
 
 import pytest
 
 from shiny.run._run import OutputStream, ShinyAppProc, run_shiny_app
 
 
-class DummyIO:
+class DummyIO(io.StringIO):
     def __init__(self, lines: list[str]):
-        self._lines = lines
-        self.closed = False
+        super().__init__("".join(lines))
 
-    def readline(self) -> str:
-        if self._lines:
-            return self._lines.pop(0)
-        self.closed = True
-        return ""
-
-    def close(self) -> None:
-        self.closed = True
+    def readline(self, size: int = -1) -> str:
+        line = super().readline(size)
+        if line == "":
+            self.close()
+        return line
 
 
 class DummyProc:
@@ -54,12 +49,12 @@ def test_output_stream_wait_for_false_when_closed() -> None:
 def test_run_shiny_app_retries(monkeypatch: pytest.MonkeyPatch) -> None:
     proc = DummyProc()
 
-    def fake_popen(*args, **kwargs):
+    def fake_popen(*args: object, **kwargs: object) -> DummyProc:
         return proc
 
     calls: list[str] = []
 
-    def fake_wait(self, timeout_secs: float) -> None:
+    def fake_wait(self: ShinyAppProc, timeout_secs: float) -> None:
         calls.append("wait")
         if len(calls) == 1:
             raise ConnectionError("bind error")
@@ -75,7 +70,7 @@ def test_run_shiny_app_retries(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_run_shiny_app_no_wait(monkeypatch: pytest.MonkeyPatch) -> None:
     proc = DummyProc()
 
-    def fake_popen(*args, **kwargs):
+    def fake_popen(*args: object, **kwargs: object) -> DummyProc:
         return proc
 
     monkeypatch.setattr("subprocess.Popen", fake_popen)

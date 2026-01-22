@@ -158,7 +158,10 @@ def test_download_and_extract_zip_single_dir(
         def read(self) -> bytes:
             return data
 
-    monkeypatch.setattr("shiny._main_create.urlopen", lambda url: DummyResponse())
+    def fake_urlopen(url: str) -> DummyResponse:
+        return DummyResponse()
+
+    monkeypatch.setattr("shiny._main_create.urlopen", fake_urlopen)
 
     extracted = download_and_extract_zip("https://example.com/repo.zip", tmp_path)
     assert extracted.name == "repo-root"

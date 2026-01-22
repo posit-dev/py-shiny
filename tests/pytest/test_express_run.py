@@ -9,6 +9,7 @@ from htmltools import Tag, TagList
 
 from shiny.express import _run as express_run
 from shiny.express._run import (
+    AppOpts,
     InputNotImportedShim,
     _merge_app_opts,
     _normalize_app_opts,
@@ -40,7 +41,10 @@ def test_app_opts_ignores_non_stub_session(monkeypatch: pytest.MonkeyPatch) -> N
     class DummySession:
         pass
 
-    monkeypatch.setattr(express_run, "get_current_session", lambda: DummySession())
+    def fake_get_current_session() -> DummySession:
+        return DummySession()
+
+    monkeypatch.setattr(express_run, "get_current_session", fake_get_current_session)
     app_opts(debug=True)
 
 
@@ -49,23 +53,31 @@ def test_app_opts_sets_values() -> None:
     with session_context(stub):
         app_opts(static_assets="assets", bookmark_store="url", debug=True)
 
-    static_assets = stub.app_opts["static_assets"]
+    static_assets = stub.app_opts.get("static_assets")
+    assert static_assets is not None
     assert static_assets["/"] == Path("assets")
-    assert stub.app_opts["bookmark_store"] == "url"
-    assert stub.app_opts["debug"] is True
+    assert stub.app_opts.get("bookmark_store") == "url"
+    assert stub.app_opts.get("debug") is True
 
 
 def test_merge_and_normalize_app_opts(tmp_path: Path) -> None:
-    base = {"static_assets": {"/": Path("www")}, "debug": False}
-    updates = {"static_assets": {"/foo": Path("assets")}, "bookmark_store": "url"}
+    base: AppOpts = {"static_assets": {"/": Path("www")}, "debug": False}
+    updates: AppOpts = {
+        "static_assets": {"/foo": Path("assets")},
+        "bookmark_store": "url",
+    }
 
     merged = _merge_app_opts(base, updates)
-    assert merged["static_assets"]["/foo"] == Path("assets")
-    assert merged["bookmark_store"] == "url"
+    static_assets = merged.get("static_assets")
+    assert static_assets is not None
+    assert static_assets["/foo"] == Path("assets")
+    assert merged.get("bookmark_store") == "url"
 
     normalized = _normalize_app_opts(merged, tmp_path)
-    assert normalized["static_assets"]["/"].is_absolute()
-    assert normalized["static_assets"]["/foo"].is_absolute()
+    normalized_static = normalized.get("static_assets")
+    assert normalized_static is not None
+    assert normalized_static["/"].is_absolute()
+    assert normalized_static["/foo"].is_absolute()
 
 
 def test_input_not_imported_shim_message() -> None:

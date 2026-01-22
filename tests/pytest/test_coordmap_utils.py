@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import types
-from typing import Any
+from typing import cast
 
 import pytest
 
@@ -13,6 +13,7 @@ from shiny.render._coordmap import (
     _is_reverse_trans,
     _simplify_type,
 )
+from shiny.types import PlotnineFigure
 
 
 def test_is_log_trans_and_reverse() -> None:
@@ -62,11 +63,11 @@ def test_get_mappings_with_facets() -> None:
         mapping = {"x": "wt", "y": "mpg"}
         layout = FakeLayout()
 
-    mapping = _get_mappings(FakePlot())
+    mapping = _get_mappings(cast(PlotnineFigure, FakePlot()))
     assert mapping["x"] == "mpg"
     assert mapping["y"] == "wt"
-    assert mapping["panelvar1"] == "cyl"
-    assert mapping["panelvar2"] == "gear"
+    assert mapping.get("panelvar1") == "cyl"
+    assert mapping.get("panelvar2") == "gear"
 
     class FakeLayoutWrap:
         coord = object()
@@ -76,5 +77,5 @@ def test_get_mappings_with_facets() -> None:
         mapping = {}
         layout = FakeLayoutWrap()
 
-    mapping_wrap = _get_mappings(FakePlotWrap())
-    assert mapping_wrap["panelvar1"] == "am"
+    mapping_wrap = _get_mappings(cast(PlotnineFigure, FakePlotWrap()))
+    assert mapping_wrap.get("panelvar1") == "am"

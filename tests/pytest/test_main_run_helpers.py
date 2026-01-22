@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import types
 from pathlib import Path
 
 import pytest
@@ -27,7 +26,10 @@ def test_try_import_module_handles_missing() -> None:
 
 
 def test_setup_hot_reload_and_launch_browser() -> None:
-    log_config = {"handlers": {}, "loggers": {"uvicorn.error": {}}}
+    log_config: dict[str, dict[str, dict[str, object]]] = {
+        "handlers": {},
+        "loggers": {"uvicorn.error": {}},
+    }
     _main.setup_hot_reload(log_config, 1, 2, False)
     assert "shiny_hot_reload" in log_config["handlers"]
 
@@ -46,15 +48,20 @@ def test_set_workbench_kwargs(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_run_app_uses_uvicorn(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     called = {}
 
-    def fake_run(*args, **kwargs):
+    def fake_run(*args: object, **kwargs: object) -> None:
         called["args"] = args
         called["kwargs"] = kwargs
 
     monkeypatch.setattr("uvicorn.run", fake_run)
-    monkeypatch.setattr("shiny._main.is_express_app", lambda *_: False)
-    monkeypatch.setattr(
-        "shiny._main.resolve_app", lambda app, app_dir: ("app:app", str(tmp_path))
-    )
+
+    def fake_is_express_app(*_: object) -> bool:
+        return False
+
+    def fake_resolve_app(app: str, app_dir: str | None) -> tuple[str, str]:
+        return ("app:app", str(tmp_path))
+
+    monkeypatch.setattr("shiny._main.is_express_app", fake_is_express_app)
+    monkeypatch.setattr("shiny._main.resolve_app", fake_resolve_app)
 
     _main.run_app("app.py:app", port=1234, reload=False)
 
