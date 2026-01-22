@@ -9,11 +9,15 @@ from shiny.ui._progress import Progress
 # =============================================================================
 # Helper: Create mock session
 # =============================================================================
-def create_mock_session():
+def create_mock_session() -> MagicMock:
     """Create a mock session object for testing Progress class."""
+
+    def _ns(value: str) -> str:
+        return f"ns_{value}"
+
     session = MagicMock()
     session._send_progress = MagicMock()
-    session.ns = MagicMock(side_effect=lambda x: f"ns_{x}")
+    session.ns = MagicMock(side_effect=_ns)
     return session
 
 
@@ -306,6 +310,7 @@ class TestProgressContextManager:
         """Test Progress with 'with' statement when exception occurs."""
         session = create_mock_session()
         with patch("shiny.ui._progress.require_active_session", return_value=session):
+            progress: Progress | None = None
             try:
                 with Progress(session=session) as progress:
                     raise ValueError("Test exception")
@@ -313,6 +318,7 @@ class TestProgressContextManager:
                 pass
 
             # Should still be closed even after exception
+            assert progress is not None
             assert progress._closed is True
 
 

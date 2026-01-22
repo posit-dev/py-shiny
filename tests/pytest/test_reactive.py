@@ -100,7 +100,7 @@ class TestContext:
     def test_context_on_invalidate_callback(self):
         """Test on_invalidate callback is called."""
         ctx = Context()
-        called = []
+        called: list[bool] = []
         ctx.on_invalidate(lambda: called.append(True))
         ctx.invalidate()
         assert called == [True]
@@ -109,7 +109,7 @@ class TestContext:
         """Test on_invalidate called immediately if already invalidated."""
         ctx = Context()
         ctx.invalidate()
-        called = []
+        called: list[bool] = []
         ctx.on_invalidate(lambda: called.append(True))
         assert called == [True]
 

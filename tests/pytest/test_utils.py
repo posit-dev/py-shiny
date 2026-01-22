@@ -30,22 +30,22 @@ class TestDropNone:
 
     def test_no_none_values(self):
         """Test dict with no None values is returned unchanged."""
-        d = {"a": 1, "b": "hello", "c": [1, 2, 3]}
+        d: dict[str, object] = {"a": 1, "b": "hello", "c": [1, 2, 3]}
         assert drop_none(d) == d
 
     def test_all_none_values(self):
         """Test dict with all None values returns empty dict."""
-        d = {"a": None, "b": None, "c": None}
+        d: dict[str, object] = {"a": None, "b": None, "c": None}
         assert drop_none(d) == {}
 
     def test_mixed_values(self):
         """Test dict with mixed None and non-None values."""
-        d = {"a": 1, "b": None, "c": "hello", "d": None}
+        d: dict[str, object] = {"a": 1, "b": None, "c": "hello", "d": None}
         assert drop_none(d) == {"a": 1, "c": "hello"}
 
     def test_preserves_falsy_values(self):
         """Test that falsy values other than None are preserved."""
-        d = {"a": 0, "b": "", "c": [], "d": False, "e": None}
+        d: dict[str, object] = {"a": 0, "b": "", "c": [], "d": False, "e": None}
         assert drop_none(d) == {"a": 0, "b": "", "c": [], "d": False}
 
 

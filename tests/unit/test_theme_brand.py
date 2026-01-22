@@ -4,7 +4,6 @@ Tests for BrandBootstrapConfigFromYaml, BrandBootstrapConfig, and ThemeBrand cla
 """
 
 import warnings
-from typing import Any, Callable
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -506,9 +505,9 @@ class TestThemeBrandPrepareColorVars:
             brand
         )
 
-        assert palette_defaults == {}
+        assert _palette_defaults == {}
         assert color_defaults == {}
-        assert rules == []
+        assert _rules == []
 
     def test_prepare_color_vars_with_theme_colors(self):
         """Test with theme colors defined"""
@@ -522,7 +521,9 @@ class TestThemeBrandPrepareColorVars:
 
         brand.color.to_dict.side_effect = _to_dict
 
-        palette_defaults, color_defaults, _rules = ThemeBrand._prepare_color_vars(brand)
+        _palette_defaults, color_defaults, _rules = ThemeBrand._prepare_color_vars(
+            brand
+        )
 
         assert "brand_color_primary" in color_defaults
         assert color_defaults["brand_color_primary"] == "#007bff"
@@ -541,7 +542,7 @@ class TestThemeBrandPrepareColorVars:
 
         brand.color.to_dict.side_effect = _to_dict
 
-        palette_defaults, color_defaults, rules = ThemeBrand._prepare_color_vars(brand)
+        palette_defaults, color_defaults, _rules = ThemeBrand._prepare_color_vars(brand)
 
         # Bootstrap color 'red' should be in color_defaults
         assert color_defaults["red"] == "#ff0000"

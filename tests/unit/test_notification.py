@@ -10,14 +10,16 @@ from shiny.ui._notification import notification_remove, notification_show
 # =============================================================================
 # Helper: Create mock session
 # =============================================================================
-def create_mock_session():
+def create_mock_session() -> MagicMock:
     """Create a mock session object for testing notification functions."""
+
+    def _process_ui(value: object) -> dict[str, object]:
+        if value is not None:
+            return {"html": str(value), "deps": []}
+        return {"html": "", "deps": []}
+
     session = MagicMock()
-    session._process_ui = MagicMock(
-        side_effect=lambda x: (
-            {"html": str(x), "deps": []} if x is not None else {"html": "", "deps": []}
-        )
-    )
+    session._process_ui = MagicMock(side_effect=_process_ui)
     session._send_message_sync = MagicMock()
     return session
 

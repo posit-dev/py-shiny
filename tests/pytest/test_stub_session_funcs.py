@@ -1,6 +1,8 @@
 """Tests for shiny.express._stub_session module"""
 
 import pytest
+from starlette.requests import Request
+from starlette.responses import PlainTextResponse
 
 from shiny._namespaces import Root
 from shiny.express._stub_session import ExpressStubSession
@@ -139,8 +141,8 @@ class TestExpressStubSessionMethods:
         """Test set_message_handler returns empty string"""
         session = ExpressStubSession()
 
-        def handler():
-            return {}
+        def handler() -> str:
+            return "ok"
 
         result = session.set_message_handler("name", handler)
         assert result == ""
@@ -194,8 +196,8 @@ class TestExpressStubSessionMethods:
         """Test dynamic_route returns empty string"""
         session = ExpressStubSession()
 
-        def handler(request):
-            return None
+        def handler(request: Request) -> PlainTextResponse:
+            return PlainTextResponse("ok")
 
         result = session.dynamic_route("name", handler)
         assert result == ""
@@ -220,6 +222,6 @@ class TestExpressStubSessionMethods:
 
         @decorator
         def download_handler():
-            pass
+            return [b"data"]
 
         # Decorator should not raise and should not modify the function significantly

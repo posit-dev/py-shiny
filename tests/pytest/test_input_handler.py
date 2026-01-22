@@ -138,9 +138,10 @@ class TestBuiltInDateHandler:
             cast("Session", None),
         )
         assert isinstance(result, tuple)
-        assert len(result) == 2
-        assert result[0] == datetime.date(2023, 1, 1)
-        assert result[1] == datetime.date(2023, 12, 31)
+        result_tuple = cast(tuple[datetime.date | None, datetime.date | None], result)
+        assert len(result_tuple) == 2
+        assert result_tuple[0] == datetime.date(2023, 1, 1)
+        assert result_tuple[1] == datetime.date(2023, 12, 31)
 
     def test_shiny_date_handler_with_partial_list(self) -> None:
         """Test date handler with list containing None."""
@@ -192,9 +193,12 @@ class TestBuiltInDatetimeHandler:
             cast("Session", None),
         )
         assert isinstance(result, tuple)
-        assert len(result) == 2
-        assert isinstance(result[0], datetime.datetime)
-        assert isinstance(result[1], datetime.datetime)
+        result_tuple = cast(
+            tuple[datetime.datetime | None, datetime.datetime | None], result
+        )
+        assert len(result_tuple) == 2
+        assert isinstance(result_tuple[0], datetime.datetime)
+        assert isinstance(result_tuple[1], datetime.datetime)
 
 
 class TestBuiltInActionHandler:

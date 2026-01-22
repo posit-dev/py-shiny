@@ -2,6 +2,8 @@
 
 from shiny._namespaces import namespace_context
 from shiny.module import ResolvedId, current_namespace, resolve_id, server, ui
+from shiny.session import Session
+from shiny.session._session import Inputs, Outputs
 
 
 class TestModuleUI:
@@ -46,7 +48,9 @@ class TestModuleServer:
         """Test that server decorator exists and is callable."""
 
         @server
-        def my_server(input, output, session, value: int = 10):
+        def my_server(
+            input: Inputs, output: Outputs, session: Session, value: int = 10
+        ) -> int:
             return value
 
         # Server decorator should work (actual execution requires session)

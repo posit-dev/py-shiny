@@ -1,7 +1,7 @@
 """Tests for shiny._launchbrowser module."""
 
 import logging
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from shiny._launchbrowser import LaunchBrowserHandler
 
@@ -40,7 +40,9 @@ class TestLaunchBrowserHandler:
     )
     @patch("webbrowser.open")
     @patch("shiny._launchbrowser.get_proxy_url", return_value="http://localhost:8000/")
-    def test_emit_launches_browser_on_startup_message(self, mock_proxy, mock_open):
+    def test_emit_launches_browser_on_startup_message(
+        self, mock_proxy: MagicMock, mock_open: MagicMock
+    ) -> None:
         """emit should launch browser when startup message detected."""
         handler = LaunchBrowserHandler()
         record = logging.LogRecord(
@@ -63,7 +65,9 @@ class TestLaunchBrowserHandler:
     )
     @patch("webbrowser.open")
     @patch("shiny._launchbrowser.get_proxy_url", return_value="http://localhost:8000/")
-    def test_emit_only_launches_once(self, mock_proxy, mock_open):
+    def test_emit_only_launches_once(
+        self, mock_proxy: MagicMock, mock_open: MagicMock
+    ) -> None:
         """emit should only launch browser once."""
         handler = LaunchBrowserHandler()
         record = logging.LogRecord(

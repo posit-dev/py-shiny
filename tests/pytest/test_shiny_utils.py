@@ -120,7 +120,7 @@ class TestSortKeysLength:
 
     def test_empty_dict(self) -> None:
         """Test sorting empty dict."""
-        result = sort_keys_length({})
+        result: dict[str, object] = sort_keys_length({})
         assert result == {}
 
     def test_preserves_values(self) -> None:

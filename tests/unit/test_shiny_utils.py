@@ -141,7 +141,7 @@ class TestSortKeysLength:
 
     def test_sort_keys_length_empty_dict(self) -> None:
         """Test sort_keys_length with empty dict."""
-        result = sort_keys_length({})
+        result: dict[str, object] = sort_keys_length({})
         assert result == {}
 
     def test_sort_keys_length_same_length_keys(self) -> None:

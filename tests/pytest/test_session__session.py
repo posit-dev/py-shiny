@@ -2,13 +2,19 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
-from typing import Any, AsyncIterable
+from typing import Any, AsyncIterable, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import htmltools
 import pytest
 from starlette.requests import Request
-from starlette.responses import HTMLResponse, PlainTextResponse, StreamingResponse
+from starlette.responses import (
+    HTMLResponse,
+    PlainTextResponse,
+    Response,
+    StreamingResponse,
+)
+from starlette.types import Scope
 
 from shiny import App, render, ui
 from shiny._connection import MockConnection
@@ -25,6 +31,7 @@ from shiny.session._session import (
     SessionProxy,
 )
 from shiny.types import (
+    FileInfo,
     SafeException,
     SilentCancelOutputException,
     SilentException,
@@ -33,7 +40,7 @@ from shiny.types import (
 
 
 def _make_request(method: str) -> Request:
-    scope = {
+    scope: Scope = {
         "type": "http",
         "method": method,
         "path": "/",
@@ -50,7 +57,7 @@ async def _collect_streaming_response(response: StreamingResponse) -> bytes:
         if isinstance(chunk, str):
             body_parts.append(chunk.encode())
         else:
-            body_parts.append(chunk)
+            body_parts.append(bytes(chunk))
     return b"".join(body_parts)
 
 
@@ -502,6 +509,7 @@ async def test_session_download_decorator_registers_and_renders_url():
     renderer = session.output._outputs[ResolvedId("handler")].renderer
     with session_context(session):
         url = await renderer.render()
+    assert isinstance(url, str)
     assert "download" in url
 
 
@@ -817,8 +825,8 @@ async def test_dispatch_handles_attribute_error():
     app = App(ui.page_fluid(), None)
     session = AppSession(app, "id", conn)
 
-    class _HandlerMap(dict):
-        def __getitem__(self, key: str):
+    class _HandlerMap(dict[str, Any]):
+        def __getitem__(self, key: str) -> Any:
             raise AttributeError("missing")
 
     session._message_handlers = _HandlerMap()  # type: ignore[assignment]
@@ -920,6 +928,7 @@ async def test_upload_init_sets_mime_type():
     ]
     response = await handler(file_infos)
 
+    assert isinstance(response, dict)
     assert response["jobId"]
     assert file_infos[0]["type"] == "text/plain"
     assert file_infos[1]["type"] == "custom"
@@ -954,7 +963,9 @@ async def test_upload_end_sets_value_and_serializer(tmp_path: Path):
     app = App(ui.page_fluid(), None)
     session = AppSession(app, "id", conn)
 
-    file_infos = [{"name": "test.txt", "size": 1, "type": "text/plain"}]
+    file_infos: list[FileInfo] = [
+        {"name": "test.txt", "size": 1, "type": "text/plain", "datapath": ""}
+    ]
     job_id = session._file_upload_manager.create_upload_operation(file_infos)
 
     upload_op = session._file_upload_manager.get_upload_operation(job_id)
@@ -1019,7 +1030,9 @@ async def test_handle_request_upload_success(tmp_path: Path):
     app = App(ui.page_fluid(), None)
     session = AppSession(app, "id", conn)
 
-    file_infos = [{"name": "test.txt", "size": 1, "type": "text/plain"}]
+    file_infos: list[FileInfo] = [
+        {"name": "test.txt", "size": 1, "type": "text/plain", "datapath": ""}
+    ]
     job_id = session._file_upload_manager.create_upload_operation(file_infos)
 
     async def stream():
@@ -1052,6 +1065,7 @@ async def test_handle_request_download_file(tmp_path: Path):
     response = await session._handle_request_impl(
         _make_request("GET"), "download", "file"
     )
+    assert isinstance(response, Response)
     assert response.status_code == 200
 
 
@@ -1080,6 +1094,7 @@ async def test_handle_request_download_iterable_sets_filename_and_warns():
     assert response.headers.get("Transfer-Encoding") == "chunked"
     body = await _collect_streaming_response(response)
     assert body == b"ab"
+    assert isinstance(response_missing, Response)
     assert response_missing.status_code == 404
 
 
@@ -1089,8 +1104,8 @@ async def test_handle_request_download_async_iterable():
     app = App(ui.page_fluid(), None)
     session = AppSession(app, "id", conn)
 
-    async def handler() -> AsyncIterable[str]:
-        yield "a"
+    async def handler() -> AsyncIterable[bytes]:
+        yield b"a"
         yield b"b"
 
     session._downloads["async"] = DownloadInfo(
@@ -1125,6 +1140,7 @@ async def test_handle_request_download_content_disposition_encoded():
     response = await session._handle_request_impl(
         _make_request("GET"), "download", "encoded"
     )
+    assert isinstance(response, Response)
     assert "filename*" in response.headers.get("Content-Disposition", "")
 
 
@@ -1141,7 +1157,7 @@ async def test_handle_request_dynamic_route_sync_and_async():
         return PlainTextResponse("async")
 
     session._dynamic_routes["sync"] = sync_handler
-    session._dynamic_routes["async"] = async_handler
+    session._dynamic_routes["async"] = cast(Any, async_handler)
 
     response = await session._handle_request_impl(
         _make_request("GET"), "dynamic_route", "sync"
@@ -1165,6 +1181,7 @@ async def test_handle_request_dynamic_route_missing():
     response = await session._handle_request_impl(
         _make_request("GET"), "dynamic_route", "missing"
     )
+    assert isinstance(response, Response)
     assert response.status_code == 400
 
 
@@ -1175,6 +1192,7 @@ async def test_handle_request_not_found():
     session = AppSession(app, "id", conn)
 
     response = await session._handle_request_impl(_make_request("GET"), "other", None)
+    assert isinstance(response, Response)
     assert response.status_code == 404
 
 
@@ -1480,7 +1498,7 @@ async def test_inputs_attr_helpers_and_serialize_filters():
     assert isinstance(inputs.x, Value)
 
     inputs._serializers = {}  # type: ignore[assignment]
-    inputs.__setattr__("_serializers", inputs._serializers)
+    inputs.__setattr__("_serializers", cast(Any, inputs._serializers))
 
     result = await inputs._serialize(exclude=[], state_dir=None)
     assert ".clientdata_meta" not in result

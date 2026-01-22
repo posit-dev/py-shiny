@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+import pytest
+
 from shiny.express._is_express import (
     DetectShinyExpressVisitor,
     find_magic_comment_mode,
@@ -106,7 +108,7 @@ class TestFindMagicCommentMode:
         result = find_magic_comment_mode(content)
         assert result == "express"
 
-    def test_invalid_magic_comment(self, capsys) -> None:
+    def test_invalid_magic_comment(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Test invalid magic comment value prints error."""
         content = "# shiny_mode: invalid\ncode"
         result = find_magic_comment_mode(content)

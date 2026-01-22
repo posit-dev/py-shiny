@@ -84,8 +84,8 @@ class TestPriorityQueueFIFO:
         assert pq_int.get() == 42
 
         # Test with lists
-        pq_list = PriorityQueueFIFO[list]()
-        test_list = [1, 2, 3]
+        pq_list = PriorityQueueFIFO[list[int]]()
+        test_list: list[int] = [1, 2, 3]
         pq_list.put(1, test_list)
         assert pq_list.get() == test_list
 

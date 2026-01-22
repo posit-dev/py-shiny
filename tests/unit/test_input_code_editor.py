@@ -24,10 +24,14 @@ from shiny.ui._input_code_editor import (
 # =============================================================================
 # Helper: Create mock session
 # =============================================================================
-def create_mock_session():
+def create_mock_session() -> MagicMock:
     """Create a mock session object for testing code editor functions."""
+
+    def _process_ui(value: object) -> dict[str, object]:
+        return {"html": str(value), "deps": []}
+
     session = MagicMock()
-    session._process_ui = MagicMock(side_effect=lambda x: {"html": str(x), "deps": []})
+    session._process_ui = MagicMock(side_effect=_process_ui)
     session.send_input_message = MagicMock()
     return session
 

@@ -4,7 +4,8 @@ Tests for markdown() and default_md_renderer() functions
 """
 
 import warnings
-from unittest.mock import patch
+from typing import Any
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -150,7 +151,7 @@ class TestMarkdownCustomRenderer:
     def test_custom_render_func(self):
         """Test markdown with custom render function"""
 
-        def custom_renderer(text):
+        def custom_renderer(text: str) -> str:
             return f"<custom>{text}</custom>"
 
         result = markdown("Hello", render_func=custom_renderer)
@@ -159,7 +160,7 @@ class TestMarkdownCustomRenderer:
     def test_custom_render_func_with_kwargs(self):
         """Test markdown with custom render function and kwargs"""
 
-        def custom_renderer(text, prefix=""):
+        def custom_renderer(text: str, prefix: str = "") -> str:
             return f"{prefix}{text}"
 
         result = markdown("Hello", render_func=custom_renderer, prefix="PREFIX:")
@@ -168,7 +169,7 @@ class TestMarkdownCustomRenderer:
     def test_custom_render_func_replaces_default(self):
         """Test that custom render function replaces default"""
 
-        def noop_renderer(text):
+        def noop_renderer(text: str) -> str:
             return text
 
         result = markdown("# Header", render_func=noop_renderer)
@@ -251,10 +252,10 @@ class TestDefaultMdRendererWarnings:
     """Tests for warnings when optional packages are missing"""
 
     @patch("importlib.import_module")
-    def test_warns_when_linkify_missing(self, mock_import):
+    def test_warns_when_linkify_missing(self, mock_import: MagicMock) -> None:
         """Test warning when linkify-it is not installed"""
 
-        def side_effect(name, package=None):
+        def side_effect(name: str, package: str | None = None) -> Any:
             if "linkify" in str(name) or "linkify" in str(package or ""):
                 raise ModuleNotFoundError("No module named 'linkify_it'")
             raise ModuleNotFoundError("Allow MarkdownIt import")

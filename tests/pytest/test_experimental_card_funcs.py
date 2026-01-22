@@ -2,6 +2,7 @@
 
 import io
 from pathlib import Path
+from typing import Any, Literal, cast
 
 import pytest
 
@@ -89,7 +90,13 @@ class TestCardImage:
         img_file = tmp_path / "test.png"
         img_file.write_bytes(img_data)
 
-        for radius in ["top", "bottom", "all", "none"]:
+        radius_options: list[Literal["top", "bottom", "all", "none"]] = [
+            "top",
+            "bottom",
+            "all",
+            "none",
+        ]
+        for radius in radius_options:
             result = card_image(str(img_file), border_radius=radius)
             assert result is not None
 
@@ -160,5 +167,5 @@ class TestCardImage:
         img_file = tmp_path / "test.png"
         img_file.write_bytes(img_data)
 
-        result = card_image(str(img_file), container=None)
+        result = card_image(str(img_file), container=cast(Any, None))
         assert result is not None

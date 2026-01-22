@@ -15,13 +15,13 @@ class TestConsolidateAttrs:
 
     def test_consolidate_attrs_with_kwargs(self):
         """Test consolidate_attrs with keyword arguments."""
-        attrs, children = consolidate_attrs(id="my_id", class_="my_class")
+        attrs, _children = consolidate_attrs(id="my_id", class_="my_class")
         assert attrs.get("id") == "my_id"
         assert attrs.get("class") == "my_class"
 
     def test_consolidate_attrs_with_children(self):
         """Test consolidate_attrs with child elements."""
-        attrs, children = consolidate_attrs("child1", "child2")
+        _attrs, children = consolidate_attrs("child1", "child2")
         assert len(children) == 2
         assert children[0] == "child1"
         assert children[1] == "child2"

@@ -1,6 +1,7 @@
 """Tests for shiny/ui/_input_update.py - session-dependent update functions."""
 
 from datetime import date
+from typing import Callable
 from unittest.mock import MagicMock, patch
 
 from htmltools import tags
@@ -28,21 +29,32 @@ from shiny.ui._input_update import (
     update_text_area,
     update_tooltip,
 )
+from shiny._namespaces import ResolvedId
 
 
 # =============================================================================
 # Helper: Create mock session
 # =============================================================================
-def create_mock_session():
+def create_mock_session() -> MagicMock:
     """Create a mock session object for testing update functions."""
+
+    def _process_ui(value: object) -> dict[str, object] | None:
+        if value is None:
+            return None
+        return {"html": str(value), "deps": []}
+
+    def _on_flush(fn: Callable[[], None]) -> Callable[[], None]:
+        return fn
+
+    def _ns(value: str) -> str:
+        return f"ns_{value}"
+
     session = MagicMock()
-    session._process_ui = MagicMock(
-        side_effect=lambda x: {"html": str(x), "deps": []} if x is not None else None
-    )
+    session._process_ui = MagicMock(side_effect=_process_ui)
     session.send_input_message = MagicMock()
     session._send_message_sync = MagicMock()
-    session.on_flush = MagicMock(side_effect=lambda fn: fn)
-    session.ns = MagicMock(side_effect=lambda x: f"ns_{x}")
+    session.on_flush = MagicMock(side_effect=_on_flush)
+    session.ns = MagicMock(side_effect=_ns)
     session.dynamic_route = MagicMock(return_value="/dynamic/route")
     return session
 
@@ -159,7 +171,7 @@ class TestUpdateTaskButton:
         # Busy state should add to manual set
         assert "ns_task_btn2" in manual_task_reset_buttons
         # Cleanup
-        manual_task_reset_buttons.discard("ns_task_btn2")
+        manual_task_reset_buttons.discard(ResolvedId("ns_task_btn2"))
 
     def test_update_state_none(self):
         """Test task button update with no state change."""

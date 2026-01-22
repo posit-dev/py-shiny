@@ -44,7 +44,7 @@ class TestConsolidateAttrs:
         """Test that dict attributes are filtered from children."""
         child = tags.div("Child")
         # consolidate_attrs wraps in a div and extracts attrs
-        attrs, children = consolidate_attrs(child, id="my_id")
+        _attrs, children = consolidate_attrs(child, id="my_id")
         # Dict should be merged into attrs, not appear in children
         assert len(children) == 1
         assert children[0] is child

@@ -3,6 +3,7 @@
 import os
 import tempfile
 from pathlib import Path
+from typing import Any, cast
 
 import pytest
 
@@ -86,7 +87,7 @@ class TestThemePreset:
         """Test preset setter with invalid value raises error."""
         theme = Theme()
         with pytest.raises(ValueError, match="Invalid preset"):
-            theme.preset = "invalid"
+            theme.preset = cast(Any, "invalid")
 
     def test_preset_setter_resets_css(self):
         """Test preset setter resets cached CSS."""

@@ -17,7 +17,7 @@ class TestConsolidateAttrs:
 
     def test_consolidate_attrs_children_only(self):
         """Test consolidate_attrs with children only."""
-        attrs, children = consolidate_attrs("Child 1", "Child 2")
+        _attrs, children = consolidate_attrs("Child 1", "Child 2")
         assert len(children) == 2
         assert "Child 1" in children
         assert "Child 2" in children
