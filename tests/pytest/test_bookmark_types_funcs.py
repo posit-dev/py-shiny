@@ -55,7 +55,7 @@ class TestBookmarkDirFnType:
         # This should type-check as BookmarkDirFnAsync
         fn: BookmarkDirFnAsync = async_fn
         # Run the async function
-        result = asyncio.get_event_loop().run_until_complete(fn("bookmark_abc"))
+        result = asyncio.run(fn("bookmark_abc"))
         assert result == Path("/tmp/bookmarks/bookmark_abc")
 
     def test_save_dir_fn_type(self):
@@ -66,7 +66,7 @@ class TestBookmarkDirFnType:
             return Path(f"/save/{bookmark_id}")
 
         fn: BookmarkSaveDirFn = save_fn
-        result = asyncio.get_event_loop().run_until_complete(fn("save_123"))
+        result = asyncio.run(fn("save_123"))
         assert result == Path("/save/save_123")
 
     def test_restore_dir_fn_type(self):
@@ -77,7 +77,7 @@ class TestBookmarkDirFnType:
             return Path(f"/restore/{bookmark_id}")
 
         fn: BookmarkRestoreDirFn = restore_fn
-        result = asyncio.get_event_loop().run_until_complete(fn("restore_456"))
+        result = asyncio.run(fn("restore_456"))
         assert result == Path("/restore/restore_456")
 
 
