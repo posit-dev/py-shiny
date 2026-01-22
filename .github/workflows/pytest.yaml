@@ -14,6 +14,7 @@ on:
 jobs:
   check:
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     strategy:
       matrix:
         # "3.10" must be a string; otherwise it is interpreted as 3.1.
@@ -40,9 +41,14 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Run unit tests with coverage
-        if: steps.install.outcome == 'success' && (success() || failure())
+        if: steps.install.outcome == 'success' && (success() || failure()) && matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
         run: |
-          python -m pytest tests/pytest/ --cov=shiny --cov-report=xml --cov-report=term-missing -q
+          python -m pytest tests/pytest/ --cov=shiny --cov-report=xml -q
+
+      - name: Run unit tests without coverage
+        if: steps.install.outcome == 'success' && (success() || failure()) && (matrix.os != 'ubuntu-latest' || matrix.python-version != '3.12')
+        run: |
+          python -m pytest tests/pytest/ -q
 
       - name: Upload coverage reports to Codecov
         if: steps.install.outcome == 'success' && (success() || failure()) && matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
