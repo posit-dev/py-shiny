@@ -97,11 +97,12 @@ def test_generate_test_file_success(tmp_path: Path, monkeypatch: pytest.MonkeyPa
 
     messages: list[str] = []
 
-    def fake_echo(msg: str) -> None:
+    def fake_echo(msg: str = "") -> None:
         messages.append(str(msg))
 
     monkeypatch.setattr(click, "echo", fake_echo)
     monkeypatch.setenv("OPENAI_API_KEY", "x")
+    monkeypatch.setattr(Path, "cwd", classmethod(lambda cls: tmp_path))
 
     generate_test_file(
         app_file=str(app_file),

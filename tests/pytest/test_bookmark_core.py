@@ -30,11 +30,17 @@ def test_bookmark_express_stub_no_ops() -> None:
 
 
 def test_bookmark_app_get_bookmark_url(monkeypatch: pytest.MonkeyPatch) -> None:
-    app = App(ui.page_fluid(), lambda i, o, s: None, bookmark_store="url")
+    def app_ui(req: Any):
+        return ui.page_fluid()
+
+    app = App(app_ui, lambda i, o, s: None, bookmark_store="url")
     session = AppSession(app, "id", MockConnection())
     bookmark = BookmarkApp(session)
 
-    monkeypatch.setattr(BookmarkState, "_encode_state", lambda self: "qs")
+    async def fake_encode_state(self: BookmarkState) -> str:
+        return "qs"
+
+    monkeypatch.setattr(BookmarkState, "_encode_state", fake_encode_state)
 
     session.clientdata.url_protocol = lambda: "http:"
     session.clientdata.url_hostname = lambda: "example.com"
@@ -46,7 +52,10 @@ def test_bookmark_app_get_bookmark_url(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_bookmark_app_update_query_string_invalid_mode() -> None:
-    app = App(ui.page_fluid(), lambda i, o, s: None, bookmark_store="url")
+    def app_ui(req: Any):
+        return ui.page_fluid()
+
+    app = App(app_ui, lambda i, o, s: None, bookmark_store="url")
     session = AppSession(app, "id", MockConnection())
     bookmark = BookmarkApp(session)
 

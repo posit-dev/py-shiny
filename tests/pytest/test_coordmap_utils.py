@@ -39,19 +39,19 @@ def test_simplify_type_with_fake_numpy(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_get_mappings_with_facets() -> None:
-    class FakeFacetGrid:
+    class facet_grid:  # noqa: N801
         cols = ["cyl"]
         rows = ["gear"]
 
-    class FakeFacetWrap:
+    class facet_wrap:  # noqa: N801
         vars = ["am"]
 
-    class FakeCoordFlip:
+    class coord_flip:  # noqa: N801
         pass
 
     class FakeLayout:
-        coord = FakeCoordFlip()
-        facet = FakeFacetGrid()
+        coord = coord_flip()
+        facet = facet_grid()
 
     class FakePlot:
         mapping = {"x": "wt", "y": "mpg"}
@@ -65,7 +65,7 @@ def test_get_mappings_with_facets() -> None:
 
     class FakeLayoutWrap:
         coord = object()
-        facet = FakeFacetWrap()
+        facet = facet_wrap()
 
     class FakePlotWrap:
         mapping = {}

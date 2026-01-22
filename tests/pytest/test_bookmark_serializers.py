@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 
 import pytest
@@ -22,12 +23,12 @@ def test_is_unserializable() -> None:
 
 
 def test_serializer_unserializable() -> None:
-    value = serializer_unserializable()
+    value = asyncio.run(serializer_unserializable())
     assert isinstance(value, Unserializable)
 
 
 def test_serializer_default() -> None:
-    assert serializer_default(1, None) == 1
+    assert asyncio.run(serializer_default(1, None)) == 1
 
 
 def test_serializer_file_input_warns_when_no_state_dir() -> None:
