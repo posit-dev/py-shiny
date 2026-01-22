@@ -1,6 +1,7 @@
 """Tests for shiny.experimental.ui._card module."""
 
 import io
+from pathlib import Path
 
 import pytest
 
@@ -15,7 +16,7 @@ class TestCardImage:
         result = card_image(None, src="https://example.com/image.jpg")
         assert result is not None
 
-    def test_card_image_with_file_path(self, tmp_path):
+    def test_card_image_with_file_path(self, tmp_path: Path) -> None:
         """card_image should work with a file path."""
         # Create a simple image file (1x1 PNG)
         img_data = (
@@ -30,7 +31,7 @@ class TestCardImage:
         result = card_image(str(img_file))
         assert result is not None
 
-    def test_card_image_with_path_object(self, tmp_path):
+    def test_card_image_with_path_object(self, tmp_path: Path) -> None:
         """card_image should work with Path object."""
         img_data = (
             b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01"
@@ -63,7 +64,7 @@ class TestCardImage:
         with pytest.raises(ValueError, match="mime_type"):
             card_image(buffer)
 
-    def test_card_image_with_href(self, tmp_path):
+    def test_card_image_with_href(self, tmp_path: Path) -> None:
         """card_image should accept href parameter."""
         img_data = (
             b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01"
@@ -77,7 +78,7 @@ class TestCardImage:
         result = card_image(str(img_file), href="https://example.com")
         assert result is not None
 
-    def test_card_image_border_radius_options(self, tmp_path):
+    def test_card_image_border_radius_options(self, tmp_path: Path) -> None:
         """card_image should accept different border_radius options."""
         img_data = (
             b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01"
@@ -92,7 +93,7 @@ class TestCardImage:
             result = card_image(str(img_file), border_radius=radius)
             assert result is not None
 
-    def test_card_image_with_height(self, tmp_path):
+    def test_card_image_with_height(self, tmp_path: Path) -> None:
         """card_image should accept height parameter."""
         img_data = (
             b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01"
@@ -106,7 +107,7 @@ class TestCardImage:
         result = card_image(str(img_file), height="200px")
         assert result is not None
 
-    def test_card_image_with_width(self, tmp_path):
+    def test_card_image_with_width(self, tmp_path: Path) -> None:
         """card_image should accept width parameter."""
         img_data = (
             b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01"
@@ -120,7 +121,7 @@ class TestCardImage:
         result = card_image(str(img_file), width="100%")
         assert result is not None
 
-    def test_card_image_fill_false(self, tmp_path):
+    def test_card_image_fill_false(self, tmp_path: Path) -> None:
         """card_image should accept fill=False."""
         img_data = (
             b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01"
@@ -134,7 +135,7 @@ class TestCardImage:
         result = card_image(str(img_file), fill=False)
         assert result is not None
 
-    def test_card_image_with_class(self, tmp_path):
+    def test_card_image_with_class(self, tmp_path: Path) -> None:
         """card_image should accept class_ parameter."""
         img_data = (
             b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01"
@@ -148,7 +149,7 @@ class TestCardImage:
         result = card_image(str(img_file), class_="my-image")
         assert result is not None
 
-    def test_card_image_no_container(self, tmp_path):
+    def test_card_image_no_container(self, tmp_path: Path) -> None:
         """card_image should work with container=None."""
         img_data = (
             b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01"

@@ -1,5 +1,9 @@
 """Tests for shiny.bookmark._utils module"""
 
+from pathlib import Path
+
+from _pytest.monkeypatch import MonkeyPatch
+
 from shiny.bookmark._utils import (
     from_json_file,
     from_json_str,
@@ -12,17 +16,17 @@ from shiny.bookmark._utils import (
 class TestInShinyServer:
     """Test in_shiny_server function"""
 
-    def test_not_in_shiny_server(self, monkeypatch):
+    def test_not_in_shiny_server(self, monkeypatch: MonkeyPatch) -> None:
         """Test in_shiny_server returns False when SHINY_PORT not set"""
         monkeypatch.delenv("SHINY_PORT", raising=False)
         assert in_shiny_server() is False
 
-    def test_in_shiny_server_empty_port(self, monkeypatch):
+    def test_in_shiny_server_empty_port(self, monkeypatch: MonkeyPatch) -> None:
         """Test in_shiny_server returns False when SHINY_PORT is empty"""
         monkeypatch.setenv("SHINY_PORT", "")
         assert in_shiny_server() is False
 
-    def test_in_shiny_server_with_port(self, monkeypatch):
+    def test_in_shiny_server_with_port(self, monkeypatch: MonkeyPatch) -> None:
         """Test in_shiny_server returns True when SHINY_PORT is set"""
         monkeypatch.setenv("SHINY_PORT", "3838")
         assert in_shiny_server() is True
@@ -80,13 +84,13 @@ class TestJsonStr:
 class TestJsonFile:
     """Test to_json_file and from_json_file functions"""
 
-    def test_to_json_file_creates_file(self, tmp_path):
+    def test_to_json_file_creates_file(self, tmp_path: Path) -> None:
         """Test to_json_file creates file"""
         file_path = tmp_path / "test.json"
         to_json_file({"test": "data"}, file_path)
         assert file_path.exists()
 
-    def test_to_json_file_writes_json(self, tmp_path):
+    def test_to_json_file_writes_json(self, tmp_path: Path) -> None:
         """Test to_json_file writes valid JSON"""
         file_path = tmp_path / "test.json"
         to_json_file({"key": "value"}, file_path)
@@ -94,14 +98,14 @@ class TestJsonFile:
         assert "key" in content
         assert "value" in content
 
-    def test_from_json_file_reads_data(self, tmp_path):
+    def test_from_json_file_reads_data(self, tmp_path: Path) -> None:
         """Test from_json_file reads JSON data"""
         file_path = tmp_path / "test.json"
         file_path.write_text('{"name": "test"}')
         result = from_json_file(file_path)
         assert result == {"name": "test"}
 
-    def test_roundtrip_json_file(self, tmp_path):
+    def test_roundtrip_json_file(self, tmp_path: Path) -> None:
         """Test roundtrip to_json_file -> from_json_file"""
         file_path = tmp_path / "roundtrip.json"
         original = {"items": [1, 2, 3], "nested": {"a": "b"}}
@@ -109,7 +113,7 @@ class TestJsonFile:
         result = from_json_file(file_path)
         assert result == original
 
-    def test_json_file_uses_utf8(self, tmp_path):
+    def test_json_file_uses_utf8(self, tmp_path: Path) -> None:
         """Test JSON file operations use UTF-8 encoding"""
         file_path = tmp_path / "unicode.json"
         data = {"emoji": "🎉", "accented": "café"}

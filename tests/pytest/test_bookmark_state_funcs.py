@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 
 import pytest
+from _pytest.monkeypatch import MonkeyPatch
 
 from shiny.bookmark._bookmark_state import (
     _local_dir,
@@ -62,7 +63,9 @@ class TestLocalSaveDir:
     """Test local_save_dir async function"""
 
     @pytest.mark.asyncio
-    async def test_local_save_dir_creates_directory(self, tmp_path, monkeypatch):
+    async def test_local_save_dir_creates_directory(
+        self, tmp_path: Path, monkeypatch: MonkeyPatch
+    ) -> None:
         """Test local_save_dir creates directory if not exists"""
         # Change to temp directory
         monkeypatch.chdir(tmp_path)
@@ -74,7 +77,9 @@ class TestLocalSaveDir:
         assert result.is_dir()
 
     @pytest.mark.asyncio
-    async def test_local_save_dir_returns_path(self, tmp_path, monkeypatch):
+    async def test_local_save_dir_returns_path(
+        self, tmp_path: Path, monkeypatch: MonkeyPatch
+    ) -> None:
         """Test local_save_dir returns Path object"""
         monkeypatch.chdir(tmp_path)
 
@@ -83,7 +88,9 @@ class TestLocalSaveDir:
         assert isinstance(result, Path)
 
     @pytest.mark.asyncio
-    async def test_local_save_dir_creates_nested(self, tmp_path, monkeypatch):
+    async def test_local_save_dir_creates_nested(
+        self, tmp_path: Path, monkeypatch: MonkeyPatch
+    ) -> None:
         """Test local_save_dir creates nested directories"""
         monkeypatch.chdir(tmp_path)
 
@@ -99,7 +106,9 @@ class TestLocalRestoreDir:
     """Test local_restore_dir async function"""
 
     @pytest.mark.asyncio
-    async def test_local_restore_dir_returns_path(self, tmp_path, monkeypatch):
+    async def test_local_restore_dir_returns_path(
+        self, tmp_path: Path, monkeypatch: MonkeyPatch
+    ) -> None:
         """Test local_restore_dir returns Path object"""
         monkeypatch.chdir(tmp_path)
 
@@ -108,7 +117,9 @@ class TestLocalRestoreDir:
         assert isinstance(result, Path)
 
     @pytest.mark.asyncio
-    async def test_local_restore_dir_doesnt_create(self, tmp_path, monkeypatch):
+    async def test_local_restore_dir_doesnt_create(
+        self, tmp_path: Path, monkeypatch: MonkeyPatch
+    ) -> None:
         """Test local_restore_dir doesn't create directory"""
         monkeypatch.chdir(tmp_path)
 
@@ -118,7 +129,9 @@ class TestLocalRestoreDir:
         assert not result.exists()
 
     @pytest.mark.asyncio
-    async def test_local_restore_dir_structure(self, tmp_path, monkeypatch):
+    async def test_local_restore_dir_structure(
+        self, tmp_path: Path, monkeypatch: MonkeyPatch
+    ) -> None:
         """Test local_restore_dir returns correct path structure"""
         monkeypatch.chdir(tmp_path)
 

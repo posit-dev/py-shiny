@@ -169,6 +169,7 @@ class TestCardBody:
         """Test body with height."""
         result = card_body("Content", height="150px")
         resolved = result.resolve()
+        assert isinstance(resolved, Tag)
         style_attr = str(resolved.attrs.get("style", ""))
         assert "150px" in style_attr
 
@@ -182,6 +183,7 @@ class TestCardBody:
         """Test body with gap."""
         result = card_body("Content", gap="5px")
         resolved = result.resolve()
+        assert isinstance(resolved, Tag)
         style_attr = str(resolved.attrs.get("style", ""))
         assert "5px" in style_attr
 
@@ -259,6 +261,7 @@ class TestCardStructure:
     def test_card_has_init_attribute(self) -> None:
         """Test that card has data-bslib-card-init attribute."""
         result = card("Content")
+        assert isinstance(result, Tag)
         assert result.attrs.get("data-bslib-card-init") is not None
 
     def test_card_includes_dependencies(self) -> None:
@@ -271,6 +274,7 @@ class TestCardStructure:
     def test_card_is_fillable(self) -> None:
         """Test that card is marked as fillable container."""
         result = card("Content")
+        assert isinstance(result, Tag)
         # Card should be a fillable container
         class_attr = result.attrs.get("class", "")
         # Fill containers have specific classes

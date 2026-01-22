@@ -1,8 +1,12 @@
 """Tests for shiny.input_handler module."""
 
+from typing import Any
+
 import pytest
 
 from shiny.input_handler import _InputHandlers
+from shiny.module import ResolvedId
+from shiny.session import Session
 
 
 class TestInputHandlers:
@@ -13,7 +17,7 @@ class TestInputHandlers:
         handlers = _InputHandlers()
 
         @handlers.add("test.type")
-        def handler(value, name, session):
+        def handler(value: Any, name: ResolvedId, session: Session) -> Any:
             return value * 2
 
         assert "test.type" in handlers
@@ -23,13 +27,13 @@ class TestInputHandlers:
         handlers = _InputHandlers()
 
         @handlers.add("test.type")
-        def handler1(value, name, session):
+        def handler1(value: Any, name: ResolvedId, session: Session) -> Any:
             return value
 
         with pytest.raises(ValueError, match="already registered"):
 
             @handlers.add("test.type")
-            def handler2(value, name, session):
+            def handler2(value: Any, name: ResolvedId, session: Session) -> Any:
                 return value
 
     def test_input_handlers_add_with_force(self) -> None:
@@ -37,11 +41,11 @@ class TestInputHandlers:
         handlers = _InputHandlers()
 
         @handlers.add("test.type")
-        def handler1(value, name, session):
+        def handler1(value: Any, name: ResolvedId, session: Session) -> Any:
             return value
 
         @handlers.add("test.type", force=True)
-        def handler2(value, name, session):
+        def handler2(value: Any, name: ResolvedId, session: Session) -> Any:
             return value * 2
 
         assert "test.type" in handlers
@@ -51,7 +55,7 @@ class TestInputHandlers:
         handlers = _InputHandlers()
 
         @handlers.add("test.type")
-        def handler(value, name, session):
+        def handler(value: Any, name: ResolvedId, session: Session) -> Any:
             return value
 
         assert "test.type" in handlers
@@ -75,11 +79,11 @@ class TestInputHandlers:
         handlers = _InputHandlers()
 
         @handlers.add("type.one")
-        def handler1(value, name, session):
+        def handler1(value: Any, name: ResolvedId, session: Session) -> Any:
             return value
 
         @handlers.add("type.two")
-        def handler2(value, name, session):
+        def handler2(value: Any, name: ResolvedId, session: Session) -> Any:
             return value
 
         assert "type.one" in handlers
@@ -90,7 +94,7 @@ class TestInputHandlers:
         handlers = _InputHandlers()
 
         @handlers.add("test.type")
-        def handler(value, name, session):
+        def handler(value: Any, name: ResolvedId, session: Session) -> Any:
             return value
 
         # Dict-like operations

@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any, Iterable, Optional
+from typing import Any, Iterable, Optional, cast
 from unittest.mock import MagicMock
 
 import pandas as pd
 import pytest
+from _pytest.monkeypatch import MonkeyPatch
 from htmltools import tags
 
 from shiny._namespaces import ResolvedId, Root
@@ -20,7 +21,7 @@ from shiny.render._render import (
 )
 from shiny.render._render import ui as render_ui
 from shiny.render._try_render_plot import PlotSizeInfo
-from shiny.session import session_context
+from shiny.session import Session, session_context
 from shiny.session._session import DownloadInfo
 from shiny.types import ImgData
 
@@ -158,7 +159,9 @@ async def test_code_transform():
 
 
 @pytest.mark.asyncio
-async def test_plot_returns_none_when_value_none_and_no_renderers(monkeypatch):
+async def test_plot_returns_none_when_value_none_and_no_renderers(
+    monkeypatch: MonkeyPatch,
+) -> None:
     sys_modules = __import__("sys").modules
     monkeypatch.delitem(sys_modules, "plotnine", raising=False)
     monkeypatch.delitem(sys_modules, "matplotlib", raising=False)
@@ -167,12 +170,12 @@ async def test_plot_returns_none_when_value_none_and_no_renderers(monkeypatch):
     renderer = plot(lambda: None)
     renderer.output_id = "plot"
     session = _PlotSession("plot")
-    with session_context(session):
+    with session_context(cast(Session, session)):
         assert await renderer.render() is None
 
 
 @pytest.mark.asyncio
-async def test_plot_raises_on_unsupported_type(monkeypatch):
+async def test_plot_raises_on_unsupported_type(monkeypatch: MonkeyPatch) -> None:
     sys_modules = __import__("sys").modules
     monkeypatch.delitem(sys_modules, "plotnine", raising=False)
     monkeypatch.delitem(sys_modules, "matplotlib", raising=False)
@@ -181,13 +184,13 @@ async def test_plot_raises_on_unsupported_type(monkeypatch):
     renderer = plot(lambda: object())
     renderer.output_id = "plot"
     session = _PlotSession("plot")
-    with session_context(session):
+    with session_context(cast(Session, session)):
         with pytest.raises(Exception, match="doesn't know to render objects"):
             await renderer.render()
 
 
 @pytest.mark.asyncio
-async def test_plot_uses_matplotlib_when_available(monkeypatch):
+async def test_plot_uses_matplotlib_when_available(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.setitem(__import__("sys").modules, "matplotlib", SimpleNamespace())
 
     def fake_render_matplotlib(*args: Any, **kwargs: Any):
@@ -200,14 +203,16 @@ async def test_plot_uses_matplotlib_when_available(monkeypatch):
     renderer = plot(lambda: object())
     renderer.output_id = "plot"
     session = _PlotSession("plot")
-    with session_context(session):
+    with session_context(cast(Session, session)):
         result = await renderer.render()
     assert isinstance(result, dict)
-    assert result["src"].startswith("data:image/png;base64")
+    src = result["src"]
+    assert isinstance(src, str)
+    assert src.startswith("data:image/png;base64")
 
 
 @pytest.mark.asyncio
-async def test_plot_uses_plotnine_first(monkeypatch):
+async def test_plot_uses_plotnine_first(monkeypatch: MonkeyPatch) -> None:
     calls: list[str] = []
 
     monkeypatch.setitem(__import__("sys").modules, "plotnine", SimpleNamespace())
@@ -231,14 +236,17 @@ async def test_plot_uses_plotnine_first(monkeypatch):
     renderer = plot(lambda: object())
     renderer.output_id = "plot"
     session = _PlotSession("plot")
-    with session_context(session):
+    with session_context(cast(Session, session)):
         result = await renderer.render()
-    assert result["src"].endswith("aaa")
+    assert isinstance(result, dict)
+    src = result["src"]
+    assert isinstance(src, str)
+    assert src.endswith("aaa")
     assert calls == ["plotnine"]
 
 
 @pytest.mark.asyncio
-async def test_plot_uses_pil_when_available(monkeypatch):
+async def test_plot_uses_pil_when_available(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.setitem(__import__("sys").modules, "PIL", SimpleNamespace())
 
     def fake_render_pil(*args: Any, **kwargs: Any):
@@ -249,13 +257,18 @@ async def test_plot_uses_pil_when_available(monkeypatch):
     renderer = plot(lambda: object())
     renderer.output_id = "plot"
     session = _PlotSession("plot")
-    with session_context(session):
+    with session_context(cast(Session, session)):
         result = await renderer.render()
-    assert result["src"].endswith("ccc")
+    assert isinstance(result, dict)
+    src = result["src"]
+    assert isinstance(src, str)
+    assert src.endswith("ccc")
 
 
 @pytest.mark.asyncio
-async def test_plot_plotnine_false_falls_back_to_matplotlib(monkeypatch):
+async def test_plot_plotnine_false_falls_back_to_matplotlib(
+    monkeypatch: MonkeyPatch,
+) -> None:
     sys_modules = __import__("sys").modules
     monkeypatch.setitem(sys_modules, "plotnine", SimpleNamespace())
     monkeypatch.setitem(sys_modules, "matplotlib", SimpleNamespace())
@@ -276,13 +289,18 @@ async def test_plot_plotnine_false_falls_back_to_matplotlib(monkeypatch):
     renderer = plot(lambda: object())
     renderer.output_id = "plot"
     session = _PlotSession("plot")
-    with session_context(session):
+    with session_context(cast(Session, session)):
         result = await renderer.render()
-    assert result["src"].endswith("aaa")
+    assert isinstance(result, dict)
+    src = result["src"]
+    assert isinstance(src, str)
+    assert src.endswith("aaa")
 
 
 @pytest.mark.asyncio
-async def test_plot_matplotlib_false_falls_back_to_pil(monkeypatch):
+async def test_plot_matplotlib_false_falls_back_to_pil(
+    monkeypatch: MonkeyPatch,
+) -> None:
     sys_modules = __import__("sys").modules
     monkeypatch.delitem(sys_modules, "plotnine", raising=False)
     monkeypatch.setitem(sys_modules, "matplotlib", SimpleNamespace())
@@ -302,13 +320,16 @@ async def test_plot_matplotlib_false_falls_back_to_pil(monkeypatch):
     renderer = plot(lambda: object())
     renderer.output_id = "plot"
     session = _PlotSession("plot")
-    with session_context(session):
+    with session_context(cast(Session, session)):
         result = await renderer.render()
-    assert result["src"].endswith("bbb")
+    assert isinstance(result, dict)
+    src = result["src"]
+    assert isinstance(src, str)
+    assert src.endswith("bbb")
 
 
 @pytest.mark.asyncio
-async def test_plot_pil_false_allows_none(monkeypatch):
+async def test_plot_pil_false_allows_none(monkeypatch: MonkeyPatch) -> None:
     sys_modules = __import__("sys").modules
     monkeypatch.delitem(sys_modules, "plotnine", raising=False)
     monkeypatch.delitem(sys_modules, "matplotlib", raising=False)
@@ -322,7 +343,7 @@ async def test_plot_pil_false_allows_none(monkeypatch):
     renderer = plot(lambda: None)
     renderer.output_id = "plot"
     session = _PlotSession("plot")
-    with session_context(session):
+    with session_context(cast(Session, session)):
         assert await renderer.render() is None
 
 
@@ -335,7 +356,10 @@ async def test_image_transform_encodes_and_keeps_file(tmp_path: Path):
     value: ImgData = {"src": str(img_path)}
     result = await renderer.transform(value)
     assert result is not None
-    assert result["src"].startswith("data:image/png;base64,")
+    assert isinstance(result, dict)
+    src = result["src"]
+    assert isinstance(src, str)
+    assert src.startswith("data:image/png;base64,")
     assert img_path.exists()
 
 
@@ -363,21 +387,27 @@ async def test_table_transform_dataframe():
     df = pd.DataFrame({"a": [1, 2]})
     renderer = table(lambda: df, index=True, classes="custom", border=1)
     result = await renderer.transform(df)
-    assert "custom" in result["html"]
-    assert "table" in result["html"]
+    assert isinstance(result, dict)
+    html = result["html"]
+    assert isinstance(html, str)
+    assert "custom" in html
+    assert "table" in html
 
 
 @pytest.mark.asyncio
-async def test_table_transform_styler():
+async def test_table_transform_styler() -> None:
     df = pd.DataFrame({"a": [1, 2]})
     styler = df.style
-    renderer = table(lambda: styler)
-    result = await renderer.transform(styler)
-    assert "<table" in result["html"]
+    renderer = table(cast(Any, lambda: styler))
+    result = await renderer.transform(cast(Any, styler))
+    assert isinstance(result, dict)
+    html = result["html"]
+    assert isinstance(html, str)
+    assert "<table" in html
 
 
 @pytest.mark.asyncio
-async def test_table_transform_uses_as_data_frame(monkeypatch):
+async def test_table_transform_uses_as_data_frame(monkeypatch: MonkeyPatch) -> None:
     class _Obj:
         pass
 
@@ -389,13 +419,16 @@ async def test_table_transform_uses_as_data_frame(monkeypatch):
         return _Wrapped()
 
     monkeypatch.setattr("shiny.render._render.as_data_frame", fake_as_data_frame)
-    renderer = table(lambda: _Obj())
-    result = await renderer.transform(_Obj())
-    assert "<table" in result["html"]
+    renderer = table(cast(Any, lambda: _Obj()))
+    result = await renderer.transform(cast(Any, _Obj()))
+    assert isinstance(result, dict)
+    html = result["html"]
+    assert isinstance(html, str)
+    assert "<table" in html
 
 
 @pytest.mark.asyncio
-async def test_table_transform_type_error(monkeypatch):
+async def test_table_transform_type_error(monkeypatch: MonkeyPatch) -> None:
     class _Obj:
         pass
 
@@ -403,9 +436,9 @@ async def test_table_transform_type_error(monkeypatch):
         raise ValueError("nope")
 
     monkeypatch.setattr("shiny.render._render.as_data_frame", fake_as_data_frame)
-    renderer = table(lambda: _Obj())
+    renderer = table(cast(Any, lambda: _Obj()))
     with pytest.raises(TypeError, match="doesn't know how to render"):
-        await renderer.transform(_Obj())
+        await renderer.transform(cast(Any, _Obj()))
 
 
 @pytest.mark.asyncio
@@ -414,11 +447,14 @@ async def test_render_ui_uses_session_process_ui():
     fake_session.ns = ResolvedId("")
     fake_session._process_ui.return_value = {"deps": [], "html": "<div>ok</div>"}
 
-    with session_context(fake_session):
+    with session_context(cast(Session, fake_session)):
         renderer = render_ui(lambda: tags.div("ok"))
         result = await renderer.transform(tags.div("ok"))
 
-    assert result["html"] == "<div>ok</div>"
+    assert isinstance(result, dict)
+    html = result["html"]
+    assert isinstance(html, str)
+    assert html == "<div>ok</div>"
     fake_session._process_ui.assert_called_once()
 
 
@@ -429,7 +465,7 @@ async def test_download_registers_handler_with_session():
     def handler() -> Iterable[bytes]:
         yield b"abc"
 
-    with session_context(session):
+    with session_context(cast(Session, session)):
         decorator = download(filename="data.csv", media_type="text/csv")
 
         @decorator
@@ -448,7 +484,7 @@ def test_download_does_not_register_with_stub_session():
     def handler() -> Iterable[bytes]:
         yield b"abc"
 
-    with session_context(session):
+    with session_context(cast(Session, session)):
         decorator = download(filename="data.csv", media_type="text/csv")
 
         @decorator
@@ -464,7 +500,7 @@ async def test_download_url_quoting():
     session.id = "session id"
     session.ns = ResolvedId("ns")
 
-    with session_context(session):
+    with session_context(cast(Session, session)):
         decorator = download(filename="data.csv")
 
         @decorator
@@ -473,6 +509,7 @@ async def test_download_url_quoting():
 
         renderer = file_handler
         url = await renderer.render()
+        assert isinstance(url, str)
         assert "session%20id" in url
         assert "ns-file_handler" in url
 
@@ -530,7 +567,9 @@ def test_plot_auto_output_ui_sets_dimensions():
 
 
 @pytest.mark.asyncio
-async def test_plot_render_returns_none_when_renderer_returns_none(monkeypatch):
+async def test_plot_render_returns_none_when_renderer_returns_none(
+    monkeypatch: MonkeyPatch,
+) -> None:
     monkeypatch.setitem(__import__("sys").modules, "plotnine", SimpleNamespace())
 
     def fake_render_plotnine(*args: Any, **kwargs: Any):
@@ -541,7 +580,7 @@ async def test_plot_render_returns_none_when_renderer_returns_none(monkeypatch):
     )
 
     session = _PlotSession("plot")
-    with session_context(session):
+    with session_context(cast(Session, session)):
         renderer = plot(lambda: object())
         renderer.output_id = "plot"
         result = await renderer.render()
@@ -550,7 +589,7 @@ async def test_plot_render_returns_none_when_renderer_returns_none(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_plot_render_uses_container_size(monkeypatch):
+async def test_plot_render_uses_container_size(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.setitem(__import__("sys").modules, "matplotlib", SimpleNamespace())
 
     captured: dict[str, PlotSizeInfo] = {}
@@ -572,7 +611,7 @@ async def test_plot_render_uses_container_size(monkeypatch):
     )
 
     session = _PlotSession("none", pixelratio=2.0, include_size=True)
-    with session_context(session):
+    with session_context(cast(Session, session)):
         renderer = plot(lambda: object())
         renderer.output_id = "none"
         await renderer.render()

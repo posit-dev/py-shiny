@@ -4,6 +4,7 @@ Tests for BrandBootstrapConfigFromYaml, BrandBootstrapConfig, and ThemeBrand cla
 """
 
 import warnings
+from typing import Any, Callable
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -379,6 +380,7 @@ class TestBrandBootstrapConfigFromBrand:
             "shiny": {"theme": {"functions": "@function shiny() {}"}},
         }
         config = BrandBootstrapConfig.from_brand(brand)
+        assert config.functions is not None
         assert "@function bs() {}" in config.functions
         assert "@function shiny() {}" in config.functions
 
@@ -390,6 +392,7 @@ class TestBrandBootstrapConfigFromBrand:
             "shiny": {"theme": {"mixins": "@mixin shiny() {}"}},
         }
         config = BrandBootstrapConfig.from_brand(brand)
+        assert config.mixins is not None
         assert "@mixin bs() {}" in config.mixins
         assert "@mixin shiny() {}" in config.mixins
 
@@ -401,6 +404,7 @@ class TestBrandBootstrapConfigFromBrand:
             "shiny": {"theme": {"rules": ".shiny {}"}},
         }
         config = BrandBootstrapConfig.from_brand(brand)
+        assert config.rules is not None
         assert ".bs {}" in config.rules
         assert ".shiny {}" in config.rules
 
@@ -412,6 +416,7 @@ class TestBrandBootstrapConfigFromBrand:
             "shiny": {"theme": {"defaults": {"shiny-color": "red"}}},
         }
         config = BrandBootstrapConfig.from_brand(brand)
+        assert config.defaults is not None
         assert config.defaults["bs-color"] == "blue"
         assert config.defaults["shiny-color"] == "red"
 
@@ -423,6 +428,7 @@ class TestBrandBootstrapConfigFromBrand:
             "shiny": {"theme": {"defaults": {"color": "red"}}},
         }
         config = BrandBootstrapConfig.from_brand(brand)
+        assert config.defaults is not None
         assert config.defaults["color"] == "red"
 
 
@@ -440,8 +446,8 @@ class TestThemeBrandGetThemeName:
         brand.color = None
         brand.typography = None
 
-        # Use the static method indirectly through accessing it
-        result = ThemeBrand._get_theme_name(ThemeBrand, brand)
+        theme = ThemeBrand.__new__(ThemeBrand)
+        result = theme._get_theme_name(brand)
         assert result == "brand"
 
     def test_get_theme_name_no_name(self):
@@ -453,7 +459,8 @@ class TestThemeBrandGetThemeName:
         brand.color = None
         brand.typography = None
 
-        result = ThemeBrand._get_theme_name(ThemeBrand, brand)
+        theme = ThemeBrand.__new__(ThemeBrand)
+        result = theme._get_theme_name(brand)
         assert result == "brand"
 
     def test_get_theme_name_short_name(self):
@@ -467,7 +474,8 @@ class TestThemeBrandGetThemeName:
         brand.color = None
         brand.typography = None
 
-        result = ThemeBrand._get_theme_name(ThemeBrand, brand)
+        theme = ThemeBrand.__new__(ThemeBrand)
+        result = theme._get_theme_name(brand)
         assert result == "ShortName"
 
     def test_get_theme_name_full_name_no_short(self):
@@ -481,7 +489,8 @@ class TestThemeBrandGetThemeName:
         brand.color = None
         brand.typography = None
 
-        result = ThemeBrand._get_theme_name(ThemeBrand, brand)
+        theme = ThemeBrand.__new__(ThemeBrand)
+        result = theme._get_theme_name(brand)
         assert result == "Full Name"
 
 
@@ -493,7 +502,9 @@ class TestThemeBrandPrepareColorVars:
         brand = MagicMock()
         brand.color = None
 
-        palette_defaults, color_defaults, rules = ThemeBrand._prepare_color_vars(brand)
+        _palette_defaults, color_defaults, _rules = ThemeBrand._prepare_color_vars(
+            brand
+        )
 
         assert palette_defaults == {}
         assert color_defaults == {}
@@ -503,11 +514,15 @@ class TestThemeBrandPrepareColorVars:
         """Test with theme colors defined"""
         brand = MagicMock()
         brand.color = MagicMock()
-        brand.color.to_dict.side_effect = lambda include: (
-            {"primary": "#007bff", "secondary": "#6c757d"} if include == "theme" else {}
-        )
 
-        palette_defaults, color_defaults, rules = ThemeBrand._prepare_color_vars(brand)
+        def _to_dict(include: str) -> dict[str, str]:
+            if include == "theme":
+                return {"primary": "#007bff", "secondary": "#6c757d"}
+            return {}
+
+        brand.color.to_dict.side_effect = _to_dict
+
+        palette_defaults, color_defaults, _rules = ThemeBrand._prepare_color_vars(brand)
 
         assert "brand_color_primary" in color_defaults
         assert color_defaults["brand_color_primary"] == "#007bff"
@@ -518,9 +533,13 @@ class TestThemeBrandPrepareColorVars:
         """Test with palette containing bootstrap color"""
         brand = MagicMock()
         brand.color = MagicMock()
-        brand.color.to_dict.side_effect = lambda include: (
-            {} if include == "theme" else {"red": "#ff0000", "custom": "#123456"}
-        )
+
+        def _to_dict(include: str) -> dict[str, str]:
+            if include == "theme":
+                return {}
+            return {"red": "#ff0000", "custom": "#123456"}
+
+        brand.color.to_dict.side_effect = _to_dict
 
         palette_defaults, color_defaults, rules = ThemeBrand._prepare_color_vars(brand)
 
@@ -534,9 +553,13 @@ class TestThemeBrandPrepareColorVars:
         """Test that rules have correct structure"""
         brand = MagicMock()
         brand.color = MagicMock()
-        brand.color.to_dict.side_effect = lambda include: (
-            {} if include == "theme" else {"mycolor": "#abcdef"}
-        )
+
+        def _to_dict(include: str) -> dict[str, str]:
+            if include == "theme":
+                return {}
+            return {"mycolor": "#abcdef"}
+
+        brand.color.to_dict.side_effect = _to_dict
 
         _, _, rules = ThemeBrand._prepare_color_vars(brand)
 
@@ -594,7 +617,9 @@ class TestThemeBrandInit:
 
     @patch.object(ThemeBrand, "add_sass_layer_file")
     @patch("shiny.ui._theme_brand.path_pkg_www")
-    def test_init_basic(self, mock_path_pkg_www, mock_add_sass):
+    def test_init_basic(
+        self, mock_path_pkg_www: MagicMock, mock_add_sass: MagicMock
+    ) -> None:
         """Test basic initialization"""
         mock_path_pkg_www.return_value = "/mock/path/brand.scss"
 
@@ -611,7 +636,9 @@ class TestThemeBrandInit:
 
     @patch.object(ThemeBrand, "add_sass_layer_file")
     @patch("shiny.ui._theme_brand.path_pkg_www")
-    def test_init_with_include_paths(self, mock_path_pkg_www, mock_add_sass):
+    def test_init_with_include_paths(
+        self, mock_path_pkg_www: MagicMock, mock_add_sass: MagicMock
+    ) -> None:
         """Test initialization with include_paths"""
         mock_path_pkg_www.return_value = "/mock/path/brand.scss"
 
@@ -627,7 +654,9 @@ class TestThemeBrandInit:
 
     @patch.object(ThemeBrand, "add_sass_layer_file")
     @patch("shiny.ui._theme_brand.path_pkg_www")
-    def test_init_with_preset(self, mock_path_pkg_www, mock_add_sass):
+    def test_init_with_preset(
+        self, mock_path_pkg_www: MagicMock, mock_add_sass: MagicMock
+    ) -> None:
         """Test initialization with preset from brand"""
         mock_path_pkg_www.return_value = "/mock/path/brand.scss"
 
@@ -643,7 +672,9 @@ class TestThemeBrandInit:
 
     @patch.object(ThemeBrand, "add_sass_layer_file")
     @patch("shiny.ui._theme_brand.path_pkg_www")
-    def test_init_with_colors(self, mock_path_pkg_www, mock_add_sass):
+    def test_init_with_colors(
+        self, mock_path_pkg_www: MagicMock, mock_add_sass: MagicMock
+    ) -> None:
         """Test initialization with colors"""
         mock_path_pkg_www.return_value = "/mock/path/brand.scss"
 
@@ -651,9 +682,13 @@ class TestThemeBrandInit:
         brand.meta = None
         brand.defaults = None
         brand.color = MagicMock()
-        brand.color.to_dict.side_effect = lambda include: (
-            {"primary": "#007bff"} if include == "theme" else {}
-        )
+
+        def _to_dict(include: str) -> dict[str, str]:
+            if include == "theme":
+                return {"primary": "#007bff"}
+            return {}
+
+        brand.color.to_dict.side_effect = _to_dict
         brand.typography = None
 
         theme = ThemeBrand(brand)
@@ -667,7 +702,9 @@ class TestThemeBrandAddDefaultsHdr:
 
     @patch.object(ThemeBrand, "add_sass_layer_file")
     @patch("shiny.ui._theme_brand.path_pkg_www")
-    def test_add_defaults_hdr(self, mock_path_pkg_www, mock_add_sass):
+    def test_add_defaults_hdr(
+        self, mock_path_pkg_www: MagicMock, mock_add_sass: MagicMock
+    ) -> None:
         """Test _add_defaults_hdr adds header and values"""
         mock_path_pkg_www.return_value = "/mock/path/brand.scss"
 
@@ -695,8 +732,8 @@ class TestThemeBrandAddBrandBootstrapOther:
     @patch.object(ThemeBrand, "add_sass_layer_file")
     @patch("shiny.ui._theme_brand.path_pkg_www")
     def test_add_brand_bootstrap_other_functions(
-        self, mock_path_pkg_www, mock_add_sass
-    ):
+        self, mock_path_pkg_www: MagicMock, mock_add_sass: MagicMock
+    ) -> None:
         """Test adding bootstrap functions"""
         mock_path_pkg_www.return_value = "/mock/path/brand.scss"
 
@@ -715,7 +752,9 @@ class TestThemeBrandAddBrandBootstrapOther:
 
     @patch.object(ThemeBrand, "add_sass_layer_file")
     @patch("shiny.ui._theme_brand.path_pkg_www")
-    def test_add_brand_bootstrap_other_mixins(self, mock_path_pkg_www, mock_add_sass):
+    def test_add_brand_bootstrap_other_mixins(
+        self, mock_path_pkg_www: MagicMock, mock_add_sass: MagicMock
+    ) -> None:
         """Test adding bootstrap mixins"""
         mock_path_pkg_www.return_value = "/mock/path/brand.scss"
 
@@ -734,7 +773,9 @@ class TestThemeBrandAddBrandBootstrapOther:
 
     @patch.object(ThemeBrand, "add_sass_layer_file")
     @patch("shiny.ui._theme_brand.path_pkg_www")
-    def test_add_brand_bootstrap_other_rules(self, mock_path_pkg_www, mock_add_sass):
+    def test_add_brand_bootstrap_other_rules(
+        self, mock_path_pkg_www: MagicMock, mock_add_sass: MagicMock
+    ) -> None:
         """Test adding bootstrap rules"""
         mock_path_pkg_www.return_value = "/mock/path/brand.scss"
 
@@ -757,7 +798,9 @@ class TestThemeBrandHtmlDependencies:
 
     @patch.object(ThemeBrand, "add_sass_layer_file")
     @patch("shiny.ui._theme_brand.path_pkg_www")
-    def test_html_dependencies_no_typography(self, mock_path_pkg_www, mock_add_sass):
+    def test_html_dependencies_no_typography(
+        self, mock_path_pkg_www: MagicMock, mock_add_sass: MagicMock
+    ) -> None:
         """Test _html_dependencies with no typography"""
         mock_path_pkg_www.return_value = "/mock/path/brand.scss"
 
@@ -778,8 +821,12 @@ class TestThemeBrandHtmlDependencies:
     @patch.object(ThemeBrand, "_get_css_tempdir")
     @patch("shiny.ui._theme_brand.path_pkg_www")
     def test_html_dependencies_with_typography_no_fonts(
-        self, mock_path_pkg_www, mock_tempdir, mock_parent_deps, mock_add_sass
-    ):
+        self,
+        mock_path_pkg_www: MagicMock,
+        mock_tempdir: MagicMock,
+        mock_parent_deps: MagicMock,
+        mock_add_sass: MagicMock,
+    ) -> None:
         """Test _html_dependencies with typography but no fonts dependency"""
         mock_path_pkg_www.return_value = "/mock/path/brand.scss"
         mock_tempdir.return_value = "/tmp/test"
@@ -804,12 +851,12 @@ class TestThemeBrandHtmlDependencies:
     @patch("shiny.ui._theme_brand.path_pkg_www")
     def test_html_dependencies_with_fonts_dependency(
         self,
-        mock_path_pkg_www,
-        mock_tempdir,
-        mock_path_class,
-        mock_parent_deps,
-        mock_add_sass,
-    ):
+        mock_path_pkg_www: MagicMock,
+        mock_tempdir: MagicMock,
+        mock_path_class: MagicMock,
+        mock_parent_deps: MagicMock,
+        mock_add_sass: MagicMock,
+    ) -> None:
         """Test _html_dependencies with fonts dependency"""
         mock_path_pkg_www.return_value = "/mock/path/brand.scss"
         mock_tempdir.return_value = "/tmp/test"
