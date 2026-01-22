@@ -110,7 +110,9 @@ class TestModuleExports:
 
     def test_module_imports_correctly(self):
         """Module should import without errors."""
-        import shiny.ui._input_password  # noqa: F401, E501
+        import shiny.ui._input_password as input_password_module
+
+        assert input_password_module is not None
 
     def test_all_exports_exist(self):
         """All items in __all__ should be importable."""

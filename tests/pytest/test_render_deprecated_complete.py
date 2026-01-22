@@ -74,7 +74,9 @@ class TestModuleStructure:
 
     def test_module_imports_correctly(self):
         """Module should import without errors."""
-        import shiny.render._deprecated  # noqa: F401, E501
+        import shiny.render._deprecated as deprecated_module
+
+        assert deprecated_module is not None
 
     def test_generic_types_imported(self):
         """Module should use Generic types correctly."""

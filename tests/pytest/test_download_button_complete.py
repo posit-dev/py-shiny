@@ -167,7 +167,9 @@ class TestModuleExports:
 
     def test_module_imports_correctly(self):
         """Module should import without errors."""
-        import shiny.ui._download_button  # noqa: F401, E501
+        import shiny.ui._download_button as download_button_module
+
+        assert download_button_module is not None
 
     def test_all_exports_exist(self):
         """All items in __all__ should be importable."""

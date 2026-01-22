@@ -75,7 +75,9 @@ class TestModuleExports:
 
     def test_module_imports_correctly(self):
         """Module should import without errors."""
-        import shiny.ui._chat  # noqa: F401, E501
+        import shiny.ui._chat as chat
+
+        assert chat is not None
 
     def test_all_exports_exist(self):
         """All items in __all__ should be importable."""

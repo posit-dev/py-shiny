@@ -240,4 +240,6 @@ class TestModuleExports:
 
     def test_module_imports_correctly(self):
         """Module should import without errors."""
-        import shiny.ui._modal  # noqa: F401, E501
+        import shiny.ui._modal as modal_module
+
+        assert modal_module is not None
