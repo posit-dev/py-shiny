@@ -7,12 +7,14 @@ from shiny.express import input, render, session, ui
 with ui.sidebar(open="closed"):
     ui.input_slider("obs", "Number of observations:", min=0, max=1000, value=500)
 
-ui.markdown("""
+ui.markdown(
+    """
 #### `session.clientdata` values
 
 The following methods are available from the `session.clientdata` object and allow you
 to reactively read the client data values from the browser.
-""")
+"""
+)
 
 
 @render.code

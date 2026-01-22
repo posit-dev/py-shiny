@@ -9,11 +9,13 @@ df = reactive.value(mtcars.iloc[:, range(4)])
 with ui.layout_columns(col_widths=[4, 4, 4]):
     with ui.card():
         with ui.card_header():
-            ui.markdown("""
+            ui.markdown(
+                """
                 ##### Editable data frame
                 * Edit the cells!
                 * Sort the columns!
-                """)
+                """
+            )
 
             @render.data_frame
             def df_original():
@@ -31,11 +33,13 @@ with ui.layout_columns(col_widths=[4, 4, 4]):
 
     with ui.card():
         with ui.card_header():
-            ui.markdown("""
+            ui.markdown(
+                """
                 ##### Updated data from the first data frame
                 * Select the rows!
                 * Filter and sort the columns!
-                """)
+                """
+            )
 
             @render.data_frame
             def df_edited():
@@ -47,10 +51,12 @@ with ui.layout_columns(col_widths=[4, 4, 4]):
 
     with ui.card():
         with ui.card_header():
-            ui.markdown("""
+            ui.markdown(
+                """
                 ##### Selected data from the second data frame
                 * Sort the columns!
-                """)
+                """
+            )
 
             @render.data_frame
             def df_selected():

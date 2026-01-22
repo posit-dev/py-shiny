@@ -231,7 +231,8 @@ def test_theme_add_sass_layer_file():
             Theme().add_sass_layer_file(f"{temp_dir}/no-layers.scss")
 
         with open(f"{temp_dir}/layers.scss", "w") as temp_scss:
-            temp_scss.write("""
+            temp_scss.write(
+                """
 /*-- scss:uses --*/
 // uses
 /*-- scss:functions --*/
@@ -246,7 +247,8 @@ def test_theme_add_sass_layer_file():
 // defaults 2
 /*-- scss:rules --*/
 // rules 2
-            """)
+            """
+            )
 
         theme = Theme().add_sass_layer_file(temp_scss.name)
 

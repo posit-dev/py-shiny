@@ -4,7 +4,8 @@ from shiny import reactive
 from shiny.express import input, render, ui
 from shiny.ui import output_ui
 
-ui.markdown(f"""
+ui.markdown(
+    f"""
     This example demonstrates how `@reactive.event()` can be used to restrict
     execution of: (1) a `@render` function, (2) `@reactive.calc`, or (3)
     `@reactive.effect`.
@@ -12,7 +13,8 @@ ui.markdown(f"""
     In all three cases, the output is dependent on a random value that gets updated
     every 0.5 seconds (currently, it is {output_ui("number", inline=True)}), but
     the output is only updated when the button is clicked.
-    """)
+    """
+)
 
 # Always update this output when the number is updated
 with ui.hold():

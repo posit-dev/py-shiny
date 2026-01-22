@@ -5,26 +5,38 @@ from shiny import App, reactive, render, ui
 app_ui = ui.page_fillable(
     ui.layout_columns(
         ui.card(
-            ui.card_header(ui.markdown("""
+            ui.card_header(
+                ui.markdown(
+                    """
                     ##### Editable data frame
                     * Edit the cells!
                     * Sort the columns!
-                    """)),
+                    """
+                )
+            ),
             ui.output_data_frame("df_original"),
         ),
         ui.card(
-            ui.card_header(ui.markdown("""
+            ui.card_header(
+                ui.markdown(
+                    """
                     ##### Updated data from the first data frame
                     * Select the rows!
                     * Filter and sort the columns!
-                    """)),
+                    """
+                )
+            ),
             ui.output_data_frame("df_edited"),
         ),
         ui.card(
-            ui.card_header(ui.markdown("""
+            ui.card_header(
+                ui.markdown(
+                    """
                     ##### Selected data from the second data frame
                     * Sort the columns!
-                    """)),
+                    """
+                )
+            ),
             ui.output_data_frame("df_selected"),
         ),
         col_widths=[4, 4, 4],

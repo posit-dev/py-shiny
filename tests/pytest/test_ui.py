@@ -8,7 +8,8 @@ from shiny.ui._input_select import _update_options
 
 def test_panel_title():
     x = HTMLDocument(ui.panel_title("Hello Shiny UI")).render()["html"]
-    assert x == textwrap.dedent("""\
+    assert x == textwrap.dedent(
+        """\
         <!DOCTYPE html>
         <html>
           <head>
@@ -19,7 +20,8 @@ def test_panel_title():
           <body>
             <h2>Hello Shiny UI</h2>
           </body>
-        </html>""")
+        </html>"""
+    )
 
     title = TagList(
         tags.h1("A title"),
@@ -29,7 +31,8 @@ def test_panel_title():
     )
 
     x = HTMLDocument(ui.panel_title(title)).render()["html"]
-    assert x == textwrap.dedent("""\
+    assert x == textwrap.dedent(
+        """\
         <!DOCTYPE html>
         <html>
           <head>
@@ -46,13 +49,15 @@ def test_panel_title():
               A subtitle
             </h5>
           </body>
-        </html>""")
+        </html>"""
+    )
 
 
 def test_modal_footer():
     # Default behavior: Dismiss button
     x = str(ui.modal())
-    assert x == textwrap.dedent("""\
+    assert x == textwrap.dedent(
+        """\
         <div id="shiny-modal" class="modal fade" tabindex="-1" data-backdrop="static" data-bs-backdrop="static" data-keyboard="false" data-bs-keyboard="false">
           <div class="modal-dialog">
             <div class="modal-content">
@@ -68,11 +73,13 @@ def test_modal_footer():
         } else {
           $('#shiny-modal').modal().focus()
         }</script>
-        </div>""")
+        </div>"""
+    )
 
     # None: drop footer altogether
     x = str(ui.modal(footer=None))
-    assert x == textwrap.dedent("""\
+    assert x == textwrap.dedent(
+        """\
         <div id="shiny-modal" class="modal fade" tabindex="-1" data-backdrop="static" data-bs-backdrop="static" data-keyboard="false" data-bs-keyboard="false">
           <div class="modal-dialog">
             <div class="modal-content">
@@ -85,11 +92,13 @@ def test_modal_footer():
         } else {
           $('#shiny-modal').modal().focus()
         }</script>
-        </div>""")
+        </div>"""
+    )
 
     # If other falsy value: Render empty footer
     x = str(ui.modal(footer=""))
-    assert x == textwrap.dedent("""\
+    assert x == textwrap.dedent(
+        """\
         <div id="shiny-modal" class="modal fade" tabindex="-1" data-backdrop="static" data-bs-backdrop="static" data-keyboard="false" data-bs-keyboard="false">
           <div class="modal-dialog">
             <div class="modal-content">
@@ -103,11 +112,13 @@ def test_modal_footer():
         } else {
           $('#shiny-modal').modal().focus()
         }</script>
-        </div>""")
+        </div>"""
+    )
 
     # Anything else: include custom footer
     x = str(ui.modal(footer=ui.span("Custom Footer", class_="mt-3")))
-    assert x == textwrap.dedent("""\
+    assert x == textwrap.dedent(
+        """\
         <div id="shiny-modal" class="modal fade" tabindex="-1" data-backdrop="static" data-bs-backdrop="static" data-keyboard="false" data-bs-keyboard="false">
           <div class="modal-dialog">
             <div class="modal-content">
@@ -123,7 +134,8 @@ def test_modal_footer():
         } else {
           $('#shiny-modal').modal().focus()
         }</script>
-        </div>""")
+        </div>"""
+    )
 
 
 def test__update_options():

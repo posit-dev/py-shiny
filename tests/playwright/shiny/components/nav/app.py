@@ -94,11 +94,13 @@ app_ui = ui.page_navbar(
     fillable=False,
     footer=ui.div(
         {"style": "width:80%;margin: 0 auto"},
-        ui.tags.style("""
+        ui.tags.style(
+            """
             h4 {
                 margin-top: 3em;
             }
-            """),
+            """
+        ),
         "page_navbar(): Footer (w/ custom styling)",
         make_navset(
             "navset_bar", ui.navset_bar, title=True, sidebar=True, headerfooter=True

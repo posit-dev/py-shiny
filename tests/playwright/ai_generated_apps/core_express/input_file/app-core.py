@@ -22,13 +22,17 @@ app_ui = ui.page_fillable(
         # Output for the data grid
         ui.output_data_frame("file_table"),
         # Instructions card
-        ui.card(ui.markdown("""
+        ui.card(
+            ui.markdown(
+                """
                 ### Instructions:
                 1. Click 'Choose Files...' to select one or more files
                 2. Supported file types: CSV, TXT, PDF, and images
                 3. File information will appear in the table below
                 4. Use filters to search through uploaded files
-                """)),
+                """
+            )
+        ),
     )
 )
 

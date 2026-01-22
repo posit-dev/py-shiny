@@ -3,12 +3,14 @@ import asyncio
 from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 
 app_ui = ui.page_fluid(
-    ui.tags.p("""
+    ui.tags.p(
+        """
       The first time you click the button, you should see a 1 appear below the button,
       as well as 2 messages in the python console (all reporting 1 click). After
       clicking once, clicking again should increment the number below the button and
       print the number of clicks in the console twice.
-      """),
+      """
+    ),
     ui.navset_card_tab(
         ui.nav_panel(
             "Sync",

@@ -2,11 +2,13 @@ import shiny.experimental as x
 from shiny import App, ui
 
 app_ui = ui.page_fluid(
-    ui.tags.style("""
+    ui.tags.style(
+        """
         .card-body {
             border: 1px dashed red;
         }
-        """),
+        """
+    ),
     x.ui.card(
         ui.card_header(
             "These two images are in their own individual card_body() container"

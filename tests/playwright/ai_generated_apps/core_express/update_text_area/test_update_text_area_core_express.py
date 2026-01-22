@@ -18,11 +18,13 @@ def test_update_text_area(page: Page, app: ShinyAppProc) -> None:
     new_placeholder = controller.InputText(page, "new_placeholder")
 
     show_values = controller.OutputText(page, "show_values")
-    show_values.expect_value("""
+    show_values.expect_value(
+        """
         Current Label: Updated Label
         Current Value: Updated text content
         Current Placeholder: Updated placeholder text
-        """)
+        """
+    )
 
     # Update text are button
     update_button = controller.InputActionButton(page, "update")
@@ -51,11 +53,13 @@ def test_update_text_area(page: Page, app: ShinyAppProc) -> None:
     text_area.expect_placeholder("New placeholder text")
 
     # Check the output
-    show_values.expect_value("""
+    show_values.expect_value(
+        """
         Current Label: New Label
         Current Value: New text content
         Current Placeholder: New placeholder text
-        """)
+        """
+    )
     text_area.expect_label("New Label")
     text_area.expect_value("New text content")
     text_area.expect_placeholder("New placeholder text")

@@ -3,7 +3,8 @@ import random
 from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 
 app_ui = ui.page_fluid(
-    ui.markdown(f"""
+    ui.markdown(
+        f"""
         This example demonstrates how `@reactive.event()` can be used to restrict
         execution of: (1) a `@render` function, (2) `@reactive.calc`, or (3)
         `@reactive.effect`.
@@ -11,7 +12,8 @@ app_ui = ui.page_fluid(
         In all three cases, the output is dependent on a random value that gets updated
         every 0.5 seconds (currently, it is {ui.output_ui("number", inline=True)}), but
         the output is only updated when the button is clicked.
-        """),
+        """
+    ),
     ui.row(
         ui.column(
             3,

@@ -1,6 +1,7 @@
 from shiny.express import ui
 
-ui.markdown("""
+ui.markdown(
+    """
     # Hello World
 
     This is **markdown** and here is some `code`:
@@ -8,4 +9,5 @@ ui.markdown("""
     ```python
     print('Hello world!')
     ```
-    """)
+    """
+)
