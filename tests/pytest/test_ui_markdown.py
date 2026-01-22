@@ -54,12 +54,10 @@ class TestMarkdown:
 
     def test_markdown_dedent(self) -> None:
         """Test that markdown text is dedented."""
-        result = markdown(
-            """
+        result = markdown("""
             This is indented text.
             It should be dedented.
-        """
-        )
+        """)
 
         rendered = str(result)
         assert "indented" in rendered

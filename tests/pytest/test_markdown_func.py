@@ -49,12 +49,10 @@ class TestMarkdown:
 
     def test_markdown_dedent(self):
         """Test markdown dedents text."""
-        result = markdown(
-            """
+        result = markdown("""
             # Header
             Text
-            """
-        )
+            """)
         html_str = str(result)
         assert "<h1>" in html_str
 

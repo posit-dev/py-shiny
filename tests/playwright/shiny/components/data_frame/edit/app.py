@@ -316,12 +316,10 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
             val,
         )
 
-        return ui.HTML(
-            f"""
+        return ui.HTML(f"""
             <script>console.log("patching: {patch['value']}")</script>
             demo_{patch["value"]}
-            """
-        )
+            """)
 
     # @reactive.effect
     # def _():
