@@ -39,10 +39,20 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Run unit tests
+      - name: Run unit tests with coverage
         if: steps.install.outcome == 'success' && (success() || failure())
         run: |
-          make check-tests
+          python -m pytest tests/pytest/ --cov=shiny --cov-report=xml --cov-report=term-missing -q
+
+      - name: Upload coverage reports to Codecov
+        if: steps.install.outcome == 'success' && (success() || failure()) && matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+          verbose: true
 
       - name: Type check
         if: steps.install.outcome == 'success' && (success() || failure())
