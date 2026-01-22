@@ -1,13 +1,14 @@
 """Tests for value box UI components."""
 
+from htmltools import tags
+
 from shiny.ui import (
-    value_box,
+    showcase_bottom,
     showcase_left_center,
     showcase_top_right,
-    showcase_bottom,
+    value_box,
     value_box_theme,
 )
-from htmltools import tags
 
 
 class TestValueBox:

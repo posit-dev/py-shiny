@@ -1,16 +1,17 @@
 """Tests for notification and download helper functions."""
 
-from shiny.ui import (
-    download_link,
-    download_button,
-    panel_well,
-    panel_conditional,
-    panel_title,
-    panel_fixed,
-    panel_absolute,
-    help_text,
-)
 from htmltools import tags
+
+from shiny.ui import (
+    download_button,
+    download_link,
+    help_text,
+    panel_absolute,
+    panel_conditional,
+    panel_fixed,
+    panel_title,
+    panel_well,
+)
 
 
 class TestDownloadUI:

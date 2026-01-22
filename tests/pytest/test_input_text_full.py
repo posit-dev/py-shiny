@@ -1,11 +1,11 @@
 """Tests for shiny/ui/_input_text.py module."""
 
+from shiny.ui._input_password import (
+    input_password,
+)
 from shiny.ui._input_text import (
     input_text,
     input_text_area,
-)
-from shiny.ui._input_password import (
-    input_password,
 )
 
 

@@ -1,8 +1,8 @@
 """Tests for shiny/reactive/_poll.py module."""
 
 from shiny.reactive._poll import (
-    poll,
     file_reader,
+    poll,
 )
 
 

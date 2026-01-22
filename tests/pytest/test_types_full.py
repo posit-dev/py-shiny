@@ -3,8 +3,8 @@
 from shiny.types import (
     NavSetArg,
     SafeException,
-    SilentException,
     SilentCancelOutputException,
+    SilentException,
 )
 
 

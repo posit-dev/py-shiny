@@ -6,6 +6,7 @@ import os
 
 from htmltools import Tag, TagList, tags
 
+from shiny.types import MISSING
 from shiny.ui._utils import (
     JSEval,
     _find_child_strings,
@@ -17,7 +18,6 @@ from shiny.ui._utils import (
     path_pkg_www,
     shiny_input_label,
 )
-from shiny.types import MISSING
 
 
 class TestShinyInputLabel:

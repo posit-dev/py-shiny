@@ -1,8 +1,8 @@
 """Tests for shiny/_utils.py module."""
 
 from shiny._utils import (
-    rand_hex,
     drop_none,
+    rand_hex,
 )
 
 

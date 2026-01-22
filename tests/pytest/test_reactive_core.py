@@ -1,16 +1,16 @@
 """Tests for shiny/reactive/_core.py and _reactives.py modules."""
 
-from shiny.reactive._reactives import (
-    effect,
-    Effect_ as Effect,
-    calc,
-    Calc_ as Calc,
-)
 from shiny.reactive._core import (
-    isolate,
-    invalidate_later,
     flush,
+    invalidate_later,
+    isolate,
     lock,
+)
+from shiny.reactive._reactives import Calc_ as Calc
+from shiny.reactive._reactives import Effect_ as Effect
+from shiny.reactive._reactives import (
+    calc,
+    effect,
 )
 
 

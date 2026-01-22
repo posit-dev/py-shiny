@@ -302,12 +302,12 @@ class TestModuleExports:
         from shiny.types import (
             MISSING,
             MISSING_TYPE,
-            Jsonifiable,
             FileInfo,
             ImgData,
+            Jsonifiable,
             SafeException,
-            SilentException,
             SilentCancelOutputException,
+            SilentException,
         )
 
         # Just verify they're all importable

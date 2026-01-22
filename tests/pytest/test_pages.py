@@ -1,14 +1,14 @@
 """Tests for page UI components."""
 
 from shiny.ui import (
-    page_fluid,
-    page_fixed,
-    page_fillable,
+    nav_panel,
     page_bootstrap,
+    page_fillable,
+    page_fixed,
+    page_fluid,
     page_navbar,
     page_sidebar,
     sidebar,
-    nav_panel,
 )
 
 

@@ -236,6 +236,7 @@ class TestDefaultMdRendererModuleNotFound:
         """Test error when markdown-it-py is not installed"""
         # We need to reload the module to trigger the import error
         import importlib
+
         import shiny.ui._markdown
 
         with pytest.raises(ModuleNotFoundError, match="markdown-it"):

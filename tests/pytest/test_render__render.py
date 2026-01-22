@@ -17,8 +17,8 @@ from shiny.render._render import (
     plot,
     table,
     text,
-    ui as render_ui,
 )
+from shiny.render._render import ui as render_ui
 from shiny.render._try_render_plot import PlotSizeInfo
 from shiny.session import session_context
 from shiny.session._session import DownloadInfo

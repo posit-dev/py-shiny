@@ -1,8 +1,8 @@
 """Tests for shiny/reactive/_reactives.py module."""
 
 from shiny.reactive._reactives import (
-    value,
     Value,
+    value,
 )
 
 

@@ -6,11 +6,11 @@ import pytest
 from htmltools import Tag, span
 
 from shiny.ui import (
-    value_box,
-    value_box_theme,
+    showcase_bottom,
     showcase_left_center,
     showcase_top_right,
-    showcase_bottom,
+    value_box,
+    value_box_theme,
 )
 from shiny.ui._valuebox import ShowcaseLayout, ValueBoxTheme, resolve_showcase_layout
 

@@ -1,9 +1,9 @@
 """Tests for shiny/ui/css/_css_unit.py module."""
 
 from shiny.ui.css._css_unit import (
-    as_css_unit,
-    as_css_padding,
     CssUnit,
+    as_css_padding,
+    as_css_unit,
 )
 
 

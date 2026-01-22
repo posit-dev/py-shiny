@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
+import pytest
+
 from shiny.plotutils import brushed_points, near_points
 from shiny.types import BrushInfo, CoordInfo
-
-import pytest
 
 # These tests require pandas, so skip if not available
 pd = pytest.importorskip("pandas")

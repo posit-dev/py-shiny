@@ -1,19 +1,19 @@
 """Tests for navigation set UI components."""
 
 from shiny.ui import (
-    nav_panel,
-    nav_menu,
     nav_control,
+    nav_menu,
+    nav_panel,
     nav_spacer,
-    navset_tab,
-    navset_pill,
-    navset_underline,
-    navset_hidden,
-    navset_card_tab,
-    navset_card_pill,
-    navset_card_underline,
-    navset_pill_list,
     navset_bar,
+    navset_card_pill,
+    navset_card_tab,
+    navset_card_underline,
+    navset_hidden,
+    navset_pill,
+    navset_pill_list,
+    navset_tab,
+    navset_underline,
 )
 
 

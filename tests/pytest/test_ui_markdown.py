@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from shiny.ui._markdown import markdown
 from htmltools import HTML
+
+from shiny.ui._markdown import markdown
 
 
 class TestMarkdown:
