@@ -1,11 +1,7 @@
 import pytest
 from htmltools import Tag, tags
 
-from shiny.ui._accordion import (
-    AccordionPanel,
-    accordion,
-    accordion_panel,
-)
+from shiny.ui._accordion import AccordionPanel, accordion, accordion_panel
 
 
 class TestAccordionPanel:

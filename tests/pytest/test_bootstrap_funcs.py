@@ -2,11 +2,7 @@
 
 from htmltools import Tag, TagList
 
-from shiny.ui._bootstrap import (
-    column,
-    panel_title,
-    row,
-)
+from shiny.ui._bootstrap import column, panel_title, row
 
 
 class TestRow:

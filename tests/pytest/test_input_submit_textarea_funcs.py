@@ -2,10 +2,7 @@
 
 from htmltools import Tag, span
 
-from shiny.ui._input_submit_textarea import (
-    input_submit_textarea,
-    is_button_tag,
-)
+from shiny.ui._input_submit_textarea import input_submit_textarea, is_button_tag
 from shiny.ui._input_task_button import input_task_button
 
 

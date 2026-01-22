@@ -1,10 +1,6 @@
 """Tests for shiny/ui/_markdown_stream.py - Markdown stream exports."""
 
-from shiny.ui._markdown_stream import (
-    MarkdownStream,
-    output_markdown_stream,
-    __all__,
-)
+from shiny.ui._markdown_stream import MarkdownStream, __all__, output_markdown_stream
 
 
 class TestMarkdownStreamExports:

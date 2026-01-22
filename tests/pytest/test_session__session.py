@@ -5,15 +5,15 @@ from pathlib import Path
 from typing import Any, AsyncIterable
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import htmltools
 import pytest
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, PlainTextResponse, StreamingResponse
 
 from shiny import App, render, ui
 from shiny._connection import MockConnection
-import htmltools
-from shiny.bookmark._button import BOOKMARK_ID
 from shiny._namespaces import ResolvedId
+from shiny.bookmark._button import BOOKMARK_ID
 from shiny.reactive import Value, effect, flush, isolate
 from shiny.reactive._core import ReactiveWarning
 from shiny.session import Session, session_context

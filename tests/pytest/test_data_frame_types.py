@@ -1,9 +1,6 @@
 """Tests for shiny/render/_data_frame_utils/_types.py module."""
 
-from shiny.render._data_frame_utils._types import (
-    ColumnSort,
-    CellPatch,
-)
+from shiny.render._data_frame_utils._types import CellPatch, ColumnSort
 
 
 class TestColumnSort:

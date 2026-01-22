@@ -1,6 +1,6 @@
 """Tests for shiny/ui/_notification.py module."""
 
-from shiny.ui._notification import notification_show, notification_remove
+from shiny.ui._notification import notification_remove, notification_show
 
 
 class TestNotificationShow:

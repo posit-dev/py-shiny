@@ -3,10 +3,7 @@
 import pytest
 from htmltools import Tag
 
-from shiny.ui._input_dark_mode import (
-    input_dark_mode,
-    validate_dark_mode_option,
-)
+from shiny.ui._input_dark_mode import input_dark_mode, validate_dark_mode_option
 
 
 class TestInputDarkMode:

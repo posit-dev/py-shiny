@@ -1,8 +1,8 @@
 """Tests for shiny/render/renderer/_utils.py module."""
 
 from shiny.render.renderer._utils import (
-    rendered_deps_to_jsonifiable,
     imgdata_to_jsonifiable,
+    rendered_deps_to_jsonifiable,
     set_kwargs_value,
 )
 from shiny.types import MISSING

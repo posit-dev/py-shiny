@@ -2,13 +2,7 @@
 
 from htmltools import Tag, div
 
-from shiny.ui._card import (
-    CardItem,
-    card,
-    card_body,
-    card_footer,
-    card_header,
-)
+from shiny.ui._card import CardItem, card, card_body, card_footer, card_header
 
 
 class TestCard:

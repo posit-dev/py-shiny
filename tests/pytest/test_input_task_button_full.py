@@ -1,7 +1,7 @@
 """Tests for shiny/ui/_input_task_button.py - Task button input and binding."""
 
 from shiny.ui import input_task_button
-from shiny.ui._input_task_button import spinner_icon, bind_task_button
+from shiny.ui._input_task_button import bind_task_button, spinner_icon
 
 
 class TestInputTaskButton:

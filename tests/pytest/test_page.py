@@ -1,13 +1,13 @@
 """Tests for shiny/ui/_page.py module."""
 
 from shiny.ui._page import (
-    page_fluid,
-    page_fixed,
-    page_fillable,
-    page_sidebar,
-    page_bootstrap,
     page_auto,
+    page_bootstrap,
+    page_fillable,
+    page_fixed,
+    page_fluid,
     page_navbar,
+    page_sidebar,
 )
 
 

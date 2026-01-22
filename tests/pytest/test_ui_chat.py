@@ -1,12 +1,6 @@
 """Tests for shiny/ui/_chat.py - Chat exports."""
 
-from shiny.ui._chat import (
-    Chat,
-    ChatExpress,
-    chat_ui,
-    ChatMessageDict,
-    __all__,
-)
+from shiny.ui._chat import Chat, ChatExpress, ChatMessageDict, __all__, chat_ui
 
 
 class TestChatExports:

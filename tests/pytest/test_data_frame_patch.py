@@ -1,9 +1,6 @@
 """Tests for shiny/render/_data_frame_utils/_patch.py module."""
 
-from shiny.render._data_frame_utils._patch import (
-    CellPatch,
-    CellValue,
-)
+from shiny.render._data_frame_utils._patch import CellPatch, CellValue
 
 
 class TestCellPatch:
