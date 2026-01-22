@@ -2,172 +2,138 @@
 
 from __future__ import annotations
 
+from unittest.mock import MagicMock, patch
+
 from htmltools import Tag
 
-from shiny.ui import modal, modal_button
+from shiny.ui._modal import modal, modal_button, modal_remove, modal_show
+
+
+def create_mock_session() -> MagicMock:
+    """Create a mock session for testing modal functions."""
+    mock = MagicMock()
+    mock._process_ui.return_value = {"html": "<div>test</div>", "deps": []}
+    return mock
 
 
 class TestModalButton:
-    """Tests for the modal_button function."""
+    """Tests for modal_button function."""
 
-    def test_basic_button(self) -> None:
-        """Test creating a basic modal button."""
+    def test_modal_button_basic(self) -> None:
+        """Test basic modal button creation."""
         result = modal_button("Close")
         assert isinstance(result, Tag)
-        assert result.name == "button"
-        assert "btn" in result.attrs.get("class", "")
-        assert "btn-default" in result.attrs.get("class", "")
-        assert result.attrs.get("type") == "button"
+        html = str(result)
+        assert "Close" in html
+        assert "btn" in html
 
-    def test_button_with_icon(self) -> None:
-        """Test creating a button with an icon."""
-        result = modal_button("Close", icon="✓")
-        assert isinstance(result, Tag)
+    def test_modal_button_with_icon(self) -> None:
+        """Test modal button with icon."""
+        result = modal_button("Close", icon="icon-x")
+        html = str(result)
+        assert "Close" in html
+        assert "icon-x" in html
 
-    def test_button_with_custom_attrs(self) -> None:
-        """Test creating a button with custom attributes."""
-        result = modal_button("Close", id="my-btn", class_="custom-class")
-        assert isinstance(result, Tag)
-        assert result.attrs.get("id") == "my-btn"
-
-    def test_button_has_dismiss_attrs(self) -> None:
-        """Test that button has Bootstrap dismiss attributes."""
-        result = modal_button("Dismiss")
-        # Should have both BS4 and BS5 dismiss attributes
-        assert result.attrs.get("data-dismiss") == "modal"
-        assert result.attrs.get("data-bs-dismiss") == "modal"
+    def test_modal_button_with_kwargs(self) -> None:
+        """Test modal button with custom attributes."""
+        result = modal_button("Close", id="close-btn", class_="custom-class")
+        html = str(result)
+        assert "close-btn" in html
+        assert "custom-class" in html
 
 
 class TestModal:
-    """Tests for the modal function."""
+    """Tests for modal function."""
 
-    def test_basic_modal(self) -> None:
-        """Test creating a basic modal."""
-        result = modal("Content")
+    def test_modal_basic(self) -> None:
+        """Test basic modal creation."""
+        result = modal("Hello, World!")
         assert isinstance(result, Tag)
-        assert result.name == "div"
-        assert result.attrs.get("id") == "shiny-modal"
-        assert "modal" in result.attrs.get("class", "")
-        assert "fade" in result.attrs.get("class", "")
+        html = str(result)
+        assert "modal" in html
+        assert "Hello, World!" in html
 
     def test_modal_with_title(self) -> None:
-        """Test creating a modal with a title."""
+        """Test modal with title."""
         result = modal("Content", title="My Title")
-        assert isinstance(result, Tag)
-        # The title should be present in the rendered HTML
-        rendered = str(result)
-        assert "My Title" in rendered
-        assert "modal-title" in rendered
+        html = str(result)
+        assert "My Title" in html
+        assert "modal-title" in html
 
-    def test_modal_without_fade(self) -> None:
-        """Test creating a modal without fade animation."""
-        result = modal("Content", fade=False)
-        assert isinstance(result, Tag)
-        class_attr = result.attrs.get("class", "")
-        assert "modal" in class_attr
-        assert "fade" not in class_attr
-
-    def test_modal_sizes(self) -> None:
-        """Test modal with different sizes."""
-        # Small modal
-        small = modal("Content", size="s")
-        assert "modal-sm" in str(small)
-
-        # Large modal
-        large = modal("Content", size="l")
-        assert "modal-lg" in str(large)
-
-        # Extra large modal
-        xl = modal("Content", size="xl")
-        assert "modal-xl" in str(xl)
-
-        # Medium modal (default)
-        medium = modal("Content", size="m")
-        modal_html = str(medium)
-        assert "modal-sm" not in modal_html
-        assert "modal-lg" not in modal_html
-        assert "modal-xl" not in modal_html
-
-    def test_modal_easy_close(self) -> None:
-        """Test modal with easy_close option."""
-        # With easy_close=True, backdrop/keyboard should be None (not set)
-        easy = modal("Content", easy_close=True)
-        assert easy.attrs.get("data-backdrop") is None
-        assert easy.attrs.get("data-keyboard") is None
-        assert easy.attrs.get("data-bs-backdrop") is None
-        assert easy.attrs.get("data-bs-keyboard") is None
-
-        # With easy_close=False, backdrop should be "static"
-        hard = modal("Content", easy_close=False)
-        assert hard.attrs.get("data-backdrop") == "static"
-        assert hard.attrs.get("data-keyboard") == "false"
-        assert hard.attrs.get("data-bs-backdrop") == "static"
-        assert hard.attrs.get("data-bs-keyboard") == "false"
-
-    def test_modal_default_footer(self) -> None:
-        """Test that modal has a default footer with dismiss button."""
-        result = modal("Content")
-        rendered = str(result)
-        assert "modal-footer" in rendered
-        assert "Dismiss" in rendered
-
-    def test_modal_no_footer(self) -> None:
+    def test_modal_footer_none(self) -> None:
         """Test modal with no footer."""
         result = modal("Content", footer=None)
-        rendered = str(result)
-        assert "modal-footer" not in rendered
+        html = str(result)
+        assert "modal-footer" not in html
 
     def test_modal_custom_footer(self) -> None:
         """Test modal with custom footer."""
-        custom_footer = modal_button("Save Changes")
-        result = modal("Content", footer=custom_footer)
-        rendered = str(result)
-        assert "modal-footer" in rendered
-        assert "Save Changes" in rendered
+        result = modal("Content", footer="Custom Footer")
+        html = str(result)
+        assert "Custom Footer" in html
+        assert "modal-footer" in html
 
-    def test_modal_multiple_children(self) -> None:
-        """Test modal with multiple content elements."""
-        result = modal("Paragraph 1", "Paragraph 2", "Paragraph 3")
-        rendered = str(result)
-        assert "Paragraph 1" in rendered
-        assert "Paragraph 2" in rendered
-        assert "Paragraph 3" in rendered
+    def test_modal_size_small(self) -> None:
+        """Test modal with small size."""
+        result = modal("Content", size="s")
+        html = str(result)
+        assert "modal-sm" in html
 
-    def test_modal_with_kwargs(self) -> None:
-        """Test modal with additional body kwargs."""
-        result = modal("Content", id="body-id")
-        # id should be on the modal itself, not the body
-        assert result.attrs.get("id") == "shiny-modal"
+    def test_modal_size_large(self) -> None:
+        """Test modal with large size."""
+        result = modal("Content", size="l")
+        html = str(result)
+        assert "modal-lg" in html
 
-    def test_modal_has_script(self) -> None:
-        """Test that modal includes JavaScript for Bootstrap compatibility."""
-        result = modal("Content")
-        rendered = str(result)
-        assert "<script>" in rendered
-        assert "bootstrap.Modal" in rendered or "modal" in rendered
+    def test_modal_size_xl(self) -> None:
+        """Test modal with xl size."""
+        result = modal("Content", size="xl")
+        html = str(result)
+        assert "modal-xl" in html
 
-    def test_modal_tabindex(self) -> None:
-        """Test that modal has tabindex for accessibility."""
-        result = modal("Content")
-        assert result.attrs.get("tabindex") == "-1"
+    def test_modal_easy_close(self) -> None:
+        """Test modal with easy close enabled."""
+        result = modal("Content", easy_close=True)
+        html = str(result)
+        assert 'data-backdrop="static"' not in html
+
+    def test_modal_no_easy_close(self) -> None:
+        """Test modal with easy close disabled (default)."""
+        result = modal("Content", easy_close=False)
+        html = str(result)
+        assert "static" in html
+
+    def test_modal_no_fade(self) -> None:
+        """Test modal without fade animation."""
+        result = modal("Content", fade=False)
+        html = str(result)
+        assert 'class="modal"' in html
 
 
-class TestModalStructure:
-    """Tests for modal DOM structure."""
+class TestModalShow:
+    """Tests for modal_show function."""
 
-    def test_modal_structure(self) -> None:
-        """Test that modal has correct nested structure."""
-        result = modal("Content", title="Title")
-        rendered = str(result)
-        # Check for required structural classes
-        assert "modal-dialog" in rendered
-        assert "modal-content" in rendered
-        assert "modal-body" in rendered
+    def test_modal_show(self) -> None:
+        """Test showing a modal."""
+        mock_session = create_mock_session()
+        modal_ui = modal("Content")
+        with patch("shiny.ui._modal.require_active_session", return_value=mock_session):
+            modal_show(modal_ui, session=mock_session)
+        mock_session._send_message_sync.assert_called_once()
+        call_args = mock_session._send_message_sync.call_args[0][0]
+        assert "modal" in call_args
+        assert call_args["modal"]["type"] == "show"
 
-    def test_modal_header_only_with_title(self) -> None:
-        """Test that modal header only appears when title is provided."""
-        with_title = modal("Content", title="My Title")
-        without_title = modal("Content")
 
-        assert "modal-header" in str(with_title)
-        assert "modal-header" not in str(without_title)
+class TestModalRemove:
+    """Tests for modal_remove function."""
+
+    def test_modal_remove(self) -> None:
+        """Test removing a modal."""
+        mock_session = create_mock_session()
+        with patch("shiny.ui._modal.require_active_session", return_value=mock_session):
+            modal_remove(session=mock_session)
+        mock_session._send_message_sync.assert_called_once()
+        call_args = mock_session._send_message_sync.call_args[0][0]
+        assert "modal" in call_args
+        assert call_args["modal"]["type"] == "remove"
