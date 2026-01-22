@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from tempfile import NamedTemporaryFile
 
 import pytest
 from htmltools import HTMLDependency, Tag, TagList
@@ -50,31 +49,21 @@ class TestShinyPageThemeDeps:
         result = shiny_page_theme_deps("//example.com/theme.css")
         assert isinstance(result, TagList)
 
-    def test_with_file_path(self):
+    def test_with_file_path(self, tmp_path: Path):
         """Test shiny_page_theme_deps with file path."""
-        with NamedTemporaryFile(suffix=".css", delete=False) as f:
-            f.write(b"body { color: red; }")
-            f.flush()
-            path = Path(f.name)
+        path = tmp_path / "theme.css"
+        path.write_text("body { color: red; }", encoding="utf-8")
 
-        try:
-            result = shiny_page_theme_deps(str(path))
-            assert isinstance(result, TagList)
-        finally:
-            path.unlink()
+        result = shiny_page_theme_deps(str(path))
+        assert isinstance(result, TagList)
 
-    def test_with_path_object(self):
+    def test_with_path_object(self, tmp_path: Path):
         """Test shiny_page_theme_deps with Path object."""
-        with NamedTemporaryFile(suffix=".css", delete=False) as f:
-            f.write(b"body { color: blue; }")
-            f.flush()
-            path = Path(f.name)
+        path = tmp_path / "theme.css"
+        path.write_text("body { color: blue; }", encoding="utf-8")
 
-        try:
-            result = shiny_page_theme_deps(path)
-            assert isinstance(result, TagList)
-        finally:
-            path.unlink()
+        result = shiny_page_theme_deps(path)
+        assert isinstance(result, TagList)
 
     def test_with_tagifiable(self):
         """Test shiny_page_theme_deps with Tagifiable object."""

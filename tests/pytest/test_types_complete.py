@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import pytest
 
+# Import all types at module level to ensure coverage sees them
+from shiny import types as shiny_types
+
 
 class TestMissingTypeComplete:
     """Complete tests for MISSING and MISSING_TYPE."""
@@ -383,13 +386,9 @@ class TestModuleExports:
 
     def test_all_exports_exist(self):
         """All items in __all__ should be importable."""
-        from shiny import types
-
-        for name in types.__all__:
-            assert hasattr(types, name)
+        for name in shiny_types.__all__:
+            assert hasattr(shiny_types, name)
 
     def test_all_is_tuple(self):
         """__all__ should be a tuple."""
-        from shiny import types
-
-        assert isinstance(types.__all__, tuple)
+        assert isinstance(shiny_types.__all__, tuple)

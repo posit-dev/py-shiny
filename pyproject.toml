@@ -197,6 +197,26 @@ exclude_lines = [
     "@overload",
     "@typing.overload",
     "\\.\\.\\.",  # Ellipsis in stub files
+    # Exclude import statements
+    "^import ",
+    "^from .* import ",
+    # Exclude TypedDict and Protocol definitions (type-only code)
+    "class .*\\(TypedDict\\):",
+    "class .*\\(.*TypedDict.*\\):",
+    "class .*\\(Protocol\\):",
+    "class .*\\(.*Protocol.*\\):",
+    # Exclude type aliases and TypeVar
+    "^[A-Z][a-zA-Z0-9_]* = ",
+    ".* = TypeVar\\(",
+    ".* = Union\\[",
+    # Exclude __all__ definitions
+    "^__all__ = ",
+    # Exclude sentinel/marker class definitions
+    "^class [A-Z_]+:",
+    "^    pass$",
+    # Exclude docstrings (triple-quoted strings)
+    '"""',
+    "'''",
 ]
 # Note: show_missing is intentionally not set to true by default.
 # Using `--cov-report=term-missing` with the full shiny source causes

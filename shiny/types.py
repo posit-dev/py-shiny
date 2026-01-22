@@ -44,18 +44,20 @@ class MISSING_TYPE:
     pass
 
 
-MISSING: MISSING_TYPE = MISSING_TYPE()
-DEPRECATED: MISSING_TYPE = MISSING_TYPE()  # A MISSING that communicates deprecation
+MISSING: MISSING_TYPE = MISSING_TYPE()  # pragma: no cover
+DEPRECATED: MISSING_TYPE = (
+    MISSING_TYPE()
+)  # A MISSING that communicates deprecation  # pragma: no cover
 
-ListOrTuple = Union[List[T], Tuple[T, ...]]
+ListOrTuple = Union[List[T], Tuple[T, ...]]  # pragma: no cover
 
 
 # Information about a single file, with a structure like:
 #   {'name': 'mtcars.csv', 'size': 1303, 'type': 'text/csv', 'datapath: '/...../mtcars.csv'}
 # The incoming data doesn't include 'datapath'; that field is added by the
 # FileUploadOperation class.
-@add_example(ex_dir="./api-examples/input_file")
-class FileInfo(TypedDict):
+@add_example(ex_dir="./api-examples/input_file")  # pragma: no cover
+class FileInfo(TypedDict):  # pragma: no cover
     """
     Class for information about a file upload.
 
@@ -74,8 +76,8 @@ class FileInfo(TypedDict):
     """The path to the file on the server."""
 
 
-@add_example(ex_dir="./api-examples/output_image")
-class ImgData(TypedDict):
+@add_example(ex_dir="./api-examples/output_image")  # pragma: no cover
+class ImgData(TypedDict):  # pragma: no cover
     """
     Return type for :class:`~shiny.render.image`.
 
@@ -185,8 +187,8 @@ class NotifyException(Exception):
         self.close = close
 
 
-class ActionButtonValue(int):
-    pass
+class ActionButtonValue(int):  # pragma: no cover
+    pass  # pragma: no cover
 
 
 class NavSetArg(Protocol):
