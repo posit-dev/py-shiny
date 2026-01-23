@@ -142,6 +142,28 @@ def test_toolbar_input_button_tooltip_custom():
     assert "Save your work" in rendered
 
 
+def test_toolbar_input_button_tooltip_show_label_default():
+    # When show_label=True, tooltip should default to False
+    btn = ui.toolbar_input_button("btn1", "Edit", icon="✏️", show_label=True)
+    rendered = str(btn)
+    assert "bslib-tooltip" not in rendered
+
+    # When show_label=False, tooltip should default to True
+    btn_icon_only = ui.toolbar_input_button("btn2", "Save", icon="💾", show_label=False)
+    rendered_icon_only = str(btn_icon_only)
+    assert "bslib-tooltip" in rendered_icon_only
+
+
+def test_toolbar_input_button_empty_label_warning():
+    # Empty string label should warn
+    with pytest.warns(UserWarning, match="non-empty string label"):
+        ui.toolbar_input_button("btn1", "", icon="💾")
+
+    # Whitespace-only label should warn
+    with pytest.warns(UserWarning, match="non-empty string label"):
+        ui.toolbar_input_button("btn2", "   ", icon="💾")
+
+
 # ============================================================================
 # toolbar_input_select() tests
 # ============================================================================

@@ -20,6 +20,7 @@ from .._utils import drop_none, private_random_int
 from ..bookmark import restore_input
 from ..module import resolve_id
 from ..session import Session, require_active_session
+from ..types import MISSING, MISSING_TYPE
 from ._html_deps_shinyverse import components_dependencies
 from ._input_select import (
     SelectChoicesArg,
@@ -241,7 +242,7 @@ def toolbar_input_button(
     *,
     icon: Optional[TagChild] = None,
     show_label: bool = False,
-    tooltip: bool | str = True,
+    tooltip: bool | str | MISSING_TYPE = MISSING,
     disabled: bool = False,
     border: bool = False,
     **kwargs: TagAttrValue,
@@ -265,12 +266,18 @@ def toolbar_input_button(
     show_label
         Whether to show the label text. If `False` (the default), only the icon is
         shown (if provided). If `True`, the label text is shown alongside the icon.
+        Note that `show_label` can be dynamically updated using
+        :func:`~shiny.ui.update_toolbar_input_button`.
     tooltip
         Tooltip text to display when hovering over the input. Can be:
         * `True` (default when `show_label = False`) - shows a tooltip with the
           `label` text
         * `False` (default when `show_label = True`) - no tooltip
         * A character string - shows a tooltip with custom text
+
+        Defaults to `!show_label`. When a tooltip is created, it will have an ID of
+        `"{id}_tooltip"` which can be used to update the tooltip text via
+        :func:`~shiny.ui.update_tooltip`.
     disabled
         If `True`, the button will not be clickable. Use
         :func:`~shiny.ui.update_toolbar_input_button` to dynamically enable/disable
@@ -287,8 +294,14 @@ def toolbar_input_button(
 
     Notes
     ------
-    ::: {.callout-note title="Server value"}
-    An integer representing the number of clicks.
+    ::: {.callout-note title="Updating toolbar buttons"}
+    Use :func:`~shiny.ui.update_toolbar_input_button` to change the label, label
+    visibility, icon, and disabled state of the button from the server.
+
+    Note that you cannot change the `tooltip` or `border` parameters after the button
+    has been created, as these affect the button's structure and ARIA attributes.
+
+    Please use :func:`~shiny.ui.update_tooltip` to update tooltip text.
     :::
 
     See Also
@@ -317,19 +330,6 @@ def toolbar_input_button(
         show_label=True
     )
     ```
-
-    ```python
-    from shiny import ui
-
-    # With border and custom tooltip
-    ui.toolbar_input_button(
-        id="delete",
-        icon=icon("trash"),
-        label="Delete",
-        border=True,
-        tooltip="Delete this item"
-    )
-    ```
     """
 
     if "_add_ws" not in kwargs:
@@ -350,6 +350,10 @@ def toolbar_input_button(
             "Consider providing a non-empty string label for accessibility.",
             stacklevel=2,
         )
+
+    # Compute tooltip default: !show_label
+    if isinstance(tooltip, MISSING_TYPE):
+        tooltip = not show_label
 
     resolved_id = resolve_id(id)
     label_id = f"btn-label-{private_random_int(1000, 10000)}"
@@ -373,20 +377,21 @@ def toolbar_input_button(
         else None
     )
 
-    # Create button
+    attrs, _ = consolidate_attrs(**kwargs)
+
+    border_class = "border-0" if not border else "border-1"
     button = tags.button(
         icon_elem,
         label_elem,
         {
             "id": resolved_id,
             "type": "button",
-            "class": "bslib-toolbar-input-button btn btn-default btn-sm action-button",
+            "class": f"bslib-toolbar-input-button btn btn-default btn-sm action-button {border_class}",
             "data-type": btn_type,
             "aria-labelledby": label_id,
         },
-        class_="border-0" if not border else "border-1",
+        attrs,
         disabled="" if disabled else None,
-        **kwargs,
     )
 
     # Handle tooltip
@@ -459,6 +464,8 @@ def update_toolbar_input_button(
 
     Note that you cannot change `tooltip` or `border` parameters after the button has
     been created, as these affect the button's structure and ARIA attributes.
+
+    Please use :func:`~shiny.ui.update_tooltip` to update tooltip text.
 
     See Also
     --------
