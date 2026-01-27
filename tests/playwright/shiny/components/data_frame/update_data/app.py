@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import palmerpenguins  # pyright: ignore[reportMissingTypeStubs]
+import palmerpenguins
 import pandas as pd
 
 from shiny import reactive
