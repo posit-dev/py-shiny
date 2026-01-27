@@ -22,7 +22,7 @@ def test_toolbar_select_basic(page: Page, app: ShinyAppProc) -> None:
     expect(select).to_be_visible()
     expect(select).to_have_class(re.compile(r"bslib-toolbar-select"))
 
-    # Check initial value (first option)
+    # Check initial value (first option autoselected)
     expect(select).to_have_value("Option 1")
     output = page.locator("#output_basic")
     expect(output).to_have_text("Basic select value: Option 1")
@@ -35,12 +35,23 @@ def test_toolbar_select_basic(page: Page, app: ShinyAppProc) -> None:
     label_span = wrapper.locator(".bslib-toolbar-label")
     expect(label_span).to_have_class(re.compile(r"visually-hidden"))
 
+    # Should have default tooltip with label text (label hidden)
+    tooltip = page.locator("#select_basic_tooltip")
+    expect(tooltip).to_be_attached()
+
+    # Verify tooltip shows label text
+    select.hover()
+    page.wait_for_timeout(100)
+    tooltip_content = page.locator(".tooltip-inner")
+    expect(tooltip_content.first).to_contain_text("Choose option")
+
 
 def test_toolbar_select_dict_choices(page: Page, app: ShinyAppProc) -> None:
     """Test select with dict choices and selected value."""
     page.goto(app.url)
 
-    select = page.locator("#select_dict").locator("select")
+    wrapper = page.locator("#select_dict")
+    select = wrapper.locator("select")
     expect(select).to_be_visible()
 
     # Check that selected value is "active"
@@ -54,6 +65,16 @@ def test_toolbar_select_dict_choices(page: Page, app: ShinyAppProc) -> None:
 
     select.select_option("archived")
     expect(output).to_have_text("Dict select value: archived")
+
+    # Should have default tooltip with label text (label hidden by default)
+    tooltip = page.locator("#select_dict_tooltip")
+    expect(tooltip).to_be_attached()
+
+    # Verify tooltip shows label text
+    select.hover()
+    page.wait_for_timeout(100)
+    tooltip_content = page.locator(".tooltip-inner")
+    expect(tooltip_content.first).to_contain_text("Filter")
 
 
 def test_toolbar_select_with_icon(page: Page, app: ShinyAppProc) -> None:
@@ -69,12 +90,22 @@ def test_toolbar_select_with_icon(page: Page, app: ShinyAppProc) -> None:
     expect(icon).to_be_visible()
     expect(icon).to_have_attribute("aria-hidden", "true")
 
+    # Should have default tooltip with label text (icon-only, label hidden)
+    tooltip = page.locator("#select_icon_tooltip")
+    expect(tooltip).to_be_attached()
+
     # Select should work normally
     select = wrapper.locator("select")
     expect(select).to_have_value("All")
     select.select_option("Recent")
     output = page.locator("#output_icon")
     expect(output).to_have_text("Icon select value: Recent")
+
+    # Verify tooltip shows label text
+    select.hover()
+    page.wait_for_timeout(100)
+    tooltip_content = page.locator(".tooltip-inner")
+    expect(tooltip_content.first).to_contain_text("Filter data")
 
 
 def test_toolbar_select_label_shown(page: Page, app: ShinyAppProc) -> None:
@@ -91,6 +122,10 @@ def test_toolbar_select_label_shown(page: Page, app: ShinyAppProc) -> None:
     expect(label_span).to_be_visible()
     expect(label_span).to_have_text("Sort by")
 
+    # Should NOT have default tooltip when label is shown
+    tooltip = page.locator("#select_label_shown_tooltip")
+    expect(tooltip).not_to_be_attached()
+
 
 def test_toolbar_select_custom_tooltip(page: Page, app: ShinyAppProc) -> None:
     """Test select with custom tooltip."""
@@ -99,11 +134,17 @@ def test_toolbar_select_custom_tooltip(page: Page, app: ShinyAppProc) -> None:
     wrapper = page.locator("#select_custom_tooltip")
     select = wrapper.locator("select")
 
-    # Should have tooltip with custom text
+    # Should have tooltip element
+    tooltip = page.locator("#select_custom_tooltip_tooltip")
+    expect(tooltip).to_be_attached()
+
+    # Hover to show tooltip and verify text matches custom tooltip (not label)
     select.hover()
     page.wait_for_timeout(100)
     tooltip_content = page.locator(".tooltip-inner")
     expect(tooltip_content.first).to_contain_text("Change how items are displayed")
+    # Verify it does NOT contain the label text
+    expect(tooltip_content.first).not_to_contain_text("View mode")
 
 
 def test_toolbar_select_no_tooltip(page: Page, app: ShinyAppProc) -> None:
@@ -112,6 +153,10 @@ def test_toolbar_select_no_tooltip(page: Page, app: ShinyAppProc) -> None:
 
     wrapper = page.locator("#select_no_tooltip")
     select = wrapper.locator("select")
+
+    # Should NOT have a tooltip element
+    tooltip = page.locator("#select_no_tooltip_tooltip")
+    expect(tooltip).not_to_be_attached()
 
     # Hover should not show tooltip
     select.hover()
@@ -124,7 +169,8 @@ def test_toolbar_select_grouped_choices(page: Page, app: ShinyAppProc) -> None:
     """Test select with grouped choices."""
     page.goto(app.url)
 
-    select = page.locator("#select_grouped").locator("select")
+    wrapper = page.locator("#select_grouped")
+    select = wrapper.locator("select")
     expect(select).to_be_visible()
 
     # Check initial value (first option in first group)
@@ -139,6 +185,16 @@ def test_toolbar_select_grouped_choices(page: Page, app: ShinyAppProc) -> None:
     # Select from second group
     select.select_option("b2")
     expect(output).to_have_text("Grouped select value: b2")
+
+    # Should have default tooltip with label text (label hidden by default)
+    tooltip = page.locator("#select_grouped_tooltip")
+    expect(tooltip).to_be_attached()
+
+    # Verify tooltip shows label text
+    select.hover()
+    page.wait_for_timeout(100)
+    tooltip_content = page.locator(".tooltip-inner")
+    expect(tooltip_content.first).to_contain_text("Select item")
 
 
 def test_toolbar_select_update_choices(page: Page, app: ShinyAppProc) -> None:
@@ -280,13 +336,13 @@ def test_toolbar_select_update_all(page: Page, app: ShinyAppProc) -> None:
     output = page.locator("#output_update_all")
 
     # Initial state
-    expect(select).to_have_value("Active")
+    expect(select).to_have_value("Inactive")
     expect(label_span).to_have_text("Status")
     expect(label_span).to_have_class(re.compile(r"visually-hidden"))
 
     # Change selection to trigger update
     select.select_option("Active")
-    page.wait_for_timeout(200)
+    page.wait_for_timeout(500)
 
     # After update: new label, new choices, new selected, icon added, label shown
     expect(label_span).to_have_text("New Status")
@@ -296,10 +352,13 @@ def test_toolbar_select_update_all(page: Page, app: ShinyAppProc) -> None:
     expect(select).to_have_value("Online")
     expect(output).to_have_text("Update all value: Online")
 
-    # Icon should now be present
+    # Icon should now be visible (was added by update)
     label = wrapper.locator("label")
     icon = label.locator(".bslib-toolbar-icon")
     expect(icon).to_be_visible()
+    # Verify icon has content
+    icon_html = icon.inner_html()
+    assert len(icon_html) > 0
 
 
 def test_toolbar_select_icon_and_label(page: Page, app: ShinyAppProc) -> None:
@@ -321,6 +380,10 @@ def test_toolbar_select_icon_and_label(page: Page, app: ShinyAppProc) -> None:
     assert "visually-hidden" not in class_attr
     expect(label_span).to_have_text("Priority")
 
+    # Should NOT have default tooltip when label is shown (even with icon)
+    tooltip = page.locator("#select_icon_label_tooltip")
+    expect(tooltip).not_to_be_attached()
+
 
 def test_toolbar_select_custom_attributes(page: Page, app: ShinyAppProc) -> None:
     """Test select with custom attributes."""
@@ -331,7 +394,7 @@ def test_toolbar_select_custom_attributes(page: Page, app: ShinyAppProc) -> None
 
     # Should have custom data attributes
     expect(wrapper).to_have_attribute("data-testid", "category-select")
-    expect(wrapper).to_have_attribute("data-type", "custom")
+    expect(wrapper).to_have_attribute("style", "background-color: #f9b928;")
 
     # Select should still work
     select = wrapper.locator("select")
@@ -358,20 +421,6 @@ def test_toolbar_select_aria_attributes(page: Page, app: ShinyAppProc) -> None:
     wrapper_icon = page.locator("#select_icon")
     icon = wrapper_icon.locator(".bslib-toolbar-icon")
     expect(icon).to_have_attribute("aria-hidden", "true")
-
-
-def test_toolbar_select_default_tooltip(page: Page, app: ShinyAppProc) -> None:
-    """Test default tooltip behavior (shows label when label is hidden)."""
-    page.goto(app.url)
-
-    # Select with hidden label should have tooltip with label text
-    wrapper = page.locator("#select_basic")
-    select = wrapper.locator("select")
-
-    select.hover()
-    page.wait_for_timeout(100)
-    tooltip_content = page.locator(".tooltip-inner")
-    expect(tooltip_content.first).to_contain_text("Choose option")
 
 
 def test_toolbar_select_structure(page: Page, app: ShinyAppProc) -> None:

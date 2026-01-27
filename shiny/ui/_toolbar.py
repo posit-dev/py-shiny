@@ -28,7 +28,6 @@ from ._input_select import (
     _normalize_choices,
     _render_choices,
 )
-from ._tag import consolidate_attrs
 from ._tooltip import tooltip as ui_tooltip
 from .css import CssUnit, as_css_unit
 
@@ -299,9 +298,12 @@ def toolbar_input_button(
     visibility, icon, and disabled state of the button from the server.
 
     Note that you cannot change the `tooltip` or `border` parameters after the button
-    has been created, as these affect the button's structure and ARIA attributes.
+    has been created, as these affect the button's structure and ARIA attributes. Please
+    use :func:`~shiny.ui.update_tooltip` to update tooltip text.
 
-    Please use :func:`~shiny.ui.update_tooltip` to update tooltip text.
+    When a tooltip is created for the select input, it will have an ID of
+    `"{id}_tooltip"` which can be used to update the tooltip text dynamically
+    via :func:`~shiny.ui.update_tooltip`.
     :::
 
     See Also
@@ -382,8 +384,6 @@ def toolbar_input_button(
         else None
     )
 
-    attrs, _ = consolidate_attrs(**kwargs)
-
     border_class = "border-0" if not border else "border-1"
     button = tags.button(
         icon_elem,
@@ -395,7 +395,7 @@ def toolbar_input_button(
             "data-type": btn_type,
             "aria-labelledby": label_id,
         },
-        attrs,
+        kwargs,
         disabled="" if disabled else None,
     )
 
@@ -468,9 +468,12 @@ def update_toolbar_input_button(
     allows you to update the button's label, icon, and disabled state from the server.
 
     Note that you cannot change `tooltip` or `border` parameters after the button has
-    been created, as these affect the button's structure and ARIA attributes.
+    been created, as these affect the button's structure and ARIA attributes. Please use
+    :func:`~shiny.ui.update_tooltip` to update tooltip text.
 
-    Please use :func:`~shiny.ui.update_tooltip` to update tooltip text.
+    When a tooltip is created for the select input, it will have an ID of
+    `"{id}_tooltip"` which can be used to update the tooltip text dynamically
+    via :func:`~shiny.ui.update_tooltip`.
 
     See Also
     --------
@@ -545,7 +548,7 @@ def toolbar_input_select(
     selected: Optional[str] = None,
     icon: Optional[TagChild] = None,
     show_label: bool = False,
-    tooltip: bool | str = True,
+    tooltip: bool | str | MISSING_TYPE = MISSING,
     **kwargs: TagAttrValue,
 ) -> Tag:
     """
@@ -592,8 +595,19 @@ def toolbar_input_select(
 
     Notes
     ------
-    ::: {.callout-note title="Server value"}
-    A string with the value of the selected item.
+    ::: {.callout-note title="Updating toolbar select inputs"}
+    You can update the appearance and choices of a toolbar select input. This function
+    works similarly to :func:`shiny::updateSelectInput`, but is specifically
+    designed for `toolbar_input_select`. It allows you to update the select's label,
+    icon, choices, selected value, and label visibility from the server.
+
+    Note that you cannot enable or disable the `tooltip` parameter after the
+    select has been created, as this affects the select's structure and ARIA
+    attributes. Please use :func:`~shiny.ui.update_tooltip` to update tooltip text.
+
+    When a tooltip is created for the select input, it will have an ID of
+    `"{id}_tooltip"` which can be used to update the tooltip text dynamically
+    via :func:`~shiny.ui.update_tooltip`.
     :::
 
     See Also
@@ -651,54 +665,48 @@ def toolbar_input_select(
     )
     ```
     """
-    # Validate kwargs contains only named arguments
-    attrs, children = consolidate_attrs(**kwargs)
-    if children:
-        raise ValueError("All arguments in `**kwargs` must be named.")
-
     # Validate that label is a non-empty string
     if not isinstance(label, str) or not label.strip():
         raise ValueError("`label` must be a non-empty string.")
+
+    # Set tooltip default based on show_label (matches bslib R behavior)
+    if tooltip is MISSING:
+        tooltip = not show_label
 
     resolved_id = resolve_id(id)
 
     # Restore input for bookmarking
     selected = restore_input(resolved_id=resolved_id, default=selected)
 
-    # Normalize choices
     choices_normalized = _normalize_choices(choices)
 
     # Set selected to first choice if no default or restored value
     if selected is None:
         selected = _find_first_option(choices_normalized)
 
-    # Use a unique ID for the select element to avoid conflicts with standard
-    # select binding. The wrapper will have the main ID that Shiny uses.
-    select_internal_id = f"{resolved_id}-select"
+    # Select element gets its own ID for label association
+    select_id = f"{resolved_id}-select"
 
-    # Create select element
     select_tag = tags.select(
         _render_choices(choices_normalized, selected),
         {
-            "id": select_internal_id,
+            "id": select_id,
             "class": "form-select form-select-sm bslib-toolbar-select",
+            "data-shiny-no-bind-input": True,
         },
     )
 
-    # Add optional icon before the select
-    icon_elem = (
-        span(
-            icon,
-            {
-                "class": "bslib-toolbar-icon",
-                "aria-hidden": "true",
-                "role": "none",
-                "tabindex": "-1",
-            },
-            style="pointer-events: none",
-        )
-        if icon is not None
-        else None
+    # Always create icon element for consistent DOM structure (even if empty)
+    # This allows dynamic icon updates via update_toolbar_input_select()
+    icon_elem = span(
+        icon,
+        {
+            "class": "bslib-toolbar-icon",
+            "aria-hidden": "true",
+            "role": "none",
+            "tabindex": "-1",
+        },
+        style="pointer-events: none",
     )
 
     # Create label element
@@ -715,15 +723,15 @@ def toolbar_input_select(
         {
             "id": f"{resolved_id}-label",
             "class": "control-label",
-            "for": select_internal_id,
+            "for": select_id,
         },
+        # Added to fix icon alignment issue because icon svg padding
         style=css(
             display="inline-flex",
             align_items="center",
         ),
     )
 
-    # Handle tooltip
     tooltip_text: Optional[TagChild] = None
     if tooltip is True:
         # Hide from screen readers since it repeats the label content
@@ -735,6 +743,7 @@ def toolbar_input_select(
         select_tag = ui_tooltip(
             select_tag,
             tooltip_text,
+            id=f"{resolved_id}_tooltip",
             placement="bottom",
         )
 
@@ -745,7 +754,7 @@ def toolbar_input_select(
             "id": resolved_id,
             "class": "bslib-toolbar-input-select shiny-input-container",
         },
-        attrs,
+        kwargs,
     )
 
 
@@ -790,8 +799,13 @@ def update_toolbar_input_select(
     allows you to update the select's label, icon, choices, selected value(s), and
     label visibility from the server.
 
-    Note that you cannot change the `tooltip` parameter after the select has been
-    created, as it affects the structure and ARIA attributes.
+    Note that you cannot enable or disable the `tooltip` parameter after the
+    select has been created, as this affects the select's structure and ARIA
+    attributes. Please use :func:`~shiny.ui.update_tooltip` to update tooltip text.
+
+    When a tooltip is created for the select input, it will have an ID of
+    `"{id}_tooltip"` which can be used to update the tooltip text dynamically
+    via :func:`~shiny.ui.update_tooltip`.
 
     See Also
     --------
