@@ -1,6 +1,6 @@
 import pkgutil
 
-import palmerpenguins  # pyright: ignore[reportMissingTypeStubs]
+import palmerpenguins
 import polars as pl
 from narwhals.stable.v1.typing import IntoDataFrame
 

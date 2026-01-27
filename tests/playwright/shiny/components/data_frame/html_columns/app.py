@@ -3,7 +3,7 @@ import random
 import string
 from typing import Any, cast
 
-import palmerpenguins  # pyright: ignore[reportMissingTypeStubs]
+import palmerpenguins
 import polars as pl
 from htmltools import HTMLDependency
 
