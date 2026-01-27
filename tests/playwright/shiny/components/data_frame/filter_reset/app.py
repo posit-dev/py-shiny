@@ -1,7 +1,7 @@
 from typing import cast
 
 import pandas as pd
-from palmerpenguins import load_penguins  # pyright: ignore[reportMissingTypeStubs]
+from palmerpenguins import load_penguins
 
 from shiny import reactive
 from shiny.express import input, render, ui
