@@ -167,6 +167,8 @@ def test_toolbar_input_button_empty_label_warning():
 # ============================================================================
 # toolbar_input_select() tests
 # ============================================================================
+
+# --- Basic structure tests ---
 def test_toolbar_input_select_basic():
     sel = ui.toolbar_input_select("sel1", "Choose", ["A", "B", "C"])
     assert isinstance(sel, Tag)
@@ -174,6 +176,36 @@ def test_toolbar_input_select_basic():
     assert sel.has_class("bslib-toolbar-input-select")
 
 
+def test_toolbar_input_select_internal_id():
+    """Test that select element has internal ID to avoid conflicts."""
+    sel = ui.toolbar_input_select("sel1", "Choose", ["A", "B"])
+    rendered = str(sel)
+    # The wrapper should have id="sel1"
+    # The select should have id="sel1-select"
+    assert 'id="sel1"' in rendered
+    assert 'id="sel1-select"' in rendered
+
+
+def test_toolbar_input_select_select_id_format():
+    """Test that the select element has the correct internal ID format."""
+    sel = ui.toolbar_input_select("myselect", "Choose", ["A", "B"])
+    rendered = str(sel)
+    # Wrapper has id="myselect", select has id="myselect-select"
+    assert 'id="myselect"' in rendered
+    assert 'id="myselect-select"' in rendered
+    # Label should reference the select's internal ID
+    assert 'for="myselect-select"' in rendered
+
+
+def test_toolbar_input_select_no_bind_input():
+    """Test that select has data-shiny-no-bind-input attribute."""
+    sel = ui.toolbar_input_select("sel1", "Choose", ["A", "B"])
+    rendered = str(sel)
+    # This prevents Shiny from binding to the internal select directly
+    assert "data-shiny-no-bind-input" in rendered
+
+
+# --- Label validation tests ---
 def test_toolbar_input_select_label_required():
     with pytest.raises(ValueError, match="non-empty string"):
         ui.toolbar_input_select("sel1", "", ["A", "B", "C"])
@@ -182,6 +214,22 @@ def test_toolbar_input_select_label_required():
         ui.toolbar_input_select("sel1", "   ", ["A", "B", "C"])
 
 
+def test_toolbar_input_select_label_type_validation():
+    """Test that label must be a string."""
+    # Non-string label should raise ValueError
+    with pytest.raises(ValueError, match="non-empty string"):
+        ui.toolbar_input_select("sel1", 123, ["A", "B"])  # type: ignore
+
+
+def test_toolbar_input_select_label_for_attribute():
+    """Test that label 'for' attribute points to select element."""
+    sel = ui.toolbar_input_select("sel1", "Choose", ["A", "B"])
+    rendered = str(sel)
+    # Label should have for="sel1-select" matching the select's internal ID
+    assert 'for="sel1-select"' in rendered
+
+
+# --- Choices tests ---
 def test_toolbar_input_select_choices_list():
     sel = ui.toolbar_input_select("sel1", "Choose", ["A", "B", "C"])
     rendered = str(sel)
@@ -214,6 +262,16 @@ def test_toolbar_input_select_choices_optgroup():
     assert "B2" in rendered
 
 
+def test_toolbar_input_select_single_choice():
+    """Test select with only one choice."""
+    sel = ui.toolbar_input_select("sel1", "Choose", ["Only Option"])
+    rendered = str(sel)
+    assert "Only Option" in rendered
+    # Should be auto-selected
+    assert 'value="Only Option" selected' in rendered or 'selected value="Only Option"' in rendered
+
+
+# --- Selection tests ---
 def test_toolbar_input_select_selected():
     sel = ui.toolbar_input_select("sel1", "Choose", ["A", "B", "C"], selected="B")
     rendered = str(sel)
@@ -221,11 +279,70 @@ def test_toolbar_input_select_selected():
     assert 'value="B" selected' in rendered or 'selected value="B"' in rendered
 
 
+def test_toolbar_input_select_default_selected():
+    """Test that first choice is selected by default when no selected value."""
+    sel = ui.toolbar_input_select("sel1", "Choose", ["X", "Y", "Z"])
+    rendered = str(sel)
+    # X should be selected (first option)
+    assert 'value="X" selected' in rendered or 'selected value="X"' in rendered
+
+
+def test_toolbar_input_select_default_selected_dict():
+    """Test that first choice is selected by default with dict choices."""
+    sel = ui.toolbar_input_select(
+        "sel1", "Choose", {"key1": "Label 1", "key2": "Label 2"}
+    )
+    rendered = str(sel)
+    # First key should be selected
+    assert 'value="key1" selected' in rendered or 'selected value="key1"' in rendered
+
+
+def test_toolbar_input_select_default_selected_optgroup():
+    """Test that first choice in first group is selected by default with optgroups."""
+    choices = {
+        "Group A": {"a1": "A1", "a2": "A2"},
+        "Group B": {"b1": "B1", "b2": "B2"},
+    }
+    sel = ui.toolbar_input_select("sel1", "Choose", choices)
+    rendered = str(sel)
+    # First option in first group should be selected
+    assert 'value="a1" selected' in rendered or 'selected value="a1"' in rendered
+
+
+def test_toolbar_input_select_selected_in_optgroup():
+    """Test selecting a specific value within an optgroup."""
+    choices = {
+        "Group A": {"a1": "A1", "a2": "A2"},
+        "Group B": {"b1": "B1", "b2": "B2"},
+    }
+    sel = ui.toolbar_input_select("sel1", "Choose", choices, selected="b2")
+    rendered = str(sel)
+    # b2 should be selected
+    assert 'value="b2" selected' in rendered or 'selected value="b2"' in rendered
+
+
+# --- Icon and label tests ---
 def test_toolbar_input_select_with_icon():
     sel = ui.toolbar_input_select("sel1", "Filter", ["All", "Active"], icon="🔍")
     rendered = str(sel)
     assert "🔍" in rendered
     assert "Filter" in rendered
+
+
+def test_toolbar_input_select_icon_aria_hidden():
+    """Test that icon is properly marked as decorative."""
+    sel = ui.toolbar_input_select("sel1", "Filter", ["A", "B"], icon="🔍")
+    rendered = str(sel)
+    # Icon should be aria-hidden
+    assert 'aria-hidden="true"' in rendered
+
+
+def test_toolbar_input_select_empty_icon():
+    """Test that empty icon element is created even when no icon provided."""
+    sel = ui.toolbar_input_select("sel1", "Choose", ["A", "B"], icon=None)
+    rendered = str(sel)
+    # Icon container should still exist for dynamic updates
+    assert "bslib-toolbar-icon" in rendered
 
 
 def test_toolbar_input_select_show_label():
@@ -240,6 +357,21 @@ def test_toolbar_input_select_show_label():
     assert "Choose" in rendered_shown
 
 
+def test_toolbar_input_select_icon_and_label_both_visible():
+    """Test that both icon and label can be visible at the same time."""
+    sel = ui.toolbar_input_select(
+        "sel1", "Filter", ["A", "B"], icon="🔍", show_label=True
+    )
+    rendered = str(sel)
+    # Both should be present and label should not be visually-hidden
+    assert "🔍" in rendered
+    assert "Filter" in rendered
+    # Check that label span doesn't have visually-hidden class
+    # This is indirect, but we can verify the structure
+    assert "bslib-toolbar-label" in rendered
+
+
+# --- Tooltip tests ---
 def test_toolbar_input_select_tooltip():
     sel = ui.toolbar_input_select("sel1", "Choose", ["A", "B"], tooltip=True)
     rendered = str(sel)
@@ -250,13 +382,6 @@ def test_toolbar_input_select_tooltip():
     assert "bslib-tooltip" not in rendered_no_tooltip
 
 
-def test_toolbar_input_select_kwargs_only_named():
-    # Should accept named arguments in kwargs
-    sel = ui.toolbar_input_select("sel1", "Choose", ["A", "B"], data_foo="bar")
-    rendered = str(sel)
-    assert 'data-foo="bar"' in rendered or 'data_foo="bar"' in rendered
-
-
 def test_toolbar_input_select_custom_tooltip():
     sel = ui.toolbar_input_select("sel1", "Choose", ["A", "B"], tooltip="Custom tip")
     rendered = str(sel)
@@ -264,45 +389,50 @@ def test_toolbar_input_select_custom_tooltip():
     assert "Custom tip" in rendered
 
 
-def test_toolbar_input_select_internal_id():
-    """Test that select element has internal ID to avoid conflicts."""
-    sel = ui.toolbar_input_select("sel1", "Choose", ["A", "B"])
+def test_toolbar_input_select_tooltip_id():
+    """Test that tooltip has predictable ID for programmatic updates."""
+    sel = ui.toolbar_input_select("sel1", "Choose", ["A", "B"], tooltip=True)
     rendered = str(sel)
-    # The wrapper should have id="sel1"
-    # The select should have id="sel1-select"
-    assert 'id="sel1"' in rendered
-    assert 'id="sel1-select"' in rendered
+    # Tooltip should have ID sel1_tooltip
+    assert 'id="sel1_tooltip"' in rendered
 
 
-def test_toolbar_input_select_label_for_attribute():
-    """Test that label 'for' attribute points to select element."""
-    sel = ui.toolbar_input_select("sel1", "Choose", ["A", "B"])
+def test_toolbar_input_select_tooltip_label_combo():
+    """Test tooltip behavior when both show_label and tooltip are explicitly set."""
+    # show_label=True and tooltip=True (explicit override)
+    sel1 = ui.toolbar_input_select(
+        "sel1", "Filter", ["A", "B"], show_label=True, tooltip=True
+    )
+    rendered1 = str(sel1)
+    # Should have both visible label and tooltip
+    assert "bslib-tooltip" in rendered1
+    assert "Filter" in rendered1
+
+    # show_label=False and tooltip=False (explicit override)
+    sel2 = ui.toolbar_input_select(
+        "sel2", "Filter", ["A", "B"], show_label=False, tooltip=False
+    )
+    rendered2 = str(sel2)
+    # Should have no tooltip
+    assert "bslib-tooltip" not in rendered2
+
+
+# --- Custom attributes tests ---
+def test_toolbar_input_select_kwargs_only_named():
+    # Should accept named arguments in kwargs
+    sel = ui.toolbar_input_select("sel1", "Choose", ["A", "B"], data_foo="bar")
     rendered = str(sel)
-    # Label should have for="sel1-select" matching the select's internal ID
-    assert 'for="sel1-select"' in rendered
+    assert 'data-foo="bar"' in rendered or 'data_foo="bar"' in rendered
 
 
-def test_toolbar_input_select_icon_aria_hidden():
-    """Test that icon is properly marked as decorative."""
-    sel = ui.toolbar_input_select("sel1", "Filter", ["A", "B"], icon="🔍")
+def test_toolbar_input_select_custom_attributes():
+    """Test that custom attributes are applied to the wrapper div."""
+    sel = ui.toolbar_input_select(
+        "sel1", "Choose", ["A", "B"], data_testid="my-select", style="color: red;"
+    )
     rendered = str(sel)
-    # Icon should be aria-hidden
-    assert 'aria-hidden="true"' in rendered
-
-
-def test_toolbar_input_select_label_type_validation():
-    """Test that label must be a string."""
-    # Non-string label should raise ValueError
-    with pytest.raises(ValueError, match="non-empty string"):
-        ui.toolbar_input_select("sel1", 123, ["A", "B"])  # type: ignore
-
-
-def test_toolbar_input_select_default_selected():
-    """Test that first choice is selected by default when no selected value."""
-    sel = ui.toolbar_input_select("sel1", "Choose", ["X", "Y", "Z"])
-    rendered = str(sel)
-    # X should be selected (first option)
-    assert 'value="X" selected' in rendered or 'selected value="X"' in rendered
+    assert 'data-testid="my-select"' in rendered or 'data_testid="my-select"' in rendered
+    assert "color: red" in rendered or "color:red" in rendered
 
 
 # ============================================================================
@@ -315,6 +445,9 @@ def test_update_toolbar_input_select_exists():
     assert callable(update_toolbar_input_select)
 
 
+# ============================================================================
+# toolbar_spacer() tests
+# ============================================================================
 def test_toolbar_spacer_basic():
     """Test toolbar_spacer basic functionality."""
     spacer = ui.toolbar_spacer()
