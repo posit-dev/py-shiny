@@ -257,6 +257,72 @@ def test_toolbar_input_select_kwargs_only_named():
     assert 'data-foo="bar"' in rendered or 'data_foo="bar"' in rendered
 
 
+def test_toolbar_input_select_custom_tooltip():
+    sel = ui.toolbar_input_select("sel1", "Choose", ["A", "B"], tooltip="Custom tip")
+    rendered = str(sel)
+    assert "bslib-tooltip" in rendered
+    assert "Custom tip" in rendered
+
+
+def test_toolbar_input_select_internal_id():
+    """Test that select element has internal ID to avoid conflicts."""
+    sel = ui.toolbar_input_select("sel1", "Choose", ["A", "B"])
+    rendered = str(sel)
+    # The wrapper should have id="sel1"
+    # The select should have id="sel1-select"
+    assert 'id="sel1"' in rendered
+    assert 'id="sel1-select"' in rendered
+
+
+def test_toolbar_input_select_label_for_attribute():
+    """Test that label 'for' attribute points to select element."""
+    sel = ui.toolbar_input_select("sel1", "Choose", ["A", "B"])
+    rendered = str(sel)
+    # Label should have for="sel1-select" matching the select's internal ID
+    assert 'for="sel1-select"' in rendered
+
+
+def test_toolbar_input_select_icon_aria_hidden():
+    """Test that icon is properly marked as decorative."""
+    sel = ui.toolbar_input_select("sel1", "Filter", ["A", "B"], icon="🔍")
+    rendered = str(sel)
+    # Icon should be aria-hidden
+    assert 'aria-hidden="true"' in rendered
+
+
+def test_toolbar_input_select_label_type_validation():
+    """Test that label must be a string."""
+    # Non-string label should raise ValueError
+    with pytest.raises(ValueError, match="non-empty string"):
+        ui.toolbar_input_select("sel1", 123, ["A", "B"])  # type: ignore
+
+
+def test_toolbar_input_select_default_selected():
+    """Test that first choice is selected by default when no selected value."""
+    sel = ui.toolbar_input_select("sel1", "Choose", ["X", "Y", "Z"])
+    rendered = str(sel)
+    # X should be selected (first option)
+    assert 'value="X" selected' in rendered or 'selected value="X"' in rendered
+
+
+# ============================================================================
+# update_toolbar_input_select() tests
+# ============================================================================
+def test_update_toolbar_input_select_exists():
+    """Test that update function exists and is callable."""
+    from shiny.ui import update_toolbar_input_select
+
+    assert callable(update_toolbar_input_select)
+
+
+def test_toolbar_spacer_basic():
+    """Test toolbar_spacer basic functionality."""
+    spacer = ui.toolbar_spacer()
+    assert isinstance(spacer, Tag)
+    assert spacer.has_class("bslib-toolbar-spacer")
+    assert spacer.attrs.get("aria-hidden") == "true"
+
+
 # ============================================================================
 # Integration tests
 # ============================================================================

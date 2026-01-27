@@ -371,7 +371,12 @@ def toolbar_input_button(
         span(
             icon,
             {"class": "bslib-toolbar-icon", "aria-hidden": "true"},
-            style="pointer-events: none",
+            style=css(
+                pointer_events="none",
+                display="inline-flex",
+                align_items="center",
+                vertical_align="middle",
+            ),
         )
         if icon is not None
         else None
@@ -712,6 +717,10 @@ def toolbar_input_select(
             "class": "control-label",
             "for": select_internal_id,
         },
+        style=css(
+            display="inline-flex",
+            align_items="center",
+        ),
     )
 
     # Handle tooltip
