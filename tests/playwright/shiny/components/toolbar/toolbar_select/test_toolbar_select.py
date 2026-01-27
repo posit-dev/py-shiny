@@ -209,15 +209,31 @@ def test_toolbar_select_update_choices(page: Page, app: ShinyAppProc) -> None:
     expect(select).to_have_value("A")
     expect(output).to_have_text("Update choices value: A")
 
-    # Click to update to X, Y, Z with Y selected
+    # Click to update to X, Y, Z
     button.click()
     page.wait_for_timeout(100)
-    expect(select).to_have_value("Y")
-    expect(output).to_have_text("Update choices value: Y")
+    # "A" should still show as selected in the render.text even though it is no longer
+    # in the choices because we have not selected a new value yet and we did not specify
+    #  selected in the serverside update, so the input value retains its original
+    expect(output).to_have_text("Update choices value: A")
+    options = select.locator("option")
+    expect(options).to_have_count(3)
+
+    # Verify each option's value and text
+    expect(options.nth(0)).to_have_attribute("value", "X")
+    expect(options.nth(0)).to_have_text("X")
+
+    expect(options.nth(1)).to_have_attribute("value", "Y")
+    expect(options.nth(1)).to_have_text("Y")
+
+    expect(options.nth(2)).to_have_attribute("value", "Z")
+    expect(options.nth(2)).to_have_text("Z")
 
     # Click again to switch back to A, B, C with B selected
     button.click()
     page.wait_for_timeout(100)
+    # Now the selected value should change when options are updated because a selected
+    # value was provided in the server update
     expect(select).to_have_value("B")
     expect(output).to_have_text("Update choices value: B")
 

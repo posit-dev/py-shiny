@@ -365,7 +365,6 @@ def server(input, output, session):
             ui.update_toolbar_input_select(
                 "select_update_choices",
                 choices=["X", "Y", "Z"],
-                selected="Y",
             )
         else:
             ui.update_toolbar_input_select(
