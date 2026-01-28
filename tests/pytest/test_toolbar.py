@@ -494,3 +494,87 @@ def test_toolbar_in_card():
     assert "bslib-toolbar" in rendered
     assert "edit" in rendered
     assert "delete" in rendered
+
+
+def test_toolbar_in_numeric_input_label():
+    """Test that toolbar works as a label for numeric input."""
+    numeric = ui.input_numeric(
+        "quantity",
+        label=ui.toolbar(
+            ui.toolbar_spacer(),
+            ui.toolbar_input_button("btn_preset_10", "10", show_label=True),
+            ui.toolbar_input_button("btn_preset_50", "50", show_label=True),
+            ui.toolbar_input_button("btn_reset", "Reset", icon="🔄"),
+            align="right",
+        ),
+        value=1,
+    )
+    rendered = str(numeric)
+    assert "bslib-toolbar" in rendered
+    assert "btn_preset_10" in rendered
+    assert "btn_preset_50" in rendered
+    assert "btn_reset" in rendered
+    # Toolbar should be in a label element
+    assert "<label" in rendered
+
+
+def test_toolbar_in_text_area_label():
+    """Test that toolbar works as a label for text area input."""
+    textarea = ui.input_text_area(
+        "notes",
+        label=ui.toolbar(
+            ui.toolbar_input_button("btn_bold", "Bold", icon="💪", tooltip="Make text bold"),
+            ui.toolbar_input_button("btn_italic", "Italic", icon="📝", tooltip="Make text italic"),
+            ui.toolbar_divider(),
+            ui.toolbar_input_select(
+                "text_size",
+                label="Text Size",
+                choices=["small", "normal", "large"],
+                selected="normal",
+            ),
+            ui.toolbar_spacer(),
+            ui.toolbar_input_button("btn_clear", "Clear", icon="🗑️", border=True),
+            align="right",
+        ),
+        placeholder="Type your notes here...",
+    )
+    rendered = str(textarea)
+    assert "bslib-toolbar" in rendered
+    assert "btn_bold" in rendered
+    assert "btn_italic" in rendered
+    assert "text_size" in rendered
+    assert "btn_clear" in rendered
+    assert "bslib-toolbar-divider" in rendered
+    assert "bslib-toolbar-spacer" in rendered
+    # Toolbar should be in a label element
+    assert "<label" in rendered
+
+
+def test_toolbar_in_submit_textarea():
+    """Test that toolbar works in input_submit_textarea."""
+    submit_textarea = ui.input_submit_textarea(
+        "message",
+        label="Message",
+        placeholder="Compose your message...",
+        toolbar=ui.toolbar(
+            ui.toolbar_input_select(
+                "priority",
+                label="Priority",
+                choices=["low", "medium", "high"],
+                selected="medium",
+                icon="🚩",
+            ),
+            ui.toolbar_divider(),
+            ui.toolbar_input_button("btn_attach", "Attach", icon="📎", tooltip="Attach file"),
+            ui.toolbar_input_button("btn_emoji", "Emoji", icon="😀", tooltip="Insert emoji"),
+            align="right",
+        ),
+    )
+    rendered = str(submit_textarea)
+    assert "bslib-toolbar" in rendered
+    assert "priority" in rendered
+    assert "btn_attach" in rendered
+    assert "btn_emoji" in rendered
+    assert "bslib-toolbar-divider" in rendered
+    # Toolbar should be present in submit textarea structure
+    assert "message" in rendered

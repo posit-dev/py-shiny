@@ -52,18 +52,24 @@ def test_numeric_input_toolbar_preset_buttons(page: Page, app: ShinyAppProc) -> 
     page.wait_for_timeout(100)
     quantity.expect_value("10")
     expect(output).to_contain_text("Quantity: 10")
+    # Move cursor away to hide tooltip
+    page.mouse.move(0, 0)
 
     # Click preset 50
     btn_preset_50.click()
     page.wait_for_timeout(100)
     quantity.expect_value("50")
     expect(output).to_contain_text("Quantity: 50")
+    # Move cursor away to hide tooltip
+    page.mouse.move(0, 0)
 
     # Click preset 100
     btn_preset_100.click()
     page.wait_for_timeout(100)
     quantity.expect_value("100")
     expect(output).to_contain_text("Quantity: 100")
+    # Move cursor away to hide tooltip
+    page.mouse.move(0, 0)
 
     # Click reset
     btn_reset.click()
@@ -235,14 +241,14 @@ def test_text_area_toolbar_button_clicks(page: Page, app: ShinyAppProc) -> None:
     # Click bold button
     btn_bold.click()
     expect(output).to_contain_text("Bold: 1")
-    # Click elsewhere to dismiss tooltip
-    output.click()
+    # Move cursor away to hide tooltip
+    page.mouse.move(0, 0)
 
     # Click italic button
     btn_italic.click()
     expect(output).to_contain_text("Italic: 1")
-    # Click elsewhere to dismiss tooltip
-    output.click()
+    # Move cursor away to hide tooltip
+    page.mouse.move(0, 0)
 
     # Click link button
     btn_link.click()
@@ -315,11 +321,15 @@ def test_submit_textarea_toolbar_buttons(page: Page, app: ShinyAppProc) -> None:
     btn_attach.click()
     page.wait_for_timeout(100)
     expect(output).to_contain_text("Attach: 1")
+    # Move cursor away to hide tooltip
+    page.mouse.move(0, 0)
 
     # Click emoji button
     btn_emoji.click()
     page.wait_for_timeout(100)
     expect(output).to_contain_text("Emoji: 1")
+    # Move cursor away to hide tooltip
+    page.mouse.move(0, 0)
 
     # Click copy button
     btn_copy_draft.click()
