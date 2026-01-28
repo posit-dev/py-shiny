@@ -316,8 +316,8 @@ class ToolbarInputSelect(UiBase):
         # Get all option values and compare
         playwright_expect(self.loc_choices).to_have_count(len(choices), timeout=timeout)
         for i, expected_value in enumerate(choices):
-            playwright_expect(self.loc_choices.nth(i)).to_have_value(
-                expected_value, timeout=timeout
+            playwright_expect(self.loc_choices.nth(i)).to_have_attribute(
+                "value", expected_value, timeout=timeout
             )
 
     def expect_selected(
@@ -336,7 +336,7 @@ class ToolbarInputSelect(UiBase):
         timeout
             The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
-        playwright_expect(self.loc_selected).to_have_value(value, timeout=timeout)
+        playwright_expect(self.loc_select).to_have_value(value, timeout=timeout)
 
     def expect_choice_groups(
         self,
