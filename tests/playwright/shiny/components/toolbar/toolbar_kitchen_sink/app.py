@@ -23,6 +23,7 @@ app_ui = ui.page_fluid(
                     label="Format",
                     choices={"md": "Markdown", "txt": "Plain Text", "html": "HTML"},
                     selected="md",
+                    icon=icon_svg("file-code"),
                 ),
                 align="right",
             ),

@@ -385,6 +385,16 @@ def toolbar_input_button(
     )
 
     border_class = "border-0" if not border else "border-1"
+
+    # Add inline styles for buttons with both icon and label
+    button_style = None
+    if btn_type == "both":
+        button_style = css(
+            display="inline-flex",
+            align_items="center",
+            gap="0.25rem",
+        )
+
     button = tags.button(
         icon_elem,
         label_elem,
@@ -397,6 +407,7 @@ def toolbar_input_button(
         },
         kwargs,
         disabled="" if disabled else None,
+        style=button_style,
     )
 
     # Handle tooltip
