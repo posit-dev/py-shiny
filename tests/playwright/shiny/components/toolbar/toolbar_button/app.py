@@ -66,7 +66,6 @@ app_ui = ui.page_fluid(
                     "btn_no_tooltip",
                     label="Settings",
                     icon=icon_svg("gear"),
-                    show_label=True,
                     tooltip=False,
                 ),
                 align="right",

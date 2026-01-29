@@ -51,7 +51,7 @@ app_ui = ui.page_fluid(
                 ui.toolbar_input_select(
                     "select_icon",
                     label="Filter data",
-                    choices=["All", "Recent", "Favorites"],
+                    choices=["All", "Recent", "Archived"],
                     icon=icon_svg("star"),
                 ),
                 align="right",

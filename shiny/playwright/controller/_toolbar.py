@@ -87,6 +87,27 @@ class ToolbarInputButton(InputActionBase):
         expected_count = 1 if exists else 0
         playwright_expect(self.loc_icon).to_have_count(expected_count, timeout=timeout)
 
+    def expect_icon_visible(
+        self,
+        visible: bool = True,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expect the icon to be visible.
+
+        Parameters
+        ----------
+        visible
+            Whether the icon should be visible.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        if visible:
+            playwright_expect(self.loc_icon).to_be_visible(timeout=timeout)
+        else:
+            playwright_expect(self.loc_icon).to_be_hidden(timeout=timeout)
+
     def expect_label_visible(
         self,
         visible: bool,
@@ -268,6 +289,27 @@ class ToolbarInputSelect(UiBase):
         expected_count = 1 if exists else 0
         playwright_expect(self.loc_icon).to_have_count(expected_count, timeout=timeout)
 
+    def expect_icon_visible(
+        self,
+        visible: bool = True,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expect the icon to be visible.
+
+        Parameters
+        ----------
+        visible
+            Whether the icon should be visible.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        if visible:
+            playwright_expect(self.loc_icon).to_be_visible(timeout=timeout)
+        else:
+            playwright_expect(self.loc_icon).to_be_hidden(timeout=timeout)
+
     def expect_label_visible(
         self,
         visible: bool,
@@ -360,4 +402,13 @@ class ToolbarInputSelect(UiBase):
             )
             return
 
-        playwright_expect(self.loc_choice_groups).to_have_text(labels, timeout=timeout)
+        # Verify count first
+        playwright_expect(self.loc_choice_groups).to_have_count(
+            len(labels), timeout=timeout
+        )
+
+        # Then verify each optgroup's label attribute
+        for i, expected_label in enumerate(labels):
+            playwright_expect(self.loc_choice_groups.nth(i)).to_have_attribute(
+                "label", expected_label, timeout=timeout
+            )
