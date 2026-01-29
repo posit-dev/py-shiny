@@ -41,7 +41,7 @@ def test_toolbar_gap():
 
 
 def test_toolbar_contains_children():
-    btn = ui.toolbar_input_button("btn1", "Button 1")
+    btn = ui.toolbar_input_button("btn1", "Button 1", icon="📝")
     t = ui.toolbar(btn)
     rendered = str(t)
     assert "btn1" in rendered
@@ -60,20 +60,20 @@ def test_toolbar_divider_basic():
 def test_toolbar_divider_width():
     d = ui.toolbar_divider(width="5px")
     style = str(d.attrs.get("style", ""))
-    assert "--_divider-width:5px" in style
+    assert "--_divider-width: 5px" in style
 
 
 def test_toolbar_divider_gap():
     d = ui.toolbar_divider(gap="2rem")
     style = str(d.attrs.get("style", ""))
-    assert "--_divider-gap:2rem" in style
+    assert "--_divider-gap: 2rem" in style
 
 
 # ============================================================================
 # toolbar_input_button() tests
 # ============================================================================
 def test_toolbar_input_button_basic():
-    btn = ui.toolbar_input_button("btn1", "Button Label")
+    btn = ui.toolbar_input_button("btn1", "Button Label", icon="💾")
     assert isinstance(btn, Tag)
 
 
@@ -107,16 +107,16 @@ def test_toolbar_input_button_no_icon_no_show_label_raises():
 
 
 def test_toolbar_input_button_disabled():
-    btn = ui.toolbar_input_button("btn1", "Button", disabled=True)
+    btn = ui.toolbar_input_button("btn1", "Button", icon="💾", disabled=True)
     rendered = str(btn)
     assert "disabled" in rendered
 
 
 def test_toolbar_input_button_border():
-    btn_no_border = ui.toolbar_input_button("btn1", "Button", border=False)
+    btn_no_border = ui.toolbar_input_button("btn1", "Button", icon="💾", border=False)
     assert "border-0" in str(btn_no_border)
 
-    btn_with_border = ui.toolbar_input_button("btn2", "Button", border=True)
+    btn_with_border = ui.toolbar_input_button("btn2", "Button", icon="💾", border=True)
     assert "border-1" in str(btn_with_border)
 
 
