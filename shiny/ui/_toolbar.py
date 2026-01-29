@@ -369,16 +369,15 @@ def toolbar_input_button(
     )
 
     # Wrap icon to ensure it's always treated as decorative
-    # Note: faicons adds margin-right="0.2em" by default, so we need to override it
+    # Note: faicons adds margin-right="0.2em" by default, so we override it
     icon_elem = None
     if icon is not None:
-        # If the icon is a Tag, modify its style to remove margins
+        # Remove default margins from icon (e.g., from faicons)
         if isinstance(icon, Tag):
-            # Get existing style or empty string
             existing_style = icon.attrs.get("style", "")
-            # Add margin override (using !important to override faicons default)
-            new_style = f"{existing_style}; margin-left: 0 !important; margin-right: 0 !important;".strip("; ")
-            icon.attrs["style"] = new_style
+            icon.attrs["style"] = (
+                f"{existing_style}; margin: 0 !important;".lstrip("; ")
+            )
 
         icon_elem = span(
             icon,
