@@ -369,30 +369,43 @@ def toolbar_input_button(
     )
 
     # Wrap icon to ensure it's always treated as decorative
-    icon_elem = (
-        span(
+    # Note: faicons adds margin-right="0.2em" by default, so we need to override it
+    icon_elem = None
+    if icon is not None:
+        # If the icon is a Tag, modify its style to remove margins
+        if isinstance(icon, Tag):
+            # Get existing style or empty string
+            existing_style = icon.attrs.get("style", "")
+            # Add margin override (using !important to override faicons default)
+            new_style = f"{existing_style}; margin-left: 0 !important; margin-right: 0 !important;".strip("; ")
+            icon.attrs["style"] = new_style
+
+        icon_elem = span(
             icon,
-            {"class": "bslib-toolbar-icon", "aria-hidden": "true"},
-            style=css(
-                pointer_events="none",
-                display="inline-flex",
-                align_items="center",
-                vertical_align="middle",
-            ),
+            {
+                "class": "bslib-toolbar-icon",
+                "aria-hidden": "true",
+                "style": "pointer-events: none; display: inline-flex; align-items: center;",
+            },
         )
-        if icon is not None
-        else None
-    )
 
     border_class = "border-0" if not border else "border-1"
 
-    # Add inline styles for buttons with both icon and label
+    # Add inline styles for buttons based on type
     button_style = None
     if btn_type == "both":
+        # Icon and label: use flexbox with gap
         button_style = css(
             display="inline-flex",
             align_items="center",
             gap="0.25rem",
+        )
+    elif btn_type == "icon":
+        # Icon only: ensure button is flex container for proper centering
+        button_style = css(
+            display="inline-flex",
+            align_items="center",
+            justify_content="center",
         )
 
     button = tags.button(
