@@ -32,6 +32,14 @@ quartodoc:
         - express.ui.input_action_button
         - express.ui.input_action_link
         - express.ui.input_task_button
+    - title: Toolbar
+      desc: Create compact toolbars with buttons and inputs for use in headers, footers, and other small spaces.
+      contents:
+        - express.ui.toolbar
+        - express.ui.toolbar_input_button
+        - express.ui.toolbar_input_select
+        - express.ui.toolbar_divider
+        - express.ui.toolbar_spacer
     - title: Output components
       desc: Reactively render output.
       contents:
@@ -132,6 +140,8 @@ quartodoc:
         - express.ui.update_action_button
         - express.ui.update_action_link
         - express.ui.update_task_button
+        - express.ui.update_toolbar_input_button
+        - express.ui.update_toolbar_input_select
     - title: Update UI Layouts
       desc: ""
       contents:

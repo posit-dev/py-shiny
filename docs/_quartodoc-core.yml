@@ -60,6 +60,14 @@ quartodoc:
         - ui.input_action_button
         - ui.input_action_link
         - ui.input_task_button
+    - title: Toolbar
+      desc: Create compact toolbars with buttons and inputs for use in headers, footers, and other small spaces.
+      contents:
+        - ui.toolbar
+        - ui.toolbar_input_button
+        - ui.toolbar_input_select
+        - ui.toolbar_divider
+        - ui.toolbar_spacer
     - title: Value boxes
       desc: Prominently display a value and label in a box that can be expanded to show more information.
       contents:
@@ -172,6 +180,8 @@ quartodoc:
         - ui.update_action_button
         - ui.update_action_link
         - ui.update_task_button
+        - ui.update_toolbar_input_button
+        - ui.update_toolbar_input_select
     - title: Update UI Layouts
       desc: ""
       contents:

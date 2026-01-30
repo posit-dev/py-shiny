@@ -1,205 +1,150 @@
+from faicons import icon_svg
+
 from shiny import App, reactive, render, ui
 
-app_ui = ui.page_fillable(
-    ui.h2("Toolbar Examples"),
-    ui.layout_columns(
-        # Example 1: Document Editor with toolbar buttons
-        ui.card(
-            ui.card_header(
-                "Document Editor",
-                ui.toolbar(
+app_ui = ui.page_fluid(
+    ui.h2("Toolbar Kitchen Sink Example"),
+    ui.p("Comprehensive examples of toolbar usage patterns"),
+    # Card 1: Toolbar in header with icon button, select, divider
+    # Body has input with toolbar in label
+    ui.card(
+        ui.card_header(
+            "Document Editor",
+            ui.toolbar(
+                ui.toolbar_input_button(
+                    "btn_save",
+                    label="Save",
+                    icon=icon_svg("floppy-disk"),
+                    tooltip="Save Document",
+                ),
+                ui.toolbar_divider(),
+                ui.toolbar_input_select(
+                    "format",
+                    label="Format",
+                    choices={"md": "Markdown", "txt": "Plain Text", "html": "HTML"},
+                    selected="md",
+                    icon=icon_svg("file-code"),
+                ),
+                align="right",
+            ),
+        ),
+        ui.card_body(
+            ui.input_text_area(
+                "content",
+                label=ui.toolbar(
                     ui.toolbar_input_button(
-                        "undo", label="Undo", icon=ui.HTML("↶")
+                        "btn_bold",
+                        label="Bold",
+                        icon=icon_svg("bold"),
                     ),
                     ui.toolbar_input_button(
-                        "redo", label="Redo", icon=ui.HTML("↷")
+                        "btn_italic",
+                        label="Italic",
+                        icon=icon_svg("italic"),
+                    ),
+                    ui.toolbar_input_button(
+                        "btn_code",
+                        label="Code",
+                        icon=icon_svg("code"),
+                    ),
+                    align="right",
+                ),
+                placeholder="Type your content here...",
+                rows=8,
+            ),
+            ui.output_text("output_card1"),
+        ),
+    ),
+    # Card 2: Toolbar in header with label button, select with label, spacer
+    # Body has submit textarea with toolbar
+    ui.card(
+        ui.card_header(
+            "Message Composer",
+            ui.toolbar(
+                ui.toolbar_input_button(
+                    "btn_new",
+                    label="New Message",
+                    icon=icon_svg("plus"),
+                    show_label=True,
+                ),
+                ui.toolbar_spacer(),
+                ui.toolbar_input_select(
+                    "recipient",
+                    label="To",
+                    choices={
+                        "team": "Team",
+                        "manager": "Manager",
+                        "support": "Support",
+                    },
+                    selected="team",
+                    show_label=True,
+                ),
+                align="right",
+            ),
+        ),
+        ui.card_body(
+            ui.input_submit_textarea(
+                "message",
+                label="Message",
+                placeholder="Compose your message...",
+                rows=6,
+                toolbar=ui.toolbar(
+                    ui.toolbar_input_select(
+                        "priority",
+                        label="Priority",
+                        choices={"low": "Low", "medium": "Medium", "high": "High"},
+                        selected="medium",
+                        icon=icon_svg("flag"),
                     ),
                     ui.toolbar_divider(),
                     ui.toolbar_input_button(
-                        "save", label="Save", icon=ui.HTML("💾")
+                        "btn_attach",
+                        label="Attach",
+                        icon=icon_svg("paperclip"),
                     ),
                     ui.toolbar_input_button(
-                        "settings",
-                        label="Settings",
-                        icon=ui.HTML("⚙️"),
-                        tooltip="Open settings",
-                    ),
-                    align="right",
-                    gap="0.25rem",
-                ),
-            ),
-            ui.card_body(
-                ui.p("Edit your document here..."),
-                ui.output_text_verbatim("editor_actions"),
-            ),
-        ),
-        # Example 2: Data Table with filtering toolbar
-        ui.card(
-            ui.card_header(
-                "Data Table",
-                ui.toolbar(
-                    ui.toolbar_input_select(
-                        "filter",
-                        label="Filter",
-                        choices=["All", "Active", "Completed", "Archived"],
-                        icon=ui.HTML("🔍"),
-                    ),
-                    ui.toolbar_input_select(
-                        "sort",
-                        label="Sort",
-                        choices={
-                            "name_asc": "Name (A-Z)",
-                            "name_desc": "Name (Z-A)",
-                            "date_asc": "Date (Oldest)",
-                            "date_desc": "Date (Newest)",
-                        },
-                        selected="date_desc",
-                        show_label=True,
-                    ),
-                    ui.toolbar_divider(),
-                    ui.toolbar_input_button(
-                        "refresh", label="Refresh", icon=ui.HTML("🔄")
-                    ),
-                    align="right",
-                    gap="0.5rem",
-                ),
-            ),
-            ui.card_body(
-                ui.output_text_verbatim("table_status"),
-            ),
-        ),
-        # Example 3: Media Player controls
-        ui.card(
-            ui.card_header(
-                "Media Player",
-                ui.toolbar(
-                    ui.toolbar_input_button(
-                        "play",
-                        label="Play",
-                        icon=ui.HTML("▶️"),
-                        border=True,
-                    ),
-                    ui.toolbar_input_button(
-                        "pause", label="Pause", icon=ui.HTML("⏸")
-                    ),
-                    ui.toolbar_input_button(
-                        "stop", label="Stop", icon=ui.HTML("⏹")
-                    ),
-                    ui.toolbar_divider(),
-                    ui.toolbar_input_select(
-                        "speed",
-                        label="Speed",
-                        choices=["0.5x", "1x", "1.5x", "2x"],
-                        selected="1x",
-                    ),
-                    align="right",
-                    gap="0.25rem",
-                ),
-            ),
-            ui.card_body(
-                ui.output_text_verbatim("media_status"),
-            ),
-        ),
-        # Example 4: Dynamic updates
-        ui.card(
-            ui.card_header(
-                "Dynamic Toolbar",
-                ui.toolbar(
-                    ui.toolbar_input_button(
-                        "toggle_edit",
-                        label="Edit Mode",
-                        icon=ui.HTML("✏️"),
-                    ),
-                    ui.toolbar_input_select(
-                        "view",
-                        label="View",
-                        choices=["List", "Grid", "Table"],
+                        "btn_emoji",
+                        label="Emoji",
+                        icon=icon_svg("face-smile"),
                     ),
                     align="right",
                 ),
             ),
-            ui.card_body(
-                ui.output_text_verbatim("dynamic_status"),
-                ui.p(
-                    ui.em("Click Edit Mode to toggle between edit and view modes")
-                ),
-            ),
+            ui.output_text("output_card2"),
         ),
-        col_widths=[6, 6, 6, 6],
     ),
 )
 
 
 def server(input, output, session):
-    # Example 1: Document Editor
+    # Card 1 outputs
     @output
     @render.text
-    def editor_actions():
-        actions = []
-        if input.undo():
-            actions.append(f"Undo clicked: {input.undo()} times")
-        if input.redo():
-            actions.append(f"Redo clicked: {input.redo()} times")
-        if input.save():
-            actions.append(f"Save clicked: {input.save()} times")
-        if input.settings():
-            actions.append(f"Settings clicked: {input.settings()} times")
-        return "\n".join(actions) if actions else "No actions yet"
+    def output_card1():
+        save_clicks = input.btn_save()
+        format_val = input.format()
+        bold_clicks = input.btn_bold()
+        italic_clicks = input.btn_italic()
+        code_clicks = input.btn_code()
+        return f"Save: {save_clicks} | Format: {format_val} | Bold: {bold_clicks}, Italic: {italic_clicks}, Code: {code_clicks}"
 
-    # Example 2: Data Table
-    @output
-    @render.text
-    def table_status():
-        refresh_count = input.refresh() if input.refresh() else 0
-        return (
-            f"Filter: {input.filter()}\n"
-            f"Sort: {input.sort()}\n"
-            f"Refreshed: {refresh_count} times"
-        )
-
-    # Example 3: Media Player
-    @output
-    @render.text
-    def media_status():
-        status_lines = []
-        if input.play():
-            status_lines.append(f"▶️  Playing (clicked {input.play()} times)")
-        if input.pause():
-            status_lines.append(f"⏸  Paused (clicked {input.pause()} times)")
-        if input.stop():
-            status_lines.append(f"⏹  Stopped (clicked {input.stop()} times)")
-        status_lines.append(f"Speed: {input.speed()}")
-        return "\n".join(status_lines)
-
-    # Example 4: Dynamic updates
-    edit_mode = reactive.value(False)
-
-    @output
-    @render.text
-    def dynamic_status():
-        mode = "Edit Mode" if edit_mode() else "View Mode"
-        return f"Current Mode: {mode}\nView: {input.view()}\nToggle clicks: {input.toggle_edit()}"
+    # Card 2 outputs
+    submit_count = reactive.value(0)
 
     @reactive.effect
-    @reactive.event(input.toggle_edit)
+    @reactive.event(input.message)
     def _():
-        # Toggle edit mode
-        edit_mode.set(not edit_mode())
+        submit_count.set(submit_count.get() + 1)
 
-        if edit_mode():
-            # Switch to edit mode
-            ui.update_toolbar_input_button(
-                "toggle_edit",
-                label="View Mode",
-                icon=ui.HTML("👁️"),
-            )
-        else:
-            # Switch to view mode
-            ui.update_toolbar_input_button(
-                "toggle_edit",
-                label="Edit Mode",
-                icon=ui.HTML("✏️"),
-            )
+    @output
+    @render.text
+    def output_card2():
+        new_clicks = input.btn_new()
+        recipient_val = input.recipient()
+        priority_val = input.priority()
+        attach_clicks = input.btn_attach()
+        emoji_clicks = input.btn_emoji()
+        return f"New: {new_clicks} | To: {recipient_val} | Priority: {priority_val} | Attach: {attach_clicks}, Emoji: {emoji_clicks} | Submits: {submit_count.get()}"
 
 
 app = App(app_ui, server)
