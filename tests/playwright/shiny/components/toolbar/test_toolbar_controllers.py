@@ -95,9 +95,7 @@ def test_toolbar_button_expect_label_hidden(page: Page, app: ShinyAppProc) -> No
     button_no_tooltip.expect_label_visible(visible=False)
 
 
-def test_toolbar_button_toggle_label_visibility(
-    page: Page, app: ShinyAppProc
-) -> None:
+def test_toolbar_button_toggle_label_visibility(page: Page, app: ShinyAppProc) -> None:
     """Test toggling label visibility dynamically."""
     page.goto(app.url)
 
@@ -346,9 +344,7 @@ def test_toolbar_select_set(page: Page, app_select: ShinyAppProc) -> None:
     expect(output).to_have_text("Basic select value: Option 3")
 
 
-def test_toolbar_button_all_methods_together(
-    page: Page, app: ShinyAppProc
-) -> None:
+def test_toolbar_button_all_methods_together(page: Page, app: ShinyAppProc) -> None:
     """Test multiple controller methods work together correctly."""
     page.goto(app.url)
 

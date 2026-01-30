@@ -110,13 +110,15 @@ def test_toolbar_input_button_show_label_defaults():
     btn_no_icon = ui.toolbar_input_button("btn1", "Save")
     rendered_no_icon = str(btn_no_icon)
     # Label should be visible (not have hidden attribute)
-    assert "hidden" not in rendered_no_icon.split("bslib-toolbar-label")[1].split(">")[0]
+    assert (
+        "hidden" not in rendered_no_icon.split("bslib-toolbar-label")[1].split(">")[0]
+    )
 
     # With icon: show_label should default to False
     btn_with_icon = ui.toolbar_input_button("btn2", "Edit", icon="✏️")
     rendered_with_icon = str(btn_with_icon)
     # Label should be hidden
-    assert 'hidden=""' in rendered_with_icon or 'hidden' in rendered_with_icon
+    assert 'hidden=""' in rendered_with_icon or "hidden" in rendered_with_icon
 
 
 def test_toolbar_input_button_no_icon_no_show_label_raises():
@@ -185,6 +187,7 @@ def test_toolbar_input_button_empty_label_warning():
 # ============================================================================
 # toolbar_input_select() tests
 # ============================================================================
+
 
 # --- Basic structure tests ---
 def test_toolbar_input_select_basic():
@@ -257,9 +260,7 @@ def test_toolbar_input_select_choices_list():
 
 
 def test_toolbar_input_select_choices_dict():
-    sel = ui.toolbar_input_select(
-        "sel1", "Choose", {"a": "Choice A", "b": "Choice B"}
-    )
+    sel = ui.toolbar_input_select("sel1", "Choose", {"a": "Choice A", "b": "Choice B"})
     rendered = str(sel)
     assert "Choice A" in rendered
     assert "Choice B" in rendered
@@ -286,7 +287,10 @@ def test_toolbar_input_select_single_choice():
     rendered = str(sel)
     assert "Only Option" in rendered
     # Should be auto-selected
-    assert 'value="Only Option" selected' in rendered or 'selected value="Only Option"' in rendered
+    assert (
+        'value="Only Option" selected' in rendered
+        or 'selected value="Only Option"' in rendered
+    )
 
 
 # --- Selection tests ---
@@ -395,7 +399,9 @@ def test_toolbar_input_select_tooltip():
     rendered = str(sel)
     assert "bslib-tooltip" in rendered
 
-    sel_no_tooltip = ui.toolbar_input_select("sel2", "Choose", ["A", "B"], tooltip=False)
+    sel_no_tooltip = ui.toolbar_input_select(
+        "sel2", "Choose", ["A", "B"], tooltip=False
+    )
     rendered_no_tooltip = str(sel_no_tooltip)
     assert "bslib-tooltip" not in rendered_no_tooltip
 
@@ -449,7 +455,9 @@ def test_toolbar_input_select_custom_attributes():
         "sel1", "Choose", ["A", "B"], data_testid="my-select", style="color: red;"
     )
     rendered = str(sel)
-    assert 'data-testid="my-select"' in rendered or 'data_testid="my-select"' in rendered
+    assert (
+        'data-testid="my-select"' in rendered or 'data_testid="my-select"' in rendered
+    )
     assert "color: red" in rendered or "color:red" in rendered
 
 
@@ -541,8 +549,12 @@ def test_toolbar_in_text_area_label():
     textarea = ui.input_text_area(
         "notes",
         label=ui.toolbar(
-            ui.toolbar_input_button("btn_bold", "Bold", icon="💪", tooltip="Make text bold"),
-            ui.toolbar_input_button("btn_italic", "Italic", icon="📝", tooltip="Make text italic"),
+            ui.toolbar_input_button(
+                "btn_bold", "Bold", icon="💪", tooltip="Make text bold"
+            ),
+            ui.toolbar_input_button(
+                "btn_italic", "Italic", icon="📝", tooltip="Make text italic"
+            ),
             ui.toolbar_divider(),
             ui.toolbar_input_select(
                 "text_size",
@@ -583,8 +595,12 @@ def test_toolbar_in_submit_textarea():
                 icon="🚩",
             ),
             ui.toolbar_divider(),
-            ui.toolbar_input_button("btn_attach", "Attach", icon="📎", tooltip="Attach file"),
-            ui.toolbar_input_button("btn_emoji", "Emoji", icon="😀", tooltip="Insert emoji"),
+            ui.toolbar_input_button(
+                "btn_attach", "Attach", icon="📎", tooltip="Attach file"
+            ),
+            ui.toolbar_input_button(
+                "btn_emoji", "Emoji", icon="😀", tooltip="Insert emoji"
+            ),
             align="right",
         ),
     )

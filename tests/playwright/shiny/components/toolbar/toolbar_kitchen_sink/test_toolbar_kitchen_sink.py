@@ -247,7 +247,7 @@ def test_toolbar_alignment(page: Page, app: ShinyAppProc) -> None:
 
     # All toolbars in this app should be right-aligned
     # Only check toolbars that have data-align attribute (actual ui.toolbar() elements)
-    toolbars = page.locator('.bslib-toolbar[data-align]')
+    toolbars = page.locator(".bslib-toolbar[data-align]")
     count = toolbars.count()
     for i in range(count):
         toolbar = toolbars.nth(i)

@@ -11,9 +11,7 @@ with ui.layout_columns(col_widths=[6, 6]):
             "Document Editor"
             with ui.toolbar(align="right", gap="0.25rem"):
                 ui.toolbar_input_button("save_doc", label="Save", icon=ui.HTML("💾"))
-                ui.toolbar_input_button(
-                    "share", label="Share", icon=ui.HTML("📤")
-                )
+                ui.toolbar_input_button("share", label="Share", icon=ui.HTML("📤"))
                 ui.toolbar_divider()
                 ui.toolbar_input_button("info", label="Info", icon=ui.HTML("ℹ️"))
 
@@ -42,13 +40,18 @@ with ui.layout_columns(col_widths=[6, 6]):
                 ui.toolbar_input_select(
                     "category",
                     label="Category",
-                    choices={"tech": "Technology", "health": "Health", "edu": "Education"},
+                    choices={
+                        "tech": "Technology",
+                        "health": "Health",
+                        "edu": "Education",
+                    },
                     show_label=True,
                 )
 
         @render.text
         def filter_status():
             return f"Status: {input.status_filter()} | Category: {input.category()}"
+
 
 with ui.layout_columns(col_widths=12):
     # Example 3: Full-width card with left-aligned toolbar

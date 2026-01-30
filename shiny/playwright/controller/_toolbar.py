@@ -397,9 +397,7 @@ class ToolbarInputSelect(UiBase):
             The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
         if len(labels) == 0:
-            playwright_expect(self.loc_choice_groups).to_have_count(
-                0, timeout=timeout
-            )
+            playwright_expect(self.loc_choice_groups).to_have_count(0, timeout=timeout)
             return
 
         # Verify count first

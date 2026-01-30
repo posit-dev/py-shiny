@@ -422,4 +422,6 @@ def test_toolbar_select_structure(page: Page, app: ShinyAppProc) -> None:
 
     # Should contain a select element
     expect(select_ctrl.loc_select).to_be_attached()
-    expect(select_ctrl.loc_select).to_have_class(re.compile(r"form-select.*bslib-toolbar-select"))
+    expect(select_ctrl.loc_select).to_have_class(
+        re.compile(r"form-select.*bslib-toolbar-select")
+    )
