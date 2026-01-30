@@ -310,7 +310,6 @@ def test_update_toolbar_button_all_properties(page: Page, app: ShinyAppProc) -> 
     page.goto(app.url)
 
     button = controller.ToolbarInputButton(page, "btn_update_all")
-    output = page.locator("#output_update_all")
 
     # Initial state
     expect(button.loc_label).to_have_text("Start")

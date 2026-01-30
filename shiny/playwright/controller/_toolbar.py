@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import re
-from typing import Optional
 
 from playwright.sync_api import Locator, Page
 from playwright.sync_api import expect as playwright_expect
 
-from .._types import Timeout
+from .._types import PatternOrStr, Timeout
 from ..expect._internal import (
     expect_attribute_to_have_value as _expect_attribute_to_have_value,
 )
@@ -52,7 +51,7 @@ class ToolbarInputButton(InputActionBase):
 
     def expect_label(
         self,
-        value: str,
+        value: PatternOrStr,
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -62,13 +61,13 @@ class ToolbarInputButton(InputActionBase):
         Parameters
         ----------
         value
-            The expected label text.
+            The expected label text (exact string or regex pattern).
         timeout
             The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
         playwright_expect(self.loc_label).to_have_text(value, timeout=timeout)
 
-    def expect_icon(
+    def expect_icon(  # type: ignore[override]
         self,
         exists: bool = True,
         *,

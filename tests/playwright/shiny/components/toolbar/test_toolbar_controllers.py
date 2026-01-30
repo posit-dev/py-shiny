@@ -1,7 +1,5 @@
 """Test the toolbar controller expect methods."""
 
-import re
-
 from conftest import create_app_fixture
 from playwright.sync_api import Page, expect
 
