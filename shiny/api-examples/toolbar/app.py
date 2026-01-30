@@ -245,7 +245,7 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
             return ui.p("No messages sent yet.", style="color: #888;")
 
         items = []
-        for i, msg in enumerate(reversed(msg_list), 1):
+        for _, msg in enumerate(reversed(msg_list), 1):
             items.append(
                 ui.div(
                     ui.strong(f"To: {msg['to']} ({msg['priority']} priority)"),
