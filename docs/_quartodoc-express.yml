@@ -28,6 +28,7 @@ quartodoc:
         - express.ui.input_text
         - express.ui.input_text_area
         - express.ui.input_submit_textarea
+        - express.ui.input_code_editor
         - express.ui.input_password
         - express.ui.input_action_button
         - express.ui.input_action_link
@@ -136,6 +137,7 @@ quartodoc:
         - express.ui.update_text
         - express.ui.update_text_area
         - express.ui.update_submit_textarea
+        - express.ui.update_code_editor
         - express.ui.update_navset
         - express.ui.update_action_button
         - express.ui.update_action_link

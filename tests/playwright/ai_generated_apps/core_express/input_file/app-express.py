@@ -57,12 +57,10 @@ with ui.card():
 
     # Add some instructions
     with ui.card():
-        ui.markdown(
-            """
+        ui.markdown("""
         ### Instructions:
         1. Click 'Choose Files...' to select one or more files
         2. Supported file types: CSV, TXT, PDF, and images
         3. File information will appear in the table below
         4. Use filters to search through uploaded files
-        """
-        )
+        """)

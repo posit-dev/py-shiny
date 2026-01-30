@@ -30,6 +30,7 @@ quartodoc:
         - playwright.controller.InputBookmarkButton
         - playwright.controller.InputCheckbox
         - playwright.controller.InputCheckboxGroup
+        - playwright.controller.InputCodeEditor
         - playwright.controller.InputDarkMode
         - playwright.controller.InputDate
         - playwright.controller.InputDateRange

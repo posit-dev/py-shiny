@@ -28,6 +28,7 @@ from ._input_controls import (
     InputSwitch,
 )
 from ._input_fields import (
+    InputCodeEditor,
     InputDate,
     InputDateRange,
     InputNumeric,
@@ -78,6 +79,7 @@ __all__ = [
     "InputBookmarkButton",
     "InputCheckbox",
     "InputCheckboxGroup",
+    "InputCodeEditor",
     "InputDarkMode",
     "InputDate",
     "InputDateRange",
