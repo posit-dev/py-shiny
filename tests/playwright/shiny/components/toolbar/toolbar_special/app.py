@@ -1,6 +1,6 @@
 from faicons import icon_svg
 
-from shiny import App, reactive, render, ui
+from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 
 app_ui = ui.page_fluid(
     ui.h2("Toolbar Special Cases Test App"),
@@ -149,7 +149,7 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input, output, session):
+def server(input: Inputs, output: Outputs, session: Session) -> None:
     # Test 1: Numeric input with presets
     @output
     @render.text

@@ -1,6 +1,6 @@
 from faicons import icon_svg
 
-from shiny import App, reactive, render, ui
+from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 
 app_ui = ui.page_fluid(
     ui.h2("Toolbar Input Button Tests"),
@@ -224,7 +224,7 @@ app_ui = ui.page_fluid(
                     "btn_custom_attr",
                     label="Custom",
                     icon=icon_svg("star"),
-                    **{"data-testid": "custom-button", "data-category": "featured"},
+                    **{"data-testid": "custom-button", "data-category": "featured"},  # type: ignore[reportArgumentType]
                 ),
                 align="right",
             ),
@@ -255,7 +255,7 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input, output, session):
+def server(input: Inputs, output: Outputs, session: Session) -> None:
     # Test 1: Icon-only
     @output
     @render.text

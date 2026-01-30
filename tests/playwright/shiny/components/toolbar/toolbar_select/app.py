@@ -1,6 +1,6 @@
 from faicons import icon_svg
 
-from shiny import App, reactive, render, ui
+from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 
 app_ui = ui.page_fluid(
     ui.h2("Toolbar Input Select Tests"),
@@ -296,7 +296,7 @@ app_ui = ui.page_fluid(
                     **{
                         "data-testid": "category-select",
                         "style": "background-color: #f9b928;",
-                    },
+                    },  # type: ignore[reportArgumentType]
                 ),
                 align="right",
             ),
@@ -308,7 +308,7 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input, output, session):
+def server(input: Inputs, output: Outputs, session: Session) -> None:
     # Test 1: Basic select
     @output
     @render.text
