@@ -367,48 +367,23 @@ def toolbar_input_button(
     label_elem = span(
         label,
         id=label_id,
-        class_="bslib-toolbar-label",
+        class_="bslib-toolbar-label action-label",
         hidden="" if not show_label else None,
     )
 
     # Wrap icon to ensure it's always treated as decorative
-    # Note: faicons adds margin-right="0.2em" by default, so we override it
     icon_elem = None
     if icon is not None:
-        # Remove default margins from icon (e.g., from faicons)
-        if isinstance(icon, Tag):
-            existing_style = icon.attrs.get("style", "")
-            icon.attrs["style"] = (
-                f"{existing_style}; margin: 0 !important;".lstrip("; ")
-            )
-
         icon_elem = span(
             icon,
             {
-                "class": "bslib-toolbar-icon",
+                "class": "bslib-toolbar-icon action-icon",
                 "aria-hidden": "true",
-                "style": "pointer-events: none; display: inline-flex; align-items: center;",
+                "style": "pointer-events: none;",
             },
         )
 
     border_class = "border-0" if not border else "border-1"
-
-    # Add inline styles for buttons based on type
-    button_style = None
-    if btn_type == "both":
-        # Icon and label: use flexbox with gap
-        button_style = css(
-            display="inline-flex",
-            align_items="center",
-            gap="0.25rem",
-        )
-    elif btn_type == "icon":
-        # Icon only: ensure button is flex container for proper centering
-        button_style = css(
-            display="inline-flex",
-            align_items="center",
-            justify_content="center",
-        )
 
     button = tags.button(
         icon_elem,
@@ -422,10 +397,8 @@ def toolbar_input_button(
         },
         kwargs,
         disabled="" if disabled else None,
-        style=button_style,
     )
 
-    # Handle tooltip
     tooltip_text: Optional[TagChild] = None
     if tooltip is True:
         tooltip_text = label
@@ -727,7 +700,7 @@ def toolbar_input_select(
     icon_elem = span(
         icon,
         {
-            "class": "bslib-toolbar-icon",
+            "class": "bslib-toolbar-icon action-icon",
             "aria-hidden": "true",
             "role": "none",
             "tabindex": "-1",
@@ -736,7 +709,9 @@ def toolbar_input_select(
     )
 
     # Create label element
-    label_span_classes = "bslib-toolbar-label"
+    # Uses both bslib-toolbar-label (for toolbar-specific styling) and action-label
+    # (for compatibility with standard action button update mechanisms)
+    label_span_classes = "bslib-toolbar-label action-label"
     if not show_label:
         label_span_classes += " visually-hidden"
 
@@ -751,11 +726,6 @@ def toolbar_input_select(
             "class": "control-label",
             "for": select_id,
         },
-        # Added to fix icon alignment issue because icon svg padding
-        style=css(
-            display="inline-flex",
-            align_items="center",
-        ),
     )
 
     tooltip_text: Optional[TagChild] = None

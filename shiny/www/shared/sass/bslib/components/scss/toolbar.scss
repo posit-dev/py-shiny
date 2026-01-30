@@ -54,6 +54,12 @@
     }
   }
 
+  .bslib-toolbar-icon.action-icon {
+    svg, img {
+      margin: 0 !important;
+    }
+  }
+
   // Remove the left padding on label-only buttons so the text is centered
   .bslib-toolbar-input-button[data-type="label"] {
     .action-label {
@@ -197,9 +203,12 @@ label > .bslib-toolbar {
   label.control-label {
     font-weight: 600;
     margin-bottom: 0;
+    display: inline-flex;
+    align-items: center;
   }
 
   .bslib-toolbar-label {
     margin-left: 0.15rem;
+
   }
 }
