@@ -128,6 +128,17 @@ def server(input, output, session):
         code_clicks = input.btn_code()
         return f"Save: {save_clicks} | Format: {format_val} | Bold: {bold_clicks}, Italic: {italic_clicks}, Code: {code_clicks}"
 
+    # Update save button icon and tooltip after click
+    @reactive.effect
+    @reactive.event(input.btn_save)
+    def _():
+        # After click, change to check icon and update tooltip
+        ui.update_toolbar_input_button(
+            "btn_save",
+            icon=icon_svg("circle-check"),
+        )
+        ui.update_tooltip("btn_save_tooltip", "Saved successfully!")
+
     # Card 2 outputs
     submit_count = reactive.value(0)
 

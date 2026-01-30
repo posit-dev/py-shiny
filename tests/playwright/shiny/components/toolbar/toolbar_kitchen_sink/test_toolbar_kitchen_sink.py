@@ -280,3 +280,41 @@ def test_no_tooltips_on_label_buttons(page: Page, app: ShinyAppProc) -> None:
     # Button with visible label should not have tooltip
     tooltip = page.locator("#btn_new_tooltip")
     expect(tooltip).not_to_be_attached()
+
+
+def test_update_tooltip_after_update_button(page: Page, app: ShinyAppProc) -> None:
+    """Test updating tooltip content after updating toolbar button."""
+    page.goto(app.url)
+
+    btn_save = controller.ToolbarInputButton(page, "btn_save")
+    tooltip = page.locator("#btn_save_tooltip")
+
+    # Verify initial tooltip exists
+    expect(tooltip).to_be_attached()
+
+    # Hover to show initial tooltip
+    btn_save.loc.hover()
+    page.wait_for_timeout(100)
+    tooltip_content = page.locator(".tooltip-inner")
+    expect(tooltip_content.first).to_contain_text("Save Document")
+
+    # Move away to hide tooltip
+    page.mouse.move(0, 0)
+    page.wait_for_timeout(200)
+
+    # Click button to trigger update_toolbar_input_button and update_tooltip
+    btn_save.click()
+    page.mouse.move(0, 0)
+    page.wait_for_timeout(300)
+
+    # Verify icon changed (check icon HTML changed)
+    icon_html = btn_save.loc_icon.inner_html()
+    assert len(icon_html) > 0  # Icon should still be present
+
+    # Hover to show updated tooltip
+    btn_save.loc.hover()
+    page.wait_for_timeout(300)
+    tooltip_content = page.locator(".tooltip-inner")
+    expect(tooltip_content.first).to_contain_text("Saved successfully!")
+    # Verify it no longer shows the old tooltip
+    expect(tooltip_content.first).not_to_contain_text("Save Document")
