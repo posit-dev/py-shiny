@@ -10,53 +10,53 @@ app_ui = ui.page_fluid(
         # Card 1: Toolbar in header with icon button, select, divider
         # Body has input with toolbar in label
         ui.card(
-        ui.card_header(
-            "Document Editor",
-            ui.toolbar(
-                ui.toolbar_input_button(
-                    "btn_save",
-                    label="Save",
-                    icon=icon_svg("floppy-disk"),
-                    tooltip="Save Document",
-                ),
-                ui.toolbar_divider(),
-                ui.toolbar_input_select(
-                    "format",
-                    label="Format",
-                    choices={"md": "Markdown", "txt": "Plain Text", "html": "HTML"},
-                    selected="md",
-                    icon=icon_svg("file-code"),
-                ),
-                align="right",
-            ),
-        ),
-        ui.card_body(
-            ui.input_text_area(
-                "content",
-                label=ui.toolbar(
+            ui.card_header(
+                "Document Editor",
+                ui.toolbar(
                     ui.toolbar_input_button(
-                        "btn_bold",
-                        label="Bold",
-                        icon=icon_svg("bold"),
+                        "btn_save",
+                        label="Save",
+                        icon=icon_svg("floppy-disk"),
+                        tooltip="Save Document",
                     ),
-                    ui.toolbar_input_button(
-                        "btn_italic",
-                        label="Italic",
-                        icon=icon_svg("italic"),
-                    ),
-                    ui.toolbar_input_button(
-                        "btn_code",
-                        label="Code",
-                        icon=icon_svg("code"),
+                    ui.toolbar_divider(),
+                    ui.toolbar_input_select(
+                        "format",
+                        label="Format",
+                        choices={"md": "Markdown", "txt": "Plain Text", "html": "HTML"},
+                        selected="md",
+                        icon=icon_svg("file-code"),
                     ),
                     align="right",
                 ),
-                placeholder="Type your content here...",
-                rows=8,
             ),
-            ui.output_text("output_card1"),
+            ui.card_body(
+                ui.input_text_area(
+                    "content",
+                    label=ui.toolbar(
+                        ui.toolbar_input_button(
+                            "btn_bold",
+                            label="Bold",
+                            icon=icon_svg("bold"),
+                        ),
+                        ui.toolbar_input_button(
+                            "btn_italic",
+                            label="Italic",
+                            icon=icon_svg("italic"),
+                        ),
+                        ui.toolbar_input_button(
+                            "btn_code",
+                            label="Code",
+                            icon=icon_svg("code"),
+                        ),
+                        align="right",
+                    ),
+                    placeholder="Type your content here...",
+                    rows=8,
+                ),
+                ui.output_text("output_card1"),
+            ),
         ),
-    ),
         # Card 3: Image gallery with toolbar controls
         ui.card(
             ui.card_header(
@@ -65,7 +65,11 @@ app_ui = ui.page_fluid(
                     ui.toolbar_input_select(
                         "view_mode",
                         label="View",
-                        choices={"grid": "Grid", "list": "List", "slideshow": "Slideshow"},
+                        choices={
+                            "grid": "Grid",
+                            "list": "List",
+                            "slideshow": "Slideshow",
+                        },
                         selected="grid",
                         icon=icon_svg("images"),
                     ),
@@ -222,11 +226,9 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
         priority = input.priority()
         if message_text and message_text.strip():
             current_messages = list(messages.get())  # Create a new list
-            current_messages.append({
-                "text": message_text,
-                "to": recipient,
-                "priority": priority
-            })
+            current_messages.append(
+                {"text": message_text, "to": recipient, "priority": priority}
+            )
             messages.set(current_messages)
 
     @reactive.effect
@@ -249,7 +251,7 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
                     ui.strong(f"To: {msg['to']} ({msg['priority']} priority)"),
                     ui.br(),
                     ui.span(msg["text"]),
-                    style="padding: 8px; margin-bottom: 8px; border: 1px solid #ddd; border-radius: 4px; display: block;"
+                    style="padding: 8px; margin-bottom: 8px; border: 1px solid #ddd; border-radius: 4px; display: block;",
                 )
             )
         return ui.div(*items)
