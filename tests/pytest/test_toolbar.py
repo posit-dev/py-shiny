@@ -95,10 +95,28 @@ def test_toolbar_input_button_with_icon_and_label():
 
 
 def test_toolbar_input_button_label_only():
-    btn = ui.toolbar_input_button("btn1", "Click Me", icon=None, show_label=True)
+    # When no icon is provided, show_label defaults to True
+    btn = ui.toolbar_input_button("btn1", "Click Me")
     rendered = str(btn)
     assert "btn1" in rendered
     assert "Click Me" in rendered
+    # Verify label is visible (not hidden)
+    assert "hidden" not in rendered.split("bslib-toolbar-label")[1].split(">")[0]
+
+
+def test_toolbar_input_button_show_label_defaults():
+    """Test that show_label defaults correctly based on icon presence."""
+    # No icon: show_label should default to True
+    btn_no_icon = ui.toolbar_input_button("btn1", "Save")
+    rendered_no_icon = str(btn_no_icon)
+    # Label should be visible (not have hidden attribute)
+    assert "hidden" not in rendered_no_icon.split("bslib-toolbar-label")[1].split(">")[0]
+
+    # With icon: show_label should default to False
+    btn_with_icon = ui.toolbar_input_button("btn2", "Edit", icon="✏️")
+    rendered_with_icon = str(btn_with_icon)
+    # Label should be hidden
+    assert 'hidden=""' in rendered_with_icon or 'hidden' in rendered_with_icon
 
 
 def test_toolbar_input_button_no_icon_no_show_label_raises():

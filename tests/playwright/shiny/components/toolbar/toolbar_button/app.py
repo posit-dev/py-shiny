@@ -181,7 +181,7 @@ app_ui = ui.page_fluid(
             ui.output_text("output_toggle_disabled"),
         ),
     ),
-    # Test 11: Label-only button (no icon)
+    # Test 11: Label-only button (no icon) - show_label defaults to True
     ui.card(
         ui.card_header(
             "Test 11: Label Only (No Icon)",
@@ -189,7 +189,6 @@ app_ui = ui.page_fluid(
                 ui.toolbar_input_button(
                     "btn_label_only",
                     label="Click Me",
-                    show_label=True,
                 ),
                 align="right",
             ),

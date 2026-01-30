@@ -61,9 +61,9 @@ def toolbar(
         CSS width of the toolbar. Defaults to None, which will automatically set
         `width: 100%` when the toolbar is a direct child of a label element (e.g., when
         used in input labels).
-        For :func:`~shiny.ui.toolbar_spacer`, to push elements
-        effectively, the toolbar needs `width="100%"` to expand and create space. Set
-        this explicitly if you need to control the width in other contexts.
+        For :func:`~shiny.ui.toolbar_spacer`, to push elements effectively, the toolbar
+        needs `width="100%"` to expand and create space. Set this explicitly if you need
+        to control the width in other contexts.
 
     Returns
     -------
@@ -81,11 +81,16 @@ def toolbar(
     --------
     ```python
     from shiny import ui
+    from faicons import icon_svg
 
     # Basic toolbar with buttons
     ui.toolbar(
-        ui.toolbar_input_button(id="save", icon=icon("save"), label="Save"),
-        ui.toolbar_input_button(id="edit", icon=icon("pencil"), label="Edit"),
+        ui.toolbar_input_button(id="save", label="Save"),
+        ui.toolbar_input_button(
+            id="edit",
+            label="Edit",
+            icon=icon_svg("gear")
+        )
         align="right"
     )
     ```
@@ -141,17 +146,20 @@ def toolbar_divider(
     ui.toolbar(
         ui.toolbar_input_button(id="left1", label="Left"),
         ui.toolbar_divider(),
-        ui.toolbar_input_button(id="right1", label="Right")
+        ui.toolbar_input_button(id="right1", label="Right"),
+        align="right"
     )
     ```
 
     ```python
     from shiny import ui
+    from faicons import icon_svg
 
     ui.toolbar(
-        ui.toolbar_input_button(id="a", label="A"),
+        ui.toolbar_input_button(id="a", label="A", icon=icon_svg("star")),
         ui.toolbar_divider(width="5px", gap="20px"),
-        ui.toolbar_input_button(id="b", label="B")
+        ui.toolbar_input_button(id="b", label="B", icon=icon_svg("heart")),
+        align="right"
     )
     ```
     """
@@ -206,6 +214,7 @@ def toolbar_spacer() -> Tag:
     --------
     ```python
     from shiny import ui
+    from faicons import icon_svg
 
     # Items on both left and right - set width="100%"
     ui.card(
@@ -214,7 +223,12 @@ def toolbar_spacer() -> Tag:
             ui.toolbar(
                 ui.toolbar_input_button(id="save", label="Save"),
                 ui.toolbar_spacer(),
-                ui.toolbar_input_button(id="settings", label="Settings"),
+                ui.toolbar_input_button(
+                    id="settings",
+                    label="Settings",
+                    icon=icon_svg("gear")
+                ),
+                align="left",
                 width="100%"
             )
         )
@@ -223,13 +237,15 @@ def toolbar_spacer() -> Tag:
 
     ```python
     from shiny import ui
+    from faicons import icon_svg
 
     # Multiple items on each side with spacer
     ui.toolbar(
-        ui.toolbar_input_button(id="undo", label="Undo"),
-        ui.toolbar_input_button(id="redo", label="Redo"),
+        ui.toolbar_input_button(id="undo", label="Undo", icon=icon_svg("arrow-rotate-left")),
+        ui.toolbar_input_button(id="redo", label="Redo", icon=icon_svg("arrow-rotate-right")),
         ui.toolbar_spacer(),
-        ui.toolbar_input_button(id="help", label="Help"),
+        ui.toolbar_input_button(id="help", label="Help", icon=icon_svg("circle-question")),
+        align="left",
         width="100%"
     )
     ```
@@ -243,7 +259,7 @@ def toolbar_input_button(
     label: TagChild,
     *,
     icon: Optional[TagChild] = None,
-    show_label: bool = False,
+    show_label: bool | MISSING_TYPE = MISSING,
     tooltip: bool | str | MISSING_TYPE = MISSING,
     disabled: bool = False,
     border: bool = False,
@@ -259,15 +275,17 @@ def toolbar_input_button(
     id
         The input ID.
     label
-        The input label. By default, `label` is not shown but is used by `tooltip`.
-        Set `show_label = True` to show the label (see `tooltip` for details on how
+        The input label. When an icon is provided, the label is hidden by default but
+        is used by `tooltip`. When no icon is provided, the label is shown by default.
+        Use `show_label` to control label visibility (see `tooltip` for details on how
         this affects the tooltip behavior).
     icon
         An icon. If provided without `show_label = True`, only the icon will be
         visible.
     show_label
-        Whether to show the label text. If `False` (the default), only the icon is
-        shown (if provided). If `True`, the label text is shown alongside the icon.
+        Whether to show the label text. Defaults to `True` when no icon is provided,
+        and `False` when an icon is provided. If `False`, only the icon is shown
+        (requires an icon). If `True`, the label text is shown (with icon if provided).
         Note that `show_label` can be dynamically updated using
         :func:`~shiny.ui.update_toolbar_input_button`.
     tooltip
@@ -319,26 +337,30 @@ def toolbar_input_button(
     --------
     ```python
     from shiny import ui
+    from faicons import icon_svg
 
-    # Icon-only with tooltip
-    ui.toolbar_input_button(id="save", icon=icon("save"), label="Save")
-    ```
+    # Label-only button
+    ui.toolbar_input_button(id="save", label="Save")
 
-    ```python
-    from shiny import ui
+    # Icon-only button
+    ui.toolbar_input_button(id="save", label="Edit", icon=faicons.icon_svg("pencil"))
 
     # Label and icon
     ui.toolbar_input_button(
         id="edit",
-        icon=icon("pencil"),
         label="Edit",
-        show_label=True
+        show_label=True,
+        icon=faicons.icon_svg("pencil")
     )
     ```
     """
 
     if "_add_ws" not in kwargs:
         kwargs["_add_ws"] = True
+
+    # Compute show_label default: True if no icon, False if icon is provided
+    if isinstance(show_label, MISSING_TYPE):
+        show_label = icon is None
 
     # Determine button type
     if icon is None:
@@ -482,12 +504,12 @@ def update_toolbar_input_button(
     Examples
     --------
     ```python
-    from shiny import App, reactive, ui
+    from shiny import App, reactive, render, ui
 
     app_ui = ui.page_fluid(
         ui.toolbar(
-            align="right",
-            ui.toolbar_input_button("btn", label="Click me", icon=icon("play"))
+            ui.toolbar_input_button("btn", label="Click me"),
+            align="right"
         ),
         ui.output_text_verbatim("count")
     )
@@ -504,8 +526,7 @@ def update_toolbar_input_button(
             if input.btn() == 1:
                 ui.update_toolbar_input_button(
                     "btn",
-                    label="Clicked!",
-                    icon=icon("check")
+                    label="Clicked!"
                 )
 
     app = App(app_ui, server)
@@ -621,29 +642,30 @@ def toolbar_input_select(
     from shiny import ui
 
     ui.toolbar(
-        align="right",
         ui.toolbar_input_select(
             id="select",
             label="Choose option",
             choices=["Option 1", "Option 2", "Option 3"],
-            selected="Option 2"
-        )
+            selected="Option 2",
+        ),
+        align="right",
     )
     ```
 
     ```python
     from shiny import ui
+    from faicons import icon_svg
 
     # With icon and tooltip
     ui.toolbar(
-        align="right",
         ui.toolbar_input_select(
             id="filter",
             label="Filter",
             choices=["All", "Active", "Archived"],
-            icon=icon("filter"),
+            icon=icon_svg("paperclip"),
             tooltip="Filter the data"
-        )
+        ),
+        align="right"
     )
     ```
 
@@ -652,7 +674,6 @@ def toolbar_input_select(
 
     # Grouped choices
     ui.toolbar(
-        align="right",
         ui.toolbar_input_select(
             id="grouped",
             label="Select item",
@@ -661,6 +682,7 @@ def toolbar_input_select(
                 "Group B": {"b1": "Choice B1", "b2": "Choice B2"}
             }
         )
+        align="right"
     )
     ```
     """
@@ -815,12 +837,13 @@ def update_toolbar_input_select(
 
     app_ui = ui.page_fluid(
         ui.toolbar(
-            align="right",
             ui.toolbar_input_select(
                 "select",
                 label="Choose",
                 choices=["A", "B", "C"]
-            )
+            ),
+            align="right",
+
         ),
         ui.output_text_verbatim("value")
     )

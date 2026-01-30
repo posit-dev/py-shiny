@@ -18,19 +18,16 @@ app_ui = ui.page_fluid(
                     ui.toolbar_input_button(
                         "btn_preset_10",
                         label="10",
-                        show_label=True,
                         tooltip="Set to 10",
                     ),
                     ui.toolbar_input_button(
                         "btn_preset_50",
                         label="50",
-                        show_label=True,
                         tooltip="Set to 50",
                     ),
                     ui.toolbar_input_button(
                         "btn_preset_100",
                         label="100",
-                        show_label=True,
                         tooltip="Set to 100",
                     ),
                     ui.toolbar_divider(),
