@@ -511,56 +511,6 @@ def toolbar_input_select(
     * :func:`~shiny.ui.toolbar`
     * :func:`~shiny.ui.update_toolbar_input_select`
     * :func:`~shiny.ui.input_select`
-
-    Examples
-    --------
-    ```python
-    from shiny import ui
-
-    ui.toolbar(
-        ui.toolbar_input_select(
-            id="select",
-            label="Choose option",
-            choices=["Option 1", "Option 2", "Option 3"],
-            selected="Option 2",
-        ),
-        align="right",
-    )
-    ```
-
-    ```python
-    from shiny import ui
-    from faicons import icon_svg
-
-    # With icon and tooltip
-    ui.toolbar(
-        ui.toolbar_input_select(
-            id="filter",
-            label="Filter",
-            choices=["All", "Active", "Archived"],
-            icon=icon_svg("paperclip"),
-            tooltip="Filter the data"
-        ),
-        align="right"
-    )
-    ```
-
-    ```python
-    from shiny import ui
-
-    # Grouped choices
-    ui.toolbar(
-        ui.toolbar_input_select(
-            id="grouped",
-            label="Select item",
-            choices={
-                "Group A": {"a1": "Choice A1", "a2": "Choice A2"},
-                "Group B": {"b1": "Choice B1", "b2": "Choice B2"}
-            }
-        )
-        align="right"
-    )
-    ```
     """
     if not isinstance(label, str) or not label.strip():
         raise ValueError("`label` must be a non-empty string.")
@@ -603,8 +553,6 @@ def toolbar_input_select(
         style="pointer-events: none",
     )
 
-    # Uses both bslib-toolbar-label (for toolbar-specific styling) and action-label
-    # (for compatibility with standard action button update mechanisms)
     label_span_classes = "bslib-toolbar-label action-label"
     if not show_label:
         label_span_classes += " visually-hidden"
