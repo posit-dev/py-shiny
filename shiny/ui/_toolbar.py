@@ -362,7 +362,9 @@ def toolbar_input_button(
     if isinstance(show_label, MISSING_TYPE):
         show_label = icon is None
 
-    # Determine button type
+    if isinstance(tooltip, MISSING_TYPE):
+        tooltip = not show_label
+
     if icon is None:
         if not show_label:
             raise ValueError("If `show_label` is False, `icon` must be provided.")
@@ -378,14 +380,9 @@ def toolbar_input_button(
             stacklevel=2,
         )
 
-    # Compute tooltip default: !show_label
-    if isinstance(tooltip, MISSING_TYPE):
-        tooltip = not show_label
-
     resolved_id = resolve_id(id)
     label_id = f"btn-label-{private_random_int(1000, 10000)}"
 
-    # Create label element (hidden if show_label is False)
     label_elem = span(
         label,
         id=label_id,
@@ -534,7 +531,6 @@ def update_toolbar_input_button(
     """
     session = require_active_session(session)
 
-    # Validate label if provided
     if label is not None:
         label_text = _extract_text(label)
         if not label_text.strip():
@@ -543,7 +539,6 @@ def update_toolbar_input_button(
                 stacklevel=2,
             )
 
-    # Process label and icon through session
     label_processed = session._process_ui(label) if label is not None else None
     icon_processed = session._process_ui(icon) if icon is not None else None
 
@@ -686,7 +681,6 @@ def toolbar_input_select(
     )
     ```
     """
-    # Validate that label is a non-empty string
     if not isinstance(label, str) or not label.strip():
         raise ValueError("`label` must be a non-empty string.")
 
@@ -696,12 +690,10 @@ def toolbar_input_select(
 
     resolved_id = resolve_id(id)
 
-    # Restore input for bookmarking
     selected = restore_input(resolved_id=resolved_id, default=selected)
 
     choices_normalized = _normalize_choices(choices)
 
-    # Set selected to first choice if no default or restored value
     if selected is None:
         selected = _find_first_option(choices_normalized)
 
@@ -730,7 +722,6 @@ def toolbar_input_select(
         style="pointer-events: none",
     )
 
-    # Create label element
     # Uses both bslib-toolbar-label (for toolbar-specific styling) and action-label
     # (for compatibility with standard action button update mechanisms)
     label_span_classes = "bslib-toolbar-label action-label"
@@ -870,18 +861,15 @@ def update_toolbar_input_select(
     """
     session = require_active_session(session)
 
-    # Process label and icon through session
     label_processed = session._process_ui(label) if label is not None else None
     icon_processed = session._process_ui(icon) if icon is not None else None
 
-    # Process choices - generate the options HTML
     options_processed = None
     if choices is not None:
         choices_normalized = _normalize_choices(choices)
         options_html = _render_choices(choices_normalized, selected)
         options_processed = str(options_html)
 
-    # Convert selected to string if provided
     selected_processed = str(selected) if selected is not None else None
 
     message = drop_none(
