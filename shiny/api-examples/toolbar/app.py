@@ -5,13 +5,10 @@ from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 app_ui = ui.page_fluid(
     ui.h2("Toolbar Kitchen Sink Example"),
     ui.p("Comprehensive examples of toolbar usage patterns"),
-    # Row 1: Two cards side by side
     ui.layout_columns(
-        # Card 1: Toolbar in header with icon button, select, divider
-        # Body has input with toolbar in label
         ui.card(
             ui.card_header(
-                "Document Editor",
+                "Toolbar in header & label",
                 ui.toolbar(
                     ui.toolbar_input_button(
                         "btn_save",
@@ -57,10 +54,9 @@ app_ui = ui.page_fluid(
                 ui.output_text("output_card1"),
             ),
         ),
-        # Card 3: Image gallery with toolbar controls
         ui.card(
             ui.card_header(
-                "Image Gallery",
+                "Toolbar in header & input label",
                 ui.toolbar(
                     ui.toolbar_input_select(
                         "view_mode",
@@ -88,40 +84,54 @@ app_ui = ui.page_fluid(
                 ),
             ),
             ui.card_body(
-                ui.input_slider(
-                    "zoom",
+                ui.input_numeric(
+                    "quantity",
                     label=ui.toolbar(
+                        "Adjust Quantity:",
+                        ui.toolbar_spacer(),
                         ui.toolbar_input_button(
-                            "btn_zoom_out",
-                            label="Zoom Out",
-                            icon=icon_svg("magnifying-glass-minus"),
+                            "btn_preset_10",
+                            label="10",
+                            show_label=True,
+                            tooltip="Set to 10",
                         ),
                         ui.toolbar_input_button(
-                            "btn_zoom_in",
-                            label="Zoom In",
-                            icon=icon_svg("magnifying-glass-plus"),
+                            "btn_preset_50",
+                            label="50",
+                            show_label=True,
+                            tooltip="Set to 50",
+                        ),
+                        ui.toolbar_input_button(
+                            "btn_preset_100",
+                            label="100",
+                            show_label=True,
+                            tooltip="Set to 100",
+                        ),
+                        ui.toolbar_divider(),
+                        ui.toolbar_input_button(
+                            "btn_reset",
+                            label="Reset",
+                            icon=icon_svg("rotate-left"),
+                            tooltip="Reset to 1",
                         ),
                         align="right",
                     ),
-                    min=50,
-                    max=200,
-                    value=100,
-                    post="%",
+                    value=1,
+                    min=1,
+                    max=1000,
                 ),
                 ui.output_text("output_card3"),
             ),
         ),
         col_widths=[6, 6],
     ),
-    # Card 2: Toolbar in header with label button, select with label, spacer
-    # Body has submit textarea with toolbar
     ui.card(
         ui.card_header(
-            "Message Composer",
+            "Toolbar in Text Input Submit Area: Message Composer",
             ui.toolbar(
                 ui.toolbar_input_button(
                     "btn_new",
-                    label="New Message",
+                    label="New Chat",
                     icon=icon_svg("plus"),
                     show_label=True,
                 ),
@@ -203,19 +213,37 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
         )
         ui.update_tooltip("btn_save_tooltip", "Saved successfully!")
 
-    # Card 3 outputs (Image Gallery)
+    # Card 2 outputs
     @output
     @render.text
     def output_card3():
         view_mode = input.view_mode()
         filter_clicks = input.btn_filter()
         sort_clicks = input.btn_sort()
-        zoom_val = input.zoom()
-        zoom_in_clicks = input.btn_zoom_in()
-        zoom_out_clicks = input.btn_zoom_out()
-        return f"View: {view_mode} | Zoom: {zoom_val}% | Filter: {filter_clicks}, Sort: {sort_clicks} | Zoom In: {zoom_in_clicks}, Zoom Out: {zoom_out_clicks}"
+        quantity = input.quantity()
+        return f"View: {view_mode} | Quantity: {quantity} | Filter: {filter_clicks}, Sort: {sort_clicks}"
 
-    # Card 2 outputs
+    @reactive.effect
+    @reactive.event(input.btn_preset_10)
+    def _():
+        ui.update_numeric("quantity", value=10)
+
+    @reactive.effect
+    @reactive.event(input.btn_preset_50)
+    def _():
+        ui.update_numeric("quantity", value=50)
+
+    @reactive.effect
+    @reactive.event(input.btn_preset_100)
+    def _():
+        ui.update_numeric("quantity", value=100)
+
+    @reactive.effect
+    @reactive.event(input.btn_reset)
+    def _():
+        ui.update_numeric("quantity", value=1)
+
+    # Card 3 outputs
     messages = reactive.value([])
 
     @reactive.effect
@@ -236,6 +264,7 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
     def _():
         # Clear messages when New Message is clicked
         messages.set([])
+        ui.update_text_area("message", value="")
 
     @output
     @render.ui

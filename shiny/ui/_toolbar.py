@@ -33,9 +33,6 @@ from .css import CssUnit, as_css_unit
 
 
 @add_example()
-@add_example("app-numeric-input.py")
-@add_example("app-text-area.py")
-@add_example("app-submit-textarea.py")
 def toolbar(
     *args: TagChild,
     align: Literal["right", "left"] = "right",
