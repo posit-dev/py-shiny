@@ -134,31 +134,6 @@ def toolbar_divider(
     --------
     * :func:`~shiny.ui.toolbar`
     * :func:`~shiny.ui.toolbar_spacer`
-
-    Examples
-    --------
-    ```python
-    from shiny import ui
-
-    ui.toolbar(
-        ui.toolbar_input_button(id="left1", label="Left"),
-        ui.toolbar_divider(),
-        ui.toolbar_input_button(id="right1", label="Right"),
-        align="right"
-    )
-    ```
-
-    ```python
-    from shiny import ui
-    from faicons import icon_svg
-
-    ui.toolbar(
-        ui.toolbar_input_button(id="a", label="A", icon=icon_svg("star")),
-        ui.toolbar_divider(width="5px", gap="20px"),
-        ui.toolbar_input_button(id="b", label="B", icon=icon_svg("heart")),
-        align="right"
-    )
-    ```
     """
     width_css = as_css_unit(width) if width is not None else None
     gap_css = as_css_unit(gap) if gap is not None else None
@@ -207,45 +182,6 @@ def toolbar_spacer() -> Tag:
     * :func:`~shiny.ui.toolbar`
     * :func:`~shiny.ui.toolbar_divider`
 
-    Examples
-    --------
-    ```python
-    from shiny import ui
-    from faicons import icon_svg
-
-    # Items on both left and right - set width="100%"
-    ui.card(
-        ui.card_header(
-            "My Card",
-            ui.toolbar(
-                ui.toolbar_input_button(id="save", label="Save"),
-                ui.toolbar_spacer(),
-                ui.toolbar_input_button(
-                    id="settings",
-                    label="Settings",
-                    icon=icon_svg("gear")
-                ),
-                align="left",
-                width="100%"
-            )
-        )
-    )
-    ```
-
-    ```python
-    from shiny import ui
-    from faicons import icon_svg
-
-    # Multiple items on each side with spacer
-    ui.toolbar(
-        ui.toolbar_input_button(id="undo", label="Undo", icon=icon_svg("arrow-rotate-left")),
-        ui.toolbar_input_button(id="redo", label="Redo", icon=icon_svg("arrow-rotate-right")),
-        ui.toolbar_spacer(),
-        ui.toolbar_input_button(id="help", label="Help", icon=icon_svg("circle-question")),
-        align="left",
-        width="100%"
-    )
-    ```
     """
     return div({"class": "bslib-toolbar-spacer", "aria-hidden": "true"})
 
