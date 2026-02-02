@@ -265,27 +265,6 @@ def toolbar_input_button(
     * :func:`~shiny.ui.toolbar`
     * :func:`~shiny.ui.update_toolbar_input_button`
     * :func:`~shiny.ui.input_action_button`
-
-    Examples
-    --------
-    ```python
-    from shiny import ui
-    from faicons import icon_svg
-
-    # Label-only button
-    ui.toolbar_input_button(id="save", label="Save")
-
-    # Icon-only button
-    ui.toolbar_input_button(id="save", label="Edit", icon=faicons.icon_svg("pencil"))
-
-    # Label and icon
-    ui.toolbar_input_button(
-        id="edit",
-        label="Edit",
-        show_label=True,
-        icon=faicons.icon_svg("pencil")
-    )
-    ```
     """
 
     if "_add_ws" not in kwargs:
