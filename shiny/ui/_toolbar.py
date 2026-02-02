@@ -409,37 +409,6 @@ def update_toolbar_input_button(
     --------
     * :func:`~shiny.ui.toolbar_input_button`
     * :func:`~shiny.ui.update_action_button`
-
-    Examples
-    --------
-    ```python
-    from shiny import App, reactive, render, ui
-
-    app_ui = ui.page_fluid(
-        ui.toolbar(
-            ui.toolbar_input_button("btn", label="Click me"),
-            align="right"
-        ),
-        ui.output_text_verbatim("count")
-    )
-
-    def server(input, output, session):
-        @output
-        @render.text
-        def count():
-            return str(input.btn())
-
-        @reactive.effect
-        @reactive.event(input.btn)
-        def _():
-            if input.btn() == 1:
-                ui.update_toolbar_input_button(
-                    "btn",
-                    label="Clicked!"
-                )
-
-    app = App(app_ui, server)
-    ```
     """
     session = require_active_session(session)
 
