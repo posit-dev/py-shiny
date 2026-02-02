@@ -15,7 +15,7 @@ import pkgutil
 # TODO-future; Can we maintain pre-processed value and use it within editing?
 # A: Doesn't seem possible for now
 import great_tables as gt
-import palmerpenguins  # pyright: ignore[reportMissingTypeStubs]
+import palmerpenguins
 import polars as pl
 
 from shiny import App, Inputs, Outputs, Session, module, reactive, render, req, ui
@@ -44,7 +44,7 @@ df = df.astype({"Sample Number": "object"})
 df.loc[:, "Sample Number"] = df.loc[
     :, "Sample Number"
 ].apply(  # pyright: ignore[reportCallIssue]
-    lambda x: ui.HTML(  # pyright: ignore[reportUnknownLambdaType]
+    lambda x: ui.HTML(  # pyright: ignore[reportUnknownLambdaType,reportUnknownArgumentType]
         str(
             ui.tags.strong(
                 ui.tags.em(str(x))  # pyright: ignore[reportUnknownArgumentType]
@@ -316,12 +316,10 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
             val,
         )
 
-        return ui.HTML(
-            f"""
+        return ui.HTML(f"""
             <script>console.log("patching: {patch['value']}")</script>
             demo_{patch["value"]}
-            """
-        )
+            """)
 
     # @reactive.effect
     # def _():

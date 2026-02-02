@@ -53,4 +53,4 @@ else:
 # conditional imports into the .pyi file when generating type stubs. Without this line,
 # pyright will not include the above imports in the generated .pyi file, and it will
 # result in a lot of red squiggles in user code.
-_: 'Annotated |Concatenate[str, ParamSpec("P")] | ParamSpec | TypeGuard | TypeIs | NotRequired | Required | TypedDict | assert_type | Self'  # type:ignore
+_: 'Annotated |Concatenate[str, ParamSpec("P")] | ParamSpec | TypeGuard | TypeIs | NotRequired | Required | TypedDict | assert_type | Self'  # type: ignore

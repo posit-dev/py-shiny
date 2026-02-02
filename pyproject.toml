@@ -90,7 +90,7 @@ test = [
     "rsconnect-python",
     "scikit-learn",
     "folium",
-    "palmerpenguins",
+    "palmerpenguins>=0.1.5",                         # type stubs available
     "faicons",
     "ridgeplot",
     "great_tables",
@@ -100,7 +100,7 @@ test = [
     "pyarrow-stubs",
 ]
 dev = [
-    "black>=24.0",
+    "black>=26.1.0",
     "flake8>=6.0.0",
     "flake8-bugbear>=23.2.13",
     "Flake8-pyproject>=1.2.3",
