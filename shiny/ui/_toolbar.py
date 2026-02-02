@@ -649,44 +649,6 @@ def update_toolbar_input_select(
     --------
     * :func:`~shiny.ui.toolbar_input_select`
     * :func:`~shiny.ui.update_select`
-
-    Examples
-    --------
-    ```python
-    from shiny import App, reactive, ui
-
-    app_ui = ui.page_fluid(
-        ui.toolbar(
-            ui.toolbar_input_select(
-                "select",
-                label="Choose",
-                choices=["A", "B", "C"]
-            ),
-            align="right",
-
-        ),
-        ui.output_text_verbatim("value")
-    )
-
-    def server(input, output, session):
-        @output
-        @render.text
-        def value():
-            return str(input.select())
-
-        @reactive.effect
-        @reactive.event(input.select)
-        def _():
-            if input.select() == "A":
-                ui.update_toolbar_input_select(
-                    "select",
-                    label="Pick one",
-                    choices=["X", "Y", "Z"],
-                    selected="Y"
-                )
-
-    app = App(app_ui, server)
-    ```
     """
     session = require_active_session(session)
 
