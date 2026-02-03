@@ -3,7 +3,13 @@ requires = ["setuptools>=60", "wheel", "setuptools_scm>=8.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = { find = { include = ["shiny", "shiny.*"] } }
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["shiny*"]
+namespaces = false
+
+[tool.setuptools.exclude-package-data]
+"*" = ["api-examples/**"]
 
 [tool.setuptools_scm]
 write_to = "shiny/_version.py"
