@@ -252,6 +252,37 @@ app_ui = ui.page_fluid(
             ui.output_text("output_custom_style"),
         ),
     ),
+    # Test 15: Re-enable disabled button
+    ui.card(
+        ui.card_header(
+            "Test 15: Re-enable Disabled Button",
+            ui.toolbar(
+                ui.toolbar_input_button(
+                    "btn_target",
+                    label="Target",
+                    icon=icon_svg("bullseye"),
+                    show_label=True,
+                ),
+                ui.toolbar_divider(),
+                ui.toolbar_input_button(
+                    "btn_disable",
+                    label="Disable",
+                    icon=icon_svg("ban"),
+                    show_label=True,
+                ),
+                ui.toolbar_input_button(
+                    "btn_enable",
+                    label="Enable",
+                    icon=icon_svg("circle-check"),
+                    show_label=True,
+                ),
+                align="right",
+            ),
+        ),
+        ui.card_body(
+            ui.output_text("output_reenable"),
+        ),
+    ),
 )
 
 
@@ -409,6 +440,22 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
     @render.text
     def output_custom_style():
         return f"Custom style button clicked {input.btn_custom_style()} times"
+
+    # Test 15: Re-enable disabled button
+    @output
+    @render.text
+    def output_reenable():
+        return f"Target button clicked {input.btn_target()} times"
+
+    @reactive.effect
+    @reactive.event(input.btn_disable)
+    def _():
+        ui.update_toolbar_input_button("btn_target", disabled=True)
+
+    @reactive.effect
+    @reactive.event(input.btn_enable)
+    def _():
+        ui.update_toolbar_input_button("btn_target", disabled=False)
 
 
 app = App(app_ui, server)

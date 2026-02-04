@@ -359,6 +359,46 @@ def test_update_toolbar_button_all_properties(page: Page, app: ShinyAppProc) -> 
     expect(button.loc).to_be_disabled()
 
 
+def test_update_toolbar_button_reenable(page: Page, app: ShinyAppProc) -> None:
+    """Test that a button can be disabled and then re-enabled."""
+    page.goto(app.url)
+
+    target_button = controller.ToolbarInputButton(page, "btn_target")
+    disable_button = controller.ToolbarInputButton(page, "btn_disable")
+    enable_button = controller.ToolbarInputButton(page, "btn_enable")
+    output = page.locator("#output_reenable")
+
+    # Initially enabled
+    expect(target_button.loc).to_be_enabled()
+    expect(output).to_have_text("Target button clicked 0 times")
+
+    # Click target button to verify it works
+    target_button.click()
+    page.wait_for_timeout(100)
+    expect(output).to_have_text("Target button clicked 1 times")
+
+    # Click disable button
+    disable_button.click()
+    page.wait_for_timeout(100)
+
+    # Target button should now be disabled
+    expect(target_button.loc).to_be_disabled()
+    expect(target_button.loc).to_have_attribute("disabled", "")
+
+    # Click enable button
+    enable_button.click()
+    page.wait_for_timeout(100)
+
+    # Target button should now be re-enabled
+    expect(target_button.loc).to_be_enabled()
+    expect(target_button.loc).not_to_have_attribute("disabled", "")
+
+    # Click target button again to verify it works after re-enabling
+    target_button.click()
+    page.wait_for_timeout(100)
+    expect(output).to_have_text("Target button clicked 2 times")
+
+
 def test_toolbar_button_aria_attributes(page: Page, app: ShinyAppProc) -> None:
     """Test accessibility attributes."""
     page.goto(app.url)
