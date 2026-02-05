@@ -43,8 +43,8 @@ def generate_reactive_label(
         A descriptive span label in the format:
         - "reactive myValue" (for simple calc)
         - "reactive cache myValue" (with modifier)
-        - "reactive my-module:myValue" (with namespace)
-        - "reactive cache my-module:myValue" (with namespace and modifier)
+        - "reactive mod:myValue" (with namespace)
+        - "reactive cache mod:myValue" (with namespace and modifier)
         - "observe <anonymous>" (for lambda function)
 
     Examples
