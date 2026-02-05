@@ -89,6 +89,185 @@ class TestLabelGeneration:
         assert label == "output my_output"
 
 
+class TestReactiveModifierContext:
+    """Reactive modifier context tests"""
+
+    def test_get_modifier_outside_context(self):
+        """Test getting modifier outside any context returns None"""
+        from shiny.reactive._core import get_current_reactive_modifier
+
+        modifier = get_current_reactive_modifier()
+        assert modifier is None
+
+    def test_single_modifier_context(self):
+        """Test setting a single modifier in context"""
+        from shiny.reactive._core import (
+            get_current_reactive_modifier,
+            reactive_modifier_context,
+        )
+
+        with reactive_modifier_context("event"):
+            modifier = get_current_reactive_modifier()
+            assert modifier == "event"
+
+        # Should be None again after exiting context
+        modifier = get_current_reactive_modifier()
+        assert modifier is None
+
+    def test_multiple_nested_modifier_contexts(self):
+        """Test multiple nested modifiers are space-separated"""
+        from shiny.reactive._core import (
+            get_current_reactive_modifier,
+            reactive_modifier_context,
+        )
+
+        with reactive_modifier_context("event"):
+            assert get_current_reactive_modifier() == "event"
+
+            with reactive_modifier_context("testlevel"):
+                assert get_current_reactive_modifier() == "event testlevel"
+
+            # Should be back to just "event"
+            assert get_current_reactive_modifier() == "event"
+
+        # Should be None again
+        assert get_current_reactive_modifier() is None
+
+    def test_label_generation_with_modifier_from_context(self):
+        """Test that generate_reactive_label uses modifier from context"""
+        from shiny.reactive._core import reactive_modifier_context
+
+        def my_calc():
+            return 42
+
+        # Without context
+        label = generate_reactive_label(my_calc, "reactive")
+        assert label == "reactive my_calc"
+
+        # With event modifier in context
+        with reactive_modifier_context("event"):
+            from shiny.reactive._core import get_current_reactive_modifier
+
+            label = generate_reactive_label(
+                my_calc, "reactive", modifier=get_current_reactive_modifier()
+            )
+            assert label == "reactive event my_calc"
+
+        # With multiple modifiers
+        with reactive_modifier_context("event"):
+            with reactive_modifier_context("testlevel"):
+                from shiny.reactive._core import get_current_reactive_modifier
+
+                label = generate_reactive_label(
+                    my_calc,
+                    "reactive",
+                    modifier=get_current_reactive_modifier(),
+                )
+                assert label == "reactive event testlevel my_calc"
+
+    def test_reset_modifier_context(self):
+        """Test that reset_reactive_modifier_context temporarily clears all modifiers"""
+        from shiny.reactive._core import (
+            get_current_reactive_modifier,
+            reactive_modifier_context,
+            reset_reactive_modifier_context,
+        )
+
+        # Start with no modifier
+        assert get_current_reactive_modifier() is None
+
+        with reactive_modifier_context("event"):
+            assert get_current_reactive_modifier() == "event"
+
+            # Reset should temporarily clear modifier
+            with reset_reactive_modifier_context():
+                assert get_current_reactive_modifier() is None
+
+            # Should be back to "event" after reset context exits
+            assert get_current_reactive_modifier() == "event"
+
+        # Should be None after all contexts exit
+        assert get_current_reactive_modifier() is None
+
+    def test_reset_modifier_context_with_nested_modifiers(self):
+        """Test reset with multiple nested modifiers"""
+        from shiny.reactive._core import (
+            get_current_reactive_modifier,
+            reactive_modifier_context,
+            reset_reactive_modifier_context,
+        )
+
+        with reactive_modifier_context("event"):
+            with reactive_modifier_context("cache"):
+                # Should have both modifiers
+                assert get_current_reactive_modifier() == "event cache"
+
+                # Reset should clear all modifiers
+                with reset_reactive_modifier_context():
+                    assert get_current_reactive_modifier() is None
+
+                # Should restore both modifiers
+                assert get_current_reactive_modifier() == "event cache"
+
+            # Should be back to just "event"
+            assert get_current_reactive_modifier() == "event"
+
+    def test_reset_modifier_context_equivalent_to_none(self):
+        """Test that reset_reactive_modifier_context is equivalent to reactive_modifier_context(None)"""
+        from shiny.reactive._core import (
+            get_current_reactive_modifier,
+            reactive_modifier_context,
+            reset_reactive_modifier_context,
+        )
+
+        # Test with reset_reactive_modifier_context
+        with reactive_modifier_context("event"):
+            with reset_reactive_modifier_context():
+                result1 = get_current_reactive_modifier()
+
+        # Test with reactive_modifier_context(None)
+        with reactive_modifier_context("event"):
+            with reactive_modifier_context(None):
+                result2 = get_current_reactive_modifier()
+
+        # Both should produce the same result
+        assert result1 == result2 == None
+
+    @pytest.mark.asyncio
+    async def test_calc_resets_modifier_for_nested_reads(self):
+        """Test that calc execution resets modifiers when reading nested reactives"""
+        from shiny.reactive import Calc_, flush
+        from shiny.reactive._core import (
+            get_current_reactive_modifier,
+            reactive_modifier_context,
+        )
+
+        # Track what modifier was active when inner_calc executed
+        modifier_during_inner = None
+
+        def inner_calc():
+            nonlocal modifier_during_inner
+            modifier_during_inner = get_current_reactive_modifier()
+            return 42
+
+        inner = Calc_(inner_calc)
+
+        def outer_calc():
+            # This should execute with "event" modifier in its span,
+            # but when it reads inner_calc, the modifier should be reset
+            return inner()
+
+        outer = Calc_(outer_calc)
+
+        # Execute outer_calc with "event" modifier
+        with reactive_modifier_context("event"):
+            await outer.update_value()
+
+        # The inner calc should have been executed with NO modifier
+        # (even though outer had "event" modifier)
+        assert modifier_during_inner is None
+
+
 class TestSourceReferenceExtraction:
     """Source code attribute extraction tests"""
 

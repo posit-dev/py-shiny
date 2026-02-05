@@ -46,7 +46,15 @@ from ..types import (
     NotifyException,
     SilentException,
 )
-from ._core import Context, Dependents, ReactiveWarning, isolate
+from ._core import (
+    Context,
+    Dependents,
+    ReactiveWarning,
+    get_current_reactive_modifier,
+    isolate,
+    reactive_modifier_context,
+    reset_reactive_modifier_context,
+)
 
 if TYPE_CHECKING:
     from .. import Session
@@ -291,6 +299,8 @@ class Calc_(Generic[T]):
 
         # Extract OpenTelemetry attributes at initialization time
         self._otel_attrs = self._extract_otel_attrs(fn)
+        # Lazy-initialized label components (cached on first run)
+        self._otel_label: str | None = None
 
     def __call__(self) -> T:
         # Run the Coroutine (synchronously), and then return the value.
@@ -326,9 +336,7 @@ class Calc_(Generic[T]):
 
         with session_context(self._session):
             async with with_otel_span_async(
-                lambda: generate_reactive_label(
-                    self._fn, "reactive", session=self._session
-                ),
+                self._get_otel_label,
                 attributes=self._otel_attrs,
                 level=OtelCollectLevel.REACTIVITY,
             ):
@@ -347,9 +355,30 @@ class Calc_(Generic[T]):
     async def _run_func(self) -> None:
         self._error.clear()
         try:
-            self._value.append(await self._fn())
+            # Reset modifiers when executing user function, so nested reactive reads
+            # don't inherit this calc's modifiers. See similar situation / notes in Effect_._run().
+            with reset_reactive_modifier_context():
+                val = await self._fn()
+
+            self._value.append(val)
         except Exception as err:
             self._error.append(err)
+
+    def _get_otel_label(self) -> str:
+        """
+        Get OTel span label with current modifier.
+        Caches label components on first call for performance.
+        """
+        # Lazy-initialize the label components on first call
+        if self._otel_label is None:
+            self._otel_label = generate_reactive_label(
+                self._fn,
+                "reactive",
+                session=self._session,
+                modifier=get_current_reactive_modifier(),
+            )
+
+        return self._otel_label
 
     def _extract_otel_attrs(self, fn: Callable[..., Any]) -> dict[str, Any]:
         """Extract OpenTelemetry attributes from the reactive function."""
@@ -551,6 +580,8 @@ class Effect_:
 
         # Extract OpenTelemetry attributes at initialization time
         self._otel_attrs = self._extract_otel_attrs(fn)
+        # Lazy-initialized label components (cached on first run)
+        self._otel_label: str | None = None
 
         # Defer the first running of this until flushReact is called
         self._create_context().invalidate()
@@ -602,19 +633,24 @@ class Effect_:
 
         with session_context(self._session):
             async with with_otel_span_async(
-                lambda: generate_reactive_label(
-                    self._fn, "observe", session=self._session
-                ),
+                self._get_otel_label,
                 attributes=self._otel_attrs,
                 level=OtelCollectLevel.REACTIVITY,
             ):
                 try:
                     with ctx():
-                        await self._fn()
+                        # Reset modifiers when executing user function, so nested reactive reads
+                        # don't inherit this effect's modifiers.
+                        # This MUST BE called after `get_current_reactive_modifier()` (which is read within `self._get_otel_label`).
+                        # We need to have the modifier at run time. B/C at creation time, the decorators will not have been applied.
+                        # So, by capturing them at run time, we must then reset the label modifier as we recurse through `self._fn()` calls.
+                        with reset_reactive_modifier_context():
+                            await self._fn()
 
                         # Yield so that messages can be sent to the client if necessary.
                         # https://github.com/posit-dev/py-shiny/issues/1381
                         await asyncio.sleep(0)
+
                 except SilentException:
                     # It's OK for SilentException to cause an Effect to stop running
                     pass
@@ -710,6 +746,21 @@ class Effect_:
 
     def _on_session_ended_cb(self) -> None:
         self.destroy()
+
+    def _get_otel_label(self) -> str:
+        """
+        Get OTel span label with current modifier.
+        Caches label components on first call for performance.
+        """
+        # Lazy-initialize the label components on first call
+        if self._otel_label is None:
+            self._otel_label = generate_reactive_label(
+                self._fn,
+                "observe",
+                session=self._session,
+                modifier=get_current_reactive_modifier(),
+            )
+        return self._otel_label
 
     def _extract_otel_attrs(self, fn: Callable[..., Any]) -> dict[str, Any]:
         """Extract OpenTelemetry attributes from the reactive function."""
@@ -915,8 +966,10 @@ def event(
             # `something`
             async def new_user_async_fn():
                 await trigger()
-                with isolate():
-                    return await user_fn()
+                # Set "event" modifier for OTel span labels
+                with reactive_modifier_context("event"):
+                    with isolate():
+                        return await user_fn()
 
             return new_user_async_fn  # type: ignore
 
@@ -931,8 +984,10 @@ def event(
             @functools.wraps(user_fn)
             def new_user_fn() -> T:
                 run_coro_sync(trigger())
-                with isolate():
-                    return user_fn()
+                # Set "event" modifier for OTel span labels
+                with reactive_modifier_context("event"):
+                    with isolate():
+                        return user_fn()
 
             return new_user_fn
 
