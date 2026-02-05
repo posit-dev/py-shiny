@@ -231,12 +231,13 @@ class TestReactiveModifierContext:
                 result2 = get_current_reactive_modifier()
 
         # Both should produce the same result
-        assert result1 == result2 == None
+        assert result1 is None
+        assert result2 is None
 
     @pytest.mark.asyncio
     async def test_calc_resets_modifier_for_nested_reads(self):
         """Test that calc execution resets modifiers when reading nested reactives"""
-        from shiny.reactive import Calc_, flush
+        from shiny.reactive import Calc_
         from shiny.reactive._core import (
             get_current_reactive_modifier,
             reactive_modifier_context,
