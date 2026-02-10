@@ -50,10 +50,7 @@ from ._core import (
     Context,
     Dependents,
     ReactiveWarning,
-    get_current_reactive_modifier,
     isolate,
-    reactive_modifier_context,
-    reset_reactive_modifier_context,
 )
 
 if TYPE_CHECKING:
@@ -355,10 +352,7 @@ class Calc_(Generic[T]):
     async def _run_func(self) -> None:
         self._error.clear()
         try:
-            # Reset modifiers when executing user function, so nested reactive reads
-            # don't inherit this calc's modifiers. See similar situation / notes in Effect_._run().
-            with reset_reactive_modifier_context():
-                val = await self._fn()
+            val = await self._fn()
 
             self._value.append(val)
         except Exception as err:
@@ -366,16 +360,15 @@ class Calc_(Generic[T]):
 
     def _get_otel_label(self) -> str:
         """
-        Get OTel span label with current modifier.
-        Caches label components on first call for performance.
+        Get OTel span label.
+        Caches label on first call for performance.
         """
-        # Lazy-initialize the label components on first call
+        # Lazy-initialize the label on first call
         if self._otel_label is None:
             self._otel_label = generate_reactive_label(
                 self._fn,
                 "reactive",
                 session=self._session,
-                modifier=get_current_reactive_modifier(),
             )
 
         return self._otel_label
@@ -639,13 +632,7 @@ class Effect_:
             ):
                 try:
                     with ctx():
-                        # Reset modifiers when executing user function, so nested reactive reads
-                        # don't inherit this effect's modifiers.
-                        # This MUST BE called after `get_current_reactive_modifier()` (which is read within `self._get_otel_label`).
-                        # We need to have the modifier at run time. B/C at creation time, the decorators will not have been applied.
-                        # So, by capturing them at run time, we must then reset the label modifier as we recurse through `self._fn()` calls.
-                        with reset_reactive_modifier_context():
-                            await self._fn()
+                        await self._fn()
 
                         # Yield so that messages can be sent to the client if necessary.
                         # https://github.com/posit-dev/py-shiny/issues/1381
@@ -749,16 +736,15 @@ class Effect_:
 
     def _get_otel_label(self) -> str:
         """
-        Get OTel span label with current modifier.
-        Caches label components on first call for performance.
+        Get OTel span label.
+        Caches label on first call for performance.
         """
-        # Lazy-initialize the label components on first call
+        # Lazy-initialize the label on first call
         if self._otel_label is None:
             self._otel_label = generate_reactive_label(
                 self._fn,
                 "observe",
                 session=self._session,
-                modifier=get_current_reactive_modifier(),
             )
         return self._otel_label
 
@@ -966,10 +952,8 @@ def event(
             # `something`
             async def new_user_async_fn():
                 await trigger()
-                # Set "event" modifier for OTel span labels
-                with reactive_modifier_context("event"):
-                    with isolate():
-                        return await user_fn()
+                with isolate():
+                    return await user_fn()
 
             return new_user_async_fn  # type: ignore
 
@@ -984,10 +968,8 @@ def event(
             @functools.wraps(user_fn)
             def new_user_fn() -> T:
                 run_coro_sync(trigger())
-                # Set "event" modifier for OTel span labels
-                with reactive_modifier_context("event"):
-                    with isolate():
-                        return user_fn()
+                with isolate():
+                    return user_fn()
 
             return new_user_fn
 
