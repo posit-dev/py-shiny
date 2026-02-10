@@ -166,6 +166,12 @@ def _(value: str, name: ResolvedId, session: Session) -> str:
     return value
 
 
+@input_handlers.add("bslib.toolbar.button")
+def _(value: int, name: ResolvedId, session: Session) -> ActionButtonValue:
+    # Toolbar buttons work like action buttons - they return a click count
+    return ActionButtonValue(value)
+
+
 @input_handlers.add("shiny.file")
 def _(value: Any, name: ResolvedId, session: Session) -> Any:
 

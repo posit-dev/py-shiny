@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
+* Added toolbar component with `ui.toolbar()`, `ui.toolbar_input_button()`, `ui.toolbar_input_select()`, `ui.toolbar_divider()`, `ui.toolbar_spacer()`, `ui.update_toolbar_input_button()`, and `ui.update_toolbar_input_select()`. Toolbars are compact UI containers designed for small form elements suitable for card headers, footers, and other constrained spaces. They support flexible alignment (left/right), custom spacing and width, icon-only or labeled buttons with optional tooltips, select inputs with grouped choices, visual dividers for separating elements, and flexible spacers for split layouts. Server-side updates allow dynamic modification of button and select properties. (#2155)
+
+
 * Added a new `ui.input_code_editor()` element that allows for light-weight code editing with syntax highlighting, using the [prism-code-editor](https://prism-code-editor.netlify.app/) library. The editor supports 20+ languages, more than a dozen themes, and automatic light/dark mode switching. (#2128)
 
 ### Improvements

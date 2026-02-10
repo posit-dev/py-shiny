@@ -16,3 +16,16 @@
     padding: 0;
   }
 }
+
+// Ensure hidden/disabled nav-links remain hidden even when active
+// This prevents nav_panel_hidden() from being visible when it becomes the active tab
+
+@if $bootstrap-version <= 3 {
+  .nav>li>a[disabled] {
+    display: none !important;
+  }
+} @else {
+  .nav-link[disabled] {
+    display: none !important;
+  }
+}

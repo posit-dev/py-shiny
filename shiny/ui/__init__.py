@@ -170,6 +170,15 @@ from ._sidebar import (
     update_sidebar,
 )
 from ._theme import Theme
+from ._toolbar import (
+    toolbar,
+    toolbar_divider,
+    toolbar_spacer,
+    toolbar_input_button,
+    toolbar_input_select,
+    update_toolbar_input_button,
+    update_toolbar_input_select,
+)
 from ._tooltip import tooltip
 from ._utils import js_eval
 from ._valuebox import (
@@ -360,6 +369,14 @@ __all__ = (
     "Theme",
     # _tooltip
     "tooltip",
+    # _toolbar
+    "toolbar",
+    "toolbar_input_button",
+    "toolbar_input_select",
+    "toolbar_divider",
+    "toolbar_spacer",
+    "update_toolbar_input_button",
+    "update_toolbar_input_select",
     # _progress
     "Progress",
     # Items below are from htmltools
