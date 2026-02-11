@@ -128,7 +128,7 @@ doc = [
     "shinylive",
     "pydantic>=2.7.4",
     "quartodoc>=0.8.1",
-    "griffe>=1.3.2",
+    "griffe>=1.3.2,<2.0.0",
 ]
 add-test = [
     "chatlas[anthropic,openai]",
