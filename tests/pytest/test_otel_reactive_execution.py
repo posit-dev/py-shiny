@@ -292,6 +292,38 @@ class TestEffectSpans:
                     # The span wrapper is still called but returns a no-op
                     mock_span.assert_called_once()
 
+    @pytest.mark.asyncio
+    async def test_effect_span_includes_source_attrs(self):
+        """Test that Effect span includes source code attributes"""
+        with patch_otel_tracing_state(tracing_enabled=True):
+            with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
+                # Create an effect with known source
+                def my_effect():
+                    pass
+
+                effect = Effect_(my_effect, session=None)
+
+                # Mock span wrapper to capture attributes
+                # Must patch at the import location in _reactives module
+                with patch(
+                    "shiny.reactive._reactives.with_otel_span_async"
+                ) as mock_span:
+                    # Configure mock
+                    mock_span.return_value.__aenter__ = AsyncMock(return_value=None)
+                    mock_span.return_value.__aexit__ = AsyncMock(return_value=None)
+
+                    # Execute the effect
+                    await effect._run()
+
+                    # Verify source attributes were included via _otel_attrs
+                    call_args = mock_span.call_args
+                    attrs = call_args[1]["attributes"]
+                    # Attributes are stored on the effect instance at init time
+                    assert "code.function" in attrs
+                    assert attrs["code.function"] == "my_effect"
+                    assert "code.filepath" in attrs
+                    assert "code.lineno" in attrs
+
 
 class TestOutputSpans:
     """Output rendering span tests"""
