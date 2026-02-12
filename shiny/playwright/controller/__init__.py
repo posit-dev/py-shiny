@@ -68,6 +68,10 @@ from ._overlay import (
     Tooltip,
 )
 from ._toast import Toast
+from ._toolbar import (
+    ToolbarInputButton,
+    ToolbarInputSelect,
+)
 
 __all__ = [
     "InputActionButton",
@@ -122,4 +126,6 @@ __all__ = [
     "DownloadButton",
     "DownloadLink",
     "PageNavbar",
+    "ToolbarInputButton",
+    "ToolbarInputSelect",
 ]
