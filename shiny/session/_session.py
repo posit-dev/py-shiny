@@ -1408,15 +1408,21 @@ class Inputs:
         if not isinstance(value, reactive.Value):
             raise TypeError("`value` must be a reactive.Value object.")
 
+        # Set the name on the Value for OpenTelemetry logging (before namespacing)
+        value._name = key
         self._map[self._ns(key)] = value
 
     def __getitem__(self, key: str) -> Value[Any]:
+        original_key = key
         key = self._ns(key)
         # Auto-populate key if accessed but not yet set. Needed to take reactive
         # dependencies on input values that haven't been received from client
         # yet.
         if key not in self._map:
-            self._map[key] = Value[Any](read_only=True)
+            new_value = Value[Any](read_only=True)
+            # Set the name for OpenTelemetry logging (before namespacing)
+            new_value._name = original_key
+            self._map[key] = new_value
 
         return self._map[key]
 

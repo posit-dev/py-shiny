@@ -35,8 +35,9 @@ from .. import _utils
 from .._docstring import add_example
 from .._utils import is_async_callable, run_coro_sync
 from .._validation import req
-from ..otel import OtelCollectLevel
+from ..otel import OtelCollectLevel, should_otel_collect
 from ..otel._attributes import extract_source_ref
+from ..otel._core import emit_log
 from ..otel._labels import (
     generate_reactive_label,
     get_otel_label_modifier,
@@ -131,6 +132,9 @@ class Value(Generic[T]):
         self._read_only: bool = read_only
         self._value_dependents: Dependents = Dependents()
         self._is_set_dependents: Dependents = Dependents()
+        # Optional name for OpenTelemetry logging
+        # Set by Inputs when the value is added to the inputs map
+        self._name: str | None = None
 
     def __call__(self) -> T:
         return self.get()
@@ -187,6 +191,8 @@ class Value(Generic[T]):
     # The ._set() method allows setting read-only Value objects. This is used when the
     # Value is part of a session.Inputs object, and the session wants to set it.
     def _set(self, value: T) -> bool:
+        from ..session import get_current_session
+
         if self._value is value:
             return False
 
@@ -195,6 +201,32 @@ class Value(Generic[T]):
 
         self._value = value
         self._value_dependents.invalidate()
+
+        # Log value update for OpenTelemetry
+        # Only log when collection level is REACTIVITY or higher
+        if should_otel_collect(OtelCollectLevel.REACTIVITY):
+            # Build log message with namespace support
+            value_name = self._name or "<unnamed>"
+
+            # Add namespace prefix if present
+            session = get_current_session()
+            if session is not None:
+                # session.ns is a ResolvedId (subclass of str)
+                # It will be an empty string ("") for Root namespace
+                ns_str = str(session.ns)
+                if ns_str:  # Only use non-empty namespaces
+                    value_name = f"{ns_str}:{value_name}"
+
+            log_body = f"Set reactiveVal {value_name}"
+
+            # Add session ID to attributes if available
+            # TODO We also need the srcref attributes
+            attributes: dict[str, Any] = {}
+            if session is not None and hasattr(session, "id"):
+                attributes["session.id"] = session.id
+
+            emit_log(log_body, severity_text="DEBUG", attributes=attributes)
+
         return True
 
     def unset(self) -> None:
