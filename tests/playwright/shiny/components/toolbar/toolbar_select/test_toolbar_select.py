@@ -4,6 +4,7 @@ from conftest import create_app_fixture
 from playwright.sync_api import Page, expect
 
 from shiny.playwright import controller
+from shiny.playwright.expect import expect_not_to_have_class
 from shiny.run import ShinyAppProc
 
 app = create_app_fixture("./app.py")
@@ -40,7 +41,6 @@ def test_toolbar_select_basic(page: Page, app: ShinyAppProc) -> None:
 
     # Verify tooltip shows label text
     select_ctrl.loc_select.hover()
-    page.wait_for_timeout(100)
     tooltip_content = page.locator(".tooltip-inner")
     expect(tooltip_content.first).to_contain_text("Choose option")
 
@@ -70,7 +70,6 @@ def test_toolbar_select_dict_choices(page: Page, app: ShinyAppProc) -> None:
 
     # Verify tooltip shows label text
     select_ctrl.loc_select.hover()
-    page.wait_for_timeout(100)
     tooltip_content = page.locator(".tooltip-inner")
     expect(tooltip_content.first).to_contain_text("Filter")
 
@@ -98,7 +97,6 @@ def test_toolbar_select_with_icon(page: Page, app: ShinyAppProc) -> None:
 
     # Verify tooltip shows label text
     select_ctrl.loc_select.hover()
-    page.wait_for_timeout(100)
     tooltip_content = page.locator(".tooltip-inner")
     expect(tooltip_content.first).to_contain_text("Filter data")
 
@@ -110,9 +108,7 @@ def test_toolbar_select_label_shown(page: Page, app: ShinyAppProc) -> None:
     select_ctrl = controller.ToolbarInputSelect(page, "select_label_shown")
 
     # Label should be visible (not have visually-hidden class)
-    class_attr = select_ctrl.loc_label.get_attribute("class")
-    assert class_attr is not None
-    assert "visually-hidden" not in class_attr
+    expect_not_to_have_class(select_ctrl.loc_label, "visually-hidden")
     expect(select_ctrl.loc_label).to_be_visible()
     expect(select_ctrl.loc_label).to_have_text("Sort by")
 
@@ -282,9 +278,7 @@ def test_toolbar_select_toggle_show_label(page: Page, app: ShinyAppProc) -> None
     # Click to show
     button.click()
     page.wait_for_timeout(100)
-    class_attr = select_ctrl.loc_label.get_attribute("class")
-    assert class_attr is not None
-    assert "visually-hidden" not in class_attr
+    expect_not_to_have_class(select_ctrl.loc_label, "visually-hidden")
 
     # Click to hide again
     button.click()
@@ -299,23 +293,23 @@ def test_toolbar_select_update_icon(page: Page, app: ShinyAppProc) -> None:
     select_ctrl = controller.ToolbarInputSelect(page, "select_update_icon")
     button = page.locator("#btn_update_icon")
 
-    # Get initial icon HTML
-    initial_html = select_ctrl.loc_icon.inner_html()
-    assert len(initial_html) > 0
+    # Expect initial icon (sun)
+    expect(select_ctrl.loc_icon.locator("svg")).to_have_attribute(
+        "viewBox", "0 0 512 512"
+    )
 
-    # Click to update icon
+    # Click to update icon (to moon)
     button.click()
-    page.wait_for_timeout(200)
-    updated_html = select_ctrl.loc_icon.inner_html()
-    assert updated_html != initial_html
-    assert len(updated_html) > 0
 
-    # Click again to toggle back
+    expect(select_ctrl.loc_icon.locator("svg")).to_have_attribute(
+        "viewBox", "0 0 384 512"
+    )
+
+    # Click again to toggle back to the original (sun)
     button.click()
-    page.wait_for_timeout(200)
-    final_html = select_ctrl.loc_icon.inner_html()
-    assert final_html != updated_html
-    assert len(final_html) > 0
+    expect(select_ctrl.loc_icon.locator("svg")).to_have_attribute(
+        "viewBox", "0 0 512 512"
+    )
 
 
 def test_toolbar_select_update_all(page: Page, app: ShinyAppProc) -> None:
@@ -336,9 +330,7 @@ def test_toolbar_select_update_all(page: Page, app: ShinyAppProc) -> None:
 
     # After update: new label, new choices, new selected, icon added, label shown
     expect(select_ctrl.loc_label).to_have_text("New Status")
-    class_attr = select_ctrl.loc_label.get_attribute("class")
-    assert class_attr is not None
-    assert "visually-hidden" not in class_attr
+    expect_not_to_have_class(select_ctrl.loc_label, "visually-hidden")
     select_ctrl.expect_selected("Online")
     expect(output).to_have_text("Update all value: Online")
 
@@ -360,9 +352,7 @@ def test_toolbar_select_icon_and_label(page: Page, app: ShinyAppProc) -> None:
 
     # Label should be visible (not visually-hidden)
     expect(select_ctrl.loc_label).to_be_visible()
-    class_attr = select_ctrl.loc_label.get_attribute("class")
-    assert class_attr is not None
-    assert "visually-hidden" not in class_attr
+    expect_not_to_have_class(select_ctrl.loc_label, "visually-hidden")
     expect(select_ctrl.loc_label).to_have_text("Priority")
 
     # Should NOT have default tooltip when label is shown (even with icon)
