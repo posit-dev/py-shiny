@@ -12,7 +12,7 @@ __all__ = (
     "get_otel_tracer",
     "get_otel_logger",
     "is_otel_tracing_enabled",
-    "emit_log",
+    "emit_otel_log",
 )
 
 # Global state for lazy initialization
@@ -89,7 +89,7 @@ def is_otel_tracing_enabled() -> bool:
     return _tracing_enabled
 
 
-def emit_log(
+def emit_otel_log(
     body: str,
     severity_text: str = "INFO",
     attributes: Union[dict[str, Any], None] = None,
@@ -115,13 +115,13 @@ def emit_log(
     Examples
     --------
     ```python
-    from shiny.otel._core import emit_log
+    from shiny.otel._core import emit_otel_log
 
     # Simple log message
-    emit_log("Value updated")
+    emit_otel_log("Value updated")
 
     # Log with severity and attributes
-    emit_log(
+    emit_otel_log(
         "Set reactiveVal myValue",
         severity_text="DEBUG",
         attributes={"session.id": session_id, "value.name": "myValue"}

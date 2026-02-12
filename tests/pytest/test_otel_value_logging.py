@@ -29,7 +29,7 @@ from opentelemetry.sdk._logs.export import (
 
 from shiny import reactive
 from shiny._namespaces import ResolvedId
-from shiny.otel._core import emit_log
+from shiny.otel._core import emit_otel_log
 from shiny.session import Session, session_context
 
 from .otel_helpers import patch_otel_tracing_state, reset_otel_tracing_state
@@ -76,7 +76,7 @@ class TestEmitLog:
         provider, exporter = otel_log_provider
         exporter.clear()
 
-        emit_log("Test message")
+        emit_otel_log("Test message")
 
         # Force flush and get logs
         provider.force_flush()
@@ -93,7 +93,7 @@ class TestEmitLog:
         provider, exporter = otel_log_provider
         exporter.clear()
 
-        emit_log("Debug message", severity_text="DEBUG")
+        emit_otel_log("Debug message", severity_text="DEBUG")
 
         provider.force_flush()
         logs = exporter.get_finished_logs()
@@ -107,7 +107,7 @@ class TestEmitLog:
         provider, exporter = otel_log_provider
         exporter.clear()
 
-        emit_log(
+        emit_otel_log(
             "Test with attributes",
             attributes={"session.id": "test-123", "custom.key": "value"},
         )
@@ -130,7 +130,7 @@ class TestEmitLog:
         reset_otel_tracing_state()
 
         # Should not raise
-        emit_log("Test message")
+        emit_otel_log("Test message")
 
 
 class TestValueUpdateLogging:

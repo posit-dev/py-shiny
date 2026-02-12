@@ -37,7 +37,7 @@ from .._utils import is_async_callable, run_coro_sync
 from .._validation import req
 from ..otel import OtelCollectLevel, should_otel_collect
 from ..otel._attributes import extract_source_ref
-from ..otel._core import emit_log
+from ..otel._core import emit_otel_log
 from ..otel._labels import (
     generate_reactive_label,
     get_otel_label_modifier,
@@ -225,7 +225,7 @@ class Value(Generic[T]):
             if session is not None and hasattr(session, "id"):
                 attributes["session.id"] = session.id
 
-            emit_log(log_body, severity_text="DEBUG", attributes=attributes)
+            emit_otel_log(log_body, severity_text="DEBUG", attributes=attributes)
 
         return True
 
