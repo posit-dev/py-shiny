@@ -37,7 +37,11 @@ from .._utils import is_async_callable, run_coro_sync
 from .._validation import req
 from ..otel import OtelCollectLevel
 from ..otel._attributes import extract_source_ref
-from ..otel._labels import generate_reactive_label
+from ..otel._labels import (
+    generate_reactive_label,
+    get_otel_label_modifier,
+    set_otel_label_modifier,
+)
 from ..otel._span_wrappers import with_otel_span_async
 from ..types import (
     MISSING,
@@ -46,12 +50,7 @@ from ..types import (
     NotifyException,
     SilentException,
 )
-from ._core import (
-    Context,
-    Dependents,
-    ReactiveWarning,
-    isolate,
-)
+from ._core import Context, Dependents, ReactiveWarning, isolate
 
 if TYPE_CHECKING:
     from .. import Session
@@ -295,9 +294,15 @@ class Calc_(Generic[T]):
         self._error: list[Exception] = []
 
         # Extract OpenTelemetry attributes at initialization time
-        self._otel_attrs = self._extract_otel_attrs(fn)
-        # Lazy-initialized label components (cached on first run)
-        self._otel_label: str | None = None
+        self._otel_attrs: dict[str, object] = self._extract_otel_attrs(fn)
+
+        # Extract modifier from function attribute and generate label
+        self._otel_label: str = generate_reactive_label(
+            fn,
+            "reactive",
+            session=self._session,
+            modifier=get_otel_label_modifier(fn),
+        )
 
     def __call__(self) -> T:
         # Run the Coroutine (synchronously), and then return the value.
@@ -333,7 +338,7 @@ class Calc_(Generic[T]):
 
         with session_context(self._session):
             async with with_otel_span_async(
-                self._get_otel_label,
+                self._otel_label,
                 attributes=self._otel_attrs,
                 level=OtelCollectLevel.REACTIVITY,
             ):
@@ -357,21 +362,6 @@ class Calc_(Generic[T]):
             self._value.append(val)
         except Exception as err:
             self._error.append(err)
-
-    def _get_otel_label(self) -> str:
-        """
-        Get OTel span label.
-        Caches label on first call for performance.
-        """
-        # Lazy-initialize the label on first call
-        if self._otel_label is None:
-            self._otel_label = generate_reactive_label(
-                self._fn,
-                "reactive",
-                session=self._session,
-            )
-
-        return self._otel_label
 
     def _extract_otel_attrs(self, fn: Callable[..., Any]) -> dict[str, Any]:
         """Extract OpenTelemetry attributes from the reactive function."""
@@ -572,9 +562,15 @@ class Effect_:
             self._session.on_ended(self._on_session_ended_cb)
 
         # Extract OpenTelemetry attributes at initialization time
-        self._otel_attrs = self._extract_otel_attrs(fn)
-        # Lazy-initialized label components (cached on first run)
-        self._otel_label: str | None = None
+        self._otel_attrs: dict[str, object] = self._extract_otel_attrs(fn)
+
+        # Extract modifier from function attribute and generate label
+        self._otel_label: str = generate_reactive_label(
+            fn,
+            "observe",
+            session=self._session,
+            modifier=get_otel_label_modifier(fn),
+        )
 
         # Defer the first running of this until flushReact is called
         self._create_context().invalidate()
@@ -626,7 +622,7 @@ class Effect_:
 
         with session_context(self._session):
             async with with_otel_span_async(
-                self._get_otel_label,
+                self._otel_label,
                 attributes=self._otel_attrs,
                 level=OtelCollectLevel.REACTIVITY,
             ):
@@ -733,20 +729,6 @@ class Effect_:
 
     def _on_session_ended_cb(self) -> None:
         self.destroy()
-
-    def _get_otel_label(self) -> str:
-        """
-        Get OTel span label.
-        Caches label on first call for performance.
-        """
-        # Lazy-initialize the label on first call
-        if self._otel_label is None:
-            self._otel_label = generate_reactive_label(
-                self._fn,
-                "observe",
-                session=self._session,
-            )
-        return self._otel_label
 
     def _extract_otel_attrs(self, fn: Callable[..., Any]) -> dict[str, Any]:
         """Extract OpenTelemetry attributes from the reactive function."""
@@ -955,6 +937,9 @@ def event(
                 with isolate():
                     return await user_fn()
 
+            # Prepend "event" modifier to any existing label
+            set_otel_label_modifier(new_user_async_fn, "event", mode="prepend")
+
             return new_user_async_fn  # type: ignore
 
         elif any([is_async_callable(arg) for arg in args]):
@@ -970,6 +955,9 @@ def event(
                 run_coro_sync(trigger())
                 with isolate():
                     return user_fn()
+
+            # Prepend "event" modifier to any existing label
+            set_otel_label_modifier(new_user_fn, "event", mode="prepend")
 
             return new_user_fn
 

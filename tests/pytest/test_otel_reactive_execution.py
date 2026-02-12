@@ -154,10 +154,9 @@ class TestCalcSpans:
                     # Verify span was created
                     mock_span.assert_called_once()
                     call_args = mock_span.call_args
-                    # Verify the name callable was passed
-                    name_callable = call_args[0][0]
-                    assert callable(name_callable)
-                    assert name_callable() == "reactive my_calc"
+                    # Verify the label string was passed
+                    label = call_args[0][0]
+                    assert label == "reactive my_calc"
                     assert call_args[1]["level"] == OtelCollectLevel.REACTIVITY
 
     @pytest.mark.asyncio
@@ -246,10 +245,9 @@ class TestEffectSpans:
                     # Verify span was created
                     mock_span.assert_called_once()
                     call_args = mock_span.call_args
-                    # Verify the name callable was passed
-                    name_callable = call_args[0][0]
-                    assert callable(name_callable)
-                    assert name_callable() == "observe my_effect"
+                    # Verify the label string was passed
+                    label = call_args[0][0]
+                    assert label == "observe my_effect"
                     assert call_args[1]["level"] == OtelCollectLevel.REACTIVITY
 
     @pytest.mark.asyncio

@@ -10,7 +10,14 @@ from typing import TYPE_CHECKING, Any, Callable, Optional
 if TYPE_CHECKING:
     from ..session import Session
 
-__all__ = ["generate_reactive_label"]
+__all__ = [
+    "generate_reactive_label",
+    "get_otel_label_modifier",
+    "set_otel_label_modifier",
+]
+
+# Attribute name used to store modifiers on function objects
+_MODIFIER_ATTR = "_shiny_otel_label_modifier"
 
 
 def generate_reactive_label(
@@ -92,3 +99,105 @@ def generate_reactive_label(
     parts.append(name)
 
     return " ".join(parts)
+
+
+def get_otel_label_modifier(func: Callable[..., Any]) -> Optional[str]:
+    """
+    Get the OTel label modifier from a function.
+
+    Retrieves the modifier string that has been set on a function object,
+    typically by decorators like `@reactive.event()`.
+
+    Parameters
+    ----------
+    func
+        The function to retrieve the modifier from.
+
+    Returns
+    -------
+    str | None
+        The modifier string if set (e.g., "event", "event cache"), or None if
+        no modifier has been set.
+
+    Examples
+    --------
+    >>> def my_func():
+    ...     return 42
+    >>> get_otel_label_modifier(my_func)
+    None
+
+    >>> @reactive.event(input.x)
+    ... def my_event_func():
+    ...     return 42
+    >>> get_otel_label_modifier(my_event_func)
+    'event'
+    """
+    return getattr(func, _MODIFIER_ATTR, None)
+
+
+def set_otel_label_modifier(
+    func: Callable[..., Any],
+    modifier: str,
+    *,
+    mode: str = "prepend",
+) -> None:
+    """
+    Set the OTel label modifier on a function.
+
+    Stores a modifier string on a function object that will be used when
+    generating OTel span labels for reactive computations.
+
+    Parameters
+    ----------
+    func
+        The function to set the modifier on.
+    modifier
+        The modifier string to set (e.g., "event", "cache").
+    mode
+        How to combine with existing modifiers:
+        - "prepend" (default): Add before existing modifiers
+        - "append": Add after existing modifiers
+        - "replace": Replace all existing modifiers
+
+    Examples
+    --------
+    >>> def my_func():
+    ...     return 42
+    >>> set_otel_label_modifier(my_func, "event")
+    >>> get_otel_label_modifier(my_func)
+    'event'
+
+    >>> set_otel_label_modifier(my_func, "cache")
+    >>> get_otel_label_modifier(my_func)  # mode="prepend" by default
+    'cache event'
+
+    >>> set_otel_label_modifier(my_func, "debounce", mode="append")
+    >>> get_otel_label_modifier(my_func)
+    'cache event debounce'
+
+    >>> set_otel_label_modifier(my_func, "throttle", mode="replace")
+    >>> get_otel_label_modifier(my_func)
+    'throttle'
+
+    Note
+    ----
+    This function modifies the function object in-place by setting an attribute
+    on its `__dict__`. The attribute name used is stored in `_MODIFIER_ATTR`.
+    """
+    existing = getattr(func, _MODIFIER_ATTR, None)
+
+    if mode == "replace" or existing is None:
+        # Replace mode or no existing modifier - just set it
+        new_modifier = modifier
+    elif mode == "prepend":
+        # Prepend: new modifier comes first
+        new_modifier = f"{modifier} {existing}"
+    elif mode == "append":
+        # Append: new modifier comes last
+        new_modifier = f"{existing} {modifier}"
+    else:
+        raise ValueError(
+            f"Invalid mode: {mode!r}. Must be 'prepend', 'append', or 'replace'."
+        )
+
+    setattr(func, _MODIFIER_ATTR, new_modifier)
