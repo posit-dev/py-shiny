@@ -160,7 +160,6 @@ class ReactiveEnvironment:
     def use_context(self, ctx: Context) -> typing.Generator[None, None, None]:
         old = self._current_context.set(ctx)
         try:
-
             yield
         finally:
             self._current_context.reset(old)
