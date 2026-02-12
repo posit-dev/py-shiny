@@ -372,7 +372,9 @@ def test_toolbar_button_aria_attributes(page: Page, app: ShinyAppProc) -> None:
     button = controller.ToolbarInputButton(page, "btn_icon_only")
 
     # Should have aria-labelledby pointing to label
-    expect(button.loc).to_have_attribute("aria-labelledby", re.compile(r"btn-label-\d+"))
+    expect(button.loc).to_have_attribute(
+        "aria-labelledby", re.compile(r"btn-label-\d+")
+    )
 
     # Icon should be aria-hidden
     expect(button.loc_icon).to_have_attribute("aria-hidden", "true")
