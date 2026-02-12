@@ -106,7 +106,9 @@ def get_otel_label_modifier(func: Callable[..., Any]) -> Optional[str]:
     Get the OTel label modifier from a function.
 
     Retrieves the modifier string that has been set on a function object,
-    typically by decorators like `@reactive.event()`.
+    typically by decorators like ``@reactive.event()``. The modifier is
+    automatically preserved through decorator chains when :func:`functools.wraps`
+    is used.
 
     Parameters
     ----------
@@ -131,6 +133,18 @@ def get_otel_label_modifier(func: Callable[..., Any]) -> Optional[str]:
     ...     return 42
     >>> get_otel_label_modifier(my_event_func)
     'event'
+
+    Note
+    ----
+    This function retrieves an attribute stored on the function's `__dict__`.
+    When decorators use :func:`functools.wraps`, the `__dict__` is automatically
+    copied from the original function, preserving the modifier through the
+    decorator chain.
+
+    See Also
+    --------
+    set_otel_label_modifier : Set the modifier on a function.
+    generate_reactive_label : Generate a span label including the modifier.
     """
     return getattr(func, _MODIFIER_ATTR, None)
 
@@ -146,6 +160,11 @@ def set_otel_label_modifier(
 
     Stores a modifier string on a function object that will be used when
     generating OTel span labels for reactive computations.
+
+    The modifier attribute is automatically preserved through decorator chains
+    when decorators use :func:`functools.wraps`. This allows modifiers to be
+    "baked in" at decoration time and retrieved later during reactive object
+    initialization.
 
     Parameters
     ----------
@@ -179,11 +198,39 @@ def set_otel_label_modifier(
     >>> get_otel_label_modifier(my_func)
     'throttle'
 
+    The modifier is automatically preserved through decorator chains:
+
+    >>> import functools
+    >>> def original():
+    ...     return 42
+    >>> set_otel_label_modifier(original, "event")
+    >>> @functools.wraps(original)
+    ... def wrapper():
+    ...     return original()
+    >>> get_otel_label_modifier(wrapper)  # Preserved!
+    'event'
+
     Note
     ----
     This function modifies the function object in-place by setting an attribute
     on its `__dict__`. The attribute name used is stored in `_MODIFIER_ATTR`.
+
+    When :func:`functools.wraps` is used in decorators, it copies `__dict__`
+    from the original function to the wrapper, which automatically preserves
+    the modifier attribute. This is how ``@reactive.event()`` can set modifiers
+    that are later retrieved by `Calc_` and `Effect_` during initialization.
+
+    See Also
+    --------
+    get_otel_label_modifier : Retrieve the modifier from a function.
+    generate_reactive_label : Generate a span label including the modifier.
     """
+    # Validate mode first
+    if mode not in ("prepend", "append", "replace"):
+        raise ValueError(
+            f"Invalid mode: {mode!r}. Must be 'prepend', 'append', or 'replace'."
+        )
+
     existing = getattr(func, _MODIFIER_ATTR, None)
 
     if mode == "replace" or existing is None:
@@ -195,9 +242,5 @@ def set_otel_label_modifier(
     elif mode == "append":
         # Append: new modifier comes last
         new_modifier = f"{existing} {modifier}"
-    else:
-        raise ValueError(
-            f"Invalid mode: {mode!r}. Must be 'prepend', 'append', or 'replace'."
-        )
 
     setattr(func, _MODIFIER_ATTR, new_modifier)

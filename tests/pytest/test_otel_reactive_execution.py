@@ -107,6 +107,176 @@ class TestLabelGeneration:
         assert label == "output my_output"
 
 
+class TestModifierHelpers:
+    """Modifier helper function tests"""
+
+    def test_get_otel_label_modifier_returns_none_by_default(self):
+        """Test that get_otel_label_modifier returns None for unmodified functions"""
+        from shiny.otel._labels import get_otel_label_modifier
+
+        def my_func():
+            return 42
+
+        modifier = get_otel_label_modifier(my_func)
+        assert modifier is None
+
+    def test_set_otel_label_modifier_sets_attribute(self):
+        """Test that set_otel_label_modifier sets the modifier attribute"""
+        from shiny.otel._labels import get_otel_label_modifier, set_otel_label_modifier
+
+        def my_func():
+            return 42
+
+        set_otel_label_modifier(my_func, "event")
+        modifier = get_otel_label_modifier(my_func)
+        assert modifier == "event"
+
+    def test_set_otel_label_modifier_prepend_mode(self):
+        """Test that set_otel_label_modifier prepends by default"""
+        from shiny.otel._labels import get_otel_label_modifier, set_otel_label_modifier
+
+        def my_func():
+            return 42
+
+        set_otel_label_modifier(my_func, "event")
+        assert get_otel_label_modifier(my_func) == "event"
+
+        set_otel_label_modifier(my_func, "cache")  # Prepend by default
+        assert get_otel_label_modifier(my_func) == "cache event"
+
+        set_otel_label_modifier(my_func, "debounce", mode="prepend")
+        assert get_otel_label_modifier(my_func) == "debounce cache event"
+
+    def test_set_otel_label_modifier_append_mode(self):
+        """Test that set_otel_label_modifier can append modifiers"""
+        from shiny.otel._labels import get_otel_label_modifier, set_otel_label_modifier
+
+        def my_func():
+            return 42
+
+        set_otel_label_modifier(my_func, "event")
+        assert get_otel_label_modifier(my_func) == "event"
+
+        set_otel_label_modifier(my_func, "cache", mode="append")
+        assert get_otel_label_modifier(my_func) == "event cache"
+
+        set_otel_label_modifier(my_func, "debounce", mode="append")
+        assert get_otel_label_modifier(my_func) == "event cache debounce"
+
+    def test_set_otel_label_modifier_replace_mode(self):
+        """Test that set_otel_label_modifier can replace modifiers"""
+        from shiny.otel._labels import get_otel_label_modifier, set_otel_label_modifier
+
+        def my_func():
+            return 42
+
+        set_otel_label_modifier(my_func, "event")
+        set_otel_label_modifier(my_func, "cache", mode="append")
+        assert get_otel_label_modifier(my_func) == "event cache"
+
+        set_otel_label_modifier(my_func, "throttle", mode="replace")
+        assert get_otel_label_modifier(my_func) == "throttle"
+
+    def test_set_otel_label_modifier_invalid_mode(self):
+        """Test that set_otel_label_modifier raises error for invalid mode"""
+        from shiny.otel._labels import set_otel_label_modifier
+
+        def my_func():
+            return 42
+
+        with pytest.raises(ValueError, match=r"Invalid mode: 'invalid'"):
+            set_otel_label_modifier(my_func, "event", mode="invalid")
+
+    def test_functools_wraps_preserves_modifier(self):
+        """Test that @functools.wraps preserves the modifier attribute"""
+        import functools
+
+        from shiny.otel._labels import get_otel_label_modifier, set_otel_label_modifier
+
+        def original():
+            return 42
+
+        set_otel_label_modifier(original, "event")
+
+        @functools.wraps(original)
+        def wrapper():
+            return original()
+
+        # Modifier should be preserved through @functools.wraps
+        assert get_otel_label_modifier(wrapper) == "event"
+
+
+class TestReactiveEventModifier:
+    """Test @reactive.event modifier integration"""
+
+    def test_reactive_event_sets_modifier(self):
+        """Test that @reactive.event sets the event modifier"""
+        from shiny.otel._labels import get_otel_label_modifier
+        from shiny.reactive import Value, event
+
+        x = Value(0)
+
+        @event(x)
+        def my_func():
+            return 42
+
+        # The decorator should have set the "event" modifier
+        modifier = get_otel_label_modifier(my_func)
+        assert modifier == "event"
+
+    def test_calc_extracts_event_modifier(self):
+        """Test that Calc_ extracts modifier from @reactive.event decorated function"""
+        from shiny.reactive import Calc_, Value, event
+
+        x = Value(0)
+
+        @event(x)
+        def my_calc():
+            return 42
+
+        calc = Calc_(my_calc)
+
+        # The calc should have generated label with "event" modifier
+        assert calc._otel_label == "reactive event my_calc"
+
+    def test_effect_extracts_event_modifier(self):
+        """Test that Effect_ extracts modifier from @reactive.event decorated function"""
+        from shiny.reactive import Effect_, Value, event
+
+        x = Value(0)
+
+        @event(x)
+        def my_effect():
+            pass
+
+        effect = Effect_(my_effect, session=None)
+
+        # The effect should have generated label with "event" modifier
+        assert effect._otel_label == "observe event my_effect"
+
+    def test_calc_without_modifier_has_no_modifier_in_label(self):
+        """Test that Calc_ without modifier has clean label"""
+
+        def my_calc():
+            return 42
+
+        calc = Calc_(my_calc)
+
+        # The calc should have label without modifier
+        assert calc._otel_label == "reactive my_calc"
+
+    def test_effect_without_modifier_has_no_modifier_in_label(self):
+        """Test that Effect_ without modifier has clean label"""
+
+        def my_effect():
+            pass
+
+        effect = Effect_(my_effect, session=None)
+
+        # The effect should have label without modifier
+        assert effect._otel_label == "observe my_effect"
+
+
 class TestSourceReferenceExtraction:
     """Source code attribute extraction tests"""
 
