@@ -51,6 +51,9 @@ from ..bookmark._serializers import serializer_file_input
 from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
 from ..module import ResolvedId
+from ..otel import OtelCollectLevel
+from ..otel._attributes import extract_source_ref
+from ..otel._span_wrappers import with_otel_span_async
 from ..reactive import Effect_, Value, effect
 from ..reactive import flush as reactive_flush
 from ..reactive import isolate
@@ -1860,9 +1863,16 @@ class Outputs:
                 )
 
                 try:
-                    with session.clientdata._output_name_ctx(output_name):
-                        # Call the app's renderer function
-                        value = await renderer.render()
+                    async with with_otel_span_async(
+                        lambda: f"output {output_id}",
+                        attributes=lambda: extract_source_ref(
+                            getattr(renderer.fn, "_orig_fn", renderer.fn)
+                        ),
+                        level=OtelCollectLevel.REACTIVITY,
+                    ):
+                        with session.clientdata._output_name_ctx(output_name):
+                            # Call the app's renderer function
+                            value = await renderer.render()
 
                     session._outbound_message_queues.set_value(output_name, value)
 

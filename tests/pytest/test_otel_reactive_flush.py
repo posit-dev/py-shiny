@@ -9,11 +9,23 @@ Tests cover:
 """
 
 import os
+from typing import Tuple
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+    InMemorySpanExporter,
+)
 
-from shiny.otel import OtelCollectLevel
+from shiny.otel import OtelCollectLevel, should_otel_collect
+from shiny.otel._span_wrappers import with_otel_span_async
+from shiny.reactive._core import ReactiveEnvironment
+
+from .otel_helpers import (
+    get_exported_spans,
+    patch_otel_tracing_state,
+)
 
 
 class TestReactiveFlushSpans:
@@ -21,34 +33,26 @@ class TestReactiveFlushSpans:
 
     def test_reactive_update_collection_enabled_at_reactive_update_level(self):
         """Test that collection is enabled for REACTIVE_UPDATE level when SHINY_OTEL_COLLECT=reactive_update"""
-        from shiny.otel import should_otel_collect
-
-        with patch("shiny.otel._core._tracing_enabled", True):
+        with patch_otel_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactive_update"}):
                 assert should_otel_collect(OtelCollectLevel.REACTIVE_UPDATE) is True
                 assert should_otel_collect(OtelCollectLevel.REACTIVITY) is False
 
     def test_reactive_update_collection_enabled_at_all_level(self):
         """Test that REACTIVE_UPDATE level collection is enabled when SHINY_OTEL_COLLECT=all"""
-        from shiny.otel import should_otel_collect
-
-        with patch("shiny.otel._core._tracing_enabled", True):
+        with patch_otel_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "all"}):
                 assert should_otel_collect(OtelCollectLevel.REACTIVE_UPDATE) is True
 
     def test_reactive_update_collection_disabled_at_session_level(self):
         """Test that REACTIVE_UPDATE level collection is disabled when SHINY_OTEL_COLLECT=session"""
-        from shiny.otel import should_otel_collect
-
-        with patch("shiny.otel._core._tracing_enabled", True):
+        with patch_otel_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "session"}):
                 assert should_otel_collect(OtelCollectLevel.REACTIVE_UPDATE) is False
 
     def test_collection_disabled_at_none_level(self):
         """Test that collection is disabled when SHINY_OTEL_COLLECT=none"""
-        from shiny.otel import should_otel_collect
-
-        with patch("shiny.otel._core._tracing_enabled", True):
+        with patch_otel_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "none"}):
                 assert should_otel_collect(OtelCollectLevel.SESSION) is False
                 assert should_otel_collect(OtelCollectLevel.REACTIVE_UPDATE) is False
@@ -60,9 +64,7 @@ class TestReactiveFlushInstrumentation:
     @pytest.mark.asyncio
     async def test_flush_creates_span_when_collecting(self):
         """Test that flush() wraps execution in reactive.update span when collecting"""
-        from shiny.reactive._core import ReactiveEnvironment
-
-        with patch("shiny.otel._core._tracing_enabled", True):
+        with patch_otel_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactive_update"}):
                 # Create a reactive environment
                 env = ReactiveEnvironment()
@@ -87,9 +89,7 @@ class TestReactiveFlushInstrumentation:
     @pytest.mark.asyncio
     async def test_flush_no_span_when_not_collecting(self):
         """Test that flush() does not create span when not collecting"""
-        from shiny.reactive._core import ReactiveEnvironment
-
-        with patch("shiny.otel._core._tracing_enabled", True):
+        with patch_otel_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "session"}):
                 # Create a reactive environment
                 env = ReactiveEnvironment()
@@ -104,9 +104,7 @@ class TestReactiveFlushInstrumentation:
     @pytest.mark.asyncio
     async def test_contextvar_stores_span_during_flush(self):
         """Test that the current span is stored on instance during flush"""
-        from shiny.reactive._core import ReactiveEnvironment
-
-        with patch("shiny.otel._core._tracing_enabled", True):
+        with patch_otel_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactive_update"}):
                 env = ReactiveEnvironment()
 
@@ -137,9 +135,7 @@ class TestReactiveFlushInstrumentation:
     @pytest.mark.asyncio
     async def test_contextvar_reset_after_flush(self):
         """Test that instance span is reset after flush completes"""
-        from shiny.reactive._core import ReactiveEnvironment
-
-        with patch("shiny.otel._core._tracing_enabled", True):
+        with patch_otel_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactive_update"}):
                 env = ReactiveEnvironment()
 
@@ -161,26 +157,16 @@ class TestReactiveFlushInstrumentation:
                 assert env._current_otel_span is None
 
     @pytest.mark.asyncio
-    async def test_span_parent_child_relationship(self):
+    async def test_span_parent_child_relationship(
+        self, otel_tracer_provider: Tuple[TracerProvider, InMemorySpanExporter]
+    ):
         """Test that reactive.update span is child of parent span when nested"""
-        # Set up in-memory exporter to capture spans
-        from opentelemetry import trace
-        from opentelemetry.sdk.trace import TracerProvider
-        from opentelemetry.sdk.trace.export import SimpleSpanProcessor
-        from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
-            InMemorySpanExporter,
-        )
+        provider, memory_exporter = otel_tracer_provider
 
-        from shiny.otel import OtelCollectLevel
-        from shiny.otel._span_wrappers import with_otel_span_async
-        from shiny.reactive._core import ReactiveEnvironment
+        # Clear any previous spans
+        memory_exporter.clear()
 
-        memory_exporter = InMemorySpanExporter()
-        provider = TracerProvider()
-        provider.add_span_processor(SimpleSpanProcessor(memory_exporter))
-        trace.set_tracer_provider(provider)
-
-        with patch("shiny.otel._core._tracing_enabled", True):
+        with patch_otel_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "all"}):
                 # Simulate session.start with reactive_flush inside
                 async with with_otel_span_async(
@@ -192,8 +178,8 @@ class TestReactiveFlushInstrumentation:
                     env = ReactiveEnvironment()
                     await env.flush()
 
-        # Get exported spans
-        spans = memory_exporter.get_finished_spans()
+        # Get exported spans with proper flushing
+        spans = get_exported_spans(provider, memory_exporter)
 
         # Filter out the _otel_is_recording span
         app_spans = [s for s in spans if not s.name.startswith("_otel")]

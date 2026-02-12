@@ -12,7 +12,10 @@ Tests cover:
 import os
 from unittest.mock import Mock, patch
 
-from shiny.otel import OtelCollectLevel
+from shiny.otel import OtelCollectLevel, should_otel_collect
+from shiny.otel._attributes import extract_http_attributes
+
+from .otel_helpers import patch_otel_tracing_state
 
 
 class TestHttpAttributes:
@@ -20,8 +23,6 @@ class TestHttpAttributes:
 
     def test_extract_http_attributes_from_url(self):
         """Test extracting HTTP attributes from http_conn.url"""
-        from shiny.otel._attributes import extract_http_attributes
-
         # Create mock HTTP connection with url attribute
         mock_url = Mock()
         mock_url.hostname = "localhost"
@@ -41,8 +42,6 @@ class TestHttpAttributes:
 
     def test_extract_http_attributes_from_scope(self):
         """Test extracting HTTP attributes from ASGI scope as fallback"""
-        from shiny.otel._attributes import extract_http_attributes
-
         # Create mock HTTP connection with scope but no url
         mock_conn = Mock()
         mock_conn.url = None
@@ -61,8 +60,6 @@ class TestHttpAttributes:
 
     def test_extract_http_attributes_empty(self):
         """Test extracting HTTP attributes when no data available"""
-        from shiny.otel._attributes import extract_http_attributes
-
         # Create mock HTTP connection with no url or scope
         mock_conn = Mock()
         mock_conn.url = None
@@ -75,8 +72,6 @@ class TestHttpAttributes:
 
     def test_extract_http_attributes_partial(self):
         """Test extracting HTTP attributes with partial data"""
-        from shiny.otel._attributes import extract_http_attributes
-
         # Create mock with only some attributes
         mock_url = Mock()
         mock_url.hostname = "example.com"
@@ -101,27 +96,20 @@ class TestSessionSpans:
 
     def test_session_level_collection_enabled(self):
         """Test that collection is enabled for SESSION level when SHINY_OTEL_COLLECT=session"""
-        from shiny.otel import should_otel_collect
-
-        # Mock the tracing enabled check
-        with patch("shiny.otel._core._tracing_enabled", True):
+        with patch_otel_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "session"}):
                 assert should_otel_collect(OtelCollectLevel.SESSION) is True
                 assert should_otel_collect(OtelCollectLevel.REACTIVE_UPDATE) is False
 
     def test_collection_disabled_at_none_level(self):
         """Test that collection is disabled when SHINY_OTEL_COLLECT=none"""
-        from shiny.otel import should_otel_collect
-
-        with patch("shiny.otel._core._tracing_enabled", True):
+        with patch_otel_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "none"}):
                 assert should_otel_collect(OtelCollectLevel.SESSION) is False
 
     def test_session_level_collection_enabled_at_all_level(self):
         """Test that SESSION level collection is enabled when SHINY_OTEL_COLLECT=all"""
-        from shiny.otel import should_otel_collect
-
-        with patch("shiny.otel._core._tracing_enabled", True):
+        with patch_otel_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "all"}):
                 assert should_otel_collect(OtelCollectLevel.SESSION) is True
 
@@ -131,20 +119,16 @@ class TestSessionInstrumentation:
 
     def test_session_collection_enabled_for_instrumentation(self):
         """Test that collection is enabled for session instrumentation when configured"""
-        from shiny.otel import should_otel_collect
-
         # Verify the should_otel_collect function works correctly for session instrumentation
-        with patch("shiny.otel._core._tracing_enabled", True):
+        with patch_otel_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "session"}):
                 result = should_otel_collect(OtelCollectLevel.SESSION)
                 assert result is True
 
     def test_no_otel_when_sdk_not_configured(self):
         """Test that no OTel operations occur when SDK not configured"""
-        from shiny.otel import should_otel_collect
-
         # Simulate SDK not configured by setting tracing_enabled to False
-        with patch("shiny.otel._core._tracing_enabled", False):
+        with patch_otel_tracing_state(tracing_enabled=False):
             # Without SDK configured, should always return False
             result = should_otel_collect(OtelCollectLevel.SESSION)
             assert result is False

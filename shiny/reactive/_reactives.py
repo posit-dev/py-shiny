@@ -21,6 +21,7 @@ import traceback
 import warnings
 from typing import (
     TYPE_CHECKING,
+    Any,
     Awaitable,
     Callable,
     Generic,
@@ -34,6 +35,14 @@ from .. import _utils
 from .._docstring import add_example
 from .._utils import is_async_callable, run_coro_sync
 from .._validation import req
+from ..otel import OtelCollectLevel
+from ..otel._attributes import extract_source_ref
+from ..otel._labels import (
+    generate_reactive_label,
+    get_otel_label_modifier,
+    set_otel_label_modifier,
+)
+from ..otel._span_wrappers import with_otel_span_async
 from ..types import (
     MISSING,
     MISSING_TYPE,
@@ -284,6 +293,17 @@ class Calc_(Generic[T]):
         self._value: list[T] = []
         self._error: list[Exception] = []
 
+        # Extract OpenTelemetry attributes at initialization time
+        self._otel_attrs: dict[str, object] = self._extract_otel_attrs(fn)
+
+        # Extract modifier from function attribute and generate label
+        self._otel_label: str = generate_reactive_label(
+            fn,
+            "reactive",
+            session=self._session,
+            modifier=get_otel_label_modifier(fn),
+        )
+
     def __call__(self) -> T:
         # Run the Coroutine (synchronously), and then return the value.
         # If the Coroutine yields control, then an error will be raised.
@@ -317,11 +337,16 @@ class Calc_(Generic[T]):
         from ..session import session_context
 
         with session_context(self._session):
-            try:
-                with self._ctx():
-                    await self._run_func()
-            finally:
-                self._running = was_running
+            async with with_otel_span_async(
+                self._otel_label,
+                attributes=self._otel_attrs,
+                level=OtelCollectLevel.REACTIVITY,
+            ):
+                try:
+                    with self._ctx():
+                        await self._run_func()
+                finally:
+                    self._running = was_running
 
     def _on_invalidate_cb(self) -> None:
         self._invalidated = True
@@ -332,9 +357,15 @@ class Calc_(Generic[T]):
     async def _run_func(self) -> None:
         self._error.clear()
         try:
-            self._value.append(await self._fn())
+            val = await self._fn()
+
+            self._value.append(val)
         except Exception as err:
             self._error.append(err)
+
+    def _extract_otel_attrs(self, fn: Callable[..., Any]) -> dict[str, Any]:
+        """Extract OpenTelemetry attributes from the reactive function."""
+        return extract_source_ref(fn)
 
 
 class CalcAsync_(Calc_[T]):
@@ -530,6 +561,17 @@ class Effect_:
         if self._session is not None:
             self._session.on_ended(self._on_session_ended_cb)
 
+        # Extract OpenTelemetry attributes at initialization time
+        self._otel_attrs: dict[str, object] = self._extract_otel_attrs(fn)
+
+        # Extract modifier from function attribute and generate label
+        self._otel_label: str = generate_reactive_label(
+            fn,
+            "observe",
+            session=self._session,
+            modifier=get_otel_label_modifier(fn),
+        )
+
         # Defer the first running of this until flushReact is called
         self._create_context().invalidate()
 
@@ -579,38 +621,44 @@ class Effect_:
         from ..session import session_context
 
         with session_context(self._session):
-            try:
-                with ctx():
-                    await self._fn()
+            async with with_otel_span_async(
+                self._otel_label,
+                attributes=self._otel_attrs,
+                level=OtelCollectLevel.REACTIVITY,
+            ):
+                try:
+                    with ctx():
+                        await self._fn()
 
-                    # Yield so that messages can be sent to the client if necessary.
-                    # https://github.com/posit-dev/py-shiny/issues/1381
-                    await asyncio.sleep(0)
-            except SilentException:
-                # It's OK for SilentException to cause an Effect to stop running
-                pass
-            except NotifyException as e:
-                traceback.print_exc()
+                        # Yield so that messages can be sent to the client if necessary.
+                        # https://github.com/posit-dev/py-shiny/issues/1381
+                        await asyncio.sleep(0)
 
-                if self._session:
-                    from .._app import SANITIZE_ERROR_MSG
-                    from ..ui import notification_show
+                except SilentException:
+                    # It's OK for SilentException to cause an Effect to stop running
+                    pass
+                except NotifyException as e:
+                    traceback.print_exc()
 
-                    msg = str(e)
-                    warnings.warn(msg, ReactiveWarning, stacklevel=2)
-                    if e.sanitize:
-                        msg = SANITIZE_ERROR_MSG
-                    notification_show(msg, type="error", duration=None)
-                    if e.close:
+                    if self._session:
+                        from .._app import SANITIZE_ERROR_MSG
+                        from ..ui import notification_show
+
+                        msg = str(e)
+                        warnings.warn(msg, ReactiveWarning, stacklevel=2)
+                        if e.sanitize:
+                            msg = SANITIZE_ERROR_MSG
+                        notification_show(msg, type="error", duration=None)
+                        if e.close:
+                            await self._session._unhandled_error(e)
+                except Exception as e:
+                    traceback.print_exc()
+
+                    warnings.warn(
+                        "Error in Effect: " + str(e), ReactiveWarning, stacklevel=2
+                    )
+                    if self._session:
                         await self._session._unhandled_error(e)
-            except Exception as e:
-                traceback.print_exc()
-
-                warnings.warn(
-                    "Error in Effect: " + str(e), ReactiveWarning, stacklevel=2
-                )
-                if self._session:
-                    await self._session._unhandled_error(e)
 
     def on_invalidate(self, callback: Callable[[], None]) -> None:
         """
@@ -681,6 +729,10 @@ class Effect_:
 
     def _on_session_ended_cb(self) -> None:
         self.destroy()
+
+    def _extract_otel_attrs(self, fn: Callable[..., Any]) -> dict[str, Any]:
+        """Extract OpenTelemetry attributes from the reactive function."""
+        return extract_source_ref(fn)
 
 
 @overload
@@ -885,6 +937,9 @@ def event(
                 with isolate():
                     return await user_fn()
 
+            # Prepend "event" modifier to any existing label
+            set_otel_label_modifier(new_user_async_fn, "event", mode="prepend")
+
             return new_user_async_fn  # type: ignore
 
         elif any([is_async_callable(arg) for arg in args]):
@@ -900,6 +955,9 @@ def event(
                 run_coro_sync(trigger())
                 with isolate():
                     return user_fn()
+
+            # Prepend "event" modifier to any existing label
+            set_otel_label_modifier(new_user_fn, "event", mode="prepend")
 
             return new_user_fn
 

@@ -8,7 +8,11 @@ from opentelemetry import trace
 from opentelemetry._logs import get_logger_provider
 from opentelemetry.trace import Tracer
 
-__all__ = ("get_otel_tracer", "get_otel_logger", "is_otel_tracing_enabled")
+__all__ = (
+    "get_otel_tracer",
+    "get_otel_logger",
+    "is_otel_tracing_enabled",
+)
 
 # Global state for lazy initialization
 _tracer: Union[Tracer, None] = None

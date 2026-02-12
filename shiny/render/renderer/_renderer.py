@@ -247,7 +247,7 @@ class Renderer(Generic[IT]):
             " (of type `IT`) into a JSON-serializable object."
             " Ex: `dict`, `None`, `str`. (common)\n"
             "* `render(self)` method has full control of how an App author's value is"
-            " retrieved (`self._fn()`) and processed. (rare)"
+            " retrieved (`self.fn()`) and processed. (rare)"
         )
 
     async def render(self) -> Jsonifiable:
