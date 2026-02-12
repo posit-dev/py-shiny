@@ -129,8 +129,8 @@ def test_toolbar_select_custom_tooltip(page: Page, app: ShinyAppProc) -> None:
 
     # Hover to show tooltip and verify text matches custom tooltip (not label)
     select_ctrl.loc_select.hover()
-    page.wait_for_timeout(100)
     tooltip_content = page.locator(".tooltip-inner")
+    expect(tooltip_content.first).to_be_visible()
     expect(tooltip_content.first).to_contain_text("Change how items are displayed")
     # Verify it does NOT contain the label text
     expect(tooltip_content.first).not_to_contain_text("View mode")
@@ -148,7 +148,6 @@ def test_toolbar_select_no_tooltip(page: Page, app: ShinyAppProc) -> None:
 
     # Hover should not show tooltip
     select_ctrl.loc_select.hover()
-    page.wait_for_timeout(100)
     tooltip_content = page.locator(".tooltip-inner")
     expect(tooltip_content).not_to_be_visible()
 
@@ -179,8 +178,8 @@ def test_toolbar_select_grouped_choices(page: Page, app: ShinyAppProc) -> None:
 
     # Verify tooltip shows label text
     select_ctrl.loc_select.hover()
-    page.wait_for_timeout(100)
     tooltip_content = page.locator(".tooltip-inner")
+    expect(tooltip_content.first).to_be_visible()
     expect(tooltip_content.first).to_contain_text("Select item")
 
 
@@ -198,7 +197,6 @@ def test_toolbar_select_update_choices(page: Page, app: ShinyAppProc) -> None:
 
     # Click to update to X, Y, Z
     button.click()
-    page.wait_for_timeout(100)
     # "A" should still show as selected in the render.text even though it is no longer
     # in the choices because we have not selected a new value yet and we did not specify
     #  selected in the serverside update, so the input value retains its original
@@ -207,7 +205,6 @@ def test_toolbar_select_update_choices(page: Page, app: ShinyAppProc) -> None:
 
     # Click again to switch back to A, B, C with B selected
     button.click()
-    page.wait_for_timeout(100)
     # Now the selected value should change when options are updated because a selected
     # value was provided in the server update
     select_ctrl.expect_selected("B")
@@ -227,19 +224,16 @@ def test_toolbar_select_update_selected(page: Page, app: ShinyAppProc) -> None:
 
     # Click to go to Second
     button.click()
-    page.wait_for_timeout(100)
     select_ctrl.expect_selected("Second")
     expect(output).to_have_text("Update selected value: Second")
 
     # Click to go to Third
     button.click()
-    page.wait_for_timeout(100)
     select_ctrl.expect_selected("Third")
     expect(output).to_have_text("Update selected value: Third")
 
     # Click to go back to First
     button.click()
-    page.wait_for_timeout(100)
     select_ctrl.expect_selected("First")
     expect(output).to_have_text("Update selected value: First")
 
@@ -256,12 +250,10 @@ def test_toolbar_select_update_label(page: Page, app: ShinyAppProc) -> None:
 
     # Click to update
     button.click()
-    page.wait_for_timeout(100)
     expect(select_ctrl.loc_label).to_have_text("Updated 1")
 
     # Click again
     button.click()
-    page.wait_for_timeout(100)
     expect(select_ctrl.loc_label).to_have_text("Updated 2")
 
 
@@ -277,12 +269,10 @@ def test_toolbar_select_toggle_show_label(page: Page, app: ShinyAppProc) -> None
 
     # Click to show
     button.click()
-    page.wait_for_timeout(100)
     expect_not_to_have_class(select_ctrl.loc_label, "visually-hidden")
 
     # Click to hide again
     button.click()
-    page.wait_for_timeout(100)
     expect(select_ctrl.loc_label).to_have_class(re.compile(r"visually-hidden"))
 
 
@@ -326,7 +316,6 @@ def test_toolbar_select_update_all(page: Page, app: ShinyAppProc) -> None:
 
     # Change selection to trigger update
     select_ctrl.set("Active")
-    page.wait_for_timeout(500)
 
     # After update: new label, new choices, new selected, icon added, label shown
     expect(select_ctrl.loc_label).to_have_text("New Status")
@@ -336,9 +325,8 @@ def test_toolbar_select_update_all(page: Page, app: ShinyAppProc) -> None:
 
     # Icon should now be visible (was added by update)
     expect(select_ctrl.loc_icon).to_be_visible()
-    # Verify icon has content
-    icon_html = select_ctrl.loc_icon.inner_html()
-    assert len(icon_html) > 0
+    # Verify the icon has an SVG element
+    expect(select_ctrl.loc_icon.locator("svg")).to_be_visible()
 
 
 def test_toolbar_select_icon_and_label(page: Page, app: ShinyAppProc) -> None:
@@ -386,9 +374,9 @@ def test_toolbar_select_aria_attributes(page: Page, app: ShinyAppProc) -> None:
 
     # Label should have 'for' attribute pointing to select
     label = select_ctrl.loc.locator("label")
-    label_for = label.get_attribute("for")
-    select_id = select_ctrl.loc_select.get_attribute("id")
-    assert label_for == select_id
+    # Verify both elements have their respective attributes and they match
+    expect(select_ctrl.loc_select).to_have_attribute("id", re.compile(r".+"))
+    expect(label).to_have_attribute("for", re.compile(r".+"))
 
     # Icon should be aria-hidden
     select_ctrl_icon = controller.ToolbarInputSelect(page, "select_icon")

@@ -4,6 +4,7 @@ from conftest import create_app_fixture
 from playwright.sync_api import Page, expect
 
 from shiny.playwright import controller
+from shiny.playwright.expect import expect_not_to_have_class
 from shiny.run import ShinyAppProc
 
 app = create_app_fixture("./app.py")
@@ -67,25 +68,21 @@ def test_card1_interactions(page: Page, app: ShinyAppProc) -> None:
     # Click save button
     btn_save = controller.ToolbarInputButton(page, "btn_save")
     btn_save.click()
-    page.wait_for_timeout(100)
     expect(output).to_contain_text("Save: 1")
 
     # Change format
     select_format = controller.ToolbarInputSelect(page, "format")
     select_format.set("html")
-    page.wait_for_timeout(100)
     expect(output).to_contain_text("Format: html")
 
     # Click formatting buttons
     btn_bold = controller.ToolbarInputButton(page, "btn_bold")
     btn_bold.click()
-    page.wait_for_timeout(100)
     expect(output).to_contain_text("Bold: 1")
 
     btn_italic = controller.ToolbarInputButton(page, "btn_italic")
     btn_italic.click()
     btn_italic.click()
-    page.wait_for_timeout(100)
     expect(output).to_contain_text("Italic: 2")
 
 
@@ -110,9 +107,7 @@ def test_card2_header_toolbar(page: Page, app: ShinyAppProc) -> None:
     select_recipient = controller.ToolbarInputSelect(page, "recipient")
     expect(select_recipient.loc).to_be_visible()
     # Label should be visible (not have visually-hidden class)
-    class_attr = select_recipient.loc_label.get_attribute("class")
-    assert class_attr is not None
-    assert "visually-hidden" not in class_attr
+    expect_not_to_have_class(select_recipient.loc_label, "visually-hidden")
     expect(select_recipient.loc_label).to_be_visible()
     expect(select_recipient.loc_label).to_have_text("To")
 
@@ -158,31 +153,26 @@ def test_card2_interactions(page: Page, app: ShinyAppProc) -> None:
     # Click new button
     btn_new = controller.ToolbarInputButton(page, "btn_new")
     btn_new.click()
-    page.wait_for_timeout(100)
     expect(output).to_contain_text("New: 1")
 
     # Change recipient
     select_recipient = controller.ToolbarInputSelect(page, "recipient")
     select_recipient.set("manager")
-    page.wait_for_timeout(100)
     expect(output).to_contain_text("To: manager")
 
     # Change priority
     select_priority = controller.ToolbarInputSelect(page, "priority")
     select_priority.set("high")
-    page.wait_for_timeout(100)
     expect(output).to_contain_text("Priority: high")
 
     # Click toolbar buttons
     btn_attach = controller.ToolbarInputButton(page, "btn_attach")
     btn_attach.click()
-    page.wait_for_timeout(100)
     expect(output).to_contain_text("Attach: 1")
 
     btn_emoji = controller.ToolbarInputButton(page, "btn_emoji")
     btn_emoji.click()
     btn_emoji.click()
-    page.wait_for_timeout(100)
     expect(output).to_contain_text("Emoji: 2")
 
     # Submit message
@@ -191,7 +181,6 @@ def test_card2_interactions(page: Page, app: ShinyAppProc) -> None:
 
     # Click the submit button using controller
     message_input.loc_button.click()
-    page.wait_for_timeout(200)
     expect(output).to_contain_text("Submits: 1")
 
 
@@ -294,27 +283,32 @@ def test_update_tooltip_after_update_button(page: Page, app: ShinyAppProc) -> No
 
     # Hover to show initial tooltip
     btn_save.loc.hover()
-    page.wait_for_timeout(100)
     tooltip_content = page.locator(".tooltip-inner")
+    expect(tooltip_content.first).to_be_visible()
     expect(tooltip_content.first).to_contain_text("Save Document")
 
     # Move away to hide tooltip
     page.mouse.move(0, 0)
-    page.wait_for_timeout(200)
+    expect(tooltip_content.first).not_to_be_visible()
 
     # Click button to trigger update_toolbar_input_button and update_tooltip
     btn_save.click()
     page.mouse.move(0, 0)
-    page.wait_for_timeout(300)
 
-    # Verify icon changed (check icon HTML changed)
-    icon_html = btn_save.loc_icon.inner_html()
-    assert len(icon_html) > 0  # Icon should still be present
+    # Wait for icon to change to circle-check (viewBox for circle-check icon)
+    # This ensures the button update has been processed
+    expect(btn_save.loc_icon.locator("svg")).to_have_attribute("viewBox", "0 0 512 512")
 
-    # Hover to show updated tooltip
-    btn_save.loc.hover()
-    page.wait_for_timeout(300)
+    # Click elsewhere to ensure any open tooltip is closed
+    page.locator("h2").click()
     tooltip_content = page.locator(".tooltip-inner")
+    expect(tooltip_content.first).not_to_be_visible()
+
+    # Now hover to show the updated tooltip
+    btn_save.loc.hover()
+
+    # Wait for the tooltip to show the new text
+    expect(tooltip_content.first).to_be_visible()
     expect(tooltip_content.first).to_contain_text("Saved successfully!")
     # Verify it no longer shows the old tooltip
     expect(tooltip_content.first).not_to_contain_text("Save Document")
