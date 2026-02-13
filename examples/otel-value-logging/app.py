@@ -20,12 +20,14 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import ConsoleSpanExporter, SimpleSpanProcessor
 
 trace_provider = TracerProvider()
+# For demo purposes, log to the console
 trace_provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
 trace.set_tracer_provider(trace_provider)
 
 # Set up OpenTelemetry logging
 log_provider = LoggerProvider()
 log_provider.add_log_record_processor(
+    # For demo purposes, log to the console
     SimpleLogRecordProcessor(ConsoleLogRecordExporter())
 )
 set_logger_provider(log_provider)
