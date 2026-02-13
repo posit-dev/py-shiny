@@ -4,7 +4,7 @@ from conftest import create_app_fixture
 from playwright.sync_api import Page, expect
 
 from shiny.playwright import controller
-from shiny.playwright.expect import expect_to_have_class
+from shiny.playwright.expect import expect_not_to_have_attribute, expect_to_have_class
 from shiny.run import ShinyAppProc
 
 app = create_app_fixture("./app.py")
@@ -54,6 +54,7 @@ def test_toolbar_button_with_label(page: Page, app: ShinyAppProc) -> None:
 
     # Both icon and label should be visible
     expect(button.loc_icon).to_be_visible()
+    expect_not_to_have_attribute(button.loc_label, "hidden")
     expect(button.loc_label).to_be_visible()
     expect(button.loc_label).to_have_text("Edit")
 
@@ -248,6 +249,7 @@ def test_update_toolbar_button_show_label(page: Page, app: ShinyAppProc) -> None
     button.click()
 
     # Label should be visible (hidden attribute should be removed)
+    expect_not_to_have_attribute(button.loc_label, "hidden")
     expect(button.loc_label).to_be_visible()
 
     # Click to hide again
@@ -311,6 +313,7 @@ def test_update_toolbar_button_all_properties(page: Page, app: ShinyAppProc) -> 
     button.click()
     expect(button.loc_label).to_have_text("Pause")
     # Check label is visible (hidden attribute removed)
+    expect_not_to_have_attribute(button.loc_label, "hidden")
     expect(button.loc_label).to_be_visible()
     # Icon changed to "pause" with viewBox "0 0 320 512"
     expect(button.loc_icon.locator("svg")).to_have_attribute("viewBox", "0 0 320 512")
@@ -358,7 +361,7 @@ def test_update_toolbar_button_reenable(page: Page, app: ShinyAppProc) -> None:
 
     # Target button should now be re-enabled
     expect(target_button.loc).to_be_enabled()
-    expect(target_button.loc).not_to_have_attribute("disabled", "")
+    expect_not_to_have_attribute(target_button.loc, "disabled")
 
     # Click target button again to verify it works after re-enabling
     target_button.click()
