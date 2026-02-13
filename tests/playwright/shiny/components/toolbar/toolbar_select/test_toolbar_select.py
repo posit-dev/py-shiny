@@ -373,8 +373,10 @@ def test_toolbar_select_aria_attributes(page: Page, app: ShinyAppProc) -> None:
     select_ctrl = controller.ToolbarInputSelect(page, "select_basic")
 
     # Label should have 'for' attribute pointing to select's id
+    select_id = select_ctrl.loc_select.get_attribute("id")
+    assert select_id is not None  # for type checking
     label_element = select_ctrl.loc.locator("label")
-    expect(label_element).to_have_attribute("for", "select_basic-select")
+    expect(label_element).to_have_attribute("for", select_id)
 
     # Icon should be aria-hidden
     select_ctrl_icon = controller.ToolbarInputSelect(page, "select_icon")
