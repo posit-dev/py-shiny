@@ -1,4 +1,4 @@
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Error, Page, expect
 
 from shiny.playwright import controller
 from shiny.playwright.expect._internal import _expect_nav_to_have_header_footer
@@ -6,7 +6,12 @@ from shiny.run import ShinyAppProc
 
 
 def test_navset_hidden_kitchensink(page: Page, local_app: ShinyAppProc) -> None:
-    page.goto(local_app.url)
+    try:
+        page.goto(local_app.url)
+    except Error as e:
+        if "interrupted by another navigation" not in str(e):
+            raise
+        page.goto(local_app.url)
 
     navset_hidden_1 = controller.NavsetHidden(page, "hidden_tabs1")
     radio1 = controller.InputRadioButtons(page, "controller1")
