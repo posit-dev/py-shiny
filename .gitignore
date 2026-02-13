@@ -133,5 +133,8 @@ tests/inspect-ai/scripts/test_metadata.json
 
 # Claude
 /.claude/*
+!/.claude/CLAUDE.md
 !/.claude/skills/
 !/.claude/skills/**
+!/.claude/commands/
+!/.claude/commands/**
