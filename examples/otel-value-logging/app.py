@@ -31,7 +31,7 @@ log_provider.add_log_record_processor(
 set_logger_provider(log_provider)
 
 # Now import shiny
-from shiny import App, reactive, ui  # noqa: E402
+from shiny import App, reactive, render, ui  # noqa: E402
 
 app_ui = ui.page_fluid(
     ui.h2("OpenTelemetry Value Logging Demo"),
@@ -59,20 +59,17 @@ def server(input, output, session):
         # This will generate a log event
         counter.set(counter.get() + 1)
 
-    @output
-    @reactive.render.text
+    @render.text
     def slider_value():
         # When the slider changes, this will trigger value update logging
         return f"Slider value: {input.slider()}"
 
-    @output
-    @reactive.render.text
+    @render.text
     def text_value():
         # When the text input changes, this will trigger value update logging
         return f"Text input: {input.text()}"
 
-    @output
-    @reactive.render.text
+    @render.text
     def counter_value():
         # Display the counter value
         return f"Counter: {counter()}"

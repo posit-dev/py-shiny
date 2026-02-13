@@ -220,7 +220,15 @@ class Value(Generic[T]):
             log_body = f"Set reactiveVal {value_name}"
 
             # Add session ID to attributes if available
-            # TODO We also need the srcref attributes
+            # TODO-srcref: Add source reference attributes here.
+            #   Source reference (srcref) attributes capture where reactive values
+            #   are defined or updated (file name, line number, function name).
+            #   This would allow OpenTelemetry logs to be correlated back to user
+            #   code locations. When we standardize srcref extraction for reactive
+            #   objects (similar to how it's done for Calc/Effect in _extract_otel_attrs),
+            #   those attributes should be merged into this dict alongside session.id.
+            #   For now, Value objects don't have a natural "definition site" since
+            #   they can be created and updated from multiple locations.
             attributes: dict[str, Any] = {}
             if session is not None and hasattr(session, "id"):
                 attributes["session.id"] = session.id

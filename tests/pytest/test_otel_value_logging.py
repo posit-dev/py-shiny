@@ -36,12 +36,19 @@ from .otel_helpers import patch_otel_tracing_state, reset_otel_tracing_state
 
 
 @pytest.fixture(scope="session")
-def otel_log_provider() -> Iterator[Tuple[LoggerProvider, InMemoryLogRecordExporter]]:
+def otel_log_provider_and_exporter() -> (
+    Iterator[Tuple[LoggerProvider, InMemoryLogRecordExporter]]
+):
     """
     Set up an OpenTelemetry LoggerProvider with in-memory exporter for testing.
 
     This fixture creates a session-scoped LoggerProvider that collects logs
     in memory, allowing tests to verify log emission without external dependencies.
+
+    Returns
+    -------
+    tuple[LoggerProvider, InMemoryLogRecordExporter]
+        The provider and exporter for use in tests.
     """
     # Create in-memory exporter and logger provider
     memory_exporter = InMemoryLogRecordExporter()
@@ -69,11 +76,11 @@ def mock_session() -> Mock:
 
 
 class TestEmitLog:
-    """Tests for the emit_log helper function"""
+    """Tests for the emit_otel_log helper function"""
 
-    def test_emit_log_basic(self, otel_log_provider):
+    def test_emit_log_basic(self, otel_log_provider_and_exporter):
         """Test basic log emission"""
-        provider, exporter = otel_log_provider
+        provider, exporter = otel_log_provider_and_exporter
         exporter.clear()
 
         emit_otel_log("Test message")
@@ -88,9 +95,9 @@ class TestEmitLog:
         assert len(test_logs) == 1
         assert test_logs[0].log_record.severity_text == "INFO"
 
-    def test_emit_log_with_severity(self, otel_log_provider):
+    def test_emit_log_with_severity(self, otel_log_provider_and_exporter):
         """Test log emission with custom severity"""
-        provider, exporter = otel_log_provider
+        provider, exporter = otel_log_provider_and_exporter
         exporter.clear()
 
         emit_otel_log("Debug message", severity_text="DEBUG")
@@ -102,9 +109,9 @@ class TestEmitLog:
         assert len(test_logs) == 1
         assert test_logs[0].log_record.severity_text == "DEBUG"
 
-    def test_emit_log_with_attributes(self, otel_log_provider):
+    def test_emit_log_with_attributes(self, otel_log_provider_and_exporter):
         """Test log emission with attributes"""
-        provider, exporter = otel_log_provider
+        provider, exporter = otel_log_provider_and_exporter
         exporter.clear()
 
         emit_otel_log(
@@ -136,9 +143,9 @@ class TestEmitLog:
 class TestValueUpdateLogging:
     """Tests for reactive Value update logging"""
 
-    def test_value_set_logs_update(self, otel_log_provider, mock_session):
+    def test_value_set_logs_update(self, otel_log_provider_and_exporter, mock_session):
         """Test that setting a value logs an update"""
-        provider, exporter = otel_log_provider
+        provider, exporter = otel_log_provider_and_exporter
         exporter.clear()
 
         with session_context(mock_session):
@@ -174,9 +181,11 @@ class TestValueUpdateLogging:
         assert attrs is not None
         assert attrs.get("session.id") == "test-session-123"
 
-    def test_value_set_with_namespace(self, otel_log_provider, mock_session):
+    def test_value_set_with_namespace(
+        self, otel_log_provider_and_exporter, mock_session
+    ):
         """Test that value updates include namespace in log message"""
-        provider, exporter = otel_log_provider
+        provider, exporter = otel_log_provider_and_exporter
         exporter.clear()
 
         # Set up session with namespace
@@ -200,9 +209,9 @@ class TestValueUpdateLogging:
         assert len(value_logs) >= 1
         assert value_logs[0].log_record.body == "Set reactiveVal mymodule:my_input"
 
-    def test_value_set_unnamed(self, otel_log_provider, mock_session):
+    def test_value_set_unnamed(self, otel_log_provider_and_exporter, mock_session):
         """Test that unnamed values log as <unnamed>"""
-        provider, exporter = otel_log_provider
+        provider, exporter = otel_log_provider_and_exporter
         exporter.clear()
 
         with session_context(mock_session):
@@ -223,9 +232,9 @@ class TestValueUpdateLogging:
         assert len(value_logs) >= 1
         assert value_logs[0].log_record.body == "Set reactiveVal <unnamed>"
 
-    def test_value_set_no_session(self, otel_log_provider):
+    def test_value_set_no_session(self, otel_log_provider_and_exporter):
         """Test that value updates work without a session"""
-        provider, exporter = otel_log_provider
+        provider, exporter = otel_log_provider_and_exporter
         exporter.clear()
 
         with patch_otel_tracing_state(tracing_enabled=True):
@@ -251,9 +260,11 @@ class TestValueUpdateLogging:
         if attrs is not None:
             assert "session.id" not in attrs
 
-    def test_value_set_no_log_when_tracing_disabled(self, otel_log_provider):
+    def test_value_set_no_log_when_tracing_disabled(
+        self, otel_log_provider_and_exporter
+    ):
         """Test that no logs are emitted when tracing is disabled"""
-        provider, exporter = otel_log_provider
+        provider, exporter = otel_log_provider_and_exporter
         exporter.clear()
 
         with patch_otel_tracing_state(tracing_enabled=False):
@@ -274,10 +285,10 @@ class TestValueUpdateLogging:
         assert len(value_logs) == 0
 
     def test_value_set_no_log_when_collection_level_low(
-        self, otel_log_provider, mock_session
+        self, otel_log_provider_and_exporter, mock_session
     ):
         """Test that no logs are emitted when collection level is below REACTIVITY"""
-        provider, exporter = otel_log_provider
+        provider, exporter = otel_log_provider_and_exporter
         exporter.clear()
 
         with session_context(mock_session):
@@ -299,9 +310,11 @@ class TestValueUpdateLogging:
         ]
         assert len(value_logs) == 0
 
-    def test_value_set_multiple_updates(self, otel_log_provider, mock_session):
+    def test_value_set_multiple_updates(
+        self, otel_log_provider_and_exporter, mock_session
+    ):
         """Test that multiple value updates each produce a log"""
-        provider, exporter = otel_log_provider
+        provider, exporter = otel_log_provider_and_exporter
         exporter.clear()
 
         with session_context(mock_session):
@@ -326,9 +339,11 @@ class TestValueUpdateLogging:
         # Should have 3 logs for 3 updates
         assert len(value_logs) == 3
 
-    def test_value_set_same_value_no_update(self, otel_log_provider, mock_session):
+    def test_value_set_same_value_no_update(
+        self, otel_log_provider_and_exporter, mock_session
+    ):
         """Test that setting same value doesn't log (because _set returns False)"""
-        provider, exporter = otel_log_provider
+        provider, exporter = otel_log_provider_and_exporter
         exporter.clear()
 
         with session_context(mock_session):
