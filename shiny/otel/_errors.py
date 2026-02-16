@@ -65,7 +65,11 @@ def is_silent_error(exception: Exception) -> bool:
 
     return isinstance(
         exception,
-        (SilentException, SilentCancelOutputException, SilentOperationInProgressException),
+        (
+            SilentException,
+            SilentCancelOutputException,
+            SilentOperationInProgressException,
+        ),
     )
 
 
