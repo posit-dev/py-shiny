@@ -35,6 +35,7 @@ from .. import _utils
 from .._docstring import add_example
 from .._utils import is_async_callable, run_coro_sync
 from .._validation import req
+from ._utils import is_user_code_frame
 from ..otel import OtelCollectLevel, should_otel_collect
 from ..otel._attributes import extract_source_ref
 from ..otel._core import emit_otel_log
@@ -157,47 +158,6 @@ class Value(Generic[T]):
         else:
             self._name = self._try_infer_name()
 
-    @staticmethod
-    def _is_user_code_frame(filename: str) -> bool:
-        """
-        Check if a filename represents user code (not internal shiny package code).
-
-        Parameters
-        ----------
-        filename
-            Path to the file to check
-
-        Returns
-        -------
-        bool
-            True if the file is user code, False if it's internal shiny code
-        """
-        import os
-
-        # Skip special/generated frames
-        if not filename or filename.startswith("<"):
-            return False
-
-        # Test files are always considered user code
-        basename = os.path.basename(filename)
-        if basename.startswith("test_"):
-            return True
-
-        # Check if file is within shiny package directory
-        try:
-            shiny_package_dir = os.path.dirname(os.path.dirname(__file__))
-            # Use os.path.commonpath to check if file is under shiny package
-            common = os.path.commonpath([filename, shiny_package_dir])
-            if common == shiny_package_dir:
-                # File is within shiny package, skip it unless it's in tests
-                if "tests" not in filename:
-                    return False
-        except (ValueError, TypeError):
-            # Different drives on Windows or other path issues - treat as user code
-            pass
-
-        return True
-
     def _try_infer_name(self) -> str | None:
         """
         Attempt to infer the variable name from the call stack.
@@ -225,7 +185,7 @@ class Value(Generic[T]):
                 filename = frame_info.filename
 
                 # Skip internal shiny code, keep user code
-                if not self._is_user_code_frame(filename):
+                if not is_user_code_frame(filename):
                     continue
 
                 # Get the source line
@@ -282,7 +242,7 @@ class Value(Generic[T]):
                 filename = frame_info.filename
 
                 # Skip internal shiny code, keep user code
-                if not self._is_user_code_frame(filename):
+                if not is_user_code_frame(filename):
                     continue
 
                 # Found a user code frame - extract attributes
