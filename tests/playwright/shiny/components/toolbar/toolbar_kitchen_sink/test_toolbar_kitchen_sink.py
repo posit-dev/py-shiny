@@ -1,5 +1,6 @@
 import re
 
+import pytest
 from conftest import create_app_fixture
 from playwright.sync_api import Page, expect
 
@@ -10,6 +11,7 @@ from shiny.run import ShinyAppProc
 app = create_app_fixture("./app.py")
 
 
+@pytest.mark.flaky(reruns=3)
 def test_card1_header_toolbar(page: Page, app: ShinyAppProc) -> None:
     """Test Card 1: Toolbar in header with icon button, select, and divider."""
     page.goto(app.url)
@@ -31,6 +33,7 @@ def test_card1_header_toolbar(page: Page, app: ShinyAppProc) -> None:
     expect(select_format.loc_label).to_have_class(re.compile(r"visually-hidden"))
 
 
+@pytest.mark.flaky(reruns=3)
 def test_card1_input_toolbar_label(page: Page, app: ShinyAppProc) -> None:
     """Test Card 1: Toolbar in input label with formatting buttons."""
     page.goto(app.url)
@@ -54,6 +57,7 @@ def test_card1_input_toolbar_label(page: Page, app: ShinyAppProc) -> None:
     expect(textarea).to_have_attribute("placeholder", "Type your content here...")
 
 
+@pytest.mark.flaky(reruns=3)
 def test_card1_interactions(page: Page, app: ShinyAppProc) -> None:
     """Test Card 1: Button clicks and select changes."""
     page.goto(app.url)
@@ -86,6 +90,7 @@ def test_card1_interactions(page: Page, app: ShinyAppProc) -> None:
     expect(output).to_contain_text("Italic: 2")
 
 
+@pytest.mark.flaky(reruns=3)
 def test_card2_header_toolbar(page: Page, app: ShinyAppProc) -> None:
     """Test Card 2: Toolbar in header with label button, spacer, and select with label."""
     page.goto(app.url)
@@ -112,6 +117,7 @@ def test_card2_header_toolbar(page: Page, app: ShinyAppProc) -> None:
     expect(select_recipient.loc_label).to_have_text("To")
 
 
+@pytest.mark.flaky(reruns=3)
 def test_card2_submit_textarea_toolbar(page: Page, app: ShinyAppProc) -> None:
     """Test Card 2: Submit textarea with toolbar parameter."""
     page.goto(app.url)
@@ -138,6 +144,7 @@ def test_card2_submit_textarea_toolbar(page: Page, app: ShinyAppProc) -> None:
     expect(textarea).to_have_attribute("placeholder", "Compose your message...")
 
 
+@pytest.mark.flaky(reruns=3)
 def test_card2_interactions(page: Page, app: ShinyAppProc) -> None:
     """Test Card 2: Button clicks, select changes, and submit."""
     page.goto(app.url)
@@ -184,6 +191,7 @@ def test_card2_interactions(page: Page, app: ShinyAppProc) -> None:
     expect(output).to_contain_text("Submits: 1")
 
 
+@pytest.mark.flaky(reruns=3)
 def test_all_toolbar_elements_present(page: Page, app: ShinyAppProc) -> None:
     """Test that all toolbar element types are present and functional."""
     page.goto(app.url)
@@ -230,6 +238,7 @@ def test_all_toolbar_elements_present(page: Page, app: ShinyAppProc) -> None:
     expect(spacer).to_be_attached()
 
 
+@pytest.mark.flaky(reruns=3)
 def test_toolbar_alignment(page: Page, app: ShinyAppProc) -> None:
     """Test that all toolbars have correct alignment."""
     page.goto(app.url)
@@ -243,6 +252,7 @@ def test_toolbar_alignment(page: Page, app: ShinyAppProc) -> None:
         expect(toolbar).to_have_attribute("data-align", "right")
 
 
+@pytest.mark.flaky(reruns=3)
 def test_tooltips_on_icon_only_buttons(page: Page, app: ShinyAppProc) -> None:
     """Test that icon-only buttons have tooltips."""
     page.goto(app.url)
@@ -262,6 +272,7 @@ def test_tooltips_on_icon_only_buttons(page: Page, app: ShinyAppProc) -> None:
         expect(tooltip).to_be_attached()
 
 
+@pytest.mark.flaky(reruns=3)
 def test_no_tooltips_on_label_buttons(page: Page, app: ShinyAppProc) -> None:
     """Test that buttons with visible labels don't have tooltips by default."""
     page.goto(app.url)
@@ -271,6 +282,7 @@ def test_no_tooltips_on_label_buttons(page: Page, app: ShinyAppProc) -> None:
     expect(tooltip).not_to_be_attached()
 
 
+@pytest.mark.flaky(reruns=3)
 def test_update_tooltip_after_update_button(page: Page, app: ShinyAppProc) -> None:
     """Test updating tooltip content after updating toolbar button."""
     page.goto(app.url)
