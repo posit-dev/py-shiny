@@ -522,3 +522,69 @@ class TestValueNaming:
         # Should NOT have input. prefix (key starts with .)
         # The name should just be the original key
         assert val._name == ".clientdata_output_plot_hidden"
+
+
+class TestValueSourceReference:
+    """Tests for source reference tracking in value updates"""
+
+    def test_source_ref_in_log_attributes(
+        self, otel_log_provider_and_exporter, mock_session
+    ):
+        """Test that source reference attributes are included in logs"""
+        provider, exporter = otel_log_provider_and_exporter
+        exporter.clear()
+
+        with session_context(mock_session):
+            with patch_otel_tracing_state(tracing_enabled=True):
+                with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
+                    val = reactive.Value(0, name="test_value")
+                    val._set(42)  # This line should be captured in source ref
+
+        provider.force_flush()
+        logs = exporter.get_finished_logs()
+
+        value_logs = [
+            log
+            for log in logs
+            if log.log_record.body and "Set reactiveVal" in log.log_record.body
+        ]
+        assert len(value_logs) >= 1
+
+        # Check that source reference attributes are present
+        attrs = value_logs[0].log_record.attributes
+        assert attrs is not None
+        assert "code.filepath" in attrs
+        assert "code.lineno" in attrs
+        assert "code.function" in attrs
+
+        # Verify the filepath points to this test file
+        assert "test_otel_value_logging.py" in attrs["code.filepath"]
+        # Verify the function is this test
+        assert attrs["code.function"] == "test_source_ref_in_log_attributes"
+
+    def test_source_ref_without_session(self, otel_log_provider_and_exporter):
+        """Test that source reference works without a session"""
+        provider, exporter = otel_log_provider_and_exporter
+        exporter.clear()
+
+        with patch_otel_tracing_state(tracing_enabled=True):
+            with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
+                val = reactive.Value(0, name="standalone")
+                val._set(100)
+
+        provider.force_flush()
+        logs = exporter.get_finished_logs()
+
+        value_logs = [
+            log
+            for log in logs
+            if log.log_record.body and "Set reactiveVal" in log.log_record.body
+        ]
+        assert len(value_logs) >= 1
+
+        # Source ref should still be present
+        attrs = value_logs[0].log_record.attributes
+        assert attrs is not None
+        assert "code.filepath" in attrs
+        assert "code.lineno" in attrs
+        assert "code.function" in attrs

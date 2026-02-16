@@ -41,7 +41,11 @@ Each log event includes:
 
 - **Body**: The log message (e.g., `"Set reactiveVal input.slider"` for inputs, `"Set reactiveVal counter"` for user values)
 - **Severity**: `DEBUG` level
-- **Attributes**: `session.id` for traceability across requests
+- **Attributes**:
+  - `session.id`: Session identifier for traceability across requests
+  - `code.filepath`: File where the value was updated
+  - `code.lineno`: Line number of the update
+  - `code.function`: Function containing the update
 - **Timestamp**: When the value was updated
 
 The console output will show both OpenTelemetry spans (for reactive execution) and log events (for value updates), giving you complete observability into your application's reactive behavior.

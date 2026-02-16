@@ -221,6 +221,67 @@ class Value(Generic[T]):
 
         return None
 
+    def _extract_caller_source_ref(self) -> dict[str, Any]:
+        """
+        Extract source reference attributes from the caller of _set().
+
+        This captures where the value update originated (file, line, function),
+        which is useful for debugging and tracing reactive value changes.
+
+        Returns
+        -------
+        dict[str, Any]
+            Dictionary with code.filepath, code.lineno, and code.function keys.
+            Returns empty dict if source information is unavailable.
+
+        Notes
+        -----
+        Following OpenTelemetry semantic conventions for code attributes:
+        - code.filepath: Full path to source file
+        - code.lineno: Line number where _set() was called
+        - code.function: Function name containing the call
+
+        This method walks the call stack to find the first frame outside
+        the shiny package (excluding tests), which represents user code.
+        """
+        import inspect
+
+        try:
+            # Stack: [0] = _extract_caller_source_ref, [1] = _set, [2] = caller
+            for frame_info in inspect.stack()[2:]:
+                filename = frame_info.filename
+
+                # Skip frames we can't get info from
+                if not filename or filename.startswith("<"):
+                    continue
+
+                # Skip internal shiny package code (but not test files)
+                import os
+
+                basename = os.path.basename(filename)
+                if "shiny" in filename and not basename.startswith("test_"):
+                    path_parts = filename.split(os.sep)
+                    if "shiny" in path_parts and "tests" not in path_parts:
+                        continue
+
+                # Found a user code frame - extract attributes
+                attrs: dict[str, Any] = {}
+                attrs["code.filepath"] = filename
+
+                if frame_info.lineno:
+                    attrs["code.lineno"] = frame_info.lineno
+
+                if frame_info.function:
+                    attrs["code.function"] = frame_info.function
+
+                return attrs
+
+        except Exception:
+            # If anything fails, silently return empty dict
+            pass
+
+        return {}
+
     def __call__(self) -> T:
         return self.get()
 
@@ -304,19 +365,16 @@ class Value(Generic[T]):
 
             log_body = f"Set reactiveVal {value_name}"
 
-            # Add session ID to attributes if available
-            # TODO-srcref: Add source reference attributes here.
-            #   Source reference (srcref) attributes capture where reactive values
-            #   are defined or updated (file name, line number, function name).
-            #   This would allow OpenTelemetry logs to be correlated back to user
-            #   code locations. When we standardize srcref extraction for reactive
-            #   objects (similar to how it's done for Calc/Effect in _extract_otel_attrs),
-            #   those attributes should be merged into this dict alongside session.id.
-            #   For now, Value objects don't have a natural "definition site" since
-            #   they can be created and updated from multiple locations.
+            # Build attributes dict with session ID and source reference
             attributes: dict[str, Any] = {}
+
+            # Add session ID if available
             if session is not None and hasattr(session, "id"):
                 attributes["session.id"] = session.id
+
+            # Add source reference (file, line, function where _set was called)
+            srcref_attrs = self._extract_caller_source_ref()
+            attributes.update(srcref_attrs)
 
             emit_otel_log(log_body, severity_text="DEBUG", attributes=attributes)
 
