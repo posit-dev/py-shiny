@@ -1741,7 +1741,8 @@ class ClientData:
 
         val = self._session.root_scope().input[id]
         if val._name is None:
-            val._name = f"clientdata {key}"
+            # No leading `.`
+            val._name = str(id).removeprefix(".")
 
         return val()
 
@@ -1767,7 +1768,8 @@ class ClientData:
         if input_id in self._session.root_scope().input:
             val = self._session.root_scope().input[input_id]
             if val._name is None:
-                val._name = f"clientdata output {non_namespace_id} - {key}"
+                # No leading `.`
+                val._name = f"clientdata_output_{non_namespace_id}_{key}"
             return val()
         else:
             return None
