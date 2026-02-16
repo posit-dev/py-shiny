@@ -92,15 +92,29 @@ def with_otel_span(
             resolved_attrs = attributes
 
     tracer = get_otel_tracer()
-    with tracer.start_as_current_span(resolved_name, attributes=resolved_attrs) as span:
+    with tracer.start_as_current_span(
+        resolved_name,
+        attributes=resolved_attrs,
+        record_exception=False,  # We handle exception recording manually
+        set_status_on_exception=False,  # We handle status setting manually
+    ) as span:
         try:
             yield span
             # If we reach here without exception, mark as OK
             span.set_status(Status(StatusCode.OK))
         except Exception as e:
-            # Record the exception and set error status
-            span.record_exception(e)
-            span.set_status(Status(StatusCode.ERROR, str(e)))
+            from ._errors import is_silent_error, maybe_sanitize_error
+
+            # Check if this is a silent error
+            if is_silent_error(e):
+                # Silent errors don't set error status or record exceptions
+                # Set status to OK since silent exceptions are not actual errors
+                span.set_status(Status(StatusCode.OK))
+            else:
+                # Sanitize the error if needed before recording
+                sanitized_exc = maybe_sanitize_error(e)
+                span.record_exception(sanitized_exc)
+                span.set_status(Status(StatusCode.ERROR, str(sanitized_exc)))
             raise
 
 
@@ -124,7 +138,10 @@ async def with_otel_span_async(
     If collection is disabled or the SDK is not configured, this becomes a no-op
     context manager that yields None.
 
-    Note: Exception recording and sanitization will be added in Phase 6.
+    Exception handling respects Shiny's error semantics:
+    - Silent exceptions (SilentException, etc.) are not recorded in spans
+    - Error messages are sanitized when app.sanitize_errors is True
+    - SafeException messages bypass sanitization
 
     Parameters
     ----------
@@ -186,14 +203,27 @@ async def with_otel_span_async(
             resolved_attrs = attributes
 
     tracer = get_otel_tracer()
-    with tracer.start_as_current_span(resolved_name, attributes=resolved_attrs) as span:
+    with tracer.start_as_current_span(
+        resolved_name,
+        attributes=resolved_attrs,
+        record_exception=False,  # We handle exception recording manually
+        set_status_on_exception=False,  # We handle status setting manually
+    ) as span:
         try:
             yield span
             # If we reach here without exception, mark as OK
             span.set_status(Status(StatusCode.OK))
         except Exception as e:
-            # Record the exception and set error status
-            # TODO: Phase 6 will add error sanitization here
-            span.record_exception(e)
-            span.set_status(Status(StatusCode.ERROR, str(e)))
+            from ._errors import is_silent_error, maybe_sanitize_error
+
+            # Check if this is a silent error
+            if is_silent_error(e):
+                # Silent errors don't set error status or record exceptions
+                # Set status to OK since silent exceptions are not actual errors
+                span.set_status(Status(StatusCode.OK))
+            else:
+                # Sanitize the error if needed before recording
+                sanitized_exc = maybe_sanitize_error(e)
+                span.record_exception(sanitized_exc)
+                span.set_status(Status(StatusCode.ERROR, str(sanitized_exc)))
             raise
