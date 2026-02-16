@@ -112,15 +112,11 @@ def with_otel_span(
                 span.set_status(Status(StatusCode.OK))
             else:
                 # Add session ID to span attributes if available
-                try:
-                    from ..session import get_current_session
+                from ..session import get_current_session
 
-                    session = get_current_session()
-                    if session is not None and hasattr(session, "id"):
-                        span.set_attribute("session.id", session.id)
-                except ImportError:
-                    # Import failed, continue without session ID
-                    pass
+                session = get_current_session()
+                if session is not None and hasattr(session, "id"):
+                    span.set_attribute("session.id", session.id)
 
                 # Sanitize the error if needed before recording
                 sanitized_exc = maybe_sanitize_error(e)
