@@ -17,7 +17,7 @@ from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 from opentelemetry.trace import StatusCode
 
-from shiny import App, ui
+from shiny import App
 from shiny.otel._errors import (
     is_silent_error,
     maybe_sanitize_error,
