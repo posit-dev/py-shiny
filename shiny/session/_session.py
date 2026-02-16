@@ -1410,8 +1410,10 @@ class Inputs:
 
         # Set the name on the Value for OpenTelemetry logging (before namespacing)
         # The module ns will be included separately
-        # Exclude things like `.clientData`
-        if not key.startswith("."):
+        # Keys starting with "." (like .clientdata_*) use the full key as the name
+        if key.startswith("."):
+            value._name = key
+        else:
             value._name = f"input.{key}"
         self._map[self._ns(key)] = value
 

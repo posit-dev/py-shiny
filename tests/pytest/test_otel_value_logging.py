@@ -505,8 +505,8 @@ class TestValueNaming:
         val = reactive.Value(True, name="original_name")
         inputs[".clientdata_output_plot_hidden"] = val
 
-        # Should keep original name (not add input. prefix for keys starting with .)
-        assert val._name == "original_name"
+        # Should use the full key as the name (not add input. prefix for keys starting with .)
+        assert val._name == ".clientdata_output_plot_hidden"
 
     def test_inputs_getitem_skips_clientdata_prefix(self):
         """Test that Inputs.__getitem__ doesn't add 'input.' prefix for .clientdata_ keys"""
