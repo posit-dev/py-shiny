@@ -45,11 +45,10 @@ class TestCore:
 
     def test_is_otel_tracing_enabled_without_sdk(self):
         """Test that is_otel_tracing_enabled() returns False when SDK not configured."""
-        # Reset cached value
-        reset_otel_tracing_state()
-
-        # Without SDK, tracing should be disabled
-        assert is_otel_tracing_enabled() is False
+        # Force tracing disabled to simulate no SDK configuration
+        with patch_otel_tracing_state(tracing_enabled=False):
+            # Without SDK, tracing should be disabled
+            assert is_otel_tracing_enabled() is False
 
 
 class TestOtelCollectLevel:
@@ -122,15 +121,14 @@ class TestShouldOtelCollect:
 
     def test_should_otel_collect_without_sdk(self):
         """Test that should_otel_collect returns False when SDK not configured."""
-        # Reset cached tracing status
-        reset_otel_tracing_state()
-
-        # Without SDK, should_otel_collect should always return False
-        # (except for NONE which should raise ValueError)
-        assert should_otel_collect(OtelCollectLevel.SESSION) is False
-        assert should_otel_collect(OtelCollectLevel.REACTIVE_UPDATE) is False
-        assert should_otel_collect(OtelCollectLevel.REACTIVITY) is False
-        assert should_otel_collect(OtelCollectLevel.ALL) is False
+        # Force tracing disabled to simulate no SDK configuration
+        with patch_otel_tracing_state(tracing_enabled=False):
+            # Without SDK, should_otel_collect should always return False
+            # (except for NONE which should raise ValueError)
+            assert should_otel_collect(OtelCollectLevel.SESSION) is False
+            assert should_otel_collect(OtelCollectLevel.REACTIVE_UPDATE) is False
+            assert should_otel_collect(OtelCollectLevel.REACTIVITY) is False
+            assert should_otel_collect(OtelCollectLevel.ALL) is False
 
     def test_should_otel_collect_raises_on_none(self):
         """Test that should_otel_collect raises ValueError when called with NONE."""
@@ -168,13 +166,14 @@ class TestShouldOtelCollect:
         expected: bool,
     ) -> None:
         """Test should_otel_collect logic based on level comparison (when tracing disabled)."""
-        # Reset tracing status to ensure it's disabled
-        reset_otel_tracing_state()
+        from .otel_helpers import patch_otel_tracing_state
 
         with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": current_level.name.lower()}):
-            # Without SDK, should always be False regardless of levels
-            result = should_otel_collect(required_level)
-            assert result is False
+            # Force tracing to be disabled, simulating no SDK configuration
+            with patch_otel_tracing_state(tracing_enabled=False):
+                # Without SDK, should always be False regardless of levels
+                result = should_otel_collect(required_level)
+                assert result is False
 
 
 class TestSpanWrappers:
@@ -185,33 +184,37 @@ class TestSpanWrappers:
         assert callable(with_otel_span)
         assert callable(with_otel_span_async)
 
-    def test_with_otel_span_creates_span(self):
+    def test_with_otel_span_creates_span(self, otel_tracer_provider):
         """Test that with_otel_span creates a span when collection is enabled."""
-        # Force collection by mocking should_otel_collect at its source
+        provider, exporter = otel_tracer_provider
+
+        # Force collection by mocking should_otel_collect
         with patch("shiny.otel._collect.should_otel_collect", return_value=True):
             with with_otel_span(
                 "test_span", {"key": "value"}, level=OtelCollectLevel.SESSION
             ) as span:
                 assert span is not None
-                # Without SDK, span won't be recording
-                assert span.is_recording() is False
+                # With session-scoped TracerProvider, span will be recording
+                assert span.is_recording() is True
 
     @pytest.mark.asyncio
-    async def test_with_otel_span_async_creates_span(self):
+    async def test_with_otel_span_async_creates_span(self, otel_tracer_provider):
         """Test that with_otel_span_async creates a span when collection is enabled."""
-        # Force collection by mocking should_otel_collect at its source
+        provider, exporter = otel_tracer_provider
+
+        # Force collection by mocking should_otel_collect
         with patch("shiny.otel._collect.should_otel_collect", return_value=True):
             async with with_otel_span_async(
                 "test_span_async", {"key": "value"}, level=OtelCollectLevel.SESSION
             ) as span:
                 assert span is not None
-                # Without SDK, span won't be recording
-                assert span.is_recording() is False
+                # With session-scoped TracerProvider, span will be recording
+                assert span.is_recording() is True
 
     def test_with_otel_span_no_op_when_not_collecting(self):
         """Test that with_otel_span returns None when collection disabled."""
-        # Without SDK configured, should return None (no-op)
-        with patch_otel_tracing_state(tracing_enabled=None):
+        # Force tracing disabled to simulate no SDK configuration
+        with patch_otel_tracing_state(tracing_enabled=False):
             with with_otel_span(
                 "test_span", {"key": "value"}, level=OtelCollectLevel.SESSION
             ) as span:
@@ -221,8 +224,8 @@ class TestSpanWrappers:
     @pytest.mark.asyncio
     async def test_with_otel_span_async_no_op_when_not_collecting(self):
         """Test that with_otel_span_async returns None when collection disabled."""
-        # Without SDK configured, should return None (no-op)
-        with patch_otel_tracing_state(tracing_enabled=None):
+        # Force tracing disabled to simulate no SDK configuration
+        with patch_otel_tracing_state(tracing_enabled=False):
             async with with_otel_span_async(
                 "test_span_async", {"key": "value"}, level=OtelCollectLevel.SESSION
             ) as span:

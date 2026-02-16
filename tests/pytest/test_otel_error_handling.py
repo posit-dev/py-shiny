@@ -29,32 +29,6 @@ from shiny.types import SafeException, SilentCancelOutputException, SilentExcept
 from .otel_helpers import get_exported_spans, patch_otel_tracing_state
 
 
-@pytest.fixture(scope="function")  # Changed to function scope for test isolation
-def otel_tracer_provider():
-    """Set up OpenTelemetry TracerProvider for testing."""
-    from opentelemetry import trace
-
-    from .otel_helpers import reset_otel_tracing_state
-
-    # Create in-memory exporter and tracer provider
-    memory_exporter = InMemorySpanExporter()
-    provider = TracerProvider()
-    provider.add_span_processor(SimpleSpanProcessor(memory_exporter))
-
-    # Set as global tracer provider
-    trace.set_tracer_provider(provider)
-
-    # Reset OTel state to pick up new provider
-    reset_otel_tracing_state()
-
-    # Clear any existing spans
-    memory_exporter.clear()
-
-    yield provider, memory_exporter
-
-    # Cleanup is handled by pytest
-
-
 @pytest.fixture
 def mock_session():
     """Create a mock session for testing."""
