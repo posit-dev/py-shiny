@@ -35,8 +35,8 @@ Interact with the app and watch the console output for log events:
 
 - **Move the slider** → logs `"Set reactiveVal slider"` with session ID
 - **Type in the text input** → logs `"Set reactiveVal text"` with session ID
-- **Click the increment button** → logs `"Set reactiveVal <unnamed>"` with session ID
-  - The *counter* variable is named `counter` in the code, but appears as `<unnamed>` in logs because Python doesn't support introspecting variable names for standalone `reactive.Value()` objects. Only input values (which are stored in a dictionary) can have their names automatically captured.
+- **Click the increment button** → logs `"Set reactiveVal counter"` with session ID
+  - The *counter* variable name is automatically inferred from the assignment statement `counter = reactive.Value(0)` using stack inspection.
 
 Each log event includes:
 

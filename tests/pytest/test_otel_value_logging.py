@@ -369,3 +369,97 @@ class TestValueUpdateLogging:
             if log.log_record.body and "Set reactiveVal" in log.log_record.body
         ]
         assert len(value_logs) == 0
+
+
+class TestValueNaming:
+    """Tests for reactive Value naming (explicit and automatic inference)"""
+
+    def test_explicit_name_parameter(self):
+        """Test that explicit name parameter is used"""
+        val = reactive.Value(0, name="my_counter")
+        assert val._name == "my_counter"
+
+    def test_inferred_name_simple_assignment(self):
+        """Test that simple assignment names are inferred"""
+        test_value = reactive.Value(0)
+        assert test_value._name == "test_value"
+
+    def test_inferred_name_attribute_assignment(self):
+        """Test that attribute assignment names are inferred"""
+
+        class Container:
+            def __init__(self):
+                self.counter = reactive.Value(0)
+
+        obj = Container()
+        assert obj.counter._name == "counter"
+
+    def test_explicit_name_overrides_inference(self):
+        """Test that explicit name takes priority over inference"""
+        explicit_name = reactive.Value(0, name="custom_name")
+        assert explicit_name._name == "custom_name"
+
+    def test_unnamed_value_when_inference_fails(self):
+        """Test that name is None when inference fails"""
+        # Create value in a way that inference can't detect (list comprehension)
+        values = [reactive.Value(i) for i in range(3)]
+        # Names should be None because inference fails for list comprehensions
+        assert all(v._name is None for v in values)
+
+    def test_name_used_in_logging(self, otel_log_provider_and_exporter, mock_session):
+        """Test that explicit name is used in logs"""
+        provider, exporter = otel_log_provider_and_exporter
+        exporter.clear()
+
+        with session_context(mock_session):
+            with patch_otel_tracing_state(tracing_enabled=True):
+                with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
+                    val = reactive.Value(0, name="explicit_counter")
+                    val._set(42)
+
+        provider.force_flush()
+        logs = exporter.get_finished_logs()
+
+        value_logs = [
+            log
+            for log in logs
+            if log.log_record.body and "Set reactiveVal" in log.log_record.body
+        ]
+        assert len(value_logs) >= 1
+        assert value_logs[0].log_record.body == "Set reactiveVal explicit_counter"
+
+    def test_inferred_name_used_in_logging(
+        self, otel_log_provider_and_exporter, mock_session
+    ):
+        """Test that inferred name is used in logs"""
+        provider, exporter = otel_log_provider_and_exporter
+        exporter.clear()
+
+        with session_context(mock_session):
+            with patch_otel_tracing_state(tracing_enabled=True):
+                with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
+                    inferred_counter = reactive.Value(0)
+                    inferred_counter._set(42)
+
+        provider.force_flush()
+        logs = exporter.get_finished_logs()
+
+        value_logs = [
+            log
+            for log in logs
+            if log.log_record.body and "Set reactiveVal" in log.log_record.body
+        ]
+        assert len(value_logs) >= 1
+        assert value_logs[0].log_record.body == "Set reactiveVal inferred_counter"
+
+    def test_name_can_be_overridden_after_creation(self):
+        """Test that Inputs can override inferred names"""
+        # Simulate what Inputs does
+        my_input = reactive.Value(0)
+        original_name = my_input._name
+
+        # Inputs overrides the name
+        my_input._name = "input_id"
+
+        assert my_input._name == "input_id"
+        assert my_input._name != original_name

@@ -83,6 +83,13 @@ class Value(Generic[T]):
         An optional initial value.
     read_only
         If ``True``, then the reactive value cannot be `set()`.
+    name
+        An optional name for the reactive value, used in OpenTelemetry logging and
+        debugging. If not provided, the name will be automatically inferred from the
+        assignment statement (e.g., ``counter = reactive.Value(0)`` will use "counter"
+        as the name). If automatic inference fails, the name will be ``None`` and logs
+        will show ``"<unnamed>"``. Input values created by Shiny will have their names
+        set automatically based on their input IDs.
 
     Returns
     -------
@@ -117,24 +124,102 @@ class Value(Generic[T]):
     # - Value(1) works, with T is inferred to be int.
     @overload
     def __init__(
-        self, value: MISSING_TYPE = MISSING, *, read_only: bool = False
+        self,
+        value: MISSING_TYPE = MISSING,
+        *,
+        read_only: bool = False,
+        name: str | None = None,
     ) -> None: ...
 
     @overload
-    def __init__(self, value: T, *, read_only: bool = False) -> None: ...
+    def __init__(
+        self, value: T, *, read_only: bool = False, name: str | None = None
+    ) -> None: ...
 
     # If `value` is MISSING, then `get()` will raise a SilentException, until a new
     # value is set. Calling `unset()` will set the value to MISSING.
     def __init__(
-        self, value: T | MISSING_TYPE = MISSING, *, read_only: bool = False
+        self,
+        value: T | MISSING_TYPE = MISSING,
+        *,
+        read_only: bool = False,
+        name: str | None = None,
     ) -> None:
         self._value: T | MISSING_TYPE = value
         self._read_only: bool = read_only
         self._value_dependents: Dependents = Dependents()
         self._is_set_dependents: Dependents = Dependents()
-        # Optional name for OpenTelemetry logging
-        # Set by Inputs when the value is added to the inputs map
-        self._name: str | None = None
+        # Optional name for OpenTelemetry logging and debugging
+        # Priority: 1) explicit name parameter, 2) inferred from assignment, 3) set by Inputs, 4) None
+        if name is not None:
+            self._name = name
+        else:
+            self._name = self._try_infer_name()
+
+    def _try_infer_name(self) -> str | None:
+        """
+        Attempt to infer the variable name from the call stack.
+
+        This examines the frame where Value() was instantiated and tries
+        to parse the assignment statement to extract the variable name.
+
+        Returns None if the name cannot be reliably determined.
+
+        Examples of what works:
+        - counter = reactive.Value(0) → "counter"
+        - self.counter = reactive.Value(0) → "counter"
+
+        Examples of what doesn't work (returns None):
+        - values = [reactive.Value(0), reactive.Value(1)]
+        - reactive.Value(0)  # No assignment
+        - Complex expressions
+        """
+        import inspect
+        import re
+
+        try:
+            # Walk up the stack: [0] = _try_infer_name, [1] = __init__, [2] = caller
+            for frame_info in inspect.stack()[2:]:
+                filename = frame_info.filename
+
+                # Skip internal shiny package code (but not test files)
+                # Check for shiny module code by looking for shiny package path patterns
+                if filename.startswith("<"):
+                    continue
+
+                # Skip if it's in the shiny package itself (e.g., shiny/reactive/_reactives.py)
+                # but NOT if it's a test file (e.g., tests/pytest/test_*.py)
+                import os
+
+                basename = os.path.basename(filename)
+                if "shiny" in filename and not basename.startswith("test_"):
+                    # Check if it's actually in the shiny package directory
+                    path_parts = filename.split(os.sep)
+                    if "shiny" in path_parts and "tests" not in path_parts:
+                        continue
+
+                # Get the source line
+                if frame_info.code_context:
+                    line = frame_info.code_context[0].strip()
+
+                    # Pattern 1: var_name = reactive.Value(...)
+                    match = re.match(r"^(\w+)\s*=\s*reactive\.Value", line)
+                    if match:
+                        return match.group(1)
+
+                    # Pattern 2: self.var_name = reactive.Value(...)
+                    match = re.match(r"^\w+\.(\w+)\s*=\s*reactive\.Value", line)
+                    if match:
+                        return match.group(1)
+
+                # Stop after first user code frame
+                break
+
+        except Exception:
+            # If anything fails, silently return None
+            pass
+
+        return None
 
     def __call__(self) -> T:
         return self.get()
