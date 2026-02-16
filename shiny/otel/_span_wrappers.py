@@ -123,18 +123,22 @@ def with_otel_span(
                 if session is not None and hasattr(session, "id"):
                     span.set_attribute("session.id", session.id)
 
+                # Sanitize the error if needed before recording/setting status
+                sanitized_exc = maybe_sanitize_error(e, session=session)
+
                 # Only record the exception once at the innermost span where it originates
                 # Parent spans will still get ERROR status, but won't duplicate the exception details
                 if not has_otel_exception_been_recorded(e):
-                    # Sanitize the error if needed before recording
-                    sanitized_exc = maybe_sanitize_error(e)
                     span.record_exception(sanitized_exc)
-                    # Mark the original exception so parent spans don't record it again
+                    # Mark the original exception so parent spans don't record it again.
+                    # Python propagates the same exception object when re-raising (not a copy),
+                    # so this marking will be visible to all parent spans.
                     mark_otel_exception_as_recorded(e)
 
                 # Always set error status on all spans that encounter the error
-                sanitized_exc = maybe_sanitize_error(e)
                 span.set_status(Status(StatusCode.ERROR, str(sanitized_exc)))
+            # Re-raise the original exception (not sanitized_exc) so the exception object
+            # propagates unchanged to parent spans with the marking intact
             raise
 
 
@@ -248,26 +252,27 @@ async def with_otel_span_async(
                 span.set_status(Status(StatusCode.OK))
             else:
                 # Add session ID to span attributes if available
-                try:
-                    from ..session import get_current_session
+                from ..session import get_current_session
 
-                    session = get_current_session()
-                    if session is not None and hasattr(session, "id"):
-                        span.set_attribute("session.id", session.id)
-                except ImportError:
-                    # Import failed, continue without session ID
-                    pass
+                session = get_current_session()
+                if session is not None and hasattr(session, "id"):
+                    span.set_attribute("session.id", session.id)
+
+                # Sanitize the error if needed before recording/setting status
+                sanitized_exc = maybe_sanitize_error(e, session=session)
 
                 # Only record the exception once at the innermost span where it originates
                 # Parent spans will still get ERROR status, but won't duplicate the exception details
                 if not has_otel_exception_been_recorded(e):
-                    # Sanitize the error if needed before recording
-                    sanitized_exc = maybe_sanitize_error(e)
                     span.record_exception(sanitized_exc)
-                    # Mark the original exception so parent spans don't record it again
+                    # Mark the original exception so parent spans don't record it again.
+                    # Python propagates the same exception object when re-raising (not a copy),
+                    # so this marking will be visible to all parent spans.
                     mark_otel_exception_as_recorded(e)
 
                 # Always set error status on all spans that encounter the error
-                sanitized_exc = maybe_sanitize_error(e)
                 span.set_status(Status(StatusCode.ERROR, str(sanitized_exc)))
+
+            # Re-raise the original exception (not sanitized_exc) so the exception object
+            # propagates unchanged to parent spans with the marking intact
             raise

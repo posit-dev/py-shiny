@@ -188,13 +188,13 @@ def maybe_sanitize_error(
     if isinstance(exception, SafeException):
         return exception
 
-    # Check if we should sanitize
-    if not should_sanitize_errors(session):
-        return exception
-
     # Get the session if not provided
     if session is None:
         session = get_current_session()
+
+    # Check if we should sanitize
+    if not should_sanitize_errors(session):
+        return exception
 
     # Get the generic error message
     # If no session is available, use the default message
@@ -266,6 +266,11 @@ def mark_otel_exception_as_recorded(exception: Exception) -> None:
     This prevents the same exception from being recorded multiple times
     as it propagates up through parent spans. All parent spans will still
     get ERROR status, but only the innermost span records the exception details.
+
+    When an exception is raised and re-raised through multiple spans, Python
+    propagates the same exception object (not a copy). This allows parent spans
+    to detect that the exception has already been recorded by checking for the
+    marker set by this function.
 
     Parameters
     ----------
