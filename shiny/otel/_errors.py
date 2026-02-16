@@ -10,6 +10,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from ..session import get_current_session
+from ..types import (
+    SafeException,
+    SilentCancelOutputException,
+    SilentException,
+    SilentOperationInProgressException,
+)
 
 if TYPE_CHECKING:
     from ..session import Session
@@ -61,12 +67,6 @@ def is_silent_error(exception: Exception) -> bool:
     - `shiny.types.SilentCancelOutputException`
     - `shiny.types.SilentOperationInProgressException`
     """
-    from ..types import (
-        SilentCancelOutputException,
-        SilentException,
-        SilentOperationInProgressException,
-    )
-
     return isinstance(
         exception,
         (
@@ -184,8 +184,6 @@ def maybe_sanitize_error(
     - `should_sanitize_errors`
     - `shiny.types.SafeException`
     """
-    from ..types import SafeException
-
     # SafeException always bypasses sanitization
     if isinstance(exception, SafeException):
         return exception
@@ -247,9 +245,9 @@ def has_otel_exception_been_recorded(exception: Exception) -> bool:
 
     Notes
     -----
-    This function checks for a private attribute `_shiny_otel_recorded` on the
-    exception object. This attribute is set by `mark_otel_exception_as_recorded()`
-    when the exception is first recorded in a span.
+    This function checks for a `_shiny_otel_exception_recorded` key in the exception's
+    `__dict__`. This key is set by `mark_otel_exception_as_recorded()` when
+    the exception is first recorded in a span.
 
     This pattern matches R Shiny's behavior where exceptions are only recorded
     at the innermost reactive span, while parent spans still get ERROR status.
@@ -258,7 +256,7 @@ def has_otel_exception_been_recorded(exception: Exception) -> bool:
     --------
     - `mark_otel_exception_as_recorded`
     """
-    return getattr(exception, "_shiny_otel_recorded", False)
+    return exception.__dict__.get("_shiny_otel_exception_recorded", False)
 
 
 def mark_otel_exception_as_recorded(exception: Exception) -> None:
@@ -285,8 +283,8 @@ def mark_otel_exception_as_recorded(exception: Exception) -> None:
 
     Notes
     -----
-    This function sets a private attribute `_shiny_otel_recorded` on the exception
-    object. This attribute is checked by `has_otel_exception_been_recorded()`.
+    This function sets a `_shiny_otel_exception_recorded` key in the exception's `__dict__`.
+    This key is checked by `has_otel_exception_been_recorded()`.
 
     This pattern matches R Shiny's behavior where exceptions are only recorded
     at the innermost reactive span, while parent spans still get ERROR status.
@@ -295,4 +293,4 @@ def mark_otel_exception_as_recorded(exception: Exception) -> None:
     --------
     - `has_otel_exception_been_recorded`
     """
-    exception._shiny_otel_recorded = True  # type: ignore[attr-defined]
+    exception.__dict__["_shiny_otel_exception_recorded"] = True
