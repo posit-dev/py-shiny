@@ -63,9 +63,9 @@ def is_silent_error(exception: Exception) -> bool:
 
     See Also
     --------
-    - `shiny.types.SilentException`
-    - `shiny.types.SilentCancelOutputException`
-    - `shiny.types.SilentOperationInProgressException`
+    * `shiny.types.SilentException`
+    * `shiny.types.SilentCancelOutputException`
+    * `shiny.types.SilentOperationInProgressException`
     """
     return isinstance(
         exception,
@@ -117,8 +117,8 @@ def should_sanitize_errors(session: Session | None = None) -> bool:
 
     See Also
     --------
-    - `shiny.types.SafeException`
-    - `maybe_sanitize_error`
+    * `shiny.types.SafeException`
+    * `maybe_sanitize_error`
     """
     if session is None:
         # Try to get current session from context
@@ -181,8 +181,8 @@ def maybe_sanitize_error(
 
     See Also
     --------
-    - `should_sanitize_errors`
-    - `shiny.types.SafeException`
+    * `should_sanitize_errors`
+    * `shiny.types.SafeException`
     """
     # SafeException always bypasses sanitization
     if isinstance(exception, SafeException):
@@ -246,7 +246,7 @@ def has_otel_exception_been_recorded(exception: Exception) -> bool:
 
     See Also
     --------
-    - `mark_otel_exception_as_recorded`
+    * `mark_otel_exception_as_recorded`
     """
     return exception.__dict__.get("_shiny_otel_exception_recorded", False)
 
@@ -288,6 +288,6 @@ def mark_otel_exception_as_recorded(exception: Exception) -> None:
 
     See Also
     --------
-    - `has_otel_exception_been_recorded`
+    * `has_otel_exception_been_recorded`
     """
     exception.__dict__["_shiny_otel_exception_recorded"] = True
