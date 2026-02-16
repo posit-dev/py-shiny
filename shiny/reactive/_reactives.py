@@ -157,6 +157,47 @@ class Value(Generic[T]):
         else:
             self._name = self._try_infer_name()
 
+    @staticmethod
+    def _is_user_code_frame(filename: str) -> bool:
+        """
+        Check if a filename represents user code (not internal shiny package code).
+
+        Parameters
+        ----------
+        filename
+            Path to the file to check
+
+        Returns
+        -------
+        bool
+            True if the file is user code, False if it's internal shiny code
+        """
+        import os
+
+        # Skip special/generated frames
+        if not filename or filename.startswith("<"):
+            return False
+
+        # Test files are always considered user code
+        basename = os.path.basename(filename)
+        if basename.startswith("test_"):
+            return True
+
+        # Check if file is within shiny package directory
+        try:
+            shiny_package_dir = os.path.dirname(os.path.dirname(__file__))
+            # Use os.path.commonpath to check if file is under shiny package
+            common = os.path.commonpath([filename, shiny_package_dir])
+            if common == shiny_package_dir:
+                # File is within shiny package, skip it unless it's in tests
+                if "tests" not in filename:
+                    return False
+        except (ValueError, TypeError):
+            # Different drives on Windows or other path issues - treat as user code
+            pass
+
+        return True
+
     def _try_infer_name(self) -> str | None:
         """
         Attempt to infer the variable name from the call stack.
@@ -176,36 +217,16 @@ class Value(Generic[T]):
         - Complex expressions
         """
         import inspect
-        import os
         import re
 
         try:
-            # Determine shiny package directory for filtering
-            shiny_package_dir = os.path.dirname(os.path.dirname(__file__))
-
             # Walk up the stack: [0] = _try_infer_name, [1] = __init__, [2] = caller
             for frame_info in inspect.stack()[2:]:
                 filename = frame_info.filename
 
-                # Skip internal shiny package code (but not test files)
-                if filename.startswith("<"):
+                # Skip internal shiny code, keep user code
+                if not self._is_user_code_frame(filename):
                     continue
-
-                # Skip if it's in the shiny package itself
-                # but NOT if it's a test file
-                basename = os.path.basename(filename)
-                if not basename.startswith("test_"):
-                    # Check if file is within shiny package directory
-                    try:
-                        # Use os.path.commonpath to check if file is under shiny package
-                        common = os.path.commonpath([filename, shiny_package_dir])
-                        if common == shiny_package_dir:
-                            # File is within shiny package, skip it unless it's in tests
-                            if "tests" not in filename:
-                                continue
-                    except (ValueError, TypeError):
-                        # Different drives on Windows or other path issues
-                        pass
 
                 # Get the source line
                 if frame_info.code_context:
@@ -254,35 +275,15 @@ class Value(Generic[T]):
         the shiny package (excluding tests), which represents user code.
         """
         import inspect
-        import os
 
         try:
-            # Determine shiny package directory for filtering
-            shiny_package_dir = os.path.dirname(os.path.dirname(__file__))
-
             # Stack: [0] = _extract_caller_source_ref, [1] = _set, [2] = caller
             for frame_info in inspect.stack()[2:]:
                 filename = frame_info.filename
 
-                # Skip frames we can't get info from
-                if not filename or filename.startswith("<"):
+                # Skip internal shiny code, keep user code
+                if not self._is_user_code_frame(filename):
                     continue
-
-                # Skip if it's in the shiny package itself
-                # but NOT if it's a test file
-                basename = os.path.basename(filename)
-                if not basename.startswith("test_"):
-                    # Check if file is within shiny package directory
-                    try:
-                        # Use os.path.commonpath to check if file is under shiny package
-                        common = os.path.commonpath([filename, shiny_package_dir])
-                        if common == shiny_package_dir:
-                            # File is within shiny package, skip it unless it's in tests
-                            if "tests" not in filename:
-                                continue
-                    except (ValueError, TypeError):
-                        # Different drives on Windows or other path issues
-                        pass
 
                 # Found a user code frame - extract attributes
                 attrs: dict[str, Any] = {}
