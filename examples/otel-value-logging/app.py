@@ -59,7 +59,7 @@ def server(input, output, session):
     def _():
         # When the button is clicked, update the counter
         # This will generate a log event
-        counter.set(counter.get() + 1)
+        counter.set(counter() + 1)
 
     @render.text
     def slider_value():
