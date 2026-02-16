@@ -118,8 +118,8 @@ def with_otel_span(
                     session = get_current_session()
                     if session is not None and hasattr(session, "id"):
                         span.set_attribute("session.id", session.id)
-                except (LookupError, ImportError):
-                    # No session context, continue without session ID
+                except ImportError:
+                    # Import failed, continue without session ID
                     pass
 
                 # Sanitize the error if needed before recording
@@ -240,8 +240,8 @@ async def with_otel_span_async(
                     session = get_current_session()
                     if session is not None and hasattr(session, "id"):
                         span.set_attribute("session.id", session.id)
-                except (LookupError, ImportError):
-                    # No session context, continue without session ID
+                except ImportError:
+                    # Import failed, continue without session ID
                     pass
 
                 # Sanitize the error if needed before recording

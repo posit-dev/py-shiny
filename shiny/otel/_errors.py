@@ -118,13 +118,9 @@ def should_sanitize_errors(session: Session | None = None) -> bool:
     """
     if session is None:
         # Try to get current session from context
-        try:
-            from ..session import get_current_session
+        from ..session import get_current_session
 
-            session = get_current_session()
-        except LookupError:
-            # No session context, default to True for security
-            return True
+        session = get_current_session()
 
     # Session might still be None if get_current_session() returned None
     if session is None:
@@ -198,13 +194,9 @@ def maybe_sanitize_error(
 
     # Get the session if not provided
     if session is None:
-        try:
-            from ..session import get_current_session
+        from ..session import get_current_session
 
-            session = get_current_session()
-        except LookupError:
-            # No session context available
-            pass
+        session = get_current_session()
 
     # Get the generic error message
     # If no session is available, use the default message
