@@ -120,7 +120,7 @@ class TestErrorSanitization:
 
         # Should return generic Exception type to avoid leaking info through exception type
         assert isinstance(sanitized, Exception)
-        assert type(sanitized) == Exception  # Exactly Exception, not a subclass
+        assert type(sanitized) is Exception  # Exactly Exception, not a subclass
         assert str(sanitized) == mock_session.app.sanitize_error_msg
         assert "secret123" not in str(sanitized)
 
@@ -168,7 +168,7 @@ class TestErrorSanitization:
 
         # Should use generic Exception type to avoid leaking info through exception type
         assert isinstance(sanitized, Exception)
-        assert type(sanitized) == Exception  # Exactly Exception, not a subclass
+        assert type(sanitized) is Exception  # Exactly Exception, not a subclass
 
 
 class TestSpanExceptionRecording:
