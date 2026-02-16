@@ -12,6 +12,8 @@ import os
 from unittest.mock import patch
 
 import pytest
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
 from shiny.otel import (
     OtelCollectLevel,
@@ -23,7 +25,7 @@ from shiny.otel import (
 )
 from shiny.otel._span_wrappers import with_otel_span, with_otel_span_async
 
-from .otel_helpers import patch_otel_tracing_state, reset_otel_tracing_state
+from .otel_helpers import patch_otel_tracing_state
 
 
 class TestCore:
@@ -184,9 +186,11 @@ class TestSpanWrappers:
         assert callable(with_otel_span)
         assert callable(with_otel_span_async)
 
-    def test_with_otel_span_creates_span(self, otel_tracer_provider):
+    def test_with_otel_span_creates_span(
+        self, otel_tracer_provider: tuple[TracerProvider, InMemorySpanExporter]
+    ):
         """Test that with_otel_span creates a span when collection is enabled."""
-        provider, exporter = otel_tracer_provider
+        _provider, _exporter = otel_tracer_provider
 
         # Force collection by mocking should_otel_collect
         with patch("shiny.otel._collect.should_otel_collect", return_value=True):
@@ -198,9 +202,11 @@ class TestSpanWrappers:
                 assert span.is_recording() is True
 
     @pytest.mark.asyncio
-    async def test_with_otel_span_async_creates_span(self, otel_tracer_provider):
+    async def test_with_otel_span_async_creates_span(
+        self, otel_tracer_provider: tuple[TracerProvider, InMemorySpanExporter]
+    ):
         """Test that with_otel_span_async creates a span when collection is enabled."""
-        provider, exporter = otel_tracer_provider
+        _provider, _exporter = otel_tracer_provider
 
         # Force collection by mocking should_otel_collect
         with patch("shiny.otel._collect.should_otel_collect", return_value=True):
