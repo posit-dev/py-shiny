@@ -49,7 +49,6 @@ def test_numeric_input_toolbar_preset_buttons(page: Page, app: ShinyAppProc) -> 
 
     # Click preset 10
     btn_preset_10.click()
-    page.wait_for_timeout(100)
     quantity.expect_value("10")
     expect(output).to_contain_text("Quantity: 10")
     # Move cursor away and click elsewhere to unfocus and hide tooltip
@@ -58,7 +57,6 @@ def test_numeric_input_toolbar_preset_buttons(page: Page, app: ShinyAppProc) -> 
 
     # Click preset 50
     btn_preset_50.click()
-    page.wait_for_timeout(100)
     quantity.expect_value("50")
     expect(output).to_contain_text("Quantity: 50")
     # Move cursor away and click elsewhere to unfocus and hide tooltip
@@ -67,7 +65,6 @@ def test_numeric_input_toolbar_preset_buttons(page: Page, app: ShinyAppProc) -> 
 
     # Click preset 100
     btn_preset_100.click()
-    page.wait_for_timeout(100)
     quantity.expect_value("100")
     expect(output).to_contain_text("Quantity: 100")
     # Move cursor away and click elsewhere to unfocus and hide tooltip
@@ -76,7 +73,6 @@ def test_numeric_input_toolbar_preset_buttons(page: Page, app: ShinyAppProc) -> 
 
     # Click reset
     btn_reset.click()
-    page.wait_for_timeout(100)
     quantity.expect_value("1")
     expect(output).to_contain_text("Quantity: 1")
 
@@ -194,7 +190,6 @@ def test_text_area_toolbar_clear_button(page: Page, app: ShinyAppProc) -> None:
 
     # Click clear button
     btn_clear.click()
-    page.wait_for_timeout(100)
 
     # Text should be cleared
     notes.expect_value("")
@@ -213,12 +208,10 @@ def test_text_area_toolbar_select(page: Page, app: ShinyAppProc) -> None:
 
     # Change to small
     text_size.set("small")
-    page.wait_for_timeout(100)
     expect(output).to_contain_text("Text Size: small")
 
     # Change to large
     text_size.set("large")
-    page.wait_for_timeout(100)
     expect(output).to_contain_text("Text Size: large")
 
 
@@ -292,17 +285,14 @@ def test_submit_textarea_toolbar_select(page: Page, app: ShinyAppProc) -> None:
 
     # Change to high
     priority.set("high")
-    page.wait_for_timeout(100)
     expect(output).to_contain_text("Priority: high")
 
     # Change to urgent
     priority.set("urgent")
-    page.wait_for_timeout(100)
     expect(output).to_contain_text("Priority: urgent")
 
     # Change to low
     priority.set("low")
-    page.wait_for_timeout(100)
     expect(output).to_contain_text("Priority: low")
 
 
@@ -324,7 +314,6 @@ def test_submit_textarea_toolbar_buttons(page: Page, app: ShinyAppProc) -> None:
 
     # Click attach button
     btn_attach.click()
-    page.wait_for_timeout(100)
     expect(output).to_contain_text("Attach: 1")
     # Move cursor away and click elsewhere to unfocus and hide tooltip
     page.mouse.move(0, 0)
@@ -332,7 +321,6 @@ def test_submit_textarea_toolbar_buttons(page: Page, app: ShinyAppProc) -> None:
 
     # Click emoji button
     btn_emoji.click()
-    page.wait_for_timeout(100)
     expect(output).to_contain_text("Emoji: 1")
     # Move cursor away and click elsewhere to unfocus and hide tooltip
     page.mouse.move(0, 0)
@@ -340,7 +328,6 @@ def test_submit_textarea_toolbar_buttons(page: Page, app: ShinyAppProc) -> None:
 
     # Click copy button
     btn_copy_draft.click()
-    page.wait_for_timeout(100)
     expect(output).to_contain_text("Copy: 1")
 
 
@@ -357,7 +344,6 @@ def test_submit_textarea_submit_functionality(page: Page, app: ShinyAppProc) -> 
     # Type a message and submit
     message.set("Test message")
     message.loc_button.click()
-    page.wait_for_timeout(200)
 
     # Submit count should increment
     expect(output).to_contain_text("Submits: 1")
