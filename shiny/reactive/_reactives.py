@@ -35,8 +35,9 @@ from .. import _utils
 from .._docstring import add_example
 from .._utils import is_async_callable, run_coro_sync
 from .._validation import req
-from ..otel import OtelCollectLevel
+from ..otel import OtelCollectLevel, should_otel_collect
 from ..otel._attributes import extract_source_ref
+from ..otel._core import emit_otel_log
 from ..otel._labels import (
     generate_reactive_label,
     get_otel_label_modifier,
@@ -51,6 +52,7 @@ from ..types import (
     SilentException,
 )
 from ._core import Context, Dependents, ReactiveWarning, isolate
+from ._utils import is_user_code_frame
 
 if TYPE_CHECKING:
     from .. import Session
@@ -82,6 +84,13 @@ class Value(Generic[T]):
         An optional initial value.
     read_only
         If ``True``, then the reactive value cannot be `set()`.
+    name
+        An optional name for the reactive value, used in OpenTelemetry logging and
+        debugging. If not provided, the name will be automatically inferred from the
+        assignment statement (e.g., ``counter = reactive.Value(0)`` will use "counter"
+        as the name). If automatic inference fails, the name will be ``None`` and logs
+        will show ``"<unnamed>"``. Input values created by Shiny will have their names
+        set automatically based on their input IDs.
 
     Returns
     -------
@@ -116,21 +125,143 @@ class Value(Generic[T]):
     # - Value(1) works, with T is inferred to be int.
     @overload
     def __init__(
-        self, value: MISSING_TYPE = MISSING, *, read_only: bool = False
+        self,
+        value: MISSING_TYPE = MISSING,
+        *,
+        read_only: bool = False,
+        name: str | None = None,
     ) -> None: ...
 
     @overload
-    def __init__(self, value: T, *, read_only: bool = False) -> None: ...
+    def __init__(
+        self, value: T, *, read_only: bool = False, name: str | None = None
+    ) -> None: ...
 
     # If `value` is MISSING, then `get()` will raise a SilentException, until a new
     # value is set. Calling `unset()` will set the value to MISSING.
     def __init__(
-        self, value: T | MISSING_TYPE = MISSING, *, read_only: bool = False
+        self,
+        value: T | MISSING_TYPE = MISSING,
+        *,
+        read_only: bool = False,
+        name: str | None = None,
     ) -> None:
         self._value: T | MISSING_TYPE = value
         self._read_only: bool = read_only
         self._value_dependents: Dependents = Dependents()
         self._is_set_dependents: Dependents = Dependents()
+        # Optional name for OpenTelemetry logging and debugging
+        # Priority during initialization: 1) explicit name parameter, 2) inferred from assignment, 3) None
+        # Can be overwritten later by Inputs class when value is added/accessed
+        if name is not None:
+            self._name = name
+        else:
+            self._name = self._try_infer_name()
+
+    def _try_infer_name(self) -> str | None:
+        """
+        Attempt to infer the variable name from the call stack.
+
+        This examines the frame where Value() was instantiated and tries
+        to parse the assignment statement to extract the variable name.
+
+        Returns None if the name cannot be reliably determined.
+
+        Examples of what works:
+        - counter = reactive.Value(0) → "counter"
+        - self.counter = reactive.Value(0) → "counter"
+
+        Examples of what doesn't work (returns None):
+        - values = [reactive.Value(0), reactive.Value(1)]
+        - reactive.Value(0)  # No assignment
+        - Complex expressions
+        """
+        import inspect
+        import re
+
+        try:
+            # Walk up the stack: [0] = _try_infer_name, [1] = __init__, [2] = caller
+            for frame_info in inspect.stack()[2:]:
+                filename = frame_info.filename
+
+                # Skip internal shiny code, keep user code
+                if not is_user_code_frame(filename):
+                    continue
+
+                # Get the source line
+                if frame_info.code_context:
+                    line = frame_info.code_context[0].strip()
+
+                    # Pattern 1: var_name = reactive.Value(...)
+                    match = re.match(r"^(\w+)\s*=\s*reactive\.Value", line)
+                    if match:
+                        return match.group(1)
+
+                    # Pattern 2: self.var_name = reactive.Value(...)
+                    match = re.match(r"^\w+\.(\w+)\s*=\s*reactive\.Value", line)
+                    if match:
+                        return match.group(1)
+
+                # Stop after first user code frame
+                break
+
+        except Exception:
+            # If anything fails, silently return None
+            pass
+
+        return None
+
+    def _extract_caller_source_ref(self) -> dict[str, Any]:
+        """
+        Extract source reference attributes from the caller of _set().
+
+        This captures where the value update originated (file, line, function),
+        which is useful for debugging and tracing reactive value changes.
+
+        Returns
+        -------
+        dict[str, Any]
+            Dictionary with code.filepath, code.lineno, and code.function keys.
+            Returns empty dict if source information is unavailable.
+
+        Notes
+        -----
+        Following OpenTelemetry semantic conventions for code attributes:
+        - code.filepath: Full path to source file
+        - code.lineno: Line number where _set() was called
+        - code.function: Function name containing the call
+
+        This method walks the call stack to find the first frame outside
+        the shiny package (excluding tests), which represents user code.
+        """
+        import inspect
+
+        try:
+            # Stack: [0] = _extract_caller_source_ref, [1] = _set, [2] = caller
+            for frame_info in inspect.stack()[2:]:
+                filename = frame_info.filename
+
+                # Skip internal shiny code, keep user code
+                if not is_user_code_frame(filename):
+                    continue
+
+                # Found a user code frame - extract attributes
+                attrs: dict[str, Any] = {}
+                attrs["code.filepath"] = filename
+
+                if frame_info.lineno:
+                    attrs["code.lineno"] = frame_info.lineno
+
+                if frame_info.function:
+                    attrs["code.function"] = frame_info.function
+
+                return attrs
+
+        except Exception:
+            # If anything fails, silently return empty dict
+            pass
+
+        return {}
 
     def __call__(self) -> T:
         return self.get()
@@ -187,6 +318,8 @@ class Value(Generic[T]):
     # The ._set() method allows setting read-only Value objects. This is used when the
     # Value is part of a session.Inputs object, and the session wants to set it.
     def _set(self, value: T) -> bool:
+        from ..session import get_current_session
+
         if self._value is value:
             return False
 
@@ -195,6 +328,37 @@ class Value(Generic[T]):
 
         self._value = value
         self._value_dependents.invalidate()
+
+        # Log value update for OpenTelemetry
+        # Only log when collection level is REACTIVITY or higher
+        if should_otel_collect(OtelCollectLevel.REACTIVITY):
+            # Build log message with namespace support
+            value_name = self._name or "<unnamed>"
+
+            # Add namespace prefix if present
+            session = get_current_session()
+            if session is not None:
+                # session.ns is a ResolvedId (subclass of str)
+                # It will be an empty string ("") for Root namespace
+                ns_str = str(session.ns)
+                if ns_str:  # Only use non-empty namespaces
+                    value_name = f"{ns_str}:{value_name}"
+
+            log_body = f"Set reactiveVal {value_name}"
+
+            # Build attributes dict with session ID and source reference
+            attributes: dict[str, Any] = {}
+
+            # Add session ID if available
+            if session is not None and hasattr(session, "id"):
+                attributes["session.id"] = session.id
+
+            # Add source reference (file, line, function where _set was called)
+            srcref_attrs = self._extract_caller_source_ref()
+            attributes.update(srcref_attrs)
+
+            emit_otel_log(log_body, severity_text="DEBUG", attributes=attributes)
+
         return True
 
     def unset(self) -> None:

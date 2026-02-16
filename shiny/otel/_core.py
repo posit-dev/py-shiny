@@ -12,6 +12,7 @@ __all__ = (
     "get_otel_tracer",
     "get_otel_logger",
     "is_otel_tracing_enabled",
+    "emit_otel_log",
 )
 
 # Global state for lazy initialization
@@ -86,3 +87,63 @@ def is_otel_tracing_enabled() -> bool:
         with tracer.start_as_current_span("_otel_is_recording") as span:
             _tracing_enabled = span.is_recording()
     return _tracing_enabled
+
+
+def emit_otel_log(
+    body: str,
+    severity_text: str = "INFO",
+    attributes: Union[dict[str, Any], None] = None,
+) -> None:
+    """
+    Emit an OpenTelemetry log record.
+
+    This function provides a simple interface for emitting structured log events
+    to OpenTelemetry. It handles logger initialization and gracefully no-ops when
+    OTel SDK is not configured.
+
+    Parameters
+    ----------
+    body
+        The log message body (main text of the log).
+    severity_text
+        The severity level of the log. Common values: "TRACE", "DEBUG", "INFO",
+        "WARN", "ERROR", "FATAL". Defaults to "INFO".
+    attributes
+        Optional dictionary of attributes to attach to the log record.
+        These provide additional structured context about the event.
+
+    Examples
+    --------
+    ```python
+    from shiny.otel._core import emit_otel_log
+
+    # Simple log message
+    emit_otel_log("Value updated")
+
+    # Log with severity and attributes
+    emit_otel_log(
+        "Set reactiveVal myValue",
+        severity_text="DEBUG",
+        attributes={"session.id": session_id, "value.name": "myValue"}
+    )
+    ```
+
+    Notes
+    -----
+    This function is a no-op when the OTel SDK is not properly configured.
+    No exceptions will be raised if logging fails.
+
+    The function uses the OpenTelemetry Logs API, which follows the OpenTelemetry
+    specification for log data model.
+    """
+    try:
+        logger = get_otel_logger()
+        logger.emit(
+            body=body,
+            severity_text=severity_text,
+            attributes=attributes,
+        )
+    except Exception:
+        # Silently fail if OTel logging is not configured or fails
+        # We don't want telemetry issues to break the app
+        pass

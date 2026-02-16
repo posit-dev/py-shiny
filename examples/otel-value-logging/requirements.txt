@@ -1,0 +1,3 @@
+shiny
+opentelemetry-api
+opentelemetry-sdk
