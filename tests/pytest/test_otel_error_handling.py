@@ -66,9 +66,10 @@ def mock_session():
     session.id = "test-session-123"
     session.ns = ResolvedId("")  # Root namespace
 
-    # Create a mock app with sanitize_errors settings
+    # Create a mock app with sanitize_otel_errors settings
     app = Mock(spec=App)
-    app.sanitize_errors = False
+    app.sanitize_errors = False  # UI error sanitization
+    app.sanitize_otel_errors = True  # OTel error sanitization (default)
     app.sanitize_error_msg = "An error has occurred. Check your logs or contact the app author for clarification."
     session.app = app
 
@@ -111,26 +112,26 @@ class TestErrorSanitization:
 
     def test_should_sanitize_with_flag_enabled(self, mock_session):
         """Test that sanitization is enabled when app setting is True"""
-        mock_session.app.sanitize_errors = True
+        mock_session.app.sanitize_otel_errors = True
 
         with session_context(mock_session):
             assert should_sanitize_errors(mock_session) is True
 
     def test_should_not_sanitize_with_flag_disabled(self, mock_session):
         """Test that sanitization is disabled when app setting is False"""
-        mock_session.app.sanitize_errors = False
+        mock_session.app.sanitize_otel_errors = False
 
         with session_context(mock_session):
             assert should_sanitize_errors(mock_session) is False
 
-    def test_should_not_sanitize_without_session(self):
-        """Test that sanitization is disabled when no session is available"""
-        # Call without session context
-        assert should_sanitize_errors(None) is False
+    def test_should_sanitize_without_session(self):
+        """Test that sanitization defaults to True when no session is available"""
+        # Call without session context - should default to True for security
+        assert should_sanitize_errors(None) is True
 
     def test_maybe_sanitize_regular_exception(self, mock_session):
         """Test that regular exceptions are sanitized when enabled"""
-        mock_session.app.sanitize_errors = True
+        mock_session.app.sanitize_otel_errors = True
         exc = ValueError("Database password is 'secret123'")
 
         with session_context(mock_session):
@@ -142,7 +143,7 @@ class TestErrorSanitization:
 
     def test_maybe_sanitize_safe_exception_bypasses(self, mock_session):
         """Test that SafeException bypasses sanitization"""
-        mock_session.app.sanitize_errors = True
+        mock_session.app.sanitize_otel_errors = True
         exc = SafeException("This is safe to show")
 
         with session_context(mock_session):
@@ -154,7 +155,7 @@ class TestErrorSanitization:
 
     def test_maybe_sanitize_disabled_returns_original(self, mock_session):
         """Test that exceptions are not sanitized when disabled"""
-        mock_session.app.sanitize_errors = False
+        mock_session.app.sanitize_otel_errors = False
         exc = ValueError("Sensitive information")
 
         with session_context(mock_session):
@@ -164,18 +165,21 @@ class TestErrorSanitization:
         assert result is exc
         assert str(result) == "Sensitive information"
 
-    def test_maybe_sanitize_without_session_returns_original(self):
-        """Test that exceptions are not sanitized without session context"""
+    def test_maybe_sanitize_without_session_sanitizes_by_default(self):
+        """Test that exceptions are sanitized by default without session context"""
+        from shiny._app import SANITIZE_ERROR_MSG
+
         exc = ValueError("Some error")
         result = maybe_sanitize_error(exc, None)
 
-        # Should return the original exception
-        assert result is exc
-        assert str(result) == "Some error"
+        # Should return sanitized exception (defaults to True for security)
+        assert result is not exc
+        assert str(result) == SANITIZE_ERROR_MSG
+        assert "Some error" not in str(result)
 
     def test_maybe_sanitize_preserves_exception_type(self, mock_session):
         """Test that sanitization preserves exception type"""
-        mock_session.app.sanitize_errors = True
+        mock_session.app.sanitize_otel_errors = True
         exc = RuntimeError("Original message")
 
         with session_context(mock_session):
@@ -263,8 +267,8 @@ class TestSpanExceptionRecording:
         provider, exporter = otel_tracer_provider
         exporter.clear()
 
-        # Enable sanitization
-        mock_session.app.sanitize_errors = True
+        # Enable sanitization for OTel
+        mock_session.app.sanitize_otel_errors = True
 
         with session_context(mock_session):
             with patch_otel_tracing_state(tracing_enabled=True):
@@ -305,8 +309,8 @@ class TestSpanExceptionRecording:
         provider, exporter = otel_tracer_provider
         exporter.clear()
 
-        # Enable sanitization
-        mock_session.app.sanitize_errors = True
+        # Enable sanitization for OTel
+        mock_session.app.sanitize_otel_errors = True
 
         with session_context(mock_session):
             with patch_otel_tracing_state(tracing_enabled=True):

@@ -50,6 +50,7 @@ SANITIZE_ERRORS: bool = False
 SANITIZE_ERROR_MSG: str = (
     "An error has occurred. Check your logs or contact the app author for clarification."
 )
+SANITIZE_OTEL_ERRORS: bool = True
 
 
 class App:
@@ -111,6 +112,18 @@ class App:
     The message to show when an error occurs and ``SANITIZE_ERRORS=True``.
     """
 
+    sanitize_otel_errors: bool = True
+    """
+    Whether to sanitize error messages in OpenTelemetry spans and logs. When ``True``
+    (the default), exception messages are replaced with a generic message before being
+    sent to telemetry backends, preventing sensitive information from being leaked to
+    external observability systems. Set to ``False`` only in trusted development
+    environments where telemetry data is kept secure.
+
+    Note: This is separate from ``sanitize_errors`` which controls UI error messages.
+    ``SafeException`` messages bypass sanitization regardless of this setting.
+    """
+
     ui: RenderedHTML | Callable[[Request], Tag | TagList]
     server: Callable[[Inputs, Outputs, Session], None]
 
@@ -155,6 +168,7 @@ class App:
         self.lib_prefix: str = LIB_PREFIX
         self.sanitize_errors: bool = SANITIZE_ERRORS
         self.sanitize_error_msg: str = SANITIZE_ERROR_MSG
+        self.sanitize_otel_errors: bool = SANITIZE_OTEL_ERRORS
 
         if static_assets is None:
             static_assets = {}

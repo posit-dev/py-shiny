@@ -71,21 +71,21 @@ def is_silent_error(exception: Exception) -> bool:
 
 def should_sanitize_errors(session: Session | None = None) -> bool:
     """
-    Check if error messages should be sanitized based on app settings.
+    Check if error messages should be sanitized for OpenTelemetry based on app settings.
 
     When sanitization is enabled, exception messages are replaced with a generic
-    message to avoid leaking sensitive information in production environments.
+    message to avoid leaking sensitive information to telemetry backends.
 
     Parameters
     ----------
     session
         The current session. If None, attempts to get the current session from context.
-        If no session is available, returns False (no sanitization).
+        If no session is available, defaults to True for security.
 
     Returns
     -------
     bool
-        True if errors should be sanitized, False otherwise.
+        True if errors should be sanitized for OpenTelemetry, False otherwise.
 
     Examples
     --------
@@ -94,12 +94,16 @@ def should_sanitize_errors(session: Session | None = None) -> bool:
     >>> # In a Shiny app context:
     >>> session = get_current_session()
     >>> should_sanitize_errors(session)
-    False  # Default is False
+    True  # Default is True for security
 
     Notes
     -----
-    Error sanitization is controlled by the `App.sanitize_errors` setting, which
-    may be enabled by default in production environments like Posit Connect.
+    Error sanitization for OpenTelemetry is controlled by the `App.sanitize_otel_errors`
+    setting, which defaults to True to prevent sensitive information from being sent to
+    external telemetry backends. This is separate from `App.sanitize_errors` which
+    controls UI error messages.
+
+    When no session is available, this function defaults to True as a security precaution.
 
     `SafeException` messages bypass sanitization even when this setting is True.
 
@@ -115,21 +119,21 @@ def should_sanitize_errors(session: Session | None = None) -> bool:
 
             session = get_current_session()
         except LookupError:
-            # No session context, don't sanitize
-            return False
+            # No session context, default to True for security
+            return True
 
     # Session might still be None if get_current_session() returned None
     if session is None:
-        return False
+        return True
 
-    return session.app.sanitize_errors
+    return session.app.sanitize_otel_errors
 
 
 def maybe_sanitize_error(
     exception: Exception, session: Session | None = None
 ) -> Exception:
     """
-    Sanitize an exception message if required by app settings.
+    Sanitize an exception message for OpenTelemetry if required by app settings.
 
     This function checks if error sanitization is enabled and if the exception
     is not a `SafeException`. If both conditions are met, it returns a new
@@ -170,6 +174,9 @@ def maybe_sanitize_error(
     `SafeException` exceptions always bypass sanitization, allowing developers
     to generate user-friendly error messages even when sanitization is enabled.
 
+    Error sanitization for OpenTelemetry defaults to True for security. This is
+    separate from UI error sanitization (`App.sanitize_errors`).
+
     See Also
     --------
     - `should_sanitize_errors`
@@ -185,23 +192,27 @@ def maybe_sanitize_error(
     if not should_sanitize_errors(session):
         return exception
 
-    # Get the generic error message
+    # Get the session if not provided
     if session is None:
         try:
             from ..session import get_current_session
 
             session = get_current_session()
         except LookupError:
-            # No session, return original
-            return exception
+            # No session context available
+            pass
 
-    # Session might still be None if get_current_session() returned None
+    # Get the generic error message
+    # If no session is available, use the default message
     if session is None:
-        return exception
+        from .._app import SANITIZE_ERROR_MSG
+
+        sanitized_msg = SANITIZE_ERROR_MSG
+    else:
+        sanitized_msg = session.app.sanitize_error_msg
 
     # Create a new exception with the generic message
     # Preserve the exception type so error handlers can still work
-    sanitized_msg = session.app.sanitize_error_msg
     exc_type = type(exception)
 
     try:
