@@ -459,7 +459,66 @@ class TestValueNaming:
         original_name = my_input._name
 
         # Inputs overrides the name
-        my_input._name = "input_id"
+        my_input._name = "input.id"
 
-        assert my_input._name == "input_id"
+        assert my_input._name == "input.id"
         assert my_input._name != original_name
+
+    def test_inputs_sets_name_with_prefix(self, mock_session):
+        """Test that Inputs class sets names with 'input.' prefix"""
+        from shiny._namespaces import ResolvedId
+        from shiny.session._session import Inputs
+
+        # Create an Inputs object
+        inputs = Inputs({}, ns=lambda x: ResolvedId(x))
+
+        # Create a value and add it via __setitem__
+        val = reactive.Value(42)
+        inputs["my_slider"] = val
+
+        # Should have input. prefix
+        assert val._name == "input.my_slider"
+
+    def test_inputs_getitem_sets_name_with_prefix(self):
+        """Test that Inputs.__getitem__ auto-creates values with 'input.' prefix"""
+        from shiny._namespaces import ResolvedId
+        from shiny.session._session import Inputs
+
+        # Create an Inputs object
+        inputs = Inputs({}, ns=lambda x: ResolvedId(x))
+
+        # Access a non-existent input (triggers auto-creation)
+        val = inputs["slider"]
+
+        # Should have input. prefix
+        assert val._name == "input.slider"
+
+    def test_inputs_skips_clientdata_prefix(self):
+        """Test that Inputs skips 'input.' prefix for .clientdata_ keys via __setitem__"""
+        from shiny._namespaces import ResolvedId
+        from shiny.session._session import Inputs
+
+        # Create an Inputs object
+        inputs = Inputs({}, ns=lambda x: ResolvedId(x))
+
+        # Create a value with explicit name to avoid inference
+        val = reactive.Value(True, name="original_name")
+        inputs[".clientdata_output_plot_hidden"] = val
+
+        # Should keep original name (not add input. prefix for keys starting with .)
+        assert val._name == "original_name"
+
+    def test_inputs_getitem_skips_clientdata_prefix(self):
+        """Test that Inputs.__getitem__ doesn't add 'input.' prefix for .clientdata_ keys"""
+        from shiny._namespaces import ResolvedId
+        from shiny.session._session import Inputs
+
+        # Create an Inputs object
+        inputs = Inputs({}, ns=lambda x: ResolvedId(x))
+
+        # Access a .clientdata key (triggers auto-creation)
+        val = inputs[".clientdata_output_plot_hidden"]
+
+        # Should NOT have input. prefix (key starts with .)
+        # The name should just be the original key
+        assert val._name == ".clientdata_output_plot_hidden"

@@ -33,14 +33,13 @@ This example demonstrates automatic logging of reactive value updates using Open
 
 Interact with the app and watch the console output for log events:
 
-- **Move the slider** → logs `"Set reactiveVal slider"` with session ID
-- **Type in the text input** → logs `"Set reactiveVal text"` with session ID
+- **Move the slider** → logs `"Set reactiveVal input.slider"` with session ID
+- **Type in the text input** → logs `"Set reactiveVal input.text"` with session ID
 - **Click the increment button** → logs `"Set reactiveVal counter"` with session ID
-  - The *counter* variable name is automatically inferred from the assignment statement `counter = reactive.Value(0)` using stack inspection.
 
 Each log event includes:
 
-- **Body**: The log message (e.g., `"Set reactiveVal slider"`)
+- **Body**: The log message (e.g., `"Set reactiveVal input.slider"` for inputs, `"Set reactiveVal counter"` for user values)
 - **Severity**: `DEBUG` level
 - **Attributes**: `session.id` for traceability across requests
 - **Timestamp**: When the value was updated

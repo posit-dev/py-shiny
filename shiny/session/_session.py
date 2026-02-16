@@ -1398,7 +1398,7 @@ class Inputs:
     """
 
     def __init__(
-        self, values: dict[str, Value[Any]], ns: Callable[[str], str] = Root
+        self, values: dict[str, Value[Any]], ns: Callable[[str], ResolvedId] = Root
     ) -> None:
         self._map = values
         self._ns = ns
@@ -1409,7 +1409,10 @@ class Inputs:
             raise TypeError("`value` must be a reactive.Value object.")
 
         # Set the name on the Value for OpenTelemetry logging (before namespacing)
-        value._name = key
+        # The module ns will be included separately
+        # Exclude things like `.clientData`
+        if not key.startswith("."):
+            value._name = f"input.{key}"
         self._map[self._ns(key)] = value
 
     def __getitem__(self, key: str) -> Value[Any]:
@@ -1419,9 +1422,18 @@ class Inputs:
         # dependencies on input values that haven't been received from client
         # yet.
         if key not in self._map:
-            new_value = Value[Any](read_only=True)
             # Set the name for OpenTelemetry logging (before namespacing)
-            new_value._name = original_key
+            # The module ns will be included separately
+            # Exclude things like `.clientData`
+            value_name = (
+                original_key
+                if original_key.startswith(".")
+                else f"input.{original_key}"
+            )
+
+            new_value = Value[Any](read_only=True, name=value_name)
+
+            # Do not call __setitem__ directly here. The _name would be undone
             self._map[key] = new_value
 
         return self._map[key]
@@ -1725,7 +1737,11 @@ class ClientData:
                 f"ClientData value '{key}' not found. Please report this issue."
             )
 
-        return self._session.root_scope().input[id]()
+        val = self._session.root_scope().input[id]
+        if val._name is None:
+            val._name = f"clientdata {key}"
+
+        return val()
 
     def _read_output(self, id: Id | None, key: str) -> str | None:
         self._check_current_context(f"output_{key}")
@@ -1741,12 +1757,16 @@ class ClientData:
             )
 
         # Module support
+        non_namespace_id = id
         if not isinstance(id, ResolvedId):
             id = self._session.ns(id)
 
         input_id = ResolvedId(f".clientdata_output_{id}_{key}")
         if input_id in self._session.root_scope().input:
-            return self._session.root_scope().input[input_id]()
+            val = self._session.root_scope().input[input_id]
+            if val._name is None:
+                val._name = f"clientdata output {non_namespace_id} - {key}"
+            return val()
         else:
             return None
 
