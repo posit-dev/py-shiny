@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from ..session import get_current_session
+
 if TYPE_CHECKING:
     from ..session import Session
 
@@ -118,8 +120,6 @@ def should_sanitize_errors(session: Session | None = None) -> bool:
     """
     if session is None:
         # Try to get current session from context
-        from ..session import get_current_session
-
         session = get_current_session()
 
     # Session might still be None if get_current_session() returned None
@@ -194,8 +194,6 @@ def maybe_sanitize_error(
 
     # Get the session if not provided
     if session is None:
-        from ..session import get_current_session
-
         session = get_current_session()
 
     # Get the generic error message
