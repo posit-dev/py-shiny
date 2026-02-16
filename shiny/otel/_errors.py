@@ -205,16 +205,8 @@ def maybe_sanitize_error(
     else:
         sanitized_msg = session.app.sanitize_error_msg
 
-    # Create a new exception with the generic message
-    # Preserve the exception type so error handlers can still work
-    exc_type = type(exception)
-
-    try:
-        # Try to create a new exception of the same type with the sanitized message
-        return exc_type(sanitized_msg)
-    except Exception:
-        # If that fails, just return a generic Exception
-        return Exception(sanitized_msg)
+    # Return a generic Exception to avoid leaking information through the exception type
+    return Exception(sanitized_msg)
 
 
 def has_otel_exception_been_recorded(exception: Exception) -> bool:
