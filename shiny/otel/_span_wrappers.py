@@ -151,7 +151,7 @@ async def with_otel_span_async(
 
     Exception handling respects Shiny's error semantics:
     - Silent exceptions (SilentException, etc.) are not recorded in spans
-    - Error messages are sanitized when app.sanitize_errors is True
+    - Error messages are sanitized when app.sanitize_otel_errors is True
     - SafeException messages bypass sanitization
 
     Parameters
