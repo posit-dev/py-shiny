@@ -118,7 +118,9 @@ class TestErrorSanitization:
         with session_context(mock_session):
             sanitized = maybe_sanitize_error(exc, mock_session)
 
-        assert isinstance(sanitized, ValueError)
+        # Should return generic Exception type to avoid leaking info through exception type
+        assert isinstance(sanitized, Exception)
+        assert type(sanitized) == Exception  # Exactly Exception, not a subclass
         assert str(sanitized) == mock_session.app.sanitize_error_msg
         assert "secret123" not in str(sanitized)
 
@@ -156,16 +158,17 @@ class TestErrorSanitization:
         assert str(result) == SANITIZE_ERROR_MSG
         assert "Some error" not in str(result)
 
-    def test_maybe_sanitize_preserves_exception_type(self, mock_session: Session):
-        """Test that sanitization preserves exception type"""
+    def test_maybe_sanitize_uses_generic_exception_type(self, mock_session: Session):
+        """Test that sanitization uses generic Exception type for security"""
         mock_session.app.sanitize_otel_errors = True
         exc = RuntimeError("Original message")
 
         with session_context(mock_session):
             sanitized = maybe_sanitize_error(exc, mock_session)
 
-        # Should preserve the exception type
-        assert isinstance(sanitized, RuntimeError)
+        # Should use generic Exception type to avoid leaking info through exception type
+        assert isinstance(sanitized, Exception)
+        assert type(sanitized) == Exception  # Exactly Exception, not a subclass
 
 
 class TestSpanExceptionRecording:
@@ -206,7 +209,8 @@ class TestSpanExceptionRecording:
         assert len(span.events) > 0
         exception_events = [e for e in span.events if e.name == "exception"]
         assert len(exception_events) == 1
-        assert "ValueError" in str(exception_events[0].attributes)
+        # When sanitized, should record as generic Exception type
+        assert "Exception" in str(exception_events[0].attributes)
 
     def test_silent_exception_not_recorded_in_span(
         self, otel_tracer_provider: tuple[TracerProvider, InMemorySpanExporter]
@@ -475,7 +479,8 @@ class TestExceptionRecordingOnce:
         # Child span should have recorded the exception
         child_exception_events = [e for e in child_span.events if e.name == "exception"]
         assert len(child_exception_events) == 1
-        assert "ValueError" in str(child_exception_events[0].attributes)
+        # When sanitized, should record as generic Exception type
+        assert "Exception" in str(child_exception_events[0].attributes)
 
         # Parent span should NOT have recorded the exception (already recorded by child)
         parent_exception_events = [
@@ -513,7 +518,8 @@ class TestExceptionRecordingOnce:
         # Child span should have recorded the exception
         child_exception_events = [e for e in child_span.events if e.name == "exception"]
         assert len(child_exception_events) == 1
-        assert "ValueError" in str(child_exception_events[0].attributes)
+        # When sanitized, should record as generic Exception type
+        assert "Exception" in str(child_exception_events[0].attributes)
 
         # Parent span should NOT have recorded the exception (already recorded by child)
         parent_exception_events = [
