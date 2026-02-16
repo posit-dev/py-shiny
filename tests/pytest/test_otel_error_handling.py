@@ -388,3 +388,35 @@ class TestSpanExceptionRecording:
         # Should NOT have recorded exception
         exception_events = [e for e in span.events if e.name == "exception"]
         assert len(exception_events) == 0
+
+    def test_session_id_in_error_span(self, otel_tracer_provider, mock_session):
+        """Test that session ID is included in error span attributes"""
+        provider, exporter = otel_tracer_provider
+        exporter.clear()
+
+        with session_context(mock_session):
+            with patch_otel_tracing_state(tracing_enabled=True):
+                from shiny.otel import OtelCollectLevel
+                from shiny.otel._span_wrappers import with_otel_span_async
+
+                async def test_func():
+                    async with with_otel_span_async(
+                        "test_span", level=OtelCollectLevel.SESSION
+                    ):
+                        raise ValueError("Test error")
+
+                import asyncio
+
+                with pytest.raises(ValueError):
+                    asyncio.run(test_func())
+
+        # Check spans
+        spans = get_exported_spans(provider, exporter)
+        app_spans = [s for s in spans if s.name == "test_span"]
+        assert len(app_spans) == 1
+
+        span = app_spans[0]
+        # Should have session.id attribute
+        assert span.attributes is not None
+        assert "session.id" in span.attributes
+        assert span.attributes["session.id"] == "test-session-123"
