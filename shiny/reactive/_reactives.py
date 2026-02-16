@@ -35,7 +35,6 @@ from .. import _utils
 from .._docstring import add_example
 from .._utils import is_async_callable, run_coro_sync
 from .._validation import req
-from ._utils import is_user_code_frame
 from ..otel import OtelCollectLevel, should_otel_collect
 from ..otel._attributes import extract_source_ref
 from ..otel._core import emit_otel_log
@@ -53,6 +52,7 @@ from ..types import (
     SilentException,
 )
 from ._core import Context, Dependents, ReactiveWarning, isolate
+from ._utils import is_user_code_frame
 
 if TYPE_CHECKING:
     from .. import Session
