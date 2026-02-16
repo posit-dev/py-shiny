@@ -11,19 +11,33 @@ Tests cover:
 
 # pyright: reportUnknownMemberType=false, reportUnknownArgumentType=false, reportUnknownVariableType=false
 
+import asyncio
+from unittest.mock import Mock
+
 import pytest
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 from opentelemetry.trace import StatusCode
 
 from shiny import App
+from shiny._app import SANITIZE_ERROR_MSG
+from shiny._namespaces import ResolvedId
+from shiny.otel import OtelCollectLevel
 from shiny.otel._errors import (
+    has_otel_exception_been_recorded,
     is_silent_error,
+    mark_otel_exception_as_recorded,
     maybe_sanitize_error,
     should_sanitize_errors,
 )
+from shiny.otel._span_wrappers import with_otel_span, with_otel_span_async
 from shiny.session import Session, session_context
-from shiny.types import SafeException, SilentCancelOutputException, SilentException
+from shiny.types import (
+    SafeException,
+    SilentCancelOutputException,
+    SilentException,
+    SilentOperationInProgressException,
+)
 
 from .otel_helpers import get_exported_spans, patch_otel_tracing_state
 
@@ -31,10 +45,6 @@ from .otel_helpers import get_exported_spans, patch_otel_tracing_state
 @pytest.fixture
 def mock_session():
     """Create a mock session for testing."""
-    from unittest.mock import Mock
-
-    from shiny._namespaces import ResolvedId
-
     session = Mock(spec=Session)
     session.id = "test-session-123"
     session.ns = ResolvedId("")  # Root namespace
@@ -64,8 +74,6 @@ class TestSilentErrorDetection:
 
     def test_silent_operation_in_progress_is_detected(self):
         """Test that SilentOperationInProgressException is detected as silent"""
-        from shiny.types import SilentOperationInProgressException
-
         exc = SilentOperationInProgressException("Operation in progress")
         assert is_silent_error(exc) is True
 
@@ -140,8 +148,6 @@ class TestErrorSanitization:
 
     def test_maybe_sanitize_without_session_sanitizes_by_default(self):
         """Test that exceptions are sanitized by default without session context"""
-        from shiny._app import SANITIZE_ERROR_MSG
-
         exc = ValueError("Some error")
         result = maybe_sanitize_error(exc, None)
 
@@ -413,3 +419,160 @@ class TestSpanExceptionRecording:
         assert span.attributes is not None
         assert "session.id" in span.attributes
         assert span.attributes["session.id"] == "test-session-123"
+
+
+class TestExceptionRecordingOnce:
+    """Tests for recording exceptions only once at innermost span"""
+
+    def test_exception_marking_functions(self):
+        """Test that exception marking functions work correctly"""
+        exc = ValueError("Test error")
+
+        # Initially, exception is not marked as recorded
+        assert has_otel_exception_been_recorded(exc) is False
+
+        # Mark it as recorded
+        mark_otel_exception_as_recorded(exc)
+
+        # Now it should be marked
+        assert has_otel_exception_been_recorded(exc) is True
+
+    def test_nested_spans_record_exception_once_async(
+        self, otel_tracer_provider: tuple[TracerProvider, InMemorySpanExporter]
+    ):
+        """Test that nested async spans only record exception once at innermost span"""
+        provider, exporter = otel_tracer_provider
+        exporter.clear()
+
+        with patch_otel_tracing_state(tracing_enabled=True):
+
+            async def test_func():
+                # Parent span
+                async with with_otel_span_async(
+                    "parent_span", level=OtelCollectLevel.SESSION
+                ):
+                    # Child span where error originates
+                    async with with_otel_span_async(
+                        "child_span", level=OtelCollectLevel.SESSION
+                    ):
+                        raise ValueError("Test error from child")
+
+            with pytest.raises(ValueError, match="Test error from child"):
+                asyncio.run(test_func())
+
+        # Check spans
+        spans = get_exported_spans(provider, exporter)
+        assert len(spans) == 2
+
+        # Find parent and child spans
+        child_span = next(s for s in spans if s.name == "child_span")
+        parent_span = next(s for s in spans if s.name == "parent_span")
+
+        # Both spans should have ERROR status
+        assert child_span.status.status_code == StatusCode.ERROR
+        assert parent_span.status.status_code == StatusCode.ERROR
+
+        # Child span should have recorded the exception
+        child_exception_events = [e for e in child_span.events if e.name == "exception"]
+        assert len(child_exception_events) == 1
+        assert "ValueError" in str(child_exception_events[0].attributes)
+
+        # Parent span should NOT have recorded the exception (already recorded by child)
+        parent_exception_events = [
+            e for e in parent_span.events if e.name == "exception"
+        ]
+        assert len(parent_exception_events) == 0
+
+    def test_nested_spans_record_exception_once_sync(
+        self, otel_tracer_provider: tuple[TracerProvider, InMemorySpanExporter]
+    ):
+        """Test that nested sync spans only record exception once at innermost span"""
+        provider, exporter = otel_tracer_provider
+        exporter.clear()
+
+        with patch_otel_tracing_state(tracing_enabled=True):
+            with pytest.raises(ValueError, match="Test error from child"):
+                # Parent span
+                with with_otel_span("parent_span", level=OtelCollectLevel.SESSION):
+                    # Child span where error originates
+                    with with_otel_span("child_span", level=OtelCollectLevel.SESSION):
+                        raise ValueError("Test error from child")
+
+        # Check spans
+        spans = get_exported_spans(provider, exporter)
+        assert len(spans) == 2
+
+        # Find parent and child spans
+        child_span = next(s for s in spans if s.name == "child_span")
+        parent_span = next(s for s in spans if s.name == "parent_span")
+
+        # Both spans should have ERROR status
+        assert child_span.status.status_code == StatusCode.ERROR
+        assert parent_span.status.status_code == StatusCode.ERROR
+
+        # Child span should have recorded the exception
+        child_exception_events = [e for e in child_span.events if e.name == "exception"]
+        assert len(child_exception_events) == 1
+        assert "ValueError" in str(child_exception_events[0].attributes)
+
+        # Parent span should NOT have recorded the exception (already recorded by child)
+        parent_exception_events = [
+            e for e in parent_span.events if e.name == "exception"
+        ]
+        assert len(parent_exception_events) == 0
+
+    def test_triple_nested_spans_record_exception_once(
+        self, otel_tracer_provider: tuple[TracerProvider, InMemorySpanExporter]
+    ):
+        """Test that triple-nested spans only record exception once at innermost span"""
+        provider, exporter = otel_tracer_provider
+        exporter.clear()
+
+        with patch_otel_tracing_state(tracing_enabled=True):
+
+            async def test_func():
+                # Grandparent span
+                async with with_otel_span_async(
+                    "grandparent_span", level=OtelCollectLevel.SESSION
+                ):
+                    # Parent span
+                    async with with_otel_span_async(
+                        "parent_span", level=OtelCollectLevel.SESSION
+                    ):
+                        # Child span where error originates
+                        async with with_otel_span_async(
+                            "child_span", level=OtelCollectLevel.SESSION
+                        ):
+                            raise ValueError("Test error from child")
+
+            with pytest.raises(ValueError, match="Test error from child"):
+                asyncio.run(test_func())
+
+        # Check spans
+        spans = get_exported_spans(provider, exporter)
+        assert len(spans) == 3
+
+        # Find all spans
+        child_span = next(s for s in spans if s.name == "child_span")
+        parent_span = next(s for s in spans if s.name == "parent_span")
+        grandparent_span = next(s for s in spans if s.name == "grandparent_span")
+
+        # All spans should have ERROR status
+        assert child_span.status.status_code == StatusCode.ERROR
+        assert parent_span.status.status_code == StatusCode.ERROR
+        assert grandparent_span.status.status_code == StatusCode.ERROR
+
+        # Only child span should have recorded the exception
+        child_exception_events = [e for e in child_span.events if e.name == "exception"]
+        assert len(child_exception_events) == 1
+
+        # Parent and grandparent should NOT have recorded the exception
+        parent_exception_events = [
+            e for e in parent_span.events if e.name == "exception"
+        ]
+        assert len(parent_exception_events) == 0
+
+        grandparent_exception_events = [
+            e for e in grandparent_span.events if e.name == "exception"
+        ]
+        assert len(grandparent_exception_events) == 0

@@ -103,7 +103,12 @@ def with_otel_span(
             # If we reach here without exception, mark as OK
             span.set_status(Status(StatusCode.OK))
         except Exception as e:
-            from ._errors import is_silent_error, maybe_sanitize_error
+            from ._errors import (
+                has_otel_exception_been_recorded,
+                is_silent_error,
+                mark_otel_exception_as_recorded,
+                maybe_sanitize_error,
+            )
 
             # Check if this is a silent error
             if is_silent_error(e):
@@ -118,9 +123,17 @@ def with_otel_span(
                 if session is not None and hasattr(session, "id"):
                     span.set_attribute("session.id", session.id)
 
-                # Sanitize the error if needed before recording
+                # Only record the exception once at the innermost span where it originates
+                # Parent spans will still get ERROR status, but won't duplicate the exception details
+                if not has_otel_exception_been_recorded(e):
+                    # Sanitize the error if needed before recording
+                    sanitized_exc = maybe_sanitize_error(e)
+                    span.record_exception(sanitized_exc)
+                    # Mark the original exception so parent spans don't record it again
+                    mark_otel_exception_as_recorded(e)
+
+                # Always set error status on all spans that encounter the error
                 sanitized_exc = maybe_sanitize_error(e)
-                span.record_exception(sanitized_exc)
                 span.set_status(Status(StatusCode.ERROR, str(sanitized_exc)))
             raise
 
@@ -221,7 +234,12 @@ async def with_otel_span_async(
             # If we reach here without exception, mark as OK
             span.set_status(Status(StatusCode.OK))
         except Exception as e:
-            from ._errors import is_silent_error, maybe_sanitize_error
+            from ._errors import (
+                has_otel_exception_been_recorded,
+                is_silent_error,
+                mark_otel_exception_as_recorded,
+                maybe_sanitize_error,
+            )
 
             # Check if this is a silent error
             if is_silent_error(e):
@@ -240,8 +258,16 @@ async def with_otel_span_async(
                     # Import failed, continue without session ID
                     pass
 
-                # Sanitize the error if needed before recording
+                # Only record the exception once at the innermost span where it originates
+                # Parent spans will still get ERROR status, but won't duplicate the exception details
+                if not has_otel_exception_been_recorded(e):
+                    # Sanitize the error if needed before recording
+                    sanitized_exc = maybe_sanitize_error(e)
+                    span.record_exception(sanitized_exc)
+                    # Mark the original exception so parent spans don't record it again
+                    mark_otel_exception_as_recorded(e)
+
+                # Always set error status on all spans that encounter the error
                 sanitized_exc = maybe_sanitize_error(e)
-                span.record_exception(sanitized_exc)
                 span.set_status(Status(StatusCode.ERROR, str(sanitized_exc)))
             raise

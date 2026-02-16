@@ -18,6 +18,8 @@ __all__ = (
     "is_silent_error",
     "should_sanitize_errors",
     "maybe_sanitize_error",
+    "has_otel_exception_been_recorded",
+    "mark_otel_exception_as_recorded",
 )
 
 
@@ -215,3 +217,82 @@ def maybe_sanitize_error(
     except Exception:
         # If that fails, just return a generic Exception
         return Exception(sanitized_msg)
+
+
+def has_otel_exception_been_recorded(exception: Exception) -> bool:
+    """
+    Check if an exception has already been recorded in an OTel span.
+
+    This is used to ensure we only record the exception once at the innermost
+    span where it originates, not in every parent span it propagates through.
+
+    Parameters
+    ----------
+    exception
+        The exception to check.
+
+    Returns
+    -------
+    bool
+        True if the exception has already been recorded in a span, False otherwise.
+
+    Examples
+    --------
+    >>> exc = ValueError("Something went wrong")
+    >>> has_otel_exception_been_recorded(exc)
+    False
+    >>> mark_otel_exception_as_recorded(exc)
+    >>> has_otel_exception_been_recorded(exc)
+    True
+
+    Notes
+    -----
+    This function checks for a private attribute `_shiny_otel_recorded` on the
+    exception object. This attribute is set by `mark_otel_exception_as_recorded()`
+    when the exception is first recorded in a span.
+
+    This pattern matches R Shiny's behavior where exceptions are only recorded
+    at the innermost reactive span, while parent spans still get ERROR status.
+
+    See Also
+    --------
+    - `mark_otel_exception_as_recorded`
+    """
+    return getattr(exception, "_shiny_otel_recorded", False)
+
+
+def mark_otel_exception_as_recorded(exception: Exception) -> None:
+    """
+    Mark an exception as having been recorded in an OTel span.
+
+    This prevents the same exception from being recorded multiple times
+    as it propagates up through parent spans. All parent spans will still
+    get ERROR status, but only the innermost span records the exception details.
+
+    Parameters
+    ----------
+    exception
+        The exception to mark as recorded.
+
+    Examples
+    --------
+    >>> exc = ValueError("Something went wrong")
+    >>> has_otel_exception_been_recorded(exc)
+    False
+    >>> mark_otel_exception_as_recorded(exc)
+    >>> has_otel_exception_been_recorded(exc)
+    True
+
+    Notes
+    -----
+    This function sets a private attribute `_shiny_otel_recorded` on the exception
+    object. This attribute is checked by `has_otel_exception_been_recorded()`.
+
+    This pattern matches R Shiny's behavior where exceptions are only recorded
+    at the innermost reactive span, while parent spans still get ERROR status.
+
+    See Also
+    --------
+    - `has_otel_exception_been_recorded`
+    """
+    exception._shiny_otel_recorded = True  # type: ignore[attr-defined]
