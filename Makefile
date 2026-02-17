@@ -179,6 +179,7 @@ clean-js: FORCE
 SUB_FILE:=
 PYTEST_BROWSERS:= --browser webkit --browser firefox --browser chromium
 PYTEST_DEPLOYS_BROWSERS:= --browser chromium
+PYTEST_XDIST?= -n auto
 
 
 # Full test path to playwright tests
@@ -222,10 +223,25 @@ playwright-examples: FORCE
 playwright-ai: FORCE
 	$(MAKE) playwright TEST_FILE="$(AI_TEST_FILE)"
 
-coverage: FORCE ## check combined code coverage (must run e2e last)
-	pytest --cov-report term-missing --cov=shiny tests/pytest/ $(SHINY_TEST_FILE) $(PYTEST_BROWSERS)
-	coverage html
-	$(BROWSER) htmlcov/index.html
+coverage: FORCE ## check unit test coverage (HTML + term)
+	$(MAKE) coverage-unit
+
+coverage-unit: FORCE ## check unit test coverage only (HTML + term)
+	pytest tests/pytest/ $(PYTEST_XDIST) --cov=shiny --cov-report=term-missing --cov-report=html
+	coverage combine
+	@echo "Coverage report: htmlcov/index.html"
+
+coverage-check: FORCE ## check coverage meets minimum threshold
+	pytest tests/pytest/ --cov=shiny --cov-fail-under=25
+
+# CI coverage report: generates both HTML and term reports for CI environments
+coverage-ci: FORCE ## generate unit test coverage reports for CI (HTML + term)
+	@echo "-------- Running tests with coverage --------"
+	pytest tests/pytest/ $(PYTEST_XDIST) --cov=shiny --cov-report=html --cov-report=term
+	coverage combine
+	@echo "Coverage HTML report: htmlcov/index.html"
+	@echo "-------- Coverage Report Summary --------"
+	coverage report
 
 release: dist ## package and upload a release
 	twine upload dist/*

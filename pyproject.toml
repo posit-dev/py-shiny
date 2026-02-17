@@ -180,3 +180,56 @@ skip = [
 # Note: This setting can not be done via CLI and must be set within a config
 ignore_errors = true
 exclude = ["shiny/api-examples", "shiny/templates"]
+
+[tool.coverage.run]
+source = ["shiny"]
+branch = true
+parallel = true
+concurrency = ["multiprocessing"]
+omit = [
+    "shiny/api-examples/*",
+    "shiny/templates/*",
+    "shiny/www/*",
+    "shiny/_version.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "if typing.TYPE_CHECKING:",
+    "@overload",
+    "@typing.overload",
+    "\\.\\.\\.",  # Ellipsis in stub files
+    # Exclude import statements
+    "^import ",
+    "^from .* import ",
+    # Exclude TypedDict and Protocol definitions (type-only code)
+    "class .*\\(TypedDict\\):",
+    "class .*\\(.*TypedDict.*\\):",
+    "class .*\\(Protocol\\):",
+    "class .*\\(.*Protocol.*\\):",
+    # Exclude type aliases and TypeVar
+    "^[A-Z][a-zA-Z0-9_]* = ",
+    ".* = TypeVar\\(",
+    ".* = Union\\[",
+    # Exclude __all__ definitions
+    "^__all__ = ",
+    # Exclude sentinel/marker class definitions
+    "^class [A-Z_]+:",
+    "^    pass$",
+    # Exclude docstrings (triple-quoted strings)
+    '"""',
+    "'''",
+]
+# Note: show_missing is intentionally not set to true by default.
+# Using `--cov-report=term-missing` with the full shiny source causes
+# coverage report generation to be extremely slow. Use HTML reports
+# or targeted term-missing reports on specific modules instead.
+precision = 2
+fail_under = 25
+
+[tool.coverage.html]
+directory = "htmlcov"

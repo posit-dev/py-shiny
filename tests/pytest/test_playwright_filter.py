@@ -7,9 +7,11 @@ from typing import Dict, Set
 from tests.pytest._utils import skip_on_windows
 
 known_entries: Dict[str, Set[str]] = {
-    # "tests/pytest/test_poll.py": {
-    #     "my_locator.filter('foo')",
-    # }
+    # tests/pytest/test_hostenv.py uses .filter() for logging.Filter, not Playwright's Locator.filter()
+    "tests/pytest/test_hostenv.py": {
+        "result = filter_obj.filter(record)",
+        "filter_obj.filter(record)",
+    },
 }
 
 # Trim all line values of `known_entries`
