@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, Optional, Tuple, Union
 
-from chatlas import ChatAnthropic, ChatOpenAI, token_usage
+from chatlas import ChatAnthropic, ChatBedrockAnthropic, ChatOpenAI, token_usage
 from dotenv import load_dotenv
 
 __all__ = [
@@ -50,7 +50,9 @@ class ShinyTestGenerator:
 
     def __init__(
         self,
-        provider: Literal["anthropic", "openai"] = Config.DEFAULT_PROVIDER,
+        provider: Literal[
+            "anthropic", "openai", "bedrock-anthropic"
+        ] = Config.DEFAULT_PROVIDER,
         api_key: Optional[str] = None,
         log_file: str = Config.LOG_FILE,
         setup_logging: bool = True,
@@ -74,25 +76,28 @@ class ShinyTestGenerator:
             self.setup_logging()
 
     @property
-    def client(self) -> Union[ChatAnthropic, ChatOpenAI]:
+    def client(self) -> Union[ChatAnthropic, ChatOpenAI, ChatBedrockAnthropic]:
         """Lazy-loaded chat client based on provider"""
         if self._client is None:
-            if not self.api_key:
-                env_var = (
-                    "ANTHROPIC_API_KEY"
-                    if self.provider == "anthropic"
-                    else "OPENAI_API_KEY"
-                )
-                self.api_key = os.getenv(env_var)
-            if not self.api_key:
-                raise ValueError(
-                    f"Missing API key for provider '{self.provider}'. Set the environment variable "
-                    f"{'ANTHROPIC_API_KEY' if self.provider == 'anthropic' else 'OPENAI_API_KEY'} or pass api_key explicitly."
-                )
+            if self.provider in ("anthropic", "openai"):
+                if not self.api_key:
+                    env_var = (
+                        "ANTHROPIC_API_KEY"
+                        if self.provider == "anthropic"
+                        else "OPENAI_API_KEY"
+                    )
+                    self.api_key = os.getenv(env_var)
+                if not self.api_key:
+                    raise ValueError(
+                        f"Missing API key for provider '{self.provider}'. Set the environment variable "
+                        f"{'ANTHROPIC_API_KEY' if self.provider == 'anthropic' else 'OPENAI_API_KEY'} or pass api_key explicitly."
+                    )
             if self.provider == "anthropic":
                 self._client = ChatAnthropic(api_key=self.api_key)
             elif self.provider == "openai":
                 self._client = ChatOpenAI(api_key=self.api_key)
+            elif self.provider == "bedrock-anthropic":
+                self._client = ChatBedrockAnthropic()
             else:
                 raise ValueError(f"Unsupported provider: {self.provider}")
         return self._client
@@ -118,6 +123,8 @@ class ShinyTestGenerator:
             return Config.DEFAULT_ANTHROPIC_MODEL
         elif self.provider == "openai":
             return Config.DEFAULT_OPENAI_MODEL
+        elif self.provider == "bedrock-anthropic":
+            return Config.DEFAULT_BEDROCK_ANTHROPIC_MODEL
         else:
             raise ValueError(f"Unsupported provider: {self.provider}")
 
@@ -168,6 +175,15 @@ class ShinyTestGenerator:
 
     def _validate_model_for_provider(self, model: str) -> str:
         """Validate that the model is compatible with the current provider"""
+        if self.provider == "bedrock-anthropic":
+            resolved_model = model
+            if resolved_model.startswith("gpt-") or resolved_model.startswith("o1-"):
+                raise ValueError(
+                    f"Model '{model}' is an OpenAI model but provider is set to 'bedrock-anthropic'. "
+                    f"Use an Anthropic Bedrock model ID (e.g., 'us.anthropic.claude-3-7-sonnet-20250219-v1:0')."
+                )
+            return resolved_model
+
         resolved_model = self._resolve_model(model)
 
         if self.provider == "anthropic":
@@ -193,18 +209,19 @@ class ShinyTestGenerator:
             model = self._validate_model_for_provider(model)
 
         try:
-            if not self.api_key:
-                env_var = (
-                    "ANTHROPIC_API_KEY"
-                    if self.provider == "anthropic"
-                    else "OPENAI_API_KEY"
-                )
-                self.api_key = os.getenv(env_var)
-            if not self.api_key:
-                raise ValueError(
-                    f"Missing API key for provider '{self.provider}'. Set the environment variable "
-                    f"{'ANTHROPIC_API_KEY' if self.provider == 'anthropic' else 'OPENAI_API_KEY'} or pass api_key."
-                )
+            if self.provider in ("anthropic", "openai"):
+                if not self.api_key:
+                    env_var = (
+                        "ANTHROPIC_API_KEY"
+                        if self.provider == "anthropic"
+                        else "OPENAI_API_KEY"
+                    )
+                    self.api_key = os.getenv(env_var)
+                if not self.api_key:
+                    raise ValueError(
+                        f"Missing API key for provider '{self.provider}'. Set the environment variable "
+                        f"{'ANTHROPIC_API_KEY' if self.provider == 'anthropic' else 'OPENAI_API_KEY'} or pass api_key."
+                    )
             # Create chat client with the specified model
             if self.provider == "anthropic":
                 chat = ChatAnthropic(
@@ -219,6 +236,12 @@ class ShinyTestGenerator:
                     system_prompt=self.system_prompt,
                     api_key=self.api_key,
                 )
+            elif self.provider == "bedrock-anthropic":
+                chat = ChatBedrockAnthropic(
+                    model=model,
+                    system_prompt=self.system_prompt,
+                    max_tokens=Config.MAX_TOKENS,
+                )
             else:
                 raise ValueError(f"Unsupported provider: {self.provider}")
 
@@ -226,15 +249,12 @@ class ShinyTestGenerator:
             response = chat.chat(prompt)
             elapsed = time.perf_counter() - start_time
             usage = token_usage()
-            # For Anthropic, token_usage() includes costs. For OpenAI, use chat.get_cost with model pricing.
             token_price = None
             if self.provider == "openai":
                 token_price = Config.OPENAI_PRICING.get(model)
                 try:
-                    # Call to compute and cache costs internally; per-entry cost is computed below
                     _ = chat.get_cost(options="all", token_price=token_price)
                 except Exception:
-                    # If cost computation fails, continue without it
                     pass
 
             try:
@@ -530,7 +550,9 @@ class ShinyTestGenerator:
         )
 
     def switch_provider(
-        self, provider: Literal["anthropic", "openai"], api_key: Optional[str] = None
+        self,
+        provider: Literal["anthropic", "openai", "bedrock-anthropic"],
+        api_key: Optional[str] = None,
     ):
         self.provider = provider
         if api_key:
@@ -549,6 +571,11 @@ class ShinyTestGenerator:
     ) -> "ShinyTestGenerator":
         return cls(provider="openai", api_key=api_key, **kwargs)
 
+    @classmethod
+    def create_bedrock_anthropic_generator(cls, **kwargs) -> "ShinyTestGenerator":
+        # AWS credentials and region are resolved from environment or AWS config
+        return cls(provider="bedrock-anthropic", api_key=None, **kwargs)
+
     def get_available_models(self) -> list[str]:
         if self.provider == "anthropic":
             return [
@@ -562,6 +589,10 @@ class ShinyTestGenerator:
                 for model in Config.MODEL_ALIASES.keys()
                 if (model.startswith("gpt-") or model.startswith("o1-"))
             ]
+        elif self.provider == "bedrock-anthropic":
+            # Bedrock requires full model IDs (e.g., 'us.anthropic.claude-sonnet-4-20250514-v1:0').
+            # We don't provide aliases here because IDs are region/account specific.
+            return []
         else:
             return []
 
@@ -573,7 +604,7 @@ def cli():
     parser.add_argument("app_file", help="Path to the Shiny app file")
     parser.add_argument(
         "--provider",
-        choices=["anthropic", "openai"],
+        choices=["anthropic", "openai", "bedrock-anthropic"],
         default=Config.DEFAULT_PROVIDER,
         help="LLM provider to use",
     )
