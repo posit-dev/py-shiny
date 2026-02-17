@@ -2,15 +2,12 @@ from __future__ import annotations
 
 __all__ = ("icon",)
 
-from typing import TYPE_CHECKING, Literal, Optional
+from typing import Literal, Optional
 
 from htmltools import Tag, TagAttrValue, tags
 
 from .._docstring import add_example
 from .css._css_unit import CssUnit, as_css_unit
-
-if TYPE_CHECKING:
-    from faicons import icon_svg as _icon_svg
 
 
 @add_example()
@@ -49,7 +46,13 @@ def icon(
         Accessibility mode. ``"decorative"`` (default) hides the icon from screen
         readers. ``"semantic"`` makes the icon accessible and requires a title.
     **kwargs
-        Additional HTML attributes for the SVG element (e.g., ``class_``, ``style``).
+        For FontAwesome icons (``lib="fa"``): Additional parameters passed to
+        ``faicons.icon_svg()``, such as ``fill``, ``margin_left``, ``margin_right``,
+        and other styling options. Also accepts HTML attributes like ``class_``, ``id``.
+
+        For Bootstrap icons (``lib="bs"``): HTML attributes for the SVG element
+        (e.g., ``class_``, ``id``). The ``style`` and ``class_`` attributes will be
+        merged with the icon's built-in styles and classes.
 
     Returns
     -------
@@ -60,6 +63,30 @@ def icon(
     --------
     * :func:`~shiny.ui.input_action_button`
     * :func:`~shiny.ui.value_box`
+
+    Examples
+    --------
+    ```python
+    from shiny import ui
+
+    # FontAwesome icon (default library)
+    ui.icon("star")
+
+    # Bootstrap icon
+    ui.icon("heart-fill", lib="bs")
+
+    # FontAwesome icon with specific style
+    ui.icon("github", style="brands")
+
+    # Icon with custom size
+    ui.icon("gear", size="2em")
+
+    # Semantic icon with title for accessibility
+    ui.icon("warning", title="Warning icon", a11y="semantic")
+
+    # Icon with custom styling
+    ui.icon("star", class_="text-warning")
+    ```
     """
     if a11y == "semantic" and not title:
         raise ValueError("title is required when a11y='semantic'")
@@ -91,15 +118,17 @@ def _icon_fa(
         ) from None
 
     # Convert size to string for faicons
-    height = None
-    width = None
-    if size is not None:
-        css_size = as_css_unit(size)
-        height = css_size
-        width = css_size
+    height = width = as_css_unit(size) if size is not None else None
 
     # Map a11y to faicons parameters
     a11y_param = "deco" if a11y == "decorative" else "sem"
+
+    # Provide icon_svg defaults for parameters not explicitly overridden in kwargs
+    # This ensures icon() behaves like icon_svg() by default
+    kwargs.setdefault("fill", "currentColor")
+    kwargs.setdefault("margin_left", "auto")
+    kwargs.setdefault("margin_right", "0.2em")
+    kwargs.setdefault("position", "relative")
 
     return icon_svg(
         name,
@@ -108,7 +137,7 @@ def _icon_fa(
         width=width,
         title=title,
         a11y=a11y_param,
-        **kwargs,
+        **kwargs,  # type: ignore[arg-type]
     )
 
 
@@ -147,20 +176,32 @@ def _icon_bs(
         a11y_attrs["aria_hidden"] = "true"
 
     # Build SVG children
-    children: list[Tag | str] = []
+    from htmltools import HTML
+
+    children: list[Tag | str | HTML] = []
     if title:
         children.append(tags.title(title))
 
     # Add the SVG content (path data or raw SVG content)
     svg_content = icon_data.get("content", "")
     if svg_content:
-        from htmltools import HTML
-
         children.append(HTML(svg_content))
+
+    # Merge user-provided classes with our icon classes
+    user_classes = kwargs.pop("class_", "")
+    all_classes = " ".join(css_classes)
+    if user_classes:
+        all_classes = f"{all_classes} {user_classes}"
+
+    # Merge user-provided styles with our icon styles
+    user_style = kwargs.pop("style", "")
+    all_styles = ";".join(styles)
+    if user_style:
+        all_styles = f"{all_styles};{user_style}"
 
     return tags.svg(
         *children,
-        {"class": " ".join(css_classes), "style": ";".join(styles)},
+        {"class": all_classes, "style": all_styles},
         xmlns="http://www.w3.org/2000/svg",
         viewBox=icon_data["viewBox"],
         **a11y_attrs,
