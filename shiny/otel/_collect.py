@@ -18,8 +18,8 @@ class OtelCollectLevel(IntEnum):
 
     - NONE (0): No telemetry collected
     - SESSION (1): Session lifecycle spans only
-    - REACTIVE_UPDATE (2): SESSION + reactive flush cycles
-    - REACTIVITY (3): REACTIVE_UPDATE + individual reactive computations and value updates
+    - REACTIVE_UPDATE (2): SESSION + reactive update cycles
+    - REACTIVITY (3): REACTIVE_UPDATE + individual reactive executions and value updates
     - ALL (4): All available telemetry (currently equivalent to REACTIVITY)
 
     Examples
