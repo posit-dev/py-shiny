@@ -3,9 +3,16 @@ name: Build API docs and Shinylive for GitHub Pages
 # Allow for `main` branch to build full website and deploy
 # Allow branches that start with `docs-` to build full website, but not deploy
 # Allow for PRs to build quartodoc only. (No shinylive, no site build, no deploy)
+# Manual workflow_dispatch allows building shinylive from any branch
 
 on:
   workflow_dispatch:
+    inputs:
+      build_shinylive:
+        description: 'Build shinylive assets (slow, ~10 min)'
+        required: false
+        type: boolean
+        default: false
   push:
     branches: ["main", "docs-**"]
   pull_request:
@@ -48,7 +55,7 @@ jobs:
       # Shinylive
       # =====================================================
       - name: Check out shinylive
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' || inputs.build_shinylive
         uses: actions/checkout@v4
         with:
           repository: rstudio/shinylive
@@ -56,7 +63,7 @@ jobs:
           path: shinylive-repo
 
       - name: Update shinylive's copy of shiny and htmltools
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' || inputs.build_shinylive
         run: |
           cd shinylive-repo
           make submodules
@@ -64,13 +71,21 @@ jobs:
           make submodules-pull-htmltools
 
       - name: Build shinylive
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' || inputs.build_shinylive
         run: |
           cd shinylive-repo
           make all
 
+      - name: Upload shinylive build artifact
+        if: inputs.build_shinylive
+        uses: actions/upload-artifact@v4
+        with:
+          name: shinylive-build
+          path: shinylive-repo/build/
+          retention-days: 30
+
       - name: Use local build of shinylive for building docs
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' || inputs.build_shinylive
         run: |
           cd shinylive-repo && shinylive assets install-from-local ./build
 
