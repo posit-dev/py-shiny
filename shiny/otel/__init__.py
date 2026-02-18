@@ -38,15 +38,20 @@ To enable OpenTelemetry tracing in your Shiny application:
 
 ## Collection Levels
 
-- **none**: No telemetry collected
+Control what Shiny internal telemetry is collected:
+
+- **none**: No Shiny telemetry collected
 - **session**: Session lifecycle spans only
-- **reactive_update**: Session + reactive flush cycles
-- **reactivity**: Session + reactive flush + individual reactive computations
-- **all**: All available telemetry (currently equivalent to reactivity)
+- **reactive_update**: Session + reactive update cycles
+- **reactivity**: Session + reactive cycles + individual reactive executions + value logs
+- **all**: All available Shiny telemetry (currently equivalent to reactivity)
+
+**Important**: These levels only affect Shiny's internal spans and logs. Any OpenTelemetry
+spans you create manually in your application code are unaffected.
 
 ## Programmatic Control
 
-Use the `otel_collect` context manager to control collection dynamically:
+Use the `otel_collect` context manager to control Shiny's collection level dynamically:
 
 ```python
 from shiny import App, ui, reactive
@@ -55,19 +60,20 @@ from shiny.otel import otel_collect
 @reactive.calc
 def my_calc():
     with otel_collect("none"):
-        # No telemetry for sensitive operations
+        # No Shiny telemetry for sensitive operations
+        # (your own spans are still recorded)
         sensitive_data = load_secrets()
 
-    # Normal telemetry resumes here
+    # Normal Shiny telemetry resumes here
     return process_data(sensitive_data)
 ```
 
 ## API Reference
 
 Main exports:
-- `OtelCollectLevel`: Enum defining collection levels
-- `should_otel_collect`: Check if telemetry should be collected for a given level
-- `otel_collect`: Context manager to temporarily change collection level (Phase 7)
+- `OtelCollectLevel`: Enum defining Shiny collection levels
+- `should_otel_collect`: Check if Shiny telemetry should be collected for a given level
+- `otel_collect`: Context manager to temporarily change Shiny's collection level
 """
 
 from __future__ import annotations
@@ -78,6 +84,7 @@ from ._core import (
     get_otel_tracer,
     is_otel_tracing_enabled,
 )
+from ._decorators import otel_collect
 
 __all__ = (
     # Collection level management
@@ -88,6 +95,6 @@ __all__ = (
     "get_otel_tracer",
     "get_otel_logger",
     "is_otel_tracing_enabled",
-    # User-facing API (will be added in Phase 7)
-    # "otel_collect",
+    # User-facing API
+    "otel_collect",
 )
