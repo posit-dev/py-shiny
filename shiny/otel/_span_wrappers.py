@@ -8,6 +8,7 @@ from typing import Any, AsyncIterator, Callable, Dict, Iterator, Union
 from opentelemetry.trace import Span, Status, StatusCode
 
 from ._collect import OtelCollectLevel
+from ._constants import ATTR_SESSION_ID
 
 __all__ = ("with_otel_span", "with_otel_span_async")
 
@@ -121,7 +122,7 @@ def with_otel_span(
 
                 session = get_current_session()
                 if session is not None and hasattr(session, "id"):
-                    span.set_attribute("session.id", session.id)
+                    span.set_attribute(ATTR_SESSION_ID, session.id)
 
                 # Sanitize the error if needed before recording/setting status
                 sanitized_exc = maybe_sanitize_error(e, session=session)
@@ -202,7 +203,7 @@ async def with_otel_span_async(
         # Lazy attributes (only computed if collecting)
         async with with_otel_span_async(
             "session.start",
-            lambda: {"session.id": session.id, **extract_http_attributes(conn)}
+            lambda: {ATTR_SESSION_ID: session.id, **extract_http_attributes(conn)}
         ) as span:
             # Attributes only extracted if span is created
             await session_work()
@@ -256,7 +257,7 @@ async def with_otel_span_async(
 
                 session = get_current_session()
                 if session is not None and hasattr(session, "id"):
-                    span.set_attribute("session.id", session.id)
+                    span.set_attribute(ATTR_SESSION_ID, session.id)
 
                 # Sanitize the error if needed before recording/setting status
                 sanitized_exc = maybe_sanitize_error(e, session=session)
