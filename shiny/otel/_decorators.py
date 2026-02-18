@@ -9,6 +9,7 @@ from contextlib import contextmanager
 from typing import Any, Callable, TypeVar, Union
 
 from ._collect import OtelCollectLevel, _current_collect_level
+from ._function_attrs import set_otel_collect_level_on_func
 
 __all__ = ("otel_collect", "no_otel_collect")
 
@@ -48,9 +49,15 @@ class OtelCollect:
 
     def __call__(self, func: Callable[..., T]) -> Callable[..., T]:
         """Decorator implementation."""
+        # Mark the function with the desired collection level.
+        # This will be read by reactive objects (Calc_, Effect_) when they
+        # create spans for their execution.
+        set_otel_collect_level_on_func(func, self.level)
 
         @functools.wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> T:
+            # Also set the context variable for non-reactive uses
+            # (e.g., regular functions decorated with @otel_collect)
             @contextmanager
             def _context_manager():  # type: ignore[misc]
                 token = _current_collect_level.set(self.level)

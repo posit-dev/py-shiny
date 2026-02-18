@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ._constants import EXCEPTION_ATTR_OTEL_RECORDED
 from ..session import get_current_session
 from ..types import (
     SafeException,
@@ -17,6 +16,7 @@ from ..types import (
     SilentException,
     SilentOperationInProgressException,
 )
+from ._constants import EXCEPTION_ATTR_OTEL_RECORDED
 
 if TYPE_CHECKING:
     from ..session import Session

@@ -14,6 +14,7 @@ __all__ = (
     "EXCEPTION_ATTR_OTEL_RECORDED",
     # Function attributes
     "FUNC_ATTR_OTEL_LABEL_MODIFIER",
+    "FUNC_ATTR_OTEL_COLLECT_LEVEL",
 )
 
 # ============================================================================
@@ -52,3 +53,6 @@ propagates through parent spans.
 
 FUNC_ATTR_OTEL_LABEL_MODIFIER = "_shiny_otel_label_modifier"
 """Attribute name used to store OTel label modifiers on function objects."""
+
+FUNC_ATTR_OTEL_COLLECT_LEVEL = "_shiny_otel_collect_level"
+"""Attribute name used to store OTel collection level on function objects."""
