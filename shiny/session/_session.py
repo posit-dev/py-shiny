@@ -593,8 +593,8 @@ class AppSession(Session):
         # Wrap session cleanup in session.end span (or no-op if not collecting)
         async with with_otel_span_async(
             "session.end",
-            {"session.id": self.id},
-            level=OtelCollectLevel.SESSION,
+            attributes={"session.id": self.id},
+            required_level=OtelCollectLevel.SESSION,
         ):
             try:
                 await self._on_ended_callbacks.invoke()
@@ -692,11 +692,11 @@ class AppSession(Session):
 
                             async with with_otel_span_async(
                                 "session.start",
-                                lambda: {
+                                attributes=lambda: {
                                     "session.id": self.id,
                                     **extract_http_attributes(self.http_conn),
                                 },
-                                level=OtelCollectLevel.SESSION,
+                                required_level=OtelCollectLevel.SESSION,
                             ):
                                 with session_context(self):
                                     self.app.server(self.input, self.output, self)
@@ -1898,7 +1898,7 @@ class Outputs:
                         attributes=lambda: extract_source_ref(
                             getattr(renderer.fn, "_orig_fn", renderer.fn)
                         ),
-                        level=OtelCollectLevel.REACTIVITY,
+                        required_level=OtelCollectLevel.REACTIVITY,
                     ):
                         with session.clientdata._output_name_ctx(output_name):
                             # Call the app's renderer function

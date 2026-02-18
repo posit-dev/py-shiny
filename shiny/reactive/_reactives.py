@@ -37,7 +37,9 @@ from .._utils import is_async_callable, run_coro_sync
 from .._validation import req
 from ..otel import OtelCollectLevel, should_otel_collect
 from ..otel._attributes import extract_source_ref
+from ..otel._collect import get_otel_collect_level
 from ..otel._core import emit_otel_log
+from ..otel._function_attrs import get_otel_collect_level_from_func
 from ..otel._labels import (
     generate_reactive_label,
     get_otel_label_modifier,
@@ -468,6 +470,12 @@ class Calc_(Generic[T]):
             modifier=get_otel_label_modifier(fn),
         )
 
+        # Extract collection level from function attribute (set by @otel_collect decorator)
+        # If not set, capture the current collection level at initialization time
+        self._otel_level: OtelCollectLevel = (
+            get_otel_collect_level_from_func(fn) or get_otel_collect_level()
+        )
+
     def __call__(self) -> T:
         # Run the Coroutine (synchronously), and then return the value.
         # If the Coroutine yields control, then an error will be raised.
@@ -504,7 +512,8 @@ class Calc_(Generic[T]):
             async with with_otel_span_async(
                 self._otel_label,
                 attributes=self._otel_attrs,
-                level=OtelCollectLevel.REACTIVITY,
+                required_level=OtelCollectLevel.REACTIVITY,
+                collection_level=self._otel_level,
             ):
                 try:
                     with self._ctx():
@@ -736,6 +745,12 @@ class Effect_:
             modifier=get_otel_label_modifier(fn),
         )
 
+        # Extract collection level from function attribute (set by @otel_collect decorator)
+        # If not set, capture the current collection level at initialization time
+        self._otel_level: OtelCollectLevel = (
+            get_otel_collect_level_from_func(fn) or get_otel_collect_level()
+        )
+
         # Defer the first running of this until flushReact is called
         self._create_context().invalidate()
 
@@ -788,7 +803,8 @@ class Effect_:
             async with with_otel_span_async(
                 self._otel_label,
                 attributes=self._otel_attrs,
-                level=OtelCollectLevel.REACTIVITY,
+                required_level=OtelCollectLevel.REACTIVITY,
+                collection_level=self._otel_level,
             ):
                 try:
                     with ctx():

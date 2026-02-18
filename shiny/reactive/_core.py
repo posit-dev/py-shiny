@@ -23,6 +23,8 @@ from typing import TYPE_CHECKING, Awaitable, Callable, Generator, Optional, Type
 from .. import _utils
 from .._datastructures import PriorityQueueFIFO
 from .._docstring import add_example, no_example
+from ..otel import OtelCollectLevel
+from ..otel._span_wrappers import with_otel_span_async
 from ..types import MISSING, MISSING_TYPE
 
 if TYPE_CHECKING:
@@ -178,13 +180,10 @@ class ReactiveEnvironment:
 
     async def flush(self) -> None:
         """Flush all pending operations"""
-        from ..otel import OtelCollectLevel
-        from ..otel._span_wrappers import with_otel_span_async
-
         # Wrap entire flush cycle in reactive.update span (or no-op if not collecting)
         async with with_otel_span_async(
             "reactive.update",
-            level=OtelCollectLevel.REACTIVE_UPDATE,
+            required_level=OtelCollectLevel.REACTIVE_UPDATE,
         ) as span:
             # Store span on instance so child reactive spans can reference it
             old_span = self._current_otel_span
