@@ -7,8 +7,9 @@ from typing import Any, AsyncIterator, Callable, Dict, Iterator, Union
 
 from opentelemetry.trace import Span, Status, StatusCode
 
-from ._collect import OtelCollectLevel
+from ._collect import OtelCollectLevel, get_otel_collect_level
 from ._constants import ATTR_SESSION_ID
+from ._core import get_otel_tracer, is_otel_tracing_enabled
 
 __all__ = ("with_otel_span", "with_otel_span_async")
 
@@ -21,8 +22,10 @@ NameType = Union[str, Callable[[], str]]
 @contextmanager
 def with_otel_span(
     name: NameType,
+    *,
     attributes: AttributesType = None,
-    level: OtelCollectLevel = OtelCollectLevel.SESSION,
+    required_level: OtelCollectLevel = OtelCollectLevel.SESSION,
+    collection_level: OtelCollectLevel | None = None,
 ) -> Iterator[Span | None]:
     """
     Context manager for creating and managing an OpenTelemetry span.
@@ -48,7 +51,7 @@ def with_otel_span(
         that returns a dictionary. If a callable is provided, it will only be
         called if collection is enabled, allowing for lazy evaluation of
         expensive attribute extraction.
-    level
+    required_level
         The minimum collection level required for this span. Defaults to SESSION.
 
     Yields
@@ -74,10 +77,18 @@ def with_otel_span(
         pass
     ```
     """
-    from ._collect import should_otel_collect
-    from ._core import get_otel_tracer
+    # First check if OTel is enabled at all
+    if not is_otel_tracing_enabled():
+        yield None
+        return
 
-    if not should_otel_collect(level):
+    # Use provided collection_level or get current level
+    current_level = (
+        collection_level if collection_level is not None else get_otel_collect_level()
+    )
+
+    # Check if we should collect based on current level vs required threshold
+    if current_level < required_level:
         yield None
         return
 
@@ -146,8 +157,10 @@ def with_otel_span(
 @asynccontextmanager
 async def with_otel_span_async(
     name: NameType,
+    *,
     attributes: AttributesType = None,
-    level: OtelCollectLevel = OtelCollectLevel.SESSION,
+    required_level: OtelCollectLevel = OtelCollectLevel.SESSION,
+    collection_level: OtelCollectLevel | None = None,
 ) -> AsyncIterator[Span | None]:
     """
     Async context manager for creating and managing an OpenTelemetry span.
@@ -179,7 +192,7 @@ async def with_otel_span_async(
         that returns a dictionary. If a callable is provided, it will only be
         called if collection is enabled, allowing for lazy evaluation of
         expensive attribute extraction.
-    level
+    required_level
         The minimum collection level required for this span. Defaults to SESSION.
 
     Yields
@@ -209,10 +222,18 @@ async def with_otel_span_async(
             await session_work()
     ```
     """
-    from ._collect import should_otel_collect
-    from ._core import get_otel_tracer
+    # First check if OTel is enabled at all
+    if not is_otel_tracing_enabled():
+        yield None
+        return
 
-    if not should_otel_collect(level):
+    # Use provided collection_level or get current level
+    current_level = (
+        collection_level if collection_level is not None else get_otel_collect_level()
+    )
+
+    # Check if we should collect based on current level vs required threshold
+    if current_level < required_level:
         yield None
         return
 
