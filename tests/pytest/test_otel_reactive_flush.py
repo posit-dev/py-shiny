@@ -75,7 +75,7 @@ class TestReactiveFlushInstrumentation:
                 mock_span.__aexit__ = AsyncMock(return_value=None)
 
                 with patch(
-                    "shiny.otel._span_wrappers.with_otel_span_async",
+                    "shiny.reactive._core.with_otel_span_async",
                     return_value=mock_span,
                 ) as mock_wrapper:
                     await env.flush()
@@ -84,7 +84,7 @@ class TestReactiveFlushInstrumentation:
                     mock_wrapper.assert_called_once()
                     args, kwargs = mock_wrapper.call_args
                     assert args[0] == "reactive.update"
-                    assert kwargs["level"] == OtelCollectLevel.REACTIVE_UPDATE
+                    assert kwargs["required_level"] == OtelCollectLevel.REACTIVE_UPDATE
 
     @pytest.mark.asyncio
     async def test_flush_no_span_when_not_collecting(self):
@@ -124,7 +124,7 @@ class TestReactiveFlushInstrumentation:
                 env.on_flushed(capture_span, once=True)
 
                 with patch(
-                    "shiny.otel._span_wrappers.with_otel_span_async",
+                    "shiny.reactive._core.with_otel_span_async",
                     return_value=mock_span,
                 ):
                     await env.flush()
@@ -148,7 +148,7 @@ class TestReactiveFlushInstrumentation:
                 assert env._current_otel_span is None
 
                 with patch(
-                    "shiny.otel._span_wrappers.with_otel_span_async",
+                    "shiny.reactive._core.with_otel_span_async",
                     return_value=mock_span,
                 ):
                     await env.flush()
@@ -171,8 +171,8 @@ class TestReactiveFlushInstrumentation:
                 # Simulate session.start with reactive_flush inside
                 async with with_otel_span_async(
                     "session.start",
-                    {"session.id": "test123"},
-                    level=OtelCollectLevel.SESSION,
+                    attributes={"session.id": "test123"},
+                    required_level=OtelCollectLevel.SESSION,
                 ):
                     # Create reactive environment and flush
                     env = ReactiveEnvironment()

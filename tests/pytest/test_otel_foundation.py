@@ -195,7 +195,9 @@ class TestSpanWrappers:
         # Force collection by mocking should_otel_collect
         with patch("shiny.otel._collect.should_otel_collect", return_value=True):
             with with_otel_span(
-                "test_span", {"key": "value"}, level=OtelCollectLevel.SESSION
+                "test_span",
+                attributes={"key": "value"},
+                required_level=OtelCollectLevel.SESSION,
             ) as span:
                 assert span is not None
                 # With session-scoped TracerProvider, span will be recording
@@ -211,7 +213,9 @@ class TestSpanWrappers:
         # Force collection by mocking should_otel_collect
         with patch("shiny.otel._collect.should_otel_collect", return_value=True):
             async with with_otel_span_async(
-                "test_span_async", {"key": "value"}, level=OtelCollectLevel.SESSION
+                "test_span_async",
+                attributes={"key": "value"},
+                required_level=OtelCollectLevel.SESSION,
             ) as span:
                 assert span is not None
                 # With session-scoped TracerProvider, span will be recording
@@ -222,7 +226,9 @@ class TestSpanWrappers:
         # Force tracing disabled to simulate no SDK configuration
         with patch_otel_tracing_state(tracing_enabled=False):
             with with_otel_span(
-                "test_span", {"key": "value"}, level=OtelCollectLevel.SESSION
+                "test_span",
+                attributes={"key": "value"},
+                required_level=OtelCollectLevel.SESSION,
             ) as span:
                 # yields None when not collecting
                 assert span is None
@@ -233,7 +239,9 @@ class TestSpanWrappers:
         # Force tracing disabled to simulate no SDK configuration
         with patch_otel_tracing_state(tracing_enabled=False):
             async with with_otel_span_async(
-                "test_span_async", {"key": "value"}, level=OtelCollectLevel.SESSION
+                "test_span_async",
+                attributes={"key": "value"},
+                required_level=OtelCollectLevel.SESSION,
             ) as span:
                 # yields None when not collecting
                 assert span is None

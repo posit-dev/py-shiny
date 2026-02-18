@@ -345,7 +345,7 @@ class TestCalcSpans:
                     # Verify the label string was passed
                     label = call_args[0][0]
                     assert label == "reactive my_calc"
-                    assert call_args[1]["level"] == OtelCollectLevel.REACTIVITY
+                    assert call_args[1]["required_level"] == OtelCollectLevel.REACTIVITY
 
     @pytest.mark.asyncio
     async def test_calc_no_span_when_disabled(self):
@@ -436,7 +436,7 @@ class TestEffectSpans:
                     # Verify the label string was passed
                     label = call_args[0][0]
                     assert label == "observe my_effect"
-                    assert call_args[1]["level"] == OtelCollectLevel.REACTIVITY
+                    assert call_args[1]["required_level"] == OtelCollectLevel.REACTIVITY
 
     @pytest.mark.asyncio
     async def test_effect_no_span_when_disabled(self):
@@ -531,7 +531,7 @@ class TestSpanHierarchy:
                 # Manually create flush span and execute calc inside it
                 async with with_otel_span_async(
                     "reactive.update",
-                    level=OtelCollectLevel.REACTIVE_UPDATE,
+                    required_level=OtelCollectLevel.REACTIVE_UPDATE,
                 ):
                     await calc.update_value()
 
