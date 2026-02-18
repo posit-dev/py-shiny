@@ -7,6 +7,8 @@ that include function names, namespaces, and modifiers.
 
 from typing import TYPE_CHECKING, Any, Callable, Optional
 
+from ._constants import FUNC_ATTR_OTEL_LABEL_MODIFIER
+
 if TYPE_CHECKING:
     from ..session import Session
 
@@ -15,9 +17,6 @@ __all__ = [
     "get_otel_label_modifier",
     "set_otel_label_modifier",
 ]
-
-# Attribute name used to store modifiers on function objects
-_MODIFIER_ATTR = "_shiny_otel_label_modifier"
 
 
 def generate_reactive_label(
@@ -146,7 +145,7 @@ def get_otel_label_modifier(func: Callable[..., Any]) -> Optional[str]:
     set_otel_label_modifier : Set the modifier on a function.
     generate_reactive_label : Generate a span label including the modifier.
     """
-    return getattr(func, _MODIFIER_ATTR, None)
+    return getattr(func, FUNC_ATTR_OTEL_LABEL_MODIFIER, None)
 
 
 def set_otel_label_modifier(
@@ -213,7 +212,7 @@ def set_otel_label_modifier(
     Note
     ----
     This function modifies the function object in-place by setting an attribute
-    on its `__dict__`. The attribute name used is stored in `_MODIFIER_ATTR`.
+    on its `__dict__`. The attribute name used is `FUNC_ATTR_OTEL_LABEL_MODIFIER`.
 
     When :func:`functools.wraps` is used in decorators, it copies `__dict__`
     from the original function to the wrapper, which automatically preserves
@@ -231,7 +230,7 @@ def set_otel_label_modifier(
             f"Invalid mode: {mode!r}. Must be 'prepend', 'append', or 'replace'."
         )
 
-    existing = getattr(func, _MODIFIER_ATTR, None)
+    existing = getattr(func, FUNC_ATTR_OTEL_LABEL_MODIFIER, None)
 
     if mode == "replace" or existing is None:
         # Replace mode or no existing modifier - just set it
@@ -243,4 +242,4 @@ def set_otel_label_modifier(
         # Append: new modifier comes last
         new_modifier = f"{existing} {modifier}"
 
-    setattr(func, _MODIFIER_ATTR, new_modifier)
+    setattr(func, FUNC_ATTR_OTEL_LABEL_MODIFIER, new_modifier)

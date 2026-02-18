@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from ._constants import EXCEPTION_ATTR_OTEL_RECORDED
 from ..session import get_current_session
 from ..types import (
     SafeException,
@@ -237,9 +238,9 @@ def has_otel_exception_been_recorded(exception: Exception) -> bool:
 
     Notes
     -----
-    This function checks for a `_shiny_otel_exception_recorded` key in the exception's
-    `__dict__`. This key is set by `mark_otel_exception_as_recorded()` when
-    the exception is first recorded in a span.
+    This function checks for a marker in the exception's `__dict__`. This marker
+    is set by `mark_otel_exception_as_recorded()` when the exception is first
+    recorded in a span.
 
     This pattern matches R Shiny's behavior where exceptions are only recorded
     at the innermost reactive span, while parent spans still get ERROR status.
@@ -248,7 +249,7 @@ def has_otel_exception_been_recorded(exception: Exception) -> bool:
     --------
     * `mark_otel_exception_as_recorded`
     """
-    return exception.__dict__.get("_shiny_otel_exception_recorded", False)
+    return exception.__dict__.get(EXCEPTION_ATTR_OTEL_RECORDED, False)
 
 
 def mark_otel_exception_as_recorded(exception: Exception) -> None:
@@ -280,8 +281,8 @@ def mark_otel_exception_as_recorded(exception: Exception) -> None:
 
     Notes
     -----
-    This function sets a `_shiny_otel_exception_recorded` key in the exception's `__dict__`.
-    This key is checked by `has_otel_exception_been_recorded()`.
+    This function sets a marker in the exception's `__dict__`. This marker is
+    checked by `has_otel_exception_been_recorded()`.
 
     This pattern matches R Shiny's behavior where exceptions are only recorded
     at the innermost reactive span, while parent spans still get ERROR status.
@@ -290,4 +291,4 @@ def mark_otel_exception_as_recorded(exception: Exception) -> None:
     --------
     * `has_otel_exception_been_recorded`
     """
-    exception.__dict__["_shiny_otel_exception_recorded"] = True
+    exception.__dict__[EXCEPTION_ATTR_OTEL_RECORDED] = True

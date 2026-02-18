@@ -8,6 +8,8 @@ from opentelemetry import trace
 from opentelemetry._logs import get_logger_provider
 from opentelemetry.trace import Tracer
 
+from ._constants import TRACER_NAME
+
 __all__ = (
     "get_otel_tracer",
     "get_otel_logger",
@@ -19,9 +21,6 @@ __all__ = (
 _tracer: Union[Tracer, None] = None
 _logger: Union[Any, None] = None
 _tracing_enabled: Union[bool, None] = None
-
-# Tracer configuration
-TRACER_NAME = "co.posit.python-package.shiny"
 
 
 def get_otel_tracer() -> Tracer:
