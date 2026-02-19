@@ -384,6 +384,11 @@ class TestValueNaming:
         test_value = reactive.Value(0)
         assert test_value._name == "test_value"
 
+    def test_inferred_name_simple_assignment_lowercase(self):
+        """Test that simple assignment names are inferred with lowercase value()"""
+        test_value_lower = reactive.value(0)
+        assert test_value_lower._name == "test_value_lower"
+
     def test_inferred_name_attribute_assignment(self):
         """Test that attribute assignment names are inferred"""
 
@@ -393,6 +398,52 @@ class TestValueNaming:
 
         obj = Container()
         assert obj.counter._name == "counter"
+
+    def test_inferred_name_attribute_assignment_lowercase(self):
+        """Test that attribute assignment names are inferred with lowercase value()"""
+
+        class Container:
+            def __init__(self):
+                self.counter_lower = reactive.value(0)
+
+        obj = Container()
+        assert obj.counter_lower._name == "counter_lower"
+
+    def test_inferred_name_simple_assignment_no_prefix(self):
+        """Test that simple assignment names are inferred with Value (no prefix)"""
+        from shiny.reactive import Value
+
+        test_value_no_prefix = Value(0)
+        assert test_value_no_prefix._name == "test_value_no_prefix"
+
+    def test_inferred_name_simple_assignment_lowercase_no_prefix(self):
+        """Test that simple assignment names are inferred with value (no prefix)"""
+        from shiny.reactive import value
+
+        test_value_lower_no_prefix = value(0)
+        assert test_value_lower_no_prefix._name == "test_value_lower_no_prefix"
+
+    def test_inferred_name_attribute_assignment_no_prefix(self):
+        """Test that attribute assignment names are inferred with Value (no prefix)"""
+        from shiny.reactive import Value
+
+        class Container:
+            def __init__(self):
+                self.counter_no_prefix = Value(0)
+
+        obj = Container()
+        assert obj.counter_no_prefix._name == "counter_no_prefix"
+
+    def test_inferred_name_attribute_assignment_lowercase_no_prefix(self):
+        """Test that attribute assignment names are inferred with value (no prefix)"""
+        from shiny.reactive import value
+
+        class Container:
+            def __init__(self):
+                self.counter_lower_no_prefix = value(0)
+
+        obj = Container()
+        assert obj.counter_lower_no_prefix._name == "counter_lower_no_prefix"
 
     def test_explicit_name_overrides_inference(self):
         """Test that explicit name takes priority over inference"""
@@ -451,6 +502,30 @@ class TestValueNaming:
         ]
         assert len(value_logs) >= 1
         assert value_logs[0].log_record.body == "Set reactiveVal inferred_counter"
+
+    def test_inferred_name_used_in_logging_lowercase(
+        self, otel_log_provider_and_exporter, mock_session
+    ):
+        """Test that inferred name is used in logs with lowercase value()"""
+        provider, exporter = otel_log_provider_and_exporter
+        exporter.clear()
+
+        with session_context(mock_session):
+            with patch_otel_tracing_state(tracing_enabled=True):
+                with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
+                    inferred_counter_lower = reactive.value(0)
+                    inferred_counter_lower._set(42)
+
+        provider.force_flush()
+        logs = exporter.get_finished_logs()
+
+        value_logs = [
+            log
+            for log in logs
+            if log.log_record.body and "Set reactiveVal" in log.log_record.body
+        ]
+        assert len(value_logs) >= 1
+        assert value_logs[0].log_record.body == "Set reactiveVal inferred_counter_lower"
 
     def test_name_can_be_overridden_after_creation(self):
         """Test that Inputs can override inferred names"""
