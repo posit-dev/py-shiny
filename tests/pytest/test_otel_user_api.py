@@ -127,7 +127,10 @@ class TestOtelCollectDecorator:
 
         # Function should be marked with the attribute
         assert hasattr(decorated_func, FUNC_ATTR_OTEL_COLLECT_LEVEL)
-        assert getattr(decorated_func, FUNC_ATTR_OTEL_COLLECT_LEVEL) == OtelCollectLevel.NONE
+        assert (
+            getattr(decorated_func, FUNC_ATTR_OTEL_COLLECT_LEVEL)
+            == OtelCollectLevel.NONE
+        )
 
         # Function should still work normally
         result = decorated_func()
@@ -159,7 +162,10 @@ class TestOtelCollectDecorator:
 
         # Function should be marked with the attribute
         assert hasattr(func_with_kwargs, FUNC_ATTR_OTEL_COLLECT_LEVEL)
-        assert getattr(func_with_kwargs, FUNC_ATTR_OTEL_COLLECT_LEVEL) == OtelCollectLevel.NONE
+        assert (
+            getattr(func_with_kwargs, FUNC_ATTR_OTEL_COLLECT_LEVEL)
+            == OtelCollectLevel.NONE
+        )
 
         # Function should still work normally
         result = func_with_kwargs(1, b=2, c=3)
@@ -186,7 +192,9 @@ class TestOtelCollectDecorator:
 
         # Function should be marked with the attribute
         assert hasattr(failing_func, FUNC_ATTR_OTEL_COLLECT_LEVEL)
-        assert getattr(failing_func, FUNC_ATTR_OTEL_COLLECT_LEVEL) == OtelCollectLevel.NONE
+        assert (
+            getattr(failing_func, FUNC_ATTR_OTEL_COLLECT_LEVEL) == OtelCollectLevel.NONE
+        )
 
         # Exception should propagate normally
         with pytest.raises(ValueError, match="Test exception"):
@@ -323,23 +331,23 @@ class TestNoOtelCollect:
             assert get_otel_collect_level() >= OtelCollectLevel.REACTIVITY
 
     def test_no_otel_collect_as_decorator(self):
-        """Test no_otel_collect() works as decorator."""
-        with patch_otel_tracing_state(tracing_enabled=True):
+        """Test no_otel_collect() marks function with NONE collection level."""
+        from shiny.otel._constants import FUNC_ATTR_OTEL_COLLECT_LEVEL
 
-            @no_otel_collect()
-            def sensitive_func() -> str:  # type: ignore[misc]
-                assert get_otel_collect_level() == OtelCollectLevel.NONE
-                return "secret"
+        @no_otel_collect()
+        def sensitive_func() -> str:  # type: ignore[misc]
+            return "secret"
 
-            # Outside should be default
-            assert get_otel_collect_level() >= OtelCollectLevel.REACTIVITY
+        # Function should be marked with NONE level attribute
+        assert hasattr(sensitive_func, FUNC_ATTR_OTEL_COLLECT_LEVEL)
+        assert (
+            getattr(sensitive_func, FUNC_ATTR_OTEL_COLLECT_LEVEL)
+            == OtelCollectLevel.NONE
+        )
 
-            # Call function
-            result = sensitive_func()
-            assert result == "secret"
-
-            # After should be default
-            assert get_otel_collect_level() >= OtelCollectLevel.REACTIVITY
+        # Function should still work normally
+        result = sensitive_func()
+        assert result == "secret"
 
     def test_no_otel_collect_equivalent_to_otel_collect_none(self):
         """Test that no_otel_collect() is equivalent to otel_collect('none')."""
