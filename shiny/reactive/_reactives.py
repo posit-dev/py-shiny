@@ -36,7 +36,7 @@ from .._docstring import add_example
 from .._utils import is_async_callable, run_coro_sync
 from .._validation import req
 from ..otel import OtelCollectLevel, should_otel_collect
-from ..otel._attributes import extract_source_ref
+from ..otel._attributes import SourceRefAttrs, extract_source_ref
 from ..otel._collect import get_otel_collect_level
 from ..otel._core import emit_otel_log
 from ..otel._function_attrs import get_otel_collect_level_from_func
@@ -213,24 +213,26 @@ class Value(Generic[T]):
 
         return None
 
-    def _extract_caller_source_ref(self) -> dict[str, Any]:
+    def _extract_caller_source_ref(self) -> SourceRefAttrs:
         """
         Extract source reference attributes from the caller of _set().
 
-        This captures where the value update originated (file, line, function),
-        which is useful for debugging and tracing reactive value changes.
+        This captures where the value update originated (file, line, column,
+        function), which is useful for debugging and tracing reactive value changes.
 
         Returns
         -------
-        dict[str, Any]
-            Dictionary with code.filepath, code.lineno, and code.function keys.
-            Returns empty dict if source information is unavailable.
+        SourceRefAttrs
+            Dictionary with code.filepath, code.lineno, code.column.number, and
+            code.function keys. Returns empty dict if source information is
+            unavailable.
 
         Notes
         -----
         Following OpenTelemetry semantic conventions for code attributes:
         - code.filepath: Full path to source file
-        - code.lineno: Line number where _set() was called
+        - code.lineno: Line number where _set() was called (1-indexed)
+        - code.column.number: Column number where _set() was called (0-indexed)
         - code.function: Function name containing the call
 
         This method walks the call stack to find the first frame outside
@@ -248,11 +250,17 @@ class Value(Generic[T]):
                     continue
 
                 # Found a user code frame - extract attributes
-                attrs: dict[str, Any] = {}
+                attrs: SourceRefAttrs = {}
                 attrs["code.filepath"] = filename
 
                 if frame_info.lineno:
                     attrs["code.lineno"] = frame_info.lineno
+
+                # Extract column number if available (Python 3.11+)
+                if hasattr(frame_info, "positions") and frame_info.positions:
+                    col_offset = frame_info.positions.col_offset
+                    if col_offset is not None:
+                        attrs["code.column.number"] = col_offset
 
                 if frame_info.function:
                     attrs["code.function"] = frame_info.function
@@ -460,7 +468,7 @@ class Calc_(Generic[T]):
         self._error: list[Exception] = []
 
         # Extract OpenTelemetry attributes at initialization time
-        self._otel_attrs: dict[str, object] = self._extract_otel_attrs(fn)
+        self._otel_attrs: SourceRefAttrs = self._extract_otel_attrs(fn)
 
         # Extract modifier from function attribute and generate label
         self._otel_label: str = create_otel_label(
@@ -536,7 +544,7 @@ class Calc_(Generic[T]):
         except Exception as err:
             self._error.append(err)
 
-    def _extract_otel_attrs(self, fn: Callable[..., Any]) -> dict[str, Any]:
+    def _extract_otel_attrs(self, fn: Callable[..., Any]) -> SourceRefAttrs:
         """Extract OpenTelemetry attributes from the reactive function."""
         return extract_source_ref(fn)
 
@@ -735,7 +743,7 @@ class Effect_:
             self._session.on_ended(self._on_session_ended_cb)
 
         # Extract OpenTelemetry attributes at initialization time
-        self._otel_attrs: dict[str, object] = self._extract_otel_attrs(fn)
+        self._otel_attrs: SourceRefAttrs = self._extract_otel_attrs(fn)
 
         # Extract modifier from function attribute and generate label
         self._otel_label: str = create_otel_label(
@@ -750,6 +758,7 @@ class Effect_:
         self._otel_level: OtelCollectLevel = (
             get_otel_collect_level_from_func(fn) or get_otel_collect_level()
         )
+        print("Effect", self._otel_label, self._otel_level, self._otel_attrs)
 
         # Defer the first running of this until flushReact is called
         self._create_context().invalidate()
@@ -910,7 +919,7 @@ class Effect_:
     def _on_session_ended_cb(self) -> None:
         self.destroy()
 
-    def _extract_otel_attrs(self, fn: Callable[..., Any]) -> dict[str, Any]:
+    def _extract_otel_attrs(self, fn: Callable[..., Any]) -> SourceRefAttrs:
         """Extract OpenTelemetry attributes from the reactive function."""
         return extract_source_ref(fn)
 

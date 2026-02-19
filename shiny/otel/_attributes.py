@@ -3,12 +3,29 @@
 from __future__ import annotations
 
 import inspect
-from typing import TYPE_CHECKING, Any, Callable, Dict, cast
+from typing import TYPE_CHECKING, Any, Callable, Dict, TypedDict, cast
 
 if TYPE_CHECKING:
     from starlette.requests import HTTPConnection
 
-__all__ = ("extract_http_attributes", "extract_source_ref")
+
+# OpenTelemetry source code reference attributes
+# Following OTel semantic conventions for code attributes
+# All fields are optional since source information may not be available
+# for built-in functions, C extensions, or dynamically generated code
+SourceRefAttrs = TypedDict(
+    "SourceRefAttrs",
+    {
+        "code.filepath": str,  # Full path to source file
+        "code.lineno": int,  # Line number in source file (1-indexed)
+        "code.column.number": int,  # Column number in source file (0-indexed)
+        "code.function": str,  # Function or method name
+    },
+    total=False,
+)
+
+
+__all__ = ("extract_http_attributes", "extract_source_ref", "SourceRefAttrs")
 
 
 def extract_http_attributes(http_conn: HTTPConnection) -> Dict[str, Any]:
@@ -85,12 +102,12 @@ def extract_http_attributes(http_conn: HTTPConnection) -> Dict[str, Any]:
     return attributes
 
 
-def extract_source_ref(func: Callable[..., Any]) -> Dict[str, Any]:
+def extract_source_ref(func: Callable[..., Any]) -> SourceRefAttrs:
     """
     Extract source code location attributes from a function for OTel spans.
 
-    This extracts source file path, line number, and function name following
-    OpenTelemetry semantic conventions for code attributes.
+    This extracts source file path, line number, column number, and function
+    name following OpenTelemetry semantic conventions for code attributes.
 
     Parameters
     ----------
@@ -99,7 +116,7 @@ def extract_source_ref(func: Callable[..., Any]) -> Dict[str, Any]:
 
     Returns
     -------
-    Dict[str, Any]
+    SourceRefAttrs
         Dictionary of source code attributes suitable for span attributes.
         Returns empty dict if source information is unavailable.
 
@@ -115,6 +132,7 @@ def extract_source_ref(func: Callable[..., Any]) -> Dict[str, Any]:
     # Returns: {
     #     "code.filepath": "/path/to/file.py",
     #     "code.lineno": 42,
+    #     "code.column.number": 0,
     #     "code.function": "my_calc"
     # }
     ```
@@ -123,7 +141,8 @@ def extract_source_ref(func: Callable[..., Any]) -> Dict[str, Any]:
     -----
     Following OTel semantic conventions:
     - `code.filepath`: Full path to source file
-    - `code.lineno`: Line number where function is defined
+    - `code.lineno`: Line number where function is defined (1-indexed)
+    - `code.column.number`: Column number where function is defined (0-indexed)
     - `code.function`: Function name
 
     Source information may not be available for:
@@ -132,7 +151,7 @@ def extract_source_ref(func: Callable[..., Any]) -> Dict[str, Any]:
     - Dynamically generated functions
     - Lambda functions (will have name "<lambda>")
     """
-    attributes: Dict[str, Any] = {}
+    attributes: SourceRefAttrs = {}
 
     # Get source file path
     try:
@@ -154,6 +173,19 @@ def extract_source_ref(func: Callable[..., Any]) -> Dict[str, Any]:
     except (TypeError, OSError):
         # TypeError: built-in functions, C extensions
         # OSError: source file not found
+        pass
+
+    # Get column number where function is defined (Python 3.11+)
+    try:
+        code_obj = getattr(func, "__code__", None)
+        if code_obj and hasattr(code_obj, "co_positions"):
+            # co_positions() returns iterator of (lineno, end_lineno, col_offset, end_col_offset)
+            # Get the first position which corresponds to the function definition
+            positions = code_obj.co_positions()
+            first_pos = next(positions, None)
+            if first_pos and first_pos[2] is not None:
+                attributes["code.column.number"] = first_pos[2]
+    except (TypeError, StopIteration):
         pass
 
     # Get function name (this rarely fails)

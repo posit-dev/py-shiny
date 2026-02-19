@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager, contextmanager
-from typing import Any, AsyncIterator, Callable, Dict, Iterator, Union
+from typing import Any, AsyncIterator, Callable, Dict, Iterator, Mapping, Union
 
 from opentelemetry.trace import Span, Status, StatusCode
 
@@ -14,7 +14,7 @@ from ._core import get_otel_tracer, is_otel_tracing_enabled
 __all__ = ("with_otel_span", "with_otel_span_async")
 
 # Type aliases for parameters
-AttributesValue = Dict[str, Any] | None
+AttributesValue = Mapping[str, Any] | None
 AttributesType = Union[AttributesValue, Callable[[], AttributesValue]]
 NameType = Union[str, Callable[[], str]]
 
@@ -99,9 +99,10 @@ def with_otel_span(
     resolved_attrs: Dict[str, Any] = {}
     if attributes is not None:
         if callable(attributes):
-            resolved_attrs = attributes() or {}
+            attr_result = attributes()
+            resolved_attrs = dict(attr_result) if attr_result else {}
         else:
-            resolved_attrs = attributes
+            resolved_attrs = dict(attributes)
 
     tracer = get_otel_tracer()
     with tracer.start_as_current_span(
@@ -244,9 +245,10 @@ async def with_otel_span_async(
     resolved_attrs: Dict[str, Any] = {}
     if attributes is not None:
         if callable(attributes):
-            resolved_attrs = attributes() or {}
+            attr_result = attributes()
+            resolved_attrs = dict(attr_result) if attr_result else {}
         else:
-            resolved_attrs = attributes
+            resolved_attrs = dict(attributes)
 
     tracer = get_otel_tracer()
     with tracer.start_as_current_span(
