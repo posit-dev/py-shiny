@@ -563,3 +563,65 @@ class TestSpanHierarchy:
         assert (
             calc_span.context.trace_id == update_span.context.trace_id  # type: ignore[union-attr]
         ), "Spans should be in same trace"
+
+
+class TestCollectionLevelNone:
+    """Tests for OtelCollectLevel.NONE handling"""
+
+    def test_calc_respects_none_level(self):
+        """Verify Calc_ correctly handles OtelCollectLevel.NONE (value 0)"""
+        from shiny.otel import otel_collect
+
+        with patch_otel_tracing_state(tracing_enabled=True):
+
+            @otel_collect(OtelCollectLevel.NONE)
+            def my_calc():
+                return 42
+
+            calc = Calc_(my_calc)
+
+            # The bug: using `or` would treat NONE (0) as falsy
+            # This verifies the fix: explicitly checking for None
+            assert calc._otel_level == OtelCollectLevel.NONE
+
+    def test_effect_respects_none_level(self):
+        """Verify Effect_ correctly handles OtelCollectLevel.NONE (value 0)"""
+        from shiny.otel import otel_collect
+
+        with patch_otel_tracing_state(tracing_enabled=True):
+
+            @otel_collect(OtelCollectLevel.NONE)
+            def my_effect():
+                pass
+
+            effect = Effect_(my_effect)
+
+            # The bug: using `or` would treat NONE (0) as falsy
+            # This verifies the fix: explicitly checking for None
+            assert effect._otel_level == OtelCollectLevel.NONE
+
+    def test_calc_without_decorator_uses_context_level(self):
+        """Verify Calc_ uses context level when no decorator is present"""
+        with patch_otel_tracing_state(tracing_enabled=True):
+
+            def my_calc():
+                return 42
+
+            calc = Calc_(my_calc)
+
+            # Without decorator, should use the current context level
+            # Default test level is REACTIVITY
+            assert calc._otel_level >= OtelCollectLevel.REACTIVITY
+
+    def test_effect_without_decorator_uses_context_level(self):
+        """Verify Effect_ uses context level when no decorator is present"""
+        with patch_otel_tracing_state(tracing_enabled=True):
+
+            def my_effect():
+                pass
+
+            effect = Effect_(my_effect)
+
+            # Without decorator, should use the current context level
+            # Default test level is REACTIVITY
+            assert effect._otel_level >= OtelCollectLevel.REACTIVITY

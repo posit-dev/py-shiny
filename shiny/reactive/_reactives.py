@@ -483,8 +483,9 @@ class Calc_(Generic[T]):
 
         # Extract collection level from function attribute (set by @otel_collect decorator)
         # If not set, capture the current collection level at initialization time
+        func_level = get_otel_collect_level_from_func(fn)
         self._otel_level: OtelCollectLevel = (
-            get_otel_collect_level_from_func(fn) or get_otel_collect_level()
+            func_level if func_level is not None else get_otel_collect_level()
         )
 
     def __call__(self) -> T:
@@ -758,8 +759,9 @@ class Effect_:
 
         # Extract collection level from function attribute (set by @otel_collect decorator)
         # If not set, capture the current collection level at initialization time
+        func_level = get_otel_collect_level_from_func(fn)
         self._otel_level: OtelCollectLevel = (
-            get_otel_collect_level_from_func(fn) or get_otel_collect_level()
+            func_level if func_level is not None else get_otel_collect_level()
         )
 
         # Defer the first running of this until flushReact is called
@@ -809,8 +811,6 @@ class Effect_:
         self._exec_count += 1
 
         from ..session import session_context
-
-        print("Effect", self._otel_label, self._otel_level, self._otel_attrs)
 
         with session_context(self._session):
             async with with_otel_span_async(
