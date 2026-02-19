@@ -47,14 +47,31 @@ class OtelCollect:
         from shiny.reactive._reactives import Calc_, Effect_
         from shiny.render.renderer import Renderer
 
-        if isinstance(func, (Calc_, Effect_, Renderer)):
-            obj_type = type(func).__name__
+        if isinstance(func, Calc_):
             raise TypeError(
-                f"otel_collect() cannot be used on {obj_type} objects. "
-                f"Apply @otel_collect before @reactive.calc/@reactive.effect/@render decorators:\n"
+                f"otel_collect() cannot be used on Calc_ objects. "
+                f"Apply @otel_collect before @reactive.calc:\n"
                 f"  @reactive.calc\n"
                 f"  @otel_collect('{self.level.name.lower()}')\n"
-                f"  def my_func(): ..."
+                f"  def my_calc(): ..."
+            )
+
+        if isinstance(func, Effect_):
+            raise TypeError(
+                f"otel_collect() cannot be used on Effect_ objects. "
+                f"Apply @otel_collect before @reactive.effect:\n"
+                f"  @reactive.effect\n"
+                f"  @otel_collect('{self.level.name.lower()}')\n"
+                f"  def my_effect(): ..."
+            )
+
+        if isinstance(func, Renderer):
+            raise TypeError(
+                f"otel_collect() cannot be used on Renderer objects. "
+                f"Apply @otel_collect before @render decorator:\n"
+                f"  @render.text  # or @render.plot, etc.\n"
+                f"  @otel_collect('{self.level.name.lower()}')\n"
+                f"  def my_output(): ..."
             )
 
         # Mark the function with the desired collect level.
