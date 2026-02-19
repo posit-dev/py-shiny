@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import functools
 from contextlib import contextmanager
-from typing import Any, Callable, TypeVar, Union
+from typing import Any, Callable, Literal, TypeVar
 
 from ._collect import OtelCollectLevel, _current_collect_level
 from ._function_attrs import set_otel_collect_level_on_func
@@ -73,8 +73,8 @@ class OtelCollect:
 
 
 def otel_collect(
-    level: Union[str, OtelCollectLevel],
-) -> Any:
+    level: Literal["none", "session", "reactive_update", "reactivity", "all"],
+) -> OtelCollect:
     """
     Control Shiny's OpenTelemetry collection level for a block of code or function.
 
@@ -89,10 +89,9 @@ def otel_collect(
 
     Parameters
     ----------
-    level : str | OtelCollectLevel
-        Collection level to use. Can be a string (`"none"`, `"session"`,
-        `"reactive_update"`, `"reactivity"`, `"all"`) or an
-        `OtelCollectLevel` enum value.
+    level
+        Collection level to use. Must be one of: `"none"`, `"session"`,
+        `"reactive_update"`, `"reactivity"`, or `"all"`.
 
     Returns
     -------
@@ -149,22 +148,28 @@ def otel_collect(
 
     See Also
     --------
-    * `shiny.otel.OtelCollectLevel` - Enum defining collection levels
+    * `shiny.otel.OtelCollectLevel` - Enum defining collection levels (internal use)
     """
-    # Convert string to enum if needed
-    if isinstance(level, str):
-        level = OtelCollectLevel[level.upper()]
-
-    # Validate that level is a valid OtelCollectLevel enum value
-    if not isinstance(level, OtelCollectLevel):
+    # Validate type
+    if not isinstance(level, str):
         raise TypeError(
-            f"level must be a string or OtelCollectLevel enum value, got {type(level).__name__}"
+            f"level must be a string, got {type(level).__name__}"
         )
 
-    return OtelCollect(level)
+    # Convert string to enum
+    try:
+        enum_level = OtelCollectLevel[level.upper()]
+    except KeyError:
+        valid_levels = ", ".join(f'"{lvl}"' for lvl in ["none", "session", "reactive_update", "reactivity", "all"])
+        raise ValueError(
+            f"Invalid collection level: {level!r}. "
+            f"Valid levels are: {valid_levels}"
+        )
+
+    return OtelCollect(enum_level)
 
 
-def no_otel_collect() -> Any:
+def no_otel_collect() -> OtelCollect:
     """
     Disable Shiny's OpenTelemetry collection for a block of code or function.
 

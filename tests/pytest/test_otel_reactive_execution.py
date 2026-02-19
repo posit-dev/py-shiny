@@ -574,7 +574,7 @@ class TestCollectionLevelNone:
 
         with patch_otel_tracing_state(tracing_enabled=True):
 
-            @otel_collect(OtelCollectLevel.NONE)
+            @otel_collect("none")
             def my_calc():
                 return 42
 
@@ -590,7 +590,7 @@ class TestCollectionLevelNone:
 
         with patch_otel_tracing_state(tracing_enabled=True):
 
-            @otel_collect(OtelCollectLevel.NONE)
+            @otel_collect("none")
             def my_effect():
                 pass
 

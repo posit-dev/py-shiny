@@ -27,10 +27,10 @@ class TestOtelCollectContextManager:
             # Should restore after context
             assert get_otel_collect_level() >= OtelCollectLevel.REACTIVITY
 
-    def test_context_manager_with_enum_level(self):
-        """Test context manager with OtelCollectLevel enum."""
+    def test_context_manager_with_session_level(self):
+        """Test context manager with session level string."""
         with patch_otel_tracing_state(tracing_enabled=True):
-            with otel_collect(OtelCollectLevel.SESSION):
+            with otel_collect("session"):
                 assert get_otel_collect_level() == OtelCollectLevel.SESSION
                 assert should_otel_collect(OtelCollectLevel.SESSION)
                 assert not should_otel_collect(OtelCollectLevel.REACTIVE_UPDATE)
@@ -72,39 +72,49 @@ class TestOtelCollectContextManager:
     def test_all_string_levels(self):
         """Test all valid string level values."""
         with patch_otel_tracing_state(tracing_enabled=True):
-            levels = ["none", "session", "reactive_update", "reactivity", "all"]
-
-            for level_str in levels:
-                with otel_collect(level_str):
-                    level = get_otel_collect_level()
-                    assert level == OtelCollectLevel[level_str.upper()]
+            # Explicitly test each level to maintain type safety
+            with otel_collect("none"):
+                assert get_otel_collect_level() == OtelCollectLevel.NONE
+            with otel_collect("session"):
+                assert get_otel_collect_level() == OtelCollectLevel.SESSION
+            with otel_collect("reactive_update"):
+                assert get_otel_collect_level() == OtelCollectLevel.REACTIVE_UPDATE
+            with otel_collect("reactivity"):
+                assert get_otel_collect_level() == OtelCollectLevel.REACTIVITY
+            with otel_collect("all"):
+                assert get_otel_collect_level() == OtelCollectLevel.ALL
 
     def test_case_insensitive_strings(self):
-        """Test string levels are case-insensitive."""
+        """Test string levels are case-insensitive at runtime."""
         with patch_otel_tracing_state(tracing_enabled=True):
-            # Test various cases
-            for level_str in ["none", "NONE", "None", "NoNe"]:
-                with otel_collect(level_str):
-                    assert get_otel_collect_level() == OtelCollectLevel.NONE
+            # Test various cases - type checker enforces lowercase, but runtime accepts any case
+            with otel_collect("none"):
+                assert get_otel_collect_level() == OtelCollectLevel.NONE
+            with otel_collect("NONE"):  # type: ignore[arg-type]
+                assert get_otel_collect_level() == OtelCollectLevel.NONE
+            with otel_collect("None"):  # type: ignore[arg-type]
+                assert get_otel_collect_level() == OtelCollectLevel.NONE
+            with otel_collect("NoNe"):  # type: ignore[arg-type]
+                assert get_otel_collect_level() == OtelCollectLevel.NONE
 
     def test_invalid_level_type_raises_error(self):
         """Test that invalid level types raise TypeError."""
         with patch_otel_tracing_state(tracing_enabled=True):
             # Test invalid types
             with pytest.raises(
-                TypeError, match="level must be a string or OtelCollectLevel enum value"
+                TypeError, match="level must be a string"
             ):
                 with otel_collect(123):  # type: ignore[arg-type]
                     pass
 
             with pytest.raises(
-                TypeError, match="level must be a string or OtelCollectLevel enum value"
+                TypeError, match="level must be a string"
             ):
                 with otel_collect(None):  # type: ignore[arg-type]
                     pass
 
             with pytest.raises(
-                TypeError, match="level must be a string or OtelCollectLevel enum value"
+                TypeError, match="level must be a string"
             ):
                 with otel_collect([]):  # type: ignore[arg-type]
                     pass
