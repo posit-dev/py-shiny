@@ -109,25 +109,26 @@ def server(input, output, session):
         counter_val = normal_counter()
         return f"Slider: {slider_val}\nCounter: {counter_val}\n\n✅ Full telemetry"
 
-    # Private section: Suppressed telemetry (no spans, no value logs)
-    private_counter = reactive.value(0)
-    print("Private counter: ", private_counter._name, private_counter._try_infer_name())
+    # Suppresses ALL shiny telemetry for objects defined within this context
+    with otel_collect("none"):
+        # Private section: Suppressed telemetry (no spans, no value logs)
+        private_counter = reactive.value(0)
 
-    @reactive.effect
-    @reactive.event(input.private_increment)
-    @otel_collect("none")  # Suppresses ALL telemetry for this effect
-    def _():
-        # No value update log will be generated
-        private_counter.set(private_counter.get() + 1)
-        print(f"\n>>> Private counter updated to: {private_counter.get()} (NO LOGS)")
+        @reactive.effect
+        @reactive.event(input.private_increment)
+        def _():
+            # No value update log will be generated
+            private_counter.set(private_counter.get() + 1)
+            print(
+                f"\n>>> Private counter updated to: {private_counter.get()} (NO LOGS)"
+            )
 
-    @render.text
-    @otel_collect("none")  # Suppresses ALL telemetry for this output
-    def private_counter_display():
-        # No telemetry for slider reads or counter reads
-        slider_val = input.private_slider()
-        counter_val = private_counter()
-        return f"Slider: {slider_val}\nCounter: {counter_val}\n\n❌ No telemetry"
+        @render.text
+        def private_counter_display():
+            # No telemetry for slider reads or counter reads
+            slider_val = input.private_slider()
+            counter_val = private_counter()
+            return f"Slider: {slider_val}\nCounter: {counter_val}\n\n❌ No telemetry"
 
     # Computation examples
     compute_counter = reactive.value(0)
@@ -140,7 +141,7 @@ def server(input, output, session):
 
     @reactive.effect
     @reactive.event(input.compute_private)
-    @otel_collect("none")
+    @otel_collect("none")  # Explicitly disable Shiny OTel for this effect
     def _():
         compute_counter_private.set(compute_counter_private.get() + 1)
 
@@ -156,7 +157,7 @@ def server(input, output, session):
         return f"Sum 1..100 = {total:,}\nRun #{count}\n\n✅ Spans + value logs"
 
     @render.text
-    @otel_collect("none")  # Decorator suppresses ALL telemetry
+    @otel_collect("none")  # Explicitly disable Shiny OTel for this output
     def result_private():
         """Private computation with no telemetry."""
         count = compute_counter_private.get()

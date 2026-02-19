@@ -35,9 +35,10 @@ from .. import _utils
 from .._docstring import add_example
 from .._utils import is_async_callable, run_coro_sync
 from .._validation import req
-from ..otel import OtelCollectLevel, should_otel_collect
+from ..otel import OtelCollectLevel
 from ..otel._attributes import SourceRefAttrs, extract_source_ref
-from ..otel._core import emit_otel_log
+from ..otel._collect import get_otel_collect_level
+from ..otel._core import emit_otel_log, is_otel_tracing_enabled
 from ..otel._function_attrs import resolve_func_otel_level
 from ..otel._labels import (
     create_otel_label,
@@ -158,6 +159,10 @@ class Value(Generic[T]):
             self._name = name
         else:
             self._name = self._try_infer_name()
+
+        # Capture collection level at initialization time
+        # This determines whether value updates will emit OTel logs
+        self._otel_level: OtelCollectLevel = get_otel_collect_level()
 
     def _try_infer_name(self) -> str | None:
         """
@@ -350,8 +355,10 @@ class Value(Generic[T]):
         self._value_dependents.invalidate()
 
         # Log value update for OpenTelemetry
-        # Only log when collection level is REACTIVITY or higher
-        if should_otel_collect(OtelCollectLevel.REACTIVITY):
+        # Only log when:
+        # 1. Tracing is enabled (OpenTelemetry SDK is configured)
+        # 2. Collection level (captured at initialization) is REACTIVITY or higher
+        if is_otel_tracing_enabled() and self._otel_level >= OtelCollectLevel.REACTIVITY:
             # Build log message with namespace support
             value_name = self._name or "<unnamed>"
 
