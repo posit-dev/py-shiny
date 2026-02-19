@@ -56,7 +56,7 @@ from ..otel._attributes import extract_source_ref
 from ..otel._decorators import no_otel_collect
 from ..otel._function_attrs import resolve_func_otel_level
 from ..otel._labels import create_otel_label
-from ..otel._span_wrappers import with_otel_span_async
+from ..otel._span_wrappers import shiny_otel_span_async
 from ..reactive import Effect_, Value, effect
 from ..reactive import flush as reactive_flush
 from ..reactive import isolate
@@ -587,14 +587,14 @@ class AppSession(Session):
 
     async def _run_session_ended_tasks(self) -> None:
         from ..otel import OtelCollectLevel
-        from ..otel._span_wrappers import with_otel_span_async
+        from ..otel._span_wrappers import shiny_otel_span_async
 
         if self._has_run_session_ended_tasks:
             return
         self._has_run_session_ended_tasks = True
 
         # Wrap session cleanup in session.end span (or no-op if not collecting)
-        async with with_otel_span_async(
+        async with shiny_otel_span_async(
             "session.end",
             attributes={"session.id": self.id},
             required_level=OtelCollectLevel.SESSION,
@@ -691,9 +691,9 @@ class AppSession(Session):
                             # Wrap server function initialization in session.start span
                             from ..otel import OtelCollectLevel
                             from ..otel._attributes import extract_http_attributes
-                            from ..otel._span_wrappers import with_otel_span_async
+                            from ..otel._span_wrappers import shiny_otel_span_async
 
-                            async with with_otel_span_async(
+                            async with shiny_otel_span_async(
                                 "session.start",
                                 attributes=lambda: {
                                     "session.id": self.id,
@@ -1907,7 +1907,7 @@ class Outputs:
                 )
 
                 try:
-                    async with with_otel_span_async(
+                    async with shiny_otel_span_async(
                         output_otel_label,
                         attributes=output_otel_attrs,
                         required_level=OtelCollectLevel.REACTIVITY,

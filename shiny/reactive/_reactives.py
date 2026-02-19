@@ -45,7 +45,7 @@ from ..otel._labels import (
     get_otel_label_modifier,
     set_otel_label_modifier,
 )
-from ..otel._span_wrappers import with_otel_span_async
+from ..otel._span_wrappers import shiny_otel_span_async
 from ..types import (
     MISSING,
     MISSING_TYPE,
@@ -535,7 +535,7 @@ class Calc_(Generic[T]):
         from ..session import session_context
 
         with session_context(self._session):
-            async with with_otel_span_async(
+            async with shiny_otel_span_async(
                 self._otel_label,
                 attributes=self._otel_attrs,
                 required_level=OtelCollectLevel.REACTIVITY,
@@ -824,7 +824,7 @@ class Effect_:
         from ..session import session_context
 
         with session_context(self._session):
-            async with with_otel_span_async(
+            async with shiny_otel_span_async(
                 self._otel_label,
                 attributes=self._otel_attrs,
                 required_level=OtelCollectLevel.REACTIVITY,

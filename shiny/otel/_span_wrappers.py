@@ -11,7 +11,7 @@ from ._collect import OtelCollectLevel, get_otel_collect_level
 from ._constants import ATTR_SESSION_ID
 from ._core import get_otel_tracer, is_otel_tracing_enabled
 
-__all__ = ("with_otel_span", "with_otel_span_async")
+__all__ = ("shiny_otel_span", "shiny_otel_span_async")
 
 # Type aliases for parameters
 AttributesValue = Mapping[str, Any] | None
@@ -20,7 +20,7 @@ NameType = Union[str, Callable[[], str]]
 
 
 @contextmanager
-def with_otel_span(
+def shiny_otel_span(
     name: NameType,
     *,
     attributes: AttributesType = None,
@@ -28,7 +28,7 @@ def with_otel_span(
     collection_level: OtelCollectLevel | None = None,
 ) -> Iterator[Span | None]:
     """
-    Context manager for creating and managing an OpenTelemetry span.
+    Context manager for creating and managing a Shiny OpenTelemetry span.
 
     This is a synchronous version for non-async contexts. It automatically:
     - Checks if collection should occur based on the collection level
@@ -62,17 +62,17 @@ def with_otel_span(
     Examples
     --------
     ```python
-    from shiny.otel._span_wrappers import with_otel_span
+    from shiny.otel._span_wrappers import shiny_otel_span
     from shiny.otel import OtelCollectLevel
 
     # Static attributes
-    with with_otel_span("my_operation", {"user_id": "123"}) as span:
+    with shiny_otel_span("my_operation", attributes={"user_id": "123"}) as span:
         # Do work
         if span:
             span.set_attribute("result", "success")
 
     # Lazy attributes (only computed if collecting)
-    with with_otel_span("session.start", lambda: extract_http_attributes(conn)) as span:
+    with shiny_otel_span("session.start", attributes=lambda: extract_http_attributes(conn)) as span:
         # Attributes only extracted if span is created
         pass
     ```
@@ -156,7 +156,7 @@ def with_otel_span(
 
 
 @asynccontextmanager
-async def with_otel_span_async(
+async def shiny_otel_span_async(
     name: NameType,
     *,
     attributes: AttributesType = None,
@@ -164,7 +164,7 @@ async def with_otel_span_async(
     collection_level: OtelCollectLevel | None = None,
 ) -> AsyncIterator[Span | None]:
     """
-    Async context manager for creating and managing an OpenTelemetry span.
+    Async context manager for creating and managing a Shiny OpenTelemetry span.
 
     This is the async version that properly propagates context through async
     boundaries. It automatically:
