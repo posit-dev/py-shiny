@@ -1957,7 +1957,6 @@ class Outputs:
                 label_type="output",
                 session=self._session,
             )
-            # TODO double check that this is of the user function or the renderer itself
             output_obs._otel_attrs = output_obs._extract_otel_attrs(renderer_func)
 
             # Store the renderer and effect info
