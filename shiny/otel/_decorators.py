@@ -4,7 +4,7 @@ User-facing decorators and context managers for OpenTelemetry collection control
 
 from __future__ import annotations
 
-from contextlib import contextmanager
+from contextvars import Token
 from typing import Any, Callable, Literal, TypeVar
 
 from ._collect import OtelCollectLevel, _current_collect_level
@@ -28,23 +28,18 @@ class OtelCollect:
         level: OtelCollectLevel,
     ) -> None:
         self.level = level
-        self._context: Any = None
+        self._token: Token[OtelCollectLevel] | None = None
 
     def __enter__(self) -> None:
-        @contextmanager
-        def _context_manager():  # type: ignore[misc]
-            """Context manager implementation."""
-            token = _current_collect_level.set(self.level)
-            try:
-                yield
-            finally:
-                _current_collect_level.reset(token)
+        """Set the collection level for the duration of the context."""
+        self._token = _current_collect_level.set(self.level)
+        return None
 
-        self._context = _context_manager()
-        return self._context.__enter__()
-
-    def __exit__(self, *args: Any) -> Any:
-        return self._context.__exit__(*args)
+    def __exit__(self, *args: Any) -> None:
+        """Reset the collection level to its previous value."""
+        if self._token is not None:
+            _current_collect_level.reset(self._token)
+            self._token = None
 
     def __call__(self, func: Callable[..., T]) -> Callable[..., T]:
         """Decorator implementation."""
