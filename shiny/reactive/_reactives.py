@@ -358,7 +358,10 @@ class Value(Generic[T]):
         # Only log when:
         # 1. Tracing is enabled (OpenTelemetry SDK is configured)
         # 2. Collection level (captured at initialization) is REACTIVITY or higher
-        if is_otel_tracing_enabled() and self._otel_level >= OtelCollectLevel.REACTIVITY:
+        if (
+            is_otel_tracing_enabled()
+            and self._otel_level >= OtelCollectLevel.REACTIVITY
+        ):
             # Build log message with namespace support
             value_name = self._name or "<unnamed>"
 
