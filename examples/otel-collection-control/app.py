@@ -7,7 +7,11 @@ This app shows:
 3. How `otel_collect("none")` suppresses both spans and value logs
 
 Run with:
-    python app.py
+    SHINY_OTEL_COLLECT=all python app.py
+
+Or with shinylive:
+    shinylive export . site
+    python -m http.server --directory site 8008
 
 Watch the console for spans and log events as you interact with the app.
 """
@@ -170,28 +174,3 @@ def server(input, output, session):
 
 
 app = App(app_ui, server)
-
-
-if __name__ == "__main__":
-    import os
-
-    # Set default collection level to ALL (collect everything)
-    os.environ.setdefault("SHINY_OTEL_COLLECT", "all")
-
-    # Run the app
-    from shiny import run_app
-
-    print("\n" + "=" * 80)
-    print("OpenTelemetry: Collection Control & Value Logging Demo")
-    print("=" * 80)
-    print("\nThis demo shows:")
-    print("  1. Normal telemetry: Spans + value update logs")
-    print("  2. Suppressed telemetry: @otel_collect('none') disables both")
-    print("\nCollection level: ALL (default)")
-    print("\nInteract with the app and watch for:")
-    print("  • Spans: reactive execution, session lifecycle")
-    print("  • Logs: value updates with source references")
-    print("  • Suppression: How @otel_collect('none') affects both")
-    print("=" * 80 + "\n")
-
-    run_app(app, launch_browser=True)
