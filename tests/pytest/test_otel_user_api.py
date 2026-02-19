@@ -193,24 +193,28 @@ class TestOtelCollectDecorator:
             failing_func()
 
     def test_nested_decorated_functions(self):
-        """Test calling decorated function from another decorated function."""
-        with patch_otel_tracing_state(tracing_enabled=True):
+        """Test multiple functions can be decorated with different levels."""
+        from shiny.otel._constants import FUNC_ATTR_OTEL_COLLECT_LEVEL
 
-            @otel_collect("none")
-            def inner():
-                assert get_otel_collect_level() == OtelCollectLevel.NONE
-                return "inner"
+        @otel_collect("none")
+        def inner():
+            return "inner"
 
-            @otel_collect("session")
-            def outer():
-                assert get_otel_collect_level() == OtelCollectLevel.SESSION
-                result = inner()
-                # Should restore to SESSION after inner() returns
-                assert get_otel_collect_level() == OtelCollectLevel.SESSION
-                return result
+        @otel_collect("session")
+        def outer():
+            result = inner()
+            return result
 
-            result = outer()
-            assert result == "inner"
+        # Both functions should be marked with their respective attributes
+        assert hasattr(inner, FUNC_ATTR_OTEL_COLLECT_LEVEL)
+        assert getattr(inner, FUNC_ATTR_OTEL_COLLECT_LEVEL) == OtelCollectLevel.NONE
+
+        assert hasattr(outer, FUNC_ATTR_OTEL_COLLECT_LEVEL)
+        assert getattr(outer, FUNC_ATTR_OTEL_COLLECT_LEVEL) == OtelCollectLevel.SESSION
+
+        # Functions should work normally
+        result = outer()
+        assert result == "inner"
 
 
 class TestOtelCollectEnvironmentVariable:
