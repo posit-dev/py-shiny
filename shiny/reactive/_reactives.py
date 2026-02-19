@@ -41,7 +41,7 @@ from ..otel._collect import get_otel_collect_level
 from ..otel._core import emit_otel_log
 from ..otel._function_attrs import get_otel_collect_level_from_func
 from ..otel._labels import (
-    generate_reactive_label,
+    create_otel_label,
     get_otel_label_modifier,
     set_otel_label_modifier,
 )
@@ -463,7 +463,7 @@ class Calc_(Generic[T]):
         self._otel_attrs: dict[str, object] = self._extract_otel_attrs(fn)
 
         # Extract modifier from function attribute and generate label
-        self._otel_label: str = generate_reactive_label(
+        self._otel_label: str = create_otel_label(
             fn,
             "reactive",
             session=self._session,
@@ -738,7 +738,7 @@ class Effect_:
         self._otel_attrs: dict[str, object] = self._extract_otel_attrs(fn)
 
         # Extract modifier from function attribute and generate label
-        self._otel_label: str = generate_reactive_label(
+        self._otel_label: str = create_otel_label(
             fn,
             "observe",
             session=self._session,

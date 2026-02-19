@@ -21,7 +21,7 @@ from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanE
 
 from shiny.otel import OtelCollectLevel
 from shiny.otel._attributes import extract_source_ref
-from shiny.otel._labels import generate_reactive_label
+from shiny.otel._labels import create_otel_label
 from shiny.otel._span_wrappers import with_otel_span_async
 from shiny.reactive import Calc_, Effect_
 
@@ -31,21 +31,21 @@ from .otel_helpers import get_exported_spans, patch_otel_tracing_state
 class TestLabelGeneration:
     """Label generation tests"""
 
-    def test_generate_reactive_label_for_calc(self):
+    def test_create_otel_label_for_calc(self):
         """Test generating label for a calc with function name"""
 
         def my_calc():
             return 42
 
-        label = generate_reactive_label(my_calc, "reactive")
+        label = create_otel_label(my_calc, "reactive")
         assert label == "reactive my_calc"
 
-    def test_generate_reactive_label_for_lambda(self):
+    def test_create_otel_label_for_lambda(self):
         """Test generating label for anonymous/lambda function"""
-        label = generate_reactive_label(lambda: 42, "reactive")
+        label = create_otel_label(lambda: 42, "reactive")
         assert label == "reactive <anonymous>"
 
-    def test_generate_reactive_label_with_namespace(self):
+    def test_create_otel_label_with_namespace(self):
         """Test generating label with namespace prefix"""
         from unittest.mock import Mock
 
@@ -58,19 +58,19 @@ class TestLabelGeneration:
         mock_session = Mock()
         mock_session.ns = ResolvedId("mod")
 
-        label = generate_reactive_label(my_calc, "reactive", session=mock_session)
+        label = create_otel_label(my_calc, "reactive", session=mock_session)
         assert label == "reactive mod:my_calc"
 
-    def test_generate_reactive_label_with_modifier(self):
+    def test_create_otel_label_with_modifier(self):
         """Test generating label with modifier (e.g., cache)"""
 
         def my_calc():
             return 42
 
-        label = generate_reactive_label(my_calc, "reactive", modifier="cache")
+        label = create_otel_label(my_calc, "reactive", modifier="cache")
         assert label == "reactive cache my_calc"
 
-    def test_generate_reactive_label_with_namespace_and_modifier(self):
+    def test_create_otel_label_with_namespace_and_modifier(self):
         """Test generating label with both namespace and modifier"""
         from unittest.mock import Mock
 
@@ -83,7 +83,7 @@ class TestLabelGeneration:
         mock_session = Mock()
         mock_session.ns = ResolvedId("mod")
 
-        label = generate_reactive_label(
+        label = create_otel_label(
             my_calc, "reactive", session=mock_session, modifier="cache"
         )
         assert label == "reactive cache mod:my_calc"
@@ -94,7 +94,7 @@ class TestLabelGeneration:
         def my_effect():
             pass
 
-        label = generate_reactive_label(my_effect, "observe")
+        label = create_otel_label(my_effect, "observe")
         assert label == "observe my_effect"
 
     def test_generate_output_label(self):
@@ -103,7 +103,7 @@ class TestLabelGeneration:
         def my_output():
             return "text"
 
-        label = generate_reactive_label(my_output, "output")
+        label = create_otel_label(my_output, "output")
         assert label == "output my_output"
 
 
