@@ -118,48 +118,52 @@ class TestOtelCollectDecorator:
     """Tests for otel_collect as a decorator."""
 
     def test_decorator_on_function(self):
-        """Test decorator applied to a function."""
-        with patch_otel_tracing_state(tracing_enabled=True):
+        """Test decorator marks a function with collection level attribute."""
+        from shiny.otel._constants import FUNC_ATTR_OTEL_COLLECT_LEVEL
 
-            @otel_collect("none")
-            def decorated_func():
-                # Should be NONE inside decorated function
-                assert get_otel_collect_level() == OtelCollectLevel.NONE
-                return "result"
+        @otel_collect("none")
+        def decorated_func():
+            return "result"
 
-            # Outside function, should be default
-            assert get_otel_collect_level() >= OtelCollectLevel.REACTIVITY
+        # Function should be marked with the attribute
+        assert hasattr(decorated_func, FUNC_ATTR_OTEL_COLLECT_LEVEL)
+        assert getattr(decorated_func, FUNC_ATTR_OTEL_COLLECT_LEVEL) == OtelCollectLevel.NONE
 
-            # Call function
-            result = decorated_func()
-            assert result == "result"
-
-            # After function, should be default again
-            assert get_otel_collect_level() >= OtelCollectLevel.REACTIVITY
+        # Function should still work normally
+        result = decorated_func()
+        assert result == "result"
 
     def test_decorator_with_arguments(self):
-        """Test decorator on function with arguments."""
-        with patch_otel_tracing_state(tracing_enabled=True):
+        """Test decorator marks function with arguments."""
+        from shiny.otel._constants import FUNC_ATTR_OTEL_COLLECT_LEVEL
 
-            @otel_collect("session")
-            def add(a: int, b: int) -> int:  # type: ignore[misc]
-                assert get_otel_collect_level() == OtelCollectLevel.SESSION
-                return a + b
+        @otel_collect("session")
+        def add(a: int, b: int) -> int:  # type: ignore[misc]
+            return a + b
 
-            result = add(2, 3)
-            assert result == 5
+        # Function should be marked with the attribute
+        assert hasattr(add, FUNC_ATTR_OTEL_COLLECT_LEVEL)
+        assert getattr(add, FUNC_ATTR_OTEL_COLLECT_LEVEL) == OtelCollectLevel.SESSION
+
+        # Function should still work normally
+        result = add(2, 3)
+        assert result == 5
 
     def test_decorator_with_kwargs(self):
-        """Test decorator on function with keyword arguments."""
-        with patch_otel_tracing_state(tracing_enabled=True):
+        """Test decorator marks function with keyword arguments."""
+        from shiny.otel._constants import FUNC_ATTR_OTEL_COLLECT_LEVEL
 
-            @otel_collect("none")
-            def func_with_kwargs(a: int, b: int = 10, *, c: int = 20) -> int:  # type: ignore[misc]
-                assert get_otel_collect_level() == OtelCollectLevel.NONE
-                return a + b + c
+        @otel_collect("none")
+        def func_with_kwargs(a: int, b: int = 10, *, c: int = 20) -> int:  # type: ignore[misc]
+            return a + b + c
 
-            result = func_with_kwargs(1, b=2, c=3)
-            assert result == 6
+        # Function should be marked with the attribute
+        assert hasattr(func_with_kwargs, FUNC_ATTR_OTEL_COLLECT_LEVEL)
+        assert getattr(func_with_kwargs, FUNC_ATTR_OTEL_COLLECT_LEVEL) == OtelCollectLevel.NONE
+
+        # Function should still work normally
+        result = func_with_kwargs(1, b=2, c=3)
+        assert result == 6
 
     def test_decorator_preserves_function_metadata(self):
         """Test decorator preserves function name and docstring."""
@@ -172,21 +176,21 @@ class TestOtelCollectDecorator:
         assert my_function.__name__ == "my_function"
         assert my_function.__doc__ == "My docstring."
 
-    def test_decorator_exception_handling(self):
-        """Test decorator restores level even on exception."""
-        with patch_otel_tracing_state(tracing_enabled=True):
-            original_level = get_otel_collect_level()
+    def test_decorator_preserves_exceptions(self):
+        """Test decorator doesn't interfere with exception handling."""
+        from shiny.otel._constants import FUNC_ATTR_OTEL_COLLECT_LEVEL
 
-            @otel_collect("none")
-            def failing_func():
-                assert get_otel_collect_level() == OtelCollectLevel.NONE
-                raise ValueError("Test exception")
+        @otel_collect("none")
+        def failing_func():
+            raise ValueError("Test exception")
 
-            with pytest.raises(ValueError):
-                failing_func()
+        # Function should be marked with the attribute
+        assert hasattr(failing_func, FUNC_ATTR_OTEL_COLLECT_LEVEL)
+        assert getattr(failing_func, FUNC_ATTR_OTEL_COLLECT_LEVEL) == OtelCollectLevel.NONE
 
-            # Should restore despite exception
-            assert get_otel_collect_level() == original_level
+        # Exception should propagate normally
+        with pytest.raises(ValueError, match="Test exception"):
+            failing_func()
 
     def test_nested_decorated_functions(self):
         """Test calling decorated function from another decorated function."""
