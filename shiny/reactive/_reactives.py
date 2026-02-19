@@ -758,7 +758,6 @@ class Effect_:
         self._otel_level: OtelCollectLevel = (
             get_otel_collect_level_from_func(fn) or get_otel_collect_level()
         )
-        print("Effect", self._otel_label, self._otel_level, self._otel_attrs)
 
         # Defer the first running of this until flushReact is called
         self._create_context().invalidate()
@@ -807,6 +806,8 @@ class Effect_:
         self._exec_count += 1
 
         from ..session import session_context
+
+        print("Effect", self._otel_label, self._otel_level, self._otel_attrs)
 
         with session_context(self._session):
             async with with_otel_span_async(

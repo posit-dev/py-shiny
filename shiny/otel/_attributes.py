@@ -163,29 +163,23 @@ def extract_source_ref(func: Callable[..., Any]) -> SourceRefAttrs:
         # OSError: source file not found
         pass
 
-    # Get line number where function is defined
+    # Get line number and column number where function is defined
     try:
         source_lines = inspect.getsourcelines(func)
         if source_lines:
             # getsourcelines returns (lines, starting_line_number)
-            line_number = source_lines[1]
+            lines, line_number = source_lines
             attributes["code.lineno"] = line_number
+
+            # Extract column number from indentation of first line
+            if lines:
+                first_line = lines[0]
+                # Column is the number of leading whitespace characters
+                column = len(first_line) - len(first_line.lstrip())
+                attributes["code.column.number"] = column
     except (TypeError, OSError):
         # TypeError: built-in functions, C extensions
         # OSError: source file not found
-        pass
-
-    # Get column number where function is defined (Python 3.11+)
-    try:
-        code_obj = getattr(func, "__code__", None)
-        if code_obj and hasattr(code_obj, "co_positions"):
-            # co_positions() returns iterator of (lineno, end_lineno, col_offset, end_col_offset)
-            # Get the first position which corresponds to the function definition
-            positions = code_obj.co_positions()
-            first_pos = next(positions, None)
-            if first_pos and first_pos[2] is not None:
-                attributes["code.column.number"] = first_pos[2]
-    except (TypeError, StopIteration):
         pass
 
     # Get function name (this rarely fails)
