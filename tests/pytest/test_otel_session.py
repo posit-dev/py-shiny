@@ -12,9 +12,9 @@ Tests cover:
 import os
 from unittest.mock import Mock, patch
 
+from shiny.otel._attributes import extract_http_attributes
 from shiny.otel._collect import OtelCollectLevel, get_otel_collect_level
 from shiny.otel._core import is_otel_tracing_enabled
-from shiny.otel._attributes import extract_http_attributes
 
 from .otel_helpers import patch_otel_tracing_state
 

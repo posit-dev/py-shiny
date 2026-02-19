@@ -36,27 +36,45 @@ class TestReactiveFlushSpans:
         """Test that collection is enabled for REACTIVE_UPDATE level when SHINY_OTEL_COLLECT=reactive_update"""
         with patch_otel_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactive_update"}):
-                assert (is_otel_tracing_enabled() and get_otel_collect_level() >= OtelCollectLevel.REACTIVE_UPDATE) is True
-                assert (is_otel_tracing_enabled() and get_otel_collect_level() >= OtelCollectLevel.REACTIVITY) is False
+                assert (
+                    is_otel_tracing_enabled()
+                    and get_otel_collect_level() >= OtelCollectLevel.REACTIVE_UPDATE
+                ) is True
+                assert (
+                    is_otel_tracing_enabled()
+                    and get_otel_collect_level() >= OtelCollectLevel.REACTIVITY
+                ) is False
 
     def test_reactive_update_collection_enabled_at_all_level(self):
         """Test that REACTIVE_UPDATE level collection is enabled when SHINY_OTEL_COLLECT=all"""
         with patch_otel_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "all"}):
-                assert (is_otel_tracing_enabled() and get_otel_collect_level() >= OtelCollectLevel.REACTIVE_UPDATE) is True
+                assert (
+                    is_otel_tracing_enabled()
+                    and get_otel_collect_level() >= OtelCollectLevel.REACTIVE_UPDATE
+                ) is True
 
     def test_reactive_update_collection_disabled_at_session_level(self):
         """Test that REACTIVE_UPDATE level collection is disabled when SHINY_OTEL_COLLECT=session"""
         with patch_otel_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "session"}):
-                assert (is_otel_tracing_enabled() and get_otel_collect_level() >= OtelCollectLevel.REACTIVE_UPDATE) is False
+                assert (
+                    is_otel_tracing_enabled()
+                    and get_otel_collect_level() >= OtelCollectLevel.REACTIVE_UPDATE
+                ) is False
 
     def test_collection_disabled_at_none_level(self):
         """Test that collection is disabled when SHINY_OTEL_COLLECT=none"""
         with patch_otel_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "none"}):
-                assert (is_otel_tracing_enabled() and get_otel_collect_level() >= OtelCollectLevel.SESSION) is False
-                assert (is_otel_tracing_enabled() and get_otel_collect_level() >= OtelCollectLevel.REACTIVE_UPDATE) is False
+                assert (
+                    is_otel_tracing_enabled()
+                    and get_otel_collect_level() >= OtelCollectLevel.SESSION
+                ) is False
+                assert (
+                    is_otel_tracing_enabled()
+                    and get_otel_collect_level() >= OtelCollectLevel.REACTIVE_UPDATE
+                ) is False
 
 
 class TestReactiveFlushInstrumentation:

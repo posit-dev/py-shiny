@@ -35,9 +35,8 @@ from .. import _utils
 from .._docstring import add_example
 from .._utils import is_async_callable, run_coro_sync
 from .._validation import req
-from ..otel._collect import OtelCollectLevel
 from ..otel._attributes import SourceRefAttrs, extract_source_ref
-from ..otel._collect import get_otel_collect_level
+from ..otel._collect import OtelCollectLevel, get_otel_collect_level
 from ..otel._core import emit_otel_log, is_otel_tracing_enabled
 from ..otel._function_attrs import resolve_func_otel_level
 from ..otel._labels import (

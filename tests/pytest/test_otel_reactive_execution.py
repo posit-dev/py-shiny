@@ -19,8 +19,8 @@ import pytest
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
-from shiny.otel._collect import OtelCollectLevel
 from shiny.otel._attributes import extract_source_ref
+from shiny.otel._collect import OtelCollectLevel
 from shiny.otel._labels import create_otel_label
 from shiny.otel._span_wrappers import shiny_otel_span_async
 from shiny.reactive import Calc_, Effect_

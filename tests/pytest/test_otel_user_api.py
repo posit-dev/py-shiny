@@ -23,7 +23,10 @@ class TestOtelCollectContextManager:
 
             with otel_collect("none"):
                 assert get_otel_collect_level() == OtelCollectLevel.NONE
-                assert not (is_otel_tracing_enabled() and get_otel_collect_level() >= OtelCollectLevel.SESSION)
+                assert not (
+                    is_otel_tracing_enabled()
+                    and get_otel_collect_level() >= OtelCollectLevel.SESSION
+                )
 
             # Should restore after context
             assert get_otel_collect_level() >= OtelCollectLevel.REACTIVITY
@@ -33,8 +36,14 @@ class TestOtelCollectContextManager:
         with patch_otel_tracing_state(tracing_enabled=True):
             with otel_collect("session"):
                 assert get_otel_collect_level() == OtelCollectLevel.SESSION
-                assert (is_otel_tracing_enabled() and get_otel_collect_level() >= OtelCollectLevel.SESSION)
-                assert not (is_otel_tracing_enabled() and get_otel_collect_level() >= OtelCollectLevel.REACTIVE_UPDATE)
+                assert (
+                    is_otel_tracing_enabled()
+                    and get_otel_collect_level() >= OtelCollectLevel.SESSION
+                )
+                assert not (
+                    is_otel_tracing_enabled()
+                    and get_otel_collect_level() >= OtelCollectLevel.REACTIVE_UPDATE
+                )
 
     def test_nested_context_managers(self):
         """Test nested context managers work correctly."""
@@ -300,7 +309,10 @@ class TestNoOtelCollect:
             with no_otel_collect():
                 # Should be at NONE level inside
                 assert get_otel_collect_level() == OtelCollectLevel.NONE
-                assert not (is_otel_tracing_enabled() and get_otel_collect_level() >= OtelCollectLevel.SESSION)
+                assert not (
+                    is_otel_tracing_enabled()
+                    and get_otel_collect_level() >= OtelCollectLevel.SESSION
+                )
 
             # Should restore after context
             assert get_otel_collect_level() >= OtelCollectLevel.REACTIVITY
