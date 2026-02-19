@@ -49,7 +49,7 @@ class OtelCollect:
 
         if isinstance(func, Calc_):
             raise TypeError(
-                f"otel_collect() cannot be used on Calc_ objects. "
+                f"otel_collect() cannot be used on @reactive.calc objects. "
                 f"Apply @otel_collect before @reactive.calc:\n"
                 f"  @reactive.calc\n"
                 f'  @otel_collect("{self.level.name.lower()}")\n'
@@ -58,7 +58,7 @@ class OtelCollect:
 
         if isinstance(func, Effect_):
             raise TypeError(
-                f"otel_collect() cannot be used on Effect_ objects. "
+                f"otel_collect() cannot be used on @reactive.effect objects. "
                 f"Apply @otel_collect before @reactive.effect:\n"
                 f"  @reactive.effect\n"
                 f'  @otel_collect("{self.level.name.lower()}")\n'
@@ -67,8 +67,8 @@ class OtelCollect:
 
         if isinstance(func, Renderer):
             raise TypeError(
-                f"otel_collect() cannot be used on Renderer objects. "
-                f"Apply @otel_collect before @render decorator:\n"
+                f"otel_collect() cannot be used on render objects. "
+                f"Apply @otel_collect before the @render.func decorator:\n"
                 f"  @render.text  # or @render.plot, etc.\n"
                 f'  @otel_collect("{self.level.name.lower()}")\n'
                 f"  def my_output(): ..."
