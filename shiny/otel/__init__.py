@@ -77,15 +77,11 @@ Main export:
 from __future__ import annotations
 
 from ._collect import get_otel_collect_level
-from ._core import get_otel_logger, get_otel_tracer
 from ._decorators import otel_collect
 
 __all__ = (
     # Collect level management
     "get_otel_collect_level",
-    # Core functionality
-    "get_otel_tracer",
-    "get_otel_logger",
     # User-facing API
     "otel_collect",
 )
