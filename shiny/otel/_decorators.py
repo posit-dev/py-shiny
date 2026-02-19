@@ -52,7 +52,7 @@ class OtelCollect:
                 f"otel_collect() cannot be used on Calc_ objects. "
                 f"Apply @otel_collect before @reactive.calc:\n"
                 f"  @reactive.calc\n"
-                f"  @otel_collect('{self.level.name.lower()}')\n"
+                f'  @otel_collect("{self.level.name.lower()}")\n'
                 f"  def my_calc(): ..."
             )
 
@@ -61,7 +61,7 @@ class OtelCollect:
                 f"otel_collect() cannot be used on Effect_ objects. "
                 f"Apply @otel_collect before @reactive.effect:\n"
                 f"  @reactive.effect\n"
-                f"  @otel_collect('{self.level.name.lower()}')\n"
+                f'  @otel_collect("{self.level.name.lower()}")\n'
                 f"  def my_effect(): ..."
             )
 
@@ -70,7 +70,7 @@ class OtelCollect:
                 f"otel_collect() cannot be used on Renderer objects. "
                 f"Apply @otel_collect before @render decorator:\n"
                 f"  @render.text  # or @render.plot, etc.\n"
-                f"  @otel_collect('{self.level.name.lower()}')\n"
+                f'  @otel_collect("{self.level.name.lower()}")\n'
                 f"  def my_output(): ..."
             )
 
