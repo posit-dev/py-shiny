@@ -44,14 +44,16 @@ from shiny.otel import otel_collect  # noqa: E402
 
 app_ui = ui.page_fluid(
     ui.h2("OpenTelemetry: Collection Control & Value Logging"),
-    ui.markdown("""
+    ui.markdown(
+        """
         This demo shows how `otel_collect` controls **both spans and value logs**.
 
         Watch the console to see:
         - **Spans**: Session lifecycle, reactive execution
         - **Logs**: Reactive value updates with source references
         - **Control**: How `@otel_collect("none")` suppresses both
-        """),
+        """
+    ),
     ui.hr(),
     ui.layout_columns(
         ui.card(
@@ -59,20 +61,24 @@ app_ui = ui.page_fluid(
             ui.input_slider("normal_slider", "Slider", 0, 100, 50),
             ui.input_action_button("normal_increment", "Increment Counter"),
             ui.output_text_verbatim("normal_counter_display"),
-            ui.markdown("""
+            ui.markdown(
+                """
                 **Telemetry:** ✅ Spans + value logs
                 This section generates full telemetry.
-                """),
+                """
+            ),
         ),
         ui.card(
             ui.card_header("Suppressed Telemetry (No Collection)"),
             ui.input_slider("private_slider", "Slider", 0, 100, 50),
             ui.input_action_button("private_increment", "Increment Counter"),
             ui.output_text_verbatim("private_counter_display"),
-            ui.markdown("""
+            ui.markdown(
+                """
                 **Telemetry:** ❌ No spans, no value logs
                 Uses `@otel_collect("none")` to suppress all Shiny telemetry.
-                """),
+                """
+            ),
         ),
     ),
     ui.hr(),
@@ -139,6 +145,7 @@ def server(input, output, session):
 
     @reactive.effect
     @reactive.event(input.compute_private)
+    @otel_collect("none")
     def _():
         compute_counter_private.set(compute_counter_private.get() + 1)
 

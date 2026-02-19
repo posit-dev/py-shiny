@@ -1874,6 +1874,24 @@ class Outputs:
             # renderer is a Renderer object. Give it a bit of metadata.
             renderer._set_output_metadata(output_id=output_id)
 
+            # Gather otel info for inner method
+            renderer_func = getattr(renderer.fn, "_orig_fn", renderer.fn)
+            output_otel_label = create_otel_label(
+                func=renderer_func,
+                label_type="output",
+                session=self._session,
+            )
+            output_otel_attrs = extract_source_ref(renderer_func)
+            output_otel_level = resolve_func_otel_level(renderer_func)
+            # print(
+            #     "Output",
+            #     output_name,
+            #     "OTel Level:",
+            #     output_obs._otel_level,
+            #     "Attrs:",
+            #     output_obs._otel_attrs,
+            # )
+
             renderer._on_register()
 
             self.remove(output_name)
@@ -1896,11 +1914,10 @@ class Outputs:
 
                 try:
                     async with with_otel_span_async(
-                        lambda: f"output {output_id}",
-                        attributes=lambda: extract_source_ref(
-                            getattr(renderer.fn, "_orig_fn", renderer.fn)
-                        ),
+                        output_otel_label,
+                        attributes=output_otel_attrs,
                         required_level=OtelCollectLevel.REACTIVITY,
+                        collection_level=output_otel_level,
                     ):
                         with session.clientdata._output_name_ctx(output_name):
                             # Call the app's renderer function
@@ -1950,16 +1967,6 @@ class Outputs:
                     "binding", {"id": output_name}
                 )
             )
-
-            # Override OTel attributes for output_obs effect
-            renderer_func = getattr(renderer.fn, "_orig_fn", renderer.fn)
-            output_obs._otel_label = create_otel_label(
-                func=renderer_func,
-                label_type="output",
-                session=self._session,
-            )
-            output_obs._otel_attrs = output_obs._extract_otel_attrs(renderer_func)
-            output_obs._otel_level = resolve_func_otel_level(renderer_func)
 
             # Store the renderer and effect info
             self._outputs[output_name] = OutputInfo(
