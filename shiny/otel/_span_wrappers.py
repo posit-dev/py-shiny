@@ -32,7 +32,7 @@ async def shiny_otel_span_async(
 
     This is the async version that properly propagates context through async
     boundaries. It automatically:
-    - Checks if collection should occur based on the collection level
+    - Checks if collection should occur based on the collect level
     - Creates a span with the given name and attributes (if collecting)
     - Records exceptions if they occur
     - Sets appropriate span status (OK or ERROR)
@@ -58,7 +58,7 @@ async def shiny_otel_span_async(
         called if collection is enabled, allowing for lazy evaluation of
         expensive attribute extraction.
     required_level
-        The minimum collection level required for this span. Defaults to SESSION.
+        The minimum collect level required for this span. Defaults to SESSION.
 
     Yields
     ------

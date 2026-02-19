@@ -30,13 +30,13 @@ To enable OpenTelemetry tracing in your Shiny application:
    app = App(...)
    ```
 
-3. Control collection level via environment variable:
+3. Control collect level via environment variable:
    ```bash
    export SHINY_OTEL_COLLECT=all  # or: none, session, reactive_update, reactivity
    python app.py
    ```
 
-## Collection Levels
+## Collect Levels
 
 Control what Shiny internal telemetry is collected:
 
@@ -51,7 +51,7 @@ spans you create manually in your application code are unaffected.
 
 ## Programmatic Control
 
-Use the `otel_collect` context manager to control Shiny's collection level dynamically:
+Use the `otel_collect` context manager to control Shiny's collect level dynamically:
 
 ```python
 from shiny import App, ui, reactive
@@ -71,9 +71,9 @@ def my_calc():
 ## API Reference
 
 Main exports:
-- `OtelCollectLevel`: Enum defining Shiny collection levels
+- `OtelCollectLevel`: Enum defining Shiny collect levels
 - `should_otel_collect`: Check if Shiny telemetry should be collected for a given level
-- `otel_collect`: Context manager to temporarily change Shiny's collection level
+- `otel_collect`: Context manager to temporarily change Shiny's collect level
 """
 
 from __future__ import annotations
@@ -87,7 +87,7 @@ from ._core import (
 from ._decorators import otel_collect
 
 __all__ = (
-    # Collection level management
+    # Collect level management
     "OtelCollectLevel",
     "get_otel_collect_level",
     "should_otel_collect",

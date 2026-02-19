@@ -17,15 +17,15 @@ Watch the console for spans and log events as you interact with the app.
 """
 
 # Configure OpenTelemetry BEFORE importing shiny
-from opentelemetry import trace  # noqa: E402
-from opentelemetry._logs import set_logger_provider  # noqa: E402
-from opentelemetry.sdk._logs import LoggerProvider  # noqa: E402
-from opentelemetry.sdk._logs.export import (  # noqa: E402
+from opentelemetry import trace
+from opentelemetry._logs import set_logger_provider
+from opentelemetry.sdk._logs import LoggerProvider
+from opentelemetry.sdk._logs.export import (
     ConsoleLogRecordExporter,
     SimpleLogRecordProcessor,
 )
-from opentelemetry.sdk.trace import TracerProvider  # noqa: E402
-from opentelemetry.sdk.trace.export import (  # noqa: E402
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import (
     ConsoleSpanExporter,
     SimpleSpanProcessor,
 )
@@ -43,8 +43,8 @@ log_provider.add_log_record_processor(
 set_logger_provider(log_provider)
 
 # Now import shiny
-from shiny import App, reactive, render, ui  # noqa: E402
-from shiny.otel import otel_collect  # noqa: E402
+from shiny import App, reactive, render, ui
+from shiny.otel import otel_collect
 
 app_ui = ui.page_fluid(
     ui.h2("OpenTelemetry: Collection Control & Value Logging"),

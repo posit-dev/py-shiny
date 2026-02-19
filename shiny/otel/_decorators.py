@@ -19,7 +19,7 @@ class OtelCollect:
     """
     Helper class that can be used as both context manager and decorator.
 
-    This class wraps the collection level management functionality, allowing
+    This class wraps the collect level management functionality, allowing
     the same object to be used with `with` statements or as a function decorator.
     """
 
@@ -28,22 +28,22 @@ class OtelCollect:
         level: OtelCollectLevel,
     ) -> None:
         self.level = level
-        self._token: Token[OtelCollectLevel] | None = None
+        self._token: Token[OtelCollectLevel | None] | None = None
 
     def __enter__(self) -> None:
-        """Set the collection level for the duration of the context."""
+        """Set the collect level for the duration of the context."""
         self._token = _current_collect_level.set(self.level)
         return None
 
     def __exit__(self, *args: Any) -> None:
-        """Reset the collection level to its previous value."""
+        """Reset the collect level to its previous value."""
         if self._token is not None:
             _current_collect_level.reset(self._token)
             self._token = None
 
     def __call__(self, func: Callable[..., T]) -> Callable[..., T]:
         """Decorator implementation."""
-        # Mark the function with the desired collection level.
+        # Mark the function with the desired collect level.
         # This will be read by reactive objects (Calc_, Effect_) when they
         # create spans for their execution.
         set_otel_collect_level_on_func(func, self.level)
@@ -54,10 +54,10 @@ def otel_collect(
     level: Literal["none", "session", "reactive_update", "reactivity", "all"],
 ) -> OtelCollect:
     """
-    Control Shiny's OpenTelemetry collection level for a block of code or function.
+    Control Shiny's OpenTelemetry collect level for a block of code or function.
 
     This can be used as either a context manager or a decorator to temporarily
-    set the collection level for **Shiny's internal telemetry only**, overriding
+    set the collect level for **Shiny's internal telemetry only**, overriding
     the default level from the `SHINY_OTEL_COLLECT` environment variable.
 
     Note: This only affects spans and logs created by Shiny itself (session lifecycle,
@@ -68,7 +68,7 @@ def otel_collect(
     Parameters
     ----------
     level
-        Collection level to use. Must be one of: `"none"`, `"session"`,
+        Collect level to use. Must be one of: `"none"`, `"session"`,
         `"reactive_update"`, `"reactivity"`, or `"all"`.
 
     Returns
@@ -116,7 +116,7 @@ def otel_collect(
         # Back to session-level collection
     ```
 
-    **Available collection levels:**
+    **Available collect levels:**
 
     - `"none"`: No telemetry collected
     - `"session"`: Session lifecycle spans only
@@ -126,7 +126,7 @@ def otel_collect(
 
     See Also
     --------
-    * `shiny.otel.OtelCollectLevel` - Enum defining collection levels (internal use)
+    * `shiny.otel.OtelCollectLevel` - Enum defining collect levels (internal use)
     """
     # Validate type
     if not isinstance(level, str):
@@ -137,7 +137,7 @@ def otel_collect(
     if level not in valid_levels_list:
         valid_levels = ", ".join(f'"{lvl}"' for lvl in valid_levels_list)
         raise ValueError(
-            f"Invalid collection level: {level!r}. "
+            f"Invalid collect level: {level!r}. "
             f"Valid levels are: {valid_levels} (must be lowercase)"
         )
 
@@ -197,7 +197,7 @@ def no_otel_collect() -> OtelCollect:
 
     See Also
     --------
-    * `shiny.otel.otel_collect` - Full control over collection levels
-    * `shiny.otel.OtelCollectLevel` - Enum defining all collection levels
+    * `shiny.otel.otel_collect` - Full control over collect levels
+    * `shiny.otel.OtelCollectLevel` - Enum defining all collect levels
     """
     return otel_collect("none")

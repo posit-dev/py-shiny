@@ -1,4 +1,4 @@
-"""Collection level management for OpenTelemetry instrumentation."""
+"""Collect level management for OpenTelemetry instrumentation."""
 
 from __future__ import annotations
 
@@ -12,9 +12,9 @@ __all__ = ("OtelCollectLevel", "get_otel_collect_level", "should_otel_collect")
 
 class OtelCollectLevel(IntEnum):
     """
-    OpenTelemetry collection levels for Shiny instrumentation.
+    OpenTelemetry collect levels for Shiny instrumentation.
 
-    Collection levels control the granularity of telemetry data collected:
+    Collect levels control the granularity of telemetry data collected:
 
     - NONE (0): No telemetry collected
     - SESSION (1): Session lifecycle spans only
@@ -24,7 +24,7 @@ class OtelCollectLevel(IntEnum):
 
     Examples
     --------
-    Set collection level via environment variable:
+    Set collect level via environment variable:
     ```bash
     export SHINY_OTEL_COLLECT=session
     python app.py
@@ -47,7 +47,7 @@ class OtelCollectLevel(IntEnum):
     ALL = 4
 
 
-# Context variable to track current collection level
+# Context variable to track current collect level
 _current_collect_level: ContextVar[Optional[OtelCollectLevel]] = ContextVar(
     "otel_collect_level", default=None
 )
@@ -55,9 +55,9 @@ _current_collect_level: ContextVar[Optional[OtelCollectLevel]] = ContextVar(
 
 def get_otel_collect_level() -> OtelCollectLevel:
     """
-    Get the current OpenTelemetry collection level.
+    Get the current OpenTelemetry collect level.
 
-    The collection level is determined in the following order:
+    The collect level is determined in the following order:
     1. Context variable (set via otel_collect context manager)
     2. SHINY_OTEL_COLLECT environment variable
     3. Default: ALL
@@ -65,7 +65,7 @@ def get_otel_collect_level() -> OtelCollectLevel:
     Returns
     -------
     OtelCollectLevel
-        The current collection level.
+        The current collect level.
     """
     # Check context variable first (set by otel_collect context manager)
     level = _current_collect_level.get()
@@ -101,12 +101,12 @@ def should_otel_collect(required_level: OtelCollectLevel) -> bool:
 
     This combines two checks:
     1. Is OpenTelemetry SDK configured? (via is_otel_tracing_enabled)
-    2. Is the current collection level >= required level?
+    2. Is the current collect level >= required level?
 
     Parameters
     ----------
     required_level
-        The minimum collection level required for this telemetry.
+        The minimum collect level required for this telemetry.
         Must be one of: SESSION, REACTIVE_UPDATE, REACTIVITY, or ALL.
         NONE is not a valid required level.
 

@@ -55,4 +55,4 @@ FUNC_ATTR_OTEL_LABEL_MODIFIER = "_shiny_otel_label_modifier"
 """Attribute name used to store OTel label modifiers on function objects."""
 
 FUNC_ATTR_OTEL_COLLECT_LEVEL = "_shiny_otel_collect_level"
-"""Attribute name used to store OTel collection level on function objects."""
+"""Attribute name used to store OTel collect level on function objects."""

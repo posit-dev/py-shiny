@@ -23,7 +23,7 @@ def resolve_func_otel_level(
     default: OtelCollectLevel | None = None,
 ) -> OtelCollectLevel:
     """
-    Resolve the OTel collection level for a function with automatic fallback.
+    Resolve the OTel collect level for a function with automatic fallback.
 
     Checks the function for an @otel_collect decorator attribute, then falls
     back to the provided default, or finally to the current context level.
@@ -31,7 +31,7 @@ def resolve_func_otel_level(
     Parameters
     ----------
     func
-        The function to resolve the collection level for.
+        The function to resolve the collect level for.
     default
         Default level if no decorator is present on the function.
         If None (default), falls back to the current context level.
@@ -39,7 +39,7 @@ def resolve_func_otel_level(
     Returns
     -------
     OtelCollectLevel
-        The resolved collection level from function attribute, default, or context.
+        The resolved collect level from function attribute, default, or context.
 
     Notes
     -----
@@ -47,7 +47,7 @@ def resolve_func_otel_level(
     preserved through decorator chains when functools.wraps is used.
 
     Reactive objects (Calc_, Effect_) check for this attribute to determine
-    what collection level to use when creating spans for their execution.
+    what collect level to use when creating spans for their execution.
 
     Examples
     --------
@@ -74,18 +74,18 @@ def set_otel_collect_level_on_func(
     func: Callable[..., Any], level: OtelCollectLevel
 ) -> None:
     """
-    Set the OTel collection level on a function object.
+    Set the OTel collect level on a function object.
 
     This is used by the @otel_collect decorator to mark functions with their
-    desired collection level. The level will be used when the function is
+    desired collect level. The level will be used when the function is
     executed as part of a reactive context (Calc, Effect, etc.).
 
     Parameters
     ----------
     func
-        The function to set the collection level on.
+        The function to set the collect level on.
     level
-        The collection level to use for this function's execution.
+        The collect level to use for this function's execution.
 
     Notes
     -----
