@@ -383,7 +383,7 @@ class TestNoOtelCollect:
 
 class TestOtelCollectIntegrationWithRealBackend:
     """Integration tests using real OpenTelemetry exporters (not mocks).
-    
+
     These tests verify that otel_collect controls the decision to create spans,
     though we test synchronously due to context variable propagation limitations
     with asyncio.run().
@@ -492,7 +492,7 @@ class TestOtelCollectIntegrationWithRealBackend:
             return 42
 
         # Trying to apply otel_collect to the Calc_ object should fail
-        with pytest.raises(TypeError, match="cannot be used on Calc_ objects"):
+        with pytest.raises(TypeError, match="cannot be used on @reactive.calc objects"):
             otel_collect("none")(my_calc)
 
     def test_otel_collect_rejects_effect_objects(self):
@@ -505,8 +505,10 @@ class TestOtelCollectIntegrationWithRealBackend:
             pass
 
         # Trying to apply otel_collect to the Effect_ object should fail
-        with pytest.raises(TypeError, match="cannot be used on Effect_ objects"):
-            otel_collect("none")(my_effect)
+        with pytest.raises(
+            TypeError, match="cannot be used on @reactive.effect objects"
+        ):
+            otel_collect("none")(my_effect)  # pyright: ignore[reportArgumentType]
 
     def test_otel_collect_rejects_renderer_objects(self):
         """Verify otel_collect rejects already-wrapped Renderer objects."""
@@ -518,7 +520,7 @@ class TestOtelCollectIntegrationWithRealBackend:
             return "hello"
 
         # Trying to apply otel_collect to the Renderer object should fail
-        with pytest.raises(TypeError, match="cannot be used on.*objects"):
+        with pytest.raises(TypeError, match="cannot be used on render objects"):
             otel_collect("none")(my_text)
 
     def test_otel_collect_accepts_plain_functions(self):
