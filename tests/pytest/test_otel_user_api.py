@@ -4,8 +4,8 @@ Tests for user-facing OpenTelemetry API (otel_collect context manager and decora
 
 import pytest
 
-from shiny.otel import OtelCollectLevel, otel_collect, should_otel_collect
-from shiny.otel._collect import get_otel_collect_level
+from shiny.otel import otel_collect, should_otel_collect
+from shiny.otel._collect import OtelCollectLevel, get_otel_collect_level
 from shiny.otel._decorators import no_otel_collect
 
 from .otel_helpers import patch_otel_tracing_state

@@ -83,7 +83,8 @@ def patch_otel_tracing_state(*, tracing_enabled: Union[bool, None]) -> Iterator[
     --------
     ```python
     from tests.pytest.test_otel_helpers import patch_otel_tracing_state
-    from shiny.otel import should_otel_collect, OtelCollectLevel
+    from shiny.otel import should_otel_collect
+    from shiny.otel._collect import OtelCollectLevel
 
     # Test with tracing enabled
     with patch_otel_tracing_state(tracing_enabled=True):

@@ -12,7 +12,8 @@ Tests cover:
 import os
 from unittest.mock import Mock, patch
 
-from shiny.otel import OtelCollectLevel, should_otel_collect
+from shiny.otel import should_otel_collect
+from shiny.otel._collect import OtelCollectLevel
 from shiny.otel._attributes import extract_http_attributes
 
 from .otel_helpers import patch_otel_tracing_state

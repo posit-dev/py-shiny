@@ -22,7 +22,7 @@ from opentelemetry.trace import StatusCode
 from shiny import App
 from shiny._app import SANITIZE_ERROR_MSG
 from shiny._namespaces import ResolvedId
-from shiny.otel import OtelCollectLevel
+from shiny.otel._collect import OtelCollectLevel
 from shiny.otel._errors import (
     has_otel_exception_been_recorded,
     is_silent_error,
@@ -182,7 +182,7 @@ class TestSpanExceptionRecording:
         exporter.clear()
 
         with patch_otel_tracing_state(tracing_enabled=True):
-            from shiny.otel import OtelCollectLevel
+            from shiny.otel._collect import OtelCollectLevel
             from shiny.otel._span_wrappers import shiny_otel_span_async
 
             async def test_func():
@@ -220,7 +220,7 @@ class TestSpanExceptionRecording:
         exporter.clear()
 
         with patch_otel_tracing_state(tracing_enabled=True):
-            from shiny.otel import OtelCollectLevel
+            from shiny.otel._collect import OtelCollectLevel
             from shiny.otel._span_wrappers import shiny_otel_span_async
 
             async def test_func():
@@ -261,7 +261,7 @@ class TestSpanExceptionRecording:
 
         with session_context(mock_session):
             with patch_otel_tracing_state(tracing_enabled=True):
-                from shiny.otel import OtelCollectLevel
+                from shiny.otel._collect import OtelCollectLevel
                 from shiny.otel._span_wrappers import shiny_otel_span_async
 
                 async def test_func():
@@ -305,7 +305,7 @@ class TestSpanExceptionRecording:
 
         with session_context(mock_session):
             with patch_otel_tracing_state(tracing_enabled=True):
-                from shiny.otel import OtelCollectLevel
+                from shiny.otel._collect import OtelCollectLevel
                 from shiny.otel._span_wrappers import shiny_otel_span_async
 
                 async def test_func():
@@ -345,7 +345,7 @@ class TestSpanExceptionRecording:
 
         with session_context(mock_session):
             with patch_otel_tracing_state(tracing_enabled=True):
-                from shiny.otel import OtelCollectLevel
+                from shiny.otel._collect import OtelCollectLevel
                 from shiny.otel._span_wrappers import shiny_otel_span_async
 
                 async def test_func():

@@ -51,7 +51,7 @@ from ..bookmark._serializers import serializer_file_input
 from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
 from ..module import ResolvedId
-from ..otel import OtelCollectLevel
+from ..otel._collect import OtelCollectLevel
 from ..otel._attributes import extract_source_ref
 from ..otel._decorators import no_otel_collect
 from ..otel._function_attrs import resolve_func_otel_level
@@ -586,7 +586,7 @@ class AppSession(Session):
         self.on_ended(self._file_upload_manager.rm_upload_dir)
 
     async def _run_session_ended_tasks(self) -> None:
-        from ..otel import OtelCollectLevel
+        from ..otel._collect import OtelCollectLevel
         from ..otel._span_wrappers import shiny_otel_span_async
 
         if self._has_run_session_ended_tasks:
@@ -689,7 +689,7 @@ class AppSession(Session):
                             self._manage_inputs(message_obj["data"])
 
                             # Wrap server function initialization in session.start span
-                            from ..otel import OtelCollectLevel
+                            from ..otel._collect import OtelCollectLevel
                             from ..otel._attributes import extract_http_attributes
                             from ..otel._span_wrappers import shiny_otel_span_async
 

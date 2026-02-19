@@ -71,14 +71,13 @@ def my_calc():
 ## API Reference
 
 Main exports:
-- `OtelCollectLevel`: Enum defining Shiny collect levels
-- `should_otel_collect`: Check if Shiny telemetry should be collected for a given level
-- `otel_collect`: Context manager to temporarily change Shiny's collect level
+- `otel_collect`: Context manager/decorator to temporarily change Shiny's collect level
+- `should_otel_collect`: Check if Shiny telemetry should be collected for a given level (internal use)
 """
 
 from __future__ import annotations
 
-from ._collect import OtelCollectLevel, get_otel_collect_level, should_otel_collect
+from ._collect import get_otel_collect_level, should_otel_collect
 from ._core import (
     get_otel_logger,
     get_otel_tracer,
@@ -88,7 +87,6 @@ from ._decorators import otel_collect
 
 __all__ = (
     # Collect level management
-    "OtelCollectLevel",
     "get_otel_collect_level",
     "should_otel_collect",
     # Core functionality

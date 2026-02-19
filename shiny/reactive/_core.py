@@ -23,7 +23,7 @@ from typing import TYPE_CHECKING, Awaitable, Callable, Generator, Optional, Type
 from .. import _utils
 from .._datastructures import PriorityQueueFIFO
 from .._docstring import add_example, no_example
-from ..otel import OtelCollectLevel
+from ..otel._collect import OtelCollectLevel
 from ..otel._span_wrappers import shiny_otel_span_async
 from ..types import MISSING, MISSING_TYPE
 
