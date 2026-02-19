@@ -7,7 +7,7 @@ from contextvars import ContextVar
 from enum import IntEnum
 from typing import Optional
 
-__all__ = ("OtelCollectLevel", "get_otel_collect_level", "should_otel_collect")
+__all__ = ("OtelCollectLevel", "get_otel_collect_level")
 
 
 class OtelCollectLevel(IntEnum):
@@ -93,54 +93,3 @@ def get_otel_collect_level() -> OtelCollectLevel:
             stacklevel=2,
         )
         return OtelCollectLevel.ALL
-
-
-def should_otel_collect(required_level: OtelCollectLevel) -> bool:
-    """
-    Check if telemetry should be collected for the given level.
-
-    This combines two checks:
-    1. Is OpenTelemetry SDK configured? (via is_otel_tracing_enabled)
-    2. Is the current collect level >= required level?
-
-    Parameters
-    ----------
-    required_level
-        The minimum collect level required for this telemetry.
-        Must be one of: SESSION, REACTIVE_UPDATE, REACTIVITY, or ALL.
-        NONE is not a valid required level.
-
-    Returns
-    -------
-    bool
-        True if telemetry should be collected, False otherwise.
-
-    Raises
-    ------
-    ValueError
-        If required_level is NONE (NONE is not a valid telemetry level).
-
-    Examples
-    --------
-    ```python
-    from shiny.otel import should_otel_collect, OtelCollectLevel
-
-    if should_otel_collect(OtelCollectLevel.SESSION):
-        # Create session span
-        pass
-    ```
-    """
-    from ._core import is_otel_tracing_enabled
-
-    # NONE is not a valid required level - it means "no telemetry"
-    if required_level == OtelCollectLevel.NONE:
-        raise ValueError(
-            "should_otel_collect() cannot be called with OtelCollectLevel.NONE. "
-            "NONE means no telemetry should be collected. "
-            "Use SESSION, REACTIVE_UPDATE, REACTIVITY, or ALL instead."
-        )
-
-    if not is_otel_tracing_enabled():
-        return False
-
-    return get_otel_collect_level() >= required_level

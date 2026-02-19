@@ -5,11 +5,8 @@ Tests for user-facing OpenTelemetry API (otel_collect context manager and decora
 import pytest
 
 from shiny.otel import otel_collect
-from shiny.otel._collect import (
-    OtelCollectLevel,
-    get_otel_collect_level,
-    should_otel_collect,
-)
+from shiny.otel._collect import OtelCollectLevel, get_otel_collect_level
+from shiny.otel._core import is_otel_tracing_enabled
 from shiny.otel._decorators import no_otel_collect
 
 from .otel_helpers import patch_otel_tracing_state
@@ -26,7 +23,7 @@ class TestOtelCollectContextManager:
 
             with otel_collect("none"):
                 assert get_otel_collect_level() == OtelCollectLevel.NONE
-                assert not should_otel_collect(OtelCollectLevel.SESSION)
+                assert not (is_otel_tracing_enabled() and get_otel_collect_level() >= OtelCollectLevel.SESSION)
 
             # Should restore after context
             assert get_otel_collect_level() >= OtelCollectLevel.REACTIVITY
@@ -36,8 +33,8 @@ class TestOtelCollectContextManager:
         with patch_otel_tracing_state(tracing_enabled=True):
             with otel_collect("session"):
                 assert get_otel_collect_level() == OtelCollectLevel.SESSION
-                assert should_otel_collect(OtelCollectLevel.SESSION)
-                assert not should_otel_collect(OtelCollectLevel.REACTIVE_UPDATE)
+                assert (is_otel_tracing_enabled() and get_otel_collect_level() >= OtelCollectLevel.SESSION)
+                assert not (is_otel_tracing_enabled() and get_otel_collect_level() >= OtelCollectLevel.REACTIVE_UPDATE)
 
     def test_nested_context_managers(self):
         """Test nested context managers work correctly."""
@@ -290,39 +287,6 @@ class TestOtelCollectEnvironmentVariable:
 class TestOtelCollectIntegration:
     """Integration tests for otel_collect with reactive system."""
 
-    def test_collection_level_affects_should_otel_collect(self):
-        """Test that collection level affects should_otel_collect checks."""
-        with patch_otel_tracing_state(tracing_enabled=True):
-            # At ALL level, all checks should pass (except NONE which is invalid)
-            with otel_collect("all"):
-                assert should_otel_collect(OtelCollectLevel.SESSION)
-                assert should_otel_collect(OtelCollectLevel.REACTIVE_UPDATE)
-                assert should_otel_collect(OtelCollectLevel.REACTIVITY)
-                assert should_otel_collect(OtelCollectLevel.ALL)
-
-            # At SESSION level, only SESSION should collect
-            with otel_collect("session"):
-                assert should_otel_collect(OtelCollectLevel.SESSION)
-                assert not should_otel_collect(OtelCollectLevel.REACTIVE_UPDATE)
-                assert not should_otel_collect(OtelCollectLevel.REACTIVITY)
-                assert not should_otel_collect(OtelCollectLevel.ALL)
-
-            # At NONE level, nothing should collect
-            with otel_collect("none"):
-                assert not should_otel_collect(OtelCollectLevel.SESSION)
-                assert not should_otel_collect(OtelCollectLevel.REACTIVE_UPDATE)
-                assert not should_otel_collect(OtelCollectLevel.REACTIVITY)
-                assert not should_otel_collect(OtelCollectLevel.ALL)
-
-    def test_tracing_disabled_overrides_collection_level(self):
-        """Test that disabled tracing overrides collection level."""
-        with patch_otel_tracing_state(tracing_enabled=False):
-            # Even at ALL level, should not collect if tracing disabled
-            with otel_collect("all"):
-                assert not should_otel_collect(OtelCollectLevel.SESSION)
-                assert not should_otel_collect(OtelCollectLevel.REACTIVE_UPDATE)
-                assert not should_otel_collect(OtelCollectLevel.REACTIVITY)
-
 
 class TestNoOtelCollect:
     """Tests for no_otel_collect() convenience function."""
@@ -336,7 +300,7 @@ class TestNoOtelCollect:
             with no_otel_collect():
                 # Should be at NONE level inside
                 assert get_otel_collect_level() == OtelCollectLevel.NONE
-                assert not should_otel_collect(OtelCollectLevel.SESSION)
+                assert not (is_otel_tracing_enabled() and get_otel_collect_level() >= OtelCollectLevel.SESSION)
 
             # Should restore after context
             assert get_otel_collect_level() >= OtelCollectLevel.REACTIVITY
@@ -392,30 +356,6 @@ class TestOtelCollectIntegrationWithRealBackend:
     though we test synchronously due to context variable propagation limitations
     with asyncio.run().
     """
-
-    def test_should_collect_respects_otel_collect_context(self):
-        """Verify should_otel_collect respects otel_collect context manager."""
-        from .otel_helpers import patch_otel_tracing_state
-
-        with patch_otel_tracing_state(tracing_enabled=True):
-            # Default level should allow all
-            assert should_otel_collect(OtelCollectLevel.SESSION)
-            assert should_otel_collect(OtelCollectLevel.REACTIVITY)
-
-            # With NONE level, nothing should collect
-            with otel_collect("none"):
-                assert not should_otel_collect(OtelCollectLevel.SESSION)
-                assert not should_otel_collect(OtelCollectLevel.REACTIVITY)
-
-            # With SESSION level, only SESSION should collect
-            with otel_collect("session"):
-                assert should_otel_collect(OtelCollectLevel.SESSION)
-                assert not should_otel_collect(OtelCollectLevel.REACTIVITY)
-
-            # With REACTIVITY level, both should collect
-            with otel_collect("reactivity"):
-                assert should_otel_collect(OtelCollectLevel.SESSION)
-                assert should_otel_collect(OtelCollectLevel.REACTIVITY)
 
     def test_reactive_value_captures_collect_level_at_init(self):
         """Verify reactive Value captures collect level at initialization."""
