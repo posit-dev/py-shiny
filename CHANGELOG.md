@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Reduced installed package size by ~400KB by excluding `api-examples/` directories from wheel and source distributions. These examples are only needed when building documentation from the source repository. (#2126)
 
+* Improved reactive value name inference to support all import styles: `reactive.Value()`, `reactive.value()`, `Value()`, and `value()` now all correctly infer variable names for better OpenTelemetry log messages. (#TBD)
+
+* Enhanced OpenTelemetry source reference attributes by adding `code.column.number` to track the column position of reactive value updates alongside existing file path, line number, and function name. (#TBD)
+
 ### Other changes
 
 * Updated `palmerpenguins` dependency to version `>=0.1.5` to include type stubs, removing the need for type ignore comments in tests. (#2157)
