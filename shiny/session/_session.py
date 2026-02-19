@@ -1949,6 +1949,12 @@ class Outputs:
                 )
             )
 
+            # Override OTel attributes for output_obs effect
+            output_obs._otel_label = f"effect output {output_id}"
+            output_obs._otel_attrs = output_obs._extract_otel_attrs(
+                getattr(renderer.fn, "_orig_fn", renderer.fn)
+            )
+
             # Store the renderer and effect info
             self._outputs[output_name] = OutputInfo(
                 renderer=renderer,
