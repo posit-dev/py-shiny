@@ -740,7 +740,7 @@ class Effect_:
         # Extract modifier from function attribute and generate label
         self._otel_label: str = create_otel_label(
             fn,
-            "observe",
+            "effect",
             session=self._session,
             modifier=get_otel_label_modifier(fn),
         )
@@ -856,7 +856,7 @@ class Effect_:
         """
         Destroy this reactive effect.
 
-        Stops the observer from executing ever again, even if it is currently scheduled
+        Stops the effect from executing ever again, even if it is currently scheduled
         for re-execution.
         """
         self._destroyed = True
@@ -901,8 +901,8 @@ class Effect_:
 
         Note
         ----
-        If the observer is currently invalidated, then the change in priority will not
-        take effect until the next invalidation--unless the observer is also currently
+        If the effect is currently invalidated, then the change in priority will not
+        take effect until the next invalidation--unless the effect is also currently
         suspended, in which case the priority change will be effective upon resume.
         """
         self._priority = priority
