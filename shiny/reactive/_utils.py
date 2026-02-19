@@ -65,9 +65,18 @@ def is_user_code_frame(filename: str) -> bool:
 
         # Check if file is under shiny package
         if file_path.is_relative_to(shiny_package_dir):
-            # File is within shiny package, skip it unless it's in tests
-            if "tests" not in file_path.parts:
-                return False
+            # Allow tests and examples
+            if not (
+                file_path.is_relative_to(shiny_package_dir / "examples")
+                or file_path.is_relative_to(shiny_package_dir / "tests")
+                or file_path.is_relative_to(
+                    shiny_package_dir / "shiny" / "api-examples"
+                )
+            ):
+                return True
+
+            return False
+
     except (ValueError, TypeError):
         # Different drives on Windows or other path issues - treat as user code
         pass
