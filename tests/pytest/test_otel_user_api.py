@@ -84,18 +84,25 @@ class TestOtelCollectContextManager:
             with otel_collect("all"):
                 assert get_otel_collect_level() == OtelCollectLevel.ALL
 
-    def test_case_insensitive_strings(self):
-        """Test string levels are case-insensitive at runtime."""
+    def test_case_sensitive_strings(self):
+        """Test string levels must be lowercase (enforced at runtime)."""
         with patch_otel_tracing_state(tracing_enabled=True):
-            # Test various cases - type checker enforces lowercase, but runtime accepts any case
+            # Lowercase should work (matches Literal type hint)
             with otel_collect("none"):
                 assert get_otel_collect_level() == OtelCollectLevel.NONE
-            with otel_collect("NONE"):  # type: ignore[arg-type]
-                assert get_otel_collect_level() == OtelCollectLevel.NONE
-            with otel_collect("None"):  # type: ignore[arg-type]
-                assert get_otel_collect_level() == OtelCollectLevel.NONE
-            with otel_collect("NoNe"):  # type: ignore[arg-type]
-                assert get_otel_collect_level() == OtelCollectLevel.NONE
+
+            # Non-lowercase should raise ValueError
+            with pytest.raises(ValueError, match="must be lowercase"):
+                with otel_collect("NONE"):  # type: ignore[arg-type]
+                    pass
+
+            with pytest.raises(ValueError, match="must be lowercase"):
+                with otel_collect("None"):  # type: ignore[arg-type]
+                    pass
+
+            with pytest.raises(ValueError, match="must be lowercase"):
+                with otel_collect("NoNe"):  # type: ignore[arg-type]
+                    pass
 
     def test_invalid_level_type_raises_error(self):
         """Test that invalid level types raise TypeError."""

@@ -25,6 +25,7 @@ from . import module
 
 # OpenTelemetry support
 from . import otel
+from .otel import otel_collect
 
 if _is_pyodide:
     # In pyodide, avoid importing _main because it imports packages that aren't
@@ -60,6 +61,8 @@ __all__ = (
     "Outputs",
     # _validation.py
     "req",
+    # otel
+    "otel_collect",
     # _deprecated.py
     "render_text",
     "render_plot",

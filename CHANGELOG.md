@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added toolbar component with `ui.toolbar()`, `ui.toolbar_input_button()`, `ui.toolbar_input_select()`, `ui.toolbar_divider()`, `ui.toolbar_spacer()`, `ui.update_toolbar_input_button()`, and `ui.update_toolbar_input_select()`. Toolbars are compact UI containers designed for small form elements suitable for card headers, footers, and other constrained spaces. They support flexible alignment (left/right), custom spacing and width, icon-only or labeled buttons with optional tooltips, select inputs with grouped choices, visual dividers for separating elements, and flexible spacers for split layouts. Server-side updates allow dynamic modification of button and select properties. (#2155)
 
+* Added OpenTelemetry collection control API with `otel_collect()` context manager/decorator, `OtelCollectLevel` enum (via `shiny.otel`), and environment variable support (`SHINY_OTEL_COLLECT`). This allows fine-grained control over what Shiny internal telemetry is collected. Use `with otel_collect("none"):` to disable telemetry for sensitive operations, or `@otel_collect("reactivity")` to enable detailed reactive execution tracing. Available levels: `"none"`, `"session"`, `"reactive_update"`, `"reactivity"`, and `"all"`. (#2178)
 
 * Added a new `ui.input_code_editor()` element that allows for light-weight code editing with syntax highlighting, using the [prism-code-editor](https://prism-code-editor.netlify.app/) library. The editor supports 20+ languages, more than a dozen themes, and automatic light/dark mode switching. (#2128)
 
@@ -18,9 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Reduced installed package size by ~400KB by excluding `api-examples/` directories from wheel and source distributions. These examples are only needed when building documentation from the source repository. (#2126)
 
-* Improved reactive value name inference to support all import styles: `reactive.Value()`, `reactive.value()`, `Value()`, and `value()` now all correctly infer variable names for better OpenTelemetry log messages. (#TBD)
+* Improved reactive value name inference to support all import styles: `reactive.Value()`, `reactive.value()`, `Value()`, and `value()` now all correctly infer variable names for better OpenTelemetry log messages. (#2178)
 
-* Enhanced OpenTelemetry source reference attributes by adding `code.column.number` to track the column position of reactive value updates alongside existing file path, line number, and function name. (#TBD)
+* Enhanced OpenTelemetry source reference attributes by adding `code.column.number` to track the column position of reactive value updates alongside existing file path, line number, and function name. (#2178)
 
 ### Other changes
 

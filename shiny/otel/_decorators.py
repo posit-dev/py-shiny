@@ -137,17 +137,17 @@ def otel_collect(
     if not isinstance(level, str):
         raise TypeError(f"level must be a string, got {type(level).__name__}")
 
-    # Convert string to enum
-    try:
-        enum_level = OtelCollectLevel[level.upper()]
-    except KeyError:
-        valid_levels = ", ".join(
-            f'"{lvl}"'
-            for lvl in ["none", "session", "reactive_update", "reactivity", "all"]
-        )
+    # Enforce lowercase (matching Literal type hint)
+    valid_levels_list = ["none", "session", "reactive_update", "reactivity", "all"]
+    if level not in valid_levels_list:
+        valid_levels = ", ".join(f'"{lvl}"' for lvl in valid_levels_list)
         raise ValueError(
-            f"Invalid collection level: {level!r}. " f"Valid levels are: {valid_levels}"
+            f"Invalid collection level: {level!r}. "
+            f"Valid levels are: {valid_levels} (must be lowercase)"
         )
+
+    # Convert string to enum (now guaranteed to be valid lowercase)
+    enum_level = OtelCollectLevel[level.upper()]
 
     return OtelCollect(enum_level)
 
