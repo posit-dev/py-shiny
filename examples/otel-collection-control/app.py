@@ -26,10 +26,10 @@ from opentelemetry.sdk.trace.export import (  # noqa: E402
     SimpleSpanProcessor,
 )
 
-# Set up tracing
-trace_provider = TracerProvider()
-trace_provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
-trace.set_tracer_provider(trace_provider)
+# # Set up tracing
+# trace_provider = TracerProvider()
+# trace_provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
+# trace.set_tracer_provider(trace_provider)
 
 # Set up logging (for value update logs)
 log_provider = LoggerProvider()
@@ -117,6 +117,7 @@ def server(input, output, session):
 
     # Private section: Suppressed telemetry (no spans, no value logs)
     private_counter = reactive.value(0)
+    print("Private counter: ", private_counter._name, private_counter._try_infer_name())
 
     @reactive.effect
     @reactive.event(input.private_increment)

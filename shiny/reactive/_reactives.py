@@ -158,6 +158,7 @@ class Value(Generic[T]):
             self._name = name
         else:
             self._name = self._try_infer_name()
+            print("_try_infer_name", self._try_infer_name())
 
     def _try_infer_name(self) -> str | None:
         """
@@ -184,6 +185,7 @@ class Value(Generic[T]):
             # Walk up the stack: [0] = _try_infer_name, [1] = __init__, [2] = caller
             for frame_info in inspect.stack()[2:]:
                 filename = frame_info.filename
+                print(filename)
 
                 # Skip internal shiny code, keep user code
                 if not is_user_code_frame(filename):

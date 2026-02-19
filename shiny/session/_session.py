@@ -53,6 +53,7 @@ from ..input_handler import input_handlers
 from ..module import ResolvedId
 from ..otel import OtelCollectLevel
 from ..otel._attributes import extract_source_ref
+from ..otel._decorators import no_otel_collect
 from ..otel._function_attrs import resolve_func_otel_level
 from ..otel._labels import create_otel_label
 from ..otel._span_wrappers import with_otel_span_async
@@ -1883,14 +1884,6 @@ class Outputs:
             )
             output_otel_attrs = extract_source_ref(renderer_func)
             output_otel_level = resolve_func_otel_level(renderer_func)
-            # print(
-            #     "Output",
-            #     output_name,
-            #     "OTel Level:",
-            #     output_obs._otel_level,
-            #     "Attrs:",
-            #     output_obs._otel_attrs,
-            # )
 
             renderer._on_register()
 
@@ -1900,6 +1893,7 @@ class Outputs:
                 suspended=suspend_when_hidden and self._session._is_hidden(output_name),
                 priority=priority,
             )
+            @no_otel_collect()
             async def output_obs():
                 if self._session.is_stub_session():
                     raise RuntimeError(

@@ -101,21 +101,15 @@ class TestOtelCollectContextManager:
         """Test that invalid level types raise TypeError."""
         with patch_otel_tracing_state(tracing_enabled=True):
             # Test invalid types
-            with pytest.raises(
-                TypeError, match="level must be a string"
-            ):
+            with pytest.raises(TypeError, match="level must be a string"):
                 with otel_collect(123):  # type: ignore[arg-type]
                     pass
 
-            with pytest.raises(
-                TypeError, match="level must be a string"
-            ):
+            with pytest.raises(TypeError, match="level must be a string"):
                 with otel_collect(None):  # type: ignore[arg-type]
                     pass
 
-            with pytest.raises(
-                TypeError, match="level must be a string"
-            ):
+            with pytest.raises(TypeError, match="level must be a string"):
                 with otel_collect([]):  # type: ignore[arg-type]
                     pass
 

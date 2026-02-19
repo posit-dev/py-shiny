@@ -4,7 +4,6 @@ User-facing decorators and context managers for OpenTelemetry collection control
 
 from __future__ import annotations
 
-import functools
 from contextlib import contextmanager
 from typing import Any, Callable, Literal, TypeVar
 
@@ -53,23 +52,7 @@ class OtelCollect:
         # This will be read by reactive objects (Calc_, Effect_) when they
         # create spans for their execution.
         set_otel_collect_level_on_func(func, self.level)
-
-        @functools.wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> T:
-            # Also set the context variable for non-reactive uses
-            # (e.g., regular functions decorated with @otel_collect)
-            @contextmanager
-            def _context_manager():  # type: ignore[misc]
-                token = _current_collect_level.set(self.level)
-                try:
-                    yield
-                finally:
-                    _current_collect_level.reset(token)
-
-            with _context_manager():
-                return func(*args, **kwargs)
-
-        return wrapper  # type: ignore[return-value]
+        return func
 
 
 def otel_collect(
@@ -152,18 +135,18 @@ def otel_collect(
     """
     # Validate type
     if not isinstance(level, str):
-        raise TypeError(
-            f"level must be a string, got {type(level).__name__}"
-        )
+        raise TypeError(f"level must be a string, got {type(level).__name__}")
 
     # Convert string to enum
     try:
         enum_level = OtelCollectLevel[level.upper()]
     except KeyError:
-        valid_levels = ", ".join(f'"{lvl}"' for lvl in ["none", "session", "reactive_update", "reactivity", "all"])
+        valid_levels = ", ".join(
+            f'"{lvl}"'
+            for lvl in ["none", "session", "reactive_update", "reactivity", "all"]
+        )
         raise ValueError(
-            f"Invalid collection level: {level!r}. "
-            f"Valid levels are: {valid_levels}"
+            f"Invalid collection level: {level!r}. " f"Valid levels are: {valid_levels}"
         )
 
     return OtelCollect(enum_level)
