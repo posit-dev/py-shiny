@@ -1951,15 +1951,14 @@ class Outputs:
             )
 
             # Override OTel attributes for output_obs effect
+            renderer_func = getattr(renderer.fn, "_orig_fn", renderer.fn)
             output_obs._otel_label = create_otel_label(
-                func=getattr(renderer.fn, "_orig_fn", renderer.fn),
+                func=renderer_func,
                 label_type="output",
                 session=self._session,
             )
             # TODO double check that this is of the user function or the renderer itself
-            output_obs._otel_attrs = output_obs._extract_otel_attrs(
-                getattr(renderer.fn, "_orig_fn", renderer.fn)
-            )
+            output_obs._otel_attrs = output_obs._extract_otel_attrs(renderer_func)
 
             # Store the renderer and effect info
             self._outputs[output_name] = OutputInfo(
