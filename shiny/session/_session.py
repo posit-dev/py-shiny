@@ -53,6 +53,7 @@ from ..input_handler import input_handlers
 from ..module import ResolvedId
 from ..otel import OtelCollectLevel
 from ..otel._attributes import extract_source_ref
+from ..otel._labels import create_otel_label
 from ..otel._span_wrappers import with_otel_span_async
 from ..reactive import Effect_, Value, effect
 from ..reactive import flush as reactive_flush
@@ -1950,7 +1951,12 @@ class Outputs:
             )
 
             # Override OTel attributes for output_obs effect
-            output_obs._otel_label = f"effect output {output_id}"
+            output_obs._otel_label = create_otel_label(
+                func=getattr(renderer.fn, "_orig_fn", renderer.fn),
+                label_type="output",
+                session=self._session,
+            )
+            # TODO double check that this is of the user function or the renderer itself
             output_obs._otel_attrs = output_obs._extract_otel_attrs(
                 getattr(renderer.fn, "_orig_fn", renderer.fn)
             )
