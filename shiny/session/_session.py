@@ -53,6 +53,7 @@ from ..input_handler import input_handlers
 from ..module import ResolvedId
 from ..otel import OtelCollectLevel
 from ..otel._attributes import extract_source_ref
+from ..otel._function_attrs import resolve_func_otel_level
 from ..otel._labels import create_otel_label
 from ..otel._span_wrappers import with_otel_span_async
 from ..reactive import Effect_, Value, effect
@@ -1958,7 +1959,7 @@ class Outputs:
                 session=self._session,
             )
             output_obs._otel_attrs = output_obs._extract_otel_attrs(renderer_func)
-            # output_obs._otel_level =
+            output_obs._otel_level = resolve_func_otel_level(renderer_func)
 
             # Store the renderer and effect info
             self._outputs[output_name] = OutputInfo(
