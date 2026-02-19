@@ -158,7 +158,6 @@ class Value(Generic[T]):
             self._name = name
         else:
             self._name = self._try_infer_name()
-            print("_try_infer_name", self._try_infer_name())
 
     def _try_infer_name(self) -> str | None:
         """
@@ -171,7 +170,13 @@ class Value(Generic[T]):
 
         Examples of what works:
         - counter = reactive.Value(0) → "counter"
+        - counter = reactive.value(0) → "counter"
+        - counter = Value(0) → "counter"
+        - counter = value(0) → "counter"
         - self.counter = reactive.Value(0) → "counter"
+        - self.counter = reactive.value(0) → "counter"
+        - self.counter = Value(0) → "counter"
+        - self.counter = value(0) → "counter"
 
         Examples of what doesn't work (returns None):
         - values = [reactive.Value(0), reactive.Value(1)]
@@ -185,7 +190,6 @@ class Value(Generic[T]):
             # Walk up the stack: [0] = _try_infer_name, [1] = __init__, [2] = caller
             for frame_info in inspect.stack()[2:]:
                 filename = frame_info.filename
-                print(filename)
 
                 # Skip internal shiny code, keep user code
                 if not is_user_code_frame(filename):
@@ -195,14 +199,16 @@ class Value(Generic[T]):
                 if frame_info.code_context:
                     line = frame_info.code_context[0].strip()
 
-                    # Pattern 1: var_name = reactive.Value(...)
-                    match = re.match(r"^(\w+)\s*=\s*reactive\.Value", line)
+                    # Pattern 1: var_name = [reactive.]Value(...) or [reactive.]value(...)
+                    match = re.match(r"^(\w+)\s*=\s*(?:reactive\.)?[Vv]alue", line)
                     if match:
+                        # print(match.group(1))
                         return match.group(1)
 
-                    # Pattern 2: self.var_name = reactive.Value(...)
-                    match = re.match(r"^\w+\.(\w+)\s*=\s*reactive\.Value", line)
+                    # Pattern 2: self.var_name = [reactive.]Value(...) or [reactive.]value(...)
+                    match = re.match(r"^\w+\.(\w+)\s*=\s*(?:reactive\.)?[Vv]alue", line)
                     if match:
+                        # print(match.group(1))
                         return match.group(1)
 
                 # Stop after first user code frame
