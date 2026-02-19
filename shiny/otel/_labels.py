@@ -68,7 +68,7 @@ def create_otel_label(
     """
     # Extract function name
     name = getattr(func, "__name__", "<anonymous>")
-    if name == "<lambda>":
+    if name == "_" or name == "<lambda>":
         name = "<anonymous>"
 
     # Build label parts
