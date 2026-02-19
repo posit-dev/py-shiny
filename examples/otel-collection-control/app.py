@@ -27,9 +27,9 @@ from opentelemetry.sdk.trace.export import (  # noqa: E402
 )
 
 # # Set up tracing
-# trace_provider = TracerProvider()
-# trace_provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
-# trace.set_tracer_provider(trace_provider)
+trace_provider = TracerProvider()
+trace_provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
+trace.set_tracer_provider(trace_provider)
 
 # Set up logging (for value update logs)
 log_provider = LoggerProvider()
@@ -44,16 +44,14 @@ from shiny.otel import otel_collect  # noqa: E402
 
 app_ui = ui.page_fluid(
     ui.h2("OpenTelemetry: Collection Control & Value Logging"),
-    ui.markdown(
-        """
+    ui.markdown("""
         This demo shows how `otel_collect` controls **both spans and value logs**.
 
         Watch the console to see:
         - **Spans**: Session lifecycle, reactive execution
         - **Logs**: Reactive value updates with source references
         - **Control**: How `@otel_collect("none")` suppresses both
-        """
-    ),
+        """),
     ui.hr(),
     ui.layout_columns(
         ui.card(
@@ -61,24 +59,20 @@ app_ui = ui.page_fluid(
             ui.input_slider("normal_slider", "Slider", 0, 100, 50),
             ui.input_action_button("normal_increment", "Increment Counter"),
             ui.output_text_verbatim("normal_counter_display"),
-            ui.markdown(
-                """
+            ui.markdown("""
                 **Telemetry:** ✅ Spans + value logs
                 This section generates full telemetry.
-                """
-            ),
+                """),
         ),
         ui.card(
             ui.card_header("Suppressed Telemetry (No Collection)"),
             ui.input_slider("private_slider", "Slider", 0, 100, 50),
             ui.input_action_button("private_increment", "Increment Counter"),
             ui.output_text_verbatim("private_counter_display"),
-            ui.markdown(
-                """
+            ui.markdown("""
                 **Telemetry:** ❌ No spans, no value logs
                 Uses `@otel_collect("none")` to suppress all Shiny telemetry.
-                """
-            ),
+                """),
         ),
     ),
     ui.hr(),
