@@ -23,7 +23,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Enhanced OpenTelemetry source reference attributes by adding `code.column.number` to track the column position of reactive value updates alongside existing file path, line number, and function name. (#2178)
 
+* Improved OpenTelemetry collection level handling: reactive values now capture the collection level at initialization time (matching behavior of `Calc` and `Effect`), ensuring consistent telemetry behavior throughout the value's lifetime. (#2178)
+
 ### Other changes
+
+* Internal OpenTelemetry span wrapper functions renamed from `with_otel_span` to `shiny_otel_span_async` for clarity. Removed unused synchronous span wrapper. (#2178)
 
 * Updated `palmerpenguins` dependency to version `>=0.1.5` to include type stubs, removing the need for type ignore comments in tests. (#2157)
 
