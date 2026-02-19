@@ -37,9 +37,8 @@ from .._utils import is_async_callable, run_coro_sync
 from .._validation import req
 from ..otel import OtelCollectLevel, should_otel_collect
 from ..otel._attributes import SourceRefAttrs, extract_source_ref
-from ..otel._collect import get_otel_collect_level
 from ..otel._core import emit_otel_log
-from ..otel._function_attrs import get_otel_collect_level_from_func
+from ..otel._function_attrs import resolve_func_otel_level
 from ..otel._labels import (
     create_otel_label,
     get_otel_label_modifier,
@@ -483,10 +482,7 @@ class Calc_(Generic[T]):
 
         # Extract collection level from function attribute (set by @otel_collect decorator)
         # If not set, capture the current collection level at initialization time
-        func_level = get_otel_collect_level_from_func(fn)
-        self._otel_level: OtelCollectLevel = (
-            func_level if func_level is not None else get_otel_collect_level()
-        )
+        self._otel_level: OtelCollectLevel = resolve_func_otel_level(fn)
 
     def __call__(self) -> T:
         # Run the Coroutine (synchronously), and then return the value.
@@ -759,10 +755,7 @@ class Effect_:
 
         # Extract collection level from function attribute (set by @otel_collect decorator)
         # If not set, capture the current collection level at initialization time
-        func_level = get_otel_collect_level_from_func(fn)
-        self._otel_level: OtelCollectLevel = (
-            func_level if func_level is not None else get_otel_collect_level()
-        )
+        self._otel_level: OtelCollectLevel = resolve_func_otel_level(fn)
 
         # Defer the first running of this until flushReact is called
         self._create_context().invalidate()

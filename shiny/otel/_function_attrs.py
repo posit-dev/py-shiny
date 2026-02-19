@@ -7,32 +7,39 @@ execution is traced by OpenTelemetry.
 
 from __future__ import annotations
 
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
-from ._collect import OtelCollectLevel
+from ._collect import OtelCollectLevel, get_otel_collect_level
 from ._constants import FUNC_ATTR_OTEL_COLLECT_LEVEL
 
 __all__ = (
-    "get_otel_collect_level_from_func",
+    "resolve_func_otel_level",
     "set_otel_collect_level_on_func",
 )
 
 
-def get_otel_collect_level_from_func(
+def resolve_func_otel_level(
     func: Callable[..., Any],
-) -> Optional[OtelCollectLevel]:
+    default: OtelCollectLevel | None = None,
+) -> OtelCollectLevel:
     """
-    Get the OTel collection level set on a function by @otel_collect decorator.
+    Resolve the OTel collection level for a function with automatic fallback.
+
+    Checks the function for an @otel_collect decorator attribute, then falls
+    back to the provided default, or finally to the current context level.
 
     Parameters
     ----------
     func
-        The function to retrieve the collection level from.
+        The function to resolve the collection level for.
+    default
+        Default level if no decorator is present on the function.
+        If None (default), falls back to the current context level.
 
     Returns
     -------
-    OtelCollectLevel | None
-        The collection level if set, or None if no level has been set.
+    OtelCollectLevel
+        The resolved collection level from function attribute, default, or context.
 
     Notes
     -----
@@ -41,8 +48,26 @@ def get_otel_collect_level_from_func(
 
     Reactive objects (Calc_, Effect_) check for this attribute to determine
     what collection level to use when creating spans for their execution.
+
+    Examples
+    --------
+    ```python
+    # Automatically uses context level as fallback
+    level = resolve_func_otel_level(fn)
+
+    # Or provide a custom default
+    level = resolve_func_otel_level(fn, default=OtelCollectLevel.SESSION)
+    ```
     """
-    return getattr(func, FUNC_ATTR_OTEL_COLLECT_LEVEL, None)
+    func_level = getattr(func, FUNC_ATTR_OTEL_COLLECT_LEVEL, None)
+
+    if func_level is not None:
+        return func_level
+
+    if default is not None:
+        return default
+
+    return get_otel_collect_level()
 
 
 def set_otel_collect_level_on_func(

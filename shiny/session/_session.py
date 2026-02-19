@@ -1958,6 +1958,7 @@ class Outputs:
                 session=self._session,
             )
             output_obs._otel_attrs = output_obs._extract_otel_attrs(renderer_func)
+            # output_obs._otel_level =
 
             # Store the renderer and effect info
             self._outputs[output_name] = OutputInfo(
