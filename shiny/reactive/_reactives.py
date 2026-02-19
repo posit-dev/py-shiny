@@ -256,11 +256,14 @@ class Value(Generic[T]):
                 if frame_info.lineno:
                     attrs["code.lineno"] = frame_info.lineno
 
-                # Extract column number if available (Python 3.11+)
-                if hasattr(frame_info, "positions") and frame_info.positions:
-                    col_offset = frame_info.positions.col_offset
-                    if col_offset is not None:
-                        attrs["code.column.number"] = col_offset
+                # Extract column number from source line indentation
+                if frame_info.code_context and frame_info.index is not None:
+                    # code_context is a list of source lines around the call
+                    # index is which line in code_context is the actual call
+                    call_line = frame_info.code_context[frame_info.index]
+                    # Column is the number of leading whitespace characters
+                    column = len(call_line) - len(call_line.lstrip())
+                    attrs["code.column.number"] = column
 
                 if frame_info.function:
                     attrs["code.function"] = frame_info.function

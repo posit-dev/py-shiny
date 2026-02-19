@@ -176,6 +176,7 @@ def extract_source_ref(func: Callable[..., Any]) -> SourceRefAttrs:
                 first_line = lines[0]
                 # Column is the number of leading whitespace characters
                 column = len(first_line) - len(first_line.lstrip())
+                # Where the initial `def` or `async def` starts
                 attributes["code.column.number"] = column
     except (TypeError, OSError):
         # TypeError: built-in functions, C extensions
