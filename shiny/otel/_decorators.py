@@ -43,6 +43,20 @@ class OtelCollect:
 
     def __call__(self, func: Callable[..., T]) -> Callable[..., T]:
         """Decorator implementation."""
+        # Reject reactive objects - otel_collect should decorate functions, not objects
+        from shiny.reactive._reactives import Calc_, Effect_
+        from shiny.render.renderer import Renderer
+
+        if isinstance(func, (Calc_, Effect_, Renderer)):
+            obj_type = type(func).__name__
+            raise TypeError(
+                f"otel_collect() cannot be used on {obj_type} objects. "
+                f"Apply @otel_collect before @reactive.calc/@reactive.effect/@render decorators:\n"
+                f"  @reactive.calc\n"
+                f"  @otel_collect('{self.level.name.lower()}')\n"
+                f"  def my_func(): ..."
+            )
+
         # Mark the function with the desired collect level.
         # This will be read by reactive objects (Calc_, Effect_) when they
         # create spans for their execution.

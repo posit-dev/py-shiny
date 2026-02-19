@@ -481,3 +481,62 @@ class TestOtelCollectIntegrationWithRealBackend:
                 pass
 
             assert my_effect._otel_level == OtelCollectLevel.REACTIVITY
+
+    def test_otel_collect_rejects_calc_objects(self):
+        """Verify otel_collect rejects already-wrapped Calc_ objects."""
+        from shiny import reactive
+
+        # Create a calc first
+        @reactive.calc
+        def my_calc():
+            return 42
+
+        # Trying to apply otel_collect to the Calc_ object should fail
+        with pytest.raises(TypeError, match="cannot be used on Calc_ objects"):
+            otel_collect("none")(my_calc)
+
+    def test_otel_collect_rejects_effect_objects(self):
+        """Verify otel_collect rejects already-wrapped Effect_ objects."""
+        from shiny import reactive
+
+        # Create an effect first
+        @reactive.effect
+        def my_effect():
+            pass
+
+        # Trying to apply otel_collect to the Effect_ object should fail
+        with pytest.raises(TypeError, match="cannot be used on Effect_ objects"):
+            otel_collect("none")(my_effect)
+
+    def test_otel_collect_rejects_renderer_objects(self):
+        """Verify otel_collect rejects already-wrapped Renderer objects."""
+        from shiny import render
+
+        # Create a renderer first
+        @render.text
+        def my_text():
+            return "hello"
+
+        # Trying to apply otel_collect to the Renderer object should fail
+        with pytest.raises(TypeError, match="cannot be used on.*objects"):
+            otel_collect("none")(my_text)
+
+    def test_otel_collect_accepts_plain_functions(self):
+        """Verify otel_collect works on plain functions (correct usage)."""
+
+        # This should work fine
+        @otel_collect("none")
+        def plain_func():
+            return 42
+
+        assert plain_func() == 42
+
+        # This should also work (correct decorator order)
+        @otel_collect("none")
+        def func_to_wrap():
+            return 100
+
+        # Function should be marked before wrapping
+        from shiny.otel._constants import FUNC_ATTR_OTEL_COLLECT_LEVEL
+
+        assert hasattr(func_to_wrap, FUNC_ATTR_OTEL_COLLECT_LEVEL)
