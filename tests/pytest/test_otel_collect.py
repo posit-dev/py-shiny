@@ -1,5 +1,11 @@
 """
-Tests for user-facing OpenTelemetry API (otel_collect context manager and decorator).
+Tests for otel_collect() function and OpenTelemetry collection control.
+
+Tests cover:
+- otel_collect() as context manager and decorator
+- Environment variable configuration (SHINY_OTEL_COLLECT)
+- Integration with reactive primitives (Value, Calc_, Effect_, Renderer)
+- Validation and error handling
 """
 
 import pytest
