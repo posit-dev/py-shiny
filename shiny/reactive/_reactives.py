@@ -21,6 +21,7 @@ import traceback
 import warnings
 from typing import (
     TYPE_CHECKING,
+    Any,
     Awaitable,
     Callable,
     Generic,
@@ -34,6 +35,15 @@ from .. import _utils
 from .._docstring import add_example
 from .._utils import is_async_callable, run_coro_sync
 from .._validation import req
+from ..otel import OtelCollectLevel, should_otel_collect
+from ..otel._attributes import extract_source_ref
+from ..otel._core import emit_otel_log
+from ..otel._labels import (
+    generate_reactive_label,
+    get_otel_label_modifier,
+    set_otel_label_modifier,
+)
+from ..otel._span_wrappers import with_otel_span_async
 from ..types import (
     MISSING,
     MISSING_TYPE,
@@ -42,6 +52,7 @@ from ..types import (
     SilentException,
 )
 from ._core import Context, Dependents, ReactiveWarning, isolate
+from ._utils import is_user_code_frame
 
 if TYPE_CHECKING:
     from .. import Session
@@ -73,6 +84,13 @@ class Value(Generic[T]):
         An optional initial value.
     read_only
         If ``True``, then the reactive value cannot be `set()`.
+    name
+        An optional name for the reactive value, used in OpenTelemetry logging and
+        debugging. If not provided, the name will be automatically inferred from the
+        assignment statement (e.g., ``counter = reactive.Value(0)`` will use "counter"
+        as the name). If automatic inference fails, the name will be ``None`` and logs
+        will show ``"<unnamed>"``. Input values created by Shiny will have their names
+        set automatically based on their input IDs.
 
     Returns
     -------
@@ -107,21 +125,143 @@ class Value(Generic[T]):
     # - Value(1) works, with T is inferred to be int.
     @overload
     def __init__(
-        self, value: MISSING_TYPE = MISSING, *, read_only: bool = False
+        self,
+        value: MISSING_TYPE = MISSING,
+        *,
+        read_only: bool = False,
+        name: str | None = None,
     ) -> None: ...
 
     @overload
-    def __init__(self, value: T, *, read_only: bool = False) -> None: ...
+    def __init__(
+        self, value: T, *, read_only: bool = False, name: str | None = None
+    ) -> None: ...
 
     # If `value` is MISSING, then `get()` will raise a SilentException, until a new
     # value is set. Calling `unset()` will set the value to MISSING.
     def __init__(
-        self, value: T | MISSING_TYPE = MISSING, *, read_only: bool = False
+        self,
+        value: T | MISSING_TYPE = MISSING,
+        *,
+        read_only: bool = False,
+        name: str | None = None,
     ) -> None:
         self._value: T | MISSING_TYPE = value
         self._read_only: bool = read_only
         self._value_dependents: Dependents = Dependents()
         self._is_set_dependents: Dependents = Dependents()
+        # Optional name for OpenTelemetry logging and debugging
+        # Priority during initialization: 1) explicit name parameter, 2) inferred from assignment, 3) None
+        # Can be overwritten later by Inputs class when value is added/accessed
+        if name is not None:
+            self._name = name
+        else:
+            self._name = self._try_infer_name()
+
+    def _try_infer_name(self) -> str | None:
+        """
+        Attempt to infer the variable name from the call stack.
+
+        This examines the frame where Value() was instantiated and tries
+        to parse the assignment statement to extract the variable name.
+
+        Returns None if the name cannot be reliably determined.
+
+        Examples of what works:
+        - counter = reactive.Value(0) → "counter"
+        - self.counter = reactive.Value(0) → "counter"
+
+        Examples of what doesn't work (returns None):
+        - values = [reactive.Value(0), reactive.Value(1)]
+        - reactive.Value(0)  # No assignment
+        - Complex expressions
+        """
+        import inspect
+        import re
+
+        try:
+            # Walk up the stack: [0] = _try_infer_name, [1] = __init__, [2] = caller
+            for frame_info in inspect.stack()[2:]:
+                filename = frame_info.filename
+
+                # Skip internal shiny code, keep user code
+                if not is_user_code_frame(filename):
+                    continue
+
+                # Get the source line
+                if frame_info.code_context:
+                    line = frame_info.code_context[0].strip()
+
+                    # Pattern 1: var_name = reactive.Value(...)
+                    match = re.match(r"^(\w+)\s*=\s*reactive\.Value", line)
+                    if match:
+                        return match.group(1)
+
+                    # Pattern 2: self.var_name = reactive.Value(...)
+                    match = re.match(r"^\w+\.(\w+)\s*=\s*reactive\.Value", line)
+                    if match:
+                        return match.group(1)
+
+                # Stop after first user code frame
+                break
+
+        except Exception:
+            # If anything fails, silently return None
+            pass
+
+        return None
+
+    def _extract_caller_source_ref(self) -> dict[str, Any]:
+        """
+        Extract source reference attributes from the caller of _set().
+
+        This captures where the value update originated (file, line, function),
+        which is useful for debugging and tracing reactive value changes.
+
+        Returns
+        -------
+        dict[str, Any]
+            Dictionary with code.filepath, code.lineno, and code.function keys.
+            Returns empty dict if source information is unavailable.
+
+        Notes
+        -----
+        Following OpenTelemetry semantic conventions for code attributes:
+        - code.filepath: Full path to source file
+        - code.lineno: Line number where _set() was called
+        - code.function: Function name containing the call
+
+        This method walks the call stack to find the first frame outside
+        the shiny package (excluding tests), which represents user code.
+        """
+        import inspect
+
+        try:
+            # Stack: [0] = _extract_caller_source_ref, [1] = _set, [2] = caller
+            for frame_info in inspect.stack()[2:]:
+                filename = frame_info.filename
+
+                # Skip internal shiny code, keep user code
+                if not is_user_code_frame(filename):
+                    continue
+
+                # Found a user code frame - extract attributes
+                attrs: dict[str, Any] = {}
+                attrs["code.filepath"] = filename
+
+                if frame_info.lineno:
+                    attrs["code.lineno"] = frame_info.lineno
+
+                if frame_info.function:
+                    attrs["code.function"] = frame_info.function
+
+                return attrs
+
+        except Exception:
+            # If anything fails, silently return empty dict
+            pass
+
+        return {}
 
     def __call__(self) -> T:
         return self.get()
@@ -178,6 +318,8 @@ class Value(Generic[T]):
     # The ._set() method allows setting read-only Value objects. This is used when the
     # Value is part of a session.Inputs object, and the session wants to set it.
     def _set(self, value: T) -> bool:
+        from ..session import get_current_session
+
         if self._value is value:
             return False
 
@@ -186,6 +328,37 @@ class Value(Generic[T]):
 
         self._value = value
         self._value_dependents.invalidate()
+
+        # Log value update for OpenTelemetry
+        # Only log when collection level is REACTIVITY or higher
+        if should_otel_collect(OtelCollectLevel.REACTIVITY):
+            # Build log message with namespace support
+            value_name = self._name or "<unnamed>"
+
+            # Add namespace prefix if present
+            session = get_current_session()
+            if session is not None:
+                # session.ns is a ResolvedId (subclass of str)
+                # It will be an empty string ("") for Root namespace
+                ns_str = str(session.ns)
+                if ns_str:  # Only use non-empty namespaces
+                    value_name = f"{ns_str}:{value_name}"
+
+            log_body = f"Set reactiveVal {value_name}"
+
+            # Build attributes dict with session ID and source reference
+            attributes: dict[str, Any] = {}
+
+            # Add session ID if available
+            if session is not None and hasattr(session, "id"):
+                attributes["session.id"] = session.id
+
+            # Add source reference (file, line, function where _set was called)
+            srcref_attrs = self._extract_caller_source_ref()
+            attributes.update(srcref_attrs)
+
+            emit_otel_log(log_body, severity_text="DEBUG", attributes=attributes)
+
         return True
 
     def unset(self) -> None:
@@ -284,6 +457,17 @@ class Calc_(Generic[T]):
         self._value: list[T] = []
         self._error: list[Exception] = []
 
+        # Extract OpenTelemetry attributes at initialization time
+        self._otel_attrs: dict[str, object] = self._extract_otel_attrs(fn)
+
+        # Extract modifier from function attribute and generate label
+        self._otel_label: str = generate_reactive_label(
+            fn,
+            "reactive",
+            session=self._session,
+            modifier=get_otel_label_modifier(fn),
+        )
+
     def __call__(self) -> T:
         # Run the Coroutine (synchronously), and then return the value.
         # If the Coroutine yields control, then an error will be raised.
@@ -317,11 +501,16 @@ class Calc_(Generic[T]):
         from ..session import session_context
 
         with session_context(self._session):
-            try:
-                with self._ctx():
-                    await self._run_func()
-            finally:
-                self._running = was_running
+            async with with_otel_span_async(
+                self._otel_label,
+                attributes=self._otel_attrs,
+                level=OtelCollectLevel.REACTIVITY,
+            ):
+                try:
+                    with self._ctx():
+                        await self._run_func()
+                finally:
+                    self._running = was_running
 
     def _on_invalidate_cb(self) -> None:
         self._invalidated = True
@@ -332,9 +521,15 @@ class Calc_(Generic[T]):
     async def _run_func(self) -> None:
         self._error.clear()
         try:
-            self._value.append(await self._fn())
+            val = await self._fn()
+
+            self._value.append(val)
         except Exception as err:
             self._error.append(err)
+
+    def _extract_otel_attrs(self, fn: Callable[..., Any]) -> dict[str, Any]:
+        """Extract OpenTelemetry attributes from the reactive function."""
+        return extract_source_ref(fn)
 
 
 class CalcAsync_(Calc_[T]):
@@ -530,6 +725,17 @@ class Effect_:
         if self._session is not None:
             self._session.on_ended(self._on_session_ended_cb)
 
+        # Extract OpenTelemetry attributes at initialization time
+        self._otel_attrs: dict[str, object] = self._extract_otel_attrs(fn)
+
+        # Extract modifier from function attribute and generate label
+        self._otel_label: str = generate_reactive_label(
+            fn,
+            "observe",
+            session=self._session,
+            modifier=get_otel_label_modifier(fn),
+        )
+
         # Defer the first running of this until flushReact is called
         self._create_context().invalidate()
 
@@ -579,38 +785,44 @@ class Effect_:
         from ..session import session_context
 
         with session_context(self._session):
-            try:
-                with ctx():
-                    await self._fn()
+            async with with_otel_span_async(
+                self._otel_label,
+                attributes=self._otel_attrs,
+                level=OtelCollectLevel.REACTIVITY,
+            ):
+                try:
+                    with ctx():
+                        await self._fn()
 
-                    # Yield so that messages can be sent to the client if necessary.
-                    # https://github.com/posit-dev/py-shiny/issues/1381
-                    await asyncio.sleep(0)
-            except SilentException:
-                # It's OK for SilentException to cause an Effect to stop running
-                pass
-            except NotifyException as e:
-                traceback.print_exc()
+                        # Yield so that messages can be sent to the client if necessary.
+                        # https://github.com/posit-dev/py-shiny/issues/1381
+                        await asyncio.sleep(0)
 
-                if self._session:
-                    from .._app import SANITIZE_ERROR_MSG
-                    from ..ui import notification_show
+                except SilentException:
+                    # It's OK for SilentException to cause an Effect to stop running
+                    pass
+                except NotifyException as e:
+                    traceback.print_exc()
 
-                    msg = str(e)
-                    warnings.warn(msg, ReactiveWarning, stacklevel=2)
-                    if e.sanitize:
-                        msg = SANITIZE_ERROR_MSG
-                    notification_show(msg, type="error", duration=None)
-                    if e.close:
+                    if self._session:
+                        from .._app import SANITIZE_ERROR_MSG
+                        from ..ui import notification_show
+
+                        msg = str(e)
+                        warnings.warn(msg, ReactiveWarning, stacklevel=2)
+                        if e.sanitize:
+                            msg = SANITIZE_ERROR_MSG
+                        notification_show(msg, type="error", duration=None)
+                        if e.close:
+                            await self._session._unhandled_error(e)
+                except Exception as e:
+                    traceback.print_exc()
+
+                    warnings.warn(
+                        "Error in Effect: " + str(e), ReactiveWarning, stacklevel=2
+                    )
+                    if self._session:
                         await self._session._unhandled_error(e)
-            except Exception as e:
-                traceback.print_exc()
-
-                warnings.warn(
-                    "Error in Effect: " + str(e), ReactiveWarning, stacklevel=2
-                )
-                if self._session:
-                    await self._session._unhandled_error(e)
 
     def on_invalidate(self, callback: Callable[[], None]) -> None:
         """
@@ -681,6 +893,10 @@ class Effect_:
 
     def _on_session_ended_cb(self) -> None:
         self.destroy()
+
+    def _extract_otel_attrs(self, fn: Callable[..., Any]) -> dict[str, Any]:
+        """Extract OpenTelemetry attributes from the reactive function."""
+        return extract_source_ref(fn)
 
 
 @overload
@@ -885,6 +1101,9 @@ def event(
                 with isolate():
                     return await user_fn()
 
+            # Prepend "event" modifier to any existing label
+            set_otel_label_modifier(new_user_async_fn, "event", mode="prepend")
+
             return new_user_async_fn  # type: ignore
 
         elif any([is_async_callable(arg) for arg in args]):
@@ -900,6 +1119,9 @@ def event(
                 run_coro_sync(trigger())
                 with isolate():
                     return user_fn()
+
+            # Prepend "event" modifier to any existing label
+            set_otel_label_modifier(new_user_fn, "event", mode="prepend")
 
             return new_user_fn
 
