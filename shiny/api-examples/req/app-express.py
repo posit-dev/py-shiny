@@ -43,4 +43,4 @@ def safe_click():
 def _():
     req(input.unsafe())
     print("unsafe clicks:", input.unsafe())
-    # raise Exception("Observer exception: this should cause a crash")
+    # raise Exception("`reactive.effect()` exception: this should cause a crash")

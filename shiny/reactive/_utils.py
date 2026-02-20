@@ -6,7 +6,7 @@ This module contains helper functions used by reactive classes.
 
 from __future__ import annotations
 
-import os
+from pathlib import Path
 
 __all__ = ("is_user_code_frame",)
 
@@ -53,22 +53,28 @@ def is_user_code_frame(filename: str) -> bool:
         return False
 
     # Test files are always considered user code
-    basename = os.path.basename(filename)
-    if basename.startswith("test_"):
+    file_path = Path(filename)
+    if file_path.name.startswith("test_"):
         return True
 
     # Check if file is within shiny package directory
     try:
-        # Get the shiny package directory (two levels up from this file)
-        # This file is at shiny/reactive/_utils.py, so we go up to shiny/
-        shiny_package_dir = os.path.dirname(os.path.dirname(__file__))
+        # Get the shiny repository directory (three levels up from this file)
+        # This file is at ./shiny/reactive/_utils.py, so we go up to ./
+        shiny_repo_dir = Path(__file__).parent.parent.parent
 
-        # Use os.path.commonpath to check if file is under shiny package
-        common = os.path.commonpath([filename, shiny_package_dir])
-        if common == shiny_package_dir:
-            # File is within shiny package, skip it unless it's in tests
-            if "tests" not in filename:
-                return False
+        # Check if file is under shiny package
+        if file_path.is_relative_to(shiny_repo_dir):
+            # Allow tests and examples
+            if not (
+                file_path.is_relative_to(shiny_repo_dir / "examples")
+                or file_path.is_relative_to(shiny_repo_dir / "tests")
+                or file_path.is_relative_to(shiny_repo_dir / "shiny" / "api-examples")
+            ):
+                return True
+
+            return False
+
     except (ValueError, TypeError):
         # Different drives on Windows or other path issues - treat as user code
         pass
