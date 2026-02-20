@@ -58,19 +58,17 @@ def test_input_select_kitchensink(page: Page, local_app: ShinyAppProc) -> None:
         ]
     )
 
-    # TODO-karan; Debug why this does not complete
-    # page.set_default_timeout(100)
-    # select_with_custom_size_and_dict.expect_choices(
-    #     [
-    #         "Orange",
-    #         "Lemon",
-    #         "Lime",
-    #         "Strawberry",
-    #         "Blueberry",
-    #         "Raspberry",
-    #     ],
-    # )
-    # select_with_custom_size_and_dict.expect_size("4")
+    select_with_custom_size_and_dict.expect_choices(
+        [
+            "Orange",
+            "Lemon",
+            "Lime",
+            "Strawberry",
+            "Blueberry",
+            "Raspberry",
+        ],
+    )
+    select_with_custom_size_and_dict.expect_size("4")
 
     # # # TODO-karan; Should we implement this? Seems like the only way to determine which choices belong to which groups. While we're at it, we might as well test the labels.
     # # select_with_custom_size_and_dict.expect_choices({
