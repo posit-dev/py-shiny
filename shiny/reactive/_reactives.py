@@ -357,6 +357,9 @@ class Value(Generic[T]):
         # Only log when:
         # 1. Tracing is enabled (OpenTelemetry SDK is configured)
         # 2. Collection level (captured at initialization) is REACTIVITY or higher
+        # TODO: 3. Value name does not start with "input." (skip logging for input.* values)
+        #    Input values create excessive noise. Only user-created reactive.Value()
+        #    objects should log updates.
         if (
             is_otel_tracing_enabled()
             and self._otel_level >= OtelCollectLevel.REACTIVITY
