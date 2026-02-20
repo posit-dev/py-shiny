@@ -59,19 +59,17 @@ def is_user_code_frame(filename: str) -> bool:
 
     # Check if file is within shiny package directory
     try:
-        # Get the shiny package directory (two levels up from this file)
-        # This file is at shiny/reactive/_utils.py, so we go up to shiny/
-        shiny_package_dir = Path(__file__).parent.parent
+        # Get the shiny repository directory (three levels up from this file)
+        # This file is at ./shiny/reactive/_utils.py, so we go up to ./
+        shiny_repo_dir = Path(__file__).parent.parent.parent
 
         # Check if file is under shiny package
-        if file_path.is_relative_to(shiny_package_dir):
+        if file_path.is_relative_to(shiny_repo_dir):
             # Allow tests and examples
             if not (
-                file_path.is_relative_to(shiny_package_dir / "examples")
-                or file_path.is_relative_to(shiny_package_dir / "tests")
-                or file_path.is_relative_to(
-                    shiny_package_dir / "shiny" / "api-examples"
-                )
+                file_path.is_relative_to(shiny_repo_dir / "examples")
+                or file_path.is_relative_to(shiny_repo_dir / "tests")
+                or file_path.is_relative_to(shiny_repo_dir / "shiny" / "api-examples")
             ):
                 return True
 
