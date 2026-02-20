@@ -204,7 +204,8 @@ class Value(Generic[T]):
                     line = frame_info.code_context[0].strip()
 
                     # Pattern 1: var_name = [reactive.]Value(...) or [reactive.]value(...)
-                    # Require opening paren to avoid matching ValueFactory, value2, etc.
+                    # The \( at the end anchors to a function call, preventing matches
+                    # against identifiers like ValueFactory or value2
                     match = re.match(r"^(\w+)\s*=\s*(?:reactive\.)?[Vv]alue\s*\(", line)
                     if match:
                         return match.group(1)
