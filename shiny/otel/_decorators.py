@@ -113,7 +113,7 @@ def otel_collect(
     **As a context manager:**
 
     ```python
-    from shiny import otel_collect
+    from shiny.otel import otel_collect
 
     # Disable telemetry for a specific block
     with otel_collect("none"):
@@ -125,7 +125,7 @@ def otel_collect(
     **As a decorator:**
 
     ```python
-    from shiny import otel_collect
+    from shiny.otel import otel_collect
 
     @otel_collect("none")
     def expensive_computation():
@@ -137,7 +137,7 @@ def otel_collect(
     **Nested context managers:**
 
     ```python
-    from shiny import otel_collect
+    from shiny.otel import otel_collect
 
     with otel_collect("session"):
         # Only session-level telemetry collected
