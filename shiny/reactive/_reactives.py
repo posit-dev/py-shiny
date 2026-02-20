@@ -243,8 +243,13 @@ class Value(Generic[T]):
         Following OpenTelemetry semantic conventions for code attributes:
         - code.filepath: Full path to source file
         - code.lineno: Line number where _set() was called (1-indexed)
-        - code.column.number: Column number where _set() was called (0-indexed)
+        - code.column.number: Column offset where _set() was called (0-indexed,
+          Python 3.11+ only)
         - code.function: Function name containing the call
+
+        The column.number attribute uses Python 3.11+ frame position information
+        for accurate column offsets. On earlier Python versions, this attribute
+        is omitted.
 
         This method walks the call stack to find the first frame outside
         the shiny package (excluding tests), which represents user code.
@@ -267,14 +272,12 @@ class Value(Generic[T]):
                 if frame_info.lineno:
                     attrs["code.lineno"] = frame_info.lineno
 
-                # Extract column number from source line indentation
-                if frame_info.code_context and frame_info.index is not None:
-                    # code_context is a list of source lines around the call
-                    # index is which line in code_context is the actual call
-                    call_line = frame_info.code_context[frame_info.index]
-                    # Column is the number of leading whitespace characters
-                    column = len(call_line) - len(call_line.lstrip())
-                    attrs["code.column.number"] = column
+                # Extract column number using Python 3.11+ position info when available
+                # Only include if we have accurate position information
+                if hasattr(frame_info, "positions") and frame_info.positions:
+                    # Python 3.11+ provides precise column offset via positions
+                    if frame_info.positions.col_offset is not None:
+                        attrs["code.column.number"] = frame_info.positions.col_offset  # type: ignore[typeddict-item]
 
                 if frame_info.function:
                     attrs["code.function"] = frame_info.function
