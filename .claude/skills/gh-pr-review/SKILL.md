@@ -15,6 +15,8 @@ Manage GitHub pull request review comments and threads using the `gh pr-review` 
 
 **Description:** Review all unresolved PR comments, address them by making necessary code changes, and commit the changes appropriately.
 
+**Note:** If `PR_NUMBER` is omitted, the command will automatically detect and use the PR associated with the current branch.
+
 **Workflow:**
 1. Fetch and display all unresolved PR review comments
 2. Analyze each comment to understand the requested changes
@@ -44,6 +46,8 @@ This will:
 **Usage:** `/resolve-pr-threads [PR_NUMBER]`
 
 **Description:** Bulk resolve unresolved PR review threads. Useful after manually addressing comments or after using `/address-pr-comments`.
+
+**Note:** If `PR_NUMBER` is omitted, the command will automatically detect and use the PR associated with the current branch.
 
 **Workflow:**
 1. Fetch and display all unresolved PR review threads
