@@ -211,7 +211,9 @@ class Value(Generic[T]):
                         return match.group(1)
 
                     # Pattern 2: self.var_name = [reactive.]Value(...) or [reactive.]value(...)
-                    match = re.match(r"^\w+\.(\w+)\s*=\s*(?:reactive\.)?[Vv]alue\s*\(", line)
+                    match = re.match(
+                        r"^\w+\.(\w+)\s*=\s*(?:reactive\.)?[Vv]alue\s*\(", line
+                    )
                     if match:
                         return match.group(1)
 

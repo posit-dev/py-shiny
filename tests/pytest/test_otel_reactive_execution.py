@@ -252,7 +252,7 @@ class TestReactiveEventModifier:
         effect = Effect_(my_effect, session=None)
 
         # The effect should have generated label with "event" modifier
-        assert effect._otel_label == "observe event my_effect"
+        assert effect._otel_label == "effect event my_effect"
 
     def test_calc_without_modifier_has_no_modifier_in_label(self):
         """Test that Calc_ without modifier has clean label"""
@@ -274,7 +274,7 @@ class TestReactiveEventModifier:
         effect = Effect_(my_effect, session=None)
 
         # The effect should have label without modifier
-        assert effect._otel_label == "observe my_effect"
+        assert effect._otel_label == "effect my_effect"
 
 
 class TestSourceReferenceExtraction:
@@ -435,7 +435,7 @@ class TestEffectSpans:
                     call_args = mock_span.call_args
                     # Verify the label string was passed
                     label = call_args[0][0]
-                    assert label == "observe my_effect"
+                    assert label == "effect my_effect"
                     assert call_args[1]["required_level"] == OtelCollectLevel.REACTIVITY
 
     @pytest.mark.asyncio
