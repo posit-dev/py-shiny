@@ -7,68 +7,11 @@ description: Manage GitHub pull request review comments using the gh-pr-review e
 
 Manage GitHub pull request review comments and threads using the `gh pr-review` extension. This extension enables viewing, navigating, replying to, and resolving review threads directly from the terminal.
 
-## Slash Commands
+## Commands
 
-### /address-pr-comments
-
-**Usage:** `/address-pr-comments [PR_NUMBER]`
-
-**Description:** Review all unresolved PR comments, address them by making necessary code changes, and commit the changes appropriately.
-
-**Note:** If `PR_NUMBER` is omitted, the command will automatically detect and use the PR associated with the current branch.
-
-**Workflow:**
-1. Fetch and display all unresolved PR review comments
-2. Analyze each comment to understand the requested changes
-3. Make the necessary code modifications to address each comment
-4. Commit the changes with descriptive commit messages
-5. Reply to each thread indicating what was done
-6. Report back with a summary of addressed comments
-7. Ask if the user wants to resolve the threads
-
-**When to use:** Use this command when you have received PR review feedback and need to systematically address all unresolved comments before the PR can be merged.
-
-**Example:**
-```
-/address-pr-comments 42
-```
-
-This will:
-- View unresolved comments on PR #42
-- Make code changes to address each comment
-- Create commits for the changes
-- Reply to reviewers with explanations
-- Provide a summary of all addressed items
-- Ask if you want to resolve the threads
-
-### /resolve-pr-threads
-
-**Usage:** `/resolve-pr-threads [PR_NUMBER]`
-
-**Description:** Bulk resolve unresolved PR review threads. Useful after manually addressing comments or after using `/address-pr-comments`.
-
-**Note:** If `PR_NUMBER` is omitted, the command will automatically detect and use the PR associated with the current branch.
-
-**Workflow:**
-1. Fetch and display all unresolved PR review threads
-2. Show thread details (file, line, comment text)
-3. Ask for confirmation or allow selective resolution
-4. Resolve the confirmed threads
-5. Report back with a summary of resolved threads
-
-**When to use:** Use this command when you have already addressed PR comments and want to bulk resolve the threads, or when you need to clean up threads that are no longer relevant.
-
-**Example:**
-```
-/resolve-pr-threads 42
-```
-
-This will:
-- List all unresolved threads on PR #42
-- Show what each thread is about
-- Ask which threads to resolve (all or specific ones)
-- Resolve the selected threads
-- Provide a summary of resolved items
+This skill provides access to the following commands:
+- `/pr-threads-address` - Review and address all unresolved PR review threads (see `.claude/commands/pr-threads-address.md`)
+- `/pr-threads-resolve` - Bulk resolve unresolved PR review threads (see `.claude/commands/pr-threads-resolve.md`)
 
 ## Prerequisites
 
