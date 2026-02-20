@@ -19,9 +19,10 @@ Manage GitHub pull request review comments and threads using the `gh pr-review` 
 1. Fetch and display all unresolved PR review comments
 2. Analyze each comment to understand the requested changes
 3. Make the necessary code modifications to address each comment
-4. Reply to each thread indicating what was done
-5. Commit the changes with descriptive commit messages
-6. Report back with a summary of addressed comments
+4. Commit the changes with descriptive commit messages
+5. Reply to each thread indicating what was done
+6. Resolve each thread after the commit is made
+7. Report back with a summary of addressed comments
 
 **When to use:** Use this command when you have received PR review feedback and need to systematically address all unresolved comments before the PR can be merged.
 
@@ -33,8 +34,9 @@ Manage GitHub pull request review comments and threads using the `gh pr-review` 
 This will:
 - View unresolved comments on PR #42
 - Make code changes to address each comment
-- Reply to reviewers with explanations
 - Create commits for the changes
+- Reply to reviewers with explanations
+- Resolve each thread after committing
 - Provide a summary of all addressed items
 
 ## Prerequisites
