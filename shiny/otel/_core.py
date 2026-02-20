@@ -82,7 +82,7 @@ def is_otel_tracing_enabled() -> bool:
     if _tracing_enabled is None:
         from opentelemetry.sdk.trace import TracerProvider as SDKTracerProvider
 
-        tracer_provider = get_tracer_provider()
+        tracer_provider = trace.get_tracer_provider()
         # Check if we have a real SDK TracerProvider (not the no-op ProxyTracerProvider)
         # The SDK TracerProvider has span processors that record spans
         _tracing_enabled = isinstance(tracer_provider, SDKTracerProvider)
