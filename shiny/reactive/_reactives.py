@@ -276,10 +276,10 @@ class Value(Generic[T]):
 
                 # Extract column number using Python 3.11+ position info when available
                 # Only include if we have accurate position information
-                if hasattr(frame_info, "positions") and frame_info.positions:
+                if hasattr(frame_info, "positions") and frame_info.positions:  # type: ignore[attr-defined]
                     # Python 3.11+ provides precise column offset via positions
-                    if frame_info.positions.col_offset is not None:
-                        attrs["code.column.number"] = frame_info.positions.col_offset  # type: ignore[typeddict-item]
+                    if frame_info.positions.col_offset is not None:  # type: ignore[attr-defined]
+                        attrs["code.column.number"] = frame_info.positions.col_offset  # type: ignore[typeddict-item, attr-defined]
 
                 if frame_info.function:
                     attrs["code.function"] = frame_info.function
