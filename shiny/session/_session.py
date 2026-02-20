@@ -51,7 +51,11 @@ from ..bookmark._serializers import serializer_file_input
 from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
 from ..module import ResolvedId
-from ..otel._attributes import extract_http_attributes, extract_source_ref
+from ..otel._attributes import (
+    extract_http_attributes,
+    extract_source_ref,
+    get_session_id_attrs,
+)
 from ..otel._collect import OtelCollectLevel
 from ..otel._decorators import no_otel_collect
 from ..otel._function_attrs import resolve_func_otel_level
@@ -593,7 +597,7 @@ class AppSession(Session):
         # Wrap session cleanup in session.end span (or no-op if not collecting)
         async with shiny_otel_span_async(
             "session.end",
-            attributes={"session.id": self.id},
+            attributes=get_session_id_attrs(self),
             required_level=OtelCollectLevel.SESSION,
         ):
             try:

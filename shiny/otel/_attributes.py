@@ -5,8 +5,12 @@ from __future__ import annotations
 import inspect
 from typing import TYPE_CHECKING, Any, Callable, Dict, TypedDict, cast
 
+from ._constants import ATTR_SESSION_ID
+
 if TYPE_CHECKING:
     from starlette.requests import HTTPConnection
+
+    from ..session import Session
 
 
 # OpenTelemetry source code reference attributes
@@ -25,7 +29,39 @@ SourceRefAttrs = TypedDict(
 )
 
 
-__all__ = ("extract_http_attributes", "extract_source_ref", "SourceRefAttrs")
+__all__ = (
+    "extract_http_attributes",
+    "extract_source_ref",
+    "get_session_id_attrs",
+    "SourceRefAttrs",
+)
+
+
+def get_session_id_attrs(session: Session) -> Dict[str, str]:
+    """
+    Get session ID attributes for OpenTelemetry spans.
+
+    Parameters
+    ----------
+    session
+        The Shiny session object.
+
+    Returns
+    -------
+    Dict[str, str]
+        Dictionary containing the session.id attribute.
+
+    Examples
+    --------
+    ```python
+    from shiny.otel._attributes import get_session_id_attrs
+
+    # In session context
+    attrs = get_session_id_attrs(session)
+    # Returns: {"session.id": "abc123"}
+    ```
+    """
+    return {ATTR_SESSION_ID: session.id}
 
 
 def extract_http_attributes(http_conn: HTTPConnection) -> Dict[str, Any]:
