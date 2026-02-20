@@ -762,7 +762,7 @@ class Effect_:
         # Extract modifier from function attribute and generate label
         self._otel_label: str = create_otel_label(
             fn,
-            "observe",
+            "effect",
             session=self._session,
             modifier=get_otel_label_modifier(fn),
         )

@@ -94,8 +94,8 @@ class TestLabelGeneration:
         def my_effect():
             pass
 
-        label = create_otel_label(my_effect, "observe")
-        assert label == "observe my_effect"
+        label = create_otel_label(my_effect, "effect")
+        assert label == "effect my_effect"
 
     def test_generate_output_label(self):
         """Test generating label for output rendering"""
