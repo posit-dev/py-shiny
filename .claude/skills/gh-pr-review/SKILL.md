@@ -10,6 +10,7 @@ Manage GitHub pull request review comments and threads using the `gh pr-review` 
 ## Commands
 
 This skill provides access to the following commands:
+
 - `/pr-threads-address` - Review and address all unresolved PR review threads (see `.claude/commands/pr-threads-address.md`)
 - `/pr-threads-resolve` - Bulk resolve unresolved PR review threads (see `.claude/commands/pr-threads-resolve.md`)
 
@@ -34,6 +35,7 @@ gh pr-review review view --pr <number> --repo <owner/repo>
 ```
 
 **Common filters:**
+
 - `--reviewer <login>` — Filter by specific reviewer
 - `--states <list>` — Filter by review state (APPROVED, CHANGES_REQUESTED, COMMENTED, DISMISSED)
 - `--unresolved` — Show only unresolved threads
@@ -42,6 +44,7 @@ gh pr-review review view --pr <number> --repo <owner/repo>
 - `--include-comment-node-id` — Include GraphQL node IDs for replies
 
 **Examples:**
+
 ```bash
 # View all unresolved comments
 gh pr-review review view --pr 42 --unresolved --repo owner/repo
@@ -72,6 +75,7 @@ gh pr-review review --add-comment --review-id <PRR_...> --path <file-path> --lin
 ```
 
 **Flags:**
+
 - `--review-id` — Review ID from `--start` command (required)
 - `--path` — File path in the repository (required)
 - `--line` — Line number for the comment (required)
@@ -86,11 +90,13 @@ gh pr-review review --submit --review-id <PRR_...> --event <EVENT_TYPE> --body "
 ```
 
 **Event types:**
+
 - `APPROVE` — Approve the changes
 - `REQUEST_CHANGES` — Request changes before merging
 - `COMMENT` — Submit general feedback without explicit approval
 
 **Example:**
+
 ```bash
 gh pr-review review --submit --review-id PRR_abc123 --event REQUEST_CHANGES --body "Please address the comments before merging" --repo owner/repo
 ```
@@ -100,12 +106,13 @@ gh pr-review review --submit --review-id PRR_abc123 --event REQUEST_CHANGES --bo
 Respond to specific review comment threads:
 
 ```bash
-gh pr-review comments reply --thread-id <PRRT_...> --body "<reply-text>" --repo <owner/repo>
+gh pr-review comments reply --thread-id <PRRT_...> --body "<reply-text>" --repo <owner/repo> --pr <number>
 ```
 
 **Example:**
+
 ```bash
-gh pr-review comments reply --thread-id PRRT_xyz789 --body "Fixed in the latest commit" --repo owner/repo
+gh pr-review comments reply --thread-id PRRT_xyz789 --body "Fixed in the latest commit" --repo owner/repo --pr 42
 ```
 
 ### List Review Threads
@@ -117,6 +124,7 @@ gh pr-review threads list --pr <number> --repo <owner/repo>
 ```
 
 **Common filters:**
+
 - `--unresolved` — Show only unresolved threads
 - `--resolved` — Show only resolved threads
 
@@ -177,6 +185,7 @@ gh pr-review threads resolve --thread-id PRRT_xyz789 --repo owner/repo
 3. **Review IDs**: Review IDs (format `PRR_...`) are returned by the `review --start` command and must be used for adding comments to that review.
 
 4. **Multi-line Comments**: Use heredoc syntax for multi-line comment bodies:
+
    ```bash
    gh pr-review comments reply --thread-id PRRT_xyz789 --body "$(cat <<'EOF'
    Good point. Here's my reasoning:
