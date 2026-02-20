@@ -204,15 +204,14 @@ class Value(Generic[T]):
                     line = frame_info.code_context[0].strip()
 
                     # Pattern 1: var_name = [reactive.]Value(...) or [reactive.]value(...)
-                    match = re.match(r"^(\w+)\s*=\s*(?:reactive\.)?[Vv]alue", line)
+                    # Require opening paren to avoid matching ValueFactory, value2, etc.
+                    match = re.match(r"^(\w+)\s*=\s*(?:reactive\.)?[Vv]alue\s*\(", line)
                     if match:
-                        # print(match.group(1))
                         return match.group(1)
 
                     # Pattern 2: self.var_name = [reactive.]Value(...) or [reactive.]value(...)
-                    match = re.match(r"^\w+\.(\w+)\s*=\s*(?:reactive\.)?[Vv]alue", line)
+                    match = re.match(r"^\w+\.(\w+)\s*=\s*(?:reactive\.)?[Vv]alue\s*\(", line)
                     if match:
-                        # print(match.group(1))
                         return match.group(1)
 
                 # Stop after first user code frame
