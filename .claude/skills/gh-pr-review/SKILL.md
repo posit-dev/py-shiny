@@ -39,6 +39,33 @@ This will:
 - Provide a summary of all addressed items
 - Ask if you want to resolve the threads
 
+### /resolve-pr-threads
+
+**Usage:** `/resolve-pr-threads [PR_NUMBER]`
+
+**Description:** Bulk resolve unresolved PR review threads. Useful after manually addressing comments or after using `/address-pr-comments`.
+
+**Workflow:**
+1. Fetch and display all unresolved PR review threads
+2. Show thread details (file, line, comment text)
+3. Ask for confirmation or allow selective resolution
+4. Resolve the confirmed threads
+5. Report back with a summary of resolved threads
+
+**When to use:** Use this command when you have already addressed PR comments and want to bulk resolve the threads, or when you need to clean up threads that are no longer relevant.
+
+**Example:**
+```
+/resolve-pr-threads 42
+```
+
+This will:
+- List all unresolved threads on PR #42
+- Show what each thread is about
+- Ask which threads to resolve (all or specific ones)
+- Resolve the selected threads
+- Provide a summary of resolved items
+
 ## Prerequisites
 
 Before using any pr-review commands, check if the extension is installed:
