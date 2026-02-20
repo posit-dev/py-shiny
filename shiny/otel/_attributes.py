@@ -37,7 +37,7 @@ __all__ = (
 )
 
 
-def get_session_id_attrs(session: Session) -> Dict[str, str]:
+def get_session_id_attrs(session: Session | None) -> Dict[str, str]:
     """
     Get session ID attributes for OpenTelemetry spans.
 
@@ -61,6 +61,8 @@ def get_session_id_attrs(session: Session) -> Dict[str, str]:
     # Returns: {"session.id": "abc123"}
     ```
     """
+    if session is None or not hasattr(session, "id"):
+        return {}
     return {ATTR_SESSION_ID: session.id}
 
 

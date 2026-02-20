@@ -693,7 +693,7 @@ class AppSession(Session):
                             async with shiny_otel_span_async(
                                 "session.start",
                                 attributes=lambda: {
-                                    "session.id": self.id,
+                                    **get_session_id_attrs(self),
                                     **extract_http_attributes(self.http_conn),
                                 },
                                 required_level=OtelCollectLevel.SESSION,

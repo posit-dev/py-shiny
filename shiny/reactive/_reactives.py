@@ -35,7 +35,7 @@ from .. import _utils
 from .._docstring import add_example
 from .._utils import is_async_callable, run_coro_sync
 from .._validation import req
-from ..otel._attributes import SourceRefAttrs, extract_source_ref
+from ..otel._attributes import SourceRefAttrs, extract_source_ref, get_session_id_attrs
 from ..otel._collect import OtelCollectLevel, get_otel_collect_level
 from ..otel._core import emit_otel_log, is_otel_tracing_enabled
 from ..otel._function_attrs import resolve_func_otel_level
@@ -376,16 +376,10 @@ class Value(Generic[T]):
             log_body = f"Set reactiveVal {value_name}"
 
             # Build attributes dict with session ID and source reference
-            attributes: dict[str, Any] = {}
-
-            # Add session ID if available
-            if session is not None and hasattr(session, "id"):
-                attributes["session.id"] = session.id
-
-            # Add source reference (file, line, function where _set was called)
-            srcref_attrs = self._extract_caller_source_ref()
-            attributes.update(srcref_attrs)
-
+            attributes = {
+                **get_session_id_attrs(session),
+                **self._extract_caller_source_ref(),
+            }
             emit_otel_log(log_body, severity_text="DEBUG", attributes=attributes)
 
         return True
