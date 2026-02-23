@@ -3,12 +3,67 @@
 from __future__ import annotations
 
 import inspect
-from typing import TYPE_CHECKING, Any, Callable, Dict, cast
+from typing import TYPE_CHECKING, Any, Callable, Dict, TypedDict, cast
+
+from ._constants import ATTR_SESSION_ID
 
 if TYPE_CHECKING:
     from starlette.requests import HTTPConnection
 
-__all__ = ("extract_http_attributes", "extract_source_ref")
+    from ..session import Session
+
+
+# OpenTelemetry source code reference attributes
+# Following OTel semantic conventions for code attributes
+# All fields are optional since source information may not be available
+# for built-in functions, C extensions, or dynamically generated code
+SourceRefAttrs = TypedDict(
+    "SourceRefAttrs",
+    {
+        "code.filepath": str,  # Full path to source file
+        "code.lineno": int,  # Line number in source file (1-indexed)
+        "code.column.number": int,  # Column number in source file (0-indexed)
+        "code.function": str,  # Function or method name
+    },
+    total=False,
+)
+
+
+__all__ = (
+    "extract_http_attributes",
+    "extract_source_ref",
+    "get_session_id_attrs",
+    "SourceRefAttrs",
+)
+
+
+def get_session_id_attrs(session: Session | None) -> Dict[str, str]:
+    """
+    Get session ID attributes for OpenTelemetry spans.
+
+    Parameters
+    ----------
+    session
+        The Shiny session object.
+
+    Returns
+    -------
+    Dict[str, str]
+        Dictionary containing the session.id attribute.
+
+    Examples
+    --------
+    ```python
+    from shiny.otel._attributes import get_session_id_attrs
+
+    # In session context
+    attrs = get_session_id_attrs(session)
+    # Returns: {"session.id": "abc123"}
+    ```
+    """
+    if session is None or not hasattr(session, "id"):
+        return {}
+    return {ATTR_SESSION_ID: session.id}
 
 
 def extract_http_attributes(http_conn: HTTPConnection) -> Dict[str, Any]:
@@ -85,12 +140,12 @@ def extract_http_attributes(http_conn: HTTPConnection) -> Dict[str, Any]:
     return attributes
 
 
-def extract_source_ref(func: Callable[..., Any]) -> Dict[str, Any]:
+def extract_source_ref(func: Callable[..., Any]) -> SourceRefAttrs:
     """
     Extract source code location attributes from a function for OTel spans.
 
-    This extracts source file path, line number, and function name following
-    OpenTelemetry semantic conventions for code attributes.
+    This extracts source file path, line number, column number, and function
+    name following OpenTelemetry semantic conventions for code attributes.
 
     Parameters
     ----------
@@ -99,7 +154,7 @@ def extract_source_ref(func: Callable[..., Any]) -> Dict[str, Any]:
 
     Returns
     -------
-    Dict[str, Any]
+    SourceRefAttrs
         Dictionary of source code attributes suitable for span attributes.
         Returns empty dict if source information is unavailable.
 
@@ -115,6 +170,7 @@ def extract_source_ref(func: Callable[..., Any]) -> Dict[str, Any]:
     # Returns: {
     #     "code.filepath": "/path/to/file.py",
     #     "code.lineno": 42,
+    #     "code.column.number": 0,
     #     "code.function": "my_calc"
     # }
     ```
@@ -123,7 +179,8 @@ def extract_source_ref(func: Callable[..., Any]) -> Dict[str, Any]:
     -----
     Following OTel semantic conventions:
     - `code.filepath`: Full path to source file
-    - `code.lineno`: Line number where function is defined
+    - `code.lineno`: Line number where function is defined (1-indexed)
+    - `code.column.number`: Column number where function is defined (0-indexed)
     - `code.function`: Function name
 
     Source information may not be available for:
@@ -132,7 +189,7 @@ def extract_source_ref(func: Callable[..., Any]) -> Dict[str, Any]:
     - Dynamically generated functions
     - Lambda functions (will have name "<lambda>")
     """
-    attributes: Dict[str, Any] = {}
+    attributes: SourceRefAttrs = {}
 
     # Get source file path
     try:
@@ -144,13 +201,21 @@ def extract_source_ref(func: Callable[..., Any]) -> Dict[str, Any]:
         # OSError: source file not found
         pass
 
-    # Get line number where function is defined
+    # Get line number and column number where function is defined
     try:
         source_lines = inspect.getsourcelines(func)
         if source_lines:
             # getsourcelines returns (lines, starting_line_number)
-            line_number = source_lines[1]
+            lines, line_number = source_lines
             attributes["code.lineno"] = line_number
+
+            # Extract column number from indentation of first line
+            if lines:
+                first_line = lines[0]
+                # Column is the number of leading whitespace characters
+                column = len(first_line) - len(first_line.lstrip())
+                # Where the initial `def` or `async def` starts
+                attributes["code.column.number"] = column
     except (TypeError, OSError):
         # TypeError: built-in functions, C extensions
         # OSError: source file not found

@@ -7,27 +7,26 @@ that include function names, namespaces, and modifiers.
 
 from typing import TYPE_CHECKING, Any, Callable, Optional
 
+from ._constants import FUNC_ATTR_OTEL_LABEL_MODIFIER
+
 if TYPE_CHECKING:
     from ..session import Session
 
 __all__ = [
-    "generate_reactive_label",
+    "create_otel_label",
     "get_otel_label_modifier",
     "set_otel_label_modifier",
 ]
 
-# Attribute name used to store modifiers on function objects
-_MODIFIER_ATTR = "_shiny_otel_label_modifier"
 
-
-def generate_reactive_label(
+def create_otel_label(
     func: Callable[..., Any],
     label_type: str,
     session: "Session | None" = None,
     modifier: Optional[str] = None,
 ) -> str:
     """
-    Generate a descriptive label for a reactive computation span.
+    Create a descriptive OpenTelemetry span label for reactive computations.
 
     Parameters
     ----------
@@ -36,7 +35,7 @@ def generate_reactive_label(
     label_type
         The type of reactive computation. Common values:
         - "reactive" for Calc
-        - "observe" for Effect
+        - "effect" for Effect
         - "output" for Output rendering
     session
         Optional session to extract namespace from. If provided and the session
@@ -52,24 +51,24 @@ def generate_reactive_label(
         - "reactive cache myValue" (with modifier)
         - "reactive mod:myValue" (with namespace)
         - "reactive cache mod:myValue" (with namespace and modifier)
-        - "observe <anonymous>" (for lambda function)
+        - "effect <anonymous>" (for lambda function)
 
     Examples
     --------
     >>> def my_calc():
     ...     return 42
-    >>> generate_reactive_label(my_calc, "reactive")
+    >>> create_otel_label(my_calc, "reactive")
     'reactive my_calc'
 
-    >>> generate_reactive_label(lambda: 42, "observe")
-    'observe <anonymous>'
+    >>> create_otel_label(lambda: 42, "effect")
+    'effect <anonymous>'
 
-    >>> generate_reactive_label(my_calc, "reactive", session=mock_session, modifier="cache")
+    >>> create_otel_label(my_calc, "reactive", session=mock_session, modifier="cache")
     'reactive cache mod:my_calc'
     """
     # Extract function name
     name = getattr(func, "__name__", "<anonymous>")
-    if name == "<lambda>":
+    if name == "_" or name == "<lambda>":
         name = "<anonymous>"
 
     # Build label parts
@@ -144,9 +143,9 @@ def get_otel_label_modifier(func: Callable[..., Any]) -> Optional[str]:
     See Also
     --------
     set_otel_label_modifier : Set the modifier on a function.
-    generate_reactive_label : Generate a span label including the modifier.
+    create_otel_label : Create a span label including the modifier.
     """
-    return getattr(func, _MODIFIER_ATTR, None)
+    return getattr(func, FUNC_ATTR_OTEL_LABEL_MODIFIER, None)
 
 
 def set_otel_label_modifier(
@@ -213,7 +212,7 @@ def set_otel_label_modifier(
     Note
     ----
     This function modifies the function object in-place by setting an attribute
-    on its `__dict__`. The attribute name used is stored in `_MODIFIER_ATTR`.
+    on its `__dict__`. The attribute name used is `FUNC_ATTR_OTEL_LABEL_MODIFIER`.
 
     When :func:`functools.wraps` is used in decorators, it copies `__dict__`
     from the original function to the wrapper, which automatically preserves
@@ -223,7 +222,7 @@ def set_otel_label_modifier(
     See Also
     --------
     get_otel_label_modifier : Retrieve the modifier from a function.
-    generate_reactive_label : Generate a span label including the modifier.
+    create_otel_label : Create a span label including the modifier.
     """
     # Validate mode first
     if mode not in ("prepend", "append", "replace"):
@@ -231,7 +230,7 @@ def set_otel_label_modifier(
             f"Invalid mode: {mode!r}. Must be 'prepend', 'append', or 'replace'."
         )
 
-    existing = getattr(func, _MODIFIER_ATTR, None)
+    existing = getattr(func, FUNC_ATTR_OTEL_LABEL_MODIFIER, None)
 
     if mode == "replace" or existing is None:
         # Replace mode or no existing modifier - just set it
@@ -243,4 +242,4 @@ def set_otel_label_modifier(
         # Append: new modifier comes last
         new_modifier = f"{existing} {modifier}"
 
-    setattr(func, _MODIFIER_ATTR, new_modifier)
+    setattr(func, FUNC_ATTR_OTEL_LABEL_MODIFIER, new_modifier)

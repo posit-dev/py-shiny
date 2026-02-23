@@ -35,15 +35,16 @@ from .. import _utils
 from .._docstring import add_example
 from .._utils import is_async_callable, run_coro_sync
 from .._validation import req
-from ..otel import OtelCollectLevel, should_otel_collect
-from ..otel._attributes import extract_source_ref
-from ..otel._core import emit_otel_log
+from ..otel._attributes import SourceRefAttrs, extract_source_ref, get_session_id_attrs
+from ..otel._collect import OtelCollectLevel, get_otel_collect_level
+from ..otel._core import emit_otel_log, is_otel_tracing_enabled
+from ..otel._function_attrs import resolve_func_otel_level
 from ..otel._labels import (
-    generate_reactive_label,
+    create_otel_label,
     get_otel_label_modifier,
     set_otel_label_modifier,
 )
-from ..otel._span_wrappers import with_otel_span_async
+from ..otel._span_wrappers import shiny_otel_span
 from ..types import (
     MISSING,
     MISSING_TYPE,
@@ -158,6 +159,10 @@ class Value(Generic[T]):
         else:
             self._name = self._try_infer_name()
 
+        # Capture collection level at initialization time
+        # This determines whether value updates will emit OTel logs
+        self._otel_level: OtelCollectLevel = get_otel_collect_level()
+
     def _try_infer_name(self) -> str | None:
         """
         Attempt to infer the variable name from the call stack.
@@ -169,7 +174,13 @@ class Value(Generic[T]):
 
         Examples of what works:
         - counter = reactive.Value(0) → "counter"
+        - counter = reactive.value(0) → "counter"
+        - counter = Value(0) → "counter"
+        - counter = value(0) → "counter"
         - self.counter = reactive.Value(0) → "counter"
+        - self.counter = reactive.value(0) → "counter"
+        - self.counter = Value(0) → "counter"
+        - self.counter = value(0) → "counter"
 
         Examples of what doesn't work (returns None):
         - values = [reactive.Value(0), reactive.Value(1)]
@@ -192,13 +203,17 @@ class Value(Generic[T]):
                 if frame_info.code_context:
                     line = frame_info.code_context[0].strip()
 
-                    # Pattern 1: var_name = reactive.Value(...)
-                    match = re.match(r"^(\w+)\s*=\s*reactive\.Value", line)
+                    # Pattern 1: var_name = [reactive.]Value(...) or [reactive.]value(...)
+                    # The \( at the end anchors to a function call, preventing matches
+                    # against identifiers like ValueFactory or value2
+                    match = re.match(r"^(\w+)\s*=\s*(?:reactive\.)?[Vv]alue\s*\(", line)
                     if match:
                         return match.group(1)
 
-                    # Pattern 2: self.var_name = reactive.Value(...)
-                    match = re.match(r"^\w+\.(\w+)\s*=\s*reactive\.Value", line)
+                    # Pattern 2: self.var_name = [reactive.]Value(...) or [reactive.]value(...)
+                    match = re.match(
+                        r"^\w+\.(\w+)\s*=\s*(?:reactive\.)?[Vv]alue\s*\(", line
+                    )
                     if match:
                         return match.group(1)
 
@@ -211,25 +226,32 @@ class Value(Generic[T]):
 
         return None
 
-    def _extract_caller_source_ref(self) -> dict[str, Any]:
+    def _extract_caller_source_ref(self) -> SourceRefAttrs:
         """
         Extract source reference attributes from the caller of _set().
 
-        This captures where the value update originated (file, line, function),
-        which is useful for debugging and tracing reactive value changes.
+        This captures where the value update originated (file, line, column,
+        function), which is useful for debugging and tracing reactive value changes.
 
         Returns
         -------
-        dict[str, Any]
-            Dictionary with code.filepath, code.lineno, and code.function keys.
-            Returns empty dict if source information is unavailable.
+        SourceRefAttrs
+            Dictionary with code.filepath, code.lineno, code.column.number, and
+            code.function keys. Returns empty dict if source information is
+            unavailable.
 
         Notes
         -----
         Following OpenTelemetry semantic conventions for code attributes:
         - code.filepath: Full path to source file
-        - code.lineno: Line number where _set() was called
+        - code.lineno: Line number where _set() was called (1-indexed)
+        - code.column.number: Column offset where _set() was called (0-indexed,
+          Python 3.11+ only)
         - code.function: Function name containing the call
+
+        The column.number attribute uses Python 3.11+ frame position information
+        for accurate column offsets. On earlier Python versions, this attribute
+        is omitted.
 
         This method walks the call stack to find the first frame outside
         the shiny package (excluding tests), which represents user code.
@@ -246,11 +268,18 @@ class Value(Generic[T]):
                     continue
 
                 # Found a user code frame - extract attributes
-                attrs: dict[str, Any] = {}
+                attrs: SourceRefAttrs = {}
                 attrs["code.filepath"] = filename
 
                 if frame_info.lineno:
                     attrs["code.lineno"] = frame_info.lineno
+
+                # Extract column number using Python 3.11+ position info when available
+                # Only include if we have accurate position information
+                if hasattr(frame_info, "positions") and frame_info.positions:  # type: ignore[attr-defined]
+                    # Python 3.11+ provides precise column offset via positions
+                    if frame_info.positions.col_offset is not None:  # type: ignore[attr-defined]
+                        attrs["code.column.number"] = frame_info.positions.col_offset  # type: ignore[typeddict-item, attr-defined]
 
                 if frame_info.function:
                     attrs["code.function"] = frame_info.function
@@ -330,8 +359,16 @@ class Value(Generic[T]):
         self._value_dependents.invalidate()
 
         # Log value update for OpenTelemetry
-        # Only log when collection level is REACTIVITY or higher
-        if should_otel_collect(OtelCollectLevel.REACTIVITY):
+        # Only log when:
+        # 1. Tracing is enabled (OpenTelemetry SDK is configured)
+        # 2. Collection level (captured at initialization) is REACTIVITY or higher
+        # TODO: 3. Value name does not start with "input." (skip logging for input.* values)
+        #    Input values create excessive noise. Only user-created reactive.Value()
+        #    objects should log updates.
+        if (
+            is_otel_tracing_enabled()
+            and self._otel_level >= OtelCollectLevel.REACTIVITY
+        ):
             # Build log message with namespace support
             value_name = self._name or "<unnamed>"
 
@@ -347,16 +384,10 @@ class Value(Generic[T]):
             log_body = f"Set reactiveVal {value_name}"
 
             # Build attributes dict with session ID and source reference
-            attributes: dict[str, Any] = {}
-
-            # Add session ID if available
-            if session is not None and hasattr(session, "id"):
-                attributes["session.id"] = session.id
-
-            # Add source reference (file, line, function where _set was called)
-            srcref_attrs = self._extract_caller_source_ref()
-            attributes.update(srcref_attrs)
-
+            attributes = {
+                **get_session_id_attrs(session),
+                **self._extract_caller_source_ref(),
+            }
             emit_otel_log(log_body, severity_text="DEBUG", attributes=attributes)
 
         return True
@@ -458,15 +489,19 @@ class Calc_(Generic[T]):
         self._error: list[Exception] = []
 
         # Extract OpenTelemetry attributes at initialization time
-        self._otel_attrs: dict[str, object] = self._extract_otel_attrs(fn)
+        self._otel_attrs: SourceRefAttrs = self._extract_otel_attrs(fn)
 
         # Extract modifier from function attribute and generate label
-        self._otel_label: str = generate_reactive_label(
+        self._otel_label: str = create_otel_label(
             fn,
             "reactive",
             session=self._session,
             modifier=get_otel_label_modifier(fn),
         )
+
+        # Extract collection level from function attribute (set by @otel_collect decorator)
+        # If not set, capture the current collection level at initialization time
+        self._otel_level: OtelCollectLevel = resolve_func_otel_level(fn)
 
     def __call__(self) -> T:
         # Run the Coroutine (synchronously), and then return the value.
@@ -501,10 +536,11 @@ class Calc_(Generic[T]):
         from ..session import session_context
 
         with session_context(self._session):
-            async with with_otel_span_async(
+            async with shiny_otel_span(
                 self._otel_label,
                 attributes=self._otel_attrs,
-                level=OtelCollectLevel.REACTIVITY,
+                required_level=OtelCollectLevel.REACTIVITY,
+                collection_level=self._otel_level,
             ):
                 try:
                     with self._ctx():
@@ -527,7 +563,7 @@ class Calc_(Generic[T]):
         except Exception as err:
             self._error.append(err)
 
-    def _extract_otel_attrs(self, fn: Callable[..., Any]) -> dict[str, Any]:
+    def _extract_otel_attrs(self, fn: Callable[..., Any]) -> SourceRefAttrs:
         """Extract OpenTelemetry attributes from the reactive function."""
         return extract_source_ref(fn)
 
@@ -726,15 +762,19 @@ class Effect_:
             self._session.on_ended(self._on_session_ended_cb)
 
         # Extract OpenTelemetry attributes at initialization time
-        self._otel_attrs: dict[str, object] = self._extract_otel_attrs(fn)
+        self._otel_attrs: SourceRefAttrs = self._extract_otel_attrs(fn)
 
         # Extract modifier from function attribute and generate label
-        self._otel_label: str = generate_reactive_label(
+        self._otel_label: str = create_otel_label(
             fn,
-            "observe",
+            "effect",
             session=self._session,
             modifier=get_otel_label_modifier(fn),
         )
+
+        # Extract collection level from function attribute (set by @otel_collect decorator)
+        # If not set, capture the current collection level at initialization time
+        self._otel_level: OtelCollectLevel = resolve_func_otel_level(fn)
 
         # Defer the first running of this until flushReact is called
         self._create_context().invalidate()
@@ -785,10 +825,11 @@ class Effect_:
         from ..session import session_context
 
         with session_context(self._session):
-            async with with_otel_span_async(
+            async with shiny_otel_span(
                 self._otel_label,
                 attributes=self._otel_attrs,
-                level=OtelCollectLevel.REACTIVITY,
+                required_level=OtelCollectLevel.REACTIVITY,
+                collection_level=self._otel_level,
             ):
                 try:
                     with ctx():
@@ -840,7 +881,7 @@ class Effect_:
         """
         Destroy this reactive effect.
 
-        Stops the observer from executing ever again, even if it is currently scheduled
+        Stops the effect from executing ever again, even if it is currently scheduled
         for re-execution.
         """
         self._destroyed = True
@@ -885,8 +926,8 @@ class Effect_:
 
         Note
         ----
-        If the observer is currently invalidated, then the change in priority will not
-        take effect until the next invalidation--unless the observer is also currently
+        If the effect is currently invalidated, then the change in priority will not
+        take effect until the next invalidation--unless the effect is also currently
         suspended, in which case the priority change will be effective upon resume.
         """
         self._priority = priority
@@ -894,7 +935,7 @@ class Effect_:
     def _on_session_ended_cb(self) -> None:
         self.destroy()
 
-    def _extract_otel_attrs(self, fn: Callable[..., Any]) -> dict[str, Any]:
+    def _extract_otel_attrs(self, fn: Callable[..., Any]) -> SourceRefAttrs:
         """Extract OpenTelemetry attributes from the reactive function."""
         return extract_source_ref(fn)
 

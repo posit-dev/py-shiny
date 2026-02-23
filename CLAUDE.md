@@ -243,13 +243,86 @@ When creating a custom renderer:
 4. Use `@output_transformer()` decorator for post-processing
 5. Register in `shiny/render/__init__.py`
 
+### Documentation Style
+
+- Use **Google-style docstrings**, not Sphinx/reStructuredText format
+- Parameter descriptions use `name` followed by description on next line, indented
+- Use markdown in docstrings: backticks for code, `**bold**` for emphasis
+- Section headers: `Parameters`, `Returns`, `Yields`, `Raises`, `Examples`, `Note`, `See Also`
+- Example format:
+
+````python
+def foo(x: int, name: str) -> bool:
+    """
+    Brief one-line description.
+
+    Longer description paragraph if needed. Can use markdown formatting
+    like `code`, **bold**, and even code blocks.
+
+    Parameters
+    ----------
+    x
+        Description of x parameter.
+    name
+        Description of name parameter.
+
+    Returns
+    -------
+    :
+        Description of return value.
+
+    Examples
+    --------
+    ```python
+    result = foo(42, "test")
+    ```
+
+    See Also
+    --------
+    * `bar()` - Related function that does something similar
+    * `baz()` - Another related function
+    """
+````
+
 ### Type Checking Notes
 
 - Pyright is the primary type checker (not mypy)
 - Some packages require manual stubs: run `make pyright-typings` to generate
 - Stubs are placed in `typings/` (gitignored)
-- Parameter types: prefer `Optional[T]` over `T | None` for user-facing APIs
+- Parameter types: prefer `T | None` over `Optional[T]` when no default `None` value is provided
 - Use `Literal` instead of `Enum` for string options
+
+## Code Style Preferences
+
+Beyond PEP 8 and standard Python conventions, the following style preferences are used in this codebase:
+
+### Import Organization
+
+- **Always place imports at the top of the file**, not inline within functions
+- Group imports in standard order: stdlib, third-party, local relative
+- Avoid lazy/deferred imports unless absolutely necessary for circular dependency resolution
+- When moving inline imports to the top, update any test mocks to patch the new import location
+
+### Parameter Naming
+
+- Use **named arguments** for all parameters except the first positional parameter in function calls
+- Choose descriptive parameter names that clarify intent:
+  - Use `required_level` not `level` when the parameter represents a threshold/minimum
+  - Use `collection_level` not `level` when the parameter represents a current setting
+- Good: `with_otel_span("name", attributes=attrs, required_level=OtelCollectLevel.SESSION)`
+- Bad: `with_otel_span("name", attrs, OtelCollectLevel.SESSION)`
+
+### Constants and Magic Values
+
+- Use constants for values that appear multiple times across the codebase
+- Inline single-use attribute/configuration values directly at point of use
+- Document constants with docstrings explaining their purpose
+
+### Error Handling
+
+- Be explicit about which exceptions are caught and why
+- Use type-specific exception handling rather than broad `except Exception`
+- Document exception behavior in function docstrings
 
 ## Git Commit and PR Conventions
 

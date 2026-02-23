@@ -19,10 +19,10 @@ import pytest
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
-from shiny.otel import OtelCollectLevel
 from shiny.otel._attributes import extract_source_ref
-from shiny.otel._labels import generate_reactive_label
-from shiny.otel._span_wrappers import with_otel_span_async
+from shiny.otel._collect import OtelCollectLevel
+from shiny.otel._labels import create_otel_label
+from shiny.otel._span_wrappers import shiny_otel_span
 from shiny.reactive import Calc_, Effect_
 
 from .otel_helpers import get_exported_spans, patch_otel_tracing_state
@@ -31,21 +31,21 @@ from .otel_helpers import get_exported_spans, patch_otel_tracing_state
 class TestLabelGeneration:
     """Label generation tests"""
 
-    def test_generate_reactive_label_for_calc(self):
+    def test_create_otel_label_for_calc(self):
         """Test generating label for a calc with function name"""
 
         def my_calc():
             return 42
 
-        label = generate_reactive_label(my_calc, "reactive")
+        label = create_otel_label(my_calc, "reactive")
         assert label == "reactive my_calc"
 
-    def test_generate_reactive_label_for_lambda(self):
+    def test_create_otel_label_for_lambda(self):
         """Test generating label for anonymous/lambda function"""
-        label = generate_reactive_label(lambda: 42, "reactive")
+        label = create_otel_label(lambda: 42, "reactive")
         assert label == "reactive <anonymous>"
 
-    def test_generate_reactive_label_with_namespace(self):
+    def test_create_otel_label_with_namespace(self):
         """Test generating label with namespace prefix"""
         from unittest.mock import Mock
 
@@ -58,19 +58,19 @@ class TestLabelGeneration:
         mock_session = Mock()
         mock_session.ns = ResolvedId("mod")
 
-        label = generate_reactive_label(my_calc, "reactive", session=mock_session)
+        label = create_otel_label(my_calc, "reactive", session=mock_session)
         assert label == "reactive mod:my_calc"
 
-    def test_generate_reactive_label_with_modifier(self):
+    def test_create_otel_label_with_modifier(self):
         """Test generating label with modifier (e.g., cache)"""
 
         def my_calc():
             return 42
 
-        label = generate_reactive_label(my_calc, "reactive", modifier="cache")
+        label = create_otel_label(my_calc, "reactive", modifier="cache")
         assert label == "reactive cache my_calc"
 
-    def test_generate_reactive_label_with_namespace_and_modifier(self):
+    def test_create_otel_label_with_namespace_and_modifier(self):
         """Test generating label with both namespace and modifier"""
         from unittest.mock import Mock
 
@@ -83,7 +83,7 @@ class TestLabelGeneration:
         mock_session = Mock()
         mock_session.ns = ResolvedId("mod")
 
-        label = generate_reactive_label(
+        label = create_otel_label(
             my_calc, "reactive", session=mock_session, modifier="cache"
         )
         assert label == "reactive cache mod:my_calc"
@@ -94,8 +94,8 @@ class TestLabelGeneration:
         def my_effect():
             pass
 
-        label = generate_reactive_label(my_effect, "observe")
-        assert label == "observe my_effect"
+        label = create_otel_label(my_effect, "effect")
+        assert label == "effect my_effect"
 
     def test_generate_output_label(self):
         """Test generating label for output rendering"""
@@ -103,7 +103,7 @@ class TestLabelGeneration:
         def my_output():
             return "text"
 
-        label = generate_reactive_label(my_output, "output")
+        label = create_otel_label(my_output, "output")
         assert label == "output my_output"
 
 
@@ -252,7 +252,7 @@ class TestReactiveEventModifier:
         effect = Effect_(my_effect, session=None)
 
         # The effect should have generated label with "event" modifier
-        assert effect._otel_label == "observe event my_effect"
+        assert effect._otel_label == "effect event my_effect"
 
     def test_calc_without_modifier_has_no_modifier_in_label(self):
         """Test that Calc_ without modifier has clean label"""
@@ -274,7 +274,7 @@ class TestReactiveEventModifier:
         effect = Effect_(my_effect, session=None)
 
         # The effect should have label without modifier
-        assert effect._otel_label == "observe my_effect"
+        assert effect._otel_label == "effect my_effect"
 
 
 class TestSourceReferenceExtraction:
@@ -329,9 +329,7 @@ class TestCalcSpans:
 
                 # Mock span wrapper to verify it's called
                 # Must patch at the import location in _reactives module
-                with patch(
-                    "shiny.reactive._reactives.with_otel_span_async"
-                ) as mock_span:
+                with patch("shiny.reactive._reactives.shiny_otel_span") as mock_span:
                     # Configure mock to act as async context manager
                     mock_span.return_value.__aenter__ = AsyncMock(return_value=None)
                     mock_span.return_value.__aexit__ = AsyncMock(return_value=None)
@@ -345,7 +343,7 @@ class TestCalcSpans:
                     # Verify the label string was passed
                     label = call_args[0][0]
                     assert label == "reactive my_calc"
-                    assert call_args[1]["level"] == OtelCollectLevel.REACTIVITY
+                    assert call_args[1]["required_level"] == OtelCollectLevel.REACTIVITY
 
     @pytest.mark.asyncio
     async def test_calc_no_span_when_disabled(self):
@@ -360,9 +358,7 @@ class TestCalcSpans:
 
                 # Mock span wrapper to verify it's not called
                 # Must patch at the import location in _reactives module
-                with patch(
-                    "shiny.reactive._reactives.with_otel_span_async"
-                ) as mock_span:
+                with patch("shiny.reactive._reactives.shiny_otel_span") as mock_span:
                     # Execute the calc
                     await calc.update_value()
 
@@ -383,9 +379,7 @@ class TestCalcSpans:
 
                 # Mock span wrapper to capture attributes
                 # Must patch at the import location in _reactives module
-                with patch(
-                    "shiny.reactive._reactives.with_otel_span_async"
-                ) as mock_span:
+                with patch("shiny.reactive._reactives.shiny_otel_span") as mock_span:
                     # Configure mock
                     mock_span.return_value.__aenter__ = AsyncMock(return_value=None)
                     mock_span.return_value.__aexit__ = AsyncMock(return_value=None)
@@ -420,9 +414,7 @@ class TestEffectSpans:
 
                 # Mock span wrapper to verify it's called
                 # Must patch at the import location in _reactives module
-                with patch(
-                    "shiny.reactive._reactives.with_otel_span_async"
-                ) as mock_span:
+                with patch("shiny.reactive._reactives.shiny_otel_span") as mock_span:
                     # Configure mock to act as async context manager
                     mock_span.return_value.__aenter__ = AsyncMock(return_value=None)
                     mock_span.return_value.__aexit__ = AsyncMock(return_value=None)
@@ -435,8 +427,8 @@ class TestEffectSpans:
                     call_args = mock_span.call_args
                     # Verify the label string was passed
                     label = call_args[0][0]
-                    assert label == "observe my_effect"
-                    assert call_args[1]["level"] == OtelCollectLevel.REACTIVITY
+                    assert label == "effect my_effect"
+                    assert call_args[1]["required_level"] == OtelCollectLevel.REACTIVITY
 
     @pytest.mark.asyncio
     async def test_effect_no_span_when_disabled(self):
@@ -452,9 +444,7 @@ class TestEffectSpans:
 
                 # Mock span wrapper to verify it's not called
                 # Must patch at the import location in _reactives module
-                with patch(
-                    "shiny.reactive._reactives.with_otel_span_async"
-                ) as mock_span:
+                with patch("shiny.reactive._reactives.shiny_otel_span") as mock_span:
                     # Execute the effect
                     await effect._run()
 
@@ -475,9 +465,7 @@ class TestEffectSpans:
 
                 # Mock span wrapper to capture attributes
                 # Must patch at the import location in _reactives module
-                with patch(
-                    "shiny.reactive._reactives.with_otel_span_async"
-                ) as mock_span:
+                with patch("shiny.reactive._reactives.shiny_otel_span") as mock_span:
                     # Configure mock
                     mock_span.return_value.__aenter__ = AsyncMock(return_value=None)
                     mock_span.return_value.__aexit__ = AsyncMock(return_value=None)
@@ -516,9 +504,6 @@ class TestSpanHierarchy:
         """Test that calc spans are children of reactive.update span"""
         provider, memory_exporter = otel_tracer_provider
 
-        # Clear any previous spans
-        memory_exporter.clear()
-
         with patch_otel_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "all"}):
 
@@ -529,9 +514,9 @@ class TestSpanHierarchy:
                 calc = Calc_(my_calc)
 
                 # Manually create flush span and execute calc inside it
-                async with with_otel_span_async(
+                async with shiny_otel_span(
                     "reactive.update",
-                    level=OtelCollectLevel.REACTIVE_UPDATE,
+                    required_level=OtelCollectLevel.REACTIVE_UPDATE,
                 ):
                     await calc.update_value()
 
@@ -563,3 +548,65 @@ class TestSpanHierarchy:
         assert (
             calc_span.context.trace_id == update_span.context.trace_id  # type: ignore[union-attr]
         ), "Spans should be in same trace"
+
+
+class TestCollectionLevelNone:
+    """Tests for OtelCollectLevel.NONE handling"""
+
+    def test_calc_respects_none_level(self):
+        """Verify Calc_ correctly handles OtelCollectLevel.NONE (value 0)"""
+        from shiny.otel import otel_collect
+
+        with patch_otel_tracing_state(tracing_enabled=True):
+
+            @otel_collect("none")
+            def my_calc():
+                return 42
+
+            calc = Calc_(my_calc)
+
+            # The bug: using `or` would treat NONE (0) as falsy
+            # This verifies the fix: explicitly checking for None
+            assert calc._otel_level == OtelCollectLevel.NONE
+
+    def test_effect_respects_none_level(self):
+        """Verify Effect_ correctly handles OtelCollectLevel.NONE (value 0)"""
+        from shiny.otel import otel_collect
+
+        with patch_otel_tracing_state(tracing_enabled=True):
+
+            @otel_collect("none")
+            def my_effect():
+                pass
+
+            effect = Effect_(my_effect)
+
+            # The bug: using `or` would treat NONE (0) as falsy
+            # This verifies the fix: explicitly checking for None
+            assert effect._otel_level == OtelCollectLevel.NONE
+
+    def test_calc_without_decorator_uses_context_level(self):
+        """Verify Calc_ uses context level when no decorator is present"""
+        with patch_otel_tracing_state(tracing_enabled=True):
+
+            def my_calc():
+                return 42
+
+            calc = Calc_(my_calc)
+
+            # Without decorator, should use the current context level
+            # Default test level is REACTIVITY
+            assert calc._otel_level >= OtelCollectLevel.REACTIVITY
+
+    def test_effect_without_decorator_uses_context_level(self):
+        """Verify Effect_ uses context level when no decorator is present"""
+        with patch_otel_tracing_state(tracing_enabled=True):
+
+            def my_effect():
+                pass
+
+            effect = Effect_(my_effect)
+
+            # Without decorator, should use the current context level
+            # Default test level is REACTIVITY
+            assert effect._otel_level >= OtelCollectLevel.REACTIVITY

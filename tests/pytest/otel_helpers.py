@@ -82,16 +82,19 @@ def patch_otel_tracing_state(*, tracing_enabled: Union[bool, None]) -> Iterator[
     Examples
     --------
     ```python
-    from tests.pytest.test_otel_helpers import patch_otel_tracing_state
-    from shiny.otel import should_otel_collect, OtelCollectLevel
+    from tests.pytest.otel_helpers import patch_otel_tracing_state
+    from shiny.otel._core import is_otel_tracing_enabled
+    from shiny.otel._collect import OtelCollectLevel, get_otel_collect_level
 
     # Test with tracing enabled
     with patch_otel_tracing_state(tracing_enabled=True):
-        assert should_otel_collect(OtelCollectLevel.SESSION) is True
+        assert is_otel_tracing_enabled() is True
+        # Can also check collect level
+        assert get_otel_collect_level() >= OtelCollectLevel.SESSION
 
     # Test with tracing disabled
     with patch_otel_tracing_state(tracing_enabled=False):
-        assert should_otel_collect(OtelCollectLevel.SESSION) is False
+        assert is_otel_tracing_enabled() is False
     ```
 
     Notes
@@ -192,7 +195,9 @@ def otel_tracer_provider_impl() -> (
 
     Notes
     -----
-    Tests should call exporter.clear() to clear spans between tests if needed.
+    The exporter is automatically cleared before each test via the
+    otel_tracer_provider fixture to ensure test isolation.
+    Manual exporter.clear() calls are not needed.
     """
     # Set up provider with in-memory exporter for testing
     memory_exporter = InMemorySpanExporter()

@@ -51,9 +51,16 @@ from ..bookmark._serializers import serializer_file_input
 from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
 from ..module import ResolvedId
-from ..otel import OtelCollectLevel
-from ..otel._attributes import extract_source_ref
-from ..otel._span_wrappers import with_otel_span_async
+from ..otel._attributes import (
+    extract_http_attributes,
+    extract_source_ref,
+    get_session_id_attrs,
+)
+from ..otel._collect import OtelCollectLevel
+from ..otel._decorators import no_otel_collect
+from ..otel._function_attrs import resolve_func_otel_level
+from ..otel._labels import create_otel_label
+from ..otel._span_wrappers import shiny_otel_span
 from ..reactive import Effect_, Value, effect
 from ..reactive import flush as reactive_flush
 from ..reactive import isolate
@@ -583,18 +590,15 @@ class AppSession(Session):
         self.on_ended(self._file_upload_manager.rm_upload_dir)
 
     async def _run_session_ended_tasks(self) -> None:
-        from ..otel import OtelCollectLevel
-        from ..otel._span_wrappers import with_otel_span_async
-
         if self._has_run_session_ended_tasks:
             return
         self._has_run_session_ended_tasks = True
 
         # Wrap session cleanup in session.end span (or no-op if not collecting)
-        async with with_otel_span_async(
+        async with shiny_otel_span(
             "session.end",
-            {"session.id": self.id},
-            level=OtelCollectLevel.SESSION,
+            attributes=get_session_id_attrs(self),
+            required_level=OtelCollectLevel.SESSION,
         ):
             try:
                 await self._on_ended_callbacks.invoke()
@@ -686,17 +690,13 @@ class AppSession(Session):
                             self._manage_inputs(message_obj["data"])
 
                             # Wrap server function initialization in session.start span
-                            from ..otel import OtelCollectLevel
-                            from ..otel._attributes import extract_http_attributes
-                            from ..otel._span_wrappers import with_otel_span_async
-
-                            async with with_otel_span_async(
+                            async with shiny_otel_span(
                                 "session.start",
-                                lambda: {
-                                    "session.id": self.id,
+                                attributes=lambda: {
+                                    **get_session_id_attrs(self),
                                     **extract_http_attributes(self.http_conn),
                                 },
-                                level=OtelCollectLevel.SESSION,
+                                required_level=OtelCollectLevel.SESSION,
                             ):
                                 with session_context(self):
                                     self.app.server(self.input, self.output, self)
@@ -1872,6 +1872,16 @@ class Outputs:
             # renderer is a Renderer object. Give it a bit of metadata.
             renderer._set_output_metadata(output_id=output_id)
 
+            # Gather otel info for inner method
+            renderer_func = getattr(renderer.fn, "_orig_fn", renderer.fn)
+            output_otel_label = create_otel_label(
+                func=renderer_func,
+                label_type="output",
+                session=self._session,
+            )
+            output_otel_attrs = extract_source_ref(renderer_func)
+            output_otel_level = resolve_func_otel_level(renderer_func)
+
             renderer._on_register()
 
             self.remove(output_name)
@@ -1880,6 +1890,7 @@ class Outputs:
                 suspended=suspend_when_hidden and self._session._is_hidden(output_name),
                 priority=priority,
             )
+            @no_otel_collect()
             async def output_obs():
                 if self._session.is_stub_session():
                     raise RuntimeError(
@@ -1893,12 +1904,11 @@ class Outputs:
                 )
 
                 try:
-                    async with with_otel_span_async(
-                        lambda: f"output {output_id}",
-                        attributes=lambda: extract_source_ref(
-                            getattr(renderer.fn, "_orig_fn", renderer.fn)
-                        ),
-                        level=OtelCollectLevel.REACTIVITY,
+                    async with shiny_otel_span(
+                        output_otel_label,
+                        attributes=output_otel_attrs,
+                        required_level=OtelCollectLevel.REACTIVITY,
+                        collection_level=output_otel_level,
                     ):
                         with session.clientdata._output_name_ctx(output_name):
                             # Call the app's renderer function

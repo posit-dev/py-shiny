@@ -8,6 +8,8 @@ from opentelemetry import trace
 from opentelemetry._logs import get_logger_provider
 from opentelemetry.trace import Tracer
 
+from ._constants import TRACER_NAME
+
 __all__ = (
     "get_otel_tracer",
     "get_otel_logger",
@@ -19,9 +21,6 @@ __all__ = (
 _tracer: Union[Tracer, None] = None
 _logger: Union[Any, None] = None
 _tracing_enabled: Union[bool, None] = None
-
-# Tracer configuration
-TRACER_NAME = "co.posit.python-package.shiny"
 
 
 def get_otel_tracer() -> Tracer:
@@ -70,9 +69,9 @@ def is_otel_tracing_enabled() -> bool:
     """
     Check if OpenTelemetry tracing is enabled.
 
-    This checks whether the OTel SDK is properly configured by creating a test
-    span and checking if it's recording. The result is cached to avoid repeated
-    checks.
+    This checks whether the OTel SDK is properly configured by examining if the
+    tracer provider is a real SDK TracerProvider (not the no-op ProxyTracerProvider).
+    The result is cached to avoid repeated checks.
 
     Returns
     -------
@@ -81,11 +80,16 @@ def is_otel_tracing_enabled() -> bool:
     """
     global _tracing_enabled
     if _tracing_enabled is None:
-        tracer = get_otel_tracer()
-        # Check if spans are actually being recorded
-        # When no SDK is configured, spans will be NonRecordingSpan instances
-        with tracer.start_as_current_span("_otel_is_recording") as span:
-            _tracing_enabled = span.is_recording()
+        try:
+            from opentelemetry.sdk.trace import TracerProvider as SDKTracerProvider
+        except ImportError:
+            # If we can't import the SDK TracerProvider, tracing is disabled
+            _tracing_enabled = False
+        else:
+            tracer_provider = trace.get_tracer_provider()
+            # Check if we have a real SDK TracerProvider (not the no-op ProxyTracerProvider)
+            # The SDK TracerProvider has span processors that record spans
+            _tracing_enabled = isinstance(tracer_provider, SDKTracerProvider)
     return _tracing_enabled
 
 

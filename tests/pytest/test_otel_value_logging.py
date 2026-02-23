@@ -36,26 +36,30 @@ from .otel_helpers import patch_otel_tracing_state, reset_otel_tracing_state
 
 
 @pytest.fixture(scope="session")
-def otel_log_provider_and_exporter() -> (
+def _otel_log_provider_session() -> (
     Iterator[Tuple[LoggerProvider, InMemoryLogRecordExporter]]
 ):
     """
-    Set up an OpenTelemetry LoggerProvider with in-memory exporter for testing.
+    Internal session-scoped fixture for OpenTelemetry LoggerProvider.
 
-    This fixture creates a session-scoped LoggerProvider that collects logs
-    in memory, allowing tests to verify log emission without external dependencies.
+    Creates a single LoggerProvider and InMemoryLogRecordExporter for the entire
+    test session. This is wrapped by the otel_log_provider_and_exporter fixture
+    which provides automatic log clearing before each test.
 
-    Returns
-    -------
-    tuple[LoggerProvider, InMemoryLogRecordExporter]
-        The provider and exporter for use in tests.
+    Why session-scoped?
+    -------------------
+    OpenTelemetry uses a global singleton for the logger provider. Calling
+    set_logger_provider() multiple times causes warnings ("Overriding of current
+    LoggerProvider is not allowed") and potential state corruption. Session scope
+    ensures the provider is set once per pytest worker process, avoiding conflicts
+    during parallel test execution.
     """
     # Create in-memory exporter and logger provider
     memory_exporter = InMemoryLogRecordExporter()
     provider = LoggerProvider()
     provider.add_log_record_processor(SimpleLogRecordProcessor(memory_exporter))
 
-    # Set as global logger provider
+    # Set as global logger provider (can only be done once per process)
     set_logger_provider(provider)
 
     # Reset OTel state to pick up new provider
@@ -64,6 +68,38 @@ def otel_log_provider_and_exporter() -> (
     yield provider, memory_exporter
 
     # Cleanup - no need to restore, pytest handles it
+
+
+@pytest.fixture
+def otel_log_provider_and_exporter(
+    _otel_log_provider_session: Tuple[LoggerProvider, InMemoryLogRecordExporter],
+) -> Tuple[LoggerProvider, InMemoryLogRecordExporter]:
+    """
+    Function-scoped fixture for OpenTelemetry LoggerProvider.
+
+    Provides access to a session-scoped LoggerProvider and InMemoryLogRecordExporter,
+    automatically clearing logs before each test to ensure test isolation.
+
+    Why two fixtures instead of one?
+    --------------------------------
+    We cannot merge this into one function-scoped fixture because:
+    1. The provider must be set globally once per worker (session scope)
+    2. The exporter must be cleared per test (function scope)
+    3. Creating new providers per test would repeatedly call
+       set_logger_provider(), causing warnings and state corruption
+
+    This two-fixture pattern separates the one-time global setup (session)
+    from the per-test cleanup (function), working correctly with pytest-xdist.
+
+    Returns
+    -------
+    tuple[LoggerProvider, InMemoryLogRecordExporter]
+        The provider and exporter for use in tests.
+    """
+    provider, exporter = _otel_log_provider_session
+    # Clear logs from previous tests to ensure isolation
+    exporter.clear()
+    return provider, exporter
 
 
 @pytest.fixture
@@ -81,8 +117,6 @@ class TestEmitLog:
     def test_emit_log_basic(self, otel_log_provider_and_exporter):
         """Test basic log emission"""
         provider, exporter = otel_log_provider_and_exporter
-        exporter.clear()
-
         emit_otel_log("Test message")
 
         # Force flush and get logs
@@ -98,8 +132,6 @@ class TestEmitLog:
     def test_emit_log_with_severity(self, otel_log_provider_and_exporter):
         """Test log emission with custom severity"""
         provider, exporter = otel_log_provider_and_exporter
-        exporter.clear()
-
         emit_otel_log("Debug message", severity_text="DEBUG")
 
         provider.force_flush()
@@ -112,8 +144,6 @@ class TestEmitLog:
     def test_emit_log_with_attributes(self, otel_log_provider_and_exporter):
         """Test log emission with attributes"""
         provider, exporter = otel_log_provider_and_exporter
-        exporter.clear()
-
         emit_otel_log(
             "Test with attributes",
             attributes={"session.id": "test-123", "custom.key": "value"},
@@ -146,8 +176,6 @@ class TestValueUpdateLogging:
     def test_value_set_logs_update(self, otel_log_provider_and_exporter, mock_session):
         """Test that setting a value logs an update"""
         provider, exporter = otel_log_provider_and_exporter
-        exporter.clear()
-
         with session_context(mock_session):
             with patch_otel_tracing_state(tracing_enabled=True):
                 # Simulate setting collection level to REACTIVITY
@@ -186,8 +214,6 @@ class TestValueUpdateLogging:
     ):
         """Test that value updates include namespace in log message"""
         provider, exporter = otel_log_provider_and_exporter
-        exporter.clear()
-
         # Set up session with namespace
         mock_session.ns = ResolvedId("mymodule")
 
@@ -212,8 +238,6 @@ class TestValueUpdateLogging:
     def test_value_set_unnamed(self, otel_log_provider_and_exporter, mock_session):
         """Test that unnamed values log as <unnamed>"""
         provider, exporter = otel_log_provider_and_exporter
-        exporter.clear()
-
         with session_context(mock_session):
             with patch_otel_tracing_state(tracing_enabled=True):
                 with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
@@ -235,8 +259,6 @@ class TestValueUpdateLogging:
     def test_value_set_no_session(self, otel_log_provider_and_exporter):
         """Test that value updates work without a session"""
         provider, exporter = otel_log_provider_and_exporter
-        exporter.clear()
-
         with patch_otel_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
                 val = reactive.Value[int]()
@@ -265,8 +287,6 @@ class TestValueUpdateLogging:
     ):
         """Test that no logs are emitted when tracing is disabled"""
         provider, exporter = otel_log_provider_and_exporter
-        exporter.clear()
-
         with patch_otel_tracing_state(tracing_enabled=False):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
                 val = reactive.Value[int]()
@@ -289,8 +309,6 @@ class TestValueUpdateLogging:
     ):
         """Test that no logs are emitted when collection level is below REACTIVITY"""
         provider, exporter = otel_log_provider_and_exporter
-        exporter.clear()
-
         with session_context(mock_session):
             with patch_otel_tracing_state(tracing_enabled=True):
                 # Set collection level to SESSION (below REACTIVITY)
@@ -315,8 +333,6 @@ class TestValueUpdateLogging:
     ):
         """Test that multiple value updates each produce a log"""
         provider, exporter = otel_log_provider_and_exporter
-        exporter.clear()
-
         with session_context(mock_session):
             with patch_otel_tracing_state(tracing_enabled=True):
                 with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
@@ -344,8 +360,6 @@ class TestValueUpdateLogging:
     ):
         """Test that setting same value doesn't log (because _set returns False)"""
         provider, exporter = otel_log_provider_and_exporter
-        exporter.clear()
-
         with session_context(mock_session):
             with patch_otel_tracing_state(tracing_enabled=True):
                 with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
@@ -353,8 +367,6 @@ class TestValueUpdateLogging:
                     val._name = "test_value"
 
                     # Clear any initial logs
-                    exporter.clear()
-
                     # Set to same value - should return False and not log
                     result = val._set(42)
                     assert result is False
@@ -384,6 +396,11 @@ class TestValueNaming:
         test_value = reactive.Value(0)
         assert test_value._name == "test_value"
 
+    def test_inferred_name_simple_assignment_lowercase(self):
+        """Test that simple assignment names are inferred with lowercase value()"""
+        test_value_lower = reactive.value(0)
+        assert test_value_lower._name == "test_value_lower"
+
     def test_inferred_name_attribute_assignment(self):
         """Test that attribute assignment names are inferred"""
 
@@ -393,6 +410,52 @@ class TestValueNaming:
 
         obj = Container()
         assert obj.counter._name == "counter"
+
+    def test_inferred_name_attribute_assignment_lowercase(self):
+        """Test that attribute assignment names are inferred with lowercase value()"""
+
+        class Container:
+            def __init__(self):
+                self.counter_lower = reactive.value(0)
+
+        obj = Container()
+        assert obj.counter_lower._name == "counter_lower"
+
+    def test_inferred_name_simple_assignment_no_prefix(self):
+        """Test that simple assignment names are inferred with Value (no prefix)"""
+        from shiny.reactive import Value
+
+        test_value_no_prefix = Value(0)
+        assert test_value_no_prefix._name == "test_value_no_prefix"
+
+    def test_inferred_name_simple_assignment_lowercase_no_prefix(self):
+        """Test that simple assignment names are inferred with value (no prefix)"""
+        from shiny.reactive import value
+
+        test_value_lower_no_prefix = value(0)
+        assert test_value_lower_no_prefix._name == "test_value_lower_no_prefix"
+
+    def test_inferred_name_attribute_assignment_no_prefix(self):
+        """Test that attribute assignment names are inferred with Value (no prefix)"""
+        from shiny.reactive import Value
+
+        class Container:
+            def __init__(self):
+                self.counter_no_prefix = Value(0)
+
+        obj = Container()
+        assert obj.counter_no_prefix._name == "counter_no_prefix"
+
+    def test_inferred_name_attribute_assignment_lowercase_no_prefix(self):
+        """Test that attribute assignment names are inferred with value (no prefix)"""
+        from shiny.reactive import value
+
+        class Container:
+            def __init__(self):
+                self.counter_lower_no_prefix = value(0)
+
+        obj = Container()
+        assert obj.counter_lower_no_prefix._name == "counter_lower_no_prefix"
 
     def test_explicit_name_overrides_inference(self):
         """Test that explicit name takes priority over inference"""
@@ -409,8 +472,6 @@ class TestValueNaming:
     def test_name_used_in_logging(self, otel_log_provider_and_exporter, mock_session):
         """Test that explicit name is used in logs"""
         provider, exporter = otel_log_provider_and_exporter
-        exporter.clear()
-
         with session_context(mock_session):
             with patch_otel_tracing_state(tracing_enabled=True):
                 with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
@@ -433,8 +494,6 @@ class TestValueNaming:
     ):
         """Test that inferred name is used in logs"""
         provider, exporter = otel_log_provider_and_exporter
-        exporter.clear()
-
         with session_context(mock_session):
             with patch_otel_tracing_state(tracing_enabled=True):
                 with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
@@ -451,6 +510,28 @@ class TestValueNaming:
         ]
         assert len(value_logs) >= 1
         assert value_logs[0].log_record.body == "Set reactiveVal inferred_counter"
+
+    def test_inferred_name_used_in_logging_lowercase(
+        self, otel_log_provider_and_exporter, mock_session
+    ):
+        """Test that inferred name is used in logs with lowercase value()"""
+        provider, exporter = otel_log_provider_and_exporter
+        with session_context(mock_session):
+            with patch_otel_tracing_state(tracing_enabled=True):
+                with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
+                    inferred_counter_lower = reactive.value(0)
+                    inferred_counter_lower._set(42)
+
+        provider.force_flush()
+        logs = exporter.get_finished_logs()
+
+        value_logs = [
+            log
+            for log in logs
+            if log.log_record.body and "Set reactiveVal" in log.log_record.body
+        ]
+        assert len(value_logs) >= 1
+        assert value_logs[0].log_record.body == "Set reactiveVal inferred_counter_lower"
 
     def test_name_can_be_overridden_after_creation(self):
         """Test that Inputs can override inferred names"""
@@ -532,8 +613,6 @@ class TestValueSourceReference:
     ):
         """Test that source reference attributes are included in logs"""
         provider, exporter = otel_log_provider_and_exporter
-        exporter.clear()
-
         with session_context(mock_session):
             with patch_otel_tracing_state(tracing_enabled=True):
                 with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
@@ -565,8 +644,6 @@ class TestValueSourceReference:
     def test_source_ref_without_session(self, otel_log_provider_and_exporter):
         """Test that source reference works without a session"""
         provider, exporter = otel_log_provider_and_exporter
-        exporter.clear()
-
         with patch_otel_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
                 val = reactive.Value(0, name="standalone")

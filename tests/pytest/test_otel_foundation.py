@@ -15,15 +15,9 @@ import pytest
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
-from shiny.otel import (
-    OtelCollectLevel,
-    get_otel_collect_level,
-    get_otel_logger,
-    get_otel_tracer,
-    is_otel_tracing_enabled,
-    should_otel_collect,
-)
-from shiny.otel._span_wrappers import with_otel_span, with_otel_span_async
+from shiny.otel._collect import OtelCollectLevel, get_otel_collect_level
+from shiny.otel._core import get_otel_logger, get_otel_tracer, is_otel_tracing_enabled
+from shiny.otel._span_wrappers import shiny_otel_span
 
 from .otel_helpers import patch_otel_tracing_state
 
@@ -51,6 +45,24 @@ class TestCore:
         with patch_otel_tracing_state(tracing_enabled=False):
             # Without SDK, tracing should be disabled
             assert is_otel_tracing_enabled() is False
+
+    def test_is_otel_tracing_enabled_creates_no_spans(
+        self, otel_tracer_provider: tuple[TracerProvider, InMemorySpanExporter]
+    ):
+        """Test that is_otel_tracing_enabled() doesn't create spans when called."""
+        from .otel_helpers import get_exported_spans
+
+        provider, exporter = otel_tracer_provider
+
+        # Enable tracing
+        with patch_otel_tracing_state(tracing_enabled=True):
+            # Call the function multiple times
+            for _ in range(10):
+                is_otel_tracing_enabled()
+
+        # Verify no spans were created
+        spans = get_exported_spans(provider, exporter)
+        assert len(spans) == 0, "is_otel_tracing_enabled() should not create any spans"
 
 
 class TestOtelCollectLevel:
@@ -118,122 +130,40 @@ class TestGetOtelCollectLevel:
                 assert level == OtelCollectLevel.ALL
 
 
-class TestShouldOtelCollect:
-    """should_otel_collect() function tests"""
-
-    def test_should_otel_collect_without_sdk(self):
-        """Test that should_otel_collect returns False when SDK not configured."""
-        # Force tracing disabled to simulate no SDK configuration
-        with patch_otel_tracing_state(tracing_enabled=False):
-            # Without SDK, should_otel_collect should always return False
-            # (except for NONE which should raise ValueError)
-            assert should_otel_collect(OtelCollectLevel.SESSION) is False
-            assert should_otel_collect(OtelCollectLevel.REACTIVE_UPDATE) is False
-            assert should_otel_collect(OtelCollectLevel.REACTIVITY) is False
-            assert should_otel_collect(OtelCollectLevel.ALL) is False
-
-    def test_should_otel_collect_raises_on_none(self):
-        """Test that should_otel_collect raises ValueError when called with NONE."""
-        with pytest.raises(
-            ValueError,
-            match="should_otel_collect\\(\\) cannot be called with OtelCollectLevel.NONE",
-        ):
-            should_otel_collect(OtelCollectLevel.NONE)
-
-    @pytest.mark.parametrize(
-        "current_level,required_level,expected",
-        [
-            # NONE collects nothing (current_level can be NONE, but required_level cannot)
-            (OtelCollectLevel.NONE, OtelCollectLevel.SESSION, False),
-            (OtelCollectLevel.NONE, OtelCollectLevel.ALL, False),
-            # SESSION collects SESSION only
-            (OtelCollectLevel.SESSION, OtelCollectLevel.SESSION, True),
-            (OtelCollectLevel.SESSION, OtelCollectLevel.REACTIVE_UPDATE, False),
-            (OtelCollectLevel.SESSION, OtelCollectLevel.ALL, False),
-            # REACTIVE_UPDATE collects REACTIVE_UPDATE and SESSION
-            (OtelCollectLevel.REACTIVE_UPDATE, OtelCollectLevel.SESSION, True),
-            (OtelCollectLevel.REACTIVE_UPDATE, OtelCollectLevel.REACTIVE_UPDATE, True),
-            (OtelCollectLevel.REACTIVE_UPDATE, OtelCollectLevel.REACTIVITY, False),
-            # ALL collects everything
-            (OtelCollectLevel.ALL, OtelCollectLevel.SESSION, True),
-            (OtelCollectLevel.ALL, OtelCollectLevel.REACTIVE_UPDATE, True),
-            (OtelCollectLevel.ALL, OtelCollectLevel.REACTIVITY, True),
-            (OtelCollectLevel.ALL, OtelCollectLevel.ALL, True),
-        ],
-    )
-    def test_should_otel_collect_logic_when_tracing_disabled(
-        self,
-        current_level: OtelCollectLevel,
-        required_level: OtelCollectLevel,
-        expected: bool,
-    ) -> None:
-        """Test should_otel_collect logic based on level comparison (when tracing disabled)."""
-        from .otel_helpers import patch_otel_tracing_state
-
-        with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": current_level.name.lower()}):
-            # Force tracing to be disabled, simulating no SDK configuration
-            with patch_otel_tracing_state(tracing_enabled=False):
-                # Without SDK, should always be False regardless of levels
-                result = should_otel_collect(required_level)
-                assert result is False
-
-
 class TestSpanWrappers:
     """Span wrapper utilities tests"""
 
-    def test_with_otel_span_import(self):
-        """Test that span wrapper functions can be imported."""
-        assert callable(with_otel_span)
-        assert callable(with_otel_span_async)
+    def test_shiny_otel_span_import(self):
+        """Test that span wrapper function can be imported."""
+        assert callable(shiny_otel_span)
 
-    def test_with_otel_span_creates_span(
+    @pytest.mark.asyncio
+    async def test_shiny_otel_span_creates_span(
         self, otel_tracer_provider: tuple[TracerProvider, InMemorySpanExporter]
     ):
-        """Test that with_otel_span creates a span when collection is enabled."""
+        """Test that shiny_otel_span creates a span when collection is enabled."""
         _provider, _exporter = otel_tracer_provider
 
-        # Force collection by mocking should_otel_collect
-        with patch("shiny.otel._collect.should_otel_collect", return_value=True):
-            with with_otel_span(
-                "test_span", {"key": "value"}, level=OtelCollectLevel.SESSION
+        # Enable tracing to allow span creation
+        with patch_otel_tracing_state(tracing_enabled=True):
+            async with shiny_otel_span(
+                "test_span_async",
+                attributes={"key": "value"},
+                required_level=OtelCollectLevel.SESSION,
             ) as span:
                 assert span is not None
                 # With session-scoped TracerProvider, span will be recording
                 assert span.is_recording() is True
 
     @pytest.mark.asyncio
-    async def test_with_otel_span_async_creates_span(
-        self, otel_tracer_provider: tuple[TracerProvider, InMemorySpanExporter]
-    ):
-        """Test that with_otel_span_async creates a span when collection is enabled."""
-        _provider, _exporter = otel_tracer_provider
-
-        # Force collection by mocking should_otel_collect
-        with patch("shiny.otel._collect.should_otel_collect", return_value=True):
-            async with with_otel_span_async(
-                "test_span_async", {"key": "value"}, level=OtelCollectLevel.SESSION
-            ) as span:
-                assert span is not None
-                # With session-scoped TracerProvider, span will be recording
-                assert span.is_recording() is True
-
-    def test_with_otel_span_no_op_when_not_collecting(self):
-        """Test that with_otel_span returns None when collection disabled."""
+    async def test_shiny_otel_span_no_op_when_not_collecting(self):
+        """Test that shiny_otel_span returns None when collection disabled."""
         # Force tracing disabled to simulate no SDK configuration
         with patch_otel_tracing_state(tracing_enabled=False):
-            with with_otel_span(
-                "test_span", {"key": "value"}, level=OtelCollectLevel.SESSION
-            ) as span:
-                # yields None when not collecting
-                assert span is None
-
-    @pytest.mark.asyncio
-    async def test_with_otel_span_async_no_op_when_not_collecting(self):
-        """Test that with_otel_span_async returns None when collection disabled."""
-        # Force tracing disabled to simulate no SDK configuration
-        with patch_otel_tracing_state(tracing_enabled=False):
-            async with with_otel_span_async(
-                "test_span_async", {"key": "value"}, level=OtelCollectLevel.SESSION
+            async with shiny_otel_span(
+                "test_span_async",
+                attributes={"key": "value"},
+                required_level=OtelCollectLevel.SESSION,
             ) as span:
                 # yields None when not collecting
                 assert span is None
