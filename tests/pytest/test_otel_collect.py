@@ -18,6 +18,18 @@ from shiny.otel._decorators import no_otel_collect
 from .otel_helpers import patch_otel_tracing_state
 
 
+@pytest.fixture(autouse=True)
+def clear_otel_collect_env(monkeypatch):
+    """
+    Auto-use fixture that clears SHINY_OTEL_COLLECT for all tests in this file.
+
+    This ensures tests get the default collect level (ALL) unless they explicitly
+    set the environment variable. Tests in TestOtelCollectEnvironmentVariable that
+    need to test specific env var values will set them explicitly after this clears.
+    """
+    monkeypatch.delenv("SHINY_OTEL_COLLECT", raising=False)
+
+
 class TestOtelCollectContextManager:
     """Tests for otel_collect as a context manager."""
 

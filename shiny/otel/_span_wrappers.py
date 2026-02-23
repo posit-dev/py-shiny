@@ -66,7 +66,6 @@ async def shiny_otel_span(
     --------
     ```python
     from shiny.otel._span_wrappers import shiny_otel_span
-    from shiny.otel import OtelCollectLevel
 
     async def my_async_function():
         # Static attributes
