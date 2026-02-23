@@ -23,14 +23,19 @@ Create an Architecture Decision Record from a plan provided by the user.
 
 4. **Extract information from the plan**
 
-   From the user's input, identify:
-   - **Title**: A concise name for the decision
-   - **Context**: The situation and problem being addressed
-   - **Decision Drivers**: Key factors influencing the choice
-   - **Options**: Alternatives that were considered
-   - **Decision**: The chosen option
-   - **Reasoning**: Why this option was selected
-   - **Consequences**: Expected outcomes (positive and negative)
+   From the user's input, identify and map to ADR sections:
+
+   | User's Plan Info | → | ADR Section |
+   |------------------|---|-------------|
+   | Decision name | → | Title (concise, use kebab-case for filename) |
+   | Situation/problem | → | Context and Problem Statement |
+   | Requirements/constraints | → | Decision Drivers |
+   | Alternatives considered | → | Considered Options |
+   | Chosen approach | → | Decision Outcome |
+   | Why this was chosen | → | Decision Outcome justification |
+   | Benefits | → | Positive Consequences |
+   | Drawbacks/risks | → | Negative Consequences |
+   | Related issues/PRs | → | Technical Story + Links section |
 
 5. **Fill in any gaps**
 

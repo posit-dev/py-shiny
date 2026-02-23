@@ -14,7 +14,12 @@ YYYY-MM-DD
 
 ## Technical Story
 
-[Description or ticket/issue reference, e.g., "GitHub Issue #123" or "Improve performance of data loading"]
+[Brief context about what triggered this decision. Can be a GitHub issue reference, user request, performance problem, or strategic initiative. If there's a related issue/PR, link it here AND in the Links section below.]
+
+Examples:
+- "Addresses performance issues reported in #123"
+- "Part of Q2 2025 UI modernization initiative"
+- "User feedback indicated confusion with previous approach"
 
 ---
 

@@ -47,11 +47,28 @@ Examples:
 
 The easiest way to create an ADR is using the Claude slash commands:
 
-| Command | Description |
-|---------|-------------|
-| `/adr-create` | Create an ADR from a plan you provide |
-| `/adr-from-current` | Convert Claude's active plan into an ADR |
-| `/adr-interview` | Interactive interview to document a past decision |
+| Command | When to Use | Description |
+|---------|-------------|-------------|
+| `/adr-create` | You have a plan to document | Create an ADR from a plan you provide in the conversation |
+| `/adr-from-current` | Claude has an active plan/todo list | Convert Claude's current working plan into an ADR |
+| `/adr-interview` | Documenting a past decision | Interactive interview to capture a decision already made |
+
+**Which command should I use?**
+
+```
+┌─ Is the decision already made and implemented?
+│
+├─ YES → Use /adr-interview
+│         (captures past decisions retroactively)
+│
+└─ NO → Is Claude currently working on a plan?
+        │
+        ├─ YES → Use /adr-from-current
+        │         (converts active PLAN.md or todo list)
+        │
+        └─ NO → Use /adr-create
+                  (you provide the plan details)
+```
 
 ### Manual Creation
 
@@ -90,6 +107,45 @@ You probably don't need an ADR for:
 - Minor refactoring
 - Documentation updates
 - Routine dependency updates
+
+## ADR Workflow and Review
+
+### Creating and Proposing ADRs
+
+1. **Create the ADR** using one of the Claude commands or manually
+2. **Set status to "proposed"** for new decisions
+3. **Submit a PR** that includes:
+   - The ADR file (`adr/NNNN-title.md`)
+   - Update to `adr/README.md` index
+   - Any related implementation (if applicable)
+
+### Reviewing ADRs
+
+When reviewing an ADR PR, check:
+
+- [ ] Title is clear and concise
+- [ ] Context explains the problem adequately
+- [ ] Decision drivers are well-justified
+- [ ] Multiple options were considered
+- [ ] Consequences (both positive and negative) are realistic
+- [ ] Links to related issues/PRs are included
+- [ ] Formatting follows the template
+
+### Accepting ADRs
+
+- **For proposed decisions**: Team lead or maintainer changes status from "proposed" to "accepted"
+- **For past decisions** (via `/adr-interview`): Status is "accepted" immediately since decision is already in effect
+- Acceptance can happen in the same PR or a follow-up commit
+
+### Updating ADR Status
+
+When circumstances change:
+
+- **Deprecating**: Add note explaining why, set status to "deprecated"
+- **Superseding**: Create new ADR, update old one with "superseded by [ADR-XXXX]" link
+- **Rejecting**: Add rejection reason, set status to "rejected"
+
+Status changes should be committed with explanation in commit message.
 
 ## Index
 

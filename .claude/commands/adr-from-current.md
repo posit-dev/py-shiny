@@ -32,10 +32,19 @@ Convert Claude's currently active plan (PLAN.md or todo list) into an Architectu
 5. **Transform into ADR format**
 
    Map plan elements to ADR sections:
-   - Plan overview → Context and Problem Statement
-   - Implementation approach → Decision Outcome
-   - Plan rationale → Decision Drivers
-   - Trade-offs mentioned → Pros/Cons
+
+   | Plan Element | → | ADR Section |
+   |--------------|---|-------------|
+   | Plan title | → | Title (concise, use kebab-case for filename) |
+   | Overview/why this is needed | → | Context and Problem Statement |
+   | Goals/requirements mentioned | → | Decision Drivers |
+   | Implementation approach | → | Decision Outcome (the "what", not the "how") |
+   | Alternative approaches mentioned | → | Considered Options |
+   | Benefits/rationale | → | Positive Consequences |
+   | Trade-offs/concerns | → | Negative Consequences |
+   | Related issues/PRs | → | Technical Story + Links section |
+
+   **Key transformation principle**: Plans describe "how to implement", ADRs describe "what we decided and why".
 
 6. **Fill gaps with the user**
 
@@ -43,7 +52,11 @@ Convert Claude's currently active plan (PLAN.md or todo list) into an Architectu
    - "What alternatives did you consider before this plan?"
    - "Who should be listed as deciders?"
    - "What are the potential downsides of this approach?"
-   - "Should this ADR status be 'proposed' or 'accepted'?"
+
+   **Status determination**:
+   - If the plan is actively being implemented → status is "accepted"
+   - If the plan is awaiting approval → status is "proposed"
+   - If unclear, ask: "Is this decision already approved, or awaiting review?"
 
 7. **Generate the ADR**
 
@@ -65,22 +78,23 @@ Convert Claude's currently active plan (PLAN.md or todo list) into an Architectu
 Given a `PLAN.md` like:
 
 ```markdown
-# Add Caching to API
+# Add Reactive Polling to File Watcher
 
 ## Overview
-Implement caching to improve API response times.
+Implement reactive polling for file system changes in Shiny apps.
 
 ## Implementation
-1. Add Redis client dependency
-2. Create cache wrapper
-3. Apply to expensive endpoints
+1. Add watchdog dependency for file system events
+2. Create reactive poll wrapper
+3. Integrate with reactive graph
+4. Add examples showing auto-reload patterns
 ```
 
 Claude would:
-1. Identify the problem: slow API responses
-2. Identify the decision: use Redis for caching
-3. Ask about alternatives considered (in-memory, file-based, etc.)
-4. Generate an ADR capturing the caching decision
+1. Identify the problem: need reactive file system monitoring
+2. Identify the decision: use watchdog library with reactive polling
+3. Ask about alternatives considered (OS-native watchers, manual polling, etc.)
+4. Generate an ADR capturing the file watching decision
 
 ## Notes
 

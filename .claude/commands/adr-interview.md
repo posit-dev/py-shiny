@@ -30,9 +30,14 @@ Start with: "I'll help you document a past architectural decision as an ADR. Let
 
 **Question 5**: "What options did you consider? Even briefly considered or rejected ideas count."
 
-For each option mentioned, ask:
-- "What were the pros of [option]?"
+*Wait for response listing options.*
+
+For each option mentioned, **immediately** ask:
+- "Tell me about [option] - what were the pros?"
 - "What were the cons or concerns about [option]?"
+- *Summarize*: "So [option] was good for [pros] but had issues with [cons]. Is that right?"
+
+Then move to the next option.
 
 If they only mention one option: "Was there ever any discussion of doing it differently? Even approaches that were quickly dismissed?"
 
@@ -80,26 +85,6 @@ After any revisions:
 - **Validate understanding**: Summarize back to confirm accuracy
 - **Accept uncertainty**: "I don't remember" is a valid answer
 - **Note gaps**: If information is missing, note it in the ADR
-
-## Example Dialogue
-
-**Claude**: I'll help you document a past architectural decision. What decision would you like to document?
-
-**User**: We decided to vendor bslib assets instead of using a CDN.
-
-**Claude**: Got it. When approximately was this decision made, and who was involved?
-
-**User**: About 2 years ago, the core Shiny team decided.
-
-**Claude**: What problem were you trying to solve by vendoring the assets?
-
-**User**: We needed offline support and wanted to control versioning tightly.
-
-**Claude**: What alternatives did you consider?
-
-**User**: CDN delivery was the obvious alternative. We also briefly considered npm packages.
-
-*[Interview continues...]*
 
 ## Notes
 
