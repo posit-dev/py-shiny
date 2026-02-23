@@ -62,7 +62,7 @@ class TestAsyncSpanPropagation:
 
         # Verify parent-child relationship
         assert inner_span.parent is not None
-        assert inner_span.parent.span_id == outer_span.context.span_id
+        assert inner_span.parent.span_id == outer_span.context.span_id  # type: ignore[union-attr]
 
     @pytest.mark.asyncio
     async def test_span_propagates_through_task(
@@ -103,7 +103,7 @@ class TestAsyncSpanPropagation:
 
         # Verify parent-child relationship
         assert background_span.parent is not None
-        assert background_span.parent.span_id == main_span.context.span_id
+        assert background_span.parent.span_id == main_span.context.span_id  # type: ignore[union-attr]
 
 
 class TestConcurrentReactiveExecutions:
@@ -117,7 +117,7 @@ class TestConcurrentReactiveExecutions:
         provider, memory_exporter = otel_tracer_provider
 
         # Track execution order
-        execution_order = []
+        execution_order: list[str] = []
 
         async def slow_calc_1():
             execution_order.append("calc1_start")
@@ -142,7 +142,7 @@ class TestConcurrentReactiveExecutions:
                 required_level=OtelCollectLevel.REACTIVE_UPDATE,
             ):
                 # Start both calcs concurrently
-                results = await asyncio.gather(
+                await asyncio.gather(
                     calc1.update_value(),
                     calc2.update_value(),
                 )
@@ -193,7 +193,7 @@ class TestConcurrentReactiveExecutions:
         assert len(update_spans) == 2
 
         # Verify they are separate spans (different span IDs)
-        assert update_spans[0].context.span_id != update_spans[1].context.span_id
+        assert update_spans[0].context.span_id != update_spans[1].context.span_id  # type: ignore[union-attr]
 
 
 class TestAsyncContextIsolation:
@@ -238,7 +238,7 @@ class TestAsyncContextIsolation:
         assert len(task_spans) == 3
 
         # Verify each has correct attributes
-        task_ids = {s.attributes.get("task.id") for s in task_spans}
+        task_ids = {s.attributes.get("task.id") for s in task_spans}  # type: ignore[union-attr]
         assert task_ids == {"A", "B", "C"}
 
         # Verify all tasks completed
@@ -248,7 +248,7 @@ class TestAsyncContextIsolation:
         parent_span = next(s for s in spans if s.name == "parent.operation")
         for task_span in task_spans:
             assert task_span.parent is not None
-            assert task_span.parent.span_id == parent_span.context.span_id
+            assert task_span.parent.span_id == parent_span.context.span_id  # type: ignore[union-attr]
 
     @pytest.mark.asyncio
     async def test_nested_async_contexts_maintain_hierarchy(
@@ -298,22 +298,22 @@ class TestAsyncContextIsolation:
         span_map = {s.name: s for s in level_spans}
 
         # Verify hierarchy: level.0 → level.1 → level.2 → level.3
-        level_0 = span_map["level.0"]
-        level_1 = span_map["level.1"]
-        level_2 = span_map["level.2"]
-        level_3 = span_map["level.3"]
+        level_0_span = span_map["level.0"]
+        level_1_span = span_map["level.1"]
+        level_2_span = span_map["level.2"]
+        level_3_span = span_map["level.3"]
 
         # level.1 should be child of level.0
-        assert level_1.parent is not None
-        assert level_1.parent.span_id == level_0.context.span_id
+        assert level_1_span.parent is not None
+        assert level_1_span.parent.span_id == level_0_span.context.span_id  # type: ignore[union-attr]
 
         # level.2 should be child of level.1
-        assert level_2.parent is not None
-        assert level_2.parent.span_id == level_1.context.span_id
+        assert level_2_span.parent is not None
+        assert level_2_span.parent.span_id == level_1_span.context.span_id  # type: ignore[union-attr]
 
         # level.3 should be child of level.2
-        assert level_3.parent is not None
-        assert level_3.parent.span_id == level_2.context.span_id
+        assert level_3_span.parent is not None
+        assert level_3_span.parent.span_id == level_2_span.context.span_id  # type: ignore[union-attr]
 
 
 class TestReactiveUpdateConcurrency:
@@ -356,10 +356,11 @@ class TestReactiveUpdateConcurrency:
         # Find the reactive.update span
         update_spans = [s for s in spans if s.name == "reactive.update"]
         assert len(update_spans) == 1
-        update_span = update_spans[0]
 
         # Find the calc spans
-        calc_spans = [s for s in spans if s.name.startswith("reactive") and "calc" in s.name]
+        calc_spans = [
+            s for s in spans if s.name.startswith("reactive") and "calc" in s.name
+        ]
 
         # Should have two calc spans
         assert len(calc_spans) >= 2
