@@ -504,9 +504,6 @@ class TestSpanHierarchy:
         """Test that calc spans are children of reactive.update span"""
         provider, memory_exporter = otel_tracer_provider
 
-        # Clear any previous spans
-        memory_exporter.clear()
-
         with patch_otel_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "all"}):
 

@@ -179,8 +179,6 @@ class TestSpanExceptionRecording:
     ):
         """Test that regular exceptions are recorded in spans"""
         provider, exporter = otel_tracer_provider
-        exporter.clear()
-
         with patch_otel_tracing_state(tracing_enabled=True):
             from shiny.otel._collect import OtelCollectLevel
             from shiny.otel._span_wrappers import shiny_otel_span
@@ -217,8 +215,6 @@ class TestSpanExceptionRecording:
     ):
         """Test that silent exceptions are not recorded in spans"""
         provider, exporter = otel_tracer_provider
-        exporter.clear()
-
         with patch_otel_tracing_state(tracing_enabled=True):
             from shiny.otel._collect import OtelCollectLevel
             from shiny.otel._span_wrappers import shiny_otel_span
@@ -254,8 +250,6 @@ class TestSpanExceptionRecording:
     ):
         """Test that exception messages are sanitized in spans when enabled"""
         provider, exporter = otel_tracer_provider
-        exporter.clear()
-
         # Enable sanitization for OTel
         mock_session.app.sanitize_otel_errors = True
 
@@ -298,8 +292,6 @@ class TestSpanExceptionRecording:
     ):
         """Test that SafeException messages are not sanitized even when enabled"""
         provider, exporter = otel_tracer_provider
-        exporter.clear()
-
         # Enable sanitization for OTel
         mock_session.app.sanitize_otel_errors = True
 
@@ -341,8 +333,6 @@ class TestSpanExceptionRecording:
     ):
         """Test that session ID is included in error span attributes"""
         provider, exporter = otel_tracer_provider
-        exporter.clear()
-
         with session_context(mock_session):
             with patch_otel_tracing_state(tracing_enabled=True):
                 from shiny.otel._collect import OtelCollectLevel
@@ -392,8 +382,6 @@ class TestExceptionRecordingOnce:
     ):
         """Test that nested async spans only record exception once at innermost span"""
         provider, exporter = otel_tracer_provider
-        exporter.clear()
-
         with patch_otel_tracing_state(tracing_enabled=True):
 
             async def test_func():
@@ -439,8 +427,6 @@ class TestExceptionRecordingOnce:
     ):
         """Test that triple-nested spans only record exception once at innermost span"""
         provider, exporter = otel_tracer_provider
-        exporter.clear()
-
         with patch_otel_tracing_state(tracing_enabled=True):
 
             async def test_func():

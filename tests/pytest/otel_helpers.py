@@ -195,7 +195,9 @@ def otel_tracer_provider_impl() -> (
 
     Notes
     -----
-    Tests should call exporter.clear() to clear spans between tests if needed.
+    The exporter is automatically cleared before each test via the
+    otel_tracer_provider fixture to ensure test isolation.
+    Manual exporter.clear() calls are not needed.
     """
     # Set up provider with in-memory exporter for testing
     memory_exporter = InMemorySpanExporter()

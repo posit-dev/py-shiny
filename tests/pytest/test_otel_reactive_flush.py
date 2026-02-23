@@ -182,9 +182,6 @@ class TestReactiveFlushInstrumentation:
         """Test that reactive.update span is child of parent span when nested"""
         provider, memory_exporter = otel_tracer_provider
 
-        # Clear any previous spans
-        memory_exporter.clear()
-
         with patch_otel_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "all"}):
                 # Simulate session.start with reactive_flush inside

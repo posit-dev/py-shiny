@@ -36,19 +36,15 @@ from .otel_helpers import patch_otel_tracing_state, reset_otel_tracing_state
 
 
 @pytest.fixture(scope="session")
-def otel_log_provider_and_exporter() -> (
+def _otel_log_provider_session() -> (
     Iterator[Tuple[LoggerProvider, InMemoryLogRecordExporter]]
 ):
     """
-    Set up an OpenTelemetry LoggerProvider with in-memory exporter for testing.
+    Internal session-scoped fixture for OpenTelemetry LoggerProvider.
 
-    This fixture creates a session-scoped LoggerProvider that collects logs
-    in memory, allowing tests to verify log emission without external dependencies.
-
-    Returns
-    -------
-    tuple[LoggerProvider, InMemoryLogRecordExporter]
-        The provider and exporter for use in tests.
+    Creates a single LoggerProvider and InMemoryLogRecordExporter for the entire
+    test session. This is wrapped by the otel_log_provider_and_exporter fixture
+    which provides automatic log clearing before each test.
     """
     # Create in-memory exporter and logger provider
     memory_exporter = InMemoryLogRecordExporter()
@@ -67,6 +63,27 @@ def otel_log_provider_and_exporter() -> (
 
 
 @pytest.fixture
+def otel_log_provider_and_exporter(
+    _otel_log_provider_session: Tuple[LoggerProvider, InMemoryLogRecordExporter]
+) -> Tuple[LoggerProvider, InMemoryLogRecordExporter]:
+    """
+    Function-scoped fixture for OpenTelemetry LoggerProvider.
+
+    Provides access to a session-scoped LoggerProvider and InMemoryLogRecordExporter,
+    automatically clearing logs before each test to ensure test isolation.
+
+    Returns
+    -------
+    tuple[LoggerProvider, InMemoryLogRecordExporter]
+        The provider and exporter for use in tests.
+    """
+    provider, exporter = _otel_log_provider_session
+    # Clear logs from previous tests to ensure isolation
+    exporter.clear()
+    return provider, exporter
+
+
+@pytest.fixture
 def mock_session() -> Mock:
     """Create a mock session for testing."""
     session = Mock(spec=Session)
@@ -81,8 +98,6 @@ class TestEmitLog:
     def test_emit_log_basic(self, otel_log_provider_and_exporter):
         """Test basic log emission"""
         provider, exporter = otel_log_provider_and_exporter
-        exporter.clear()
-
         emit_otel_log("Test message")
 
         # Force flush and get logs
@@ -98,8 +113,6 @@ class TestEmitLog:
     def test_emit_log_with_severity(self, otel_log_provider_and_exporter):
         """Test log emission with custom severity"""
         provider, exporter = otel_log_provider_and_exporter
-        exporter.clear()
-
         emit_otel_log("Debug message", severity_text="DEBUG")
 
         provider.force_flush()
@@ -112,8 +125,6 @@ class TestEmitLog:
     def test_emit_log_with_attributes(self, otel_log_provider_and_exporter):
         """Test log emission with attributes"""
         provider, exporter = otel_log_provider_and_exporter
-        exporter.clear()
-
         emit_otel_log(
             "Test with attributes",
             attributes={"session.id": "test-123", "custom.key": "value"},
@@ -146,8 +157,6 @@ class TestValueUpdateLogging:
     def test_value_set_logs_update(self, otel_log_provider_and_exporter, mock_session):
         """Test that setting a value logs an update"""
         provider, exporter = otel_log_provider_and_exporter
-        exporter.clear()
-
         with session_context(mock_session):
             with patch_otel_tracing_state(tracing_enabled=True):
                 # Simulate setting collection level to REACTIVITY
@@ -186,8 +195,6 @@ class TestValueUpdateLogging:
     ):
         """Test that value updates include namespace in log message"""
         provider, exporter = otel_log_provider_and_exporter
-        exporter.clear()
-
         # Set up session with namespace
         mock_session.ns = ResolvedId("mymodule")
 
@@ -212,8 +219,6 @@ class TestValueUpdateLogging:
     def test_value_set_unnamed(self, otel_log_provider_and_exporter, mock_session):
         """Test that unnamed values log as <unnamed>"""
         provider, exporter = otel_log_provider_and_exporter
-        exporter.clear()
-
         with session_context(mock_session):
             with patch_otel_tracing_state(tracing_enabled=True):
                 with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
@@ -235,8 +240,6 @@ class TestValueUpdateLogging:
     def test_value_set_no_session(self, otel_log_provider_and_exporter):
         """Test that value updates work without a session"""
         provider, exporter = otel_log_provider_and_exporter
-        exporter.clear()
-
         with patch_otel_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
                 val = reactive.Value[int]()
@@ -265,8 +268,6 @@ class TestValueUpdateLogging:
     ):
         """Test that no logs are emitted when tracing is disabled"""
         provider, exporter = otel_log_provider_and_exporter
-        exporter.clear()
-
         with patch_otel_tracing_state(tracing_enabled=False):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
                 val = reactive.Value[int]()
@@ -289,8 +290,6 @@ class TestValueUpdateLogging:
     ):
         """Test that no logs are emitted when collection level is below REACTIVITY"""
         provider, exporter = otel_log_provider_and_exporter
-        exporter.clear()
-
         with session_context(mock_session):
             with patch_otel_tracing_state(tracing_enabled=True):
                 # Set collection level to SESSION (below REACTIVITY)
@@ -315,8 +314,6 @@ class TestValueUpdateLogging:
     ):
         """Test that multiple value updates each produce a log"""
         provider, exporter = otel_log_provider_and_exporter
-        exporter.clear()
-
         with session_context(mock_session):
             with patch_otel_tracing_state(tracing_enabled=True):
                 with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
@@ -344,8 +341,6 @@ class TestValueUpdateLogging:
     ):
         """Test that setting same value doesn't log (because _set returns False)"""
         provider, exporter = otel_log_provider_and_exporter
-        exporter.clear()
-
         with session_context(mock_session):
             with patch_otel_tracing_state(tracing_enabled=True):
                 with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
@@ -353,8 +348,6 @@ class TestValueUpdateLogging:
                     val._name = "test_value"
 
                     # Clear any initial logs
-                    exporter.clear()
-
                     # Set to same value - should return False and not log
                     result = val._set(42)
                     assert result is False
@@ -460,8 +453,6 @@ class TestValueNaming:
     def test_name_used_in_logging(self, otel_log_provider_and_exporter, mock_session):
         """Test that explicit name is used in logs"""
         provider, exporter = otel_log_provider_and_exporter
-        exporter.clear()
-
         with session_context(mock_session):
             with patch_otel_tracing_state(tracing_enabled=True):
                 with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
@@ -484,8 +475,6 @@ class TestValueNaming:
     ):
         """Test that inferred name is used in logs"""
         provider, exporter = otel_log_provider_and_exporter
-        exporter.clear()
-
         with session_context(mock_session):
             with patch_otel_tracing_state(tracing_enabled=True):
                 with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
@@ -508,8 +497,6 @@ class TestValueNaming:
     ):
         """Test that inferred name is used in logs with lowercase value()"""
         provider, exporter = otel_log_provider_and_exporter
-        exporter.clear()
-
         with session_context(mock_session):
             with patch_otel_tracing_state(tracing_enabled=True):
                 with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
@@ -607,8 +594,6 @@ class TestValueSourceReference:
     ):
         """Test that source reference attributes are included in logs"""
         provider, exporter = otel_log_provider_and_exporter
-        exporter.clear()
-
         with session_context(mock_session):
             with patch_otel_tracing_state(tracing_enabled=True):
                 with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
@@ -640,8 +625,6 @@ class TestValueSourceReference:
     def test_source_ref_without_session(self, otel_log_provider_and_exporter):
         """Test that source reference works without a session"""
         provider, exporter = otel_log_provider_and_exporter
-        exporter.clear()
-
         with patch_otel_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
                 val = reactive.Value(0, name="standalone")
