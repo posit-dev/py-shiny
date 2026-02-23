@@ -60,7 +60,7 @@ from ..otel._collect import OtelCollectLevel
 from ..otel._decorators import no_otel_collect
 from ..otel._function_attrs import resolve_func_otel_level
 from ..otel._labels import create_otel_label
-from ..otel._span_wrappers import shiny_otel_span_async
+from ..otel._span_wrappers import shiny_otel_span
 from ..reactive import Effect_, Value, effect
 from ..reactive import flush as reactive_flush
 from ..reactive import isolate
@@ -595,7 +595,7 @@ class AppSession(Session):
         self._has_run_session_ended_tasks = True
 
         # Wrap session cleanup in session.end span (or no-op if not collecting)
-        async with shiny_otel_span_async(
+        async with shiny_otel_span(
             "session.end",
             attributes=get_session_id_attrs(self),
             required_level=OtelCollectLevel.SESSION,
@@ -690,7 +690,7 @@ class AppSession(Session):
                             self._manage_inputs(message_obj["data"])
 
                             # Wrap server function initialization in session.start span
-                            async with shiny_otel_span_async(
+                            async with shiny_otel_span(
                                 "session.start",
                                 attributes=lambda: {
                                     **get_session_id_attrs(self),
@@ -1904,7 +1904,7 @@ class Outputs:
                 )
 
                 try:
-                    async with shiny_otel_span_async(
+                    async with shiny_otel_span(
                         output_otel_label,
                         attributes=output_otel_attrs,
                         required_level=OtelCollectLevel.REACTIVITY,

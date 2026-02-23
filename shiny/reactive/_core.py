@@ -24,7 +24,7 @@ from .. import _utils
 from .._datastructures import PriorityQueueFIFO
 from .._docstring import add_example, no_example
 from ..otel._collect import OtelCollectLevel
-from ..otel._span_wrappers import shiny_otel_span_async
+from ..otel._span_wrappers import shiny_otel_span
 from ..types import MISSING, MISSING_TYPE
 
 if TYPE_CHECKING:
@@ -181,7 +181,7 @@ class ReactiveEnvironment:
     async def flush(self) -> None:
         """Flush all pending operations"""
         # Wrap entire flush cycle in reactive.update span (or no-op if not collecting)
-        async with shiny_otel_span_async(
+        async with shiny_otel_span(
             "reactive.update",
             required_level=OtelCollectLevel.REACTIVE_UPDATE,
         ) as span:

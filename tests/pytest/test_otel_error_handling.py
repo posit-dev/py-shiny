@@ -30,7 +30,7 @@ from shiny.otel._errors import (
     maybe_sanitize_error,
     should_sanitize_errors,
 )
-from shiny.otel._span_wrappers import shiny_otel_span_async
+from shiny.otel._span_wrappers import shiny_otel_span
 from shiny.session import Session, session_context
 from shiny.types import (
     SafeException,
@@ -183,10 +183,10 @@ class TestSpanExceptionRecording:
 
         with patch_otel_tracing_state(tracing_enabled=True):
             from shiny.otel._collect import OtelCollectLevel
-            from shiny.otel._span_wrappers import shiny_otel_span_async
+            from shiny.otel._span_wrappers import shiny_otel_span
 
             async def test_func():
-                async with shiny_otel_span_async(
+                async with shiny_otel_span(
                     "test_span", required_level=OtelCollectLevel.SESSION
                 ):
                     raise ValueError("Test error")
@@ -221,10 +221,10 @@ class TestSpanExceptionRecording:
 
         with patch_otel_tracing_state(tracing_enabled=True):
             from shiny.otel._collect import OtelCollectLevel
-            from shiny.otel._span_wrappers import shiny_otel_span_async
+            from shiny.otel._span_wrappers import shiny_otel_span
 
             async def test_func():
-                async with shiny_otel_span_async(
+                async with shiny_otel_span(
                     "test_span", required_level=OtelCollectLevel.SESSION
                 ):
                     raise SilentException("Silent error")
@@ -262,10 +262,10 @@ class TestSpanExceptionRecording:
         with session_context(mock_session):
             with patch_otel_tracing_state(tracing_enabled=True):
                 from shiny.otel._collect import OtelCollectLevel
-                from shiny.otel._span_wrappers import shiny_otel_span_async
+                from shiny.otel._span_wrappers import shiny_otel_span
 
                 async def test_func():
-                    async with shiny_otel_span_async(
+                    async with shiny_otel_span(
                         "test_span", required_level=OtelCollectLevel.SESSION
                     ):
                         raise ValueError("Database password is 'secret123'")
@@ -306,10 +306,10 @@ class TestSpanExceptionRecording:
         with session_context(mock_session):
             with patch_otel_tracing_state(tracing_enabled=True):
                 from shiny.otel._collect import OtelCollectLevel
-                from shiny.otel._span_wrappers import shiny_otel_span_async
+                from shiny.otel._span_wrappers import shiny_otel_span
 
                 async def test_func():
-                    async with shiny_otel_span_async(
+                    async with shiny_otel_span(
                         "test_span", required_level=OtelCollectLevel.SESSION
                     ):
                         raise SafeException("This is safe to show")
@@ -346,10 +346,10 @@ class TestSpanExceptionRecording:
         with session_context(mock_session):
             with patch_otel_tracing_state(tracing_enabled=True):
                 from shiny.otel._collect import OtelCollectLevel
-                from shiny.otel._span_wrappers import shiny_otel_span_async
+                from shiny.otel._span_wrappers import shiny_otel_span
 
                 async def test_func():
-                    async with shiny_otel_span_async(
+                    async with shiny_otel_span(
                         "test_span", required_level=OtelCollectLevel.SESSION
                     ):
                         raise ValueError("Test error")
@@ -398,11 +398,11 @@ class TestExceptionRecordingOnce:
 
             async def test_func():
                 # Parent span
-                async with shiny_otel_span_async(
+                async with shiny_otel_span(
                     "parent_span", required_level=OtelCollectLevel.SESSION
                 ):
                     # Child span where error originates
-                    async with shiny_otel_span_async(
+                    async with shiny_otel_span(
                         "child_span", required_level=OtelCollectLevel.SESSION
                     ):
                         raise ValueError("Test error from child")
@@ -445,15 +445,15 @@ class TestExceptionRecordingOnce:
 
             async def test_func():
                 # Grandparent span
-                async with shiny_otel_span_async(
+                async with shiny_otel_span(
                     "grandparent_span", required_level=OtelCollectLevel.SESSION
                 ):
                     # Parent span
-                    async with shiny_otel_span_async(
+                    async with shiny_otel_span(
                         "parent_span", required_level=OtelCollectLevel.SESSION
                     ):
                         # Child span where error originates
-                        async with shiny_otel_span_async(
+                        async with shiny_otel_span(
                             "child_span", required_level=OtelCollectLevel.SESSION
                         ):
                             raise ValueError("Test error from child")

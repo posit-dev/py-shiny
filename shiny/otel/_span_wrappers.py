@@ -11,7 +11,7 @@ from ._collect import OtelCollectLevel, get_otel_collect_level
 from ._constants import ATTR_SESSION_ID
 from ._core import get_otel_tracer, is_otel_tracing_enabled
 
-__all__ = ("shiny_otel_span_async",)
+__all__ = ("shiny_otel_span",)
 
 # Type aliases for parameters
 AttributesValue = Mapping[str, Any] | None
@@ -20,7 +20,7 @@ NameType = Union[str, Callable[[], str]]
 
 
 @asynccontextmanager
-async def shiny_otel_span_async(
+async def shiny_otel_span(
     name: NameType,
     *,
     attributes: AttributesType = None,
@@ -28,9 +28,9 @@ async def shiny_otel_span_async(
     collection_level: OtelCollectLevel | None = None,
 ) -> AsyncIterator[Span | None]:
     """
-    Async context manager for creating and managing a Shiny OpenTelemetry span.
+    Context manager for creating and managing a Shiny OpenTelemetry span.
 
-    This is the async version that properly propagates context through async
+    This async context manager properly propagates context through async
     boundaries. It automatically:
     - Checks if collection should occur based on the collect level
     - Creates a span with the given name and attributes (if collecting)
@@ -68,18 +68,18 @@ async def shiny_otel_span_async(
     Examples
     --------
     ```python
-    from shiny.otel._span_wrappers import with_otel_span_async
+    from shiny.otel._span_wrappers import shiny_otel_span
     from shiny.otel import OtelCollectLevel
 
     async def my_async_function():
         # Static attributes
-        async with with_otel_span_async("async_operation", {"count": 42}) as span:
+        async with shiny_otel_span("async_operation", {"count": 42}) as span:
             await some_async_call()
             if span:
                 span.set_attribute("completed", True)
 
         # Lazy attributes (only computed if collecting)
-        async with with_otel_span_async(
+        async with shiny_otel_span(
             "session.start",
             lambda: {ATTR_SESSION_ID: session.id, **extract_http_attributes(conn)}
         ) as span:

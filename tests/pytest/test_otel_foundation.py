@@ -17,7 +17,7 @@ from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanE
 
 from shiny.otel._collect import OtelCollectLevel, get_otel_collect_level
 from shiny.otel._core import get_otel_logger, get_otel_tracer, is_otel_tracing_enabled
-from shiny.otel._span_wrappers import shiny_otel_span_async
+from shiny.otel._span_wrappers import shiny_otel_span
 
 from .otel_helpers import patch_otel_tracing_state
 
@@ -133,20 +133,20 @@ class TestGetOtelCollectLevel:
 class TestSpanWrappers:
     """Span wrapper utilities tests"""
 
-    def test_shiny_otel_span_async_import(self):
+    def test_shiny_otel_span_import(self):
         """Test that span wrapper function can be imported."""
-        assert callable(shiny_otel_span_async)
+        assert callable(shiny_otel_span)
 
     @pytest.mark.asyncio
-    async def test_shiny_otel_span_async_creates_span(
+    async def test_shiny_otel_span_creates_span(
         self, otel_tracer_provider: tuple[TracerProvider, InMemorySpanExporter]
     ):
-        """Test that shiny_otel_span_async creates a span when collection is enabled."""
+        """Test that shiny_otel_span creates a span when collection is enabled."""
         _provider, _exporter = otel_tracer_provider
 
         # Enable tracing to allow span creation
         with patch_otel_tracing_state(tracing_enabled=True):
-            async with shiny_otel_span_async(
+            async with shiny_otel_span(
                 "test_span_async",
                 attributes={"key": "value"},
                 required_level=OtelCollectLevel.SESSION,
@@ -156,11 +156,11 @@ class TestSpanWrappers:
                 assert span.is_recording() is True
 
     @pytest.mark.asyncio
-    async def test_shiny_otel_span_async_no_op_when_not_collecting(self):
-        """Test that shiny_otel_span_async returns None when collection disabled."""
+    async def test_shiny_otel_span_no_op_when_not_collecting(self):
+        """Test that shiny_otel_span returns None when collection disabled."""
         # Force tracing disabled to simulate no SDK configuration
         with patch_otel_tracing_state(tracing_enabled=False):
-            async with shiny_otel_span_async(
+            async with shiny_otel_span(
                 "test_span_async",
                 attributes={"key": "value"},
                 required_level=OtelCollectLevel.SESSION,

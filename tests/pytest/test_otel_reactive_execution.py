@@ -22,7 +22,7 @@ from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanE
 from shiny.otel._attributes import extract_source_ref
 from shiny.otel._collect import OtelCollectLevel
 from shiny.otel._labels import create_otel_label
-from shiny.otel._span_wrappers import shiny_otel_span_async
+from shiny.otel._span_wrappers import shiny_otel_span
 from shiny.reactive import Calc_, Effect_
 
 from .otel_helpers import get_exported_spans, patch_otel_tracing_state
@@ -330,7 +330,7 @@ class TestCalcSpans:
                 # Mock span wrapper to verify it's called
                 # Must patch at the import location in _reactives module
                 with patch(
-                    "shiny.reactive._reactives.shiny_otel_span_async"
+                    "shiny.reactive._reactives.shiny_otel_span"
                 ) as mock_span:
                     # Configure mock to act as async context manager
                     mock_span.return_value.__aenter__ = AsyncMock(return_value=None)
@@ -361,7 +361,7 @@ class TestCalcSpans:
                 # Mock span wrapper to verify it's not called
                 # Must patch at the import location in _reactives module
                 with patch(
-                    "shiny.reactive._reactives.shiny_otel_span_async"
+                    "shiny.reactive._reactives.shiny_otel_span"
                 ) as mock_span:
                     # Execute the calc
                     await calc.update_value()
@@ -384,7 +384,7 @@ class TestCalcSpans:
                 # Mock span wrapper to capture attributes
                 # Must patch at the import location in _reactives module
                 with patch(
-                    "shiny.reactive._reactives.shiny_otel_span_async"
+                    "shiny.reactive._reactives.shiny_otel_span"
                 ) as mock_span:
                     # Configure mock
                     mock_span.return_value.__aenter__ = AsyncMock(return_value=None)
@@ -421,7 +421,7 @@ class TestEffectSpans:
                 # Mock span wrapper to verify it's called
                 # Must patch at the import location in _reactives module
                 with patch(
-                    "shiny.reactive._reactives.shiny_otel_span_async"
+                    "shiny.reactive._reactives.shiny_otel_span"
                 ) as mock_span:
                     # Configure mock to act as async context manager
                     mock_span.return_value.__aenter__ = AsyncMock(return_value=None)
@@ -453,7 +453,7 @@ class TestEffectSpans:
                 # Mock span wrapper to verify it's not called
                 # Must patch at the import location in _reactives module
                 with patch(
-                    "shiny.reactive._reactives.shiny_otel_span_async"
+                    "shiny.reactive._reactives.shiny_otel_span"
                 ) as mock_span:
                     # Execute the effect
                     await effect._run()
@@ -476,7 +476,7 @@ class TestEffectSpans:
                 # Mock span wrapper to capture attributes
                 # Must patch at the import location in _reactives module
                 with patch(
-                    "shiny.reactive._reactives.shiny_otel_span_async"
+                    "shiny.reactive._reactives.shiny_otel_span"
                 ) as mock_span:
                     # Configure mock
                     mock_span.return_value.__aenter__ = AsyncMock(return_value=None)
@@ -529,7 +529,7 @@ class TestSpanHierarchy:
                 calc = Calc_(my_calc)
 
                 # Manually create flush span and execute calc inside it
-                async with shiny_otel_span_async(
+                async with shiny_otel_span(
                     "reactive.update",
                     required_level=OtelCollectLevel.REACTIVE_UPDATE,
                 ):

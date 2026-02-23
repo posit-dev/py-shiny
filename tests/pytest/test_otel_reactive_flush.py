@@ -20,7 +20,7 @@ from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
 
 from shiny.otel._collect import OtelCollectLevel, get_otel_collect_level
 from shiny.otel._core import is_otel_tracing_enabled
-from shiny.otel._span_wrappers import shiny_otel_span_async
+from shiny.otel._span_wrappers import shiny_otel_span
 from shiny.reactive._core import ReactiveEnvironment
 
 from .otel_helpers import (
@@ -94,12 +94,12 @@ class TestReactiveFlushInstrumentation:
                 mock_span.__aexit__ = AsyncMock(return_value=None)
 
                 with patch(
-                    "shiny.reactive._core.shiny_otel_span_async",
+                    "shiny.reactive._core.shiny_otel_span",
                     return_value=mock_span,
                 ) as mock_wrapper:
                     await env.flush()
 
-                    # Verify shiny_otel_span_async was called with correct parameters
+                    # Verify shiny_otel_span was called with correct parameters
                     mock_wrapper.assert_called_once()
                     args, kwargs = mock_wrapper.call_args
                     assert args[0] == "reactive.update"
@@ -143,7 +143,7 @@ class TestReactiveFlushInstrumentation:
                 env.on_flushed(capture_span, once=True)
 
                 with patch(
-                    "shiny.reactive._core.shiny_otel_span_async",
+                    "shiny.reactive._core.shiny_otel_span",
                     return_value=mock_span,
                 ):
                     await env.flush()
@@ -167,7 +167,7 @@ class TestReactiveFlushInstrumentation:
                 assert env._current_otel_span is None
 
                 with patch(
-                    "shiny.reactive._core.shiny_otel_span_async",
+                    "shiny.reactive._core.shiny_otel_span",
                     return_value=mock_span,
                 ):
                     await env.flush()
@@ -188,7 +188,7 @@ class TestReactiveFlushInstrumentation:
         with patch_otel_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "all"}):
                 # Simulate session.start with reactive_flush inside
-                async with shiny_otel_span_async(
+                async with shiny_otel_span(
                     "session.start",
                     attributes={"session.id": "test123"},
                     required_level=OtelCollectLevel.SESSION,
