@@ -19,7 +19,7 @@ from .otel_helpers import patch_otel_tracing_state
 
 
 @pytest.fixture(autouse=True)
-def clear_otel_collect_env(monkeypatch):
+def clear_otel_collect_env(monkeypatch: pytest.MonkeyPatch):
     """
     Auto-use fixture that clears SHINY_OTEL_COLLECT for all tests in this file.
 
@@ -263,10 +263,10 @@ class TestOtelCollectDecorator:
 class TestOtelCollectEnvironmentVariable:
     """Tests for SHINY_OTEL_COLLECT environment variable."""
 
-    def test_env_var_sets_default_level(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    def test_env_var_sets_default_level(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test environment variable sets default collection level."""
         with patch_otel_tracing_state(tracing_enabled=True):
-            monkeypatch.setenv("SHINY_OTEL_COLLECT", "session")  # type: ignore[attr-defined]
+            monkeypatch.setenv("SHINY_OTEL_COLLECT", "session")
 
             # Force re-read of env var by clearing contextvar
             from shiny.otel._collect import _current_collect_level
@@ -275,10 +275,12 @@ class TestOtelCollectEnvironmentVariable:
 
             assert get_otel_collect_level() == OtelCollectLevel.SESSION
 
-    def test_context_manager_overrides_env_var(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    def test_context_manager_overrides_env_var(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test context manager overrides environment variable."""
         with patch_otel_tracing_state(tracing_enabled=True):
-            monkeypatch.setenv("SHINY_OTEL_COLLECT", "session")  # type: ignore[attr-defined]
+            monkeypatch.setenv("SHINY_OTEL_COLLECT", "session")
 
             # Force re-read of env var
             from shiny.otel._collect import _current_collect_level
@@ -295,10 +297,12 @@ class TestOtelCollectEnvironmentVariable:
             # Should restore to env var value
             assert get_otel_collect_level() == OtelCollectLevel.SESSION
 
-    def test_invalid_env_var_defaults_with_warning(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    def test_invalid_env_var_defaults_with_warning(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test invalid environment variable value defaults to ALL with warning."""
         with patch_otel_tracing_state(tracing_enabled=True):
-            monkeypatch.setenv("SHINY_OTEL_COLLECT", "invalid_level")  # type: ignore[attr-defined]
+            monkeypatch.setenv("SHINY_OTEL_COLLECT", "invalid_level")
 
             # Force re-read of env var
             from shiny.otel._collect import _current_collect_level
