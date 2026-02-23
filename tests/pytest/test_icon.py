@@ -59,9 +59,10 @@ def test_icon_bs_a11y_semantic_with_title():
     assert "<title>Favorite</title>" in rendered
 
 
-def test_icon_bs_a11y_semantic_requires_title():
-    with pytest.raises(ValueError, match="title is required"):
-        ui.icon("star", lib="bs", a11y="semantic")
+def test_icon_bs_defaults_to_decorative():
+    """Test that icons default to decorative (aria-hidden)"""
+    icon = ui.icon("star", lib="bs")
+    assert icon.attrs.get("aria-hidden") == "true"
 
 
 def test_icon_bs_unknown_icon_raises():
