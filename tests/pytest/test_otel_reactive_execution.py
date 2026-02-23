@@ -329,9 +329,7 @@ class TestCalcSpans:
 
                 # Mock span wrapper to verify it's called
                 # Must patch at the import location in _reactives module
-                with patch(
-                    "shiny.reactive._reactives.shiny_otel_span"
-                ) as mock_span:
+                with patch("shiny.reactive._reactives.shiny_otel_span") as mock_span:
                     # Configure mock to act as async context manager
                     mock_span.return_value.__aenter__ = AsyncMock(return_value=None)
                     mock_span.return_value.__aexit__ = AsyncMock(return_value=None)
@@ -360,9 +358,7 @@ class TestCalcSpans:
 
                 # Mock span wrapper to verify it's not called
                 # Must patch at the import location in _reactives module
-                with patch(
-                    "shiny.reactive._reactives.shiny_otel_span"
-                ) as mock_span:
+                with patch("shiny.reactive._reactives.shiny_otel_span") as mock_span:
                     # Execute the calc
                     await calc.update_value()
 
@@ -383,9 +379,7 @@ class TestCalcSpans:
 
                 # Mock span wrapper to capture attributes
                 # Must patch at the import location in _reactives module
-                with patch(
-                    "shiny.reactive._reactives.shiny_otel_span"
-                ) as mock_span:
+                with patch("shiny.reactive._reactives.shiny_otel_span") as mock_span:
                     # Configure mock
                     mock_span.return_value.__aenter__ = AsyncMock(return_value=None)
                     mock_span.return_value.__aexit__ = AsyncMock(return_value=None)
@@ -420,9 +414,7 @@ class TestEffectSpans:
 
                 # Mock span wrapper to verify it's called
                 # Must patch at the import location in _reactives module
-                with patch(
-                    "shiny.reactive._reactives.shiny_otel_span"
-                ) as mock_span:
+                with patch("shiny.reactive._reactives.shiny_otel_span") as mock_span:
                     # Configure mock to act as async context manager
                     mock_span.return_value.__aenter__ = AsyncMock(return_value=None)
                     mock_span.return_value.__aexit__ = AsyncMock(return_value=None)
@@ -452,9 +444,7 @@ class TestEffectSpans:
 
                 # Mock span wrapper to verify it's not called
                 # Must patch at the import location in _reactives module
-                with patch(
-                    "shiny.reactive._reactives.shiny_otel_span"
-                ) as mock_span:
+                with patch("shiny.reactive._reactives.shiny_otel_span") as mock_span:
                     # Execute the effect
                     await effect._run()
 
@@ -475,9 +465,7 @@ class TestEffectSpans:
 
                 # Mock span wrapper to capture attributes
                 # Must patch at the import location in _reactives module
-                with patch(
-                    "shiny.reactive._reactives.shiny_otel_span"
-                ) as mock_span:
+                with patch("shiny.reactive._reactives.shiny_otel_span") as mock_span:
                     # Configure mock
                     mock_span.return_value.__aenter__ = AsyncMock(return_value=None)
                     mock_span.return_value.__aexit__ = AsyncMock(return_value=None)

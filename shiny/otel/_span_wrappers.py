@@ -16,12 +16,11 @@ __all__ = ("shiny_otel_span",)
 # Type aliases for parameters
 AttributesValue = Mapping[str, Any] | None
 AttributesType = Union[AttributesValue, Callable[[], AttributesValue]]
-NameType = Union[str, Callable[[], str]]
 
 
 @asynccontextmanager
 async def shiny_otel_span(
-    name: NameType,
+    name: str,
     *,
     attributes: AttributesType = None,
     required_level: OtelCollectLevel = OtelCollectLevel.SESSION,
@@ -49,9 +48,7 @@ async def shiny_otel_span(
     Parameters
     ----------
     name
-        The name of the span, or a callable that returns the span name. If a
-        callable is provided, it will only be called if collection is enabled,
-        allowing for lazy evaluation of expensive name generation.
+        The name of the span.
     attributes
         Optional dictionary of attributes to attach to the span, or a callable
         that returns a dictionary. If a callable is provided, it will only be
@@ -73,7 +70,7 @@ async def shiny_otel_span(
 
     async def my_async_function():
         # Static attributes
-        async with shiny_otel_span("async_operation", {"count": 42}) as span:
+        async with shiny_otel_span("async_operation", attributes={"count": 42}) as span:
             await some_async_call()
             if span:
                 span.set_attribute("completed", True)
@@ -81,7 +78,7 @@ async def shiny_otel_span(
         # Lazy attributes (only computed if collecting)
         async with shiny_otel_span(
             "session.start",
-            lambda: {ATTR_SESSION_ID: session.id, **extract_http_attributes(conn)}
+            attributes=lambda: {ATTR_SESSION_ID: session.id, **extract_http_attributes(conn)}
         ) as span:
             # Attributes only extracted if span is created
             await session_work()
@@ -102,9 +99,6 @@ async def shiny_otel_span(
         yield None
         return
 
-    # Resolve name if callable
-    resolved_name = name() if callable(name) else name
-
     # Resolve attributes if callable
     resolved_attrs: Dict[str, Any] = {}
     if attributes is not None:
@@ -116,7 +110,7 @@ async def shiny_otel_span(
 
     tracer = get_otel_tracer()
     with tracer.start_as_current_span(
-        resolved_name,
+        name,
         attributes=resolved_attrs,
         record_exception=False,  # We handle exception recording manually
         set_status_on_exception=False,  # We handle status setting manually
