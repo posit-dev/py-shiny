@@ -45,13 +45,21 @@ def _otel_log_provider_session() -> (
     Creates a single LoggerProvider and InMemoryLogRecordExporter for the entire
     test session. This is wrapped by the otel_log_provider_and_exporter fixture
     which provides automatic log clearing before each test.
+
+    Why session-scoped?
+    -------------------
+    OpenTelemetry uses a global singleton for the logger provider. Calling
+    set_logger_provider() multiple times causes warnings ("Overriding of current
+    LoggerProvider is not allowed") and potential state corruption. Session scope
+    ensures the provider is set once per pytest worker process, avoiding conflicts
+    during parallel test execution.
     """
     # Create in-memory exporter and logger provider
     memory_exporter = InMemoryLogRecordExporter()
     provider = LoggerProvider()
     provider.add_log_record_processor(SimpleLogRecordProcessor(memory_exporter))
 
-    # Set as global logger provider
+    # Set as global logger provider (can only be done once per process)
     set_logger_provider(provider)
 
     # Reset OTel state to pick up new provider
@@ -64,13 +72,24 @@ def _otel_log_provider_session() -> (
 
 @pytest.fixture
 def otel_log_provider_and_exporter(
-    _otel_log_provider_session: Tuple[LoggerProvider, InMemoryLogRecordExporter]
+    _otel_log_provider_session: Tuple[LoggerProvider, InMemoryLogRecordExporter],
 ) -> Tuple[LoggerProvider, InMemoryLogRecordExporter]:
     """
     Function-scoped fixture for OpenTelemetry LoggerProvider.
 
     Provides access to a session-scoped LoggerProvider and InMemoryLogRecordExporter,
     automatically clearing logs before each test to ensure test isolation.
+
+    Why two fixtures instead of one?
+    --------------------------------
+    We cannot merge this into one function-scoped fixture because:
+    1. The provider must be set globally once per worker (session scope)
+    2. The exporter must be cleared per test (function scope)
+    3. Creating new providers per test would repeatedly call
+       set_logger_provider(), causing warnings and state corruption
+
+    This two-fixture pattern separates the one-time global setup (session)
+    from the per-test cleanup (function), working correctly with pytest-xdist.
 
     Returns
     -------

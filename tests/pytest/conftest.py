@@ -12,26 +12,46 @@ from .otel_helpers import otel_tracer_provider_impl
 
 
 @pytest.fixture(scope="session")
-def _otel_tracer_provider_session() -> Iterator[Tuple[TracerProvider, InMemorySpanExporter]]:
+def _otel_tracer_provider_session() -> (
+    Iterator[Tuple[TracerProvider, InMemorySpanExporter]]
+):
     """
     Internal session-scoped fixture for OpenTelemetry TracerProvider.
 
     Creates a single TracerProvider and InMemorySpanExporter for the entire test
     session. This is wrapped by the otel_tracer_provider fixture which provides
     automatic span clearing before each test.
+
+    Why session-scoped?
+    -------------------
+    OpenTelemetry uses a global singleton for the tracer provider. Calling
+    trace.set_tracer_provider() multiple times causes warnings and potential
+    state corruption. Session scope ensures the provider is set once per
+    pytest worker process, avoiding conflicts during parallel test execution.
     """
     yield from otel_tracer_provider_impl()
 
 
 @pytest.fixture
 def otel_tracer_provider(
-    _otel_tracer_provider_session: Tuple[TracerProvider, InMemorySpanExporter]
+    _otel_tracer_provider_session: Tuple[TracerProvider, InMemorySpanExporter],
 ) -> Tuple[TracerProvider, InMemorySpanExporter]:
     """
     Function-scoped pytest fixture for OpenTelemetry TracerProvider.
 
     Provides access to a session-scoped TracerProvider and InMemorySpanExporter,
     automatically clearing spans before each test to ensure test isolation.
+
+    Why two fixtures instead of one?
+    --------------------------------
+    We cannot merge this into one function-scoped fixture because:
+    1. The provider must be set globally once per worker (session scope)
+    2. The exporter must be cleared per test (function scope)
+    3. Creating new providers per test would repeatedly call
+       trace.set_tracer_provider(), causing warnings and state corruption
+
+    This two-fixture pattern separates the one-time global setup (session)
+    from the per-test cleanup (function), working correctly with pytest-xdist.
 
     Yields
     ------
