@@ -54,6 +54,9 @@ class TestCore:
 
         provider, exporter = otel_tracer_provider
 
+        # Clear any spans from previous tests
+        exporter.clear()
+
         # Enable tracing
         with patch_otel_tracing_state(tracing_enabled=True):
             # Call the function multiple times
