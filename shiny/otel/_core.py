@@ -82,8 +82,8 @@ def is_otel_tracing_enabled() -> bool:
     if _tracing_enabled is None:
         try:
             from opentelemetry.sdk.trace import TracerProvider as SDKTracerProvider
-        except (ImportError, ModuleNotFoundError):
-            # opentelemetry-sdk is optional; if it's not available, tracing is disabled
+        except ImportError:
+            # If we can't import the SDK TracerProvider, tracing is disabled
             _tracing_enabled = False
         else:
             tracer_provider = trace.get_tracer_provider()
