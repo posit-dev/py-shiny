@@ -46,6 +46,24 @@ class TestCore:
             # Without SDK, tracing should be disabled
             assert is_otel_tracing_enabled() is False
 
+    def test_is_otel_tracing_enabled_creates_no_spans(
+        self, otel_tracer_provider: tuple[TracerProvider, InMemorySpanExporter]
+    ):
+        """Test that is_otel_tracing_enabled() doesn't create spans when called."""
+        from .otel_helpers import get_exported_spans
+
+        provider, exporter = otel_tracer_provider
+
+        # Enable tracing
+        with patch_otel_tracing_state(tracing_enabled=True):
+            # Call the function multiple times
+            for _ in range(10):
+                is_otel_tracing_enabled()
+
+        # Verify no spans were created
+        spans = get_exported_spans(provider, exporter)
+        assert len(spans) == 0, "is_otel_tracing_enabled() should not create any spans"
+
 
 class TestOtelCollectLevel:
     """OtelCollectLevel enum tests"""
