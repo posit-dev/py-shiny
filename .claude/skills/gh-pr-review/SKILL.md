@@ -171,6 +171,7 @@ gh pr-review comments reply \
   --thread-id PRRT_xyz789 \
   --body "Thanks for the update, looks good now" \
   --repo owner/repo
+  --pr 42
 
 # 6. Resolve the thread
 gh pr-review threads resolve --thread-id PRRT_xyz789 --repo owner/repo
@@ -194,7 +195,7 @@ gh pr-review threads resolve --thread-id PRRT_xyz789 --repo owner/repo
    2. Backwards compatibility
    3. Code maintainability
    EOF
-   )" --repo owner/repo
+   )" --repo owner/repo --pr 42
    ```
 
 5. **JSON Output**: Most commands support JSON output for programmatic processing and LLM integration. The tool is designed to provide "deterministic, stable output" with "compact, meaningful JSON."
