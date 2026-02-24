@@ -1,4 +1,45 @@
-"""High-level span creation helpers for async contexts."""
+"""
+High-level span creation helpers for async contexts.
+
+Async Context Propagation Design
+---------------------------------
+
+This module relies on the OpenTelemetry Python SDK's built-in context propagation
+for async code. The SDK automatically handles span context through Python's
+contextvars mechanism, which propagates correctly through async boundaries
+(await, asyncio.create_task, asyncio.gather, etc.).
+
+When you use `tracer.start_as_current_span()`, the SDK:
+1. Sets the span as "current" in the OpenTelemetry context (using contextvars)
+2. Python's contextvars automatically copy to new async tasks
+3. Child spans created within those tasks automatically use the context parent
+4. Span hierarchy is maintained correctly across concurrent operations
+
+This design was chosen over implementing custom context management because:
+- The OTel SDK's implementation is battle-tested and specification-compliant
+- It automatically handles edge cases (task cancellation, exception propagation)
+- It works seamlessly with other OTel-instrumented libraries
+- It avoids code duplication and reduces maintenance burden
+
+Important Notes
+---------------
+
+**Session Context Independence**: OpenTelemetry context propagation is independent
+of Shiny's session context. When spawning async tasks (e.g., with
+`asyncio.create_task()`), the OTel span context will propagate automatically,
+but the Shiny session context must be passed explicitly via the `session`
+parameter if the task needs access to `input`, `output`, or session state.
+
+**Testing**: Unit tests in `tests/pytest/test_otel_async_context.py` verify
+correct span propagation through various async patterns. Integration tests in
+`tests/playwright/shiny/otel-async/` verify the full reactive flow with async
+operations.
+
+See Also
+--------
+- OpenTelemetry Context API: https://opentelemetry.io/docs/specs/otel/context/
+- Python contextvars: https://docs.python.org/3/library/contextvars.html
+"""
 
 from __future__ import annotations
 
