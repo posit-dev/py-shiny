@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING, Awaitable, Callable, Literal, Optional
 
 from .._docstring import add_example
 from .._utils import AsyncCallbacks, CancelCallback, wrap_async
+from ..otel._decorators import no_otel_collect
+from ..otel._span_wrappers import OtelCollectLevel, shiny_otel_span
 from ._button import BOOKMARK_ID
 from ._restore_state import RestoreState
 from ._save_state import BookmarkState
@@ -375,12 +377,14 @@ class BookmarkApp(Bookmark):
             # Fires when the bookmark button is clicked.
             @reactive.effect
             @reactive.event(root_session.input[BOOKMARK_ID])
+            @no_otel_collect()
             async def _():
                 await root_session.bookmark()
 
             # If there was an error initializing the current restore context, show
             # notification in the client.
             @reactive.effect
+            @no_otel_collect()
             def init_error_message():
                 if self._restore_context and self._restore_context._init_error_msg:
                     notification_show(
@@ -393,28 +397,38 @@ class BookmarkApp(Bookmark):
             # Run the on_restore function at the beginning of the flush cycle, but after
             # the server function has been executed.
             @reactive.effect(priority=1000000)
+            @no_otel_collect()
             async def invoke_on_restore_callbacks():
                 if self._on_restore_callbacks.count() == 0:
                     return
 
                 with session_context(root_session):
 
-                    try:
-                        # ?withLogErrors
-                        with reactive.isolate():
-                            if self._restore_context and self._restore_context.active:
-                                restore_state = self._restore_context.as_state()
-                                await self._on_restore_callbacks.invoke(restore_state)
-                    except Exception as e:
-                        warnings.warn(
-                            f"Error calling on_restore callback: {e}",
-                            stacklevel=2,
-                        )
-                        notification_show(
-                            f"Error calling on_restore callback: {e}",
-                            duration=None,
-                            type="error",
-                        )
+                    async with shiny_otel_span(
+                        "Restore bookmark callbacks",
+                        required_level=OtelCollectLevel.REACTIVE_UPDATE,
+                    ):
+                        try:
+                            # ?withLogErrors
+                            with reactive.isolate():
+                                if (
+                                    self._restore_context
+                                    and self._restore_context.active
+                                ):
+                                    restore_state = self._restore_context.as_state()
+                                    await self._on_restore_callbacks.invoke(
+                                        restore_state
+                                    )
+                        except Exception as e:
+                            warnings.warn(
+                                f"Error calling on_restore callback: {e}",
+                                stacklevel=2,
+                            )
+                            notification_show(
+                                f"Error calling on_restore callback: {e}",
+                                duration=None,
+                                type="error",
+                            )
 
             # Run the on_restored function after the flush cycle completes and
             # information is sent to the client.
@@ -424,21 +438,30 @@ class BookmarkApp(Bookmark):
                     return
 
                 with session_context(root_session):
-                    try:
-                        with reactive.isolate():
-                            if self._restore_context and self._restore_context.active:
-                                restore_state = self._restore_context.as_state()
-                                await self._on_restored_callbacks.invoke(restore_state)
-                    except Exception as e:
-                        warnings.warn(
-                            f"Error calling on_restored callback: {e}",
-                            stacklevel=1,
-                        )
-                        notification_show(
-                            f"Error calling on_restored callback: {e}",
-                            duration=None,
-                            type="error",
-                        )
+                    async with shiny_otel_span(
+                        "Restored bookmark callbacks",
+                        required_level=OtelCollectLevel.REACTIVE_UPDATE,
+                    ):
+                        try:
+                            with reactive.isolate():
+                                if (
+                                    self._restore_context
+                                    and self._restore_context.active
+                                ):
+                                    restore_state = self._restore_context.as_state()
+                                    await self._on_restored_callbacks.invoke(
+                                        restore_state
+                                    )
+                        except Exception as e:
+                            warnings.warn(
+                                f"Error calling on_restored callback: {e}",
+                                stacklevel=1,
+                            )
+                            notification_show(
+                                f"Error calling on_restored callback: {e}",
+                                duration=None,
+                                type="error",
+                            )
 
         return
 

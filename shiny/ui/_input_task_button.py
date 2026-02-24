@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from shiny.otel._decorators import no_otel_collect
+
 __all__ = ("input_task_button",)
 
 from functools import partial
@@ -213,6 +215,7 @@ def bind_task_button(
     button_id = resolve_id(button_id)
 
     @effect(priority=1000)
+    @no_otel_collect()
     def effect_sync_button():
         if task.status() == "running":
             update_task_button(button_id, state="busy")
