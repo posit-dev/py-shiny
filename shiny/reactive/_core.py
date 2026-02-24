@@ -128,23 +128,7 @@ class ReactiveEnvironment:
         )
         self._next_id: int = 0
         self._pending_flush_queue: PriorityQueueFIFO[Context] = PriorityQueueFIFO()
-        self._lock: Optional[asyncio.Lock] = None
         self._flushed_callbacks = _utils.AsyncCallbacks()
-
-    @property
-    def lock(self) -> asyncio.Lock:
-        """
-        Lock that protects this ReactiveEnvironment. It must be lazily created, because
-        at the time the module is loaded, there generally isn't a running asyncio loop
-        yet. This causes the asyncio.Lock to be created with a different loop than it
-        will be invoked from later; when that happens, acquire() will succeed if there's
-        no contention, but throw a "hey you're on the wrong loop" error if there is.
-        """
-        if self._lock is None:
-            # Ensure we have a loop; get_running_loop() throws an error if we don't
-            asyncio.get_running_loop()
-            self._lock = asyncio.Lock()
-        return self._lock
 
     def next_id(self) -> int:
         """Return the next available id"""
@@ -174,8 +158,32 @@ class ReactiveEnvironment:
 
     async def flush(self) -> None:
         """Flush all pending operations"""
-        await self._flush_sequential()
+        await self._flush_concurrent()
         await self._flushed_callbacks.invoke()
+
+    async def _flush_concurrent(self) -> None:
+        """Run all pending contexts concurrently using asyncio.gather().
+
+        Uses an outer loop to handle effects that are newly invalidated during the
+        current flush batch. Each iteration gathers all currently-pending contexts
+        and runs them concurrently; if any of those effects invalidate other effects,
+        those will be picked up in the next iteration.
+        """
+        while not self._pending_flush_queue.empty():
+            tasks: list[typing.Awaitable[None]] = []
+            while not self._pending_flush_queue.empty():
+                ctx = self._pending_flush_queue.get()
+                tasks.append(ctx.execute_flush_callbacks())
+
+            if tasks:
+                results = await asyncio.gather(*tasks, return_exceptions=True)
+                for result in results:
+                    if isinstance(result, BaseException):
+                        # Log the exception but don't re-raise; effects handle
+                        # their own errors internally
+                        traceback.print_exception(
+                            type(result), result, result.__traceback__
+                        )
 
     async def _flush_sequential(self) -> None:
         # Sequential flush: instead of storing the tasks in a list and calling gather()
@@ -291,14 +299,40 @@ def on_flushed(
 @no_example()
 def lock() -> asyncio.Lock:
     """
-    A lock that should be held whenever manipulating the reactive graph.
-
-    For example, :func:`~shiny.reactive.lock` makes it safe to set a
-    :class:`~reactive.value` and call :func:`~shiny.reactive.flush` from a different
-    :class:`~asyncio.Task` than the one that is running the Shiny
-    :class:`~shiny.Session`.
+    .. deprecated::
+        The global reactive lock has been removed. Reactive locking is now handled
+        per-session. This function returns a no-op lock for backward compatibility.
     """
-    return _reactive_environment.lock
+    warnings.warn(
+        "reactive.lock() is deprecated. The reactive lock is now per-session. "
+        "This returns a no-op lock for backward compatibility.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return _noop_lock
+
+
+class _NoOpLock:
+    """A lock that does nothing, for backward compatibility with reactive.lock()."""
+
+    async def __aenter__(self) -> None:
+        pass
+
+    async def __aexit__(self, *args: object) -> None:
+        pass
+
+    async def acquire(self) -> bool:
+        return True
+
+    def release(self) -> None:
+        pass
+
+    def locked(self) -> bool:
+        return False
+
+
+# Single instance used for backward compatibility
+_noop_lock: asyncio.Lock = _NoOpLock()  # type: ignore[assignment]
 
 
 @add_example()
@@ -359,12 +393,32 @@ def invalidate_later(
                 # only be a no-op.
                 return
 
-            async with lock():
-                # Prevent the ctx.invalidate() from killing our own task. (Another way
-                # to accomplish this is to unregister our ctx.on_invalidate handler, but
-                # ctx.on_invalidate doesn't currently allow unregistration.)
-                cancellable = False
+            # Use the session's per-session lock if available, otherwise proceed
+            # without a lock (e.g. when used outside of a session context).
+            root_session = None
+            if session is not None:
+                try:
+                    from ..session._session import AppSession
 
+                    root = session.root_scope()
+                    if isinstance(root, AppSession):
+                        root_session = root
+                except (AttributeError, TypeError):
+                    pass
+
+            if root_session is not None:
+
+                async def _do_invalidate() -> None:
+                    nonlocal cancellable
+                    async with root_session._reactive_lock:
+                        cancellable = False
+                        ctx.invalidate()
+                        await flush()
+
+                await root_session._cycle_start_action(_do_invalidate)
+            else:
+                # No session or not a real AppSession; just invalidate directly
+                cancellable = False
                 ctx.invalidate()
                 await flush()
 

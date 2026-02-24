@@ -16,7 +16,7 @@ from .._docstring import add_example
 from .._typing_extensions import ParamSpec
 from .._utils import is_async_callable
 from .._validation import req
-from ._core import Context, flush, lock
+from ._core import Context, flush
 from ._reactives import Value, isolate
 
 P = ParamSpec("P")
@@ -146,22 +146,21 @@ class ExtendedTask(Generic[P, R]):
         self._task = None
 
         async def _impl():
-            async with lock():
-                if task.cancelled():
-                    self.status.set("cancelled")
-                elif task.exception() is not None:
-                    self.error.set(cast(BaseException, task.exception()))
-                    self.status.set("error")
-                else:
-                    self.value.set(task.result())
-                    self.status.set("success")
+            if task.cancelled():
+                self.status.set("cancelled")
+            elif task.exception() is not None:
+                self.error.set(cast(BaseException, task.exception()))
+                self.status.set("error")
+            else:
+                self.value.set(task.result())
+                self.status.set("success")
 
+            await flush()
+
+            if len(self._invocation_queue) > 0:
+                next_invocation = self._invocation_queue.pop(0)
+                next_invocation()
                 await flush()
-
-                if len(self._invocation_queue) > 0:
-                    next_invocation = self._invocation_queue.pop(0)
-                    next_invocation()
-                    await flush()
 
         asyncio.create_task(_impl())
 
