@@ -14,9 +14,57 @@ if TYPE_CHECKING:
 
 __all__ = [
     "create_otel_label",
+    "create_otel_label_str",
     "get_otel_label_modifier",
     "set_otel_label_modifier",
 ]
+
+
+def create_otel_label_str(
+    label_type: str,
+    name: str | None,
+    namespace: str | None = None,
+) -> str:
+    """
+    Create a raw OTel label without modifiers.
+
+    This is a lower-level function that constructs the label based on the type,
+    name, and optional namespace string. It does not handle modifiers or session
+    extraction, and is intended for internal use when those details are already
+    known.
+
+    Parameters
+    ----------
+    label_type
+        The type of reactive computation (e.g., "reactive", "effect", "output").
+    name
+        The base name to include in the label (e.g., function name).
+    namespace
+        Optional namespace string to prefix the name with (e.g., "mod1").
+
+    Returns
+    -------
+    str
+        A raw span label in the format:
+        - "reactive myValue" (no namespace)
+        - "reactive mod1:myValue" (with namespace)
+
+    Examples
+    --------
+    >>> create_otel_label_str("reactive", "myValue")
+    'reactive myValue'
+
+    >>> create_otel_label_str("reactive", "myValue", namespace="mod1")
+    'reactive mod1:myValue'
+    """
+
+    if name is None or name == "" or name == "_" or name == "<lambda>":
+        name = "<anonymous>"
+
+    if namespace:
+        return f"{label_type} {namespace}:{name}"
+
+    return f"{label_type} {name}"
 
 
 def create_otel_label(
@@ -67,12 +115,7 @@ def create_otel_label(
     'reactive cache mod:my_calc'
     """
     # Extract function name
-    name = getattr(func, "__name__", "<anonymous>")
-    if name == "_" or name == "<lambda>":
-        name = "<anonymous>"
-
-    # Build label parts
-    parts: list[str] = []
+    name = getattr(func, "__name__", None)
 
     # Extract namespace from session if provided
     namespace: str | None = None
@@ -83,21 +126,10 @@ def create_otel_label(
         if ns_str:  # Only use non-empty namespaces
             namespace = ns_str
 
-    # Add namespace prefix to name if present
-    if namespace:
-        name = f"{namespace}:{name}"
-
-    # Add label type
-    parts.append(label_type)
-
-    # Add modifier if provided
     if modifier:
-        parts.append(modifier)
+        label_type = f"{label_type} {modifier}"
 
-    # Add function name
-    parts.append(name)
-
-    return " ".join(parts)
+    return create_otel_label_str(label_type, name, namespace=namespace)
 
 
 def get_otel_label_modifier(func: Callable[..., Any]) -> Optional[str]:

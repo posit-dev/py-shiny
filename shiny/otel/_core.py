@@ -135,7 +135,7 @@ def emit_otel_log(
 
     # Log with severity and attributes
     emit_otel_log(
-        "Set reactive.Value myValue",
+        "Set reactive.value myValue",
         severity_text="DEBUG",
         attributes={"session.id": session_id, "value.name": "myValue"}
     )
