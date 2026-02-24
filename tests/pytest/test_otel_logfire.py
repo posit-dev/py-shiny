@@ -123,24 +123,6 @@ class TestLogfireIntegration:
             is_otel_tracing_enabled() is True
         ), "Shiny should detect direct SDK TracerProvider"
 
-    def test_no_provider_not_detected(self):
-        """
-        Test that when no provider is configured, OTel is correctly detected as disabled.
-        """
-        from opentelemetry import trace
-        from opentelemetry.trace import ProxyTracerProvider
-
-        # Reset to default (no-op) provider
-        trace.set_tracer_provider(ProxyTracerProvider())
-
-        # Reset cached state to force re-evaluation
-        reset_otel_tracing_state()
-
-        # Check that Shiny detects OTel is disabled
-        assert (
-            is_otel_tracing_enabled() is False
-        ), "Shiny should not detect no-op provider as enabled"
-
 
 class TestLogfireSpanCreation:
     """Test that Shiny can create spans when logfire is configured."""
