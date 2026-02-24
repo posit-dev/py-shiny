@@ -312,6 +312,123 @@ class TestSourceReferenceExtraction:
         # Should return empty dict without errors
         assert isinstance(attrs, dict)
 
+    def test_extract_source_ref_from_wrapped_function(self):
+        """Test that extract_source_ref unwraps @functools.wraps decorated functions"""
+        import functools
+
+        # Define the original function at a known line
+        def original_function():  # This is the line we expect to see
+            return 42
+
+        # Capture the line number where original_function is defined
+        original_line = original_function.__code__.co_firstlineno
+
+        # Create a wrapper using @functools.wraps
+        @functools.wraps(original_function)
+        def wrapper_function():
+            return original_function()
+
+        # Extract attributes from the wrapper
+        attrs = extract_source_ref(wrapper_function)
+
+        # Should extract from the ORIGINAL function, not the wrapper
+        assert "code.function" in attrs
+        assert attrs["code.function"] == "original_function", (
+            f"Should have original function name, got: {attrs.get('code.function')}"
+        )
+
+        assert "code.filepath" in attrs
+        assert attrs["code.filepath"].endswith("test_otel_reactive_execution.py"), (
+            f"Should point to this test file, got: {attrs['code.filepath']}"
+        )
+
+        assert "code.lineno" in attrs
+        assert attrs["code.lineno"] == original_line, (
+            f"Should have original line number ({original_line}), got: {attrs.get('code.lineno')}"
+        )
+
+    def test_extract_source_ref_from_nested_wrapped_functions(self):
+        """Test extract_source_ref with multiple layers of wrapping"""
+        import functools
+
+        # Original function
+        def original():
+            return 42
+
+        original_line = original.__code__.co_firstlineno
+
+        # First wrapper
+        @functools.wraps(original)
+        def wrapper1():
+            return original()
+
+        # Second wrapper (wrapping the first wrapper)
+        @functools.wraps(wrapper1)
+        def wrapper2():
+            return wrapper1()
+
+        # Extract from the outermost wrapper
+        attrs = extract_source_ref(wrapper2)
+
+        # Should unwrap all the way to the original
+        assert "code.function" in attrs
+        assert attrs["code.function"] == "original"
+        assert "code.lineno" in attrs
+        assert attrs["code.lineno"] == original_line
+
+    def test_extract_source_ref_from_reactive_event_decorator(self):
+        """Test that @reactive.event decorated functions unwrap correctly"""
+        from shiny.reactive import event, Value
+
+        # Create a reactive value to use as event trigger
+        trigger = Value(0)
+
+        # Define original function
+        def my_effect():  # This is the line we expect
+            return trigger()
+
+        original_line = my_effect.__code__.co_firstlineno
+
+        # Apply @reactive.event decorator
+        decorated = event(trigger)(my_effect)
+
+        # Extract from decorated function
+        attrs = extract_source_ref(decorated)
+
+        # Should extract from original function, not the event wrapper
+        assert "code.function" in attrs
+        assert attrs["code.function"] == "my_effect", (
+            f"Should have original function name, got: {attrs.get('code.function')}"
+        )
+
+        assert "code.lineno" in attrs
+        assert attrs["code.lineno"] == original_line, (
+            f"Should have original line number ({original_line}), got: {attrs.get('code.lineno')}"
+        )
+
+    def test_extract_source_ref_from_unwrappable_function(self):
+        """Test that functions without __wrapped__ attribute still work"""
+
+        # Function without @functools.wraps
+        def outer():
+            def inner():
+                return 42
+
+            # Manually set attributes but NOT __wrapped__
+            inner.__name__ = "fake_name"
+            return inner
+
+        func = outer()
+
+        # Should not crash, should extract from the actual function
+        attrs = extract_source_ref(func)
+
+        # Should have attributes (even if they're from the inner function)
+        assert isinstance(attrs, dict)
+        # Function name should be what we set
+        if "code.function" in attrs:
+            assert attrs["code.function"] == "fake_name"
+
 
 class TestCalcSpans:
     """Calc execution span tests"""
