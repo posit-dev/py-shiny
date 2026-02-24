@@ -70,7 +70,7 @@ def is_otel_tracing_enabled() -> bool:
     Check if OpenTelemetry tracing is enabled.
 
     This checks whether the OTel SDK is properly configured by examining if the
-    tracer provider is a real SDK TracerProvider (not the no-op ProxyTracerProvider).
+    tracer provider is a real SDK TracerProvider (or a proxy wrapping one).
     The result is cached to avoid repeated checks.
 
     Returns
@@ -87,9 +87,18 @@ def is_otel_tracing_enabled() -> bool:
             _tracing_enabled = False
         else:
             tracer_provider = trace.get_tracer_provider()
-            # Check if we have a real SDK TracerProvider (not the no-op ProxyTracerProvider)
-            # The SDK TracerProvider has span processors that record spans
-            _tracing_enabled = isinstance(tracer_provider, SDKTracerProvider)
+            # Check if we have a real SDK TracerProvider
+            if isinstance(tracer_provider, SDKTracerProvider):
+                _tracing_enabled = True
+            # Also check for proxy providers (e.g., logfire's ProxyTracerProvider)
+            # that wrap an SDK TracerProvider
+            elif hasattr(tracer_provider, "provider") and isinstance(
+                tracer_provider.provider,  # type: ignore[attr-defined]
+                SDKTracerProvider,
+            ):
+                _tracing_enabled = True
+            else:
+                _tracing_enabled = False
     return _tracing_enabled
 
 
