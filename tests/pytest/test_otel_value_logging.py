@@ -350,7 +350,8 @@ class TestValueUpdateLogging:
         value_logs = [
             log
             for log in logs
-            if log.log_record.body and "Set reactive.Value counter" in log.log_record.body
+            if log.log_record.body
+            and "Set reactive.Value counter" in log.log_record.body
         ]
         # Should have 3 logs for 3 updates
         assert len(value_logs) == 3
@@ -531,7 +532,9 @@ class TestValueNaming:
             if log.log_record.body and "Set reactive.Value" in log.log_record.body
         ]
         assert len(value_logs) >= 1
-        assert value_logs[0].log_record.body == "Set reactive.Value inferred_counter_lower"
+        assert (
+            value_logs[0].log_record.body == "Set reactive.Value inferred_counter_lower"
+        )
 
     def test_name_can_be_overridden_after_creation(self):
         """Test that Inputs can override inferred names"""

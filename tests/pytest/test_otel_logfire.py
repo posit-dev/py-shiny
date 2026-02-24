@@ -32,7 +32,6 @@ from shiny.otel._core import is_otel_tracing_enabled
 
 from .otel_helpers import reset_otel_tracing_state
 
-
 pytestmark = pytest.mark.xdist_group(name="logfire_serial")
 
 
