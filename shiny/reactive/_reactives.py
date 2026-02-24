@@ -41,7 +41,7 @@ from ..otel._core import emit_otel_log, is_otel_tracing_enabled
 from ..otel._function_attrs import resolve_func_otel_level
 from ..otel._labels import (
     create_otel_label,
-    create_otel_label_str,
+    create_otel_span_name,
     get_otel_label_modifier,
     set_otel_label_modifier,
 )
@@ -384,7 +384,7 @@ class Value(Generic[T]):
         ):
             if self._otel_label is None:
                 # Lazily initialize the OTel label on first set, when we have the name available
-                self._otel_label = create_otel_label_str(
+                self._otel_label = create_otel_label(
                     "Set reactive.value",
                     self._name,
                     namespace=self._otel_namespace,
@@ -502,9 +502,9 @@ class Calc_(Generic[T]):
         self._otel_attrs: SourceRefAttrs = self._extract_otel_attrs(fn)
 
         # Extract modifier from function attribute and generate label
-        self._otel_label: str = create_otel_label(
+        self._otel_label: str = create_otel_span_name(
             fn,
-            "reactive",
+            "reactive.calc",
             session=self._session,
             modifier=get_otel_label_modifier(fn),
         )
@@ -775,9 +775,9 @@ class Effect_:
         self._otel_attrs: SourceRefAttrs = self._extract_otel_attrs(fn)
 
         # Extract modifier from function attribute and generate label
-        self._otel_label: str = create_otel_label(
+        self._otel_label: str = create_otel_span_name(
             fn,
-            "effect",
+            "reactive.effect",
             session=self._session,
             modifier=get_otel_label_modifier(fn),
         )

@@ -13,20 +13,20 @@ if TYPE_CHECKING:
     from ..session import Session
 
 __all__ = [
+    "create_otel_span_name",
     "create_otel_label",
-    "create_otel_label_str",
     "get_otel_label_modifier",
     "set_otel_label_modifier",
 ]
 
 
-def create_otel_label_str(
+def create_otel_label(
     label_type: str,
     name: str | None,
     namespace: str | None = None,
 ) -> str:
     """
-    Create a raw OTel label without modifiers.
+    Create an OTel label without modifiers.
 
     This is a lower-level function that constructs the label based on the type,
     name, and optional namespace string. It does not handle modifiers or session
@@ -36,7 +36,7 @@ def create_otel_label_str(
     Parameters
     ----------
     label_type
-        The type of reactive computation (e.g., "reactive", "effect", "output").
+        The type of reactive computation (e.g., "reactive.calc", "reactive.effect", "output").
     name
         The base name to include in the label (e.g., function name).
     namespace
@@ -45,17 +45,17 @@ def create_otel_label_str(
     Returns
     -------
     str
-        A raw span label in the format:
-        - "reactive myValue" (no namespace)
-        - "reactive mod1:myValue" (with namespace)
+        A span label in the format:
+        - "reactive.calc myValue" (no namespace)
+        - "reactive.calc mod1:myValue" (with namespace)
 
     Examples
     --------
-    >>> create_otel_label_str("reactive", "myValue")
-    'reactive myValue'
+    >>> create_otel_label("reactive.calc", "myValue")
+    'reactive.calc myValue'
 
-    >>> create_otel_label_str("reactive", "myValue", namespace="mod1")
-    'reactive mod1:myValue'
+    >>> create_otel_label("reactive.calc", "myValue", namespace="mod1")
+    'reactive.calc mod1:myValue'
     """
 
     if name is None or name == "" or name == "_" or name == "<lambda>":
@@ -67,7 +67,7 @@ def create_otel_label_str(
     return f"{label_type} {name}"
 
 
-def create_otel_label(
+def create_otel_span_name(
     func: Callable[..., Any],
     label_type: str,
     session: "Session | None" = None,
@@ -82,8 +82,8 @@ def create_otel_label(
         The reactive function to generate a label for.
     label_type
         The type of reactive computation. Common values:
-        - "reactive" for Calc
-        - "effect" for Effect
+        - "reactive.calc" for Calc
+        - "reactive.effect" for Effect
         - "output" for Output rendering
     session
         Optional session to extract namespace from. If provided and the session
@@ -95,24 +95,24 @@ def create_otel_label(
     -------
     str
         A descriptive span label in the format:
-        - "reactive myValue" (for simple calc)
-        - "reactive cache myValue" (with modifier)
-        - "reactive mod:myValue" (with namespace)
-        - "reactive cache mod:myValue" (with namespace and modifier)
-        - "effect <anonymous>" (for lambda function)
+        - "reactive.calc myValue"
+        - "reactive.calc cache myValue" (with modifier)
+        - "reactive.calc mod:myValue" (with namespace)
+        - "reactive.calc cache mod:myValue" (with namespace and modifier)
+        - "reactive.effect <anonymous>" (for lambda function)
 
     Examples
     --------
     >>> def my_calc():
     ...     return 42
-    >>> create_otel_label(my_calc, "reactive")
-    'reactive my_calc'
+    >>> create_otel_span_name(my_calc, "reactive.calc")
+    'reactive.calc my_calc'
 
-    >>> create_otel_label(lambda: 42, "effect")
+    >>> create_otel_span_name(lambda: 42, "effect")
     'effect <anonymous>'
 
-    >>> create_otel_label(my_calc, "reactive", session=mock_session, modifier="cache")
-    'reactive cache mod:my_calc'
+    >>> create_otel_span_name(my_calc, "reactive.calc", session=mock_session, modifier="cache")
+    'reactive.calc cache mod:my_calc'
     """
     # Extract function name
     name = getattr(func, "__name__", None)
@@ -129,7 +129,7 @@ def create_otel_label(
     if modifier:
         label_type = f"{label_type} {modifier}"
 
-    return create_otel_label_str(label_type, name, namespace=namespace)
+    return create_otel_label(label_type, name, namespace=namespace)
 
 
 def get_otel_label_modifier(func: Callable[..., Any]) -> Optional[str]:
@@ -175,7 +175,7 @@ def get_otel_label_modifier(func: Callable[..., Any]) -> Optional[str]:
     See Also
     --------
     set_otel_label_modifier : Set the modifier on a function.
-    create_otel_label : Create a span label including the modifier.
+    create_otel_span_name : Create a span label including the modifier.
     """
     return getattr(func, FUNC_ATTR_OTEL_LABEL_MODIFIER, None)
 
@@ -254,7 +254,7 @@ def set_otel_label_modifier(
     See Also
     --------
     get_otel_label_modifier : Retrieve the modifier from a function.
-    create_otel_label : Create a span label including the modifier.
+    create_otel_span_name : Create a span label including the modifier.
     """
     # Validate mode first
     if mode not in ("prepend", "append", "replace"):
