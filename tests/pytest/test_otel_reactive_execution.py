@@ -7,7 +7,7 @@ Tests cover:
 - Output rendering span creation
 - Label generation for reactive computations
 - Source code attribute extraction
-- Span parent-child relationships (reactive.update → calc/effect/output)
+- Span parent-child relationships (reactive_update → calc/effect/output)
 - Collection level controls
 """
 
@@ -21,7 +21,7 @@ from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanE
 
 from shiny.otel._attributes import extract_source_ref
 from shiny.otel._collect import OtelCollectLevel
-from shiny.otel._labels import create_otel_label
+from shiny.otel._labels import create_otel_span_name
 from shiny.otel._span_wrappers import shiny_otel_span
 from shiny.reactive import Calc_, Effect_
 
@@ -31,21 +31,21 @@ from .otel_helpers import get_exported_spans, patch_otel_tracing_state
 class TestLabelGeneration:
     """Label generation tests"""
 
-    def test_create_otel_label_for_calc(self):
+    def test_create_otel_span_name_for_calc(self):
         """Test generating label for a calc with function name"""
 
         def my_calc():
             return 42
 
-        label = create_otel_label(my_calc, "reactive")
-        assert label == "reactive my_calc"
+        label = create_otel_span_name(my_calc, "reactive.calc")
+        assert label == "reactive.calc my_calc"
 
-    def test_create_otel_label_for_lambda(self):
+    def test_create_otel_span_name_for_lambda(self):
         """Test generating label for anonymous/lambda function"""
-        label = create_otel_label(lambda: 42, "reactive")
-        assert label == "reactive <anonymous>"
+        label = create_otel_span_name(lambda: 42, "reactive.effect")
+        assert label == "reactive.effect <anonymous>"
 
-    def test_create_otel_label_with_namespace(self):
+    def test_create_otel_span_name_with_namespace(self):
         """Test generating label with namespace prefix"""
         from unittest.mock import Mock
 
@@ -58,19 +58,19 @@ class TestLabelGeneration:
         mock_session = Mock()
         mock_session.ns = ResolvedId("mod")
 
-        label = create_otel_label(my_calc, "reactive", session=mock_session)
-        assert label == "reactive mod:my_calc"
+        label = create_otel_span_name(my_calc, "reactive.calc", session=mock_session)
+        assert label == "reactive.calc mod:my_calc"
 
-    def test_create_otel_label_with_modifier(self):
+    def test_create_otel_span_name_with_modifier(self):
         """Test generating label with modifier (e.g., cache)"""
 
         def my_calc():
             return 42
 
-        label = create_otel_label(my_calc, "reactive", modifier="cache")
-        assert label == "reactive cache my_calc"
+        label = create_otel_span_name(my_calc, "reactive.calc", modifier="cache")
+        assert label == "reactive.calc cache my_calc"
 
-    def test_create_otel_label_with_namespace_and_modifier(self):
+    def test_create_otel_span_name_with_namespace_and_modifier(self):
         """Test generating label with both namespace and modifier"""
         from unittest.mock import Mock
 
@@ -83,10 +83,10 @@ class TestLabelGeneration:
         mock_session = Mock()
         mock_session.ns = ResolvedId("mod")
 
-        label = create_otel_label(
-            my_calc, "reactive", session=mock_session, modifier="cache"
+        label = create_otel_span_name(
+            my_calc, "reactive.calc", session=mock_session, modifier="cache"
         )
-        assert label == "reactive cache mod:my_calc"
+        assert label == "reactive.calc cache mod:my_calc"
 
     def test_generate_observe_label(self):
         """Test generating label for effect (observe)"""
@@ -94,8 +94,8 @@ class TestLabelGeneration:
         def my_effect():
             pass
 
-        label = create_otel_label(my_effect, "effect")
-        assert label == "effect my_effect"
+        label = create_otel_span_name(my_effect, "reactive.effect")
+        assert label == "reactive.effect my_effect"
 
     def test_generate_output_label(self):
         """Test generating label for output rendering"""
@@ -103,7 +103,7 @@ class TestLabelGeneration:
         def my_output():
             return "text"
 
-        label = create_otel_label(my_output, "output")
+        label = create_otel_span_name(my_output, "output")
         assert label == "output my_output"
 
 
@@ -237,7 +237,7 @@ class TestReactiveEventModifier:
         calc = Calc_(my_calc)
 
         # The calc should have generated label with "event" modifier
-        assert calc._otel_label == "reactive event my_calc"
+        assert calc._otel_label == "reactive.calc event my_calc"
 
     def test_effect_extracts_event_modifier(self):
         """Test that Effect_ extracts modifier from @reactive.event decorated function"""
@@ -252,7 +252,7 @@ class TestReactiveEventModifier:
         effect = Effect_(my_effect, session=None)
 
         # The effect should have generated label with "event" modifier
-        assert effect._otel_label == "effect event my_effect"
+        assert effect._otel_label == "reactive.effect event my_effect"
 
     def test_calc_without_modifier_has_no_modifier_in_label(self):
         """Test that Calc_ without modifier has clean label"""
@@ -263,7 +263,7 @@ class TestReactiveEventModifier:
         calc = Calc_(my_calc)
 
         # The calc should have label without modifier
-        assert calc._otel_label == "reactive my_calc"
+        assert calc._otel_label == "reactive.calc my_calc"
 
     def test_effect_without_modifier_has_no_modifier_in_label(self):
         """Test that Effect_ without modifier has clean label"""
@@ -274,7 +274,7 @@ class TestReactiveEventModifier:
         effect = Effect_(my_effect, session=None)
 
         # The effect should have label without modifier
-        assert effect._otel_label == "effect my_effect"
+        assert effect._otel_label == "reactive.effect my_effect"
 
 
 class TestSourceReferenceExtraction:
@@ -342,7 +342,7 @@ class TestCalcSpans:
                     call_args = mock_span.call_args
                     # Verify the label string was passed
                     label = call_args[0][0]
-                    assert label == "reactive my_calc"
+                    assert label == "reactive.calc my_calc"
                     assert call_args[1]["required_level"] == OtelCollectLevel.REACTIVITY
 
     @pytest.mark.asyncio
@@ -398,7 +398,7 @@ class TestCalcSpans:
 
 
 class TestEffectSpans:
-    """Effect execution span tests"""
+    """Reactive Effect execution span tests"""
 
     @pytest.mark.asyncio
     async def test_effect_creates_span_when_enabled(self):
@@ -427,7 +427,7 @@ class TestEffectSpans:
                     call_args = mock_span.call_args
                     # Verify the label string was passed
                     label = call_args[0][0]
-                    assert label == "effect my_effect"
+                    assert label == "reactive.effect my_effect"
                     assert call_args[1]["required_level"] == OtelCollectLevel.REACTIVITY
 
     @pytest.mark.asyncio
@@ -501,7 +501,7 @@ class TestSpanHierarchy:
     async def test_calc_span_nested_under_reactive_update(
         self, otel_tracer_provider: Tuple[TracerProvider, InMemorySpanExporter]
     ):
-        """Test that calc spans are children of reactive.update span"""
+        """Test that calc spans are children of reactive_update span"""
         provider, memory_exporter = otel_tracer_provider
 
         with patch_otel_tracing_state(tracing_enabled=True):
@@ -515,7 +515,7 @@ class TestSpanHierarchy:
 
                 # Manually create flush span and execute calc inside it
                 async with shiny_otel_span(
-                    "reactive.update",
+                    "reactive_update",
                     required_level=OtelCollectLevel.REACTIVE_UPDATE,
                 ):
                     await calc.update_value()
@@ -526,15 +526,17 @@ class TestSpanHierarchy:
         # Filter out internal OTel spans
         app_spans = [s for s in spans if not s.name.startswith("_otel")]
 
-        # Should have 2 spans: reactive.update and reactive my_calc
+        # Should have 2 spans: reactive_update and reactive my_calc
         assert len(app_spans) >= 2
 
         # Find the spans
-        update_span = next((s for s in app_spans if s.name == "reactive.update"), None)
-        calc_span = next((s for s in app_spans if s.name == "reactive my_calc"), None)
+        update_span = next((s for s in app_spans if s.name == "reactive_update"), None)
+        calc_span = next(
+            (s for s in app_spans if s.name == "reactive.calc my_calc"), None
+        )
 
-        assert update_span is not None, "reactive.update span should exist"
-        assert calc_span is not None, "reactive my_calc span should exist"
+        assert update_span is not None, "reactive_update span should exist"
+        assert calc_span is not None, "reactive.calc my_calc span should exist"
 
         # Verify parent-child relationship
         calc_parent = calc_span.parent
@@ -542,7 +544,7 @@ class TestSpanHierarchy:
         # Note: pyright doesn't understand that context is always present on ReadableSpan
         assert (
             calc_parent.span_id == update_span.context.span_id  # type: ignore[union-attr]
-        ), "calc parent should be reactive.update"
+        ), "reactive.calc parent should be reactive_update"
 
         # Verify they're in the same trace
         assert (

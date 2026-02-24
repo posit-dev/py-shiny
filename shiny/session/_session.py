@@ -59,7 +59,7 @@ from ..otel._attributes import (
 from ..otel._collect import OtelCollectLevel
 from ..otel._decorators import no_otel_collect
 from ..otel._function_attrs import resolve_func_otel_level
-from ..otel._labels import create_otel_label
+from ..otel._labels import create_otel_span_name
 from ..otel._span_wrappers import shiny_otel_span
 from ..reactive import Effect_, Value, effect
 from ..reactive import flush as reactive_flush
@@ -701,7 +701,7 @@ class AppSession(Session):
                                 with session_context(self):
                                     self.app.server(self.input, self.output, self)
 
-                                    # Flush here to attempt a reactive.update within `session.start` otel span.
+                                    # Flush here to attempt a reactive_update within `session.start` otel span.
                                     # Might also fix https://github.com/posit-dev/py-shiny/issues/1889
                                     await reactive_flush()
 
@@ -1874,7 +1874,7 @@ class Outputs:
 
             # Gather otel info for inner method
             renderer_func = getattr(renderer.fn, "_orig_fn", renderer.fn)
-            output_otel_label = create_otel_label(
+            output_otel_label = create_otel_span_name(
                 func=renderer_func,
                 label_type="output",
                 session=self._session,
