@@ -142,7 +142,7 @@ class TestConcurrentReactiveExecutions:
 
             # Execute them concurrently within a reactive update span
             async with shiny_otel_span(
-                "reactive.update",
+                "reactive_update",
                 required_level=OtelCollectLevel.REACTIVE_UPDATE,
             ):
                 # Start both calcs concurrently
@@ -157,7 +157,7 @@ class TestConcurrentReactiveExecutions:
         # Filter to reactive-related spans
         calc_spans = [s for s in spans if s.name.startswith("reactive")]
 
-        # Should have: 1 reactive.update + 2 reactive slow_calc spans
+        # Should have: 1 reactive_update + 2 reactive slow_calc spans
         assert len(calc_spans) >= 2  # At least the two calc spans
 
         # Verify both calcs executed
@@ -190,10 +190,10 @@ class TestConcurrentReactiveExecutions:
         # Get exported spans
         spans = get_exported_spans(provider, memory_exporter)
 
-        # Filter to reactive.update spans
-        update_spans = [s for s in spans if s.name == "reactive.update"]
+        # Filter to reactive_update spans
+        update_spans = [s for s in spans if s.name == "reactive_update"]
 
-        # Should have two separate reactive.update spans
+        # Should have two separate reactive_update spans
         assert len(update_spans) == 2
 
         # Verify they are separate spans (different span IDs)
@@ -340,13 +340,13 @@ class TestAsyncContextIsolation:
 
 
 class TestReactiveUpdateConcurrency:
-    """Test reactive.update span behavior with concurrent operations"""
+    """Test reactive_update span behavior with concurrent operations"""
 
     @pytest.mark.asyncio
     async def test_multiple_calcs_share_reactive_update_parent(
         self, otel_tracer_provider: Tuple[TracerProvider, InMemorySpanExporter]
     ):
-        """Test that multiple calcs executing in same flush share reactive.update parent"""
+        """Test that multiple calcs executing in same flush share reactive_update parent"""
         provider, memory_exporter = otel_tracer_provider
 
         async def calc_a():
@@ -364,7 +364,7 @@ class TestReactiveUpdateConcurrency:
 
             # Execute within a reactive update span
             async with shiny_otel_span(
-                "reactive.update",
+                "reactive_update",
                 required_level=OtelCollectLevel.REACTIVE_UPDATE,
             ):
                 # Execute calcs concurrently
@@ -376,8 +376,8 @@ class TestReactiveUpdateConcurrency:
         # Get exported spans
         spans = get_exported_spans(provider, memory_exporter)
 
-        # Find the reactive.update span
-        update_spans = [s for s in spans if s.name == "reactive.update"]
+        # Find the reactive_update span
+        update_spans = [s for s in spans if s.name == "reactive_update"]
         assert len(update_spans) == 1
 
         # Find the calc spans
@@ -388,7 +388,7 @@ class TestReactiveUpdateConcurrency:
         # Should have two calc spans
         assert len(calc_spans) >= 2
 
-        # Verify both calc spans have the reactive.update as parent
+        # Verify both calc spans have the reactive_update as parent
         for calc_span in calc_spans:
             assert calc_span.parent is not None
             # Note: Parent might be set via context propagation

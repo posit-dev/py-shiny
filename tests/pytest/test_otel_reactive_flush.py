@@ -2,7 +2,7 @@
 OpenTelemetry Reactive Flush Instrumentation
 
 Tests cover:
-- reactive.update span creation during flush cycles
+- reactive_update span creation during flush cycles
 - Collection level controls for REACTIVE_UPDATE level
 - Contextvar storage of spans for child reactive spans
 - Multiple flush cycles create separate spans
@@ -14,23 +14,18 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
-    InMemorySpanExporter,
-)
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
 from shiny.otel._collect import OtelCollectLevel, get_otel_collect_level
 from shiny.otel._core import is_otel_tracing_enabled
 from shiny.otel._span_wrappers import shiny_otel_span
 from shiny.reactive._core import ReactiveEnvironment
 
-from .otel_helpers import (
-    get_exported_spans,
-    patch_otel_tracing_state,
-)
+from .otel_helpers import get_exported_spans, patch_otel_tracing_state
 
 
 class TestReactiveFlushSpans:
-    """Tests for reactive.update span creation during flush cycles"""
+    """Tests for reactive_update span creation during flush cycles"""
 
     def test_reactive_update_collection_enabled_at_reactive_update_level(self):
         """Test that collection is enabled for REACTIVE_UPDATE level when SHINY_OTEL_COLLECT=reactive_update"""
@@ -78,11 +73,11 @@ class TestReactiveFlushSpans:
 
 
 class TestReactiveFlushInstrumentation:
-    """Tests for reactive.update span instrumentation in flush cycles"""
+    """Tests for reactive_update span instrumentation in flush cycles"""
 
     @pytest.mark.asyncio
     async def test_flush_creates_span_when_collecting(self):
-        """Test that flush() wraps execution in reactive.update span when collecting"""
+        """Test that flush() wraps execution in reactive_update span when collecting"""
         with patch_otel_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactive_update"}):
                 # Create a reactive environment
@@ -102,7 +97,7 @@ class TestReactiveFlushInstrumentation:
                     # Verify shiny_otel_span was called with correct parameters
                     mock_wrapper.assert_called_once()
                     args, kwargs = mock_wrapper.call_args
-                    assert args[0] == "reactive.update"
+                    assert args[0] == "reactive_update"
                     assert kwargs["required_level"] == OtelCollectLevel.REACTIVE_UPDATE
 
     @pytest.mark.asyncio
@@ -179,7 +174,7 @@ class TestReactiveFlushInstrumentation:
     async def test_span_parent_child_relationship(
         self, otel_tracer_provider: Tuple[TracerProvider, InMemorySpanExporter]
     ):
-        """Test that reactive.update span is child of parent span when nested"""
+        """Test that reactive_update span is child of parent span when nested"""
         provider, memory_exporter = otel_tracer_provider
 
         with patch_otel_tracing_state(tracing_enabled=True):
@@ -200,25 +195,25 @@ class TestReactiveFlushInstrumentation:
         # Filter out the _otel_is_recording span
         app_spans = [s for s in spans if not s.name.startswith("_otel")]
 
-        # Should have 2 spans: session.start and reactive.update
+        # Should have 2 spans: session.start and reactive_update
         assert len(app_spans) >= 2
 
-        # Find session.start and reactive.update spans
+        # Find session.start and reactive_update spans
         session_span = next((s for s in app_spans if s.name == "session.start"), None)
         reactive_span = next(
-            (s for s in app_spans if s.name == "reactive.update"), None
+            (s for s in app_spans if s.name == "reactive_update"), None
         )
 
         assert session_span is not None, "session.start span should exist"
-        assert reactive_span is not None, "reactive.update span should exist"
+        assert reactive_span is not None, "reactive_update span should exist"
 
         # Verify parent-child relationship
-        assert reactive_span.parent is not None, "reactive.update should have a parent"
-        assert reactive_span.context is not None, "reactive.update should have context"
+        assert reactive_span.parent is not None, "reactive_update should have a parent"
+        assert reactive_span.context is not None, "reactive_update should have context"
         assert session_span.context is not None, "session.start should have context"
         assert (
             reactive_span.parent.span_id == session_span.context.span_id
-        ), "reactive.update parent should be session.start"
+        ), "reactive_update parent should be session.start"
 
         # Verify they're in the same trace
         assert (

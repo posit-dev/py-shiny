@@ -113,9 +113,9 @@ When telemetry is enabled (`all` level), you'll see spans like:
 
 ```text
 session.start
-  └─ reactive.update
-      ├─ reactive result
-      ├─ effect <lambda>
+  └─ reactive_update
+      ├─ reactive.calc result
+      ├─ reactive.effect <lambda>
       └─ output result_private (suppressed with @otel_collect("none"))
 ```
 
