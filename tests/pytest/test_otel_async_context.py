@@ -61,8 +61,9 @@ class TestAsyncSpanPropagation:
         inner_span = next(s for s in app_spans if s.name == "inner.operation")
 
         # Verify parent-child relationship
-        assert inner_span.parent is not None
-        assert inner_span.parent.span_id == outer_span.context.span_id  # type: ignore[union-attr]
+        assert inner_span.parent is not None, "inner_span should have a parent"
+        assert outer_span.context is not None, "outer_span should have a context"
+        assert inner_span.parent.span_id == outer_span.context.span_id
 
     @pytest.mark.asyncio
     async def test_span_propagates_through_task(
@@ -102,8 +103,11 @@ class TestAsyncSpanPropagation:
         background_span = next(s for s in app_spans if s.name == "background.task")
 
         # Verify parent-child relationship
-        assert background_span.parent is not None
-        assert background_span.parent.span_id == main_span.context.span_id  # type: ignore[union-attr]
+        assert (
+            background_span.parent is not None
+        ), "background_span should have a parent"
+        assert main_span.context is not None, "main_span should have a context"
+        assert background_span.parent.span_id == main_span.context.span_id
 
 
 class TestConcurrentReactiveExecutions:
@@ -193,7 +197,13 @@ class TestConcurrentReactiveExecutions:
         assert len(update_spans) == 2
 
         # Verify they are separate spans (different span IDs)
-        assert update_spans[0].context.span_id != update_spans[1].context.span_id  # type: ignore[union-attr]
+        assert (
+            update_spans[0].context is not None
+        ), "update_spans[0] should have a context"
+        assert (
+            update_spans[1].context is not None
+        ), "update_spans[1] should have a context"
+        assert update_spans[0].context.span_id != update_spans[1].context.span_id
 
 
 class TestAsyncContextIsolation:
@@ -238,7 +248,14 @@ class TestAsyncContextIsolation:
         assert len(task_spans) == 3
 
         # Verify each has correct attributes
-        task_ids = {s.attributes.get("task.id") for s in task_spans}  # type: ignore[union-attr]
+        task_ids: set[str] = set()
+        for task_span in task_spans:
+            assert task_span.attributes is not None, "task_span should have attributes"
+            task_id = task_span.attributes.get("task.id")
+            assert isinstance(
+                task_id, str
+            ), f"task.id should be a string, got {type(task_id)}"
+            task_ids.add(task_id)
         assert task_ids == {"A", "B", "C"}
 
         # Verify all tasks completed
@@ -246,9 +263,12 @@ class TestAsyncContextIsolation:
 
         # Verify all task spans have the same parent (the parent.operation span)
         parent_span = next(s for s in spans if s.name == "parent.operation")
+        assert parent_span.context is not None, "parent_span should have a context"
         for task_span in task_spans:
-            assert task_span.parent is not None
-            assert task_span.parent.span_id == parent_span.context.span_id  # type: ignore[union-attr]
+            assert (
+                task_span.parent is not None
+            ), f"task_span {task_span.name} should have a parent"
+            assert task_span.parent.span_id == parent_span.context.span_id
 
     @pytest.mark.asyncio
     async def test_nested_async_contexts_maintain_hierarchy(
@@ -304,16 +324,19 @@ class TestAsyncContextIsolation:
         level_3_span = span_map["level.3"]
 
         # level.1 should be child of level.0
-        assert level_1_span.parent is not None
-        assert level_1_span.parent.span_id == level_0_span.context.span_id  # type: ignore[union-attr]
+        assert level_1_span.parent is not None, "level.1 should have a parent"
+        assert level_0_span.context is not None, "level.0 should have a context"
+        assert level_1_span.parent.span_id == level_0_span.context.span_id
 
         # level.2 should be child of level.1
-        assert level_2_span.parent is not None
-        assert level_2_span.parent.span_id == level_1_span.context.span_id  # type: ignore[union-attr]
+        assert level_2_span.parent is not None, "level.2 should have a parent"
+        assert level_1_span.context is not None, "level.1 should have a context"
+        assert level_2_span.parent.span_id == level_1_span.context.span_id
 
         # level.3 should be child of level.2
-        assert level_3_span.parent is not None
-        assert level_3_span.parent.span_id == level_2_span.context.span_id  # type: ignore[union-attr]
+        assert level_3_span.parent is not None, "level.3 should have a parent"
+        assert level_2_span.context is not None, "level.2 should have a context"
+        assert level_3_span.parent.span_id == level_2_span.context.span_id
 
 
 class TestReactiveUpdateConcurrency:
