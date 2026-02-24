@@ -185,7 +185,7 @@ class TestValueUpdateLogging:
                     val._name = "test_value"
 
                     # Set the value
-                    val._set(42)
+                    val.set(42)
 
         # Check logs
         provider.force_flush()
@@ -195,13 +195,13 @@ class TestValueUpdateLogging:
         value_logs = [
             log
             for log in logs
-            if log.log_record.body and "Set reactive.Value" in log.log_record.body
+            if log.log_record.body and "Set reactive.value" in log.log_record.body
         ]
         assert len(value_logs) >= 1
 
         # Check the log details
         log = value_logs[0]
-        assert log.log_record.body == "Set reactive.Value test_value"
+        assert log.log_record.body == "Set reactive.value test_value"
         assert log.log_record.severity_text == "DEBUG"
 
         # Check session ID attribute
@@ -222,7 +222,7 @@ class TestValueUpdateLogging:
                 with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
                     val = reactive.Value[int]()
                     val._name = "my_input"
-                    val._set(100)
+                    val.set(100)
 
         provider.force_flush()
         logs = exporter.get_finished_logs()
@@ -230,20 +230,24 @@ class TestValueUpdateLogging:
         value_logs = [
             log
             for log in logs
-            if log.log_record.body and "Set reactive.Value" in log.log_record.body
+            if log.log_record.body and "Set reactive.value" in log.log_record.body
         ]
         assert len(value_logs) >= 1
-        assert value_logs[0].log_record.body == "Set reactive.Value mymodule:my_input"
+        assert value_logs[0].log_record.body == "Set reactive.value mymodule:my_input"
 
     def test_value_set_unnamed(self, otel_log_provider_and_exporter, mock_session):
-        """Test that unnamed values log as <unnamed>"""
+        """Test that unnamed values log as <anonymous>"""
         provider, exporter = otel_log_provider_and_exporter
         with session_context(mock_session):
             with patch_otel_tracing_state(tracing_enabled=True):
                 with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
                     val = reactive.Value[int]()
-                    # Don't set name
-                    val._set(42)
+                    val._name = ""
+                    val.set(42)
+
+                    val2 = reactive.Value[int]()
+                    val2._name = None
+                    val2.set(42)
 
         provider.force_flush()
         logs = exporter.get_finished_logs()
@@ -251,10 +255,35 @@ class TestValueUpdateLogging:
         value_logs = [
             log
             for log in logs
-            if log.log_record.body and "Set reactive.Value" in log.log_record.body
+            if log.log_record.body and "Set reactive.value" in log.log_record.body
+        ]
+        assert len(value_logs) >= 2
+        assert value_logs[0].log_record.body == "Set reactive.value <anonymous>"
+        assert value_logs[1].log_record.body == "Set reactive.value <anonymous>"
+
+    def test_name_unset_from_fn(self, otel_log_provider_and_exporter, mock_session):
+        """Test that if name is unset from function, it logs as <anonymous>"""
+        provider, exporter = otel_log_provider_and_exporter
+
+        def make_value():
+            return reactive.Value[int]()
+
+        with session_context(mock_session):
+            with patch_otel_tracing_state(tracing_enabled=True):
+                with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
+                    val = make_value()
+                    val.set(42)
+
+        provider.force_flush()
+        logs = exporter.get_finished_logs()
+
+        value_logs = [
+            log
+            for log in logs
+            if log.log_record.body and "Set reactive.value" in log.log_record.body
         ]
         assert len(value_logs) >= 1
-        assert value_logs[0].log_record.body == "Set reactive.Value <unnamed>"
+        assert value_logs[0].log_record.body == "Set reactive.value <anonymous>"
 
     def test_value_set_no_session(self, otel_log_provider_and_exporter):
         """Test that value updates work without a session"""
@@ -263,7 +292,7 @@ class TestValueUpdateLogging:
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
                 val = reactive.Value[int]()
                 val._name = "standalone_value"
-                val._set(42)
+                val.set(42)
 
         provider.force_flush()
         logs = exporter.get_finished_logs()
@@ -271,10 +300,10 @@ class TestValueUpdateLogging:
         value_logs = [
             log
             for log in logs
-            if log.log_record.body and "Set reactive.Value" in log.log_record.body
+            if log.log_record.body and "Set reactive.value" in log.log_record.body
         ]
         assert len(value_logs) >= 1
-        assert value_logs[0].log_record.body == "Set reactive.Value standalone_value"
+        assert value_logs[0].log_record.body == "Set reactive.value standalone_value"
 
         # Session ID should not be present
         attrs = value_logs[0].log_record.attributes
@@ -291,7 +320,7 @@ class TestValueUpdateLogging:
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
                 val = reactive.Value[int]()
                 val._name = "test_value"
-                val._set(42)
+                val.set(42)
 
         provider.force_flush()
         logs = exporter.get_finished_logs()
@@ -300,7 +329,7 @@ class TestValueUpdateLogging:
         value_logs = [
             log
             for log in logs
-            if log.log_record.body and "Set reactive.Value" in log.log_record.body
+            if log.log_record.body and "Set reactive.value" in log.log_record.body
         ]
         assert len(value_logs) == 0
 
@@ -315,7 +344,7 @@ class TestValueUpdateLogging:
                 with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "session"}):
                     val = reactive.Value[int]()
                     val._name = "test_value"
-                    val._set(42)
+                    val.set(42)
 
         provider.force_flush()
         logs = exporter.get_finished_logs()
@@ -324,7 +353,7 @@ class TestValueUpdateLogging:
         value_logs = [
             log
             for log in logs
-            if log.log_record.body and "Set reactive.Value" in log.log_record.body
+            if log.log_record.body and "Set reactive.value" in log.log_record.body
         ]
         assert len(value_logs) == 0
 
@@ -340,9 +369,9 @@ class TestValueUpdateLogging:
                     val._name = "counter"
 
                     # Set multiple times
-                    val._set(1)
-                    val._set(2)
-                    val._set(3)
+                    val.set(1)
+                    val.set(2)
+                    val.set(3)
 
         provider.force_flush()
         logs = exporter.get_finished_logs()
@@ -351,7 +380,7 @@ class TestValueUpdateLogging:
             log
             for log in logs
             if log.log_record.body
-            and "Set reactive.Value counter" in log.log_record.body
+            and "Set reactive.value counter" in log.log_record.body
         ]
         # Should have 3 logs for 3 updates
         assert len(value_logs) == 3
@@ -369,7 +398,7 @@ class TestValueUpdateLogging:
 
                     # Clear any initial logs
                     # Set to same value - should return False and not log
-                    result = val._set(42)
+                    result = val.set(42)
                     assert result is False
 
         provider.force_flush()
@@ -379,9 +408,53 @@ class TestValueUpdateLogging:
         value_logs = [
             log
             for log in logs
-            if log.log_record.body and "Set reactive.Value" in log.log_record.body
+            if log.log_record.body and "Set reactive.value" in log.log_record.body
         ]
         assert len(value_logs) == 0
+
+    def test_read_only_attribute_in_logs(
+        self, otel_log_provider_and_exporter, mock_session
+    ):
+        """Test that read-only values have read-only attribute in logs"""
+        provider, exporter = otel_log_provider_and_exporter
+        with session_context(mock_session):
+            with patch_otel_tracing_state(tracing_enabled=True):
+                with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
+                    # Create read-only value
+                    readonly_val = reactive.Value[int](42, read_only=True)
+                    readonly_val._name = "readonly_val"
+                    readonly_val._set(100)  # Use _set to bypass read-only check
+
+                    # Create regular (non-read-only) value
+                    regular_val = reactive.Value[int]()
+                    regular_val._name = "regular_val"
+                    regular_val.set(200)
+
+        provider.force_flush()
+        logs = exporter.get_finished_logs()
+
+        # Find read-only value log
+        readonly_logs = [
+            log
+            for log in logs
+            if log.log_record.body and "readonly_val" in log.log_record.body
+        ]
+        assert len(readonly_logs) >= 1
+        readonly_log = readonly_logs[0]
+        assert readonly_log.log_record.attributes is not None
+        assert readonly_log.log_record.attributes.get("read-only") is True
+
+        # Find regular value log - should have read-only=False
+        regular_logs = [
+            log
+            for log in logs
+            if log.log_record.body and "regular_val" in log.log_record.body
+        ]
+        assert len(regular_logs) >= 1
+        regular_log = regular_logs[0]
+        assert regular_log.log_record.attributes is not None
+        # read-only attribute should not exist for non-read-only values
+        assert "read-only" not in regular_log.log_record.attributes
 
 
 class TestValueNaming:
@@ -477,7 +550,7 @@ class TestValueNaming:
             with patch_otel_tracing_state(tracing_enabled=True):
                 with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
                     val = reactive.Value(0, name="explicit_counter")
-                    val._set(42)
+                    val.set(42)
 
         provider.force_flush()
         logs = exporter.get_finished_logs()
@@ -485,10 +558,10 @@ class TestValueNaming:
         value_logs = [
             log
             for log in logs
-            if log.log_record.body and "Set reactive.Value" in log.log_record.body
+            if log.log_record.body and "Set reactive.value" in log.log_record.body
         ]
         assert len(value_logs) >= 1
-        assert value_logs[0].log_record.body == "Set reactive.Value explicit_counter"
+        assert value_logs[0].log_record.body == "Set reactive.value explicit_counter"
 
     def test_inferred_name_used_in_logging(
         self, otel_log_provider_and_exporter, mock_session
@@ -499,7 +572,7 @@ class TestValueNaming:
             with patch_otel_tracing_state(tracing_enabled=True):
                 with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
                     inferred_counter = reactive.Value(0)
-                    inferred_counter._set(42)
+                    inferred_counter.set(42)
 
         provider.force_flush()
         logs = exporter.get_finished_logs()
@@ -507,10 +580,10 @@ class TestValueNaming:
         value_logs = [
             log
             for log in logs
-            if log.log_record.body and "Set reactive.Value" in log.log_record.body
+            if log.log_record.body and "Set reactive.value" in log.log_record.body
         ]
         assert len(value_logs) >= 1
-        assert value_logs[0].log_record.body == "Set reactive.Value inferred_counter"
+        assert value_logs[0].log_record.body == "Set reactive.value inferred_counter"
 
     def test_inferred_name_used_in_logging_lowercase(
         self, otel_log_provider_and_exporter, mock_session
@@ -521,7 +594,7 @@ class TestValueNaming:
             with patch_otel_tracing_state(tracing_enabled=True):
                 with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
                     inferred_counter_lower = reactive.value(0)
-                    inferred_counter_lower._set(42)
+                    inferred_counter_lower.set(42)
 
         provider.force_flush()
         logs = exporter.get_finished_logs()
@@ -529,11 +602,11 @@ class TestValueNaming:
         value_logs = [
             log
             for log in logs
-            if log.log_record.body and "Set reactive.Value" in log.log_record.body
+            if log.log_record.body and "Set reactive.value" in log.log_record.body
         ]
         assert len(value_logs) >= 1
         assert (
-            value_logs[0].log_record.body == "Set reactive.Value inferred_counter_lower"
+            value_logs[0].log_record.body == "Set reactive.value inferred_counter_lower"
         )
 
     def test_name_can_be_overridden_after_creation(self):
@@ -620,7 +693,7 @@ class TestValueSourceReference:
             with patch_otel_tracing_state(tracing_enabled=True):
                 with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
                     val = reactive.Value(0, name="test_value")
-                    val._set(42)  # This line should be captured in source ref
+                    val.set(42)  # This line should be captured in source ref
 
         provider.force_flush()
         logs = exporter.get_finished_logs()
@@ -628,7 +701,7 @@ class TestValueSourceReference:
         value_logs = [
             log
             for log in logs
-            if log.log_record.body and "Set reactive.Value" in log.log_record.body
+            if log.log_record.body and "Set reactive.value" in log.log_record.body
         ]
         assert len(value_logs) >= 1
 
@@ -650,7 +723,7 @@ class TestValueSourceReference:
         with patch_otel_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
                 val = reactive.Value(0, name="standalone")
-                val._set(100)
+                val.set(100)
 
         provider.force_flush()
         logs = exporter.get_finished_logs()
@@ -658,7 +731,7 @@ class TestValueSourceReference:
         value_logs = [
             log
             for log in logs
-            if log.log_record.body and "Set reactive.Value" in log.log_record.body
+            if log.log_record.body and "Set reactive.value" in log.log_record.body
         ]
         assert len(value_logs) >= 1
 
