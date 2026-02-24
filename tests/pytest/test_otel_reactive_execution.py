@@ -333,19 +333,19 @@ class TestSourceReferenceExtraction:
 
         # Should extract from the ORIGINAL function, not the wrapper
         assert "code.function" in attrs
-        assert attrs["code.function"] == "original_function", (
-            f"Should have original function name, got: {attrs.get('code.function')}"
-        )
+        assert (
+            attrs["code.function"] == "original_function"
+        ), f"Should have original function name, got: {attrs.get('code.function')}"
 
         assert "code.filepath" in attrs
-        assert attrs["code.filepath"].endswith("test_otel_reactive_execution.py"), (
-            f"Should point to this test file, got: {attrs['code.filepath']}"
-        )
+        assert attrs["code.filepath"].endswith(
+            "test_otel_reactive_execution.py"
+        ), f"Should point to this test file, got: {attrs['code.filepath']}"
 
         assert "code.lineno" in attrs
-        assert attrs["code.lineno"] == original_line, (
-            f"Should have original line number ({original_line}), got: {attrs.get('code.lineno')}"
-        )
+        assert (
+            attrs["code.lineno"] == original_line
+        ), f"Should have original line number ({original_line}), got: {attrs.get('code.lineno')}"
 
     def test_extract_source_ref_from_nested_wrapped_functions(self):
         """Test extract_source_ref with multiple layers of wrapping"""
@@ -378,7 +378,7 @@ class TestSourceReferenceExtraction:
 
     def test_extract_source_ref_from_reactive_event_decorator(self):
         """Test that @reactive.event decorated functions unwrap correctly"""
-        from shiny.reactive import event, Value
+        from shiny.reactive import Value, event
 
         # Create a reactive value to use as event trigger
         trigger = Value(0)
@@ -397,14 +397,14 @@ class TestSourceReferenceExtraction:
 
         # Should extract from original function, not the event wrapper
         assert "code.function" in attrs
-        assert attrs["code.function"] == "my_effect", (
-            f"Should have original function name, got: {attrs.get('code.function')}"
-        )
+        assert (
+            attrs["code.function"] == "my_effect"
+        ), f"Should have original function name, got: {attrs.get('code.function')}"
 
         assert "code.lineno" in attrs
-        assert attrs["code.lineno"] == original_line, (
-            f"Should have original line number ({original_line}), got: {attrs.get('code.lineno')}"
-        )
+        assert (
+            attrs["code.lineno"] == original_line
+        ), f"Should have original line number ({original_line}), got: {attrs.get('code.lineno')}"
 
     def test_extract_source_ref_from_unwrappable_function(self):
         """Test that functions without __wrapped__ attribute still work"""

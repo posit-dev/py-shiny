@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from shiny.otel._decorators import no_otel_collect
-
 __all__ = ("input_task_button",)
 
 from functools import partial
@@ -12,6 +10,7 @@ from htmltools import HTML, Tag, TagAttrValue, TagChild, css, tags
 from .._docstring import add_example
 from .._typing_extensions import ParamSpec
 from ..module import resolve_id
+from ..otel._decorators import no_otel_collect
 from ..reactive._extended_task import ExtendedTask
 from ..reactive._reactives import effect
 from ..types import MISSING, MISSING_TYPE
