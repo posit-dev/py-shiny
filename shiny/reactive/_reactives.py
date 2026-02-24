@@ -381,7 +381,7 @@ class Value(Generic[T]):
                 if ns_str:  # Only use non-empty namespaces
                     value_name = f"{ns_str}:{value_name}"
 
-            log_body = f"Set reactiveVal {value_name}"
+            log_body = f"Set reactive.Value {value_name}"
 
             # Build attributes dict with session ID and source reference
             attributes = {

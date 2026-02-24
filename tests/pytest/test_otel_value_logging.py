@@ -195,13 +195,13 @@ class TestValueUpdateLogging:
         value_logs = [
             log
             for log in logs
-            if log.log_record.body and "Set reactiveVal" in log.log_record.body
+            if log.log_record.body and "Set reactive.Value" in log.log_record.body
         ]
         assert len(value_logs) >= 1
 
         # Check the log details
         log = value_logs[0]
-        assert log.log_record.body == "Set reactiveVal test_value"
+        assert log.log_record.body == "Set reactive.Value test_value"
         assert log.log_record.severity_text == "DEBUG"
 
         # Check session ID attribute
@@ -230,10 +230,10 @@ class TestValueUpdateLogging:
         value_logs = [
             log
             for log in logs
-            if log.log_record.body and "Set reactiveVal" in log.log_record.body
+            if log.log_record.body and "Set reactive.Value" in log.log_record.body
         ]
         assert len(value_logs) >= 1
-        assert value_logs[0].log_record.body == "Set reactiveVal mymodule:my_input"
+        assert value_logs[0].log_record.body == "Set reactive.Value mymodule:my_input"
 
     def test_value_set_unnamed(self, otel_log_provider_and_exporter, mock_session):
         """Test that unnamed values log as <unnamed>"""
@@ -251,10 +251,10 @@ class TestValueUpdateLogging:
         value_logs = [
             log
             for log in logs
-            if log.log_record.body and "Set reactiveVal" in log.log_record.body
+            if log.log_record.body and "Set reactive.Value" in log.log_record.body
         ]
         assert len(value_logs) >= 1
-        assert value_logs[0].log_record.body == "Set reactiveVal <unnamed>"
+        assert value_logs[0].log_record.body == "Set reactive.Value <unnamed>"
 
     def test_value_set_no_session(self, otel_log_provider_and_exporter):
         """Test that value updates work without a session"""
@@ -271,10 +271,10 @@ class TestValueUpdateLogging:
         value_logs = [
             log
             for log in logs
-            if log.log_record.body and "Set reactiveVal" in log.log_record.body
+            if log.log_record.body and "Set reactive.Value" in log.log_record.body
         ]
         assert len(value_logs) >= 1
-        assert value_logs[0].log_record.body == "Set reactiveVal standalone_value"
+        assert value_logs[0].log_record.body == "Set reactive.Value standalone_value"
 
         # Session ID should not be present
         attrs = value_logs[0].log_record.attributes
@@ -300,7 +300,7 @@ class TestValueUpdateLogging:
         value_logs = [
             log
             for log in logs
-            if log.log_record.body and "Set reactiveVal" in log.log_record.body
+            if log.log_record.body and "Set reactive.Value" in log.log_record.body
         ]
         assert len(value_logs) == 0
 
@@ -324,7 +324,7 @@ class TestValueUpdateLogging:
         value_logs = [
             log
             for log in logs
-            if log.log_record.body and "Set reactiveVal" in log.log_record.body
+            if log.log_record.body and "Set reactive.Value" in log.log_record.body
         ]
         assert len(value_logs) == 0
 
@@ -350,7 +350,7 @@ class TestValueUpdateLogging:
         value_logs = [
             log
             for log in logs
-            if log.log_record.body and "Set reactiveVal counter" in log.log_record.body
+            if log.log_record.body and "Set reactive.Value counter" in log.log_record.body
         ]
         # Should have 3 logs for 3 updates
         assert len(value_logs) == 3
@@ -378,7 +378,7 @@ class TestValueUpdateLogging:
         value_logs = [
             log
             for log in logs
-            if log.log_record.body and "Set reactiveVal" in log.log_record.body
+            if log.log_record.body and "Set reactive.Value" in log.log_record.body
         ]
         assert len(value_logs) == 0
 
@@ -484,10 +484,10 @@ class TestValueNaming:
         value_logs = [
             log
             for log in logs
-            if log.log_record.body and "Set reactiveVal" in log.log_record.body
+            if log.log_record.body and "Set reactive.Value" in log.log_record.body
         ]
         assert len(value_logs) >= 1
-        assert value_logs[0].log_record.body == "Set reactiveVal explicit_counter"
+        assert value_logs[0].log_record.body == "Set reactive.Value explicit_counter"
 
     def test_inferred_name_used_in_logging(
         self, otel_log_provider_and_exporter, mock_session
@@ -506,10 +506,10 @@ class TestValueNaming:
         value_logs = [
             log
             for log in logs
-            if log.log_record.body and "Set reactiveVal" in log.log_record.body
+            if log.log_record.body and "Set reactive.Value" in log.log_record.body
         ]
         assert len(value_logs) >= 1
-        assert value_logs[0].log_record.body == "Set reactiveVal inferred_counter"
+        assert value_logs[0].log_record.body == "Set reactive.Value inferred_counter"
 
     def test_inferred_name_used_in_logging_lowercase(
         self, otel_log_provider_and_exporter, mock_session
@@ -528,10 +528,10 @@ class TestValueNaming:
         value_logs = [
             log
             for log in logs
-            if log.log_record.body and "Set reactiveVal" in log.log_record.body
+            if log.log_record.body and "Set reactive.Value" in log.log_record.body
         ]
         assert len(value_logs) >= 1
-        assert value_logs[0].log_record.body == "Set reactiveVal inferred_counter_lower"
+        assert value_logs[0].log_record.body == "Set reactive.Value inferred_counter_lower"
 
     def test_name_can_be_overridden_after_creation(self):
         """Test that Inputs can override inferred names"""
@@ -625,7 +625,7 @@ class TestValueSourceReference:
         value_logs = [
             log
             for log in logs
-            if log.log_record.body and "Set reactiveVal" in log.log_record.body
+            if log.log_record.body and "Set reactive.Value" in log.log_record.body
         ]
         assert len(value_logs) >= 1
 
@@ -655,7 +655,7 @@ class TestValueSourceReference:
         value_logs = [
             log
             for log in logs
-            if log.log_record.body and "Set reactiveVal" in log.log_record.body
+            if log.log_record.body and "Set reactive.Value" in log.log_record.body
         ]
         assert len(value_logs) >= 1
 
