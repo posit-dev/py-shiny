@@ -1,6 +1,6 @@
 # OpenTelemetry Collection Control Example
 
-This example demonstrates how to control Shiny's OpenTelemetry collection levels using the `otel_collect` context manager and decorator.
+This example demonstrates how to control Shiny's OpenTelemetry collection levels using the `shiny.otel.otel_collect` context manager and decorator.
 
 ## Overview
 
@@ -12,6 +12,29 @@ The `otel_collect` function allows you to dynamically control which **Shiny inte
 - **Compliance**: Ensure sensitive data isn't inadvertently sent to telemetry backends
 
 **Important**: `otel_collect` only affects Shiny's internal spans and logs (session lifecycle, reactive execution, value updates, etc.). Any OpenTelemetry spans you create manually in your application code are unaffected and will continue to be recorded normally.
+
+**Note on Timing**: Collection levels are captured when reactive objects (`Value`, `Calc`, `Effect`) are **created**, not when they are executed. This means:
+
+```python
+# Collection level is captured when reactive.calc() creates the Calc object
+with otel_collect("none"):
+    @reactive.calc
+    def my_calc():
+        return expensive_computation()
+
+# Later execution of my_calc() uses the "none" level that was active during creation,
+# even if the current level has changed
+```
+
+If you need to dynamically control telemetry at execution time, use `otel_collect` inside the reactive function body:
+
+```python
+@reactive.calc
+def my_calc():
+    # Collection level is evaluated each time the calc executes
+    with otel_collect("none" if is_sensitive() else "all"):
+        return expensive_computation()
+```
 
 ## Features Demonstrated
 
