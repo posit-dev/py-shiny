@@ -225,9 +225,10 @@ def extract_source_ref(func: Callable[..., Any]) -> SourceRefAttrs:
                 column = len(first_line) - len(first_line.lstrip())
                 # Where the initial `def` or `async def` starts
                 attributes["code.column.number"] = column
-    except (TypeError, OSError):
+    except (TypeError, OSError, ValueError):
         # TypeError: built-in functions, C extensions
         # OSError: source file not found
+        # ValueError: circular __wrapped__ chain (getsourcelines calls unwrap internally)
         pass
 
     # Get function name (this rarely fails)

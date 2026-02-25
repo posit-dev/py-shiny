@@ -429,6 +429,85 @@ class TestSourceReferenceExtraction:
         if "code.function" in attrs:
             assert attrs["code.function"] == "fake_name"
 
+    def test_extract_source_ref_from_deeply_nested_wrappers(self):
+        """Test extract_source_ref with 3+ layers of wrapping"""
+        import functools
+
+        # Original function
+        def original():
+            return 42
+
+        original_line = original.__code__.co_firstlineno
+
+        # Create 3 layers of wrappers
+        @functools.wraps(original)
+        def wrapper1():
+            return original()
+
+        @functools.wraps(wrapper1)
+        def wrapper2():
+            return wrapper1()
+
+        @functools.wraps(wrapper2)
+        def wrapper3():
+            return wrapper2()
+
+        # Extract from the outermost wrapper (3 layers deep)
+        attrs = extract_source_ref(wrapper3)
+
+        # Should unwrap all the way to the original
+        assert "code.function" in attrs
+        assert (
+            attrs["code.function"] == "original"
+        ), "Should unwrap through 3 layers to original"
+        assert "code.lineno" in attrs
+        assert attrs["code.lineno"] == original_line
+
+    def test_extract_source_ref_from_functools_partial(self):
+        """Test extract_source_ref with functools.partial objects"""
+        import functools
+
+        def my_func(a: int, b: int) -> int:
+            return a + b
+
+        # Create a partial function
+        partial_func = functools.partial(my_func, 10)
+
+        # Extract from partial
+        attrs = extract_source_ref(partial_func)
+
+        # Note: functools.partial objects don't have __code__ or typical function
+        # attributes, so extract_source_ref returns an empty dict. This is expected
+        # behavior since partials are callable wrappers, not regular functions.
+        # In practice, this is fine since Shiny apps rarely use partials directly
+        # as reactive functions.
+        assert isinstance(attrs, dict)
+        # May be empty or have limited info - that's OK for partials
+
+    def test_extract_source_ref_from_circular_wrapped_chain(self):
+        """Test that circular __wrapped__ chains are handled gracefully"""
+
+        # Create a function with circular __wrapped__ reference
+        def func1():
+            return 1
+
+        def func2():
+            return 2
+
+        # Create circular reference: func1.__wrapped__ -> func2 -> func1
+        func1.__wrapped__ = func2  # type: ignore
+        func2.__wrapped__ = func1  # type: ignore
+
+        # Should handle ValueError from circular chain gracefully
+        attrs = extract_source_ref(func1)
+
+        # Should not crash and should return dict (may be empty or partial)
+        assert isinstance(attrs, dict)
+        # With ValueError handling in both unwrap() and getsourcelines(),
+        # we should get at least the function name
+        assert "code.function" in attrs
+        assert attrs["code.function"] == "func1"
+
 
 class TestCalcSpans:
     """Calc execution span tests"""
