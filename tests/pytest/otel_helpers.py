@@ -128,25 +128,21 @@ def patch_otel_tracing_state(*, tracing_enabled: Union[bool, None]) -> Iterator[
         )
 
         # Also patch in test modules that import it
-        try:
-            stack.enter_context(
-                patch(
-                    "tests.pytest.test_otel_session.is_otel_tracing_enabled",
-                    return_value=enabled,
+        test_modules = [
+            "tests.pytest.test_otel_foundation",
+            "tests.pytest.test_otel_session",
+            "tests.pytest.test_otel_value_logging",
+            "tests.pytest.test_otel_collect",
+            "tests.pytest.test_otel_logfire",
+            "tests.pytest.test_otel_reactive_flush",
+        ]
+        for module in test_modules:
+            try:
+                stack.enter_context(
+                    patch(f"{module}.is_otel_tracing_enabled", return_value=enabled)
                 )
-            )
-        except (ImportError, AttributeError):
-            pass  # Module may not be imported yet
-
-        try:
-            stack.enter_context(
-                patch(
-                    "tests.pytest.test_otel_value_logging.is_otel_tracing_enabled",
-                    return_value=enabled,
-                )
-            )
-        except (ImportError, AttributeError):
-            pass  # Module may not be imported yet
+            except (ImportError, AttributeError):
+                pass  # Module may not be imported yet
 
         yield
 
