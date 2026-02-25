@@ -41,6 +41,7 @@ from ..otel._core import emit_otel_log, is_otel_tracing_enabled
 from ..otel._function_attrs import resolve_func_otel_level
 from ..otel._labels import (
     create_otel_label,
+    create_otel_span_name,
     get_otel_label_modifier,
     set_otel_label_modifier,
 )
@@ -147,6 +148,8 @@ class Value(Generic[T]):
         read_only: bool = False,
         name: str | None = None,
     ) -> None:
+        from ..session._utils import get_current_session
+
         self._value: T | MISSING_TYPE = value
         self._read_only: bool = read_only
         self._value_dependents: Dependents = Dependents()
@@ -161,7 +164,19 @@ class Value(Generic[T]):
 
         # Capture collection level at initialization time
         # This determines whether value updates will emit OTel logs
+        session = get_current_session()
         self._otel_level: OtelCollectLevel = get_otel_collect_level()
+        self._otel_attrs: dict[str, Any] = {**get_session_id_attrs(session)}
+        if read_only:
+            self._otel_attrs["read-only"] = True
+
+        self._otel_namespace: str | None = None
+        if session is not None:
+            ns_str = str(session.ns)
+            if ns_str:  # Only use non-empty namespaces
+                self._otel_namespace = ns_str
+        # Lazily initialized OTel label for value updates; Allows for `_name` to be adjusted manually after init (ex: Inputs class)
+        self._otel_label: str | None = None
 
     def _try_infer_name(self) -> str | None:
         """
@@ -347,8 +362,6 @@ class Value(Generic[T]):
     # The ._set() method allows setting read-only Value objects. This is used when the
     # Value is part of a session.Inputs object, and the session wants to set it.
     def _set(self, value: T) -> bool:
-        from ..session import get_current_session
-
         if self._value is value:
             return False
 
@@ -358,39 +371,46 @@ class Value(Generic[T]):
         self._value = value
         self._value_dependents.invalidate()
 
+        self._emit_otel_log()
+
+        return True
+
+    def _emit_otel_log(self) -> None:
         # Log value update for OpenTelemetry
         # Only log when:
         # 1. Tracing is enabled (OpenTelemetry SDK is configured)
         # 2. Collection level (captured at initialization) is REACTIVITY or higher
-        # TODO: 3. Value name does not start with "input." (skip logging for input.* values)
-        #    Input values create excessive noise. Only user-created reactive.Value()
-        #    objects should log updates.
-        if (
+        # 3. Value name does not start with "input." or `.clientData`. Once the reactive initialization is done, we should log all updates.
+        if not (
             is_otel_tracing_enabled()
             and self._otel_level >= OtelCollectLevel.REACTIVITY
         ):
-            # Build log message with namespace support
-            value_name = self._name or "<unnamed>"
+            return
 
-            # Add namespace prefix if present
-            session = get_current_session()
-            if session is not None:
-                # session.ns is a ResolvedId (subclass of str)
-                # It will be an empty string ("") for Root namespace
-                ns_str = str(session.ns)
-                if ns_str:  # Only use non-empty namespaces
-                    value_name = f"{ns_str}:{value_name}"
+        from ..session._utils import get_current_session
 
-            log_body = f"Set reactiveVal {value_name}"
+        s = get_current_session()
+        if s is None:
+            # No session, therefore it is too early
+            return
 
+        if self._otel_label is None:
+            # Lazily initialize the OTel label on first set, when we have the name available
+            self._otel_label = create_otel_label(
+                "Set reactive.value",
+                self._name,
+                namespace=self._otel_namespace,
+            )
+
+        emit_otel_log(
+            self._otel_label,
+            severity_text="DEBUG",
             # Build attributes dict with session ID and source reference
-            attributes = {
-                **get_session_id_attrs(session),
+            attributes={
+                **self._otel_attrs,
                 **self._extract_caller_source_ref(),
-            }
-            emit_otel_log(log_body, severity_text="DEBUG", attributes=attributes)
-
-        return True
+            },
+        )
 
     def unset(self) -> None:
         """
@@ -492,9 +512,9 @@ class Calc_(Generic[T]):
         self._otel_attrs: SourceRefAttrs = self._extract_otel_attrs(fn)
 
         # Extract modifier from function attribute and generate label
-        self._otel_label: str = create_otel_label(
+        self._otel_label: str = create_otel_span_name(
             fn,
-            "reactive",
+            "reactive.calc",
             session=self._session,
             modifier=get_otel_label_modifier(fn),
         )
@@ -765,9 +785,9 @@ class Effect_:
         self._otel_attrs: SourceRefAttrs = self._extract_otel_attrs(fn)
 
         # Extract modifier from function attribute and generate label
-        self._otel_label: str = create_otel_label(
+        self._otel_label: str = create_otel_span_name(
             fn,
-            "effect",
+            "reactive.effect",
             session=self._session,
             modifier=get_otel_label_modifier(fn),
         )

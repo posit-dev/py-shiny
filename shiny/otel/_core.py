@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextvars import ContextVar
 from typing import Any, Union
 
 from opentelemetry import trace
@@ -20,7 +21,13 @@ __all__ = (
 # Global state for lazy initialization
 _tracer: Union[Tracer, None] = None
 _logger: Union[Any, None] = None
-_tracing_enabled: Union[bool, None] = None
+
+# Test-only override for is_otel_tracing_enabled()
+# This is used by test helpers to control tracing state without manipulating
+# the global TracerProvider (which OpenTelemetry doesn't allow after setup)
+_test_tracing_override: ContextVar[Union[bool, None]] = ContextVar(
+    "test_tracing_override", default=None
+)
 
 
 def get_otel_tracer() -> Tracer:
@@ -70,27 +77,45 @@ def is_otel_tracing_enabled() -> bool:
     Check if OpenTelemetry tracing is enabled.
 
     This checks whether the OTel SDK is properly configured by examining if the
-    tracer provider is a real SDK TracerProvider (not the no-op ProxyTracerProvider).
-    The result is cached to avoid repeated checks.
+    tracer provider is a real SDK TracerProvider (or a proxy wrapping one).
+
+    This function checks the current state on every call, allowing users to set up
+    their TracerProvider after importing Shiny.
 
     Returns
     -------
     bool
         True if tracing is enabled, False otherwise.
     """
-    global _tracing_enabled
-    if _tracing_enabled is None:
-        try:
-            from opentelemetry.sdk.trace import TracerProvider as SDKTracerProvider
-        except ImportError:
-            # If we can't import the SDK TracerProvider, tracing is disabled
-            _tracing_enabled = False
-        else:
-            tracer_provider = trace.get_tracer_provider()
-            # Check if we have a real SDK TracerProvider (not the no-op ProxyTracerProvider)
-            # The SDK TracerProvider has span processors that record spans
-            _tracing_enabled = isinstance(tracer_provider, SDKTracerProvider)
-    return _tracing_enabled
+    # Check for test-only override first (used by test helpers)
+    test_override = _test_tracing_override.get()
+    if test_override is not None:
+        return test_override
+
+    # Note: This function does not cache its result to allow users to set up their
+    # TracerProvider after importing Shiny. The performance impact is negligible
+    # (~0.22μs per check), and the check only happens when creating spans.
+    try:
+        from opentelemetry.sdk.trace import TracerProvider as SDKTracerProvider
+    except ImportError:
+        # If we can't import the SDK TracerProvider, tracing is disabled
+        return False
+
+    tracer_provider = trace.get_tracer_provider()
+
+    # Check if we have a real SDK TracerProvider
+    if isinstance(tracer_provider, SDKTracerProvider):
+        return True
+
+    # Also check for proxy providers (e.g., logfire's ProxyTracerProvider)
+    # that wrap an SDK TracerProvider
+    if hasattr(tracer_provider, "provider") and isinstance(
+        tracer_provider.provider,  # type: ignore[attr-defined]
+        SDKTracerProvider,
+    ):
+        return True
+
+    return False
 
 
 def emit_otel_log(
@@ -126,7 +151,7 @@ def emit_otel_log(
 
     # Log with severity and attributes
     emit_otel_log(
-        "Set reactiveVal myValue",
+        "Set reactive.value myValue",
         severity_text="DEBUG",
         attributes={"session.id": session_id, "value.name": "myValue"}
     )

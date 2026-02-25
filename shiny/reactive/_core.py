@@ -134,7 +134,7 @@ class ReactiveEnvironment:
         self._pending_flush_queue: PriorityQueueFIFO[Context] = PriorityQueueFIFO()
         self._lock: Optional[asyncio.Lock] = None
         self._flushed_callbacks = _utils.AsyncCallbacks()
-        # Current OpenTelemetry span (e.g., reactive.update) for child spans to reference
+        # Current OpenTelemetry span (e.g., reactive_update) for child spans to reference
         self._current_otel_span: Optional[Span] = None
 
     @property
@@ -180,9 +180,9 @@ class ReactiveEnvironment:
 
     async def flush(self) -> None:
         """Flush all pending operations"""
-        # Wrap entire flush cycle in reactive.update span (or no-op if not collecting)
+        # Wrap entire flush cycle in reactive_update span (or no-op if not collecting)
         async with shiny_otel_span(
-            "reactive.update",
+            "reactive_update",
             required_level=OtelCollectLevel.REACTIVE_UPDATE,
         ) as span:
             # Store span on instance so child reactive spans can reference it

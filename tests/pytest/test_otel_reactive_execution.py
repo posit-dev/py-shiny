@@ -7,7 +7,7 @@ Tests cover:
 - Output rendering span creation
 - Label generation for reactive computations
 - Source code attribute extraction
-- Span parent-child relationships (reactive.update → calc/effect/output)
+- Span parent-child relationships (reactive_update → calc/effect/output)
 - Collection level controls
 """
 
@@ -21,7 +21,7 @@ from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanE
 
 from shiny.otel._attributes import extract_source_ref
 from shiny.otel._collect import OtelCollectLevel
-from shiny.otel._labels import create_otel_label
+from shiny.otel._labels import create_otel_span_name
 from shiny.otel._span_wrappers import shiny_otel_span
 from shiny.reactive import Calc_, Effect_
 
@@ -31,21 +31,21 @@ from .otel_helpers import get_exported_spans, patch_otel_tracing_state
 class TestLabelGeneration:
     """Label generation tests"""
 
-    def test_create_otel_label_for_calc(self):
+    def test_create_otel_span_name_for_calc(self):
         """Test generating label for a calc with function name"""
 
         def my_calc():
             return 42
 
-        label = create_otel_label(my_calc, "reactive")
-        assert label == "reactive my_calc"
+        label = create_otel_span_name(my_calc, "reactive.calc")
+        assert label == "reactive.calc my_calc"
 
-    def test_create_otel_label_for_lambda(self):
+    def test_create_otel_span_name_for_lambda(self):
         """Test generating label for anonymous/lambda function"""
-        label = create_otel_label(lambda: 42, "reactive")
-        assert label == "reactive <anonymous>"
+        label = create_otel_span_name(lambda: 42, "reactive.effect")
+        assert label == "reactive.effect <anonymous>"
 
-    def test_create_otel_label_with_namespace(self):
+    def test_create_otel_span_name_with_namespace(self):
         """Test generating label with namespace prefix"""
         from unittest.mock import Mock
 
@@ -58,19 +58,19 @@ class TestLabelGeneration:
         mock_session = Mock()
         mock_session.ns = ResolvedId("mod")
 
-        label = create_otel_label(my_calc, "reactive", session=mock_session)
-        assert label == "reactive mod:my_calc"
+        label = create_otel_span_name(my_calc, "reactive.calc", session=mock_session)
+        assert label == "reactive.calc mod:my_calc"
 
-    def test_create_otel_label_with_modifier(self):
+    def test_create_otel_span_name_with_modifier(self):
         """Test generating label with modifier (e.g., cache)"""
 
         def my_calc():
             return 42
 
-        label = create_otel_label(my_calc, "reactive", modifier="cache")
-        assert label == "reactive cache my_calc"
+        label = create_otel_span_name(my_calc, "reactive.calc", modifier="cache")
+        assert label == "reactive.calc cache my_calc"
 
-    def test_create_otel_label_with_namespace_and_modifier(self):
+    def test_create_otel_span_name_with_namespace_and_modifier(self):
         """Test generating label with both namespace and modifier"""
         from unittest.mock import Mock
 
@@ -83,10 +83,10 @@ class TestLabelGeneration:
         mock_session = Mock()
         mock_session.ns = ResolvedId("mod")
 
-        label = create_otel_label(
-            my_calc, "reactive", session=mock_session, modifier="cache"
+        label = create_otel_span_name(
+            my_calc, "reactive.calc", session=mock_session, modifier="cache"
         )
-        assert label == "reactive cache mod:my_calc"
+        assert label == "reactive.calc cache mod:my_calc"
 
     def test_generate_observe_label(self):
         """Test generating label for effect (observe)"""
@@ -94,8 +94,8 @@ class TestLabelGeneration:
         def my_effect():
             pass
 
-        label = create_otel_label(my_effect, "effect")
-        assert label == "effect my_effect"
+        label = create_otel_span_name(my_effect, "reactive.effect")
+        assert label == "reactive.effect my_effect"
 
     def test_generate_output_label(self):
         """Test generating label for output rendering"""
@@ -103,7 +103,7 @@ class TestLabelGeneration:
         def my_output():
             return "text"
 
-        label = create_otel_label(my_output, "output")
+        label = create_otel_span_name(my_output, "output")
         assert label == "output my_output"
 
 
@@ -237,7 +237,7 @@ class TestReactiveEventModifier:
         calc = Calc_(my_calc)
 
         # The calc should have generated label with "event" modifier
-        assert calc._otel_label == "reactive event my_calc"
+        assert calc._otel_label == "reactive.calc event my_calc"
 
     def test_effect_extracts_event_modifier(self):
         """Test that Effect_ extracts modifier from @reactive.event decorated function"""
@@ -252,7 +252,7 @@ class TestReactiveEventModifier:
         effect = Effect_(my_effect, session=None)
 
         # The effect should have generated label with "event" modifier
-        assert effect._otel_label == "effect event my_effect"
+        assert effect._otel_label == "reactive.effect event my_effect"
 
     def test_calc_without_modifier_has_no_modifier_in_label(self):
         """Test that Calc_ without modifier has clean label"""
@@ -263,7 +263,7 @@ class TestReactiveEventModifier:
         calc = Calc_(my_calc)
 
         # The calc should have label without modifier
-        assert calc._otel_label == "reactive my_calc"
+        assert calc._otel_label == "reactive.calc my_calc"
 
     def test_effect_without_modifier_has_no_modifier_in_label(self):
         """Test that Effect_ without modifier has clean label"""
@@ -274,7 +274,7 @@ class TestReactiveEventModifier:
         effect = Effect_(my_effect, session=None)
 
         # The effect should have label without modifier
-        assert effect._otel_label == "effect my_effect"
+        assert effect._otel_label == "reactive.effect my_effect"
 
 
 class TestSourceReferenceExtraction:
@@ -312,6 +312,202 @@ class TestSourceReferenceExtraction:
         # Should return empty dict without errors
         assert isinstance(attrs, dict)
 
+    def test_extract_source_ref_from_wrapped_function(self):
+        """Test that extract_source_ref unwraps @functools.wraps decorated functions"""
+        import functools
+
+        # Define the original function at a known line
+        def original_function():  # This is the line we expect to see
+            return 42
+
+        # Capture the line number where original_function is defined
+        original_line = original_function.__code__.co_firstlineno
+
+        # Create a wrapper using @functools.wraps
+        @functools.wraps(original_function)
+        def wrapper_function():
+            return original_function()
+
+        # Extract attributes from the wrapper
+        attrs = extract_source_ref(wrapper_function)
+
+        # Should extract from the ORIGINAL function, not the wrapper
+        assert "code.function" in attrs
+        assert (
+            attrs["code.function"] == "original_function"
+        ), f"Should have original function name, got: {attrs.get('code.function')}"
+
+        assert "code.filepath" in attrs
+        assert attrs["code.filepath"].endswith(
+            "test_otel_reactive_execution.py"
+        ), f"Should point to this test file, got: {attrs['code.filepath']}"
+
+        assert "code.lineno" in attrs
+        assert (
+            attrs["code.lineno"] == original_line
+        ), f"Should have original line number ({original_line}), got: {attrs.get('code.lineno')}"
+
+    def test_extract_source_ref_from_nested_wrapped_functions(self):
+        """Test extract_source_ref with multiple layers of wrapping"""
+        import functools
+
+        # Original function
+        def original():
+            return 42
+
+        original_line = original.__code__.co_firstlineno
+
+        # First wrapper
+        @functools.wraps(original)
+        def wrapper1():
+            return original()
+
+        # Second wrapper (wrapping the first wrapper)
+        @functools.wraps(wrapper1)
+        def wrapper2():
+            return wrapper1()
+
+        # Extract from the outermost wrapper
+        attrs = extract_source_ref(wrapper2)
+
+        # Should unwrap all the way to the original
+        assert "code.function" in attrs
+        assert attrs["code.function"] == "original"
+        assert "code.lineno" in attrs
+        assert attrs["code.lineno"] == original_line
+
+    def test_extract_source_ref_from_reactive_event_decorator(self):
+        """Test that @reactive.event decorated functions unwrap correctly"""
+        from shiny.reactive import Value, event
+
+        # Create a reactive value to use as event trigger
+        trigger = Value(0)
+
+        # Define original function
+        def my_effect():  # This is the line we expect
+            return trigger()
+
+        original_line = my_effect.__code__.co_firstlineno
+
+        # Apply @reactive.event decorator
+        decorated = event(trigger)(my_effect)
+
+        # Extract from decorated function
+        attrs = extract_source_ref(decorated)
+
+        # Should extract from original function, not the event wrapper
+        assert "code.function" in attrs
+        assert (
+            attrs["code.function"] == "my_effect"
+        ), f"Should have original function name, got: {attrs.get('code.function')}"
+
+        assert "code.lineno" in attrs
+        assert (
+            attrs["code.lineno"] == original_line
+        ), f"Should have original line number ({original_line}), got: {attrs.get('code.lineno')}"
+
+    def test_extract_source_ref_from_unwrappable_function(self):
+        """Test that functions without __wrapped__ attribute still work"""
+
+        # Function without @functools.wraps
+        def outer():
+            def inner():
+                return 42
+
+            # Manually set attributes but NOT __wrapped__
+            inner.__name__ = "fake_name"
+            return inner
+
+        func = outer()
+
+        # Should not crash, should extract from the actual function
+        attrs = extract_source_ref(func)
+
+        # Should have attributes (even if they're from the inner function)
+        assert isinstance(attrs, dict)
+        # Function name should be what we set
+        if "code.function" in attrs:
+            assert attrs["code.function"] == "fake_name"
+
+    def test_extract_source_ref_from_deeply_nested_wrappers(self):
+        """Test extract_source_ref with 3+ layers of wrapping"""
+        import functools
+
+        # Original function
+        def original():
+            return 42
+
+        original_line = original.__code__.co_firstlineno
+
+        # Create 3 layers of wrappers
+        @functools.wraps(original)
+        def wrapper1():
+            return original()
+
+        @functools.wraps(wrapper1)
+        def wrapper2():
+            return wrapper1()
+
+        @functools.wraps(wrapper2)
+        def wrapper3():
+            return wrapper2()
+
+        # Extract from the outermost wrapper (3 layers deep)
+        attrs = extract_source_ref(wrapper3)
+
+        # Should unwrap all the way to the original
+        assert "code.function" in attrs
+        assert (
+            attrs["code.function"] == "original"
+        ), "Should unwrap through 3 layers to original"
+        assert "code.lineno" in attrs
+        assert attrs["code.lineno"] == original_line
+
+    def test_extract_source_ref_from_functools_partial(self):
+        """Test extract_source_ref with functools.partial objects"""
+        import functools
+
+        def my_func(a: int, b: int) -> int:
+            return a + b
+
+        # Create a partial function
+        partial_func = functools.partial(my_func, 10)
+
+        # Extract from partial
+        attrs = extract_source_ref(partial_func)
+
+        # Note: functools.partial objects don't have __code__ or typical function
+        # attributes, so extract_source_ref returns an empty dict. This is expected
+        # behavior since partials are callable wrappers, not regular functions.
+        # In practice, this is fine since Shiny apps rarely use partials directly
+        # as reactive functions.
+        assert isinstance(attrs, dict)
+        # May be empty or have limited info - that's OK for partials
+
+    def test_extract_source_ref_from_circular_wrapped_chain(self):
+        """Test that circular __wrapped__ chains are handled gracefully"""
+
+        # Create a function with circular __wrapped__ reference
+        def func1():
+            return 1
+
+        def func2():
+            return 2
+
+        # Create circular reference: func1.__wrapped__ -> func2 -> func1
+        func1.__wrapped__ = func2  # type: ignore
+        func2.__wrapped__ = func1  # type: ignore
+
+        # Should handle ValueError from circular chain gracefully
+        attrs = extract_source_ref(func1)
+
+        # Should not crash and should return dict (may be empty or partial)
+        assert isinstance(attrs, dict)
+        # With ValueError handling in both unwrap() and getsourcelines(),
+        # we should get at least the function name
+        assert "code.function" in attrs
+        assert attrs["code.function"] == "func1"
+
 
 class TestCalcSpans:
     """Calc execution span tests"""
@@ -342,7 +538,7 @@ class TestCalcSpans:
                     call_args = mock_span.call_args
                     # Verify the label string was passed
                     label = call_args[0][0]
-                    assert label == "reactive my_calc"
+                    assert label == "reactive.calc my_calc"
                     assert call_args[1]["required_level"] == OtelCollectLevel.REACTIVITY
 
     @pytest.mark.asyncio
@@ -398,7 +594,7 @@ class TestCalcSpans:
 
 
 class TestEffectSpans:
-    """Effect execution span tests"""
+    """Reactive Effect execution span tests"""
 
     @pytest.mark.asyncio
     async def test_effect_creates_span_when_enabled(self):
@@ -427,7 +623,7 @@ class TestEffectSpans:
                     call_args = mock_span.call_args
                     # Verify the label string was passed
                     label = call_args[0][0]
-                    assert label == "effect my_effect"
+                    assert label == "reactive.effect my_effect"
                     assert call_args[1]["required_level"] == OtelCollectLevel.REACTIVITY
 
     @pytest.mark.asyncio
@@ -501,7 +697,7 @@ class TestSpanHierarchy:
     async def test_calc_span_nested_under_reactive_update(
         self, otel_tracer_provider: Tuple[TracerProvider, InMemorySpanExporter]
     ):
-        """Test that calc spans are children of reactive.update span"""
+        """Test that calc spans are children of reactive_update span"""
         provider, memory_exporter = otel_tracer_provider
 
         with patch_otel_tracing_state(tracing_enabled=True):
@@ -515,7 +711,7 @@ class TestSpanHierarchy:
 
                 # Manually create flush span and execute calc inside it
                 async with shiny_otel_span(
-                    "reactive.update",
+                    "reactive_update",
                     required_level=OtelCollectLevel.REACTIVE_UPDATE,
                 ):
                     await calc.update_value()
@@ -526,15 +722,17 @@ class TestSpanHierarchy:
         # Filter out internal OTel spans
         app_spans = [s for s in spans if not s.name.startswith("_otel")]
 
-        # Should have 2 spans: reactive.update and reactive my_calc
+        # Should have 2 spans: reactive_update and reactive my_calc
         assert len(app_spans) >= 2
 
         # Find the spans
-        update_span = next((s for s in app_spans if s.name == "reactive.update"), None)
-        calc_span = next((s for s in app_spans if s.name == "reactive my_calc"), None)
+        update_span = next((s for s in app_spans if s.name == "reactive_update"), None)
+        calc_span = next(
+            (s for s in app_spans if s.name == "reactive.calc my_calc"), None
+        )
 
-        assert update_span is not None, "reactive.update span should exist"
-        assert calc_span is not None, "reactive my_calc span should exist"
+        assert update_span is not None, "reactive_update span should exist"
+        assert calc_span is not None, "reactive.calc my_calc span should exist"
 
         # Verify parent-child relationship
         calc_parent = calc_span.parent
@@ -542,7 +740,7 @@ class TestSpanHierarchy:
         # Note: pyright doesn't understand that context is always present on ReadableSpan
         assert (
             calc_parent.span_id == update_span.context.span_id  # type: ignore[union-attr]
-        ), "calc parent should be reactive.update"
+        ), "reactive.calc parent should be reactive_update"
 
         # Verify they're in the same trace
         assert (

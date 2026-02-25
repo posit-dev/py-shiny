@@ -60,6 +60,7 @@ dependencies = [
 
 [project.optional-dependencies]
 theme = ["libsass>=0.23.0", "brand_yml>=0.1.0"]
+otel = ["opentelemetry-sdk>=1.20.0"]
 test = [
     "pytest>=6.2.4",
     "pytest-asyncio>=0.17.2",
@@ -100,6 +101,7 @@ test = [
     "pyarrow",
     "pyarrow-stubs",
     "opentelemetry-sdk>=1.20.0",
+    "logfire>=4.0.0",
 ]
 dev = [
     "black>=26.1.0",

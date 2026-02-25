@@ -1,6 +1,6 @@
 # OpenTelemetry Collection Control Example
 
-This example demonstrates how to control Shiny's OpenTelemetry collection levels using the `otel_collect` context manager and decorator.
+This example demonstrates how to control Shiny's OpenTelemetry collection levels using the `shiny.otel.otel_collect` context manager and decorator.
 
 ## Overview
 
@@ -12,6 +12,45 @@ The `otel_collect` function allows you to dynamically control which **Shiny inte
 - **Compliance**: Ensure sensitive data isn't inadvertently sent to telemetry backends
 
 **Important**: `otel_collect` only affects Shiny's internal spans and logs (session lifecycle, reactive execution, value updates, etc.). Any OpenTelemetry spans you create manually in your application code are unaffected and will continue to be recorded normally.
+
+### Timing
+
+Collection levels are captured when reactive objects (`reactive.value`, `reactive.calc`, `reactive.effect`) are **created**, not when they are executed. This means the level used for Shiny's internal spans (reactive execution, value updates) is **permanently set** at object creation time:
+
+```python
+# Collection level is captured when reactive.calc() creates the Calc object
+with otel_collect("none"):
+    @reactive.calc
+    def my_calc():
+        return expensive_computation()
+
+# Later execution of my_calc() ALWAYS uses "none" for Shiny's internal spans,
+# regardless of what the current otel_collect level is
+```
+
+Using `otel_collect` inside a reactive function body will **not** affect Shiny's internal spans for that reactive - the level was already captured at object creation. To dynamically control collection levels, use the decorator on render functions, which are created at app initialization:
+
+```python
+# Incorrect - this does NOT change Shiny's internal span level for my_calc
+@reactive.calc
+def my_calc():
+    with otel_collect("none" if is_sensitive() else "all"):
+        return expensive_computation()  # Shiny still uses level from creation time
+
+# Correct - use decorator on render functions to suppress telemetry
+@render.text
+@otel_collect("none")
+def result_private():
+    # Entire render function runs without Shiny telemetry
+    return compute_private_data()
+
+@render.text  # Uses default "all" level
+def result_public():
+    # Shiny telemetry enabled for this render
+    return compute_public_data()
+```
+
+**Note**: Using `otel_collect` inside a reactive function body *will* affect any manual spans you create with `shiny_otel_span()`, just not Shiny's automatic internal spans.
 
 ## Features Demonstrated
 
@@ -44,11 +83,17 @@ def result_private():
 ```python
 from shiny.otel import otel_collect
 
-with otel_collect("session"):
+with otel_collect("all"):
     # Only session-level Shiny telemetry
     with otel_collect("none"):
+
         # No Shiny telemetry in this inner block
-        process_data()
+        @render.text
+        def result_private():
+            # Entire function runs without Shiny telemetry
+            # (your own spans are still recorded)
+            return compute_private_data()
+
     # Back to session-level Shiny telemetry
 ```
 
@@ -68,10 +113,16 @@ The following collection levels control **Shiny's internal telemetry** (from lea
 
 ### Prerequisites
 
-Install the OpenTelemetry SDK:
+Install Shiny with OpenTelemetry support:
 
 ```bash
-pip install opentelemetry-sdk
+pip install shiny[otel]
+```
+
+Or install from requirements:
+
+```bash
+pip install -r requirements.txt
 ```
 
 ### Run the App
@@ -113,9 +164,9 @@ When telemetry is enabled (`all` level), you'll see spans like:
 
 ```text
 session.start
-  └─ reactive.update
-      ├─ reactive result
-      ├─ effect <lambda>
+  └─ reactive_update
+      ├─ reactive.calc result
+      ├─ reactive.effect <lambda>
       └─ output result_private (suppressed with @otel_collect("none"))
 ```
 
@@ -127,55 +178,8 @@ Use `otel_collect("none")` to wrap code that:
 - Handles personally identifiable information (PII)
 - Performs operations that shouldn't be visible in external monitoring systems
 
-## Real-World Use Cases
-
-### 1. Protecting Sensitive Computations
-
-```python
-from shiny.otel import otel_collect
-
-@reactive.calc
-def user_data():
-    with otel_collect("none"):
-        # Don't send PII to telemetry backend
-        user_info = fetch_user_from_database()
-        decrypt_sensitive_fields(user_info)
-    return user_info
-```
-
-### 2. Performance-Critical Paths
-
-```python
-from shiny.otel import otel_collect
-
-@otel_collect("none")
-def fast_update():
-    # Disable telemetry overhead for high-frequency updates
-    for i in range(10000):
-        counter.set(counter.get() + 1)
-```
-
-### 3. Conditional Telemetry
-
-```python
-from shiny.otel import otel_collect
-
-def process_data():
-    level = "none" if is_production() else "all"
-    with otel_collect(level):
-        # Detailed telemetry in dev, none in production
-        result = expensive_computation()
-    return result
-```
-
 ## Additional Resources
 
 - [OpenTelemetry Python Documentation](https://opentelemetry.io/docs/instrumentation/python/)
 - [Shiny OpenTelemetry Guide](../../docs/otel.md) (if available)
 - [py-shiny GitHub Repository](https://github.com/posit-dev/py-shiny)
-
-## Related Examples
-
-- `otel-basic/`: Basic OpenTelemetry setup
-- `otel-value-logging/`: Value update logging with source references
-- `otel-jaeger/`: Integration with Jaeger backend (if available)

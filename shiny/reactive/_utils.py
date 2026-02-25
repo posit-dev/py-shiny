@@ -66,7 +66,7 @@ def is_user_code_frame(filename: str) -> bool:
         # Check if file is under shiny package
         if file_path.is_relative_to(shiny_repo_dir):
             # Allow tests and examples
-            if not (
+            if (
                 file_path.is_relative_to(shiny_repo_dir / "examples")
                 or file_path.is_relative_to(shiny_repo_dir / "tests")
                 or file_path.is_relative_to(shiny_repo_dir / "shiny" / "api-examples")

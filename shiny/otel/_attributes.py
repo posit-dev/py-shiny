@@ -191,9 +191,18 @@ def extract_source_ref(func: Callable[..., Any]) -> SourceRefAttrs:
     """
     attributes: SourceRefAttrs = {}
 
+    # Unwrap decorated functions to get to the original user function
+    # This handles cases where @functools.wraps is used (e.g., @reactive.event)
+    try:
+        unwrapped_func = inspect.unwrap(func)
+    except (ValueError, AttributeError):
+        # ValueError: circular __wrapped__ chain
+        # AttributeError: no __wrapped__ attribute
+        unwrapped_func = func
+
     # Get source file path
     try:
-        source_file = inspect.getsourcefile(func)
+        source_file = inspect.getsourcefile(unwrapped_func)
         if source_file:
             attributes["code.filepath"] = source_file
     except (TypeError, OSError):
@@ -203,7 +212,7 @@ def extract_source_ref(func: Callable[..., Any]) -> SourceRefAttrs:
 
     # Get line number and column number where function is defined
     try:
-        source_lines = inspect.getsourcelines(func)
+        source_lines = inspect.getsourcelines(unwrapped_func)
         if source_lines:
             # getsourcelines returns (lines, starting_line_number)
             lines, line_number = source_lines
@@ -216,9 +225,10 @@ def extract_source_ref(func: Callable[..., Any]) -> SourceRefAttrs:
                 column = len(first_line) - len(first_line.lstrip())
                 # Where the initial `def` or `async def` starts
                 attributes["code.column.number"] = column
-    except (TypeError, OSError):
+    except (TypeError, OSError, ValueError):
         # TypeError: built-in functions, C extensions
         # OSError: source file not found
+        # ValueError: circular __wrapped__ chain (getsourcelines calls unwrap internally)
         pass
 
     # Get function name (this rarely fails)
