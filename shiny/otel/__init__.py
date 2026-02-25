@@ -8,9 +8,9 @@ allowing you to observe application behavior, performance, and reactive executio
 
 To enable OpenTelemetry tracing in your Shiny application:
 
-1. Install the OpenTelemetry SDK:
+1. Install Shiny with OpenTelemetry support:
    ```bash
-   pip install opentelemetry-sdk
+   pip install shiny[otel]
    ```
 
 2. Configure the SDK before importing shiny:

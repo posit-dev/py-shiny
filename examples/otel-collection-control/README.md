@@ -83,17 +83,18 @@ def result_private():
 ```python
 from shiny.otel import otel_collect
 
-@render.text
-def result_mixed():
-    # Outer function has normal telemetry
-    public_data = fetch_public_data()
-
-    # Suppress telemetry for sensitive processing
+with otel_collect("all"):
+    # Only session-level Shiny telemetry
     with otel_collect("none"):
-        sensitive_result = process_sensitive_data()
 
-    # Back to normal telemetry
-    return f"Public: {public_data}, Result: {sensitive_result}"
+        # No Shiny telemetry in this inner block
+        @render.text
+        def result_private():
+            # Entire function runs without Shiny telemetry
+            # (your own spans are still recorded)
+            return compute_private_data()
+
+    # Back to session-level Shiny telemetry
 ```
 
 ## Collection Levels
@@ -112,10 +113,16 @@ The following collection levels control **Shiny's internal telemetry** (from lea
 
 ### Prerequisites
 
-Install the OpenTelemetry SDK:
+Install Shiny with OpenTelemetry support:
 
 ```bash
-pip install opentelemetry-sdk
+pip install shiny[otel]
+```
+
+Or install from requirements:
+
+```bash
+pip install -r requirements.txt
 ```
 
 ### Run the App
