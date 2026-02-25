@@ -143,7 +143,8 @@ def test_bookmark_callbacks_otel_spans(page: Page, local_app: ShinyAppProc) -> N
 
     # Click to show captured OTel spans
     show_spans_button.click()
-    expect(otel_spans_output.loc).not_to_be_empty()
+    # Wait for actual JSON content (not just any non-empty content)
+    expect(otel_spans_output.loc).to_contain_text('"name"')
 
     # Get the spans output and verify it contains span data
     spans_text = otel_spans_output.loc.text_content()
@@ -266,7 +267,8 @@ def test_bookmark_callbacks_code_filepath(page: Page, local_app: ShinyAppProc) -
 
     # Show captured spans before reload
     show_spans_button.click()
-    expect(otel_spans_output.loc).not_to_be_empty()
+    # Wait for actual JSON content (not just any non-empty content)
+    expect(otel_spans_output.loc).to_contain_text('"name"')
 
     spans_text = otel_spans_output.loc.text_content()
     print("Spans output text:", spans_text)

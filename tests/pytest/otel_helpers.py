@@ -139,7 +139,10 @@ def patch_otel_tracing_state(*, tracing_enabled: Union[bool, None]) -> Iterator[
         for module in test_modules:
             try:
                 stack.enter_context(
-                    patch(f"{module}.is_otel_tracing_enabled", return_value=enabled)
+                    patch(
+                        f"{module}.is_otel_tracing_enabled",
+                        return_value=enabled,
+                    )
                 )
             except (ImportError, AttributeError):
                 pass  # Module may not be imported yet
