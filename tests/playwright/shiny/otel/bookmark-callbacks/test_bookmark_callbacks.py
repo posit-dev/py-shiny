@@ -330,3 +330,36 @@ def test_bookmark_callbacks_code_filepath(page: Page, local_app: ShinyAppProc) -
         assert (
             "bookmark-callbacks/app.py" in filepath
         ), f"Span '{span_name}' has code.filepath not pointing to test app: {filepath}"
+
+
+# TODO: Additional test coverage for bookmark edge cases (Issue #8 from phase8_review.md)
+#
+# The following test scenarios would provide additional coverage but are deferred
+# as optional enhancements. They are marked as "Suggestions (Non-Blocking)" in the
+# Phase 8 review and can be implemented if specific issues arise:
+#
+# 1. Exception sanitization verification
+#    - Test that exceptions in bookmark callbacks are sanitized
+#    - Verify SafeException bypasses sanitization
+#    - Confirm sensitive information (API keys, passwords) doesn't leak to UI
+#    - Note: Error sanitization is already implemented in bookmark callbacks
+#
+# 2. Module namespacing compatibility
+#    - Test bookmark callbacks work correctly in module proxy sessions
+#    - Verify state restoration respects module namespaces
+#    - Ensure callback registration works in nested module contexts
+#
+# 3. Concurrent bookmark operations
+#    - Test concurrent bookmark.save() calls don't corrupt state
+#    - Verify thread-safety of bookmark state updates
+#    - Check for race conditions in state serialization
+#
+# 4. Async callback timeout handling
+#    - Test slow async callbacks don't block flush cycle indefinitely
+#    - Verify timeout behavior for long-running callbacks
+#    - Ensure graceful degradation when callbacks exceed timeout
+#
+# These tests would require complex setup (module proxies, concurrent operation
+# orchestration, timeout configuration) that exceeds the immediate value. The
+# existing tests already cover the critical bookmark callback behaviors including
+# ordering, state passing, and OTel instrumentation.
