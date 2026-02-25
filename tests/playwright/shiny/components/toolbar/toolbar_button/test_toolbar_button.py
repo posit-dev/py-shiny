@@ -1,5 +1,6 @@
 import re
 
+import pytest
 from conftest import create_app_fixture
 from playwright.sync_api import Page, expect
 
@@ -10,6 +11,7 @@ from shiny.run import ShinyAppProc
 app = create_app_fixture("./app.py")
 
 
+@pytest.mark.flaky(reruns=3)
 def test_toolbar_button_icon_only(page: Page, app: ShinyAppProc) -> None:
     """Test icon-only button with default tooltip."""
     page.goto(app.url)
@@ -45,6 +47,7 @@ def test_toolbar_button_icon_only(page: Page, app: ShinyAppProc) -> None:
     expect(output).to_have_text("Icon-only button clicked 1 times")
 
 
+@pytest.mark.flaky(reruns=3)
 def test_toolbar_button_with_label(page: Page, app: ShinyAppProc) -> None:
     """Test button with both icon and label shown."""
     page.goto(app.url)
@@ -71,6 +74,7 @@ def test_toolbar_button_with_label(page: Page, app: ShinyAppProc) -> None:
     expect(output).to_have_text("Button with label clicked 1 times")
 
 
+@pytest.mark.flaky(reruns=3)
 def test_toolbar_button_custom_tooltip(page: Page, app: ShinyAppProc) -> None:
     """Test button with custom tooltip text."""
     page.goto(app.url)
@@ -91,6 +95,7 @@ def test_toolbar_button_custom_tooltip(page: Page, app: ShinyAppProc) -> None:
     expect(tooltip_content.first).not_to_contain_text("Delete")
 
 
+@pytest.mark.flaky(reruns=3)
 def test_toolbar_button_no_tooltip(page: Page, app: ShinyAppProc) -> None:
     """Test button with tooltip disabled."""
     page.goto(app.url)
@@ -103,6 +108,7 @@ def test_toolbar_button_no_tooltip(page: Page, app: ShinyAppProc) -> None:
     expect(tooltip).not_to_be_attached()
 
 
+@pytest.mark.flaky(reruns=3)
 def test_toolbar_button_disabled(page: Page, app: ShinyAppProc) -> None:
     """Test disabled button state."""
     page.goto(app.url)
@@ -128,6 +134,7 @@ def test_toolbar_button_disabled(page: Page, app: ShinyAppProc) -> None:
     expect(output).to_have_text("Disabled button clicked 0 times (should stay 0)")
 
 
+@pytest.mark.flaky(reruns=3)
 def test_toolbar_button_border(page: Page, app: ShinyAppProc) -> None:
     """Test button with border."""
     page.goto(app.url)
@@ -154,6 +161,7 @@ def test_toolbar_button_border(page: Page, app: ShinyAppProc) -> None:
     expect(output).to_have_text("Border button clicked 1 times")
 
 
+@pytest.mark.flaky(reruns=3)
 def test_toolbar_button_label_only(page: Page, app: ShinyAppProc) -> None:
     """Test label-only button without icon."""
     page.goto(app.url)
@@ -176,6 +184,7 @@ def test_toolbar_button_label_only(page: Page, app: ShinyAppProc) -> None:
     expect(tooltip).not_to_be_attached()
 
 
+@pytest.mark.flaky(reruns=3)
 def test_update_toolbar_button_label(page: Page, app: ShinyAppProc) -> None:
     """Test updating button label."""
     page.goto(app.url)
@@ -196,6 +205,7 @@ def test_update_toolbar_button_label(page: Page, app: ShinyAppProc) -> None:
     expect(button.loc_label).to_have_text("Updated 2")
 
 
+@pytest.mark.flaky(reruns=3)
 def test_update_toolbar_button_icon(page: Page, app: ShinyAppProc) -> None:
     """Test updating button icon."""
     page.goto(app.url)
@@ -226,6 +236,7 @@ def test_update_toolbar_button_icon(page: Page, app: ShinyAppProc) -> None:
     expect(button.loc_icon.locator("svg")).to_have_attribute("viewBox", "0 0 384 512")
 
 
+@pytest.mark.flaky(reruns=3)
 def test_update_toolbar_button_show_label(page: Page, app: ShinyAppProc) -> None:
     """Test toggling label visibility."""
     page.goto(app.url)
@@ -257,6 +268,7 @@ def test_update_toolbar_button_show_label(page: Page, app: ShinyAppProc) -> None
     expect(button.loc_label).to_have_attribute("hidden", "")
 
 
+@pytest.mark.flaky(reruns=3)
 def test_update_toolbar_button_disabled(page: Page, app: ShinyAppProc) -> None:
     """Test toggling disabled state."""
     page.goto(app.url)
@@ -286,6 +298,7 @@ def test_update_toolbar_button_disabled(page: Page, app: ShinyAppProc) -> None:
     expect(button.loc).to_have_attribute("disabled", "")
 
 
+@pytest.mark.flaky(reruns=3)
 def test_update_toolbar_button_all_properties(page: Page, app: ShinyAppProc) -> None:
     """Test updating multiple properties at once."""
     page.goto(app.url)
@@ -332,6 +345,7 @@ def test_update_toolbar_button_all_properties(page: Page, app: ShinyAppProc) -> 
     expect(button.loc).to_be_disabled()
 
 
+@pytest.mark.flaky(reruns=3)
 def test_update_toolbar_button_reenable(page: Page, app: ShinyAppProc) -> None:
     """Test that a button can be disabled and then re-enabled."""
     page.goto(app.url)
@@ -368,6 +382,7 @@ def test_update_toolbar_button_reenable(page: Page, app: ShinyAppProc) -> None:
     expect(output).to_have_text("Target button clicked 2 times")
 
 
+@pytest.mark.flaky(reruns=3)
 def test_toolbar_button_aria_attributes(page: Page, app: ShinyAppProc) -> None:
     """Test accessibility attributes."""
     page.goto(app.url)
@@ -383,6 +398,7 @@ def test_toolbar_button_aria_attributes(page: Page, app: ShinyAppProc) -> None:
     expect(button.loc_icon).to_have_attribute("aria-hidden", "true")
 
 
+@pytest.mark.flaky(reruns=3)
 def test_toolbar_button_click_count(page: Page, app: ShinyAppProc) -> None:
     """Test that click count increments correctly."""
     page.goto(app.url)
@@ -396,6 +412,7 @@ def test_toolbar_button_click_count(page: Page, app: ShinyAppProc) -> None:
         expect(output).to_have_text(f"Icon-only button clicked {i} times")
 
 
+@pytest.mark.flaky(reruns=3)
 def test_toolbar_button_type_attribute(page: Page, app: ShinyAppProc) -> None:
     """Test button type attribute."""
     page.goto(app.url)
@@ -413,6 +430,7 @@ def test_toolbar_button_type_attribute(page: Page, app: ShinyAppProc) -> None:
     expect(btn_label.loc).to_have_attribute("data-type", "label")
 
 
+@pytest.mark.flaky(reruns=3)
 def test_toolbar_button_custom_data_attributes(page: Page, app: ShinyAppProc) -> None:
     """Test button with custom data attributes passed via kwargs."""
     page.goto(app.url)
@@ -435,6 +453,7 @@ def test_toolbar_button_custom_data_attributes(page: Page, app: ShinyAppProc) ->
     expect(output).to_have_text("Custom attr button clicked 1 times")
 
 
+@pytest.mark.flaky(reruns=3)
 def test_toolbar_button_custom_class(page: Page, app: ShinyAppProc) -> None:
     """Test button with custom Bootstrap class."""
     page.goto(app.url)

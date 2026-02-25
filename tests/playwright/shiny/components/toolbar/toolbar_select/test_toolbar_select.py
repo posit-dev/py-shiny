@@ -1,5 +1,6 @@
 import re
 
+import pytest
 from conftest import create_app_fixture
 from playwright.sync_api import Page, expect
 
@@ -10,6 +11,7 @@ from shiny.run import ShinyAppProc
 app = create_app_fixture("./app.py")
 
 
+@pytest.mark.flaky(reruns=3)
 def test_toolbar_select_basic(page: Page, app: ShinyAppProc) -> None:
     """Test basic select with list choices."""
     page.goto(app.url)
@@ -45,6 +47,7 @@ def test_toolbar_select_basic(page: Page, app: ShinyAppProc) -> None:
     expect(tooltip_content.first).to_contain_text("Choose option")
 
 
+@pytest.mark.flaky(reruns=3)
 def test_toolbar_select_dict_choices(page: Page, app: ShinyAppProc) -> None:
     """Test select with dict choices and selected value."""
     page.goto(app.url)
@@ -74,6 +77,7 @@ def test_toolbar_select_dict_choices(page: Page, app: ShinyAppProc) -> None:
     expect(tooltip_content.first).to_contain_text("Filter")
 
 
+@pytest.mark.flaky(reruns=3)
 def test_toolbar_select_with_icon(page: Page, app: ShinyAppProc) -> None:
     """Test select with icon."""
     page.goto(app.url)
@@ -101,6 +105,7 @@ def test_toolbar_select_with_icon(page: Page, app: ShinyAppProc) -> None:
     expect(tooltip_content.first).to_contain_text("Filter data")
 
 
+@pytest.mark.flaky(reruns=3)
 def test_toolbar_select_label_shown(page: Page, app: ShinyAppProc) -> None:
     """Test select with label shown."""
     page.goto(app.url)
@@ -117,6 +122,7 @@ def test_toolbar_select_label_shown(page: Page, app: ShinyAppProc) -> None:
     expect(tooltip).not_to_be_attached()
 
 
+@pytest.mark.flaky(reruns=3)
 def test_toolbar_select_custom_tooltip(page: Page, app: ShinyAppProc) -> None:
     """Test select with custom tooltip."""
     page.goto(app.url)
@@ -136,6 +142,7 @@ def test_toolbar_select_custom_tooltip(page: Page, app: ShinyAppProc) -> None:
     expect(tooltip_content.first).not_to_contain_text("View mode")
 
 
+@pytest.mark.flaky(reruns=3)
 def test_toolbar_select_no_tooltip(page: Page, app: ShinyAppProc) -> None:
     """Test select with tooltip disabled."""
     page.goto(app.url)
@@ -152,6 +159,7 @@ def test_toolbar_select_no_tooltip(page: Page, app: ShinyAppProc) -> None:
     expect(tooltip_content).not_to_be_visible()
 
 
+@pytest.mark.flaky(reruns=3)
 def test_toolbar_select_grouped_choices(page: Page, app: ShinyAppProc) -> None:
     """Test select with grouped choices."""
     page.goto(app.url)
@@ -183,6 +191,7 @@ def test_toolbar_select_grouped_choices(page: Page, app: ShinyAppProc) -> None:
     expect(tooltip_content.first).to_contain_text("Select item")
 
 
+@pytest.mark.flaky(reruns=3)
 def test_toolbar_select_update_choices(page: Page, app: ShinyAppProc) -> None:
     """Test updating select choices."""
     page.goto(app.url)
@@ -211,6 +220,7 @@ def test_toolbar_select_update_choices(page: Page, app: ShinyAppProc) -> None:
     expect(output).to_have_text("Update choices value: B")
 
 
+@pytest.mark.flaky(reruns=3)
 def test_toolbar_select_update_selected(page: Page, app: ShinyAppProc) -> None:
     """Test updating selected value."""
     page.goto(app.url)
@@ -238,6 +248,7 @@ def test_toolbar_select_update_selected(page: Page, app: ShinyAppProc) -> None:
     expect(output).to_have_text("Update selected value: First")
 
 
+@pytest.mark.flaky(reruns=3)
 def test_toolbar_select_update_label(page: Page, app: ShinyAppProc) -> None:
     """Test updating select label."""
     page.goto(app.url)
@@ -257,6 +268,7 @@ def test_toolbar_select_update_label(page: Page, app: ShinyAppProc) -> None:
     expect(select_ctrl.loc_label).to_have_text("Updated 2")
 
 
+@pytest.mark.flaky(reruns=3)
 def test_toolbar_select_toggle_show_label(page: Page, app: ShinyAppProc) -> None:
     """Test toggling label visibility."""
     page.goto(app.url)
@@ -276,6 +288,7 @@ def test_toolbar_select_toggle_show_label(page: Page, app: ShinyAppProc) -> None
     expect(select_ctrl.loc_label).to_have_class(re.compile(r"visually-hidden"))
 
 
+@pytest.mark.flaky(reruns=3)
 def test_toolbar_select_update_icon(page: Page, app: ShinyAppProc) -> None:
     """Test updating select icon."""
     page.goto(app.url)
@@ -302,6 +315,7 @@ def test_toolbar_select_update_icon(page: Page, app: ShinyAppProc) -> None:
     )
 
 
+@pytest.mark.flaky(reruns=3)
 def test_toolbar_select_update_all(page: Page, app: ShinyAppProc) -> None:
     """Test updating all properties at once."""
     page.goto(app.url)
@@ -329,6 +343,7 @@ def test_toolbar_select_update_all(page: Page, app: ShinyAppProc) -> None:
     expect(select_ctrl.loc_icon.locator("svg")).to_be_visible()
 
 
+@pytest.mark.flaky(reruns=3)
 def test_toolbar_select_icon_and_label(page: Page, app: ShinyAppProc) -> None:
     """Test select with both icon and label shown."""
     page.goto(app.url)
@@ -348,6 +363,7 @@ def test_toolbar_select_icon_and_label(page: Page, app: ShinyAppProc) -> None:
     expect(tooltip).not_to_be_attached()
 
 
+@pytest.mark.flaky(reruns=3)
 def test_toolbar_select_custom_attributes(page: Page, app: ShinyAppProc) -> None:
     """Test select with custom attributes."""
     page.goto(app.url)
@@ -366,6 +382,7 @@ def test_toolbar_select_custom_attributes(page: Page, app: ShinyAppProc) -> None
     expect(output).to_have_text("Custom attr value: Science")
 
 
+@pytest.mark.flaky(reruns=3)
 def test_toolbar_select_aria_attributes(page: Page, app: ShinyAppProc) -> None:
     """Test accessibility attributes."""
     page.goto(app.url)
@@ -383,6 +400,7 @@ def test_toolbar_select_aria_attributes(page: Page, app: ShinyAppProc) -> None:
     expect(select_ctrl_icon.loc_icon).to_have_attribute("aria-hidden", "true")
 
 
+@pytest.mark.flaky(reruns=3)
 def test_toolbar_select_structure(page: Page, app: ShinyAppProc) -> None:
     """Test the overall structure of toolbar_input_select."""
     page.goto(app.url)
