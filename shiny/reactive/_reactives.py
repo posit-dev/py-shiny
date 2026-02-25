@@ -371,36 +371,46 @@ class Value(Generic[T]):
         self._value = value
         self._value_dependents.invalidate()
 
+        self._emit_otel_log()
+
+        return True
+
+    def _emit_otel_log(self) -> None:
         # Log value update for OpenTelemetry
         # Only log when:
         # 1. Tracing is enabled (OpenTelemetry SDK is configured)
         # 2. Collection level (captured at initialization) is REACTIVITY or higher
-        # TODO: 3. Value name does not start with "input." (skip logging for input.* values)
-        #    Input values create excessive noise. Only user-created reactive.Value()
-        #    objects should log updates.
-        if (
+        # 3. Value name does not start with "input." or `.clientData`. Once the reactive initialization is done, we should log all updates.
+        if not (
             is_otel_tracing_enabled()
             and self._otel_level >= OtelCollectLevel.REACTIVITY
         ):
-            if self._otel_label is None:
-                # Lazily initialize the OTel label on first set, when we have the name available
-                self._otel_label = create_otel_label(
-                    "Set reactive.value",
-                    self._name,
-                    namespace=self._otel_namespace,
-                )
+            return
 
-            emit_otel_log(
-                self._otel_label,
-                severity_text="DEBUG",
-                # Build attributes dict with session ID and source reference
-                attributes={
-                    **self._otel_attrs,
-                    **self._extract_caller_source_ref(),
-                },
+        from ..session._utils import get_current_session
+
+        s = get_current_session()
+        if s is None:
+            # No session, therefore it is too early
+            return
+
+        if self._otel_label is None:
+            # Lazily initialize the OTel label on first set, when we have the name available
+            self._otel_label = create_otel_label(
+                "Set reactive.value",
+                self._name,
+                namespace=self._otel_namespace,
             )
 
-        return True
+        emit_otel_log(
+            self._otel_label,
+            severity_text="DEBUG",
+            # Build attributes dict with session ID and source reference
+            attributes={
+                **self._otel_attrs,
+                **self._extract_caller_source_ref(),
+            },
+        )
 
     def unset(self) -> None:
         """
