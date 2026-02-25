@@ -403,42 +403,42 @@ class BookmarkApp(Bookmark):
                     return
 
                 with session_context(root_session):
-
-                    async with shiny_otel_span(
-                        "restore_bookmark_callbacks",
-                        required_level=OtelCollectLevel.REACTIVE_UPDATE,
-                    ):
-                        try:
-                            with reactive.isolate():
-                                if (
-                                    self._restore_context
-                                    and self._restore_context.active
+                    try:
+                        with reactive.isolate():
+                            if (
+                                self._restore_context
+                                and self._restore_context.active
+                            ):
+                                # Only create span if there's actual work to do
+                                async with shiny_otel_span(
+                                    "restore_bookmark_callbacks",
+                                    required_level=OtelCollectLevel.REACTIVE_UPDATE,
                                 ):
                                     restore_state = self._restore_context.as_state()
                                     await self._on_restore_callbacks.invoke(
                                         restore_state
                                     )
-                        except Exception as e:
-                            # DEV NOTE: Error sanitization is important here even though
-                            # this is not OTel-specific. User callback errors may contain
-                            # sensitive information (file paths, API keys, internal state)
-                            # that should not be displayed directly in the UI.
-                            #
-                            # This respects app.sanitize_error_msg setting and SafeException
-                            # exceptions bypass sanitization.
-                            from ..otel._errors import maybe_sanitize_error
+                    except Exception as e:
+                        # DEV NOTE: Error sanitization is important here even though
+                        # this is not OTel-specific. User callback errors may contain
+                        # sensitive information (file paths, API keys, internal state)
+                        # that should not be displayed directly in the UI.
+                        #
+                        # This respects app.sanitize_error_msg setting and SafeException
+                        # exceptions bypass sanitization.
+                        from ..otel._errors import maybe_sanitize_error
 
-                            sanitized = maybe_sanitize_error(e, session=root_session)
+                        sanitized = maybe_sanitize_error(e, session=root_session)
 
-                            warnings.warn(
-                                f"Error calling on_restore callback: {sanitized}",
-                                stacklevel=2,
-                            )
-                            notification_show(
-                                f"Error calling on_restore callback: {sanitized}",
-                                duration=None,
-                                type="error",
-                            )
+                        warnings.warn(
+                            f"Error calling on_restore callback: {sanitized}",
+                            stacklevel=2,
+                        )
+                        notification_show(
+                            f"Error calling on_restore callback: {sanitized}",
+                            duration=None,
+                            type="error",
+                        )
 
             # Run the on_restored function after the flush cycle completes and
             # information is sent to the client.
@@ -448,41 +448,42 @@ class BookmarkApp(Bookmark):
                     return
 
                 with session_context(root_session):
-                    async with shiny_otel_span(
-                        "restored_bookmark_callbacks",
-                        required_level=OtelCollectLevel.REACTIVE_UPDATE,
-                    ):
-                        try:
-                            with reactive.isolate():
-                                if (
-                                    self._restore_context
-                                    and self._restore_context.active
+                    try:
+                        with reactive.isolate():
+                            if (
+                                self._restore_context
+                                and self._restore_context.active
+                            ):
+                                # Only create span if there's actual work to do
+                                async with shiny_otel_span(
+                                    "restored_bookmark_callbacks",
+                                    required_level=OtelCollectLevel.REACTIVE_UPDATE,
                                 ):
                                     restore_state = self._restore_context.as_state()
                                     await self._on_restored_callbacks.invoke(
                                         restore_state
                                     )
-                        except Exception as e:
-                            # DEV NOTE: Error sanitization is important here even though
-                            # this is not OTel-specific. User callback errors may contain
-                            # sensitive information (file paths, API keys, internal state)
-                            # that should not be displayed directly in the UI.
-                            #
-                            # This respects app.sanitize_error_msg setting and SafeException
-                            # exceptions bypass sanitization.
-                            from ..otel._errors import maybe_sanitize_error
+                    except Exception as e:
+                        # DEV NOTE: Error sanitization is important here even though
+                        # this is not OTel-specific. User callback errors may contain
+                        # sensitive information (file paths, API keys, internal state)
+                        # that should not be displayed directly in the UI.
+                        #
+                        # This respects app.sanitize_error_msg setting and SafeException
+                        # exceptions bypass sanitization.
+                        from ..otel._errors import maybe_sanitize_error
 
-                            sanitized = maybe_sanitize_error(e, session=root_session)
+                        sanitized = maybe_sanitize_error(e, session=root_session)
 
-                            warnings.warn(
-                                f"Error calling on_restored callback: {sanitized}",
-                                stacklevel=2,
-                            )
-                            notification_show(
-                                f"Error calling on_restored callback: {sanitized}",
-                                duration=None,
-                                type="error",
-                            )
+                        warnings.warn(
+                            f"Error calling on_restored callback: {sanitized}",
+                            stacklevel=2,
+                        )
+                        notification_show(
+                            f"Error calling on_restored callback: {sanitized}",
+                            duration=None,
+                            type="error",
+                        )
 
         return
 
@@ -520,7 +521,6 @@ class BookmarkApp(Bookmark):
         if self.store == "disable":
             return None
 
-        # ?withLogErrors
         from ..bookmark._bookmark import BookmarkState
         from ..session import session_context
 
@@ -591,9 +591,9 @@ class BookmarkApp(Bookmark):
                 with session_context(self._root_session):
                     await self._on_bookmarked_callbacks.invoke(full_url)
             else:
-                # Barret:
-                # This action feels weird. I don't believe it should occur
-                # Instead, I believe it should update the query string and set the user's clipboard with a UI notification in the corner.
+                # TODO: Consider improving default bookmarking UX
+                # Currently shows modal dialog, but could instead update query string
+                # and copy to clipboard with a non-blocking notification
                 with session_context(self._root_session):
                     await self.show_bookmark_url_modal(full_url)
 
