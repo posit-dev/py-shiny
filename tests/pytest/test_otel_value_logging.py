@@ -286,7 +286,7 @@ class TestValueUpdateLogging:
         assert value_logs[0].log_record.body == "Set reactive.value <anonymous>"
 
     def test_value_set_no_session(self, otel_log_provider_and_exporter):
-        """Test that value updates work without a session"""
+        """Test that value updates do NOT log without a session (too early)"""
         provider, exporter = otel_log_provider_and_exporter
         with patch_otel_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
@@ -302,14 +302,8 @@ class TestValueUpdateLogging:
             for log in logs
             if log.log_record.body and "Set reactive.value" in log.log_record.body
         ]
-        assert len(value_logs) >= 1
-        assert value_logs[0].log_record.body == "Set reactive.value standalone_value"
-
-        # Session ID should not be present
-        attrs = value_logs[0].log_record.attributes
-        # attrs could be None or not contain session.id
-        if attrs is not None:
-            assert "session.id" not in attrs
+        # Should have NO logs without a session (intentionally returns early)
+        assert len(value_logs) == 0
 
     def test_value_set_no_log_when_tracing_disabled(
         self, otel_log_provider_and_exporter
@@ -718,7 +712,7 @@ class TestValueSourceReference:
         assert attrs["code.function"] == "test_source_ref_in_log_attributes"
 
     def test_source_ref_without_session(self, otel_log_provider_and_exporter):
-        """Test that source reference works without a session"""
+        """Test that NO logs are emitted without a session (too early)"""
         provider, exporter = otel_log_provider_and_exporter
         with patch_otel_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
@@ -733,11 +727,5 @@ class TestValueSourceReference:
             for log in logs
             if log.log_record.body and "Set reactive.value" in log.log_record.body
         ]
-        assert len(value_logs) >= 1
-
-        # Source ref should still be present
-        attrs = value_logs[0].log_record.attributes
-        assert attrs is not None
-        assert "code.filepath" in attrs
-        assert "code.lineno" in attrs
-        assert "code.function" in attrs
+        # Should have NO logs without a session (intentionally returns early)
+        assert len(value_logs) == 0

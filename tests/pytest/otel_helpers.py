@@ -5,9 +5,9 @@ Provides common helpers for setting up test isolation when working with
 OpenTelemetry TracerProvider in tests.
 """
 
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from typing import Iterator, Tuple, Union
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
@@ -68,8 +68,8 @@ def patch_otel_tracing_state(*, tracing_enabled: Union[bool, None]) -> Iterator[
     """
     Context manager to temporarily patch the tracing state for testing.
 
-    This mocks the TracerProvider to control what `is_otel_tracing_enabled()`
-    returns, without relying on cached state.
+    This mocks `is_otel_tracing_enabled()` directly to control what it returns,
+    without affecting the actual TracerProvider setup in tests.
 
     Parameters
     ----------
@@ -104,17 +104,50 @@ def patch_otel_tracing_state(*, tracing_enabled: Union[bool, None]) -> Iterator[
     This is a test utility and should not be used in production code.
     The state is automatically restored when exiting the context.
     """
-    # Create mock provider based on desired state
-    if tracing_enabled:
-        # Return a real SDK TracerProvider
-        mock_provider = TracerProvider()
-    else:
-        # Return a non-SDK provider (the default ProxyTracerProvider behavior)
-        mock_provider = MagicMock()
-        mock_provider.__class__.__name__ = "ProxyTracerProvider"
+    # Mock is_otel_tracing_enabled() in all places it's used
+    # Need to patch both where it's defined and where it's imported
+    enabled = bool(tracing_enabled)
 
-    # Mock trace.get_tracer_provider() to return our mock
-    with patch("opentelemetry.trace.get_tracer_provider", return_value=mock_provider):
+    # Use ExitStack to manage multiple patches cleanly
+    with ExitStack() as stack:
+        # Patch in production code
+        stack.enter_context(
+            patch("shiny.otel._core.is_otel_tracing_enabled", return_value=enabled)
+        )
+        stack.enter_context(
+            patch(
+                "shiny.otel._span_wrappers.is_otel_tracing_enabled",
+                return_value=enabled,
+            )
+        )
+        stack.enter_context(
+            patch(
+                "shiny.reactive._reactives.is_otel_tracing_enabled",
+                return_value=enabled,
+            )
+        )
+
+        # Also patch in test modules that import it
+        try:
+            stack.enter_context(
+                patch(
+                    "tests.pytest.test_otel_session.is_otel_tracing_enabled",
+                    return_value=enabled,
+                )
+            )
+        except (ImportError, AttributeError):
+            pass  # Module may not be imported yet
+
+        try:
+            stack.enter_context(
+                patch(
+                    "tests.pytest.test_otel_value_logging.is_otel_tracing_enabled",
+                    return_value=enabled,
+                )
+            )
+        except (ImportError, AttributeError):
+            pass  # Module may not be imported yet
+
         yield
 
 
