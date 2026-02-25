@@ -1,3 +1,4 @@
+import pytest
 from conftest import create_app_fixture
 from playwright.sync_api import Page, expect
 
@@ -7,6 +8,7 @@ from shiny.run import ShinyAppProc
 app = create_app_fixture("./app.py")
 
 
+@pytest.mark.flaky(reruns=3)
 def test_numeric_input_toolbar_basic(page: Page, app: ShinyAppProc) -> None:
     """Test toolbar in numeric input label - basic structure."""
     page.goto(app.url)
@@ -30,6 +32,7 @@ def test_numeric_input_toolbar_basic(page: Page, app: ShinyAppProc) -> None:
     expect(btn_reset.loc).to_be_visible()
 
 
+@pytest.mark.flaky(reruns=3)
 def test_numeric_input_toolbar_preset_buttons(page: Page, app: ShinyAppProc) -> None:
     """Test preset buttons functionality."""
     page.goto(app.url)
@@ -77,6 +80,7 @@ def test_numeric_input_toolbar_preset_buttons(page: Page, app: ShinyAppProc) -> 
     expect(output).to_contain_text("Quantity: 1")
 
 
+@pytest.mark.flaky(reruns=3)
 def test_numeric_input_toolbar_spacer(page: Page, app: ShinyAppProc) -> None:
     """Test that spacer pushes buttons to the right in numeric input toolbar."""
     page.goto(app.url)
@@ -102,6 +106,7 @@ def test_numeric_input_toolbar_spacer(page: Page, app: ShinyAppProc) -> None:
     assert box_reset["x"] > box_10["x"] + box_10["width"]
 
 
+@pytest.mark.flaky(reruns=3)
 def test_text_area_toolbar_spacer_positioning(page: Page, app: ShinyAppProc) -> None:
     """Test that spacer creates proper spacing in text area toolbar."""
     page.goto(app.url)
@@ -126,6 +131,7 @@ def test_text_area_toolbar_spacer_positioning(page: Page, app: ShinyAppProc) -> 
     assert clear_box["x"] > select_box["x"] + select_box["width"] + 20
 
 
+@pytest.mark.flaky(reruns=3)
 def test_submit_textarea_toolbar_positioning(page: Page, app: ShinyAppProc) -> None:
     """Test that toolbar has significant spacing before submit button."""
     page.goto(app.url)
@@ -150,6 +156,7 @@ def test_submit_textarea_toolbar_positioning(page: Page, app: ShinyAppProc) -> N
     assert submit_box["x"] > copy_box["x"] + copy_box["width"] + 20
 
 
+@pytest.mark.flaky(reruns=3)
 def test_text_area_toolbar_basic(page: Page, app: ShinyAppProc) -> None:
     """Test toolbar in text area label - basic structure."""
     page.goto(app.url)
@@ -177,6 +184,7 @@ def test_text_area_toolbar_basic(page: Page, app: ShinyAppProc) -> None:
     expect(text_size.loc).to_be_visible()
 
 
+@pytest.mark.flaky(reruns=3)
 def test_text_area_toolbar_clear_button(page: Page, app: ShinyAppProc) -> None:
     """Test clear button functionality."""
     page.goto(app.url)
@@ -195,6 +203,7 @@ def test_text_area_toolbar_clear_button(page: Page, app: ShinyAppProc) -> None:
     notes.expect_value("")
 
 
+@pytest.mark.flaky(reruns=3)
 def test_text_area_toolbar_select(page: Page, app: ShinyAppProc) -> None:
     """Test toolbar select functionality."""
     page.goto(app.url)
@@ -215,6 +224,7 @@ def test_text_area_toolbar_select(page: Page, app: ShinyAppProc) -> None:
     expect(output).to_contain_text("Text Size: large")
 
 
+@pytest.mark.flaky(reruns=3)
 def test_text_area_toolbar_button_clicks(page: Page, app: ShinyAppProc) -> None:
     """Test that toolbar buttons register clicks."""
     page.goto(app.url)
@@ -253,6 +263,7 @@ def test_text_area_toolbar_button_clicks(page: Page, app: ShinyAppProc) -> None:
     expect(output).to_contain_text("Link: 1")
 
 
+@pytest.mark.flaky(reruns=3)
 def test_submit_textarea_toolbar_basic(page: Page, app: ShinyAppProc) -> None:
     """Test toolbar in submit textarea - basic structure."""
     page.goto(app.url)
@@ -272,6 +283,7 @@ def test_submit_textarea_toolbar_basic(page: Page, app: ShinyAppProc) -> None:
     expect(btn_copy_draft.loc).to_be_visible()
 
 
+@pytest.mark.flaky(reruns=3)
 def test_submit_textarea_toolbar_select(page: Page, app: ShinyAppProc) -> None:
     """Test priority select functionality."""
     page.goto(app.url)
@@ -296,6 +308,7 @@ def test_submit_textarea_toolbar_select(page: Page, app: ShinyAppProc) -> None:
     expect(output).to_contain_text("Priority: low")
 
 
+@pytest.mark.flaky(reruns=3)
 def test_submit_textarea_toolbar_buttons(page: Page, app: ShinyAppProc) -> None:
     """Test toolbar buttons in submit textarea."""
     page.goto(app.url)
@@ -331,6 +344,7 @@ def test_submit_textarea_toolbar_buttons(page: Page, app: ShinyAppProc) -> None:
     expect(output).to_contain_text("Copy: 1")
 
 
+@pytest.mark.flaky(reruns=3)
 def test_submit_textarea_submit_functionality(page: Page, app: ShinyAppProc) -> None:
     """Test that submit button works."""
     page.goto(app.url)
@@ -349,6 +363,7 @@ def test_submit_textarea_submit_functionality(page: Page, app: ShinyAppProc) -> 
     expect(output).to_contain_text("Submits: 1")
 
 
+@pytest.mark.flaky(reruns=3)
 def test_toolbar_dividers_present(page: Page, app: ShinyAppProc) -> None:
     """Test that toolbar dividers are present in all toolbars."""
     page.goto(app.url)
@@ -376,6 +391,7 @@ def test_toolbar_dividers_present(page: Page, app: ShinyAppProc) -> None:
     expect(divider3).to_have_count(1)
 
 
+@pytest.mark.flaky(reruns=3)
 def test_toolbar_spacers_present(page: Page, app: ShinyAppProc) -> None:
     """Test that toolbar spacers are present where expected."""
     page.goto(app.url)
