@@ -61,8 +61,9 @@ from ..otel._decorators import no_otel_collect
 from ..otel._function_attrs import resolve_func_otel_level
 from ..otel._labels import create_otel_span_name
 from ..otel._span_wrappers import shiny_otel_span
-from ..reactive import Effect_, Value, effect, isolate
+from ..reactive import Effect_, Value, effect
 from ..reactive import flush as reactive_flush
+from ..reactive import isolate
 from ..reactive._core import lock
 from ..reactive._core import on_flushed as reactive_on_flushed
 from ..render.renderer import Renderer, RendererT

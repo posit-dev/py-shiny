@@ -79,6 +79,9 @@ def is_otel_tracing_enabled() -> bool:
     bool
         True if tracing is enabled, False otherwise.
     """
+    # Note: This function does not cache its result to allow users to set up their
+    # TracerProvider after importing Shiny. The performance impact is negligible
+    # (~0.22μs per check), and the check only happens when creating spans.
     try:
         from opentelemetry.sdk.trace import TracerProvider as SDKTracerProvider
     except ImportError:

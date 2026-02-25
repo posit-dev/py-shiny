@@ -39,7 +39,9 @@ def test_no_input_clientdata_logs_on_load(page: Page, local_app: ShinyAppProc) -
     # Get the logs
     logs_text = otel_logs_output.loc.text_content()
     assert logs_text is not None, "Logs output should not be None"
-    assert logs_text.strip() != "", f"Logs output should not be empty, got: '{logs_text}'"
+    assert (
+        logs_text.strip() != ""
+    ), f"Logs output should not be empty, got: '{logs_text}'"
 
     # Parse the logs
     logs_data: list[dict[str, Any]] = json.loads(logs_text)
@@ -122,7 +124,8 @@ def test_no_input_clientdata_logs_after_access(
         len(final_input_logs) == 0
     ), f"Should have no input logs after access (filtered by design), found {len(final_input_logs)}"
 
-    print("\n\u2713 Verified: input.* and .clientData values are not logged (by design)")
+    print(
+        "\n\u2713 Verified: input.* and .clientData values are not logged (by design)"
+    )
     print(f"  Total logs before access: {len(initial_logs)}")
     print(f"  Total logs after access: {len(final_logs)}")
-
