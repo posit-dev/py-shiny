@@ -11,6 +11,7 @@ Verifies that:
 
 import json
 import re
+from pathlib import Path
 from typing import Any
 
 from playwright.sync_api import Page, expect
@@ -306,30 +307,57 @@ def test_bookmark_callbacks_code_filepath(page: Page, local_app: ShinyAppProc) -
         len(spans_with_filepath) > 0
     ), "Should have spans with code.filepath attribute"
 
+    # Get the expected app directory (where the test app.py is located)
+    test_dir = Path(__file__).parent.resolve()
+    expected_app_file = test_dir / "app.py"
+
     # Verify code.filepath for all spans
     for span in spans_with_filepath:
         attrs = span["attributes"]
-        filepath = attrs["code.filepath"]
+        filepath_str = attrs["code.filepath"]
         span_name = span["name"]
 
-        # Should NOT be internal Shiny library files
-        assert (
-            "/shiny/bookmark/" not in filepath
-        ), f"Span '{span_name}' has code.filepath pointing to internal Shiny file: {filepath}"
-        assert (
-            "/shiny/session/" not in filepath
-        ), f"Span '{span_name}' has code.filepath pointing to internal Shiny file: {filepath}"
-        assert (
-            "/shiny/reactive/" not in filepath
-        ), f"Span '{span_name}' has code.filepath pointing to internal Shiny file: {filepath}"
+        # Convert to Path for robust cross-platform handling
+        filepath = Path(filepath_str).resolve()
 
-        # Should be the test app file
-        assert filepath.endswith(
-            "app.py"
-        ), f"Span '{span_name}' has code.filepath not ending in app.py: {filepath}"
-        assert (
-            "bookmark-callbacks/app.py" in filepath
-        ), f"Span '{span_name}' has code.filepath not pointing to test app: {filepath}"
+        # Verify the file exists
+        assert filepath.exists(), (
+            f"Span '{span_name}' has code.filepath pointing to non-existent file: "
+            f"{filepath}"
+        )
+
+        # Verify it's NOT in internal Shiny library directories
+        # Check if any parent directory is named 'shiny' with subdirs like 'bookmark', 'session', 'reactive'
+        try:
+            # Try to get relative path from shiny package location
+            import shiny
+
+            shiny_package_path = Path(shiny.__file__).parent.resolve()
+
+            # Check if filepath is under the shiny package
+            try:
+                rel_path = filepath.relative_to(shiny_package_path)
+                # If we get here, file is inside shiny package - check if it's in internal dirs
+                internal_dirs = {"bookmark", "session", "reactive"}
+                if rel_path.parts and rel_path.parts[0] in internal_dirs:
+                    raise AssertionError(
+                        f"Span '{span_name}' has code.filepath pointing to internal "
+                        f"Shiny file in {rel_path.parts[0]}/: {filepath}"
+                    )
+            except ValueError:
+                # filepath is not relative to shiny package - this is good
+                pass
+        except Exception as e:
+            if isinstance(e, AssertionError):
+                raise
+            # If we can't determine shiny package location, skip this check
+            pass
+
+        # Verify it's the expected app.py file
+        assert filepath == expected_app_file, (
+            f"Span '{span_name}' has code.filepath not pointing to test app.py. "
+            f"Expected: {expected_app_file}, Got: {filepath}"
+        )
 
 
 # TODO: Additional test coverage for bookmark edge cases (Issue #8 from phase8_review.md)
