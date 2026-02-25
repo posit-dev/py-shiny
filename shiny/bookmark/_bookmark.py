@@ -405,11 +405,10 @@ class BookmarkApp(Bookmark):
                 with session_context(root_session):
 
                     async with shiny_otel_span(
-                        "Restore bookmark callbacks",
+                        "restore_bookmark_callbacks",
                         required_level=OtelCollectLevel.REACTIVE_UPDATE,
                     ):
                         try:
-                            # ?withLogErrors
                             with reactive.isolate():
                                 if (
                                     self._restore_context
@@ -420,12 +419,23 @@ class BookmarkApp(Bookmark):
                                         restore_state
                                     )
                         except Exception as e:
+                            # DEV NOTE: Error sanitization is important here even though
+                            # this is not OTel-specific. User callback errors may contain
+                            # sensitive information (file paths, API keys, internal state)
+                            # that should not be displayed directly in the UI.
+                            #
+                            # This respects app.sanitize_error_msg setting and SafeException
+                            # exceptions bypass sanitization.
+                            from ..otel._errors import maybe_sanitize_error
+
+                            sanitized = maybe_sanitize_error(e, session=root_session)
+
                             warnings.warn(
-                                f"Error calling on_restore callback: {e}",
+                                f"Error calling on_restore callback: {sanitized}",
                                 stacklevel=2,
                             )
                             notification_show(
-                                f"Error calling on_restore callback: {e}",
+                                f"Error calling on_restore callback: {sanitized}",
                                 duration=None,
                                 type="error",
                             )
@@ -439,7 +449,7 @@ class BookmarkApp(Bookmark):
 
                 with session_context(root_session):
                     async with shiny_otel_span(
-                        "Restored bookmark callbacks",
+                        "restored_bookmark_callbacks",
                         required_level=OtelCollectLevel.REACTIVE_UPDATE,
                     ):
                         try:
@@ -453,12 +463,23 @@ class BookmarkApp(Bookmark):
                                         restore_state
                                     )
                         except Exception as e:
+                            # DEV NOTE: Error sanitization is important here even though
+                            # this is not OTel-specific. User callback errors may contain
+                            # sensitive information (file paths, API keys, internal state)
+                            # that should not be displayed directly in the UI.
+                            #
+                            # This respects app.sanitize_error_msg setting and SafeException
+                            # exceptions bypass sanitization.
+                            from ..otel._errors import maybe_sanitize_error
+
+                            sanitized = maybe_sanitize_error(e, session=root_session)
+
                             warnings.warn(
-                                f"Error calling on_restored callback: {e}",
-                                stacklevel=1,
+                                f"Error calling on_restored callback: {sanitized}",
+                                stacklevel=2,
                             )
                             notification_show(
-                                f"Error calling on_restored callback: {e}",
+                                f"Error calling on_restored callback: {sanitized}",
                                 duration=None,
                                 type="error",
                             )

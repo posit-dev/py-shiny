@@ -195,24 +195,28 @@ def test_bookmark_callbacks_otel_spans(page: Page, local_app: ShinyAppProc) -> N
     span_names_after = [span["name"] for span in spans_data_after]
     print(f"Span names after restore: {span_names_after}")
 
-    # Find bookmark-related spans
+    # Find bookmark-related spans (using underscore naming convention)
     restore_spans = [
-        s for s in spans_data_after if s["name"] == "Restore bookmark callbacks"
+        s for s in spans_data_after if s["name"] == "restore_bookmark_callbacks"
     ]
     restored_spans = [
-        s for s in spans_data_after if s["name"] == "Restored bookmark callbacks"
+        s for s in spans_data_after if s["name"] == "restored_bookmark_callbacks"
     ]
 
-    assert len(restore_spans) > 0, "Should have 'Restore bookmark callbacks' span"
-    assert len(restored_spans) > 0, "Should have 'Restored bookmark callbacks' span"
+    assert len(restore_spans) > 0, "Should have 'restore_bookmark_callbacks' span"
+    assert len(restored_spans) > 0, "Should have 'restored_bookmark_callbacks' span"
 
     # Get the most recent restore/restored spans (in case there are multiple from initial load)
     restore_span = restore_spans[-1]
     restored_span = restored_spans[-1]
 
     # Verify both spans have a parent
-    assert "parent_span_id" in restore_span, "Restore span should have a parent"
-    assert "parent_span_id" in restored_span, "Restored span should have a parent"
+    assert (
+        "parent_span_id" in restore_span
+    ), "restore_bookmark_callbacks span should have a parent"
+    assert (
+        "parent_span_id" in restored_span
+    ), "restored_bookmark_callbacks span should have a parent"
 
     # Build a lookup map of span_id to span
     span_lookup = {s["span_id"]: s for s in spans_data_after}
@@ -224,28 +228,28 @@ def test_bookmark_callbacks_otel_spans(page: Page, local_app: ShinyAppProc) -> N
     # Verify parent spans exist and contain "reactive_update"
     assert (
         restore_parent is not None
-    ), f"Should find parent for Restore span (parent_id: {restore_span['parent_span_id']})"
+    ), f"Should find parent for restore_bookmark_callbacks span (parent_id: {restore_span['parent_span_id']})"
     assert (
         restored_parent is not None
-    ), f"Should find parent for Restored span (parent_id: {restored_span['parent_span_id']})"
+    ), f"Should find parent for restored_bookmark_callbacks span (parent_id: {restored_span['parent_span_id']})"
 
     assert (
         "reactive_update" in restore_parent["name"]
-    ), f"Restore parent should be reactive_update, got: {restore_parent['name']}"
+    ), f"restore_bookmark_callbacks parent should be reactive_update, got: {restore_parent['name']}"
     assert (
         "reactive_update" in restored_parent["name"]
-    ), f"Restored parent should be reactive_update, got: {restored_parent['name']}"
+    ), f"restored_bookmark_callbacks parent should be reactive_update, got: {restored_parent['name']}"
 
     # Verify timing: restore should start and end before restored starts
     assert (
         restore_span["start_time"] < restore_span["end_time"]
-    ), "Restore span should have valid timing"
+    ), "restore_bookmark_callbacks span should have valid timing"
     assert (
         restored_span["start_time"] < restored_span["end_time"]
-    ), "Restored span should have valid timing"
+    ), "restored_bookmark_callbacks span should have valid timing"
     assert (
         restore_span["end_time"] <= restored_span["start_time"]
-    ), "Restore should complete before Restored starts"
+    ), "restore_bookmark_callbacks should complete before restored_bookmark_callbacks starts"
 
 
 def test_bookmark_callbacks_code_filepath(page: Page, local_app: ShinyAppProc) -> None:
