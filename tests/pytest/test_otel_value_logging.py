@@ -73,7 +73,7 @@ def _otel_log_provider_session() -> (
 @pytest.fixture
 def otel_log_provider_and_exporter(
     _otel_log_provider_session: Tuple[LoggerProvider, InMemoryLogRecordExporter],
-) -> Tuple[LoggerProvider, InMemoryLogRecordExporter]:
+) -> Iterator[Tuple[LoggerProvider, InMemoryLogRecordExporter]]:
     """
     Function-scoped fixture for OpenTelemetry LoggerProvider.
 
@@ -96,10 +96,19 @@ def otel_log_provider_and_exporter(
     tuple[LoggerProvider, InMemoryLogRecordExporter]
         The provider and exporter for use in tests.
     """
+    from shiny.otel import _core
+    from shiny.otel._constants import TRACER_NAME
+
     provider, exporter = _otel_log_provider_session
     # Clear logs from previous tests to ensure isolation
     exporter.clear()
-    return provider, exporter
+    # Force _core._logger to use our test provider's logger.
+    # This handles cases where set_logger_provider() was rejected (e.g., when
+    # logfire or another test already set the global logger provider).
+    _core._logger = provider.get_logger(TRACER_NAME)
+    yield provider, exporter
+    # Reset after test so subsequent callers re-fetch from global provider
+    _core._logger = None
 
 
 @pytest.fixture
