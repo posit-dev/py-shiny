@@ -7,6 +7,7 @@ OpenTelemetry TracerProvider in tests.
 
 from contextlib import contextmanager
 from typing import Iterator, Tuple, Union
+from unittest.mock import MagicMock, patch
 
 from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
@@ -22,9 +23,9 @@ def reset_otel_tracing_state() -> None:
     """
     Reset all cached OTel state to force re-evaluation.
 
-    This clears the cached tracer, logger, and tracing enabled flag, forcing them
-    to be re-evaluated on the next use. This is essential for test isolation,
-    especially when setting up a new TracerProvider.
+    This clears the cached tracer and logger, forcing them to be re-evaluated
+    on the next use. This is essential for test isolation, especially when
+    setting up a new TracerProvider.
 
     Examples
     --------
@@ -51,11 +52,13 @@ def reset_otel_tracing_state() -> None:
     If you need to temporarily set specific values for testing, use the
     `patch_otel_tracing_state()` context manager instead.
 
+    Note: `is_otel_tracing_enabled()` no longer uses caching and will always
+    reflect the current state of the TracerProvider.
+
     See Also
     --------
     patch_otel_tracing_state : Context manager to temporarily set tracing state
     """
-    _core._tracing_enabled = None
     _core._tracer = None
     _core._logger = None
 
@@ -65,15 +68,14 @@ def patch_otel_tracing_state(*, tracing_enabled: Union[bool, None]) -> Iterator[
     """
     Context manager to temporarily patch the tracing state for testing.
 
-    This provides a cleaner alternative to using `unittest.mock.patch` on
-    the internal `_tracing_enabled` variable. It automatically saves and
-    restores the original state.
+    This mocks the TracerProvider to control what `is_otel_tracing_enabled()`
+    returns, without relying on cached state.
 
     Parameters
     ----------
     tracing_enabled
-        The temporary value to set for tracing state. Can be True (enabled),
-        False (disabled), or None (uninitialized).
+        The temporary value to set for tracing state. Can be True (enabled)
+        or False (disabled). None is treated as False.
 
     Yields
     ------
@@ -102,15 +104,18 @@ def patch_otel_tracing_state(*, tracing_enabled: Union[bool, None]) -> Iterator[
     This is a test utility and should not be used in production code.
     The state is automatically restored when exiting the context.
     """
-    # Save original state
-    original = _core._tracing_enabled
-    try:
-        # Set temporary state
-        _core._tracing_enabled = tracing_enabled
+    # Create mock provider based on desired state
+    if tracing_enabled:
+        # Return a real SDK TracerProvider
+        mock_provider = TracerProvider()
+    else:
+        # Return a non-SDK provider (the default ProxyTracerProvider behavior)
+        mock_provider = MagicMock()
+        mock_provider.__class__.__name__ = "ProxyTracerProvider"
+
+    # Mock trace.get_tracer_provider() to return our mock
+    with patch("opentelemetry.trace.get_tracer_provider", return_value=mock_provider):
         yield
-    finally:
-        # Restore original state
-        _core._tracing_enabled = original
 
 
 def get_exported_spans(provider: TracerProvider, exporter: InMemorySpanExporter):

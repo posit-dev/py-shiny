@@ -20,7 +20,6 @@ __all__ = (
 # Global state for lazy initialization
 _tracer: Union[Tracer, None] = None
 _logger: Union[Any, None] = None
-_tracing_enabled: Union[bool, None] = None
 
 
 def get_otel_tracer() -> Tracer:
@@ -71,35 +70,36 @@ def is_otel_tracing_enabled() -> bool:
 
     This checks whether the OTel SDK is properly configured by examining if the
     tracer provider is a real SDK TracerProvider (or a proxy wrapping one).
-    The result is cached to avoid repeated checks.
+
+    This function checks the current state on every call, allowing users to set up
+    their TracerProvider after importing Shiny.
 
     Returns
     -------
     bool
         True if tracing is enabled, False otherwise.
     """
-    global _tracing_enabled
-    if _tracing_enabled is None:
-        try:
-            from opentelemetry.sdk.trace import TracerProvider as SDKTracerProvider
-        except ImportError:
-            # If we can't import the SDK TracerProvider, tracing is disabled
-            _tracing_enabled = False
-        else:
-            tracer_provider = trace.get_tracer_provider()
-            # Check if we have a real SDK TracerProvider
-            if isinstance(tracer_provider, SDKTracerProvider):
-                _tracing_enabled = True
-            # Also check for proxy providers (e.g., logfire's ProxyTracerProvider)
-            # that wrap an SDK TracerProvider
-            elif hasattr(tracer_provider, "provider") and isinstance(
-                tracer_provider.provider,  # type: ignore[attr-defined]
-                SDKTracerProvider,
-            ):
-                _tracing_enabled = True
-            else:
-                _tracing_enabled = False
-    return _tracing_enabled
+    try:
+        from opentelemetry.sdk.trace import TracerProvider as SDKTracerProvider
+    except ImportError:
+        # If we can't import the SDK TracerProvider, tracing is disabled
+        return False
+
+    tracer_provider = trace.get_tracer_provider()
+
+    # Check if we have a real SDK TracerProvider
+    if isinstance(tracer_provider, SDKTracerProvider):
+        return True
+
+    # Also check for proxy providers (e.g., logfire's ProxyTracerProvider)
+    # that wrap an SDK TracerProvider
+    if hasattr(tracer_provider, "provider") and isinstance(
+        tracer_provider.provider,  # type: ignore[attr-defined]
+        SDKTracerProvider,
+    ):
+        return True
+
+    return False
 
 
 def emit_otel_log(
