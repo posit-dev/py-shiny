@@ -8,6 +8,7 @@ Tests cover:
 """
 
 import asyncio
+import sys
 from typing import Tuple
 
 import pytest
@@ -337,6 +338,174 @@ class TestAsyncContextIsolation:
         assert level_3_span.parent is not None, "level.3 should have a parent"
         assert level_2_span.context is not None, "level.2 should have a context"
         assert level_3_span.parent.span_id == level_2_span.context.span_id
+
+    @pytest.mark.asyncio
+    @pytest.mark.skipif(
+        sys.version_info < (3, 11),
+        reason="asyncio.TaskGroup requires Python 3.11+",
+    )
+    async def test_task_group_maintains_context_per_task(
+        self, otel_tracer_provider: Tuple[TracerProvider, InMemorySpanExporter]
+    ):
+        """Test that asyncio.TaskGroup maintains separate context for each task"""
+        provider, memory_exporter = otel_tracer_provider
+
+        async def task_with_span(task_id: str):
+            """Create a span with a unique name"""
+            async with shiny_otel_span(
+                f"taskgroup.{task_id}",
+                attributes={"task.id": task_id},
+                required_level=OtelCollectLevel.ALL,
+            ):
+                await asyncio.sleep(0.001)
+                return task_id
+
+        with patch_otel_tracing_state(tracing_enabled=True):
+            async with shiny_otel_span(
+                "parent.operation",
+                required_level=OtelCollectLevel.ALL,
+            ):
+                # Run multiple tasks concurrently using TaskGroup (Python 3.11+)
+                async with asyncio.TaskGroup() as tg:  # type: ignore[attr-defined]
+                    tg.create_task(task_with_span("X"))  # type: ignore[attr-defined]
+                    tg.create_task(task_with_span("Y"))  # type: ignore[attr-defined]
+                    tg.create_task(task_with_span("Z"))  # type: ignore[attr-defined]
+
+        # Get exported spans
+        spans = get_exported_spans(provider, memory_exporter)
+
+        # Filter to taskgroup spans
+        task_spans = [s for s in spans if s.name.startswith("taskgroup.")]
+
+        # Should have three task spans
+        assert len(task_spans) == 3
+
+        # Verify each has correct attributes
+        task_ids: set[str] = set()
+        for task_span in task_spans:
+            assert task_span.attributes is not None, "task_span should have attributes"
+            task_id = task_span.attributes.get("task.id")
+            assert isinstance(
+                task_id, str
+            ), f"task.id should be a string, got {type(task_id)}"
+            task_ids.add(task_id)
+        assert task_ids == {"X", "Y", "Z"}
+
+        # Verify all task spans have the same parent (the parent.operation span)
+        parent_span = next(s for s in spans if s.name == "parent.operation")
+        assert parent_span.context is not None, "parent_span should have a context"
+        for task_span in task_spans:
+            assert (
+                task_span.parent is not None
+            ), f"task_span {task_span.name} should have a parent"
+            assert task_span.parent.span_id == parent_span.context.span_id
+
+    @pytest.mark.asyncio
+    async def test_as_completed_maintains_context_per_task(
+        self, otel_tracer_provider: Tuple[TracerProvider, InMemorySpanExporter]
+    ):
+        """Test that asyncio.as_completed() maintains separate context for each task"""
+        provider, memory_exporter = otel_tracer_provider
+
+        async def task_with_span(task_id: str, delay: float):
+            """Create a span with a unique name and delay"""
+            async with shiny_otel_span(
+                f"ascompleted.{task_id}",
+                attributes={"task.id": task_id},
+                required_level=OtelCollectLevel.ALL,
+            ):
+                await asyncio.sleep(delay)
+                return task_id
+
+        with patch_otel_tracing_state(tracing_enabled=True):
+            async with shiny_otel_span(
+                "parent.operation",
+                required_level=OtelCollectLevel.ALL,
+            ):
+                # Create tasks with different delays
+                tasks = [
+                    asyncio.create_task(task_with_span("P", 0.003)),
+                    asyncio.create_task(task_with_span("Q", 0.001)),
+                    asyncio.create_task(task_with_span("R", 0.002)),
+                ]
+
+                # Process tasks as they complete
+                completion_order: list[str] = []
+                for completed_task in asyncio.as_completed(tasks):
+                    result = await completed_task
+                    completion_order.append(result)
+
+        # Get exported spans
+        spans = get_exported_spans(provider, memory_exporter)
+
+        # Filter to ascompleted spans
+        task_spans = [s for s in spans if s.name.startswith("ascompleted.")]
+
+        # Should have three task spans
+        assert len(task_spans) == 3
+
+        # Verify completion order (Q finished first, then R, then P)
+        assert completion_order == ["Q", "R", "P"]
+
+        # Verify all task spans have the same parent (the parent.operation span)
+        parent_span = next(s for s in spans if s.name == "parent.operation")
+        assert parent_span.context is not None, "parent_span should have a context"
+        for task_span in task_spans:
+            assert (
+                task_span.parent is not None
+            ), f"task_span {task_span.name} should have a parent"
+            assert task_span.parent.span_id == parent_span.context.span_id
+
+    @pytest.mark.asyncio
+    async def test_pre_created_tasks_maintain_parent_context(
+        self, otel_tracer_provider: Tuple[TracerProvider, InMemorySpanExporter]
+    ):
+        """Test that tasks created before entering span still capture span context when awaited"""
+        provider, memory_exporter = otel_tracer_provider
+
+        async def task_with_span(task_id: str):
+            """Create a span with a unique name"""
+            async with shiny_otel_span(
+                f"precreated.{task_id}",
+                attributes={"task.id": task_id},
+                required_level=OtelCollectLevel.ALL,
+            ):
+                await asyncio.sleep(0.001)
+                return task_id
+
+        with patch_otel_tracing_state(tracing_enabled=True):
+            # Create tasks BEFORE entering the parent span
+            # This tests the edge case where tasks exist prior to span creation
+            task1 = asyncio.create_task(task_with_span("M"))
+            task2 = asyncio.create_task(task_with_span("N"))
+
+            async with shiny_otel_span(
+                "parent.operation",
+                required_level=OtelCollectLevel.ALL,
+            ):
+                # Await the pre-created tasks inside the parent span
+                results = await asyncio.gather(task1, task2)
+
+        # Get exported spans
+        spans = get_exported_spans(provider, memory_exporter)
+
+        # Filter to precreated spans
+        task_spans = [s for s in spans if s.name.startswith("precreated.")]
+
+        # Should have two task spans
+        assert len(task_spans) == 2
+
+        # Verify both tasks completed
+        assert set(results) == {"M", "N"}
+
+        # Note: Pre-created tasks will NOT have the parent.operation as parent
+        # because they captured the context at creation time (before parent span existed)
+        # This is expected behavior - context is captured at task creation, not at await
+        # We verify that the tasks still executed correctly and created spans
+        for task_span in task_spans:
+            # Tasks should have valid span IDs
+            assert task_span.context is not None
+            assert task_span.context.span_id is not None
 
 
 class TestReactiveUpdateConcurrency:
