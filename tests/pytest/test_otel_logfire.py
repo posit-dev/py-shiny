@@ -93,44 +93,32 @@ class TestLogfireIntegration:
             is_otel_tracing_enabled() is True
         ), "Shiny should detect logfire's ProxyTracerProvider"
 
-    def test_logfire_provider_has_underlying_sdk_provider(self):
+    def test_proxy_provider_with_underlying_sdk_detected(self):
         """
-        Test that logfire's ProxyTracerProvider wraps a real SDK TracerProvider.
+        Test that proxy providers with underlying SDK TracerProvider are detected.
 
-        This verifies the underlying structure that our detection logic relies on.
+        This tests our detection logic for wrapped providers (like logfire's
+        ProxyTracerProvider) without depending on logfire's implementation.
         """
         _check_provider_not_already_set()
 
-        try:
-            import logfire
-        except ImportError:
-            pytest.skip("logfire not installed")
+        from unittest.mock import Mock
 
         from opentelemetry import trace
         from opentelemetry.sdk.trace import TracerProvider as SDKTracerProvider
 
-        # Configure logfire
-        logfire.configure(token="test", send_to_logfire=False)
+        # Create a mock proxy provider that mimics logfire's structure
+        mock_proxy_provider = Mock()
+        mock_proxy_provider.provider = SDKTracerProvider()  # Wrapped SDK provider
 
-        # Get the provider
-        tracer_provider = trace.get_tracer_provider()
+        # Set as global provider
+        trace.set_tracer_provider(mock_proxy_provider)
+        reset_otel_tracing_state()
 
-        # Verify it has a .provider attribute (indicates a proxy/wrapper)
-        assert hasattr(
-            tracer_provider, "provider"
-        ), "Logfire provider should have .provider attribute exposing underlying SDK provider"
-
-        # Verify the underlying provider is an SDK TracerProvider
-        underlying = tracer_provider.provider  # type: ignore[attr-defined]
-        assert isinstance(
-            underlying, SDKTracerProvider
-        ), "Underlying provider should be SDK TracerProvider"
-
-        # Verify the provider is not directly an SDK provider (it's wrapped)
-        # This ensures our detection logic for proxy providers is being tested
-        assert not isinstance(
-            tracer_provider, SDKTracerProvider
-        ), "Logfire should wrap the SDK provider, not expose it directly"
+        # Verify our detection logic recognizes the proxy provider
+        assert (
+            is_otel_tracing_enabled() is True
+        ), "Should detect proxy provider with underlying SDK TracerProvider"
 
     def test_direct_sdk_provider_still_detected(self):
         """
