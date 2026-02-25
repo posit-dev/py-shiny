@@ -8,13 +8,13 @@ on app initialization, but ARE logged when explicitly accessed after load.
 import json
 import os
 
+from opentelemetry.sdk._logs import LoggerProvider
+from opentelemetry.sdk._logs.export import InMemoryLogRecordExporter
+from starlette.requests import Request
+
+from shiny import App, Inputs, Outputs, Session, reactive, render, ui
+
 os.environ["SHINY_OTEL_COLLECT"] = "all"
-
-from opentelemetry.sdk._logs import LoggerProvider  # noqa: E402
-from opentelemetry.sdk._logs.export import InMemoryLogRecordExporter  # noqa: E402
-from starlette.requests import Request  # noqa: E402
-
-from shiny import App, Inputs, Outputs, Session, reactive, render, ui  # noqa: E402
 
 # Set up OTel log collection
 _log_exporter = None

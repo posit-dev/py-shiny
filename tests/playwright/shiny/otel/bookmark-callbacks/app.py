@@ -9,17 +9,17 @@ and displays OpenTelemetry spans.
 import json
 import os
 
-os.environ["SHINY_OTEL_COLLECT"] = "all"
-
-from opentelemetry.sdk.trace import TracerProvider  # noqa: E402
-from opentelemetry.sdk.trace.export.in_memory_span_exporter import (  # noqa: E402
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
     InMemorySpanExporter,
 )
-from starlette.requests import Request  # noqa: E402
+from starlette.requests import Request
 
-from shiny import App, Inputs, Outputs, Session, reactive, render, ui  # noqa: E402
-from shiny.bookmark import RestoreState  # noqa: E402
-from shiny.bookmark._save_state import BookmarkState  # noqa: E402
+from shiny import App, Inputs, Outputs, Session, reactive, render, ui
+from shiny.bookmark import RestoreState
+from shiny.bookmark._save_state import BookmarkState
+
+os.environ["SHINY_OTEL_COLLECT"] = "all"
 
 # Set up OTel span collection if SHINY_OTEL_COLLECT is enabled
 _span_exporter = None
