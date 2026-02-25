@@ -83,12 +83,17 @@ def result_private():
 ```python
 from shiny.otel import otel_collect
 
-with otel_collect("all"):
-    # Only session-level Shiny telemetry
+@render.text
+def result_mixed():
+    # Outer function has normal telemetry
+    public_data = fetch_public_data()
+
+    # Suppress telemetry for sensitive processing
     with otel_collect("none"):
-        # No Shiny telemetry in this inner block
-        process_data()
-    # Back to session-level Shiny telemetry
+        sensitive_result = process_sensitive_data()
+
+    # Back to normal telemetry
+    return f"Public: {public_data}, Result: {sensitive_result}"
 ```
 
 ## Collection Levels
