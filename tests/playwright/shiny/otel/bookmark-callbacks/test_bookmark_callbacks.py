@@ -147,6 +147,7 @@ def test_bookmark_callbacks_otel_spans(page: Page, local_app: ShinyAppProc) -> N
 
     # Get the spans output and verify it contains span data
     spans_text = otel_spans_output.loc.text_content()
+    print("Spans output text:", spans_text)
     assert spans_text is not None, "Spans output should have content"
     assert "error" not in spans_text.lower(), "Should not have OTel error"
 
@@ -268,6 +269,7 @@ def test_bookmark_callbacks_code_filepath(page: Page, local_app: ShinyAppProc) -
     expect(otel_spans_output.loc).not_to_be_empty()
 
     spans_text = otel_spans_output.loc.text_content()
+    print("Spans output text:", spans_text)
     assert spans_text is not None
     spans_before_reload: list[dict[str, Any]] = json.loads(spans_text)
 
