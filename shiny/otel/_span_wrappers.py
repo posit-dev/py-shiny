@@ -49,7 +49,6 @@ from typing import Any, AsyncIterator, Callable, Dict, Mapping, Union
 from opentelemetry.trace import Span, Status, StatusCode
 
 from ._collect import OtelCollectLevel, get_otel_collect_level
-from ._constants import ATTR_SESSION_ID
 from ._core import get_otel_tracer, is_otel_tracing_enabled
 
 __all__ = ("shiny_otel_span",)
@@ -95,6 +94,10 @@ async def shiny_otel_span(
         that returns a dictionary. If a callable is provided, it will only be
         called if collection is enabled, allowing for lazy evaluation of
         expensive attribute extraction.
+
+        **Important:** Session context attributes (like `session.id`) should be
+        explicitly passed in this parameter. They are NOT automatically added,
+        providing flexibility to choose which spans include session context.
     required_level
         The minimum collect level required for this span. Defaults to SESSION.
 
@@ -173,15 +176,8 @@ async def shiny_otel_span(
                 # Set status to OK since silent exceptions are not actual errors
                 span.set_status(Status(StatusCode.OK))
             else:
-                # Add session ID to span attributes if available
-                from ..session import get_current_session
-
-                session = get_current_session()
-                if session is not None and hasattr(session, "id"):
-                    span.set_attribute(ATTR_SESSION_ID, session.id)
-
                 # Sanitize the error if needed before recording/setting status
-                sanitized_exc = maybe_sanitize_error(e, session=session)
+                sanitized_exc = maybe_sanitize_error(e)
 
                 # Only record the exception once at the innermost span where it originates
                 # Parent spans will still get ERROR status, but won't duplicate the exception details

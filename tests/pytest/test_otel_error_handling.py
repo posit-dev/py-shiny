@@ -331,7 +331,9 @@ class TestSpanExceptionRecording:
         otel_tracer_provider: tuple[TracerProvider, InMemorySpanExporter],
         mock_session: Session,
     ):
-        """Test that session ID is included in error span attributes"""
+        """Test that session ID can be explicitly added to error spans"""
+        from shiny.otel._constants import ATTR_SESSION_ID
+
         provider, exporter = otel_tracer_provider
         with session_context(mock_session):
             with patch_otel_tracing_state(tracing_enabled=True):
@@ -339,8 +341,11 @@ class TestSpanExceptionRecording:
                 from shiny.otel._span_wrappers import shiny_otel_span
 
                 async def test_func():
+                    # Explicitly pass session.id in attributes
                     async with shiny_otel_span(
-                        "test_span", required_level=OtelCollectLevel.SESSION
+                        "test_span",
+                        attributes={ATTR_SESSION_ID: mock_session.id},
+                        required_level=OtelCollectLevel.SESSION,
                     ):
                         raise ValueError("Test error")
 
@@ -355,7 +360,7 @@ class TestSpanExceptionRecording:
         assert len(app_spans) == 1
 
         span = app_spans[0]
-        # Should have session.id attribute
+        # Should have explicitly added session.id attribute
         assert span.attributes is not None
         assert "session.id" in span.attributes
         assert span.attributes["session.id"] == "test-session-123"
