@@ -405,10 +405,7 @@ class BookmarkApp(Bookmark):
                 with session_context(root_session):
                     try:
                         with reactive.isolate():
-                            if (
-                                self._restore_context
-                                and self._restore_context.active
-                            ):
+                            if self._restore_context and self._restore_context.active:
                                 # Only create span if there's actual work to do
                                 async with shiny_otel_span(
                                     "restore_bookmark_callbacks",
@@ -450,10 +447,7 @@ class BookmarkApp(Bookmark):
                 with session_context(root_session):
                     try:
                         with reactive.isolate():
-                            if (
-                                self._restore_context
-                                and self._restore_context.active
-                            ):
+                            if self._restore_context and self._restore_context.active:
                                 # Only create span if there's actual work to do
                                 async with shiny_otel_span(
                                     "restored_bookmark_callbacks",
