@@ -187,7 +187,7 @@ async def shiny_otel_span(
                 span.set_status(Status(StatusCode.OK))
             else:
                 # Sanitize the error if needed before recording/setting status
-                sanitized_exc = maybe_sanitize_error(e)
+                sanitized_exc = maybe_sanitize_error(e, session=None)
 
                 # Only record the exception once at the innermost span where it originates
                 # Parent spans will still get ERROR status, but won't duplicate the exception details
