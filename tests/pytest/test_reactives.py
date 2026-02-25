@@ -256,13 +256,14 @@ async def test_async_sequential():
 
     assert results == [111, 211, 115, 215]
 
-    # Effects now run concurrently (via asyncio.gather), so the execution order is
-    # interleaved at await points rather than sequential. Both effects start, yield
-    # at asyncio.sleep(0), then interleave their calc evaluations.
+    # Effects are dequeued one at a time from the priority queue and started as
+    # tasks, matching R Shiny's flushReact() behavior. Each effect's synchronous
+    # portion runs before the next is dequeued, so o1 starts first and gets
+    # further before o2 begins. They still interleave at await points.
     # fmt: off
     assert exec_order == [
-        'o1-1', 'o2-1', 'o1-2', 'r1-1', 'o2-2', 'r2-1', 'r1-2', 'o1-3', 'r2-2', 'o2-3',
-        'o1-1', 'o2-1', 'o1-2', 'r1-1', 'o2-2', 'r2-1', 'r1-2', 'o1-3', 'r2-2', 'o2-3',
+        'o1-1', 'o1-2', 'r1-1', 'o2-1', 'r1-2', 'o1-3', 'o2-2', 'r2-1', 'r2-2', 'o2-3',
+        'o1-1', 'o1-2', 'r1-1', 'o2-1', 'r1-2', 'o1-3', 'o2-2', 'r2-1', 'r2-2', 'o2-3',
     ]
     # fmt: on
 
