@@ -5,9 +5,8 @@ Provides common helpers for setting up test isolation when working with
 OpenTelemetry TracerProvider in tests.
 """
 
-from contextlib import ExitStack, contextmanager
+from contextlib import contextmanager
 from typing import Iterator, Tuple, Union
-from unittest.mock import patch
 
 from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
@@ -66,10 +65,12 @@ def reset_otel_tracing_state() -> None:
 @contextmanager
 def patch_otel_tracing_state(*, tracing_enabled: Union[bool, None]) -> Iterator[None]:
     """
-    Context manager to temporarily patch the tracing state for testing.
+    Context manager to temporarily set the tracing state for testing.
 
-    This mocks `is_otel_tracing_enabled()` directly to control what it returns,
-    without affecting the actual TracerProvider setup in tests.
+    This uses a test-only context variable to control what `is_otel_tracing_enabled()`
+    returns, without manipulating the global TracerProvider. This approach works
+    regardless of where or how the function is imported, eliminating the need to
+    patch individual modules.
 
     Parameters
     ----------
@@ -102,52 +103,23 @@ def patch_otel_tracing_state(*, tracing_enabled: Union[bool, None]) -> Iterator[
     Notes
     -----
     This is a test utility and should not be used in production code.
-    The state is automatically restored when exiting the context.
+    The override is automatically cleared when exiting the context.
+
+    Implementation detail: This works by setting a context variable that
+    `is_otel_tracing_enabled()` checks before doing its normal provider detection.
+    This is more robust than manipulating the TracerProvider because OpenTelemetry
+    doesn't allow overriding providers once they're set.
     """
-    # Mock is_otel_tracing_enabled() in all places it's used
-    # Need to patch both where it's defined and where it's imported
     enabled = bool(tracing_enabled)
 
-    # Use ExitStack to manage multiple patches cleanly
-    with ExitStack() as stack:
-        # Patch in production code
-        stack.enter_context(
-            patch("shiny.otel._core.is_otel_tracing_enabled", return_value=enabled)
-        )
-        stack.enter_context(
-            patch(
-                "shiny.otel._span_wrappers.is_otel_tracing_enabled",
-                return_value=enabled,
-            )
-        )
-        stack.enter_context(
-            patch(
-                "shiny.reactive._reactives.is_otel_tracing_enabled",
-                return_value=enabled,
-            )
-        )
+    # Set the test override context variable
+    token = _core._test_tracing_override.set(enabled)
 
-        # Also patch in test modules that import it
-        test_modules = [
-            "tests.pytest.test_otel_foundation",
-            "tests.pytest.test_otel_session",
-            "tests.pytest.test_otel_value_logging",
-            "tests.pytest.test_otel_collect",
-            "tests.pytest.test_otel_logfire",
-            "tests.pytest.test_otel_reactive_flush",
-        ]
-        for module in test_modules:
-            try:
-                stack.enter_context(
-                    patch(
-                        f"{module}.is_otel_tracing_enabled",
-                        return_value=enabled,
-                    )
-                )
-            except (ImportError, AttributeError):
-                pass  # Module may not be imported yet
-
+    try:
         yield
+    finally:
+        # Restore the original value (None, meaning no override)
+        _core._test_tracing_override.reset(token)
 
 
 def get_exported_spans(provider: TracerProvider, exporter: InMemorySpanExporter):
@@ -235,7 +207,13 @@ def otel_tracer_provider_impl() -> (
     The exporter is automatically cleared before each test via the
     otel_tracer_provider fixture to ensure test isolation.
     Manual exporter.clear() calls are not needed.
+
+    The original TracerProvider is saved and restored after the fixture
+    completes to ensure proper cleanup.
     """
+    # Save the original tracer provider
+    original_provider = trace.get_tracer_provider()
+
     # Set up provider with in-memory exporter for testing
     memory_exporter = InMemorySpanExporter()
     provider = TracerProvider()
@@ -249,4 +227,6 @@ def otel_tracer_provider_impl() -> (
 
     yield provider, memory_exporter
 
-    # Cleanup is handled by pytest - no need to restore
+    # Restore the original tracer provider
+    trace.set_tracer_provider(original_provider)
+    reset_otel_tracing_state()

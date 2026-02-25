@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextvars import ContextVar
 from typing import Any, Union
 
 from opentelemetry import trace
@@ -20,6 +21,13 @@ __all__ = (
 # Global state for lazy initialization
 _tracer: Union[Tracer, None] = None
 _logger: Union[Any, None] = None
+
+# Test-only override for is_otel_tracing_enabled()
+# This is used by test helpers to control tracing state without manipulating
+# the global TracerProvider (which OpenTelemetry doesn't allow after setup)
+_test_tracing_override: ContextVar[Union[bool, None]] = ContextVar(
+    "test_tracing_override", default=None
+)
 
 
 def get_otel_tracer() -> Tracer:
@@ -79,6 +87,11 @@ def is_otel_tracing_enabled() -> bool:
     bool
         True if tracing is enabled, False otherwise.
     """
+    # Check for test-only override first (used by test helpers)
+    test_override = _test_tracing_override.get()
+    if test_override is not None:
+        return test_override
+
     # Note: This function does not cache its result to allow users to set up their
     # TracerProvider after importing Shiny. The performance impact is negligible
     # (~0.22μs per check), and the check only happens when creating spans.
