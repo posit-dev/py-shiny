@@ -414,11 +414,6 @@ class App:
     # ==========================================================================
     # Flush
     # ==========================================================================
-    def _request_flush(self, session: AppSession) -> None:
-        # TODO: Until we have reactive domains, because we can't yet keep track
-        # of which sessions need a flush.
-        pass
-        # self._sessions_needing_flush[session.id] = session
 
     # ==========================================================================
     # HTML Dependency stuff

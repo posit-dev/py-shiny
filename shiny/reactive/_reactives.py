@@ -562,10 +562,13 @@ class Effect_:
                 _continue()
 
         async def on_flush_cb() -> None:
-            if not self._destroyed:
-                await self._run()
-            if self._session:
-                self._session._decrement_busy_count()
+            try:
+                if not self._destroyed:
+                    await self._run()
+            finally:
+                # Always decrement in finally block to ensure busy count stays accurate
+                if self._session:
+                    self._session._decrement_busy_count()
 
         ctx.on_invalidate(on_invalidate_cb)
         ctx.on_flush(on_flush_cb)

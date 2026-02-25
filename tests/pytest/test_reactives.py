@@ -256,15 +256,14 @@ async def test_async_sequential():
 
     assert results == [111, 211, 115, 215]
 
-    # This is the order of execution if the async effects are run sequentially. The
-    # `asyncio.sleep(0)` still yields control, but since there are no other effects
-    # scheduled, it will simply resume at the same point.
+    # Effects are dequeued one at a time from the priority queue and started as
+    # tasks, matching R Shiny's flushReact() behavior. Each effect's synchronous
+    # portion runs before the next is dequeued, so o1 starts first and gets
+    # further before o2 begins. They still interleave at await points.
     # fmt: off
     assert exec_order == [
-        'o1-1', 'o1-2', 'r1-1', 'r1-2', 'o1-3',
-        'o2-1', 'o2-2', 'r2-1', 'r2-2', 'o2-3',
-        'o1-1', 'o1-2', 'r1-1', 'r1-2', 'o1-3',
-        'o2-1', 'o2-2', 'r2-1', 'r2-2', 'o2-3'
+        'o1-1', 'o1-2', 'r1-1', 'o2-1', 'r1-2', 'o1-3', 'o2-2', 'r2-1', 'r2-2', 'o2-3',
+        'o1-1', 'o1-2', 'r1-1', 'o2-1', 'r1-2', 'o1-3', 'o2-2', 'r2-1', 'r2-2', 'o2-3',
     ]
     # fmt: on
 
