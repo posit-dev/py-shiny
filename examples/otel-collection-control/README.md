@@ -13,7 +13,7 @@ The `otel_collect` function allows you to dynamically control which **Shiny inte
 
 **Important**: `otel_collect` only affects Shiny's internal spans and logs (session lifecycle, reactive execution, value updates, etc.). Any OpenTelemetry spans you create manually in your application code are unaffected and will continue to be recorded normally.
 
-**Note on Timing**: Collection levels are captured when reactive objects (`Value`, `Calc`, `Effect`) are **created**, not when they are executed. This means:
+**Note on Timing**: Collection levels are captured when reactive objects (`reactive.value`, `reactive.calc`, `reactive.effect`) are **created**, not when they are executed. This means the level used for Shiny's internal spans (reactive execution, value updates) is **permanently set** at object creation time:
 
 ```python
 # Collection level is captured when reactive.calc() creates the Calc object
@@ -22,19 +22,32 @@ with otel_collect("none"):
     def my_calc():
         return expensive_computation()
 
-# Later execution of my_calc() uses the "none" level that was active during creation,
-# even if the current level has changed
+# Later execution of my_calc() ALWAYS uses "none" for Shiny's internal spans,
+# regardless of what the current otel_collect level is
 ```
 
-If you need to dynamically control telemetry at execution time, use `otel_collect` inside the reactive function body:
+Using `otel_collect` inside a reactive function body will **not** affect Shiny's internal spans for that reactive - the level was already captured at object creation. To change the collection level for a reactive, you must recreate it with a different level:
 
 ```python
+# Incorrect - this does NOT change Shiny's internal span level for my_calc
 @reactive.calc
 def my_calc():
-    # Collection level is evaluated each time the calc executes
     with otel_collect("none" if is_sensitive() else "all"):
+        return expensive_computation()  # Shiny still uses level from creation time
+
+# Correct - recreate the reactive object to change its level
+if is_production():
+    @reactive.calc
+    @otel_collect("none")
+    def my_calc():
+        return expensive_computation()
+else:
+    @reactive.calc  # Uses default "all" level
+    def my_calc():
         return expensive_computation()
 ```
+
+**Note**: Using `otel_collect` inside a reactive function body *will* affect any manual spans you create with `shiny_otel_span()`, just not Shiny's automatic internal spans.
 
 ## Features Demonstrated
 
