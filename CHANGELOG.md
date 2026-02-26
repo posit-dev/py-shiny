@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Added OpenTelemetry collection control with `otel_collect()` (from `shiny.otel`), a context manager and decorator for controlling what Shiny internal telemetry is collected. Use `with otel_collect("none"):` to disable Shiny-specific telemetry for sensitive operations, or `@otel_collect("reactivity")` to enable detailed reactive execution tracing. The collect level can also be set via the `SHINY_OTEL_COLLECT` environment variable. Available levels: `"none"`, `"session"`, `"reactive_update"`, `"reactivity"`, and `"all"`. See `shiny.otel.otel_collect()` for more details. (#2178)
 
 
+* Added OpenTelemetry example application (`examples/open-telemetry/`) demonstrating console exporter, collection control with `@otel_collect`, and side-by-side comparison of normal vs. suppressed telemetry. The OpenTelemetry SDK is available via the optional `[otel]` dependency group: `pip install shiny[otel]`. (#2140)
+
+
 ### New features
 
 * Added toolbar component with `ui.toolbar()`, `ui.toolbar_input_button()`, `ui.toolbar_input_select()`, `ui.toolbar_divider()`, `ui.toolbar_spacer()`, `ui.update_toolbar_input_button()`, and `ui.update_toolbar_input_select()`. Toolbars are compact UI containers designed for small form elements suitable for card headers, footers, and other constrained spaces. They support flexible alignment (left/right), custom spacing and width, icon-only or labeled buttons with optional tooltips, select inputs with grouped choices, visual dividers for separating elements, and flexible spacers for split layouts. Server-side updates allow dynamic modification of button and select properties. (#2155)

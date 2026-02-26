@@ -165,7 +165,7 @@ testpaths = ["tests"]
 extend-exclude = ["docs", ".venv", "venv", "typings", "build", "_dev"]
 ignore = ["E302", "E501", "F403", "F405", "W503", "E203", "E701", "E704"]
 per-file-ignores = [
-    "examples/otel-collection-control/app.py:E402",
+    "examples/open-telemetry/app.py:E402",
 ]
 
 [tool.isort]
