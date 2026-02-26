@@ -333,6 +333,7 @@ quartodoc:
             name: "OpenTelemetry"
             desc: "Observability and telemetry instrumentation for Shiny applications"
           contents:
+            - otel
             - otel.otel_collect
             - otel.get_otel_collect_level
     - title: Types
