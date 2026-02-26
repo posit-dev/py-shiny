@@ -174,9 +174,3 @@ def server(input, output, session):
 
 
 app = App(app_ui, server)
-
-# TODO: Disable OTel value update logging for input.* values
-# Input values (from UI widgets) should not emit OTel logs when set from the client,
-# as this creates excessive noise. Only user-created reactive.Value() objects should
-# log updates. This requires checking if the Value's name starts with "input." in
-# the _set() method before calling emit_otel_log().

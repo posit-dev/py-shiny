@@ -380,7 +380,7 @@ class Value(Generic[T]):
         # Only log when:
         # 1. Tracing is enabled (OpenTelemetry SDK is configured)
         # 2. Collection level (captured at initialization) is REACTIVITY or higher
-        # 3. Value name does not start with "input." or `.clientData`. Once the reactive initialization is done, we should log all updates.
+        # 3. A session is available. (Initial input.* and .clientdata_* do not have a session when they are set, so we won't log those initial values. However, updates will be logged, since they occur within a session context.)
         if not (
             is_otel_tracing_enabled()
             and self._otel_level >= OtelCollectLevel.REACTIVITY
