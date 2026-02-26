@@ -13,19 +13,17 @@ To enable OpenTelemetry tracing in your Shiny application:
    pip install shiny[otel]
    ```
 
-2. Configure the SDK before importing shiny:
+2. Configure the OpenTelemetry SDK:
    ```python
    from opentelemetry import trace
    from opentelemetry.sdk.trace import TracerProvider
    from opentelemetry.sdk.trace.export import ConsoleSpanExporter, SimpleSpanProcessor
+   from shiny import App, ui
 
    # Set up the tracer provider
    provider = TracerProvider()
    provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
    trace.set_tracer_provider(provider)
-
-   # Now import and use shiny
-   from shiny import App, ui
 
    app = App(...)
    ```
@@ -70,8 +68,9 @@ def my_calc():
 
 ## API Reference
 
-Main export:
+Main exports:
 - `otel_collect`: Context manager/decorator to temporarily change Shiny's collect level
+- `get_otel_collect_level`: Get the current collect level
 """
 
 from __future__ import annotations
