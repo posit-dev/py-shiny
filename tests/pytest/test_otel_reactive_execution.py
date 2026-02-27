@@ -869,6 +869,46 @@ class TestExtendedTaskSpans:
                             break
                     await asyncio.sleep(0.01)
 
+    @pytest.mark.asyncio
+    async def test_extended_task_queue_log_disabled_at_low_level(self):
+        """Test that ExtendedTask does NOT emit queue logs when collection level is too low"""
+        import asyncio
+        from unittest.mock import patch
+
+        from shiny.reactive import ExtendedTask
+
+        with patch_otel_tracing_state(tracing_enabled=True):
+            with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "session"}):
+                # Create a task
+                async def slow_task():
+                    await asyncio.sleep(0.05)
+                    return 42
+
+                task = ExtendedTask(slow_task)
+
+                # Verify collection level was captured at SESSION
+                from shiny.otel._collect import OtelCollectLevel
+
+                assert task._otel_level == OtelCollectLevel.SESSION
+
+                # Mock emit_otel_log to verify it's NOT called
+                with patch("shiny.reactive._extended_task.emit_otel_log") as mock_emit:
+                    # Invoke first time
+                    task.invoke()
+
+                    # Invoke second time while first is running (should queue but NOT log)
+                    task.invoke()
+
+                    # Check that second invocation was queued
+                    assert len(task._invocation_queue) == 1
+
+                    # emit_otel_log should NOT have been called
+                    # (collection level SESSION < REACTIVITY required for logging)
+                    mock_emit.assert_not_called()
+
+                    # Clean up - cancel tasks
+                    task.cancel()
+
 
 class TestSpanHierarchy:
     """Test span parent-child relationships"""
