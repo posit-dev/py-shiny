@@ -189,7 +189,7 @@ Session spans + reactive update cycle spans (one span per flush cycle).
 **Use case**: Understanding how many update cycles occur
 
 ### `reactivity` (3)
-Everything from `reactive_update` + individual reactive execution spans (calcs, effects, outputs) + value update logs.
+Everything from `reactive_update` + individual reactive execution spans (calcs, effects, outputs, extended tasks) + value update logs.
 
 **Overhead**: Moderate (1 span per reactive computation)
 **Use case**: Detailed debugging and development
@@ -724,7 +724,7 @@ pip install "shiny[otel]"
 
 ## Next Steps
 
-- **Examples**: Check out `_dev/otel/examples/` for working example apps
+- **Examples**: Check out `examples/open-telemetry/` for working example apps
 - **API Reference**: See API documentation for `shiny.otel` module
 - **OpenTelemetry Docs**: https://opentelemetry.io/docs/languages/python/
 - **Shiny Docs**: https://shiny.posit.co/py/

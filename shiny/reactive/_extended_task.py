@@ -19,7 +19,7 @@ from .._utils import is_async_callable
 from .._validation import req
 from ..otel._attributes import extract_source_ref, get_session_id_attrs
 from ..otel._collect import OtelCollectLevel
-from ..otel._core import emit_otel_log
+from ..otel._core import emit_otel_log, is_otel_tracing_enabled
 from ..otel._function_attrs import resolve_func_otel_level
 from ..otel._labels import create_otel_span_name
 from ..otel._span_wrappers import shiny_otel_span
@@ -135,15 +135,19 @@ class ExtendedTask(Generic[P, R]):
         with isolate():
             if self.status() == "running" or len(self._invocation_queue) > 0:
                 self._invocation_queue.append(lambda: self._invoke(*args, **kwargs))
-                # Log queue operation at DEBUG level
-                emit_otel_log(
-                    self._otel_log_label,
-                    severity_text="DEBUG",
-                    attributes={
-                        **self._otel_attrs,
-                        "queue.size": len(self._invocation_queue),
-                    },
-                )
+                # Log queue operation at DEBUG level if OTel is enabled and collection level is sufficient
+                if (
+                    is_otel_tracing_enabled()
+                    and self._otel_level >= OtelCollectLevel.REACTIVITY
+                ):
+                    emit_otel_log(
+                        self._otel_log_label,
+                        severity_text="DEBUG",
+                        attributes={
+                            **self._otel_attrs,
+                            "queue.size": len(self._invocation_queue),
+                        },
+                    )
             else:
                 self._invoke(*args, **kwargs)
 
