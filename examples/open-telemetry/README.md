@@ -6,7 +6,7 @@ This example demonstrates OpenTelemetry integration with Shiny, including:
 - Reactive value logging
 - Side-by-side comparison of normal vs. suppressed telemetry
 
-For comprehensive documentation, see [shiny/otel/README.md](../../shiny/otel/README.md).
+For comprehensive documentation, see [shiny/otel/README.md](https://shiny.posit.co/py/api/core/OpenTelemetry.html).
 
 ## Overview
 
@@ -186,6 +186,6 @@ Use `otel_collect("none")` to wrap code that:
 
 ## Additional Resources
 
-- [Shiny OpenTelemetry Documentation](../../shiny/otel/README.md) - Complete guide with examples
+- [Shiny OpenTelemetry Documentation](https://shiny.posit.co/py/api/core/OpenTelemetry.html) - Complete guide with examples
 - [OpenTelemetry Python Documentation](https://opentelemetry.io/docs/instrumentation/python/)
 - [py-shiny GitHub Repository](https://github.com/posit-dev/py-shiny)
