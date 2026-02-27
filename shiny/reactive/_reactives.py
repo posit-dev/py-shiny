@@ -404,7 +404,7 @@ class Value(Generic[T]):
 
         emit_otel_log(
             self._otel_label,
-            severity_text="DEBUG",
+            severity_text="INFO",
             # Build attributes dict with session ID and source reference
             attributes={
                 **self._otel_attrs,
