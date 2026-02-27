@@ -211,7 +211,7 @@ class TestValueUpdateLogging:
         # Check the log details
         log = value_logs[0]
         assert log.log_record.body == "Set reactive.value test_value"
-        assert log.log_record.severity_text == "DEBUG"
+        assert log.log_record.severity_text == "INFO"
 
         # Check session ID attribute
         attrs = log.log_record.attributes

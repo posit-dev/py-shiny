@@ -1,6 +1,12 @@
-# OpenTelemetry Collection Control Example
+# OpenTelemetry Example
 
-This example demonstrates how to control Shiny's OpenTelemetry collection levels using the `shiny.otel.otel_collect` context manager and decorator.
+This example demonstrates OpenTelemetry integration with Shiny, including:
+- Console exporter setup for viewing traces
+- Collection level control with `@otel_collect`
+- Reactive value logging
+- Side-by-side comparison of normal vs. suppressed telemetry
+
+For comprehensive documentation, please see the [Shiny OpenTelemetry documentation](https://shiny.posit.co/py/api/core/OpenTelemetry.html).
 
 ## Overview
 
@@ -180,6 +186,6 @@ Use `otel_collect("none")` to wrap code that:
 
 ## Additional Resources
 
+- [Shiny OpenTelemetry Documentation](https://shiny.posit.co/py/api/core/OpenTelemetry.html) - Complete guide with examples
 - [OpenTelemetry Python Documentation](https://opentelemetry.io/docs/instrumentation/python/)
-- [Shiny OpenTelemetry Guide](../../docs/otel.md) (if available)
 - [py-shiny GitHub Repository](https://github.com/posit-dev/py-shiny)

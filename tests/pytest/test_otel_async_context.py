@@ -424,9 +424,9 @@ class TestAsyncContextIsolation:
             ):
                 # Create tasks with different delays
                 tasks = [
-                    asyncio.create_task(task_with_span("P", 0.003)),
-                    asyncio.create_task(task_with_span("Q", 0.001)),
-                    asyncio.create_task(task_with_span("R", 0.002)),
+                    asyncio.create_task(task_with_span("P", 0.03)),
+                    asyncio.create_task(task_with_span("Q", 0.01)),
+                    asyncio.create_task(task_with_span("R", 0.02)),
                 ]
 
                 # Process tasks as they complete

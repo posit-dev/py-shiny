@@ -66,6 +66,31 @@ def get_otel_collect_level() -> OtelCollectLevel:
     -------
     OtelCollectLevel
         The current collect level.
+
+    Examples
+    --------
+    Check the current collection level:
+
+    ```python
+    from shiny.otel import get_otel_collect_level
+
+    # Get the current level
+    level = get_otel_collect_level()
+    print(f"Current level: {level.name}")  # e.g., "ALL", "SESSION", "NONE"
+    ```
+
+    Use with context manager:
+
+    ```python
+    from shiny.otel import get_otel_collect_level, otel_collect
+
+    print(get_otel_collect_level().name)  # "ALL" (default)
+
+    with otel_collect("session"):
+        print(get_otel_collect_level().name)  # "SESSION"
+
+    print(get_otel_collect_level().name)  # "ALL" (restored)
+    ```
     """
     # Check context variable first (set by otel_collect context manager)
     level = _current_collect_level.get()

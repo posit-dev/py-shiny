@@ -690,6 +690,266 @@ class TestOutputSpans:
         )
 
 
+class TestExtendedTaskSpans:
+    """ExtendedTask execution span tests"""
+
+    @pytest.mark.asyncio
+    async def test_extended_task_creates_span_when_enabled(self):
+        """Test that ExtendedTask execution creates a span when collection level is REACTIVITY"""
+        import asyncio
+
+        from shiny.reactive import ExtendedTask, isolate
+
+        with patch_otel_tracing_state(tracing_enabled=True):
+            with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "all"}):
+                # Create an ExtendedTask
+                async def my_task():
+                    await asyncio.sleep(0.01)
+                    return 42
+
+                # Mock span wrapper to verify it's called
+                # Must patch at the import location in _extended_task module
+                with patch(
+                    "shiny.reactive._extended_task.shiny_otel_span"
+                ) as mock_span:
+                    # Configure mock to act as async context manager
+                    mock_span.return_value.__aenter__ = AsyncMock(return_value=None)
+                    mock_span.return_value.__aexit__ = AsyncMock(return_value=None)
+
+                    task = ExtendedTask(my_task)
+
+                    # Invoke the task
+                    task.invoke()
+
+                    # Wait for task to complete (use isolate to read status outside reactive context)
+                    while True:
+                        with isolate():
+                            if task.status() != "running":
+                                break
+                        await asyncio.sleep(0.01)
+
+                    # Should have succeeded
+                    with isolate():
+                        assert task.status() == "success"
+
+                    # Verify span was created
+                    mock_span.assert_called_once()
+                    call_args = mock_span.call_args
+                    # Verify the label string was passed
+                    label = call_args[0][0]
+                    assert label == "extended_task my_task"
+                    assert call_args[1]["required_level"] == OtelCollectLevel.REACTIVITY
+
+    @pytest.mark.asyncio
+    async def test_extended_task_no_span_when_disabled(self):
+        """Test that ExtendedTask execution doesn't create span when collection level is too low"""
+        import asyncio
+
+        from shiny.reactive import ExtendedTask, isolate
+
+        with patch_otel_tracing_state(tracing_enabled=True):
+            with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "session"}):
+                # Create an ExtendedTask
+                async def my_task():
+                    await asyncio.sleep(0.01)
+                    return 42
+
+                # Mock span wrapper to verify it's called (but returns no-op at low level)
+                # Must patch at the import location in _extended_task module
+                with patch(
+                    "shiny.reactive._extended_task.shiny_otel_span"
+                ) as mock_span:
+                    # Configure mock to act as async context manager
+                    mock_span.return_value.__aenter__ = AsyncMock(return_value=None)
+                    mock_span.return_value.__aexit__ = AsyncMock(return_value=None)
+
+                    task = ExtendedTask(my_task)
+
+                    # Invoke the task
+                    task.invoke()
+
+                    # Wait for task to complete (use isolate to read status outside reactive context)
+                    while True:
+                        with isolate():
+                            if task.status() != "running":
+                                break
+                        await asyncio.sleep(0.01)
+
+                    # Should have succeeded
+                    with isolate():
+                        assert task.status() == "success"
+
+                    # Verify span wrapper was called (it returns a no-op at low collection levels)
+                    mock_span.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_extended_task_span_includes_source_attrs(self):
+        """Test that ExtendedTask span includes source code attributes"""
+        import asyncio
+
+        from shiny.reactive import ExtendedTask
+
+        with patch_otel_tracing_state(tracing_enabled=True):
+            with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "all"}):
+
+                async def my_task():
+                    await asyncio.sleep(0.01)
+                    return 42
+
+                task = ExtendedTask(my_task)
+
+                # Check that OTel attributes include source reference
+                assert "code.function" in task._otel_attrs
+                assert task._otel_attrs["code.function"] == "my_task"
+                assert "code.filepath" in task._otel_attrs
+                assert "code.lineno" in task._otel_attrs
+
+    def test_extended_task_label_generation(self):
+        """Test that ExtendedTask generates correct label"""
+        import asyncio
+
+        from shiny.reactive import ExtendedTask
+
+        async def my_task():
+            await asyncio.sleep(0.01)
+            return 42
+
+        task = ExtendedTask(my_task)
+
+        # Should have label with function name
+        assert task._otel_label == "extended_task my_task"
+
+    def test_extended_task_anonymous_label(self):
+        """Test that ExtendedTask handles anonymous/lambda correctly"""
+        import asyncio
+
+        from shiny.reactive import ExtendedTask
+
+        # ExtendedTask requires async functions
+        async def anonymous_task():
+            await asyncio.sleep(0.001)
+
+        # Manually set __name__ to simulate lambda
+        anonymous_task.__name__ = "<lambda>"
+
+        task = ExtendedTask(anonymous_task)
+
+        # Should have <anonymous> label for lambda-like function
+        assert task._otel_label == "extended_task <anonymous>"
+
+    def test_extended_task_label_with_namespace(self):
+        """Test that ExtendedTask generates label with namespace prefix"""
+        import asyncio
+        from unittest.mock import Mock, patch
+
+        from shiny._namespaces import ResolvedId
+        from shiny.reactive import ExtendedTask
+
+        async def my_task():
+            await asyncio.sleep(0.01)
+            return 42
+
+        # Create a mock session with a namespace
+        mock_session = Mock()
+        mock_session.ns = ResolvedId("mod1")
+        mock_session.id = "test-session-123"
+
+        # Patch get_current_session to return our mock
+        with patch("shiny.session.get_current_session", return_value=mock_session):
+            task = ExtendedTask(my_task)
+
+        # Should have namespace prefix in label
+        assert task._otel_label == "extended_task mod1:my_task"
+        # Queue label should also have namespace
+        assert task._otel_log_label == "extended_task queued mod1:my_task"
+
+    @pytest.mark.asyncio
+    async def test_extended_task_queued_log(self):
+        """Test that ExtendedTask emits log when invocation is queued"""
+        import asyncio
+        from unittest.mock import patch
+
+        from shiny.reactive import ExtendedTask, isolate
+
+        with patch_otel_tracing_state(tracing_enabled=True):
+            with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "all"}):
+                # Create a task that takes a while
+                async def slow_task():
+                    await asyncio.sleep(0.1)
+                    return 42
+
+                # Mock emit_otel_log to verify it's called when queuing
+                with patch("shiny.reactive._extended_task.emit_otel_log") as mock_emit:
+                    task = ExtendedTask(slow_task)
+
+                    # Invoke first time (should not log queue)
+                    task.invoke()
+
+                    # Invoke second time while first is running (should log queue)
+                    task.invoke()
+
+                    # Check that second invocation was queued
+                    assert len(task._invocation_queue) == 1
+
+                    # Verify log was emitted for the queue operation
+                    mock_emit.assert_called_once()
+                    call_args = mock_emit.call_args
+                    # Verify the label and attributes
+                    assert call_args[0][0] == "extended_task queued slow_task"
+                    assert call_args[1]["severity_text"] == "DEBUG"
+                    assert call_args[1]["attributes"]["queue.size"] == 1
+
+                    # Wait for both to complete (use isolate to read status)
+                    while True:
+                        with isolate():
+                            if (
+                                task.status() != "running"
+                                and len(task._invocation_queue) == 0
+                            ):
+                                break
+                        await asyncio.sleep(0.01)
+
+    @pytest.mark.asyncio
+    async def test_extended_task_queue_log_disabled_at_low_level(self):
+        """Test that ExtendedTask does NOT emit queue logs when collection level is too low"""
+        import asyncio
+        from unittest.mock import patch
+
+        from shiny.reactive import ExtendedTask
+
+        with patch_otel_tracing_state(tracing_enabled=True):
+            with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "session"}):
+                # Create a task
+                async def slow_task():
+                    await asyncio.sleep(0.05)
+                    return 42
+
+                task = ExtendedTask(slow_task)
+
+                # Verify collection level was captured at SESSION
+                from shiny.otel._collect import OtelCollectLevel
+
+                assert task._otel_level == OtelCollectLevel.SESSION
+
+                # Mock emit_otel_log to verify it's NOT called
+                with patch("shiny.reactive._extended_task.emit_otel_log") as mock_emit:
+                    # Invoke first time
+                    task.invoke()
+
+                    # Invoke second time while first is running (should queue but NOT log)
+                    task.invoke()
+
+                    # Check that second invocation was queued
+                    assert len(task._invocation_queue) == 1
+
+                    # emit_otel_log should NOT have been called
+                    # (collection level SESSION < REACTIVITY required for logging)
+                    mock_emit.assert_not_called()
+
+                    # Clean up - cancel tasks
+                    task.cancel()
+
+
 class TestSpanHierarchy:
     """Test span parent-child relationships"""
 

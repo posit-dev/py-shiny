@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from typing import (
+    Any,
     Awaitable,
     Callable,
     Generic,
@@ -16,6 +17,12 @@ from .._docstring import add_example
 from .._typing_extensions import ParamSpec
 from .._utils import is_async_callable
 from .._validation import req
+from ..otel._attributes import extract_source_ref, get_session_id_attrs
+from ..otel._collect import OtelCollectLevel
+from ..otel._core import emit_otel_log, is_otel_tracing_enabled
+from ..otel._function_attrs import resolve_func_otel_level
+from ..otel._labels import create_otel_span_name
+from ..otel._span_wrappers import shiny_otel_span
 from ._core import Context, flush, lock
 from ._reactives import Value, isolate
 
@@ -52,6 +59,27 @@ class ExtendedTask(Generic[P, R]):
             raise TypeError("ExtendedTask can only be used with async functions")
         self._func = func
         self._task: Optional[asyncio.Task[R]] = None
+
+        # Extract OpenTelemetry attributes at initialization time
+        from ..session import get_current_session
+
+        session = get_current_session()
+        self._otel_attrs: dict[str, Any] = {
+            **extract_source_ref(func),
+            **get_session_id_attrs(session),
+        }
+
+        # Generate label for task execution span
+        self._otel_label: str = create_otel_span_name(
+            func, "extended_task", session=session
+        )
+        self._otel_log_label: str = self._otel_label.replace(
+            "extended_task", "extended_task queued", 1
+        )
+
+        # Extract collection level from function attribute (set by @otel_collect decorator)
+        # If not set, capture the current collection level at initialization time
+        self._otel_level: OtelCollectLevel = resolve_func_otel_level(func)
 
         self.status: Value[Status] = Value("initial")
         """
@@ -107,6 +135,19 @@ class ExtendedTask(Generic[P, R]):
         with isolate():
             if self.status() == "running" or len(self._invocation_queue) > 0:
                 self._invocation_queue.append(lambda: self._invoke(*args, **kwargs))
+                # Log queue operation at DEBUG level if OTel is enabled and collection level is sufficient
+                if (
+                    is_otel_tracing_enabled()
+                    and self._otel_level >= OtelCollectLevel.REACTIVITY
+                ):
+                    emit_otel_log(
+                        self._otel_log_label,
+                        severity_text="DEBUG",
+                        attributes={
+                            **self._otel_attrs,
+                            "queue.size": len(self._invocation_queue),
+                        },
+                    )
             else:
                 self._invoke(*args, **kwargs)
 
@@ -125,10 +166,17 @@ class ExtendedTask(Generic[P, R]):
 
     async def _execution_wrapper(self, *args: P.args, **kwargs: P.kwargs) -> R:
         """
-        Wraps the user code in a context that denies access to reactive sources.
+        Wraps the user code in a context that denies access to reactive sources,
+        and creates an OpenTelemetry span to track the task execution.
         """
-        with DenialContext()():
-            return await self._func(*args, **kwargs)
+        async with shiny_otel_span(
+            self._otel_label,
+            attributes=self._otel_attrs,
+            required_level=OtelCollectLevel.REACTIVITY,
+            collection_level=self._otel_level,
+        ):
+            with DenialContext()():
+                return await self._func(*args, **kwargs)
 
     def _done_callback(self, task: asyncio.Task[R]) -> None:
         """
