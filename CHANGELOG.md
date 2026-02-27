@@ -9,11 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### OpenTelemetry
 
-* Added OpenTelemetry collection control with `otel_collect()` (from `shiny.otel`), a context manager and decorator for controlling what Shiny internal telemetry is collected. Use `with otel_collect("none"):` to disable Shiny-specific telemetry for sensitive operations, or `@otel_collect("reactivity")` to enable detailed reactive execution tracing. The collect level can also be set via the `SHINY_OTEL_COLLECT` environment variable. Available levels: `"none"`, `"session"`, `"reactive_update"`, `"reactivity"`, and `"all"`. See `shiny.otel.otel_collect()` for more details. (#2178)
+* Added OpenTelemetry collection control with `otel_collect()` (from `shiny.otel`), a context manager and decorator for controlling what Shiny internal telemetry is collected. Use `with otel_collect("none"):` to disable Shiny-specific telemetry for sensitive operations, or `@otel_collect("reactivity")` to enable detailed reactive execution tracing. The collect level can also be set via the `SHINY_OTEL_COLLECT` environment variable. Available levels: (#2143)
+  * `"none"` - Disables all Shiny-specific telemetry collection. Use this for sensitive operations where you don't want Shiny to emit any spans or logs.
+  * `"session"` - Captures session lifecycle spans that track when user sessions start, end, and their duration. This provides basic visibility into session activity without detailed reactive execution information.
+  * `"reactive_update"` - Captures everything from `"session"` plus reactive flush cycle spans that show when reactive invalidation and re-execution occurs. This helps identify performance bottlenecks in reactive updates without the overhead of per-reactive-component instrumentation.
+  * `"reactivity"` - Captures everything from `"reactive_update"` plus individual reactive execution spans (`reactive.calc`, `reactive.effect`, `extended_task`), info-level logs for reactive value updates (including source file, line number, and column position), and debug-level logs for extended task queue operations. This provides comprehensive visibility into reactive execution flow and timing.
+  * `"all"` \[Default\] - Currently equivalent to `"reactivity"` and represents the most comprehensive telemetry available. This is the default level when `SHINY_OTEL_COLLECT=all` is set.
 
-
-* Added OpenTelemetry example application (`examples/open-telemetry/`) demonstrating console exporter, collection control with `@otel_collect`, and side-by-side comparison of normal vs. suppressed telemetry. The OpenTelemetry SDK is available via the optional `[otel]` dependency group: `pip install shiny[otel]`. (#2140)
-
+* Added OpenTelemetry example application (`examples/open-telemetry/`) demonstrating console exporter, collection control with `@otel_collect`, and side-by-side comparison of normal vs. suppressed telemetry. The OpenTelemetry SDK is available via the optional `[otel]` dependency group: `pip install shiny[otel]`. Note: If you're already using an observability package with OpenTelemetry integration (e.g., `logfire`), it likely already includes `opentelemetry-sdk`, so you may not need to explicitly install the `[otel]` group. (#2143)
 
 ### New features
 
