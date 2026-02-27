@@ -707,21 +707,38 @@ class TestExtendedTaskSpans:
                     await asyncio.sleep(0.01)
                     return 42
 
-                task = ExtendedTask(my_task)
+                # Mock span wrapper to verify it's called
+                # Must patch at the import location in _extended_task module
+                with patch(
+                    "shiny.reactive._extended_task.shiny_otel_span"
+                ) as mock_span:
+                    # Configure mock to act as async context manager
+                    mock_span.return_value.__aenter__ = AsyncMock(return_value=None)
+                    mock_span.return_value.__aexit__ = AsyncMock(return_value=None)
 
-                # Invoke the task
-                task.invoke()
+                    task = ExtendedTask(my_task)
 
-                # Wait for task to complete (use isolate to read status outside reactive context)
-                while True:
+                    # Invoke the task
+                    task.invoke()
+
+                    # Wait for task to complete (use isolate to read status outside reactive context)
+                    while True:
+                        with isolate():
+                            if task.status() != "running":
+                                break
+                        await asyncio.sleep(0.01)
+
+                    # Should have succeeded
                     with isolate():
-                        if task.status() != "running":
-                            break
-                    await asyncio.sleep(0.01)
+                        assert task.status() == "success"
 
-                # Should have succeeded
-                with isolate():
-                    assert task.status() == "success"
+                    # Verify span was created
+                    mock_span.assert_called_once()
+                    call_args = mock_span.call_args
+                    # Verify the label string was passed
+                    label = call_args[0][0]
+                    assert label == "extended_task my_task"
+                    assert call_args[1]["required_level"] == OtelCollectLevel.REACTIVITY
 
     @pytest.mark.asyncio
     async def test_extended_task_no_span_when_disabled(self):
@@ -737,21 +754,33 @@ class TestExtendedTaskSpans:
                     await asyncio.sleep(0.01)
                     return 42
 
-                task = ExtendedTask(my_task)
+                # Mock span wrapper to verify it's called (but returns no-op at low level)
+                # Must patch at the import location in _extended_task module
+                with patch(
+                    "shiny.reactive._extended_task.shiny_otel_span"
+                ) as mock_span:
+                    # Configure mock to act as async context manager
+                    mock_span.return_value.__aenter__ = AsyncMock(return_value=None)
+                    mock_span.return_value.__aexit__ = AsyncMock(return_value=None)
 
-                # Invoke the task
-                task.invoke()
+                    task = ExtendedTask(my_task)
 
-                # Wait for task to complete (use isolate to read status outside reactive context)
-                while True:
+                    # Invoke the task
+                    task.invoke()
+
+                    # Wait for task to complete (use isolate to read status outside reactive context)
+                    while True:
+                        with isolate():
+                            if task.status() != "running":
+                                break
+                        await asyncio.sleep(0.01)
+
+                    # Should have succeeded
                     with isolate():
-                        if task.status() != "running":
-                            break
-                    await asyncio.sleep(0.01)
+                        assert task.status() == "success"
 
-                # Should have succeeded
-                with isolate():
-                    assert task.status() == "success"
+                    # Verify span wrapper was called (it returns a no-op at low collection levels)
+                    mock_span.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_extended_task_span_includes_source_attrs(self):
@@ -838,6 +867,7 @@ class TestExtendedTaskSpans:
     async def test_extended_task_queued_log(self):
         """Test that ExtendedTask emits log when invocation is queued"""
         import asyncio
+        from unittest.mock import patch
 
         from shiny.reactive import ExtendedTask, isolate
 
@@ -848,26 +878,36 @@ class TestExtendedTaskSpans:
                     await asyncio.sleep(0.1)
                     return 42
 
-                task = ExtendedTask(slow_task)
+                # Mock emit_otel_log to verify it's called when queuing
+                with patch("shiny.reactive._extended_task.emit_otel_log") as mock_emit:
+                    task = ExtendedTask(slow_task)
 
-                # Invoke first time (should not log queue)
-                task.invoke()
+                    # Invoke first time (should not log queue)
+                    task.invoke()
 
-                # Invoke second time while first is running (should log queue)
-                task.invoke()
+                    # Invoke second time while first is running (should log queue)
+                    task.invoke()
 
-                # Check that second invocation was queued
-                assert len(task._invocation_queue) == 1
+                    # Check that second invocation was queued
+                    assert len(task._invocation_queue) == 1
 
-                # Wait for both to complete (use isolate to read status)
-                while True:
-                    with isolate():
-                        if (
-                            task.status() != "running"
-                            and len(task._invocation_queue) == 0
-                        ):
-                            break
-                    await asyncio.sleep(0.01)
+                    # Verify log was emitted for the queue operation
+                    mock_emit.assert_called_once()
+                    call_args = mock_emit.call_args
+                    # Verify the label and attributes
+                    assert call_args[0][0] == "extended_task queued slow_task"
+                    assert call_args[1]["severity_text"] == "DEBUG"
+                    assert call_args[1]["attributes"]["queue.size"] == 1
+
+                    # Wait for both to complete (use isolate to read status)
+                    while True:
+                        with isolate():
+                            if (
+                                task.status() != "running"
+                                and len(task._invocation_queue) == 0
+                            ):
+                                break
+                        await asyncio.sleep(0.01)
 
     @pytest.mark.asyncio
     async def test_extended_task_queue_log_disabled_at_low_level(self):
