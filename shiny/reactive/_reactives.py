@@ -21,6 +21,7 @@ import traceback
 import warnings
 from typing import (
     TYPE_CHECKING,
+    Any,
     Awaitable,
     Callable,
     Generic,
@@ -34,6 +35,17 @@ from .. import _utils
 from .._docstring import add_example
 from .._utils import is_async_callable, run_coro_sync
 from .._validation import req
+from ..otel._attributes import SourceRefAttrs, extract_source_ref, get_session_id_attrs
+from ..otel._collect import OtelCollectLevel, get_otel_collect_level
+from ..otel._core import emit_otel_log, is_otel_tracing_enabled
+from ..otel._function_attrs import resolve_func_otel_level
+from ..otel._labels import (
+    create_otel_label,
+    create_otel_span_name,
+    get_otel_label_modifier,
+    set_otel_label_modifier,
+)
+from ..otel._span_wrappers import shiny_otel_span
 from ..types import (
     MISSING,
     MISSING_TYPE,
@@ -42,6 +54,7 @@ from ..types import (
     SilentException,
 )
 from ._core import Context, Dependents, ReactiveWarning, isolate
+from ._utils import is_user_code_frame
 
 if TYPE_CHECKING:
     from .. import Session
@@ -73,6 +86,13 @@ class Value(Generic[T]):
         An optional initial value.
     read_only
         If ``True``, then the reactive value cannot be `set()`.
+    name
+        An optional name for the reactive value, used in OpenTelemetry logging and
+        debugging. If not provided, the name will be automatically inferred from the
+        assignment statement (e.g., ``counter = reactive.Value(0)`` will use "counter"
+        as the name). If automatic inference fails, the name will be ``None`` and logs
+        will show ``"<unnamed>"``. Input values created by Shiny will have their names
+        set automatically based on their input IDs.
 
     Returns
     -------
@@ -107,21 +127,185 @@ class Value(Generic[T]):
     # - Value(1) works, with T is inferred to be int.
     @overload
     def __init__(
-        self, value: MISSING_TYPE = MISSING, *, read_only: bool = False
+        self,
+        value: MISSING_TYPE = MISSING,
+        *,
+        read_only: bool = False,
+        name: str | None = None,
     ) -> None: ...
 
     @overload
-    def __init__(self, value: T, *, read_only: bool = False) -> None: ...
+    def __init__(
+        self, value: T, *, read_only: bool = False, name: str | None = None
+    ) -> None: ...
 
     # If `value` is MISSING, then `get()` will raise a SilentException, until a new
     # value is set. Calling `unset()` will set the value to MISSING.
     def __init__(
-        self, value: T | MISSING_TYPE = MISSING, *, read_only: bool = False
+        self,
+        value: T | MISSING_TYPE = MISSING,
+        *,
+        read_only: bool = False,
+        name: str | None = None,
     ) -> None:
+        from ..session._utils import get_current_session
+
         self._value: T | MISSING_TYPE = value
         self._read_only: bool = read_only
         self._value_dependents: Dependents = Dependents()
         self._is_set_dependents: Dependents = Dependents()
+        # Optional name for OpenTelemetry logging and debugging
+        # Priority during initialization: 1) explicit name parameter, 2) inferred from assignment, 3) None
+        # Can be overwritten later by Inputs class when value is added/accessed
+        if name is not None:
+            self._name = name
+        else:
+            self._name = self._try_infer_name()
+
+        # Capture collection level at initialization time
+        # This determines whether value updates will emit OTel logs
+        session = get_current_session()
+        self._otel_level: OtelCollectLevel = get_otel_collect_level()
+        self._otel_attrs: dict[str, Any] = {**get_session_id_attrs(session)}
+        if read_only:
+            self._otel_attrs["read-only"] = True
+
+        self._otel_namespace: str | None = None
+        if session is not None:
+            ns_str = str(session.ns)
+            if ns_str:  # Only use non-empty namespaces
+                self._otel_namespace = ns_str
+        # Lazily initialized OTel label for value updates; Allows for `_name` to be adjusted manually after init (ex: Inputs class)
+        self._otel_label: str | None = None
+
+    def _try_infer_name(self) -> str | None:
+        """
+        Attempt to infer the variable name from the call stack.
+
+        This examines the frame where Value() was instantiated and tries
+        to parse the assignment statement to extract the variable name.
+
+        Returns None if the name cannot be reliably determined.
+
+        Examples of what works:
+        - counter = reactive.Value(0) → "counter"
+        - counter = reactive.value(0) → "counter"
+        - counter = Value(0) → "counter"
+        - counter = value(0) → "counter"
+        - self.counter = reactive.Value(0) → "counter"
+        - self.counter = reactive.value(0) → "counter"
+        - self.counter = Value(0) → "counter"
+        - self.counter = value(0) → "counter"
+
+        Examples of what doesn't work (returns None):
+        - values = [reactive.Value(0), reactive.Value(1)]
+        - reactive.Value(0)  # No assignment
+        - Complex expressions
+        """
+        import inspect
+        import re
+
+        try:
+            # Walk up the stack: [0] = _try_infer_name, [1] = __init__, [2] = caller
+            for frame_info in inspect.stack()[2:]:
+                filename = frame_info.filename
+
+                # Skip internal shiny code, keep user code
+                if not is_user_code_frame(filename):
+                    continue
+
+                # Get the source line
+                if frame_info.code_context:
+                    line = frame_info.code_context[0].strip()
+
+                    # Pattern 1: var_name = [reactive.]Value(...) or [reactive.]value(...)
+                    # The \( at the end anchors to a function call, preventing matches
+                    # against identifiers like ValueFactory or value2
+                    match = re.match(r"^(\w+)\s*=\s*(?:reactive\.)?[Vv]alue\s*\(", line)
+                    if match:
+                        return match.group(1)
+
+                    # Pattern 2: self.var_name = [reactive.]Value(...) or [reactive.]value(...)
+                    match = re.match(
+                        r"^\w+\.(\w+)\s*=\s*(?:reactive\.)?[Vv]alue\s*\(", line
+                    )
+                    if match:
+                        return match.group(1)
+
+                # Stop after first user code frame
+                break
+
+        except Exception:
+            # If anything fails, silently return None
+            pass
+
+        return None
+
+    def _extract_caller_source_ref(self) -> SourceRefAttrs:
+        """
+        Extract source reference attributes from the caller of _set().
+
+        This captures where the value update originated (file, line, column,
+        function), which is useful for debugging and tracing reactive value changes.
+
+        Returns
+        -------
+        SourceRefAttrs
+            Dictionary with code.filepath, code.lineno, code.column.number, and
+            code.function keys. Returns empty dict if source information is
+            unavailable.
+
+        Notes
+        -----
+        Following OpenTelemetry semantic conventions for code attributes:
+        - code.filepath: Full path to source file
+        - code.lineno: Line number where _set() was called (1-indexed)
+        - code.column.number: Column offset where _set() was called (0-indexed,
+          Python 3.11+ only)
+        - code.function: Function name containing the call
+
+        The column.number attribute uses Python 3.11+ frame position information
+        for accurate column offsets. On earlier Python versions, this attribute
+        is omitted.
+
+        This method walks the call stack to find the first frame outside
+        the shiny package (excluding tests), which represents user code.
+        """
+        import inspect
+
+        try:
+            # Stack: [0] = _extract_caller_source_ref, [1] = _set, [2] = caller
+            for frame_info in inspect.stack()[2:]:
+                filename = frame_info.filename
+
+                # Skip internal shiny code, keep user code
+                if not is_user_code_frame(filename):
+                    continue
+
+                # Found a user code frame - extract attributes
+                attrs: SourceRefAttrs = {}
+                attrs["code.filepath"] = filename
+
+                if frame_info.lineno:
+                    attrs["code.lineno"] = frame_info.lineno
+
+                # Extract column number using Python 3.11+ position info when available
+                # Only include if we have accurate position information
+                if hasattr(frame_info, "positions") and frame_info.positions:  # type: ignore[attr-defined]
+                    # Python 3.11+ provides precise column offset via positions
+                    if frame_info.positions.col_offset is not None:  # type: ignore[attr-defined]
+                        attrs["code.column.number"] = frame_info.positions.col_offset  # type: ignore[typeddict-item, attr-defined]
+
+                if frame_info.function:
+                    attrs["code.function"] = frame_info.function
+
+                return attrs
+
+        except Exception:
+            # If anything fails, silently return empty dict
+            pass
+
+        return {}
 
     def __call__(self) -> T:
         return self.get()
@@ -186,7 +370,47 @@ class Value(Generic[T]):
 
         self._value = value
         self._value_dependents.invalidate()
+
+        self._emit_otel_log()
+
         return True
+
+    def _emit_otel_log(self) -> None:
+        # Log value update for OpenTelemetry
+        # Only log when:
+        # 1. Tracing is enabled (OpenTelemetry SDK is configured)
+        # 2. Collection level (captured at initialization) is REACTIVITY or higher
+        # 3. A session is available. (Initial input.* and .clientdata_* do not have a session when they are set, so we won't log those initial values. However, updates will be logged, since they occur within a session context.)
+        if not (
+            is_otel_tracing_enabled()
+            and self._otel_level >= OtelCollectLevel.REACTIVITY
+        ):
+            return
+
+        from ..session._utils import get_current_session
+
+        s = get_current_session()
+        if s is None:
+            # No session, therefore it is too early
+            return
+
+        if self._otel_label is None:
+            # Lazily initialize the OTel label on first set, when we have the name available
+            self._otel_label = create_otel_label(
+                "Set reactive.value",
+                self._name,
+                namespace=self._otel_namespace,
+            )
+
+        emit_otel_log(
+            self._otel_label,
+            severity_text="INFO",
+            # Build attributes dict with session ID and source reference
+            attributes={
+                **self._otel_attrs,
+                **self._extract_caller_source_ref(),
+            },
+        )
 
     def unset(self) -> None:
         """
@@ -284,6 +508,21 @@ class Calc_(Generic[T]):
         self._value: list[T] = []
         self._error: list[Exception] = []
 
+        # Extract OpenTelemetry attributes at initialization time
+        self._otel_attrs: SourceRefAttrs = self._extract_otel_attrs(fn)
+
+        # Extract modifier from function attribute and generate label
+        self._otel_label: str = create_otel_span_name(
+            fn,
+            "reactive.calc",
+            session=self._session,
+            modifier=get_otel_label_modifier(fn),
+        )
+
+        # Extract collection level from function attribute (set by @otel_collect decorator)
+        # If not set, capture the current collection level at initialization time
+        self._otel_level: OtelCollectLevel = resolve_func_otel_level(fn)
+
     def __call__(self) -> T:
         # Run the Coroutine (synchronously), and then return the value.
         # If the Coroutine yields control, then an error will be raised.
@@ -317,11 +556,17 @@ class Calc_(Generic[T]):
         from ..session import session_context
 
         with session_context(self._session):
-            try:
-                with self._ctx():
-                    await self._run_func()
-            finally:
-                self._running = was_running
+            async with shiny_otel_span(
+                self._otel_label,
+                attributes=self._otel_attrs,
+                required_level=OtelCollectLevel.REACTIVITY,
+                collection_level=self._otel_level,
+            ):
+                try:
+                    with self._ctx():
+                        await self._run_func()
+                finally:
+                    self._running = was_running
 
     def _on_invalidate_cb(self) -> None:
         self._invalidated = True
@@ -332,9 +577,15 @@ class Calc_(Generic[T]):
     async def _run_func(self) -> None:
         self._error.clear()
         try:
-            self._value.append(await self._fn())
+            val = await self._fn()
+
+            self._value.append(val)
         except Exception as err:
             self._error.append(err)
+
+    def _extract_otel_attrs(self, fn: Callable[..., Any]) -> SourceRefAttrs:
+        """Extract OpenTelemetry attributes from the reactive function."""
+        return extract_source_ref(fn)
 
 
 class CalcAsync_(Calc_[T]):
@@ -530,6 +781,21 @@ class Effect_:
         if self._session is not None:
             self._session.on_ended(self._on_session_ended_cb)
 
+        # Extract OpenTelemetry attributes at initialization time
+        self._otel_attrs: SourceRefAttrs = self._extract_otel_attrs(fn)
+
+        # Extract modifier from function attribute and generate label
+        self._otel_label: str = create_otel_span_name(
+            fn,
+            "reactive.effect",
+            session=self._session,
+            modifier=get_otel_label_modifier(fn),
+        )
+
+        # Extract collection level from function attribute (set by @otel_collect decorator)
+        # If not set, capture the current collection level at initialization time
+        self._otel_level: OtelCollectLevel = resolve_func_otel_level(fn)
+
         # Defer the first running of this until flushReact is called
         self._create_context().invalidate()
 
@@ -579,38 +845,45 @@ class Effect_:
         from ..session import session_context
 
         with session_context(self._session):
-            try:
-                with ctx():
-                    await self._fn()
+            async with shiny_otel_span(
+                self._otel_label,
+                attributes=self._otel_attrs,
+                required_level=OtelCollectLevel.REACTIVITY,
+                collection_level=self._otel_level,
+            ):
+                try:
+                    with ctx():
+                        await self._fn()
 
-                    # Yield so that messages can be sent to the client if necessary.
-                    # https://github.com/posit-dev/py-shiny/issues/1381
-                    await asyncio.sleep(0)
-            except SilentException:
-                # It's OK for SilentException to cause an Effect to stop running
-                pass
-            except NotifyException as e:
-                traceback.print_exc()
+                        # Yield so that messages can be sent to the client if necessary.
+                        # https://github.com/posit-dev/py-shiny/issues/1381
+                        await asyncio.sleep(0)
 
-                if self._session:
-                    from .._app import SANITIZE_ERROR_MSG
-                    from ..ui import notification_show
+                except SilentException:
+                    # It's OK for SilentException to cause an Effect to stop running
+                    pass
+                except NotifyException as e:
+                    traceback.print_exc()
 
-                    msg = str(e)
-                    warnings.warn(msg, ReactiveWarning, stacklevel=2)
-                    if e.sanitize:
-                        msg = SANITIZE_ERROR_MSG
-                    notification_show(msg, type="error", duration=None)
-                    if e.close:
+                    if self._session:
+                        from .._app import SANITIZE_ERROR_MSG
+                        from ..ui import notification_show
+
+                        msg = str(e)
+                        warnings.warn(msg, ReactiveWarning, stacklevel=2)
+                        if e.sanitize:
+                            msg = SANITIZE_ERROR_MSG
+                        notification_show(msg, type="error", duration=None)
+                        if e.close:
+                            await self._session._unhandled_error(e)
+                except Exception as e:
+                    traceback.print_exc()
+
+                    warnings.warn(
+                        "Error in Effect: " + str(e), ReactiveWarning, stacklevel=2
+                    )
+                    if self._session:
                         await self._session._unhandled_error(e)
-            except Exception as e:
-                traceback.print_exc()
-
-                warnings.warn(
-                    "Error in Effect: " + str(e), ReactiveWarning, stacklevel=2
-                )
-                if self._session:
-                    await self._session._unhandled_error(e)
 
     def on_invalidate(self, callback: Callable[[], None]) -> None:
         """
@@ -628,7 +901,7 @@ class Effect_:
         """
         Destroy this reactive effect.
 
-        Stops the observer from executing ever again, even if it is currently scheduled
+        Stops the effect from executing ever again, even if it is currently scheduled
         for re-execution.
         """
         self._destroyed = True
@@ -673,14 +946,18 @@ class Effect_:
 
         Note
         ----
-        If the observer is currently invalidated, then the change in priority will not
-        take effect until the next invalidation--unless the observer is also currently
+        If the effect is currently invalidated, then the change in priority will not
+        take effect until the next invalidation--unless the effect is also currently
         suspended, in which case the priority change will be effective upon resume.
         """
         self._priority = priority
 
     def _on_session_ended_cb(self) -> None:
         self.destroy()
+
+    def _extract_otel_attrs(self, fn: Callable[..., Any]) -> SourceRefAttrs:
+        """Extract OpenTelemetry attributes from the reactive function."""
+        return extract_source_ref(fn)
 
 
 @overload
@@ -885,6 +1162,9 @@ def event(
                 with isolate():
                     return await user_fn()
 
+            # Prepend "event" modifier to any existing label
+            set_otel_label_modifier(new_user_async_fn, "event", mode="prepend")
+
             return new_user_async_fn  # type: ignore
 
         elif any([is_async_callable(arg) for arg in args]):
@@ -900,6 +1180,9 @@ def event(
                 run_coro_sync(trigger())
                 with isolate():
                     return user_fn()
+
+            # Prepend "event" modifier to any existing label
+            set_otel_label_modifier(new_user_fn, "event", mode="prepend")
 
             return new_user_fn
 

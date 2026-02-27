@@ -1,0 +1,206 @@
+"""
+High-level span creation helpers for async contexts.
+
+Async Context Propagation Design
+---------------------------------
+
+This module relies on the OpenTelemetry Python SDK's built-in context propagation
+for async code. The SDK automatically handles span context through Python's
+contextvars mechanism, which propagates correctly through async boundaries
+(await, asyncio.create_task, asyncio.gather, TaskGroup, as_completed, etc.).
+
+Python's contextvars provide automatic context propagation to child tasks:
+- When you create a task with asyncio.create_task(), the current context is
+  automatically copied to the new task
+- This happens at task creation time, not at await time
+- The context includes the current span, so child spans created within tasks
+  automatically use the correct parent
+
+When you use `tracer.start_as_current_span()`, the SDK:
+1. Sets the span as "current" in the OpenTelemetry context (using contextvars)
+2. Python's contextvars automatically copy to new async tasks
+3. Child spans created within those tasks automatically use the context parent
+4. Span hierarchy is maintained correctly across concurrent operations
+
+This design was chosen over implementing custom context management because:
+- The OTel SDK's implementation is battle-tested and specification-compliant
+- It automatically handles edge cases (task cancellation, exception propagation)
+- It works seamlessly with other OTel-instrumented libraries
+- It avoids code duplication and reduces maintenance burden
+
+For more on Python's contextvars and async task context propagation:
+https://docs.python.org/3/library/contextvars.html#asyncio-support
+
+Important Notes
+---------------
+
+**Session Context Independence**: OpenTelemetry context propagation is independent
+of Shiny's session context. When spawning async tasks (e.g., with
+`asyncio.create_task()`), the OTel span context will propagate automatically,
+but the Shiny session context must be passed explicitly via the `session`
+parameter if the task needs access to `input`, `output`, or session state.
+
+**Testing**: Unit tests in `tests/pytest/test_otel_async_context.py` verify
+correct span propagation through various async patterns. Integration tests in
+`tests/playwright/shiny/otel-async/` verify the full reactive flow with async
+operations.
+
+See Also
+--------
+- OpenTelemetry Context API: https://opentelemetry.io/docs/specs/otel/context/
+- Python contextvars: https://docs.python.org/3/library/contextvars.html
+"""
+
+from __future__ import annotations
+
+from contextlib import asynccontextmanager
+from typing import Any, AsyncIterator, Callable, Dict, Mapping, Union
+
+from opentelemetry.trace import Span, Status, StatusCode
+
+from ._collect import OtelCollectLevel, get_otel_collect_level
+from ._core import get_otel_tracer, is_otel_tracing_enabled
+
+__all__ = ("shiny_otel_span",)
+
+# Type aliases for parameters
+AttributesValue = Mapping[str, Any] | None
+AttributesType = Union[AttributesValue, Callable[[], AttributesValue]]
+
+
+@asynccontextmanager
+async def shiny_otel_span(
+    name: str,
+    *,
+    attributes: AttributesType = None,
+    required_level: OtelCollectLevel = OtelCollectLevel.SESSION,
+    collection_level: OtelCollectLevel | None = None,
+) -> AsyncIterator[Span | None]:
+    """
+    Context manager for creating and managing a Shiny OpenTelemetry span.
+
+    This async context manager properly propagates context through async
+    boundaries. It automatically:
+    - Checks if collection should occur based on the collect level
+    - Creates a span with the given name and attributes (if collecting)
+    - Records exceptions if they occur
+    - Sets appropriate span status (OK or ERROR)
+    - Ends the span when the context exits
+
+    If collection is disabled or the SDK is not configured, this becomes a no-op
+    context manager that yields None.
+
+    Exception handling respects Shiny's error semantics:
+    - Silent exceptions (SilentException, etc.) are not recorded in spans
+    - Error messages are sanitized when app.sanitize_otel_errors is True
+    - SafeException messages bypass sanitization
+
+    Parameters
+    ----------
+    name
+        The name of the span.
+    attributes
+        Optional dictionary of attributes to attach to the span, or a callable
+        that returns a dictionary. If a callable is provided, it will only be
+        called if collection is enabled, allowing for lazy evaluation of
+        expensive attribute extraction.
+
+        **Important:** Session context attributes (like `session.id`) should be
+        explicitly passed in this parameter. They are NOT automatically added,
+        providing flexibility to choose which spans include session context.
+    required_level
+        The minimum collect level required for this span. Defaults to SESSION.
+
+    Yields
+    ------
+    Span | None
+        The created span instance, or None if collection is disabled.
+
+    Examples
+    --------
+    ```python
+    from shiny.otel._span_wrappers import shiny_otel_span
+
+    async def my_async_function():
+        # Static attributes
+        async with shiny_otel_span("async_operation", attributes={"count": 42}) as span:
+            await some_async_call()
+            if span:
+                span.set_attribute("completed", True)
+
+        # Lazy attributes (only computed if collecting)
+        async with shiny_otel_span(
+            "session.start",
+            attributes=lambda: {ATTR_SESSION_ID: session.id, **extract_http_attributes(conn)}
+        ) as span:
+            # Attributes only extracted if span is created
+            await session_work()
+    ```
+    """
+    # First check if OTel is enabled at all
+    if not is_otel_tracing_enabled():
+        yield None
+        return
+
+    # Use provided collection_level or get current level
+    current_level = (
+        collection_level if collection_level is not None else get_otel_collect_level()
+    )
+
+    # Check if we should collect based on current level vs required threshold
+    if current_level < required_level:
+        yield None
+        return
+
+    # Resolve attributes if callable
+    resolved_attrs: Dict[str, Any] = {}
+    if attributes is not None:
+        if callable(attributes):
+            attr_result = attributes()
+            resolved_attrs = dict(attr_result) if attr_result else {}
+        else:
+            resolved_attrs = dict(attributes)
+
+    tracer = get_otel_tracer()
+    with tracer.start_as_current_span(
+        name,
+        attributes=resolved_attrs,
+        record_exception=False,  # We handle exception recording manually
+        set_status_on_exception=False,  # We handle status setting manually
+    ) as span:
+        try:
+            yield span
+            # If we reach here without exception, mark as OK
+            span.set_status(Status(StatusCode.OK))
+        except Exception as e:
+            from ._errors import (
+                has_otel_exception_been_recorded,
+                is_silent_error,
+                mark_otel_exception_as_recorded,
+                maybe_sanitize_error,
+            )
+
+            # Check if this is a silent error
+            if is_silent_error(e):
+                # Silent errors don't set error status or record exceptions
+                # Set status to OK since silent exceptions are not actual errors
+                span.set_status(Status(StatusCode.OK))
+            else:
+                # Sanitize the error if needed before recording/setting status
+                sanitized_exc = maybe_sanitize_error(e, session=None)
+
+                # Only record the exception once at the innermost span where it originates
+                # Parent spans will still get ERROR status, but won't duplicate the exception details
+                if not has_otel_exception_been_recorded(e):
+                    span.record_exception(sanitized_exc)
+                    # Mark the original exception so parent spans don't record it again.
+                    # Python propagates the same exception object when re-raising (not a copy),
+                    # so this marking will be visible to all parent spans.
+                    mark_otel_exception_as_recorded(e)
+
+                # Always set error status on all spans that encounter the error
+                span.set_status(Status(StatusCode.ERROR, str(sanitized_exc)))
+
+            # Re-raise the original exception (not sanitized_exc) so the exception object
+            # propagates unchanged to parent spans with the marking intact
+            raise

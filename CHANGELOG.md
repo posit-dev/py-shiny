@@ -7,16 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### OpenTelemetry
+
+* Added OpenTelemetry collection control with `otel_collect()` (from `shiny.otel`), a context manager and decorator for controlling what Shiny internal telemetry is collected. Use `with otel_collect("none"):` to disable Shiny-specific telemetry for sensitive operations, or `@otel_collect("reactivity")` to enable detailed reactive execution tracing. The collect level can also be set via the `SHINY_OTEL_COLLECT` environment variable. Available levels: (#2143)
+  * `"none"` - Disables all Shiny-specific telemetry collection. Use this for sensitive operations where you don't want Shiny to emit any spans or logs.
+  * `"session"` - Captures session lifecycle spans that track when user sessions start, end, and their duration. This provides basic visibility into session activity without detailed reactive execution information.
+  * `"reactive_update"` - Captures everything from `"session"` plus reactive flush cycle spans that show when reactive invalidation and re-execution occurs. This helps identify performance bottlenecks in reactive updates without the overhead of per-reactive-component instrumentation.
+  * `"reactivity"` - Captures everything from `"reactive_update"` plus individual reactive execution spans (`reactive.calc`, `reactive.effect`, `extended_task`), info-level logs for reactive value updates (including source file, line number, and column position), and debug-level logs for extended task queue operations. This provides comprehensive visibility into reactive execution flow and timing.
+  * `"all"` \[Default\] - Currently equivalent to `"reactivity"` and represents the most comprehensive telemetry available. This is the default collection level when `SHINY_OTEL_COLLECT` is not set (or is explicitly set to `all`).
+
+* Added OpenTelemetry example application (`examples/open-telemetry/`) demonstrating console exporter, collection control with `@otel_collect`, and side-by-side comparison of normal vs. suppressed telemetry. The OpenTelemetry SDK is available via the optional `[otel]` dependency group: `pip install shiny[otel]`. Note: If you're already using an observability package with OpenTelemetry integration (e.g., `logfire`), it likely already includes `opentelemetry-sdk`, so you may not need to explicitly install the `[otel]` group. (#2143)
+
 ### New features
 
 * Added toolbar component with `ui.toolbar()`, `ui.toolbar_input_button()`, `ui.toolbar_input_select()`, `ui.toolbar_divider()`, `ui.toolbar_spacer()`, `ui.update_toolbar_input_button()`, and `ui.update_toolbar_input_select()`. Toolbars are compact UI containers designed for small form elements suitable for card headers, footers, and other constrained spaces. They support flexible alignment (left/right), custom spacing and width, icon-only or labeled buttons with optional tooltips, select inputs with grouped choices, visual dividers for separating elements, and flexible spacers for split layouts. Server-side updates allow dynamic modification of button and select properties. (#2155)
-
 
 * Added a new `ui.input_code_editor()` element that allows for light-weight code editing with syntax highlighting, using the [prism-code-editor](https://prism-code-editor.netlify.app/) library. The editor supports 20+ languages, more than a dozen themes, and automatic light/dark mode switching. (#2128)
 
 ### Improvements
 
 * Reduced installed package size by ~400KB by excluding `api-examples/` directories from wheel and source distributions. These examples are only needed when building documentation from the source repository. (#2126)
+
+* Improved reactive value name inference to support all import styles: `reactive.Value()`, `reactive.value()`, `Value()`, and `value()` now all correctly infer variable names for better OpenTelemetry log messages. (#2178)
+
+* Enhanced OpenTelemetry source reference attributes by adding `code.column.number` to track the column position of reactive value updates alongside existing file path, line number, and function name. (#2178)
+
+* Improved OpenTelemetry collection level handling: reactive values now capture the collection level at initialization time (matching behavior of `Calc` and `Effect`), ensuring consistent telemetry behavior throughout the value's lifetime. (#2178)
 
 ### Other changes
 

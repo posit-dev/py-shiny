@@ -46,15 +46,12 @@ def test_shiny_import_itself():
         path = Path(path)
 
         file_txt = path.read_text(encoding="utf-8")
-        while True:
-            if "\ndef " in file_txt:
-                file_txt = file_txt.split("\ndef ")[0]
-            elif "\nasync def " in file_txt:
-                file_txt = file_txt.split("\nasync def ")[0]
-            elif "\nclass " in file_txt:
-                file_txt = file_txt.split("\nclass ")[0]
-            else:
-                break
+
+        # Remove all code below any function, class definitions, or docstrings
+        # Attempt to isolate the import statements at the top of the file
+        for txt in ("\ndef ", "\nasync def ", "\nclass ", '"""'):
+            if txt in file_txt:
+                file_txt = file_txt.split(txt)[0]
 
         for search_txt in ("\nfrom shiny.", "\nfrom shiny ", "\nimport shiny\n"):
             if search_txt == "\nimport shiny\n" and path.name.endswith("_main.py"):
