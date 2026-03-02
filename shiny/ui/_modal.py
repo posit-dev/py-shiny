@@ -33,7 +33,7 @@ def modal_button(label: TagChild, icon: TagChild = None, **kwargs: TagAttrValue)
     label
         An input label.
     icon
-        An icon to appear inline with the button/link.
+        An icon to appear inline with the button.
     **kwargs
         Attributes to be applied to the button.
 

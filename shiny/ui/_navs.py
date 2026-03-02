@@ -135,7 +135,7 @@ def nav_panel(
         provide the value to the ``selected`` argument of the navigation container
         (e.g., :func:`~shiny.ui.navset_tab`).
     icon
-        An icon to appear inline with the button/link.
+        An icon to appear inline with the navigation item.
 
     See Also
     --------
@@ -338,7 +338,7 @@ def nav_menu(
         provide the value to the ``selected`` argument of the navigation container
         (e.g., :func:`~shiny.ui.navset_tab`).
     icon
-        An icon to appear inline with the button/link.
+        An icon to appear inline with the menu.
     align
         Horizontal alignment of the dropdown menu relative to dropdown toggle.
 

@@ -30,7 +30,7 @@ def input_action_button(
     label
         An input label.
     icon
-        An icon to appear inline with the button/link.
+        An icon to appear inline with the button.
     width
         The CSS width, e.g. '400px', or '100%'
     disabled
@@ -97,7 +97,7 @@ def input_action_link(
     label
         An input label.
     icon
-        An icon to appear inline with the button/link.
+        An icon to appear inline with the link.
     **kwargs
         Attributes to be applied to the link.
 

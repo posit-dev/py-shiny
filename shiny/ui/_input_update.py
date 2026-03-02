@@ -88,7 +88,7 @@ def update_action_button(
     label
         An input label.
     icon
-        An icon to appear inline with the button/link.
+        An icon to appear inline with the button.
     disabled
         If `True`, disable the button making it unclickable; if `False`, the button will
         become enabled and clickable.
@@ -133,7 +133,7 @@ def update_action_link(
     label
         An input label.
     icon
-        An icon to appear inline with the button/link.
+        An icon to appear inline with the link.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
         :func:`~shiny.session.get_current_session`.

@@ -72,3 +72,64 @@ def test_effect():
         @render.text
         def my_output():
             return "42"
+
+
+def test_download_auto_output_ui_button():
+    """Test that render.download creates a button by default."""
+    d = render.download(label="Test Download", icon="test_icon")
+    d.output_id = "test_id"
+    ui_tag = d.auto_output_ui()
+
+    # Convert to string to check the generated HTML
+    html_str = str(ui_tag)
+
+    # Should contain button classes
+    assert "btn" in html_str
+    assert "shiny-download-link" in html_str
+    assert "test_icon" in html_str
+    assert "Test Download" in html_str
+
+
+def test_download_auto_output_ui_link():
+    """Test that render.download creates a link when button=False."""
+    d = render.download(label="Test Download", icon="test_icon", button=False)
+    d.output_id = "test_id"
+    ui_tag = d.auto_output_ui()
+
+    # Convert to string to check the generated HTML
+    html_str = str(ui_tag)
+
+    # Should not contain button classes (btn btn-default)
+    assert "btn btn-default" not in html_str
+    # But should still have shiny-download-link
+    assert "shiny-download-link" in html_str
+    assert "test_icon" in html_str
+    assert "Test Download" in html_str
+
+
+def test_download_button_parameter_default():
+    """Test that button parameter defaults to True."""
+    d = render.download(label="Test")
+    assert d.button is True
+
+
+def test_download_without_icon_button():
+    """Test that render.download works without an icon (button)."""
+    d = render.download(label="Download")
+    d.output_id = "test_id"
+    ui_tag = d.auto_output_ui()
+
+    html_str = str(ui_tag)
+    assert "Download" in html_str
+    assert "btn" in html_str
+
+
+def test_download_without_icon_link():
+    """Test that render.download works without an icon (link)."""
+    d = render.download(label="Download", button=False)
+    d.output_id = "test_id"
+    ui_tag = d.auto_output_ui()
+
+    html_str = str(ui_tag)
+    assert "Download" in html_str
+    assert "shiny-download-link" in html_str

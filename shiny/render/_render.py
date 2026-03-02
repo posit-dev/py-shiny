@@ -628,7 +628,14 @@ class download(Renderer[str]):
     encoding
         The encoding of the download.
     label
-        (Express only) A label for the button. Defaults to "Download".
+        (Express only) A label for the button or link. Defaults to "Download".
+    icon
+        (Express only) An icon to display on the download button or link. Defaults to
+        None.
+    button
+        (Express only) Whether to render as a button (True) or link (False). Defaults
+        to True. In core mode, the UI element is placed manually with
+        :func:`~shiny.ui.download_button` or :func:`~shiny.ui.download_link`.
 
     Returns
     -------
@@ -642,10 +649,18 @@ class download(Renderer[str]):
     """
 
     def auto_output_ui(self) -> Tag:
-        return _ui.download_button(
-            self.output_id,
-            label=self.label,
-        )
+        if self.button:
+            return _ui.download_button(
+                self.output_id,
+                label=self.label,
+                icon=self.icon,
+            )
+        else:
+            return _ui.download_link(
+                self.output_id,
+                label=self.label,
+                icon=self.icon,
+            )
 
     def __init__(
         self,
@@ -655,6 +670,8 @@ class download(Renderer[str]):
         media_type: None | str | Callable[[], str] = None,
         encoding: str = "utf-8",
         label: TagChild = "Download",
+        icon: TagChild = None,
+        button: bool = True,
     ) -> None:
         super().__init__()
 
@@ -662,6 +679,8 @@ class download(Renderer[str]):
         self.media_type = media_type
         self.encoding = encoding
         self.label = label
+        self.icon = icon
+        self.button = button
 
         if fn is not None:
             self(fn)

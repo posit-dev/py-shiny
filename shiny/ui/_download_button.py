@@ -71,11 +71,10 @@ def download_link(
     label: TagChild,
     *,
     icon: TagChild = None,
-    width: Optional[str] = None,
     **kwargs: TagAttrValue,
 ) -> Tag:
     """
-    Create a download button.
+    Create a download link.
 
     Parameters
     ----------
@@ -84,11 +83,9 @@ def download_link(
     label
         An input label.
     icon
-        An icon to display on the button.
-    width
-        The width of the button.
+        An icon to display on the link.
     **kwargs
-        Additional attributes for the button.
+        Additional attributes for the link.
 
     Returns
     -------
@@ -104,7 +101,7 @@ def download_link(
     return tags.a(
         icon,
         label,
-        {"class": "shiny-download-link disabled", "style": css(width=width)},
+        {"class": "shiny-download-link disabled"},
         id=resolve_id(id),
         href="",
         target="_blank",

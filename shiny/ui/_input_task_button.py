@@ -80,11 +80,11 @@ def input_task_button(
         state, and call :func:`~shiny.ui.update_task_button` with ``state="state_name"``
         to switch the button to that state.
     icon
-        An icon to appear inline with the button/link.
+        An icon to appear inline with the button.
     label_busy
         A label to appear when the button is busy.
     icon_busy
-        An icon to appear inline with the button/link when the button is busy.
+        An icon to appear inline with the button when the button is busy.
     width
         The CSS width, e.g. '400px', or '100%'
     type
