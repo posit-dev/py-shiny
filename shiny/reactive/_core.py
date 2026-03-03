@@ -28,8 +28,6 @@ from ..otel._span_wrappers import shiny_otel_span
 from ..types import MISSING, MISSING_TYPE
 
 if TYPE_CHECKING:
-    from opentelemetry.trace import Span
-
     from ..session import Session
 
 T = TypeVar("T")
@@ -134,8 +132,6 @@ class ReactiveEnvironment:
         self._pending_flush_queue: PriorityQueueFIFO[Context] = PriorityQueueFIFO()
         self._lock: Optional[asyncio.Lock] = None
         self._flushed_callbacks = _utils.AsyncCallbacks()
-        # Current OpenTelemetry span (e.g., reactive_update) for child spans to reference
-        self._current_otel_span: Optional[Span] = None
 
     @property
     def lock(self) -> asyncio.Lock:
@@ -184,15 +180,9 @@ class ReactiveEnvironment:
         async with shiny_otel_span(
             "reactive_update",
             required_level=OtelCollectLevel.REACTIVE_UPDATE,
-        ) as span:
-            # Store span on instance so child reactive spans can reference it
-            old_span = self._current_otel_span
-            self._current_otel_span = span
-            try:
-                await self._flush_sequential()
-                await self._flushed_callbacks.invoke()
-            finally:
-                self._current_otel_span = old_span
+        ):
+            await self._flush_sequential()
+            await self._flushed_callbacks.invoke()
 
     async def _flush_sequential(self) -> None:
         # Sequential flush: instead of storing the tasks in a list and calling gather()
