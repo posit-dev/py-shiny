@@ -6,6 +6,9 @@ from contextvars import ContextVar
 from typing import Any, Union
 
 from opentelemetry import trace
+
+# There is no public API for get_logger_provider.
+# Use private module, similar to logfire: https://github.com/pydantic/logfire/blob/ac3f23b5c03675d6c0f95e037f2a5eab0420f09d/logfire/_internal/logs.py#L11
 from opentelemetry._logs import get_logger_provider
 from opentelemetry.trace import Tracer
 

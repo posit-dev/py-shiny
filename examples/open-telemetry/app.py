@@ -16,6 +16,7 @@ Or with shinylive:
 Watch the console for spans and log events as you interact with the app.
 """
 
+# Set up OpenTelemetry logging to the console
 from opentelemetry import trace
 from opentelemetry._logs import set_logger_provider
 from opentelemetry.sdk._logs import LoggerProvider
@@ -24,25 +25,29 @@ from opentelemetry.sdk._logs.export import (
     SimpleLogRecordProcessor,
 )
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import (
-    ConsoleSpanExporter,
-    SimpleSpanProcessor,
-)
+from opentelemetry.sdk.trace.export import ConsoleSpanExporter, SimpleSpanProcessor
 
 from shiny import App, reactive, render, ui
 from shiny.otel import otel_collect
 
-# Set up tracing
+# Set up debug OpenTelemetry tracing/logging to the console
+# NOT recommended for production use
 trace_provider = TracerProvider()
 trace_provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
 trace.set_tracer_provider(trace_provider)
-
-# Set up logging (for value update logs)
 log_provider = LoggerProvider()
 log_provider.add_log_record_processor(
     SimpleLogRecordProcessor(ConsoleLogRecordExporter())
 )
 set_logger_provider(log_provider)
+
+# # Typical setup behavior:
+# import logfire
+# logfire.configure(
+#     token="fake-token-for-demo",
+#     service_name="shiny-open-telemetry-demo",
+#     environment="development",
+# )
 
 app_ui = ui.page_fluid(
     ui.h2("OpenTelemetry: Collection Control & Value Logging"),
