@@ -127,6 +127,7 @@ def otel_collect(
     ```python
     from shiny.otel import otel_collect
 
+    @reactive.calc
     @otel_collect("none")
     def expensive_computation():
         # No telemetry collected when this function runs
@@ -143,7 +144,9 @@ def otel_collect(
         # Only session-level telemetry collected
         with otel_collect("none"):
             # No telemetry collected in this inner block
-            do_something()
+            my_value = reactive.value(0)
+            my_value.set(10)
+
         # Back to session-level collection
     ```
 
