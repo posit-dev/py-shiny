@@ -54,14 +54,14 @@ See Also
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from typing import Any, AsyncIterator, Callable, Dict, Mapping, Union
+from typing import Any, AsyncGenerator, AsyncIterable, AsyncIterator, Callable, Dict, Mapping, Union
 
 from opentelemetry.trace import Span, Status, StatusCode
 
 from ._collect import OtelCollectLevel, get_otel_collect_level
 from ._core import get_otel_tracer, is_otel_tracing_enabled
 
-__all__ = ("shiny_otel_span",)
+__all__ = ("shiny_otel_span", "shiny_otel_span_stream")
 
 # Type aliases for parameters
 AttributesValue = Mapping[str, Any] | None
@@ -204,3 +204,57 @@ async def shiny_otel_span(
             # Re-raise the original exception (not sanitized_exc) so the exception object
             # propagates unchanged to parent spans with the marking intact
             raise
+
+
+async def shiny_otel_span_stream(
+    name: str,
+    inner: AsyncIterable[bytes],
+    *,
+    attributes: AttributesType = None,
+    required_level: OtelCollectLevel = OtelCollectLevel.SESSION,
+    collection_level: OtelCollectLevel | None = None,
+) -> AsyncGenerator[bytes, None]:
+    """
+    Async generator that wraps a byte stream in a Shiny OpenTelemetry span.
+
+    The span opens when iteration begins and closes when the stream is exhausted
+    or raises an exception. Error handling is identical to `shiny_otel_span`.
+
+    Parameters
+    ----------
+    name
+        The name of the span.
+    inner
+        The async iterable of bytes to wrap.
+    attributes
+        Optional span attributes (dict or callable returning dict).
+    required_level
+        Minimum collect level required for this span. Defaults to SESSION.
+    collection_level
+        Per-call collect level override.
+
+    Yields
+    ------
+    bytes
+        Each chunk from the inner iterable.
+
+    Examples
+    --------
+    ```python
+    wrapped = shiny_otel_span_stream(
+        "download",
+        original_stream,
+        attributes={"session.id": session_id, "download.id": download_id},
+        required_level=OtelCollectLevel.REACTIVITY,
+    )
+    return StreamingResponse(wrapped, 200, headers=headers)
+    ```
+    """
+    async with shiny_otel_span(
+        name,
+        attributes=attributes,
+        required_level=required_level,
+        collection_level=collection_level,
+    ):
+        async for chunk in inner:
+            yield chunk
