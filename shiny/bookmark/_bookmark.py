@@ -406,9 +406,7 @@ class BookmarkApp(Bookmark):
                         with reactive.isolate():
                             if self._restore_context and self._restore_context.active:
                                 restore_state = self._restore_context.as_state()
-                                await self._on_restore_callbacks.invoke(
-                                    restore_state
-                                )
+                                await self._on_restore_callbacks.invoke(restore_state)
                     except Exception as e:
                         warnings.warn(
                             f"Error calling on_restore callback: {e}",
@@ -432,9 +430,7 @@ class BookmarkApp(Bookmark):
                         with reactive.isolate():
                             if self._restore_context and self._restore_context.active:
                                 restore_state = self._restore_context.as_state()
-                                await self._on_restored_callbacks.invoke(
-                                    restore_state
-                                )
+                                await self._on_restored_callbacks.invoke(restore_state)
                     except Exception as e:
                         warnings.warn(
                             f"Error calling on_restored callback: {e}",
