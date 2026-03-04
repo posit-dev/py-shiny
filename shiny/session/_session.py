@@ -944,6 +944,9 @@ class AppSession(Session):
 
                         if isinstance(contents, str):
                             # contents is the path to a file
+                            # Span captures download initiation; the actual file
+                            # transfer is handled by Starlette's ASGI layer after
+                            # we return the FileResponse object.
                             async with shiny_otel_span(
                                 "download",
                                 attributes=otel_attrs,
