@@ -5,7 +5,7 @@ Tests for otel.suppress and Shiny OTel collection control.
 import pytest
 
 from shiny import otel
-from shiny.otel._collect import OtelCollectLevel, _current_collect_level
+from shiny.otel._collect import OtelCollectLevel, _current_collect_level, _get_env_level
 from shiny.otel._constants import FUNC_ATTR_OTEL_COLLECT_LEVEL
 
 from .otel_helpers import patch_otel_tracing_state
@@ -151,8 +151,6 @@ class TestGetLevel:
             assert otel.get_level() == OtelCollectLevel.ALL
 
     def test_get_env_level_ignores_contextvar(self, monkeypatch: pytest.MonkeyPatch):
-        from shiny.otel._collect import _get_env_level
-
         monkeypatch.setenv("SHINY_OTEL_COLLECT", "session")
         _current_collect_level.set(None)
 
@@ -163,8 +161,6 @@ class TestGetLevel:
             assert _get_env_level() == OtelCollectLevel.SESSION
 
     def test_get_env_level_defaults_to_all(self):
-        from shiny.otel._collect import _get_env_level
-
         _current_collect_level.set(None)
         assert _get_env_level() == OtelCollectLevel.ALL
 
